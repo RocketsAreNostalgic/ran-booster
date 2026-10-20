@@ -189,7 +189,12 @@ final class PackageRemovalServiceTest extends TestCase {
 				try {
 					$service->recovery_confirmation( $type, $identifier );
 					self::fail( 'Unverified work state must prevent a removal confirmation.' );
-				} catch ( \RuntimeException ) {
+				} catch ( \RuntimeException $failure ) {
+					if ( 'missing' === $state ) {
+						self::assertSame( 'The recovery operation state is unavailable.', $failure->getMessage() );
+					} elseif ( 'running' === $state ) {
+						self::assertSame( 'Unresolved deployment work prevents recovery.', $failure->getMessage() );
+					}
 					self::assertFalse( $fixture->plugins->unlinked );
 					self::assertFalse( $fixture->themes->unlinked );
 					self::assertSame( array(), $fixture->gateway->events );

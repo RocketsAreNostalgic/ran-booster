@@ -1,3 +1,4 @@
+/* global DOMParser, htmx */
 (function () {
 	'use strict';
 
@@ -17,7 +18,284 @@
 		initTroubleshootingCredentialChoices();
 		initProviderRepositoryFilter();
 		initProviderTaskNavigation();
+		initActivityHistoryAppend();
 	});
+
+	function initActivityHistoryAppend() {
+		const root = document.querySelector('[data-ran-booster-activity]');
+		const list = root?.querySelector('[data-ran-booster-activity-list]');
+		const loadOlder = root?.querySelector(
+			'[data-ran-booster-activity-load-older]'
+		);
+		if (
+			!root ||
+			!list ||
+			!loadOlder ||
+			!root.dataset.ranBoosterActivityFilter ||
+			typeof htmx === 'undefined' ||
+			typeof htmx.ajax !== 'function'
+		) {
+			return;
+		}
+
+		const progress = root.querySelector(
+			'[data-ran-booster-activity-progress]'
+		);
+		const error = root.querySelector('[data-ran-booster-activity-error]');
+		const announcement = root.querySelector(
+			'[data-ran-booster-activity-announcement]'
+		);
+		const { __ } = wp.i18n;
+		let inFlight = false;
+
+		function selection() {
+			return {
+				filter: root.dataset.ranBoosterActivityFilter || '',
+				package:
+					root.querySelector('[name="activity_package"]')?.value ||
+					'',
+				provider:
+					root.querySelector('[name="activity_provider"]')?.value ||
+					'',
+			};
+		}
+
+		function showFailure() {
+			if (error) {
+				error.hidden = false;
+				error.focus?.({ preventScroll: true });
+			}
+		}
+
+		function setBusy(isBusy) {
+			root.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+			loadOlder.setAttribute('aria-busy', isBusy ? 'true' : 'false');
+			loadOlder.setAttribute('aria-disabled', isBusy ? 'true' : 'false');
+			if (progress) {
+				progress.hidden = !isBusy;
+			}
+			if (isBusy && error) {
+				error.hidden = true;
+			}
+		}
+
+		function activityUrl(value, filter) {
+			try {
+				const url = new URL(value, window.location.href);
+				const cursor = (url.searchParams.get('before') || '').match(
+					/^v1\|([a-f0-9]{64})\|\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\|(activity|deployment)\|[1-9][0-9]*$/
+				);
+				return url.origin === window.location.origin &&
+					url.pathname === window.location.pathname &&
+					url.searchParams.get('page') === 'ran-booster' &&
+					url.searchParams.get('tab') === 'troubleshooting' &&
+					url.searchParams.get('panel') === 'activity' &&
+					cursor?.[1] === filter
+					? url
+					: null;
+			} catch {
+				return null;
+			}
+		}
+
+		loadOlder.dataset.ranBoosterActivityAppendBound = 'true';
+		loadOlder.textContent = __('Load older activity', 'ran-booster');
+		loadOlder.addEventListener('click', function (event) {
+			if (
+				event.button === 1 ||
+				event.metaKey ||
+				event.ctrlKey ||
+				event.shiftKey
+			) {
+				return;
+			}
+			if (inFlight) {
+				event.preventDefault();
+				return;
+			}
+			const request = activityUrl(
+				loadOlder.getAttribute('href'),
+				root.dataset.ranBoosterActivityFilter
+			);
+			if (!request) {
+				return;
+			}
+			event.preventDefault();
+			inFlight = true;
+			setBusy(true);
+			const snapshot = selection();
+			const existing = new Set(
+				Array.from(
+					list.querySelectorAll('[data-ran-booster-activity-row]')
+				).map(function (row) {
+					return row.getAttribute('data-ran-booster-activity-row');
+				})
+			);
+			htmx.ajax('GET', request.href, {
+				source: loadOlder,
+				target: root,
+				handler(_element, responseInfo) {
+					try {
+						const response = responseInfo.xhr;
+						const responseUrl = activityUrl(
+							response.responseURL,
+							snapshot.filter
+						);
+						const responseDocument =
+							new DOMParser().parseFromString(
+								response.responseText,
+								'text/html'
+							);
+						const responseRoots = responseDocument.querySelectorAll(
+							'[data-ran-booster-activity]'
+						);
+						const responseRoot =
+							1 === responseRoots.length
+								? responseRoots[0]
+								: null;
+						const responseList = responseRoot?.querySelector(
+							'[data-ran-booster-activity-list]'
+						);
+						const current = selection();
+						const incomingRows = responseList
+							? Array.from(
+									responseList.querySelectorAll(
+										'[data-ran-booster-activity-row]'
+									)
+								)
+							: [];
+						const incoming = new Set();
+						const next = responseRoot?.querySelector(
+							'[data-ran-booster-activity-load-older]'
+						);
+						const nextUrl = next
+							? activityUrl(
+									next.getAttribute('href'),
+									snapshot.filter
+								)
+							: null;
+						const exhausted = Boolean(
+							responseRoot?.querySelector(
+								'[data-ran-booster-activity-exhausted]'
+							)
+						);
+						const validRows = exhausted
+							? !responseList && !next
+							: !exhausted &&
+								0 < incomingRows.length &&
+								25 >= incomingRows.length &&
+								incomingRows.every(function (row) {
+									const id = row.getAttribute(
+										'data-ran-booster-activity-row'
+									);
+									if (
+										!/^[1-9][0-9]*$/.test(id || '') ||
+										existing.has(id)
+									) {
+										return false;
+									}
+									incoming.add(id);
+									return (
+										incoming.size ===
+										incomingRows.indexOf(row) + 1
+									);
+								});
+						if (
+							200 !== response.status ||
+							!root.isConnected ||
+							!responseUrl ||
+							request.href !== responseUrl.href ||
+							!responseRoot ||
+							'0' !==
+								responseRoot.dataset
+									.ranBoosterActivityUnavailable ||
+							'1' !==
+								responseRoot.dataset
+									.ranBoosterActivityHasCursor ||
+							responseRoot.dataset.ranBoosterActivityFilter !==
+								snapshot.filter ||
+							responseRoot.dataset.ranBoosterActivityProvider !==
+								snapshot.provider ||
+							responseRoot.dataset.ranBoosterActivityPackage !==
+								snapshot.package ||
+							current.filter !== snapshot.filter ||
+							current.provider !== snapshot.provider ||
+							current.package !== snapshot.package ||
+							!validRows ||
+							(next &&
+								(!nextUrl ||
+									nextUrl.searchParams.get('before') ===
+										request.searchParams.get('before') ||
+									nextUrl.searchParams.get(
+										'activity_provider'
+									) !==
+										request.searchParams.get(
+											'activity_provider'
+										) ||
+									nextUrl.searchParams.get(
+										'activity_package'
+									) !==
+										request.searchParams.get(
+											'activity_package'
+										)))
+						) {
+							showFailure();
+							return;
+						}
+						const hadFocus =
+							loadOlder.ownerDocument?.activeElement ===
+							loadOlder;
+						const responseRunner = responseRoot.querySelector(
+							'[data-ran-booster-activity-runner]'
+						);
+						if (
+							!root.querySelector(
+								'[data-ran-booster-activity-runner]'
+							) &&
+							responseRunner
+						) {
+							root.querySelector(
+								'.ran-booster-attempt-table'
+							)?.before(responseRunner);
+						}
+						if (!exhausted) {
+							list.append(...incomingRows);
+						}
+						incomingRows.forEach(function (row) {
+							htmx.process?.(row);
+						});
+						if (next) {
+							loadOlder.setAttribute(
+								'href',
+								next.getAttribute('href')
+							);
+						} else {
+							loadOlder.parentElement?.remove();
+						}
+						if (announcement) {
+							announcement.textContent = exhausted
+								? __(
+										'No older activity is available.',
+										'ran-booster'
+									)
+								: __('Older activity loaded.', 'ran-booster');
+							announcement.hidden = false;
+							if (hadFocus) {
+								announcement.focus?.({ preventScroll: true });
+							}
+						}
+					} catch {
+						showFailure();
+					}
+				},
+			})
+				.catch(showFailure)
+				.finally(function () {
+					inFlight = false;
+					setBusy(false);
+				});
+		});
+	}
 
 	function initProviderTaskNavigation() {
 		const taskRegion = document.getElementById(

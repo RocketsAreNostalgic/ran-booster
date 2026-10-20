@@ -3162,11 +3162,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( $requested_ref, $page['items'][0]['requested_ref'] );
 		self::assertSame( '2026-10-12 18:00:00', $page['items'][0]['resolved_at'] );
 		self::assertSame( 7, $page['items'][0]['resolved_by'] );
+		self::assertSame( hash( 'sha256', '' ), $page['activity_filter_key'] );
 		self::assertSame( 'v1|' . hash( 'sha256', '' ) . '|' . $time . '|activity|2', $page['next_cursor'] );
 		self::assertStringNotContainsString( 'package_type IN', implode( "\n", $database->reads ) );
 		$_GET  = array( 'before' => $page['next_cursor'] );
 		$older = $presenter->activity();
 		self::assertFalse( $older['unavailable'] );
+		self::assertSame( $page['activity_filter_key'], $older['activity_filter_key'] );
 		self::assertSame( array( 1 ), array_column( $older['items'], 'id' ) );
 		self::assertNull( $older['next_cursor'] );
 		foreach ( array(

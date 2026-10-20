@@ -13,15 +13,16 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$items             = is_array( $deployment_activity['items'] ?? null ) ? $deployment_activity['items'] : array();
-$filters           = is_array( $deployment_activity['filters'] ?? null ) ? $deployment_activity['filters'] : array();
-$filter_options    = is_array( $deployment_activity['filter_options'] ?? null ) ? $deployment_activity['filter_options'] : array();
-$filter_state      = is_array( $deployment_activity['filter_state'] ?? null ) ? $deployment_activity['filter_state'] : array();
-$unavailable       = true === ( $deployment_activity['unavailable'] ?? false );
-$has_cursor        = true === ( $deployment_activity['has_cursor'] ?? false );
-$base_url          = $troubleshooting_base . '&panel=activity';
-$selected_provider = is_string( $filter_state['provider'] ?? null ) ? $filter_state['provider'] : '';
-$selected_package  = is_string( $filter_state['package'] ?? null ) ? $filter_state['package'] : '';
+$items               = is_array( $deployment_activity['items'] ?? null ) ? $deployment_activity['items'] : array();
+$filters             = is_array( $deployment_activity['filters'] ?? null ) ? $deployment_activity['filters'] : array();
+$filter_options      = is_array( $deployment_activity['filter_options'] ?? null ) ? $deployment_activity['filter_options'] : array();
+$filter_state        = is_array( $deployment_activity['filter_state'] ?? null ) ? $deployment_activity['filter_state'] : array();
+$unavailable         = true === ( $deployment_activity['unavailable'] ?? false );
+$has_cursor          = true === ( $deployment_activity['has_cursor'] ?? false );
+$activity_filter_key = is_string( $deployment_activity['activity_filter_key'] ?? null ) ? $deployment_activity['activity_filter_key'] : '';
+$base_url            = $troubleshooting_base . '&panel=activity';
+$selected_provider   = is_string( $filter_state['provider'] ?? null ) ? $filter_state['provider'] : '';
+$selected_package    = is_string( $filter_state['package'] ?? null ) ? $filter_state['package'] : '';
 if ( '' !== $selected_provider ) {
 	$base_url .= '&activity_provider=' . rawurlencode( $selected_provider );
 }
@@ -54,7 +55,7 @@ $origin_labels = array(
 	'webhook' => __( 'Repository webhook', 'ran-booster' ),
 );
 ?>
-<section class="ran-booster-activity" aria-labelledby="ran-booster-activity-heading">
+<section class="ran-booster-activity" aria-labelledby="ran-booster-activity-heading" data-ran-booster-activity data-ran-booster-activity-filter="<?php echo esc_attr( $activity_filter_key ); ?>" data-ran-booster-activity-provider="<?php echo esc_attr( $selected_provider ); ?>" data-ran-booster-activity-package="<?php echo esc_attr( $selected_package ); ?>" data-ran-booster-activity-has-cursor="<?php echo $has_cursor ? '1' : '0'; ?>" data-ran-booster-activity-unavailable="<?php echo $unavailable ? '1' : '0'; ?>">
 	<header class="ran-booster-activity__header">
 		<h3 id="ran-booster-activity-heading"><?php esc_html_e( 'Activity', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Review recorded checks and deployments. Activity is recorded independently of diagnostic logging.', 'ran-booster' ); ?></p>
@@ -93,7 +94,7 @@ $origin_labels = array(
 		?>
 		<div class="notice notice-warning inline"><p><?php echo esc_html( $deployment_activity['filter_notice'] ); ?></p></div><?php } ?>
 	<?php if ( $has_queued ) { ?>
-		<form method="post">
+		<form method="post" data-ran-booster-activity-runner>
 			<?php wp_nonce_field( 'ran-booster-request-deployment-runner' ); ?>
 			<input type="hidden" name="ran_booster[action]" value="request-deployment-runner">
 			<?php submit_button( __( 'Request deployment runner', 'ran-booster' ), 'secondary', 'submit', false ); ?>
@@ -102,8 +103,7 @@ $origin_labels = array(
 	<?php if ( $unavailable ) { ?>
 		<div class="notice notice-error inline"><p><?php esc_html_e( 'Activity is temporarily unavailable.', 'ran-booster' ); ?></p></div>
 	<?php } elseif ( array() === $items && $has_cursor ) { ?>
-		<p><?php esc_html_e( 'No older activity is available.', 'ran-booster' ); ?></p>
-		<p><a class="button" href="<?php echo esc_url( $base_url ); ?>"><?php esc_html_e( 'View latest activity', 'ran-booster' ); ?></a></p>
+		<p data-ran-booster-activity-exhausted><?php esc_html_e( 'No older activity is available.', 'ran-booster' ); ?></p>
 	<?php } elseif ( array() === $items && ( '' !== $selected_provider || '' !== $selected_package ) ) { ?>
 		<p><?php esc_html_e( 'No activity matches these filters.', 'ran-booster' ); ?></p>
 	<?php } elseif ( array() === $items ) { ?>
@@ -117,7 +117,7 @@ $origin_labels = array(
 				<span role="columnheader"><?php esc_html_e( 'Activity', 'ran-booster' ); ?></span>
 				<span role="columnheader"><?php esc_html_e( 'Outcome', 'ran-booster' ); ?></span>
 			</div>
-			<ul class="ran-booster-attempt-list">
+			<ul class="ran-booster-attempt-list" data-ran-booster-activity-list>
 			<?php
 			foreach ( $items as $item ) {
 				$recorded_check   = 'activity' === ( $item['record_source'] ?? '' );
@@ -148,7 +148,7 @@ $origin_labels = array(
 					default => ucfirst( str_replace( array( '.', '_' ), ' ', (string) ( $item['operation'] ?? '' ) ) ),
 				};
 				?>
-				<li class="ran-booster-attempt-row">
+				<li class="ran-booster-attempt-row" data-ran-booster-activity-row="<?php echo esc_attr( (string) ( $item['activity_record_id'] ?? '' ) ); ?>">
 					<div class="ran-booster-attempt-row__summary" role="row">
 						<span class="ran-booster-attempt-row__time" role="cell" data-label="<?php esc_attr_e( 'Time', 'ran-booster' ); ?>"><?php echo esc_html( (string) ( $item['created_at'] ?? '' ) ); ?></span>
 						<span class="ran-booster-attempt-row__package" role="cell" data-label="<?php esc_attr_e( 'Subject', 'ran-booster' ); ?>">
@@ -218,8 +218,13 @@ $origin_labels = array(
 			</ul>
 		</div>
 	<?php } ?>
-	<?php
-	if ( null !== $next ) {
-		?>
-		<p><a class="button" href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'Load older activity', 'ran-booster' ); ?></a></p><?php } ?>
+	<?php if ( ! $unavailable && $has_cursor ) { ?>
+		<p><a class="button" href="<?php echo esc_url( $base_url ); ?>"><?php esc_html_e( 'View latest activity', 'ran-booster' ); ?></a></p>
+	<?php } ?>
+	<?php if ( null !== $next ) { ?>
+		<p data-ran-booster-activity-load-older-wrap><a class="button" data-ran-booster-activity-load-older href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'View older activity', 'ran-booster' ); ?></a></p>
+		<p data-ran-booster-activity-progress role="status" aria-live="polite" hidden><?php esc_html_e( 'Loading older activity…', 'ran-booster' ); ?></p>
+		<p data-ran-booster-activity-error role="alert" tabindex="-1" hidden><?php esc_html_e( 'Older activity could not be loaded. Try again.', 'ran-booster' ); ?></p>
+		<p data-ran-booster-activity-announcement role="status" aria-live="polite" tabindex="-1" hidden></p>
+	<?php } ?>
 </section>

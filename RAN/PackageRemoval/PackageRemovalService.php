@@ -156,6 +156,12 @@ final readonly class PackageRemovalService {
 		}
 		$record                     = ( 'plugin' === $type ? $this->plugins : $this->themes )->recovery_record( $identifier );
 		$record['installed_digest'] = $this->wordpress->installed_fingerprint( $type, $identifier );
+		if ( null === $this->attempts ) {
+			throw new \RuntimeException( 'The recovery operation state is unavailable.' );
+		}
+		if ( $this->attempts->has_unresolved_target_attempt( $type, $identifier ) ) {
+			throw new \RuntimeException( 'Unresolved deployment work prevents recovery.' );
+		}
 		return $record;
 	}
 

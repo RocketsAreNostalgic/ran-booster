@@ -179,12 +179,15 @@ final class RAN_Booster_AdoptionRecoveryProof {
 			throw new RuntimeException( 'The stored identity is unavailable.' );
 		}
 		$request       = new DeploymentRequest( 'example/' . $slug, $this->credential_id, false, 'main', $slug, null, DeploymentPolicy::MANUAL, null, installed_identifier: $id, adoption_token: $old_token );
+		$before_work   = $this->removal->recovery_confirmation( $type, $id );
 		$attempt       = $this->attempts->admit_and_claim_manual( 'update', $type, 'p2-recovery', sha1( 'p2-recovery' . "\0" . 'example/' . $slug ), $request, 'main', 'branch', 1 );
 		$configuration = new ManagedReleaseConfiguration( $slug, 'plugin' === $type ? 'entry.php' : 'style.css' );
 		if ( 'release' === $source ) {
 			// This is real branch history preceding the release switch, not native release work.
 			$this->attempts->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
 			$this->check( $this->release->transition( $type, $id, PackageSource::BRANCH, 1, PackageSource::RELEASE_ASSET, $configuration, 0, $old_token ), 'enable release after link' );
+		} else {
+			$this->expect_failure( fn () => $this->recover( $type, $id, $before_work ), 'new running admission blocks previously reviewed management removal' );
 		}
 		$this->assert_admin_pages( $type, $id, false );
 		$this->check(
@@ -199,14 +202,15 @@ final class RAN_Booster_AdoptionRecoveryProof {
 			'corrupt stored revision'
 		);
 		$this->expect_failure( fn () => $this->package( $type, $id ), 'ordinary hydration rejects corruption' );
-		$this->assert_admin_pages( $type, $id, true );
+		$this->assert_admin_pages( $type, $id, true, 'branch' === $source );
 		$this->expect_failure( fn () => $this->package( $type, $id ), 'admin presentation must not repair corrupt hydration' );
 		$this->check( isset( $this->removal->recovery_targets( $type )[ $id ] ), 'recovery inventory remains reachable' );
-		$confirmation = $this->removal->recovery_confirmation( $type, $id );
 		if ( 'branch' === $source ) {
-			$this->expect_failure( fn () => $this->recover( $type, $id, $confirmation ), 'running admission blocks recovery' );
+			$this->expect_failure( fn () => $this->removal->recovery_confirmation( $type, $id ), 'running work prevents offering a removal confirmation' );
 			$this->attempts->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
+			$this->assert_admin_pages( $type, $id, true );
 		}
+		$confirmation   = $this->removal->recovery_confirmation( $type, $id );
 		$history_before = $this->attempts->find_exact( $attempt->get_id() )?->safe_data();
 		$this->check( $this->filesystem->put_contents( $file, $bytes . "\n/* changed */\n", 0644 ), 'replace confirmed bytes' );
 		$this->expect_failure( fn () => $this->recover( $type, $id, $confirmation ), 'changed installed target refuses recovery' );
@@ -269,7 +273,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 		}
 	}
 
-	private function assert_admin_pages( string $type, string $id, bool $damaged ): void {
+	private function assert_admin_pages( string $type, string $id, bool $damaged, bool $blocked = false ): void {
 		global $wpdb;
 		$before = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package = %s', ran_booster_table_name(), $id ), ARRAY_A );
 		$this->check( is_array( $before ), 'capture exact management row before read-only admin requests' );
@@ -284,6 +288,8 @@ final class RAN_Booster_AdoptionRecoveryProof {
 				if ( $recovery ) {
 					$_GET['recovery']        = '1';
 					$_GET['recovery_target'] = $id;
+				} else {
+					$_GET['package'] = $id;
 				}
 				$html = '';
 				ob_start();
@@ -296,7 +302,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 				} finally {
 					$html = (string) ob_get_clean();
 				}
-				$this->assert_admin_html( $html, $type, $id, $damaged, $recovery );
+				$this->assert_admin_html( $html, $type, $id, $damaged, $recovery, $blocked );
 				if ( ! $damaged && 'plugin' === $type ) {
 					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Exercise WordPress's actual installed-plugin action-link filter.
 					$links = apply_filters( 'plugin_action_links_' . $id, array() );
@@ -304,7 +310,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 				}
 			}
 			if ( '1' === getenv( 'RAN_BOOSTER_RECOVERY_HTTP' ) ) {
-				$this->assert_admin_http( $type, $id, $damaged );
+				$this->assert_admin_http( $type, $id, $damaged, $blocked );
 			}
 		} finally {
 			$_GET  = $original_get;
@@ -313,20 +319,31 @@ final class RAN_Booster_AdoptionRecoveryProof {
 		$this->check( $before === $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package = %s', ran_booster_table_name(), $id ), ARRAY_A ), 'admin bootstrap and read-only pages preserve the exact management row' );
 	}
 
-	private function assert_admin_html( string $html, string $type, string $id, bool $damaged, bool $recovery ): void {
-		if ( ! $recovery ) {
-			$this->check( str_contains( $html, 'Review management removal' ) === $damaged, 'contextual review invitation appears only for damaged settings' );
+	private function assert_admin_html( string $html, string $type, string $id, bool $damaged, bool $recovery, bool $blocked ): void {
+		$this->check( ! str_contains( $html, 'id="ran-booster-recovery-target"' ) && ! str_contains( $html, 'Link this installed package' ), 'failure journey has no unrelated package picker or premature relink action' );
+		if ( ! $damaged ) {
+			$this->check( ! str_contains( $html, 'value="recover-' . $type . '"' ), 'healthy target has no emergency removal form' );
+			$this->check( $recovery ? str_contains( $html, 'Open package settings' ) : str_contains( $html, 'id="ran-booster-package-edit-form"' ), 'healthy direct recovery returns to ordinary settings and ordinary settings remain available' );
+			if ( $recovery ) {
+				$this->check( str_contains( $html, 'data-ran-booster-package-failure-state="healthy"' ), 'healthy direct route is classified as normal settings access' );
+			}
+			return;
+		}
+		$this->check( str_contains( $html, esc_html( $id ) ) && str_contains( $html, 'revision' ), 'package failure retains the exact installed target and known saved-configuration cause' );
+		$this->check( str_contains( $html, 'data-ran-booster-package-failure-state="' . ( $blocked ? 'blocked' : 'damaged' ) . '"' ), 'actual package failure state distinguishes eligible removal from blocked work' );
+		if ( $blocked ) {
+			$this->check( ! str_contains( $html, 'value="recover-' . $type . '"' ), 'running work leaves no executable removal confirmation' );
 			return;
 		}
 		$confirmation = $this->removal->recovery_confirmation( $type, $id );
-		$this->check( str_contains( $html, 'Stop managing an installed package' ) && str_contains( $html, 'name="ran_booster[identifier]" value="' . esc_attr( $id ) . '"' ), 'real recovery page and exact target remain reachable before hydration' );
+		$this->check( str_contains( $html, 'name="ran_booster[identifier]" value="' . esc_attr( $id ) . '"' ), 'real package-specific confirmation remains reachable before hydration' );
 		foreach ( array( 'adoption_token', 'digest', 'installed_digest' ) as $field ) {
 			$this->check( str_contains( $html, 'name="ran_booster[' . $field . ']" value="' . esc_attr( $confirmation[ $field ] ) . '"' ), 'real bound recovery confirmation fields' );
 		}
 		$this->check( 1 === preg_match( '/name="_wpnonce" value="([^"]+)"/', $html, $nonce ) && false !== wp_verify_nonce( $nonce[1], PackageAdminController::recovery_action( $type, $id, $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] ) ), 'real recovery nonce remains bound to the reviewed record and installed bytes' );
 	}
 
-	private function assert_admin_http( string $type, string $id, bool $damaged ): void {
+	private function assert_admin_http( string $type, string $id, bool $damaged, bool $blocked ): void {
 		$origin = (string) getenv( 'RAN_BOOSTER_RECOVERY_TEST_URL' );
 		$parts  = wp_parse_url( $origin );
 		if ( ! defined( 'LOGGED_IN_COOKIE' ) || ! defined( 'AUTH_COOKIE' ) || ! is_array( $parts )
@@ -368,10 +385,12 @@ final class RAN_Booster_AdoptionRecoveryProof {
 				if ( $recovery ) {
 					$query['recovery']        = '1';
 					$query['recovery_target'] = $id;
+				} else {
+					$query['package'] = $id;
 				}
 				$response = wp_remote_get( add_query_arg( $query, $origin . '/wp-admin/admin.php' ), $options );
 				$this->check( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ), 'real authenticated package/recovery GET remains available' );
-				$this->assert_admin_html( wp_remote_retrieve_body( $response ), $type, $id, $damaged, $recovery );
+				$this->assert_admin_html( wp_remote_retrieve_body( $response ), $type, $id, $damaged, $recovery, $blocked );
 			}
 		} finally {
 			$sessions->destroy( $token );

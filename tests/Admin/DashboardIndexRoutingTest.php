@@ -2287,6 +2287,35 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	#[DataProvider( 'package_type_provider' )]
+	public function test_signed_success_notice_is_emitted_once_when_package_settings_fail_to_load( string $type ): void {
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		foreach ( array(
+			'edit'    => 'saved',
+			'install' => 'installed',
+		) as $operation => $completed ) {
+			$_GET      = array(
+				'package'                   => $identifier,
+				'ran_booster_result'        => $operation,
+				'ran_booster_package'       => $identifier,
+				'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ),
+			);
+			$dashboard = $this->dashboard(
+				$this->throwing_secrets(),
+				plugins: new FailingDashboardPluginRepository(),
+				themes: new FailingDashboardThemeRepository()
+			);
+			$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+			$successes = array_values( array_filter( $dashboard->messages, static fn ( array $message ): bool => 'success' === $message['type'] ) );
+
+			self::assertSame( 'packages/recovery', $result['view'] );
+			self::assertSame( $identifier, $result['data']['recovery_identifier'] );
+			self::assertSame( 'blocked', $result['data']['recovery_state'] );
+			self::assertCount( 1, $successes );
+			self::assertSame( ucfirst( $type ) . ' was successfully ' . $completed . '.', $successes[0]['message'] );
+		}
+	}
+
+	#[DataProvider( 'package_type_provider' )]
 	public function test_signed_already_managed_notice_projects_the_managed_package_into_the_create_view( string $type ): void {
 		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
 		$_GET       = array(

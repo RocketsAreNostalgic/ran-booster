@@ -593,7 +593,9 @@ class Dashboard {
 		if ( ! current_user_can( 'update_' . $type . 's' ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage these packages.', 'ran-booster' ) );
 		}
-		$this->package_admin?->add_success_notice( $this, $type );
+		if ( null === $failure ) {
+			$this->package_admin?->add_success_notice( $this, $type );
+		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only target selection; POST verifies the full confirmation nonce.
 		$identifier ??= isset( $_GET['recovery_target'] ) && is_string( $_GET['recovery_target'] ) ? wp_unslash( $_GET['recovery_target'] ) : '';
 		$name         = $identifier;

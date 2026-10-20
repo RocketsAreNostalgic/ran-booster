@@ -1,13 +1,19 @@
 # Provider registration and coexistence: released baseline
 
+For upcoming-release operator instructions, use
+[Choose GitHub support](github-provider-replacement.md). The remainder of this
+document preserves the historical beta.36 baseline; its uses of “currently” and
+“today” refer to that release, not the replacement candidate.
+
 **Status:** Released-baseline characterization for Provider API 15, checked against
 Core beta.36 on 15 October 2026. The replacement work in issues #406–409 is
 authorized for implementation but is not delivered by this release. Earlier
 external-composition proofs do not qualify replacement or credential adoption.
 The registration order and bundled-only behavior described below apply to that
 released baseline. The #171 integration accumulator adds explicit replacement
-selection; its current source contract is documented in
-[the shared contract in #411](https://github.com/RocketsAreNostalgic/ran-booster/issues/411). This baseline
+selection; its presentation is documented in the
+[provider extension contract](provider-extension-contract.md#github-replacement-presentation),
+with coordination in [#411](https://github.com/RocketsAreNostalgic/ran-booster/issues/411). This baseline
 record does not qualify the accumulator or change registration semantics.
 
 ## Short answer

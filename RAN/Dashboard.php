@@ -549,7 +549,7 @@ class Dashboard {
 				} catch ( PluginNotFound | ThemeNotFound ) {
 					// An absent package returns to the matching list.
 				} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
-					return $this->package_storage_failure_index( $package_view, $type, $failure );
+					return $this->render_recovery( $package_view, $identifier, $failure );
 				}
 			}
 			if ( null !== $package ) {
@@ -588,34 +588,89 @@ class Dashboard {
 		return $this->render( 'packages/index', $this->package_index_data( $packages, $package_view ) );
 	}
 
-	private function render_recovery( PackagePagePresenter $package_view ): mixed {
+	private function render_recovery( PackagePagePresenter $package_view, ?string $identifier = null, ?Throwable $failure = null ): mixed {
 		$type = $package_view->get_type();
 		if ( ! current_user_can( 'update_' . $type . 's' ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage these packages.', 'ran-booster' ) );
 		}
 		$this->package_admin?->add_success_notice( $this, $type );
-		$targets      = array();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only target selection; POST verifies the full confirmation nonce.
+		$identifier ??= isset( $_GET['recovery_target'] ) && is_string( $_GET['recovery_target'] ) ? wp_unslash( $_GET['recovery_target'] ) : '';
+		$name         = $identifier;
+		$state        = 'unknown';
 		$confirmation = null;
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only exact target selection; POST verifies the full confirmation nonce.
-		$identifier = isset( $_GET['recovery_target'] ) && is_string( $_GET['recovery_target'] ) ? wp_unslash( $_GET['recovery_target'] ) : '';
-		try {
-			$removals = $this->removals ?? throw new LogicException( 'Recovery is unavailable.' );
-			$targets  = $removals->recovery_targets( $type );
-			if ( '' !== $identifier ) {
-				$confirmation = $removals->recovery_confirmation( $type, $identifier );
+		$reason       = __( 'Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package.', 'ran-booster' );
+		$blocker      = null;
+		if ( '' !== $identifier ) {
+			$state = 'blocked';
+			try {
+				new \RAN\Storage\PackageModel( array( 'package' => $identifier ) );
+				if ( null === $failure ) {
+					try {
+						$package = 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier );
+						if ( ! $package instanceof Package ) {
+							throw new LogicException( 'The management record is unavailable.' );
+						}
+					} catch ( PackageStorageFailure | \InvalidArgumentException $read_failure ) {
+						$failure = $read_failure;
+					}
+				}
+				if ( null === $failure ) {
+					$state  = 'healthy';
+					$name   = (string) $package->name;
+					$reason = __( 'Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it.', 'ran-booster' );
+				} else {
+					$reason   = $this->package_settings_failure_reason( $failure );
+					$removals = $this->removals ?? throw new LogicException( 'Recovery is unavailable.' );
+					$targets  = $removals->recovery_targets( $type );
+					if ( ! isset( $targets[ $identifier ] ) ) {
+						throw new LogicException( 'The installed package is unavailable.' );
+					}
+					$name = $targets[ $identifier ];
+					if ( $failure instanceof \InvalidArgumentException ) {
+						try {
+							$confirmation = $removals->recovery_confirmation( $type, $identifier );
+							$state        = 'damaged';
+						} catch ( Throwable $unsafe ) {
+							$blocker = 'Unresolved deployment work prevents recovery.' === $unsafe->getMessage()
+								? __( 'Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again.', 'ran-booster' )
+								: __( 'Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again.', 'ran-booster' );
+						}
+					}
+				}
+			} catch ( Throwable $unsafe ) {
+				$blocker = __( 'Booster cannot verify this installed package and its management record. No management changes have been made.', 'ran-booster' );
+				if ( null === $failure ) {
+					$reason = $blocker;
+				}
 			}
-		} catch ( Throwable $failure ) {
-			$this->add_failure_message( new WP_Error( 'ran_booster_recovery_unavailable', __( 'Booster cannot safely stop managing this selection. The installed target, management identity, or storage could not be verified. Resolve that uncertainty before trying again.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery_confirmation' ) );
 		}
 		return $this->render(
 			'packages/recovery',
 			array(
 				'package_view'          => $package_view,
-				'recovery_targets'      => $targets,
-				'recovery_confirmation' => $confirmation,
 				'recovery_identifier'   => $identifier,
+				'recovery_name'         => $name,
+				'recovery_state'        => $state,
+				'recovery_reason'       => $reason,
+				'recovery_blocker'      => $blocker,
+				'recovery_confirmation' => $confirmation,
 			)
 		);
+	}
+
+	private function package_settings_failure_reason( Throwable $failure ): string {
+		if ( $failure instanceof PackageStorageFailure ) {
+			return $failure->getMessage();
+		}
+		return match ( $failure->getMessage() ) {
+			'The managed package source revision is invalid.' => __( 'Booster’s saved update revision is invalid. It cannot safely use this package’s management settings.', 'ran-booster' ),
+			'The managed package source is invalid.' => __( 'Booster’s saved update source is invalid.', 'ran-booster' ),
+			'The deployment policy is not recognised.', 'A deployment policy must be a string.' => __( 'Booster’s saved deployment policy is invalid.', 'ran-booster' ),
+			'The repository credential identity is invalid.' => __( 'Booster’s saved repository credential reference is invalid.', 'ran-booster' ),
+			'The repository privacy setting is invalid.' => __( 'Booster’s saved repository privacy setting is invalid.', 'ran-booster' ),
+			default => __( 'Booster’s saved management configuration for this package is invalid and cannot be opened safely.', 'ran-booster' ),
+		};
 	}
 
 	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|null */
@@ -866,8 +921,6 @@ class Dashboard {
 
 		$data                             = $this->package_index_data( $packages, $package_view );
 		$data['package_list_unavailable'] = true;
-		$data['management_removal_help']  = $failure instanceof \InvalidArgumentException
-			|| 'ran_booster_storage_invalid_provider_identity' === $failure->get_diagnostic_id();
 		return $this->render( 'packages/index', $data );
 	}
 

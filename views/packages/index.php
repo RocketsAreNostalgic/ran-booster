@@ -113,21 +113,22 @@ $policy_labels = array(
 	</p>
 
 	<?php require dirname( __DIR__ ) . '/notices.php'; ?>
-	<?php if ( ! empty( $management_removal_help ) ) { ?>
-		<p class="description"><?php esc_html_e( 'Can’t open a package’s settings? Review whether Booster can safely stop managing it while keeping its installed files. This does not repair the package or its data.', 'ran-booster' ); ?>
-		<a href="
-		<?php
-		echo esc_url(
-			add_query_arg(
-				array(
-					'page'     => $package_view->get_page_slug(),
-					'recovery' => '1',
-				),
-				$package_admin_url
-			)
-		);
-		?>
-					"><?php esc_html_e( 'Review management removal', 'ran-booster' ); ?></a></p>
+	<?php if ( ! empty( $package_list_unavailable ) ) { ?>
+		<p class="description"><?php esc_html_e( 'Booster could not safely identify the affected management record. Review Troubleshooting before making management changes.', 'ran-booster' ); ?>
+			<a href="
+			<?php
+			echo esc_url(
+				add_query_arg(
+					array(
+						'page' => 'ran-booster',
+						'tab'  => 'troubleshooting',
+					),
+					$package_admin_url
+				)
+			);
+			?>
+						"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a>
+		</p>
 	<?php } ?>
 </div>
 

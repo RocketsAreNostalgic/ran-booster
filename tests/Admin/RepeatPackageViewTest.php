@@ -699,7 +699,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	#[DataProvider( 'managed_package_context_matrix' )]
-	public function test_only_settings_failure_payload_offers_abounded_management_removal_review(
+	public function test_unidentified_inventory_failure_never_offers_an_installed_package_picker(
 		PackagePagePresenter $package_view,
 		string $managed_package_identifier,
 		bool $multisite
@@ -708,36 +708,34 @@ final class RepeatPackageViewTest extends TestCase {
 		$packages                                      = array();
 		$package_providers                             = array();
 		$package_list_unavailable                      = true;
-		foreach ( array( false, true ) as $management_removal_help ) {
-			ob_start();
-			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
-			$html = (string) ob_get_clean();
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
 
-			self::assertSame( $management_removal_help, str_contains( $html, 'Review management removal' ) );
-			self::assertSame( $management_removal_help, str_contains( $html, 'recovery=1' ) );
-			if ( $management_removal_help ) {
-				self::assertStringContainsString( 'page=' . $package_view->get_page_slug(), $html );
-				self::assertStringContainsString( 'Review whether Booster can safely stop managing it while keeping its installed files.', $html );
-			}
-			self::assertStringContainsString( 'Package settings could not be loaded.', $html );
-			self::assertStringNotContainsString( 'Add your first', $html );
-			self::assertStringNotContainsString( $managed_package_identifier, $html );
-		}
+		self::assertStringContainsString( $package_view->get_plural_label(), $html );
+		self::assertStringContainsString( 'Package settings could not be loaded.', $html );
+		self::assertStringNotContainsString( 'Add your first', $html );
+		self::assertStringNotContainsString( 'recovery=1', $html );
+		self::assertStringNotContainsString( 'Review management removal', $html );
+		self::assertStringNotContainsString( $managed_package_identifier, $html );
 	}
 
 	#[DataProvider( 'managed_package_context_matrix' )]
-	public function test_explicit_management_removal_review_keeps_exact_confirmation_and_files_retained_copy(
+	public function test_damaged_package_confirmation_is_exact_and_has_no_unrelated_choices(
 		PackagePagePresenter $package_view,
 		string $managed_package_identifier,
 		bool $multisite
 	): void {
 		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
 		$recovery_identifier                           = $managed_package_identifier;
-		$recovery_targets                              = array( $recovery_identifier => 'Example <package>' );
+		$recovery_name                                 = 'Example <package>';
+		$recovery_reason                               = 'The saved update revision is invalid.';
+		$recovery_state                                = 'damaged';
+		$recovery_blocker                              = null;
 		$recovery_confirmation                         = array(
 			'id'               => '42',
-			'package'          => 'example',
-			'type'             => 1,
+			'package'          => $managed_package_identifier,
+			'type'             => 'plugin' === $package_view->get_type() ? 1 : 2,
 			'source'           => 'branch',
 			'adoption_token'   => 'lifetime-token',
 			'digest'           => 'record-digest',
@@ -747,11 +745,8 @@ final class RepeatPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/recovery.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Stop managing an installed package', $html );
-		self::assertStringContainsString( 'Review management removal', $html );
-		self::assertStringContainsString( 'This keeps installed files, activation, package data, shared credentials and deployment history.', $html );
-		self::assertStringContainsString( 'Running or unresolved operations prevent removal.', $html );
-		self::assertStringContainsString( 'name="recovery" value="1"', $html );
+		self::assertStringContainsString( 'Example &lt;package&gt;', $html );
+		self::assertStringContainsString( $recovery_reason, $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="recover-' . $package_view->get_type() . '"', $html );
 		self::assertStringContainsString( 'name="ran_booster[identifier]" value="' . $recovery_identifier . '"', $html );
 		self::assertStringContainsString( 'name="ran_booster[confirm_package_removal]" value="1" required', $html );
@@ -762,8 +757,55 @@ final class RepeatPackageViewTest extends TestCase {
 			'name="_wpnonce" value="' . \RAN\Admin\PackageAdminController::recovery_action( $package_view->get_type(), $recovery_identifier, 'lifetime-token', 'record-digest', 'installed-digest' ) . '"',
 			$html
 		);
-		self::assertStringContainsString( 'Example &lt;package&gt;', $html );
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		try {
+			self::assertTrue( $document->loadHTML( '<!doctype html><html><body>' . $html . '</body></html>' ) );
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+		}
+		$xpath             = new \DOMXPath( $document );
+		$forms             = $xpath->query( '//form[@method="post"]' );
+		$unrelated_choices = $xpath->query( '//select|//form[@method="get"]' );
+		self::assertInstanceOf( \DOMNodeList::class, $forms );
+		self::assertInstanceOf( \DOMNodeList::class, $unrelated_choices );
+		self::assertSame( 1, $forms->length );
+		self::assertSame( 0, $unrelated_choices->length );
+		self::assertStringNotContainsString( 'relink=', $html );
+		self::assertStringNotContainsString( 'Link this installed package', $html );
 		self::assertStringNotContainsString( 'Recover package management', $html );
+	}
+
+	#[DataProvider( 'managed_package_context_matrix' )]
+	public function test_healthy_blocked_and_unidentified_recovery_states_offer_no_removal_form(
+		PackagePagePresenter $package_view,
+		string $managed_package_identifier,
+		bool $multisite
+	): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
+		foreach ( array( 'healthy', 'blocked', 'unknown' ) as $recovery_state ) {
+			$recovery_identifier   = 'unknown' === $recovery_state ? '' : $managed_package_identifier;
+			$recovery_name         = 'Example package';
+			$recovery_reason       = 'A safely bounded <explanation>.';
+			$recovery_confirmation = null;
+			$recovery_blocker      = null;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/recovery.php';
+			$html = (string) ob_get_clean();
+
+			self::assertStringContainsString( 'Back to Managed ' . $package_view->get_plural_label(), $html, $recovery_state );
+			self::assertStringNotContainsString( '<form', $html, $recovery_state );
+			self::assertStringNotContainsString( '<select', $html, $recovery_state );
+			self::assertStringNotContainsString( 'relink=', $html, $recovery_state );
+			self::assertStringNotContainsString( 'name="ran_booster[action]"', $html, $recovery_state );
+			self::assertSame( 'healthy' === $recovery_state, str_contains( $html, 'Open package settings' ), $recovery_state );
+			if ( 'healthy' === $recovery_state ) {
+				self::assertStringContainsString( 'package=' . rawurlencode( $managed_package_identifier ), $html );
+			} else {
+				self::assertStringContainsString( 'A safely bounded &lt;explanation&gt;.', $html, $recovery_state );
+			}
+		}
 	}
 
 	/** @return array{default_provider: string, providers: list<array<string, mixed>>} */

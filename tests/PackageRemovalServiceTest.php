@@ -132,11 +132,11 @@ final class PackageRemovalServiceTest extends TestCase {
 	public function test_recovery_rejects_uncertain_work_storage_and_releases_lock(): void {
 		$fixture              = $this->fixture();
 		$database             = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$database->fail_reads = true;
 		$attempts             = $this->attempts( $database );
 		$lock                 = new RemovalUpdaterLock();
 		$service              = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $attempts, $lock );
 		$confirmation         = $service->recovery_confirmation( 'plugin', 'example/example.php' );
+		$database->fail_reads = true;
 		try {
 			$service->recover( 'plugin', 'example/example.php', $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] );
 			self::fail( 'Unresolved target work must prevent recovery.' );
@@ -144,6 +144,59 @@ final class PackageRemovalServiceTest extends TestCase {
 			self::assertFalse( $fixture->plugins->unlinked );
 			self::assertNotEmpty( $database->queries );
 			self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
+		}
+	}
+
+	public function test_recovery_review_refuses_missing_running_or_unreadable_work_state_before_offering_confirmation(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( 'missing', 'running', 'unreadable' ) as $state ) {
+				$fixture    = $this->fixture();
+				$identifier = 'plugin' === $type ? 'example/example.php' : 'example';
+				$database   = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+				$attempts   = 'missing' === $state ? null : $this->attempts( $database );
+				if ( 'running' === $state ) {
+					$database->rows = array(
+						array(
+							'id'                      => 1,
+							'correlation_id'          => str_repeat( 'a', 32 ),
+							'source'                  => 'manual',
+							'operation'               => 'install',
+							'package_type'            => $type,
+							'package_slug'            => 'example',
+							'package_source'          => 'branch',
+							'package_source_revision' => 0,
+							'provider'                => 'gh',
+							'provider_repository_id'  => 'R_example',
+							'requested_ref'           => 'main',
+							'resolved_ref'            => null,
+							'delivery_id'             => null,
+							'delivery_digest'         => null,
+							'state'                   => 'running',
+							'mutation_started_at'     => null,
+							'outcome_code'            => null,
+							'finished_at'             => null,
+							'created_at'              => '2026-10-20 00:00:00',
+							'request_json'            => ( new \RAN\Deployment\DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1 ) )->to_json(),
+						),
+					);
+					self::assertSame( \RAN\Deployment\DeploymentState::RUNNING, \RAN\Deployment\DeploymentAttempt::from_database( $database->rows[0] )->get_state() );
+				} elseif ( 'unreadable' === $state ) {
+					$database->fail_reads = true;
+				}
+				$lock    = new RemovalUpdaterLock();
+				$service = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $attempts, $lock );
+
+				try {
+					$service->recovery_confirmation( $type, $identifier );
+					self::fail( 'Unverified work state must prevent a removal confirmation.' );
+				} catch ( \RuntimeException ) {
+					self::assertFalse( $fixture->plugins->unlinked );
+					self::assertFalse( $fixture->themes->unlinked );
+					self::assertSame( array(), $fixture->gateway->events );
+					self::assertSame( array(), $fixture->gateway->invalidated );
+					self::assertSame( array(), $lock->events );
+				}
+			}
 		}
 	}
 

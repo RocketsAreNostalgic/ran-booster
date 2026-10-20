@@ -2488,13 +2488,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	#[DataProvider( 'package_type_provider' )]
-	public function test_explicit_recovery_route_bypasses_inventory_and_selected_package_hydration( string $type ): void {
+	public function test_unidentified_recovery_url_never_reads_inventory_or_offers_unrelated_targets( string $type ): void {
 		$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $type . 's' ] = true;
-		$_GET    = array(
-			'recovery'        => '1',
-			'package'         => 'corrupt',
-			'recovery_target' => 'corrupt',
-		);
+		$_GET    = array( 'recovery' => '1' );
 		$plugins = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
 		$plugins->expects( self::never() )->method( 'booster_plugin_from_file' );
@@ -2503,35 +2499,168 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$themes->expects( self::never() )->method( 'booster_theme_from_stylesheet' );
 		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
 		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
 		self::assertSame( 'packages/recovery', $result['view'] );
+		self::assertSame( 'unknown', $result['data']['recovery_state'] );
+		self::assertSame( '', $result['data']['recovery_identifier'] );
 		self::assertNull( $result['data']['recovery_confirmation'] );
+		self::assertArrayNotHasKey( 'recovery_targets', $result['data'] );
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_healthy_direct_recovery_target_returns_to_normal_settings_without_removal_confirmation( string $type ): void {
+		$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $type . 's' ] = true;
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		$_GET       = array(
+			'recovery'        => '1',
+			'recovery_target' => $identifier,
+		);
+		$package    = $this->managed_package( $identifier, 'Healthy package', 'repository-id' );
+		$plugins    = $this->createMock( PluginRepository::class );
+		$themes     = $this->createMock( ThemeRepository::class );
+		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$themes->expects( self::never() )->method( 'all_booster_themes' );
+		$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
+		$gateway = $this->createStub( PackageRemovalGateway::class );
+		$gateway->method( 'installed_targets' )->willReturn( array( $identifier => 'Healthy package' ) );
+		$removals  = new PackageRemovalService( $plugins, $themes, $gateway, null, $this->createStub( WordPressUpdaterLock::class ) );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, removals: $removals );
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+		self::assertSame( 'packages/recovery', $result['view'] );
+		self::assertSame( 'healthy', $result['data']['recovery_state'] );
+		self::assertSame( $identifier, $result['data']['recovery_identifier'] );
+		self::assertNull( $result['data']['recovery_confirmation'] );
+		self::assertSame( array(), $dashboard->messages );
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_missing_provider_keeps_the_ordinary_package_settings_and_its_saved_identity( string $type ): void {
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		$_GET       = array( 'package' => $identifier );
+		$package    = $this->managed_package( $identifier, 'Provider-dependent package', 'saved-provider-id', provider: 'temporarily-offline' );
+		$plugins    = $this->createMock( PluginRepository::class );
+		$themes     = $this->createMock( ThemeRepository::class );
+		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$themes->expects( self::never() )->method( 'all_booster_themes' );
+		$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, providers: new ProviderRegistry( array() ) );
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+		self::assertSame( 'packages/edit', $result['view'] );
+		self::assertSame( $package, $result['data']['package'] );
+		self::assertSame( 'temporarily-offline', $result['data']['package_provider_settings']['default_provider'] );
+		self::assertFalse( $result['data']['package_provider_settings']['providers'][0]['available'] );
+		self::assertSame( array(), $dashboard->messages );
 	}
 
 	#[DataProvider( 'package_storage_read_provider' )]
-	public function test_invalid_package_storage_renders_asafe_empty_index( string $type, bool $detail ): void {
+	public function test_invalid_storage_retains_known_detail_identity_but_never_guesses_an_inventory_target( string $type, bool $detail ): void {
 		if ( $detail ) {
 			$_GET['package'] = 'upstream-provider-canary';
 		}
 		$dashboard = $this->dashboard(
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
-			null,
-			null,
-			null,
-			new FailingDashboardPluginRepository(),
-			new FailingDashboardThemeRepository()
+			plugins: new FailingDashboardPluginRepository(),
+			themes: new FailingDashboardThemeRepository()
 		);
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
 
-		$result = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+		self::assertSame( $detail ? 'packages/recovery' : 'packages/index', $result['view'] );
+		if ( $detail ) {
+			self::assertSame( 'upstream-provider-canary', $result['data']['recovery_identifier'] );
+			self::assertSame( 'blocked', $result['data']['recovery_state'] );
+			self::assertNull( $result['data']['recovery_confirmation'] );
+		} else {
+			self::assertSame( array(), $result['data']['packages'] );
+			self::assertTrue( $result['data']['package_list_unavailable'] );
+			self::assertFalse( $result['data']['management_removal_help'] ?? false );
+		}
+		if ( ! $detail ) {
+			self::assertNotEmpty( $dashboard->messages );
+			self::assertSame( 'error', $dashboard->messages[0]['type'] );
+			self::assertStringNotContainsString( 'upstream-provider-canary', $dashboard->messages[0]['message'] );
+		}
+	}
 
-		self::assertSame( 'packages/index', $result['view'] );
-		self::assertSame( array(), $result['data']['packages'] );
-		self::assertTrue( $result['data']['management_removal_help'] );
-		self::assertTrue( $result['data']['package_list_unavailable'] );
-		self::assertCount( 1, $dashboard->messages );
-		self::assertSame( 'error', $dashboard->messages[0]['type'] );
-		self::assertSame( 'ran_booster_storage_invalid_provider_identity', $dashboard->messages[0]['code'] );
-		self::assertSame( array( 'recovery_required' => false ), $dashboard->messages[0]['data'] );
-		self::assertStringNotContainsString( 'upstream-provider-canary', $dashboard->messages[0]['message'] );
+	/** @return list<array{string, bool, bool}> */
+	public static function package_recovery_review_provider(): array {
+		$cases = array();
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( false, true ) as $detail ) {
+				foreach ( array( false, true ) as $blocked ) {
+					$cases[] = array( $type, $detail, $blocked );
+				}
+			}
+		}
+		return $cases;
+	}
+
+	#[DataProvider( 'package_recovery_review_provider' )]
+	public function test_invalid_saved_settings_keep_exact_target_and_verify_eligibility_before_confirmation( string $type, bool $detail, bool $blocked ): void {
+		$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $type . 's' ] = true;
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		$_GET       = $detail ? array( 'package' => $identifier ) : array(
+			'recovery'        => '1',
+			'recovery_target' => $identifier,
+		);
+		$plugins    = $this->createMock( PluginRepository::class );
+		$themes     = $this->createMock( ThemeRepository::class );
+		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$themes->expects( self::never() )->method( 'all_booster_themes' );
+		$plugins->expects( self::never() )->method( 'recover_unlink' );
+		$themes->expects( self::never() )->method( 'recover_unlink' );
+		$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( 'booster_plugin_from_file' )->with( $identifier )->willThrowException( new \InvalidArgumentException( 'The managed package source revision is invalid.' ) );
+		$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( 'booster_theme_from_stylesheet' )->with( $identifier )->willThrowException( new \InvalidArgumentException( 'The managed package source revision is invalid.' ) );
+		$record     = array(
+			'id'             => '42',
+			'package'        => $identifier,
+			'type'           => 'plugin' === $type ? 1 : 2,
+			'adoption_token' => 'lifetime-token',
+			'source'         => 'branch',
+			'digest'         => 'record-digest',
+		);
+		$repository = 'plugin' === $type ? $plugins : $themes;
+		$repository->expects( self::once() )->method( 'recovery_record' )->with( $identifier )->willReturn( $record );
+		$gateway = $this->createMock( PackageRemovalGateway::class );
+		$gateway->method( 'installed_targets' )->with( $type )->willReturn(
+			array(
+				$identifier           => 'Installed package',
+				'unrelated/other.php' => 'Unrelated installed package',
+			)
+		);
+		$gateway->expects( self::once() )->method( 'installed_fingerprint' )->with( $type, $identifier )->willReturn( 'installed-digest' );
+		$attempt_database = new AttemptRepositoryDatabase();
+		if ( $blocked ) {
+			$attempt                 = DashboardActivityWpdb::attempt( 1, 'running' );
+			$attempt['package_type'] = $type;
+			$attempt['outcome_code'] = null;
+			$attempt['finished_at']  = null;
+			$attempt_database->rows  = array( $attempt );
+		}
+		$attempts = new DeploymentAttemptRepository( $attempt_database, 'wp_ran_booster_attempts', database_lifecycle: $this->createStub( Database::class ) );
+		$lock     = $this->createMock( WordPressUpdaterLock::class );
+		$lock->expects( self::never() )->method( 'acquire' );
+		$removals  = new PackageRemovalService( $plugins, $themes, $gateway, $attempts, $lock );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, removals: $removals );
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+		self::assertSame( 'packages/recovery', $result['view'] );
+		self::assertSame( $blocked ? 'blocked' : 'damaged', $result['data']['recovery_state'] );
+		self::assertSame( $identifier, $result['data']['recovery_identifier'] );
+		self::assertSame( 'Installed package', $result['data']['recovery_name'] );
+		self::assertStringContainsString( 'revision', $result['data']['recovery_reason'] );
+		if ( $blocked ) {
+			self::assertNull( $result['data']['recovery_confirmation'] );
+			self::assertStringContainsString( 'unresolved deployment work', $result['data']['recovery_blocker'] );
+		} else {
+			self::assertSame( $record + array( 'installed_digest' => 'installed-digest' ), $result['data']['recovery_confirmation'] );
+			self::assertNull( $result['data']['recovery_blocker'] );
+		}
+		self::assertArrayNotHasKey( 'recovery_targets', $result['data'] );
+		self::assertNotEmpty( array_filter( $attempt_database->queries, static fn ( string $query ): bool => str_contains( $query, "state IN ('queued','running')" ) ) );
 	}
 
 	#[DataProvider( 'package_type_provider' )]
@@ -2587,29 +2716,29 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	#[DataProvider( 'package_storage_read_provider' )]
-	public function test_management_removal_help_distinguishes_unreadable_settings_from_storage_failures( string $type, bool $detail ): void {
-		foreach ( array(
-			new \InvalidArgumentException( 'Saved package settings are invalid.' ),
-			PackageStorageFailure::query_failed(),
-			PackageStorageFailure::unsupported_database(),
-			PackageStorageFailure::duplicate_package_rows(),
-		) as $failure ) {
+	public function test_general_storage_failure_never_offers_management_removal( string $type, bool $detail ): void {
+		foreach ( array( PackageStorageFailure::query_failed(), PackageStorageFailure::unsupported_database(), PackageStorageFailure::duplicate_package_rows() ) as $failure ) {
 			$_GET    = $detail ? array( 'package' => 'corrupt' ) : array();
 			$plugins = $this->createMock( PluginRepository::class );
 			$themes  = $this->createMock( ThemeRepository::class );
-			$plugins->expects( 'plugin' === $type ? self::once() : self::never() )
-				->method( $detail ? 'booster_plugin_from_file' : 'all_booster_plugins' )->willThrowException( $failure );
-			$themes->expects( 'theme' === $type ? self::once() : self::never() )
-				->method( $detail ? 'booster_theme_from_stylesheet' : 'all_booster_themes' )->willThrowException( $failure );
+			$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( $detail ? 'booster_plugin_from_file' : 'all_booster_plugins' )->willThrowException( $failure );
+			$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( $detail ? 'booster_theme_from_stylesheet' : 'all_booster_themes' )->willThrowException( $failure );
 			$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
 			$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
 
-			self::assertSame( 'packages/index', $result['view'] );
-			self::assertSame( array(), $result['data']['packages'] );
-			self::assertSame( $failure instanceof \InvalidArgumentException, $result['data']['management_removal_help'] );
-			self::assertTrue( $result['data']['package_list_unavailable'] );
-			self::assertCount( 1, $dashboard->messages );
-			self::assertSame( 'error', $dashboard->messages[0]['type'] );
+			self::assertSame( $detail ? 'packages/recovery' : 'packages/index', $result['view'] );
+			if ( $detail ) {
+				self::assertSame( 'blocked', $result['data']['recovery_state'] );
+				self::assertSame( 'corrupt', $result['data']['recovery_identifier'] );
+				self::assertNull( $result['data']['recovery_confirmation'] );
+			} else {
+				self::assertSame( array(), $result['data']['packages'] );
+				self::assertFalse( $result['data']['management_removal_help'] ?? false );
+				self::assertTrue( $result['data']['package_list_unavailable'] );
+			}
+			if ( ! $detail ) {
+				self::assertNotEmpty( $dashboard->messages );
+			}
 		}
 	}
 
@@ -3523,7 +3652,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
 		?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		?WordPressUpdaterLock $branch_check_lock = null,
-		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null
+		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
+		?PackageRemovalService $removals = null
 	): RoutingDashboard {
 		$providers         = $providers ?? $this->providers( $provider_credentials );
 		$branch_check_lock = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
@@ -3571,6 +3701,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$debug_capture,
 			null,
 			$admin_add_ons,
+			removals: $removals,
 			activity: $this->empty_activity_store()
 		);
 	}

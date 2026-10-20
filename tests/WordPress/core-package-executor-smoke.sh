@@ -25,8 +25,9 @@ if [[ -L "$marker" || ! -f "$marker" ]] ||
 	echo 'The core executor smoke test requires the expected disposable-site marker.' >&2
 	exit 2
 fi
-if [[ "$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" != '8.2' ]]; then
-	echo 'The core executor smoke test requires PHP 8.2.' >&2
+expected_php="${RAN_BOOSTER_TEST_PHP_VERSION-8.2}"
+if [[ ! "$expected_php" =~ ^[0-9]+\.[0-9]+$ ]] || ! actual_php="$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" || [[ "$actual_php" != "$expected_php" ]]; then
+	echo "The core executor smoke test requires PHP $expected_php (major.minor)." >&2
 	exit 2
 fi
 

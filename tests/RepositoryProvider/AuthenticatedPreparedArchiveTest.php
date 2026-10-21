@@ -215,6 +215,42 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		}
 	}
 
+	public function test_cleanup_closes_guarded_archive_resources_but_retains_fresh_head_authority(): void {
+		$allowed                       = true;
+		$invalidate_after_verification = false;
+		$verifications                 = 0;
+		$archive                       = new AuthenticatedPreparedArchive(
+			'https://archives.example.test/guarded-cleanup-verifier.zip',
+			self::REF,
+			$this->authorizer( 'Bearer guarded-cleanup-canary' ),
+			static function () use ( &$allowed, &$invalidate_after_verification, &$verifications ): void {
+				++$verifications;
+				if ( $invalidate_after_verification ) {
+					$allowed = false;
+				}
+			},
+			static function () use ( &$allowed ): bool {
+				return $allowed;
+			}
+		);
+		$archive->cleanup();
+		$this->assert_no_hooks();
+
+		$this->assert_operation_refused( fn () => $archive->get_url() );
+		$this->assert_operation_refused( fn () => $archive->get_resolved_ref() );
+		$archive->verify_current_head();
+		self::assertSame( 1, $verifications );
+
+		$allowed = false;
+		$this->assert_operation_refused( fn () => $archive->verify_current_head() );
+		self::assertSame( 1, $verifications );
+
+		$allowed                       = true;
+		$invalidate_after_verification = true;
+		$this->assert_operation_refused( fn () => $archive->verify_current_head() );
+		self::assertSame( 2, $verifications );
+	}
+
 	public function test_anonymous_operation_guard_survives_repeated_http_and_never_touches_foreign_urls(): void {
 		$allowed = true;
 		$calls   = 0;

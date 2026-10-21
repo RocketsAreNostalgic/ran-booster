@@ -69,11 +69,11 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 
 
 	public function verify_current_head(): void {
-		$this->assert_operation_allowed();
+		$this->assert_head_verification_allowed();
 		if ( null !== $this->head_verifier ) {
 			( $this->head_verifier )();
 		}
-		$this->assert_operation_allowed();
+		$this->assert_head_verification_allowed();
 	}
 
 	/**
@@ -153,11 +153,21 @@ final class AuthenticatedPreparedArchive implements PreparedArchive {
 	}
 
 	private function assert_operation_allowed(): void {
+		if ( null !== $this->operation_guard ) {
+			if ( $this->cleaned ) {
+				throw new RuntimeException( 'Provider archive operation is unavailable.' );
+			}
+			$this->assert_head_verification_allowed();
+		}
+	}
+
+	/** Current-head authority outlives cleanup of one-request archive resources. */
+	private function assert_head_verification_allowed(): void {
 		if ( null === $this->operation_guard ) {
 			return;
 		}
 		try {
-			$allowed = ! $this->cleaned && true === ( $this->operation_guard )();
+			$allowed = true === ( $this->operation_guard )();
 		} catch ( Throwable ) {
 			$allowed = false;
 		}

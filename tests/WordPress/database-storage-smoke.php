@@ -15,6 +15,18 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	throw new RuntimeException( 'This proof must run through WP-CLI.' );
 }
 
+$ran_booster_site = realpath( ABSPATH );
+if ( ! is_string( $ran_booster_site ) || realpath( (string) getenv( 'RAN_BOOSTER_WORDPRESS_PATH' ) ) !== $ran_booster_site
+	|| is_link( rtrim( ABSPATH, '/' ) ) || is_link( WP_CONTENT_DIR ) || is_link( WP_PLUGIN_DIR )
+	|| realpath( WP_CONTENT_DIR ) !== $ran_booster_site . '/wp-content'
+	|| realpath( WP_PLUGIN_DIR ) !== $ran_booster_site . '/wp-content/plugins'
+	|| 'http://localhost' !== get_option( 'siteurl' )
+	|| is_link( ABSPATH . '.ran-booster-disposable-test-site' )
+	|| "RAN Booster disposable test site\n" !== file_get_contents( ABSPATH . '.ran-booster-disposable-test-site' ) ) {
+	throw new RuntimeException( 'The database proof requires the exact marked disposable site.' );
+}
+require_once __DIR__ . '/../Storage/HistoricalIdentityMigration.php';
+
 $ran_booster_container = require __DIR__ . '/core-container-fixture.php';
 if ( ! $ran_booster_container instanceof CoreContainer ) {
 	throw new RuntimeException( 'RAN Booster is not active.' );
@@ -28,9 +40,12 @@ global $wpdb;
 $ran_booster_package_table = ran_booster_table_name();
 $ran_booster_attempt_table = Database::attempt_table_name();
 
-if ( '14.0' !== Database::$booster_db_version ) {
-	throw new RuntimeException( 'The database smoke requires the schema 14.0 lifecycle.' );
+if ( '15.0' !== Database::$booster_db_version ) {
+	throw new RuntimeException( 'The database smoke requires the schema 15.0 lifecycle.' );
 }
+
+$ran_booster_selection_proof = require __DIR__ . '/selection-install-lifecycle-proof.php';
+$ran_booster_selection_proof( $wpdb );
 
 $ran_booster_schema_seven_package = array(
 	'package'                => 'ran-booster-schema-seven-marker/ran-booster-schema-seven-marker.php',
@@ -109,6 +124,14 @@ $ran_booster_assert_rejected_version = static function (
 	$attempt_before = $ran_booster_fetch_row( $ran_booster_attempt_table, 'correlation_id', $ran_booster_schema_seven_attempt['correlation_id'] );
 	$schemas_before = array( $ran_booster_show_create( $ran_booster_package_table ), $ran_booster_show_create( $ran_booster_attempt_table ) );
 	$ran_booster_set_schema_version( $version );
+	$writes = array();
+	$record = static function ( string $query ) use ( &$writes ): string {
+		if ( preg_match( '/^\s*(INSERT|UPDATE|DELETE|REPLACE|ALTER|CREATE|DROP|TRUNCATE)\b/i', $query ) ) {
+			$writes[] = $query;
+		}
+		return $query;
+	};
+	add_filter( 'query', $record );
 
 	$rejected = false;
 	try {
@@ -120,7 +143,7 @@ $ran_booster_assert_rejected_version = static function (
 			}
 			$rejected = true;
 		}
-		if ( ! $rejected ) {
+		if ( ! $rejected || array() !== $writes ) {
 			throw new RuntimeException( 'The database smoke accepted an unsupported stored schema version.' );
 		}
 		if ( (string) get_option( Database::VERSION_OPTION, '' ) !== $version ) {
@@ -132,6 +155,7 @@ $ran_booster_assert_rejected_version = static function (
 			throw new RuntimeException( 'The database smoke found mutation after a rejected schema version.' );
 		}
 	} finally {
+		remove_filter( 'query', $record );
 		$ran_booster_set_schema_version( Database::$booster_db_version );
 	}
 };
@@ -151,7 +175,9 @@ try {
 		throw new RuntimeException( 'The exact predecessor schema could not be prepared.' );
 	}
 	$ran_booster_set_schema_version( '13.0' );
-	( new Database() )->install();
+	// Historical algorithm is test-only; current production deliberately rejects schema13.
+	( new \RAN\Tests\Storage\HistoricalIdentityMigration( new Database() ) )->migrate_adoption_identities( $ran_booster_package_table, $ran_booster_attempt_table );
+	$ran_booster_set_schema_version( Database::$booster_db_version );
 	$ran_booster_migrated = $ran_booster_fetch_row( $ran_booster_package_table, 'package', $ran_booster_schema_seven_package['package'] );
 	$ran_booster_token    = $ran_booster_migrated['adoption_token'] ?? null;
 	if ( ! is_string( $ran_booster_token ) || ! \RAN\AdoptionIdentity::matches( $ran_booster_token, 'gh', 'schema-seven-marker' ) ) {
@@ -167,14 +193,18 @@ try {
 		throw new RuntimeException( 'The prior candidate schema could not be prepared.' );
 	}
 	$ran_booster_set_schema_version( '13.0' );
-	( new Database() )->install();
+	// Historical algorithm is test-only; current production deliberately rejects schema13.
+	( new \RAN\Tests\Storage\HistoricalIdentityMigration( new Database() ) )->migrate_adoption_identities( $ran_booster_package_table, $ran_booster_attempt_table );
+	$ran_booster_set_schema_version( Database::$booster_db_version );
 	$ran_booster_prior_candidate = $ran_booster_fetch_row( $ran_booster_package_table, 'package', $ran_booster_schema_seven_package['package'] );
 	if ( ( $ran_booster_prior_candidate['adoption_token'] ?? null ) !== $ran_booster_token ) {
 		throw new RuntimeException( 'The prior candidate restart changed a stored adoption identity.' );
 	}
 	// Simulate a restart after DDL/backfill but before the version marker was committed.
 	$ran_booster_set_schema_version( '13.0' );
-	( new Database() )->install();
+	// Historical algorithm is test-only; current production deliberately rejects schema13.
+	( new \RAN\Tests\Storage\HistoricalIdentityMigration( new Database() ) )->migrate_adoption_identities( $ran_booster_package_table, $ran_booster_attempt_table );
+	$ran_booster_set_schema_version( Database::$booster_db_version );
 	( new Database() )->install();
 	$ran_booster_restarted = $ran_booster_fetch_row( $ran_booster_package_table, 'package', $ran_booster_schema_seven_package['package'] );
 	if ( ( $ran_booster_restarted['adoption_token'] ?? null ) !== $ran_booster_token ) {
@@ -195,7 +225,9 @@ try {
 	$ran_booster_assert_rejected_version( '11.0', 'unsupported_old_schema' );
 	$ran_booster_assert_rejected_version( '12.0', 'unsupported_old_schema' );
 	$ran_booster_assert_rejected_version( '10.5', 'unknown_schema_version' );
-	$ran_booster_assert_rejected_version( '15.0', 'newer_schema' );
+	$ran_booster_assert_rejected_version( '13.0', 'unsupported_old_schema' );
+	$ran_booster_assert_rejected_version( '14.0', 'unsupported_old_schema' );
+	$ran_booster_assert_rejected_version( '16.0', 'newer_schema' );
 	$ran_booster_assert_rejected_version( 'not-a-version', 'malformed_schema_version' );
 
 	foreach ( array( $ran_booster_package_table, $ran_booster_attempt_table ) as $ran_booster_table ) {
@@ -318,5 +350,11 @@ if ( ! is_callable( $ran_booster_option_proof ) ) {
 	throw new RuntimeException( 'The option concurrency proof is unavailable.' );
 }
 $ran_booster_option_proof( $wpdb );
+
+$ran_booster_selection_proof = require __DIR__ . '/github-selection-storage-smoke.php';
+if ( ! is_callable( $ran_booster_selection_proof ) ) {
+	throw new RuntimeException( 'The GitHub selection SQL proof is unavailable.' );
+}
+$ran_booster_selection_proof( $wpdb );
 
 WP_CLI::success( 'RAN Booster database storage smoke passed on ' . $wpdb->db_server_info() . '.' ); // @phpstan-ignore class.notFound (External WP-CLI contract supplied by the installed eval-file process, outside the Composer-locked WordPress dependencies.)

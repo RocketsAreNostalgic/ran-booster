@@ -312,6 +312,87 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 			)['available']
 		);
 	}
+
+	public function test_filter_choices_keep_binary_provider_and_package_dimensions_without_payload_reads(): void {
+		$this->connection->read_results = array(
+			array(
+				(object) array(
+					'provider'        => 'Gh',
+					'has_non_package' => '1',
+				),
+				(object) array(
+					'provider'        => 'gh',
+					'has_non_package' => '0',
+				),
+				(object) array(
+					'provider'        => '',
+					'has_non_package' => '1',
+				),
+			),
+			array(
+				(object) array(
+					'provider'         => 'Gh',
+					'subject_type'     => 'plugin',
+					'subject_identity' => 'Case/plugin.php',
+				),
+				(object) array(
+					'provider'         => 'gh',
+					'subject_type'     => 'theme',
+					'subject_identity' => 'case',
+				),
+			),
+		);
+		self::assertSame(
+			array(
+				'available' => true,
+				'providers' => array(
+					array(
+						'provider'        => 'Gh',
+						'has_non_package' => true,
+					),
+					array(
+						'provider'        => 'gh',
+						'has_non_package' => false,
+					),
+				),
+				'packages'  => array(
+					array(
+						'provider'         => 'Gh',
+						'subject_type'     => 'plugin',
+						'subject_identity' => 'Case/plugin.php',
+					),
+					array(
+						'provider'         => 'gh',
+						'subject_type'     => 'theme',
+						'subject_identity' => 'case',
+					),
+				),
+			),
+			$this->store->activity_filter_choices()
+		);
+		self::assertCount( 2, $this->connection->queries );
+		self::assertStringContainsString( 'SELECT BINARY provider AS provider, MAX(CASE WHEN BINARY subject_type IN', $this->connection->queries[0] );
+		self::assertStringContainsString( 'GROUP BY BINARY provider', $this->connection->queries[0] );
+		self::assertStringContainsString( 'SELECT DISTINCT BINARY provider AS provider, BINARY subject_type AS subject_type, BINARY subject_identity AS subject_identity', $this->connection->queries[1] );
+		self::assertStringContainsString( "BINARY subject_type IN ('plugin','theme')", $this->connection->queries[1] );
+		self::assertStringNotContainsString( 'SELECT *', implode( "\n", $this->connection->queries ) );
+		self::assertStringNotContainsString( 'SELECT facts', implode( "\n", $this->connection->queries ) );
+		self::assertStringContainsString( 'LIMIT 2000', $this->connection->queries[0] );
+		self::assertStringContainsString( "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))", $this->connection->queries[0] );
+	}
+
+	public function test_filter_choices_make_each_failed_read_unavailable(): void {
+		$this->connection->read_results = array( array(), false );
+		self::assertSame(
+			array(
+				'available' => false,
+				'providers' => array(),
+				'packages'  => array(),
+			),
+			$this->store->activity_filter_choices()
+		);
+	}
+
 	public function test_prune_is_bounded_and_rechecks_protection_and_terminal_state(): void {
 		$capture                        = self::capture();
 		$this->connection->read_results = array(
@@ -414,6 +495,9 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_resolved_at')), 'null') = 'null'", $this->connection->queries[0] );
 		self::assertStringContainsString( 'OR (', $this->connection->queries[0] );
 		self::assertStringEndsWith( 'LIMIT 12', $this->connection->queries[0] );
+		self::assertTrue( $this->store->activity_history( array( 'non_package' => '1' ) )['available'] );
+		self::assertStringContainsString( "NOT (BINARY subject_type IN ('plugin','theme') AND BINARY subject_identity <> '')", $this->connection->queries[1] );
+		self::assertFalse( $this->store->activity_history( array( 'non_package' => '0' ) )['available'] );
 		self::assertFalse( $this->store->activity_history( array( 'invented' => 'value' ) )['available'] );
 		self::assertFalse( $this->store->activity_history( array( 'context' => str_repeat( 'a', 2049 ) ) )['available'] );
 	}

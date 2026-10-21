@@ -135,6 +135,44 @@ final class SignedWebhookVerifierTest extends TestCase {
 		new WebhookRequest( ProviderCode::parse( 'gh' ), str_repeat( 'x', 262145 ), array(), array() );
 	}
 
+	public function test_revocation_during_signature_callback_prevents_material_read(): void {
+		$allowed = true;
+		$policy  = $this->createMock( \RAN\RepositoryProvider\ProviderWebhookPolicy::class );
+		$policy->method( 'get_signature_header' )->willReturnCallback(
+			static function () use ( &$allowed ): string {
+				$allowed = false;
+				return 'X-Hub-Signature-256';
+			}
+		);
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'webhook_materials' );
+		$guard = static function () use ( &$allowed ): void {
+			if ( ! $allowed ) {
+				throw new \RuntimeException( 'Provider revoked.' );
+			}
+		};
+		$this->expectException( \RuntimeException::class );
+		( new SignedWebhookVerifier( $secrets ) )->verify( $this->request( '{}' ), $policy, $guard );
+	}
+
+	public function test_revocation_during_material_read_prevents_verified_result(): void {
+		$allowed = true;
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->method( 'webhook_materials' )->willReturnCallback(
+			function () use ( &$allowed ): array {
+				$allowed = false;
+				return array( 'profile-one' => $this->profile() );
+			}
+		);
+		$guard = static function () use ( &$allowed ): void {
+			if ( ! $allowed ) {
+				throw new \RuntimeException( 'Provider revoked.' );
+			}
+		};
+		$this->expectException( \RuntimeException::class );
+		( new SignedWebhookVerifier( $secrets ) )->verify( $this->request( '{}' ), new GitHubWebhookPolicy(), $guard );
+	}
+
 	/** @param array<int|string, array<string, mixed>>|null $profiles */
 	private function verifier( ?array $profiles = null ): SignedWebhookVerifier {
 		$profiles ??= array( 'profile-one' => $this->profile() );

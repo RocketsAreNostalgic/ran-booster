@@ -44,7 +44,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 				__( 'Portability is unavailable on WordPress Multisite.', 'ran-booster' )
 			);
 		}
-		if ( ! $this->authorized( 'review', $candidate, null, $nonce, false ) ) {
+		if ( ! $this->authorized( 'review', $candidate, null, $nonce, false, null ) ) {
 			return $this->blocked_review(
 				$candidate,
 				'forbidden',
@@ -65,10 +65,12 @@ final class NativePortabilityFacade extends PortabilityFacade {
 		}
 	}
 
+	/** @param array<string,mixed>|null $provider_expectation */
 	public function apply(
 		PortabilityCandidate $candidate,
 		string $expected_fingerprint,
-		string $nonce
+		string $nonce,
+		?array $provider_expectation
 	): PortabilityApplyResult {
 		if ( ! RuntimeSupport::current()->allows_managed_operations() ) {
 			return new PortabilityApplyResult(
@@ -78,7 +80,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 				false
 			);
 		}
-		if ( ! $this->authorized( 'apply', $candidate, $expected_fingerprint, $nonce, true ) ) {
+		if ( ! $this->authorized( 'apply', $candidate, $expected_fingerprint, $nonce, true, $provider_expectation ) ) {
 			return new PortabilityApplyResult(
 				PortabilityApplyResult::FAILED,
 				'forbidden',
@@ -88,7 +90,7 @@ final class NativePortabilityFacade extends PortabilityFacade {
 		}
 
 		try {
-			return $this->application->apply_candidate( $candidate, $expected_fingerprint );
+			return $this->application->apply_candidate( $candidate, $expected_fingerprint, $provider_expectation );
 		} catch ( Throwable $failure ) {
 			$this->log_failure( 'apply', $failure );
 
@@ -101,18 +103,20 @@ final class NativePortabilityFacade extends PortabilityFacade {
 		}
 	}
 
+	/** @param array<string,mixed>|null $provider_expectation */
 	private function authorized(
 		string $operation,
 		PortabilityCandidate $candidate,
 		?string $expected_fingerprint,
 		string $nonce,
-		bool $apply
+		bool $apply,
+		?array $provider_expectation
 	): bool {
 		try {
 			return ( $this->can_manage )( $candidate->type, $apply )
 				&& ( $this->verify_nonce )(
 					$nonce,
-					$this->nonce_action( $operation, $candidate, $expected_fingerprint )
+					$this->nonce_action( $operation, $candidate, $expected_fingerprint, $provider_expectation )
 				);
 		} catch ( Throwable ) {
 			return false;

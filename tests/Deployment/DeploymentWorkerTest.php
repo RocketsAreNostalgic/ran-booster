@@ -24,6 +24,7 @@ use RAN\Deployment\WordPressWorkerWakeup;
 use RuntimeException;
 
 final class DeploymentWorkerTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
@@ -42,7 +43,8 @@ final class DeploymentWorkerTest extends TestCase {
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
-			$this->createStub( \RAN\Storage\Database::class )
+			$this->createStub( \RAN\Storage\Database::class ),
+			selection: $this->queued_selection( $this->database )
 		);
 		$this->coordinator = new WorkerCoordinator();
 	}
@@ -173,8 +175,20 @@ final class DeploymentWorkerTest extends TestCase {
 	}
 
 	private function request( string $slug ): DeploymentRequest {
-		$token                               = 'gh:R_' . $slug . ':11111111-1111-4111-8111-111111111111';
-		$this->database->management[ $slug ] = $token;
+		$token                                    = 'gh:R_' . $slug . ':11111111-1111-4111-8111-111111111111';
+		$this->database->management[ $slug ]      = $token;
+		$this->database->management_rows[ $slug ] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_' . $slug,
+			'repository'             => 'org/' . $slug,
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
 		return new DeploymentRequest( 'org/' . $slug, null, false, 'main', $slug, null, DeploymentPolicy::AUTOMATIC, 1, null, $slug, $token );
 	}
 }

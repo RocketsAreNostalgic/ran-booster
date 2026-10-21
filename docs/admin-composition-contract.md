@@ -27,6 +27,76 @@ updater. The separately versioned
 documents that transport and presentation contract; it does not expand any
 composition hook or authorization boundary described here.
 
+## Admin Shell continuity and page navigation
+
+Booster's Admin Shell provides continuous product branding and navigation across
+its normal administration pages, including standalone WordPress submenu destinations
+such as Extensions. Keep the shell's logo, header navigation and footer consistent
+when a page supplies its own content or local navigation.
+
+Failure and recovery output may use a minimal heading, explanation and recovery
+links when the normal administration stack cannot safely render. Examples include
+the Extensions fallback error screen and the standalone unsupported-Multisite
+recovery guide. These paths must remain usable without initializing the full
+shell or operational services; this exception does not apply to ordinary pages.
+
+A standalone destination does not automatically become a shell navigation item.
+The WordPress submenu identifies that destination; the page heading identifies
+its content. When the destination is outside the shell menu, leave that menu
+without a selected item rather than marking an unrelated section as current.
+Existing provider availability and visibility rules still apply.
+
+A page that needs local navigation places it below its heading, visually
+subordinate to and distinct from the shell navigation. Use ordinary links with
+stable URLs and an accessible current-page indication. For a settings page,
+folder-style tabs may connect the selected destination to its content panel.
+Do not label navigation links as an ARIA tab widget unless the full associated
+keyboard and interaction behaviour is implemented. Keep navigation usable on
+narrow screens.
+
+Use the shared page panels, typography, spacing, controls and feedback patterns.
+Extensions contribute inside that layout rather than replace the product chrome.
+Breadcrumbs are optional when deeper navigation needs them; they are unnecessary
+when the submenu, heading and local navigation already establish location.
+
+Page identity uses `ran-booster-page-heading__title` (23px, semibold,
+1.3 line height) and `ran-booster-page-heading__description` (base 14px,
+1.5 line height, muted, 6px after the title). Managed Plugins/Themes and
+Install/Edit variants use the same roles as dashboard pages. Keep heading
+alignment relative to its content grid, existing page actions beside the title
+where space permits, and a 20px heading-to-task separation. Do not invent
+missing descriptions or shorten existing copy. Remove redundant page decoration
+(Ignition, Guidance, Add-ons and Diagnostics above Troubleshooting); retain
+useful provider, repository and Transporter context and all panel-interior labels.
+
+Containment follows the task. Install Plugin/Theme keeps its separate white
+Repository configuration, Advanced settings and Package operation sections on
+the grey page. Provider overview tasks use separate white groups with 20px grey
+gutters. Do not add a universal white outer wrapper. Keep each group's wording,
+controls, statuses, help, disclosures, internal borders, columns and arrangement
+intact; outer separation does not authorize an interior redesign.
+
+A subordinate **Back to…** link belongs above the page heading and outside white
+content panels. Keep it within its existing enhanced replacement boundary when
+required, with ordinary keyboard/no-JavaScript navigation. Do not move forms,
+IDs, protected operations, safety notices or state to achieve visual consistency.
+Page identity rules do not change headers inside Diagnostics panels. Normal
+package recovery uses the shared title/description roles; the minimal failure
+paths described above retain their independent rendering contract.
+
+These rules refine [Core #478](https://github.com/RocketsAreNostalgic/ran-booster/issues/478)
+and the continuity guidance delivered through
+[Core #462](https://github.com/RocketsAreNostalgic/ran-booster/pull/462).
+Apply them when the future #461 Settings design is implemented; this change
+adds no Settings page, tab API or navigation destination.
+
+This is a product composition rule, not a new shell API. Reuse the generated
+Admin Shell through its existing integration and source workflow; do not hand-edit
+generated output or change the shared shell package merely to add a local page.
+The proposed Settings screen and settings-tab API are specified separately in
+[Core #461](https://github.com/RocketsAreNostalgic/ran-booster/issues/461); this
+document does not declare those features implemented.
+
 ## Add-on generation and service delivery
 
 An administration add-on must check the exact Add-on API generation before
@@ -72,8 +142,8 @@ internal typed coordinators after resolving the selected provider's exact
 release facets. A plugin must not treat those internal coordinators as a public
 service-delivery API.
 
-Portability API 3 is an independently versioned adoption-only contract for a
-trusted source bridge. Its consumer checks exact Portability API 3, not Add-on
+Portability API 4 is an independently versioned adoption-only contract for a
+trusted source bridge. Its consumer checks exact Portability API 4, not Add-on
 API 17. The separate
 [Portability API contract](portability-api.md) documents its candidate, nonce,
 review, Apply, source-ownership, recovery, and cleanup boundaries.
@@ -175,8 +245,8 @@ one registered provider aggregate supplies the complete release capability set
 required by the operation. It does not publish a prospective-release marker or
 deliver the internal facade to another plugin.
 
-The internal `ProspectiveReleaseFacade::API_VERSION` is **8** for this naming
-composition; this is not a public plugin-delivery marker.
+The internal `ProspectiveReleaseFacade::API_VERSION` is **10** for destination selection
+continuity and explicit initial installation intent; this is not a public plugin-delivery marker.
 
 The facade accepts exactly:
 
@@ -191,9 +261,26 @@ $prospective->install(
 	$tag,
 	$expected_fingerprint,
 	$channel,
-	$nonce
+	$nonce,
+	$provider_expectation
 );
 ```
+
+`install()` and `nonce_action()` additionally accept optional `$expected_identifier`
+and `$initial_policy` arguments, defaulting to `null` and `DeploymentPolicy::MANUAL`.
+Only Manual and Disabled are supported; Disabled requires a valid explicit plugin
+or theme identifier. Both values are bound into the installation nonce. Non-install
+nonce operations reject nondefault installation intent. Existing dashboard calls
+retain Manual adoption.
+
+The acquired identifier must match the expected identifier before updater locking,
+artifact handoff or filesystem mutation. A mismatch returns
+`package_identity_mismatch` and still discards the acquisition. Successful adoption
+persists the requested policy through the existing verified release repository
+operation. This does not enable Blueprint release execution or exact artifact
+selection. A future Blueprint caller must also compare inspected package-root and
+metadata-file configuration; a theme identifier alone does not prove its metadata
+filename. Installation remains inactive and this initial selection is no update lock.
 
 `supported_provider_codes()` returns the bounded complete-product provider list
 for `plugin` or `theme` using request-local configuration only. It performs no
@@ -599,3 +686,34 @@ local unavailable message.
 
 Deactivating an add-on removes its contributions on the next request; every
 Core route and administration surface remains usable.
+
+Prospective API9 carries the destination-local `provider_expectation` from exact
+inspection to installation. GitHub uses Core's provider code, selection generation
+and implementation fingerprint; unaffected providers carry null. Installation
+requires this argument and an install nonce bound to the same context. Core checks
+it before repository resolution or credential/provider work. Inspection rechecks
+its captured selection before returning evidence. Review transport never invents
+a current context or exports this destination authority.
+
+### Interrupted GitHub native installation
+
+The GitHub settings page exposes Core's protected removal recovery while an
+uncertain native mutation blocks further installation or implementation switching.
+It shows only the target type and installed identifier. Recovery requires both
+`manage_options` and `activate_plugins`, a fresh review-bound nonce, and explicit
+confirmation that the interrupted process stopped and the whole target was removed.
+A missing plugin entry file alone is insufficient. Core does not delete files or
+certify a retained installation through this action.
+
+Recovery takes the existing updater lock without reclaiming an occupied lock,
+verifies physical absence, disconnects only the reviewed management record, and
+clears only the exact reviewed native marker after fresh storage and operation
+checks. Ambiguous management or queued work within the affected plugin folder
+refuses recovery. Selection generation, implementation approval and credential
+material are preserved. Changed authority, uncertain storage outcomes, failed cache
+invalidation or lost lock ownership do not produce a success notice.
+
+Successful removal recovery does not verify cleanup of temporary files left by the
+interrupted process. Current provider availability and fresh installation review
+remain mandatory before another operation. Browser acceptance and installed
+qualification against the feature-bearing immutable dependencies are separate gates.

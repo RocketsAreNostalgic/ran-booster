@@ -94,6 +94,14 @@ namespace {
 		}
 	}
 
+	if ( ! function_exists( 'wp_cache_delete' ) ) {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress cache boundary test double retains the host function name.
+		function wp_cache_delete( string $key, string $group = '' ): bool {
+			$GLOBALS['ran_booster_attempt_cache_deletes'][] = array( $key, $group );
+			return true;
+		}
+	}
+
 	if ( ! function_exists( 'dbDelta' ) ) {
 		/**
 		 * @param string $sql
@@ -119,10 +127,11 @@ namespace RAN\Tests\Storage {
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
 	final class StorageTestWpdb extends \RAN\Storage\SchemaConnection {
 
-		public string $prefix      = 'wp_';
-		public string $base_prefix = 'wp_';
-		public string $options     = 'wp_options';
-		public string $last_error  = '';
+		public string $prefix           = 'wp_';
+		public string $base_prefix      = 'wp_';
+		public string $options          = 'wp_options';
+		public ?string $selection_value = null;
+		public string $last_error       = '';
 
 		/** @var list<string> */
 		public array $schemas = array();
@@ -222,6 +231,13 @@ namespace RAN\Tests\Storage {
 			$this->queries[] = $query;
 			if ( null !== $this->query_failure_contains && str_contains( $query, $this->query_failure_contains ) ) {
 				return false;
+			}
+			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('ran_booster_github_selection', '(.*)', 'no'\)$/", $query, $selection ) ) {
+				if ( null !== $this->selection_value ) {
+					return 0;
+				}
+				$this->selection_value = stripslashes( $selection[1] );
+				return 1;
 			}
 			if ( 1 === preg_match( '/^DROP TABLE IF EXISTS `([^`]+)`$/', $query, $matches ) ) {
 				if ( ! $this->keep_dropped_tables ) {
@@ -454,6 +470,38 @@ namespace RAN\Tests\Storage {
 				return $this->forced_results;
 			}
 
+			if ( str_starts_with( $query, 'SELECT option_name, option_value, autoload FROM `wp_options`' ) ) {
+				return null === $this->selection_value ? array() : array(
+					(object) array(
+						'option_name'  => 'ran_booster_github_selection',
+						'option_value' => $this->selection_value,
+						'autoload'     => 'no',
+					),
+				);
+			}
+			if ( 'SHOW COLUMNS FROM `wp_options`' === $query ) {
+				return array_map(
+					static fn ( string $name ): object => (object) array(
+						'Field'   => $name,
+						'Type'    => 'longtext',
+						'Null'    => 'NO',
+						'Default' => null,
+						'Extra'   => '',
+					),
+					array( 'option_name', 'option_value', 'autoload' )
+				);
+			}
+			if ( 'SHOW INDEX FROM `wp_options`' === $query ) {
+				return array(
+					(object) array(
+						'Key_name'     => 'option_name',
+						'Non_unique'   => 0,
+						'Seq_in_index' => 1,
+						'Column_name'  => 'option_name',
+						'Sub_part'     => null,
+					),
+				);
+			}
 			if ( 1 === preg_match( '/^SHOW COLUMNS FROM `([^`]+)`$/', $query, $matches ) ) {
 				if ( ! isset( $this->schema_tables[ $matches[1] ] ) ) {
 					return null;
@@ -521,6 +569,15 @@ namespace RAN\Tests\Storage {
 						&& (int) ( $row['package_type'] ?? 0 ) !== (int) $type_matches[1]
 					) {
 						return false;
+					}
+
+					if ( preg_match( "/\((LOWER\(package\)|package) = '([^']+)' OR (LOWER\(package\)|package) LIKE '([^']+)'\)/", $query, $scope_matches ) === 1 ) {
+						$prefix  = stripslashes( substr( $scope_matches[4], 0, -1 ) );
+						$package = (string) ( $row['package'] ?? '' );
+						// Model a case-sensitive table: only explicit SQL LOWER folds the stored value.
+						$exact = 'LOWER(package)' === $scope_matches[1] ? strtolower( $package ) : $package;
+						$like  = 'LOWER(package)' === $scope_matches[3] ? strtolower( $package ) : $package;
+						return stripslashes( $scope_matches[2] ) === $exact || str_starts_with( $like, $prefix );
 					}
 
 					if ( preg_match( "/package = '([^']+)'/", $query, $package_matches ) === 1

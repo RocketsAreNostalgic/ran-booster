@@ -8,6 +8,7 @@ use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ArchiveRequest;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\Admin\CredentialFieldMetadata;
 use RAN\RepositoryProvider\Admin\CredentialKindMetadata;
 use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
@@ -68,7 +69,9 @@ final readonly class ProviderSettingsPresenter {
 		private ?ThemeRepository $themes = null,
 		private ?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
-		?WordPressUpdaterLock $branch_check_lock = null
+		?WordPressUpdaterLock $branch_check_lock = null,
+		private ?GitHubProviderSelection $github_selection = null,
+		private ?\RAN\PackageRemoval\PackageRemovalService $package_removal = null
 	) {
 
 		$this->public_lookup_profiles = $public_lookup_profiles ?? new PublicRepositoryLookupProfileStore();
@@ -92,6 +95,33 @@ final readonly class ProviderSettingsPresenter {
 
 	public function build( ?string $selected_provider = null ): array {
 		$available = $this->admin_providers();
+		$selection = null === $selected_provider || 'gh' === $selected_provider ? $this->github_selection_review() : null;
+		if ( null !== $selection && ! $selection['available'] ) {
+			unset( $available['gh'] );
+		}
+		if ( null !== $selection && ( 'gh' === $selected_provider || ( null === $selected_provider && array() === $available ) ) && ! isset( $available['gh'] ) ) {
+			return array(
+				'selected_provider'            => 'gh',
+				'providers'                    => $this->tabs( $available, 'gh' ),
+				'provider'                     => array(
+					'code'             => 'gh',
+					'label'            => 'GitHub',
+					'owner_label'      => 'Owner',
+					'credential_kinds' => array(),
+					'webhook_scopes'   => array(),
+					'webhook_setup'    => null,
+					'capabilities'     => array(),
+				),
+				'credential_profiles'          => array(),
+				'webhook_profiles'             => array(),
+				'managed_webhook_repositories' => array(),
+				'provider_repositories'        => array(),
+				'public_lookup_profile'        => null,
+				'secrets_storage_unavailable'  => false,
+				'webhook_assistance_readiness' => null,
+				'github_selection'             => $selection,
+			);
+		}
 		if ( array() === $available ) {
 			throw new RuntimeException( 'No repository provider settings are available.' );
 		}
@@ -147,6 +177,7 @@ final readonly class ProviderSettingsPresenter {
 
 		return array(
 
+			'github_selection'             => 'gh' === $selected_provider ? $selection : null,
 			'selected_provider'            => $selected_provider,
 
 			'providers'                    => $this->tabs( $available, $selected_provider ),
@@ -158,6 +189,73 @@ final readonly class ProviderSettingsPresenter {
 			'public_lookup_profile'        => $public_lookup_profile,
 			'secrets_storage_unavailable'  => $storage_unavailable,
 			'webhook_assistance_readiness' => $webhook_readiness,
+		);
+	}
+
+	/** @return array<string,mixed>|null Passive local claims; never credential material. */
+	public function github_selection_diagnostics(): ?array {
+		return $this->github_selection?->status();
+	}
+
+	/** @return array<string,mixed>|null */
+	private function github_selection_review(): ?array {
+		if ( null === $this->github_selection ) {
+			return null;
+		}
+		$status = $this->github_selection->status();
+		if ( 'available' === $status['state'] && $status['available'] ) {
+			if ( 'bundled' === ( $status['current']['selected'] ?? null ) && array() === $status['candidates'] ) {
+				return null;
+			}
+			return array(
+				'status'         => $status,
+				'available'      => true,
+				'review'         => null,
+				'error'          => '',
+				'recovery'       => null,
+				'package_counts' => null,
+			);
+		}
+		$review = null;
+		$error  = '';
+		try {
+			$review = $this->github_selection->adoption_review( $this->secrets );
+		} catch ( SecretsStorageUnavailable ) {
+			$error = __( 'Set up secure credential storage from Overview before reviewing GitHub adoption.', 'ran-booster' );
+		} catch ( Throwable ) {
+			$error = __( 'GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first.', 'ran-booster' );
+		}
+		$recovery = null;
+		if ( 'recovery_required' === $status['state'] && null !== $this->package_removal ) {
+			try {
+				$recovery = $this->package_removal->native_recovery_confirmation();
+			} catch ( Throwable ) {
+				$error = __( 'Native recovery details could not be verified. Restore access to selection and management storage before continuing.', 'ran-booster' );
+			}
+		}
+		$package_counts = null;
+		try {
+			if ( null !== $this->plugins && null !== $this->themes ) {
+				$package_counts = array(
+					'branch'        => 0,
+					'release_asset' => 0,
+				);
+				foreach ( array_merge( array_values( $this->plugins->all_deployment_plugins() ), array_values( $this->themes->all_deployment_themes() ) ) as $package ) {
+					if ( 'gh' === $package->get_provider_code() ) {
+						++$package_counts[ $package->get_source()->value ];
+					}
+				}
+			}
+		} catch ( Throwable ) {
+			$package_counts = null;
+		}
+		return array(
+			'recovery'       => $recovery,
+			'package_counts' => $package_counts,
+			'review'         => $review,
+			'error'          => $error,
+			'available'      => $status['available'],
+			'status'         => $status,
 		);
 	}
 
@@ -750,7 +848,7 @@ final readonly class ProviderSettingsPresenter {
 		foreach ( $providers as $code => $provider ) {
 			$tabs[] = array(
 				'code'   => $code,
-				'label'  => $provider->get_metadata()->label,
+				'label'  => $this->providers->metadata()[ $code ]->label,
 				'active' => $code === $selected_provider,
 			);
 		}
@@ -1396,7 +1494,7 @@ final readonly class ProviderSettingsPresenter {
 		}
 		$credential_projection = $this->credential_rows( $credentials, $kind_labels, $field_labels, $owner_label );
 		$webhook_rows          = $this->webhook_rows( $webhooks, $scope_labels );
-		$credential_list       = $this->filter_and_page( $credential_projection['rows'], 'credentials', $state );
+		$credential_list       = $this->filter_and_page( $credential_projection['rows'], 'credentials', $state, is_string( $data['replace_credential'] ?? null ) ? $data['replace_credential'] : '' );
 		$webhook_list          = $this->filter_and_page( $webhook_rows, 'secrets', $state );
 		$urls                  = $this->list_urls( $provider_url, $provider_code, $state, $credential_list, $webhook_list );
 		$storage_unavailable   = ! empty( $data['secrets_storage_unavailable'] );
@@ -1570,7 +1668,7 @@ final readonly class ProviderSettingsPresenter {
 	 * @param array<string,mixed> $state
 	 * @return array{rows:list<array<string,mixed>>,total:int,pages:int,current:int}
 	 */
-	private function filter_and_page( array $rows, string $view, array $state ): array {
+	private function filter_and_page( array $rows, string $view, array $state, string $replacement_credential = '' ): array {
 		$search   = strtolower( trim( (string) $state['search'] ) );
 		$rows     = array_values(
 			array_filter(
@@ -1604,6 +1702,12 @@ final readonly class ProviderSettingsPresenter {
 		$total   = count( $rows );
 		$pages   = max( 1, (int) ceil( $total / (int) $state['per_page'] ) );
 		$current = min( (int) $state['paged'], $pages );
+		foreach ( $rows as $index => $row ) {
+			if ( 'credentials' === $view && ( $row['id'] ?? null ) === $replacement_credential && ! empty( $row['editable'] ) ) {
+				$current = intdiv( $index, (int) $state['per_page'] ) + 1;
+				break;
+			}
+		}
 
 		return array(
 			'rows'    => array_slice( $rows, ( $current - 1 ) * (int) $state['per_page'], (int) $state['per_page'] ),

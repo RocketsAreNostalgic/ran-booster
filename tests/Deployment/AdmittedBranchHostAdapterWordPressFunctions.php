@@ -43,6 +43,13 @@ if ( ! function_exists( __NAMESPACE__ . '\\disk_free_space' ) ) {
 if ( ! function_exists( __NAMESPACE__ . '\\wp_safe_remote_get' ) ) {
 	/** @param array<string, mixed> $arguments */
 	function wp_safe_remote_get( string $url, array $arguments ): mixed {
+		$before = $GLOBALS['ran_booster_admitted_http_request_args'] ?? null;
+		if ( is_callable( $before ) ) {
+			$before( $url, $arguments );
+		}
+		foreach ( $GLOBALS['ran_booster_admitted_http_guards'] ?? array() as $guard ) {
+			$guard( false, $arguments, $url );
+		}
 		$GLOBALS['ran_booster_admitted_http_calls'][] = array(
 			'url'       => $url,
 			'arguments' => $arguments,
@@ -55,7 +62,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_safe_remote_get' ) ) {
 			return array( 'ran_booster_test_wp_error' => true );
 		}
 
-		$status = is_int( $response ) ? $response : 200;
+		$status = is_int( $response ) ? $response : ( is_array( $response ) ? (int) ( $response['response']['code'] ?? 200 ) : 200 );
 		if ( $status >= 200 && $status < 300 ) {
 			$source      = $GLOBALS['ran_booster_admitted_download_fixture'] ?? null;
 			$destination = $arguments['filename'] ?? null;
@@ -65,7 +72,7 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_safe_remote_get' ) ) {
 			}
 		}
 
-		return array( 'response' => array( 'code' => $status ) );
+		return is_array( $response ) ? $response : array( 'response' => array( 'code' => $status ) );
 	}
 }
 
@@ -79,4 +86,32 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_remote_retrieve_response_code' ) )
 	function wp_remote_retrieve_response_code( mixed $response ): int {
 		return is_array( $response ) ? (int) ( $response['response']['code'] ?? 0 ) : 0;
 	}
+}
+
+/** @param callable(mixed,array<string,mixed>,string):mixed $callback */
+function add_filter( string $hook, callable $callback, int $priority, int $accepted_args ): bool {
+	if ( 'pre_http_request' !== $hook || PHP_INT_MAX !== $priority || 3 !== $accepted_args ) {
+		throw new \RuntimeException( 'Unexpected archive guard hook.' );
+	}
+	$GLOBALS['ran_booster_admitted_http_guards'][] = $callback;
+	return true;
+}
+
+/** @param callable(mixed,array<string,mixed>,string):mixed $callback */
+function remove_filter( string $hook, callable $callback, int $priority ): bool {
+	if ( 'pre_http_request' !== $hook || PHP_INT_MAX !== $priority ) {
+		throw new \RuntimeException( 'Unexpected archive guard removal.' );
+	}
+	foreach ( $GLOBALS['ran_booster_admitted_http_guards'] ?? array() as $key => $guard ) {
+		if ( $callback === $guard ) {
+			unset( $GLOBALS['ran_booster_admitted_http_guards'][ $key ] );
+		}
+	}
+	return true;
+}
+
+/** @return string|list<string> */
+function wp_remote_retrieve_header( mixed $response, string $header ): string|array {
+	$value = is_array( $response ) ? ( $response['headers'][ $header ] ?? '' ) : '';
+	return is_string( $value ) || ( is_array( $value ) && array_is_list( $value ) && count( array_filter( $value, 'is_string' ) ) === count( $value ) ) ? $value : '';
 }

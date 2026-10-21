@@ -20,8 +20,12 @@ final readonly class ArchiveRequest {
 		public RepositoryReference $repository,
 		public string $ref,
 		?string $expected_branch = null,
-		public ?\RAN\Activity\ActivityProgress $progress = null
+		public ?\RAN\Activity\ActivityProgress $progress = null,
+		public ?string $selected_commit = null
 	) {
+		if ( null !== $selected_commit && ( 1 !== preg_match( '/\A(?:[a-f0-9]{40}|[a-f0-9]{64})\z/D', $selected_commit ) || $ref !== $selected_commit || null !== $expected_branch ) ) {
+			throw new InvalidArgumentException( 'Historical archives require one exact commit without a current-head constraint.' );
+		}
 		if ( '' === trim( $ref ) ) {
 			throw new InvalidArgumentException( 'Archive ref cannot be empty.' );
 		}

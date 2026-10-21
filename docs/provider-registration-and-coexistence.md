@@ -1,9 +1,20 @@
-# Provider registration and coexistence: current state
+# Provider registration and coexistence: released baseline
 
-**Status:** Current-source characterization for Provider API 14, reconciled on
-1 October 2026 for the methods-only naming candidate. Earlier extraction and
-external-composition proofs do not certify this candidate. This document does not
-reserve new vendor names or change registration semantics.
+For upcoming-release operator instructions, use
+[Choose GitHub support](github-provider-replacement.md). The remainder of this
+document preserves the historical beta.36 baseline; its uses of “currently” and
+“today” refer to that release, not the replacement candidate.
+
+**Status:** Released-baseline characterization for Provider API 15, checked against
+Core beta.36 on 15 October 2026. The replacement work in issues #406–409 is
+authorized for implementation but is not delivered by this release. Earlier
+external-composition proofs do not qualify replacement or credential adoption.
+The registration order and bundled-only behavior described below apply to that
+released baseline. The #171 integration accumulator adds explicit replacement
+selection; its presentation is documented in the
+[provider extension contract](provider-extension-contract.md#github-replacement-presentation),
+with coordination in [#411](https://github.com/RocketsAreNostalgic/ran-booster/issues/411). This baseline
+record does not qualify the accumulator or change registration semantics.
 
 ## Short answer
 
@@ -33,7 +44,7 @@ filesystem, database, hook, or process access.
 ## Registration lifecycle
 
 Core publishes the exact integer marker
-`RAN_BOOSTER_PROVIDER_API_VERSION = 14`. Compatible provider plugins attach a
+`RAN_BOOSTER_PROVIDER_API_VERSION = 15`. Compatible provider plugins attach a
 callback to `ran_booster_register_providers` during normal plugin loading and
 must fail closed unless the marker is exactly the generation they support.
 
@@ -141,6 +152,10 @@ provider registry semantics used by external implementations, and the
 maintained Phase 5 external-wrapper fixture proves the released package can be
 composed without Booster private services.
 
+That fixture proves external composition under the existing registry contract;
+it does not displace an already registered `gh`, approve reuse of retained
+credentials, or qualify switching between implementations.
+
 Booster always registers its bundled GitHub package as `gh`. There is no
 current preference to hide or disable that first-party distribution.
 
@@ -214,9 +229,10 @@ concrete target, and a shared repository URL base is only an overlap signal. It
 does not by itself justify disabling providers that operate on different
 packages or repositories.
 
-No automatic precedence, displacement, shared webhook ingress or signing
-migration, provider election or package handover is approved. Reconsideration
-requires a concrete same-target overlap plus separate owner authority. A
-product-wide rule permitting only one provider implementation for a repository
-service would be an explicit product restriction, not a correctness property
-inferred from current metadata.
+Issues [#406–409](https://github.com/RocketsAreNostalgic/ran-booster/issues/406)
+authorize a bounded, explicitly adopted GitHub.com replacement under `gh`.
+That work retains separate provider identities and requires combined selection,
+credential and runtime safeguards before activation. It does not authorize
+automatic precedence, generic provider election, shared webhook ingress or
+automatic signing migration. The shared delivery contract is tracked in
+[#411](https://github.com/RocketsAreNostalgic/ran-booster/issues/411).

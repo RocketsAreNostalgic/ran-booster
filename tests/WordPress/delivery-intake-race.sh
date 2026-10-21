@@ -68,13 +68,17 @@ for _ in {1..150}; do
 		break
 	fi
 	if ! kill -0 "$pid_a" 2>/dev/null; then
+		if wait "$pid_a"; then child_status=0; else child_status=$?; fi
+		pid_a=''
 		cat "$log_a" >&2
-		echo 'Delivery-intake child A exited before the admission barrier.' >&2
+		printf 'Delivery-intake child A exited before the admission barrier (status %s).\n' "$child_status" >&2
 		exit 1
 	fi
 	if ! kill -0 "$pid_b" 2>/dev/null; then
+		if wait "$pid_b"; then child_status=0; else child_status=$?; fi
+		pid_b=''
 		cat "$log_b" >&2
-		echo 'Delivery-intake child B exited before the admission barrier.' >&2
+		printf 'Delivery-intake child B exited before the admission barrier (status %s).\n' "$child_status" >&2
 		exit 1
 	fi
 	sleep 0.1

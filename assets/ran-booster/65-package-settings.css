@@ -9,12 +9,28 @@
 .ran-booster-admin
 	.ran-booster-package-settings__heading
 	+ .ran-booster-package-settings {
-	margin-block-start: var(--ran-booster-space-14);
+	margin-block-start: var(--ran-booster-space-20);
 }
 
 .ran-booster-admin .ran-booster-package-settings__intro {
-	margin-block: var(--ran-booster-space-5) var(--ran-booster-space-20);
-	color: var(--ran-booster-text-muted);
+	margin-block-end: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-package-recovery {
+	min-inline-size: 0;
+	max-inline-size: 790px;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin
+	.ran-booster-package-recovery
+	> .ran-booster-settings-section {
+	margin-block-start: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-package-recovery .button {
+	max-inline-size: 100%;
+	white-space: normal;
 }
 
 .ran-booster-admin .ran-booster-package-settings {

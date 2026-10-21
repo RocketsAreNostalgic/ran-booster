@@ -62,13 +62,15 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 	}
 
 	/** @return \Closure(): bool */
-	public function deletion_postcondition( string $type, string $identifier ): \Closure {
+	public function deletion_postcondition( string $type, string $identifier, bool $allow_absent = false ): \Closure {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) ) {
 			throw new \InvalidArgumentException( 'The package type is invalid.' );
 		}
 		$relative = 'plugin' === $type && '.' !== dirname( $identifier ) ? dirname( $identifier ) : $identifier;
 		$root     = 'plugin' === $type ? WP_PLUGIN_DIR : get_theme_root( $identifier );
-		if ( ! $this->bounded_installed_path( $root, $relative ) ) {
+		clearstatcache( true );
+		$configured_root = $root;
+		if ( ! preg_match( '/\A[a-zA-Z0-9][a-zA-Z0-9_.-]*(?:\/[a-zA-Z0-9][a-zA-Z0-9_.-]*)*\z/D', $identifier ) || is_link( $root ) || ( ! $allow_absent && ! $this->bounded_installed_path( $root, $relative ) ) ) {
 			throw new \RuntimeException( 'The exact deletion target is unsafe.' );
 		}
 		$root     = realpath( $root );
@@ -88,17 +90,21 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 			throw new \RuntimeException( 'The deletion parent identity is unavailable.' );
 		}
 		$initial_entries = scandir( $parent );
-		if ( false === $initial_entries || ! in_array( $name, $initial_entries, true ) ) {
+		if ( false === $initial_entries || ( ! $allow_absent && ! in_array( $name, $initial_entries, true ) ) ) {
 			throw new \RuntimeException( 'The exact deletion target spelling could not be confirmed.' );
 		}
 		$identities = array(
 			$root   => $identity,
 			$parent => $parent_identity,
 		);
-		return static function () use ( $parent, $name, $target, $identities ): bool {
+		return static function () use ( $parent, $name, $target, $identities, $configured_root, $root ): bool {
 			$entries = array();
 			// Verify the frozen parent both before and after its fresh enumeration.
 			for ( $pass = 0; $pass < 2; ++$pass ) {
+				clearstatcache( true );
+				if ( is_link( $configured_root ) || realpath( $configured_root ) !== $root ) {
+					throw new \RuntimeException( 'The configured deletion root changed.' );
+				}
 				foreach ( $identities as $directory => $identity ) {
 					clearstatcache( true, $directory );
 					if ( is_link( $directory ) || realpath( $directory ) !== $directory ) {
@@ -118,7 +124,7 @@ final class WordPressPackageRemovalGateway implements PackageRemovalGateway {
 				}
 			}
 			clearstatcache( true, $target );
-			return ! in_array( $name, $entries, true ) && ! file_exists( $target ) && ! is_link( $target );
+			return ! in_array( strtolower( $name ), array_map( 'strtolower', $entries ), true ) && ! file_exists( $target ) && ! is_link( $target );
 		};
 	}
 

@@ -18,7 +18,11 @@ use RAN\Secrets\SecretsFile;
 use RAN\Theme;
 use Throwable;
 
-/** Canonical review and Apply behavior shared by Transporter adapters. */
+/**
+ * Canonical review and Apply behavior shared by Transporter adapters.
+ *
+ * @phpstan-import-type RequirementsReport from BlueprintRequirements
+ */
 final readonly class PortabilityApplicationService {
 
 	public function __construct(
@@ -27,6 +31,19 @@ final readonly class PortabilityApplicationService {
 		private PackageOperationService $operations,
 		private SecretsFile $secrets
 	) {
+	}
+
+	/** @return array{state:string,current:?array<string,mixed>,requested:array<string,mixed>,differences:list<string>,requested_selection:?array<string,mixed>,installed_equality:string,source_access:string,package_inspection:string} */
+	public function compare_local( BlueprintPackage $package ): array {
+		return $this->reviewer->compare_local( $package );
+	}
+
+	/** @return array{requirements:RequirementsReport,repository_conflicts:array<int,true>} */
+	public function local_report( PackageBlueprint $blueprint ): array {
+		return array(
+			'requirements'         => ( new BlueprintRequirements() )->assess( $blueprint ),
+			'repository_conflicts' => $this->reviewer->repository_conflicts( $blueprint ),
+		);
 	}
 
 	/**
@@ -40,6 +57,16 @@ final readonly class PortabilityApplicationService {
 		$verifier = $this->verifier->for_preview();
 
 		foreach ( $items as $index => $item ) {
+			if ( ! $this->selected_operation_supported( $item ) ) {
+				$verified[] = new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
+				continue;
+			}
+			$expectation = $verifier->provider_expectation( $item->package->provider );
+			if ( 'gh' === $item->package->provider && null === $expectation ) {
+				$verified[] = new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::PROVIDER_UNAVAILABLE );
+				continue;
+			}
+			$item       = new BlueprintPlanItem( $item->package, $item->action, $item->reason, $expectation );
 			$ordinal    = null;
 			$credential = $this->credential_for( $blueprint, $item, $ordinal );
 			$decision   = null === $ordinal ? null : ( $credential_decisions[ $ordinal ] ?? null );
@@ -65,10 +92,17 @@ final readonly class PortabilityApplicationService {
 		return $this->candidate_context( $candidate )['review'];
 	}
 
+	/** @param array<string,mixed>|null $provider_expectation */
 	public function apply_candidate(
 		PortabilityCandidate $candidate,
-		string $expected_fingerprint
+		string $expected_fingerprint,
+		?array $provider_expectation
 	): PortabilityApplyResult {
+		$refusal = $this->verifier->provider_review_refusal( $candidate->provider_code, $provider_expectation );
+		if ( null !== $refusal ) {
+			$reason = TargetPackageReason::from( $refusal );
+			return new PortabilityApplyResult( PortabilityApplyResult::BLOCKED, $refusal, $reason->message(), false );
+		}
 		$context = $this->candidate_context( $candidate );
 		$review  = $context['review'];
 		if ( ! hash_equals( $review->fingerprint, $expected_fingerprint ) ) {
@@ -100,8 +134,13 @@ final readonly class PortabilityApplicationService {
 
 		$package   = $context['package'];
 		$blueprint = new PackageBlueprint( array( $package ) );
-		$item      = new BlueprintPlanItem( $package, TargetPackageAction::ADOPT, TargetPackageReason::NONE );
-		$result    = $this->apply_item(
+		$item      = new BlueprintPlanItem( $package, TargetPackageAction::ADOPT, TargetPackageReason::NONE, $provider_expectation );
+		$refusal   = $this->verifier->provider_review_refusal( $candidate->provider_code, $provider_expectation );
+		if ( null !== $refusal ) {
+			$reason = TargetPackageReason::from( $refusal );
+			return new PortabilityApplyResult( PortabilityApplyResult::BLOCKED, $refusal, $reason->message(), false );
+		}
+		$result = $this->apply_item(
 			$blueprint,
 			$item,
 			null,
@@ -120,7 +159,9 @@ final readonly class PortabilityApplicationService {
 
 	/**
 	 * @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
+	 * @param array<array-key,mixed>|null $selected_rows Untrusted request selection, validated before local reads.
 	 * @return array{status:string,message:string,credential_state:string}
+	 * @param array<string,mixed>|null $provider_expectation
 	 */
 	public function apply(
 		PackageBlueprint $blueprint,
@@ -129,16 +170,38 @@ final readonly class PortabilityApplicationService {
 		array $credential_decisions,
 		?string $target_credential_id,
 		bool $adopt,
-		bool $can_install
+		bool $can_install,
+		?array $selected_rows,
+		?array $provider_expectation
 	): array {
 		$package = $blueprint->packages[ $row ] ?? null;
 		if ( ! $package instanceof BlueprintPackage ) {
 			throw new InvalidArgumentException();
 		}
-		$item = $this->reviewer->review_package( $package );
-		if ( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION === $item->reason ) {
-			return $this->result( 'skipped', $item->reason->message() );
+		$refusal = $this->verifier->provider_review_refusal( $package->provider, $provider_expectation );
+		if ( null !== $refusal ) {
+			return $this->result( 'skipped', TargetPackageReason::from( $refusal )->message() );
 		}
+		$selected_rows ??= array( $row );
+		if ( ! array_is_list( $selected_rows ) || array() === $selected_rows
+			|| count( $selected_rows ) > PackageBlueprint::MAX_PACKAGES || ! in_array( $row, $selected_rows, true ) ) {
+			throw new InvalidArgumentException( 'The selected package rows are invalid.' );
+		}
+		$selected = array();
+		foreach ( $selected_rows as $selected_row ) {
+			if ( ! is_int( $selected_row ) || isset( $selected[ $selected_row ] ) || ! isset( $blueprint->packages[ $selected_row ] ) ) {
+				throw new InvalidArgumentException( 'The selected package rows are invalid.' );
+			}
+			$selected[ $selected_row ] = $blueprint->packages[ $selected_row ];
+		}
+		if ( array() !== $this->reviewer->repository_conflicts( new PackageBlueprint( array_values( $selected ) ) ) ) {
+			return $this->result( 'skipped', __( 'The selected packages conflict: a repository can supply multiple branch packages or one release package, but not both. Select a compatible subset and review again.', 'ran-booster' ) );
+		}
+		$item = $this->reviewer->review_package( $package );
+		if ( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION === $item->reason || ! $this->selected_operation_supported( $item ) ) {
+			return $this->result( 'skipped', TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION->message() );
+		}
+		$item                 = new BlueprintPlanItem( $package, $item->action, $item->reason, $provider_expectation );
 		$ordinal              = null;
 		$credential           = $this->credential_for( $blueprint, $item, $ordinal );
 		$decision             = null === $ordinal ? null : ( $credential_decisions[ $ordinal ] ?? null );
@@ -186,6 +249,10 @@ final readonly class PortabilityApplicationService {
 		?string $target_credential_id,
 		?bool $repository_private
 	): array {
+		$refusal = $this->verifier->provider_review_refusal( $item->package->provider, $item->provider_expectation );
+		if ( null !== $refusal ) {
+			throw new InvalidArgumentException( 'Fresh provider review is required.' );
+		}
 		if ( TargetPackageAction::MANAGED === $item->action ) {
 			if ( 'import' !== $source || null === $credential || ! is_bool( $repository_private ) ) {
 				return $this->result( 'unchanged', __( 'This package is already managed.', 'ran-booster' ) );
@@ -221,7 +288,10 @@ final readonly class PortabilityApplicationService {
 				'install-' . $item->package->type,
 				$this->operation_input( $item, $credential_id, $repository_private )
 			);
-			$result    = $this->operations->execute( $operation );
+			if ( null !== $this->verifier->provider_review_refusal( $item->package->provider, $item->provider_expectation ) ) {
+				throw new InvalidArgumentException( 'Fresh provider review is required.' );
+			}
+			$result = $this->operations->execute( $operation );
 			if ( TargetPackageAction::ADOPT === $item->action ) {
 				$this->assert_disabled_result( $result, $item->package, $credential_id, $repository_private );
 
@@ -279,9 +349,27 @@ final readonly class PortabilityApplicationService {
 	 * @return array{review:PortabilityReviewResult,package:BlueprintPackage|null,private:bool|null}
 	 */
 	private function candidate_context( PortabilityCandidate $candidate ): array {
-		$resolved = $this->verifier->resolve_candidate( $candidate );
-		$package  = $resolved['package'];
-		$private  = $resolved['private'];
+		$expectation = $this->verifier->provider_expectation( $candidate->provider_code );
+		$refusal     = 'gh' === $candidate->provider_code && null === $expectation ? 'provider_unavailable'
+			: $this->verifier->provider_review_refusal( $candidate->provider_code, $expectation );
+		$resolved    = null === $refusal ? $this->verifier->resolve_candidate( $candidate )
+			: array(
+				'package' => null,
+				'private' => null,
+				'reason'  => TargetPackageReason::from( $refusal ),
+			);
+		if ( null !== $expectation ) {
+			$refusal = $this->verifier->provider_review_refusal( $candidate->provider_code, $expectation );
+			if ( null !== $refusal ) {
+				$resolved = array(
+					'package' => null,
+					'private' => null,
+					'reason'  => TargetPackageReason::from( $refusal ),
+				);
+			}
+		}
+		$package = $resolved['package'];
+		$private = $resolved['private'];
 		if ( ! $package instanceof BlueprintPackage || ! is_bool( $private ) ) {
 			$reason = $resolved['reason'];
 
@@ -309,6 +397,11 @@ final readonly class PortabilityApplicationService {
 			$item = new BlueprintPlanItem( $package, TargetPackageAction::PROTECTED, TargetPackageReason::MANAGEMENT_CONFLICT );
 		}
 
+		$refusal = $this->verifier->provider_review_refusal( $candidate->provider_code, $expectation );
+		if ( null !== $refusal ) {
+			$item = new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
+		}
+
 		return array(
 			'review'  => PortabilityReviewResult::from_resolved(
 				$candidate,
@@ -316,7 +409,8 @@ final readonly class PortabilityApplicationService {
 				$item->reason->value,
 				$item->reason->message(),
 				$package->provider_repository_id,
-				$private
+				$private,
+				$expectation
 			),
 			'package' => $package,
 			'private' => $private,
@@ -372,6 +466,19 @@ final readonly class PortabilityApplicationService {
 		return $this->secrets->import_credentials_if_absent( $blueprint, $credential )[0] ?? throw new InvalidArgumentException();
 	}
 
+	private function selected_operation_supported( BlueprintPlanItem $item ): bool {
+		if ( null === $item->package->selection || TargetPackageAction::INSTALL !== $item->action ) {
+			return true;
+		}
+		try {
+			// Validate requested identity before any credential import or provider work.
+			PackageOperation::from_input( 'install-' . $item->package->type, $this->operation_input( $item, null, false ) );
+			return true;
+		} catch ( InvalidArgumentException ) {
+			return false;
+		}
+	}
+
 	/** @return array<string, string> */
 	private function operation_input( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ): array {
 		$package = $item->package;
@@ -387,6 +494,10 @@ final readonly class PortabilityApplicationService {
 			'package_slug'                        => 'plugin' === $package->type ? explode( '/', $package->identifier, 2 )[0] : $package->identifier,
 			'subdirectory'                        => $package->subdirectory ?? '',
 		);
+		if ( TargetPackageAction::INSTALL === $item->action && null !== $package->selection ) {
+			$input['selected_commit']     = (string) $package->selection['commit'];
+			$input['expected_identifier'] = $package->identifier;
+		}
 		if ( TargetPackageAction::ADOPT === $item->action ) {
 			$input['dry-run']          = '1';
 			$input['exact_identifier'] = '1';

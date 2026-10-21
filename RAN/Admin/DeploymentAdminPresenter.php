@@ -99,23 +99,39 @@ final class DeploymentAdminPresenter {
 		return $this->outcome( 'needs_attention' === $state ? 'error' : 'info', 'ran_booster_deployment_active', $message, $reference, $operation );
 	}
 
-	/** @return array<string, mixed> */
-	public function activity(): array {
+	/**
+	 * @param array<string, string> $provider_labels
+	 * @return array<string, mixed>
+	 */
+	public function activity( array $provider_labels = array() ): array {
 		$mode                   = 'list';
 		$items                  = array();
 		$unavailable            = null === $this->attempts;
 		$has_cursor             = false;
 		$next_cursor            = null;
+		$activity_filter_key    = null;
 		$later_verified_attempt = null;
 		$package_settings_urls  = array();
-		$base                   = compact( 'mode', 'items', 'unavailable', 'has_cursor', 'next_cursor', 'later_verified_attempt', 'package_settings_urls' );
+		$package_labels         = array();
+		$filter_options         = array(
+			'providers' => array(),
+			'packages'  => array(),
+		);
+		$filter_state           = array(
+			'provider' => '',
+			'package'  => '',
+		);
+		$filter_notice          = null;
+		$base                   = compact( 'mode', 'items', 'unavailable', 'has_cursor', 'next_cursor', 'activity_filter_key', 'later_verified_attempt', 'package_settings_urls', 'package_labels', 'filter_options', 'filter_state', 'filter_notice' );
 		$has_attempt            = $this->query_has_key( 'attempt' );
 		$has_ref                = $this->query_has_key( 'reference' );
 		$base['mode']           = $has_attempt || $has_ref ? 'detail' : 'list';
 		if ( null === $this->attempts ) {
 			return $base;
 		}
-		$base['package_settings_urls'] = $this->package_settings_urls();
+		$inventory                     = $this->package_activity_inventory();
+		$base['package_settings_urls'] = $inventory['urls'];
+		$base['package_labels']        = $inventory['labels'];
 		$attempt                       = $this->query_value( 'attempt' );
 		$attempt_id                    = null === $attempt ? null : $this->positive_integer( $attempt );
 		$reference                     = $this->query_value( 'reference' );
@@ -141,30 +157,34 @@ final class DeploymentAdminPresenter {
 
 			return $base;
 		}
-		return $this->shared_history( $base );
+		return $this->shared_history( $base, $provider_labels );
 	}
 
 	/**
 	 * @param array<string, mixed> $base
+	 * @param array<string, string> $provider_labels
 	 * @return array<string, mixed>
 	 */
-	private function shared_history( array $base ): array {
+	private function shared_history( array $base, array $provider_labels ): array {
 		$base['has_cursor'] = $this->query_has_key( 'before' );
-		$base['filters']    = array();
 		$base['items']      = array();
 		try {
-			foreach ( array( 'provider', 'subject_type', 'subject_identity', 'operation', 'outcome' ) as $key ) {
-				$value = $this->query_value( 'activity_' . $key );
-				if ( $this->query_has_key( 'activity_' . $key ) && ( null === $value || strlen( $value ) > 255 || preg_match( '/[\x00-\x1F\x7F]/', $value ) ) ) {
-					throw new \InvalidArgumentException( 'Invalid activity filter.' );
-				}
-				if ( null !== $value && '' !== $value ) {
-					$base['filters'][ $key ] = $value;
-				}
+			$choices = $this->activity_store?->activity_filter_choices();
+			if ( null === $choices || ! $choices['available'] ) {
+				throw new \RuntimeException( 'Activity storage is unavailable.' );
+			}
+			$selection              = $this->activity_filter_selection( $choices['providers'], $choices['packages'], $provider_labels, $base['package_labels'] );
+			$base['filters']        = $selection['filters'];
+			$base['filter_options'] = $selection['options'];
+			$base['filter_state']   = $selection['state'];
+			$base['filter_notice']  = $selection['notice'];
+			if ( $selection['reset_cursor'] ) {
+				$base['has_cursor'] = false;
 			}
 			ksort( $base['filters'], SORT_STRING );
-			$filter_key = hash( 'sha256', http_build_query( $base['filters'], '', '&', PHP_QUERY_RFC3986 ) );
-			$cursor     = null;
+			$filter_key                  = hash( 'sha256', http_build_query( $base['filters'], '', '&', PHP_QUERY_RFC3986 ) );
+			$base['activity_filter_key'] = $filter_key;
+			$cursor                      = null;
 			if ( $base['has_cursor'] ) {
 				$raw = $this->query_value( 'before' );
 				if ( null === $raw || 1 !== preg_match( '/\Av1\|([a-f0-9]{64})\|(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\|(activity|deployment)\|([1-9][0-9]*)\z/', $raw, $parts ) || null === $this->positive_integer( $parts[4] ) ) {
@@ -221,6 +241,7 @@ final class DeploymentAdminPresenter {
 						'outcome_code'        => $outcome,
 						'resolved_at'         => $resolved_at,
 						'resolved_by'         => $resolved_by,
+						'provider_label'      => $provider_labels[ (string) ( $record['provider'] ?? '' ) ] ?? ( 'gh' === ( $record['provider'] ?? '' ) ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === ( $record['provider'] ?? '' ) ? __( 'Bitbucket', 'ran-booster' ) : (string) ( $record['provider'] ?? '' ) ) ),
 					)
 				);
 			}
@@ -234,6 +255,129 @@ final class DeploymentAdminPresenter {
 			$base['items']       = array();
 		}
 		return $base;
+	}
+
+	/**
+	 * Normalize the two browse controls against retained choices before querying history.
+	 * @param list<array{provider:string,has_non_package:bool}> $providers
+	 * @param list<array{provider:string,subject_type:string,subject_identity:string}> $packages
+	 * @param array<string, string> $provider_labels
+	 * @param array<string, string> $package_labels
+	 * @return array{filters:array<string,string>,options:array{providers:list<array{value:string,label:string}>,packages:list<array<string,string>>},state:array{provider:string,package:string},notice:?string,reset_cursor:bool}
+	 */
+	private function activity_filter_selection( array $providers, array $packages, array $provider_labels, array $package_labels ): array {
+		$notice = null;
+		foreach ( array( 'activity_subject_type', 'activity_subject_identity', 'activity_operation', 'activity_outcome' ) as $legacy ) {
+			if ( $this->query_has_key( $legacy ) ) {
+				$notice = __( 'Older activity filters were cleared. Use Provider and Activity subject to filter activity.', 'ran-booster' );
+				break;
+			}
+		}
+		$provider_options = array();
+		foreach ( $providers as $provider ) {
+			$provider_options[] = array(
+				'value' => $provider['provider'],
+				'label' => $provider_labels[ $provider['provider'] ] ?? ( 'gh' === $provider['provider'] ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $provider['provider'] ? __( 'Bitbucket', 'ran-booster' ) : $provider['provider'] ) ),
+			);
+		}
+		$package_options = array();
+		foreach ( $packages as $package ) {
+			$value = wp_json_encode( array( $package['provider'], $package['subject_type'], $package['subject_identity'] ) );
+			if ( ! is_string( $value ) ) {
+				continue;
+			}
+			$package_options[] = array(
+				'value'            => $value,
+				'provider'         => $package['provider'],
+				'subject_type'     => $package['subject_type'],
+				'subject_identity' => $package['subject_identity'],
+				'label'            => sprintf( '%1$s · %2$s: %3$s', $provider_labels[ $package['provider'] ] ?? ( 'gh' === $package['provider'] ? __( 'GitHub', 'ran-booster' ) : ( 'bb' === $package['provider'] ? __( 'Bitbucket', 'ran-booster' ) : $package['provider'] ) ), 'theme' === $package['subject_type'] ? __( 'Theme', 'ran-booster' ) : __( 'Plugin', 'ran-booster' ), $package_labels[ $package['provider'] . "\0" . $package['subject_type'] . "\0" . $package['subject_identity'] ] ?? $package['subject_identity'] ),
+			);
+		}
+		$provider = $this->activity_filter_value( 'activity_provider' );
+		if ( $this->query_has_key( 'activity_provider' ) && null === $provider && '' !== $this->query_value( 'activity_provider' ) ) {
+			$notice = __( 'That provider filter was cleared.', 'ran-booster' );
+		} elseif ( null !== $provider && ! in_array( $provider, array_column( $providers, 'provider' ), true ) ) {
+			$provider = null;
+			$notice   = __( 'That provider is no longer available in retained activity.', 'ran-booster' );
+		}
+		$visible_packages = null === $provider
+			? $package_options
+			: array_values( array_filter( $package_options, static fn ( array $option ): bool => $provider === $option['provider'] ) );
+		$has_non_package  = count(
+			array_filter(
+				$providers,
+				static fn ( array $choice ): bool => ( null === $provider || $provider === $choice['provider'] ) && $choice['has_non_package']
+			)
+		) > 0;
+		if ( $has_non_package ) {
+			array_unshift(
+				$visible_packages,
+				array(
+					'value' => 'non-package',
+					'label' => __( 'Non-package events', 'ran-booster' ),
+				)
+			);
+		}
+		$package              = $this->activity_filter_value( 'activity_package' );
+		$selected_package     = null;
+		$selected_non_package = false;
+		if ( $this->query_has_key( 'activity_package' ) && null === $package && '' !== $this->query_value( 'activity_package' ) ) {
+			$notice = __( 'That Activity subject filter was cleared.', 'ran-booster' );
+		} elseif ( 'non-package' === $package ) {
+			if ( ! $has_non_package ) {
+				$notice = __( 'That Activity subject is no longer available in retained activity.', 'ran-booster' );
+			} else {
+				$selected_non_package = true;
+			}
+		} elseif ( null !== $package ) {
+			$decoded = json_decode( $package, true );
+			foreach ( $package_options as $option ) {
+				if ( is_array( $decoded ) && array( $option['provider'], $option['subject_type'], $option['subject_identity'] ) === $decoded ) {
+					$selected_package = $option;
+					break;
+				}
+			}
+			if ( null === $selected_package ) {
+				$notice = __( 'That Activity subject is no longer available in retained activity.', 'ran-booster' );
+			} elseif ( null !== $provider && $provider !== $selected_package['provider'] ) {
+				$selected_package = null;
+				$notice           = __( 'The Activity subject filter was cleared because it does not match the selected provider.', 'ran-booster' );
+			}
+		}
+		$reset_cursor = null !== $notice;
+		$filters      = array();
+		if ( null !== $provider ) {
+			$filters['provider'] = $provider;
+		}
+		if ( $selected_non_package ) {
+			$filters['non_package'] = '1';
+		} elseif ( null !== $selected_package ) {
+			$filters['provider']         = $selected_package['provider'];
+			$filters['subject_type']     = $selected_package['subject_type'];
+			$filters['subject_identity'] = $selected_package['subject_identity'];
+		}
+		return array(
+			'filters'      => $filters,
+			'options'      => array(
+				'providers' => $provider_options,
+				'packages'  => $visible_packages,
+			),
+			'state'        => array(
+				'provider' => $provider ?? '',
+				'package'  => $selected_non_package ? 'non-package' : ( $selected_package['value'] ?? '' ),
+			),
+			'notice'       => $notice,
+			'reset_cursor' => $reset_cursor,
+		);
+	}
+
+	private function activity_filter_value( string $key ): ?string {
+		if ( ! $this->query_has_key( $key ) ) {
+			return null;
+		}
+		$value = $this->query_value( $key );
+		return null !== $value && '' !== $value && strlen( $value ) <= 1024 && ! preg_match( '/[\x00-\x1F\x7F]/', $value ) ? $value : null;
 	}
 
 	/**
@@ -281,15 +425,16 @@ final class DeploymentAdminPresenter {
 
 	/** @param array<string, int|string|null> $failure */
 	private function credential_url( array $failure ): string {
-		return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( (string) $failure['provider'] ) . '&replace_credential=' . rawurlencode( (string) $failure['credential_id'] ) );
+		return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( (string) $failure['provider'] ) . '&view=credentials&replace_credential=' . rawurlencode( (string) $failure['credential_id'] ) );
 	}
 
-	/** @return array<'plugin'|'theme', array<string, string>> */
-	private function package_settings_urls(): array {
-		$urls = array(
+	/** @return array{urls:array<'plugin'|'theme', array<string, string>>,labels:array<string,string>} */
+	private function package_activity_inventory(): array {
+		$urls   = array(
 			'plugin' => array(),
 			'theme'  => array(),
 		);
+		$labels = array();
 		foreach ( array( 'plugin', 'theme' ) as $type ) {
 			try {
 				$packages = 'plugin' === $type ? $this->plugins?->all_deployment_plugins() : $this->themes?->all_deployment_themes();
@@ -305,7 +450,12 @@ final class DeploymentAdminPresenter {
 						$seen[ $slug ] = true;
 						continue;
 					}
-					$seen[ $slug ]          = true;
+					$seen[ $slug ] = true;
+					$provider      = $package->get_provider_code();
+					$identifier    = $package->get_identifier();
+					if ( is_string( $provider ) && '' !== $provider && is_string( $identifier ) && '' !== $identifier ) {
+						$labels[ $provider . "\0" . $type . "\0" . $identifier ] = $package->get_display_name() . ' (' . $identifier . ')';
+					}
 					$query                  = array();
 					$query['page']          = $view->get_page_slug();
 					$query['package']       = (string) $package->get_identifier();
@@ -316,7 +466,7 @@ final class DeploymentAdminPresenter {
 			}
 		}
 
-		return $urls;
+		return compact( 'urls', 'labels' );
 	}
 
 	private function query_has_key( string $key ): bool {

@@ -47,7 +47,8 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 			'',
 			'',
 			'stable',
-			''
+			'',
+			null
 		);
 
 		self::assertSame( 'invalid_request', $outcome['code'] );
@@ -109,6 +110,8 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		$inspect                = $controls->process_prospective_request( 'inspect', $request );
 		self::assertTrue( $inspect['successful'] );
 		self::assertSame( $fingerprint, $inspect['data']['fingerprint'] );
+		self::assertNull( $inspect['data']['provider_expectation'] );
+		self::assertSame( $this->nonce( 'install', 'plugin' ), $inspect['data']['install_nonce'] );
 		self::assertSame( 'https://releases.acme.test/packages/example/v1.2.3-rc.1', $inspect['data']['details_url'] );
 
 		$request['ran_booster_release_install_nonce'] = $this->nonce( 'install', 'plugin' );
@@ -127,7 +130,25 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 			$prospective->calls[0][2]
 		);
 		self::assertSame( array( 'inspect', 'plugin', $prospective->calls[0][2], 'release:opaque/042', 'v1.2.3-rc.1', 'prerelease', $this->nonce( 'inspect', 'plugin' ) ), $prospective->calls[1] );
-		self::assertSame( array( 'install', 'plugin', $prospective->calls[0][2], 'release:opaque/042', 'v1.2.3-rc.1', $fingerprint, 'prerelease', $this->nonce( 'install', 'plugin' ) ), $prospective->calls[2] );
+		self::assertSame( array( 'install', 'plugin', $prospective->calls[0][2], 'release:opaque/042', 'v1.2.3-rc.1', $fingerprint, 'prerelease', $this->nonce( 'install', 'plugin' ), null ), $prospective->calls[2] );
+
+		$expectation                        = array(
+			'provider_code'              => 'gh',
+			'selection_generation'       => 4,
+			'implementation_fingerprint' => str_repeat( 'a', 64 ),
+		);
+		$inspection                         = $prospective->results['inspect']->data();
+		$inspection['provider_expectation'] = $expectation;
+		$prospective->results['inspect']    = ProspectiveReleaseResult::success( 'release_ready', $inspection );
+		$inspect                            = $controls->process_prospective_request( 'inspect', $request );
+		self::assertTrue( $inspect['successful'] );
+		self::assertSame( $expectation, $inspect['data']['provider_expectation'] );
+
+		$inspection['provider_expectation'] = 'invalid-context';
+		$prospective->results['inspect']    = ProspectiveReleaseResult::success( 'release_ready', $inspection );
+		$inspect                            = $controls->process_prospective_request( 'inspect', $request );
+		self::assertFalse( $inspect['successful'] );
+		self::assertArrayNotHasKey( 'install_nonce', $inspect['data'] );
 	}
 
 	public function test_prospective_pane_carries_type_and_install_script_suppresses_branch_dispatcher(): void {
@@ -417,7 +438,31 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 
 		self::assertTrue( $outcome['successful'] );
 		self::assertSame( $identifier, $outcome['identifier'] );
-		self::assertSame( array( 'install', $type, $request['ran_booster'], '84', 'v2.0.0', $fingerprint, 'stable', $this->nonce( 'install', $type ) ), $prospective->calls[0] );
+		self::assertSame( array( 'install', $type, $request['ran_booster'], '84', 'v2.0.0', $fingerprint, 'stable', $this->nonce( 'install', $type ), null ), $prospective->calls[0] );
+	}
+
+	public function test_install_transport_forwards_exact_destination_context_and_rejects_invalid_json(): void {
+		$prospective                                  = new ProspectiveReleaseFacadeDouble();
+		$controls                                     = ReleaseManagementFixture::controls( prospective: $prospective );
+		$request                                      = $this->request( 'install' );
+		$request['ran_booster_release_install_nonce'] = $this->nonce( 'install', 'plugin' );
+		$request['release_id']                        = '42';
+		$request['release_tag']                       = 'v1.0.0';
+		$request['release_fingerprint']               = 'v2:' . str_repeat( 'a', 64 );
+		$expectation                                  = array(
+			'provider_code'              => 'gh',
+			'selection_generation'       => 4,
+			'implementation_fingerprint' => str_repeat( 'a', 64 ),
+		);
+		$request['provider_expectation']              = wp_json_encode( $expectation );
+		$controls->process_prospective_request( 'install', $request );
+		self::assertSame( $expectation, $prospective->calls[0][8] );
+		$prospective->calls = array();
+		foreach ( array( null, array(), 'false', '42', '{', str_repeat( 'a', 513 ) ) as $malformed ) {
+			$request['provider_expectation'] = $malformed;
+			self::assertFalse( $controls->process_prospective_request( 'install', $request )['successful'] );
+		}
+		self::assertSame( array(), $prospective->calls );
 	}
 
 	/** @return iterable<string, array{string,string}> */
@@ -466,10 +511,11 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		string $channel = 'stable'
 	): array {
 		return array(
-			'expected_type'   => $type,
-			'_wpnonce'        => $this->nonce( $operation, $type ),
-			'release_channel' => $channel,
-			'ran_booster'     => array(
+			'expected_type'        => $type,
+			'_wpnonce'             => $this->nonce( $operation, $type ),
+			'release_channel'      => $channel,
+			'provider_expectation' => 'null',
+			'ran_booster'          => array(
 				'provider'      => $provider,
 				'repository'    => 'workspace/example',
 				'credential_id' => 'profile_1',

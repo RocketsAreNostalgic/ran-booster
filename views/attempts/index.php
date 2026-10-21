@@ -13,13 +13,21 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$items       = is_array( $deployment_activity['items'] ?? null ) ? $deployment_activity['items'] : array();
-$filters     = is_array( $deployment_activity['filters'] ?? null ) ? $deployment_activity['filters'] : array();
-$unavailable = true === ( $deployment_activity['unavailable'] ?? false );
-$has_cursor  = true === ( $deployment_activity['has_cursor'] ?? false );
-$base_url    = $troubleshooting_base . '&panel=activity';
-foreach ( $filters as $key => $value ) {
-	$base_url = add_query_arg( 'activity_' . $key, $value, $base_url );
+$items               = is_array( $deployment_activity['items'] ?? null ) ? $deployment_activity['items'] : array();
+$filters             = is_array( $deployment_activity['filters'] ?? null ) ? $deployment_activity['filters'] : array();
+$filter_options      = is_array( $deployment_activity['filter_options'] ?? null ) ? $deployment_activity['filter_options'] : array();
+$filter_state        = is_array( $deployment_activity['filter_state'] ?? null ) ? $deployment_activity['filter_state'] : array();
+$unavailable         = true === ( $deployment_activity['unavailable'] ?? false );
+$has_cursor          = true === ( $deployment_activity['has_cursor'] ?? false );
+$activity_filter_key = is_string( $deployment_activity['activity_filter_key'] ?? null ) ? $deployment_activity['activity_filter_key'] : '';
+$base_url            = $troubleshooting_base . '&panel=activity';
+$selected_provider   = is_string( $filter_state['provider'] ?? null ) ? $filter_state['provider'] : '';
+$selected_package    = is_string( $filter_state['package'] ?? null ) ? $filter_state['package'] : '';
+if ( '' !== $selected_provider ) {
+	$base_url .= '&activity_provider=' . rawurlencode( $selected_provider );
+}
+if ( '' !== $selected_package ) {
+	$base_url .= '&activity_package=' . rawurlencode( $selected_package );
 }
 $settings_urls = is_array( $deployment_activity['package_settings_urls'] ?? null )
 	? $deployment_activity['package_settings_urls']
@@ -47,30 +55,46 @@ $origin_labels = array(
 	'webhook' => __( 'Repository webhook', 'ran-booster' ),
 );
 ?>
-<section class="ran-booster-activity" aria-labelledby="ran-booster-activity-heading">
+<section class="ran-booster-activity" aria-labelledby="ran-booster-activity-heading" data-ran-booster-activity data-ran-booster-activity-filter="<?php echo esc_attr( $activity_filter_key ); ?>" data-ran-booster-activity-provider="<?php echo esc_attr( $selected_provider ); ?>" data-ran-booster-activity-package="<?php echo esc_attr( $selected_package ); ?>" data-ran-booster-activity-has-cursor="<?php echo $has_cursor ? '1' : '0'; ?>" data-ran-booster-activity-unavailable="<?php echo $unavailable ? '1' : '0'; ?>">
 	<header class="ran-booster-activity__header">
 		<h3 id="ran-booster-activity-heading"><?php esc_html_e( 'Activity', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Review recorded checks and deployments. Activity is recorded independently of diagnostic logging.', 'ran-booster' ); ?></p>
 	</header>
-	<form method="get">
-		<input type="hidden" name="page" value="ran-booster">
-		<input type="hidden" name="tab" value="troubleshooting">
-		<input type="hidden" name="panel" value="activity">
-		<?php
-		foreach ( array(
-			'provider'         => __( 'Provider', 'ran-booster' ),
-			'subject_type'     => __( 'Package type', 'ran-booster' ),
-			'subject_identity' => __( 'Package', 'ran-booster' ),
-			'operation'        => __( 'Activity', 'ran-booster' ),
-			'outcome'          => __( 'Outcome', 'ran-booster' ),
-		) as $key => $label ) {
-			?>
-			<label><?php echo esc_html( $label ); ?> <input type="text" name="<?php echo esc_attr( 'activity_' . $key ); ?>" value="<?php echo esc_attr( (string) ( $filters[ $key ] ?? '' ) ); ?>"></label>
-		<?php } ?>
-		<button type="submit" class="button"><?php esc_html_e( 'Filter activity', 'ran-booster' ); ?></button>
-	</form>
+	<div class="ran-booster-package-list-controls">
+		<form class="ran-booster-package-list-filters" method="get">
+			<input type="hidden" name="page" value="ran-booster">
+			<input type="hidden" name="tab" value="troubleshooting">
+			<input type="hidden" name="panel" value="activity">
+			<label class="screen-reader-text" for="ran-booster-activity-provider"><?php esc_html_e( 'Provider', 'ran-booster' ); ?></label>
+			<select id="ran-booster-activity-provider" name="activity_provider">
+				<option value=""><?php esc_html_e( 'All providers', 'ran-booster' ); ?></option>
+				<?php foreach ( $filter_options['providers'] ?? array() as $option ) { ?>
+					<?php if ( is_array( $option ) && is_string( $option['value'] ?? null ) && is_string( $option['label'] ?? null ) ) { ?>
+						<option value="<?php echo esc_attr( $option['value'] ); ?>" <?php selected( $option['value'], $selected_provider ); ?>><?php echo esc_html( $option['label'] ); ?></option>
+					<?php } ?>
+				<?php } ?>
+			</select>
+			<label class="screen-reader-text" for="ran-booster-activity-package"><?php esc_html_e( 'Activity subject', 'ran-booster' ); ?></label>
+			<select id="ran-booster-activity-package" name="activity_package">
+				<option value=""><?php esc_html_e( 'All subjects', 'ran-booster' ); ?></option>
+				<?php foreach ( $filter_options['packages'] ?? array() as $option ) { ?>
+					<?php if ( is_array( $option ) && is_string( $option['value'] ?? null ) && is_string( $option['label'] ?? null ) ) { ?>
+						<option value="<?php echo esc_attr( $option['value'] ); ?>" <?php selected( $option['value'], $selected_package ); ?>><?php echo esc_html( $option['label'] ); ?></option>
+					<?php } ?>
+				<?php } ?>
+			</select>
+			<button type="submit" class="button"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
+			<?php if ( '' !== $selected_provider || '' !== $selected_package ) { ?>
+				<a class="ran-booster-package-list-filters__clear" href="<?php echo esc_url( $troubleshooting_base . '&panel=activity' ); ?>"><?php esc_html_e( 'Clear filters', 'ran-booster' ); ?></a>
+			<?php } ?>
+		</form>
+	</div>
+	<?php
+	if ( is_string( $deployment_activity['filter_notice'] ?? null ) ) {
+		?>
+		<div class="notice notice-warning inline"><p><?php echo esc_html( $deployment_activity['filter_notice'] ); ?></p></div><?php } ?>
 	<?php if ( $has_queued ) { ?>
-		<form method="post">
+		<form method="post" data-ran-booster-activity-runner>
 			<?php wp_nonce_field( 'ran-booster-request-deployment-runner' ); ?>
 			<input type="hidden" name="ran_booster[action]" value="request-deployment-runner">
 			<?php submit_button( __( 'Request deployment runner', 'ran-booster' ), 'secondary', 'submit', false ); ?>
@@ -79,29 +103,38 @@ $origin_labels = array(
 	<?php if ( $unavailable ) { ?>
 		<div class="notice notice-error inline"><p><?php esc_html_e( 'Activity is temporarily unavailable.', 'ran-booster' ); ?></p></div>
 	<?php } elseif ( array() === $items && $has_cursor ) { ?>
-		<p><?php esc_html_e( 'No older activity is available.', 'ran-booster' ); ?></p>
-		<p><a class="button" href="<?php echo esc_url( $base_url ); ?>"><?php esc_html_e( 'View latest activity', 'ran-booster' ); ?></a></p>
+		<p data-ran-booster-activity-exhausted><?php esc_html_e( 'No older activity is available.', 'ran-booster' ); ?></p>
+	<?php } elseif ( array() === $items && ( '' !== $selected_provider || '' !== $selected_package ) ) { ?>
+		<p><?php esc_html_e( 'No activity matches these filters.', 'ran-booster' ); ?></p>
 	<?php } elseif ( array() === $items ) { ?>
 		<p><?php esc_html_e( 'No activity has been recorded yet.', 'ran-booster' ); ?></p>
 	<?php } else { ?>
 		<div class="ran-booster-data-table-wrap ran-booster-attempt-table" role="table">
 			<div class="ran-booster-attempt-table__head" role="row">
 				<span role="columnheader"><?php esc_html_e( 'Time', 'ran-booster' ); ?></span>
-				<span role="columnheader"><?php esc_html_e( 'Project', 'ran-booster' ); ?></span>
+				<span role="columnheader"><?php esc_html_e( 'Subject', 'ran-booster' ); ?></span>
 				<span role="columnheader"><?php esc_html_e( 'Source', 'ran-booster' ); ?></span>
 				<span role="columnheader"><?php esc_html_e( 'Activity', 'ran-booster' ); ?></span>
 				<span role="columnheader"><?php esc_html_e( 'Outcome', 'ran-booster' ); ?></span>
 			</div>
-			<ul class="ran-booster-attempt-list">
+			<ul class="ran-booster-attempt-list" data-ran-booster-activity-list>
 			<?php
 			foreach ( $items as $item ) {
-				$recorded_check         = 'activity' === ( $item['record_source'] ?? '' );
-				$state                  = (string) ( $item['state'] ?? '' );
-				$summary                = $recorded_check
+				$recorded_check   = 'activity' === ( $item['record_source'] ?? '' );
+				$state            = (string) ( $item['state'] ?? '' );
+				$summary          = $recorded_check
 					? DeploymentOutcomeMessage::for_activity( $state, (string) ( $item['reason'] ?? '' ), (string) ( $item['message'] ?? '' ) )
 					: DeploymentOutcomeMessage::for_code( (string) ( $item['outcome_code'] ?? 'pending' ) );
-				$project_label          = (string) ( $item['package_slug'] ?? '' );
-				$package_type           = (string) ( $item['package_type'] ?? '' );
+				$project_label    = (string) ( $item['package_slug'] ?? '' );
+				$package_type     = (string) ( $item['package_type'] ?? '' );
+				$provider_label   = (string) ( $item['provider_label'] ?? $item['provider'] ?? '' );
+				$subject_identity = (string) ( $item['subject_identity'] ?? $project_label );
+				$subject_label    = match ( $package_type ) {
+					'plugin' => __( 'Plugin', 'ran-booster' ) . ': ' . $subject_identity,
+					'theme' => __( 'Theme', 'ran-booster' ) . ': ' . $subject_identity,
+					'provider' => $provider_label,
+					default => $provider_label . ' · ' . __( 'Repository', 'ran-booster' ) . ': ' . $subject_identity,
+				};
 				$package_settings_url   = is_string( $settings_urls[ $package_type ][ $project_label ] ?? null )
 					? $settings_urls[ $package_type ][ $project_label ]
 					: '';
@@ -115,19 +148,19 @@ $origin_labels = array(
 					default => ucfirst( str_replace( array( '.', '_' ), ' ', (string) ( $item['operation'] ?? '' ) ) ),
 				};
 				?>
-				<li class="ran-booster-attempt-row">
+				<li class="ran-booster-attempt-row" data-ran-booster-activity-row="<?php echo esc_attr( (string) ( $item['activity_record_id'] ?? '' ) ); ?>">
 					<div class="ran-booster-attempt-row__summary" role="row">
 						<span class="ran-booster-attempt-row__time" role="cell" data-label="<?php esc_attr_e( 'Time', 'ran-booster' ); ?>"><?php echo esc_html( (string) ( $item['created_at'] ?? '' ) ); ?></span>
-						<span class="ran-booster-attempt-row__package" role="cell" data-label="<?php esc_attr_e( 'Project', 'ran-booster' ); ?>">
+						<span class="ran-booster-attempt-row__package" role="cell" data-label="<?php esc_attr_e( 'Subject', 'ran-booster' ); ?>">
 						<?php
 						if ( '' !== $package_settings_url ) {
 							?>
-							<a href="<?php echo esc_url( $package_settings_url ); ?>"><?php echo esc_html( $project_label ); ?></a>
+							<a href="<?php echo esc_url( $package_settings_url ); ?>"><?php echo esc_html( $subject_label ); ?></a>
 							<?php
 						} else {
 							?>
-							<?php echo esc_html( $project_label ); ?><?php } ?></span>
-						<span role="cell" data-label="<?php esc_attr_e( 'Source', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--neutral"><?php echo esc_html( $recorded_check ? (string) ( $item['provider'] ?? '' ) : __( 'Branch deployment', 'ran-booster' ) ); ?></span></span>
+							<?php echo esc_html( $subject_label ); ?><?php } ?></span>
+						<span role="cell" data-label="<?php esc_attr_e( 'Source', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--neutral"><?php echo esc_html( $recorded_check ? $provider_label : __( 'Branch deployment', 'ran-booster' ) ); ?></span></span>
 						<span role="cell" data-label="<?php esc_attr_e( 'Activity', 'ran-booster' ); ?>"><?php echo esc_html( $activity_label ); ?></span>
 						<span role="cell" data-label="<?php esc_attr_e( 'Outcome', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $state_tones[ $state ] ?? 'neutral' ); ?> ran-booster-deployment-state ran-booster-deployment-state--<?php echo esc_attr( $state ); ?>"><?php echo esc_html( $recorded_check ? $summary : ( $state_labels[ $state ] ?? $state ) ); ?></span></span>
 					</div>
@@ -185,8 +218,13 @@ $origin_labels = array(
 			</ul>
 		</div>
 	<?php } ?>
-	<?php
-	if ( null !== $next ) {
-		?>
-		<p><a class="button" href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'Load older activity', 'ran-booster' ); ?></a></p><?php } ?>
+	<?php if ( ! $unavailable && $has_cursor ) { ?>
+		<p><a class="button" href="<?php echo esc_url( $base_url ); ?>"><?php esc_html_e( 'View latest activity', 'ran-booster' ); ?></a></p>
+	<?php } ?>
+	<?php if ( null !== $next ) { ?>
+		<p data-ran-booster-activity-load-older-wrap><a class="button" data-ran-booster-activity-load-older href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'View older activity', 'ran-booster' ); ?></a></p>
+		<p data-ran-booster-activity-progress role="status" aria-live="polite" hidden><?php esc_html_e( 'Loading older activity…', 'ran-booster' ); ?></p>
+		<p data-ran-booster-activity-error role="alert" tabindex="-1" hidden><?php esc_html_e( 'Older activity could not be loaded. Try again.', 'ran-booster' ); ?></p>
+		<p data-ran-booster-activity-announcement role="status" aria-live="polite" tabindex="-1" hidden></p>
+	<?php } ?>
 </section>

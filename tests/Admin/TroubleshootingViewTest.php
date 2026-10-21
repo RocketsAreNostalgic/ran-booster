@@ -92,7 +92,7 @@ final class TroubleshootingViewTest extends TestCase {
 		);
 	}
 
-	public function test_translates_the_diagnostics_eyebrow_without_changing_the_active_panel(): void {
+	public function test_omits_redundant_page_eyebrow_without_changing_the_active_panel(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Diagnostics'] = 'Diagnostic traduit';
 		$troubleshooting_panel = 'diagnostics';
 		$troubleshooting       = array( 'providers' => array() );
@@ -105,8 +105,49 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<p class="ran-booster-eyebrow">Diagnostic traduit</p>', $html );
+		self::assertStringNotContainsString( '<p class="ran-booster-eyebrow">Diagnostic traduit</p>', $html );
 		self::assertStringContainsString( 'panel=diagnostics" aria-current="page"', $html );
+	}
+
+	public function test_installation_details_escape_local_claims_and_link_to_core_owned_provider_management(): void {
+		$troubleshooting_panel = 'diagnostics';
+		$troubleshooting       = array(
+			'providers'            => array(),
+			'installation_details' => array(
+				'GitHub provider'    => array(
+					'Name'                     => '<Untrusted plugin>',
+					'Version'                  => '1.0',
+					'Source'                   => 'External plugin',
+					'Selection state'          => 'missing',
+					'Operational availability' => 'Unavailable',
+					'Implementation'           => '<implementation>',
+					'Provider API'             => '15',
+					'Compatibility revision'   => '<revision>',
+					'Declared capabilities'    => '<capability>',
+					'Credential formats'       => '<format>',
+				),
+				'GitHub candidate 1' => array(
+					'Name'        => '<candidate>',
+					'Declaration' => 'Unavailable',
+				),
+			),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'id="ran-booster-github-provider-diagnostics"', $html );
+		self::assertStringContainsString( 'GitHub provider details', $html );
+		self::assertStringContainsString( 'Local declarations only;', $html );
+		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
+		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>' ) as $claim ) {
+			self::assertStringNotContainsString( $claim, $html );
+			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
+		}
+		self::assertStringContainsString( 'page=ran-booster&amp;tab=gh', $html );
+		self::assertStringContainsString( 'Manage GitHub provider', $html );
+		self::assertStringNotContainsString( 'value="adopt-github"', $html );
+		self::assertStringNotContainsString( 'value="recover-github-native"', $html );
+		self::assertStringNotContainsString( 'Recover management without changing installed files:', $html );
 	}
 
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {
@@ -165,11 +206,13 @@ final class TroubleshootingViewTest extends TestCase {
 			),
 		);
 
+		$troubleshooting['installation_details'] = array( 'Booster Core updates' => array( 'Updater code' => 'native_discovery_disabled' ) );
+
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<strong>Core updates</strong>', $html );
+		self::assertStringContainsString( '>Booster Core updates</h4>', $html );
 		self::assertStringContainsString( 'ran-booster-troubleshooting__core-updates', $html );
 		self::assertStringContainsString(
 			'Core updates are off for this source installation. Booster will not check for or replace itself.',
@@ -206,6 +249,8 @@ final class TroubleshootingViewTest extends TestCase {
 				'next_check'      => 1_700_000_900,
 			),
 		);
+
+		$troubleshooting['installation_details'] = array( 'Booster Core updates' => array( 'Updater code' => 'github_updater_github_http_error' ) );
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
@@ -300,7 +345,7 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function test_deployment_activity_shows_the_recorded_failure_reason(): void {
-		$attempt              = DeploymentAttempt::from_database(
+		$attempt             = DeploymentAttempt::from_database(
 			array(
 				'id'                      => 1,
 				'correlation_id'          => str_repeat( 'a', 32 ),
@@ -325,29 +370,70 @@ final class TroubleshootingViewTest extends TestCase {
 				'finished_at'             => '2026-07-23 06:00:01',
 			)
 		);
-		$deployment_activity  = array(
+		$deployment_activity = array(
 			'items'                 => array( $attempt->safe_data() ),
 			'unavailable'           => false,
 			'has_cursor'            => false,
-			'next_cursor'           => null,
+			'activity_filter_key'   => str_repeat( 'a', 64 ),
+			'next_cursor'           => 'v1|cursor|2026-07-23 06:00:00|activity|1',
 			'package_settings_urls' => array(
 				'plugin' => array(
 					'example' => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
 				),
 			),
+			'filter_options'        => array(
+				'providers' => array(
+					array(
+						'value' => 'gh',
+						'label' => 'GitHub',
+					),
+				),
+				'packages'  => array(
+					array(
+						'value' => 'non-package',
+						'label' => 'Non-package events',
+					),
+					array(
+						'value' => '["gh","plugin","example/example.php"]',
+						'label' => 'GitHub · Plugin: Example (example/example.php)',
+					),
+				),
+			),
+			'filter_state'          => array(
+				'provider' => 'gh',
+				'package'  => '["gh","plugin","example/example.php"]',
+			),
 		);
-		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+		$deployment_activity['items'][0]['activity_record_id'] = '9007199254740993';
+		$troubleshooting_base                                  = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<span role="columnheader">Project</span>', $html );
+		self::assertStringContainsString( '<section class="ran-booster-activity" aria-labelledby="ran-booster-activity-heading" data-ran-booster-activity', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-filter="' . str_repeat( 'a', 64 ) . '"', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-list', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-row="9007199254740993"', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-load-older', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-progress', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-announcement', $html );
+		self::assertStringContainsString( 'data-ran-booster-activity-error role="alert" tabindex="-1"', $html );
+		self::assertStringContainsString( '<span role="columnheader">Subject</span>', $html );
 		self::assertStringContainsString( '<span role="columnheader">Source</span>', $html );
 		self::assertStringContainsString( '<span role="columnheader">Activity</span>', $html );
 		self::assertStringContainsString( '<span role="columnheader">Outcome</span>', $html );
 		self::assertStringNotContainsString( '<span role="columnheader">Details</span>', $html );
-		self::assertStringContainsString( 'data-label="Project"', $html );
+		self::assertStringContainsString( 'data-label="Subject"', $html );
+		self::assertStringContainsString( '<select id="ran-booster-activity-provider" name="activity_provider">', $html );
+		self::assertStringContainsString( '<option value="">All providers</option>', $html );
+		self::assertStringContainsString( 'value="gh"  selected="selected">GitHub</option>', $html );
+		self::assertStringContainsString( '<label class="screen-reader-text" for="ran-booster-activity-package">Activity subject</label>', $html );
+		self::assertStringContainsString( '<option value="">All subjects</option>', $html );
+		self::assertStringContainsString( '<option value="non-package" >Non-package events</option>', $html );
+		self::assertStringContainsString( 'value="[&quot;gh&quot;,&quot;plugin&quot;,&quot;example/example.php&quot;]"  selected="selected">GitHub · Plugin: Example (example/example.php)</option>', $html );
+		self::assertStringContainsString( '>Clear filters</a>', $html );
+		self::assertStringContainsString( 'activity_provider=gh&amp;activity_package=%5B%22gh%22%2C%22plugin%22%2C%22example%2Fexample.php%22%5D&amp;before=v1%7Ccursor', $html );
 		self::assertStringContainsString( 'data-label="Source"', $html );
 		self::assertStringContainsString( 'data-label="Activity"', $html );
 		self::assertStringContainsString( 'data-label="Outcome"', $html );
@@ -358,6 +444,109 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Wait for its quota to reset', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=plugin%2Fexample.php', $html );
 		self::assertStringContainsString( 'Open plugin settings', $html );
+	}
+
+	public function test_activity_subjects_keep_provider_and_repository_records_distinct(): void {
+		$deployment_activity  = array(
+			'items'       => array(
+				array(
+					'record_source'    => 'activity',
+					'state'            => 'succeeded',
+					'operation'        => 'provider.check',
+					'provider'         => 'gh',
+					'provider_label'   => 'GitHub',
+					'package_type'     => 'provider',
+					'subject_identity' => 'gh',
+				),
+				array(
+					'record_source'    => 'activity',
+					'state'            => 'succeeded',
+					'operation'        => 'repository.check',
+					'provider'         => 'gh',
+					'provider_label'   => 'GitHub',
+					'package_type'     => 'repository',
+					'subject_identity' => 'rockets/booster',
+				),
+			),
+			'unavailable' => false,
+		);
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>GitHub</span>', $html );
+		self::assertStringContainsString( 'GitHub · Repository: rockets/booster', $html );
+		self::assertStringNotContainsString( 'GitHub · Repository: gh', $html );
+	}
+
+	public function test_activity_pagination_encodes_selected_package_json_before_escaping_urls(): void {
+		$package              = '["gh","plugin","example/a&b=1?x#quote\\".php"]';
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+		$render               = static function ( array $activity ) use ( $troubleshooting_base ): string {
+			$deployment_activity = $activity;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+			return (string) ob_get_clean();
+		};
+		$filters              = array(
+			'filter_state' => array(
+				'provider' => 'gh',
+				'package'  => $package,
+			),
+			'unavailable'  => false,
+		);
+		$next                 = $render(
+			array_merge(
+				$filters,
+				array(
+					'items'       => array(
+						array(
+							'record_source' => 'activity',
+							'state'         => 'succeeded',
+						),
+					),
+					'has_cursor'  => true,
+					'next_cursor' => 'v1|fingerprint|2026-10-12 17:00:00|activity|7',
+				)
+			)
+		);
+		$latest               = $render(
+			array_merge(
+				$filters,
+				array(
+					'items'      => array(),
+					'has_cursor' => true,
+				)
+			)
+		);
+		$encoded_package      = '%5B%22gh%22%2C%22plugin%22%2C%22example%2Fa%26b%3D1%3Fx%23quote%5C%22.php%22%5D';
+		$selected_url         = 'page=ran-booster&amp;tab=troubleshooting&amp;panel=activity&amp;activity_provider=gh&amp;activity_package=' . $encoded_package;
+
+		self::assertStringContainsString( $selected_url . '&amp;before=v1%7Cfingerprint%7C2026-10-12%2017%3A00%3A00%7Cactivity%7C7', $next );
+		self::assertStringContainsString( '>View older activity</a>', $next );
+		self::assertSame( 1, substr_count( $next, '>View latest activity</a>' ) );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=activity">Clear filters</a>', $next );
+		self::assertStringContainsString( $selected_url . '">View latest activity</a>', $latest );
+		self::assertStringNotContainsString( '&amp;before=', $latest );
+	}
+
+
+	public function test_activity_runner_form_retains_its_native_post_contract(): void {
+		$deployment_activity  = array(
+			'items'       => array( array( 'state' => 'queued' ) ),
+			'unavailable' => false,
+		);
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<form method="post" data-ran-booster-activity-runner>', $html );
+		self::assertStringContainsString( 'name="_wpnonce"', $html );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="request-deployment-runner"', $html );
 	}
 
 	public function test_deployment_activity_renders_known_package_version_failure_in_index_and_detail(): void {
@@ -580,7 +769,8 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'No older activity is available.', $html );
+		self::assertStringContainsString( '<p data-ran-booster-activity-exhausted>No older activity is available.</p>', $html );
+		self::assertSame( 1, substr_count( $html, '>View latest activity</a>' ) );
 		self::assertStringContainsString( '>View latest activity</a>', $html );
 		self::assertStringContainsString( 'panel=activity', $html );
 		self::assertStringNotContainsString( 'No activity has been recorded yet.', $html );
@@ -670,9 +860,14 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'for="ran-booster-troubleshooting-repository"', $html );
 		self::assertStringContainsString( '<caption class="screen-reader-text">', $html );
 		self::assertStringContainsString( 'The five-request provider budget was reached.', $html );
-		self::assertStringContainsString( '<code>local.runtime.ready</code>', $html );
+		self::assertStringContainsString( '>local.runtime.ready</code>', $html );
 		self::assertStringContainsString( '<textarea', $html );
 		self::assertStringContainsString( 'RAN Booster troubleshooting report', $html );
+		self::assertStringContainsString( 'class="ran-booster-troubleshooting__report-field"', $html );
+		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy report"', $html );
+		self::assertStringContainsString( '<span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>', $html );
+		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
+		self::assertStringContainsString( 'readonly>RAN Booster troubleshooting report', $html );
 	}
 
 	public function test_escapes_every_submitted_and_result_field(): void {
@@ -1470,6 +1665,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( '>2 packages</td>', $html );
 		self::assertStringContainsString( 'Back to Fixture overview', $html );
+		$this->assert_flat_profile_layout( $html );
 		self::assertStringContainsString( 'id="ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1">Credentials</h2>', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="validate-access-profile"', $html );
@@ -1742,6 +1938,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Back to Bitbucket overview', $html );
+		$this->assert_flat_profile_layout( $html );
 		self::assertStringContainsString( 'id="ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1">Webhook secrets</h2>', $html );
 		self::assertStringContainsString( 'Manage local signing material used to verify Bitbucket webhook deliveries.', $html );
@@ -1764,6 +1961,55 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<option value="workspace/two">workspace/two</option>', $html );
 		self::assertStringContainsString( 'Remote provider webhooks will not be removed.', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
+	}
+
+	public function test_empty_credential_and_secret_lists_retain_flat_controls_and_add_actions(): void {
+		foreach ( array( 'credentials', 'secrets' ) as $provider_view ) {
+			$provider                                = $this->provider_without_optional_settings();
+			$provider['credential_kinds']            = array(
+				array(
+					'code'               => 'token',
+					'label'              => 'Token',
+					'secret_label'       => 'Token',
+					'secret_placeholder' => '',
+					'fields'             => array(),
+				),
+			);
+			$provider['webhook_scopes']              = $this->webhook_scopes();
+			$provider['capabilities']['credentials'] = true;
+			$provider['capabilities']['webhooks']    = true;
+			$credential_profiles                     = array();
+			$webhook_profiles                        = array();
+			$provider_view_data                      = $this->provider_view_data( get_defined_vars() );
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+			extract( $provider_view_data );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+
+			$this->assert_flat_profile_layout( $html );
+			self::assertStringContainsString( 'credentials' === $provider_view ? 'No credentials match the current filters.' : 'No webhook secrets match the current filters.', $html );
+			self::assertStringContainsString( 'credentials' === $provider_view ? '>Add credential</button>' : '>Add webhook secret</button>', $html );
+		}
+	}
+
+	private function assert_flat_profile_layout( string $html ): void {
+		$document        = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		try {
+			self::assertTrue( $document->loadHTML( $html ) );
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous_errors );
+		}
+		$xpath   = new \DOMXPath( $document );
+		$region  = '//*[@id="ran-booster-provider-profile-region"]';
+		$section = $region . '/section[@aria-labelledby="ran-booster-provider-heading"]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::a[@class="ran-booster-provider-management__back"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '[contains(@class,"ran-booster-panel")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/header[contains(@class,"ran-booster-action-row")]/div/h2[@tabindex="-1"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/form[@class="ran-booster-provider-list-controls"]/following-sibling::table[contains(@class,"striped")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/footer)' ) );
 	}
 
 	/** @return array<string, mixed> */

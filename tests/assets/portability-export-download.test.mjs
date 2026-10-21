@@ -222,7 +222,7 @@ test('an unstructured export error uses the safe fallback message', async () => 
 test('a successful export downloads the Blueprint without leaving the Portability page', async () => {
 	const state = fixture(async () => ({
 		blob: async () => new Blob(['zip']),
-		headers: { get: () => 'application/zip' },
+		headers: new Headers({ 'content-type': 'application/zip' }),
 		ok: true,
 	}));
 
@@ -265,3 +265,52 @@ test('a client-side password validation failure does not start a second export r
 		cleanup();
 	}
 });
+
+for (const count of [
+	'1',
+	'128',
+	null,
+	'0',
+	'-1',
+	'129',
+	'1.5',
+	'01',
+	' 1',
+	'1x',
+	'1e2',
+]) {
+	test(`requirement warning header ${JSON.stringify(count)} preserves download and reports only valid counts`, async () => {
+		const headers = new Headers({ 'content-type': 'application/zip' });
+		if (count !== null) {
+			headers.set('X-RAN-Blueprint-Requirement-Warnings', count);
+		}
+		const state = fixture(async () => ({
+			blob: async () => new Blob(['zip']),
+			headers,
+			ok: true,
+		}));
+		const warning =
+			'Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction.';
+		// Fetch Headers normalizes surrounding HTTP whitespace before consumers read it.
+		const expectedWarning = ['1', '128', ' 1'].includes(count)
+			? warning
+			: '';
+
+		try {
+			loadFunction('initPortabilityExportDownload')();
+			await state.form.listeners.get('submit')(submitEvent());
+			assert.equal(state.links.length, 1);
+			assert.equal(state.links[0].clicks, 1);
+			assert.equal(state.message.hidden, !expectedWarning);
+			assert.equal(state.messageText.textContent, expectedWarning);
+			assert.equal(
+				state.events[0].detail.message,
+				'Transporter Blueprint download started.' +
+					(expectedWarning ? ' ' + expectedWarning : '')
+			);
+			assert.equal(state.submit.disabled, false);
+		} finally {
+			cleanup();
+		}
+	});
+}

@@ -90,7 +90,7 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 		$core_self_update_development_notice->render_shell_inline();
 	}
 	?>
-	<?php if ( 'packages/index' !== $view ) { ?>
+	<?php if ( ! in_array( $view, array( 'packages/index', 'packages/recovery' ), true ) ) { ?>
 		<?php require __DIR__ . '/notices.php'; ?>
 	<?php } ?>
 

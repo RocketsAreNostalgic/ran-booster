@@ -78,13 +78,8 @@ $repository_placeholder = array() === $locator_examples
 	: implode( ' or ', $locator_examples );
 
 ?>
-<p><?php esc_html_e( 'Recover management without changing installed files:', 'ran-booster' ); ?>
-<a href="<?php echo esc_url( $admin_base . '?page=ran-booster-plugins&recovery=1' ); ?>"><?php esc_html_e( 'Plugins', 'ran-booster' ); ?></a> ·
-<a href="<?php echo esc_url( $admin_base . '?page=ran-booster-themes&recovery=1' ); ?>"><?php esc_html_e( 'Themes', 'ran-booster' ); ?></a></p>
-
 <section id="ran-booster-troubleshooting-diagnostics-region" class="ran-booster-page-shell ran-booster-panel ran-booster-troubleshooting" aria-labelledby="ran-booster-troubleshooting-heading">
 	<header class="ran-booster-page-shell__header ran-booster-troubleshooting__header">
-		<p class="ran-booster-eyebrow"><?php esc_html_e( 'Diagnostics', 'ran-booster' ); ?></p>
 		<h2 id="ran-booster-troubleshooting-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Troubleshooting', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Run protected checks, temporarily capture Booster events, or review recent update activity.', 'ran-booster' ); ?></p>
 	</header>
@@ -113,59 +108,8 @@ $repository_placeholder = array() === $locator_examples
 		}
 		?>
 	<?php } else { ?>
-		<?php if ( array() !== $core_self_update ) { ?>
-			<?php
-			$self_update_mode   = $core_self_update['effective_mode'] ?? 'disabled';
-			$self_update_reason = $core_self_update['reason'] ?? 'release_marker_missing_or_invalid';
-			$updater_state      = $core_self_update['updater_state'] ?? null;
-			$self_update_tone   = 'notice-info';
-			if ( 'unavailable' === $updater_state || 'blocked' === $updater_state ) {
-				$self_update_tone    = 'notice-warning';
-				$self_update_message = __( 'RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically.', 'ran-booster' );
-			} elseif ( 'enabled' === $self_update_mode ) {
-				$self_update_tone    = 'notice-success';
-				$self_update_message = __( 'Core updates are available manually for this verified release installation. Background Core updates remain off.', 'ran-booster' );
-			} elseif ( 'configuration_disabled' === $self_update_reason ) {
-				$self_update_message = __( 'Core updates are off because this site explicitly disables them. Booster will not check for or replace itself.', 'ran-booster' );
-			} elseif ( 'configuration_invalid' === $self_update_reason ) {
-				$self_update_tone    = 'notice-warning';
-				$self_update_message = __( 'Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself.', 'ran-booster' );
-			} else {
-				$self_update_message = __( 'Core updates are off for this source installation. Booster will not check for or replace itself.', 'ran-booster' );
-			}
-			$self_update_technical = array(
-				__( 'Requested mode', 'ran-booster' )   => $core_self_update['requested_mode'] ?? null,
-				__( 'Effective mode', 'ran-booster' )   => $self_update_mode,
-				__( 'Policy reason', 'ran-booster' )    => $self_update_reason,
-				__( 'Updater state', 'ran-booster' )    => $updater_state,
-				__( 'Updater code', 'ran-booster' )     => $core_self_update['updater_code'] ?? null,
-				__( 'Offered version', 'ran-booster' )  => $core_self_update['offered_version'] ?? null,
-				__( 'Last check (UTC)', 'ran-booster' ) => is_int( $core_self_update['last_check'] ?? null )
-					? gmdate( 'c', $core_self_update['last_check'] )
-					: null,
-				__( 'Next check (UTC)', 'ran-booster' ) => is_int( $core_self_update['next_check'] ?? null )
-					? gmdate( 'c', $core_self_update['next_check'] )
-					: null,
-				__( 'Marker version', 'ran-booster' )   => $core_self_update['marker_version'] ?? null,
-				__( 'Marker commit', 'ran-booster' )    => $core_self_update['marker_commit'] ?? null,
-			);
-			?>
-			<div class="notice <?php echo esc_attr( $self_update_tone ); ?> inline ran-booster-troubleshooting__core-updates">
-				<p><strong><?php esc_html_e( 'Core updates', 'ran-booster' ); ?></strong></p>
-				<p><?php echo esc_html( $self_update_message ); ?></p>
-				<details>
-					<summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
-					<dl>
-					<?php foreach ( $self_update_technical as $technical_label => $technical_value ) { ?>
-						<?php if ( is_string( $technical_value ) && '' !== $technical_value ) { ?>
-							<dt><?php echo esc_html( $technical_label ); ?></dt>
-							<dd><code><?php echo esc_html( $technical_value ); ?></code></dd>
-						<?php } ?>
-					<?php } ?>
-					</dl>
-				</details>
-			</div>
-		<?php } ?>
+		<h3 class="ran-booster-section__title" id="ran-booster-run-diagnostics-heading"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></h3>
+		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a provider and run checks. Results below describe only this diagnostic run.', 'ran-booster' ); ?></p>
 
 	<form method="post" action="" class="ran-booster-troubleshooting__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-troubleshooting-diagnostics-error" hx-post="" hx-target="#ran-booster-troubleshooting-diagnostics-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
 		<?php wp_nonce_field( 'ran-booster-run-troubleshooting' ); ?>
@@ -225,7 +169,8 @@ $repository_placeholder = array() === $locator_examples
 	</form>
 
 		<?php if ( ! empty( $troubleshooting['ran'] ) ) { ?>
-		<div class="ran-booster-troubleshooting__results" aria-live="polite">
+		<div id="ran-booster-troubleshooting-results" class="ran-booster-troubleshooting__results" aria-live="polite">
+			<h4 class="ran-booster-section__title"><?php esc_html_e( 'Diagnostic results', 'ran-booster' ); ?></h4>
 			<?php if ( ! empty( $troubleshooting['partial'] ) ) { ?>
 				<div class="notice notice-warning inline"><p><?php echo esc_html( $partial_messages[ $troubleshooting['partial_reason'] ?? '' ] ?? __( 'Diagnostics finished with partial results.', 'ran-booster' ) ); ?></p></div>
 			<?php } ?>
@@ -263,7 +208,22 @@ $repository_placeholder = array() === $locator_examples
 							<?php $status_tone = $status_badge_tones[ $result['status'] ] ?? 'neutral'; ?>
 						<tr>
 							<td data-label="<?php esc_attr_e( 'Status', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_tone ); ?> ran-booster-diagnostic-status ran-booster-diagnostic-status--<?php echo esc_attr( $result['status'] ); ?>"><?php echo esc_html( $status_labels[ $result['status'] ] ?? __( 'Unknown', 'ran-booster' ) ); ?></span></td>
-							<th scope="row" data-label="<?php esc_attr_e( 'Check', 'ran-booster' ); ?>"><code><?php echo esc_html( $result['code'] ); ?></code></th>
+							<th scope="row" data-label="<?php esc_attr_e( 'Check', 'ran-booster' ); ?>">
+							<?php
+								$check_family = explode( '.', $result['code'] )[1] ?? '';
+								$check_labels = array(
+									'runtime'             => __( 'WordPress runtime', 'ran-booster' ),
+									'database'            => __( 'Database storage', 'ran-booster' ),
+									'filesystem'          => __( 'Filesystem access', 'ran-booster' ),
+									'destinations'        => __( 'Package destinations', 'ran-booster' ),
+									'deployment_attempts' => __( 'Deployment history', 'ran-booster' ),
+									'deployment_worker'   => __( 'Deployment worker', 'ran-booster' ),
+									'credential'          => __( 'Credential access', 'ran-booster' ),
+									'repository'          => __( 'Repository access', 'ran-booster' ),
+								);
+								echo esc_html( $check_labels[ $check_family ] ?? __( 'Provider check', 'ran-booster' ) );
+								?>
+								<br><code class="description"><?php echo esc_html( $result['code'] ); ?></code></th>
 							<td data-label="<?php esc_attr_e( 'Details', 'ran-booster' ); ?>"><?php echo esc_html( $result['message'] ); ?></td>
 							<td data-label="<?php esc_attr_e( 'Action', 'ran-booster' ); ?>"><?php echo esc_html( $result['remediation'] ); ?></td>
 						</tr>
@@ -273,11 +233,94 @@ $repository_placeholder = array() === $locator_examples
 				</table>
 			</div>
 
-			<p><label for="ran-booster-troubleshooting-report"><strong><?php esc_html_e( 'Support report', 'ran-booster' ); ?></strong></label></p>
-			<textarea id="ran-booster-troubleshooting-report" class="large-text code" rows="<?php echo esc_attr( (string) min( 16, max( 5, count( $results ) + 4 ) ) ); ?>" readonly><?php echo esc_textarea( $troubleshooting['report'] ?? '' ); ?></textarea>
-			<p class="description"><?php esc_html_e( 'This report contains only the safe, displayed result fields. Review it before sharing.', 'ran-booster' ); ?></p>
+
 		</div>
 	<?php } ?>
+		<section id="ran-booster-installation-details" aria-labelledby="ran-booster-installation-heading">
+			<h3 id="ran-booster-installation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Installation details', 'ran-booster' ); ?></h3>
+			<p class="ran-booster-section__description"><?php esc_html_e( 'Standing installation information, separate from the checks above.', 'ran-booster' ); ?></p>
+			<?php
+			$installation   = is_array( $troubleshooting['installation_details'] ?? null ) ? $troubleshooting['installation_details'] : array();
+			$github_fields  = $installation[ __( 'GitHub provider', 'ran-booster' ) ] ?? array();
+			$summary_labels = array( __( 'Name', 'ran-booster' ), __( 'Version', 'ran-booster' ), __( 'Source', 'ran-booster' ), __( 'Selection state', 'ran-booster' ), __( 'Operational availability', 'ran-booster' ) );
+			?>
+			<section class="ran-booster-panel ran-booster-page-shell" aria-labelledby="ran-booster-github-details-heading">
+				<header class="ran-booster-page-shell__header"><h4 id="ran-booster-github-details-heading" class="ran-booster-section__title"><?php esc_html_e( 'GitHub provider', 'ran-booster' ); ?></h4></header>
+				<div class="ran-booster-page-shell__body">
+					<p><?php echo esc_html( implode( ' · ', array_intersect_key( $github_fields, array_fill_keys( array( __( 'Name', 'ran-booster' ), __( 'Source', 'ran-booster' ), __( 'Operational availability', 'ran-booster' ) ), true ) ) ) ); ?></p>
+					<details id="ran-booster-github-provider-diagnostics">
+						<summary><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></summary>
+						<p><?php esc_html_e( 'Local declarations only; these claims do not verify publisher identity or remote access.', 'ran-booster' ); ?></p>
+						<dl><?php foreach ( $summary_labels as $field_label ) { ?>
+							<?php
+							if ( isset( $github_fields[ $field_label ] ) ) {
+								?>
+								<dt><?php echo esc_html( $field_label ); ?></dt><dd><?php echo esc_html( $github_fields[ $field_label ] ); ?></dd><?php } ?>
+						<?php } ?></dl>
+						<details><summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
+							<dl><?php foreach ( $github_fields as $field_label => $field_value ) { ?>
+								<?php
+								if ( ! in_array( $field_label, $summary_labels, true ) ) {
+									?>
+									<dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd><?php } ?>
+							<?php } ?></dl>
+							<?php foreach ( $installation as $context_heading => $context_fields ) { ?>
+								<?php
+								if ( in_array( $context_heading, array( __( 'GitHub provider', 'ran-booster' ), __( 'Booster Core updates', 'ran-booster' ), __( 'Diagnostic provider', 'ran-booster' ) ), true ) ) {
+									continue; }
+								?>
+								<h5><?php echo esc_html( $context_heading ); ?></h5><dl>
+								<?php
+								foreach ( $context_fields as $field_label => $field_value ) {
+									?>
+									<dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd><?php } ?></dl>
+							<?php } ?>
+						</details>
+						<p><a href="<?php echo esc_url( $admin_base . '?page=ran-booster&tab=gh' ); ?>"><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></a></p>
+					</details>
+				</div>
+			</section>
+			<?php
+			$self_update_mode   = $core_self_update['effective_mode'] ?? 'disabled';
+			$self_update_reason = $core_self_update['reason'] ?? 'release_marker_missing_or_invalid';
+			$updater_state      = $core_self_update['updater_state'] ?? null;
+			if ( array() === $core_self_update ) {
+				$self_update_message = __( 'Core update status is unavailable.', 'ran-booster' );
+			} elseif ( 'unavailable' === $updater_state || 'blocked' === $updater_state ) {
+				$self_update_message = __( 'RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically.', 'ran-booster' );
+			} elseif ( 'enabled' === $self_update_mode ) {
+				$self_update_message = __( 'Core updates are available manually for this verified release installation. Background Core updates remain off.', 'ran-booster' );
+			} elseif ( 'configuration_disabled' === $self_update_reason ) {
+				$self_update_message = __( 'Core updates are off because this site explicitly disables them. Booster will not check for or replace itself.', 'ran-booster' );
+			} elseif ( 'configuration_invalid' === $self_update_reason ) {
+				$self_update_message = __( 'Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself.', 'ran-booster' );
+			} else {
+				$self_update_message = __( 'Core updates are off for this source installation. Booster will not check for or replace itself.', 'ran-booster' );
+			}
+			?>
+			<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__core-updates" aria-labelledby="ran-booster-core-updates-heading">
+				<header class="ran-booster-page-shell__header"><h4 id="ran-booster-core-updates-heading" class="ran-booster-section__title"><?php esc_html_e( 'Booster Core updates', 'ran-booster' ); ?></h4></header>
+				<div class="ran-booster-page-shell__body">
+					<p><?php echo esc_html( $self_update_message ); ?></p>
+					<details><summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
+						<dl>
+						<?php
+						foreach ( $installation[ __( 'Booster Core updates', 'ran-booster' ) ] ?? array() as $field_label => $field_value ) {
+							?>
+							<dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd><?php } ?></dl>
+					</details>
+				</div>
+			</section>
+		</section>
+		<div data-support-report-tools>
+			<p><label for="ran-booster-troubleshooting-report"><strong><?php esc_html_e( 'Support report', 'ran-booster' ); ?></strong></label></p>
+			<div class="ran-booster-troubleshooting__report-field">
+				<textarea id="ran-booster-troubleshooting-report" class="large-text code" rows="<?php echo esc_attr( (string) min( 16, max( 5, count( $results ) + 4 ) ) ); ?>" readonly><?php echo esc_textarea( $troubleshooting['report'] ?? '' ); ?></textarea>
+				<button type="button" class="button-link ran-booster-troubleshooting__report-copy hide-if-no-js" data-support-report-copy aria-label="<?php esc_attr_e( 'Copy report', 'ran-booster' ); ?>"><span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>
+			</div>
+			<p data-support-report-status role="status" aria-live="polite" aria-atomic="true" data-copied-message="<?php esc_attr_e( 'Support report copied to the clipboard.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The report is selected; use your browser copy command.', 'ran-booster' ); ?>"></p>
+			<p class="description"><?php esc_html_e( 'This report includes the displayed installation details and diagnostic results. Local declarations and standing Core update status are not diagnostic test results. Review it before sharing.', 'ran-booster' ); ?></p>
+		</div>
 	<?php } ?>
 	</div>
 </section>

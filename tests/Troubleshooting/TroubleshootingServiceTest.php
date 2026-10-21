@@ -28,6 +28,144 @@ require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
 
 final class TroubleshootingServiceTest extends TestCase {
 
+	public function test_installation_context_is_one_passive_snapshot_shared_with_the_report(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$provider                  = new TroubleshootingProviderFixture( 'gh', static fn (): array => array() );
+		$service                   = $this->service( $provider );
+		$form                      = $service->form_payload();
+		$provider->reject_metadata = true;
+		$form['core_self_update']  = array(
+			'requested_mode' => 'auto',
+			'effective_mode' => 'disabled',
+			'reason'         => 'source_installation',
+			'last_check'     => 0,
+			'next_check'     => 1,
+			'marker_version' => '1.0.0-beta.1',
+		);
+		$selection                 = array(
+			'state'      => 'available',
+			'available'  => true,
+			'current'    => array(
+				'selected'    => 'bundled',
+				'declaration' => array(
+					'display_name'           => 'Shipped GitHub module',
+					'display_version'        => '1.2.3',
+					'implementation_id'      => 'ran/github',
+					'provider_api_version'   => 15,
+					'compatibility_revision' => '1',
+					'facets'                 => array( 'RAN\\RepositoryProvider\\RepositoryBrowser' ),
+					'api_credential_formats' => array( 'github-classic-pat-v1' ),
+					'webhook_signing_format' => 'github-hmac-sha256-v1',
+				),
+			),
+			'candidates' => array(),
+		);
+		$payload                   = $service->with_installation_context( $form, $selection );
+		self::assertSame( 0, $provider->runs );
+		self::assertFalse( $payload['ran'] );
+		self::assertSame( $form['core_self_update'], $payload['core_self_update'] );
+		self::assertSame( 'Bundled with Booster', $payload['installation_details']['GitHub provider']['Source'] );
+		self::assertSame( '15', $payload['installation_details']['GitHub provider']['Provider API'] );
+		self::assertSame( '1970-01-01T00:00:00+00:00', $payload['installation_details']['Booster Core updates']['Last check (UTC)'] );
+		foreach ( $payload['installation_details'] as $heading => $rows ) {
+			self::assertStringContainsString( "\n" . $heading . "\n", $payload['report'] );
+			foreach ( $rows as $label => $value ) {
+				self::assertStringContainsString( $label . ': ' . $value, $payload['report'] );
+			}
+		}
+		self::assertStringContainsString( 'Local declarations only;', $payload['report'] );
+		self::assertStringContainsString( "Diagnostic checks\nNot run", $payload['report'] );
+		self::assertSame( $payload, $service->with_installation_context( $payload, $selection ) );
+		$form['ran']            = true;
+		$form['results']        = array( $this->diagnostic_result( 'local.snapshot' )->to_array() );
+		$form['partial']        = true;
+		$form['partial_reason'] = 'provider_unavailable';
+		$ran                    = $service->with_installation_context( $form, $selection );
+		self::assertStringContainsString( 'Partial: yes', $ran['report'] );
+		self::assertStringContainsString( '[pass] local.snapshot | The check completed safely.', $ran['report'] );
+		self::assertSame( $payload['installation_details'], $ran['installation_details'] );
+	}
+
+	public function test_installation_context_rejects_unsafe_claims_and_never_serializes_raw_state(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$service               = $this->service();
+		$form                  = $service->form_payload();
+		$form['credential_id'] = 'credential-private-canary';
+		$form['repository']    = 'private-owner/private-repository';
+		$unsafe_values         = array( '/srv/private-path-canary/config.php', 'C:\\private-path-canary\\config.php', 'Authorization: secret-header-canary', 'Cookie: private-cookie-canary', 'Bearer private-token-canary', 'github_pat_privatecanary', '<b>html-canary</b>', "line\ncontrol-canary", str_repeat( 'oversize-canary', 40 ), new \stdClass(), array( 'raw-secret-canary' ) );
+		foreach ( $unsafe_values as $unsafe ) {
+			$form['core_self_update'] = array(
+				'reason'     => $unsafe,
+				'last_check' => '123456',
+				'next_check' => -1,
+				'secret'     => 'core-secret-canary',
+			);
+			$form['providers']['gh']  = 'Authorization: provider-header-canary';
+			$declaration              = array(
+				'display_name'           => $unsafe,
+				'display_version'        => $unsafe,
+				'implementation_id'      => $unsafe,
+				'provider_api_version'   => '15',
+				'compatibility_revision' => $unsafe,
+				'plugin_basename'        => 'private-path-canary/private.php',
+				'secret'                 => 'declaration-secret-canary',
+				'facets'                 => array( $unsafe ),
+				'api_credential_formats' => array( $unsafe ),
+			);
+			$selection                = array(
+				'state'      => $unsafe,
+				'available'  => 'true',
+				'current'    => array(
+					'selected'    => 'external',
+					'declaration' => $declaration,
+					'approval'    => 'approval-private-canary',
+				),
+				'candidates' => array( '/srv/candidate-private-canary' => $declaration ),
+				'secret'     => 'selection-private-canary',
+			);
+			$payload                  = $service->with_installation_context( $form, $selection );
+			self::assertSame( 'Unavailable', $payload['installation_details']['GitHub provider']['Name'] );
+			self::assertSame( 'Unavailable', $payload['installation_details']['GitHub provider']['Provider API'] );
+			self::assertSame( 'Unknown', $payload['installation_details']['GitHub provider']['Operational availability'] );
+			self::assertSame( 'Unavailable', $payload['installation_details']['Booster Core updates']['Policy reason'] );
+			self::assertStringNotContainsString( 'canary', $payload['report'] );
+			self::assertStringNotContainsString( 'private-owner/private-repository', $payload['report'] );
+			self::assertSame( $payload['report'], $service->with_installation_context( $payload, $selection )['report'] );
+		}
+	}
+
+	public function test_missing_provider_and_candidate_bounds_remain_explicit_in_context(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$service = new TroubleshootingService( new TroubleshootingLocalFixture( array() ), new ProviderRegistry() );
+		$payload = $service->with_installation_context( $service->form_payload(), null );
+		self::assertSame( 'Unknown', $payload['installation_details']['GitHub provider']['Source'] );
+		self::assertSame( 'Unavailable', $payload['installation_details']['Diagnostic provider']['Provider'] );
+		$selection = array(
+			'state'      => 'missing',
+			'available'  => false,
+			'current'    => array(
+				'selected'    => 'external',
+				'declaration' => array( 'display_name' => 'Absent replacement' ),
+			),
+			'candidates' => array_fill(
+				0,
+				8,
+				array(
+					'display_name' => 'Enabled replacement',
+					'facets'       => array_fill( 0, 33, 'excess-facet-canary' ),
+				)
+			),
+		);
+		$payload   = $service->with_installation_context( $payload, $selection );
+		self::assertSame( 'External replacement', $payload['installation_details']['GitHub provider']['Source'] );
+		self::assertSame( 'missing', $payload['installation_details']['GitHub provider']['Selection state'] );
+		self::assertSame( '8', $payload['installation_details']['GitHub provider']['Enabled candidates'] );
+		self::assertArrayHasKey( 'GitHub candidate 4', $payload['installation_details'] );
+		self::assertArrayNotHasKey( 'GitHub candidate 5', $payload['installation_details'] );
+		self::assertStringNotContainsString( 'excess-facet-canary', $payload['report'] );
+		self::assertFalse( $payload['ran'] );
+	}
+
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_activity_captures_actor_before_provider_work(): void {

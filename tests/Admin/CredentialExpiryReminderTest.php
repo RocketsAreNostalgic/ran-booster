@@ -198,7 +198,9 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-credential-expiry-notice' ) );
 		self::assertStringNotContainsString( '<script>', $html );
 		self::assertStringContainsString( '&lt;script&gt;Replace me&lt;/script&gt;', $html );
-		self::assertStringContainsString( 'tab=gh&amp;replace_credential=replace_me', $html );
+		self::assertStringContainsString( 'tab=gh&amp;view=credentials', $html );
+		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=replace_me', $html );
+		self::assertStringNotContainsString( 'class="button button-primary"', $html );
 
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
 		ob_start();

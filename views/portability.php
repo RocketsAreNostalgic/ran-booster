@@ -44,6 +44,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		<p class="ran-booster-portability__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></p>
 		<h2 id="ran-booster-portability-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Transport Booster-managed packages', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Use Transporter to create a Blueprint here or open one from another site.', 'ran-booster' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Known installed requirements are included as observations. Unreadable or invalid declarations are omitted; missing information does not mean compatible. Configuration export does not verify installed files or guarantee exact reproduction.', 'ran-booster' ); ?></p>
 	</header>
 
 	<section class="ran-booster-portability__chooser" aria-labelledby="ran-booster-portability-mode-heading">

@@ -62,6 +62,7 @@ class ThemeRepository extends AbstractPackageRepository {
 	 * @return Theme
 	 * @throws ThemeNotFound
 	 * @throws PackageStorageFailure
+	 * @throws \InvalidArgumentException When saved management settings are invalid.
 	 */
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		return $this->managed_package( $stylesheet );

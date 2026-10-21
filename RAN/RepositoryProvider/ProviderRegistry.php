@@ -29,10 +29,23 @@ final class ProviderRegistry {
 	private ProviderRegistrationContext $registration_context;
 	/** @var \Closure(ProviderCode): \RAN\Activity\ActivityReporter|null */
 	private ?\Closure $activity_reporter_factory;
+	/** @var \Closure(): ?array{provider_code: string, selection_generation: int, implementation_fingerprint: string, plugin_basename: ?string}|null */
+	private ?\Closure $github_selection_guard;
+	/** @var array<string, GitHubReplacementDeclaration|null> */
+	private array $github_candidates;
+	/** @var array<string, \Closure> */
+	private array $github_factories = array();
+	private ?\Closure $bundled_github_factory;
+	private bool $github_collection_invalid                         = false;
+	private bool $github_finalizing                                 = false;
+	private ?GitHubReplacementDeclaration $github_final_declaration = null;
 
 	/**
 	 * @param iterable<RepositoryProvider> $providers Initial providers.
 	 * @param callable(ProviderCode): \RAN\Activity\ActivityReporter|null $activity_reporter_factory Bound optional reporting service.
+	 * @param callable(): ?array{provider_code: string, selection_generation: int, implementation_fingerprint: string, plugin_basename: ?string}|null $github_selection_guard Host-only fresh selection and passive-evidence check; must return null until collection successfully completes.
+	 * @param array<string, GitHubReplacementDeclaration|null> $github_candidates Passive active candidates, including invalid candidates as null.
+	 * @param callable|null $bundled_github_factory Deferred host factory; never supplied through the public action.
 	 */
 	public function __construct(
 		iterable $providers = array(),
@@ -40,8 +53,14 @@ final class ProviderRegistry {
 		?callable $credential_store_factory = null,
 		?callable $delivery_evidence_reader_factory = null,
 		?ProviderRegistrationContext $registration_context = null,
-		?callable $activity_reporter_factory = null
+		?callable $activity_reporter_factory = null,
+		?callable $github_selection_guard = null,
+		array $github_candidates = array(),
+		?callable $bundled_github_factory = null
 	) {
+		$this->github_selection_guard           = null === $github_selection_guard ? null : \Closure::fromCallable( $github_selection_guard );
+		$this->github_candidates                = $github_candidates;
+		$this->bundled_github_factory           = null === $bundled_github_factory ? null : \Closure::fromCallable( $bundled_github_factory );
 		$this->activity_reporter_factory        = null === $activity_reporter_factory ? null : \Closure::fromCallable( $activity_reporter_factory );
 		$this->secret_policies                  = $secret_policies ?? new ProviderSecretPolicyCatalog();
 		$this->credential_store_factory         = null === $credential_store_factory
@@ -121,6 +140,9 @@ final class ProviderRegistry {
 				throw InvalidProviderPolicy::invalid_delivery_evidence_reader_factory();
 			}
 
+			if ( $this->github_finalizing && ! $this->registration_context->operation_allowed() ) {
+				throw new LogicException( 'GitHub selection changed before factory construction.' );
+			}
 			try {
 				$provider = $factory( $credentials, $delivery_evidence, $this->registration_context );
 			} catch ( \Throwable $exception ) {
@@ -128,6 +150,9 @@ final class ProviderRegistry {
 				throw InvalidProviderPolicy::invalid_provider_factory();
 			}
 
+			if ( $this->github_finalizing && ! $this->registration_context->operation_allowed() ) {
+				throw new LogicException( 'GitHub selection changed during factory construction.' );
+			}
 			if ( ! $provider instanceof RepositoryProvider ) {
 				throw InvalidProviderPolicy::invalid_provider_factory();
 			}
@@ -138,6 +163,16 @@ final class ProviderRegistry {
 				throw InvalidProviderPolicy::mismatched_factory_provider();
 			}
 
+			if ( $this->github_finalizing && null !== $this->github_final_declaration ) {
+				if ( 'https://github.com/' !== $metadata->repository_url_base ) {
+					throw new LogicException( 'GitHub replacement authority does not match.' );
+				}
+				foreach ( GitHubReplacementDeclaration::FACETS as $facet ) {
+					if ( ( $provider instanceof $facet ) !== in_array( $facet, $this->github_final_declaration->facets, true ) ) {
+						throw new LogicException( 'GitHub replacement facets do not match.' );
+					}
+				}
+			}
 			$this->register_provider( $provider, $metadata );
 		} finally {
 			$this->registration_in_progress = false;
@@ -196,7 +231,16 @@ final class ProviderRegistry {
 
 		// Policy registration performs every provider callback before publishing
 		// its validated record. No registry state changes before it succeeds.
-		$this->secret_policies->register( $code, $credential_policy, $webhook_policy );
+		$this->secret_policies->register(
+			$code,
+			$credential_policy,
+			$webhook_policy,
+			$this->github_finalizing ? function (): void {
+				if ( ! $this->registration_context->operation_allowed() ) {
+					throw new LogicException( 'GitHub selection changed during provider validation.' );
+				}
+			} : null
+		);
 
 		$this->providers[ $code->value ]         = $provider;
 		$this->provider_metadata[ $code->value ] = $metadata;
@@ -204,7 +248,83 @@ final class ProviderRegistry {
 
 	public function seal(): void {
 		$this->assert_not_registering();
-		$this->sealed = true;
+		if ( $this->sealed ) {
+			return;
+		}
+		try {
+			$this->finalize_github_registration();
+		} finally {
+			$this->sealed = true;
+		}
+	}
+
+	/** Collect a declaration without constructing an aggregate or disclosing credentials. */
+	public function declare_github_replacement( GitHubReplacementDeclaration $declaration, callable $factory ): void {
+		$this->assert_not_registering();
+		$this->assert_not_sealed();
+		try {
+			$basename = $declaration->plugin_basename;
+			$passive  = $this->github_candidates[ $basename ] ?? null;
+			if ( null === $this->github_selection_guard || null === $passive
+				|| $passive->implementation_fingerprint !== $declaration->implementation_fingerprint
+				|| isset( $this->github_factories[ $basename ] ) ) {
+				throw new LogicException( 'GitHub replacement declaration does not match passive discovery.' );
+			}
+			$this->assert_provider_factory_signature( $factory );
+			$this->github_factories[ $basename ] = \Closure::fromCallable( $factory );
+		} catch ( \Throwable ) {
+			$this->github_collection_invalid = true;
+		}
+	}
+
+	private function finalize_github_registration(): void {
+		if ( null === $this->github_selection_guard || $this->github_collection_invalid || count( $this->github_candidates ) > 1 ) {
+			return;
+		}
+		$guard = $this->github_selection_guard;
+		try {
+			$selected = $guard();
+		} catch ( \Throwable ) {
+			return;
+		}
+		if ( null === $selected || 'gh' !== $selected['provider_code'] || $selected['selection_generation'] < 0 ) {
+			return;
+		}
+		$basename = $selected['plugin_basename'];
+		$factory  = $this->bundled_github_factory;
+		if ( null === $basename ) {
+			if ( array() !== $this->github_candidates ) {
+				return;
+			}
+		} else {
+			$declaration = $this->github_candidates[ $basename ] ?? null;
+			$factory     = $this->github_factories[ $basename ] ?? null;
+			if ( null === $declaration || $declaration->implementation_fingerprint !== $selected['implementation_fingerprint'] ) {
+				return;
+			}
+			$this->github_final_declaration = $declaration;
+		}
+		if ( null === $factory ) {
+			return;
+		}
+		$context = $this->registration_context;
+		$bound   = new ProviderRegistrationContext(
+			static fn (): int => $context->maximum_artifact_bytes(),
+			static fn (): bool => $selected === $guard()
+		);
+		if ( ! $bound->operation_allowed() ) {
+			return;
+		}
+		$this->registration_context = $bound;
+		$this->github_finalizing    = true;
+		try {
+			$this->register_with_credential_store( 'gh', $factory );
+		} catch ( \Throwable ) {
+			$this->github_collection_invalid = true;
+		} finally {
+			$this->registration_context = $context;
+			$this->github_finalizing    = false;
+		}
 	}
 
 
@@ -327,6 +447,9 @@ final class ProviderRegistry {
 
 	private function assert_can_register_code( ProviderCode $code ): void {
 		$this->assert_not_sealed();
+		if ( 'gh' === $code->value && null !== $this->github_selection_guard && ! $this->github_finalizing ) {
+			throw new LogicException( 'GitHub is reserved for host selection.' );
+		}
 
 		if ( isset( $this->providers[ $code->value ] ) ) {
 			throw new LogicException( 'Repository provider is already registered.' );

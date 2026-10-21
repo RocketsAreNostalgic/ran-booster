@@ -1,6 +1,6 @@
-# Portability API 3
+# Portability API 4
 
-Portability API 3 is Core's narrow, request-local adoption boundary for a
+Portability API 4 is Core's narrow, request-local adoption boundary for a
 trusted source bridge. It reviews one already-installed plugin or theme and may
 adopt that package into Booster with deployment policy forced to Disabled.
 
@@ -8,16 +8,20 @@ It is not the Transporter Blueprint format, a general migration API, or an
 installer. The [Transporter Blueprint guide](portability-briefcase.md) documents
 the separate Blueprint V1 ZIP workflow.
 
+This is a held integration candidate. It is not activated or release-qualified
+until the host binds the same provider selection to the registry, credentials,
+and Blueprint consumers and the source bridge qualifies API 4 forwarding.
+
 ## Version and service delivery
 
-A consumer must require exact Portability API 3:
+A consumer must require exact Portability API 4:
 
 ```php
 add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )
-			|| 3 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
+			|| 4 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
 			return;
 		}
 
@@ -41,7 +45,7 @@ not replayed. The callback receives only the portability facade; it does not rec
 Core's container, repositories, provider clients, credential store, filesystem
 paths, or cleanup authority.
 
-Portability API 3 is independently versioned. A source bridge does not need
+Portability API 4 is independently versioned. A source bridge does not need
 Add-on API 17 or Provider API 14, although Core continues to use its registered
 providers internally.
 
@@ -50,7 +54,7 @@ A source bridge may separately feature-detect Core's additive
 row without a page refresh. Core derives the target from bounded presentation
 identity based on the installed candidate, never from a source row ID, source
 key or source revision. This presentation transport does not change
-Portability API 3 authorization, review, Apply, target verification or
+Portability API 4 authorization, review, Apply, target verification or
 source-cleanup ownership. See
 [Enhanced administration interaction API](enhanced-admin-interactions.md).
 
@@ -83,18 +87,32 @@ The bridge owns its source state and uses the facade in this order:
 1. Fresh-read and validate the source record.
 2. Build the current candidate.
 3. Derive the review action with
-   `nonce_action( 'review', $candidate )`, create that WordPress nonce, and call
+   `nonce_action( 'review', $candidate, null, null )`, create that WordPress nonce, and call
    `review( $candidate, $nonce )`.
 4. Display the returned closed action, reason, message, and opaque `v1:`
    fingerprint.
 5. Before Apply, fresh-read the source again and require its bridge-owned
    fingerprint to be unchanged.
 6. Derive the Apply action with
-   `nonce_action( 'apply', $candidate, $review->fingerprint )`, create that
+   `nonce_action( 'apply', $candidate, $review->fingerprint, $review->provider_expectation )`, create that
    WordPress nonce, and call
-   `apply( $candidate, $review->fingerprint, $nonce )`.
+   `apply( $candidate, $review->fingerprint, $nonce, $review->provider_expectation )`.
 7. Remove source authority only when Apply returns `target_verified = true` and
    a final exact source comparison succeeds.
+
+The readonly `provider_expectation` result is destination-local context. For
+GitHub it contains exactly `provider_code: gh`, a nonnegative integer
+`selection_generation`, and a lowercase SHA-256 `implementation_fingerprint`.
+It is bound into both review fingerprint and Apply nonce. Other providers accept
+only null. Review nonce arguments remain explicitly null; Apply arguments are
+all required. A missing or malformed GitHub expectation requires fresh review.
+Key order is canonicalized without reading live provider state.
+
+Do not serialize this expectation into portable Blueprint data or treat it as
+implementation approval. Stale Apply refuses before credential lookup,
+transferred-material persistence, or provider I/O. A matching expectation still
+requires fresh source, destination, capability, and nonce checks. Preview
+observation reuse never caches selection authority.
 
 `nonce_action()` scopes a nonce; it neither creates a nonce nor grants authority.
 Core independently checks `manage_options`, the applicable plugin or theme
@@ -175,7 +193,7 @@ reconcile from the two live authorities.
 
 ## Deliberate limits
 
-Portability API 3 does not provide:
+Portability API 4 does not provide:
 
 - package installation, file replacement, activation, or deployment enablement;
 - credential creation, transfer, display, validation, or deletion;

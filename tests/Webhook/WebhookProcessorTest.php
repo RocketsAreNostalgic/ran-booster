@@ -27,6 +27,8 @@ use RAN\Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEviden
 use Throwable;
 
 final class WebhookProcessorTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
+
 	public const WEBHOOK_SECRET = 'processor-test-webhook-secret-0001';
 
 	public function test_unknown_and_unsupported_providers_fail_closed(): void {
@@ -56,8 +58,109 @@ final class WebhookProcessorTest extends TestCase {
 			new WebhookProcessorCoordinator()
 		);
 
-		self::assertSame( 404, $processor->handle( 'gh', $request )->get_status() );
+		self::assertSame( 503, $processor->handle( 'gh', $request )->get_status() );
 		self::assertSame( 0, $request_calls );
+	}
+
+	public function test_lost_selection_refuses_before_request_or_signing_material_access(): void {
+		$registry  = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
+		$db        = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$selection = $this->queued_selection( $db, $registry );
+		$secrets   = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'webhook_materials' );
+		$processor                   = new WebhookProcessor( $registry, new WebhookProcessorCoordinator(), new SignedWebhookVerifier( $secrets ), $selection );
+		$db->selection->active_bytes = 'a:0:{}';
+		$response                    = $processor->handle(
+			'gh',
+			static function (): array {
+				self::fail( 'Paused ingress must not read the request.' );
+			}
+		);
+		self::assertSame( 503, $response->get_status() );
+	}
+
+	public function test_request_callback_revocation_refuses_before_signing_material_access(): void {
+		$registry  = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
+		$db        = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$selection = $this->queued_selection( $db, $registry );
+		$secrets   = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'webhook_materials' );
+		$processor = new WebhookProcessor( $registry, new WebhookProcessorCoordinator(), new SignedWebhookVerifier( $secrets ), $selection );
+		$response  = $processor->handle(
+			'gh',
+			static function () use ( $db ): array {
+				$db->selection->active_bytes = 'a:0:{}';
+				return array(
+					'body'    => '{}',
+					'headers' => array(),
+				);
+			}
+		);
+		self::assertSame( 503, $response->get_status() );
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'callback_failure_provider' )]
+	public function test_callback_failure_reports_current_availability( Throwable $failure, bool $revoke, int $expected ): void {
+		$registry  = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::probe() ) ) );
+		$db        = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$selection = $this->queued_selection( $db, $registry );
+		$secrets   = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'webhook_materials' );
+		$spy       = new WebhookProcessorCoordinatorSpy();
+		$processor = new WebhookProcessor( $registry, new WebhookProcessorCoordinator( null, $spy ), new SignedWebhookVerifier( $secrets ), $selection );
+		$response  = $processor->handle(
+			'gh',
+			static function () use ( $db, $failure, $revoke ): array {
+				if ( $revoke ) {
+					$db->selection->active_bytes = 'a:0:{}';
+				}
+				throw $failure;
+			}
+		);
+		self::assertSame( $expected, $response->get_status() );
+		self::assertSame( 0, $spy->calls );
+	}
+
+	/** @return iterable<string,array{Throwable,bool,int}> */
+	public static function callback_failure_provider(): iterable {
+		foreach ( array( false, true ) as $revoke ) {
+			$label = $revoke ? 'revoked' : 'available';
+			yield $label . '-invalid-input' => array( new \InvalidArgumentException( 'test' ), $revoke, $revoke ? 503 : 400 );
+			yield $label . '-unknown-provider' => array( \RAN\RepositoryProvider\UnknownProvider::for_code(), $revoke, $revoke ? 503 : 404 );
+			yield $label . '-unsupported-capability' => array( \RAN\RepositoryProvider\UnsupportedProviderCapability::for_provider(), $revoke, $revoke ? 503 : 404 );
+		}
+	}
+
+	public function test_authorization_callback_revocation_refuses_before_admission(): void {
+		$db     = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+		$policy = $this->createMock( ProviderWebhookPolicy::class );
+		$policy->method( 'get_provider' )->willReturn( ProviderCode::parse( 'gh' ) );
+		$policy->method( 'get_retained_headers' )->willReturn( array( 'x-hub-signature-256' ) );
+		$policy->method( 'get_signature_header' )->willReturn( 'X-Hub-Signature-256' );
+		$policy->method( 'authorize_webhook' )->willReturnCallback(
+			static function () use ( $db ): bool {
+				$db->selection->active_bytes = 'a:0:{}';
+				return true;
+			}
+		);
+		$event     = new PushEvent( ProviderCode::parse( 'gh' ), 'owner/example', '4001', 'main', str_repeat( 'a', 40 ), 'delivery-one' );
+		$registry  = new ProviderRegistry( array( new WebhookProcessorProvider( static fn (): WebhookEnvelope => WebhookEnvelope::events( $event ), $policy ) ) );
+		$selection = $this->queued_selection( $db, $registry );
+		$secrets   = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::once() )->method( 'webhook_materials' )->willReturn(
+			array(
+				'profile' => array(
+					'scope'  => 'owner',
+					'target' => 'owner',
+					'secret' => self::WEBHOOK_SECRET,
+				),
+			)
+		);
+		$spy       = new WebhookProcessorCoordinatorSpy();
+		$processor = new WebhookProcessor( $registry, new WebhookProcessorCoordinator( null, $spy ), new SignedWebhookVerifier( $secrets ), $selection );
+		$response  = $processor->handle( 'gh', $this->request( '{}', $this->signed_headers( '{}' ) ) );
+		self::assertSame( 503, $response->get_status() );
+		self::assertSame( 0, $spy->calls );
 	}
 
 	public function test_provider_exceptions_never_reach_the_response(): void {
@@ -467,7 +570,7 @@ final class WebhookProcessorTest extends TestCase {
 			}
 		};
 
-		return new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ) );
+		return new WebhookProcessor( $registry, $coordinator, new SignedWebhookVerifier( $secrets ), $this->queued_selection( new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), $registry ) );
 	}
 
 	private function event_processor( WebhookProcessorCoordinator $coordinator ): WebhookProcessor {
@@ -538,7 +641,7 @@ final readonly class WebhookProcessorProvider implements RepositoryProvider, Web
 
 	private \Closure $normalizer;
 
-	public function __construct( callable $normalizer ) {
+	public function __construct( callable $normalizer, private ?ProviderWebhookPolicy $policy = null ) {
 		$this->normalizer = \Closure::fromCallable( $normalizer );
 	}
 
@@ -551,7 +654,7 @@ final readonly class WebhookProcessorProvider implements RepositoryProvider, Web
 	}
 
 	public function get_webhook_policy(): ProviderWebhookPolicy {
-		return new GitHubWebhookPolicy();
+		return $this->policy ?? new GitHubWebhookPolicy();
 	}
 
 	public function diagnose_webhook_readiness(): \RAN\RepositoryProvider\ProviderDiagnosticResult {

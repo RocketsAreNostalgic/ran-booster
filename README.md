@@ -95,17 +95,35 @@ before uninstalling.
 
 ### Move sites with Transporter
 
-Transporter creates a password-protected Blueprint ZIP for selected managed
-packages and, when explicitly selected, eligible saved credentials. It gives
+Transporter creates a Blueprint ZIP for selected managed package configuration.
+Explicitly selecting eligible saved credentials adds a password-protected
+briefcase; package-only exports are unencrypted. It gives
 you a reconstruction path for a site move without requiring a development
 checkout. Blueprints do not include webhook secrets, provider-side hooks,
 deployment history, or WordPress content, and every restored package begins
-with deployment **Disabled**. See the
-[Transporter Blueprint guide](docs/portability-briefcase.md).
+with deployment **Disabled**. Start with the
+[dashboard walkthrough](docs/operator-journeys.md), then use the detailed
+[Transporter Blueprint reference](docs/portability-briefcase.md).
 
 Credential transfer is a copy operation. It does not move the source site's
 encryption key, revoke or rotate the source credential, or recreate
 provider-side access and webhooks.
+
+### Choose GitHub support or migrate from WP Pusher
+
+The upcoming release candidate adds explicit GitHub replacement selection and
+credential-access approval. See [Choose GitHub support](docs/github-provider-replacement.md)
+for prerequisites, paused states, switching and return to bundled GitHub.
+These candidate instructions do not describe published Core beta.36's older
+bundled-only behavior; check your installed release notes before following them.
+
+For retained WP Pusher packages, start with the
+[connected migration journey](docs/operator-journeys.md#migrate-retained-wp-pusher-packages)
+and the maintained [Migrator instructions](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/blob/main/README.md).
+Published Migrator beta.10/API 3 is incompatible with candidate Core API 4.
+The API 4 Migrator source candidate still requires compatible immutable-host
+certification and its acceptance gates before a separately authorized release.
+Candidate tests do not certify a published pairing.
 
 ### Credentials and deployment evidence
 
@@ -145,11 +163,13 @@ What administrators should watch for:
   confirming the process has stopped.
 - Troubleshooting provides bounded, on-demand diagnostics; nothing persists
   raw webhook bodies, headers, or credentials.
-- **Recover management** remains reachable from Troubleshooting when managed
-  inventory cannot load. It confirms the installed target and eligible corrupt
-  record, then stops management without deleting files or package data.
+- If damaged management settings prevent a package’s settings from opening,
+  **Review management removal** offers an explicit **Stop managing** flow.
+  It keeps installed files and package data; it does not repair them. Eligible
+  management records can be removed only after exact-target confirmation.
   Re-adoption creates a new lifetime; stale forms and work cannot act on it.
   Damaged identity, ambiguous targets and unresolved operations are refused.
+  See the [management-removal support steps](docs/package-update-orchestration.md#package-management-failure-and-safe-removal).
 
 The [package update orchestration guide](docs/package-update-orchestration.md)
 maps every trigger and handoff, and the
@@ -189,7 +209,7 @@ derives the expanded limit at four times that value and retains its other ZIP,
 identity, path and free-space checks. The same policy covers every registered
 provider's branch-source manual installs and updates, webhook updates, and
 Transporter Blueprint installs. Prospective release installation instead uses
-the released `ran/wp-release-updater` beta.9 public API (Protocol 5), with
+the released `ran/wp-release-updater` beta.12 public API (Protocol 6), with
 separate archive custody and bounds, and creates no deployment attempt.
 Inspection discards its validation ZIP; installation freshly reacquires the
 selected release using its opaque `v2:` fingerprint. Earlier selections require

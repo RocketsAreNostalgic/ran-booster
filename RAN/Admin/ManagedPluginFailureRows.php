@@ -89,7 +89,7 @@ final readonly class ManagedPluginFailureRows {
 	private function credential_url( array $failure ): string {
 		return admin_url(
 			'admin.php?page=ran-booster&tab=' . rawurlencode( (string) $failure['provider'] )
-			. '&replace_credential=' . rawurlencode( (string) $failure['credential_id'] )
+			. '&view=credentials&replace_credential=' . rawurlencode( (string) $failure['credential_id'] )
 		);
 	}
 }

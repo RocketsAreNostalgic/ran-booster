@@ -92,19 +92,47 @@ Blueprints do not export lifetime identity. Faithful database moves preserve
 stored identity; exact clones and restores also copy it and its associated work.
 There is no restore-proof invalidation promise.
 
-The **Recover management** links in package lists and Troubleshooting open an
-installed-target selector before managed inventory hydration. Confirmation
+### Package-management failure and safe removal
+
+Opening a package whose saved settings fail validation shows a failure screen
+for that exact plugin or theme. It explains the known saved-configuration problem
+and whether Booster can safely stop managing that target. Invalid Booster settings
+do not establish that the installed package's files or data are damaged. There is
+no unrelated installed-package picker or automatic disconnection.
+
+Healthy package settings keep the ordinary **Stop managing** action in their
+Danger zone; deletion remains a separate action. A missing provider, credential
+or update-source add-on has its own unavailable state: retain the management link
+and restore the missing dependency or access. It is not evidence of corrupt
+package settings. General database failures and unidentified inventory failures
+show their read error without proposing arbitrary package removal.
+
+For advanced support, the exact-target routes are
+`admin.php?page=ran-booster-plugins&recovery=1&recovery_target=PLUGIN_MAIN_FILE`
+and `admin.php?page=ran-booster-themes&recovery=1&recovery_target=THEME_STYLESHEET`.
+URL-encode the identifier. These routes retain access before complete managed
+settings hydration. A healthy target offers **Open package settings**, and an
+absent or unverifiable target has no removal form. The route without a target
+does not enumerate all installed packages. Opening any of these routes does not
+change package management.
+
+Confirmation
 binds the exact management row and installed plugin main file or theme
 `style.css`. Management-only removal accepts stable symlinked installations;
 confirmation also captures their link identity and resolved target. Link
 replacement or retargeting invalidates confirmation. Destructive removal keeps
 its separate filesystem safeguards. **Stop managing** preserves installed files,
 activation, package data, shared credentials and deployment history. It only removes the confirmed
-management record. Link that installed target again through the ordinary
-validated adoption flow; for releases, then enable release tracking. Prospective
+management record. Only after confirmed removal, link that installed target
+again through the ordinary validated adoption flow; for releases, then enable
+release tracking. Prospective
 release installation is not the recovery route for retained installed files.
 Provider unavailability can prevent validated re-adoption, but does not by
 itself prevent local recovery.
+
+For guarded actual-site verification without running the comprehensive disposable
+CI harness on retained data, follow
+[the package-management failure acceptance procedure](acceptance/package-management-failure.md).
 
 Recovery refuses an unknown source, damaged or absent token, provider/repository
 disagreement, ambiguous installed identity, unhealthy storage or changed

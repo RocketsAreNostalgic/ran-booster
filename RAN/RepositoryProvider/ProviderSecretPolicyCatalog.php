@@ -10,10 +10,12 @@ final class ProviderSecretPolicyCatalog {
 	/** @var array<string, array{credential: ProviderCredentialPolicy|null, webhook: ProviderWebhookPolicy|null}> */
 	private array $policies = array();
 
+	/** @param callable(): void|null $before_publish Host guard after every provider callback, before any policy becomes visible. */
 	public function register(
 		ProviderCode $provider,
 		?ProviderCredentialPolicy $credential_policy,
-		?ProviderWebhookPolicy $webhook_policy
+		?ProviderWebhookPolicy $webhook_policy,
+		?callable $before_publish = null
 	): void {
 		$code = $provider->value;
 
@@ -39,6 +41,10 @@ final class ProviderSecretPolicyCatalog {
 
 		if ( null !== $webhook_provider && ! $webhook_provider->equals( $provider ) ) {
 			throw InvalidProviderPolicy::mismatched_provider();
+		}
+
+		if ( null !== $before_publish ) {
+			$before_publish();
 		}
 
 		$this->policies[ $code ] = array(

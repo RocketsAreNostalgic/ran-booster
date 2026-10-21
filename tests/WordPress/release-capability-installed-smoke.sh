@@ -122,7 +122,12 @@ cp "$probe_source" "$probe_target"
 for scale in 1 5 10 20; do
 	export RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE="$scale"
 	"$php_bin" "$wp_cli" eval-file "$native_seed" --user=admin --path="$wordpress"
-	"$php_bin" "$wp_cli" eval-file "$native_proof" --user=admin --path="$wordpress"
+	for (( target_index=1; target_index<=scale; ++target_index )); do
+		export RAN_BOOSTER_NATIVE_LIFECYCLE_INDEX="$target_index"
+		"$php_bin" "$wp_cli" eval-file "$native_proof" --user=admin --path="$wordpress"
+	done
+	"$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/native-lifecycle-installed-verify.php" --user=admin --path="$wordpress"
+	"$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/native-lifecycle-installed-cleanup.php" --user=admin --path="$wordpress"
 done
 
 cmp "$probe_source" "$probe_target"

@@ -28,11 +28,66 @@ class ProviderProfileAdminController {
 		private CredentialExpiryObservationStore $expiry_observations,
 		private ?CoreAdminInteractionFacade $interaction = null,
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
-		private ?\RAN\Activity\ActivityStore $activity = null
+		private ?\RAN\Activity\ActivityStore $activity = null,
+		private ?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
+		private ?\RAN\Deployment\DeploymentAttemptRepository $deployment_attempts = null,
+		private ?\RAN\PackageRemoval\PackageRemovalService $package_removal = null
 	) {
 
 		$this->branch_check_evidence = $branch_check_evidence ?? new RepositoryBranchCheckEvidenceStore();
 	}
+	/** @param array<string,mixed> $request Untrusted form data. */
+	public function adopt_github( array $request ): void {
+		$authorized = static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
+		if ( ! $authorized() ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to change the GitHub implementation.', 'ran-booster' ) );
+		}
+		$digest = is_string( $request['review_digest'] ?? null ) ? $request['review_digest'] : '';
+		check_admin_referer( 'ran-booster-adopt-github-' . $digest );
+		try {
+			if ( null === $this->github_selection || null === $this->deployment_attempts || 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $digest ) ) {
+				throw new \RuntimeException( 'GitHub adoption is unavailable.' );
+			}
+			foreach ( array( 'confirmed', 'reuse_existing', 'acknowledge_incompatible' ) as $key ) {
+				if ( array_key_exists( $key, $request ) && '1' !== $request[ $key ] ) {
+					throw new \RuntimeException( 'Invalid GitHub adoption confirmation.' );
+				}
+			}
+			$this->github_selection->transition_selection(
+				$digest,
+				isset( $request['confirmed'] ),
+				isset( $request['reuse_existing'] ),
+				isset( $request['acknowledge_incompatible'] ),
+				$this->secrets,
+				$this->deployment_attempts,
+				$this->updater_lock,
+				$authorized
+			);
+			$this->dashboard->add_message( __( 'GitHub implementation selection saved. Review current availability before continuing.', 'ran-booster' ) );
+		} catch ( \Throwable ) {
+			$this->dashboard->add_message( new \WP_Error( 'ran_booster_github_adoption', __( 'GitHub adoption could not be verified. Review the current selection, credential permissions and recovery status before trying again.', 'ran-booster' ) ) );
+		}
+	}
+
+	/** @param array<string,mixed> $request Untrusted recovery confirmation. */
+	public function recover_github_native( array $request ): void {
+		$authorized = static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
+		if ( ! $authorized() ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to recover the GitHub installation.', 'ran-booster' ) );
+		}
+		$digest = is_string( $request['review_digest'] ?? null ) ? $request['review_digest'] : '';
+		check_admin_referer( 'ran-booster-recover-github-' . $digest );
+		try {
+			if ( null === $this->package_removal || 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $digest ) || '1' !== ( $request['confirmed_stopped'] ?? null ) || '1' !== ( $request['confirmed_removal'] ?? null ) ) {
+				throw new \RuntimeException( 'Fresh removal recovery confirmation is required.' );
+			}
+			$this->package_removal->recover_native_removal( $digest, true, true, $authorized );
+			$this->dashboard->add_message( __( 'Target removal and management disconnection verified; the native installation block is cleared. Cleanup of temporary files from the interrupted process is unverified. Review current provider availability before continuing.', 'ran-booster' ) );
+		} catch ( \Throwable ) {
+			$this->dashboard->add_message( new \WP_Error( 'ran_booster_github_recovery', __( 'Native recovery could not be verified. Review the target, management records, updater lock and current recovery status before trying again.', 'ran-booster' ) ) );
+		}
+	}
+
 	/** @param array<string, mixed> $request Untrusted request fields, validated before use. */
 	public function manage_credential_profiles( array $request ): void {
 		$this->authorize( 'ran-booster-save-secrets' );

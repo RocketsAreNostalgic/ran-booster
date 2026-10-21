@@ -29,6 +29,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Tests\Deployment\AttemptRepositoryDatabase;
 
 final class BackgroundDeploymentFailureTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	private AttemptRepositoryDatabase $database;
 	private DeploymentAttemptRepository $attempts;
@@ -41,7 +42,8 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		$this->attempts = new DeploymentAttemptRepository(
 			$this->database,
 			'wp_ran_booster_deployment_attempts',
-			database_lifecycle: $this->createStub( Database::class )
+			database_lifecycle: $this->createStub( Database::class ),
+			selection: $this->queued_selection( $this->database )
 		);
 
 		$GLOBALS['ran_booster_repository_admin_allowed']               = true;
@@ -127,7 +129,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-background-failure-notice' ) );
 		self::assertStringContainsString( 'RAN Booster automatic deployment failed', $html );
 		self::assertStringContainsString( 'tab=troubleshooting&amp;panel=activity', $html );
-		self::assertStringContainsString( 'tab=gh&amp;replace_credential=profile_123', $html );
+		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=profile_123', $html );
 		self::assertStringNotContainsString( 'secret-canary', $html );
 
 		$result = ( new DeploymentAdminController( $this->createStub( Dashboard::class ), monitor: $monitor ) )->handle();
@@ -201,6 +203,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertStringContainsString( 'notice-error', $html );
 		self::assertStringContainsString( 'repository provider rejected', $html );
 		self::assertStringContainsString( 'Replace credential', $html );
+		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=profile_123', $html );
 	}
 
 	public function test_email_is_limited_to_background_failures_and_contains_only_safe_actionable_data(): void {

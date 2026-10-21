@@ -13,6 +13,15 @@ pnpm check
 
 Runtime, archive, release-candidate, and WordPress lifecycle changes need the focused proof required by [AGENTS.md](AGENTS.md). Do not commit generated release ZIPs, secret sidecars, WordPress runtime state, or credentials.
 
+The guarded `tests/WordPress/adoption-recovery-smoke.sh` proof runs the real
+`admin_init` callbacks and package/recovery renderers for healthy and damaged
+plugin/theme settings. With the same marked disposable site served at
+`http://localhost` (or an explicitly configured localhost port), add
+`RAN_BOOSTER_RECOVERY_HTTP=1` to its normal required
+path/URL/disposable environment to also prove authenticated package/recovery GETs
+and admin-ajax heartbeat. HTTP mode requires a running server and cleans up its
+owned sessions; the ordinary CLI mode does not claim HTTP or browser acceptance.
+
 Release Please owns version/changelog/release-PR/tag/draft lifecycle. The pinned shared Profile B workflow promotes only the exact ZIP and checksum emitted by successful main Quality; do not add repository-local candidate markers, publisher state, mutable release recovery, or a second version engine.
 
 Follow [SUPPORT.md](SUPPORT.md) for ordinary support, non-sensitive defects, and feature requests. Follow [SECURITY.md](SECURITY.md) for vulnerabilities; do not submit security details in an issue or pull request.

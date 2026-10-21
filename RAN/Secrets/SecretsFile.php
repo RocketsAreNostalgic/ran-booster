@@ -6,6 +6,7 @@ namespace RAN\Secrets;
 
 use RAN\Portability\BlueprintCredential;
 use RAN\Portability\PackageBlueprint;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\InvalidProviderCode;
 use RAN\RepositoryProvider\InvalidWebhookInput;
@@ -54,6 +55,11 @@ class SecretsFile {
 	private PrivateLocationCandidateResolver $location_resolver;
 	private SecretsRuntimeAvailability $availability;
 	private bool $validate_configured_path;
+	/** @var \Closure(array{kind:mixed,configuration:mixed}|null): bool|null */
+	private ?\Closure $github_credential_access;
+	/** @var \Closure(): bool|null */
+	private ?\Closure $github_webhook_access;
+
 
 	/** @var array<string, array<string, array<string, mixed>>> */
 	private array $temporary_credentials = array();
@@ -62,6 +68,8 @@ class SecretsFile {
 	 * @param string|null                     $path             Absolute encrypted sidecar path. Null reads the encrypted-path constant.
 	 * @param array<string, mixed>|null        $constants        Test-only constant values. Null reads PHP constants.
 	 * @param ProviderSecretPolicyCatalog|null $provider_policies Registered provider-owned secret policies.
+	 * @param callable(array{kind:mixed,configuration:mixed}|null): bool|null $github_credential_access Core-owned approval bound to the request generation/fingerprint; null metadata checks availability only.
+	 * @param callable(): bool|null $github_webhook_access Core-owned signing access bound to the current selection.
 	 */
 	public function __construct(
 		?string $path = null,
@@ -70,7 +78,9 @@ class SecretsFile {
 		?SiteKeyStore $key_store = null,
 		?EncryptedSecretsEnvelopeCodec $codec = null,
 		?PrivateLocationCandidateResolver $location_resolver = null,
-		?SecretsRuntimeAvailability $availability = null
+		?SecretsRuntimeAvailability $availability = null,
+		?callable $github_credential_access = null,
+		?callable $github_webhook_access = null
 	) {
 		$this->validate_configured_path = null === $path;
 		$this->path                     = null === $path ? $this->default_path() : $path;
@@ -80,6 +90,8 @@ class SecretsFile {
 		$this->codec                    = $codec ?? new EncryptedSecretsEnvelopeCodec();
 		$this->location_resolver        = $location_resolver ?? new PrivateLocationCandidateResolver();
 		$this->availability             = $availability ?? new SecretsRuntimeAvailability();
+		$this->github_credential_access = null === $github_credential_access ? null : \Closure::fromCallable( $github_credential_access );
+		$this->github_webhook_access    = null === $github_webhook_access ? null : \Closure::fromCallable( $github_webhook_access );
 	}
 
 	/**
@@ -148,7 +160,8 @@ class SecretsFile {
 			$this->key_store,
 			$this->codec,
 			$this->location_resolver,
-			$this->availability
+			$this->availability,
+			$this->github_credential_access
 		);
 		$document  = $candidate->file_document();
 		try {
@@ -330,6 +343,81 @@ class SecretsFile {
 	}
 
 	/**
+	 * Read retained GitHub adoption metadata for Core, even while GH is paused.
+	 *
+	 * This host-only read invokes no provider policy or operation callback and is
+	 * deliberately absent from ProviderCredentialStore. Unknown configuration
+	 * stays opaque. Destroyed records remain visible but cannot count as reuse.
+	 * Storage failures throw rather than claiming an empty inventory.
+	 *
+	 * @return array<string, array{id:string,label:string,kind:string,format:string|null,configuration:array{owner:string}|null,source:'constant'|'file',self_destruct:bool,destroy_on:string|null,destroyed:bool}>
+	 */
+	public function github_adoption_inventory(): array {
+		return $this->adoption_inventory( $this->file_document() );
+	}
+
+	/**
+	 * @template T
+	 * @param callable(array<string,array<string,mixed>>):T $operation Host-only; no provider callbacks or nested sidecar access.
+	 * @return T
+	 */
+	public function with_github_adoption_inventory( callable $operation ): mixed {
+		$this->assert_available();
+		return $this->with_lock(
+			LOCK_EX,
+			true,
+			function () use ( $operation ): mixed {
+				$document = $this->document_for_locked_state( $this->load_key(), $this->has_file() );
+				return $operation( $this->adoption_inventory( $document ) );
+			}
+		);
+	}
+
+	/**
+	 * @param SecretsDocument $document
+	 * @return array<string, array{id:string,label:string,kind:string,format:string|null,configuration:array{owner:string}|null,source:'constant'|'file',self_destruct:bool,destroy_on:string|null,destroyed:bool}>
+	 */
+	private function adoption_inventory( #[\SensitiveParameter] array $document ): array {
+		$profiles = array();
+		foreach ( $document[ self::CREDENTIALS ]['gh'] ?? array() as $id => $record ) {
+			$format          = GitHubProviderSelection::credential_format( $record );
+			$owner           = $record['configuration']['owner'] ?? null;
+			$profiles[ $id ] = array(
+				'id'            => $id,
+				'label'         => $record['label'],
+				'kind'          => $record['kind'],
+				'format'        => $format,
+				'configuration' => null !== $format && is_string( $owner ) ? array( 'owner' => $owner ) : null,
+				'source'        => 'file',
+				'self_destruct' => $record['self_destruct'] ?? false,
+				'destroy_on'    => $this->credential_destroy_on( $record ),
+				'destroyed'     => $this->credential_destroyed( $record ),
+			);
+		}
+		$constant = $this->raw_constant_value( 'RAN_BOOSTER_GITHUB_TOKEN' );
+		if ( is_string( $constant ) && '' !== trim( $constant ) ) {
+			$profiles[ self::CONSTANT_PROFILE ] = array(
+				'id'            => self::CONSTANT_PROFILE,
+				'label'         => 'Deployment configuration',
+				'kind'          => 'classic',
+				'format'        => GitHubProviderSelection::credential_format(
+					array(
+						'kind'          => 'classic',
+						'configuration' => array( 'owner' => '' ),
+					)
+				),
+				'configuration' => array( 'owner' => '' ),
+				'source'        => 'constant',
+				'self_destruct' => false,
+				'destroy_on'    => null,
+				'destroyed'     => false,
+			);
+		}
+		ksort( $profiles, SORT_STRING );
+		return $profiles;
+	}
+
+	/**
 	 * Return display-safe credential profiles for one provider.
 	 *
 	 * @return array<string, CredentialProfile>
@@ -340,9 +428,12 @@ class SecretsFile {
 		}
 
 		$provider_code = $this->provider_value( $provider );
-		$profiles      = array();
-		$records       = array();
-		$constant      = $this->constant_credential(
+		if ( ! $this->credential_access_allowed( $provider_code ) ) {
+			return array();
+		}
+		$profiles = array();
+		$records  = array();
+		$constant = $this->constant_credential(
 			$provider_code,
 			$this->provider_policies->credential_policy( $provider )
 		);
@@ -353,7 +444,7 @@ class SecretsFile {
 		$document = $this->file_document();
 		foreach ( $document[ self::CREDENTIALS ][ $provider_code ] ?? array() as $id => $record ) {
 			$runtime = $this->runtime_credential_record( $provider_code, $id, $record );
-			if ( ! $this->credential_destroyed( $runtime ) ) {
+			if ( ! $this->credential_destroyed( $runtime ) && $this->credential_access_allowed( $provider_code, $record ) ) {
 				$records[ $id ] = $runtime;
 			}
 		}
@@ -373,7 +464,7 @@ class SecretsFile {
 			);
 		}
 
-		return $profiles;
+		return $this->credential_access_allowed( $provider_code ) ? $profiles : array();
 	}
 
 	/**
@@ -382,6 +473,16 @@ class SecretsFile {
 	 * @return array<string, mixed>|null
 	 */
 	public function credential_material( ProviderCode|string $provider, ?string $id = null ): ?array {
+		$provider_code = $this->provider_value( $provider );
+		if ( ! $this->credential_access_allowed( $provider_code ) ) {
+			return null;
+		}
+		$record = $this->read_credential_material( $provider, $id );
+		return null !== $record && $this->credential_access_allowed( $provider_code, $record ) ? $record : null;
+	}
+
+	/** @return array<string, mixed>|null */
+	private function read_credential_material( ProviderCode|string $provider, ?string $id = null ): ?array {
 		if ( ! $this->availability->is_available() && self::CONSTANT_PROFILE !== $id ) {
 			$this->assert_available();
 		}
@@ -406,7 +507,7 @@ class SecretsFile {
 			}
 
 			$runtime = $this->runtime_credential_record( $provider_code, $id, $record );
-			if ( $this->credential_destroyed( $runtime ) ) {
+			if ( $this->credential_destroyed( $runtime ) || ! $this->credential_access_allowed( $provider_code, $record ) ) {
 				return null;
 			}
 
@@ -417,6 +518,19 @@ class SecretsFile {
 			);
 
 			return $runtime;
+		}
+
+		if ( 'gh' === $provider_code && null !== $this->github_credential_access ) {
+			$token = $this->raw_constant_value( 'RAN_BOOSTER_GITHUB_TOKEN' );
+			if ( is_string( $token ) && '' !== trim( $token ) && ! $this->credential_access_allowed(
+				$provider_code,
+				array(
+					'kind'          => 'classic',
+					'configuration' => array( 'owner' => '' ),
+				)
+			) ) {
+				return null;
+			}
 		}
 
 		$constant = $this->constant_credential(
@@ -441,6 +555,9 @@ class SecretsFile {
 
 		$selected_id = (string) array_key_first( $candidates );
 		$selected    = $candidates[ $selected_id ];
+		if ( ! $this->credential_access_allowed( $provider_code, $selected ) ) {
+			return null;
+		}
 		if ( 'file' !== ( $selected['source'] ?? null ) ) {
 			return $selected;
 		}
@@ -525,6 +642,7 @@ class SecretsFile {
 				$ids     = array();
 
 				foreach ( $records as $entry ) {
+					$this->assert_credential_access( $entry['provider'], $entry['record'] );
 					$existing = $document[ self::CREDENTIALS ][ $entry['provider'] ][ $entry['id'] ] ?? null;
 					if ( null === $existing ) {
 						$document[ self::CREDENTIALS ][ $entry['provider'] ][ $entry['id'] ] = $entry['record'];
@@ -537,6 +655,11 @@ class SecretsFile {
 				}
 
 				return array( $document, $ids, $changed );
+			},
+			function () use ( $records ): void {
+				foreach ( $records as $entry ) {
+					$this->assert_credential_access( $entry['provider'], $entry['record'] );
+				}
 			}
 		);
 	}
@@ -562,11 +685,17 @@ class SecretsFile {
 		$retain_secret = null === $secret || '' === $secret;
 		if ( $retain_secret ) {
 			if ( is_array( $existing ) ) {
+				$this->assert_credential_access( $provider_code, $existing );
 				$secret = $existing['secret'];
 				if ( ! array_key_exists( 'provider_destroy_on', $metadata ) && isset( $existing['provider_destroy_on'] ) ) {
 					$metadata['provider_destroy_on'] = $existing['provider_destroy_on'];
 				}
 			}
+		}
+		// The Classic PAT form has no configuration fields. Canonicalize only this save input,
+		// before the format guard; retained records and imports must already be canonical.
+		if ( 'gh' === $provider_code && 'classic' === ( $metadata['kind'] ?? null ) && array() === ( $metadata['configuration'] ?? null ) ) {
+			$metadata['configuration'] = array( 'owner' => '' );
 		}
 		$record = $this->validate_credential( $provider_code, $metadata, $secret, $submitted && ! $retain_secret );
 
@@ -576,10 +705,12 @@ class SecretsFile {
 					throw new RuntimeException( 'Credential material changed while it was being validated.' );
 				}
 
+				$this->assert_credential_access( $provider_code, $record );
 				$document[ self::CREDENTIALS ][ $provider_code ][ $id ] = $record;
 
 				return array( $document, $id );
-			}
+			},
+			fn () => $this->assert_credential_access( $provider_code, $record )
 		);
 	}
 
@@ -669,7 +800,8 @@ class SecretsFile {
 		$profiles      = array();
 		$provider_code = $this->provider_value( $provider );
 		$records       = array();
-		$constant      = $this->constant_webhook(
+		// Bound GitHub has no signing constants; display local metadata without provider callbacks.
+		$constant = 'gh' === $provider_code && null !== $this->github_webhook_access ? null : $this->constant_webhook(
 			$provider_code,
 			$this->provider_policies->webhook_policy( $provider )
 		);
@@ -720,8 +852,9 @@ class SecretsFile {
 		$this->assert_available();
 		$policy        = $this->provider_policies->webhook_policy( $provider );
 		$provider_code = $this->provider_value( $provider );
-		$records       = array();
-		$constant      = $this->constant_webhook( $provider_code, $policy );
+		$this->assert_webhook_access( $provider_code );
+		$records  = array();
+		$constant = $this->constant_webhook( $provider_code, $policy );
 
 		if ( null !== $constant ) {
 			$records[ self::CONSTANT_PROFILE ] = array(
@@ -759,6 +892,7 @@ class SecretsFile {
 			);
 		}
 
+		$this->assert_webhook_access( $provider_code );
 		return $records;
 	}
 
@@ -775,9 +909,10 @@ class SecretsFile {
 	): string {
 		$this->assert_available();
 		$provider_code = $this->provider_value( $provider );
-		$id            = $this->writable_id( $id, 'wh' );
-		$document      = $this->file_document();
-		$existing      = $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ?? null;
+		$this->assert_webhook_access( $provider_code );
+		$id       = $this->writable_id( $id, 'wh' );
+		$document = $this->file_document();
+		$existing = $document[ self::WEBHOOKS ][ $provider_code ][ $id ] ?? null;
 		if ( ( null === $secret || '' === $secret ) && is_array( $existing ) ) {
 			$secret = $existing['secret'];
 		}
@@ -805,7 +940,8 @@ class SecretsFile {
 				$document[ self::WEBHOOKS ][ $provider_code ] = $records;
 
 				return array( $document, $id );
-			}
+			},
+			fn () => $this->assert_webhook_access( $provider_code )
 		);
 	}
 
@@ -995,6 +1131,47 @@ class SecretsFile {
 		);
 	}
 
+	/**
+	 * @param array<string, mixed>|null $metadata
+	 * @phpstan-impure Fresh host state can change between calls.
+	 */
+	private function credential_access_allowed( string $provider, ?array $metadata = null ): bool {
+		if ( 'gh' !== $provider || null === $this->github_credential_access ) {
+			return true;
+		}
+		try {
+			return true === ( $this->github_credential_access )(
+				null === $metadata ? null : array(
+					'kind'          => $metadata['kind'] ?? null,
+					'configuration' => $metadata['configuration'] ?? null,
+				)
+			);
+		} catch ( \Throwable ) {
+			return false;
+		}
+	}
+
+	/** @param array<string, mixed>|null $metadata */
+	private function assert_credential_access( string $provider, ?array $metadata = null ): void {
+		if ( ! $this->credential_access_allowed( $provider, $metadata ) ) {
+			throw new RuntimeException( 'GitHub credential access is unavailable.' );
+		}
+	}
+
+	private function assert_webhook_access( string $provider ): void {
+		if ( 'gh' !== $provider || null === $this->github_webhook_access ) {
+			return;
+		}
+		try {
+			$allowed = true === ( $this->github_webhook_access )();
+		} catch ( \Throwable ) {
+			$allowed = false;
+		}
+		if ( ! $allowed ) {
+			throw new RuntimeException( 'GitHub webhook access is unavailable.' );
+		}
+	}
+
 	private function provider_value( ProviderCode|string $provider ): string {
 		try {
 			return $provider instanceof ProviderCode ? $provider->value : ProviderCode::parse( $provider )->value;
@@ -1005,20 +1182,57 @@ class SecretsFile {
 
 	/** @return ConstantCredential|null */
 	private function constant_credential( string $provider, ProviderCredentialPolicy $policy ): ?array {
+		if ( ! $this->credential_access_allowed(
+			$provider,
+			array(
+				'kind'          => 'classic',
+				'configuration' => array( 'owner' => '' ),
+			)
+		) ) {
+			return null;
+		}
 		try {
-			$record = $policy->credential_from_constants( $this->declared_constants( $policy->get_constant_names() ) );
+			$names = $policy->get_constant_names();
+			$this->assert_credential_access(
+				$provider,
+				array(
+					'kind'          => 'classic',
+					'configuration' => array( 'owner' => '' ),
+				)
+			);
+			if ( 'gh' === $provider && null !== $this->github_credential_access && array( 'RAN_BOOSTER_GITHUB_TOKEN' ) !== $names ) {
+				throw new RuntimeException( 'GitHub credential constants are incompatible.' );
+			}
+			$record = $policy->credential_from_constants( $this->declared_constants( $names ) );
+			$this->assert_credential_access( $provider );
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider credential constants could not be validated.' );
+		}
+		if ( 'gh' === $provider && null !== $this->github_credential_access ) {
+			$token    = $this->raw_constant_value( 'RAN_BOOSTER_GITHUB_TOKEN' );
+			$expected = is_string( $token ) ? trim( $token ) : '';
+			if ( ( '' === $expected && null !== $record ) || ( '' !== $expected && (
+				null === $record || 'classic' !== ( $record['kind'] ?? null )
+				|| array( 'owner' => '' ) !== ( $record['configuration'] ?? null )
+				|| ! is_string( $record['secret'] ?? null ) || ! hash_equals( $expected, $record['secret'] )
+			) ) ) {
+				throw new RuntimeException( 'GitHub constant credential is no longer canonical.' );
+			}
 		}
 		if ( null === $record ) {
 			return null;
 		}
 
-		$record = $this->validate_credential(
+		$constant_record = $record;
+		$record          = $this->validate_credential(
 			$provider,
 			$record,
 			$record['secret'] ?? null
 		);
+
+		if ( 'gh' === $provider && null !== $this->github_credential_access && $record !== $constant_record ) {
+			throw new RuntimeException( 'GitHub constant credential is no longer canonical.' );
+		}
 
 		return array(
 			'id'            => self::CONSTANT_PROFILE,
@@ -1034,8 +1248,19 @@ class SecretsFile {
 
 	/** @return StoredWebhook|null */
 	private function constant_webhook( string $provider, ProviderWebhookPolicy $policy ): ?array {
+		$this->assert_webhook_access( $provider );
+		$bound = 'gh' === $provider && null !== $this->github_webhook_access;
 		try {
-			$record = $policy->webhook_from_constants( $this->declared_constants( $policy->get_constant_names() ) );
+			$names = $policy->get_constant_names();
+			$this->assert_webhook_access( $provider );
+			if ( $bound && array() !== $names ) {
+				throw new RuntimeException( 'Bound GitHub webhook constants are unsupported.' );
+			}
+			$record = $policy->webhook_from_constants( $this->declared_constants( $names ) );
+			$this->assert_webhook_access( $provider );
+			if ( $bound && null !== $record ) {
+				throw new RuntimeException( 'Bound GitHub webhook constants are unsupported.' );
+			}
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider webhook constants could not be validated.' );
 		}
@@ -1119,6 +1344,7 @@ class SecretsFile {
 			$provider_destroy_on = null;
 		}
 
+		$this->assert_credential_access( $provider, $metadata );
 		$policy = $this->provider_policies->find_credential_policy( $provider );
 		try {
 			$record = null !== $policy
@@ -1130,6 +1356,7 @@ class SecretsFile {
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider credential material could not be validated.' );
 		}
+		$this->assert_credential_access( $provider, $record );
 		$this->assert_only_keys( $record, array( 'label', 'kind', 'configuration', 'secret' ), 'Provider credential policy returned unsupported fields.' );
 
 		if ( ! is_array( $record['configuration'] ?? null ) ) {
@@ -1159,6 +1386,7 @@ class SecretsFile {
 				throw new RuntimeException( 'Provider credential material could not be validated.' );
 			}
 		}
+		$this->assert_credential_access( $provider, $validated );
 		if ( $self_destruct ) {
 			$validated['self_destruct'] = true;
 			if ( is_string( $manual_destroy_on ) ) {
@@ -1248,6 +1476,7 @@ class SecretsFile {
 		#[\SensitiveParameter] mixed $secret,
 		bool $submitted = false
 	): array {
+		$this->assert_webhook_access( $provider );
 		$policy      = $this->provider_policies->find_webhook_policy( $provider );
 		$policy_data = array_intersect_key(
 			$metadata,
@@ -1266,6 +1495,7 @@ class SecretsFile {
 		} catch ( \Throwable ) {
 			throw new RuntimeException( 'Provider webhook material could not be validated.' );
 		}
+		$this->assert_webhook_access( $provider );
 		$this->assert_only_keys( $record, array( 'label', 'scope', 'target', 'authority_id', 'secret' ), 'Provider webhook policy returned unsupported fields.' );
 		$revision = $metadata['revision'] ?? 1;
 		$origin   = $metadata['origin'] ?? 'manual';
@@ -1325,15 +1555,16 @@ class SecretsFile {
 	/**
 	 * @template TResult
 	 * @param callable(SecretsDocument): array{0: SecretsDocument, 1: TResult, 2?: bool} $mutation Mutation callback.
+	 * @param callable():void|null $before_write Fresh credential authority after key-store callbacks.
 	 * @return TResult
 	 */
-	private function mutate( #[\SensitiveParameter] callable $mutation ): mixed {
+	private function mutate( #[\SensitiveParameter] callable $mutation, ?callable $before_write = null ): mixed {
 		$this->assert_configured_location();
 
 		return $this->with_lock(
 			LOCK_EX,
 			true,
-			function () use ( $mutation ): mixed {
+			function () use ( $mutation, $before_write ): mixed {
 				$key                     = $this->load_key();
 				$has_file                = $this->has_file();
 				$document                = $this->document_for_locked_state( $key, $has_file );
@@ -1351,6 +1582,9 @@ class SecretsFile {
 					}
 
 					try {
+						if ( null !== $before_write ) {
+							$before_write();
+						}
 						$this->write_canonical_file( $document, $key );
 					} catch ( \Throwable $failure ) {
 						if ( $key_created && ! $has_file && ! $this->has_file() ) {
@@ -1727,6 +1961,7 @@ class SecretsFile {
 						$validated['secret']
 					);
 				}
+				$this->assert_credential_access( $provider, $validated );
 			}
 		}
 	}

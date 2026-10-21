@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace RAN\Storage;
 
 use RAN\Runtime\RuntimeSupport;
-use RAN\AdoptionIdentity;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 
 class Database {
 
-	public static string $booster_db_version = '14.0';
+	public static string $booster_db_version = '15.0';
 
 	public const VERSION_OPTION = 'ran_booster_db_version';
 
@@ -19,7 +19,7 @@ class Database {
 	private bool $lifecycle_inspected                         = false;
 	private ?DatabaseLifecycleFailure $lifecycle_failure      = null;
 
-	public function __construct( private ?object $database = null ) {
+	public function __construct( private ?object $database = null, private ?GitHubReplacementDeclaration $bundled_declaration = null ) {
 	}
 
 	/**
@@ -159,6 +159,10 @@ class Database {
 			return false;
 		}
 
+		if ( null === $installed_version && ( ! $inspect_current_schema || null === $this->bundled_declaration ) ) {
+			throw new DatabaseLifecycleFailure( 'selection_install_required' );
+		}
+
 		$wpdb            = $this->schema_connection();
 		$package_table   = ran_booster_table_name();
 		$attempt_table   = self::attempt_table_name();
@@ -175,10 +179,6 @@ class Database {
 				'indexes' => $this->attempt_indexes(),
 			),
 		);
-
-		if ( '13.0' === $installed_version ) {
-			$this->migrate_adoption_identities( $package_table, $attempt_table );
-		}
 
 		$missing_tables = array();
 		foreach ( $tables as $table => $contract ) {
@@ -200,6 +200,16 @@ class Database {
 			$this->verify_table( $table, $contract['columns'], $contract['indexes'] );
 		}
 
+		if ( ! isset( $wpdb->options ) || ! is_string( $wpdb->options ) || '' === $wpdb->options ) {
+			throw new DatabaseLifecycleFailure( 'selection_storage_unsupported' );
+		}
+		$selection = new GitHubSelectionStore( $wpdb, $wpdb->options );
+		if ( null === $installed_version && null !== $this->bundled_declaration ) {
+			$selection->initialize_bundled( $this->bundled_declaration );
+		}
+		// Explicit current-version verification never repairs missing or corrupt authority.
+		$selection->read( true );
+
 		if ( ! update_option( self::VERSION_OPTION, self::$booster_db_version, false )
 			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Read the mutable expected version before get_option filters can run.
 			&& self::$booster_db_version !== get_option( self::VERSION_OPTION, false ) ) {
@@ -212,82 +222,6 @@ class Database {
 		}
 
 		return true;
-	}
-
-	/** Upgrade only the exact supported predecessor, including interrupted DDL. */
-	private function migrate_adoption_identities( string $package_table, string $attempt_table ): void {
-		$wpdb = $this->schema_connection();
-		$this->verify_table( $attempt_table, $this->attempt_columns(), $this->attempt_indexes() );
-		$actual              = $this->inspect_table( $package_table );
-		$predecessor         = $this->package_columns();
-		$predecessor['type'] = $predecessor['package_type'];
-		unset( $predecessor['package_type'] );
-		ksort( $predecessor, SORT_STRING );
-		$without_token = $predecessor;
-		unset( $without_token['adoption_token'] );
-		$old_indexes                 = $this->package_indexes();
-		$old_indexes['package_type'] = array( true, array( 'type', 'package' ) );
-		if ( $actual['indexes'] === $old_indexes
-			&& in_array( $actual['columns'], array( $without_token, $predecessor ), true ) ) {
-			// Fence already-running schema-13 writers, which all name the mandatory type column.
-			// The token-bearing predecessor is an interrupted migration from the unpublished candidate.
-			$query = $actual['columns'] === $without_token
-				? $wpdb->prepare( 'ALTER TABLE %i CHANGE COLUMN type package_type tinyint(3) unsigned NOT NULL, ADD adoption_token varchar(643) DEFAULT NULL', $package_table )
-				: $wpdb->prepare( 'ALTER TABLE %i CHANGE COLUMN type package_type tinyint(3) unsigned NOT NULL', $package_table );
-			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The exact predecessor table is validated above and its identifier is prepared.
-			if ( false === $wpdb->query( $query ) ) {
-				throw new DatabaseLifecycleFailure( 'identity_schema_write_failed' );
-			}
-		} elseif ( $actual['columns'] !== $this->package_columns() || $actual['indexes'] !== $this->package_indexes() ) {
-			throw new DatabaseLifecycleFailure( 'incompatible_schema' );
-		}
-		$this->verify_table( $package_table, $this->package_columns(), $this->package_indexes() );
-		if ( false === $wpdb->query( 'SET TRANSACTION ISOLATION LEVEL SERIALIZABLE' ) || false === $wpdb->query( 'START TRANSACTION' ) ) {
-			throw new DatabaseLifecycleFailure( 'identity_transaction_failed' );
-		}
-		try {
-			$rows = $wpdb->get_results( $wpdb->prepare( 'SELECT * FROM %i ORDER BY id FOR UPDATE', $package_table ) );
-			if ( '' !== $wpdb->last_error || ! is_array( $rows ) ) {
-				throw new DatabaseLifecycleFailure( 'identity_read_failed' );
-			}
-			foreach ( $rows as $row ) {
-				if ( ! is_object( $row ) || ! property_exists( $row, 'adoption_token' ) ) {
-					throw new DatabaseLifecycleFailure( 'identity_read_failed' );
-				}
-				if ( null !== $row->adoption_token ) {
-					continue;
-				}
-				$provider = $row->provider ?? null;
-				$id       = $row->provider_repository_id ?? null;
-				if ( ! is_string( $provider ) || ! is_string( $id ) ) {
-					continue;
-				}
-				try {
-					$token = AdoptionIdentity::create( $provider, $id );
-				} catch ( \InvalidArgumentException ) {
-					continue;
-				}
-				$row_id = $row->id ?? null;
-				if ( ( ! is_int( $row_id ) && ! is_string( $row_id ) ) || 1 !== preg_match( '/\A[1-9][0-9]*\z/', (string) $row_id ) ) {
-					throw new DatabaseLifecycleFailure( 'identity_read_failed' );
-				}
-				$query = $wpdb->prepare( 'UPDATE %i SET adoption_token = %s WHERE id = %s AND adoption_token IS NULL AND BINARY provider = BINARY %s AND BINARY provider_repository_id = BINARY %s', $package_table, $token, (string) $row_id, $provider, $id );
-				// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- All values are prepared immediately above; the row remains locked.
-				if ( 1 !== $wpdb->query( $query ) ) {
-					throw new DatabaseLifecycleFailure( 'identity_write_failed' );
-				}
-				$saved = $wpdb->get_var( $wpdb->prepare( 'SELECT adoption_token FROM %i WHERE id = %s', $package_table, (string) $row_id ) );
-				if ( $this->identity_read_failed() || $saved !== $token ) {
-					throw new DatabaseLifecycleFailure( 'identity_verification_failed' );
-				}
-			}
-			if ( false === $wpdb->query( 'COMMIT' ) ) {
-				throw new DatabaseLifecycleFailure( 'identity_commit_failed' );
-			}
-		} catch ( \Throwable $failure ) {
-			$wpdb->query( 'ROLLBACK' );
-			throw $failure;
-		}
 	}
 
 	/** @phpstan-impure */
@@ -410,7 +344,7 @@ class Database {
 	 *     indexes: array<string, array{0: bool, 1: list<string>}>
 	 * }
 	 */
-	private function inspect_table( string $table_name ): array {
+	private function inspect_table( string $table_name, bool $ignore_prefix_indexes = false ): array {
 		$wpdb = $this->schema_connection();
 
 		$status_query     = $wpdb->prepare( 'SHOW TABLE STATUS WHERE Name = %s', $table_name );
@@ -420,9 +354,15 @@ class Database {
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table name as %s; inspect the live engine metadata before accepting the schema.
 		$status = $wpdb->get_row( $status_query );
+		if ( $this->identity_read_failed() ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table identifier as %i; inspect live column definitions before accepting the schema.
 		$column_rows = $wpdb->get_results( $columns_query );
+		if ( $this->identity_read_failed() ) {
+			throw new DatabaseLifecycleFailure( 'schema_read_failed' );
+		}
 		// Schema installation must inspect the authoritative database.
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The preceding prepare() binds the table identifier as %i; inspect live index definitions before accepting the schema.
 		$index_rows = $wpdb->get_results( $indexes_query );
@@ -472,7 +412,8 @@ class Database {
 			);
 		}
 
-		$indexes = array();
+		$indexes        = array();
+		$prefix_indexes = array();
 		foreach ( $index_rows as $row ) {
 			if ( ! is_object( $row )
 				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
@@ -486,7 +427,11 @@ class Database {
 			}
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
 			if ( null !== $row->Sub_part ) {
-				throw new DatabaseLifecycleFailure( 'incompatible_schema' );
+				if ( ! $ignore_prefix_indexes ) {
+					throw new DatabaseLifecycleFailure( 'incompatible_schema' );
+				}
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Native database metadata.
+				$prefix_indexes[ (string) $row->Key_name ] = true;
 			}
 
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- Database metadata retains its native field names.
@@ -505,6 +450,7 @@ class Database {
 			$indexes[ $name ][0]              = $unique;
 			$indexes[ $name ][1][ $sequence ] = $column;
 		}
+		$indexes = array_diff_key( $indexes, $prefix_indexes );
 		foreach ( $indexes as &$index ) {
 			ksort( $index[1], SORT_NUMERIC );
 			$index[1] = array_values( $index[1] );
@@ -518,6 +464,22 @@ class Database {
 			'columns' => $columns,
 			'indexes' => $indexes,
 		);
+	}
+
+	/** Verify only the options invariants needed by the selection row, without altering WordPress tables. */
+	public function require_selection_storage( string $table ): void {
+		$shape = $this->inspect_table( $table, true );
+		foreach ( array( 'option_name', 'option_value', 'autoload' ) as $column ) {
+			if ( ! isset( $shape['columns'][ $column ] ) ) {
+				throw new DatabaseLifecycleFailure( 'selection_storage_unsupported' );
+			}
+		}
+		foreach ( $shape['indexes'] as $index ) {
+			if ( array( true, array( 'option_name' ) ) === $index ) {
+				return;
+			}
+		}
+		throw new DatabaseLifecycleFailure( 'selection_storage_unsupported' );
 	}
 
 	/**
@@ -632,14 +594,14 @@ class Database {
 			throw new DatabaseLifecycleFailure( 'malformed_schema_version' );
 		}
 		if ( version_compare( $value, '10.0', '<' )
-			|| in_array( $value, array( '10.0', '11.0', '12.0' ), true )
+			|| in_array( $value, array( '10.0', '11.0', '12.0', '13.0', '14.0' ), true )
 		) {
 			throw new DatabaseLifecycleFailure( 'unsupported_old_schema' );
 		}
 		if ( version_compare( $value, self::$booster_db_version, '>' ) ) {
 			throw new DatabaseLifecycleFailure( 'newer_schema' );
 		}
-		if ( self::$booster_db_version !== $value && '13.0' !== $value ) {
+		if ( self::$booster_db_version !== $value ) {
 			throw new DatabaseLifecycleFailure( 'unknown_schema_version' );
 		}
 

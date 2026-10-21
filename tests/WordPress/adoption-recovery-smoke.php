@@ -465,7 +465,11 @@ final class RAN_Booster_AdoptionRecoveryProof {
 			return 'redacted';
 		}
 
-		$type = strtolower( trim( strtok( $content_type, ';' ) ) );
+		$type = strtok( $content_type, ';' );
+		if ( false === $type ) {
+			return 'absent';
+		}
+		$type = strtolower( trim( $type ) );
 
 		return in_array( $type, array( 'application/json', 'text/html', 'text/plain', 'application/xhtml+xml', 'application/xml' ), true ) ? $type : ( '' === $type ? 'absent' : 'redacted' );
 	}

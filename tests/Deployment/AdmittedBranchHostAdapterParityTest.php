@@ -10,9 +10,12 @@ require_once __DIR__ . '/AdmittedBranchHostAdapterWordPressFunctions.php';
 require_once __DIR__ . '/PackageMutationGuardWordPressFunctions.php';
 require_once __DIR__ . '/DeploymentWorkerPhpFunctions.php';
 require_once __DIR__ . '/../Storage/StorageTestEnvironment.php';
+require_once __DIR__ . '/../RepositoryProvider/Support/RepositoryResolverWordPressFunctions.php';
+require_once __DIR__ . '/../RepositoryProvider/AuthenticatedPreparedArchiveWordPressFunctions.php';
 
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\Deployment\AdmittedBranchHostAdapter;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentAttemptRepository;
@@ -50,6 +53,8 @@ use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
 use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RuntimeException;
 use RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+use RAN\Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\Tests\RepositoryProvider\Support\RepositoryResolverSecretsStub;
 use RAN\Tests\Support\RepositorySourceGuardDatabase;
 use ZipArchive;
 
@@ -72,6 +77,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_storage_test_options'] = array();
 		unset( $GLOBALS['ran_booster_admitted_http_request_args'], $GLOBALS['ran_booster_admitted_http_guards'] );
+		\RAN\RepositoryProvider\authenticated_archive_hooks_reset();
 		$GLOBALS['ran_booster_worker_doing_cron']                = true;
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = true;
@@ -132,6 +138,104 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			$GLOBALS['ran_booster_admitted_download_fixture'],
 			$GLOBALS['ran_booster_admitted_temp_root']
 		);
+		\RAN\RepositoryProvider\authenticated_archive_hooks_reset();
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue( array() );
+	}
+
+	public function test_guarded_github_archive_retains_post_download_head_authority_until_runner_verification(): void {
+		$commit = '0123456789abcdef0123456789abcdef01234567';
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array(
+				$this->github_repository_response(),
+				$this->github_sha_response( $commit ),
+			)
+		);
+		$provider = $this->guarded_github_provider();
+		self::assertInstanceOf( GitHubProvider::class, $provider );
+		$this->download_fixture( 'example' );
+		$executor                  = new ParityCoreExecutor();
+		$executor->after_execution = function (): void {
+			$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		};
+		$adapter                   = $this->adapter( $this->running_update(), $provider, executor: $executor );
+		$outcome                   = $this->deploy( $adapter );
+
+		self::assertSame(
+			DeploymentOutcome::CODE_DEPLOYED,
+			$outcome,
+			sprintf(
+				'Expected post-cleanup head verification before mutation; got outcome=%s resolved_ref=%s mutation_started_at=%s executor_calls=%d.',
+				$outcome,
+				(string) ( $this->database->rows[0]['resolved_ref'] ?? '' ),
+				null === ( $this->database->rows[0]['mutation_started_at'] ?? null ) ? 'null' : 'set',
+				$executor->calls
+			)
+		);
+		self::assertSame( 1, $executor->calls );
+		self::assertSame( $commit, $this->database->rows[0]['resolved_ref'] );
+		self::assertNotNull( $this->database->rows[0]['mutation_started_at'] );
+	}
+
+	public function test_guarded_private_manual_initial_install_rechecks_after_archive_cleanup(): void {
+		$commit = '1234567890abcdef1234567890abcdef12345678';
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array( $this->github_repository_response( true, 'owner/install-plugin', 'R_install_plugin' ), $this->github_sha_response( $commit ) )
+		);
+		$this->download_fixture( 'example' );
+		$executor                  = new ParityCoreExecutor();
+		$executor->after_execution = function (): void {
+			$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		};
+		$adapter                   = $this->adapter(
+			$this->running_install( 'example', is_private: true, credential_id: 'private-profile' ),
+			$this->guarded_github_provider( array( 'private-profile' => 'github-resolution-token-canary' ) ),
+			executor: $executor
+		);
+
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $this->deploy( $adapter ) );
+		self::assertSame( $commit, $this->database->rows[0]['resolved_ref'] );
+		self::assertSame( 1, $executor->calls );
+		self::assertNotNull( $this->database->rows[0]['mutation_started_at'] );
+	}
+
+	public function test_guarded_webhook_rechecks_the_current_head_after_archive_cleanup(): void {
+		$commit = 'abcdef0123456789abcdef0123456789abcdef01';
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array(
+				$this->github_repository_response(),
+				$this->github_branch_response( $commit ),
+				$this->github_branch_response( $commit ),
+			)
+		);
+		$this->download_fixture( 'example' );
+		$executor                  = new ParityCoreExecutor();
+		$executor->after_execution = function (): void {
+			$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		};
+		$adapter                   = $this->adapter( $this->running_webhook_update( $commit ), $this->guarded_github_provider(), executor: $executor );
+
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $this->deploy( $adapter ) );
+		self::assertCount( 3, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
+		self::assertSame( 1, $executor->calls );
+	}
+
+	public function test_guarded_webhook_stale_head_after_archive_cleanup_refuses_before_mutation(): void {
+		$commit = 'abcdef0123456789abcdef0123456789abcdef01';
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array(
+				$this->github_repository_response(),
+				$this->github_branch_response( $commit ),
+				$this->github_branch_response( '1234567890abcdef1234567890abcdef12345678' ),
+			)
+		);
+		$this->download_fixture( 'example' );
+		$executor = new ParityCoreExecutor();
+		$adapter  = $this->adapter( $this->running_webhook_update( $commit ), $this->guarded_github_provider(), executor: $executor );
+
+		self::assertSame( DeploymentOutcome::CODE_STALE_EVENT, $this->deploy( $adapter ) );
+		self::assertSame( $commit, $this->database->rows[0]['resolved_ref'] );
+		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		self::assertSame( 0, $executor->calls );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
@@ -642,7 +746,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 	private function adapter(
 		DeploymentAttempt $attempt,
-		ParityRepositoryProvider $provider,
+		RepositoryProvider $provider,
 		?WordPressUpdaterLock $lock = null,
 		?WordPressCorePackageExecutor $executor = null
 	): AdmittedBranchHostAdapter {
@@ -656,6 +760,48 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			$lock ?? new WordPressUpdaterLock(),
 			$executor ?? new ParityCoreExecutor(),
 			sys_get_temp_dir() . '/ran-booster-admitted-parity-maintenance'
+		);
+	}
+
+	/** @param array<string, string> $tokens */
+	private function guarded_github_provider( array $tokens = array() ): RepositoryProvider {
+		$registrar = new class() {
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The real provider requires the registrar hook; the isolated registrar only returns itself.
+			public function with_operation_guard( callable $guard ): object {
+				return $this;
+			}
+		};
+		$provider  = GitHubProvider::create(
+			new RepositoryResolverSecretsStub( $tokens ),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			$registrar,
+			operation_guard: static fn (): bool => true
+		);
+		self::assertInstanceOf( GitHubProvider::class, $provider );
+		return $provider;
+	}
+
+	/** @return array{response:array{code:int},body:string} */
+	private function github_repository_response( bool $is_private = false, string $full_name = 'owner/example', string $repository_id = 'R_example' ): array {
+		return array(
+			'response' => array( 'code' => 200 ),
+			'body'     => '{"id":"' . $repository_id . '","full_name":"' . $full_name . '","private":' . ( $is_private ? 'true' : 'false' ) . ',"default_branch":"main"}',
+		);
+	}
+
+	/** @return array{response:array{code:int},body:string} */
+	private function github_sha_response( string $commit ): array {
+		return array(
+			'response' => array( 'code' => 200 ),
+			'body'     => $commit,
+		);
+	}
+
+	/** @return array{response:array{code:int},body:string} */
+	private function github_branch_response( string $commit ): array {
+		return array(
+			'response' => array( 'code' => 200 ),
+			'body'     => '{"name":"main","commit":{"sha":"' . $commit . '"}}',
 		);
 	}
 
@@ -701,11 +847,11 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC, ?string $expected_identifier = null ): DeploymentAttempt {
+	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC, ?string $expected_identifier = null, bool $is_private = false, ?string $credential_id = null ): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/install-plugin',
-			null,
-			false,
+			$credential_id,
+			$is_private,
 			'main',
 			$slug,
 			null,
@@ -727,7 +873,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	private function running_webhook_update(): DeploymentAttempt {
+	private function running_webhook_update( string $commit = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' ): DeploymentAttempt {
 		$identifier                                     = (string) $this->plugins->managed['fixture']->get_identifier();
 		$this->database->management[ $identifier ]      = 'gh:R_example:11111111-1111-4111-8111-111111111111';
 		$this->database->management_rows[ $identifier ] = array(
@@ -764,7 +910,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 					'operation'               => 'update',
 					'package_type'            => 'plugin',
 					'provider_repository_id'  => 'R_example',
-					'requested_ref'           => str_repeat( 'b', 40 ),
+					'requested_ref'           => $commit,
 					'package_source'          => PackageSource::BRANCH->value,
 					'package_source_revision' => 1,
 					'request'                 => $request,

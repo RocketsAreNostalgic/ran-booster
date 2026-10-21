@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 final class GitHubModuleHostBoundaryTest extends TestCase {
 
 	private const EXPLICIT_CORE_HOST_INTEGRATIONS = array(
+		// Exercises the real guarded provider through Core's admitted host and shared runner.
+		'tests/Deployment/AdmittedBranchHostAdapterParityTest.php',
 		'tests/Runtime/Support/GitHubWorkflowAssistanceWordPressFunctions.php',
 		'tests/Uninstall/LocalDataRemoverTest.php',
 		'tests/Admin/Support/ExpiryReminderProvider.php',

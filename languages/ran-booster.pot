@@ -1325,7 +1325,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1228
+#: RAN/Dashboard.php:1229
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1334,7 +1334,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:594
+#: RAN/Dashboard.php:595
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -2262,16 +2262,16 @@ msgstr[1] ""
 msgid "Remove this local secret? Remote provider webhooks will not be removed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1727
+#: RAN/Admin/ProviderSettingsPresenter.php:1733
 msgid "Repository access needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1727
+#: RAN/Admin/ProviderSettingsPresenter.php:1733
 msgid "No credential saved"
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1727
+#: RAN/Admin/ProviderSettingsPresenter.php:1733
 #, php-format
 msgid "Ready · %d credential"
 msgid_plural "Ready · %d credentials"
@@ -2279,55 +2279,55 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1728
+#: RAN/Admin/ProviderSettingsPresenter.php:1734
 msgid "Restore encrypted credential storage before reviewing or changing saved repository access."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1728
+#: RAN/Admin/ProviderSettingsPresenter.php:1734
 msgid "Review saved credentials that are incomplete, expired, or approaching expiry."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1728
+#: RAN/Admin/ProviderSettingsPresenter.php:1734
 msgid "Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1728
+#: RAN/Admin/ProviderSettingsPresenter.php:1734
 msgid "Private repository access is available. Open credential management to validate, replace, or review usage."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1732
+#: RAN/Admin/ProviderSettingsPresenter.php:1738
 msgid "Webhook signing · Needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1732
+#: RAN/Admin/ProviderSettingsPresenter.php:1738
 msgid "Webhook signing · No secret saved"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1732
+#: RAN/Admin/ProviderSettingsPresenter.php:1738
 msgid "Webhook signing · Ready locally"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1733
+#: RAN/Admin/ProviderSettingsPresenter.php:1739
 msgid "Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1733
+#: RAN/Admin/ProviderSettingsPresenter.php:1739
 msgid "Review saved signing material whose configuration or managed-package usage could not be confirmed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1733
+#: RAN/Admin/ProviderSettingsPresenter.php:1739
 msgid "Automatic branch deployments require local signing material before provider webhooks can be used safely."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1733
+#: RAN/Admin/ProviderSettingsPresenter.php:1739
 msgid "Add local signing material before configuring a provider webhook."
 msgstr ""
 
 #. translators: %d is the number of local secrets that can verify signed deliveries.
-#: RAN/Admin/ProviderSettingsPresenter.php:1733
+#: RAN/Admin/ProviderSettingsPresenter.php:1739
 #, php-format
 msgid "%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists."
 msgid_plural "%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist."
@@ -2335,7 +2335,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: item count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1792
+#: RAN/Admin/ProviderSettingsPresenter.php:1798
 #: views/packages/index.php:96
 #, php-format
 msgid "%d item"
@@ -2344,25 +2344,25 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: current page number, 2: total page count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1793
+#: RAN/Admin/ProviderSettingsPresenter.php:1799
 #, php-format
 msgid "Page %1$d of %2$d"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1824
+#: RAN/Admin/ProviderSettingsPresenter.php:1830
 #, php-format
 msgid "Back to %s overview"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1825
+#: RAN/Admin/ProviderSettingsPresenter.php:1831
 #, php-format
 msgid "Manage saved credentials used for %s repository access."
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1826
+#: RAN/Admin/ProviderSettingsPresenter.php:1832
 #, php-format
 msgid "Manage local signing material used to verify %s webhook deliveries."
 msgstr ""
@@ -4639,51 +4639,51 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dashboard.php:604
+#: RAN/Dashboard.php:605
 msgid "Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package."
 msgstr ""
 
-#: RAN/Dashboard.php:623
+#: RAN/Dashboard.php:624
 msgid "Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it."
 msgstr ""
 
-#: RAN/Dashboard.php:638
+#: RAN/Dashboard.php:639
 msgid "Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:639
+#: RAN/Dashboard.php:640
 msgid "Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:644
+#: RAN/Dashboard.php:645
 msgid "Booster cannot verify this installed package and its management record. No management changes have been made."
 msgstr ""
 
-#: RAN/Dashboard.php:669
+#: RAN/Dashboard.php:670
 msgid "Booster’s saved update revision is invalid. It cannot safely use this package’s management settings."
 msgstr ""
 
-#: RAN/Dashboard.php:670
+#: RAN/Dashboard.php:671
 msgid "Booster’s saved update source is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:671
+#: RAN/Dashboard.php:672
 msgid "Booster’s saved deployment policy is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:672
+#: RAN/Dashboard.php:673
 msgid "Booster’s saved repository credential reference is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:673
+#: RAN/Dashboard.php:674
 msgid "Booster’s saved repository privacy setting is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:674
+#: RAN/Dashboard.php:675
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:915
+#: RAN/Dashboard.php:916
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 

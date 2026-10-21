@@ -425,7 +425,7 @@ final class DeploymentAdminPresenter {
 
 	/** @param array<string, int|string|null> $failure */
 	private function credential_url( array $failure ): string {
-		return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( (string) $failure['provider'] ) . '&replace_credential=' . rawurlencode( (string) $failure['credential_id'] ) );
+		return admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( (string) $failure['provider'] ) . '&view=credentials&replace_credential=' . rawurlencode( (string) $failure['credential_id'] ) );
 	}
 
 	/** @return array{urls:array<'plugin'|'theme', array<string, string>>,labels:array<string,string>} */

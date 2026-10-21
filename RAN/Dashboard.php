@@ -243,6 +243,7 @@ class Dashboard {
 			$data['provider_task']       = $this->requested_provider_task();
 			$data['repository_view']     = $this->requested_provider_repository_view();
 			$data['provider_list_state'] = $this->requested_provider_list_state();
+			$data['replace_credential']  = $this->requested_provider_repository_id( 'replace_credential' );
 
 			$data['requested_repository_id']            = $this->requested_provider_repository_id();
 			$data                                       = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
@@ -1058,9 +1059,9 @@ class Dashboard {
 		return in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? $view : 'status';
 	}
 
-	private function requested_provider_repository_id(): string {
+	private function requested_provider_repository_id( string $key = 'repository' ): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$value = $_GET['repository'] ?? null;
+		$value = $_GET[ $key ] ?? null;
 		if ( ! is_string( $value ) ) {
 			return '';
 		}

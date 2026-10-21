@@ -189,7 +189,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 		} else {
 			$this->expect_failure( fn () => $this->recover( $type, $id, $before_work ), 'new running admission blocks previously reviewed management removal' );
 		}
-		$this->assert_admin_pages( $type, $id, false );
+		$this->assert_admin_pages( $type, $id, $source, false );
 		$this->check(
 			1 === $wpdb->update(
 				ran_booster_table_name(),
@@ -202,13 +202,13 @@ final class RAN_Booster_AdoptionRecoveryProof {
 			'corrupt stored revision'
 		);
 		$this->expect_failure( fn () => $this->package( $type, $id ), 'ordinary hydration rejects corruption' );
-		$this->assert_admin_pages( $type, $id, true, 'branch' === $source );
+		$this->assert_admin_pages( $type, $id, $source, true, 'branch' === $source );
 		$this->expect_failure( fn () => $this->package( $type, $id ), 'admin presentation must not repair corrupt hydration' );
 		$this->check( isset( $this->removal->recovery_targets( $type )[ $id ] ), 'recovery inventory remains reachable' );
 		if ( 'branch' === $source ) {
 			$this->expect_failure( fn () => $this->removal->recovery_confirmation( $type, $id ), 'running work prevents offering a removal confirmation' );
 			$this->attempts->finish( $attempt->get_id(), DeploymentOutcome::from_code( DeploymentOutcome::CODE_NO_CHANGE ) );
-			$this->assert_admin_pages( $type, $id, true );
+			$this->assert_admin_pages( $type, $id, $source, true );
 		}
 		$confirmation   = $this->removal->recovery_confirmation( $type, $id );
 		$history_before = $this->attempts->find_exact( $attempt->get_id() )?->safe_data();
@@ -273,7 +273,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 		}
 	}
 
-	private function assert_admin_pages( string $type, string $id, bool $damaged, bool $blocked = false ): void {
+	private function assert_admin_pages( string $type, string $id, string $source, bool $damaged, bool $blocked = false ): void {
 		global $wpdb;
 		$before = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package = %s', ran_booster_table_name(), $id ), ARRAY_A );
 		$this->check( is_array( $before ), 'capture exact management row before read-only admin requests' );
@@ -310,7 +310,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 				}
 			}
 			if ( '1' === getenv( 'RAN_BOOSTER_RECOVERY_HTTP' ) ) {
-				$this->assert_admin_http( $type, $id, $damaged, $blocked );
+				$this->assert_admin_http( $type, $id, $source, $damaged, $blocked );
 			}
 		} finally {
 			$_GET  = $original_get;
@@ -343,7 +343,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 		$this->check( 1 === preg_match( '/name="_wpnonce" value="([^"]+)"/', $html, $nonce ) && false !== wp_verify_nonce( $nonce[1], PackageAdminController::recovery_action( $type, $id, $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] ) ), 'real recovery nonce remains bound to the reviewed record and installed bytes' );
 	}
 
-	private function assert_admin_http( string $type, string $id, bool $damaged, bool $blocked ): void {
+	private function assert_admin_http( string $type, string $id, string $source, bool $damaged, bool $blocked ): void {
 		$origin = (string) getenv( 'RAN_BOOSTER_RECOVERY_TEST_URL' );
 		$parts  = wp_parse_url( $origin );
 		if ( ! defined( 'LOGGED_IN_COOKIE' ) || ! defined( 'AUTH_COOKIE' ) || ! is_array( $parts )
@@ -389,6 +389,7 @@ final class RAN_Booster_AdoptionRecoveryProof {
 					$query['package'] = $id;
 				}
 				$response = wp_remote_get( add_query_arg( $query, $origin . '/wp-admin/admin.php' ), $options );
+				$this->report_http_failure( $response, $type, $source, $damaged, $recovery );
 				$this->check( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ), 'real authenticated package/recovery GET remains available' );
 				$this->assert_admin_html( wp_remote_retrieve_body( $response ), $type, $id, $damaged, $recovery, $blocked );
 			}
@@ -400,6 +401,77 @@ final class RAN_Booster_AdoptionRecoveryProof {
 				$_COOKIE[ LOGGED_IN_COOKIE ] = $original_cookie;
 			}
 		}
+	}
+
+	private function report_http_failure( mixed $response, string $type, string $source, bool $damaged, bool $recovery ): void {
+		if ( '1' !== getenv( 'RAN_BOOSTER_RECOVERY_HTTP_DIAGNOSTICS' ) || ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) ) {
+			return;
+		}
+
+		$diagnostic = array(
+			'type'    => $type,
+			'source'  => $source,
+			'state'   => $damaged ? 'damaged' : 'healthy',
+			'view'    => $recovery ? 'recovery' : 'package',
+			'outcome' => is_wp_error( $response ) ? 'wp_error' : 'http_response',
+		);
+		if ( is_wp_error( $response ) ) {
+			$diagnostic['error_code']    = $this->safe_http_error_code( $response->get_error_code() );
+			$diagnostic['error_message'] = $this->safe_http_error_message( $response->get_error_message() );
+		} else {
+			$location                    = wp_remote_retrieve_header( $response, 'location' );
+			$content_type                = wp_remote_retrieve_header( $response, 'content-type' );
+			$diagnostic['status']        = $this->safe_http_status( wp_remote_retrieve_response_code( $response ) );
+			$diagnostic['reason']        = '' === wp_remote_retrieve_response_message( $response ) ? 'absent' : 'present';
+			$diagnostic['location_path'] = $this->safe_http_location_path( $location );
+			$diagnostic['content_type']  = $this->safe_http_content_type( $content_type );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Disposable WP-CLI diagnostic must reach the CI log without creating a runtime artifact.
+		fwrite( STDERR, '[RAN_RECOVERY_HTTP_DIAGNOSTIC] ' . wp_json_encode( $diagnostic ) . PHP_EOL );
+	}
+
+	private function safe_http_error_code( mixed $code ): string {
+		return is_string( $code ) && in_array( $code, array( 'http_api_curl', 'http_api_failed', 'http_request_failed', 'http_request_not_executed' ), true ) ? $code : 'redacted';
+	}
+
+	private function safe_http_error_message( mixed $message ): string {
+		if ( ! is_string( $message ) || 256 < strlen( $message ) ) {
+			return 'redacted';
+		}
+
+		if ( 1 === preg_match( '/\AcURL error ([0-9]{1,3}):/D', $message, $matches ) ) {
+			return 'cURL error ' . $matches[1];
+		}
+
+		return '' === $message ? 'absent' : 'redacted';
+	}
+
+	private function safe_http_location_path( mixed $location ): string {
+		if ( ! is_string( $location ) || 2048 < strlen( $location ) ) {
+			return 'redacted';
+		}
+
+		if ( '' === $location ) {
+			return 'absent';
+		}
+
+		$path = wp_parse_url( $location, PHP_URL_PATH );
+
+		return is_string( $path ) && in_array( $path, array( '/wp-login.php', '/wp-admin/', '/wp-admin/admin.php' ), true ) ? $path : 'redacted';
+	}
+
+	private function safe_http_content_type( mixed $content_type ): string {
+		if ( ! is_string( $content_type ) || 256 < strlen( $content_type ) ) {
+			return 'redacted';
+		}
+
+		$type = strtolower( trim( strtok( $content_type, ';' ) ) );
+
+		return in_array( $type, array( 'application/json', 'text/html', 'text/plain', 'application/xhtml+xml', 'application/xml' ), true ) ? $type : ( '' === $type ? 'absent' : 'redacted' );
+	}
+
+	private function safe_http_status( mixed $status ): int|string {
+		return is_int( $status ) && 100 <= $status && 599 >= $status ? $status : 'redacted';
 	}
 
 	private function adopt( string $type, string $id, string $slug ): void {

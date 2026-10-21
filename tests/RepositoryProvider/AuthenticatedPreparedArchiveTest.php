@@ -216,18 +216,15 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 	}
 
 	public function test_cleanup_closes_guarded_archive_resources_but_retains_fresh_head_authority(): void {
-		$allowed                       = true;
-		$invalidate_after_verification = false;
-		$verifications                 = 0;
-		$archive                       = new AuthenticatedPreparedArchive(
+		$allowed       = true;
+		$verifications = 0;
+		$archive       = new AuthenticatedPreparedArchive(
 			'https://archives.example.test/guarded-cleanup-verifier.zip',
 			self::REF,
 			$this->authorizer( 'Bearer guarded-cleanup-canary' ),
-			static function () use ( &$allowed, &$invalidate_after_verification, &$verifications ): void {
+			static function () use ( &$allowed, &$verifications ): void {
 				++$verifications;
-				if ( $invalidate_after_verification ) {
-					$allowed = false;
-				}
+				$allowed = 1 === $verifications;
 			},
 			static function () use ( &$allowed ): bool {
 				return $allowed;
@@ -245,8 +242,7 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		$this->assert_operation_refused( fn () => $archive->verify_current_head() );
 		self::assertSame( 1, $verifications );
 
-		$allowed                       = true;
-		$invalidate_after_verification = true;
+		$allowed = true;
 		$this->assert_operation_refused( fn () => $archive->verify_current_head() );
 		self::assertSame( 2, $verifications );
 	}

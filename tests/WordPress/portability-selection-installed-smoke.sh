@@ -16,7 +16,7 @@ if [[ "${1:-core}" == migrator ]]; then
   : "${RAN_MIGRATOR_ARCHIVE:?Set verified Migrator source80 (ef225f1) ZIP.}"
   : "${RAN_MIGRATOR_WP_PUSHER_ARCHIVE:?Set verified official WP Pusher 3.0.18 ZIP.}"
   : "${RAN_MIGRATOR_WP_CLI_BIN:?Set executable WP-CLI launcher for satellite helper.}"
-  [[ "$(git -C "$migrator_source" rev-parse HEAD)" == 1a159eb2f51dc77c4e053ff784e655d27538b9a7 ]] || { echo 'Exact reviewed Migrator helper source required.' >&2; exit 2; }
+  [[ "$(git -C "$migrator_source" rev-parse HEAD)" == 58019d52775a12455ccdce160abfcb7802ec8802 ]] || { echo 'Exact reviewed Migrator helper source required.' >&2; exit 2; }
   git -C "$migrator_source" diff --quiet HEAD -- tests/installed-candidate scripts
   export RAN_MIGRATOR_PROOF_DISPOSABLE=1
   export RAN_MIGRATOR_WORDPRESS_PATH="$wordpress"

@@ -500,8 +500,8 @@ jobs:
                 set -euo pipefail
                 migrator_source="$RUNNER_TEMP/migrator-source"
                 git clone --no-checkout https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator.git "$migrator_source"
-                git -C "$migrator_source" checkout --detach 1a159eb2f51dc77c4e053ff784e655d27538b9a7
-                test "$(git -C "$migrator_source" rev-parse HEAD)" = 1a159eb2f51dc77c4e053ff784e655d27538b9a7
+                git -C "$migrator_source" checkout --detach 58019d52775a12455ccdce160abfcb7802ec8802
+                test "$(git -C "$migrator_source" rev-parse HEAD)" = 58019d52775a12455ccdce160abfcb7802ec8802
                 ( cd "$migrator_source" && bash "$migrator_source/scripts/build-release.sh" ef225f13134bbca33bf910fd1ed5941f42ec9c46 )
                 archive="$migrator_source/dist/ran-booster-wp-pusher-migrator-0.1.0-beta.10.zip"
                 test "$(wc -c < "$archive" | tr -d '[:space:]')" = 22842

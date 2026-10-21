@@ -941,6 +941,29 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'Filtered canary', $html );
 		self::assertStringContainsString( 'paged=2', $html );
 		self::assertStringNotContainsString( 'profile-21', $html );
+
+		$_GET['replace_credential'] = 'profile-21';
+		$replacement_data           = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard route model to its production view.
+		extract( $replacement_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$replacement_html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Page 2 of 2', $replacement_html );
+		self::assertStringContainsString( '>Credential 21</strong>', $replacement_html );
+		self::assertStringContainsString( 'data-id="profile-21"', $replacement_html );
+
+		$_GET['replace_credential'] = 'unknown-profile';
+		$unknown_data               = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard route model to its production view.
+		extract( $unknown_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$unknown_html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Page 1 of 2', $unknown_html );
+		self::assertStringNotContainsString( 'data-id="unknown-profile"', $unknown_html );
 	}
 
 	public function test_provider_route_renders_anormalized_repository_selection(): void {

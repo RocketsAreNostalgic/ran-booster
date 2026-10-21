@@ -94,10 +94,10 @@ final class CredentialExpiryNotice {
 			</p>
 			<p>
 				<?php foreach ( $providers as $provider => $label ) { ?>
-					<a href="<?php echo esc_url( $base_url . '?page=ran-booster&tab=' . rawurlencode( $provider ) ); ?>"><?php /* translators: %s is a repository provider label. */ echo esc_html( sprintf( __( 'Review %s credentials', 'ran-booster' ), $label ) ); ?></a>
+					<a href="<?php echo esc_url( $base_url . '?page=ran-booster&tab=' . rawurlencode( $provider ) . '&view=credentials' ); ?>"><?php /* translators: %s is a repository provider label. */ echo esc_html( sprintf( __( 'Review %s credentials', 'ran-booster' ), $label ) ); ?></a>
 				<?php } ?>
 				<?php if ( null !== $replacement ) { ?>
-					<a class="button button-primary" href="<?php echo esc_url( $base_url . '?page=ran-booster&tab=' . rawurlencode( $replacement['provider'] ) . '&replace_credential=' . rawurlencode( $replacement['id'] ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>
+					<a href="<?php echo esc_url( $base_url . '?page=ran-booster&tab=' . rawurlencode( $replacement['provider'] ) . '&view=credentials&replace_credential=' . rawurlencode( $replacement['id'] ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>
 				<?php } else { ?>
 					<span><?php esc_html_e( 'This credential is managed by deployment configuration; update it there.', 'ran-booster' ); ?></span>
 				<?php } ?>

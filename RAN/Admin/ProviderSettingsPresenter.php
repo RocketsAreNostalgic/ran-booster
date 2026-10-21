@@ -1494,7 +1494,7 @@ final readonly class ProviderSettingsPresenter {
 		}
 		$credential_projection = $this->credential_rows( $credentials, $kind_labels, $field_labels, $owner_label );
 		$webhook_rows          = $this->webhook_rows( $webhooks, $scope_labels );
-		$credential_list       = $this->filter_and_page( $credential_projection['rows'], 'credentials', $state );
+		$credential_list       = $this->filter_and_page( $credential_projection['rows'], 'credentials', $state, is_string( $data['replace_credential'] ?? null ) ? $data['replace_credential'] : '' );
 		$webhook_list          = $this->filter_and_page( $webhook_rows, 'secrets', $state );
 		$urls                  = $this->list_urls( $provider_url, $provider_code, $state, $credential_list, $webhook_list );
 		$storage_unavailable   = ! empty( $data['secrets_storage_unavailable'] );
@@ -1668,7 +1668,7 @@ final readonly class ProviderSettingsPresenter {
 	 * @param array<string,mixed> $state
 	 * @return array{rows:list<array<string,mixed>>,total:int,pages:int,current:int}
 	 */
-	private function filter_and_page( array $rows, string $view, array $state ): array {
+	private function filter_and_page( array $rows, string $view, array $state, string $replacement_credential = '' ): array {
 		$search   = strtolower( trim( (string) $state['search'] ) );
 		$rows     = array_values(
 			array_filter(
@@ -1702,6 +1702,12 @@ final readonly class ProviderSettingsPresenter {
 		$total   = count( $rows );
 		$pages   = max( 1, (int) ceil( $total / (int) $state['per_page'] ) );
 		$current = min( (int) $state['paged'], $pages );
+		foreach ( $rows as $index => $row ) {
+			if ( 'credentials' === $view && ( $row['id'] ?? null ) === $replacement_credential && ! empty( $row['editable'] ) ) {
+				$current = intdiv( $index, (int) $state['per_page'] ) + 1;
+				break;
+			}
+		}
 
 		return array(
 			'rows'    => array_slice( $rows, ( $current - 1 ) * (int) $state['per_page'], (int) $state['per_page'] ),

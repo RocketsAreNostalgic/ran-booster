@@ -958,7 +958,7 @@ class Booster {
 	/** Keep this warning local: shared notice scope deliberately excludes Updates screens. */
 	private function native_update_warning_scope( mixed $hook ): bool {
 		$screen     = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
-		$id         = is_object( $screen ) && isset( $screen->id ) && is_string( $screen->id ) ? $screen->id : '';
+		$id         = is_object( $screen ) && is_string( $screen->id ) ? $screen->id : '';
 		$booster_id = str_ends_with( $id, '-network' ) ? substr( $id, 0, -8 ) : $id;
 
 		return in_array( $id, array( 'plugins', 'plugins-network', 'update-core', 'update-core-network' ), true )

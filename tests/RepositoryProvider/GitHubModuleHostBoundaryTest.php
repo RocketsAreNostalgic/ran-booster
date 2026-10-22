@@ -38,6 +38,8 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/Webhook/SignedWebhookVerifierTest.php',
 		'tests/Webhook/WebhookProcessorTest.php',
 		'tests/WordPress/ManagedReleaseRuntimeTest.php',
+		// The installed database proof verifies the real provider's isolated workflow storage.
+		'tests/WordPress/database-storage-smoke.php',
 		'tests/WordPress/github-provider-installed-readback.php',
 		// The installed return proof verifies that Core constructs the real bundled implementation.
 		'tests/WordPress/github-replacement-installed-smoke.php',

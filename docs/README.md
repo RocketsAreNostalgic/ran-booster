@@ -15,10 +15,14 @@ sanitized Booster-specific evidence.
 - [Transporter Blueprint reference](portability-briefcase.md): detailed format,
   credential choices, comparison and supported-operation boundaries.
 
-The new journeys describe the implemented upcoming-release candidate, not a
-certified published Core/Migrator pair. Published Core beta.36 retains the older
-bundled-only GitHub behavior; published Migrator beta.10/API 3 is incompatible
-with candidate Core API 4. Check the guides' status notices and release notes.
+The Core journeys describe published
+[v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
+Core beta.36's bundled-only GitHub behavior is retained as historical context.
+Published [Migrator v0.1.0-beta.10](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.10)/API 3
+is incompatible with Core beta.37's Portability API 4. Migrator's API 4 source
+has automated certification against that immutable Core host; satellite
+publication and manual acceptance remain separate. Check the guides' status
+notices before migration.
 Verified exact export, selected existing-target/release-source Blueprint execution,
 reconciliation, Abilities and whole-site V3 remain outside this delivery.
 
@@ -38,10 +42,10 @@ reconciliation, Abilities and whole-site V3 remain outside this delivery.
   only bounded follow-up packets currently proposed for the two admin hotspots.
 - [Provider registration and coexistence](provider-registration-and-coexistence.md)
   preserves the historical Provider API 15/beta.36 released baseline; use the
-  replacement operator guide above for the upcoming candidate's selection flow.
+  replacement operator guide above for beta.37's selection flow.
 - [Provider release-workflow capability](provider-release-workflow-api.md)
-  records the provider-neutral initial-only API 3 contract, the pre-1.0 API 2 retirement,
-  and the Provider API 14 registration seam.
+  records the provider-neutral initial-only API 4 contract, the pre-1.0 API 2 retirement,
+  and the Provider API 15 registration seam.
 
 Core architecture, release, portability, and security contracts remain in the
 named documents beside this index.

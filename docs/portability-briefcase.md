@@ -5,12 +5,13 @@ RAN Booster. It is based on the classes in `RAN/Portability/` and describes how
 the code classifies, verifies, and moves package blueprints and optional
 credential briefcases.
 
-**Release status:** This reference follows the implemented upcoming-release
-candidate. Read the [dashboard walkthrough](operator-journeys.md) for practical
+**Release status:** This reference describes the bounded implementation published
+in [Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
+Read the [dashboard walkthrough](operator-journeys.md) for practical
 export/import, result and recovery steps and the separate
 [WP Pusher migration journey](operator-journeys.md#migrate-retained-wp-pusher-packages)
-for compatible-bridge prerequisites. Candidate source support does not certify
-published Core/Migrator compatibility. The current delivery boundary below
+for compatible-bridge prerequisites. Core publication does not establish a
+compatible published Migrator release. The current delivery boundary below
 separates implemented operations from unfinished work.
 
 Blueprint V2 is the exported ZIP contract; valid canonical V1 archives are normalized at the input boundary. It is distinct from the

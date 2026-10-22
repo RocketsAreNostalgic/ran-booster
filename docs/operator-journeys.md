@@ -1,9 +1,9 @@
 # Transporter and WP Pusher operator walkthrough
 
-**Release status:** These instructions describe the implemented upcoming Core
-release candidate, including its selected-commit and provider-review safeguards.
-They are not a claim that every step is available in published beta.36. Use the
-release notes for your installed version. The WP Pusher bridge additionally needs
+**Release status:** The Core instructions describe published
+[v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37),
+including its selected-commit and provider-review safeguards. Use the release
+notes for your installed version. The WP Pusher bridge additionally needs
 a compatible, separately certified Migrator release; see its status below.
 
 Transporter transfers selected Booster management configuration and, only when
@@ -98,7 +98,7 @@ Even **Declared minimum met** is not a full runtime compatibility test.
 ### Initial selected commit versus adoption
 
 If a valid Blueprint supplies an exact Branch commit, inspect **Requested initial
-selection** and the exact target identity. This candidate supports initial
+selection** and the exact target identity. Core beta.37 supports initial
 installation only into an absent, unmanaged target with the required Branch
 admitted API 3 and provider archive API 2 capabilities. It freshly acquires and
 verifies the selected commit and plugin main-file/theme identity. Unsupported
@@ -159,10 +159,15 @@ the blueprint again.**, a timeout, or a lost response:
 
 **Separate release prerequisite:** The maintained
 [Migrator instructions](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/blob/main/README.md)
-describe its API 4 source candidate. Published Migrator beta.10 uses API 3 and is
-incompatible with this Core API 4 candidate. Candidate test success does not make
-that published ZIP compatible. Wait for an explicitly compatible immutable
-Migrator release, with its released-host certification and manual gates complete,
+describe its API 4 source. Published
+[Migrator v0.1.0-beta.10](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.10)
+uses API 3 and is incompatible with Core beta.37's Portability API 4. The API 4
+source has automated certification against immutable Core beta.37, recorded in
+its [certification metadata](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/blob/f454f649f8c816a81d15f62078102fb0bdabbb18/composer.json).
+That source certification does not make the published beta.10 ZIP compatible or
+establish manual acceptance. [Release PR84](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/pull/84)
+proposes beta.11 and remains open at this 22 October 2026 checkpoint. Wait for an
+explicitly compatible immutable Migrator release with its manual gates complete
 before using this as a released-product journey. A Core update alone does not
 complete that prerequisite.
 

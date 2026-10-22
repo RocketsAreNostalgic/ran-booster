@@ -1,6 +1,6 @@
 # Provider extension contract
 
-> Provider API15 reporting candidate. Qualify the coordinated Core/provider source set before publication; earlier API14 certification does not qualify this contract.
+> Provider API 15 and the GitHub replacement controls are published in [Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37). External providers still require qualification against their exact supported contract and host; earlier API 14 certification does not qualify API 15.
 
 RAN Booster Provider API 15 accepts trusted repository providers through its late
 registration action. A provider plugin attaches a callback from its main plugin
@@ -240,8 +240,9 @@ must check this exact marker before loading their implementation. API11, API12
 and API13 providers remain unregistered; there is no V2 compatibility shim.
 The registration factory still receives three arguments. Add-on API17 and Admin
 Interaction API3 are separate connected boundaries. See the
-[coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-14-compatibility-boundary).
-Core now pins immutable GitHub Provider `v1.0.0-beta.12`
+[coordinated compatibility boundary](provider-release-workflow-api.md#provider-api-15-compatibility-boundary).
+
+**Historical qualification:** Core #224 pinned immutable GitHub Provider `v1.0.0-beta.12`
 (`c90777b7a23b7e07244a94c7ccbf3c4faf4fdc2c`), the published API14 consumer,
 in both its package constraint and dependency lock. Provider source #53 and
 release #54 are merged; the inherited beta.11/API13 tuple is historical.
@@ -249,8 +250,8 @@ Merged Core #177 passed repository, archive and installed checks for its
 historical beta.8 composition (`556f19923f6564f1bbd5cecee089d6b136afc5cd`).
 That older evidence does not qualify the current lock. The corrected Core #224
 merged tree passed native, archive and installed WordPress/database qualification
-with beta.12. Core publication and matching Bitbucket/Migrator release-backed
-certification remain separate pending gates; see the
+with beta.12. At that checkpoint, Core publication and matching Bitbucket/Migrator
+release-backed certification were separate pending gates; see the historical
 [current recovery and landing record](beta31-naming-recovery.md#remaining-gates-and-landing-order)
 and the [qualification boundary](provider-release-workflow-api.md#qualification-and-delivery-boundary).
 

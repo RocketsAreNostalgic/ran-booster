@@ -1,6 +1,8 @@
 <?php
 
 use RAN\Activity\ActivityStore;
+use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\SetupRecordStore;
+use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\WorkflowAssistanceState;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
@@ -37,6 +39,186 @@ $ran_booster_database->require_supported();
 ( new Database() )->install();
 
 global $wpdb;
+// Exercise the installed Composer package against real WordPress storage and MySQL locks.
+$ran_booster_workflow_proof = static function ( wpdb $database ): void {
+	if ( ! defined( 'DB_USER' ) || ! defined( 'DB_PASSWORD' ) || ! defined( 'DB_NAME' ) || ! defined( 'DB_HOST' ) ) {
+		throw new RuntimeException( 'Workflow SQL proof requires installed WordPress database configuration.' );
+	}
+	$expect       = static function ( bool $condition, string $boundary ): void {
+		if ( ! $condition ) {
+			throw new RuntimeException( 'Workflow namespace SQL proof failed: ' . $boundary );
+		}
+	};
+	$namespace    = 'sql_' . bin2hex( random_bytes( 6 ) );
+	$a            = new WorkflowAssistanceState( $namespace . '_a' );
+	$b            = new WorkflowAssistanceState( $namespace . '_b' );
+	$bundled      = new WorkflowAssistanceState();
+	$keys         = array( bin2hex( random_bytes( 16 ) ), bin2hex( random_bytes( 16 ) ), bin2hex( random_bytes( 16 ) ) );
+	$index_a      = 'ran_booster_gh_wf_' . $a->namespace() . '_preview_keys';
+	$index_b      = 'ran_booster_gh_wf_' . $b->namespace() . '_preview_keys';
+	$preview_lock = 'ran_booster_gh_wf_' . substr( hash( 'sha256', $database->options . "\0" . $a->namespace() . "\0previews" ), 0, 40 );
+	$protected    = array(
+		$bundled->setup_option(),
+		'ran_booster_github_provider_release_workflow_assessment_observations',
+		'ran_booster_github_provider_release_workflow_failure_history',
+		'ran_booster_assisted_hooks_installations',
+		Database::VERSION_OPTION,
+	);
+	$snapshots    = array();
+	$created      = array();
+	$store_a      = new SetupRecordStore( $a );
+	$store_b      = new SetupRecordStore( $b );
+	$claim_b      = null;
+	$other        = new wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+	try {
+		foreach ( $protected as $option ) {
+			if ( add_option( $option, array( 'workflow_sql_sentinel' => $namespace ), '', false ) ) {
+				$created[] = $option;
+			}
+			$snapshots[ $option ] = get_option( $option );
+		}
+		$expect( WorkflowAssistanceState::SETUP_OPTION === $bundled->setup_option() && WorkflowAssistanceState::PREVIEW_PREFIX === $bundled->preview_prefix(), 'bundled key compatibility' );
+		$expect( 'ran_booster_github_workflow_' . substr( hash( 'sha256', $database->options ), 0, 32 ) === $bundled->setup_lock_name(), 'bundled lock compatibility' );
+		foreach ( array( '', 'Upper', '../escape', str_repeat( 'a', 33 ), "bad\0name" ) as $invalid ) {
+			$rejected = false;
+			try {
+				new WorkflowAssistanceState( $invalid );
+			} catch ( InvalidArgumentException ) {
+				$rejected = true;
+			}
+			$expect( $rejected, 'invalid namespace refusal' );
+		}
+		// Unknown evidence occupies the same repository independently and grants no usable record.
+		update_option( $a->setup_option(), array( '101' => array( 'future_schema' => 'a' ) ), false );
+		$expect( $store_a->occupied( '101' ) && null === $store_a->find( '101' ) && ! $store_b->occupied( '101' ), 'record/cache read isolation' );
+		update_option( $b->setup_option(), array( '101' => array( 'future_schema' => 'b' ) ), false );
+		$record_b = get_option( $b->setup_option() );
+		$expect( $store_a->occupied( '101' ) && $store_b->occupied( '101' ) && get_option( $a->setup_option() ) !== $record_b, 'record write isolation' );
+		$connection = (int) $database->get_var( 'SELECT CONNECTION_ID()' );
+		$expect( $connection > 0 && $connection !== (int) $other->get_var( 'SELECT CONNECTION_ID()' ), 'independent MySQL connections' );
+		$expect( '1' === (string) $other->get_var( $other->prepare( 'SELECT GET_LOCK(%s, 0)', $a->setup_lock_name() ) ), 'setup contention fixture' );
+		$expect( null === $store_a->claim( '202', 'plugin', 'fixture/main.php', 1 ), 'same-namespace setup exclusion' );
+		$claim_b = $store_b->claim( '202', 'plugin', 'fixture/main.php', 1 );
+		if ( ! is_string( $claim_b ) ) {
+			throw new RuntimeException( 'Independent workflow namespace could not acquire its setup claim.' );
+		}
+		$expect( ! $store_b->release_claim( '202', 'wrong-owner' ), 'exact token ownership' );
+		$expect( '0' === (string) $other->get_var( $other->prepare( 'SELECT RELEASE_LOCK(%s)', $b->setup_lock_name() ) ), 'foreign connection cannot release setup lock' );
+		$expect( (string) $connection === (string) $other->get_var( $other->prepare( 'SELECT IS_USED_LOCK(%s)', $b->setup_lock_name() ) ), 'setup owner remains intact' );
+		$expect( $store_b->release_claim( '202', $claim_b ), 'exact setup release' );
+		$claim_b = null;
+		$expect( '1' === (string) $other->get_var( $other->prepare( 'SELECT GET_LOCK(%s, 0)', $preview_lock ) ), 'preview contention fixture' );
+		$expect( ! $a->store_preview( $keys[0], array( 'repo_id' => '101' ), 120 ) && false === get_option( $index_a ), 'contended preview creates no index' );
+		$expect(
+			$b->store_preview(
+				$keys[0],
+				array(
+					'repo_id' => '101',
+					'owner'   => 'b',
+				),
+				120
+			),
+			'other namespace preview progresses'
+		);
+		$expect( '1' === (string) $other->get_var( $other->prepare( 'SELECT RELEASE_LOCK(%s)', $preview_lock ) ), 'preview fixture release' );
+		// Prime WordPress's missing-option cache before the guarded INSERT, then exercise UPDATE.
+		get_option( $index_a );
+		$expect(
+			$a->store_preview(
+				$keys[0],
+				array(
+					'repo_id' => '101',
+					'owner'   => 'a',
+				),
+				120
+			),
+			'connection-fenced index insert'
+		);
+		get_option( $index_a );
+		$expect(
+			$a->store_preview(
+				$keys[1],
+				array(
+					'repo_id' => '101',
+					'owner'   => 'a2',
+				),
+				120
+			),
+			'connection-fenced index update'
+		);
+		$expect(
+			array(
+				'repo_id' => '101',
+				'owner'   => 'a',
+			) === $a->read_preview( $keys[0] ) && array(
+				'repo_id' => '101',
+				'owner'   => 'b',
+			) === $b->read_preview( $keys[0] ),
+			'same-key preview/cache isolation'
+		);
+		$index = get_option( $index_a );
+		$expect( is_array( $index ) && 2 === count( $index ) && isset( $index[ $keys[0] ], $index[ $keys[1] ] ), 'index cache refreshed after SQL' );
+		if ( ! is_array( $index ) ) {
+			throw new RuntimeException( 'Workflow SQL proof index is unavailable.' );
+		}
+		$replacement             = $index;
+		$replacement[ $keys[2] ] = time() + 120;
+		$raced                   = false;
+		$race                    = static function ( string $sql ) use ( &$raced, $database, $other, $index_a, $preview_lock, $replacement, $expect ): string {
+			if ( $raced || ! str_starts_with( $sql, 'INSERT INTO' ) || ! str_contains( $sql, $index_a ) ) {
+				return $sql;
+			}
+			$raced = true;
+			// Lose server ownership after PHP's last check, then commit the next owner's index.
+			$expect( '1' === (string) $database->get_var( $database->prepare( 'SELECT RELEASE_LOCK(%s)', $preview_lock ) ), 'old preview owner releases' );
+			$expect( '1' === (string) $other->get_var( $other->prepare( 'SELECT GET_LOCK(%s, 0)', $preview_lock ) ), 'next preview owner acquires' );
+			$update = $other->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s', $database->options, maybe_serialize( $replacement ), $index_a );
+			$expect( is_string( $update ) && 1 === $other->query( $update ), 'competing SQL index commit' );
+			return $sql;
+		};
+		add_filter( 'query', $race );
+		try {
+			$expect( ! $a->store_preview( $keys[2], array( 'repo_id' => '101' ), 120 ), 'lost server ownership refuses index write' );
+		} finally {
+			remove_filter( 'query', $race );
+		}
+		$expect( $raced && get_option( $index_a ) === $replacement && false === $a->read_preview( $keys[2] ), 'competing index survives without an unindexed preview' );
+		$expect( (string) $other->get_var( 'SELECT CONNECTION_ID()' ) === (string) $database->get_var( $database->prepare( 'SELECT IS_USED_LOCK(%s)', $preview_lock ) ), 'failed old owner preserves next owner lock' );
+		$expect( '1' === (string) $other->get_var( $other->prepare( 'SELECT RELEASE_LOCK(%s)', $preview_lock ) ), 'next owner fixture release' );
+		$expect( $a->consume_preview( $keys[0] ) && false === $a->read_preview( $keys[0] ) && false !== $b->read_preview( $keys[0] ), 'preview consumption isolation' );
+		$expect( $a->remove_ephemeral_state() && $a->remove_durable_state(), 'targeted cleanup and index CAS delete' );
+		$expect( false === get_option( $index_a ) && false === get_option( $a->setup_option() ) && false === $a->read_preview( $keys[1] ), 'options/cache/transient cleanup' );
+		$expect( get_option( $b->setup_option() ) === $record_b && false !== get_option( $index_b ) && false !== $b->read_preview( $keys[0] ), 'other custom namespace survives cleanup' );
+		foreach ( $snapshots as $option => $snapshot ) {
+			$expect( get_option( $option ) === $snapshot, 'bundled, retired and Core storage preserved' );
+		}
+		$malformed = array( '../foreign' => time() + 120 );
+		update_option( $index_a, $malformed, false );
+		$expect( ! $a->store_preview( $keys[0], array(), 120 ) && ! $a->remove_ephemeral_state() && get_option( $index_a ) === $malformed, 'malformed ownership index refuses safely' );
+		$expect( false === $a->read_preview( $keys[0] ) && '' === $database->last_error, 'refusal leaves no preview or SQL error' );
+	} finally {
+		if ( is_string( $claim_b ) ) {
+			$store_b->release_claim( '202', $claim_b );
+		}
+		foreach ( array( $a->setup_lock_name(), $preview_lock ) as $lock ) {
+			$other->get_var( $other->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+		}
+		$other->close();
+		// Only unpredictable namespaces and exact sentinels created by this proof are removed.
+		foreach ( array( $a, $b ) as $state ) {
+			foreach ( $keys as $key ) {
+				delete_transient( $state->preview_prefix() . $key );
+			}
+			delete_option( $state->setup_option() );
+			delete_option( 'ran_booster_gh_wf_' . $state->namespace() . '_preview_keys' );
+		}
+		foreach ( $created as $option ) {
+			delete_option( $option );
+		}
+	}
+};
+$ran_booster_workflow_proof( $wpdb );
+
 $ran_booster_package_table = ran_booster_table_name();
 $ran_booster_attempt_table = Database::attempt_table_name();
 

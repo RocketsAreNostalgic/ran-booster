@@ -310,7 +310,9 @@ final class ProviderRegistry {
 		$context = $this->registration_context;
 		$bound   = new ProviderRegistrationContext(
 			static fn (): int => $context->maximum_artifact_bytes(),
-			static fn (): bool => $selected === $guard()
+			static fn (): bool => $selected === $guard(),
+			$context->begin_native_mutation( ... ),
+			$context->complete_native_mutation( ... )
 		);
 		if ( ! $bound->operation_allowed() ) {
 			return;

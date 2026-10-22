@@ -91,6 +91,7 @@ final class NativeUpdateWarningTest extends TestCase {
 		);
 	}
 
+	/** @param array<string,mixed> $status */
 	#[DataProvider( 'state_provider' )]
 	public function test_notice_uses_only_the_passive_tri_state_and_never_renders_diagnostics( array $status, string $hidden ): void {
 		$booster = $this->booster( $status );
@@ -184,26 +185,24 @@ final class NativeUpdateWarningTest extends TestCase {
 			}
 		);
 		foreach ( array(
-			'RAN\\Admin\\CredentialSelfDestructPurger'     => 'purge',
-			'RAN\\Dispatcher'                              => 'dispatch_post_requests',
-			'RAN\\Admin\\RepositoryPickerController'       => 'handle',
-			'RAN\\Admin\\DevelopmentSafetyNoticeController' => 'handle',
-			'RAN\\Admin\\CredentialExpiryNoticeController' => 'handle',
-			'RAN\\Admin\\DeploymentAdminController'        => 'handle',
-			'RAN\\Admin\\PackageUpdateProgressController'  => 'handle',
-			'RAN\\Admin\\PortabilityController'            => 'handle_export',
-			'RAN\\Admin\\CredentialExpiryNotice'           => 'render',
-			'RAN\\Admin\\DeploymentAdminPresenter'         => 'render',
-			'RAN\\Admin\\SecretsRuntimeAvailabilityNotice' => 'render',
-			'RAN\\Admin\\DatabaseCompatibilityNotice'      => 'render',
-			'RAN\\Admin\\ManagedPluginFailureRows'         => 'register',
-		) as $service => $method ) {
+			'RAN\\Admin\\CredentialSelfDestructPurger',
+			'RAN\\Dispatcher',
+			'RAN\\Admin\\RepositoryPickerController',
+			'RAN\\Admin\\DevelopmentSafetyNoticeController',
+			'RAN\\Admin\\CredentialExpiryNoticeController',
+			'RAN\\Admin\\DeploymentAdminController',
+			'RAN\\Admin\\PackageUpdateProgressController',
+			'RAN\\Admin\\PortabilityController',
+			'RAN\\Admin\\CredentialExpiryNotice',
+			'RAN\\Admin\\DeploymentAdminPresenter',
+			'RAN\\Admin\\SecretsRuntimeAvailabilityNotice',
+			'RAN\\Admin\\DatabaseCompatibilityNotice',
+			'RAN\\Admin\\ManagedPluginFailureRows',
+		) as $service ) {
 			$container->bind(
 				$service,
-				new class( $method ) {
-					public function __construct( private string $method ) {
-					}
-
+				new class() {
+					/** @param array<int,mixed> $arguments */
 					public function __call( string $method, array $arguments ): void {
 						unset( $method, $arguments );
 					}

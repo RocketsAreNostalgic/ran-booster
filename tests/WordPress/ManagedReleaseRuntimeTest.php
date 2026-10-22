@@ -642,8 +642,8 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		[ $registrar, $lock ] = $this->native_plugin_registrar(
 			$this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL )
 		);
-		$first_upgrader  = new \stdClass();
-		$second_upgrader = new \stdClass();
+		$first_upgrader       = new \stdClass();
+		$second_upgrader      = new \stdClass();
 
 		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $first_upgrader, self::NATIVE_EXTRA ) );
 		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );

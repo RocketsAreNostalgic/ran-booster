@@ -90,11 +90,21 @@ final class GitHubReplacementRegistrationTest extends TestCase {
 		$provider                  = $this->createMock( RepositoryProvider::class );
 		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' ) );
 		$provider->method( 'get_provider_diagnostics' )->willReturn( $this->createMock( ProviderDiagnostics::class ) );
-		$credentials = $this->createMock( ProviderCredentialStore::class );
-		$evidence    = $this->createMock( AuthenticatedWebhookDeliveryEvidenceReader::class );
-		$registry    = new ProviderRegistry(
+		$credentials  = $this->createMock( ProviderCredentialStore::class );
+		$evidence     = $this->createMock( AuthenticatedWebhookDeliveryEvidenceReader::class );
+		$native_calls = array();
+		$context      = new ProviderRegistrationContext(
+			static fn (): int => 1,
+			native_mutation_begin: static function ( string $type, string $identity ) use ( &$native_calls ): string {
+				$native_calls[] = array( $type, $identity );
+				return 'exact-owner'; },
+			native_mutation_complete: static function ( string $owner, string $type, string $identity, string $outcome ) use ( &$native_calls ): void {
+				$native_calls[] = array( $owner, $type, $identity, $outcome ); }
+		);
+		$registry     = new ProviderRegistry(
 			credential_store_factory: static fn (): ProviderCredentialStore => $credentials,
 			delivery_evidence_reader_factory: static fn (): AuthenticatedWebhookDeliveryEvidenceReader => $evidence,
+			registration_context: $context,
 			github_selection_guard: function () use ( &$selection ): ?array {
 				return $this->collection_complete ? $selection : null; },
 			github_candidates: array( $declaration->plugin_basename => $declaration )
@@ -117,14 +127,24 @@ final class GitHubReplacementRegistrationTest extends TestCase {
 			}
 		);
 		self::assertSame( 0, $invocations );
+		self::assertSame( array(), $native_calls );
 		$this->collection_complete = true;
 		$registry->seal();
 		self::assertSame( 1, $invocations );
 		self::assertSame( $provider, $registry->get( 'gh' ) );
 		self::assertInstanceOf( ProviderRegistrationContext::class, $observed );
 		self::assertTrue( $observed->operation_allowed() );
+		self::assertSame( 'exact-owner', $observed->begin_native_mutation( 'theme', 'fixture' ) );
 		++$selection['selection_generation'];
 		self::assertFalse( $observed->operation_allowed() );
+		try {
+			$observed->begin_native_mutation( 'theme', 'fixture' );
+			self::fail( 'Stale selection reached native host admission.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Native provider mutation coordination is unavailable.', $failure->getMessage() );
+		}
+		$observed->complete_native_mutation( 'exact-owner', 'theme', 'fixture', 'uncertain' );
+		self::assertSame( array( array( 'theme', 'fixture' ), array( 'exact-owner', 'theme', 'fixture', 'uncertain' ) ), $native_calls );
 		$registry->seal();
 		self::assertSame( 1, $invocations );
 	}

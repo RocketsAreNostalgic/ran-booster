@@ -17,7 +17,7 @@ use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
 
 final class ProviderRegistrationContextTest extends TestCase {
 
-	public function test_context_exposes_only_the_resolved_artifact_limit_and_resolves_lazily(): void {
+	public function test_context_exposes_bounded_policy_and_native_checkpoints_and_resolves_lazily(): void {
 		$resolutions = 0;
 		$context     = new ProviderRegistrationContext(
 			static function () use ( &$resolutions ): int {
@@ -32,8 +32,103 @@ final class ProviderRegistrationContextTest extends TestCase {
 		self::assertSame( 0, $resolutions );
 		self::assertSame( 52_428_800, $context->maximum_artifact_bytes() );
 		self::assertSame( 1, $resolutions );
-		self::assertSame( array( '__construct', 'maximum_artifact_bytes', 'operation_allowed' ), $methods );
+		self::assertSame( array( '__construct', 'begin_native_mutation', 'complete_native_mutation', 'maximum_artifact_bytes', 'operation_allowed' ), $methods );
 		self::assertSame( array(), ( new \ReflectionClass( ProviderRegistrationContext::class ) )->getProperties( \ReflectionProperty::IS_PUBLIC ) );
+	}
+
+	public function test_native_callbacks_are_lazy_and_completion_survives_revoked_approval(): void {
+		$allowed = true;
+		$events  = array();
+		$context = new ProviderRegistrationContext(
+			static fn (): int => 1,
+			static function () use ( &$allowed ): bool {
+				return $allowed; },
+			static function ( string $type, string $identity ) use ( &$events ): string {
+				$events[] = array( 'begin', $type, $identity );
+				return 'exact-owner';
+			},
+			static function ( string $owner, string $type, string $identity, string $outcome ) use ( &$events ): void {
+				$events[] = array( 'complete', $owner, $type, $identity, $outcome );
+			}
+		);
+		self::assertSame( array(), $events );
+		self::assertSame( 'exact-owner', $context->begin_native_mutation( 'plugin', 'fixture/main.php' ) );
+		$allowed = false;
+		$context->complete_native_mutation( 'exact-owner', 'plugin', 'fixture/main.php', 'uncertain' );
+		self::assertSame( array( array( 'begin', 'plugin', 'fixture/main.php' ), array( 'complete', 'exact-owner', 'plugin', 'fixture/main.php', 'uncertain' ) ), $events );
+		try {
+			$context->begin_native_mutation( 'plugin', 'fixture/main.php' );
+			self::fail( 'Revoked approval started a native update.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertSame( 'Native provider mutation coordination is unavailable.', $failure->getMessage() );
+		}
+		self::assertCount( 2, $events );
+	}
+
+	public function test_absent_native_callbacks_refuse_both_checkpoints(): void {
+		$context = new ProviderRegistrationContext( static fn (): int => 1 );
+		foreach ( array( static fn (): string => $context->begin_native_mutation( 'theme', 'fixture' ), static fn () => $context->complete_native_mutation( 'owner', 'theme', 'fixture', 'uncertain' ) ) as $operation ) {
+			try {
+				$operation();
+				self::fail( 'Missing native coordination was accepted.' );
+			} catch ( \RuntimeException $failure ) {
+				self::assertSame( 'Native provider mutation coordination is unavailable.', $failure->getMessage() );
+			}
+		}
+	}
+
+	public function test_partial_native_callback_pair_is_rejected_without_invocation(): void {
+		$begin    = static function ( string $type, string $identity ): never {
+			throw new \LogicException( $type . $identity );
+		};
+		$complete = static function ( string $owner, string $type, string $identity, string $outcome ): never {
+			throw new \LogicException( $owner . $type . $identity . $outcome );
+		};
+		foreach ( array( array( $begin, null ), array( null, $complete ) ) as $pair ) {
+			try {
+				new ProviderRegistrationContext( static fn (): int => 1, null, $pair[0], $pair[1] );
+				self::fail( 'Partial callback pair was accepted.' );
+			} catch ( \InvalidArgumentException $failure ) {
+				self::assertSame( 'Native provider mutation callbacks must be supplied together.', $failure->getMessage() );
+			}
+		}
+	}
+
+	public function test_throwing_operation_guard_refuses_native_begin_without_calling_host(): void {
+		$context = new ProviderRegistrationContext(
+			static fn (): int => 1,
+			static function (): never {
+				throw new \LogicException( 'lost authority' ); },
+			static function ( string $type, string $identity ): never {
+				throw new \LogicException( $type . $identity ); },
+			static function ( string $owner, string $type, string $identity, string $outcome ): never {
+				throw new \LogicException( $owner . $type . $identity . $outcome ); }
+		);
+		$this->expectException( \RuntimeException::class );
+		$this->expectExceptionMessage( 'Native provider mutation coordination is unavailable.' );
+		$context->begin_native_mutation( 'theme', 'fixture' );
+	}
+
+	public function test_native_host_failures_are_not_reported_as_success(): void {
+		$failure = new \RuntimeException( 'host refused' );
+		$context = new ProviderRegistrationContext(
+			static fn (): int => 1,
+			null,
+			static function ( string $type, string $identity ) use ( $failure ): never {
+				unset( $type, $identity );
+				throw $failure; },
+			static function ( string $owner, string $type, string $identity, string $outcome ) use ( $failure ): never {
+				unset( $owner, $type, $identity, $outcome );
+				throw $failure; }
+		);
+		foreach ( array( static fn (): string => $context->begin_native_mutation( 'theme', 'fixture' ), static fn () => $context->complete_native_mutation( 'owner', 'theme', 'fixture', 'uncertain' ) ) as $operation ) {
+			try {
+				$operation();
+				self::fail( 'Host refusal was ignored.' );
+			} catch ( \RuntimeException $observed ) {
+				self::assertSame( $failure, $observed );
+			}
+		}
 	}
 
 	public function test_context_defers_resolver_failure_until_policy_is_read(): void {

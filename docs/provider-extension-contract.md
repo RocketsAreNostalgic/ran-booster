@@ -66,9 +66,10 @@ returned provider uses the same requested code before atomic registration:
   `latest_authenticated_delivery()` for the already-bound provider. It has no
   provider argument and exposes neither the deployment database repository nor
   general attempt history.
-- `ProviderRegistrationContext` currently exposes only
-  `maximum_artifact_bytes()`. That method lazily resolves Core's provider-neutral
-  archive ceiling and returns it as an integer. The lazy resolution preserves
+- `ProviderRegistrationContext` exposes `maximum_artifact_bytes()` and fresh
+  `operation_allowed()` policy, plus bounded `begin_native_mutation()` and
+  `complete_native_mutation()` checkpoints. The artifact method lazily resolves
+  Core's provider-neutral archive ceiling and returns it as an integer. The lazy resolution preserves
   the existing operation/admission failure boundary: an invalid site override
   does not make plugin bootstrap fatal. The context is not a service locator and
   exposes no container, logger, database, credential writer, sidecar, storage
@@ -82,6 +83,31 @@ context is part of the credential-bearing factory contract; providers targeting
 API 14 must not feature-detect or fall back to the retired two-argument shape.
 The context remains bounded and does not create a generic dependency-injection
 seam.
+
+
+The native checkpoints are an additive Provider API15 extension; the factory's
+three arguments and existing provider interfaces are unchanged. A replacement
+that requires them must check both methods are available and refuse unsupported
+older hosts before composing native update support. The Core callback pair is
+optional for existing context callers; either native method refuses when the
+pair is absent, and construction rejects a partial pair. Construction invokes
+neither host policy nor native callbacks.
+
+`begin_native_mutation(type, identity)` rechecks the bound operation approval
+immediately before installed plugin/theme file mutation, then asks Core for its
+exact opaque update owner. Core still validates the staged target, selected
+implementation, package-mutation permission and native updater lock. Pass that
+owner unchanged to `complete_native_mutation(owner, type, identity, outcome)`.
+Completion deliberately remains callable after approval changes: it records
+exact-owner success or uncertainty without granting fresh permission. Host errors
+propagate; neither checkpoint makes a failed operation successful.
+
+Core currently supplies these native callbacks for its GitHub release update
+path, including approved replacement GitHub implementations. This does not
+certify arbitrary vendors' native-update integration. Providers must not reach
+Core private services or use no-op callbacks to claim native parity. Returning
+a release-native aggregate requires its actual safeguards, and native update
+receipts never replace replacement approval or credential consent.
 
 Core binds the two provider-specific values and the host registration context
 before invoking the factory, so retaining either provider-bound value

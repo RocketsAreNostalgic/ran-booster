@@ -198,7 +198,9 @@ final class BoosterServiceProvider {
 		$release_registrar = new ManagedReleaseUpdaterRegistrar( $release_updater );
 		$container->bind( ManagedReleaseUpdaterRegistrar::class, $release_registrar );
 		$provider_registration_context = new \RAN\RepositoryProvider\ProviderRegistrationContext(
-			static fn (): int => PackageArtifactLimit::resolve()
+			static fn (): int => PackageArtifactLimit::resolve(),
+			native_mutation_begin: static fn ( string $type, string $identity ): string => $container->make( ManagedReleaseTargetRegistrar::class )->begin_provider_native_mutation( $type, $identity ),
+			native_mutation_complete: static fn ( string $owner, string $type, string $identity, string $outcome ) => $container->make( ManagedReleaseTargetRegistrar::class )->complete_provider_native_mutation( $owner, $type, $identity, $outcome )
 		);
 		$providers                     = new ProviderRegistry(
 			array(),
@@ -228,8 +230,8 @@ final class BoosterServiceProvider {
 				$release_registrar,
 				static fn (): int => $registration_context->maximum_artifact_bytes(),
 				$registration_context->operation_allowed( ... ),
-				static fn ( string $type, string $identity ): string => $container->make( ManagedReleaseTargetRegistrar::class )->begin_provider_native_mutation( $type, $identity ),
-				static fn ( string $owner, string $type, string $identity, string $outcome ) => $container->make( ManagedReleaseTargetRegistrar::class )->complete_provider_native_mutation( $owner, $type, $identity, $outcome )
+				$registration_context->begin_native_mutation( ... ),
+				$registration_context->complete_native_mutation( ... )
 			)
 		);
 		$github_selection->bind_registry( $providers );

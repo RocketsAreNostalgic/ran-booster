@@ -443,11 +443,21 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$provider = $this->createMock( RepositoryProvider::class );
 		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' ) );
 		$provider->method( 'get_provider_diagnostics' )->willReturn( $this->createMock( ProviderDiagnostics::class ) );
-		$evidence = $this->createMock( AuthenticatedWebhookDeliveryEvidenceReader::class );
-		$captured = null;
-		$registry = new ProviderRegistry(
+		$evidence     = $this->createMock( AuthenticatedWebhookDeliveryEvidenceReader::class );
+		$captured     = null;
+		$native_calls = array();
+		$host_context = new ProviderRegistrationContext(
+			static fn (): int => 1,
+			native_mutation_begin: static function ( string $type, string $identity ) use ( &$native_calls ): string {
+				$native_calls[] = array( $type, $identity );
+				return 'bundled-owner'; },
+			native_mutation_complete: static function ( string $owner, string $type, string $identity, string $outcome ) use ( &$native_calls ): void {
+				$native_calls[] = array( $owner, $type, $identity, $outcome ); }
+		);
+		$registry     = new ProviderRegistry(
 			credential_store_factory: static fn (): ProviderCredentialStore => $secrets->credentials_for( 'gh' ),
 			delivery_evidence_reader_factory: static fn (): AuthenticatedWebhookDeliveryEvidenceReader => $evidence,
+			registration_context: $host_context,
 			github_selection_guard: array( $selection, 'registry_selection' ),
 			github_candidates: $selection->candidates(),
 			bundled_github_factory: static function ( ProviderCredentialStore $credentials, AuthenticatedWebhookDeliveryEvidenceReader $evidence, ProviderRegistrationContext $context ) use ( $provider, &$captured ): RepositoryProvider {
@@ -462,6 +472,7 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( $provider, $registry->get( 'gh' ) );
 		self::assertInstanceOf( ProviderRegistrationContext::class, $captured );
 		self::assertTrue( $captured->operation_allowed() );
+		self::assertSame( 'bundled-owner', $captured->begin_native_mutation( 'plugin', 'fixture/main.php' ) );
 		self::assertFalse(
 			$selection->credential_access_allowed(
 				array(
@@ -473,6 +484,8 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$this->candidate( 'replacement.php' );
 		$this->activate( array( 'booster.php', 'replacement.php' ) );
 		self::assertFalse( $captured->operation_allowed() );
+		$captured->complete_native_mutation( 'bundled-owner', 'plugin', 'fixture/main.php', 'uncertain' );
+		self::assertSame( array( array( 'plugin', 'fixture/main.php' ), array( 'bundled-owner', 'plugin', 'fixture/main.php', 'uncertain' ) ), $native_calls );
 		$policy->normalizations = 0;
 		self::assertNull( $secrets->credentials_for( 'gh' )->credential_material( 'classic' ) );
 		self::assertSame( array(), $secrets->credentials_for( 'gh' )->credential_profiles() );

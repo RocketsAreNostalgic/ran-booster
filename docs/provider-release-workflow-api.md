@@ -1,6 +1,6 @@
 # Provider release-workflow capability
 
-> Provider API15 / workflow V4 reporting candidate. Qualify the coordinated Core/provider source set before publication.
+> Provider API 15 / workflow V4 is published in [Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37). External providers still need qualification against their exact supported host and contract. Publication does not clear separate manual acceptance gates.
 
 Provider API 15 keeps release-workflow setup as an optional, separately versioned
 provider facet. The base provider registration seam does not change when this
@@ -69,10 +69,10 @@ remains optional for ordinary provider registration and other capabilities.
 ## Provider API 15 compatibility boundary
 
 Provider API 15 completes snake_case naming of owned methods, parameters,
-properties and DTO accessors while retaining initial-only workflow V3. API 11
+properties and DTO accessors with initial-only workflow V4. API 11
 promised V2 and is no longer advertised by Core. External providers must check
 the exact outer API marker before loading their implementation. API11, API12
-and API13 providers remain unregistered on API14; API14 providers remain
+and API13/API14 providers remain unregistered on API15; API15 providers remain
 unregistered on older or unknown future hosts. Both plugin load orders must
 be covered. No V2 shim, range negotiation or registration redesign is introduced.
 
@@ -102,12 +102,13 @@ passed repository quality, runtime archive verification and all four supported
 WordPress/database installation jobs, including bundled Provider API-12/V3
 readback without the development Composer autoloader.
 
-UI/presentation implementation and owner interactive/end-to-end acceptance
-remain deferred under #81/#85. This separate feature-acceptance boundary is not
+At that checkpoint, UI/presentation implementation and owner interactive/end-to-end
+acceptance were deferred under #81/#85. This separate feature-acceptance boundary is not
 closed by released-dependency adoption or source/API qualification. Automated
 checks must identify exact sources and
 distinguish source candidates, installed candidate archives and certified
 releases. Immutable API14 Core beta.31 publication and Bitbucket/Migrator
-release-backed qualification against that actual release remain pending. Keep certification pins tied to the actual
+release-backed qualification against that actual release were pending at that
+historical checkpoint; this is not beta.37's publication status. Keep certification pins tied to the actual
 certified release; do not publish a bridge-only release or claim full G1/G2
 acceptance from this candidate proof.

@@ -111,19 +111,21 @@ provider-side access and webhooks.
 
 ### Choose GitHub support or migrate from WP Pusher
 
-The upcoming release candidate adds explicit GitHub replacement selection and
-credential-access approval. See [Choose GitHub support](docs/github-provider-replacement.md)
+[Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37)
+includes explicit GitHub replacement selection and credential-access approval.
+See [Choose GitHub support](docs/github-provider-replacement.md)
 for prerequisites, paused states, switching and return to bundled GitHub.
-These candidate instructions do not describe published Core beta.36's older
-bundled-only behavior; check your installed release notes before following them.
+Core beta.36's bundled-only behavior remains a historical baseline; check your
+installed release notes before following the replacement instructions.
 
 For retained WP Pusher packages, start with the
 [connected migration journey](docs/operator-journeys.md#migrate-retained-wp-pusher-packages)
 and the maintained [Migrator instructions](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/blob/main/README.md).
-Published Migrator beta.10/API 3 is incompatible with candidate Core API 4.
-The API 4 Migrator source candidate still requires compatible immutable-host
-certification and its acceptance gates before a separately authorized release.
-Candidate tests do not certify a published pairing.
+Published [Migrator v0.1.0-beta.10](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.10)
+uses API 3 and is incompatible with Core beta.37's Portability API 4.
+Migrator's API 4 source has automated certification against immutable Core
+beta.37, but that does not establish Migrator publication or manual acceptance.
+A compatible Migrator release remains a separate prerequisite.
 
 ### Credentials and deployment evidence
 

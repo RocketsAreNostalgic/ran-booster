@@ -1,10 +1,11 @@
 # Choose GitHub support
 
-**Release status:** This guide describes the implemented upcoming-release
-candidate. Published Core beta.36 has the older bundled-only behavior described
-in the [released-baseline reference](provider-registration-and-coexistence.md).
-Use these steps only with the selected candidate, or a later release whose notes
-confirm inclusion. No production replacement plugin is supplied by this guide.
+**Release status:** This guide describes the replacement controls published in
+[Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
+Core beta.36's older bundled-only behavior is preserved in the
+[historical released-baseline reference](provider-registration-and-coexistence.md).
+Check your installed release before following these steps. No production
+replacement plugin is supplied by this guide.
 
 ## Before changing provider
 

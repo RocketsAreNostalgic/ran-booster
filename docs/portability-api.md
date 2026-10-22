@@ -6,11 +6,14 @@ adopt that package into Booster with deployment policy forced to Disabled.
 
 It is not the Transporter Blueprint format, a general migration API, or an
 installer. The [Transporter Blueprint guide](portability-briefcase.md) documents
-the separate Blueprint V1 ZIP workflow.
+the separate Blueprint ZIP workflow.
 
-This is a held integration candidate. It is not activated or release-qualified
-until the host binds the same provider selection to the registry, credentials,
-and Blueprint consumers and the source bridge qualifies API 4 forwarding.
+Portability API 4 is published in
+[Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
+Source bridges must still qualify their API 4 forwarding and compatible host;
+Core publication does not certify or publish a satellite. See the
+[WP Pusher migration status](operator-journeys.md#migrate-retained-wp-pusher-packages)
+before using Migrator.
 
 ## Version and service delivery
 

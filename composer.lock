@@ -4,20 +4,20 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "bf3150d5006a2c8dbedd9f0ce9902ff0",
+    "content-hash": "501b21f03f4d7fbb01384a5977d95281",
     "packages": [
         {
             "name": "ran/booster-github-provider",
-            "version": "dev-feat/example-workflow-namespace",
+            "version": "v1.0.0-beta.19",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider.git",
-                "reference": "058b43375354ec8c0a1ff7105fd0e8898e2b545d"
+                "reference": "a01497d6ebdd8df6ea155c2b2b873e36e2d0018b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/058b43375354ec8c0a1ff7105fd0e8898e2b545d",
-                "reference": "058b43375354ec8c0a1ff7105fd0e8898e2b545d",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-booster-github-provider/zipball/a01497d6ebdd8df6ea155c2b2b873e36e2d0018b",
+                "reference": "a01497d6ebdd8df6ea155c2b2b873e36e2d0018b",
                 "shasum": ""
             },
             "require": {
@@ -25,11 +25,81 @@
                 "ran/updater-support": "^1.0.0-beta.4",
                 "ran/wp-release-updater": "~1.0.0-beta.12"
             },
+            "require-dev": {
+                "php-stubs/wordpress-stubs": "7.0.*",
+                "phpcompatibility/php-compatibility": "10.0.0-alpha2",
+                "phpcompatibility/phpcompatibility-paragonie": "2.0.0-alpha2",
+                "phpcompatibility/phpcompatibility-wp": "3.0.0-alpha2",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^11.0",
+                "ran/coding-standards": "1.0.1",
+                "szepeviktor/phpstan-wordpress": "^2.0"
+            },
             "type": "library",
             "autoload": {
                 "psr-4": {
                     "RAN\\BoosterGitHubProvider\\V1\\": "src/"
                 }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "RAN\\BoosterGitHubProvider\\V1\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "check": [
+                    "@validate:strict",
+                    "@lint:syntax",
+                    "@standards",
+                    "@test"
+                ],
+                "validate:strict": [
+                    "composer validate --strict --no-check-publish"
+                ],
+                "test:foundation": [
+                    "@php tests/foundation-contract.php"
+                ],
+                "test:implementation": [
+                    "phpunit --configuration phpunit.xml --fail-on-phpunit-deprecation"
+                ],
+                "lint:syntax": [
+                    "bash -o pipefail -c 'find src tests -type f -name \"*.php\" -print0 | xargs -0 -n1 php -l'"
+                ],
+                "standards": [
+                    "phpcs --standard=.phpcs.xml --report=summary"
+                ],
+                "standards:fix": [
+                    "phpcbf --standard=.phpcs.xml --report=summary"
+                ],
+                "analyze": [
+                    "@analyze:production",
+                    "@analyze:development"
+                ],
+                "test:release-control": [
+                    "node --test tests/release-classification.test.mjs tests/release-workflow-contract.test.mjs"
+                ],
+                "test": [
+                    "@test:foundation",
+                    "@test:release-control"
+                ],
+                "test:host-contract": [
+                    "@php tests/host-contract.php"
+                ],
+                "check:host": [
+                    "@test:host-contract",
+                    "@analyze",
+                    "@test:analysis-coverage",
+                    "@test:implementation"
+                ],
+                "test:analysis-coverage": [
+                    "bash tests/analysis-coverage.sh"
+                ],
+                "analyze:production": [
+                    "phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=512M"
+                ],
+                "analyze:development": [
+                    "phpstan analyse --configuration=phpstan-development.neon --no-progress --memory-limit=512M"
+                ]
             },
             "license": [
                 "GPL-2.0-or-later"
@@ -39,7 +109,8 @@
                 "issues": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/issues",
                 "security": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-booster-github-provider"
-            }
+            },
+            "time": "2026-10-22T19:56:49+00:00"
         },
         {
             "name": "ran/updater-support",
@@ -3080,7 +3151,7 @@
         "phpcompatibility/phpcompatibility-paragonie": 15,
         "phpcompatibility/phpcompatibility-wp": 15,
         "ran/admin-shell": 20,
-        "ran/booster-github-provider": 20,
+        "ran/booster-github-provider": 10,
         "ran/updater-support": 10,
         "ran/wp-branch-updater": 10,
         "ran/wp-release-updater": 10

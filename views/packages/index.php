@@ -18,7 +18,7 @@ $package_activity_payload     = isset( $package_activity ) && is_array( $package
 $package_activity_unavailable = true === ( $package_activity_payload['unavailable'] ?? false );
 $package_activity             = isset( $package_activity_payload['items'] ) && is_array( $package_activity_payload['items'] )
 	? $package_activity_payload['items']
-	: $package_activity_payload;
+	: array();
 $package_extension_rows       = isset( $package_extension_rows ) && is_array( $package_extension_rows )
 	? $package_extension_rows
 	: array();
@@ -102,30 +102,34 @@ $policy_labels = array(
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
 );
 
-?><h2 class="wp-heading-inline ran-booster-package-heading"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></h2>
+?><h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></h2>
 <?php if ( $package_list_total > 0 ) { ?>
 	<a class="page-title-action" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 <?php } ?>
 
-<p><a href="
-<?php
-echo esc_url(
-	add_query_arg(
-		array(
-			'page'     => $package_view->get_page_slug(),
-			'recovery' => '1',
-		),
-		$package_admin_url
-	)
-);
-?>
-"><?php esc_html_e( 'Recover package management', 'ran-booster' ); ?></a></p>
 <div class="ran-booster-package-intro">
-	<p class="description">
+	<p class="ran-booster-page-heading__description">
 		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress.', 'ran-booster' ); ?>
 	</p>
 
 	<?php require dirname( __DIR__ ) . '/notices.php'; ?>
+	<?php if ( ! empty( $package_list_unavailable ) ) { ?>
+		<p class="description"><?php esc_html_e( 'Booster could not safely identify the affected management record. Review Troubleshooting before making management changes.', 'ran-booster' ); ?>
+			<a href="
+			<?php
+			echo esc_url(
+				add_query_arg(
+					array(
+						'page' => 'ran-booster',
+						'tab'  => 'troubleshooting',
+					),
+					$package_admin_url
+				)
+			);
+			?>
+						"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a>
+		</p>
+	<?php } ?>
 </div>
 
 <?php if ( $package_list_total > 0 ) { ?>
@@ -237,7 +241,9 @@ echo esc_url(
 	<tbody id="the-list">
 		<?php if ( count( $packages ) < 1 ) { ?>
 			<tr>
-				<?php if ( $package_list_total > 0 ) { ?>
+				<?php if ( ! empty( $package_list_unavailable ) ) { ?>
+					<td colspan="4"><?php esc_html_e( 'Package settings could not be loaded. Review the notice above.', 'ran-booster' ); ?></td>
+				<?php } elseif ( $package_list_total > 0 ) { ?>
 					<td></td>
 					<td colspan="3">
 						<?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No managed %s match the current filters.', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?>
@@ -292,7 +298,7 @@ echo esc_url(
 				? $last_successful_activity['finished_at']
 				: '';
 			$installed_version         = $package->get_version();
-			$credential_profiles       = is_array( $package_provider['credentials'] ?? null ) ? $package_provider['credentials'] : array();
+			$credential_profiles       = is_array( $package_provider['credential_profiles'] ?? null ) ? $package_provider['credential_profiles'] : array();
 			$credentials_by_id         = array_column( $credential_profiles, null, 'id' );
 			$stored_credential_id      = $package->get_credential_id();
 			$effective_credential_id   = '' !== $stored_credential_id

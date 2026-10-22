@@ -24,7 +24,6 @@ use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\WPBranchUpdater\V1\Archive\ArchiveOffer;
 use RAN\WPBranchUpdater\V1\Archive\PreparedArchive;
-use RAN\WPBranchUpdater\V1\Archive\PreparedArchiveArtifact;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedArchiveSource;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedAttemptJournal;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedBranchArtifact;
@@ -56,6 +55,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	private const DOWNLOAD_ATTEMPTS = 2;
 
 	private ?ProviderPreparedArchive $provider_archive = null;
+	private ?string $mutation_lock_token               = null;
 	private bool $provider_archive_cleaned             = false;
 
 	public function __construct(
@@ -76,15 +76,22 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	/** Construct the immutable package declaration from Booster's admitted snapshot. */
 	public function declaration(): BranchDeploymentDeclaration {
+		if ( null !== $this->attempt->get_request()->expected_identifier && ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || 3 !== constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) ) ) {
+			$this->stage( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
+		}
+		if ( null === $this->attempt->safe_data()['mutation_started_at'] ) {
+			$this->assert_provider_current();
+		}
 		$data       = $this->attempt->safe_data();
 		$request    = $this->attempt->get_request();
 		$identifier = null;
-
-		if ( 'install' === $data['operation'] && null !== $request->adoption_token ) {
-			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SNAPSHOT_CHANGED );
-		}
-		if ( PackageSource::BRANCH->value !== ( $data['package_source'] ?? null ) ) {
-			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED );
+		if ( null !== $request->selected_commit ) {
+			if ( 'webhook' === $data['source'] || $data['requested_ref'] !== $request->selected_commit ) {
+				$this->stage( DeploymentOutcome::CODE_PROVIDER_REQUEST_INVALID );
+			}
+			if ( ! defined( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ) || ! in_array( constant( \RAN\WPBranchUpdater\V1\Runtime\BranchUpdater::class . '::ADMITTED_API_VERSION' ), array( 2, 3 ), true ) || 2 !== ( $this->providers->metadata()[ (string) $data['provider'] ]->archive_api_version ?? 1 ) ) {
+				$this->stage( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE );
+			}
 		}
 
 		if ( 'update' === $data['operation'] ) {
@@ -99,9 +106,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			} catch ( PackageStorageFailure $failure ) {
 				$this->stage_package_storage_failure( $failure );
 			} catch ( Throwable ) {
-				$this->stage( DeploymentOutcome::CODE_POLICY_BLOCKED );
-			}
-			if ( '' === $identifier ) {
 				$this->stage( DeploymentOutcome::CODE_POLICY_BLOCKED );
 			}
 			if ( 'plugin' === $data['package_type'] && ! str_contains( $identifier, '/' ) ) {
@@ -119,7 +123,9 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			'webhook' === $data['source'] ? (string) $data['requested_ref'] : null,
 			(string) $data['operation'],
 			$request->subdirectory,
-			$identifier
+			$identifier,
+			...( null === $request->selected_commit ? array() : array( 'selected_commit' => $request->selected_commit ) ),
+			...( null === $request->expected_identifier ? array() : array( 'expected_identifier' => $request->expected_identifier ) )
 		);
 	}
 
@@ -134,7 +140,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function mark_mutation_started(): void {
 		try {
-			$this->attempt = $this->attempts->mark_mutation_started( $this->attempt->get_id() );
+			$result = $this->attempts->mark_mutation_started( $this->attempt->get_id(), owns_lock: fn (): bool => null !== $this->mutation_lock_token && $this->mutation_lock_token === $this->updater_lock->current_token() );
+			if ( $result instanceof DeploymentOutcome ) {
+				$this->stage( $result->get_code() );
+			}
+			$this->attempt = $result;
 		} catch ( DeploymentStorageFailure $failure ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Closed failure text and chained exceptions preserve durable failure mapping; they are not output.
 			throw new AdmittedBranchDurabilityFailure( previous: $failure );
@@ -160,6 +170,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterfaceAfterLastUsed -- AdmittedArchiveSource requires the baseline parameter; this host prepares from its already-admitted deployment attempt.
 	public function prepare( BranchDeploymentDeclaration $deployment, ?array $baseline ): AdmittedBranchArtifact {
 		$this->assert_declaration( $deployment );
+		$this->assert_provider_current();
 		if ( null !== $this->provider_archive ) {
 			throw new RuntimeException( 'The admitted archive source is already consumed.' );
 		}
@@ -180,7 +191,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				new ArchiveRequest(
 					$reference,
 					(string) $data['requested_ref'],
-					'webhook' === $data['source'] ? $request->configured_branch : null
+					'webhook' === $data['source'] ? $request->configured_branch : null,
+					selected_commit: $request->selected_commit
 				)
 			);
 		} catch ( Throwable $failure ) {
@@ -189,11 +201,12 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		$provider_archive = $this->provider_archive;
 		try {
+			$this->assert_provider_current();
 			$resolved_ref = $provider_archive->get_resolved_ref();
 			if ( '' === $resolved_ref || trim( $resolved_ref ) !== $resolved_ref || strlen( $resolved_ref ) > 191 || preg_match( '/[[:cntrl:]]/', $resolved_ref ) === 1 ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
-			if ( null !== $deployment->expected_head && ! hash_equals( $deployment->expected_head, $resolved_ref ) ) {
+			if ( ( null !== $deployment->expected_head && ! hash_equals( $deployment->expected_head, $resolved_ref ) ) || ( null !== $request->selected_commit && ! hash_equals( $request->selected_commit, $resolved_ref ) ) ) {
 				$this->stage( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID );
 			}
 		} catch ( AdmittedBranchStageFailure $failure ) {
@@ -228,25 +241,24 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 		$artifact = null;
 		try {
-			$artifact = new PreparedArchiveArtifact(
-				PreparedArchive::download_and_validate(
-					$offer,
-					$deployment,
-					$this->archive_directory(),
-					$maximum_artifact_bytes
-				)
+			$artifact = PreparedArchive::download_and_validate(
+				$offer,
+				$deployment,
+				$this->archive_directory(),
+				$maximum_artifact_bytes
 			);
 			$this->assert_artifact_capacity( $artifact, $deployment );
+			$this->assert_provider_current();
 			return $artifact;
 		} catch ( AdmittedBranchStageFailure $failure ) {
 			$this->cleanup_provider_archive( $provider_archive );
-			if ( $artifact instanceof PreparedArchiveArtifact ) {
+			if ( $artifact instanceof PreparedArchive ) {
 				$this->cleanup_artifact_after_host_failure( $artifact );
 			}
 			throw $failure;
 		} catch ( Throwable ) {
 			$this->cleanup_provider_archive( $provider_archive );
-			if ( $artifact instanceof PreparedArchiveArtifact ) {
+			if ( $artifact instanceof PreparedArchive ) {
 				$this->cleanup_artifact_after_host_failure( $artifact );
 			}
 			$this->stage( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED );
@@ -261,6 +273,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 	}
 
 	public function assert_mutation_allowed(): void {
+		$this->assert_provider_current();
 		PackageMutationGuard::assert_filesystem_mutation_allowed();
 	}
 
@@ -270,9 +283,6 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$request = $this->attempt->get_request();
 
 		try {
-			if ( PackageSource::BRANCH->value !== ( $data['package_source'] ?? null ) ) {
-				$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_RELEASE_SOURCE_BLOCKED );
-			}
 			if ( 'install' === $data['operation'] ) {
 				if ( 'plugin' === $data['package_type'] && 'ran-booster' === $request->package_slug ) {
 					$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_SELF_UPDATE_BLOCKED );
@@ -327,7 +337,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		$this->assert_declaration( $deployment );
 		$package    = $this->installed_package( $deployment->package_type, $deployment->slug );
 		$identifier = (string) $package->get_identifier();
-		if ( '' === $identifier ) {
+		if ( '' === $identifier || ( null !== $this->attempt->get_request()->expected_identifier && $identifier !== $this->attempt->get_request()->expected_identifier ) ) {
 			throw new RuntimeException( 'The installed package identity is unavailable.' );
 		}
 		return array( 'identifier' => $identifier ) + $this->package_runtime_state( $package );
@@ -344,8 +354,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function adopt( BranchDeploymentDeclaration $deployment ): bool {
 		$this->assert_declaration( $deployment );
-		$installed  = $this->installed_package( $deployment->package_type, $deployment->slug );
-		$request    = $this->attempt->get_request();
+		$installed = $this->installed_package( $deployment->package_type, $deployment->slug );
+		$request   = $this->attempt->get_request();
+		if ( null !== $request->expected_identifier && $installed->get_identifier() !== $request->expected_identifier ) {
+			return false;
+		}
 		$data       = $this->attempt->safe_data();
 		$repository = new ManagedRepository(
 			(string) $data['provider'],
@@ -368,7 +381,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function preflight( BranchDeploymentDeclaration $deployment, AdmittedBranchArtifact $artifact ): void {
 		$this->assert_declaration( $deployment );
-		if ( ! $artifact instanceof PreparedArchiveArtifact ) {
+		if ( ! $artifact instanceof PreparedArchive ) {
 			throw new RuntimeException( 'The admitted branch artifact is not a prepared package archive.' );
 		}
 		$artifact->assert_unchanged();
@@ -376,21 +389,20 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	public function execute( BranchDeploymentDeclaration $deployment, ?array $baseline, AdmittedBranchArtifact $artifact ): CorePackageExecutionResult {
 		$this->assert_declaration( $deployment );
-		if ( ! $artifact instanceof PreparedArchiveArtifact ) {
+		if ( ! $artifact instanceof PreparedArchive ) {
 			throw new RuntimeException( 'The admitted branch artifact is not a prepared package archive.' );
 		}
-		$archive = $artifact->archive();
 		if ( 'install' === $deployment->operation ) {
 			return 'plugin' === $deployment->package_type
-				? $this->executor->install_plugin( $archive, $deployment->slug, $deployment->subdirectory )
-				: $this->executor->install_theme( $archive, $deployment->slug, $deployment->subdirectory );
+				? $this->executor->install_plugin( $artifact, $deployment->slug, $deployment->subdirectory )
+				: $this->executor->install_theme( $artifact, $deployment->slug, $deployment->subdirectory );
 		}
 		if ( null === $baseline ) {
 			throw new RuntimeException( 'The managed package baseline is unavailable.' );
 		}
 		return 'plugin' === $deployment->package_type
-			? $this->executor->update_plugin( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] )
-			: $this->executor->update_theme( $archive, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] );
+			? $this->executor->update_plugin( $artifact, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] )
+			: $this->executor->update_theme( $artifact, $deployment->slug, $deployment->subdirectory, $baseline['identifier'] );
 	}
 
 	public function run( callable $operation ): mixed {
@@ -401,9 +413,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 			throw new BranchDeploymentLockStorageFailure( 'The WordPress updater lock storage is uncertain.', 0, $failure );
 		}
 
+		$this->mutation_lock_token = $token;
 		try {
 			return $operation();
 		} finally {
+			$this->mutation_lock_token = null;
 			try {
 				$released = $this->updater_lock->release( $token );
 			} catch ( DeploymentStorageFailure $failure ) {
@@ -423,22 +437,55 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
+	private function assert_provider_current(): void {
+		$refusal = $this->attempts->provider_refusal( $this->attempt );
+		if ( null !== $refusal ) {
+			$this->stage( $refusal );
+		}
+	}
+
 	private function download_provider_archive( ProviderPreparedArchive $archive, string $destination, int $maximum_artifact_bytes ): void {
 		try {
 			$url = $archive->get_url();
 			$this->assert_safe_https_url( $url );
 			for ( $attempt = 1; $attempt <= self::DOWNLOAD_ATTEMPTS; ++$attempt ) {
-				$response = wp_safe_remote_get(
-					$url,
-					array(
-						'timeout'             => self::DOWNLOAD_TIMEOUT,
-						'redirection'         => 3,
-						'reject_unsafe_urls'  => true,
-						'stream'              => true,
-						'filename'            => $destination,
-						'limit_response_size' => $maximum_artifact_bytes + 1,
-					)
-				);
+				for ( $redirect = 0; 3 >= $redirect; ++$redirect ) {
+					$this->assert_provider_current();
+					$guard = function ( mixed $preempt, array $arguments, string $request_url ) use ( $url, $destination ): mixed {
+						if ( $url === $request_url && true === ( $arguments['stream'] ?? null ) && ( $arguments['filename'] ?? null ) === $destination ) {
+							$this->assert_provider_current();
+						}
+						return $preempt;
+					};
+					add_filter( 'pre_http_request', $guard, PHP_INT_MAX, 3 );
+					try {
+						$response = wp_safe_remote_get(
+							$url,
+							array(
+								'timeout'             => self::DOWNLOAD_TIMEOUT,
+								'redirection'         => 0,
+								'reject_unsafe_urls'  => true,
+								'stream'              => true,
+								'filename'            => $destination,
+								'limit_response_size' => $maximum_artifact_bytes + 1,
+							)
+						);
+					} finally {
+						remove_filter( 'pre_http_request', $guard, PHP_INT_MAX );
+					}
+					$this->assert_provider_current();
+					$status = (int) wp_remote_retrieve_response_code( $response );
+					if ( ! in_array( $status, array( 301, 302, 303, 307, 308 ), true ) ) {
+						break;
+					}
+					$location = wp_remote_retrieve_header( $response, 'location' );
+					if ( ! is_string( $location ) ) {
+						$this->stage( DeploymentOutcome::CODE_ARCHIVE_URL_INVALID );
+					}
+					$this->assert_safe_https_url( $location );
+					$url = $location;
+				}
+
 				if ( is_wp_error( $response ) ) {
 					$this->stage( DeploymentOutcome::CODE_ARCHIVE_DOWNLOAD_FAILED );
 				}
@@ -461,7 +508,11 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 
 	private function verify_provider_head( ProviderPreparedArchive $archive ): void {
 		try {
+			$this->assert_provider_current();
 			$archive->verify_current_head();
+			$this->assert_provider_current();
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			throw $failure;
 		} catch ( StaleDeployment ) {
 			$this->stage( DeploymentOutcome::CODE_STALE_EVENT );
 		} catch ( Throwable $failure ) {
@@ -501,8 +552,8 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function assert_artifact_capacity( PreparedArchiveArtifact $artifact, BranchDeploymentDeclaration $deployment ): void {
-		$expanded = $artifact->archive()->expanded_bytes();
+	private function assert_artifact_capacity( PreparedArchive $artifact, BranchDeploymentDeclaration $deployment ): void {
+		$expanded = $artifact->expanded_bytes();
 		$overhead = intdiv( $expanded, 10 ) + ( 0 === $expanded % 10 ? 0 : 1 );
 		if ( $expanded > intdiv( PHP_INT_MAX - $overhead, 2 ) ) {
 			$this->stage( DeploymentOutcome::CODE_DEPLOYMENT_DISK_SPACE_LOW );
@@ -515,7 +566,7 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 		}
 	}
 
-	private function cleanup_artifact_after_host_failure( PreparedArchiveArtifact $artifact ): void {
+	private function cleanup_artifact_after_host_failure( PreparedArchive $artifact ): void {
 		try {
 			$artifact->cleanup();
 		} catch ( Throwable ) {

@@ -18,7 +18,6 @@ use RAN\Secrets\PrivateLocationCandidateResolver;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\SecretsStorageProvisioner;
 use RAN\Secrets\SecretsStorageProvisioningResult;
-use RAN\Secrets\WpConfigPathWriteResult;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 
 #[CoversClass( SecretsStorageProvisioner::class )]
@@ -775,6 +774,34 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( array( $old, $old ), $provisioner->authenticated_candidates );
 	}
 
+	public function test_recovery_retarget_refusal_requires_attention(): void {
+		$old = $this->recovery_store( 'abcdef0123456789' );
+		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
+		$provisioner                        = $this->provisioner();
+		$provisioner->configured            = $this->candidate;
+		$provisioner->health_failure        = true;
+		$provisioner->health_failure_reason = 'storage_file_missing';
+		$status                             = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION, $status->status() );
+		$recovery = $provisioner->recovery_state( $status );
+		self::assertIsArray( $recovery );
+		self::assertSame( 'available', $recovery['state'] );
+		self::assertSame( $old, $recovery['candidate_path'] );
+		self::assertMatchesRegularExpression( '/\A[a-f0-9]{64}\z/D', (string) $recovery['token'] );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Compare exact owned fixture bytes after the rejected recovery write.
+		$config                        = file_get_contents( $this->config_path );
+		$provisioner->retarget_refused = true;
+		$result                        = $provisioner->adopt_recovery( (string) $recovery['token'] );
+		self::assertSame( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION, $result->status() );
+		self::assertSame( 'wp_config_verification_unavailable', $result->code() );
+		self::assertFalse( $result->requires_next_request_verification() );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Verify rejected recovery left the owned configuration fixture unchanged.
+		self::assertSame( $config, file_get_contents( $this->config_path ) );
+		self::assertSame( array( $old, $old ), $provisioner->authenticated_candidates );
+	}
+
 	public function test_recovery_writer_failure_uses_the_same_translated_display_boundary(): void {
 		$old = $this->recovery_store( 'abcdef0123456789' );
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
@@ -1184,7 +1211,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 		$this->orphaned_ciphertext_reset_available = false;
 	}
 
-	protected function write_configuration( string $config, string $candidate ): WpConfigPathWriteResult {
+	protected function write_configuration( string $config, string $candidate ): void {
 		$this->writer_called = true;
 		if ( null !== $this->writer_failure_code ) {
 			throw new \RAN\Secrets\WpConfigPathWriteException(
@@ -1195,14 +1222,19 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 			);
 		}
 
-		return parent::write_configuration( $config, $candidate );
+		parent::write_configuration( $config, $candidate );
 	}
+
+	public bool $retarget_refused = false;
 
 	protected function retarget_configuration(
 		string $config,
 		string $current,
 		string $replacement
-	): WpConfigPathWriteResult|false {
+	): bool {
+		if ( $this->retarget_refused ) {
+			return false;
+		}
 		$this->writer_called = true;
 		if ( null !== $this->writer_failure_code ) {
 			throw new \RAN\Secrets\WpConfigPathWriteException(

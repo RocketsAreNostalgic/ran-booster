@@ -54,9 +54,9 @@ contract tests also use the real locked analyzer at Level 9 to protect callback
 results, validated secrets shapes and credential presentation. They check named
 guarantees, not whole-file Level 9 compliance; new files still enter the broad
 Level 8 analysis automatically. Level 10 remains diagnostic.
-Exactly three occurrence-level `property.notFound`
+Exactly two occurrence-level `property.notFound`
 allowances preserve arbitrary WordPress update-transient objects and their magic
-accessors: one response-channel assignment in `CorePackageExecutor` and two in
+accessors: the plugin and theme response-channel assignments in
 `core-updater-proof.php`. Do not replace these objects or narrow them to `stdClass`.
 Lower-level advisory runs may report these ignores as unmatched; do not disable
 unmatched-ignore reporting to conceal that diagnostic-level difference.
@@ -145,7 +145,11 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
   the marker, `ABSPATH`, `WP_CONTENT_DIR`, site URL, and exact target path from
   the intended site root. Never mutate a symlinked or shared development
   checkout.
-- Use the Release Please skill before release-automation work.
+- Before release preparation, automation or troubleshooting, read the shared
+  [RAN Release Please skill](https://github.com/RocketsAreNostalgic/.github/blob/main/.agents/skills/release-please/SKILL.md).
+  If it is absent from the local skill catalog, fetch and read that file through
+  GitHub; a sibling repository does not automatically inherit shared skills.
+  Keep this repository's release guide and merge rules authoritative.
 - Release Please owns version/changelog/release-PR/tag/draft lifecycle. The pinned shared Profile B workflow owns exact successful-main admission and promotion of the exact tested Core ZIP; do not restore local candidate markers, generic publisher state, mutable recovery, or a second version engine.
 - Preserve the negotiated Prospective Release API boundary: inspection
   downloads, verifies and discards the exact release ZIP; installation freshly

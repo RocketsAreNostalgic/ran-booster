@@ -6,6 +6,8 @@ namespace RAN\Webhook;
 
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentCoordinator;
+use RAN\RepositoryProvider\GitHubProviderSelection;
+use RuntimeException;
 use RAN\Deployment\DeploymentStorageFailure;
 use RAN\RepositoryProvider\InvalidProviderCode;
 use RAN\RepositoryProvider\ProviderCode;
@@ -23,7 +25,8 @@ final readonly class WebhookProcessor {
 	public function __construct(
 		private ProviderRegistry $providers,
 		private DeploymentCoordinator $coordinator,
-		private SignedWebhookVerifier $verifier
+		private SignedWebhookVerifier $verifier,
+		private ?GitHubProviderSelection $selection = null
 	) {
 	}
 
@@ -33,14 +36,23 @@ final readonly class WebhookProcessor {
 			return $this->response( 503, 'Webhook processing is unavailable on WordPress Multisite.' );
 		}
 
+		$guard = function () use ( $provider ): void {
+			if ( ! $this->available( $provider ) ) {
+				throw new RuntimeException( 'Webhook provider unavailable.' );
+			}
+		};
 		try {
 			$provider_code = ProviderCode::parse( $provider );
-			$normalizer    = $this->providers->require_capability( $provider_code, WebhookNormalizer::class );
-			$policy        = $normalizer->get_webhook_policy();
-			$input         = $request();
-			$webhook       = new WebhookRequest( $provider_code, $input['body'], $input['headers'], $policy->get_retained_headers() );
-			$verification  = $this->verifier->verify( $webhook, $policy );
-			$envelope      = $normalizer->normalize_webhook( $webhook->with_verification( $verification ) );
+			$guard();
+			$normalizer = $this->providers->require_capability( $provider_code, WebhookNormalizer::class );
+			$policy     = $normalizer->get_webhook_policy();
+			$guard();
+			$input = $request();
+			$guard();
+			$webhook      = new WebhookRequest( $provider_code, $input['body'], $input['headers'], $policy->get_retained_headers() );
+			$verification = $this->verifier->verify( $webhook, $policy, $guard );
+			$envelope     = $normalizer->normalize_webhook( $webhook->with_verification( $verification ) );
+			$guard();
 			if ( count( $envelope->get_events() ) > 32 ) {
 				throw new WebhookRejected( 400, 'Webhook event fan-out is too large.' );
 			}
@@ -55,7 +67,9 @@ final readonly class WebhookProcessor {
 
 			foreach ( $envelope->get_events() as $event ) {
 
-				if ( ! $policy->authorize_webhook( $verification, $event->provider_repository_id, $event->repository ) ) {
+				$authorized = $policy->authorize_webhook( $verification, $event->provider_repository_id, $event->repository );
+				$guard();
+				if ( ! $authorized ) {
 					throw new WebhookRejected( 401, 'Webhook authentication failed.' );
 				}
 			}
@@ -64,23 +78,26 @@ final readonly class WebhookProcessor {
 				hash( 'sha256', $webhook->get_body() )
 			);
 
-			if ( 'conflict' === $result['status'] ) {
-				return $this->response( 409, 'Webhook delivery conflict.', $result );
-			}
-
 			return $this->response( 202, 'Webhook accepted.', $result );
 		} catch ( WebhookRejected $exception ) {
+			if ( ! $this->available( $provider ) ) {
+				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
+			}
 			$status = $this->rejection_status( $exception->get_status_code() );
 
 			return $this->response(
 				$status,
 				$this->rejection_message( $status )
 			);
-		} catch ( InvalidProviderCode | UnknownProvider ) {
-			return $this->response( 404, 'Webhook provider not found.' );
-		} catch ( UnsupportedProviderCapability ) {
+		} catch ( InvalidProviderCode | UnknownProvider | UnsupportedProviderCapability ) {
+			if ( ! $this->available( $provider ) ) {
+				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
+			}
 			return $this->response( 404, 'Webhook provider not found.' );
 		} catch ( DeploymentStorageFailure $failure ) {
+			if ( ! $this->available( $provider ) ) {
+				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
+			}
 			if ( $failure->is_delivery_conflict() ) {
 				return $this->response( 409, 'Webhook delivery conflict.' );
 			}
@@ -89,9 +106,23 @@ final readonly class WebhookProcessor {
 				? $this->response( 503, 'Webhook processing is temporarily unavailable.' )
 				: $this->response( 500, 'Webhook processing failed.' );
 		} catch ( InvalidArgumentException ) {
+			if ( ! $this->available( $provider ) ) {
+				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
+			}
 			return $this->response( 400, 'Invalid webhook request.' );
 		} catch ( Throwable ) {
+			if ( ! $this->available( $provider ) ) {
+				return $this->response( 503, 'Webhook processing is temporarily unavailable.' );
+			}
 			return $this->response( 500, 'Webhook processing failed.' );
+		}
+	}
+
+	private function available( string $provider ): bool {
+		try {
+			return 'gh' !== $provider || ( $this->selection?->webhook_access_allowed() ?? false );
+		} catch ( Throwable ) {
+			return false;
 		}
 	}
 

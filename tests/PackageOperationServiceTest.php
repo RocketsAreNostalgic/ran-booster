@@ -56,6 +56,35 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
+	public function test_initial_target_identity_is_exact_and_only_allowed_for_real_installs(): void {
+		$command = PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin', array( 'expected_identifier' => 'example/Main.php' ) ) );
+		self::assertSame( 'example/Main.php', $command->expected_identifier );
+		self::assertNull( $command->identifier );
+		self::assertSame( 'example', PackageOperation::from_input( 'install-theme', $this->input( 'install-theme', array( 'expected_identifier' => 'example' ) ) )->expected_identifier );
+		foreach ( array(
+			array( 'install-plugin', array( 'expected_identifier' => 'other/main.php' ) ),
+			array( 'install-plugin', array( 'expected_identifier' => 'example' ) ),
+			array( 'install-theme', array( 'expected_identifier' => 'example/main.php' ) ),
+			array(
+				'install-plugin',
+				array(
+					'expected_identifier' => 'example/main.php',
+					'dry-run'             => '1',
+				),
+			),
+			array( 'edit-plugin', array( 'expected_identifier' => 'example/main.php' ) ),
+			array( 'update-plugin', array( 'expected_identifier' => 'example/main.php' ) ),
+			array( 'install-plugin', array( 'expected_identifier' => array( 'example/main.php' ) ) ),
+		) as [$action, $input] ) {
+			try {
+				PackageOperation::from_input( $action, $this->input( $action, $input ) );
+				self::fail( 'An invalid initial identity must refuse.' );
+			} catch ( \InvalidArgumentException $failure ) {
+				self::assertNotSame( '', $failure->getMessage() );
+			}
+		}
+	}
+
 	#[DataProvider( 'operation_matrix' )]
 	public function test_the_explicit_operation_matrix_classifies_deployments( string $action, bool $deployment ): void {
 		$operation = PackageOperation::from_input( action: $action, input: $this->input( $action ) );
@@ -1563,7 +1592,7 @@ final class OperationPluginRepository extends PluginRepository {
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
 	/** @param string $file */
-	public function unlink( $file ): PackageMutationResult {
+	public function record_recovery_unlink( $file ): PackageMutationResult {
 		if ( null !== $this->unlink_failure ) {
 			throw $this->unlink_failure;
 		}
@@ -1588,7 +1617,7 @@ final class OperationPluginRepository extends PluginRepository {
 			throw new \RuntimeException( 'The fixture rejected stale management.' );
 		}
 		$guard();
-		return $this->unlink( $identifier );
+		return $this->record_recovery_unlink( $identifier );
 	}
 
 	public function is_installed( string $identifier ): bool {
@@ -1635,7 +1664,7 @@ final class OperationThemeRepository extends ThemeRepository {
 		return PackageMutationResult::changed( PackageStorageOperation::UPDATE );
 	}
 	/** @param string $stylesheet */
-	public function unlink( $stylesheet ): PackageMutationResult {
+	public function record_recovery_unlink( $stylesheet ): PackageMutationResult {
 		$this->unlinked = (string) $stylesheet;
 		return PackageMutationResult::changed( PackageStorageOperation::DELETE );
 	}
@@ -1657,7 +1686,7 @@ final class OperationThemeRepository extends ThemeRepository {
 			throw new \RuntimeException( 'The fixture rejected stale management.' );
 		}
 		$guard();
-		return $this->unlink( $identifier );
+		return $this->record_recovery_unlink( $identifier );
 	}
 
 	public function is_installed( string $identifier ): bool {
@@ -1682,6 +1711,12 @@ final class OperationRemovalGateway implements PackageRemovalGateway {
 	}
 	public function installed_fingerprint( string $type, string $identifier ): string {
 		return hash( 'sha256', $type . '|' . $identifier );
+	}
+	/** @return \Closure(): bool */
+	public function deletion_postcondition( string $type, string $identifier, bool $allow_absent = false ): \Closure {
+		unset( $allow_absent );
+		unset( $type, $identifier );
+		return static fn (): bool => true;
 	}
 	public function invalidate_native_target( string $type, string $identifier ): void {
 		unset( $type, $identifier );

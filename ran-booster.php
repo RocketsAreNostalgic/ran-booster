@@ -5,7 +5,7 @@
  * Plugin URI: https://github.com/RocketsAreNostalgic/ran-booster
  * Description: Repository deployment management for WordPress themes and plugins.
  * x-release-please-start-version
- * Version: 1.0.0-beta.35
+ * Version: 1.0.0-beta.37
  * x-release-please-end
  * Requires at least: 7.0
  * Requires PHP: 8.2
@@ -129,6 +129,7 @@ $ran_booster_core_development_notice->register();
 			// extension seam closes and the registry is sealed.
 			$provider_registry = $ran_booster_container->make( ProviderRegistry::class );
 			do_action( 'ran_booster_register_providers', $provider_registry );
+			$ran_booster_container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
 			$provider_registry->seal();
 
 			$core_version        = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );

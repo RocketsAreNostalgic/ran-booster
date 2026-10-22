@@ -59,7 +59,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 				<div class="ran-booster-action-row ran-booster-repository-webhook-management__actions">
 					<?php foreach ( $model['operations'] as $operation ) : ?>
 						<?php $operation_disabled = $disabled || true === ( $operation['disabled'] ?? false ); ?>
-						<button class="<?php echo esc_attr( $operation['primary'] ? 'button button-primary' : 'button' ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( str_replace( 'disabled:', '', $operation['key'] ) ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"<?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
+						<button class="<?php echo esc_attr( $operation['primary'] ? 'button button-primary' : 'button' ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"<?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
 					<?php endforeach; ?>
 					<?php if ( is_string( $model['webhooks_url'] ?? null ) && '' !== $model['webhooks_url'] ) : ?>
 						<?php /* translators: %s: repository provider name. */ ?>

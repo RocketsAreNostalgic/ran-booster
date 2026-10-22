@@ -48,7 +48,9 @@ final readonly class PackageOperation {
 		public ?string $subdirectory,
 		public ?string $package_slug,
 		public ?string $ref,
-		public array $expected_package
+		public array $expected_package,
+		public ?string $selected_commit = null,
+		public ?string $expected_identifier = null
 	) {
 	}
 
@@ -60,8 +62,16 @@ final readonly class PackageOperation {
 		}
 
 		[$operation, $package_type] = $parts;
-		$link_only                  = 'install' === $operation && isset( $input['dry-run'] );
-		$identifier                 = 'install' === $operation
+		$selected_commit            = $input['selected_commit'] ?? null;
+		if ( null !== $selected_commit && ( ! is_string( $selected_commit ) || 1 !== preg_match( '/\A(?:[a-f0-9]{40}|[a-f0-9]{64})\z/D', $selected_commit ) || ! in_array( $operation, array( 'install', 'update' ), true ) || isset( $input['dry-run'] ) || isset( $input['expected_head'] ) || ( isset( $input['ref'] ) && $input['ref'] !== $selected_commit ) ) ) {
+			throw new InvalidArgumentException( 'Choose one valid historical commit without a current-head constraint.' );
+		}
+		$expected_identifier = $input['expected_identifier'] ?? null;
+		if ( null !== $expected_identifier && ( ! is_string( $expected_identifier ) || 'install' !== $operation || isset( $input['dry-run'] ) || 1 !== preg_match( 'plugin' === $package_type ? '#\A[a-z0-9][a-z0-9._-]*/[a-zA-Z0-9][a-zA-Z0-9._-]*\.php\z#D' : '#\A[a-z0-9][a-z0-9._-]*\z#D', $expected_identifier ) ) ) {
+			throw new InvalidArgumentException( 'Choose a valid initial package identity.' );
+		}
+		$link_only  = 'install' === $operation && isset( $input['dry-run'] );
+		$identifier = 'install' === $operation
 			? ( $link_only && '1' === (string) ( $input['exact_identifier'] ?? '' )
 				? self::nullable_scalar( $input[ 'plugin' === $package_type ? 'file' : 'stylesheet' ] ?? null )
 				: null )
@@ -117,7 +127,8 @@ final readonly class PackageOperation {
 				null,
 				null,
 				self::nullable_scalar( $input['ref'] ?? null ),
-				self::expected_package( $input )
+				self::expected_package( $input ),
+				$selected_commit
 			);
 		}
 
@@ -147,6 +158,10 @@ final readonly class PackageOperation {
 				: PackageSubdirectory::deployment_slug( $input['package_slug'] ?? '', $subdirectory ) )
 			: null;
 
+		if ( null !== $expected_identifier && ( strlen( $expected_identifier ) > 191 || explode( '/', $expected_identifier )[0] !== $package_slug ) ) {
+			throw new InvalidArgumentException( 'The expected package identity must match its installation slug.' );
+		}
+
 		return new self(
 			$operation,
 			$package_type,
@@ -165,7 +180,9 @@ final readonly class PackageOperation {
 			$subdirectory,
 			$package_slug,
 			null,
-			'edit' === $operation ? self::expected_package( $input ) : array()
+			'edit' === $operation ? self::expected_package( $input ) : array(),
+			$selected_commit,
+			$expected_identifier
 		);
 	}
 

@@ -21,6 +21,7 @@ final readonly class DeploymentOutcome {
 	public const CODE_PROVIDER_REPOSITORY_MISSING       = 'provider_repository_missing';
 	public const CODE_PROVIDER_REFERENCE_UNAVAILABLE    = 'provider_reference_unavailable';
 	public const CODE_PROVIDER_RATE_LIMITED             = 'provider_rate_limited';
+	public const CODE_PROVIDER_SELECTION_CHANGED        = 'provider_selection_changed';
 	public const CODE_PROVIDER_UNAVAILABLE              = 'provider_unavailable';
 	public const CODE_ARCHIVE_COMPRESSED_TOO_LARGE      = 'archive_compressed_too_large';
 	public const CODE_ARCHIVE_EXPANDED_TOO_LARGE        = 'archive_expanded_too_large';
@@ -92,6 +93,7 @@ final readonly class DeploymentOutcome {
 		self::CODE_PROVIDER_REPOSITORY_MISSING       => DeploymentState::FAILED,
 		self::CODE_PROVIDER_REFERENCE_UNAVAILABLE    => DeploymentState::FAILED,
 		self::CODE_PROVIDER_RATE_LIMITED             => DeploymentState::FAILED,
+		self::CODE_PROVIDER_SELECTION_CHANGED        => DeploymentState::FAILED,
 		self::CODE_PROVIDER_UNAVAILABLE              => DeploymentState::FAILED,
 		self::CODE_ARCHIVE_COMPRESSED_TOO_LARGE      => DeploymentState::FAILED,
 		self::CODE_ARCHIVE_EXPANDED_TOO_LARGE        => DeploymentState::FAILED,

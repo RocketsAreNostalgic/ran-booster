@@ -350,7 +350,7 @@ final class ReleasePlatformContractTest extends TestCase {
 			"define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );",
 			"define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );",
 			"define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', PortabilityFacade::API_VERSION );",
-			'public const API_VERSION = 3;',
+			'public const API_VERSION = 4;',
 			'runtime-packaging-policy.json',
 			'compare_runtime_package',
 			'package_surface_specs',

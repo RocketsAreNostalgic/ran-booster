@@ -5,7 +5,12 @@
 use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use RAN\Storage\GitHubSelectionStore;
+use RAN\RepositoryProvider\GitHubProviderSelection;
+use RAN\PackageRemoval\PackageRemovalService;
+use RAN\WordPress\WordPressUpdaterLock;
 
+$ran_booster_authorized   = static fn (): bool => current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
 $ran_booster_assert       = static function ( bool $condition, string $message ): void {
 	if ( ! $condition ) {
 		// Diagnostic exception is consumed by the disposable CLI proof, not rendered as HTML.
@@ -34,11 +39,25 @@ require_once ABSPATH . 'wp-admin/includes/theme.php';
 require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 global $wp_filesystem;
 $ran_booster_assert( ! defined( 'FS_METHOD' ) && ! isset( $wp_filesystem ), 'Public release proof requires an unconfigured direct WordPress filesystem.' );
-$ran_booster_container = require __DIR__ . '/core-container-fixture.php';
-$ran_booster_facade    = $ran_booster_container->make( ProspectiveReleaseFacade::class );
+$ran_booster_container       = require __DIR__ . '/core-container-fixture.php';
+$ran_booster_facade          = $ran_booster_container->make( ProspectiveReleaseFacade::class );
+$ran_booster_selection       = $ran_booster_container->make( GitHubProviderSelection::class );
+$ran_booster_selection_store = $ran_booster_container->make( GitHubSelectionStore::class );
+$ran_booster_removal         = $ran_booster_container->make( PackageRemovalService::class );
+$ran_booster_lock            = $ran_booster_container->make( WordPressUpdaterLock::class );
+$ran_booster_refuses         = static function ( callable $action ) use ( $ran_booster_assert ): void {
+	try {
+		$action();
+	} catch ( RuntimeException ) {
+		return;
+	}
+	$ran_booster_assert( false, 'Protected recovery unexpectedly succeeded.' );
+};
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
-$plugins                    = $ran_booster_container->make( PluginRepository::class );
-$ran_booster_themes         = $ran_booster_container->make( ThemeRepository::class );
+$plugins            = $ran_booster_container->make( PluginRepository::class );
+$ran_booster_themes = $ran_booster_container->make( ThemeRepository::class );
+require_once __DIR__ . '/disposable-management-cleanup.php';
+
 $ran_booster_counts         = array(
 	'http'       => 0,
 	'http_bytes' => 0,
@@ -168,7 +187,7 @@ try {
 			'credential_id' => '',
 			'branch'        => 'main',
 		);
-		$ran_booster_nonce   = static fn ( string $operation ): string => wp_create_nonce( $ran_booster_facade->nonce_action( $operation, $type ) );
+		$ran_booster_nonce   = static fn ( string $operation ): string => wp_create_nonce( $ran_booster_facade->nonce_action( $operation, $type, null ) );
 		$ran_booster_before  = $ran_booster_counts;
 		$ran_booster_list    = $ran_booster_facade->list_candidates( $type, $ran_booster_request, 'stable', $ran_booster_nonce( 'list_candidates' ) );
 		$ran_booster_successful( $ran_booster_list, 'release_candidates_available' );
@@ -183,7 +202,7 @@ try {
 		$ran_booster_veto       = static fn (): WP_Error => new WP_Error( 'c4_post_acquisition_veto' );
 		add_filter( 'upgrader_pre_install', $ran_booster_veto, PHP_INT_MIN, 2 ); // @phpstan-ignore arguments.count (WordPress supplies the documented hook arguments; this controlled callback deliberately consumes only the needed subset.)
 		try {
-			$ran_booster_failed = $ran_booster_facade->install( $type, $ran_booster_request, '42', 'v2.0.0', $ran_booster_fingerprint, 'stable', $ran_booster_nonce( 'install' ) ); } finally {
+			$ran_booster_failed = $ran_booster_facade->install( $type, $ran_booster_request, '42', 'v2.0.0', $ran_booster_fingerprint, 'stable', wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type, $ran_booster_inspection->data()['provider_expectation'] ) ), $ran_booster_inspection->data()['provider_expectation'] ); } finally {
 			remove_filter( 'upgrader_pre_install', $ran_booster_veto, PHP_INT_MIN ); }
 			$ran_booster_assert( ! $ran_booster_failed->successful() && $ran_booster_counts['zip'] === $ran_booster_before['zip'] + 2 && ! file_exists( $ran_booster_fixture['directory'] ) && ! is_link( $ran_booster_fixture['directory'] ), 'Post-acquisition failure mutated or reused inspection bytes.' );
 			global $wpdb;
@@ -192,15 +211,84 @@ try {
 			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Capture the expected fixture value before WordPress filters can mutate global test state.
 			$ran_booster_assert( $ran_booster_selected_theme === get_stylesheet() && ! ( 'plugin' === $type && is_plugin_active( $ran_booster_identifier ) ), 'Failed first install changed activation.' );
 			$ran_booster_clean_streams();
-			$ran_booster_result = $ran_booster_facade->install( $type, $ran_booster_request, '42', 'v2.0.0', $ran_booster_fingerprint, 'stable', $ran_booster_nonce( 'install' ) );
+			$ran_booster_uncertain = $ran_booster_selection_store->read();
+			$ran_booster_assert( isset( $ran_booster_uncertain['native_mutation'] ), 'Native veto lost its uncertain mutation marker.' );
+			$ran_booster_retry_before = $ran_booster_counts;
+			$ran_booster_blocked      = $ran_booster_facade->install( $type, $ran_booster_request, '42', 'v2.0.0', $ran_booster_fingerprint, 'stable', wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type, $ran_booster_inspection->data()['provider_expectation'] ) ), $ran_booster_inspection->data()['provider_expectation'] );
+			$ran_booster_assert( ! $ran_booster_blocked->successful() && $ran_booster_counts['zip'] === $ran_booster_retry_before['zip'] + 1 && ! file_exists( $ran_booster_fixture['directory'] ) && ! is_link( $ran_booster_fixture['directory'] ) && $ran_booster_selection_store->read() === $ran_booster_uncertain, 'Uncertain retry did not refuse after reacquisition or changed authority.' );
+			$ran_booster_clean_streams();
+			$ran_booster_review = $ran_booster_removal->native_recovery_confirmation();
+			$ran_booster_token  = $ran_booster_lock->try_acquire_without_reclaim();
+			$ran_booster_assert( null !== $ran_booster_token, 'Fixture could not acquire updater lock.' );
+			if ( null === $ran_booster_token ) {
+				throw new RuntimeException( 'Fixture updater lock is unavailable.' );
+			}
+			try {
+				$ran_booster_refuses( static fn () => $ran_booster_removal->recover_native_removal( $ran_booster_review['digest'], true, true, $ran_booster_authorized ) );
+				$ran_booster_assert( $ran_booster_lock->current_token() === $ran_booster_token && $ran_booster_selection_store->read() === $ran_booster_uncertain, 'Recovery stole the occupied lock or cleared uncertainty.' );
+			} finally {
+				$ran_booster_assert( $ran_booster_lock->release( $ran_booster_token ), 'Fixture lock cleanup failed.' );
+			}
+			$ran_booster_removal->recover_native_removal( $ran_booster_review['digest'], true, true, $ran_booster_authorized );
+			unset( $ran_booster_uncertain['native_mutation'] );
+			$ran_booster_assert( $ran_booster_selection_store->read() === $ran_booster_uncertain, 'Recovery changed selection approval or generation.' );
+			$ran_booster_inspection = $ran_booster_facade->inspect( $type, $ran_booster_request, '42', 'v2.0.0', 'stable', $ran_booster_nonce( 'inspect' ) );
+			$ran_booster_successful( $ran_booster_inspection, 'release_ready' );
+			$ran_booster_fingerprint = $ran_booster_inspection->data()['fingerprint'] ?? '';
+			$ran_booster_result      = $ran_booster_facade->install( $type, $ran_booster_request, '42', 'v2.0.0', $ran_booster_fingerprint, 'stable', wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type, $ran_booster_inspection->data()['provider_expectation'] ) ), $ran_booster_inspection->data()['provider_expectation'] );
 			$ran_booster_successful( $ran_booster_result, 'installed' );
-			$ran_booster_assert( $ran_booster_counts['zip'] === $ran_booster_before['zip'] + 3, 'Installation must acquire exactly one fresh ZIP without pre-inspection.' );
+			$ran_booster_assert( $ran_booster_counts['zip'] === $ran_booster_before['zip'] + 5, 'Installation must acquire exactly one fresh ZIP without pre-inspection.' );
 			$ran_booster_assert( hash_equals( hash( 'sha256', $ran_booster_fixture['contents'] ), (string) hash_file( 'sha256', $ran_booster_fixture['directory'] . '/' . $ran_booster_fixture['metadata'] ) ), 'Installed prospective bytes differ from the verified ZIP.' );
 			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Capture the expected fixture value before WordPress filters can mutate global test state.
 			$ran_booster_assert( $ran_booster_selected_theme === get_stylesheet() && ! ( 'plugin' === $type && is_plugin_active( $ran_booster_identifier ) ), 'New prospective target became active.' );
 			$ran_booster_package = 'plugin' === $type ? $plugins->booster_plugin_from_file( $ran_booster_identifier ) : $ran_booster_themes->booster_theme_from_stylesheet( $ran_booster_identifier );
 			$ran_booster_assert( '2.0.0' === $ran_booster_package->get_version() && RAN\PackageSource::RELEASE_ASSET === $ran_booster_package->get_source(), 'Successful prospective install was not adopted exactly.' );
 			$ran_booster_clean_streams();
+			// Exercise the same installed services for a managed target whose native outcome is uncertain.
+			$ran_booster_token = $ran_booster_lock->try_acquire_without_reclaim();
+			if ( null === $ran_booster_token ) {
+				throw new RuntimeException( 'Managed fixture updater lock is unavailable.' );
+			}
+			try {
+				$ran_booster_owner = $ran_booster_selection->begin_native_mutation( $type, $ran_booster_identifier, static fn (): bool => $ran_booster_token === $ran_booster_lock->current_token() );
+				$ran_booster_selection->complete_native_mutation( $ran_booster_owner, $type, $ran_booster_identifier, 'uncertain' );
+			} finally {
+				$ran_booster_assert( $ran_booster_lock->release( $ran_booster_token ), 'Managed fixture lock cleanup failed.' );
+			}
+			$ran_booster_review            = $ran_booster_removal->native_recovery_confirmation();
+			$ran_booster_managed_uncertain = $ran_booster_selection_store->read();
+			$ran_booster_refuses( static fn () => $ran_booster_removal->recover_native_removal( $ran_booster_review['digest'], true, true, $ran_booster_authorized ) );
+			$ran_booster_assert( $ran_booster_selection_store->read() === $ran_booster_managed_uncertain, 'Present target recovery cleared uncertainty.' );
+			$ran_booster_assert( ! is_link( $ran_booster_fixture['directory'] ) && realpath( $ran_booster_fixture['directory'] ) === $ran_booster_fixture['directory'], 'Managed removal refuses a replaced fixture path.' );
+			$ran_booster_assert( $wp_filesystem->delete( $ran_booster_fixture['directory'], true ), 'Could not remove exact inactive fixture directory.' );
+			if ( 'plugin' === $type ) {
+				$ran_booster_row = $wpdb->get_row( $wpdb->prepare( 'SELECT * FROM %i WHERE package = %s AND package_type = 1', ran_booster_table_name(), $ran_booster_identifier ), ARRAY_A );
+				$ran_booster_assert( is_array( $ran_booster_row ), 'Managed fixture record disappeared.' );
+				if ( ! is_array( $ran_booster_row ) ) {
+					throw new RuntimeException( 'Managed fixture record is unavailable.' );
+				}
+				unset( $ran_booster_row['id'] );
+				$ran_booster_row['package'] = $ran_booster_fixture['slug'] . '/sibling.php';
+				$ran_booster_assert( 1 === $wpdb->insert( ran_booster_table_name(), $ran_booster_row ), 'Could not seed managed sibling.' );
+				try {
+					$ran_booster_refuses( static fn () => $ran_booster_removal->recover_native_removal( $ran_booster_review['digest'], true, true, $ran_booster_authorized ) );
+					$ran_booster_assert( $ran_booster_selection_store->read() === $ran_booster_managed_uncertain && $plugins->has_management_record( $ran_booster_identifier ) && $plugins->has_management_record( $ran_booster_row['package'] ), 'Sibling refusal changed management or native authority.' );
+				} finally {
+					$ran_booster_assert(
+						1 === $wpdb->delete(
+							ran_booster_table_name(),
+							array(
+								'package'      => $ran_booster_row['package'],
+								'package_type' => 1,
+							)
+						),
+						'Managed sibling cleanup failed.'
+					);
+				}
+			}
+			$ran_booster_removal->recover_native_removal( $ran_booster_removal->native_recovery_confirmation()['digest'], true, true, $ran_booster_authorized );
+			unset( $ran_booster_managed_uncertain['native_mutation'] );
+			$ran_booster_assert( $ran_booster_selection_store->read() === $ran_booster_managed_uncertain && ! ( 'plugin' === $type ? $plugins : $ran_booster_themes )->has_management_record( $ran_booster_identifier ), 'Absent managed recovery failed to unlink exactly or changed selection.' );
 			$ran_booster_measurements[ $type ] = array_map( static fn ( string $key ): int => $ran_booster_counts[ $key ] - $ran_booster_before[ $key ], array_keys( $ran_booster_counts ) );
 	}
 } finally {
@@ -210,7 +298,7 @@ try {
 		$ran_booster_identifier = 'plugin' === $type ? $ran_booster_fixture['slug'] . '/' . $ran_booster_fixture['metadata'] : $ran_booster_fixture['slug'];
 		$ran_booster_assert( ! is_link( $ran_booster_fixture['directory'] ), 'Prospective cleanup refuses a replaced target.' );
 		if ( is_dir( $ran_booster_fixture['directory'] ) ) {
-			( 'plugin' === $type ? $plugins : $ran_booster_themes )->unlink( $ran_booster_identifier )->require_success();
+			ran_booster_cleanup_fixture_management( 'plugin' === $type ? $plugins : $ran_booster_themes, $ran_booster_identifier );
 			$ran_booster_removed = 'plugin' === $type ? delete_plugins( array( $ran_booster_identifier ) ) : delete_theme( $ran_booster_identifier );
 			$ran_booster_assert( ! is_wp_error( $ran_booster_removed ) && false !== $ran_booster_removed && ! file_exists( $ran_booster_fixture['directory'] ), 'Prospective fixture cleanup failed.' );
 		}

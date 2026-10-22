@@ -52,17 +52,27 @@ if [[ -e "$fixture_target" || -L "$fixture_target" || -e "$plugin_target" || -L 
 	echo 'A disposable release-capability fixture target already exists.' >&2
 	exit 2
 fi
-if [[ "$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" != '8.2' ]]; then
-	echo 'The installed release-capability proof requires PHP 8.2.' >&2
+expected_php="${RAN_BOOSTER_TEST_PHP_VERSION-8.2}"
+if [[ ! "$expected_php" =~ ^[0-9]+\.[0-9]+$ ]] || ! actual_php="$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" || [[ "$actual_php" != "$expected_php" ]]; then
+	echo "The installed release-capability proof requires PHP $expected_php (major.minor)." >&2
 	exit 2
 fi
-case "$("$php_bin" "$wp_cli" core version --path="$wordpress")" in
-	7.0|7.0.*) ;;
-	*)
-		echo 'The installed release-capability proof requires WordPress 7.0.x.' >&2
+expected_wordpress="${RAN_BOOSTER_TEST_WORDPRESS_VERSION-}"
+version="$("$php_bin" "$wp_cli" core version --path="$wordpress")" || exit 2
+if [[ ${RAN_BOOSTER_TEST_WORDPRESS_VERSION+x} ]]; then
+	if [[ ! "$expected_wordpress" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || [[ "$version" != "$expected_wordpress" ]]; then
+		echo "The installed release-capability proof requires WordPress $expected_wordpress (exact version)." >&2
 		exit 2
-		;;
-esac
+	fi
+else
+	case "$version" in
+		7.0|7.0.*) ;;
+		*)
+			echo 'The installed release-capability proof requires WordPress 7.0.x.' >&2
+			exit 2
+			;;
+	esac
+fi
 if [[ "$("$php_bin" "$wp_cli" option get siteurl --path="$wordpress")" != "$RAN_BOOSTER_RELEASE_CAPABILITY_TEST_URL" ]]; then
 	echo 'The installed release-capability proof is pointed at an unexpected site URL.' >&2
 	exit 2
@@ -112,7 +122,12 @@ cp "$probe_source" "$probe_target"
 for scale in 1 5 10 20; do
 	export RAN_BOOSTER_NATIVE_LIFECYCLE_SCALE="$scale"
 	"$php_bin" "$wp_cli" eval-file "$native_seed" --user=admin --path="$wordpress"
-	"$php_bin" "$wp_cli" eval-file "$native_proof" --user=admin --path="$wordpress"
+	for (( target_index=1; target_index<=scale; ++target_index )); do
+		export RAN_BOOSTER_NATIVE_LIFECYCLE_INDEX="$target_index"
+		"$php_bin" "$wp_cli" eval-file "$native_proof" --user=admin --path="$wordpress"
+	done
+	"$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/native-lifecycle-installed-verify.php" --user=admin --path="$wordpress"
+	"$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/native-lifecycle-installed-cleanup.php" --user=admin --path="$wordpress"
 done
 
 cmp "$probe_source" "$probe_target"

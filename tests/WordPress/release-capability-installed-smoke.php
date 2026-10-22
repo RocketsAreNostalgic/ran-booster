@@ -43,6 +43,9 @@ if ( ! is_string( $ran_booster_expected_root ) || false === $ran_booster_wordpre
 	|| ! is_string( $ran_booster_archive_root ) || false === realpath( $ran_booster_archive_root ) ) {
 	throw new RuntimeException( 'The installed release-capability smoke requires the exact disposable site and fixture.' );
 }
+$ran_booster_redirect_proof = require __DIR__ . '/archive-redirect-installed-proof.php';
+$ran_booster_redirect_proof( $ran_booster_archive_root );
+
 foreach ( $ran_booster_expected_targets as $ran_booster_target ) {
 	if ( is_link( $ran_booster_target ) || file_exists( $ran_booster_target ) ) {
 		throw new RuntimeException( 'A disposable release-capability target already exists.' );
@@ -59,8 +62,10 @@ foreach ( array( 'plugin', 'theme' ) as $ran_booster_archive_type ) {
 $ran_booster_container = require __DIR__ . '/core-container-fixture.php';
 $ran_booster_facade    = $ran_booster_container->make( ProspectiveReleaseFacade::class );
 // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
-$plugins               = $ran_booster_container->make( PluginRepository::class );
-$ran_booster_themes    = $ran_booster_container->make( ThemeRepository::class );
+$plugins            = $ran_booster_container->make( PluginRepository::class );
+$ran_booster_themes = $ran_booster_container->make( ThemeRepository::class );
+require_once __DIR__ . '/disposable-management-cleanup.php';
+
 $ran_booster_installed = array();
 
 $ran_booster_assert_result = static function ( RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult $ran_booster_result, string $code ): void {
@@ -83,7 +88,7 @@ try {
 			$type,
 			$ran_booster_request,
 			'stable',
-			wp_create_nonce( $ran_booster_facade->nonce_action( 'list_candidates', $type ) )
+			wp_create_nonce( $ran_booster_facade->nonce_action( 'list_candidates', $type, null ) )
 		);
 		$ran_booster_assert_result( $ran_booster_list, 'release_candidates_available' );
 		$ran_booster_candidate = $ran_booster_list->data()['candidates'][0] ?? null;
@@ -102,7 +107,7 @@ try {
 			'42',
 			'v2.0.0',
 			'stable',
-			wp_create_nonce( $ran_booster_facade->nonce_action( 'inspect', $type ) )
+			wp_create_nonce( $ran_booster_facade->nonce_action( 'inspect', $type, null ) )
 		);
 		$ran_booster_assert_result( $ran_booster_inspection, 'release_ready' );
 		$ran_booster_evidence = $ran_booster_inspection->data();
@@ -117,7 +122,8 @@ try {
 			'v2.0.0',
 			$ran_booster_evidence['fingerprint'],
 			'stable',
-			wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type ) )
+			wp_create_nonce( $ran_booster_facade->nonce_action( 'install', $type, null ) ),
+			null
 		);
 		$ran_booster_assert_result( $ran_booster_result, 'installed' );
 
@@ -144,13 +150,13 @@ try {
 	// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated fixture deliberately controls this WordPress global to exercise the real runtime boundary.
 	foreach ( $ran_booster_cleanup ? array_reverse( $ran_booster_installed, true ) : array() as $type => $ran_booster_identifier ) {
 		if ( 'plugin' === $type ) {
-			$plugins->unlink( $ran_booster_identifier )->require_success();
+			ran_booster_cleanup_fixture_management( $plugins, $ran_booster_identifier );
 			if ( is_plugin_active( $ran_booster_identifier ) ) {
 				deactivate_plugins( $ran_booster_identifier, true );
 			}
 			$ran_booster_result = delete_plugins( array( $ran_booster_identifier ) );
 		} else {
-			$ran_booster_themes->unlink( $ran_booster_identifier )->require_success();
+			ran_booster_cleanup_fixture_management( $ran_booster_themes, $ran_booster_identifier );
 			$ran_booster_result = delete_theme( $ran_booster_identifier );
 		}
 		if ( is_wp_error( $ran_booster_result ) || false === $ran_booster_result ) {

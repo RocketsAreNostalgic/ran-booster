@@ -24,6 +24,8 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 	/** @var list<string|null> */
 	public array $credential_ids            = array();
 	public ?string $temporary_credential_id = null;
+	/** False preserves the ordinary exact request echo; null deliberately reports anonymous authority. */
+	public string|false|null $reported_credential_id = false;
 
 	public function __construct(
 		private ProviderCredentialStore $credentials,
@@ -67,7 +69,7 @@ final class TemporaryCredentialProvider implements RepositoryProvider, ProviderC
 			$this->provider_repository_id,
 			$this->is_private,
 			'main',
-			$request->credential_id
+			false === $this->reported_credential_id ? $request->credential_id : $this->reported_credential_id
 		);
 	}
 

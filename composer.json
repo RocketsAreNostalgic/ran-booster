@@ -49,13 +49,13 @@
         "php": "^8.2",
         "ext-sodium": "*",
         "ext-zip": "*",
-        "ran/booster-github-provider": "~1.0.0-beta.16",
+        "ran/booster-github-provider": "~1.0.0-beta.18",
         "ran/updater-support": "1.0.0-beta.4",
-        "ran/wp-branch-updater": "1.0.0-beta.9",
-        "ran/wp-release-updater": "~1.0.0-beta.10"
+        "ran/wp-branch-updater": "1.0.0-beta.12",
+        "ran/wp-release-updater": "~1.0.0-beta.12"
     },
     "extra": {
-        "ran-updater-runtime-protocol": 5
+        "ran-updater-runtime-protocol": 6
     },
     "scripts": {
         "test:characterization": "@php tests/characterization.php",

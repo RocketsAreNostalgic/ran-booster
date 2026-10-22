@@ -114,8 +114,8 @@ $managed_package_url        = '' === $managed_package_identifier
 
 ?>
 <p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a></p>
-<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading"><?php echo esc_html( sprintf( /* translators: %s is Plugin or Theme. */ __( 'Install New %s', 'ran-booster' ), $package_view->get_singular_label() ) ); ?></h2>
-<p class="ran-booster-package-settings__intro"><?php esc_html_e( 'Identify the repository Booster should manage, then adjust source-specific settings when needed.', 'ran-booster' ); ?></p>
+<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is Plugin or Theme. */ __( 'Install New %s', 'ran-booster' ), $package_view->get_singular_label() ) ); ?></h2>
+<p class="ran-booster-package-settings__intro ran-booster-page-heading__description"><?php esc_html_e( 'Identify the repository Booster should manage, then adjust source-specific settings when needed.', 'ran-booster' ); ?></p>
 
 <div class="ran-booster-package-settings ran-booster-package-settings--create">
 	<div class="ran-booster-package-settings__main">

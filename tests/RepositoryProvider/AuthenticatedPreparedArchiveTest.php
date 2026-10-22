@@ -215,6 +215,213 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		}
 	}
 
+	public function test_cleanup_closes_guarded_archive_resources_but_retains_fresh_head_authority(): void {
+		$allowed       = true;
+		$verifications = 0;
+		$archive       = new AuthenticatedPreparedArchive(
+			'https://archives.example.test/guarded-cleanup-verifier.zip',
+			self::REF,
+			$this->authorizer( 'Bearer guarded-cleanup-canary' ),
+			static function () use ( &$allowed, &$verifications ): void {
+				++$verifications;
+				$allowed = 1 === $verifications;
+			},
+			static function () use ( &$allowed ): bool {
+				return $allowed;
+			}
+		);
+		$archive->cleanup();
+		$this->assert_no_hooks();
+
+		$this->assert_operation_refused( fn () => $archive->get_url() );
+		$this->assert_operation_refused( fn () => $archive->get_resolved_ref() );
+		$archive->verify_current_head();
+		self::assertSame( 1, $verifications );
+
+		$allowed = false;
+		$this->assert_operation_refused( fn () => $archive->verify_current_head() );
+		self::assertSame( 1, $verifications );
+
+		$allowed = true;
+		$this->assert_operation_refused( fn () => $archive->verify_current_head() );
+		self::assertSame( 2, $verifications );
+	}
+
+	public function test_anonymous_operation_guard_survives_repeated_http_and_never_touches_foreign_urls(): void {
+		$allowed = true;
+		$calls   = 0;
+		$url     = 'https://archives.example.test/guarded-public.zip';
+		$archive = new AuthenticatedPreparedArchive(
+			$url,
+			self::REF,
+			operation_guard: static function () use ( &$allowed, &$calls ): bool {
+				++$calls;
+				return $allowed;
+			}
+		);
+		self::assertSame( $url, $archive->get_url() );
+		self::assertSame( self::REF, $archive->get_resolved_ref() );
+		self::assertSame( array( 'headers' => array() ), $this->apply_filters( $url ) );
+		$before = $calls;
+		$this->apply_filters( $url );
+		self::assertSame( $before + 1, $calls );
+		self::assertCount( 1, $this->filters() );
+		$allowed = false;
+		$before  = $calls;
+		self::assertSame( array( 'headers' => array() ), $this->apply_filters( 'https://other.example.test/archive.zip' ) );
+		self::assertSame( $before, $calls );
+		foreach ( array( fn () => $this->apply_filters( $url ), fn () => $archive->get_url(), fn () => $archive->get_resolved_ref(), fn () => $archive->verify_current_head() ) as $operation ) {
+			$this->assert_operation_refused( $operation );
+		}
+		$before = $calls;
+		$archive->cleanup();
+		$archive->cleanup();
+		self::assertSame( $before, $calls );
+		$this->assert_no_hooks();
+		$allowed = true;
+		$this->assert_operation_refused( fn () => $archive->get_url() );
+		$replacement = new AuthenticatedPreparedArchive( $url, self::REF );
+		$replacement->cleanup();
+	}
+
+	public function test_private_guard_preserves_one_request_authentication_and_rechecks_authorizer_drift(): void {
+		foreach ( array( false, true ) as $drift ) {
+			$allowed        = true;
+			$authorizations = 0;
+			$url            = 'https://archives.example.test/guarded-private-' . (int) $drift . '.zip';
+			$archive        = new AuthenticatedPreparedArchive(
+				$url,
+				self::REF,
+				static function ( array $arguments ) use ( &$allowed, &$authorizations, $drift ): array {
+					++$authorizations;
+					$arguments['headers']['Authorization'] = 'Bearer guarded-test-only';
+					$allowed                               = ! $drift;
+					return $arguments;
+				},
+				operation_guard: static function () use ( &$allowed ): bool {
+					return $allowed;
+				}
+			);
+			if ( $drift ) {
+				$this->assert_operation_refused( fn () => $this->apply_filters( $url ) );
+			} else {
+				self::assertSame( 'Bearer guarded-test-only', $this->apply_filters( $url )['headers']['Authorization'] );
+				self::assertSame( array( 'headers' => array() ), $this->apply_filters( $url ) );
+			}
+			self::assertSame( 1, $authorizations );
+			self::assertCount( 1, $this->filters() );
+			$allowed = false;
+			$this->assert_operation_refused( fn () => $this->apply_filters( $url ) );
+			$archive->cleanup();
+			$this->assert_no_hooks();
+		}
+	}
+
+	public function test_guard_refuses_before_authorizer_and_after_head_verifier(): void {
+		$allowed        = false;
+		$authorizations = 0;
+		$verifications  = 0;
+		$url            = 'https://archives.example.test/guarded-head.zip';
+		$archive        = new AuthenticatedPreparedArchive(
+			$url,
+			self::REF,
+			static function ( array $arguments ) use ( &$authorizations ): array {
+				++$authorizations;
+				return $arguments; },
+			static function () use ( &$allowed, &$verifications ): void {
+				++$verifications;
+				$allowed = false; },
+			static function () use ( &$allowed ): bool {
+				return $allowed; }
+		);
+		$this->assert_operation_refused( fn () => $this->apply_filters( $url ) );
+		$this->assert_operation_refused( fn () => $archive->verify_current_head() );
+		self::assertSame( 0, $authorizations );
+		self::assertSame( 0, $verifications );
+		$allowed = true;
+		$this->assert_operation_refused( fn () => $archive->verify_current_head() );
+		self::assertSame( 1, $verifications );
+		$archive->cleanup();
+	}
+
+	public function test_throwing_and_nonboolean_guards_only_expose_fixed_refusals(): void {
+		foreach ( array( static fn (): int => 1, static fn (): string => 'true', static fn (): mixed => null, static fn (): never => throw new RuntimeException( 'secret-canary' ) ) as $index => $guard ) {
+			$url     = 'https://archives.example.test/invalid-guard-' . $index . '.zip';
+			$archive = new AuthenticatedPreparedArchive( $url, self::REF, operation_guard: $guard );
+			$this->assert_operation_refused( fn () => $archive->get_url() );
+			$this->assert_operation_refused( fn () => $this->apply_filters( $url ) );
+			$archive->cleanup();
+			$this->assert_no_hooks();
+		}
+	}
+
+	public function test_final_http_guard_catches_drift_from_an_intervening_argument_filter(): void {
+		$allowed = true;
+		$url     = 'https://archives.example.test/late-filter.zip';
+		$archive = new AuthenticatedPreparedArchive(
+			$url,
+			self::REF,
+			operation_guard: static function () use ( &$allowed ): bool {
+				return $allowed;
+			}
+		);
+		\RAN\RepositoryProvider\add_filter(
+			'http_request_args',
+			static function ( array $arguments ) use ( &$allowed ): array {
+				$allowed = false;
+				return $arguments;
+			},
+			20
+		);
+		$this->assert_operation_refused( fn () => $this->apply_filters( $url ) );
+		$archive->cleanup();
+	}
+
+	public function test_guarded_redirects_follow_only_the_owned_requests_chain_and_refuse_later_drift(): void {
+		foreach ( array( false, true ) as $private ) {
+			$allowed  = true;
+			$url      = 'https://archives.example.test/redirect-guard-' . (int) $private . '.zip';
+			$archive  = new AuthenticatedPreparedArchive(
+				$url,
+				self::REF,
+				$private ? $this->authorizer( 'Bearer redirect-canary' ) : null,
+				operation_guard: static function () use ( &$allowed ): bool {
+					return $allowed;
+				}
+			);
+			$hooks    = new \stdClass();
+			$location = 'https://cdn.example.test/first';
+			$headers  = array(
+				'Authorization' => 'Bearer redirect-canary',
+				'Accept'        => 'application/zip',
+			);
+			$callback = $this->actions()[0]['callback'];
+			$callback( $location, $headers, null, array( 'hooks' => $hooks ), (object) array( 'url' => $url ) );
+			self::assertSame( array( 'Accept' => 'application/zip' ), $headers );
+			$callback( $location, $headers, null, array( 'hooks' => $hooks ), (object) array( 'url' => 'https://cdn.example.test/first' ) );
+			$allowed         = false;
+			$foreign_headers = array( 'Authorization' => 'Bearer foreign-canary' );
+			$callback( $location, $foreign_headers, null, array( 'hooks' => new \stdClass() ), (object) array( 'url' => 'https://cdn.example.test/first' ) );
+			self::assertSame( array( 'Authorization' => 'Bearer foreign-canary' ), $foreign_headers );
+			$this->assert_operation_refused(
+				static function () use ( $callback, &$location, &$headers, $hooks ): void {
+					$callback( $location, $headers, null, array( 'hooks' => $hooks ), (object) array( 'url' => 'https://cdn.example.test/second' ) );
+				}
+			);
+			$archive->cleanup();
+			$this->assert_no_hooks();
+		}
+	}
+
+	private function assert_operation_refused( Closure $operation ): void {
+		try {
+			$operation();
+			self::fail( 'Unavailable archive operation proceeded.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'Provider archive operation is unavailable.', $failure->getMessage() );
+		}
+	}
+
 	private function private_archive( Closure $authorizer, string $suffix = '' ): AuthenticatedPreparedArchive {
 		return new AuthenticatedPreparedArchive(
 			'https://archives.example.test/private' . $suffix . '.zip',
@@ -240,10 +447,15 @@ final class AuthenticatedPreparedArchiveTest extends TestCase {
 		}
 	}
 
-	/** @return array<string, mixed> */
+	/**
+	 * @return array<string, mixed>
+	 * @phpstan-impure HTTP hooks consume authentication and recheck mutable authority.
+	 */
 	private function apply_filters( string $url ): array {
 		$arguments = array( 'headers' => array() );
-		foreach ( $this->filters() as $filter ) {
+		$filters   = $this->filters();
+		usort( $filters, static fn ( array $left, array $right ): int => $left['priority'] <=> $right['priority'] );
+		foreach ( $filters as $filter ) {
 			$arguments = $filter['callback']( $arguments, $url );
 		}
 

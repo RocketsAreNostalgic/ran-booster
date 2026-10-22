@@ -12,6 +12,7 @@ use RAN\Package;
 use RAN\AdoptionIdentity;
 use RAN\PackageOperation;
 use RAN\Runtime\RuntimeSupport;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
@@ -28,8 +29,114 @@ final readonly class PackageRemovalService {
 		private PackageRemovalGateway $wordpress,
 		private ?DeploymentAttemptRepository $attempts,
 		private WordPressUpdaterLock $updater_lock,
-		private ?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null
+		private ?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
+		private ?GitHubProviderSelection $github_selection = null
 	) {
+	}
+
+	/** @return array{digest:string,type:string,identifier:string,managed:bool} No credential or native owner disclosure. */
+	public function native_recovery_confirmation(): array {
+		$snapshot = $this->native_recovery_snapshot();
+		return array(
+			'digest'     => $snapshot['digest'],
+			'type'       => $snapshot['type'],
+			'identifier' => $snapshot['identifier'],
+			'managed'    => null !== $snapshot['record'],
+		);
+	}
+
+	/**
+	 * Confirm an absent target only; this never deletes files, clears an arbitrary lock,
+	 * certifies a retained installation, or claims interrupted temporary-file cleanup.
+	 *
+	 * @param callable():bool $authorized Host administrative permissions, outside owned SQL transactions.
+	 */
+	public function recover_native_removal( string $digest, bool $confirmed_stopped, bool $confirmed_removal, callable $authorized ): void {
+		RuntimeSupport::assert_managed_operations_allowed();
+		global $wpdb;
+		if ( ! $confirmed_stopped || ! $confirmed_removal || true !== $this->recovery_authorized( $authorized ) || null === $this->github_selection || null === $this->attempts || ! $this->github_selection->uses_connection( $wpdb ) ) {
+			throw new \RuntimeException( 'Explicit native recovery authority is required.' );
+		}
+		$token = $this->updater_lock->try_acquire_without_reclaim();
+		if ( null === $token ) {
+			throw new \RuntimeException( 'The updater lock requires recovery before continuing.' );
+		}
+		try {
+			$snapshot = $this->native_recovery_snapshot();
+			if ( ! hash_equals( $snapshot['digest'], $digest ) ) {
+				throw new \RuntimeException( 'The native recovery review changed.' );
+			}
+			$type       = $snapshot['type'];
+			$identifier = $snapshot['identifier'];
+			if ( 'plugin' === $type ) {
+				PackageMutationGuard::assert_plugin_file_allowed( $identifier );
+			}
+			$absent     = $this->wordpress->deletion_postcondition( $type, $identifier, true );
+			$verify     = function () use ( $type, $identifier, $absent, $token ): void {
+				if ( ! $absent() || null === $this->attempts || $this->attempts->has_unresolved_target_attempt( $type, $identifier, true ) || $this->updater_lock->current_token() !== $token ) {
+					throw new \RuntimeException( 'Native target absence or operation ownership could not be verified.' );
+				}
+			};
+			$repository = 'plugin' === $type ? $this->plugins : $this->themes;
+			$record     = $snapshot['record'];
+			$this->attempts->assert_selection_transition_idle( $this->github_selection );
+			if ( ! $absent() || true !== $this->recovery_authorized( $authorized ) || $this->github_selection->native_recovery_state() !== $snapshot['state'] ) {
+				throw new \RuntimeException( 'The native recovery authority changed.' );
+			}
+			if ( null !== $record ) {
+				// This operation owns its transaction. Keep the native marker until final verification.
+				$repository->recover_unlink( $identifier, $record['adoption_token'], $record['digest'], $verify )->require_success();
+			}
+			// Unlike ordinary removal's best-effort observations, this failure must retain the marker.
+			$this->wordpress->invalidate_native_target( $type, $identifier );
+			if ( true !== $this->recovery_authorized( $authorized ) ) {
+				throw new \RuntimeException( 'Native recovery permission changed.' );
+			}
+			$this->github_selection->recover_native_removal(
+				$snapshot['state'],
+				function () use ( $repository, $identifier, $verify ): void {
+					if ( null !== $repository->native_recovery_record( $identifier, true ) ) {
+						throw new \RuntimeException( 'The removed target is still managed.' );
+					}
+					$this->attempts?->assert_selection_transition_idle( $this->github_selection );
+					$verify();
+				}
+			);
+		} finally {
+			if ( ! $this->updater_lock->release( $token ) ) {
+				throw new \RuntimeException( 'Native recovery may have completed; updater lock release requires recovery.' );
+			}
+		}
+	}
+
+	/**
+	 * @param callable():bool $authorized
+	 * @phpstan-impure Administrative authority can change between callbacks.
+	 */
+	private function recovery_authorized( callable $authorized ): bool {
+		return $authorized();
+	}
+
+	/** @return array{digest:string,type:string,identifier:string,state:array<string,mixed>,record:?array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string}} */
+	private function native_recovery_snapshot(): array {
+		RuntimeSupport::assert_managed_operations_allowed();
+		$state  = ( $this->github_selection ?? throw new \RuntimeException( 'Native recovery is unavailable.' ) )->native_recovery_state();
+		$marker = $state['native_mutation'];
+		if ( ! is_array( $marker ) || ! is_string( $marker['target_type'] ?? null ) || ! is_string( $marker['installed_identity'] ?? null ) ) {
+			throw new \RuntimeException( 'Native recovery identity is unavailable.' );
+		}
+		$type       = $marker['target_type'];
+		$identifier = $marker['installed_identity'];
+		$record     = ( 'plugin' === $type ? $this->plugins : $this->themes )->native_recovery_record( $identifier );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Hash only validated local authority, never credentials or filesystem paths.
+		$digest = hash( 'sha256', json_encode( array( 'native-removal-v1', $state, $record ), JSON_THROW_ON_ERROR ) );
+		return array(
+			'digest'     => $digest,
+			'type'       => $type,
+			'identifier' => $identifier,
+			'state'      => $state,
+			'record'     => $record,
+		);
 	}
 
 	/** @return array<string, string> */
@@ -49,6 +156,12 @@ final readonly class PackageRemovalService {
 		}
 		$record                     = ( 'plugin' === $type ? $this->plugins : $this->themes )->recovery_record( $identifier );
 		$record['installed_digest'] = $this->wordpress->installed_fingerprint( $type, $identifier );
+		if ( null === $this->attempts ) {
+			throw new \RuntimeException( 'The recovery operation state is unavailable.' );
+		}
+		if ( $this->attempts->has_unresolved_target_attempt( $type, $identifier ) ) {
+			throw new \RuntimeException( 'Unresolved deployment work prevents recovery.' );
+		}
 		return $record;
 	}
 
@@ -137,10 +250,11 @@ final readonly class PackageRemovalService {
 				if ( null !== $blocker ) {
 					$result = PackageRemovalResult::failed( $blocker );
 				} else {
+					$absent = $this->wordpress->deletion_postcondition( $operation->package_type, $identifier );
 					$this->disable( $package );
 					$result = 'plugin' === $operation->package_type
-						? $this->delete_plugin( $identifier, $package )
-						: $this->delete_theme( $identifier, $package );
+						? $this->delete_plugin( $identifier, $package, $absent )
+						: $this->delete_theme( $identifier, $package, $absent );
 				}
 			}
 		} catch ( Throwable $failure ) {
@@ -163,7 +277,8 @@ final readonly class PackageRemovalService {
 		return $result;
 	}
 
-	private function delete_plugin( string $identifier, Package $package ): PackageRemovalResult {
+	/** @param \Closure(): bool $absent */
+	private function delete_plugin( string $identifier, Package $package, \Closure $absent ): PackageRemovalResult {
 		if ( $this->wordpress->plugin_is_active( $identifier ) ) {
 			try {
 				$this->wordpress->deactivate_plugin( $identifier );
@@ -179,23 +294,27 @@ final readonly class PackageRemovalService {
 			'plugin',
 			$identifier,
 			$package,
-			fn (): bool => $this->wordpress->delete_plugin( $identifier )
+			fn (): bool => $this->wordpress->delete_plugin( $identifier ),
+			$absent
 		);
 	}
 
-	private function delete_theme( string $stylesheet, Package $package ): PackageRemovalResult {
+	/** @param \Closure(): bool $absent */
+	private function delete_theme( string $stylesheet, Package $package, \Closure $absent ): PackageRemovalResult {
 		return $this->delete_files(
 			'theme',
 			$stylesheet,
 			$package,
-			fn (): bool => $this->wordpress->delete_theme( $stylesheet )
+			fn (): bool => $this->wordpress->delete_theme( $stylesheet ),
+			$absent
 		);
 	}
 
 	/**
 	 * @param callable(): bool $delete
+	 * @param \Closure(): bool $absent
 	 */
-	private function delete_files( string $type, string $identifier, Package $package, callable $delete ): PackageRemovalResult {
+	private function delete_files( string $type, string $identifier, Package $package, callable $delete, \Closure $absent ): PackageRemovalResult {
 		$reported_success = false;
 		try {
 			$reported_success = $delete();
@@ -203,12 +322,12 @@ final readonly class PackageRemovalService {
 			$this->log_failure( $failure, $type . '_deletion' );
 		}
 
-		if ( $this->is_installed( $type, $identifier ) ) {
+		if ( ! $absent() ) {
 			return PackageRemovalResult::failed( $reported_success ? 'files_still_present' : 'deletion_failed' );
 		}
 
 		try {
-			$this->unlink( $type, $identifier, $package );
+			$this->unlink( $type, $identifier, $package, $absent );
 		} catch ( Throwable $failure ) {
 			$this->log_failure( $failure, 'management_unlink_after_deletion' );
 
@@ -254,7 +373,8 @@ final readonly class PackageRemovalService {
 			: $this->themes->booster_theme_from_stylesheet( $identifier );
 	}
 
-	private function unlink( string $type, string $identifier, Package $package ): void {
+	/** @param \Closure(): bool $absent */
+	private function unlink( string $type, string $identifier, Package $package, \Closure $absent ): void {
 		$token      = AdoptionIdentity::of( $package ) ?? throw new \RuntimeException( 'The adoption identity is unavailable.' );
 		$repository = 'plugin' === $type ? $this->plugins : $this->themes;
 		$record     = $repository->recovery_record( $identifier );
@@ -262,8 +382,8 @@ final readonly class PackageRemovalService {
 			$identifier,
 			$token,
 			$record['digest'],
-			function () use ( $type, $identifier, $token ): void {
-				if ( $this->is_installed( $type, $identifier ) || null === $this->attempts
+			function () use ( $type, $identifier, $token, $absent ): void {
+				if ( ! $absent() || null === $this->attempts
 				|| $this->attempts->has_unresolved_target_attempt( $type, $identifier ) ) {
 					throw new \RuntimeException( 'The deleted target or operation state could not be confirmed.' );
 				}
@@ -272,11 +392,6 @@ final readonly class PackageRemovalService {
 		)->require_success();
 	}
 
-	private function is_installed( string $type, string $identifier ): bool {
-		return 'plugin' === $type
-			? $this->plugins->is_installed( $identifier )
-			: $this->themes->is_installed( $identifier );
-	}
 
 	private function log_failure( Throwable $failure, string $step ): void {
 		BoosterLogger::log_exception(

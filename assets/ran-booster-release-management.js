@@ -1265,12 +1265,17 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			data.release_id !== selectedRelease.id ||
 			data.tag !== selectedRelease.tag ||
 			releaseChannel() !== selectedRelease.channel ||
-			!validFingerprint(data.fingerprint)
+			!validFingerprint(data.fingerprint) ||
+			typeof data.install_nonce !== 'string' ||
+			!data.install_nonce ||
+			!('provider_expectation' in data)
 		) {
 			showUnavailable('unable_to_check');
 			return;
 		}
 		selectedRelease.fingerprint = data.fingerprint;
+		selectedRelease.providerExpectation = data.provider_expectation;
+		selectedRelease.installNonce = data.install_nonce;
 		setChoiceState(
 			'available',
 			wp.i18n.sprintf(
@@ -1363,6 +1368,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			release_id: selectedRelease.id,
 			release_tag: selectedRelease.tag,
 			release_fingerprint: selectedRelease.fingerprint,
+			provider_expectation: JSON.stringify(
+				selectedRelease.providerExpectation
+			),
+			ran_booster_release_install_nonce: selectedRelease.installNonce,
 			release_channel: selectedRelease.channel,
 		};
 		for (const [name, value] of Object.entries(values)) {

@@ -130,7 +130,7 @@ final class PackageAdminController {
 				is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' )
 			);
 		} catch ( Throwable $failure ) {
-			$dashboard->add_failure_message( new WP_Error( 'ran_booster_recovery_failed', __( 'Booster could not confirm safe recovery. Refresh this page and review the current management and operation state before trying again.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery' ) );
+			$dashboard->add_failure_message( new WP_Error( 'ran_booster_recovery_failed', __( 'Booster could not confirm safe management removal. Refresh this page and review the current management and operation state before trying again.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery' ) );
 		}
 		return false;
 	}
@@ -776,7 +776,7 @@ final class PackageAdminController {
 			),
 			'management_state_uncertain' => sprintf(
 				/* translators: %s: package type, such as Plugin or Theme. */
-				__( '%s files were deleted, but Booster could not verify removal of its management record.', 'ran-booster' ),
+				__( '%s removal could not be verified. Review its files and Booster management before retrying.', 'ran-booster' ),
 				$type
 			),
 			'operation_in_progress' => sprintf(

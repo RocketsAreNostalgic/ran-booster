@@ -21,26 +21,7 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 			),
 			$package_view->get_admin_url()
 		);
-	$package_source_choices = array(
-		'branch'        => array(
-			'heading'           => __( 'Branch', 'ran-booster' ),
-			'description'       => __( 'Deploy the saved branch manually or on a signed push.', 'ran-booster' ),
-			'meta'              => __( 'Included with Booster', 'ran-booster' ),
-			'url'               => add_query_arg( 'source_view', 'branch', $page_url ),
-			'disabled'          => false,
-			'hydrated'          => true,
-			'client_hydratable' => false,
-		),
-		'release_asset' => array(
-			'heading'           => __( 'Releases', 'ran-booster' ),
-			'description'       => __( 'Install verified packages from a supported provider\'s published releases.', 'ran-booster' ),
-			'meta'              => __( 'Provider capability required', 'ran-booster' ),
-			'url'               => '',
-			'disabled'          => true,
-			'hydrated'          => false,
-			'client_hydratable' => false,
-		),
-	);
+	$package_source_choices = $package_view->get_source_choice_defaults( $page_url, true );
 }
 
 ?>

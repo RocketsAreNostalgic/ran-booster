@@ -4,6 +4,7 @@
 
 	const accessSecretToolResets = new WeakMap();
 	const webhookSecretToolResets = new WeakMap();
+	const supportReportCopyResets = new WeakMap();
 	let activeCredentialButton = null;
 	let credentialRequestHandled = false;
 
@@ -40,10 +41,58 @@
 	);
 
 	document.addEventListener('htmx:afterSwap', handleProviderProfileSwap);
+	document.addEventListener('click', copySupportReport);
 	document.addEventListener(
 		'ran-booster:admin-mutation-success',
 		handleProviderProfileSuccess
 	);
+
+	async function copySupportReport(event) {
+		const copy = event.target.closest?.('[data-support-report-copy]');
+		if (!copy || copy.disabled) {
+			return;
+		}
+		const root = copy.closest('[data-support-report-tools]');
+		const input = root?.querySelector('textarea');
+		const status = root?.querySelector('[data-support-report-status]');
+		const icon = copy.querySelector('.dashicons');
+		if (!input || !status || !icon) {
+			return;
+		}
+		window.clearTimeout(supportReportCopyResets.get(copy));
+		icon.classList.replace('dashicons-yes', 'dashicons-clipboard');
+		copy.disabled = true;
+		status.textContent = '';
+		try {
+			if (typeof window.navigator?.clipboard?.writeText !== 'function') {
+				throw new Error();
+			}
+			await window.navigator.clipboard.writeText(input.value);
+			if (!input.isConnected) {
+				return;
+			}
+			icon.classList.replace('dashicons-clipboard', 'dashicons-yes');
+			status.textContent = status.dataset.copiedMessage;
+			supportReportCopyResets.set(
+				copy,
+				window.setTimeout(() => {
+					icon.classList.replace(
+						'dashicons-yes',
+						'dashicons-clipboard'
+					);
+					supportReportCopyResets.delete(copy);
+				}, 2000)
+			);
+		} catch {
+			if (input.isConnected) {
+				input.focus();
+				input.select();
+				status.textContent = status.dataset.copyFailedMessage;
+			}
+		} finally {
+			copy.disabled = false;
+		}
+	}
 
 	function handleProviderProfileSwap(event) {
 		const target = event.detail?.target;

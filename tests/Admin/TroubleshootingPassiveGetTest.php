@@ -36,9 +36,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		$GLOBALS['ran_booster_get_test_actions'] = array();
 		$GLOBALS['ran_booster_test_capability_checks'] = array();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The integration fixture must provide WordPress's global database prefix.
-		$GLOBALS['wpdb'] = new class() {
-			public string $prefix = 'wp_';
-		};
+		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
@@ -219,6 +217,49 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		self::assertSame( 1, $fixture['secrets']->purges );
 	}
 
+	/** @return list<array{\Throwable}> */
+	public static function unreadable_inventory_provider(): array {
+		return array(
+			array( new \InvalidArgumentException( 'The managed package source revision is invalid.' ) ),
+			array( \RAN\Storage\PackageStorageFailure::query_failed() ),
+			array( \RAN\Storage\PackageStorageFailure::invalid_provider_identity() ),
+		);
+	}
+
+	#[DataProvider( 'unreadable_inventory_provider' )]
+	public function test_unreadable_optional_action_links_do_not_stop_later_admin_hooks( \Throwable $failure ): void {
+		$fixture                          = $this->registered_fixture();
+		$fixture['plugins']->read_failure = $failure;
+		$_GET                             = array(
+			'page'     => 'ran-booster-plugins',
+			'recovery' => '1',
+		);
+		$continued                        = false;
+		$GLOBALS['ran_booster_get_test_actions']['admin_init'][] = static function () use ( &$continued ): void {
+			$continued = true;
+		};
+
+		$this->run_admin_init();
+
+		self::assertTrue( $continued );
+		self::assertSame( 1, $fixture['plugins']->reads );
+		self::assertSame( 1, $fixture['database']->upgrades );
+		self::assertSame( 1, $fixture['secrets']->validations );
+	}
+
+	public function test_optional_action_links_do_not_mask_unrelated_failures(): void {
+		$fixture                          = $this->registered_fixture();
+		$failure                          = new \LogicException( 'Unrelated inventory programming failure.' );
+		$fixture['plugins']->read_failure = $failure;
+
+		try {
+			$this->run_admin_init();
+			self::fail( 'An unrelated failure must propagate.' );
+		} catch ( \LogicException $actual ) {
+			self::assertSame( $failure, $actual );
+		}
+	}
+
 	public function test_typed_storage_failure_uses_the_dedicated_notice_without_ageneric_duplicate(): void {
 		$fixture = $this->registered_fixture();
 		$fixture['dashboard']->expects( self::never() )->method( 'add_failure_message' );
@@ -267,12 +308,12 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		);
 
 		( new BoosterServiceProvider(
-			static function ( ProviderSecretPolicyCatalog $policies ) use ( &$secrets ): TrackingSecretsFile {
-				$secrets = new TrackingSecretsFile( $policies );
+			static function ( ProviderSecretPolicyCatalog $policies, callable $guard ) use ( &$secrets ): TrackingSecretsFile {
+				$secrets = new TrackingSecretsFile( $policies, $guard );
 
 				return $secrets;
 			}
-		) )->register( $container, $booster, new \stdClass(), 'ran-booster.php' );
+		) )->register( $container, $booster, new \stdClass(), $GLOBALS['wpdb']->basename );
 		$container->bind( 'RAN\\Storage\\Database', $database );
 		$container->bind( 'RAN\\Storage\\PluginRepository', $plugins );
 		self::assertInstanceOf( CredentialUsageReader::class, $container->make( CredentialUsageReader::class ) );
@@ -310,8 +351,8 @@ final class TrackingSecretsFile extends SecretsFile {
 	public int $purges                     = 0;
 	public ?\Throwable $validation_failure = null;
 
-	public function __construct( ProviderSecretPolicyCatalog $policies ) {
-		parent::__construct( '/unused/troubleshooting-get-secrets.php', array(), $policies );
+	public function __construct( ProviderSecretPolicyCatalog $policies, callable $guard ) {
+		parent::__construct( '/unused/troubleshooting-get-secrets.php', array(), $policies, github_credential_access: $guard );
 	}
 
 	public function verify_and_secure(): bool {
@@ -351,7 +392,8 @@ final class TrackingDatabase extends Database {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Private hook spies belong with this full-flow isolation test.
 final class TrackingPluginRepository extends PluginRepository {
-	public int $reads = 0;
+	public int $reads                = 0;
+	public ?\Throwable $read_failure = null;
 
 	public function __construct() {
 	}
@@ -359,6 +401,9 @@ final class TrackingPluginRepository extends PluginRepository {
 	/** @return array{} */
 	public function all_booster_plugins() {
 		++$this->reads;
+		if ( null !== $this->read_failure ) {
+			throw $this->read_failure;
+		}
 
 		return array();
 	}

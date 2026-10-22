@@ -17,20 +17,15 @@ use RAN\Admin\Interaction\CoreAdminInteractionFacade;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceReadinessEvaluator;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentCoordinator;
-use RAN\Deployment\DeploymentWorker;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
-use RAN\Admin\PortabilityController;
 use RAN\Admin\PackageRepositoryRequestResolver;
-use RAN\Admin\PackageUpdateProgressController;
 use RAN\Admin\ProviderSettingsPresenter;
-use RAN\Admin\BulkPackageActionService;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryNoticeController;
 use RAN\Admin\CredentialExpiryReminder;
-use RAN\Admin\CredentialSelfDestructPurger;
 use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
@@ -47,6 +42,9 @@ use RAN\Admin\ReleaseManagement\ReleaseManagementControls;
 use RAN\Admin\ReleaseManagement\ReleaseWorkflowControls;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\GitHubProviderSelection;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
+use RAN\Storage\GitHubSelectionStore;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
@@ -55,9 +53,6 @@ use RAN\Secrets\SecretsRuntimeAvailability;
 use RAN\Secrets\SecretsStorageProvisioner;
 use RAN\Secrets\SecretsStorageUnavailable;
 use RAN\Portability\BlueprintArchive;
-use RAN\Portability\BlueprintRepositoryVerifier;
-use RAN\Portability\BlueprintReviewer;
-use RAN\Portability\ManagedPackageBlueprintExporter;
 use RAN\Portability\PortabilityApplicationService;
 use RAN\PackageRemoval\PackageRemovalGateway;
 use RAN\PackageRemoval\PackageRemovalService;
@@ -78,19 +73,25 @@ use RAN\WordPress\WordPressUpdaterLock;
 final class BoosterServiceProvider {
 	private readonly ?\Closure $secrets_factory;
 
-	/** @param callable(ProviderSecretPolicyCatalog): SecretsFile|null $secrets_factory */
+	/** @param callable(ProviderSecretPolicyCatalog, callable, callable): SecretsFile|null $secrets_factory */
 	public function __construct( ?callable $secrets_factory = null ) {
 		$this->secrets_factory = null === $secrets_factory ? null : \Closure::fromCallable( $secrets_factory );
 	}
 
 	/** @internal Core bootstrap composition only. */
 	public function register( CoreContainer $container, Booster $runtime, object $release_updater, string $self_plugin_identifier ): void {
-		$database        = new Database();
+		global $wpdb;
+		$bundled          = new GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => $self_plugin_identifier ), GitHubProvider::compatibility_contract() ) );
+		$database         = new Database( null, $bundled );
+		$selection_store  = new GitHubSelectionStore( $wpdb, $wpdb->options );
+		$github_selection = new GitHubProviderSelection( $selection_store, WP_PLUGIN_DIR, $bundled );
+		$container->bind( GitHubProviderSelection::class, $github_selection );
+		$container->bind( GitHubSelectionStore::class, $selection_store );
 		$secrets_runtime = new SecretsRuntimeAvailability();
 		$secret_policies = new ProviderSecretPolicyCatalog();
 		$secrets         = null === $this->secrets_factory
-			? new SecretsFile( provider_policies: $secret_policies, availability: $secrets_runtime )
-			: ( $this->secrets_factory )( $secret_policies );
+			? new SecretsFile( provider_policies: $secret_policies, availability: $secrets_runtime, github_credential_access: $github_selection->credential_access_allowed( ... ), github_webhook_access: $github_selection->webhook_access_allowed( ... ) )
+			: ( $this->secrets_factory )( $secret_policies, $github_selection->credential_access_allowed( ... ), $github_selection->webhook_access_allowed( ... ) );
 		if ( ! $secrets instanceof SecretsFile ) {
 			throw new \LogicException( 'The Booster secrets factory must return a SecretsFile.' );
 		}
@@ -175,38 +176,7 @@ final class BoosterServiceProvider {
 		$container->bind( DatabaseCompatibilityNotice::class, new DatabaseCompatibilityNotice( $database ) );
 		$container->bind( TemporaryDebugCapture::class, $debug_capture );
 		$container->bind( CredentialExpiryObservationStore::class, $expiry_observations );
-		$container->bind(
-			CredentialSelfDestructPurger::class,
-			static fn ( CoreContainer $container ): CredentialSelfDestructPurger => new CredentialSelfDestructPurger(
-				$container->make( SecretsFile::class ),
-				$container->make( CredentialExpiryObservationStore::class ),
-				$container->make( PublicRepositoryLookupProfileStore::class ),
-				$container->make( RepositoryBranchCheckEvidenceStore::class )
-			)
-		);
-		$container->bind(
-			ManagedPackageBlueprintExporter::class,
-			static fn ( CoreContainer $container ): ManagedPackageBlueprintExporter => new ManagedPackageBlueprintExporter(
-				$container->make( PluginRepository::class ),
-				$container->make( ThemeRepository::class ),
-				$container->make( SecretsFile::class )
-			)
-		);
 		$container->bind( BlueprintArchive::class, new BlueprintArchive() );
-		$container->bind(
-			BlueprintReviewer::class,
-			static fn ( CoreContainer $container ): BlueprintReviewer => new BlueprintReviewer(
-				$container->make( PluginRepository::class ),
-				$container->make( ThemeRepository::class )
-			)
-		);
-		$container->bind(
-			BlueprintRepositoryVerifier::class,
-			static fn ( CoreContainer $container ): BlueprintRepositoryVerifier => new BlueprintRepositoryVerifier(
-				$container->make( ProviderRegistry::class ),
-				$container->make( SecretsFile::class )
-			)
-		);
 		$container->bind( CredentialUsageReader::class, new CredentialUsageReader( null, null, $database ) );
 		$container->bind( SignedWebhookVerifier::class, new SignedWebhookVerifier( $secrets ) );
 		$container->bind(
@@ -220,7 +190,8 @@ final class BoosterServiceProvider {
 					null,
 					null,
 					$container->make( Database::class ),
-					activity: $container->make( \RAN\Activity\ActivityStore::class )
+					activity: $container->make( \RAN\Activity\ActivityStore::class ),
+					selection: $container->make( GitHubProviderSelection::class )
 				);
 			}
 		);
@@ -244,11 +215,10 @@ final class BoosterServiceProvider {
 				$activity,
 				(string) $code,
 				static fn ( \RAN\Activity\ActivityRequest $request ): ?array => self::capture_activity_context( $container, $code, $request )
-			)
-		);
-		$providers->register_with_credential_store(
-			'gh',
-			static fn (
+			),
+			github_selection_guard: $github_selection->registry_selection( ... ),
+			github_candidates: $github_selection->candidates(),
+			bundled_github_factory: static fn (
 				ProviderCredentialStore $credentials,
 				\RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader $delivery_evidence,
 				\RAN\RepositoryProvider\ProviderRegistrationContext $registration_context
@@ -256,9 +226,13 @@ final class BoosterServiceProvider {
 				$credentials,
 				$delivery_evidence,
 				$release_registrar,
-				static fn (): int => $registration_context->maximum_artifact_bytes()
+				static fn (): int => $registration_context->maximum_artifact_bytes(),
+				$registration_context->operation_allowed( ... ),
+				static fn ( string $type, string $identity ): string => $container->make( ManagedReleaseTargetRegistrar::class )->begin_provider_native_mutation( $type, $identity ),
+				static fn ( string $owner, string $type, string $identity, string $outcome ) => $container->make( ManagedReleaseTargetRegistrar::class )->complete_provider_native_mutation( $owner, $type, $identity, $outcome )
 			)
 		);
+		$github_selection->bind_registry( $providers );
 		$container->bind( ProviderRegistry::class, $providers );
 		$container->bind(
 			ReleaseWorkflowControls::class,
@@ -312,20 +286,8 @@ final class BoosterServiceProvider {
 				$background_failure_monitor
 			)
 		);
-		$container->bind(
-			PackageUpdateProgressController::class,
-			static fn ( CoreContainer $container ): PackageUpdateProgressController => new PackageUpdateProgressController(
-				$container->make( DeploymentAttemptRepository::class )
-			)
-		);
 		$container->bind( CorePackageExecutor::class, new CorePackageExecutor() );
 		$container->bind( WordPressUpdaterLock::class, new WordPressUpdaterLock() );
-		$container->bind(
-			WordPressWorkerWakeup::class,
-			static fn ( CoreContainer $container ): WordPressWorkerWakeup => new WordPressWorkerWakeup(
-				$container->make( DeploymentAttemptRepository::class )
-			)
-		);
 		$container->bind(
 			DeploymentCoordinator::class,
 			static function ( CoreContainer $container ): DeploymentCoordinator {
@@ -342,14 +304,6 @@ final class BoosterServiceProvider {
 			}
 		);
 		$container->bind(
-			DeploymentWorker::class,
-			static fn ( CoreContainer $container ): DeploymentWorker => new DeploymentWorker(
-				$container->make( DeploymentAttemptRepository::class ),
-				$container->make( DeploymentCoordinator::class ),
-				$container->make( WordPressWorkerWakeup::class )
-			)
-		);
-		$container->bind(
 			PackageRemovalGateway::class,
 			new WordPressPackageRemovalGateway()
 		);
@@ -361,7 +315,8 @@ final class BoosterServiceProvider {
 				$container->make( PackageRemovalGateway::class ),
 				$container->make( DeploymentAttemptRepository::class ),
 				$container->make( WordPressUpdaterLock::class ),
-				$container->make( RepositoryBranchCheckEvidenceStore::class )
+				$container->make( RepositoryBranchCheckEvidenceStore::class ),
+				$container->make( GitHubProviderSelection::class )
 			)
 		);
 		$container->bind(
@@ -371,17 +326,6 @@ final class BoosterServiceProvider {
 				$container->make( ThemeRepository::class ),
 				$container->make( DeploymentCoordinator::class ),
 				$container->make( PackageRemovalService::class ),
-				$container->make( WordPressUpdaterLock::class )
-			)
-		);
-		$container->bind(
-			BulkPackageActionService::class,
-			static fn ( CoreContainer $container ): BulkPackageActionService => new BulkPackageActionService(
-				$container->make( PluginRepository::class ),
-				$container->make( ThemeRepository::class ),
-				$container->make( ProviderRegistry::class ),
-				$container->make( SecretsFile::class ),
-				$container->make( DeploymentCoordinator::class ),
 				$container->make( WordPressUpdaterLock::class )
 			)
 		);
@@ -399,27 +343,9 @@ final class BoosterServiceProvider {
 			}
 		);
 		$container->bind(
-			PortabilityApplicationService::class,
-			static fn ( CoreContainer $container ): PortabilityApplicationService => new PortabilityApplicationService(
-				$container->make( BlueprintReviewer::class ),
-				$container->make( BlueprintRepositoryVerifier::class ),
-				$container->make( PackageOperationService::class ),
-				$container->make( SecretsFile::class )
-			)
-		);
-		$container->bind(
 			PortabilityFacade::class,
 			static fn ( CoreContainer $container ): PortabilityFacade => new NativePortabilityFacade(
 				$container->make( PortabilityApplicationService::class )
-			)
-		);
-		$container->bind(
-			PortabilityController::class,
-			static fn ( CoreContainer $container ): PortabilityController => new PortabilityController(
-				$container->make( ManagedPackageBlueprintExporter::class ),
-				$container->make( BlueprintArchive::class ),
-				$container->make( PortabilityApplicationService::class ),
-				$container->make( ProviderSettingsPresenter::class )
 			)
 		);
 		$release_store = new ManagedReleaseStore( null, $database );
@@ -430,6 +356,7 @@ final class BoosterServiceProvider {
 			$release_store,
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
+			$github_selection,
 			bulk_forbidden_plugin_identifier: $self_plugin_identifier,
 			activity: $activity
 		);
@@ -453,6 +380,7 @@ final class BoosterServiceProvider {
 			$container->make( ThemeRepository::class ),
 			$container->make( WordPressUpdaterLock::class ),
 			$container->make( ProviderRegistry::class ),
+			$github_selection,
 			source_guard: new \RAN\Storage\RepositorySourceGuard( null, $database )
 		);
 		$container->bind( NativeProspectiveReleaseFacade::class, $prospective_facade );

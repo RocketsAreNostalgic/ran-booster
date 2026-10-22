@@ -249,14 +249,14 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Core composition requires the WordPress table prefix.
-		$GLOBALS['wpdb'] = new class() {
-			public string $prefix = 'wp_';
-		};
+		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 
 		( new BoosterServiceProvider(
-			static fn ( ProviderSecretPolicyCatalog $policies ): SecretsFile => new Phase5SecretsFile( $policies )
-		) )->register( $container, $runtime, $updater, 'ran-booster.php' );
+			static fn ( ProviderSecretPolicyCatalog $policies, callable $guard ): SecretsFile => new Phase5SecretsFile( $policies, $guard )
+		) )->register( $container, $runtime, $updater, $GLOBALS['wpdb']->basename );
 
+		$container->make( \RAN\RepositoryProvider\GitHubProviderSelection::class )->complete_collection();
+		$container->make( ProviderRegistry::class )->seal();
 		$provider = $container->make( ProviderRegistry::class )->get( 'gh' );
 		try {
 			$provider->list_release_candidates(
@@ -601,6 +601,14 @@ final class Phase5BundledReleaseUpdater {
 	/** @var array<array-key, mixed>|null */
 	public ?array $release_arguments = null;
 
+	public function with_operation_guard( callable $guard ): self {
+		unset( $guard );
+		return $this;
+	}
+	public function with_native_mutation_callbacks( callable $begin, callable $complete ): self {
+		unset( $begin, $complete );
+		return $this;
+	}
 	public function releases( mixed ...$arguments ): object {
 		$this->release_arguments = $arguments;
 
@@ -623,8 +631,8 @@ final class Phase5BundledReleaseUpdater {
 final class Phase5SecretsFile extends SecretsFile {
 	private Phase5CredentialStore $credentials;
 
-	public function __construct( ProviderSecretPolicyCatalog $policies ) {
-		parent::__construct( '/unused/phase5-github-extension-secrets.php', array(), $policies );
+	public function __construct( ProviderSecretPolicyCatalog $policies, callable $guard ) {
+		parent::__construct( '/unused/phase5-github-extension-secrets.php', array(), $policies, github_credential_access: $guard );
 		$this->credentials = new Phase5CredentialStore();
 	}
 

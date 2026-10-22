@@ -210,8 +210,23 @@
 				link.click();
 				link.remove();
 				window.URL.revokeObjectURL(url);
+				const warningCount = response.headers.get(
+					'X-RAN-Blueprint-Requirement-Warnings'
+				);
+				const warning =
+					/^[1-9][0-9]{0,2}$/.test(warningCount || '') &&
+					Number(warningCount) <= 128
+						? __(
+								'Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction.',
+								'ran-booster'
+							)
+						: '';
+				showMessage(warning);
 				announceSuccess(
-					__('Transporter Blueprint download started.', 'ran-booster')
+					__(
+						'Transporter Blueprint download started.',
+						'ran-booster'
+					) + (warning ? ' ' + warning : '')
 				);
 			} catch (error) {
 				showMessage(
@@ -576,6 +591,12 @@
 					} else if (action === 'target') {
 						targets.add(ordinal);
 					}
+					const savedCredential = row?.querySelector(
+						'[data-portability-target-credential]'
+					)?.value;
+					if (savedCredential) {
+						targets.add('package:' + savedCredential);
+					}
 				});
 				const packageChanges = selectedRowElements.filter(
 					(row) =>
@@ -757,6 +778,9 @@
 			rememberSelections();
 			const data = new FormData(form);
 			appendCredentialDecisions(data);
+			const supersededRefresh = credentialRefreshXhr;
+			credentialRefreshXhr = null;
+			supersededRefresh?.abort();
 			const generation = ++previewGeneration;
 			if (showButtonBusy) {
 				setPreviewBusy(true);
@@ -819,6 +843,9 @@
 					);
 				}
 			} catch (error) {
+				if (generation !== previewGeneration) {
+					return;
+				}
 				reviewConfirmed = false;
 				showMessage(
 					error instanceof Error
@@ -839,9 +866,19 @@
 				return;
 			}
 			credentialRefreshXhr = event.detail.xhr;
+			++previewGeneration;
+			setPreviewBusy(false);
 			rememberSelections();
 			showReviewError(false);
 			setReviewBusy(true);
+		});
+		root.addEventListener('htmx:beforeSwap', function (event) {
+			if (
+				handlesCredentialRefresh(event) &&
+				!isLatestCredentialRefresh(event)
+			) {
+				event.detail.shouldSwap = false;
+			}
 		});
 		root.addEventListener('htmx:afterSwap', function (event) {
 			if (
@@ -850,6 +887,7 @@
 			) {
 				return;
 			}
+			prepareCredentialRefresh();
 			reviewConfirmed = true;
 			if (results) {
 				results.replaceChildren();
@@ -979,7 +1017,16 @@
 				return;
 			}
 			if (event.target.matches('[data-portability-target-credential]')) {
-				preview();
+				reviewConfirmed = false;
+				updateSelectionControls();
+				if (
+					!window.htmx ||
+					!event.target.matches(
+						'[data-portability-credential-refresh]'
+					)
+				) {
+					preview();
+				}
 			}
 			if (event.target.matches('[data-portability-select-all]')) {
 				actionableRows().forEach(function (row) {
@@ -1005,6 +1052,15 @@
 			) {
 				return;
 			}
+			const selectedIndexes = rows.map((row) =>
+				row.getAttribute('data-portability-row')
+			);
+			const providerExpectations = new Map(
+				rows.map((row) => [
+					row,
+					row.getAttribute('data-portability-provider-expectation'),
+				])
+			);
 			setApplyBusy(true);
 			try {
 				let appliedEverySelection = true;
@@ -1021,6 +1077,13 @@
 						row
 					);
 					const data = new FormData(form);
+					selectedIndexes.forEach((index) =>
+						data.append('selected_rows[]', index)
+					);
+					const providerExpectation = providerExpectations.get(row);
+					if (providerExpectation !== null) {
+						data.set('provider_expectation', providerExpectation);
+					}
 					data.set('action', 'ran_booster_apply_blueprint');
 					data.set('nonce', form.dataset.portabilityApplyNonce || '');
 					data.set(

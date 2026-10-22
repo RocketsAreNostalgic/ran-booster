@@ -171,7 +171,7 @@ final class WebhookDisplayModel {
 		$record                   = $this->records->find( $provider_code, $repository_id );
 		$status                   = null === $record ? null : $this->projected_status( $record );
 		$credentials              = $this->credential_choices( $provider_code );
-		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, $provider_label, array() !== $credentials ) : array();
+		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, array() !== $credentials ) : array();
 		$operation_models         = $this->operation_models( $operations, $provider_code, $repository_id );
 
 		$help = null;
@@ -223,7 +223,7 @@ final class WebhookDisplayModel {
 	}
 
 	/**
-	 * @param array<string,string> $available
+	 * @param array<string,true> $available
 	 * @return list<array{key:string,label:string,url:string,primary:bool,disabled:bool}>
 	 */
 	private function operation_models( array $available, string $provider_code, string $repository_id ): array {
@@ -379,10 +379,6 @@ final class WebhookDisplayModel {
 		return in_array( $code, array( 'ping_requested', 'ping_verified' ), true )
 			? 'notice-warning'
 			: ( $this->is_successful_result( $code ) ? 'notice-success' : 'notice-error' );
-	}
-
-	public function can_respond_inline_to_failure( string $code ): bool {
-		return in_array( $code, array( 'forbidden', 'invalid_request', 'invalid_token', 'operation_unauthorized', 'repository_identity_unconfirmed', 'operation_busy', 'setup_failed', 'setup_compensated', 'assessment_insufficient', 'assessment_stale', 'assessment_unsupported', 'assessment_unavailable' ), true );
 	}
 
 	/** @return array{callback_url:string,repositories:array<string,array{eligible:bool}>}|null */
@@ -555,25 +551,24 @@ final class WebhookDisplayModel {
 
 	/** @return list<array{key:string,label:string,value:string,tone?:string,recorded?:bool,state?:string,datetime?:string}> */
 	private function history_details( string $status_code, ?InstallationRecord $record ): array {
-		$history = null === $record ? null : WebhookHistory::from_record( $record )->to_array();
 		$details = array(
 			array(
 				'key'      => 'core:webhook-recorded-status',
 				'label'    => __( 'Recorded hook status', 'ran-booster' ),
-				'value'    => null === $history ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historical_status_label( $history['recorded_status'] ),
-				'tone'     => null === $history ? 'warning' : $this->historical_status_tone( $history['recorded_status'] ),
-				'recorded' => null !== $history,
+				'value'    => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historical_status_label( $record->status() ),
+				'tone'     => null === $record ? 'warning' : $this->historical_status_tone( $record->status() ),
+				'recorded' => null !== $record,
 				'state'    => $status_code,
 			),
 			array(
 				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
-				'value' => null === $history ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
+				'value' => null === $record ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
 				'tone'  => 'neutral',
 			),
 		);
 
-		if ( null !== $history && $status_code !== $history['recorded_status'] ) {
+		if ( null !== $record && $status_code !== $record->status() ) {
 			$details[] = array(
 				'key'   => 'core:webhook-current-warning',
 				'label' => __( 'Current local warning', 'ran-booster' ),
@@ -598,8 +593,8 @@ final class WebhookDisplayModel {
 				array(
 					'key'      => 'core:webhook-last-checked',
 					'label'    => __( 'Last checked', 'ran-booster' ),
-					'value'    => null === $history ? __( 'Never', 'ran-booster' ) : $history['checked_at'],
-					'datetime' => null === $history ? '' : $history['checked_at'],
+					'value'    => null === $record ? __( 'Never', 'ran-booster' ) : $record->checked_at(),
+					'datetime' => null === $record ? '' : $record->checked_at(),
 				),
 			)
 		);
@@ -607,14 +602,12 @@ final class WebhookDisplayModel {
 
 	/** @return list<array<string, string>> */
 	private function historical_details( InstallationRecord $record ): array {
-		$history = WebhookHistory::from_record( $record )->to_array();
-
 		return array(
 			array(
 				'key'   => 'core:webhook-recorded-status',
 				'label' => __( 'Recorded hook status', 'ran-booster' ),
-				'value' => $this->historical_status_label( $history['recorded_status'] ),
-				'tone'  => $this->historical_status_tone( $history['recorded_status'] ),
+				'value' => $this->historical_status_label( $record->status() ),
+				'tone'  => $this->historical_status_tone( $record->status() ),
 			),
 			array(
 				'key'   => 'core:webhook-observation',
@@ -643,40 +636,31 @@ final class WebhookDisplayModel {
 			array(
 				'key'      => 'core:webhook-last-checked',
 				'label'    => __( 'Last checked', 'ran-booster' ),
-				'value'    => $history['checked_at'],
-				'datetime' => $history['checked_at'],
+				'value'    => $record->checked_at(),
+				'datetime' => $record->checked_at(),
 			),
 		);
 	}
 
-	/** @return array<string, string> */
-	private function available_operations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, string $provider_label, bool $has_credential ): array {
+	/** @return array<string, true> */
+	private function available_operations( AssistanceTarget $target, ?InstallationRecord $record, ?string $status, bool $has_credential ): array {
 		if ( ! $has_credential ) {
 			return array();
 		}
 		if ( null === $record ) {
-			/* translators: %s: repository provider name. */
-			return array(
-				/* translators: %s: repository provider name. */
-				'setup'         => sprintf( __( 'Set up in %s', 'ran-booster' ), $provider_label ),
-				'disabled:test' => __( 'Test webhook', 'ran-booster' ),
-			);
+			return array( 'setup' => true );
 		}
 		if ( $record->requires_hook_identification() ) {
 			return array();
 		}
 		$operations = array();
 		if ( in_array( $status, array( 'profile_revision_stale', 'configuration_drift', 'local_profile_missing' ), true ) || ( 'needs_verification' !== $status && ! hash_equals( $record->endpoint(), $target->endpoint() ) ) ) {
-			/* translators: %s: repository provider name. */
-			$operations['reconfigure'] = sprintf( __( 'Update %s webhook', 'ran-booster' ), $provider_label );
+			$operations['reconfigure'] = true;
 		}
-		/* translators: %s: repository provider name. */
-		$operations['check'] = sprintf( __( 'Check %s', 'ran-booster' ), $provider_label );
-		/* translators: %s: repository provider name. */
-		$operations['test'] = sprintf( __( 'Test %s webhook', 'ran-booster' ), $provider_label );
+		$operations['check'] = true;
+		$operations['test']  = true;
 		if ( ! in_array( $status, array( 'local_profile_missing', 'remote_missing', 'removal_pending' ), true ) ) {
-			/* translators: %s: repository provider name. */
-			$operations['remove'] = sprintf( __( 'Remove from %s', 'ran-booster' ), $provider_label );
+			$operations['remove'] = true;
 		}
 
 		return $operations;

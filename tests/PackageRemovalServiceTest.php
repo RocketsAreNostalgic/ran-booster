@@ -51,6 +51,44 @@ final class PackageRemovalServiceTest extends TestCase {
 		);
 	}
 
+	public function test_deletion_uses_physical_target_absence_instead_of_installed_metadata(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( 'partial', 'gone-false', 'gone-throw', 'replacement', 'capture-failure', 'observation-failure' ) as $state ) {
+				$fixture                                 = $this->fixture();
+				$repository                              = 'plugin' === $type ? $fixture->plugins : $fixture->themes;
+				$presence_reads                          = 0;
+				$fixture->gateway->capture_fails         = 'capture-failure' === $state;
+				$fixture->gateway->physical_presence     = static function ( string $type ) use ( $state, &$presence_reads ): bool {
+					unset( $type );
+					++$presence_reads;
+					if ( 'observation-failure' === $state ) {
+						throw new \RuntimeException( 'Physical root observation unavailable.' );
+					}
+					return 'partial' === $state || ( 'replacement' === $state && $presence_reads > 1 );
+				};
+				$fixture->gateway->{ $type . '_delete' } = static function () use ( $repository, $state ): bool {
+					// Metadata disappears in partial deletion, but can stay cached after full deletion.
+					$repository->installed = 'partial' !== $state;
+					if ( 'gone-throw' === $state ) {
+						throw new \RuntimeException( 'Native hook threw after physical deletion.' );
+					}
+					return 'gone-false' !== $state;
+				};
+				$input                                   = 'plugin' === $type ? $this->input() : $this->theme_input();
+				$result                                  = $fixture->service->execute( PackageOperation::from_input( 'unlink-delete-' . $type, $input ) );
+				self::assertSame(
+					match ( $state ) {
+					'partial' => 'files_still_present',
+					'replacement', 'capture-failure', 'observation-failure' => 'management_state_uncertain',
+					default => '' },
+					$result->outcome_code
+				);
+				self::assertSame( in_array( $state, array( 'gone-false', 'gone-throw' ), true ), $repository->unlinked );
+				self::assertSame( 'capture-failure' === $state ? DeploymentPolicy::MANUAL : DeploymentPolicy::DISABLED, ( 'plugin' === $type ? $fixture->plugin : $fixture->theme )->get_deployment_policy() );
+			}
+		}
+	}
+
 	public function test_recovery_bypasses_corrupt_hydration_for_each_source_and_type(): void {
 		foreach ( array( 'plugin', 'theme' ) as $type ) {
 			foreach ( array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ) as $source ) {
@@ -94,11 +132,11 @@ final class PackageRemovalServiceTest extends TestCase {
 	public function test_recovery_rejects_uncertain_work_storage_and_releases_lock(): void {
 		$fixture              = $this->fixture();
 		$database             = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
-		$database->fail_reads = true;
 		$attempts             = $this->attempts( $database );
 		$lock                 = new RemovalUpdaterLock();
 		$service              = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $attempts, $lock );
 		$confirmation         = $service->recovery_confirmation( 'plugin', 'example/example.php' );
+		$database->fail_reads = true;
 		try {
 			$service->recover( 'plugin', 'example/example.php', $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] );
 			self::fail( 'Unresolved target work must prevent recovery.' );
@@ -106,6 +144,64 @@ final class PackageRemovalServiceTest extends TestCase {
 			self::assertFalse( $fixture->plugins->unlinked );
 			self::assertNotEmpty( $database->queries );
 			self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
+		}
+	}
+
+	public function test_recovery_review_refuses_missing_running_or_unreadable_work_state_before_offering_confirmation(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( 'missing', 'running', 'unreadable' ) as $state ) {
+				$fixture    = $this->fixture();
+				$identifier = 'plugin' === $type ? 'example/example.php' : 'example';
+				$database   = new \RAN\Tests\Deployment\AttemptRepositoryDatabase();
+				$attempts   = 'missing' === $state ? null : $this->attempts( $database );
+				if ( 'running' === $state ) {
+					$database->rows = array(
+						array(
+							'id'                      => 1,
+							'correlation_id'          => str_repeat( 'a', 32 ),
+							'source'                  => 'manual',
+							'operation'               => 'install',
+							'package_type'            => $type,
+							'package_slug'            => 'example',
+							'package_source'          => 'branch',
+							'package_source_revision' => 0,
+							'provider'                => 'gh',
+							'provider_repository_id'  => 'R_example',
+							'requested_ref'           => 'main',
+							'resolved_ref'            => null,
+							'delivery_id'             => null,
+							'delivery_digest'         => null,
+							'state'                   => 'running',
+							'mutation_started_at'     => null,
+							'outcome_code'            => null,
+							'finished_at'             => null,
+							'created_at'              => '2026-10-20 00:00:00',
+							'request_json'            => ( new \RAN\Deployment\DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1 ) )->to_json(),
+						),
+					);
+					self::assertSame( \RAN\Deployment\DeploymentState::RUNNING, \RAN\Deployment\DeploymentAttempt::from_database( $database->rows[0] )->get_state() );
+				} elseif ( 'unreadable' === $state ) {
+					$database->fail_reads = true;
+				}
+				$lock    = new RemovalUpdaterLock();
+				$service = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $attempts, $lock );
+
+				try {
+					$service->recovery_confirmation( $type, $identifier );
+					self::fail( 'Unverified work state must prevent a removal confirmation.' );
+				} catch ( \RuntimeException $failure ) {
+					if ( 'missing' === $state ) {
+						self::assertSame( 'The recovery operation state is unavailable.', $failure->getMessage() );
+					} elseif ( 'running' === $state ) {
+						self::assertSame( 'Unresolved deployment work prevents recovery.', $failure->getMessage() );
+					}
+					self::assertFalse( $fixture->plugins->unlinked );
+					self::assertFalse( $fixture->themes->unlinked );
+					self::assertSame( array(), $fixture->gateway->events );
+					self::assertSame( array(), $fixture->gateway->invalidated );
+					self::assertSame( array(), $lock->events );
+				}
+			}
 		}
 	}
 
@@ -675,9 +771,10 @@ final class PackageRemovalServiceTest extends TestCase {
 			$package->set_source( PackageSource::BRANCH, 7 );
 			$package->set_adoption_token( 'gh:R_example:11111111-1111-4111-8111-111111111111' );
 		}
-		$plugins = new RemovalPluginRepository( $plugin );
-		$themes  = new RemovalThemeRepository( $theme );
-		$gateway = new RemovalGateway();
+		$plugins                    = new RemovalPluginRepository( $plugin );
+		$themes                     = new RemovalThemeRepository( $theme );
+		$gateway                    = new RemovalGateway();
+		$gateway->physical_presence = static fn ( string $type ): bool => 'plugin' === $type ? $plugins->installed : $themes->installed;
 
 		return new RemovalFixture(
 			$plugin,
@@ -755,7 +852,7 @@ final class RemovalPluginRepository extends PluginRepository {
 			throw new \RuntimeException( 'The management record changed.' );
 		}
 		$guard();
-		return $this->unlink( $identifier );
+		return $this->record_recovery_unlink( $identifier );
 	}
 
 	public bool $installed      = true;
@@ -786,7 +883,7 @@ final class RemovalPluginRepository extends PluginRepository {
 	}
 
 	/** @param string $file */
-	public function unlink( $file ): PackageMutationResult {
+	public function record_recovery_unlink( $file ): PackageMutationResult {
 		unset( $file );
 		if ( $this->unlink_failure ) {
 			return PackageMutationResult::failed(
@@ -824,7 +921,7 @@ final class RemovalThemeRepository extends ThemeRepository {
 			throw new \RuntimeException( 'The management record changed.' );
 		}
 		$guard();
-		return $this->unlink( $identifier );
+		return $this->record_recovery_unlink( $identifier );
 	}
 
 	public bool $installed = true;
@@ -854,7 +951,7 @@ final class RemovalThemeRepository extends ThemeRepository {
 	}
 
 	/** @param string $stylesheet */
-	public function unlink( $stylesheet ): PackageMutationResult {
+	public function record_recovery_unlink( $stylesheet ): PackageMutationResult {
 		unset( $stylesheet );
 		$this->unlinked = true;
 
@@ -913,6 +1010,18 @@ final class RemovalGateway implements PackageRemovalGateway {
 	public function installed_fingerprint( string $type, string $identifier ): string {
 		unset( $type, $identifier );
 		return $this->fingerprint;
+	}
+	/** @var \Closure(string): bool|null */
+	public ?\Closure $physical_presence = null;
+	public bool $capture_fails          = false;
+	/** @return \Closure(): bool */
+	public function deletion_postcondition( string $type, string $identifier, bool $allow_absent = false ): \Closure {
+		unset( $allow_absent );
+		unset( $identifier );
+		if ( $this->capture_fails ) {
+			throw new \RuntimeException( 'Physical capture unavailable.' );
+		}
+		return fn (): bool => null !== $this->physical_presence && ! ( $this->physical_presence )( $type );
 	}
 	public function invalidate_native_target( string $type, string $identifier ): void {
 		$this->invalidated[] = $type . ':' . $identifier;

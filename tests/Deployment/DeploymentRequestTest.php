@@ -12,6 +12,32 @@ use RAN\Deployment\DeploymentRequest;
 
 final class DeploymentRequestTest extends TestCase {
 
+	public function test_initial_identity_round_trip_preserves_generation_and_historical_selection(): void {
+		$request  = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::DISABLED, 1, provider_selection_generation: 7, selected_commit: str_repeat( 'a', 40 ), expected_identifier: 'example/Main.php' );
+		$restored = DeploymentRequest::from_json( $request->to_json() );
+		self::assertSame( 'example/Main.php', $restored->expected_identifier );
+		self::assertSame( 7, $restored->provider_selection_generation );
+		self::assertSame( str_repeat( 'a', 40 ), $restored->selected_commit );
+		self::assertNull( $restored->installed_identifier );
+		self::assertNull( $restored->adoption_token );
+	}
+
+	public function test_initial_identity_rejects_noncanonical_or_wrong_slug(): void {
+		foreach ( array( '', 'other/main.php', 'example/../main.php', 'example/nested/main.php', 'example/main.PHP', ' example/main.php', 'example/main.php ', 'example/main.php/evil', 'example/\\main.php' ) as $identifier ) {
+			try {
+				new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, expected_identifier: $identifier );
+				self::fail( 'Unsafe initial identity must refuse.' );
+			} catch ( InvalidArgumentException $failure ) {
+				self::assertSame( 'The expected initial package identity is invalid.', $failure->getMessage() );
+			}
+		}
+	}
+
+	public function test_initial_identity_cannot_replace_existing_adoption_snapshot(): void {
+		$this->expectException( InvalidArgumentException::class );
+		new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, installed_identifier: 'example/main.php', adoption_token: 'gh:42:11111111-1111-4111-8111-111111111111', expected_identifier: 'example/main.php' );
+	}
+
 	public function test_canonical_request_round_trips_with_only_the_nine_allowed_keys(): void {
 		$request = $this->request();
 
@@ -81,6 +107,19 @@ final class DeploymentRequestTest extends TestCase {
 		self::assertSame( $token, $restored->adoption_token );
 		self::assertSame( 'example/main.php', $restored->installed_identifier );
 		self::assertNull( DeploymentRequest::from_json( $this->request()->to_json() )->adoption_token );
+	}
+
+	public function test_bound_empty_installed_identifier_is_rejected_at_construction(): void {
+		$this->expectException( InvalidArgumentException::class );
+		new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, null, '', 'gh:42:11111111-1111-4111-8111-111111111111' );
+	}
+
+	public function test_bound_empty_installed_identifier_is_rejected_from_stored_json(): void {
+		$request = new DeploymentRequest( 'owner/example', null, false, 'main', 'example', null, DeploymentPolicy::MANUAL, 1, null, 'example/main.php', 'gh:42:11111111-1111-4111-8111-111111111111' );
+		$json    = str_replace( '"installed_identifier":"example/main.php"', '"installed_identifier":""', $request->to_json() );
+
+		$this->expectException( InvalidArgumentException::class );
+		DeploymentRequest::from_json( $json );
 	}
 
 	public function test_duplicate_lifetime_keys_are_not_canonical(): void {

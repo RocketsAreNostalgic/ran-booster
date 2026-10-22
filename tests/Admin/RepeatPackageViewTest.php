@@ -84,10 +84,10 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-page-shell', $html );
 		self::assertStringContainsString( 'Back to Managed ' . $package_view->get_plural_label(), $html );
 		self::assertStringContainsString(
-			'<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading">Install New ' . $package_view->get_singular_label() . '</h2>',
+			'<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading ran-booster-page-heading__title">Install New ' . $package_view->get_singular_label() . '</h2>',
 			$html
 		);
-		self::assertStringContainsString( 'class="ran-booster-package-settings__intro"', $html );
+		self::assertStringContainsString( 'class="ran-booster-package-settings__intro ran-booster-page-heading__description"', $html );
 		self::assertStringContainsString( 'ran-booster-package-settings--create', $html );
 		self::assertStringContainsString( 'ran-booster-settings-section', $html );
 		self::assertStringContainsString( '>Repository configuration</h3>', $html );
@@ -260,7 +260,7 @@ final class RepeatPackageViewTest extends TestCase {
 
 		self::assertStringNotContainsString( 'ran-booster-package-settings__install-another', $html );
 		self::assertStringNotContainsString( '>Cancel</a>', $html );
-		self::assertStringNotContainsString( 'class="ran-booster-package-settings__intro"', $html );
+		self::assertStringNotContainsString( 'class="ran-booster-package-settings__intro ran-booster-page-heading__description"', $html );
 		self::assertStringNotContainsString( 'WordPress disabled', $html );
 		self::assertStringContainsString( '<p class="ran-booster-package-summary__value">Branch · main</p>', $html );
 		$save_actions = $this->action_group_by_class( $html, 'ran-booster-package-settings__save-actions' );
@@ -363,8 +363,8 @@ final class RepeatPackageViewTest extends TestCase {
 			'name="ran_booster[' . $package_view->get_identifier_field() . ']" value="' . $package->get_identifier() . '"',
 			$danger_zone
 		);
-		self::assertMatchesRegularExpression( '/Unlink ' . preg_quote( $type, '/' ) . '\\s*<\\/button>/', $danger_zone );
-		self::assertMatchesRegularExpression( '/Unlink and delete ' . preg_quote( $type, '/' ) . '\\s*<\\/button>/', $danger_zone );
+		self::assertMatchesRegularExpression( '/Stop managing ' . preg_quote( $type, '/' ) . '\\s*<\\/button>/', $danger_zone );
+		self::assertMatchesRegularExpression( '/Stop managing and delete ' . preg_quote( $type, '/' ) . '\\s*<\\/button>/', $danger_zone );
 		self::assertStringContainsString(
 			'plugin' === $type
 				? 'Settings may be permanently removed, while incomplete cleanup may leave incompatible data. This is not a rollback.'
@@ -668,6 +668,148 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertTrue( $branch_pane_position < $return_position, $package_view->get_type() );
 			self::assertTrue( $return_position < $branch_fields_position, $package_view->get_type() );
 			self::assertTrue( $branch_fields_position < $readiness_position, $package_view->get_type() );
+	}
+
+	#[DataProvider( 'managed_package_context_matrix' )]
+	public function test_package_lists_do_not_offer_management_removal_without_asettings_read_failure(
+		PackagePagePresenter $package_view,
+		string $managed_package_identifier,
+		bool $multisite
+	): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
+		self::assertSame( $managed_package_identifier, $this->package( $package_view )->get_identifier() );
+		foreach ( array( 'empty', 'populated', 'filtered', 'no-providers' ) as $state ) {
+			$packages           = 'populated' === $state ? array( $this->package( $package_view ) ) : array();
+			$package_providers  = 'no-providers' === $state ? array() : $this->provider_settings( true )['providers'];
+			$package_list_total = 'filtered' === $state ? 1 : count( $packages );
+			$package_list_state = array(
+				'search'   => 'filtered' === $state ? 'missing' : '',
+				'provider' => '',
+				'source'   => '',
+				'policy'   => '',
+			);
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			$html = (string) ob_get_clean();
+
+			self::assertStringNotContainsString( 'Recover package management', $html, $state );
+			self::assertStringNotContainsString( 'recovery=1', $html, $state );
+			self::assertStringNotContainsString( 'Review management removal', $html, $state );
+		}
+	}
+
+	#[DataProvider( 'managed_package_context_matrix' )]
+	public function test_unidentified_inventory_failure_never_offers_an_installed_package_picker(
+		PackagePagePresenter $package_view,
+		string $managed_package_identifier,
+		bool $multisite
+	): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
+		$packages                                      = array();
+		$package_providers                             = array();
+		$package_list_unavailable                      = true;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( $package_view->get_plural_label(), $html );
+		self::assertStringContainsString( 'Package settings could not be loaded.', $html );
+		self::assertStringNotContainsString( 'Add your first', $html );
+		self::assertStringNotContainsString( 'recovery=1', $html );
+		self::assertStringNotContainsString( 'Review management removal', $html );
+		self::assertStringNotContainsString( $managed_package_identifier, $html );
+	}
+
+	#[DataProvider( 'managed_package_context_matrix' )]
+	public function test_damaged_package_confirmation_is_exact_and_has_no_unrelated_choices(
+		PackagePagePresenter $package_view,
+		string $managed_package_identifier,
+		bool $multisite
+	): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
+		$recovery_identifier                           = $managed_package_identifier;
+		$recovery_name                                 = 'Example <package> ' . str_repeat( 'long-package-name-', 12 );
+		$recovery_reason                               = 'The saved update revision is invalid.';
+		$recovery_state                                = 'damaged';
+		$recovery_blocker                              = null;
+		$recovery_confirmation                         = array(
+			'id'               => '42',
+			'package'          => $managed_package_identifier,
+			'type'             => 'plugin' === $package_view->get_type() ? 1 : 2,
+			'source'           => 'branch',
+			'adoption_token'   => 'lifetime-token',
+			'digest'           => 'record-digest',
+			'installed_digest' => 'installed-digest',
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/recovery.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( esc_html( $recovery_name ), $html );
+		self::assertStringContainsString( $recovery_reason, $html );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="recover-' . $package_view->get_type() . '"', $html );
+		self::assertStringContainsString( 'name="ran_booster[identifier]" value="' . $recovery_identifier . '"', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirm_package_removal]" value="1" required', $html );
+		foreach ( array( 'adoption_token', 'digest', 'installed_digest' ) as $field ) {
+			self::assertStringContainsString( 'name="ran_booster[' . $field . ']" value="' . $recovery_confirmation[ $field ] . '"', $html );
+		}
+		self::assertStringContainsString(
+			'name="_wpnonce" value="' . \RAN\Admin\PackageAdminController::recovery_action( $package_view->get_type(), $recovery_identifier, 'lifetime-token', 'record-digest', 'installed-digest' ) . '"',
+			$html
+		);
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		try {
+			self::assertTrue( $document->loadHTML( '<!doctype html><html><body>' . $html . '</body></html>' ) );
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+		}
+		$xpath             = new \DOMXPath( $document );
+		$padded_task       = $xpath->query( '//div[@class="ran-booster-package-recovery"]/h2/following-sibling::section[contains(@class,"ran-booster-settings-section__body")]//form[@method="post"]' );
+		$forms             = $xpath->query( '//form[@method="post"]' );
+		$unrelated_choices = $xpath->query( '//select|//form[@method="get"]' );
+		self::assertInstanceOf( \DOMNodeList::class, $forms );
+		self::assertInstanceOf( \DOMNodeList::class, $unrelated_choices );
+		self::assertInstanceOf( \DOMNodeList::class, $padded_task );
+		self::assertSame( 1, $padded_task->length );
+		self::assertSame( 1, $forms->length );
+		self::assertSame( 0, $unrelated_choices->length );
+		self::assertStringNotContainsString( 'relink=', $html );
+		self::assertStringNotContainsString( 'Link this installed package', $html );
+		self::assertStringNotContainsString( 'Recover package management', $html );
+	}
+
+	#[DataProvider( 'managed_package_context_matrix' )]
+	public function test_healthy_blocked_and_unidentified_recovery_states_offer_no_removal_form(
+		PackagePagePresenter $package_view,
+		string $managed_package_identifier,
+		bool $multisite
+	): void {
+		$GLOBALS['ran_booster_package_view_multisite'] = $multisite;
+		foreach ( array( 'healthy', 'blocked', 'unknown' ) as $recovery_state ) {
+			$recovery_identifier   = 'unknown' === $recovery_state ? '' : $managed_package_identifier;
+			$recovery_name         = 'Example package ' . str_repeat( 'long-package-name-', 12 );
+			$recovery_reason       = 'A safely bounded <explanation>.';
+			$recovery_confirmation = null;
+			$recovery_blocker      = null;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/recovery.php';
+			$html = (string) ob_get_clean();
+
+			self::assertStringContainsString( 'Back to Managed ' . $package_view->get_plural_label(), $html, $recovery_state );
+			self::assertStringContainsString( esc_html( $recovery_name ), $html, $recovery_state );
+			self::assertStringNotContainsString( '<form', $html, $recovery_state );
+			self::assertStringNotContainsString( '<select', $html, $recovery_state );
+			self::assertStringNotContainsString( 'relink=', $html, $recovery_state );
+			self::assertStringNotContainsString( 'name="ran_booster[action]"', $html, $recovery_state );
+			self::assertSame( 'healthy' === $recovery_state, str_contains( $html, 'Open package settings' ), $recovery_state );
+			if ( 'healthy' === $recovery_state ) {
+				self::assertStringContainsString( 'package=' . rawurlencode( $managed_package_identifier ), $html );
+			} else {
+				self::assertStringContainsString( 'A safely bounded &lt;explanation&gt;.', $html, $recovery_state );
+			}
+		}
 	}
 
 	/** @return array{default_provider: string, providers: list<array<string, mixed>>} */

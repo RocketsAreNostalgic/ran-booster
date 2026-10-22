@@ -110,17 +110,27 @@ if [[ ${#json_fixtures[@]} -ne 7 ]]; then
 	echo 'The installed localisation proof requires seven source-hashed French Jed JSON fixtures.' >&2
 	exit 2
 fi
-if [[ "$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" != '8.2' ]]; then
-	echo 'The installed localisation proof requires PHP 8.2.' >&2
+expected_php="${RAN_BOOSTER_TEST_PHP_VERSION-8.2}"
+if [[ ! "$expected_php" =~ ^[0-9]+\.[0-9]+$ ]] || ! actual_php="$("$php_bin" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" || [[ "$actual_php" != "$expected_php" ]]; then
+	echo "The installed localisation proof requires PHP $expected_php (major.minor)." >&2
 	exit 2
 fi
-case "$("$php_bin" "$wp_cli" core version --path="$wordpress")" in
-	7.0|7.0.*) ;;
-	*)
-		echo 'The installed localisation proof requires WordPress 7.0.x.' >&2
+expected_wordpress="${RAN_BOOSTER_TEST_WORDPRESS_VERSION-}"
+version="$("$php_bin" "$wp_cli" core version --path="$wordpress")" || exit 2
+if [[ ${RAN_BOOSTER_TEST_WORDPRESS_VERSION+x} ]]; then
+	if [[ ! "$expected_wordpress" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || [[ "$version" != "$expected_wordpress" ]]; then
+		echo "The installed localisation proof requires WordPress $expected_wordpress (exact version)." >&2
 		exit 2
-		;;
-esac
+	fi
+else
+	case "$version" in
+		7.0|7.0.*) ;;
+		*)
+			echo 'The installed localisation proof requires WordPress 7.0.x.' >&2
+			exit 2
+			;;
+	esac
+fi
 if [[ "$("$php_bin" "$wp_cli" option get siteurl --path="$wordpress")" != "$RAN_BOOSTER_LOCALISATION_TEST_URL" ]]; then
 	echo 'The installed localisation proof is pointed at an unexpected site URL.' >&2
 	exit 2

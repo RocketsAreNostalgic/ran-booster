@@ -28,7 +28,6 @@ use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
-use RAN\Portability\BlueprintPackage;
 use RAN\Secrets\SecretsStorageProvisioner;
 use RAN\Secrets\SecretsStorageProvisioningResult;
 use RAN\Storage\Database;
@@ -67,7 +66,7 @@ class Dashboard {
 
 	private ProviderSettingsPresenter $provider_settings;
 	private TroubleshootingService $troubleshooting;
-	/** @var array<string, mixed>|null */
+	/** @var array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}|null */
 	private ?array $troubleshooting_payload = null;
 
 	private ?AdminTabRegistry $admin_tabs;
@@ -244,6 +243,7 @@ class Dashboard {
 			$data['provider_task']       = $this->requested_provider_task();
 			$data['repository_view']     = $this->requested_provider_repository_view();
 			$data['provider_list_state'] = $this->requested_provider_list_state();
+			$data['replace_credential']  = $this->requested_provider_repository_id( 'replace_credential' );
 
 			$data['requested_repository_id']            = $this->requested_provider_repository_id();
 			$data                                       = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
@@ -301,10 +301,16 @@ class Dashboard {
 				$data['troubleshooting'] = array();
 				$data['debug_capture']   = $this->debug_capture_payload();
 			} elseif ( 'activity' === $panel ) {
-				$data['troubleshooting']     = array();
-				$data['deployment_activity'] = $this->deployment_admin->activity();
+				$data['troubleshooting'] = array();
+				$provider_labels         = array();
+				foreach ( $this->admin_tabs?->all() ?? array() as $tab ) {
+					if ( $tab->is_provider() ) {
+						$provider_labels[ $tab->get_key() ] = $tab->get_label();
+					}
+				}
+				$data['deployment_activity'] = $this->deployment_admin->activity( $provider_labels );
 			} else {
-				$data['troubleshooting'] = $this->troubleshooting_payload ?? $this->troubleshooting->form_payload();
+				$data = array_merge( $data, $this->troubleshooting_view_data() );
 			}
 		}
 
@@ -400,21 +406,21 @@ class Dashboard {
 				if ( ! $package instanceof Package ) {
 					throw new \UnexpectedValueException();
 				}
-				$blueprint     = BlueprintPackage::from_managed_package( $type, $package );
+				$provider      = (string) $package->get_provider_code();
 				$index         = count( $rows );
 				$rows[]        = array(
 
-					'name'       => $blueprint->display_name,
-					'identifier' => $blueprint->identifier,
-					'type'       => $blueprint->type,
+					'name'       => $package->get_display_name(),
+					'identifier' => (string) $package->get_identifier(),
+					'type'       => $type,
 				);
 				$credential_id = $package->get_credential_id();
-				if ( '' !== $blueprint->provider && '' !== $credential_id ) {
-					$credentials[ $blueprint->provider ][ $credential_id ][] = array(
+				if ( '' !== $provider && '' !== $credential_id ) {
+					$credentials[ $provider ][ $credential_id ][] = array(
 						'index' => $index,
 
-						'name'  => $blueprint->display_name,
-						'type'  => $blueprint->type,
+						'name'  => $package->get_display_name(),
+						'type'  => $type,
 					);
 				}
 			}
@@ -436,12 +442,21 @@ class Dashboard {
 	public function render_troubleshooting_diagnostics_region(): string {
 
 		$troubleshooting_panel = 'diagnostics';
-		$troubleshooting       = $this->troubleshooting_payload ?? $this->troubleshooting->form_payload();
+		$troubleshooting       = $this->troubleshooting_view_data()['troubleshooting'];
 
 		ob_start();
 		require __DIR__ . '/../views/troubleshooting.php';
 
 		return (string) ob_get_clean();
+	}
+
+	/** @return array{troubleshooting:array<string,mixed>,github_selection_diagnostics:array<string,mixed>|null} */
+	private function troubleshooting_view_data(): array {
+		$selection = $this->provider_settings->github_selection_diagnostics();
+		return array(
+			'troubleshooting'              => $this->troubleshooting->with_installation_context( $this->troubleshooting_payload ?? $this->troubleshooting->form_payload(), $selection ),
+			'github_selection_diagnostics' => $selection,
+		);
 	}
 
 	/** Whether the most recent diagnostics result completed without a warning or failure. */
@@ -452,7 +467,7 @@ class Dashboard {
 		}
 
 		foreach ( $results as $result ) {
-			if ( ! is_array( $result ) || 'pass' !== ( $result['status'] ?? null ) ) {
+			if ( 'pass' !== $result['status'] ) {
 				return false;
 			}
 		}
@@ -515,37 +530,51 @@ class Dashboard {
 		( $this->package_admin ?? throw new \Error( 'The package administration controller is unavailable.' ) )->add_success_notice( $this, $type );
 		$this->add_bulk_package_notice( $type );
 
-		// Read-only package selection; mutations use separately nonce-protected forms.
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Select the package presentation only; branch checks and form mutations verify their own action nonce.
-		if ( isset( $_GET['package'] ) ) {
+		// Read-only package selection; malformed navigation never diagnoses damaged settings.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package navigation; mutations verify their own action nonce.
+		if ( isset( $_GET['package'] ) && is_string( $_GET['package'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package navigation.
+			$identifier = sanitize_text_field( wp_unslash( $_GET['package'] ) );
 			try {
-				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only package selection.
-				$identifier                                    = sanitize_text_field( wp_unslash( $_GET['package'] ) );
-				$package                                       = 'plugin' === $type
-					? $this->plugins->booster_plugin_from_file( $identifier )
-					: $this->themes->booster_theme_from_stylesheet( $identifier );
-				$repository_branch_check_outcome               = $this->requested_package_repository_branch_check( $package, $type );
-				$repository_branch_check_evidence              = null === $repository_branch_check_outcome
-					? $this->provider_settings->package_repository_branch_evidence( $type, $package )
-					: null;
-				$edit_data                                     = $package_view->edit(
-					$package,
-					$this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ),
-					$this->provider_settings->build_package_branch_readiness( $package ),
-					$this->requested_package_source_view(),
-					$this->requested_advanced_settings_open()
-				);
-				$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
-				$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
-				return $this->render(
-					'packages/edit',
-					$edit_data
-				);
-			// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
-			} catch ( PluginNotFound | ThemeNotFound $missing ) {
-				// The selected package is absent, so show the matching index instead.
-			} catch ( PackageStorageFailure $failure ) {
-				return $this->package_storage_failure_index( $package_view, $type, $failure );
+				new \RAN\Storage\PackageModel( array( 'package' => $identifier ) );
+			} catch ( \InvalidArgumentException ) {
+				$identifier = '';
+			}
+			$package = null;
+			if ( '' !== $identifier ) {
+				try {
+					$package = 'plugin' === $type
+						? $this->plugins->booster_plugin_from_file( $identifier )
+						: $this->themes->booster_theme_from_stylesheet( $identifier );
+				// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- A missing package intentionally falls back to the index.
+				} catch ( PluginNotFound | ThemeNotFound ) {
+					// An absent package returns to the matching list.
+				} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
+					return $this->render_recovery( $package_view, $identifier, $failure );
+				}
+			}
+			if ( null !== $package ) {
+				try {
+					$repository_branch_check_outcome               = $this->requested_package_repository_branch_check( $package, $type );
+					$repository_branch_check_evidence              = null === $repository_branch_check_outcome
+						? $this->provider_settings->package_repository_branch_evidence( $type, $package )
+						: null;
+					$edit_data                                     = $package_view->edit(
+						$package,
+						$this->provider_settings->build_existing_package_form( (string) ( $package->get_provider_code() ?? '' ) ),
+						$this->provider_settings->build_package_branch_readiness( $package ),
+						$this->requested_package_source_view(),
+						$this->requested_advanced_settings_open()
+					);
+					$edit_data['repository_branch_check_outcome']  = $repository_branch_check_outcome;
+					$edit_data['repository_branch_check_evidence'] = $repository_branch_check_evidence;
+					return $this->render(
+						'packages/edit',
+						$edit_data
+					);
+				} catch ( PackageStorageFailure $failure ) {
+					return $this->package_storage_failure_index( $package_view, $type, $failure );
+				}
 			}
 		}
 
@@ -553,41 +582,98 @@ class Dashboard {
 			$packages = 'plugin' === $type
 				? $this->plugins->all_booster_plugins()
 				: $this->themes->all_booster_themes();
-		} catch ( PackageStorageFailure $failure ) {
+		} catch ( PackageStorageFailure | \InvalidArgumentException $failure ) {
 			return $this->package_storage_failure_index( $package_view, $type, $failure );
 		}
 
 		return $this->render( 'packages/index', $this->package_index_data( $packages, $package_view ) );
 	}
 
-	private function render_recovery( PackagePagePresenter $package_view ): mixed {
+	private function render_recovery( PackagePagePresenter $package_view, ?string $identifier = null, ?Throwable $failure = null ): mixed {
 		$type = $package_view->get_type();
 		if ( ! current_user_can( 'update_' . $type . 's' ) ) {
 			wp_die( esc_html__( 'You do not have sufficient permissions to manage these packages.', 'ran-booster' ) );
 		}
-		$this->package_admin?->add_success_notice( $this, $type );
-		$targets      = array();
+		if ( null === $failure ) {
+			$this->package_admin?->add_success_notice( $this, $type );
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only target selection; POST verifies the full confirmation nonce.
+		$identifier ??= isset( $_GET['recovery_target'] ) && is_string( $_GET['recovery_target'] ) ? wp_unslash( $_GET['recovery_target'] ) : '';
+		$name         = $identifier;
+		$state        = 'unknown';
 		$confirmation = null;
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only exact target selection; POST verifies the full confirmation nonce.
-		$identifier = isset( $_GET['recovery_target'] ) && is_string( $_GET['recovery_target'] ) ? wp_unslash( $_GET['recovery_target'] ) : '';
-		try {
-			$removals = $this->removals ?? throw new LogicException( 'Recovery is unavailable.' );
-			$targets  = $removals->recovery_targets( $type );
-			if ( '' !== $identifier ) {
-				$confirmation = $removals->recovery_confirmation( $type, $identifier );
+		$reason       = __( 'Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package.', 'ran-booster' );
+		$blocker      = null;
+		if ( '' !== $identifier ) {
+			$state = 'blocked';
+			try {
+				new \RAN\Storage\PackageModel( array( 'package' => $identifier ) );
+				if ( null === $failure ) {
+					try {
+						$package = 'plugin' === $type ? $this->plugins->booster_plugin_from_file( $identifier ) : $this->themes->booster_theme_from_stylesheet( $identifier );
+						if ( ! $package instanceof Package ) {
+							throw new LogicException( 'The management record is unavailable.' );
+						}
+					} catch ( PackageStorageFailure | \InvalidArgumentException $read_failure ) {
+						$failure = $read_failure;
+					}
+				}
+				if ( null === $failure ) {
+					$state  = 'healthy';
+					$name   = (string) $package->name;
+					$reason = __( 'Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it.', 'ran-booster' );
+				} else {
+					$reason   = $this->package_settings_failure_reason( $failure );
+					$removals = $this->removals ?? throw new LogicException( 'Recovery is unavailable.' );
+					$targets  = $removals->recovery_targets( $type );
+					if ( ! isset( $targets[ $identifier ] ) ) {
+						throw new LogicException( 'The installed package is unavailable.' );
+					}
+					$name = $targets[ $identifier ];
+					if ( $failure instanceof \InvalidArgumentException ) {
+						try {
+							$confirmation = $removals->recovery_confirmation( $type, $identifier );
+							$state        = 'damaged';
+						} catch ( Throwable $unsafe ) {
+							$blocker = 'Unresolved deployment work prevents recovery.' === $unsafe->getMessage()
+								? __( 'Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again.', 'ran-booster' )
+								: __( 'Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again.', 'ran-booster' );
+						}
+					}
+				}
+			} catch ( Throwable $unsafe ) {
+				$blocker = __( 'Booster cannot verify this installed package and its management record. No management changes have been made.', 'ran-booster' );
+				if ( null === $failure ) {
+					$reason = $blocker;
+				}
 			}
-		} catch ( Throwable $failure ) {
-			$this->add_failure_message( new WP_Error( 'ran_booster_recovery_unavailable', __( 'Booster cannot offer removal for this selection. The installed target, management identity, or storage could not be verified. No recovery action is available until that uncertainty is resolved.', 'ran-booster' ) ), $failure, array( 'step' => 'package_recovery_confirmation' ) );
 		}
 		return $this->render(
 			'packages/recovery',
 			array(
 				'package_view'          => $package_view,
-				'recovery_targets'      => $targets,
-				'recovery_confirmation' => $confirmation,
 				'recovery_identifier'   => $identifier,
+				'recovery_name'         => $name,
+				'recovery_state'        => $state,
+				'recovery_reason'       => $reason,
+				'recovery_blocker'      => $blocker,
+				'recovery_confirmation' => $confirmation,
 			)
 		);
+	}
+
+	private function package_settings_failure_reason( Throwable $failure ): string {
+		if ( $failure instanceof PackageStorageFailure ) {
+			return $failure->getMessage();
+		}
+		return match ( $failure->getMessage() ) {
+			'The managed package source revision is invalid.' => __( 'Booster’s saved update revision is invalid. It cannot safely use this package’s management settings.', 'ran-booster' ),
+			'The managed package source is invalid.' => __( 'Booster’s saved update source is invalid.', 'ran-booster' ),
+			'The deployment policy is not recognised.', 'A deployment policy must be a string.' => __( 'Booster’s saved deployment policy is invalid.', 'ran-booster' ),
+			'The repository credential identity is invalid.' => __( 'Booster’s saved repository credential reference is invalid.', 'ran-booster' ),
+			'The repository privacy setting is invalid.' => __( 'Booster’s saved repository privacy setting is invalid.', 'ran-booster' ),
+			default => __( 'Booster’s saved management configuration for this package is invalid and cannot be opened safely.', 'ran-booster' ),
+		};
 	}
 
 	/** @return 'verified'|'subdirectory_unavailable'|'subdirectory_unverified'|'unable_to_check'|'provider_unavailable'|null */
@@ -823,9 +909,11 @@ class Dashboard {
 		);
 	}
 
-	private function package_storage_failure_index( PackagePagePresenter $package_view, string $type, PackageStorageFailure $failure ): mixed {
+	private function package_storage_failure_index( PackagePagePresenter $package_view, string $type, PackageStorageFailure|\InvalidArgumentException $failure ): mixed {
 		$this->add_failure_message(
-			$this->package_storage_error( $failure ),
+			$failure instanceof PackageStorageFailure
+				? $this->package_storage_error( $failure )
+				: new WP_Error( 'ran_booster_package_settings_unreadable', __( 'Booster could not open a package’s saved management settings. No package changes were made.', 'ran-booster' ) ),
 			$failure,
 			array(
 				'operation' => 'read-' . $type . '-packages',
@@ -834,7 +922,9 @@ class Dashboard {
 		);
 		$packages = array();
 
-		return $this->render( 'packages/index', $this->package_index_data( $packages, $package_view ) );
+		$data                             = $this->package_index_data( $packages, $package_view );
+		$data['package_list_unavailable'] = true;
+		return $this->render( 'packages/index', $data );
 	}
 
 	private function database_unavailable_create( PackagePagePresenter $package_view, string $type ): mixed {
@@ -969,9 +1059,9 @@ class Dashboard {
 		return in_array( $view, array( 'status', 'branch', 'releases' ), true ) ? $view : 'status';
 	}
 
-	private function requested_provider_repository_id(): string {
+	private function requested_provider_repository_id( string $key = 'repository' ): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$value = $_GET['repository'] ?? null;
+		$value = $_GET[ $key ] ?? null;
 		if ( ! is_string( $value ) ) {
 			return '';
 		}

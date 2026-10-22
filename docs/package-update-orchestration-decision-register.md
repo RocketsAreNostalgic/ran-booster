@@ -360,3 +360,22 @@ The August 20 RETAIN and August 23 REPLACE IN PLACE records remain above as
 historical rationale. Neither handoff is current runtime authority. Reconsider
 a handoff only with a reviewed design that keeps acquisition and verification
 inside the updater and does not trust an earlier local path.
+
+## 2026-10-15 bounded provider-selection mutation authority
+
+Ben's #409 decision reconsiders PU-002 and PU-017 only for implementation
+switching after an uncertain native mutation. Their rejected receipt framework,
+duplicate reservation ownership and exact-Reinstall rationale remain intact.
+The new evidence is that ordinary native finalization can release the global
+updater lock without proving the physical outcome. Lock absence cannot authorize
+a provider switch or another affected native installation.
+
+One optional marker in the existing GitHub selection row records the captured
+generation, random owner, target and started phase. Core prospective installation
+and the Release updater's private callbacks use the same checked CAS authority.
+Every surviving marker refuses every new GitHub native mutation and selection
+transition. Only captured-owner verified success after private cleanup clears it;
+uncertainty, callback failure and process death require protected recovery.
+Completion preserves revocation and survives provider availability changes.
+This adds no table, Branch journal, automatic recovery or new receipt framework.
+Installed combined qualification and explicit manual acceptance remain required.

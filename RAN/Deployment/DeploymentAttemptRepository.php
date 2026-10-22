@@ -12,6 +12,7 @@ use RAN\AdoptionIdentity;
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
 use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Storage\Database;
 use RAN\Storage\SqlReadConnection;
@@ -52,7 +53,8 @@ final class DeploymentAttemptRepository {
 		?callable $random_bytes = null,
 		?Database $database_lifecycle = null,
 		private mixed $configured_max_attempt_rows = null,
-		private ?ActivityStore $activity = null
+		private ?ActivityStore $activity = null,
+		private ?GitHubProviderSelection $selection = null
 	) {
 		if ( null === $this->database ) {
 			global $wpdb;
@@ -63,6 +65,22 @@ final class DeploymentAttemptRepository {
 		$this->random_bytes       = $random_bytes ?? random_bytes( ... );
 		$this->database_lifecycle = $database_lifecycle ?? new Database( $this->database );
 	}
+	/** Caller already owns the same selection row transaction, before attempt locks. */
+	public function assert_selection_transition_idle( GitHubProviderSelection $selection ): void {
+		if ( null === $this->database || ! $selection->uses_connection( $this->database ) ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		$rows = $this->read_rows(
+			$this->prepare(
+				"SELECT id FROM %i WHERE provider = 'gh' AND (state = 'running' OR (state = 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL))) LIMIT 1 FOR UPDATE",
+				$this->table_name
+			)
+		);
+		if ( array() !== $rows ) {
+			throw new \RuntimeException( 'GitHub deployment recovery or completion is required before switching.' );
+		}
+	}
+
 	public function admit_and_claim_manual(
 		string $operation,
 		string $package_type,
@@ -84,7 +102,8 @@ final class DeploymentAttemptRepository {
 
 		return $this->transaction(
 			function () use ( $operation, $package_type, $provider, $provider_repository_id, $request, $requested_ref, $package_source, $package_source_revision ): DeploymentAttempt {
-				$this->lock_adoption( $operation, $package_type, $provider, $provider_repository_id, $request );
+				$request = $this->bind_selection( $provider, $package_type, $request );
+				$this->lock_adoption( $operation, $package_type, $provider, $provider_repository_id, $request, $package_source, $package_source_revision );
 				$active = $this->active_package_attempt( $package_type, $request->package_slug );
 				if ( null !== $active ) {
 					// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The failure stores a validated, whitelisted attempt projection; it does not render output.
@@ -92,31 +111,23 @@ final class DeploymentAttemptRepository {
 				}
 
 				$this->reserve_capacity( 1 );
-				$queued = $this->insert_and_read(
-					$this->row_data(
-						'manual',
-						$operation,
-						$package_type,
-						$provider,
-						$provider_repository_id,
-						$request,
-						$requested_ref,
-						$package_source,
-						$package_source_revision,
-						null,
-						null
-					)
+				$data          = $this->row_data(
+					'manual',
+					$operation,
+					$package_type,
+					$provider,
+					$provider_repository_id,
+					$request,
+					$requested_ref,
+					$package_source,
+					$package_source_revision,
+					null,
+					null
 				);
-				$query  = $this->update_query( $queued->get_id(), DeploymentState::QUEUED, array( 'state' => DeploymentState::RUNNING->value ) );
-				if ( 1 !== $this->write_connection()->query( $query ) ) {
-					throw DeploymentStorageFailure::unavailable();
-				}
-				$running = $this->require_exact( $queued->get_id() );
-				if ( DeploymentState::RUNNING !== $running->get_state() ) {
-					throw DeploymentStorageFailure::inconsistent();
-				}
+				$data['state'] = DeploymentState::RUNNING->value;
+				$running       = $this->insert_and_read( $data );
 				$this->record_activity_start( $running, 'deployment.running' );
-				BoosterLogger::log( 'attempt queued and claimed (manual)', $running->log_context() + array( 'transition' => 'queued->running' ) );
+				BoosterLogger::log( 'attempt admitted (manual)', $running->log_context() + array( 'transition' => 'new->running' ) );
 
 				return $running;
 			},
@@ -164,8 +175,12 @@ final class DeploymentAttemptRepository {
 
 		$result = $this->transaction(
 			function () use ( $normalized ): array {
+				foreach ( $normalized as &$target ) {
+					$target['request'] = $this->bind_selection( $target['provider'], $target['package_type'], $target['request'] );
+				}
+				unset( $target );
 				foreach ( $normalized as $target ) {
-					$this->lock_adoption( 'update', $target['package_type'], $target['provider'], $target['provider_repository_id'], $target['request'] );
+					$this->lock_adoption( 'update', $target['package_type'], $target['provider'], $target['provider_repository_id'], $target['request'], $target['package_source'], $target['package_source_revision'] );
 				}
 				$admitted = array();
 				$busy     = array();
@@ -240,7 +255,8 @@ final class DeploymentAttemptRepository {
 				|| ! is_string( $target['requested_ref'] )
 				|| ! is_string( $target['package_source'] )
 				|| ! is_int( $target['package_source_revision'] )
-				|| ! $target['request'] instanceof DeploymentRequest ) {
+				|| ! $target['request'] instanceof DeploymentRequest
+				|| null !== $target['request']->selected_commit ) {
 				throw DeploymentStorageFailure::invalid_record();
 			}
 			$this->assert_operation( $target['operation'] );
@@ -258,8 +274,15 @@ final class DeploymentAttemptRepository {
 
 		return $this->transaction(
 			function () use ( $provider, $delivery_id, $delivery_digest, $normalized ): array {
+				if ( 'gh' === $provider && array() === $normalized ) {
+					$this->selection_generation();
+				}
+				foreach ( $normalized as &$target ) {
+					$target['request'] = $this->bind_selection( $provider, $target['package_type'], $target['request'] );
+				}
+				unset( $target );
 				foreach ( $normalized as $target ) {
-					$this->lock_adoption( $target['operation'], $target['package_type'], $provider, $target['provider_repository_id'], $target['request'] );
+					$this->lock_adoption( $target['operation'], $target['package_type'], $provider, $target['provider_repository_id'], $target['request'], $target['package_source'], $target['package_source_revision'] );
 				}
 				$query    = $this->prepare(
 					'SELECT * FROM %i WHERE provider = %s AND delivery_id = %s ORDER BY package_type, package_slug FOR UPDATE',
@@ -323,27 +346,115 @@ final class DeploymentAttemptRepository {
 	}
 	public function claim_next(): ?DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
-
-		return $this->transaction(
-			function (): ?DeploymentAttempt {
-				$query = $this->prepare(
-					"SELECT * FROM %i WHERE state = 'queued' ORDER BY created_at, id LIMIT 1 FOR UPDATE",
-					$this->table_name
-				);
-				$rows  = $this->read_rows( $query );
-
-				return $this->claim_locked_row( $rows );
+		$this->require_storage_support();
+		$this->write_connection();
+		$hints = $this->read_rows( $this->prepare( "SELECT * FROM %i WHERE state = 'queued' ORDER BY created_at, id", $this->table_name ) );
+		foreach ( $hints as $hint ) {
+			$queued  = DeploymentAttempt::from_database( $hint );
+			$claimed = $this->transaction(
+				function () use ( $queued ): ?DeploymentAttempt {
+					if ( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE === $this->provider_refusal( $queued ) ) {
+						return null;
+					}
+					$data = $queued->safe_data();
+					try {
+						$this->lock_adoption( (string) $data['operation'], (string) $data['package_type'], (string) $data['provider'], (string) $data['provider_repository_id'], $queued->get_request(), (string) $data['package_source'], (int) $data['package_source_revision'] );
+					} catch ( DeploymentStorageFailure $failure ) {
+						// Stale package snapshots must become truthful failures, not starve the queue.
+						if ( $failure->getMessage() !== DeploymentStorageFailure::inconsistent()->getMessage() ) {
+							throw $failure;
+						}
+					}
+					$row     = $this->locked_attempt_row( $queued->get_id() );
+					$current = DeploymentAttempt::from_database( $row );
+					if ( DeploymentState::QUEUED !== $current->get_state() ) {
+						return null;
+					}
+					if ( $current->get_request()->to_json() !== $queued->get_request()->to_json() || $current->safe_data() !== $data ) {
+						throw DeploymentStorageFailure::inconsistent();
+					}
+					return $this->claim_locked_row( array( $row ) );
+				}
+			);
+			if ( null !== $claimed ) {
+				return $claimed;
 			}
-		);
+		}
+		return null;
+	}
+
+	/** Current guard also establishes selection-before-adoption-before-attempt lock order. */
+	public function provider_refusal( DeploymentAttempt $attempt ): ?string {
+		$data = $attempt->safe_data();
+		if ( 'gh' !== $data['provider'] ) {
+			return null;
+		}
+		if ( null === $this->selection || null === $this->database || ! $this->selection->uses_connection( $this->database ) ) {
+			return DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE;
+		}
+		$request = $attempt->get_request();
+		return $this->selection->deployment_refusal( $request->provider_selection_generation, (string) $data['package_type'], $request->installed_identifier ?? $request->package_slug );
+	}
+
+	private function selection_generation(): int {
+		if ( null === $this->selection || null === $this->database || ! $this->selection->uses_connection( $this->database ) ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		$expectation = $this->selection->expectation();
+		if ( null === $expectation ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		return $expectation['selection_generation'];
+	}
+
+	private function bind_selection( string $provider, string $type, DeploymentRequest $request ): DeploymentRequest {
+		if ( 'gh' !== $provider ) {
+			return $request;
+		}
+		$generation = $this->selection_generation();
+		if ( null === $this->selection || null !== $this->selection->deployment_refusal( $generation, $type, $request->installed_identifier ?? $request->package_slug ) ) {
+			throw DeploymentStorageFailure::unavailable();
+		}
+		return new DeploymentRequest( $request->repository, $request->credential_id, $request->is_private, $request->configured_branch, $request->package_slug, $request->subdirectory, $request->deployment_policy, $request->initiating_user_id, $request->maximum_artifact_bytes, $request->installed_identifier, $request->adoption_token, $generation, $request->selected_commit, $request->expected_identifier );
 	}
 	public function record_resolved_ref( int $attempt_id, string $resolved_ref ): DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
 		$this->assert_safe_text( $resolved_ref, 191 );
 		return $this->running_write( $attempt_id, array( 'resolved_ref' => $resolved_ref ) );
 	}
-	public function mark_mutation_started( int $attempt_id, ?DateTimeInterface $at = null ): DeploymentAttempt {
+	/** @param callable():bool|null $owns_lock Exact updater ownership rechecked after adoption reads. */
+	public function mark_mutation_started( int $attempt_id, ?DateTimeInterface $at = null, ?callable $owns_lock = null ): DeploymentAttempt|DeploymentOutcome {
 		RuntimeSupport::assert_managed_operations_allowed();
-		return $this->running_write( $attempt_id, array( 'mutation_started_at' => $this->time_string( $at ?? $this->now() ) ) );
+		return $this->transaction(
+			function () use ( $attempt_id, $at, $owns_lock ): DeploymentAttempt|DeploymentOutcome {
+				$attempt = $this->require_exact( $attempt_id );
+				$refusal = $this->provider_refusal( $attempt );
+				if ( null !== $refusal ) {
+					return DeploymentOutcome::from_code( $refusal );
+				}
+				$data = $attempt->safe_data();
+				$this->lock_adoption( (string) $data['operation'], (string) $data['package_type'], (string) $data['provider'], (string) $data['provider_repository_id'], $attempt->get_request(), (string) $data['package_source'], (int) $data['package_source_revision'] );
+				$locked  = DeploymentAttempt::from_database( $this->locked_attempt_row( $attempt_id ) );
+				$refusal = $this->provider_refusal( $locked );
+				if ( null !== $refusal ) {
+					return DeploymentOutcome::from_code( $refusal );
+				}
+				if ( $locked->get_request()->to_json() !== $attempt->get_request()->to_json() || DeploymentState::RUNNING !== $locked->get_state() ) {
+					throw DeploymentStorageFailure::inconsistent();
+				}
+				if ( null !== $owns_lock && true !== $owns_lock() ) {
+					return DeploymentOutcome::from_code( DeploymentOutcome::CODE_LOCK_UNAVAILABLE );
+				}
+				$write = array( 'mutation_started_at' => $this->time_string( $at ?? $this->now() ) );
+				if ( 1 !== $this->write_connection()->query( $this->update_query( $attempt_id, DeploymentState::RUNNING, $write ) ) ) {
+					throw DeploymentStorageFailure::unavailable();
+				}
+				$mutating = $this->require_exact( $attempt_id );
+				$this->assert_attempt_data( $mutating, $write );
+				$this->require_activity_progress( $mutating, 'deployment.mutating' );
+				return $mutating;
+			}
+		);
 	}
 	public function finish( int $attempt_id, DeploymentOutcome $outcome, ?DateTimeInterface $at = null ): DeploymentAttempt {
 		RuntimeSupport::assert_managed_operations_allowed();
@@ -549,35 +660,6 @@ final class DeploymentAttemptRepository {
 	}
 
 	/**
-	 * Read a bounded deployment contribution to the shared activity page.
-	 *
-	 * @param array<string, string> $filters
-	 * @param array{time: string, source: string, id: int}|null $cursor
-	 * @return list<DeploymentAttempt>
-	 */
-	public function activity_history( array $filters, ?array $cursor, int $limit = 26 ): array {
-		$query = $this->prepare( "SELECT * FROM %i WHERE package_type IN ('plugin', 'theme')", $this->table_name );
-		foreach ( array(
-			'provider'     => 'provider',
-			'subject_type' => 'package_type',
-			'operation'    => 'operation',
-			'outcome'      => 'state',
-		) as $key => $column ) {
-			if ( isset( $filters[ $key ] ) ) {
-				$query .= $this->prepare( ' AND %i = %s', $column, $filters[ $key ] );
-			}
-		}
-		if ( isset( $filters['subject_identity'] ) ) {
-			$query .= $this->prepare( " AND BINARY JSON_UNQUOTE(JSON_EXTRACT(request_json, '$.installed_identifier')) = %s", $filters['subject_identity'] );
-		}
-		if ( null !== $cursor ) {
-			$query .= $this->prepare( " AND (created_at < %s OR (created_at = %s AND ('deployment' < %s OR ('deployment' = %s AND id < %d))))", $cursor['time'], $cursor['time'], $cursor['source'], $cursor['source'], $cursor['id'] );
-		}
-		$query .= $this->prepare( ' ORDER BY created_at DESC, id DESC LIMIT %d', $this->history_limit( $limit ) );
-		return array_map( array( DeploymentAttempt::class, 'from_database' ), $this->read_rows( $query ) );
-	}
-
-	/**
 	 * Read the newest attempt and newest successful attempt for one package.
 	 *
 	 * The two scalar subqueries keep this to one bounded database read even when
@@ -766,9 +848,6 @@ final class DeploymentAttemptRepository {
 		}
 		$data    = $attempt->safe_data();
 		$request = $attempt->get_request();
-		if ( ! is_string( $data['provider'] ) || ! is_string( $data['provider_repository_id'] ) || ! in_array( $data['package_type'], array( 'plugin', 'theme' ), true ) || ! is_string( $data['operation'] ) || ! is_string( $data['correlation_id'] ) ) {
-			throw DeploymentStorageFailure::inconsistent();
-		}
 		$repo    = new \RAN\RepositoryProvider\RepositoryReference( $request->repository, $data['provider_repository_id'], $request->is_private, $request->credential_id );
 		$target  = $request->installed_identifier ?? $request->package_slug;
 		$capture = array(
@@ -788,8 +867,8 @@ final class DeploymentAttemptRepository {
 
 	private function require_activity_progress( DeploymentAttempt $attempt, string $stage ): void {
 		if ( null !== $this->activity ) {
-			$correlation = $attempt->safe_data()['correlation_id'];
-			if ( ! is_string( $correlation ) || ! $this->activity->progress_by_correlation( $correlation, $stage, '', $this->activity_facts( $attempt ) ) ) {
+			$correlation = $attempt->get_correlation_id();
+			if ( ! $this->activity->progress_by_correlation( $correlation, $stage, '', $this->activity_facts( $attempt ) ) ) {
 				throw DeploymentStorageFailure::unavailable();
 			}
 		}
@@ -799,16 +878,12 @@ final class DeploymentAttemptRepository {
 		if ( null === $this->activity ) {
 			return;
 		}
-		$data = $attempt->safe_data();
 		if ( DeploymentState::NEEDS_ATTENTION === $outcome->get_state() ) {
 			$this->require_activity_progress( $attempt, 'deployment.needs_attention' );
 			return;
 		}
-		if ( ! is_string( $data['correlation_id'] ) ) {
-			throw DeploymentStorageFailure::inconsistent();
-		}
 		$status = DeploymentState::SUCCEEDED === $outcome->get_state() ? 'succeeded' : 'failed';
-		if ( ! $this->activity->complete_by_correlation( $data['correlation_id'], $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt ) ) ) {
+		if ( ! $this->activity->complete_by_correlation( $attempt->get_correlation_id(), $status, $outcome->get_code(), $outcome->get_code(), facts: $this->activity_facts( $attempt ) ) ) {
 			throw DeploymentStorageFailure::unavailable();
 		}
 	}
@@ -816,9 +891,6 @@ final class DeploymentAttemptRepository {
 	/** @return array{deployment_attempt_id:int, deployment_package_slug:string, deployment_source:'manual'|'webhook', deployment_state:string, deployment_requested_ref:string, deployment_resolved_ref:?string, deployment_mutation_started_at:?string, deployment_finished_at:?string, deployment_outcome:?string, deployment_resolved_at:?string, deployment_resolved_by:?int} */
 	private function activity_facts( DeploymentAttempt $attempt ): array {
 		$data = $attempt->safe_data();
-		if ( ! is_int( $data['id'] ) || ! is_string( $data['package_slug'] ) || ! in_array( $data['source'], array( 'manual', 'webhook' ), true ) || ! is_string( $data['state'] ) || ! is_string( $data['requested_ref'] ) || ( null !== $data['resolved_ref'] && ! is_string( $data['resolved_ref'] ) ) || ( null !== $data['mutation_started_at'] && ! is_string( $data['mutation_started_at'] ) ) || ( null !== $data['finished_at'] && ! is_string( $data['finished_at'] ) ) || ( null !== $data['outcome_code'] && ! is_string( $data['outcome_code'] ) ) || ( null !== $data['resolved_at'] && ! is_string( $data['resolved_at'] ) ) || ( null !== $data['resolved_by'] && ! is_int( $data['resolved_by'] ) ) ) {
-			throw DeploymentStorageFailure::inconsistent();
-		}
 		return array(
 			'deployment_attempt_id'          => $data['id'],
 			'deployment_package_slug'        => $data['package_slug'],
@@ -870,6 +942,13 @@ final class DeploymentAttemptRepository {
 		?string $delivery_id,
 		?string $delivery_digest
 	): array {
+		if ( null !== $request->expected_identifier && ( 'install' !== $operation || 'webhook' === $source || ( 'plugin' === $package_type ) !== str_contains( $request->expected_identifier, '/' ) ) ) {
+			throw DeploymentStorageFailure::invalid_record();
+		}
+		if ( null !== $request->selected_commit && ( $requested_ref !== $request->selected_commit || 'webhook' === $source ) ) {
+			throw DeploymentStorageFailure::invalid_record();
+		}
+
 		return array(
 			'correlation_id'          => bin2hex( ( $this->random_bytes )( 16 ) ),
 			'source'                  => $source,
@@ -1001,7 +1080,7 @@ final class DeploymentAttemptRepository {
 	}
 
 	/** Called inside the management-row transaction; unknown legacy targets remain a hard stop. */
-	public function has_unresolved_target_attempt( string $package_type, string $identifier ): bool {
+	public function has_unresolved_target_attempt( string $package_type, string $identifier, bool $directory_scope = false ): bool {
 		$this->assert_package_type( $package_type );
 		$this->assert_safe_text( $identifier, 255 );
 		$rows = $this->read_rows(
@@ -1018,34 +1097,60 @@ final class DeploymentAttemptRepository {
 		foreach ( $rows as $row ) {
 			$request = DeploymentAttempt::from_database( $row )->get_request();
 			$blocked = $blocked || null === $request->installed_identifier || $identifier === $request->installed_identifier;
+			if ( $directory_scope && null !== $request->installed_identifier ) {
+				// Native plugin recovery concerns the whole supplying directory, including nested siblings.
+				$target  = 'plugin' === $package_type ? explode( '/', $identifier )[0] : $identifier;
+				$other   = 'plugin' === $package_type ? explode( '/', $request->installed_identifier )[0] : $request->installed_identifier;
+				$blocked = $blocked || 0 === strcasecmp( $target, $other ) || str_starts_with( strtolower( $other ), strtolower( $target ) . '/' );
+			}
 		}
 		return $blocked;
 	}
 
 	/** Lock management before attempt rows, closing capture-before-admission races. */
-	private function lock_adoption( string $operation, string $type, string $provider, string $repository_id, DeploymentRequest $request ): void {
+	private function lock_adoption( string $operation, string $type, string $provider, string $repository_id, DeploymentRequest $request, string $source, int $revision ): void {
 		if ( 'install' === $operation ) {
 			if ( null !== $request->adoption_token || null !== $request->installed_identifier ) {
 				throw DeploymentStorageFailure::invalid_record();
 			}
-			return; // No adoption exists: the execution boundary rechecks destination absence.
+			$rows = $this->read_rows( $this->prepare( 'SELECT * FROM %i WHERE package_type = %d FOR UPDATE', ran_booster_table_name(), 'plugin' === $type ? 1 : 2 ) );
+			foreach ( $rows as $row ) {
+				if ( ! is_string( $row->package ?? null ) || explode( '/', $row->package )[0] === $request->package_slug ) {
+					throw DeploymentStorageFailure::inconsistent();
+				}
+			}
+			return; // Execution still checks physical destination absence under the updater lock.
 		}
 		if ( null === $request->adoption_token || null === $request->installed_identifier
 			|| ! AdoptionIdentity::matches( $request->adoption_token, $provider, $repository_id ) ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
-		$rows = $this->read_rows(
+		$rows     = $this->read_rows(
 			$this->prepare(
-				'SELECT package, adoption_token FROM %i WHERE package_type = %d AND BINARY package = BINARY %s LIMIT 2 FOR UPDATE',
+				'SELECT * FROM %i WHERE package_type = %d AND BINARY package = BINARY %s LIMIT 2 FOR UPDATE',
 				ran_booster_table_name(),
 				'plugin' === $type ? 1 : 2,
 				$request->installed_identifier
 			)
 		);
-		if ( 1 !== count( $rows ) || ( $rows[0]->package ?? null ) !== $request->installed_identifier
-			|| ( $rows[0]->adoption_token ?? null ) !== $request->adoption_token ) {
+		$expected = array(
+			'package'                => $request->installed_identifier,
+			'adoption_token'         => $request->adoption_token,
+			'provider'               => $provider,
+			'provider_repository_id' => $repository_id,
+			'repository'             => $request->repository,
+			'branch'                 => $request->configured_branch,
+			'private'                => (int) $request->is_private,
+			'credential_id'          => $request->credential_id,
+			'subdirectory'           => $request->subdirectory,
+			'deployment_policy'      => $request->deployment_policy->value,
+			'source'                 => $source,
+			'source_revision'        => $revision,
+		);
+		if ( 1 !== count( $rows ) ) {
 			throw DeploymentStorageFailure::inconsistent();
 		}
+		$this->assert_row_data( $rows[0], $expected );
 	}
 
 	private function active_package_attempt( string $package_type, string $package_slug ): ?DeploymentAttempt {

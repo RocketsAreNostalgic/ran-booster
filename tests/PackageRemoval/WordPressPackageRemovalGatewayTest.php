@@ -33,6 +33,164 @@ final class WordPressPackageRemovalGatewayTest extends TestCase {
 		);
 	}
 
+	public function test_recovery_accepts_initial_absence_but_refuses_residual_roots_and_links(): void {
+		$root = sys_get_temp_dir() . '/ran-native-absence-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable physical absence fixture.
+		mkdir( $root, 0700 );
+		define( 'WP_PLUGIN_DIR', $root );
+		$gateway = new WordPressPackageRemovalGateway();
+		try {
+			foreach ( array( array( 'plugin', 'target/main.php' ), array( 'plugin', 'single.php' ), array( 'theme', 'target' ) ) as list( $type, $identifier ) ) {
+				$absent = $gateway->deletion_postcondition( $type, $identifier, true );
+				self::assertTrue( $absent() );
+				$target = $root . '/' . ( 'single.php' === $identifier ? 'single.php' : 'target' );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Empty directory still counts as physical target material.
+				mkdir( $target, 0700 );
+				self::assertFalse( $absent() );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable test-owned directory.
+				rmdir( $target );
+				symlink( $root . '/missing', $target );
+				self::assertFalse( $absent() );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only disposable test-owned link.
+				unlink( $target );
+				self::assertTrue( $absent() );
+			}
+			$absent = $gateway->deletion_postcondition( 'theme', 'target', true );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Case-alias control on the real filesystem.
+			mkdir( $root . '/TARGET', 0700 );
+			self::assertFalse( $absent() );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable case-alias fixture.
+			rmdir( $root . '/TARGET' );
+			foreach ( array( '../outside', '/outside', 'target/../outside', './target' ) as $unsafe ) {
+				try {
+					$gateway->deletion_postcondition( 'theme', $unsafe, true );
+					self::fail( 'Unsafe absent target accepted.' );
+				} catch ( RuntimeException $failure ) {
+					self::assertStringContainsString( 'unsafe', $failure->getMessage() );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Verify the captured root cannot be replaced even when the new root is empty.
+			rename( $root, $root . '.old' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable replacement root.
+			mkdir( $root, 0700 );
+			try {
+				$absent();
+				self::fail( 'Changed root accepted.' );
+			} catch ( RuntimeException $failure ) {
+				self::assertStringContainsString( 'changed', $failure->getMessage() );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable replacement root.
+			rmdir( $root );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Restore test-owned root for cleanup.
+			rename( $root . '.old', $root );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only disposable test-owned root.
+			rmdir( $root );
+		}
+	}
+
+	public function test_physical_deletion_observation_preserves_directory_and_parent_identity(): void {
+		$root = sys_get_temp_dir() . '/ran-booster-deletion-target-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+		mkdir( $root, 0700 );
+		define( 'WP_PLUGIN_DIR', $root );
+		try {
+			foreach ( array( array( 'plugin', 'root.php' ), array( 'plugin', 'package/main.php' ), array( 'plugin', 'nested/package/main.php' ), array( 'theme', 'theme' ), array( 'theme', 'nested/theme' ) ) as [$type, $identifier] ) {
+				$relative = 'plugin' === $type && '.' !== dirname( $identifier ) ? dirname( $identifier ) : $identifier;
+				$target   = $root . '/' . $relative;
+				$parent   = dirname( $target );
+				if ( ! is_dir( $parent ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+					mkdir( $parent, 0700, true ); }
+				$directory = 'theme' === $type || '.' !== dirname( $identifier );
+				if ( $directory ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+					mkdir( $target, 0700 ); }
+				$metadata = $directory ? $target . '/metadata' : $target;
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Exact disposable filesystem observation requires native inode, directory and link operations.
+				file_put_contents( $metadata, 'genuine fixture bytes' );
+				$absent = ( new WordPressPackageRemovalGateway() )->deletion_postcondition( $type, $identifier );
+				self::assertFalse( $absent(), $identifier );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Exact disposable filesystem observation requires native inode, directory and link operations.
+				unlink( $metadata );
+				if ( $directory ) {
+					self::assertFalse( $absent(), 'Missing metadata is not complete directory deletion.' );
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+					rmdir( $target );
+				}
+				self::assertTrue( $absent(), $identifier );
+				symlink( $root . '/missing', $target );
+				self::assertFalse( $absent(), 'A broken replacement link is still a target entry.' );
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Exact disposable filesystem observation requires native inode, directory and link operations.
+				unlink( $target );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+			mkdir( $root . '/nested/theme', 0700 );
+			symlink( $root . '/nested', $root . '/linked' );
+			$caught = false;
+			try {
+				( new WordPressPackageRemovalGateway() )->deletion_postcondition( 'theme', 'linked/theme' );
+			} catch ( RuntimeException ) {
+				$caught = true; }
+			self::assertTrue( $caught, 'A linked parent is refused before mutation.' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Exact disposable filesystem observation requires native inode, directory and link operations.
+			unlink( $root . '/linked' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+			rmdir( $root . '/nested/theme' );
+			$target = $root . '/package';
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+			mkdir( $target, 0700 );
+			$absent = ( new WordPressPackageRemovalGateway() )->deletion_postcondition( 'theme', 'package' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+			rmdir( $target );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Exact disposable filesystem observation requires native inode, directory and link operations.
+			rename( $root, $root . '.original' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+			mkdir( $root, 0700 );
+			$caught = false;
+			try {
+				$absent();
+			} catch ( RuntimeException ) {
+				$caught = true; }
+			self::assertTrue( $caught, 'A replacement root cannot establish absence.' );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+			rmdir( $root );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename -- Exact disposable filesystem observation requires native inode, directory and link operations.
+			rename( $root . '.original', $root );
+		} finally {
+			if ( is_dir( $root . '/nested' ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+				rmdir( $root . '/nested' ); }
+			if ( is_dir( $root ) ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Exact disposable filesystem observation requires native inode, directory and link operations.
+				rmdir( $root ); }
+		}
+	}
+
+
+	public function test_exact_theme_cache_is_fresh_when_native_deletion_throws(): void {
+		foreach ( array( false, true ) as $physically_gone ) {
+			$GLOBALS['ran_booster_cached_theme_targets']           = array();
+			$GLOBALS['ran_booster_removed_theme_targets']          = array();
+			$GLOBALS['ran_booster_package_removal_gateway_events'] = array();
+			$GLOBALS['ran_booster_theme_files_removed']            = $physically_gone;
+			$GLOBALS['ran_booster_package_removal_gateway_result'] = new RuntimeException( 'Native hook threw.' );
+			$original = \RAN\PackageRemoval\wp_get_theme( 'example' );
+			$other    = \RAN\PackageRemoval\wp_get_theme( 'unrelated' );
+			self::assertTrue( $original->exists() );
+			$caught = false;
+			try {
+				( new WordPressPackageRemovalGateway() )->delete_theme( 'example' );
+			} catch ( RuntimeException ) {
+				$caught = true;
+			}
+			self::assertTrue( $caught );
+			self::assertSame( ! $physically_gone, \RAN\PackageRemoval\wp_get_theme( 'example' )->exists() );
+			self::assertSame( $other, \RAN\PackageRemoval\wp_get_theme( 'unrelated' ) );
+			self::assertSame( array( array( 'delete_theme', 'example' ), array( 'theme_cache_delete', 'example' ) ), $GLOBALS['ran_booster_package_removal_gateway_events'] );
+		}
+	}
+
 	public function test_installed_confirmation_detects_content_changes_and_file_replacement(): void {
 		$root = sys_get_temp_dir() . '/ran-booster-recovery-gateway-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Exercise exact disposable filesystem bytes and inode/symlink topology without WordPress filesystem indirection.

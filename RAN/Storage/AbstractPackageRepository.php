@@ -47,29 +47,47 @@ abstract class AbstractPackageRepository {
 		return $packages;
 	}
 
-	public function unlink( mixed $identifier ): PackageMutationResult {
-		RuntimeSupport::assert_managed_operations_allowed();
-
-		global $wpdb;
-
-		$this->require_storage_support( PackageStorageOperation::DELETE );
-		$model  = new PackageModel( array( 'package' => $identifier ) );
-		$result = $wpdb->delete(
-			ran_booster_table_name(),
-			array(
-				'package'      => $model->package,
-				'package_type' => $this->package_type(),
-			)
-		);
-
-		return $this->verify_package_deletion( $model->package, $result );
-	}
-
 	/** @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string} */
 	public function recovery_record( string $identifier ): array {
 		$this->require_recovery_storage();
 		new PackageModel( array( 'package' => $identifier ) );
 		return $this->recovery_snapshot( $identifier, $this->package_rows( $identifier ) );
+	}
+
+	/**
+	 * Exact local recovery inventory; absence is distinct from unreadable or duplicate rows.
+	 * Caller owns the selection transaction when requesting the locking form.
+	 *
+	 * @return array{id:string,package:string,type:int,adoption_token:string,source:string,digest:string}|null
+	 */
+	public function native_recovery_record( string $identifier, bool $for_update = false ): ?array {
+		$this->require_recovery_storage();
+		new PackageModel( array( 'package' => $identifier ) );
+		global $wpdb;
+		// A plugin directory can contain more than one main file. Never unlink an unreviewed sibling.
+		$scope  = strtolower( 1 === $this->package_type() ? explode( '/', $identifier )[0] : $identifier );
+		$query  = $wpdb->prepare(
+			'SELECT p.*, p.package_type AS type FROM %i p WHERE package_type = %d AND (LOWER(package) = %s OR LOWER(package) LIKE %s) LIMIT 2',
+			ran_booster_table_name(),
+			$this->package_type(),
+			$scope,
+			$wpdb->esc_like( $scope . '/' ) . '%'
+		);
+		$query .= $for_update ? ' FOR UPDATE' : '';
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Prepared bounded directory scope; locking suffix is a closed boolean choice.
+		$rows  = $wpdb->get_results( $query );
+		$error = property_exists( $wpdb, 'last_error' ) ? trim( (string) $wpdb->last_error ) : '';
+		if ( '' !== $error || ! is_array( $rows ) || count( $rows ) > 1 ) {
+			throw PackageStorageFailure::query_failed();
+		}
+		if ( array() === $rows ) {
+			return null;
+		}
+		$row = reset( $rows );
+		if ( ! is_object( $row ) ) {
+			throw PackageStorageFailure::query_failed();
+		}
+		return $this->recovery_snapshot( $identifier, array( $row ) );
 	}
 
 	/**
@@ -172,6 +190,8 @@ abstract class AbstractPackageRepository {
 	 * This intentionally does not hydrate or clean the row. Callers that need
 	 * the managed package must still use their type-specific reader so malformed
 	 * and duplicate records remain distinguishable.
+	 *
+	 * @phpstan-impure
 	 */
 	public function has_management_record( mixed $identifier ): bool {
 		$model = new PackageModel( array( 'package' => $identifier ) );

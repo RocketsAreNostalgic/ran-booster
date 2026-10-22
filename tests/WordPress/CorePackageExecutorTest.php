@@ -43,13 +43,11 @@ final class CorePackageExecutorTest extends TestCase {
 			array( new CorePackageExecutor( self::class . '::capture_operation' ), null ),
 			array( new CorePackageExecutor( static fn ( string $action, string $type, string $path, ?object $offer ): array => self::capture_operation( $action, $type, $path, $offer ) ), null ),
 		) as [ $executor, $binding ] ) {
-			foreach ( array( null, new \stdClass() ) as $offer ) {
-				$action = null === $offer ? 'install' : 'update';
-				self::assertSame(
-					array( $binding, $action, 'plugin', '/tmp/package.zip', $offer ),
-					$method->invoke( $executor, $action, 'plugin', '/tmp/package.zip', $offer )
-				);
-			}
+			self::assertSame(
+				array( $binding, 'install', 'plugin', '/tmp/package.zip', null ),
+				$method->invoke( $executor, 'plugin', '/tmp/package.zip' )
+			);
+
 		}
 		$property = new \ReflectionProperty( CorePackageExecutor::class, 'core_operation' );
 		self::assertNull( $property->getValue( new CorePackageExecutor() ) );
@@ -60,7 +58,7 @@ final class CorePackageExecutorTest extends TestCase {
 		return array( null, $action, $type, $path, $offer );
 	}
 
-	public function test_automatic_updater_installation_result_with_one_exact_completion_succeeds(): void {
+	public function test_core_installation_result_with_one_exact_completion_succeeds(): void {
 		$result = $this->map_core_result(
 			$this->wordpress_installation_result(),
 			array( $this->extra() )
@@ -72,13 +70,20 @@ final class CorePackageExecutorTest extends TestCase {
 	public function test_installation_result_array_without_one_exact_completion_fails_closed(): void {
 		$cases = array(
 			'missing completion'   => array(),
-			'wrong completion'     => array(
+			'wrong action'         => array(
 				array(
 					'plugin' => 'other/other.php',
 					'type'   => 'plugin',
 					'action' => 'update',
 				),
 			),
+			'wrong type'           => array(
+				array(
+					'type'   => 'theme',
+					'action' => 'install',
+				),
+			),
+			'missing metadata'     => array( array() ),
 			'multiple completions' => array(
 				$this->extra(),
 				$this->extra(),
@@ -93,7 +98,7 @@ final class CorePackageExecutorTest extends TestCase {
 	}
 
 	/** @return array{plugin: string, type: string, action: string} */
-	private function extra( string $action = 'update' ): array {
+	private function extra( string $action = 'install' ): array {
 		return array(
 			'plugin' => 'example/example.php',
 			'type'   => 'plugin',
@@ -118,6 +123,6 @@ final class CorePackageExecutorTest extends TestCase {
 	private function map_core_result( mixed $core_result, array $completions ): CorePackageExecutionResult {
 		$method = new ReflectionMethod( CorePackageExecutor::class, 'map_result' );
 
-		return $method->invoke( new CorePackageExecutor(), $core_result, 'plugin', 'update', 'example/example.php', $completions );
+		return $method->invoke( new CorePackageExecutor(), $core_result, 'plugin', $completions );
 	}
 }

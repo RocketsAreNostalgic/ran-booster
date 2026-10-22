@@ -12,6 +12,10 @@ use RAN\Package;
 use RAN\PackageSource;
 use RAN\Storage\AbstractPackageRepository;
 use RAN\Storage\Database;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
+use RAN\Storage\PluginRepository;
+use RAN\Storage\ThemeRepository;
 use RAN\Storage\DatabaseLifecycleFailure;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageMutationStatus;
@@ -23,8 +27,15 @@ use RAN\Tests\RANBoosterTestCase;
 use Throwable;
 
 require_once __DIR__ . '/StorageTestEnvironment.php';
+require_once dirname( __DIR__ ) . '/WordPress/disposable-management-cleanup.php';
 
 final class PackagePersistenceFailureTest extends RANBoosterTestCase {
+
+	private function install_fixture(): void {
+		$GLOBALS['ran_booster_storage_test_options'][ Database::VERSION_OPTION ] = false;
+		$declaration = new GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => 'ran-booster/ran-booster.php' ), GitHubProvider::compatibility_contract() ) );
+		( new Database( bundled_declaration: $declaration ) )->install();
+	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
@@ -34,6 +45,90 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Focused WordPress database test double.
 		$wpdb = new StorageTestWpdb();
 	}
+
+	public function test_direct_fixture_cleanup_preserves_exact_record_and_failures(): void {
+		foreach ( array( 1, 2 ) as $type ) {
+			foreach ( array( 'current', 'absent', 'read-failure', 'false-write', 'zero-write', 'readback-failure', 'replacement' ) as $state ) {
+				$GLOBALS['ran_booster_storage_test_options'] = array();
+				// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Focused WordPress database test double.
+				$GLOBALS['wpdb'] = new StorageTestWpdb();
+				$wpdb            = $GLOBALS['wpdb'];
+				$this->install_fixture();
+				$id         = 1 === $type ? 'fixture/fixture.php' : 'fixture';
+				$row        = array(
+					'id'                     => 1,
+					'package'                => $id,
+					'package_type'           => $type,
+					'provider'               => 'gh',
+					'provider_repository_id' => 'repo',
+					'adoption_token'         => 'gh:repo:12345678-1234-4234-8234-123456789abc',
+					'source'                 => 'branch',
+					'source_revision'        => 1,
+				);
+				$unrelated  = array_replace(
+					$row,
+					array(
+						'id'           => 2,
+						'package'      => 'unrelated',
+						'package_type' => 2,
+					)
+				);
+				$wpdb->rows = 'absent' === $state ? array( $unrelated ) : array( $row, $unrelated );
+				$lifecycle  = new class() extends Database {
+					public function require_ready(): void {
+					}
+
+					public function require_recovery_ready(): void {
+					}
+				};
+				$repository = 1 === $type ? new PluginRepository( $lifecycle ) : new ThemeRepository( $lifecycle );
+				if ( 'read-failure' === $state ) {
+					$wpdb->read_failure = true;
+				}
+				if ( 'false-write' === $state ) {
+					$wpdb->query_failure_contains = 'DELETE FROM';
+				}
+				if ( 'zero-write' === $state ) {
+					$wpdb->delete_result = 0;
+				}
+				if ( 'readback-failure' === $state ) {
+					$wpdb->successful_reads_before_failure = 2;
+				}
+				if ( 'replacement' === $state ) {
+					$repository = new class( $lifecycle, $type ) extends PluginRepository {
+						public function __construct( Database $db, private int $type ) {
+							parent::__construct( $db );
+						}
+						protected function package_type(): int {
+							return $this->type;
+						}
+						public function recovery_record( string $identifier ): array {
+							$record                                     = parent::recovery_record( $identifier );
+							$GLOBALS['wpdb']->rows[0]['adoption_token'] = 'gh:repo:22345678-1234-4234-8234-123456789abc';
+							return $record;
+						}
+					};
+				}
+				$caught = false;
+				try {
+					ran_booster_cleanup_fixture_management( $repository, $id );
+				} catch ( RuntimeException ) {
+					$caught = true;
+				}
+				self::assertSame( ! in_array( $state, array( 'current', 'absent' ), true ), $caught );
+				self::assertContains( $unrelated, $wpdb->rows );
+				if ( in_array( $state, array( 'current', 'absent', 'readback-failure' ), true ) ) {
+					self::assertSame( array( $unrelated ), $wpdb->rows );
+				} else {
+					self::assertCount( 2, $wpdb->rows );
+				}
+				if ( 'replacement' === $state ) {
+					self::assertSame( 'gh:repo:22345678-1234-4234-8234-123456789abc', $wpdb->rows[0]['adoption_token'] );
+				}
+			}
+		}
+	}
+
 
 	public function test_empty_query_is_distinct_from_database_and_malformed_result_failures(): void {
 		global $wpdb;
@@ -318,25 +413,39 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		}
 	}
 
-	public function test_delete_failure_and_unverified_delete_cannot_report_success(): void {
+	public function test_guarded_delete_failure_and_unverified_delete_cannot_report_success(): void {
 		global $wpdb;
-
-		$storage      = $this->storage();
-		$wpdb->rows[] = array(
-			'id'           => 12,
-			'package'      => 'example/example.php',
-			'package_type' => 1,
-		);
-
-		$wpdb->delete_result = false;
-		self::assertSame( PackageMutationStatus::FAILED, $storage->unlink_for_test( 'example/example.php' )->get_status() );
-
-		$wpdb->delete_result = 0;
+		$this->install_fixture();
+		$storage    = $this->storage();
+		$wpdb->rows = array( $this->stored_row() );
+		$snapshot   = $storage->recovery_record( 'example/example.php' );
+		foreach ( array( false, 0 ) as $delete_result ) {
+			$wpdb->delete_result = $delete_result;
+			$result              = $storage->recover_unlink( 'example/example.php', $snapshot['adoption_token'], $snapshot['digest'], static function (): void {} );
+			self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
+			self::assertCount( 1, $wpdb->rows );
+			self::assertSame( 'ROLLBACK', end( $wpdb->queries ) );
+		}
+		$wpdb->delete_result = 1;
 		$wpdb->apply_writes  = false;
-		self::assertSame( PackageMutationStatus::CONFLICT, $storage->unlink_for_test( 'example/example.php' )->get_status() );
-
+		$result              = $storage->recover_unlink( 'example/example.php', $snapshot['adoption_token'], $snapshot['digest'], static function (): void {} );
+		self::assertSame( PackageMutationStatus::FAILED, $result->get_status() );
+		self::assertTrue( $result->is_recovery_required() );
+		self::assertCount( 1, $wpdb->rows );
 		$wpdb->rows = array();
-		self::assertSame( PackageMutationStatus::UNCHANGED, $storage->unlink_for_test( 'example/example.php' )->get_status() );
+		try {
+			$storage->recover_unlink(
+				'example/example.php',
+				$snapshot['adoption_token'],
+				$snapshot['digest'],
+				static function (): void {
+					self::fail( 'Absent management must not reach the guard.' );
+				}
+			);
+			self::fail( 'Absent management is not a confirmed deletion.' );
+		} catch ( PackageStorageFailure $failure ) {
+			self::assertSame( 'ran_booster_storage_duplicate_package', $failure->get_diagnostic_id() );
+		}
 	}
 
 	public function test_post_write_verification_failures_require_recovery_for_every_mutation(): void {
@@ -382,18 +491,34 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$this->assert_ambiguous_write( $zero_edit_result, PackageStorageOperation::UPDATE );
 
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
-		$wpdb                                  = new StorageTestWpdb();
-		$wpdb->rows[]                          = $this->stored_row();
-		$wpdb->successful_reads_before_failure = 0;
-		$delete_result                         = $storage->unlink_for_test( 'example/example.php' );
+		$wpdb         = new StorageTestWpdb();
+		$wpdb->rows[] = $this->stored_row();
+		$this->install_fixture();
+		$storage       = $this->storage();
+		$snapshot      = $storage->recovery_record( 'example/example.php' );
+		$delete_result = $storage->recover_unlink(
+			'example/example.php',
+			$snapshot['adoption_token'],
+			$snapshot['digest'],
+			static function () use ( $wpdb ): void {
+				$wpdb->successful_reads_before_failure = 0;
+			}
+		);
 		$this->assert_ambiguous_write( $delete_result, PackageStorageOperation::DELETE );
 
-		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated database double.
-		$wpdb                                  = new StorageTestWpdb();
-		$wpdb->delete_result                   = 0;
-		$wpdb->successful_reads_before_failure = 0;
-		$zero_delete_result                    = $storage->unlink_for_test( 'example/example.php' );
-		$this->assert_ambiguous_write( $zero_delete_result, PackageStorageOperation::DELETE );
+		// Zero affected rows is now rejected before readback, rather than an ambiguous idempotent raw delete.
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Reset the focused WordPress database test double.
+		$wpdb         = new StorageTestWpdb();
+		$wpdb->rows[] = $this->stored_row();
+		$this->install_fixture();
+		$storage             = $this->storage();
+		$snapshot            = $storage->recovery_record( 'example/example.php' );
+		$wpdb->delete_result = 0;
+		$zero_delete_result  = $storage->recover_unlink( 'example/example.php', $snapshot['adoption_token'], $snapshot['digest'], static function (): void {} );
+		self::assertSame( PackageMutationStatus::FAILED, $zero_delete_result->get_status() );
+		self::assertFalse( $zero_delete_result->is_recovery_required() );
+		self::assertCount( 1, $wpdb->rows );
+		self::assertSame( 'ROLLBACK', end( $wpdb->queries ) );
 	}
 
 	public function test_missing_package_read_preserves_the_management_row(): void {
@@ -515,10 +640,6 @@ final class PersistenceFailureTestRepository extends AbstractPackageRepository {
 
 	public function adopt_for_test( Package $package ): PackageMutationResult {
 		return $this->adopt_package( $package );
-	}
-
-	public function unlink_for_test( string $identifier ): PackageMutationResult {
-		return $this->unlink( $identifier );
 	}
 
 	/** @param array<string, mixed> $input */

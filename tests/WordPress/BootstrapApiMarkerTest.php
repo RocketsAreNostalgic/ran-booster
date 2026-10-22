@@ -16,7 +16,7 @@ final class BootstrapApiMarkerTest extends TestCase {
 			'PROVIDER'          => 15,
 			'ADDON'             => 17,
 			'ADMIN_INTERACTION' => 3,
-			'PORTABILITY'       => 3,
+			'PORTABILITY'       => 4,
 		) as $api => $version ) {
 			foreach ( array(
 				'older'  => $version - 1,

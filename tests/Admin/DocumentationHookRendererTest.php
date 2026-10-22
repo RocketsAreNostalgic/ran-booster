@@ -44,13 +44,15 @@ final class DocumentationHookRendererTest extends TestCase {
 				return $sections;
 			};
 
+		$renderer = new DocumentationHookRenderer();
 		ob_start();
-		( new DocumentationHookRenderer() )->render_sections(
+		$sections = $renderer->prepare_sections(
 			'ran_booster_documentation_sections_after_provider_gh',
 			'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation',
 			'network',
 			'gh'
 		);
+		$renderer->render_prepared_sections( $sections );
 		$html = (string) ob_get_clean();
 
 		self::assertSame(
@@ -78,12 +80,14 @@ final class DocumentationHookRendererTest extends TestCase {
 				return $sections;
 			};
 
+		$renderer = new DocumentationHookRenderer();
 		ob_start();
-		( new DocumentationHookRenderer() )->render_sections(
+		$sections = $renderer->prepare_sections(
 			'ran_booster_documentation_sections_before_about',
 			'https://example.test/documentation',
 			'site'
 		);
+		$renderer->render_prepared_sections( $sections );
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<details id="safe-guide"', $html );

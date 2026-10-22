@@ -10,6 +10,7 @@ use InvalidArgumentException;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\Secrets\SecretsFile;
+use RAN\WordPress\ManagedReleaseStore;
 
 /**
  * Builds a deterministic package blueprint from Booster's non-cleaning readers.
@@ -24,18 +25,22 @@ final readonly class ManagedPackageBlueprintExporter {
 	public function __construct(
 		private PluginRepository $plugins,
 		private ThemeRepository $themes,
-		private SecretsFile $secrets
+		private SecretsFile $secrets,
+		private ManagedReleaseStore $releases = new ManagedReleaseStore(),
+		private BlueprintRequirements $requirements = new BlueprintRequirements()
 	) {
 	}
 
 	/**
 	 * @param array<string, list<string>>                     $credential_selection
 	 * @param list<array{type:string,identifier:string}>|null $package_selection
+	 * @param list<array{type:string,identifier:string,issues:array<string,string>}>|null $report
+	 * @param-out list<array{type:string,identifier:string,issues:array<string,string>}> $report
 	 */
-	public function export( array $credential_selection = array(), ?array $package_selection = null ): PackageBlueprint {
+	public function export( array $credential_selection = array(), ?array $package_selection = null, ?array &$report = null ): PackageBlueprint {
+		$report      = array();
 		$packages    = array();
 		$managed     = array();
-		$unsupported = array();
 		$selected    = $this->selection( $package_selection );
 		$credentials = $this->credential_selection( $credential_selection );
 		foreach ( array(
@@ -51,15 +56,23 @@ final readonly class ManagedPackageBlueprintExporter {
 					continue;
 				}
 				unset( $selected[ $key ] );
-				if ( PackageSource::BRANCH !== $package->get_source() ) {
-					$unsupported[] = new BlueprintExportPackageFailure(
-						$type,
-						$package->get_display_name(),
-						BlueprintExportPackageFailure::PUBLISHED_RELEASES
+				$configuration = PackageSource::RELEASE_ASSET === $package->get_source()
+					? $this->releases->configuration( $type, (string) $package->get_identifier() )
+					: null;
+				$blueprint     = BlueprintPackage::from_managed_package( $type, $package, $configuration );
+				$observation   = $this->requirements->installed( $blueprint );
+				if ( array() !== $observation['issues'] ) {
+					$report[] = array(
+						'type'       => $type,
+						'identifier' => $blueprint->identifier,
+						'issues'     => $observation['issues'],
 					);
-					continue;
 				}
-				$blueprint  = BlueprintPackage::from_managed_package( $type, $package );
+				if ( null !== $observation['requirements'] ) {
+					$record                 = $blueprint->to_array();
+					$record['requirements'] = $observation['requirements'];
+					$blueprint              = BlueprintPackage::from_array( $record );
+				}
 				$packages[] = $blueprint;
 				$managed[]  = array(
 					'package'   => $package,
@@ -69,10 +82,6 @@ final readonly class ManagedPackageBlueprintExporter {
 		}
 		if ( null !== $selected && array() !== $selected ) {
 			throw new InvalidArgumentException( 'The managed package selection is invalid.' );
-		}
-		if ( array() !== $unsupported ) {
-			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- The typed exception carries only display-safe package failure context to the administrator boundary.
-			throw new UnsupportedBlueprintPackages( $unsupported );
 		}
 
 		return new PackageBlueprint( $packages, array() === $credentials ? array() : $this->credentials( $managed, $credentials ) );

@@ -69,6 +69,131 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		parent::tearDown();
 	}
 
+	public function test_paused_github_adoption_inventory_is_redacted_and_retains_mixed_lifecycle(): void {
+		$this->seed_representative_document();
+		$document                      = $this->decoded_document();
+		$record                        = array(
+			'label'         => 'Retained profile',
+			'kind'          => 'classic',
+			'configuration' => array( 'owner' => '' ),
+			'secret'        => 'synthetic-private-api-material',
+		);
+		$document['credentials']['gh'] = array(
+			'classic'   => $record,
+			'fine'      => array_replace(
+				$record,
+				array(
+					'kind'          => 'fine-grained',
+					'configuration' => array( 'owner' => 'known-owner' ),
+				)
+			),
+			'unknown'   => array_replace(
+				$record,
+				array(
+					'kind'          => 'future-format',
+					'configuration' => array( 'private' => 'synthetic-private-config' ),
+				)
+			),
+			'extra'     => array_replace(
+				$record,
+				array(
+					'configuration' => array(
+						'owner'   => '',
+						'private' => 'synthetic-private-config',
+					),
+				)
+			),
+			'destroyed' => array_merge(
+				$record,
+				array(
+					'self_destruct'       => true,
+					'destroy_on'          => '2000-01-01',
+					'provider_destroy_on' => '1999-01-01',
+				)
+			),
+			'expiring'  => array_merge(
+				$record,
+				array(
+					'self_destruct' => true,
+					'destroy_on'    => '2999-01-01',
+				)
+			),
+		);
+		ksort( $document['credentials']['gh'], SORT_STRING );
+		$this->write_authenticated_document( $document );
+		$before    = hash_file( 'sha256', $this->path );
+		$calls     = 0;
+		$paused    = new SecretsFile(
+			$this->path,
+			array( 'RAN_BOOSTER_GITHUB_TOKEN' => 'synthetic-private-constant' ),
+			new ProviderSecretPolicyCatalog(),
+			$this->key_store,
+			$this->codec,
+			github_credential_access: static function () use ( &$calls ): never {
+				++$calls;
+				throw new RuntimeException( 'A paused candidate must never be consulted.' );
+			}
+		);
+		$inventory = $paused->github_adoption_inventory();
+		self::assertSame( 0, $calls );
+		self::assertCount( 7, $inventory );
+		self::assertSame( 'github-classic-pat-v1', $inventory['classic']['format'] );
+		self::assertSame( 'github-fine-grained-pat-v1', $inventory['fine']['format'] );
+		self::assertSame( array( 'owner' => 'known-owner' ), $inventory['fine']['configuration'] );
+		self::assertNull( $inventory['unknown']['configuration'] );
+		self::assertNull( $inventory['unknown']['format'] );
+		self::assertNull( $inventory['extra']['configuration'] );
+		self::assertNull( $inventory['extra']['format'] );
+		self::assertTrue( $inventory['destroyed']['destroyed'] );
+		self::assertSame( '1999-01-01', $inventory['destroyed']['destroy_on'] );
+		self::assertFalse( $inventory['expiring']['destroyed'] );
+		self::assertSame( 'constant', $inventory['constant']['source'] );
+		self::assertSame( 'github-classic-pat-v1', $inventory['constant']['format'] );
+		foreach ( $inventory as $profile ) {
+			self::assertSame( array( 'id', 'label', 'kind', 'format', 'configuration', 'source', 'self_destruct', 'destroy_on', 'destroyed' ), array_keys( $profile ) );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON keeps the redaction assertion independent of WordPress.
+		self::assertFalse( str_contains( json_encode( $inventory, JSON_THROW_ON_ERROR ), 'synthetic-private-' ) );
+		self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+		self::assertSame( array(), $paused->credentials_for( 'gh' )->credential_profiles() );
+		self::assertFalse( method_exists( $paused->credentials_for( 'gh' ), 'github_adoption_inventory' ) );
+		self::assertCount( 1, $this->secrets->credential_profiles( 'beta' ) );
+	}
+
+	#[DataProvider( 'adoption_constant_cases' )]
+	public function test_github_adoption_inventory_reads_only_active_constant_without_policy( mixed $constant, bool $present ): void {
+		$secrets = $this->new_secrets( array( 'RAN_BOOSTER_GITHUB_TOKEN' => $constant ), new ProviderSecretPolicyCatalog() );
+		$actual  = $secrets->github_adoption_inventory();
+		self::assertSame( $present ? array( 'constant' ) : array(), array_keys( $actual ) );
+		self::assertFalse( is_file( $this->path ) );
+		self::assertNull( $this->key_store->load( false ) );
+	}
+
+	/** @return iterable<string, array{mixed,bool}> */
+	public static function adoption_constant_cases(): iterable {
+		yield 'absent' => array( null, false );
+		yield 'blank' => array( '  ', false );
+		yield 'invalid-type' => array( 123, false );
+		yield 'present' => array( 'synthetic-private-constant', true );
+		yield 'no-prefix-inference' => array( 'github_pat_synthetic_test_only', true );
+	}
+
+	public function test_github_adoption_inventory_does_not_hide_authenticated_storage_corruption(): void {
+		$this->seed_representative_document();
+		$document                      = $this->decoded_document();
+		$document['credentials']['gh'] = array( 'malformed' => array( 'label' => 'Malformed' ) );
+		$this->write_authenticated_document( $document );
+		$this->expectException( RuntimeException::class );
+		$this->secrets->github_adoption_inventory();
+	}
+
+	public function test_github_adoption_inventory_does_not_hide_missing_sidecar_behind_constant(): void {
+		$this->key_store->load_or_create();
+		$secrets = $this->new_secrets( array( 'RAN_BOOSTER_GITHUB_TOKEN' => 'synthetic-private-constant' ), new ProviderSecretPolicyCatalog() );
+		$this->expectException( SecretsStorageUnavailable::class );
+		$secrets->github_adoption_inventory();
+	}
+
 	#[DataProvider( 'mutation_result_cases' )]
 	public function test_mutation_preserves_result_and_optional_write_flag( mixed $result, ?bool $write, bool $include_flag ): void {
 		$this->seed_representative_document();
@@ -572,6 +697,25 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		self::assertSame( 1, $this->calls->count( 'alpha', 'credential', 'normalize' ) );
 		self::assertSame( 1, $this->calls->normalizations_outside_lock() );
 		self::assertSame( 0, $this->calls->events_under_lock() );
+	}
+
+	public function test_v1_retry_reuses_the_existing_pre_normalization_credential_id(): void {
+		$legacy      = '{"format":"ran-booster-package-blueprint","version":1,"packages":[{"type":"plugin","identifier":"fixture/fixture.php","display_name":"Fixture","provider":"alpha","provider_repository_id":"fixture-repository-id","repository":"fixture/repository","branch":"main","subdirectory":null}],"credentials":[{"provider":"alpha","label":"Portable credential","kind":"api-key","configuration":{"tenant":"fixture"},"secret":"synthetic-portable-value","packages":[{"type":"plugin","identifier":"fixture/fixture.php"}]}]}';
+		$expected_id = 'portable_b2d7585c1a4d059295f406fbedb6797a9d749300558f92ec50add5c';
+		// Seed the exact profile ID produced by the original V1 import algorithm.
+		$this->secrets->save_credential(
+			'alpha',
+			$expected_id,
+			$this->credential_metadata( 'Portable credential' ),
+			'synthetic-portable-value'
+		);
+		$before = hash_file( 'sha256', $this->path );
+		foreach ( array( 1, 2 ) as $attempt ) {
+			$blueprint = PackageBlueprint::from_json( $legacy );
+			self::assertSame( array( $expected_id ), $this->secrets->import_credentials_if_absent( $blueprint, $blueprint->credentials[0] ), 'Retry ' . $attempt );
+			self::assertSame( $before, hash_file( 'sha256', $this->path ) );
+			self::assertCount( 1, $this->secrets->credential_profiles( 'alpha' ) );
+		}
 	}
 
 	public function test_tampered_and_authenticated_non_canonical_documents_fail_before_policy(): void {

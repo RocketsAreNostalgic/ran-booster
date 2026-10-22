@@ -5,7 +5,7 @@
 .ran-booster-admin .ran-booster-package-intro {
 	display: grid;
 	gap: var(--ran-booster-space-16);
-	margin-block-end: var(--ran-booster-space-18);
+	margin-block-end: var(--ran-booster-space-20);
 }
 
 .ran-booster-admin .ran-booster-package-intro > .description,
@@ -15,8 +15,9 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-package-heading {
+.ran-booster-admin h2.ran-booster-package-heading {
 	display: inline-block;
+	margin-block-start: var(--ran-booster-space-16);
 	margin-inline-end: var(--ran-booster-space-8);
 }
 
@@ -462,7 +463,7 @@
 		flex-direction: column;
 	}
 
-	.ran-booster-admin .ran-booster-package-heading {
+	.ran-booster-admin h2.ran-booster-package-heading {
 		display: block;
 		margin-block-end: var(--ran-booster-space-8);
 	}

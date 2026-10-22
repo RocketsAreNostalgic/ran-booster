@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import test from 'node:test';
 
@@ -95,6 +97,9 @@ function row(
 	const item = {
 		choice,
 		getAttribute(attribute) {
+			if (attribute === 'data-portability-provider-expectation') {
+				return item.providerExpectation ?? null;
+			}
 			if (attribute === 'data-portability-row') {
 				return String(index);
 			}
@@ -119,6 +124,9 @@ function row(
 			return null;
 		},
 		querySelector(selector) {
+			if (selector === '[data-portability-target-credential]') {
+				return item.targetCredential || null;
+			}
 			return selector === '[data-portability-select]' ? choice : null;
 		},
 	};
@@ -282,6 +290,46 @@ function progressButton(idleLabel, busyLabel, labelSelector) {
 	};
 
 	return { button, label };
+}
+
+function renderPackageCredentialReview(
+	action,
+	selectedId = null,
+	choices = [{ id: 'saved-profile', label: 'Saved PAT' }]
+) {
+	return execFileSync(
+		'php',
+		[
+			'-r',
+			'require $argv[1]; $portability_review_rows = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR); require $argv[2];',
+			fileURLToPath(
+				new URL(
+					'../Admin/AdminViewWordPressFunctions.php',
+					import.meta.url
+				)
+			),
+			fileURLToPath(
+				new URL('../../views/portability-review.php', import.meta.url)
+			),
+		],
+		{
+			encoding: 'utf8',
+			input: JSON.stringify([
+				{
+					name: 'Package',
+					identifier: 'example/example.php',
+					type: 'Plugin',
+					action,
+					reason: 'Repository access',
+					credential: {
+						choices,
+						selected_id: selectedId,
+						settings_url: 'https://example.test/settings',
+					},
+				},
+			]),
+		}
+	);
 }
 
 function importFixture(fetchResponse, rowSets = {}, options = {}) {
@@ -454,7 +502,12 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 				return currentRows;
 			}
 			if (selector === '[data-portability-credential-refresh]') {
-				return credentialRefreshControls;
+				return [
+					...credentialRefreshControls,
+					...currentRows
+						.map((item) => item.targetCredential)
+						.filter(Boolean),
+				];
 			}
 			if (
 				selector ===
@@ -485,7 +538,55 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		},
 		set(value) {
 			html = value;
-			setRows(rowSets[value] || []);
+			const renderedRows = options.rendered
+				? Array.from(
+						value.matchAll(
+							/<tr data-portability-row="(\d+)" data-portability-action="([a-z]+)"/g
+						),
+						(match) => [match[1], match[2], true]
+					)
+				: [];
+			setRows(rowSets[value] || renderedRows);
+			for (const match of value.matchAll(
+				/<select([^>]*data-portability-target-credential[^>]*)>([\s\S]*?)<\/select>/g
+			)) {
+				const attributes = new Map(
+					Array.from(
+						match[1].matchAll(/([a-z-]+)="([^"]*)"/g),
+						(attribute) => [attribute[1], attribute[2]]
+					)
+				);
+				const item = currentRows.find(
+					(candidate) =>
+						candidate.getAttribute('data-portability-row') ===
+						attributes.get('data-portability-row')
+				);
+				if (item) {
+					item.targetCredential = {
+						value:
+							match[2].match(
+								/<option value="([^"]*)" selected(?:="selected")?>/
+							)?.[1] || '',
+						getAttribute(name) {
+							return attributes.get(name) ?? null;
+						},
+						setAttribute(name, attributeValue) {
+							attributes.set(name, attributeValue);
+						},
+						matches(selector) {
+							return (
+								selector ===
+									'[data-portability-target-credential]' ||
+								(selector ===
+									'[data-portability-credential-refresh]' &&
+									match[1].includes(
+										'data-portability-credential-refresh'
+									))
+							);
+						},
+					};
+				}
+			}
 		},
 	});
 
@@ -520,8 +621,12 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 				}[selector] || null
 			);
 		},
-		querySelectorAll() {
-			return [];
+		querySelectorAll(selector) {
+			return selector === '[data-portability-target-credential]'
+				? currentRows
+						.map((item) => item.targetCredential)
+						.filter(Boolean)
+				: [];
 		},
 	};
 
@@ -547,22 +652,26 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	globalThis.FormData = class {
 		constructor() {
 			this.values = new Map([
-				['action', 'ran_booster_preview_blueprint'],
-				['nonce', 'preview-nonce'],
+				['action', ['ran_booster_preview_blueprint']],
+				['nonce', ['preview-nonce']],
 			]);
 			forms.push(this);
 		}
 
 		append(name, value) {
-			this.values.set(name, value);
+			this.values.set(name, [...(this.values.get(name) || []), value]);
 		}
 
 		get(name) {
-			return this.values.get(name);
+			return this.values.get(name)?.[0];
+		}
+
+		getAll(name) {
+			return this.values.get(name) || [];
 		}
 
 		set(name, value) {
-			this.values.set(name, value);
+			this.values.set(name, [value]);
 		}
 	};
 	globalThis.window = {
@@ -1392,6 +1501,79 @@ test('apply sends only selected rows serially and preserves choices on review', 
 	}
 });
 
+test('each Apply request carries its complete selected subset and later Apply reads a fresh selection', async () => {
+	const submitted = [];
+	let finishFirst;
+	const state = importFixture(
+		(data) => {
+			if (data.get('action') !== 'ran_booster_apply_blueprint') {
+				return success('<table>review</table>');
+			}
+			submitted.push({
+				row: data.get('row'),
+				selected: data.getAll('selected_rows[]'),
+				expectation: data.get('provider_expectation') ?? null,
+			});
+			if (submitted.length === 1) {
+				return new Promise((resolve) => {
+					finishFirst = () =>
+						resolve(success('', { status: 'installed' }));
+				});
+			}
+			return success('', { status: 'installed' });
+		},
+		{
+			'<table>review</table>': [
+				['2', 'install', true],
+				['5', 'install', true],
+				['9', 'adopt', true],
+			],
+		}
+	);
+
+	try {
+		loadFunction('initPortabilityPreview')();
+		await state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		state.rows()[1].choice.checked = false;
+		state.listeners.get('root:change')({ target: state.rows()[1].choice });
+		const expectation = JSON.stringify({
+			provider_code: 'gh',
+			selection_generation: 4,
+			implementation_fingerprint: 'a'.repeat(64),
+		});
+		state.rows()[2].providerExpectation = expectation;
+		const applying = state.listeners.get('apply:click')();
+		assert.deepEqual(submitted, [
+			{ row: '2', selected: ['2', '9'], expectation: null },
+		]);
+		state.rows()[2].providerExpectation = 'changed-after-apply-start';
+		// Changing a checkbox during the batch cannot change its declared subset.
+		state.rows()[2].choice.checked = false;
+		finishFirst();
+		await applying;
+		assert.deepEqual(submitted, [
+			{ row: '2', selected: ['2', '9'], expectation: null },
+			{ row: '9', selected: ['2', '9'], expectation },
+		]);
+
+		state.rows().forEach((item, index) => {
+			item.choice.checked = index === 1;
+		});
+		state.rows()[1].providerExpectation = expectation;
+		state.listeners.get('root:change')({ target: state.rows()[1].choice });
+		await state.listeners.get('apply:click')();
+		assert.deepEqual(submitted.at(-1), {
+			row: '5',
+			selected: ['5'],
+			expectation,
+		});
+		assert.equal(submitted.length, 3);
+	} finally {
+		cleanup();
+	}
+});
+
 test('apply identifies the exact package where a serial chain is pending', async () => {
 	let finishApply;
 	let applies = 0;
@@ -1512,3 +1694,211 @@ test('apply restores a disabled idle state when the final review fails', async (
 		cleanup();
 	}
 });
+
+test('shipped package-only picker serializes the explicit row profile through review and Apply', async () => {
+	const blocked = renderPackageCredentialReview('blocked');
+	const ready = renderPackageCredentialReview('install', 'saved-profile');
+	let requests = 0;
+	const state = importFixture(
+		async (data) => {
+			if (data.get('action') === 'ran_booster_apply_blueprint') {
+				assert.equal(
+					data.get('target_credentials[0]'),
+					'saved-profile'
+				);
+				assert.equal(data.get('row'), '0');
+				return success('', {
+					status: 'installed',
+					credential_state: 'target_selected',
+				});
+			}
+			if (++requests > 1) {
+				assert.equal(
+					data.get('target_credentials[0]'),
+					'saved-profile'
+				);
+			}
+			return success(requests === 1 ? blocked : ready);
+		},
+		{},
+		{ rendered: true }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const picker = state.rows()[0].targetCredential;
+		assert.equal(picker.value, '');
+		assert.equal(state.apply.disabled, true);
+		picker.value = 'saved-profile';
+		state.listeners.get('root:change')({ target: picker });
+		await tick();
+		assert.equal(state.rows()[0].targetCredential.value, 'saved-profile');
+		assert.equal(state.apply.disabled, false);
+		assert.match(state.applySummary.textContent, /use 1 saved credential/);
+		await state.listeners.get('apply:click')();
+		assert.ok(
+			state.forms.some(
+				(data) => data.get('action') === 'ran_booster_apply_blueprint'
+			)
+		);
+	} finally {
+		cleanup();
+	}
+});
+
+test('shipped picker retains an unavailable explicit profile until the operator changes it', async () => {
+	const stale = renderPackageCredentialReview(
+		'blocked',
+		'deleted-profile',
+		[]
+	);
+	const state = importFixture(
+		async () => success(stale),
+		{},
+		{ rendered: true }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		assert.equal(state.rows()[0].targetCredential.value, 'deleted-profile');
+		assert.match(stale, /Previously selected credential is unavailable/);
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		assert.equal(
+			state.forms[1].get('target_credentials[0]'),
+			'deleted-profile'
+		);
+		assert.equal(state.apply.disabled, true);
+	} finally {
+		cleanup();
+	}
+});
+
+test('package-only HTMX picker reuses credential refresh instead of starting a competing fetch', async () => {
+	const ready = renderPackageCredentialReview('install', 'saved-profile');
+	const state = importFixture(
+		async () => success(ready),
+		{},
+		{ rendered: true, htmx: true }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const picker = state.rows()[0].targetCredential;
+		assert.equal(state.apply.disabled, false);
+		state.listeners.get('root:change')({ target: picker });
+		assert.equal(state.apply.disabled, true);
+		await tick();
+		assert.equal(state.forms.length, 1);
+		assert.equal(picker.getAttribute('hx-post'), '/admin-ajax.php');
+		const detail = { xhr: { abort() {} }, requestConfig: { elt: picker } };
+		state.listeners.get('root:htmx:beforeRequest')({ detail });
+		state.review.innerHTML = ready;
+		assert.equal(
+			state.rows()[0].targetCredential.getAttribute('hx-post'),
+			null
+		);
+		state.listeners.get('root:htmx:afterSwap')({ detail });
+		assert.equal(
+			state.rows()[0].targetCredential.getAttribute('hx-post'),
+			'/admin-ajax.php'
+		);
+		assert.match(ready, /hx-sync="\[data-portability-preview\]:replace"/);
+		assert.match(
+			ready,
+			/hx-include="[^"]*\[data-portability-target-credential\]"/
+		);
+	} finally {
+		cleanup();
+	}
+});
+
+test('manual fetch review aborts and refuses a superseded HTMX credential fragment', async () => {
+	const ready = renderPackageCredentialReview('install', 'saved-profile');
+	const state = importFixture(
+		async () => success(ready),
+		{},
+		{ rendered: true, htmx: true }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		let aborted = 0;
+		const detail = {
+			xhr: {
+				abort() {
+					aborted++;
+				},
+			},
+			requestConfig: { elt: state.rows()[0].targetCredential },
+			shouldSwap: true,
+		};
+		state.listeners.get('root:htmx:beforeRequest')({ detail });
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		assert.equal(aborted, 1);
+		assert.equal(
+			state.forms[1].get('target_credentials[0]'),
+			'saved-profile'
+		);
+		state.listeners.get('root:htmx:beforeSwap')({ detail });
+		assert.equal(detail.shouldSwap, false);
+		assert.equal(state.apply.disabled, false);
+	} finally {
+		cleanup();
+	}
+});
+
+for (const failedOlderResponse of [false, true]) {
+	test(`new HTMX credential review invalidates an older fetch ${failedOlderResponse ? 'failure' : 'response'}`, async () => {
+		const ready = renderPackageCredentialReview('install', 'saved-profile');
+		let finishOlderFetch;
+		let requests = 0;
+		const state = importFixture(
+			async () =>
+				++requests === 1
+					? success(ready)
+					: new Promise((resolve) => {
+							finishOlderFetch = resolve;
+						}),
+			{},
+			{ rendered: true, htmx: true }
+		);
+		try {
+			loadFunction('initPortabilityPreview')();
+			state.listeners.get('form:submit')({ preventDefault() {} });
+			await tick();
+			const picker = state.rows()[0].targetCredential;
+			state.listeners.get('form:submit')({ preventDefault() {} });
+			const detail = {
+				xhr: { abort() {} },
+				requestConfig: { elt: picker },
+			};
+			state.listeners.get('root:htmx:beforeRequest')({ detail });
+			state.review.innerHTML = ready;
+			state.listeners.get('root:htmx:afterSwap')({ detail });
+			finishOlderFetch(
+				failedOlderResponse
+					? {
+							json: async () => {
+								throw new Error('obsolete error');
+							},
+						}
+					: success('<table>obsolete</table>')
+			);
+			await tick();
+			assert.equal(
+				state.rows()[0].targetCredential.value,
+				'saved-profile'
+			);
+			assert.equal(state.review.innerHTML, ready);
+			assert.equal(state.apply.disabled, false);
+		} finally {
+			cleanup();
+		}
+	});
+}

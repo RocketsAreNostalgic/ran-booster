@@ -9,9 +9,13 @@ require_once __DIR__ . '/AttemptRepositoryDatabase.php';
 require_once __DIR__ . '/AdmittedBranchHostAdapterWordPressFunctions.php';
 require_once __DIR__ . '/PackageMutationGuardWordPressFunctions.php';
 require_once __DIR__ . '/DeploymentWorkerPhpFunctions.php';
+require_once __DIR__ . '/../Storage/StorageTestEnvironment.php';
+require_once __DIR__ . '/../RepositoryProvider/Support/RepositoryResolverWordPressFunctions.php';
+require_once __DIR__ . '/../RepositoryProvider/AuthenticatedPreparedArchiveWordPressFunctions.php';
 
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
+use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\Deployment\AdmittedBranchHostAdapter;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentAttemptRepository;
@@ -49,10 +53,14 @@ use RAN\WPBranchUpdater\V1\Runtime\CorePackageExecutionResult;
 use RAN\WPBranchUpdater\V1\WordPress\WordPressCorePackageExecutor;
 use RuntimeException;
 use RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+use RAN\Tests\RepositoryProvider\Support\EmptyAuthenticatedWebhookDeliveryEvidenceReader;
+use RAN\Tests\RepositoryProvider\Support\RepositoryResolverSecretsStub;
 use RAN\Tests\Support\RepositorySourceGuardDatabase;
 use ZipArchive;
 
 final class AdmittedBranchHostAdapterParityTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
+
 	private const MAXIMUM_ARTIFACT_BYTES = 1048576;
 
 	private AttemptRepositoryDatabase $database;
@@ -67,6 +75,9 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		$GLOBALS['ran_booster_storage_test_options'] = array();
+		unset( $GLOBALS['ran_booster_admitted_http_request_args'], $GLOBALS['ran_booster_admitted_http_guards'] );
+		\RAN\RepositoryProvider\authenticated_archive_hooks_reset();
 		$GLOBALS['ran_booster_worker_doing_cron']                = true;
 		$GLOBALS['ran_booster_package_mutation_guard_multisite'] = false;
 		$GLOBALS['ran_booster_package_mutation_guard_file_mods'] = true;
@@ -94,7 +105,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			function ( int $length ): string {
 				return str_repeat( chr( $this->random_byte++ ), $length );
 			},
-			$this->createStub( \RAN\Storage\Database::class )
+			$this->createStub( \RAN\Storage\Database::class ),
+			selection: $this->queued_selection( $this->database )
 		);
 		$this->plugins          = new ParityPluginRepository();
 		$this->themes           = new ParityThemeRepository();
@@ -126,6 +138,278 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			$GLOBALS['ran_booster_admitted_download_fixture'],
 			$GLOBALS['ran_booster_admitted_temp_root']
 		);
+		\RAN\RepositoryProvider\authenticated_archive_hooks_reset();
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue( array() );
+	}
+
+	public function test_guarded_github_archive_retains_post_download_head_authority_until_runner_verification(): void {
+		$commit = '0123456789abcdef0123456789abcdef01234567';
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array(
+				$this->github_repository_response(),
+				$this->github_sha_response( $commit ),
+			)
+		);
+		$provider = $this->guarded_github_provider();
+		self::assertInstanceOf( GitHubProvider::class, $provider );
+		$this->download_fixture( 'example' );
+		$executor                  = new ParityCoreExecutor();
+		$executor->after_execution = function (): void {
+			$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		};
+		$adapter                   = $this->adapter( $this->running_update(), $provider, executor: $executor );
+		$outcome                   = $this->deploy( $adapter );
+
+		self::assertSame(
+			DeploymentOutcome::CODE_DEPLOYED,
+			$outcome,
+			sprintf(
+				'Expected post-cleanup head verification before mutation; got outcome=%s resolved_ref=%s mutation_started_at=%s executor_calls=%d.',
+				$outcome,
+				(string) ( $this->database->rows[0]['resolved_ref'] ?? '' ),
+				null === ( $this->database->rows[0]['mutation_started_at'] ?? null ) ? 'null' : 'set',
+				$executor->calls
+			)
+		);
+		self::assertSame( 1, $executor->calls );
+		self::assertSame( $commit, $this->database->rows[0]['resolved_ref'] );
+		self::assertNotNull( $this->database->rows[0]['mutation_started_at'] );
+	}
+
+	public function test_guarded_private_manual_initial_install_rechecks_after_archive_cleanup(): void {
+		$commit = '1234567890abcdef1234567890abcdef12345678';
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array( $this->github_repository_response( true, 'owner/install-plugin', 'R_install_plugin' ), $this->github_sha_response( $commit ) )
+		);
+		$this->download_fixture( 'example' );
+		$executor                  = new ParityCoreExecutor();
+		$executor->after_execution = function (): void {
+			$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		};
+		$adapter                   = $this->adapter(
+			$this->running_install( 'example', is_private: true, credential_id: 'private-profile' ),
+			$this->guarded_github_provider( array( 'private-profile' => 'github-resolution-token-canary' ) ),
+			executor: $executor
+		);
+
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $this->deploy( $adapter ) );
+		self::assertSame( $commit, $this->database->rows[0]['resolved_ref'] );
+		self::assertSame( 1, $executor->calls );
+		self::assertNotNull( $this->database->rows[0]['mutation_started_at'] );
+	}
+
+	public function test_guarded_webhook_rechecks_the_current_head_after_archive_cleanup(): void {
+		$commit = 'abcdef0123456789abcdef0123456789abcdef01';
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array(
+				$this->github_repository_response(),
+				$this->github_branch_response( $commit ),
+				$this->github_branch_response( $commit ),
+			)
+		);
+		$this->download_fixture( 'example' );
+		$executor                  = new ParityCoreExecutor();
+		$executor->after_execution = function (): void {
+			$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		};
+		$adapter                   = $this->adapter( $this->running_webhook_update( $commit ), $this->guarded_github_provider(), executor: $executor );
+
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $this->deploy( $adapter ) );
+		self::assertCount( 3, \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() );
+		self::assertSame( 1, $executor->calls );
+	}
+
+	public function test_guarded_webhook_stale_head_after_archive_cleanup_refuses_before_mutation(): void {
+		$commit = 'abcdef0123456789abcdef0123456789abcdef01';
+		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+			array(
+				$this->github_repository_response(),
+				$this->github_branch_response( $commit ),
+				$this->github_branch_response( '1234567890abcdef1234567890abcdef12345678' ),
+			)
+		);
+		$this->download_fixture( 'example' );
+		$executor = new ParityCoreExecutor();
+		$adapter  = $this->adapter( $this->running_webhook_update( $commit ), $this->guarded_github_provider(), executor: $executor );
+
+		self::assertSame( DeploymentOutcome::CODE_STALE_EVENT, $this->deploy( $adapter ) );
+		self::assertSame( $commit, $this->database->rows[0]['resolved_ref'] );
+		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		self::assertSame( 0, $executor->calls );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_initial_identity_refuses_old_branch_api_before_provider_or_admission(): void {
+		require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
+		$old_runtime = new class() {
+			public const ADMITTED_API_VERSION = 2;
+		};
+		class_alias( $old_runtime::class, BranchUpdater::class );
+		$provider = new ParityRepositoryProvider( null );
+		$command  = \RAN\PackageOperation::from_input(
+			'install-plugin',
+			array(
+				'provider'               => 'gh',
+				'provider_repository_id' => 'repo-id',
+				'repository'             => 'owner/example',
+				'branch'                 => 'main',
+				'package_slug'           => 'example',
+				'expected_identifier'    => 'example/main.php',
+			)
+		);
+		try {
+			$this->coordinator( $provider )->execute_manual( $command );
+			self::fail( 'An old updater must refuse initial identity requests.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'The branch updater cannot verify the expected initial package identity.', $failure->getMessage() );
+		}
+		self::assertSame( array(), $this->database->rows );
+		$adapter = $this->adapter( $this->running_install( 'example', expected_identifier: 'example/main.php' ), $provider );
+		try {
+			$adapter->declaration();
+			self::fail( 'Queued work must also refuse an old updater.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $failure->outcome_code );
+		}
+		self::assertSame( 0, $provider->prepare_calls );
+	}
+
+	public function test_coordinator_preserves_initial_identity_and_refuses_wrong_archive_main(): void {
+		require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		$this->download_fixture( 'example' );
+		$command = \RAN\PackageOperation::from_input(
+			'install-plugin',
+			array(
+				'provider'               => 'gh',
+				'provider_repository_id' => 'repo-id',
+				'repository'             => 'owner/example',
+				'branch'                 => 'main',
+				'package_slug'           => 'example',
+				'expected_identifier'    => 'example/Main.php',
+			)
+		);
+		$result  = $this->coordinator( $provider )->execute_manual( $command );
+		self::assertSame( 'failed', $result['status'] );
+		self::assertSame( 'example/Main.php', DeploymentRequest::from_json( (string) $this->database->rows[0]['request_json'] )->expected_identifier );
+		self::assertSame( 0, $this->plugins->adopt_calls );
+		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	public function test_initial_identity_survives_admission_and_blocks_wrong_installed_main_file(): void {
+		$attempt = $this->running_install( 'example', expected_identifier: 'example/Main.php' );
+		self::assertSame( 'example/Main.php', $attempt->get_request()->expected_identifier );
+		self::assertNotNull( $attempt->get_request()->provider_selection_generation );
+		self::assertNull( $attempt->get_request()->installed_identifier );
+		$adapter     = $this->adapter( $attempt, new ParityRepositoryProvider( null ) );
+		$declaration = $adapter->declaration();
+		self::assertSame( 'example/Main.php', $declaration->expected_identifier );
+		$this->plugins->installed = $this->plugin();
+		try {
+			$adapter->installed( $declaration );
+			self::fail( 'A different installed main file must refuse.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'The installed package identity is unavailable.', $failure->getMessage() );
+		}
+		self::assertFalse( $adapter->adopt( $declaration ) );
+		self::assertSame( 0, $this->plugins->adopt_calls );
+	}
+
+	public function test_initial_identity_is_rechecked_when_it_changes_after_installed_observation(): void {
+		$adapter                  = $this->adapter( $this->running_install( 'example', expected_identifier: 'example/Main.php' ), new ParityRepositoryProvider( null ) );
+		$declaration              = $adapter->declaration();
+		$this->plugins->installed = $this->plugin( identifier: 'example/Main.php' );
+		self::assertSame( 'example/Main.php', $adapter->installed( $declaration )['identifier'] );
+		$this->plugins->installed = $this->plugin( identifier: 'example/other.php' );
+		self::assertFalse( $adapter->adopt( $declaration ) );
+		self::assertSame( 0, $this->plugins->adopt_calls );
+	}
+
+	public function test_webhook_admission_rejects_explicit_historical_selection_without_acknowledgement(): void {
+		$request = new DeploymentRequest( 'owner/repo', null, false, 'main', 'repo', null, DeploymentPolicy::AUTOMATIC, null, selected_commit: str_repeat( 'a', 40 ) );
+		$before  = $this->database->rows;
+		try {
+			$this->attempts->admit_webhook_batch(
+				'gh',
+				'historical-delivery',
+				str_repeat( 'b', 64 ),
+				array(
+					array(
+						'operation'               => 'update',
+						'package_type'            => 'plugin',
+						'provider_repository_id'  => 'repo-id',
+						'requested_ref'           => str_repeat( 'a', 40 ),
+						'package_source'          => 'branch',
+						'package_source_revision' => 1,
+						'request'                 => $request,
+					),
+				)
+			);
+			self::fail( 'Webhooks cannot request historical acquisition.' );
+		} catch ( \RAN\Deployment\DeploymentStorageFailure ) {
+			self::assertSame( $before, $this->database->rows );
+		}
+	}
+
+	public function test_historical_mode_refuses_version_one_provider_before_preparation(): void {
+		$provider = new ParityRepositoryProvider( null );
+		$adapter  = $this->adapter( $this->running_update( str_repeat( 'a', 40 ) ), $provider );
+		try {
+			$adapter->declaration();
+			self::fail( 'Unsupported historical acquisition must refuse.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $failure->outcome_code );
+		}
+		self::assertSame( 0, $provider->prepare_calls );
+	}
+
+	public function test_historical_archive_keeps_tracking_branch_and_requires_exact_resolved_commit(): void {
+		$commit   = str_repeat( 'a', 40 );
+		$archive  = new ParityProviderArchive( $commit );
+		$provider = new ParityRepositoryProvider( $archive, 2 );
+		$attempt  = $this->running_update( $commit );
+		self::assertSame( $commit, $attempt->get_request()->selected_commit );
+		self::assertSame( 'main', $attempt->get_request()->configured_branch );
+		$adapter = $this->adapter( $attempt, $provider );
+		$this->download_fixture( 'example' );
+		$declaration = $adapter->declaration();
+		self::assertSame( $commit, $declaration->selected_commit );
+		self::assertNull( $declaration->expected_head );
+		$artifact = $adapter->prepare( $declaration, $this->update_baseline() );
+		self::assertNotNull( $provider->last_request );
+		self::assertSame( $commit, $provider->last_request->selected_commit );
+		self::assertSame( $commit, $provider->last_request->ref );
+		self::assertNull( $provider->last_request->expected_branch );
+		$artifact->cleanup();
+	}
+
+	public function test_coordinator_preserves_historical_selection_and_checks_installed_postconditions(): void {
+		$commit   = str_repeat( 'a', 40 );
+		$archive  = new ParityProviderArchive( $commit );
+		$provider = new ParityRepositoryProvider( $archive, 2 );
+		$attempt  = $this->running_update( $commit );
+		$this->download_fixture( 'example' );
+		$outcome = $this->coordinator( $provider )->execute_claimed( $attempt );
+		self::assertSame( 'installed_version_mismatch', $outcome->get_code() );
+		self::assertSame( $commit, $provider->last_request?->selected_commit );
+		self::assertSame( 'main', (string) $this->plugins->managed['fixture']->get_branch() );
+		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	public function test_historical_wrong_resolved_commit_cleans_before_download(): void {
+		$archive  = new ParityProviderArchive( str_repeat( 'b', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive, 2 );
+		$adapter  = $this->adapter( $this->running_update( str_repeat( 'a', 40 ) ), $provider );
+		try {
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+			self::fail( 'A different resolved commit must refuse.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_ARCHIVE_REVISION_INVALID, $failure->outcome_code );
+		}
+		self::assertSame( 1, $archive->cleanup_calls );
+		self::assertSame( array(), $GLOBALS['ran_booster_admitted_http_calls'] );
 	}
 
 	public function test_concrete_provider_download_is_bounded_and_cleans_after_success(): void {
@@ -143,6 +427,73 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( self::MAXIMUM_ARTIFACT_BYTES + 1, $arguments['limit_response_size'] );
 		self::assertSame( 1, $archive->cleanup_calls );
 		$artifact->cleanup();
+	}
+
+	public function test_redirect_argument_callback_revocation_refuses_second_transport_and_cleans(): void {
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		$adapter  = $this->adapter( $this->running_update(), $provider );
+		$this->download_fixture( 'example' );
+		$GLOBALS['ran_booster_admitted_http_responses']    = array(
+			array(
+				'response' => array( 'code' => 302 ),
+				'headers'  => array( 'location' => 'https://example.test/redirected.zip' ),
+			),
+			200,
+		);
+		$GLOBALS['ran_booster_admitted_http_request_args'] = function ( string $url ): void {
+			if ( 'https://example.test/redirected.zip' === $url ) {
+				$this->database->selection->active_bytes = 'a:0:{}';
+			}
+		};
+		try {
+			$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+			self::fail( 'A late redirected-hop revocation must refuse before transport.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_UNAVAILABLE, $failure->outcome_code );
+		}
+		self::assertCount( 1, $GLOBALS['ran_booster_admitted_http_calls'] );
+		self::assertSame( 0, $GLOBALS['ran_booster_admitted_http_calls'][0]['arguments']['redirection'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_admitted_http_guards'] );
+		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	public function test_changed_generation_refuses_before_changed_package_or_provider_preparation(): void {
+		$archive  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider = new ParityRepositoryProvider( $archive );
+		$attempt  = $this->running_update();
+		$state    = json_decode( $this->database->selection->selection->rows[0]->option_value, true, 8, JSON_THROW_ON_ERROR );
+		self::assertIsArray( $state );
+		$state['selection_generation'] = 1;
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact authority race fixture bypasses sanitization.
+		$this->database->selection->selection->rows[0]->option_value = json_encode( $state, JSON_THROW_ON_ERROR );
+		$this->plugins->managed                                      = array();
+		$adapter = $this->adapter( $attempt, $provider );
+		try {
+			$adapter->declaration();
+			self::fail( 'Stale queued work must require a fresh submission.' );
+		} catch ( AdmittedBranchStageFailure $failure ) {
+			self::assertSame( DeploymentOutcome::CODE_PROVIDER_SELECTION_CHANGED, $failure->outcome_code );
+		}
+		self::assertSame( 0, $provider->prepare_calls );
+		self::assertCount( 0, $GLOBALS['ran_booster_admitted_http_calls'] );
+	}
+
+	public function test_selection_loss_after_mutation_preserves_captured_completion_and_cleanup(): void {
+		$archive                  = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+		$provider                 = new ParityRepositoryProvider( $archive );
+		$executor                 = new ParityCoreExecutor();
+		$adapter                  = $this->adapter( $this->running_update(), $provider, executor: $executor );
+		$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		$this->download_fixture( 'example' );
+		$executor->after_execution = function (): void {
+			$this->database->selection->active_bytes = 'a:0:{}';
+		};
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $this->deploy( $adapter ) );
+		self::assertSame( 1, $executor->calls );
+		self::assertSame( 1, $archive->cleanup_calls );
+		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
+		self::assertSame( array(), $this->database->option_rows );
 	}
 
 	public function test_concrete_provider_download_retries_transient_status_before_success(): void {
@@ -395,7 +746,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 	private function adapter(
 		DeploymentAttempt $attempt,
-		ParityRepositoryProvider $provider,
+		RepositoryProvider $provider,
 		?WordPressUpdaterLock $lock = null,
 		?WordPressCorePackageExecutor $executor = null
 	): AdmittedBranchHostAdapter {
@@ -412,10 +763,64 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	private function running_update(): DeploymentAttempt {
-		$identifier                                = (string) $this->plugins->managed['fixture']->get_identifier();
-		$this->database->management[ $identifier ] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
-		$request                                   = new DeploymentRequest(
+	/** @param array<string, string> $tokens */
+	private function guarded_github_provider( array $tokens = array() ): RepositoryProvider {
+		$registrar = new class() {
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The real provider requires the registrar hook; the isolated registrar only returns itself.
+			public function with_operation_guard( callable $guard ): object {
+				return $this;
+			}
+		};
+		$provider  = GitHubProvider::create(
+			new RepositoryResolverSecretsStub( $tokens ),
+			new EmptyAuthenticatedWebhookDeliveryEvidenceReader(),
+			$registrar,
+			operation_guard: static fn (): bool => true
+		);
+		self::assertInstanceOf( GitHubProvider::class, $provider );
+		return $provider;
+	}
+
+	/** @return array{response:array{code:int},body:string} */
+	private function github_repository_response( bool $is_private = false, string $full_name = 'owner/example', string $repository_id = 'R_example' ): array {
+		return array(
+			'response' => array( 'code' => 200 ),
+			'body'     => '{"id":"' . $repository_id . '","full_name":"' . $full_name . '","private":' . ( $is_private ? 'true' : 'false' ) . ',"default_branch":"main"}',
+		);
+	}
+
+	/** @return array{response:array{code:int},body:string} */
+	private function github_sha_response( string $commit ): array {
+		return array(
+			'response' => array( 'code' => 200 ),
+			'body'     => $commit,
+		);
+	}
+
+	/** @return array{response:array{code:int},body:string} */
+	private function github_branch_response( string $commit ): array {
+		return array(
+			'response' => array( 'code' => 200 ),
+			'body'     => '{"name":"main","commit":{"sha":"' . $commit . '"}}',
+		);
+	}
+
+	private function running_update( ?string $selected_commit = null ): DeploymentAttempt {
+		$identifier                                     = (string) $this->plugins->managed['fixture']->get_identifier();
+		$this->database->management[ $identifier ]      = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$this->database->management_rows[ $identifier ] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+			'repository'             => 'owner/example',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
+		$request                                        = new DeploymentRequest(
 			'owner/example',
 			null,
 			false,
@@ -426,7 +831,8 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			7,
 			self::MAXIMUM_ARTIFACT_BYTES,
 			$identifier,
-			'gh:R_example:11111111-1111-4111-8111-111111111111'
+			'gh:R_example:11111111-1111-4111-8111-111111111111',
+			selected_commit: $selected_commit
 		);
 
 		return $this->attempts->admit_and_claim_manual(
@@ -435,23 +841,24 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			'gh',
 			'R_example',
 			$request,
-			'main',
+			$selected_commit ?? 'main',
 			PackageSource::BRANCH->value,
 			1
 		);
 	}
 
-	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC ): DeploymentAttempt {
+	private function running_install( string $slug, DeploymentPolicy $policy = DeploymentPolicy::AUTOMATIC, ?string $expected_identifier = null, bool $is_private = false, ?string $credential_id = null ): DeploymentAttempt {
 		$request = new DeploymentRequest(
 			'owner/install-plugin',
-			null,
-			false,
+			$credential_id,
+			$is_private,
 			'main',
 			$slug,
 			null,
 			$policy,
 			7,
-			self::MAXIMUM_ARTIFACT_BYTES
+			self::MAXIMUM_ARTIFACT_BYTES,
+			expected_identifier: $expected_identifier
 		);
 
 		return $this->attempts->admit_and_claim_manual(
@@ -466,10 +873,22 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		);
 	}
 
-	private function running_webhook_update(): DeploymentAttempt {
-		$identifier                                = (string) $this->plugins->managed['fixture']->get_identifier();
-		$this->database->management[ $identifier ] = 'gh:R_example:11111111-1111-4111-8111-111111111111';
-		$request                                   = new DeploymentRequest(
+	private function running_webhook_update( string $commit = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' ): DeploymentAttempt {
+		$identifier                                     = (string) $this->plugins->managed['fixture']->get_identifier();
+		$this->database->management[ $identifier ]      = 'gh:R_example:11111111-1111-4111-8111-111111111111';
+		$this->database->management_rows[ $identifier ] = array(
+			'provider'               => 'gh',
+			'provider_repository_id' => 'R_example',
+			'repository'             => 'owner/example',
+			'branch'                 => 'main',
+			'private'                => 0,
+			'credential_id'          => null,
+			'subdirectory'           => null,
+			'deployment_policy'      => DeploymentPolicy::AUTOMATIC->value,
+			'source'                 => 'branch',
+			'source_revision'        => 1,
+		);
+		$request                                        = new DeploymentRequest(
 			'owner/example',
 			null,
 			false,
@@ -491,7 +910,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 					'operation'               => 'update',
 					'package_type'            => 'plugin',
 					'provider_repository_id'  => 'R_example',
-					'requested_ref'           => str_repeat( 'b', 40 ),
+					'requested_ref'           => $commit,
 					'package_source'          => PackageSource::BRANCH->value,
 					'package_source_revision' => 1,
 					'request'                 => $request,
@@ -686,10 +1105,11 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 	public int $prepare_calls                 = 0;
 	public ?RuntimeException $prepare_failure = null;
 
-	public function __construct( private ?ParityProviderArchive $archive ) {}
+	public ?ArchiveRequest $last_request = null;
+	public function __construct( private ?ParityProviderArchive $archive, private int $archive_api_version = 1 ) {}
 
 	public function get_metadata(): ProviderMetadata {
-		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner', archive_api_version: $this->archive_api_version );
 	}
 
 	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
@@ -698,6 +1118,7 @@ final class ParityRepositoryProvider implements RepositoryProvider {
 
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInImplementedInterface -- The fixture implementation of prepare_archive retains the production method contract; these inputs do not affect this controlled result.
 	public function prepare_archive( ArchiveRequest $request ): ProviderPreparedArchive {
+		$this->last_request = $request;
 		++$this->prepare_calls;
 		if ( null !== $this->prepare_failure ) {
 			throw $this->prepare_failure;

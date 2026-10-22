@@ -78,7 +78,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	public function target( string $provider_code, string $repository_id ): ?AssistanceTarget {
-		return $this->projected_target( $this->provider_code( $provider_code ), $repository_id, true );
+		return $this->projected_target( $this->provider_code( $provider_code ), $repository_id );
 	}
 
 	public function credential_choices( string $provider_code ): array {
@@ -440,7 +440,7 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 	}
 
 	private function current_target( string $provider_code, string $repository_id, bool $allow_cleanup ): ?AssistanceTarget {
-		$current = $this->projected_target( $provider_code, $repository_id, true );
+		$current = $this->projected_target( $provider_code, $repository_id );
 		if ( null === $current && $allow_cleanup ) {
 			$current = $this->readiness_evaluator->cleanup_target( $provider_code, $repository_id, ( $this->endpoint )( $provider_code ) );
 		}
@@ -448,16 +448,16 @@ final class AssistedWebhookFacade implements WebhookAssistanceFacade {
 		return $current;
 	}
 
-	private function projected_target( string $provider_code, string $repository_id, bool $require_ready_site ): ?AssistanceTarget {
+	private function projected_target( string $provider_code, string $repository_id ): ?AssistanceTarget {
 		if ( ! $this->valid_repository_id( $repository_id ) ) {
 			return null;
 		}
 		$readiness = $this->readiness( $provider_code )->to_array();
-		if ( $require_ready_site && AssistanceReadiness::READY !== $readiness['site']['status'] ) {
+		if ( AssistanceReadiness::READY !== $readiness['site']['status'] ) {
 			return null;
 		}
 		foreach ( $readiness['repositories'] as $repository ) {
-			if ( $repository_id === $repository['repository_id'] && ( ! $require_ready_site || true === $repository['eligible'] ) ) {
+			if ( $repository_id === $repository['repository_id'] && true === $repository['eligible'] ) {
 				return new AssistanceTarget( $provider_code, $repository_id, $repository['repository'], $repository['label'], $repository['package_references'], $repository['deployment_policies'], $readiness['site']['callback_url'] );
 			}
 		}

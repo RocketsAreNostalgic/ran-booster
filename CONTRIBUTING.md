@@ -13,6 +13,15 @@ pnpm check
 
 Runtime, archive, release-candidate, and WordPress lifecycle changes need the focused proof required by [AGENTS.md](AGENTS.md). Do not commit generated release ZIPs, secret sidecars, WordPress runtime state, or credentials.
 
+The guarded `tests/WordPress/adoption-recovery-smoke.sh` proof runs the real
+`admin_init` callbacks and package/recovery renderers for healthy and damaged
+plugin/theme settings. With the same marked disposable site served at
+`http://localhost` (or an explicitly configured localhost port), add
+`RAN_BOOSTER_RECOVERY_HTTP=1` to its normal required
+path/URL/disposable environment to also prove authenticated package/recovery GETs
+and admin-ajax heartbeat. HTTP mode requires a running server and cleans up its
+owned sessions; the ordinary CLI mode does not claim HTTP or browser acceptance.
+
 Release Please owns version/changelog/release-PR/tag/draft lifecycle. The pinned shared Profile B workflow promotes only the exact ZIP and checksum emitted by successful main Quality; do not add repository-local candidate markers, publisher state, mutable release recovery, or a second version engine.
 
 Follow [SUPPORT.md](SUPPORT.md) for ordinary support, non-sensitive defects, and feature requests. Follow [SECURITY.md](SECURITY.md) for vulnerabilities; do not submit security details in an issue or pull request.
@@ -64,9 +73,8 @@ future feature as Level 9 compliant. Keep them alongside the behavioural tests
 when changing these contracts. Broad automatic Level 8 coverage is unchanged,
 and Level 10 remains diagnostic.
 
-Three exact `property.notFound` allowances retain WordPress's mutable foreign
-update-transient contract: the response-channel assignment in
-`CorePackageExecutor::transient_filter()` and the two corresponding plugin/theme
+Two exact `property.notFound` allowances retain WordPress's mutable foreign
+update-transient contract: the plugin/theme
 assignments in `tests/WordPress/core-updater-proof.php`. The existing object must
 retain its identity and supported magic accessors; declaring every object as
 `stdClass`, replacing it or adding an unrelated interface would change that
@@ -386,14 +394,12 @@ resolver, durable deployment request and tests. Method enforcement includes
 enforcement remains at 166 files. The `resolve()` null-only `legacyNull`
 parameter, constants, integer bounds and failure message remain unchanged.
 
-The internal webhook-history cohort uses `WebhookHistory::for_package()`,
-`WebhookHistory::from_record()` and `WebhookHistoryView::to_array()` throughout
-its owned callers and tests. Method enforcement includes both history classes,
-expanding the scope from 170 to 172 files; variable enforcement is unchanged by
-this cohort. Constructor/promoted parameter names and serialized history keys
-remain intact. The separate authority resolver's `forPackage()` and foreign
-readiness `toArray()` contracts retain their existing names. Historical records
-remain observations, not live readiness or restored update authority.
+Webhook history presentation reads `InstallationRecord` directly. The redundant
+internal `WebhookHistory` and `WebhookHistoryView` types were removed under #360;
+no additional history representation or persisted schema was introduced.
+Historical records remain observations, not live readiness or restored update
+authority. Exact package authority stays with
+`ManagedPackageWebhookAuthorityResolver::for_package()`.
 
 
 The internal-variable cohort adds variable enforcement for Booster,
@@ -454,7 +460,7 @@ Validation expressions and error messages, hook names, metadata keys and rendere
 HTML remain unchanged. Connected callers use snake_case methods without aliases.
 
 The webhook InstallationRecord cohort migrates 17 methods and their connected
-calls in WordPressInstallationStore, WebhookOperationCoordinator, WebhookHistory,
+calls in WordPressInstallationStore, WebhookOperationCoordinator,
 WebhookDisplayModel and RepositoryWebhookManagementControls. Schema 4, serialized
 keys, storage identity, profile revisions, the unknown-hook sentinel, immutable
 copies, validation/errors and rendered output are unchanged; no aliases are added.
@@ -584,7 +590,6 @@ Under #167, `RANOwnedMethods` and variable naming checks cover only
 `RAN/Admin/BulkPackageAction.php`, `RAN/Admin/BulkPackageActionFailure.php`,
 `RAN/Admin/BulkPackageResult.php`, `RAN/Admin/BulkPackageActionService.php`,
 `RAN/Secrets/SecretsStorageProvisioningResult.php`,
-`RAN/Secrets/WpConfigPathWriteResult.php`,
 `RAN/Secrets/SecretsStorageUnavailable.php`,
 `RAN/Secrets/SecretsRuntimeAvailability.php`,
 `RAN/Webhook/SignedWebhookVerifier.php`, `RAN/Webhook/WebhookController.php`,

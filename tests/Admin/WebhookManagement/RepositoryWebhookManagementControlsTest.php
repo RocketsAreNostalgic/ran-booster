@@ -553,6 +553,61 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'Manage signing secrets</a> disabled', $html );
 	}
 
+	public function test_unavailable_reason_keeps_package_reference_fallback_local_and_reads_current_state(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$package = $this->createMock( Package::class );
+		$package->method( 'get_source' )->willReturn( PackageSource::BRANCH );
+		$package->method( 'get_provider_code' )->willReturn( 'fixture-provider' );
+		$package->method( 'get_provider_repository_id' )->willReturn( '1234' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$unresolved = new AssistanceReadiness(
+			array(),
+			'https://example.test/webhook',
+			array(
+				array(
+					'package_references' => array( 'example/example.php' ),
+					'reason_codes'       => array( 'repository_identity_unavailable' ),
+				),
+			)
+		);
+		$facade     = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->expects( self::exactly( 3 ) )->method( 'target' )->with( 'fixture-provider', '1234' )->willReturn( null );
+		$facade->expects( self::exactly( 4 ) )->method( 'readiness' )->with( 'fixture-provider' )->willReturn(
+			$unresolved,
+			$unresolved,
+			$unresolved,
+			new AssistanceReadiness( array( 'secrets_storage_unavailable' ), 'https://example.test/webhook', array() )
+		);
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			new ManagedPackageWebhookAuthorityResolver( $plugins, $this->createMock( ThemeRepository::class ) )
+		);
+		$controls->register();
+		$projection = new AdminPackageProjection( 'plugin', 'example/example.php', 'Example', 'fixture-provider', 'branch', 1, 'manual', 'https://example.test/settings' );
+
+		ob_start();
+		$controls->render_package_webhook_setup( 'edit', 'plugin', 'branch', $projection, 'https://example.test/settings' );
+		$package_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'this repository has no stable provider identity', $package_html );
+
+		ob_start();
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
+		$repository_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'until Booster can confirm this managed repository', $repository_html );
+		self::assertStringNotContainsString( 'this repository has no stable provider identity', $repository_html );
+
+		ob_start();
+		$controls->render_package_webhook_setup( 'edit', 'plugin', 'branch', $projection, 'https://example.test/settings' );
+		$current_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'encrypted signing-secret storage is unavailable', $current_html );
+		self::assertStringNotContainsString( 'this repository has no stable provider identity', $current_html );
+	}
+
 	public function test_partial_provider_keeps_release_row_history_local_and_inert(): void {
 		$provider = new FitnessOnlyWebhookManagementCapabilityProvider( 'fitness-only', 'Fitness only' );
 		$GLOBALS['ran_booster_repository_webhook_management_test_options']['ran_booster_assisted_hooks_installations'] = array(

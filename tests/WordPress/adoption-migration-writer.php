@@ -102,8 +102,11 @@ if ( 'old-writer' === $ran_booster_writer_action ) {
 	return;
 }
 if ( 'migrate' === $ran_booster_writer_action ) {
-	$ran_booster_writer_database->install();
-	if ( '14.0' !== get_option( Database::VERSION_OPTION ) ) {
+	// Retain the historical writer-fencing proof without restoring a production migration.
+	require_once __DIR__ . '/../Storage/HistoricalIdentityMigration.php';
+	( new \RAN\Tests\Storage\HistoricalIdentityMigration( $ran_booster_writer_database ) )->migrate_adoption_identities( ran_booster_table_name(), Database::attempt_table_name() );
+	update_option( Database::VERSION_OPTION, Database::$booster_db_version, false );
+	if ( '15.0' !== get_option( Database::VERSION_OPTION ) ) {
 		throw new RuntimeException( 'The current migration did not finish.' );
 	}
 	return;
@@ -125,7 +128,12 @@ if ( 'assert-current' === $ran_booster_writer_action ) {
 	return;
 }
 if ( 'cleanup' === $ran_booster_writer_action ) {
-	// A failed pre-migration process must still leave this disposable site at its supported schema.
+	// Restore only this test's historical schema fixture; production still rejects schema13.
+	if ( '13.0' === get_option( Database::VERSION_OPTION ) ) {
+		require_once __DIR__ . '/../Storage/HistoricalIdentityMigration.php';
+		( new \RAN\Tests\Storage\HistoricalIdentityMigration( new Database() ) )->migrate_adoption_identities( ran_booster_table_name(), Database::attempt_table_name() );
+		update_option( Database::VERSION_OPTION, Database::$booster_db_version, false );
+	}
 	( new Database() )->install();
 	$wpdb->delete( ran_booster_table_name(), array( 'package' => $ran_booster_writer_id ) );
 	if ( realpath( $ran_booster_writer_path ) !== $ran_booster_writer_path || is_link( $ran_booster_writer_path )

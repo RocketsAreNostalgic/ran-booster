@@ -1,23 +1,30 @@
-# Portability API 3
+# Portability API 4
 
-Portability API 3 is Core's narrow, request-local adoption boundary for a
+Portability API 4 is Core's narrow, request-local adoption boundary for a
 trusted source bridge. It reviews one already-installed plugin or theme and may
 adopt that package into Booster with deployment policy forced to Disabled.
 
 It is not the Transporter Blueprint format, a general migration API, or an
 installer. The [Transporter Blueprint guide](portability-briefcase.md) documents
-the separate Blueprint V1 ZIP workflow.
+the separate Blueprint ZIP workflow.
+
+Portability API 4 is published in
+[Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
+Source bridges must still qualify their API 4 forwarding and compatible host;
+Core publication does not certify or publish a satellite. See the
+[WP Pusher migration status](operator-journeys.md#migrate-retained-wp-pusher-packages)
+before using Migrator.
 
 ## Version and service delivery
 
-A consumer must require exact Portability API 3:
+A consumer must require exact Portability API 4:
 
 ```php
 add_action(
 	'plugins_loaded',
 	static function (): void {
 		if ( ! defined( 'RAN_BOOSTER_PORTABILITY_API_VERSION' )
-			|| 3 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
+			|| 4 !== RAN_BOOSTER_PORTABILITY_API_VERSION ) {
 			return;
 		}
 
@@ -41,7 +48,7 @@ not replayed. The callback receives only the portability facade; it does not rec
 Core's container, repositories, provider clients, credential store, filesystem
 paths, or cleanup authority.
 
-Portability API 3 is independently versioned. A source bridge does not need
+Portability API 4 is independently versioned. A source bridge does not need
 Add-on API 17 or Provider API 14, although Core continues to use its registered
 providers internally.
 
@@ -50,7 +57,7 @@ A source bridge may separately feature-detect Core's additive
 row without a page refresh. Core derives the target from bounded presentation
 identity based on the installed candidate, never from a source row ID, source
 key or source revision. This presentation transport does not change
-Portability API 3 authorization, review, Apply, target verification or
+Portability API 4 authorization, review, Apply, target verification or
 source-cleanup ownership. See
 [Enhanced administration interaction API](enhanced-admin-interactions.md).
 
@@ -83,18 +90,32 @@ The bridge owns its source state and uses the facade in this order:
 1. Fresh-read and validate the source record.
 2. Build the current candidate.
 3. Derive the review action with
-   `nonce_action( 'review', $candidate )`, create that WordPress nonce, and call
+   `nonce_action( 'review', $candidate, null, null )`, create that WordPress nonce, and call
    `review( $candidate, $nonce )`.
 4. Display the returned closed action, reason, message, and opaque `v1:`
    fingerprint.
 5. Before Apply, fresh-read the source again and require its bridge-owned
    fingerprint to be unchanged.
 6. Derive the Apply action with
-   `nonce_action( 'apply', $candidate, $review->fingerprint )`, create that
+   `nonce_action( 'apply', $candidate, $review->fingerprint, $review->provider_expectation )`, create that
    WordPress nonce, and call
-   `apply( $candidate, $review->fingerprint, $nonce )`.
+   `apply( $candidate, $review->fingerprint, $nonce, $review->provider_expectation )`.
 7. Remove source authority only when Apply returns `target_verified = true` and
    a final exact source comparison succeeds.
+
+The readonly `provider_expectation` result is destination-local context. For
+GitHub it contains exactly `provider_code: gh`, a nonnegative integer
+`selection_generation`, and a lowercase SHA-256 `implementation_fingerprint`.
+It is bound into both review fingerprint and Apply nonce. Other providers accept
+only null. Review nonce arguments remain explicitly null; Apply arguments are
+all required. A missing or malformed GitHub expectation requires fresh review.
+Key order is canonicalized without reading live provider state.
+
+Do not serialize this expectation into portable Blueprint data or treat it as
+implementation approval. Stale Apply refuses before credential lookup,
+transferred-material persistence, or provider I/O. A matching expectation still
+requires fresh source, destination, capability, and nonce checks. Preview
+observation reuse never caches selection authority.
 
 `nonce_action()` scopes a nonce; it neither creates a nonce nor grants authority.
 Core independently checks `manage_options`, the applicable plugin or theme
@@ -123,7 +144,8 @@ source reads, source fingerprints, UI, and exact conditional source cleanup.
 Core never loads source-plugin code or receives source storage identifiers.
 
 The supported WP Pusher migration is implemented by the separate, removable
-RAN Booster WP Pusher Migrator plugin. Its bounded Overview and Transporter UI
+[RAN Booster WP Pusher Migrator](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme)
+plugin. Its bounded Overview and Transporter UI
 uses the migration presentation hooks
 documented in the [admin composition contract](admin-composition-contract.md);
 those hooks do not expand this adoption-only API.
@@ -141,20 +163,23 @@ The safe operator sequence is:
 4. Resolve any cleanup-pending row while WP Pusher remains inactive. Progress is
    reconstructed from the live source row and exact Booster target; there is no
    migration session or rollback that re-enables either deployment authority.
-5. Only after no source rows remain, separately confirm deletion of known
-   non-license WP Pusher options and, separately, the exact empty package table
-   if desired.
-6. Remove remote Push-to-Deploy webhooks at their provider. The bridge does not
-   know or delete remote hooks.
-7. Review the retained WP Pusher license key, then use the normal WordPress
-   Plugins screen for any plugin-file deletion. The bridge does not run WP
-   Pusher's uninstall routine or contact its license service.
-8. Deactivate and delete the migrator when the migration and chosen cleanup are
-   complete. Migrated packages remain managed by Core.
+5. Only after no source rows remain, review WP Pusher's uninstall effects and,
+   if desired, delete it through the normal WordPress Installed Plugins screen.
+   WP Pusher's own uninstaller removes its settings and package table and
+   attempts to revoke this site's license activation. This is a separate
+   operator action; the bridge does not perform it.
+6. Confirm the site's activation is gone in the WP Pusher dashboard. Revoke the
+   site manually there if it remains.
+7. Review and remove any WP Pusher Push-to-Deploy webhooks at their provider
+   separately. The bridge does not know or delete remote hooks.
+8. Verify the migrated packages, then deactivate and delete the migrator.
+   Migrated packages remain managed by Core.
 
 Review, cancellation, bridge deactivation, and bridge deletion remove no source
-data. Post-migration cleanup preserves the WP Pusher license key, unknown
-options, and plugin files unless the administrator handles them separately.
+data. Beyond exact verified source-row deletion, the bridge leaves WP Pusher's
+settings (including its license key and unknown options), package table, and
+plugin files untouched. It does not run WP Pusher's uninstall routine or contact
+its license service.
 
 ## Recovery from live truth
 
@@ -171,7 +196,7 @@ reconcile from the two live authorities.
 
 ## Deliberate limits
 
-Portability API 3 does not provide:
+Portability API 4 does not provide:
 
 - package installation, file replacement, activation, or deployment enablement;
 - credential creation, transfer, display, validation, or deletion;

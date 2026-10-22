@@ -37,7 +37,7 @@ $delete_description = 'plugin' === $package_view->get_type()
 			</label>
 			<p class="description"><?php esc_html_e( 'The installed files and WordPress activation state are unchanged.', 'ran-booster' ); ?></p>
 			<button type="submit" class="button ran-booster-red" disabled data-ran-booster-package-removal-submit>
-				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Unlink %s', 'ran-booster' ), $package_type_label ) ); ?>
+				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Stop managing %s', 'ran-booster' ), $package_type_label ) ); ?>
 			</button>
 		</form>
 
@@ -55,7 +55,7 @@ $delete_description = 'plugin' === $package_view->get_type()
 				<?php echo esc_html( $delete_description ); ?>
 			</p>
 			<button type="submit" class="button button-delete" disabled data-ran-booster-package-removal-submit>
-				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Unlink and delete %s', 'ran-booster' ), $package_type_label ) ); ?>
+				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Stop managing and delete %s', 'ran-booster' ), $package_type_label ) ); ?>
 			</button>
 		</form>
 	</div>

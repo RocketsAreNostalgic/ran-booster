@@ -117,8 +117,14 @@ $status_classes       = array(
 					<p class="description"><?php esc_html_e( 'Newest activity is shown in a bounded, read-only excerpt.', 'ran-booster' ); ?></p>
 				</div>
 				<?php if ( '' !== $content ) { ?>
-					<label class="screen-reader-text" for="ran-booster-debug-capture-content"><?php esc_html_e( 'Captured Booster events', 'ran-booster' ); ?></label>
-					<textarea id="ran-booster-debug-capture-content" class="large-text code" rows="16" readonly aria-labelledby="ran-booster-debug-capture-events-heading"><?php echo esc_textarea( $content ); ?></textarea>
+					<div data-support-report-tools>
+						<label class="screen-reader-text" for="ran-booster-debug-capture-content"><?php esc_html_e( 'Captured Booster events', 'ran-booster' ); ?></label>
+						<div class="ran-booster-troubleshooting__report-field">
+							<textarea id="ran-booster-debug-capture-content" class="large-text code" rows="16" readonly aria-labelledby="ran-booster-debug-capture-events-heading"><?php echo esc_textarea( $content ); ?></textarea>
+							<button type="button" class="button-link ran-booster-troubleshooting__report-copy hide-if-no-js" data-support-report-copy aria-label="<?php esc_attr_e( 'Copy captured events', 'ran-booster' ); ?>"><span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>
+						</div>
+						<p data-support-report-status role="status" aria-live="polite" aria-atomic="true" data-copied-message="<?php esc_attr_e( 'Captured events copied to the clipboard.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The captured events are selected; use your browser copy command.', 'ran-booster' ); ?>"></p>
+					</div>
 				<?php } else { ?>
 					<p class="ran-booster-debug-capture__no-events"><?php echo esc_html( 'active' === $capture_state ? __( 'No Booster events have been captured yet.', 'ran-booster' ) : __( 'No Booster events were captured.', 'ran-booster' ) ); ?></p>
 				<?php } ?>

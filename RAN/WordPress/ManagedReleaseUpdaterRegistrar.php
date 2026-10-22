@@ -12,6 +12,14 @@ final readonly class ManagedReleaseUpdaterRegistrar {
 	public function __construct( private object $registrar ) {
 	}
 
+	public function with_operation_guard( callable $guard ): self {
+		return new self( $this->invoke( 'with_operation_guard', array( $guard ) ) );
+	}
+
+	public function with_native_mutation_callbacks( callable $begin, callable $complete ): self {
+		return new self( $this->invoke( 'with_native_mutation_callbacks', array( $begin, $complete ) ) );
+	}
+
 	public function plugin( mixed ...$arguments ): object {
 		return $this->invoke( 'plugin', $arguments );
 	}

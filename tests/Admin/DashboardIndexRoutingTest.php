@@ -80,6 +80,7 @@ require_once __DIR__ . '/DashboardRoutingWordPressFunctions.php';
 require_once dirname( __DIR__, 2 ) . '/RAN/Dashboard.php';
 
 final class DashboardIndexRoutingTest extends TestCase {
+	use \RAN\Tests\Support\QueuedSelectionFixture;
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
@@ -601,6 +602,221 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $development_environment_detected ) );
 	}
 
+	public function test_paused_github_route_renders_passive_status_without_provider_and_preserves_bitbucket(): void {
+		$bundled   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' ), '/unused/plugins', $bundled );
+		$providers = new ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) );
+		$directory = sys_get_temp_dir() . '/adoption-route-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable private sidecar fixture.
+		mkdir( $directory, 0700 );
+		$dashboard   = $this->dashboard( new SecretsFile( $directory . '/secrets', array(), ShippedSecretPolicyCatalog::create() ), providers: $providers, github_selection: $selection );
+		$_GET['tab'] = 'gh';
+		$data        = $dashboard->get_index()['data'];
+		self::assertSame( 'gh', $data['selected_provider'] );
+		self::assertSame( 'provider.php', $data['tab_view'] );
+		self::assertFalse( $data['github_selection']['available'] );
+		self::assertSame( array(), $data['credential_profiles'] );
+		self::assertArrayNotHasKey( 'gh', $providers->all() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'GitHub operations are paused.', $html );
+		self::assertStringContainsString( 'Selection storage is unavailable.', $html );
+		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
+		$_GET['tab'] = 'bb';
+		self::assertSame( 'bb', $dashboard->get_index()['data']['selected_provider'] );
+		$_GET        = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'diagnostics',
+		);
+		$diagnostics = $this->dashboard( $this->throwing_secrets(), providers: new ProviderRegistry(), github_selection: $selection )->get_index()['data'];
+		self::assertSame( $selection->status(), $diagnostics['github_selection_diagnostics'] );
+		self::assertArrayNotHasKey( 'github_selection', $diagnostics );
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture lock.
+		unlink( $directory . '/secrets.lock' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable private sidecar fixture.
+		rmdir( $directory );
+	}
+
+	/** @return iterable<string,array{string,bool,bool,bool}> */
+	public static function replacement_presentations(): iterable {
+		foreach ( array( 'available', 'decision_required', 'missing', 'conflict', 'incompatible' ) as $state ) {
+			yield $state => array( $state, false, true, true );
+		}
+		yield 'missing A with B enabled' => array( 'missing', true, true, true );
+		yield 'without plugin activation permission' => array( 'decision_required', false, true, false );
+		yield 'without settings permission' => array( 'decision_required', false, false, true );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	#[DataProvider( 'replacement_presentations' )]
+	public function test_provider_replacement_presentation_keeps_decisions_and_diagnostics_separate( string $state, bool $switch_replacement, bool $manage_options, bool $activate_plugins ): void {
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'   => $manage_options,
+			'activate_plugins' => $activate_plugins,
+		);
+		$_GET['tab']                              = 'bb';
+		$data                                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+		$declaration                              = array(
+			'plugin_basename'        => 'private-path/replacement.php',
+			'implementation_id'      => 'vendor/internal-implementation',
+			'display_name'           => '<Replacement>',
+			'display_version'        => '1.0',
+			'provider_api_version'   => 15,
+			'compatibility_revision' => 'internal-revision',
+			'api_credential_formats' => array( 'internal-credential-format' ),
+			'webhook_signing_format' => null,
+			'facets'                 => array(),
+		);
+		$current_declaration                      = $switch_replacement ? array_replace(
+			$declaration,
+			array(
+				'display_name'    => 'Previous provider A',
+				'plugin_basename' => 'previous/a.php',
+			)
+		) : $declaration;
+		$review                                   = in_array( $state, array( 'decision_required', 'missing' ), true ) ? array(
+			'target'             => $declaration,
+			'selected'           => 'missing' === $state && ! $switch_replacement ? 'bundled' : 'replacement',
+			'compatible_count'   => 2,
+			'incompatible_count' => 1,
+			'signing_reuse'      => false,
+			'has_material'       => true,
+			'digest'             => str_repeat( 'c', 64 ),
+		) : null;
+		$data['github_selection']                 = array(
+			'available'      => 'available' === $state,
+			'status'         => array(
+				'state'      => $state,
+				'current'    => array(
+					'selected'    => 'replacement',
+					'declaration' => $current_declaration,
+				),
+				'candidates' => 'missing' === $state && ! $switch_replacement ? array() : array( 'private-path/replacement.php' => $declaration ),
+			),
+			'review'         => $review,
+			'error'          => '',
+			'recovery'       => null,
+			'package_counts' => array(
+				'branch'        => 2,
+				'release_asset' => 1,
+			),
+		);
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $data );
+		ob_start();
+		try {
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
+		self::assertStringContainsString( 'GitHub provider diagnostics', $html );
+		foreach ( array( 'private-path', 'vendor/internal-implementation', 'internal-revision', 'internal-credential-format', '<Replacement>' ) as $private_detail ) {
+			self::assertStringNotContainsString( $private_detail, $html );
+		}
+		if ( 'available' === $state ) {
+			self::assertStringContainsString( 'Provided by &lt;Replacement&gt;', $html );
+			self::assertStringContainsString( '<summary>Manage GitHub provider</summary>', $html );
+			self::assertStringNotContainsString( 'Affected GitHub packages:', $html );
+			self::assertStringNotContainsString( 'GitHub operations are paused.', $html );
+		} else {
+			self::assertStringContainsString( 'GitHub operations are paused.', $html );
+		}
+		if ( null === $review ) {
+			self::assertStringNotContainsString( 'value="adopt-github"', $html );
+			return;
+		}
+		if ( $switch_replacement ) {
+			self::assertStringNotContainsString( 'Previous provider A', $html );
+			self::assertStringContainsString( 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
+		}
+		self::assertStringContainsString( 'Affected GitHub packages: 2 Branch, 1 Published release.', $html );
+		if ( ! $manage_options || ! $activate_plugins ) {
+			self::assertStringNotContainsString( 'value="adopt-github"', $html );
+			self::assertStringNotContainsString( 'name="ran_booster[review_digest]"', $html );
+			return;
+		}
+		self::assertStringContainsString( 'name="ran_booster[review_digest]" value="' . str_repeat( 'c', 64 ) . '"', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed]" value="1" required', $html );
+		self::assertStringContainsString( 'name="ran_booster[reuse_existing]" value="1" required', $html );
+		self::assertStringContainsString( 'ran-booster-adopt-github-' . str_repeat( 'c', 64 ), $html );
+		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review GitHub provider</summary>', $html );
+		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
+	}
+
+	/** @return iterable<string,array{bool}> */
+	public static function native_recovery_permissions(): iterable {
+		yield 'authorized' => array( true );
+		yield 'denied' => array( false );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	#[DataProvider( 'native_recovery_permissions' )]
+	public function test_provider_view_renders_bounded_native_recovery_confirmation( bool $authorized ): void {
+		$_GET['tab']                              = 'bb';
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'activate_plugins' => $authorized );
+		$data                                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+		$data['github_selection']                 = array(
+			'available'      => true,
+			'status'         => array(
+				'state'      => 'recovery_required',
+				'candidates' => array(),
+				'current'    => null,
+			),
+			'error'          => '',
+			'package_counts' => null,
+			'review'         => null,
+			'recovery'       => array(
+				'digest'     => str_repeat( 'b', 64 ),
+				'type'       => 'plugin',
+				'identifier' => '<target>/main.php',
+				'managed'    => false,
+			),
+		);
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
+		extract( $data );
+		ob_start();
+		try {
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+			unset( $GLOBALS['ran_booster_test_capabilities'] );
+		}
+		self::assertStringContainsString( 'Recover an interrupted native installation', $html );
+		self::assertStringContainsString( '&lt;target&gt;/main.php', $html );
+		self::assertStringNotContainsString( '<target>/main.php', $html );
+		if ( ! $authorized ) {
+			self::assertStringNotContainsString( 'value="recover-github-native"', $html );
+			return;
+		}
+		self::assertStringContainsString( 'ran-booster-recover-github-' . str_repeat( 'b', 64 ), $html );
+		self::assertStringContainsString( 'name="ran_booster[action]" value="recover-github-native"', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_stopped]" value="1" required', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirmed_removal]" value="1" required', $html );
+		self::assertStringContainsString( 'A missing main file alone is insufficient.', $html );
+		self::assertStringContainsString( 'does not delete files or repair an installation', $html );
+		self::assertStringContainsString( 'Cleanup of temporary files from the interrupted process remains unverified.', $html );
+		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
+	}
+
 	public function test_provider_tab_builds_only_the_selected_provider_settings(): void {
 		$_GET['tab'] = 'bb';
 
@@ -725,6 +941,29 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'Filtered canary', $html );
 		self::assertStringContainsString( 'paged=2', $html );
 		self::assertStringNotContainsString( 'profile-21', $html );
+
+		$_GET['replace_credential'] = 'profile-21';
+		$replacement_data           = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard route model to its production view.
+		extract( $replacement_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$replacement_html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Page 2 of 2', $replacement_html );
+		self::assertStringContainsString( '>Credential 21</strong>', $replacement_html );
+		self::assertStringContainsString( 'data-id="profile-21"', $replacement_html );
+
+		$_GET['replace_credential'] = 'unknown-profile';
+		$unknown_data               = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard route model to its production view.
+		extract( $unknown_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$unknown_html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Page 1 of 2', $unknown_html );
+		self::assertStringNotContainsString( 'data-id="unknown-profile"', $unknown_html );
 	}
 
 	public function test_provider_route_renders_anormalized_repository_selection(): void {
@@ -1036,10 +1275,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( array( false, false, false, false, false, false, true ), array_column( $data['tabs'], 'active' ) );
 	}
 
-	public function test_portability_builds_display_safe_rows_from_the_non_cleaning_inventory(): void {
+	#[DataProvider( 'portability_source_provider' )]
+	public function test_portability_builds_display_safe_rows_from_the_non_cleaning_inventory( \RAN\PackageSource $source ): void {
 		$_GET['tab'] = 'portability';
 		$plugin      = $this->managed_package( 'plugin/example.php', 'Example Plugin', 'plugin-repository-id' );
-		$theme       = $this->managed_package( 'example-theme', 'Example Theme', 'theme-repository-id' );
+		$theme       = $this->managed_package( 'example-theme', 'Example Theme', 'theme-repository-id', $source );
 		$plugins     = $this->createStub( PluginRepository::class );
 		$themes      = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'plugin/example.php' => $plugin ) );
@@ -1074,6 +1314,74 @@ final class DashboardIndexRoutingTest extends TestCase {
 		);
 		self::assertSame( array(), $data['portability_export_credential_groups'] );
 		self::assertFalse( $data['portability_export_credentials_unavailable'] );
+	}
+
+	/** @return list<array{\RAN\PackageSource}> */
+	public static function portability_source_provider(): array {
+		return array(
+			array( \RAN\PackageSource::BRANCH ),
+			array( \RAN\PackageSource::RELEASE_ASSET ),
+		);
+	}
+
+	public function test_portability_lists_mixed_sources_without_requiring_release_export_configuration(): void {
+		$_GET['tab'] = 'portability';
+		$plugins     = $this->createMock( PluginRepository::class );
+		$themes      = $this->createMock( ThemeRepository::class );
+		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$themes->expects( self::never() )->method( 'all_booster_themes' );
+		$plugins->expects( self::once() )->method( 'all_deployment_plugins' )->willReturn(
+			array(
+				$this->managed_package( 'branch/branch.php', 'Branch Plugin', 'branch-repository' ),
+				$this->managed_package( 'release/release.php', 'Release Plugin', 'release-repository', \RAN\PackageSource::RELEASE_ASSET, credential_id: 'shared-profile' ),
+			)
+		);
+		$themes->expects( self::once() )->method( 'all_deployment_themes' )->willReturn(
+			array( $this->managed_package( 'release-theme', 'Release Theme', 'theme-repository', \RAN\PackageSource::RELEASE_ASSET, credential_id: 'shared-profile' ) )
+		);
+		$dashboard  = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
+		$projection = new ReflectionMethod( Dashboard::class, 'portability_export_data' );
+		$data       = $projection->invoke( $dashboard );
+
+		self::assertSame(
+			array(
+				array(
+					'name'       => 'Branch Plugin',
+					'identifier' => 'branch/branch.php',
+					'type'       => 'plugin',
+				),
+				array(
+					'name'       => 'Release Plugin',
+					'identifier' => 'release/release.php',
+					'type'       => 'plugin',
+				),
+				array(
+					'name'       => 'Release Theme',
+					'identifier' => 'release-theme',
+					'type'       => 'theme',
+				),
+			),
+			$data['rows']
+		);
+		self::assertSame(
+			array(
+				'gh' => array(
+					'shared-profile' => array(
+						array(
+							'index' => 1,
+							'name'  => 'Release Plugin',
+							'type'  => 'plugin',
+						),
+						array(
+							'index' => 2,
+							'name'  => 'Release Theme',
+							'type'  => 'theme',
+						),
+					),
+				),
+			),
+			$data['credentials']
+		);
 	}
 
 	public function test_native_transporter_route_forces_the_canonical_tab_without_mutating_the_request(): void {
@@ -1533,7 +1841,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $data['package_source']['unavailable'] );
 	}
 
-	public function test_release_package_retains_current_branch_readiness_without_provider_operations(): void {
+	/** @return list<array{bool}> */
+	public static function retained_readiness_sidecar_provider(): array {
+		return array( array( false ), array( true ) );
+	}
+
+	#[DataProvider( 'retained_readiness_sidecar_provider' )]
+	public function test_release_package_retains_current_branch_readiness_without_provider_operations( bool $secrets_unavailable ): void {
 		$package  = $this->managed_package(
 			'release/release.php',
 			'Release Package',
@@ -1544,6 +1858,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'owner/repository'
 		);
 		$plugins  = new class( $package ) extends PluginRepository {
+			public int $inventory_reads = 0;
+
 			public function __construct( private Package $package ) {
 			}
 
@@ -1559,10 +1875,13 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_plugins retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_plugins( ?\RAN\PackageSource $source = null ): array {
+				++$this->inventory_reads;
 				return array( 'release/release.php' => $this->package );
 			}
 		};
 		$themes   = new class() extends ThemeRepository {
+			public int $inventory_reads = 0;
+
 			public function __construct() {
 			}
 
@@ -1572,11 +1891,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of all_deployment_themes retains the production method contract; these inputs do not affect this controlled result.
 			public function all_deployment_themes( ?\RAN\PackageSource $source = null ): array {
+				++$this->inventory_reads;
 				return array();
 			}
 		};
-		$secrets  = new class() extends SecretsFile {
-			public function __construct() {
+		$secrets  = new class( $secrets_unavailable ) extends SecretsFile {
+			public function __construct( private bool $unavailable ) {
 				parent::__construct( '/unused/test-secrets.php', array() );
 			}
 
@@ -1585,6 +1905,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of webhook_profiles retains the production method contract; these inputs do not affect this controlled result.
 			public function webhook_profiles( ProviderCode|string $provider ): array {
+				if ( $this->unavailable ) {
+					throw new RuntimeException( 'Controlled sidecar failure.' );
+				}
 				return array(
 					'webhook-profile' => array(
 						'scope'        => 'repository',
@@ -1611,7 +1934,6 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertInstanceOf( \RAN\RepositoryProvider\WebhookNormalizer::class, $provider );
 		self::assertInstanceOf( RepositoryProvider::class, $provider );
 		$evaluator = new WebhookAssistanceReadinessEvaluator( $plugins, $themes, $secrets, new ReadyDashboardDatabase(), static fn (): bool => true );
-		self::assertSame( 'ready', $evaluator->evaluate( 'gh', rest_url( 'ran-booster/v1/webhooks/gh' ) )->to_array()['site']['status'] );
 		$dashboard = $this->dashboard(
 			$secrets,
 			plugins: $plugins,
@@ -1630,9 +1952,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertIsArray( $readiness );
 		self::assertArrayHasKey( 'retained', $readiness );
 		self::assertTrue( $readiness['retained'] );
-		self::assertSame( 'ready', $readiness['site']['status'] );
+		self::assertSame( $secrets_unavailable ? 'blocked' : 'ready', $readiness['site']['status'] );
 		self::assertSame( '101', $readiness['repository']['repository_id'] );
-		self::assertSame( 'repository', $readiness['repository']['local_secret_coverage'] );
+		self::assertSame( $secrets_unavailable ? 'unknown' : 'repository', $readiness['repository']['local_secret_coverage'] );
+		self::assertSame( 1, $plugins->inventory_reads, 'The receiver projection is the only inventory reader needed by this package page.' );
+		self::assertSame( 1, $themes->inventory_reads );
 	}
 
 	public function test_troubleshooting_results_render_only_in_the_same_dashboard_request(): void {
@@ -1665,6 +1989,165 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $dashboard->get_index()['data']['troubleshooting']['ran'] );
 		self::assertCount( 5, $dashboard->get_index()['data']['troubleshooting']['results'] );
 		self::assertFalse( $this->dashboard( $secrets, $service )->get_index()['data']['troubleshooting']['ran'] );
+	}
+
+	/** @return iterable<string,array{string}> */
+	public static function diagnostics_selection_states(): iterable {
+		foreach ( array( 'available', 'unavailable', 'unknown' ) as $state ) {
+			yield $state => array( $state );
+		}
+	}
+
+	#[DataProvider( 'diagnostics_selection_states' )]
+	public function test_diagnostics_full_and_enhanced_submissions_preserve_one_safe_installation_snapshot( string $state ): void {
+		$_GET      = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'diagnostics',
+		);
+		$secrets   = new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() );
+		$providers = $this->providers();
+		$selection = null;
+		if ( 'unknown' !== $state ) {
+			$selection = $this->queued_selection( new AttemptRepositoryDatabase(), $providers );
+			if ( 'unavailable' === $state ) {
+				$selection = new \RAN\RepositoryProvider\GitHubProviderSelection(
+					new \RAN\Storage\GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' ),
+					'/unused/plugins',
+					new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+						array(
+							'plugin_basename'        => 'index.php',
+							'implementation_id'      => 'queued-test',
+							'compatibility_revision' => '1',
+							'provider_api_version'   => 15,
+							'api_credential_formats' => array(),
+							'webhook_signing_format' => null,
+							'facets'                 => array(),
+						)
+					)
+				);
+			}
+		}
+		$local   = new class( $secrets ) extends LocalTroubleshootingService {
+			public int $runs = 0;
+			public function diagnose(): array {
+				++$this->runs;
+				return array(
+					'results' => array( new ProviderDiagnosticResult( ProviderDiagnosticResult::PASSED, 'local.submission_' . $this->runs, 'Current local result.', 'No action is required.' ) ),
+					'partial' => false,
+				);
+			}
+		};
+		$service = new TroubleshootingService( $local, $providers );
+		$initial = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection )->get_index()['data'];
+		$page    = $this->diagnostics_document( $this->render_diagnostics_page( $initial ) );
+		$this->assert_diagnostics_snapshot( $page, $initial['troubleshooting'], $state, null );
+
+		for ( $submission = 1; $submission <= 3; ++$submission ) {
+			$dashboard = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection );
+			$dashboard->post_run_troubleshooting( array( 'provider' => 'gh' ) );
+			$data = $dashboard->get_index()['data'];
+			$page = $this->diagnostics_document( $this->render_diagnostics_page( $data ) );
+			$this->assert_diagnostics_snapshot( $page, $data['troubleshooting'], $state, $submission );
+		}
+
+		for ( $submission = 4; $submission <= 6; ++$submission ) {
+			$dashboard = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection );
+			$dashboard->post_run_troubleshooting( array( 'provider' => 'gh' ) );
+			$response = $this->diagnostics_document( $dashboard->render_troubleshooting_diagnostics_region() );
+			$target   = $this->diagnostics_nodes( new \DOMXPath( $page ), '//*[@id="ran-booster-troubleshooting-diagnostics-region"]' )->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $target );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+			$parent = $target->parentNode;
+			self::assertNotNull( $parent );
+			$body = $response->getElementsByTagName( 'body' )->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $body );
+			// Apply the complete response, including any accidentally returned siblings.
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+			foreach ( iterator_to_array( $body->childNodes ) as $child ) {
+				$parent->insertBefore( $page->importNode( $child, true ), $target );
+			}
+			$parent->removeChild( $target );
+			$this->assert_diagnostics_snapshot( $page, $dashboard->get_index()['data']['troubleshooting'], $state, $submission );
+		}
+	}
+
+	/** @param array<string,mixed> $data */
+	private function render_diagnostics_page( array $data ): string {
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the actual Dashboard payload to its production view.
+		extract( $data );
+		ob_start();
+		try {
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			return (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+		}
+	}
+
+	private function diagnostics_document( string $html ): \DOMDocument {
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		try {
+			self::assertTrue( $document->loadHTML( '<!doctype html><html><body>' . $html . '</body></html>' ) );
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+		}
+		return $document;
+	}
+
+	/** @return \DOMNodeList<\DOMNode|\DOMNameSpaceNode> */
+	private function diagnostics_nodes( \DOMXPath $xpath, string $query ): \DOMNodeList {
+		$nodes = $xpath->query( $query );
+		self::assertNotFalse( $nodes );
+		return $nodes;
+	}
+
+	/** @param array{report:string,installation_details:array<string,array<string,string>>} $payload */
+	private function assert_diagnostics_snapshot( \DOMDocument $page, array $payload, string $state, ?int $submission ): void {
+		$xpath = new \DOMXPath( $page );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-diagnostics-region"]' )->length );
+		self::assertSame( 0, $this->diagnostics_nodes( $xpath, '//p[contains(., "Recover management without changing installed files")]' )->length );
+		self::assertSame( 0, $this->diagnostics_nodes( $xpath, '//a[contains(@href,"recovery=1")]' )->length );
+		self::assertSame( null === $submission ? 0 : 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-github-provider-diagnostics"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//h3[normalize-space(.)="Run diagnostics"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//h3[normalize-space(.)="Installation details"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//h4[normalize-space(.)="Booster Core updates"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/preceding-sibling::h3[normalize-space(.)="Run diagnostics"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/preceding-sibling::form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"]' )->length );
+		self::assertSame( 2, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/section[contains(concat(" ",@class," ")," ran-booster-panel ")]/header/h4' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-github-provider-diagnostics"]/details/summary[normalize-space(.)="Technical details"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-core-updates-heading"]/../following-sibling::div/details/summary[normalize-space(.)="Technical details"]' )->length );
+		$installation = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]' )->item( 0 );
+		$report       = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-report"]' )->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $installation );
+		self::assertInstanceOf( \DOMElement::class, $report );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+		self::assertSame( $payload['report'], $report->textContent );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+		self::assertStringContainsString( 'unknown' === $state ? 'Unknown' : $state, $report->textContent );
+		foreach ( $payload['installation_details'] as $heading => $fields ) {
+			if ( 'Diagnostic provider' === $heading ) {
+				continue;
+			}
+			foreach ( $fields as $value ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+				self::assertStringContainsString( $value, $installation->textContent );
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+				self::assertStringContainsString( $value, $report->textContent );
+			}
+		}
+		if ( null !== $submission ) {
+			$results = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $results );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+			self::assertStringContainsString( 'local.submission_' . $submission, $results->textContent );
+			if ( $submission > 1 ) {
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+				self::assertStringNotContainsString( 'local.submission_' . ( $submission - 1 ), $page->textContent );
+			}
+		}
 	}
 
 	public function test_deployment_activity_uses_its_own_read_payload_without_diagnostics_results(): void {
@@ -1824,6 +2307,35 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( $identifier, $result['data']['managed_package_identifier'] );
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( ucfirst( $type ) . ' was successfully installed.', $dashboard->messages[0]['message'] );
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_signed_success_notice_is_emitted_once_when_package_settings_fail_to_load( string $type ): void {
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		foreach ( array(
+			'edit'    => 'saved',
+			'install' => 'installed',
+		) as $operation => $completed ) {
+			$_GET      = array(
+				'package'                   => $identifier,
+				'ran_booster_result'        => $operation,
+				'ran_booster_package'       => $identifier,
+				'_ran_booster_notice_nonce' => wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ),
+			);
+			$dashboard = $this->dashboard(
+				$this->throwing_secrets(),
+				plugins: new FailingDashboardPluginRepository(),
+				themes: new FailingDashboardThemeRepository()
+			);
+			$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+			$successes = array_values( array_filter( $dashboard->messages, static fn ( array $message ): bool => 'success' === $message['type'] ) );
+
+			self::assertSame( 'packages/recovery', $result['view'] );
+			self::assertSame( $identifier, $result['data']['recovery_identifier'] );
+			self::assertSame( 'blocked', $result['data']['recovery_state'] );
+			self::assertCount( 1, $successes );
+			self::assertSame( ucfirst( $type ) . ' was successfully ' . $completed . '.', $successes[0]['message'] );
+		}
 	}
 
 	#[DataProvider( 'package_type_provider' )]
@@ -2028,13 +2540,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 	}
 
 	#[DataProvider( 'package_type_provider' )]
-	public function test_explicit_recovery_route_bypasses_inventory_and_selected_package_hydration( string $type ): void {
+	public function test_unidentified_recovery_url_never_reads_inventory_or_offers_unrelated_targets( string $type ): void {
 		$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $type . 's' ] = true;
-		$_GET    = array(
-			'recovery'        => '1',
-			'package'         => 'corrupt',
-			'recovery_target' => 'corrupt',
-		);
+		$_GET    = array( 'recovery' => '1' );
 		$plugins = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
 		$plugins->expects( self::never() )->method( 'booster_plugin_from_file' );
@@ -2043,33 +2551,247 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$themes->expects( self::never() )->method( 'booster_theme_from_stylesheet' );
 		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
 		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
 		self::assertSame( 'packages/recovery', $result['view'] );
+		self::assertSame( 'unknown', $result['data']['recovery_state'] );
+		self::assertSame( '', $result['data']['recovery_identifier'] );
 		self::assertNull( $result['data']['recovery_confirmation'] );
+		self::assertArrayNotHasKey( 'recovery_targets', $result['data'] );
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_healthy_direct_recovery_target_returns_to_normal_settings_without_removal_confirmation( string $type ): void {
+		$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $type . 's' ] = true;
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		$_GET       = array(
+			'recovery'        => '1',
+			'recovery_target' => $identifier,
+		);
+		$package    = $this->managed_package( $identifier, 'Healthy package', 'repository-id' );
+		$plugins    = $this->createMock( PluginRepository::class );
+		$themes     = $this->createMock( ThemeRepository::class );
+		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$themes->expects( self::never() )->method( 'all_booster_themes' );
+		$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
+		$gateway = $this->createStub( PackageRemovalGateway::class );
+		$gateway->method( 'installed_targets' )->willReturn( array( $identifier => 'Healthy package' ) );
+		$removals  = new PackageRemovalService( $plugins, $themes, $gateway, null, $this->createStub( WordPressUpdaterLock::class ) );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, removals: $removals );
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+		self::assertSame( 'packages/recovery', $result['view'] );
+		self::assertSame( 'healthy', $result['data']['recovery_state'] );
+		self::assertSame( $identifier, $result['data']['recovery_identifier'] );
+		self::assertNull( $result['data']['recovery_confirmation'] );
+		self::assertSame( array(), $dashboard->messages );
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_missing_provider_keeps_the_ordinary_package_settings_and_its_saved_identity( string $type ): void {
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		$_GET       = array( 'package' => $identifier );
+		$package    = $this->managed_package( $identifier, 'Provider-dependent package', 'saved-provider-id', provider: 'temporarily-offline' );
+		$plugins    = $this->createMock( PluginRepository::class );
+		$themes     = $this->createMock( ThemeRepository::class );
+		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$themes->expects( self::never() )->method( 'all_booster_themes' );
+		$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, providers: new ProviderRegistry( array() ) );
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+		self::assertSame( 'packages/edit', $result['view'] );
+		self::assertSame( $package, $result['data']['package'] );
+		self::assertSame( 'temporarily-offline', $result['data']['package_provider_settings']['default_provider'] );
+		self::assertFalse( $result['data']['package_provider_settings']['providers'][0]['available'] );
+		self::assertSame( array(), $dashboard->messages );
 	}
 
 	#[DataProvider( 'package_storage_read_provider' )]
-	public function test_invalid_package_storage_renders_asafe_empty_index( string $type, bool $detail ): void {
+	public function test_invalid_storage_retains_known_detail_identity_but_never_guesses_an_inventory_target( string $type, bool $detail ): void {
 		if ( $detail ) {
 			$_GET['package'] = 'upstream-provider-canary';
 		}
 		$dashboard = $this->dashboard(
 			new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ),
-			null,
-			null,
-			null,
-			new FailingDashboardPluginRepository(),
-			new FailingDashboardThemeRepository()
+			plugins: new FailingDashboardPluginRepository(),
+			themes: new FailingDashboardThemeRepository()
 		);
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
 
-		$result = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+		self::assertSame( $detail ? 'packages/recovery' : 'packages/index', $result['view'] );
+		if ( $detail ) {
+			self::assertSame( 'upstream-provider-canary', $result['data']['recovery_identifier'] );
+			self::assertSame( 'blocked', $result['data']['recovery_state'] );
+			self::assertNull( $result['data']['recovery_confirmation'] );
+		} else {
+			self::assertSame( array(), $result['data']['packages'] );
+			self::assertTrue( $result['data']['package_list_unavailable'] );
+			self::assertFalse( $result['data']['management_removal_help'] ?? false );
+		}
+		if ( ! $detail ) {
+			self::assertNotEmpty( $dashboard->messages );
+			self::assertSame( 'error', $dashboard->messages[0]['type'] );
+			self::assertStringNotContainsString( 'upstream-provider-canary', $dashboard->messages[0]['message'] );
+		}
+	}
 
-		self::assertSame( 'packages/index', $result['view'] );
-		self::assertSame( array(), $result['data']['packages'] );
-		self::assertCount( 1, $dashboard->messages );
-		self::assertSame( 'error', $dashboard->messages[0]['type'] );
-		self::assertSame( 'ran_booster_storage_invalid_provider_identity', $dashboard->messages[0]['code'] );
-		self::assertSame( array( 'recovery_required' => false ), $dashboard->messages[0]['data'] );
-		self::assertStringNotContainsString( 'upstream-provider-canary', $dashboard->messages[0]['message'] );
+	/** @return list<array{string, bool, bool}> */
+	public static function package_recovery_review_provider(): array {
+		$cases = array();
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( false, true ) as $detail ) {
+				foreach ( array( false, true ) as $blocked ) {
+					$cases[] = array( $type, $detail, $blocked );
+				}
+			}
+		}
+		return $cases;
+	}
+
+	#[DataProvider( 'package_recovery_review_provider' )]
+	public function test_invalid_saved_settings_keep_exact_target_and_verify_eligibility_before_confirmation( string $type, bool $detail, bool $blocked ): void {
+		$GLOBALS['ran_booster_test_capabilities'][ 'update_' . $type . 's' ] = true;
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		$_GET       = $detail ? array( 'package' => $identifier ) : array(
+			'recovery'        => '1',
+			'recovery_target' => $identifier,
+		);
+		$plugins    = $this->createMock( PluginRepository::class );
+		$themes     = $this->createMock( ThemeRepository::class );
+		$plugins->expects( self::never() )->method( 'all_booster_plugins' );
+		$themes->expects( self::never() )->method( 'all_booster_themes' );
+		$plugins->expects( self::never() )->method( 'recover_unlink' );
+		$themes->expects( self::never() )->method( 'recover_unlink' );
+		$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( 'booster_plugin_from_file' )->with( $identifier )->willThrowException( new \InvalidArgumentException( 'The managed package source revision is invalid.' ) );
+		$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( 'booster_theme_from_stylesheet' )->with( $identifier )->willThrowException( new \InvalidArgumentException( 'The managed package source revision is invalid.' ) );
+		$record     = array(
+			'id'             => '42',
+			'package'        => $identifier,
+			'type'           => 'plugin' === $type ? 1 : 2,
+			'adoption_token' => 'lifetime-token',
+			'source'         => 'branch',
+			'digest'         => 'record-digest',
+		);
+		$repository = 'plugin' === $type ? $plugins : $themes;
+		$repository->expects( self::once() )->method( 'recovery_record' )->with( $identifier )->willReturn( $record );
+		$gateway = $this->createMock( PackageRemovalGateway::class );
+		$gateway->method( 'installed_targets' )->with( $type )->willReturn(
+			array(
+				$identifier           => 'Installed package',
+				'unrelated/other.php' => 'Unrelated installed package',
+			)
+		);
+		$gateway->expects( self::once() )->method( 'installed_fingerprint' )->with( $type, $identifier )->willReturn( 'installed-digest' );
+		$attempt_database = new AttemptRepositoryDatabase();
+		if ( $blocked ) {
+			$attempt                 = DashboardActivityWpdb::attempt( 1, 'running' );
+			$attempt['package_type'] = $type;
+			$attempt['outcome_code'] = null;
+			$attempt['finished_at']  = null;
+			$attempt_database->rows  = array( $attempt );
+		}
+		$attempts = new DeploymentAttemptRepository( $attempt_database, 'wp_ran_booster_attempts', database_lifecycle: $this->createStub( Database::class ) );
+		$lock     = $this->createMock( WordPressUpdaterLock::class );
+		$lock->expects( self::never() )->method( 'acquire' );
+		$removals  = new PackageRemovalService( $plugins, $themes, $gateway, $attempts, $lock );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes, removals: $removals );
+		$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+		self::assertSame( 'packages/recovery', $result['view'] );
+		self::assertSame( $blocked ? 'blocked' : 'damaged', $result['data']['recovery_state'] );
+		self::assertSame( $identifier, $result['data']['recovery_identifier'] );
+		self::assertSame( 'Installed package', $result['data']['recovery_name'] );
+		self::assertStringContainsString( 'revision', $result['data']['recovery_reason'] );
+		if ( $blocked ) {
+			self::assertNull( $result['data']['recovery_confirmation'] );
+			self::assertStringContainsString( 'unresolved deployment work', $result['data']['recovery_blocker'] );
+		} else {
+			self::assertSame( $record + array( 'installed_digest' => 'installed-digest' ), $result['data']['recovery_confirmation'] );
+			self::assertNull( $result['data']['recovery_blocker'] );
+		}
+		self::assertArrayNotHasKey( 'recovery_targets', $result['data'] );
+		self::assertNotEmpty( array_filter( $attempt_database->queries, static fn ( string $query ): bool => str_contains( $query, "state IN ('queued','running')" ) ) );
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_malformed_package_navigation_keeps_ahealthy_list_without_management_removal_help( string $type ): void {
+		foreach ( array( '', array( 'corrupt' ), str_repeat( 'x', 256 ) ) as $identifier ) {
+			$_GET    = array( 'package' => $identifier );
+			$plugins = $this->createMock( PluginRepository::class );
+			$themes  = $this->createMock( ThemeRepository::class );
+			$plugins->expects( self::never() )->method( 'booster_plugin_from_file' );
+			$themes->expects( self::never() )->method( 'booster_theme_from_stylesheet' );
+			$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( 'all_booster_plugins' )->willReturn( array() );
+			$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( 'all_booster_themes' )->willReturn( array() );
+			$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
+			$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+			self::assertSame( 'packages/index', $result['view'] );
+			self::assertSame( array(), $dashboard->messages );
+			self::assertArrayNotHasKey( 'management_removal_help', $result['data'] );
+			self::assertArrayNotHasKey( 'package_list_unavailable', $result['data'] );
+			$package_view      = $result['data']['package_view'];
+			$packages          = $result['data']['packages'];
+			$package_providers = $result['data']['package_providers'];
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'recovery=1', $html );
+			self::assertStringNotContainsString( 'Review management removal', $html );
+		}
+	}
+
+	#[DataProvider( 'package_storage_read_provider' )]
+	public function test_presentation_validation_failure_is_not_diagnosed_as_unreadable_saved_package_settings( string $type, bool $detail ): void {
+		$_GET    = $detail ? array( 'package' => 'example' ) : array();
+		$package = $this->managed_package( 'example', 'Example package', 'repository-id' );
+		$plugins = $this->createMock( PluginRepository::class );
+		$themes  = $this->createMock( ThemeRepository::class );
+		$plugins->expects( 'plugin' === $type ? self::once() : self::never() )
+			->method( $detail ? 'booster_plugin_from_file' : 'all_booster_plugins' )->willReturn( $detail ? $package : array( $package ) );
+		$themes->expects( 'theme' === $type ? self::once() : self::never() )
+			->method( $detail ? 'booster_theme_from_stylesheet' : 'all_booster_themes' )->willReturn( $detail ? $package : array( $package ) );
+		$failure = new \InvalidArgumentException( 'Presentation-only validation failure.' );
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::once() )->method( 'credential_profiles' )->willThrowException( $failure );
+		$dashboard = $this->dashboard( $secrets, plugins: $plugins, themes: $themes, provider_credentials: true );
+
+		try {
+			'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+			self::fail( 'Presentation validation must not become a saved-settings failure.' );
+		} catch ( \InvalidArgumentException $actual ) {
+			self::assertSame( $failure, $actual );
+			self::assertSame( array(), $dashboard->messages );
+		}
+	}
+
+	#[DataProvider( 'package_storage_read_provider' )]
+	public function test_general_storage_failure_never_offers_management_removal( string $type, bool $detail ): void {
+		foreach ( array( PackageStorageFailure::query_failed(), PackageStorageFailure::unsupported_database(), PackageStorageFailure::duplicate_package_rows() ) as $failure ) {
+			$_GET    = $detail ? array( 'package' => 'corrupt' ) : array();
+			$plugins = $this->createMock( PluginRepository::class );
+			$themes  = $this->createMock( ThemeRepository::class );
+			$plugins->expects( 'plugin' === $type ? self::once() : self::never() )->method( $detail ? 'booster_plugin_from_file' : 'all_booster_plugins' )->willThrowException( $failure );
+			$themes->expects( 'theme' === $type ? self::once() : self::never() )->method( $detail ? 'booster_theme_from_stylesheet' : 'all_booster_themes' )->willThrowException( $failure );
+			$dashboard = $this->dashboard( $this->throwing_secrets(), plugins: $plugins, themes: $themes );
+			$result    = 'plugin' === $type ? $dashboard->get_plugins() : $dashboard->get_themes();
+
+			self::assertSame( $detail ? 'packages/recovery' : 'packages/index', $result['view'] );
+			if ( $detail ) {
+				self::assertSame( 'blocked', $result['data']['recovery_state'] );
+				self::assertSame( 'corrupt', $result['data']['recovery_identifier'] );
+				self::assertNull( $result['data']['recovery_confirmation'] );
+			} else {
+				self::assertSame( array(), $result['data']['packages'] );
+				self::assertFalse( $result['data']['management_removal_help'] ?? false );
+				self::assertTrue( $result['data']['package_list_unavailable'] );
+			}
+			if ( ! $detail ) {
+				self::assertNotEmpty( $dashboard->messages );
+			}
+		}
 	}
 
 	#[DataProvider( 'package_type_provider' )]
@@ -2584,6 +3306,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				'id'               => $id,
 				'sort_at'          => $time,
 				'status'           => 'failed',
+				'provider'         => 'gh',
 				'subject_type'     => 'plugin',
 				'subject_identity' => 'example/example.php',
 				'correlation'      => str_repeat( 'a', 32 ),
@@ -2614,16 +3337,19 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'example', $page['items'][0]['package_slug'] );
 		self::assertSame( 'example/example.php', $page['items'][0]['subject_identity'] );
 		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php', $page['package_settings_urls']['plugin']['example'] );
+		self::assertSame( 'GitHub · Plugin: Example Plugin (example/example.php)', $page['filter_options']['packages'][0]['label'] );
 		self::assertSame( 'webhook', $page['items'][0]['source'] );
 		self::assertSame( 'running', $page['items'][0]['state'] );
 		self::assertSame( $requested_ref, $page['items'][0]['requested_ref'] );
 		self::assertSame( '2026-10-12 18:00:00', $page['items'][0]['resolved_at'] );
 		self::assertSame( 7, $page['items'][0]['resolved_by'] );
+		self::assertSame( hash( 'sha256', '' ), $page['activity_filter_key'] );
 		self::assertSame( 'v1|' . hash( 'sha256', '' ) . '|' . $time . '|activity|2', $page['next_cursor'] );
 		self::assertStringNotContainsString( 'package_type IN', implode( "\n", $database->reads ) );
 		$_GET  = array( 'before' => $page['next_cursor'] );
 		$older = $presenter->activity();
 		self::assertFalse( $older['unavailable'] );
+		self::assertSame( $page['activity_filter_key'], $older['activity_filter_key'] );
 		self::assertSame( array( 1 ), array_column( $older['items'], 'id' ) );
 		self::assertNull( $older['next_cursor'] );
 		foreach ( array(
@@ -2647,17 +3373,182 @@ final class DashboardIndexRoutingTest extends TestCase {
 		unset( $GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] );
 	}
 
-	public function test_deployment_history_filters_the_exact_installed_plugin_identifier(): void {
+	public function test_activity_history_filters_the_exact_installed_plugin_identifier(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
 		$database = new DashboardActivityWpdb();
-		foreach ( array( 'example/first.php', 'example/second.php' ) as $index => $identifier ) {
-			$row                 = DashboardActivityWpdb::attempt( $index + 1, 'succeeded' );
-			$row['request_json'] = ( new DeploymentRequest( 'org/example', null, false, 'main', 'example', null, \RAN\Deployment\DeploymentPolicy::AUTOMATIC, 1, installed_identifier: $identifier, adoption_token: 'gh:repository-1:123e4567-e89b-42d3-a456-426614174000' ) )->to_json();
-			$database->rows[]    = $row;
+		foreach ( array( 'example/first.php', 'example/second.php', 'example/Second.php' ) as $index => $identifier ) {
+			$database->activity_rows[] = array(
+				'id'               => $index + 1,
+				'sort_at'          => '2026-10-12 17:00:00',
+				'status'           => 'succeeded',
+				'subject_type'     => 'plugin',
+				'subject_identity' => $identifier,
+				'correlation'      => str_repeat( 'a', 32 ),
+			);
 		}
-		$records = $this->deployment_attempts( $database )->activity_history( array( 'subject_identity' => 'example/second.php' ), null );
-		self::assertCount( 1, $records );
-		self::assertSame( 'example/second.php', $records[0]->get_request()->installed_identifier );
-		self::assertStringNotContainsString( "`package_slug` = 'example/second.php'", implode( "\n", $database->reads ) );
+		foreach ( $database->activity_rows as &$row ) {
+			$row['provider'] = 'gh';
+		}
+		unset( $row );
+		$_GET = array( 'activity_package' => wp_json_encode( array( 'gh', 'plugin', 'example/second.php' ) ) );
+		$page = ( new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) ) )->activity();
+		self::assertFalse( $page['unavailable'] );
+		self::assertCount( 1, $page['items'] );
+		self::assertSame( 'example/second.php', $page['items'][0]['subject_identity'] );
+		self::assertStringContainsString( "BINARY subject_identity = 'example/second.php'", implode( "\n", $database->reads ) );
+		self::assertStringContainsString( 'SELECT DISTINCT BINARY provider AS provider', implode( "\n", $database->reads ) );
+		self::assertStringContainsString( 'SELECT DISTINCT BINARY provider AS provider, BINARY subject_type AS subject_type, BINARY subject_identity AS subject_identity', implode( "\n", $database->reads ) );
+		self::assertStringNotContainsString( 'SELECT * FROM wp_ran_booster_activity WHERE', implode( "\n", array_slice( $database->reads, 0, 2 ) ) );
+		self::assertStringNotContainsString( 'package_type IN', implode( "\n", $database->reads ) );
+	}
+
+	public function test_activity_filter_choices_are_exact_retained_tuples_and_reset_stale_controls(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
+		$database = new DashboardActivityWpdb();
+		foreach ( array(
+			array( 'gh', 'plugin', 'same/package.php' ),
+			array( 'gh', 'plugin', 'same/Package.php' ),
+			array( 'bb', 'theme', 'same/package.php' ),
+			array( 'bb', 'repository', 'org/example' ),
+			array( 'bb', 'provider', 'bb' ),
+			array( 'bb', 'provider', 'bb' ),
+		) as $index => $row ) {
+			$database->activity_rows[] = array(
+				'id'               => $index + 1,
+				'sort_at'          => '2026-10-12 17:00:00',
+				'provider'         => $row[0],
+				'subject_type'     => $row[1],
+				'subject_identity' => $row[2],
+				'status'           => 'succeeded',
+				'correlation'      => str_repeat( 'a', 32 ),
+				'operation'        => 4 === $index ? 'credential.validate' : ( 5 === $index ? 'diagnostics.run' : 'repository.check' ),
+			);
+		}
+		$presenter = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) );
+		$_GET      = array();
+		$page      = $presenter->activity(
+			array(
+				'gh' => 'GitHub',
+				'bb' => 'Bitbucket',
+			)
+		);
+		self::assertSame( array( 'GitHub', 'Bitbucket' ), array_column( $page['filter_options']['providers'], 'label' ) );
+		self::assertCount( 4, $page['filter_options']['packages'] );
+		self::assertSame( 'Non-package events', $page['filter_options']['packages'][0]['label'] );
+		self::assertSame( 'GitHub · Plugin: same/package.php', $page['filter_options']['packages'][1]['label'] );
+		self::assertSame( array( 'same/package.php', 'same/Package.php', 'same/package.php', 'org/example', 'bb', 'bb' ), array_column( $page['items'], 'subject_identity' ) );
+		self::assertSame( array( 'credential.validate', 'diagnostics.run' ), array_slice( array_column( $page['items'], 'operation' ), 4 ) );
+		self::assertStringContainsString( 'SELECT BINARY provider AS provider, MAX(CASE WHEN BINARY subject_type IN', $database->reads[0] );
+		self::assertStringNotContainsString( 'SELECT *', $database->reads[0] );
+		$_GET = array( 'activity_package' => wp_json_encode( array( 'gh', 'plugin', 'same/Package.php' ) ) );
+		$page = $presenter->activity();
+		self::assertSame( 'gh', $page['filters']['provider'] );
+		self::assertSame( 'plugin', $page['filters']['subject_type'] );
+		self::assertSame( 'same/Package.php', $page['filters']['subject_identity'] );
+		self::assertSame( array( 'same/Package.php' ), array_column( $page['items'], 'subject_identity' ) );
+		$_GET = array(
+			'activity_provider' => 'bb',
+			'activity_package'  => wp_json_encode( array( 'gh', 'plugin', 'same/package.php' ) ),
+			'before'            => 'v1|' . hash( 'sha256', '' ) . '|2026-10-12 17:00:00|activity|1',
+		);
+		$page = $presenter->activity();
+		self::assertSame( array( 'provider' => 'bb' ), $page['filters'] );
+		self::assertSame( '', $page['filter_state']['package'] );
+		self::assertFalse( $page['has_cursor'] );
+		self::assertStringContainsString( 'does not match', (string) $page['filter_notice'] );
+		self::assertCount( 2, $page['filter_options']['packages'] );
+		$_GET = array(
+			'activity_provider' => 'bb',
+			'activity_package'  => 'non-package',
+			'before'            => 'v1|' . str_repeat( 'a', 64 ) . '|2026-10-12 17:00:00|activity|1',
+		);
+		$page = $presenter->activity();
+		self::assertSame(
+			array(
+				'non_package' => '1',
+				'provider'    => 'bb',
+			),
+			$page['filters']
+		);
+		self::assertSame( array( 'org/example', 'bb', 'bb' ), array_column( $page['items'], 'subject_identity' ) );
+		self::assertFalse( $page['has_cursor'] );
+		$_GET = array( 'activity_package' => 'non-package' );
+		$page = $presenter->activity();
+		self::assertSame( array( 'non_package' => '1' ), $page['filters'] );
+		self::assertSame( array( 'org/example', 'bb', 'bb' ), array_column( $page['items'], 'subject_identity' ) );
+		$_GET = array(
+			'activity_provider' => 'gh',
+			'activity_package'  => 'non-package',
+			'before'            => 'v1|' . str_repeat( 'b', 64 ) . '|2026-10-12 17:00:00|activity|1',
+		);
+		$page = $presenter->activity();
+		self::assertSame( array( 'provider' => 'gh' ), $page['filters'] );
+		self::assertSame( '', $page['filter_state']['package'] );
+		self::assertFalse( $page['has_cursor'] );
+		self::assertStringContainsString( 'no longer available', (string) $page['filter_notice'] );
+		$_GET = array( 'activity_package' => array( 'malformed' ) );
+		$page = $presenter->activity();
+		self::assertSame( array(), $page['filters'] );
+		self::assertStringContainsString( 'cleared', (string) $page['filter_notice'] );
+		foreach ( array( 'activity_subject_type', 'activity_subject_identity', 'activity_operation', 'activity_outcome' ) as $legacy ) {
+			$_GET = array( $legacy => 'ignored' );
+			$page = $presenter->activity();
+			self::assertSame( array(), $page['filters'] );
+			self::assertStringContainsString( 'Older activity filters were cleared', (string) $page['filter_notice'] );
+		}
+	}
+
+	public function test_non_package_subject_keeps_a_matching_cursor_and_resets_when_changed(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
+		$database = new DashboardActivityWpdb();
+		foreach ( range( 26, 1 ) as $id ) {
+			$database->activity_rows[] = array(
+				'id'               => $id,
+				'sort_at'          => '2026-10-12 17:00:00',
+				'provider'         => 'bb',
+				'subject_type'     => 'provider',
+				'subject_identity' => 'bb',
+				'status'           => 'succeeded',
+				'correlation'      => str_repeat( 'b', 32 ),
+				'operation'        => 0 === $id % 2 ? 'credential.validate' : 'diagnostics.run',
+			);
+		}
+		$database->activity_rows[] = array(
+			'id'               => 27,
+			'sort_at'          => '2026-10-12 17:00:00',
+			'provider'         => 'bb',
+			'subject_type'     => 'plugin',
+			'subject_identity' => 'example/example.php',
+			'status'           => 'succeeded',
+			'correlation'      => str_repeat( 'c', 32 ),
+		);
+		$presenter                 = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( $database ), activity_store: new \RAN\Activity\ActivityStore( $database, 'wp_ran_booster_activity' ) );
+		$_GET                      = array( 'activity_package' => 'non-package' );
+		$first                     = $presenter->activity();
+
+		self::assertCount( 25, $first['items'] );
+		self::assertNotNull( $first['next_cursor'] );
+		self::assertContains( 'credential.validate', array_column( $first['items'], 'operation' ) );
+		self::assertContains( 'diagnostics.run', array_column( $first['items'], 'operation' ) );
+		$_GET  = array(
+			'activity_package' => 'non-package',
+			'before'           => $first['next_cursor'],
+		);
+		$older = $presenter->activity();
+		self::assertFalse( $older['unavailable'] );
+		self::assertTrue( $older['has_cursor'] );
+		self::assertSame( array( 'bb' ), array_column( $older['items'], 'subject_identity' ) );
+		$_GET    = array(
+			'activity_package' => wp_json_encode( array( 'bb', 'plugin', 'example/example.php' ) ),
+			'before'           => $first['next_cursor'],
+		);
+		$changed = $presenter->activity();
+		self::assertFalse( $changed['unavailable'] );
+		self::assertFalse( $changed['has_cursor'] );
+		self::assertSame( array( 'example/example.php' ), array_column( $changed['items'], 'subject_identity' ) );
 	}
 
 	public function test_missing_activity_store_does_not_fall_back_to_deployment_only_history(): void {
@@ -2712,7 +3603,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'wp_ran_booster_deployment_attempts',
 			static fn (): \DateTimeImmutable => new \DateTimeImmutable( '2026-07-27 12:00:00 UTC' ),
 			static fn ( int $length ): string => str_repeat( "\x0b", $length ),
-			new ReadyDashboardDatabase()
+			new ReadyDashboardDatabase(),
+			selection: $this->queued_selection( $attempt_database )
 		);
 		$plugins                 = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::never() )->method( 'from_slug' );
@@ -2811,7 +3703,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?PublicRepositoryLookupProfileStore $public_lookup_profiles = null,
 		?RepositoryBranchCheckEvidenceStore $branch_check_evidence = null,
 		?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
-		?WordPressUpdaterLock $branch_check_lock = null
+		?WordPressUpdaterLock $branch_check_lock = null,
+		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
+		?PackageRemovalService $removals = null
 	): RoutingDashboard {
 		$providers         = $providers ?? $this->providers( $provider_credentials );
 		$branch_check_lock = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
@@ -2850,15 +3744,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$plugin_repository,
 			new Booster(),
 			$theme_repository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock, $github_selection ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
-			new AdminTabRegistry( $providers ),
+			new AdminTabRegistry( $providers, $github_selection ),
 			new ProviderDocumentationPresenter( $providers ),
 			$package_operations,
 			$deployment_attempts,
 			$debug_capture,
 			null,
 			$admin_add_ons,
+			removals: $removals,
 			activity: $this->empty_activity_store()
 		);
 	}
@@ -3101,6 +3996,42 @@ final class DashboardActivityWpdb implements \RAN\Storage\DeploymentWriteConnect
 		$this->reads[] = $query;
 		if ( str_contains( $query, 'FROM wp_ran_booster_activity ' ) ) {
 			$rows = $this->activity_rows;
+			if ( str_contains( $query, "NOT (BINARY subject_type IN ('plugin','theme') AND BINARY subject_identity <> '')" ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => ! in_array( $row['subject_type'], array( 'plugin', 'theme' ), true ) || '' === $row['subject_identity'] ) );
+			}
+			if ( preg_match( "/BINARY provider = '([^']+)'/", $query, $filter ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => ( $row['provider'] ?? null ) === $filter[1] ) );
+			}
+			if ( preg_match( "/BINARY subject_type = '([^']+)'/", $query, $filter ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['subject_type'] === $filter[1] ) );
+			}
+			if ( preg_match( "/BINARY subject_identity = '([^']+)'/", $query, $filter ) ) {
+				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['subject_identity'] === $filter[1] ) );
+			}
+			if ( str_contains( $query, 'SELECT DISTINCT BINARY provider AS provider, BINARY subject_type AS subject_type, BINARY subject_identity AS subject_identity' ) ) {
+				$packages = array();
+				foreach ( $rows as $row ) {
+					if ( ! in_array( $row['subject_type'], array( 'plugin', 'theme' ), true ) || '' === $row['subject_identity'] ) {
+						continue;
+					}
+					$packages[ $row['provider'] . "\0" . $row['subject_type'] . "\0" . $row['subject_identity'] ] = array_intersect_key( $row, array_flip( array( 'provider', 'subject_type', 'subject_identity' ) ) );
+				}
+				return array_map( static fn ( array $row ): object => (object) $row, array_values( $packages ) );
+			}
+			if ( str_contains( $query, 'SELECT BINARY provider AS provider, MAX(CASE WHEN BINARY subject_type IN' ) ) {
+				$providers = array();
+				foreach ( $rows as $row ) {
+					$key                 = (string) ( $row['provider'] ?? '' );
+					$providers[ $key ] ??= array(
+						'provider'        => $key,
+						'has_non_package' => '0',
+					);
+					if ( ! in_array( $row['subject_type'], array( 'plugin', 'theme' ), true ) || '' === $row['subject_identity'] ) {
+						$providers[ $key ]['has_non_package'] = '1';
+					}
+				}
+				return array_map( static fn ( array $row ): object => (object) $row, array_values( $providers ) );
+			}
 			if ( preg_match( '/sort_at = \'([^\']+)\' AND id < (\d+)/', $query, $boundary ) ) {
 				$rows = array_values( array_filter( $rows, static fn ( array $row ): bool => $row['sort_at'] < $boundary[1] || ( $row['sort_at'] === $boundary[1] && $row['id'] < (int) $boundary[2] ) ) );
 			}

@@ -155,4 +155,47 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 			$html
 		);
 	}
+
+	#[DataProvider( 'package_types' )]
+	public function test_package_recovery_places_each_refusal_notice_once_below_its_heading( PackagePagePresenter $package_view ): void {
+		$messages                  = array(
+			array(
+				'type'    => 'error',
+				'message' => 'Booster refused this package operation.',
+			),
+		);
+		$name                      = 'RAN Booster';
+		$view                      = 'packages/recovery';
+		$development_safety_notice = true;
+		$packages                  = array();
+		$package_providers         = array();
+		$package_activity          = array(
+			'items'       => array(),
+			'unavailable' => false,
+		);
+		$tabs                      = array();
+		$recovery_identifier       = 'plugin' === $package_view->get_type() ? 'example-plugin/example.php' : 'example-theme';
+		$recovery_name             = 'Refused package';
+		$recovery_state            = 'blocked';
+		$recovery_reason           = 'The supplied package management state cannot be used.';
+		$recovery_blocker          = 'The requested operation was refused.';
+		$recovery_confirmation     = null;
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/base.php';
+		$html = (string) ob_get_clean();
+
+		$heading_position            = strpos( $html, 'Booster can’t open settings for Refused package' );
+		$refusal_position            = strpos( $html, 'Booster refused this package operation.' );
+		$development_safety_position = strpos( $html, '<strong>Development safety:</strong>' );
+
+		foreach ( array( $heading_position, $refusal_position, $development_safety_position ) as $position ) {
+			self::assertIsInt( $position );
+		}
+		self::assertTrue( $heading_position < $refusal_position );
+		self::assertTrue( $refusal_position < $development_safety_position );
+		self::assertSame( 1, substr_count( $html, 'Booster refused this package operation.' ) );
+		self::assertSame( 1, substr_count( $html, '<strong>Development safety:</strong>' ) );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-development-safety' ) );
+	}
 }

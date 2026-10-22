@@ -14,7 +14,6 @@ $extension_state_labels = array(
 ?>
 <section class="ran-booster-page-shell ran-booster-extensions plugin-install-php" aria-labelledby="ran-booster-extensions-heading">
 	<header class="ran-booster-page-shell__header ran-booster-extensions__header">
-		<p class="ran-booster-eyebrow"><?php esc_html_e( 'Add-ons', 'ran-booster' ); ?></p>
 		<h2 id="ran-booster-extensions-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Extensions', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Add focused capabilities to Booster.', 'ran-booster' ); ?></p>
 	</header>

@@ -93,7 +93,7 @@ remain untouched. This grants no legacy operation authority, receipt migration
 or automatic repair. The Core external-provider regression covers both old
 update operations alone and mixed with a valid current row.
 
-## Historical qualification and delivery boundary
+## Qualification and delivery boundary
 
 PR #177 was squash-merged as `c335d6a1322db6dbb51dec4dee6c0fe2d026cc1e`
 on 30 September 2026. Exact merged-main Quality run

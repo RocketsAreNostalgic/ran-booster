@@ -63,8 +63,19 @@ function wp_localize_script( string $handle, string $name, array $data ): bool {
 	return true;
 }
 
-function wp_enqueue_script( string $handle ): void {
+/** @param list<string> $dependencies */
+function wp_enqueue_script( string $handle, string $source = '', array $dependencies = array(), string|bool|null $version = false, bool $footer = false ): bool {
 	$GLOBALS['ran_booster_asset_test_enqueued_scripts'][] = $handle;
+	if ( '' !== $source ) {
+		$GLOBALS['ran_booster_asset_test_registered_scripts'][ $handle ] = array(
+			'source'       => $source,
+			'dependencies' => $dependencies,
+			'version'      => $version,
+			'footer'       => $footer,
+		);
+	}
+
+	return true;
 }
 
 if ( ! function_exists( __NAMESPACE__ . '\\wp_create_nonce' ) ) {

@@ -14,6 +14,8 @@ use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
 
 class Booster {
+	private const NATIVE_UPDATE_WARNING_HEARTBEAT_KEY = 'ran_booster_native_update_warning';
+
 	private CoreContainer $container;
 
 	private const ADMIN_PAGE_HOOKS = array(
@@ -121,6 +123,12 @@ class Booster {
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_scripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_credential_expiry_notice_script' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'load_background_deployment_failure_notice_script' ) );
+		add_action(
+			'admin_enqueue_scripts',
+			function ( $hook ): void {
+				$this->load_native_update_warning_script( $hook );
+			}
+		);
 		$expiry_notice = $this->service_callback( \RAN\Admin\CredentialExpiryNotice::class, 'render' );
 		add_action( 'admin_notices', $expiry_notice );
 		add_action( 'network_admin_notices', $expiry_notice );
@@ -133,6 +141,19 @@ class Booster {
 		$database_notice = $this->service_callback( \RAN\Admin\DatabaseCompatibilityNotice::class, 'render' );
 		add_action( 'admin_notices', $database_notice );
 		add_action( 'network_admin_notices', $database_notice );
+		$native_update_warning = function (): void {
+			$this->render_native_update_warning();
+		};
+		add_action( 'admin_notices', $native_update_warning );
+		add_action( 'network_admin_notices', $native_update_warning );
+		add_filter(
+			'heartbeat_received',
+			function ( $response, $data ) {
+				return $this->native_update_warning_heartbeat( $response, $data );
+			},
+			10,
+			2
+		);
 		add_action( 'load-plugins.php', $this->service_callback( \RAN\Admin\ManagedPluginFailureRows::class, 'register' ) );
 	}
 
@@ -848,6 +869,101 @@ class Booster {
 			)
 		);
 		wp_enqueue_script( 'ran-booster-background-deployment-failure-notice' );
+	}
+
+	/**
+	 * Load the native-update warning listener only on the screens that can show it.
+	 *
+	 * @param mixed $hook Unused screen identifier supplied by WordPress.
+	 */
+	private function load_native_update_warning_script( $hook ): void {
+		if ( ! $this->native_update_warning_scope( $hook ) || ! $this->can_check_native_update_warning() ) {
+			return;
+		}
+
+		$script_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/native-update-warning.js';
+		$script_version = $this->asset_version( $script_path );
+		wp_enqueue_script(
+			'ran-booster-native-update-warning',
+			trailingslashit( $this->booster_url ?? '' ) . 'assets/native-update-warning.js',
+			array( 'jquery', 'heartbeat' ),
+			$script_version,
+			true
+		);
+	}
+
+	private function render_native_update_warning(): void {
+		if ( ! $this->native_update_warning_scope( null ) || ! $this->can_check_native_update_warning() ) {
+			return;
+		}
+
+		$warning    = $this->native_update_warning_state();
+		$can_manage = current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
+		?>
+		<div class="notice notice-warning" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?>><p>
+			<?php esc_html_e( 'A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed.', 'ran-booster' ); ?>
+			<?php if ( $can_manage ) : ?>
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>"><?php esc_html_e( 'Review GitHub management.', 'ran-booster' ); ?></a>
+			<?php else : ?>
+				<?php esc_html_e( 'Contact a site administrator.', 'ran-booster' ); ?>
+			<?php endif; ?>
+		</p></div>
+		<?php
+	}
+
+	/**
+	 * Adds a bounded boolean status to an authenticated WordPress heartbeat response.
+	 *
+	 * @param mixed $response Heartbeat response assembled by WordPress and other plugins.
+	 * @param mixed $data Heartbeat request payload.
+	 * @return mixed
+	 */
+	private function native_update_warning_heartbeat( $response, $data ) {
+		if ( ! is_array( $response ) || ! is_array( $data ) || ! array_key_exists( self::NATIVE_UPDATE_WARNING_HEARTBEAT_KEY, $data ) ) {
+			return $response;
+		}
+		if ( ! $this->can_check_native_update_warning() ) {
+			return $response;
+		}
+
+		$warning = $this->native_update_warning_state();
+		if ( is_bool( $warning ) ) {
+			$response[ self::NATIVE_UPDATE_WARNING_HEARTBEAT_KEY ] = $warning;
+		}
+
+		return $response;
+	}
+
+	/** @return bool|null True only for a retained native mutation; false only for an exact available selection. */
+	private function native_update_warning_state(): ?bool {
+		try {
+			$status = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->github_selection_diagnostics();
+		} catch ( \Throwable ) {
+			return null;
+		}
+		if ( ! is_array( $status ) || ! isset( $status['state'] ) || ! is_string( $status['state'] ) ) {
+			return null;
+		}
+		if ( 'recovery_required' === $status['state'] ) {
+			return true;
+		}
+
+		return 'available' === $status['state'] && true === ( $status['available'] ?? null ) ? false : null;
+	}
+
+	private function can_check_native_update_warning(): bool {
+		return current_user_can( 'update_plugins' ) || current_user_can( 'update_themes' );
+	}
+
+	/** Keep this warning local: shared notice scope deliberately excludes Updates screens. */
+	private function native_update_warning_scope( mixed $hook ): bool {
+		$screen     = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		$id         = is_object( $screen ) && isset( $screen->id ) && is_string( $screen->id ) ? $screen->id : '';
+		$booster_id = str_ends_with( $id, '-network' ) ? substr( $id, 0, -8 ) : $id;
+
+		return in_array( $id, array( 'plugins', 'plugins-network', 'update-core', 'update-core-network' ), true )
+			|| in_array( $booster_id, self::ADMIN_PAGE_HOOKS, true )
+			|| ( is_string( $hook ) && in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) );
 	}
 
 	/** Preserve WordPress's false/null fallbacks while supplying string cache tokens. */

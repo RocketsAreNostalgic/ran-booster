@@ -336,7 +336,7 @@ final class ManagedReleaseTargetRegistrar {
 		}
 		$key     = self::key( $target['type'], $target['identifier'] );
 		$pending = $this->native_updates[ $key ] ?? null;
-		if ( 'gh' === ( $pending['authority']['provider'] ?? null ) ) {
+		if ( isset( $pending['native_owner'] ) && 'gh' === ( $pending['authority']['provider'] ?? null ) ) {
 			// Release's private shutdown finalization owns completion and exact lock release.
 			return;
 		}

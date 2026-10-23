@@ -112,6 +112,25 @@ final class DocumentationHookRendererTest extends TestCase {
 		self::assertSame( array( 'https://example.test/documentation', 'site' ), $received );
 	}
 
+	public function test_passes_null_metadata_to_the_global_documentation_filter(): void {
+		$received = new \stdClass();
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] =
+			static function ( array $sections, string $url, string $scope, ?ProviderMetadata $provider_metadata ) use ( &$received ): array {
+				unset( $url, $scope );
+				$received = $provider_metadata;
+
+				return $sections;
+			};
+
+		( new DocumentationHookRenderer() )->prepare_sections(
+			'ran_booster_documentation_sections_before_about',
+			'https://example.test/documentation',
+			'site'
+		);
+
+		self::assertNull( $received );
+	}
+
 	public function test_strips_nested_ids_from_sanitized_add_on_content(): void {
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] =
 			static function ( array $sections ): array {

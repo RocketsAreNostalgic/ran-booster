@@ -153,7 +153,8 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'publish a corrected release instead of replacing its ZIP or changing installed metadata.', $html );
 		self::assertStringContainsString( 'Use your provider’s release guidance to publish an eligible installable plugin or theme ZIP.', $html );
 		self::assertStringContainsString( 'Keep package identity consistent from release selection through installation.', $html );
-		self::assertStringNotContainsString( 'github.com', $html );
+		self::assertStringContainsString( 'https://github.com/RocketsAreNostalgic/ran-booster/blob/main/docs/package-update-orchestration.md', $html );
+		self::assertStringContainsString( 'Package update orchestration guide', $html );
 		self::assertStringNotContainsString( 'setup pull request', strtolower( $html ) );
 		self::assertStringNotContainsString( 'Update URI', $html );
 		self::assertStringNotContainsString( 'PU-032', $html );

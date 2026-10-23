@@ -2454,7 +2454,18 @@ msgstr ""
 msgid "If a release is blocked, publish a corrected release rather than editing installed metadata. You can return the package to branch management from its settings. If the selected provider capability becomes unavailable, Booster preserves package source state while suppressing release offers, downloads and mutations."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:739
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:302
+msgid "Package update orchestration guide"
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:302
+#: views/documentation.php:346
+#: views/documentation.php:439
+#: views/documentation.php:441
+msgid " (opens in a new tab)"
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:740
 msgid "View all conflicting packages"
 msgstr ""
 
@@ -6385,12 +6396,6 @@ msgstr ""
 
 #: views/documentation.php:340
 msgid "Official setup guidance"
-msgstr ""
-
-#: views/documentation.php:346
-#: views/documentation.php:439
-#: views/documentation.php:441
-msgid " (opens in a new tab)"
 msgstr ""
 
 #: views/documentation.php:354

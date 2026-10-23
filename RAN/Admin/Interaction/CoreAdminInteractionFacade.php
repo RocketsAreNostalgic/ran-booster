@@ -119,6 +119,29 @@ final class CoreAdminInteractionFacade implements
 	public function prepare_pending_feedback(): void {
 		$this->flow->prepare_pending_feedback();
 	}
+	public function github_adoption_request( bool $validate_current_route = true ): SignedAdminInteractionRequest {
+		if ( $validate_current_route
+			&& ( 'ran-booster' !== $this->query_value( 'page' )
+			|| 'gh' !== $this->query_value( 'tab' )
+			|| '' !== $this->query_value( 'view' )
+			|| '' !== $this->query_value( 'panel' ) ) ) {
+			throw new InvalidArgumentException( 'GitHub adoption feedback requires the canonical GitHub administration route.' );
+		}
+
+		return new SignedAdminInteractionRequest(
+			'core:adopt-github',
+			ProviderProfileAdminController::TARGET_KEY,
+			ProviderProfileAdminController::TARGET_SELECTOR,
+			add_query_arg(
+				array(
+					'page' => 'ran-booster',
+					'tab'  => 'gh',
+				),
+				admin_url( 'admin.php' )
+			),
+			'ran-booster-package-mutation-error'
+		);
+	}
 	public function provider_profile_request(
 		string $action,
 		string $provider
@@ -230,6 +253,13 @@ final class CoreAdminInteractionFacade implements
 		}
 
 		if ( ProviderProfileAdminController::TARGET_KEY === $target ) {
+			if ( 'core:adopt-github' === $operation ) {
+				$request = $this->github_adoption_request();
+				return hash_equals( $return_url, $request->canonical_url )
+					&& hash_equals( $error_id, $request->error_region_id )
+						? $request
+						: null;
+			}
 			if ( ! str_starts_with( $operation, 'core:' ) ) {
 				return null;
 			}

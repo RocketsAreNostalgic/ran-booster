@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace RAN\Tests\RepositoryProvider;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\Interaction\CoreAdminInteractionFacade;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\GitHubReplacementDeclaration;
@@ -23,6 +25,8 @@ require_once __DIR__ . '/../Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/../Support/ProviderProfileAdminControllerWordPressFunctions.php';
 require_once __DIR__ . '/../Support/WPError.php';
 require_once __DIR__ . '/../Deployment/PackageMutationGuardWordPressFunctions.php';
+require_once __DIR__ . '/../Admin/Interaction/AdminInteractionWordPressFunctions.php';
+require_once __DIR__ . '/../Admin/DashboardRoutingWordPressFunctions.php';
 
 final class GitHubAdoptionTransitionTest extends TestCase {
 	private string $root;
@@ -35,6 +39,8 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
 	protected function setUp(): void {
+		$_GET       = array();
+		$_POST      = array();
 		$this->root = sys_get_temp_dir() . '/ran-adoption-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable private filesystem fixture.
 		mkdir( $this->root, 0700 );
@@ -54,7 +60,10 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override.
 	protected function tearDown(): void {
-		unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_nonce_valid'], $GLOBALS['ran_booster_test_nonce_checks'] );
+		$_GET  = array();
+		$_POST = array();
+		unset( $_SERVER['REQUEST_METHOD'] );
+		unset( $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_nonce_valid'], $GLOBALS['ran_booster_test_nonce_checks'], $GLOBALS['ran_booster_interaction_test_actions'] );
 		$files = glob( $this->root . '/*' );
 		foreach ( false === $files ? array() : $files as $file ) {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable test-owned files only.
@@ -136,6 +145,176 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		self::assertSame( 1, $this->store->read()['selection_generation'] );
 	}
 
+	#[DataProvider( 'adoption_feedback_outcomes' )]
+	public function test_adoption_post_redirect_get_renders_signed_feedback_after_selection_or_stale_refusal( bool $stale, string $outcome, string $message ): void {
+		$this->candidate();
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$GLOBALS['ran_booster_test_nonce_valid']  = true;
+		$review                                   = $this->selection->adoption_review( $this->secrets );
+		if ( $stale ) {
+			$this->credential( 'classic' );
+		}
+
+		$redirect    = '';
+		$interaction = new CoreAdminInteractionFacade(
+			redirect: static function ( string $url ) use ( &$redirect ): void {
+				$redirect = $url;
+			},
+			terminate: static function (): never {
+				throw new \RuntimeException( 'Signed adoption response terminated.' );
+			}
+		);
+		$dashboard   = $this->createMock( \RAN\Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$_GET  = array(
+			'page' => 'ran-booster',
+			'tab'  => 'gh',
+		);
+		$_POST = array(
+			'ran_booster' => array(
+				'action'        => 'adopt-github',
+				'review_digest' => $review['digest'],
+				'confirmed'     => '1',
+			),
+		);
+		try {
+			$this->adoption_dispatcher(
+				$dashboard,
+				$this->admin_controller( dashboard: $dashboard, interaction: $interaction )
+			)->dispatch_post_requests();
+			self::fail( 'GitHub adoption must finish with signed POST/redirect/GET feedback.' );
+		} catch ( \RuntimeException $error ) {
+			self::assertSame( 'Signed adoption response terminated.', $error->getMessage() );
+		}
+
+		self::assertSame( $stale ? 0 : 1, $this->store->read()['selection_generation'] );
+		self::assertNotSame( '', $redirect );
+		$captured_query = array();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- Load the captured signed redirect as an untrusted next-request fixture; the tested flow verifies it.
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $captured_query );
+		$_GET                      = $captured_query;
+		$_POST                     = array();
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		self::assertSame( 'core:adopt-github', $captured_query['ran_booster_interaction_operation'] ?? null );
+		self::assertSame( $outcome, $captured_query['ran_booster_interaction_outcome'] ?? null );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $captured_query['ran_booster_interaction_return'] ?? null );
+		self::assertSame( 'ran-booster-package-mutation-error', $captured_query['ran_booster_interaction_error_region'] ?? null );
+		self::assertStringNotContainsString( $review['digest'], $redirect );
+		self::assertStringNotContainsString( 'reuse_existing', $redirect );
+
+		$valid_query = $captured_query;
+		foreach ( array(
+			'ran_booster_interaction_target'       => 'tampered',
+			'ran_booster_interaction_message'      => 'Forged feedback.',
+			'ran_booster_interaction_outcome'      => 'unexpected_failure',
+			'ran_booster_interaction_return'       => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=bb',
+			'ran_booster_interaction_error_region' => 'forged-error-region',
+			'_ran_booster_interaction_nonce'       => 'forged-nonce',
+		) as $field => $value ) {
+			$_GET           = $valid_query;
+			$_GET[ $field ] = $value;
+			$GLOBALS['ran_booster_interaction_test_actions'] = array();
+			( new CoreAdminInteractionFacade() )->prepare_pending_feedback();
+			self::assertSame( array(), $GLOBALS['ran_booster_interaction_test_actions'] );
+		}
+		$_GET = $valid_query;
+
+		$GLOBALS['ran_booster_interaction_test_actions'] = array();
+		( new CoreAdminInteractionFacade() )->prepare_pending_feedback();
+		$notices = $GLOBALS['ran_booster_interaction_test_actions']['admin_notices'] ?? array();
+		self::assertCount( 1, $notices );
+		ob_start();
+		$notices[0]['callback']();
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( $message, $html );
+		self::assertStringContainsString( $stale ? 'notice-error' : 'notice-success', $html );
+		self::assertStringContainsString( $stale ? 'role="alert"' : 'role="status"', $html );
+	}
+
+	public function test_valid_nonce_noncanonical_adoption_route_refuses_without_mutation_and_uses_fixed_signed_return(): void {
+		$this->candidate();
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$GLOBALS['ran_booster_test_nonce_valid']  = true;
+		$review                                   = $this->selection->adoption_review( $this->secrets );
+		$redirect                                 = '';
+		$interaction                              = new CoreAdminInteractionFacade(
+			redirect: static function ( string $url ) use ( &$redirect ): void {
+				$redirect = $url;
+			},
+			terminate: static function (): never {
+				throw new \RuntimeException( 'Signed adoption response terminated.' );
+			}
+		);
+		$dashboard                                = $this->createMock( \RAN\Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$_GET  = array(
+			'page' => 'ran-booster',
+			'tab'  => 'gh',
+			'view' => 'credentials',
+		);
+		$_POST = array(
+			'ran_booster' => array(
+				'action'        => 'adopt-github',
+				'review_digest' => $review['digest'],
+				'confirmed'     => '1',
+			),
+		);
+		try {
+			$this->adoption_dispatcher(
+				$dashboard,
+				$this->admin_controller( dashboard: $dashboard, interaction: $interaction )
+			)->dispatch_post_requests();
+			self::fail( 'A noncanonical adoption route must finish with signed refusal feedback.' );
+		} catch ( \RuntimeException $error ) {
+			self::assertSame( 'Signed adoption response terminated.', $error->getMessage() );
+		}
+
+		self::assertSame( 0, $this->store->read()['selection_generation'] );
+		$captured_query = array();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The captured signed redirect is an untrusted fixture whose fixed return route is asserted.
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $captured_query );
+		self::assertSame( 'validation_failure', $captured_query['ran_booster_interaction_outcome'] ?? null );
+		self::assertSame( 'GitHub adoption could not be verified. Review the current selection, credential permissions and recovery status before trying again.', $captured_query['ran_booster_interaction_message'] ?? null );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $captured_query['ran_booster_interaction_return'] ?? null );
+		self::assertStringNotContainsString( $review['digest'], $redirect );
+	}
+
+	public function test_adoption_feedback_route_rejects_noncanonical_provider_routes(): void {
+		foreach ( array(
+			array(
+				'page' => 'ran-booster',
+				'tab'  => 'bb',
+			),
+			array(
+				'page' => 'ran-booster',
+				'tab'  => 'gh',
+				'view' => 'credentials',
+			),
+			array(
+				'page'  => 'ran-booster',
+				'tab'   => 'gh',
+				'panel' => 'repositories',
+			),
+		) as $route ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The route is an untrusted next-request fixture rejected by the tested facade.
+			$_GET = $route;
+			try {
+				( new CoreAdminInteractionFacade() )->github_adoption_request();
+				self::fail( 'GitHub adoption feedback must reject a noncanonical route.' );
+			} catch ( \InvalidArgumentException ) {
+				$this->addToAssertionCount( 1 );
+			}
+		}
+	}
+
+	/** @return array<string, array{bool, string, string}> */
+	public static function adoption_feedback_outcomes(): array {
+		return array(
+			'confirmed adoption' => array( false, 'success', 'GitHub implementation selection saved. Review current availability before continuing.' ),
+			'stale adoption'     => array( true, 'validation_failure', 'GitHub adoption could not be verified. Review the current selection, credential permissions and recovery status before trying again.' ),
+		);
+	}
+
 	public function test_paused_settings_are_passive_and_other_provider_settings_remain_available(): void {
 		$this->candidate();
 		$registry  = new \RAN\RepositoryProvider\ProviderRegistry( array( new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'bb' ) ) );
@@ -177,7 +356,7 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		self::assertSame( 'bb', $presenter->build( 'bb' )['selected_provider'] );
 	}
 
-	private function admin_controller( ?\RAN\PackageRemoval\PackageRemovalService $recovery = null, ?\RAN\Dashboard $dashboard = null ): \RAN\Admin\ProviderProfileAdminController {
+	private function admin_controller( ?\RAN\PackageRemoval\PackageRemovalService $recovery = null, ?\RAN\Dashboard $dashboard = null, ?CoreAdminInteractionFacade $interaction = null ): \RAN\Admin\ProviderProfileAdminController {
 		return new \RAN\Admin\ProviderProfileAdminController(
 			$dashboard ?? $this->createStub( \RAN\Dashboard::class ),
 			new \RAN\RepositoryProvider\ProviderRegistry(),
@@ -187,10 +366,30 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 			new \RAN\Storage\CredentialUsageReader(),
 			new \RAN\Admin\PublicRepositoryLookupProfileStore(),
 			new \RAN\Admin\CredentialExpiryObservationStore(),
+			$interaction,
 			github_selection: $this->selection,
 			deployment_attempts: $this->attempts,
 			package_removal: $recovery
 		);
+	}
+
+	private function adoption_dispatcher( \RAN\Dashboard $dashboard, \RAN\Admin\ProviderProfileAdminController $controller ): \RAN\Dispatcher {
+		$plugins = $this->createStub( \RAN\Storage\PluginRepository::class );
+		$themes  = $this->createStub( \RAN\Storage\ThemeRepository::class );
+
+		return new class(
+			$dashboard,
+			new \RAN\RepositoryProvider\ProviderRegistry(),
+			$this->secrets,
+			new \RAN\Admin\ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
+			new \RAN\Admin\PackageAdminController(),
+			new WordPressUpdaterLock(),
+			provider_profile_interaction: $controller
+		) extends \RAN\Dispatcher {
+			protected function redirect_to( string $url ): never {
+				throw new \RuntimeException( 'Unsigned dispatcher redirect: ' . $url );
+			}
+		};
 	}
 
 	public function test_native_recovery_admin_permissions_nonce_and_explicit_confirmations(): void {

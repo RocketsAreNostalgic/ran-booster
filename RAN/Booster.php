@@ -348,7 +348,7 @@ class Booster {
 		foreach ( $catalogue as &$extension ) {
 			$installed                = array_key_exists( $extension['plugin'], $installed_plugins );
 			$installed_version        = $installed && is_string( $installed_plugins[ $extension['plugin'] ]['Version'] ?? null ) ? $installed_plugins[ $extension['plugin'] ]['Version'] : '';
-			$release_version          = is_string( $extension['release_version'] ?? null ) ? $extension['release_version'] : '';
+			$release_version          = $extension['release_version'];
 			$network_active_available = function_exists( __NAMESPACE__ . '\\is_plugin_active_for_network' ) || function_exists( 'is_plugin_active_for_network' );
 			$active                   = $installed && ( is_plugin_active( $extension['plugin'] ) || ( $network_active_available && is_plugin_active_for_network( $extension['plugin'] ) ) );
 			$compatible               = true;
@@ -359,7 +359,7 @@ class Booster {
 				}
 			}
 
-			$installed_release_status = ! $installed || '' === $release_version || $release_version === $installed_version
+			$installed_release_status = ! $installed || $release_version === $installed_version
 				? 'selected'
 				: ( '' === $installed_version ? 'unknown' : ( version_compare( $installed_version, $release_version, '<' ) ? 'older' : 'newer' ) );
 

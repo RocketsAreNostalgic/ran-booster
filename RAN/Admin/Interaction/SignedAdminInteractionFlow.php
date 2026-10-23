@@ -216,7 +216,8 @@ final class SignedAdminInteractionFlow {
 					AdminInteractionOutcome::VALIDATION_FAILURE,
 					AdminInteractionOutcome::UNEXPECTED_FAILURE => 'notice notice-error',
 				};
-				echo '<div class="' . esc_attr( $class ) . '"><p>' . esc_html( $outcome['message'] ) . '</p></div>';
+				$role = $this->has_success_feedback( $outcome['kind'] ) ? 'status' : 'alert';
+				echo '<div class="' . esc_attr( $class ) . '" role="' . esc_attr( $role ) . '"><p>' . esc_html( $outcome['message'] ) . '</p></div>';
 			}
 		);
 	}

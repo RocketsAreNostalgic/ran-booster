@@ -44,6 +44,8 @@ class ProviderProfileAdminController {
 		}
 		$digest = is_string( $request['review_digest'] ?? null ) ? $request['review_digest'] : '';
 		check_admin_referer( 'ran-booster-adopt-github-' . $digest );
+		$interaction_request = $this->interaction?->github_adoption_request();
+		$failed              = false;
 		try {
 			if ( null === $this->github_selection || null === $this->deployment_attempts || 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $digest ) ) {
 				throw new \RuntimeException( 'GitHub adoption is unavailable.' );
@@ -63,10 +65,19 @@ class ProviderProfileAdminController {
 				$this->updater_lock,
 				$authorized
 			);
-			$this->dashboard->add_message( __( 'GitHub implementation selection saved. Review current availability before continuing.', 'ran-booster' ) );
+			$message = __( 'GitHub implementation selection saved. Review current availability before continuing.', 'ran-booster' );
 		} catch ( \Throwable ) {
-			$this->dashboard->add_message( new \WP_Error( 'ran_booster_github_adoption', __( 'GitHub adoption could not be verified. Review the current selection, credential permissions and recovery status before trying again.', 'ran-booster' ) ) );
+			$failed  = true;
+			$message = __( 'GitHub adoption could not be verified. Review the current selection, credential permissions and recovery status before trying again.', 'ran-booster' );
 		}
+		if ( null === $interaction_request ) {
+			$this->dashboard->add_message( $failed ? new \WP_Error( 'ran_booster_github_adoption', $message ) : $message );
+			return;
+		}
+		if ( $failed ) {
+			$this->interaction->respond_to_provider_profile_validation_failure( $interaction_request, $message );
+		}
+		$this->interaction->respond_to_provider_profile_success( $interaction_request, $message );
 	}
 
 	/** @param array<string,mixed> $request Untrusted recovery confirmation. */

@@ -12,6 +12,10 @@
                     "kind": "file"
                 },
                 {
+                    "path": "languages",
+                    "kind": "directory"
+                },
+                {
                     "path": "src",
                     "kind": "directory"
                 }

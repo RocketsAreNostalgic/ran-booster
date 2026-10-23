@@ -106,7 +106,7 @@ foreach ( $provider_documentation as $provider_guide ) {
 		continue;
 	}
 
-	$sections                          = $documentation_hooks->prepare_sections( 'ran_booster_documentation_sections_after_provider_' . $provider_code, $documentation_url, $documentation_scope, $provider_code );
+	$sections                          = $documentation_hooks->prepare_sections( 'ran_booster_documentation_sections_after_provider_' . $provider_code, $documentation_url, $documentation_scope, $provider_code, $provider_guide['metadata'] ?? null );
 	$sections                          = array_values(
 		array_filter(
 			$sections,
@@ -408,12 +408,12 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 				<h3><?php esc_html_e( 'Security, delivery history and hosting', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection for the network, web server, PHP workers or WordPress bootstrap. Use public HTTPS with certificate verification enabled, a unique generated secret for each repository, the provider’s JSON delivery option and only the required push event. Rotate or disable a suspected secret.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Do not cache, challenge, redirect or transform either accepted callback form: the pretty /wp-json/ route or the equivalent ?rest_route= query route. Proxies must preserve the raw body and signature headers. WordPress may already have buffered the body before Booster runs, so Core enforces its measured 256 KiB limit but does not trust or parse Content-Length as transport protection.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'A provider can time out after Booster has durably admitted work. Provider delivery history remains authoritative for request duration, response status and redelivery. GitHub does not automatically redeliver failed deliveries. For Bitbucket, enable Request History before you need it and treat its request UUID only as a cross-reference; do not assume it remains stable across automatic attempts. Compare the provider identifier with the Provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'A provider can time out after Booster has durably admitted work. Provider delivery history remains authoritative for request duration, response status and redelivery. Compare the provider identifier with the Provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'At a trusted edge or host, you may bound body and header size, read time and connections for both callback forms. Provider-published IP ranges are optional defence in depth only where the real peer address is trustworthy; keep them current and retain HMAC. Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity.', 'ran-booster' ); ?></p>
 				<h3 id="ran-booster-webhook-cleanup"><?php esc_html_e( 'Retained webhook setup and cleanup', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup. That package ignores pushes while it remains release-managed, while any branch-managed package using the same repository can continue to need the webhook. Keeping the setup is useful for a temporary switch back and forth.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'For an identified GitHub hook, the verified Remove action can remove the remote hook and release only a repository secret created specifically for it. For other providers, open the repository webhook settings from the provider screen, remove the hook at the provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Open the repository webhook settings from the provider screen, remove the hook at the provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'The provider must be able to reach this WordPress site over public HTTPS. Localhost sites need a development tunnel. Test delivery from the provider, then review Deployment activity in Troubleshooting for Booster-managed results.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $troubleshooting_url ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a>.</p>
 				<?php foreach ( $provider_documentation as $provider_guide ) { ?>
 					<?php if ( ! empty( $provider_guide['setup_available'] ) && isset( $provider_guide['code'], $provider_guide['label'], $provider_guide['webhook'] ) && is_array( $provider_guide['webhook'] ) ) { ?>
@@ -440,6 +440,9 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 								<span aria-hidden="true"> · </span>
 								<a href="<?php echo esc_url( $webhook['delivery_documentation_url'] ?? '' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a>
 							</p>
+							<?php if ( 'bb' === $provider_guide['code'] ) { ?>
+								<p><?php esc_html_e( 'For Bitbucket, enable Request History before you need it and treat its request UUID only as a cross-reference; do not assume it remains stable across automatic attempts.', 'ran-booster' ); ?></p>
+							<?php } ?>
 						</section>
 					<?php } ?>
 				<?php } ?>

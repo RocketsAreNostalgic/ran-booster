@@ -12,6 +12,8 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use RAN\Admin\DocumentationHookRenderer;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderMetadata;
 
 final class DocumentationHookRendererTest extends TestCase {
 
@@ -66,6 +68,48 @@ final class DocumentationHookRendererTest extends TestCase {
 		self::assertStringContainsString( '<summary>Fixture guide</summary>', $html );
 		self::assertStringContainsString( '<div class="ran-booster-documentation__content"><h3>Vanilla heading</h3><p>Guide <strong>content</strong></p></div>', $html );
 		self::assertStringNotContainsString( '<script>', $html );
+	}
+
+	public function test_passes_exact_registered_provider_metadata_as_the_optional_fourth_argument(): void {
+		$metadata = new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' );
+		$received = null;
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_after_provider_gh'][] =
+			static function ( array $sections, string $url, string $scope, ?ProviderMetadata $provider_metadata ) use ( &$received ): array {
+				unset( $url, $scope );
+				$received = $provider_metadata;
+
+				return $sections;
+			};
+
+		( new DocumentationHookRenderer() )->prepare_sections(
+			'ran_booster_documentation_sections_after_provider_gh',
+			'https://example.test/documentation',
+			'site',
+			'gh',
+			$metadata
+		);
+
+		self::assertSame( $metadata, $received );
+	}
+
+	public function test_keeps_three_argument_provider_callbacks_compatible(): void {
+		$received = array();
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_after_provider_gh'][] =
+			static function ( array $sections, string $url, string $scope ) use ( &$received ): array {
+				$received = array( $url, $scope );
+
+				return $sections;
+			};
+
+		( new DocumentationHookRenderer() )->prepare_sections(
+			'ran_booster_documentation_sections_after_provider_gh',
+			'https://example.test/documentation',
+			'site',
+			'gh',
+			new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' )
+		);
+
+		self::assertSame( array( 'https://example.test/documentation', 'site' ), $received );
 	}
 
 	public function test_strips_nested_ids_from_sanitized_add_on_content(): void {

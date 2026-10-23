@@ -18,6 +18,7 @@ final readonly class ProviderDocumentationPresenter {
 	 * Use the same deterministic order as every other provider-facing surface.
 	 *
 	 * @return list<array{
+	 *     metadata: \RAN\RepositoryProvider\ProviderMetadata,
 	 *     code: string,
 	 *     label: string,
 	 *     setup_available: bool,
@@ -32,6 +33,7 @@ final readonly class ProviderDocumentationPresenter {
 			$setup = null === $metadata->admin ? null : $metadata->admin->setup;
 
 			$documentation[] = array(
+				'metadata'        => $metadata,
 				'code'            => $metadata->code->value,
 				'label'           => $metadata->label,
 				'setup_available' => null !== $setup,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin;
 
 use RAN\Logging\BoosterLogger;
+use RAN\RepositoryProvider\ProviderMetadata;
 use Throwable;
 
 /**
@@ -16,16 +17,18 @@ final class DocumentationHookRenderer {
 	 * Resolve structured add-on documentation sections once, before output.
 	 *
 	 * @param non-empty-string $filter_hook
+	 * @param ProviderMetadata|null $provider_metadata Exact registered provider metadata for a provider-specific hook.
 	 * @return list<array{id: string, summary: string, content: string, open: bool}>
 	 */
 	public function prepare_sections(
 		string $filter_hook,
 		string $documentation_url,
 		string $scope,
-		?string $provider_code = null
+		?string $provider_code = null,
+		?ProviderMetadata $provider_metadata = null
 	): array {
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- Filter is a validated Core-owned documentation extension point. Public named parameters are retained.
-		$sections = apply_filters( $filter_hook, array(), $documentation_url, $scope );
+		$sections = apply_filters( $filter_hook, array(), $documentation_url, $scope, $provider_metadata );
 		$prepared = array();
 
 		if ( is_array( $sections ) ) {

@@ -651,7 +651,8 @@ $sections = apply_filters(
 	'ran_booster_documentation_sections_after_provider_' . $provider_code,
 	array(),
 	$documentation_url,
-	$scope
+	$scope,
+	$provider_metadata
 );
 
 $sections = apply_filters(
@@ -663,11 +664,19 @@ $sections = apply_filters(
 ```
 
 The dynamic provider filter runs immediately after the matching registered
-provider's Core guide. The general filter runs before Core's About section.
+provider's Core guide. Its optional fourth argument is the exact readonly
+`\RAN\RepositoryProvider\ProviderMetadata` object published by that
+registration, or `null` for callers that do not have provider metadata. An
+add-on that needs to prove ownership may compare that object by identity with
+the metadata it registered. It must not infer ownership from a provider code,
+label, or reconstructed metadata. The general filter runs before Core's About
+section and receives its established three arguments.
+
 `$documentation_url` is the canonical Booster Documentation URL and `$scope` is
 `site` or `network`. Each callback accepts and returns the section list;
 WordPress callback priority supplies ordering when more than one plugin uses a
-hook.
+hook. Existing provider callbacks registered for three accepted arguments remain
+compatible; a callback that needs `$provider_metadata` must register for four.
 
 Each appended section supplies a stable `id`, plain-text `summary`, string or
 callable `content`, and optional Boolean `open`. Core owns the disclosure

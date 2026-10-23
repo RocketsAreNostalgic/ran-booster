@@ -151,9 +151,13 @@ test('native Plugin-table failure callback replaces only the WordPress default a
 		wp: {
 			a11y: { speak: (...args) => speaks.push(args) },
 			i18n: {
-				__: (text) => text,
-				_x: (text, context) => {
+				__: (text, domain) => {
+					assert.equal(domain, 'ran-booster');
+					return text;
+				},
+				_x: (text, context, domain) => {
 					assert.equal(context, 'plugin');
+					assert.equal(domain, 'ran-booster');
 					return text;
 				},
 				sprintf: (text, value) => text.replace('%s', value),

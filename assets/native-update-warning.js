@@ -45,9 +45,10 @@
 				return;
 			}
 
-			const message = window.wp.i18n.sprintf(
+			const { __, _x, sprintf } = window.wp.i18n;
+			const message = sprintf(
 				/* translators: %s: Error string for a failed update. */
-				window.wp.i18n.__('Update failed: %s'),
+				__('Update failed: %s', 'ran-booster'),
 				response.errorMessage
 			);
 			const $row = response.plugin
@@ -62,9 +63,9 @@
 				.html(message);
 
 			if (response.pluginName) {
-				const ariaLabel = window.wp.i18n.sprintf(
+				const ariaLabel = sprintf(
 					/* translators: %s: Plugin name and version. */
-					window.wp.i18n._x('%s update failed.', 'plugin'),
+					_x('%s update failed.', 'plugin', 'ran-booster'),
 					response.pluginName
 				);
 				$message.attr('aria-label', ariaLabel);

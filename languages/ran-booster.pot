@@ -9569,6 +9569,19 @@ msgstr ""
 msgid "This report includes the displayed installation details and diagnostic results. Local declarations and standing Core update status are not diagnostic test results. Review it before sharing."
 msgstr ""
 
+#. translators: %s: Error string for a failed update.
+#: assets/native-update-warning.js:51
+#, js-format
+msgid "Update failed: %s"
+msgstr ""
+
+#. translators: %s: Plugin name and version.
+#: assets/native-update-warning.js:68
+#, js-format
+msgctxt "plugin"
+msgid "%s update failed."
+msgstr ""
+
 #: assets/ran-booster-packages.js:565
 msgid "package"
 msgstr ""

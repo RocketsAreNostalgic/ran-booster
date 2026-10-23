@@ -44,9 +44,10 @@ class ProviderProfileAdminController {
 		}
 		$digest = is_string( $request['review_digest'] ?? null ) ? $request['review_digest'] : '';
 		check_admin_referer( 'ran-booster-adopt-github-' . $digest );
-		$interaction_request = $this->interaction?->github_adoption_request();
+		$interaction_request = $this->interaction?->github_adoption_request( false );
 		$failed              = false;
 		try {
+			$this->interaction?->github_adoption_request();
 			if ( null === $this->github_selection || null === $this->deployment_attempts || 1 !== preg_match( '/\A[a-f0-9]{64}\z/D', $digest ) ) {
 				throw new \RuntimeException( 'GitHub adoption is unavailable.' );
 			}

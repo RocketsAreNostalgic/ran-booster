@@ -119,11 +119,12 @@ final class CoreAdminInteractionFacade implements
 	public function prepare_pending_feedback(): void {
 		$this->flow->prepare_pending_feedback();
 	}
-	public function github_adoption_request(): SignedAdminInteractionRequest {
-		if ( 'ran-booster' !== $this->query_value( 'page' )
+	public function github_adoption_request( bool $validate_current_route = true ): SignedAdminInteractionRequest {
+		if ( $validate_current_route
+			&& ( 'ran-booster' !== $this->query_value( 'page' )
 			|| 'gh' !== $this->query_value( 'tab' )
 			|| '' !== $this->query_value( 'view' )
-			|| '' !== $this->query_value( 'panel' ) ) {
+			|| '' !== $this->query_value( 'panel' ) ) ) {
 			throw new InvalidArgumentException( 'GitHub adoption feedback requires the canonical GitHub administration route.' );
 		}
 

@@ -231,6 +231,54 @@ final class GitHubAdoptionTransitionTest extends TestCase {
 		self::assertStringContainsString( $stale ? 'role="alert"' : 'role="status"', $html );
 	}
 
+	public function test_valid_nonce_noncanonical_adoption_route_refuses_without_mutation_and_uses_fixed_signed_return(): void {
+		$this->candidate();
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$GLOBALS['ran_booster_test_nonce_valid']  = true;
+		$review                                   = $this->selection->adoption_review( $this->secrets );
+		$redirect                                 = '';
+		$interaction                              = new CoreAdminInteractionFacade(
+			redirect: static function ( string $url ) use ( &$redirect ): void {
+				$redirect = $url;
+			},
+			terminate: static function (): never {
+				throw new \RuntimeException( 'Signed adoption response terminated.' );
+			}
+		);
+		$dashboard                                = $this->createMock( \RAN\Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+		$_GET  = array(
+			'page' => 'ran-booster',
+			'tab'  => 'gh',
+			'view' => 'credentials',
+		);
+		$_POST = array(
+			'ran_booster' => array(
+				'action'        => 'adopt-github',
+				'review_digest' => $review['digest'],
+				'confirmed'     => '1',
+			),
+		);
+		try {
+			$this->adoption_dispatcher(
+				$dashboard,
+				$this->admin_controller( dashboard: $dashboard, interaction: $interaction )
+			)->dispatch_post_requests();
+			self::fail( 'A noncanonical adoption route must finish with signed refusal feedback.' );
+		} catch ( \RuntimeException $error ) {
+			self::assertSame( 'Signed adoption response terminated.', $error->getMessage() );
+		}
+
+		self::assertSame( 0, $this->store->read()['selection_generation'] );
+		$captured_query = array();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url, WordPress.Security.NonceVerification.Recommended -- The captured signed redirect is an untrusted fixture whose fixed return route is asserted.
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $captured_query );
+		self::assertSame( 'validation_failure', $captured_query['ran_booster_interaction_outcome'] ?? null );
+		self::assertSame( 'GitHub adoption could not be verified. Review the current selection, credential permissions and recovery status before trying again.', $captured_query['ran_booster_interaction_message'] ?? null );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh', $captured_query['ran_booster_interaction_return'] ?? null );
+		self::assertStringNotContainsString( $review['digest'], $redirect );
+	}
+
 	public function test_adoption_feedback_route_rejects_noncanonical_provider_routes(): void {
 		foreach ( array(
 			array(

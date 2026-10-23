@@ -25,7 +25,9 @@ $extension_state_labels = array(
 			$details_url         = '#TB_inline?width=772&height=600&inlineId=' . $details_id;
 			$availability_label  = $extension['availability'];
 			$state_label         = $extension_state_labels[ $extension['state'] ] ?? $extension['state'];
-			$compatibility_label = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );
+			$manual_install_url  = is_string( $extension['manual_install_url'] ?? null ) ? $extension['manual_install_url'] : '';
+			$release_is_installed = (bool) ( $extension['selected_release_is_installed'] ?? true );
+			$compatibility_label = $extension['compatibility_label'];
 			$more_details_label  = sprintf(
 				/* translators: %s: Extension name. */
 				__( 'More details about %s', 'ran-booster' ),
@@ -49,13 +51,18 @@ $extension_state_labels = array(
 									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Active', 'ran-booster' ); ?></button>
 								<?php elseif ( 'Not installed' !== $extension['state'] ) : ?>
 									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Inactive', 'ran-booster' ); ?></button>
+								<?php elseif ( $extension['compatible'] && '' !== $manual_install_url ) : ?>
+									<a class="button button-primary" href="<?php echo esc_url( $manual_install_url ); ?>"><?php esc_html_e( 'Open release', 'ran-booster' ); ?></a>
 								<?php else : ?>
-									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Install', 'ran-booster' ); ?></button>
+									<span class="description"><?php echo esc_html( $compatibility_label ); ?></span>
 								<?php endif; ?>
 								</li>
 								<li>
 									<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a>
-								<?php if ( 'Active' !== $extension['state'] && 'Not installed' !== $extension['state'] ) : ?>
+								<?php if ( 'Not installed' === $extension['state'] && $extension['compatible'] && '' !== $manual_install_url ) : ?>
+									<br><span class="description"><?php esc_html_e( 'Download the attached plugin ZIP, then use Plugins > Add New > Upload Plugin.', 'ran-booster' ); ?></span>
+								<?php endif; ?>
+								<?php if ( 'Not installed' !== $extension['state'] && ( 'Active' !== $extension['state'] || ! $release_is_installed ) ) : ?>
 									<br><a href="<?php echo esc_url( $plugins_url ); ?>"><?php esc_html_e( 'Open Plugins', 'ran-booster' ); ?></a>
 								<?php endif; ?>
 								</li>
@@ -81,7 +88,7 @@ $extension_state_labels = array(
 					</div>
 					<div class="column-compatibility">
 					<?php if ( $extension['compatible'] ) : ?>
-						<span class="compatibility-compatible"><strong><?php esc_html_e( 'Compatible', 'ran-booster' ); ?></strong> <?php esc_html_e( 'with your version of Booster', 'ran-booster' ); ?></span>
+						<span class="compatibility-compatible"><?php if ( $release_is_installed ) : ?><strong><?php esc_html_e( 'Compatible', 'ran-booster' ); ?></strong> <?php esc_html_e( 'with your version of Booster', 'ran-booster' ); ?><?php else : ?><?php echo esc_html( $compatibility_label ); ?><?php endif; ?></span>
 					<?php else : ?>
 						<span class="compatibility-incompatible"><?php echo esc_html( $compatibility_label ); ?></span>
 					<?php endif; ?>
@@ -96,7 +103,8 @@ $extension_state_labels = array(
 			$details_title_id    = $details_id . '-title';
 			$availability_label  = $extension['availability'];
 			$state_label         = $extension_state_labels[ $extension['state'] ] ?? $extension['state'];
-			$compatibility_label = $extension['compatible'] ? __( 'Compatible with your version of Booster', 'ran-booster' ) : __( 'Requires a different version of Booster', 'ran-booster' );
+			$release_is_installed = (bool) ( $extension['selected_release_is_installed'] ?? true );
+			$compatibility_label = $extension['compatibility_label'];
 			?>
 			<div id="<?php echo esc_attr( $details_id ); ?>" class="hidden">
 				<article class="ran-booster-extension-details" aria-labelledby="<?php echo esc_attr( $details_title_id ); ?>">

@@ -890,6 +890,7 @@ class Booster {
 			$script_version,
 			true
 		);
+		wp_set_script_translations( 'ran-booster-native-update-warning', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 	}
 
 	private function render_native_update_warning(): void {

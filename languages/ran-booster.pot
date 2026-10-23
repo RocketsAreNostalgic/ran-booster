@@ -4635,15 +4635,15 @@ msgstr ""
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:904
+#: RAN/Booster.php:905
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:906
+#: RAN/Booster.php:907
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:908
+#: RAN/Booster.php:909
 msgid "Contact a site administrator."
 msgstr ""
 

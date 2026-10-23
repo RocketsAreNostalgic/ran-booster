@@ -33,6 +33,8 @@ final class NativeUpdateWarningTest extends TestCase {
 		$GLOBALS['ran_booster_native_warning_screen']            = (object) array( 'id' => 'plugins' );
 		$GLOBALS['ran_booster_asset_test_registered_scripts']    = array();
 		$GLOBALS['ran_booster_asset_test_enqueued_scripts']      = array();
+		$GLOBALS['ran_booster_asset_test_script_events']         = array();
+		$GLOBALS['ran_booster_asset_test_script_translations']   = array();
 	}
 
 	public function test_init_registers_the_real_notice_and_authenticated_heartbeat_callbacks(): void {
@@ -162,6 +164,16 @@ final class NativeUpdateWarningTest extends TestCase {
 		$this->load_warning_asset( $booster, 'plugins.php' );
 		self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
 		self::assertSame( array( 'jquery', 'heartbeat' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-native-update-warning']['dependencies'] );
+		self::assertSame(
+			array(
+				array(
+					'handle' => 'ran-booster-native-update-warning',
+					'domain' => 'ran-booster',
+					'path'   => dirname( __DIR__, 2 ) . '/languages',
+				),
+			),
+			$GLOBALS['ran_booster_asset_test_script_translations']
+		);
 
 		$GLOBALS['ran_booster_native_warning_screen'] = (object) array( 'id' => 'index' );
 		$this->load_warning_asset( $booster, 'index.php' );

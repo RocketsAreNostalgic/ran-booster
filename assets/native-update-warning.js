@@ -79,13 +79,16 @@
 		};
 	});
 
-	$(document).on('wp-plugin-update-success', function () {
-		if (
-			window.wp &&
-			window.wp.heartbeat &&
-			'function' === typeof window.wp.heartbeat.connectNow
-		) {
-			window.wp.heartbeat.connectNow();
+	$(document).on(
+		'wp-plugin-update-success wp-theme-update-success',
+		function () {
+			if (
+				window.wp &&
+				window.wp.heartbeat &&
+				'function' === typeof window.wp.heartbeat.connectNow
+			) {
+				window.wp.heartbeat.connectNow();
+			}
 		}
-	});
+	);
 })(jQuery, window, document);

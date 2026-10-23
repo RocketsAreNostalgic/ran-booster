@@ -53,7 +53,9 @@ function jqueryHarness() {
 	};
 	const $ = (target) => ({
 		on(event, callback) {
-			handlers.set(event, callback);
+			for (const name of event.split(/\s+/)) {
+				handlers.set(name, callback);
+			}
 			return this;
 		},
 		prop(name, value) {
@@ -120,7 +122,7 @@ test('native update warning sends a fixed heartbeat request and preserves state 
 	}
 });
 
-test('native plugin-update success asks WordPress for an immediate standard heartbeat', () => {
+test('native plugin and theme update success each ask WordPress for an immediate standard heartbeat', () => {
 	const harness = jqueryHarness();
 	let connects = 0;
 	globalThis.window = { wp: { heartbeat: { connectNow: () => connects++ } } };
@@ -134,7 +136,8 @@ test('native plugin-update success asks WordPress for an immediate standard hear
 			window: globalThis.window,
 		});
 		harness.handlers.get('wp-plugin-update-success')();
-		assert.equal(connects, 1);
+		harness.handlers.get('wp-theme-update-success')();
+		assert.equal(connects, 2);
 	} finally {
 		delete globalThis.document;
 		delete globalThis.jQuery;

@@ -962,7 +962,7 @@ class Booster {
 		$id         = is_object( $screen ) && is_string( $screen->id ) ? $screen->id : '';
 		$booster_id = str_ends_with( $id, '-network' ) ? substr( $id, 0, -8 ) : $id;
 
-		return in_array( $id, array( 'plugins', 'plugins-network', 'update-core', 'update-core-network' ), true )
+		return in_array( $id, array( 'plugins', 'plugins-network', 'themes', 'themes-network', 'update-core', 'update-core-network' ), true )
 			|| in_array( $booster_id, self::ADMIN_PAGE_HOOKS, true )
 			|| ( is_string( $hook ) && in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) );
 	}

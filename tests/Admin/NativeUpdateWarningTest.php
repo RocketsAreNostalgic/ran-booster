@@ -180,6 +180,45 @@ final class NativeUpdateWarningTest extends TestCase {
 		self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
 	}
 
+	public function test_theme_screens_enqueue_and_render_for_theme_updaters_only(): void {
+		$booster               = $this->booster(
+			array(
+				'state'     => 'recovery_required',
+				'available' => false,
+			)
+		);
+		$booster->booster_path = dirname( __DIR__, 2 );
+		$booster->booster_url  = 'https://example.test/wp-content/plugins/ran-booster';
+		$GLOBALS['ran_booster_native_warning_capabilities']['update_plugins'] = false;
+		$GLOBALS['ran_booster_native_warning_capabilities']['update_themes']  = true;
+		$GLOBALS['ran_booster_test_capabilities']                             = $GLOBALS['ran_booster_native_warning_capabilities'];
+
+		foreach ( array( 'themes', 'themes-network' ) as $screen_id ) {
+			$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => $screen_id );
+			$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+			$this->load_warning_asset( $booster, $screen_id . '.php' );
+			self::assertSame( array( 'ran-booster-native-update-warning' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+			ob_start();
+			$this->render_warning( $booster );
+			self::assertStringContainsString( 'data-ran-booster-native-update-warning', (string) ob_get_clean() );
+		}
+
+		$GLOBALS['ran_booster_native_warning_screen']       = (object) array( 'id' => 'index' );
+		$GLOBALS['ran_booster_asset_test_enqueued_scripts'] = array();
+		$this->load_warning_asset( $booster, 'index.php' );
+		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+
+		$GLOBALS['ran_booster_native_warning_screen']                        = (object) array( 'id' => 'themes' );
+		$GLOBALS['ran_booster_native_warning_capabilities']['update_themes'] = false;
+		$GLOBALS['ran_booster_test_capabilities']                            = $GLOBALS['ran_booster_native_warning_capabilities'];
+		$GLOBALS['ran_booster_asset_test_enqueued_scripts']                  = array();
+		$this->load_warning_asset( $booster, 'themes.php' );
+		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+		ob_start();
+		$this->render_warning( $booster );
+		self::assertSame( '', (string) ob_get_clean() );
+	}
+
 	/** @param array<string,mixed> $status */
 	private function booster( array $status ): Booster {
 		$container = new CoreContainer();

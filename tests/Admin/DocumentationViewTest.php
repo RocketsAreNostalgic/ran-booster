@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderMetadata;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 require_once __DIR__ . '/../Support/DocumentationHookWordPressFunctions.php';
@@ -54,7 +56,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection', $html );
 		self::assertStringContainsString( 'the pretty /wp-json/ route or the equivalent ?rest_route= query route', $html );
 		self::assertStringContainsString( 'does not trust or parse Content-Length as transport protection', $html );
-		self::assertStringContainsString( 'GitHub does not automatically redeliver failed deliveries', $html );
+		self::assertStringNotContainsString( 'GitHub does not automatically redeliver failed deliveries', $html );
 		self::assertStringContainsString( 'enable Request History before you need it', $html );
 		self::assertStringContainsString( 'do not assume it remains stable across automatic attempts', $html );
 		self::assertStringContainsString( 'Provider request ID shown on a webhook attempt in Booster Activity', $html );
@@ -64,7 +66,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'any branch-managed package using the same repository can continue to need the webhook', $html );
 		self::assertStringContainsString( 'Remove the remote provider webhook first, then remove only a local signing secret that is no longer used', $html );
 		self::assertStringContainsString( 'Never remove an owner-shared secret merely because one package changed source', $html );
-		self::assertStringContainsString( 'the verified Remove action can remove the remote hook', $html );
+		self::assertStringNotContainsString( 'the verified Remove action can remove the remote hook', $html );
 		self::assertStringContainsString( 'then use Manage signing secrets to remove an unused local secret', $html );
 		self::assertStringContainsString( 'GitHub webhook settings', $html );
 		self::assertStringContainsString( 'Bitbucket webhook settings', $html );
@@ -85,11 +87,15 @@ final class DocumentationViewTest extends TestCase {
 	}
 
 	public function test_renders_sanitized_provider_and_global_documentation_sections_in_place(): void {
-		$provider_filter =
-			static function ( array $sections, string $documentation_url, string $scope ): array {
+		$provider_documentation = $this->provider_documentation();
+		$expected_metadata      = $provider_documentation[0]['metadata'];
+		$received_metadata      = null;
+		$provider_filter        =
+			static function ( array $sections, string $documentation_url, string $scope, ?ProviderMetadata $provider_metadata ) use ( &$received_metadata ): array {
 				self::assertStringContainsString( 'tab=documentation', $documentation_url );
 				self::assertSame( 'site', $scope );
-				$sections[] = array(
+				$received_metadata = $provider_metadata;
+				$sections[]        = array(
 					'id'      => 'fixture-gh-guide',
 					'summary' => 'GitHub fixture guide',
 					'content' => '<p>Guide <strong>content</strong><script>alert(1)</script></p>',
@@ -111,7 +117,7 @@ final class DocumentationViewTest extends TestCase {
 			};
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] = $global_filter;
 		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_sections_before_about'][]         = $global_filter;
-		$html = $this->render_view( $this->provider_documentation() );
+		$html = $this->render_view( $provider_documentation );
 
 		self::assertSame( 13, preg_match_all( '/<details\b/', $html ) );
 		self::assertStringContainsString( 'id="fixture-gh-guide"', $html );
@@ -120,6 +126,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'Project X guide', $html );
 		self::assertLessThan( strpos( $html, 'About RAN Booster' ), strpos( $html, 'Project X guide' ) );
 		self::assertLessThan( strpos( $html, 'Bitbucket credentials and access' ), strpos( $html, 'GitHub fixture guide' ) );
+		self::assertSame( $expected_metadata, $received_metadata );
 	}
 
 	public function test_renders_one_ordered_page_wide_index_for_top_level_documentation_sections(): void {
@@ -568,6 +575,7 @@ final class DocumentationViewTest extends TestCase {
 	private function provider_documentation(): array {
 		return array(
 			array(
+				'metadata'        => new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' ),
 				'code'            => 'gh',
 				'label'           => 'GitHub',
 				'setup_available' => true,
@@ -588,6 +596,7 @@ final class DocumentationViewTest extends TestCase {
 				),
 			),
 			array(
+				'metadata'        => new ProviderMetadata( ProviderCode::parse( 'bb' ), 'Bitbucket', 'https://bitbucket.org/', 'Owner' ),
 				'code'            => 'bb',
 				'label'           => 'Bitbucket',
 				'setup_available' => true,

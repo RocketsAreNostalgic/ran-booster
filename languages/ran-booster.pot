@@ -1299,7 +1299,7 @@ msgstr ""
 msgid "RAN Booster could not identify the current administrator."
 msgstr ""
 
-#: RAN/Admin/DocumentationHookRenderer.php:104
+#: RAN/Admin/DocumentationHookRenderer.php:107
 msgid "An add-on guide is temporarily unavailable. Check plugin compatibility and the error log."
 msgstr ""
 
@@ -2403,90 +2403,69 @@ msgid "Prepare an eligible release"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:288
-msgid "Publish exactly one installable plugin or theme ZIP as a release asset, not as a generated source archive."
+msgid "Use your provider’s release guidance to publish an eligible installable plugin or theme ZIP."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:289
-msgid "Keep the release tag and canonical WordPress plugin or theme Version header aligned. A mismatch fails closed."
+msgid "Keep package identity consistent from release selection through installation. Booster rejects an archive it cannot verify."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:290
-msgid "Declare the exact repository in the package Update URI expected by its provider. Plugins use one eligible top-level plugin header; themes use root style.css."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:292
-msgid "Read GitHub’s "
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:291
+msgid "Treat a published release asset as immutable. If a release is blocked, publish a corrected release instead of replacing its ZIP or changing installed metadata."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:292
-msgid "About releases"
+msgid "Choose and operate the source"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:292
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:303
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:293
+msgid "Prospective installation uses the Stable track by default. Choose Preview only when alpha, beta or release-candidate builds are acceptable. Preview still excludes drafts."
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:294
+msgid "For a not-yet-managed package, candidate listing is metadata-only. Choose one of at most eight eligible releases; inspection downloads, validates and discards that exact ZIP, then binds the reviewed choice to installation with a fingerprint."
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:295
+msgid "Install performs a fresh exact acquisition. Before WordPress changes files, Booster rechecks fingerprint continuity, archive shape and size, provider and local digests, headers and package identity. WordPress installs synchronously, then Booster verifies the installed identity and unchanged target activation before adoption."
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:296
+msgid "Open the package settings, choose Releases, review Release readiness, then choose Use releases. Booster validates the release before switching; viewing settings does not change the source."
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:297
+msgid "Switching either source preserves Disabled and Manual automation, resets Automatic to Manual, and leaves repository webhook configuration unchanged."
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:298
+msgid "Use Check releases on the managed Plugins or Themes screen to refresh release metadata. Booster validates the candidate, but WordPress remains the installer. Open WordPress updates to use the administrator’s normal WordPress update workflow."
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:299
+msgid "Recovery and support"
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:300
+msgid "Installed but unmanaged means a package now exists but Booster did not adopt it. Verify its installed version and activation state before using Link installed or retrying. An uncertain state or cleanup failure does not claim installation success: inspect installed packages and Booster management before retrying."
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:301
+msgid "If a release is blocked, publish a corrected release rather than editing installed metadata. You can return the package to branch management from its settings. If the selected provider capability becomes unavailable, Booster preserves package source state while suppressing release offers, downloads and mutations."
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:302
+msgid "Package update orchestration guide"
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:302
 #: views/documentation.php:346
 #: views/documentation.php:439
 #: views/documentation.php:441
 msgid " (opens in a new tab)"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:292
-msgid " guidance. GitHub also documents "
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:292
-msgid "immutable releases"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:292
-msgid " as optional supply-chain hardening. Booster’s setup pull request does not enable that repository setting."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:293
-msgid "Choose and operate the source"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:294
-msgid "Prospective installation uses the Stable track by default. Choose Preview only when alpha, beta or release-candidate builds are acceptable. Preview still excludes drafts."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:295
-msgid "For a not-yet-managed package, candidate listing is metadata-only. Choose one of at most eight eligible releases; inspection downloads, validates and discards that exact ZIP, then binds the reviewed choice to installation with a fingerprint."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:296
-msgid "Install performs a fresh exact acquisition. Before WordPress changes files, Booster rechecks fingerprint continuity, archive shape and size, provider and local digests, headers, Update URI and package identity. WordPress installs synchronously, then Booster verifies the installed identity and unchanged target activation before adoption."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:297
-msgid "Open the package settings, choose Releases, review Release readiness, then choose Use releases. Booster validates the release before switching; viewing settings does not change the source."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:298
-msgid "Switching either source preserves Disabled and Manual automation, resets Automatic to Manual, and leaves repository webhook configuration unchanged."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:299
-msgid "Use Check releases on the managed Plugins or Themes screen to refresh release metadata. Booster validates the candidate, but WordPress remains the installer. Open WordPress updates to use the administrator’s normal WordPress update workflow."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:300
-msgid "Recovery and support"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:301
-msgid "Installed but unmanaged means a package now exists but Booster did not adopt it. Verify its installed version and activation state before using Link installed or retrying. An uncertain state or cleanup failure does not claim installation success: inspect installed packages and Booster management before retrying."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:302
-msgid "If a release is blocked, publish a corrected release rather than editing installed metadata. You can return the package to branch management from its settings. If the selected provider capability becomes unavailable, Booster preserves package source state while suppressing release offers, downloads and mutations."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:303
-msgid "Package update orchestration guide"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:741
+#: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:740
 msgid "View all conflicting packages"
 msgstr ""
 
@@ -6037,7 +6016,7 @@ msgid "Installing and managing packages"
 msgstr ""
 
 #: views/documentation.php:135
-#: views/documentation.php:452
+#: views/documentation.php:455
 msgid "About RAN Booster"
 msgstr ""
 
@@ -6051,7 +6030,7 @@ msgstr ""
 
 #: views/documentation.php:147
 #: views/documentation.php:166
-#: views/documentation.php:470
+#: views/documentation.php:473
 msgid "or"
 msgstr ""
 
@@ -6511,7 +6490,7 @@ msgid "Do not cache, challenge, redirect or transform either accepted callback f
 msgstr ""
 
 #: views/documentation.php:411
-msgid "A provider can time out after Booster has durably admitted work. Provider delivery history remains authoritative for request duration, response status and redelivery. GitHub does not automatically redeliver failed deliveries. For Bitbucket, enable Request History before you need it and treat its request UUID only as a cross-reference; do not assume it remains stable across automatic attempts. Compare the provider identifier with the Provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive."
+msgid "A provider can time out after Booster has durably admitted work. Provider delivery history remains authoritative for request duration, response status and redelivery. Compare the provider identifier with the Provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive."
 msgstr ""
 
 #: views/documentation.php:412
@@ -6531,7 +6510,7 @@ msgid "For a long-term move to Published releases, a retired site or repository,
 msgstr ""
 
 #: views/documentation.php:416
-msgid "For an identified GitHub hook, the verified Remove action can remove the remote hook and release only a repository secret created specifically for it. For other providers, open the repository webhook settings from the provider screen, remove the hook at the provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place."
+msgid "Open the repository webhook settings from the provider screen, remove the hook at the provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place."
 msgstr ""
 
 #: views/documentation.php:417
@@ -6572,103 +6551,107 @@ msgstr ""
 msgid "Delivery troubleshooting"
 msgstr ""
 
-#: views/documentation.php:454
+#: views/documentation.php:444
+msgid "For Bitbucket, enable Request History before you need it and treat its request UUID only as a cross-reference; do not assume it remains stable across automatic attempts."
+msgstr ""
+
+#: views/documentation.php:457
 msgid "Where this came from"
 msgstr ""
 
-#: views/documentation.php:455
+#: views/documentation.php:458
 msgid "Booster is a developer-focused repository deployment plugin for WordPress. It began as a modified derivative of WP Pusher 3.0.13. WP Pusher was created by Peter Suhm, and the inherited source was distributed under GPLv2. We are grateful for Peter’s original work and its central idea: use WordPress’s updater to deploy plugins and themes from version-controlled repositories."
 msgstr ""
 
-#: views/documentation.php:456
+#: views/documentation.php:459
 msgid "WP Pusher changed ownership in 2021 and is a separate product. Booster is an independent fork maintained by Rockets Are Nostalgic. It is not affiliated with or endorsed by Peter Suhm, WP Pusher or its owners. The distributed NOTICE.md and license.txt record the full source provenance and license."
 msgstr ""
 
-#: views/documentation.php:458
+#: views/documentation.php:461
 msgid "Why we built this"
 msgstr ""
 
-#: views/documentation.php:459
+#: views/documentation.php:462
 msgid "The inherited release depended on a vendor-hosted licensing, OAuth and repository-picker service just to work at all — repository access, credential storage and even the repository browser all ran through that service. We forked it to remove that dependency. Every credential, webhook and deployment decision now lives on your own site, not a third party’s."
 msgstr ""
 
-#: views/documentation.php:461
+#: views/documentation.php:464
 msgid "What’s different"
 msgstr ""
 
-#: views/documentation.php:463
+#: views/documentation.php:466
 msgid "Safety."
 msgstr ""
 
-#: views/documentation.php:463
+#: views/documentation.php:466
 msgid "Booster verifies a repository’s identity and an archive’s contents before it touches a file, and will not let a delayed or out-of-order webhook roll back code that has already been updated. Saved credentials use authenticated encryption in a file with restrictive"
 msgstr ""
 
-#: views/documentation.php:463
+#: views/documentation.php:466
 msgid "permissions; the independent key remains in the WordPress database, so neither a file-only nor database-only copy contains usable credentials."
 msgstr ""
 
-#: views/documentation.php:464
+#: views/documentation.php:467
 msgid "Transporter."
 msgstr ""
 
-#: views/documentation.php:464
+#: views/documentation.php:467
 msgid "A password-protected Transporter Blueprint moves package and repository configuration, and any credentials you choose, between sites without copying a development checkout."
 msgstr ""
 
-#: views/documentation.php:465
+#: views/documentation.php:468
 msgid "Independence & Security."
 msgstr ""
 
-#: views/documentation.php:465
+#: views/documentation.php:468
 msgid "No vendor-hosted licensing, OAuth broker or repository-picker service. Further, the inherited codebase stored a private repository’s access token as a WordPress option in the database; Booster instead saves your repository credential in a file on your own site, never in the WordPress database."
 msgstr ""
 
-#: views/documentation.php:466
+#: views/documentation.php:469
 msgid "Extensibility."
 msgstr ""
 
-#: views/documentation.php:466
+#: views/documentation.php:469
 msgid "Additional git providers can be added through a documented registration hook without modifying Booster itself."
 msgstr ""
 
-#: views/documentation.php:469
+#: views/documentation.php:472
 msgid "How a deployment stays honest"
 msgstr ""
 
-#: views/documentation.php:470
+#: views/documentation.php:473
 msgid "Every deployment is recorded as one attempt with a clear status —"
 msgstr ""
 
-#: views/documentation.php:470
+#: views/documentation.php:473
 msgid "— so there is always an honest history and something concrete to point to if something goes wrong. Beyond that record, Booster protects a deployment in a few concrete ways:"
 msgstr ""
 
-#: views/documentation.php:472
+#: views/documentation.php:475
 msgid "It will not deploy an old version over a newer one."
 msgstr ""
 
-#: views/documentation.php:472
+#: views/documentation.php:475
 msgid "If a webhook arrives late or out of order, Booster checks the repository’s current commit before replacing anything, so a delayed notification cannot roll back code that has already been updated."
 msgstr ""
 
-#: views/documentation.php:473
+#: views/documentation.php:476
 msgid "It verifies the download before touching any files."
 msgstr ""
 
-#: views/documentation.php:473
+#: views/documentation.php:476
 msgid "Before installing anything, Booster checks the downloaded archive’s exact contents, confirms it matches the expected package, and confirms every file it contains stays inside the expected folder."
 msgstr ""
 
-#: views/documentation.php:474
+#: views/documentation.php:477
 msgid "WordPress Core does the actual file replacement."
 msgstr ""
 
-#: views/documentation.php:474
+#: views/documentation.php:477
 msgid "Booster hands the verified files to WordPress’s own updater, which owns backup behaviour during the swap. Booster then checks the result and will show you a warning rather than reporting success when the outcome is unclear."
 msgstr ""
 
-#: views/documentation.php:476
+#: views/documentation.php:479
 msgid "Booster delegates package replacement to WordPress Core. It does not build, test or make untrusted repository code safe."
 msgstr ""
 

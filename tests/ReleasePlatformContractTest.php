@@ -19,6 +19,10 @@ final class ReleasePlatformContractTest extends TestCase {
 					'kind' => 'file',
 				),
 				array(
+					'path' => 'languages',
+					'kind' => 'directory',
+				),
+				array(
 					'path' => 'src',
 					'kind' => 'directory',
 				),

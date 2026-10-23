@@ -638,6 +638,40 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( array( 'runtime-lock' ), $lock->releases );
 	}
 
+	public function test_retained_uncertain_native_marker_rejects_later_begin_and_public_completion_releases_later_lock(): void {
+		[ $registrar, $lock ] = $this->native_plugin_registrar(
+			$this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL )
+		);
+		$first_upgrader       = new \stdClass();
+		$second_upgrader      = new \stdClass();
+
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $first_upgrader, self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		$owner = $registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+		$registrar->complete_native_mutation( $first_upgrader, self::NATIVE_EXTRA );
+		$registrar->complete_provider_native_mutation( $owner, 'plugin', self::NATIVE_PLUGIN, 'uncertain' );
+
+		self::assertSame( array( 'runtime-lock' ), $lock->releases );
+		self::assertNotNull( $this->native_selection_store );
+		$selection = $this->native_selection_store->read();
+		self::assertArrayHasKey( 'native_mutation', $selection );
+
+		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', $second_upgrader, self::NATIVE_EXTRA ) );
+		self::assertFalse( $registrar->fence_native_mutation( false, self::NATIVE_EXTRA ) );
+		self::assertSame( 2, $lock->acquires );
+		try {
+			$registrar->begin_provider_native_mutation( 'plugin', self::NATIVE_PLUGIN );
+			self::fail( 'Retained uncertain native marker admitted a later mutation.' );
+		} catch ( \RuntimeException ) {
+			self::addToAssertionCount( 1 );
+		}
+
+		$registrar->complete_native_mutation( $second_upgrader, self::NATIVE_EXTRA );
+
+		self::assertSame( array( 'runtime-lock', 'runtime-lock' ), $lock->releases );
+		self::assertSame( $selection, $this->native_selection_store->read() );
+	}
+
 	public function test_native_completion_rejects_wrong_owner_and_retains_marker_on_lock_release_failure(): void {
 		[ $registrar, $lock ] = $this->native_plugin_registrar( $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::MANUAL ) );
 		self::assertFalse( $registrar->authorize_native_download( false, 'package.zip', new \stdClass(), self::NATIVE_EXTRA ) );

@@ -159,10 +159,18 @@ final class RAN_Booster_UpdaterLockInstalledSmoke {
 
 global $wpdb;
 
-$ran_booster_lock_marker = ABSPATH . '.ran-booster-disposable-test-site';
+$ran_booster_lock_marker       = ABSPATH . '.ran-booster-disposable-test-site';
+$ran_booster_lock_expected_url = getenv( 'RAN_BOOSTER_CORE_UPDATER_TEST_URL' );
+if ( false === $ran_booster_lock_expected_url ) {
+	$ran_booster_lock_expected_url = 'http://localhost';
+}
+$ran_booster_lock_admitted_url = 'http://localhost' === $ran_booster_lock_expected_url
+	|| ( 1 === preg_match( '/\Ahttp:\/\/127\.0\.0\.1:([0-9]+)\z/D', $ran_booster_lock_expected_url, $ran_booster_lock_port )
+		&& 1 <= (int) $ran_booster_lock_port[1]
+		&& 65535 >= (int) $ran_booster_lock_port[1] );
 // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the exact local disposable-site marker before the native SQL proof.
-if ( ! is_file( $ran_booster_lock_marker ) || is_link( $ran_booster_lock_marker ) || is_link( rtrim( ABSPATH, '/\\' ) ) || realpath( WP_CONTENT_DIR ) !== realpath( ABSPATH . 'wp-content' ) || is_link( WP_CONTENT_DIR ) || 'RAN Booster disposable test site' !== trim( (string) file_get_contents( $ran_booster_lock_marker ) ) || 'http://localhost' !== get_option( 'siteurl' ) ) {
-	throw new RuntimeException( 'The installed native lock proof requires the marked localhost disposable site.' );
+if ( ! $ran_booster_lock_admitted_url || ! is_file( $ran_booster_lock_marker ) || is_link( $ran_booster_lock_marker ) || is_link( rtrim( ABSPATH, '/\\' ) ) || realpath( WP_CONTENT_DIR ) !== realpath( ABSPATH . 'wp-content' ) || is_link( WP_CONTENT_DIR ) || 'RAN Booster disposable test site' !== trim( (string) file_get_contents( $ran_booster_lock_marker ) ) || get_option( 'siteurl' ) !== $ran_booster_lock_expected_url ) {
+	throw new RuntimeException( 'The installed native lock proof requires the marked admitted disposable site.' );
 }
 if ( ! $wpdb instanceof wpdb || is_multisite() ) {
 	throw new RuntimeException( 'The installed native lock proof requires ordinary single-site WordPress wpdb.' );

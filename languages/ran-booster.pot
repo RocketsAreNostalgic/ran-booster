@@ -171,7 +171,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:57
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:40
 #: views/debug-capture.php:67
-#: views/extensions.php:145
+#: views/extensions.php:153
 #: views/provider.php:454
 #: views/provider.php:474
 #: views/troubleshooting.php:182
@@ -6063,7 +6063,7 @@ msgid "or"
 msgstr ""
 
 #: views/documentation.php:152
-#: views/extensions.php:153
+#: views/extensions.php:161
 msgid "Documentation"
 msgstr ""
 
@@ -6726,54 +6726,54 @@ msgid "By"
 msgstr ""
 
 #: views/extensions.php:78
-#: views/extensions.php:154
+#: views/extensions.php:162
 msgid "Support"
 msgstr ""
 
 #: views/extensions.php:86
-#: views/extensions.php:144
+#: views/extensions.php:152
 msgid "Beta"
 msgstr ""
 
-#: views/extensions.php:91
+#: views/extensions.php:95
 msgid "Compatible"
 msgstr ""
 
-#: views/extensions.php:91
+#: views/extensions.php:95
 msgid "with your version of Booster"
 msgstr ""
 
-#: views/extensions.php:119
+#: views/extensions.php:127
 #: views/troubleshooting.php:184
 #: views/troubleshooting.php:227
 msgid "Details"
 msgstr ""
 
-#: views/extensions.php:123
+#: views/extensions.php:131
 msgid "About this extension"
 msgstr ""
 
-#: views/extensions.php:125
+#: views/extensions.php:133
 msgid "What it adds"
 msgstr ""
 
-#: views/extensions.php:131
+#: views/extensions.php:139
 msgid "Before you install"
 msgstr ""
 
-#: views/extensions.php:139
+#: views/extensions.php:147
 msgid "Extension details"
 msgstr ""
 
-#: views/extensions.php:141
+#: views/extensions.php:149
 msgid "Availability"
 msgstr ""
 
-#: views/extensions.php:143
+#: views/extensions.php:151
 msgid "Maturity"
 msgstr ""
 
-#: views/extensions.php:147
+#: views/extensions.php:155
 msgid "Compatibility"
 msgstr ""
 

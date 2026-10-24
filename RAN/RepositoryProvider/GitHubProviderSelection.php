@@ -466,6 +466,24 @@ final class GitHubProviderSelection {
 		return $state;
 	}
 
+	public function native_mutation_blocks_target( string $type, string $identity ): bool {
+		return $this->store->selection_transaction(
+			function () use ( $type, $identity ): bool {
+				$marker = $this->store->read( true )['native_mutation'] ?? null;
+				if ( null === $marker || ! is_array( $marker ) ) {
+					return null !== $marker;
+				}
+				if ( $marker['target_type'] !== $type ) {
+					return false;
+				}
+				if ( 'plugin' === $type ) {
+					return 0 === strcmp( explode( '/', $marker['installed_identity'] )[0], explode( '/', $identity )[0] );
+				}
+				return 'theme' === $type && $marker['installed_identity'] === $identity;
+			}
+		);
+	}
+
 	/**
 	 * @param array<string,mixed> $expected Exact reviewed state, including marker and approval.
 	 * @param callable():void $verify Core-only physical absence/management/attempt/lock checks; no permission filters.

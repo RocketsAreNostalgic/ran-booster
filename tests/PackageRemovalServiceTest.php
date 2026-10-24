@@ -442,6 +442,19 @@ final class PackageRemovalServiceTest extends TestCase {
 			self::assertFalse( $fixture->plugins->unlinked );
 			self::assertSame( DeploymentPolicy::MANUAL, $fixture->plugin->get_deployment_policy() );
 		}
+		$fixture                                    = $this->fixture();
+		$database                                   = new \RAN\Tests\RepositoryProvider\SelectionContextDatabase();
+		$lock                                       = new RemovalUpdaterLock();
+		$service                                    = new PackageRemovalService( $fixture->plugins, $fixture->themes, $fixture->gateway, $this->attempts(), $lock, github_selection: $this->selection( database: $database ) );
+		$confirmation                               = $service->recovery_confirmation( 'plugin', 'example/example.php' );
+		$database->selection->rows[0]->option_value = '{}';
+		try {
+			$service->recover( 'plugin', 'example/example.php', $confirmation['adoption_token'], $confirmation['digest'], $confirmation['installed_digest'] );
+			self::fail( 'Corrupt authority admitted legacy recovery.' );
+		} catch ( \RuntimeException ) {
+			self::assertSame( array( 'acquire', 'release:fixture-lock' ), $lock->events );
+			self::assertFalse( $fixture->plugins->unlinked );
+		}
 	}
 
 	public function test_recovery_confirmation_preflight_cannot_admit_a_replaced_lock_token(): void {
@@ -465,6 +478,9 @@ final class PackageRemovalServiceTest extends TestCase {
 			}
 		);
 		$fixture->gateway->on_deletion_postcondition = static function () use ( &$store ): void {
+			if ( ! $store instanceof GitHubSelectionStore ) {
+				throw new \LogicException( 'Late-marker selection store is unavailable.' );
+			}
 			$state                    = $store->read();
 			$state['native_mutation'] = array(
 				'selection_generation' => 0,

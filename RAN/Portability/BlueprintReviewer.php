@@ -72,11 +72,13 @@ final readonly class BlueprintReviewer {
 
 	public function review_package( BlueprintPackage $blueprint, ?Package &$managed_package = null ): BlueprintPlanItem {
 		$managed_package = null;
-		if ( null !== $blueprint->release_configuration ) {
+		if ( null !== $blueprint->release_configuration && null !== $blueprint->selection ) {
 			return new BlueprintPlanItem( $blueprint, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
 		}
 		$item = $this->review_local_package( $blueprint, $managed_package );
-		if ( null !== $blueprint->selection && TargetPackageAction::INSTALL !== $item->action ) {
+		if ( ( null !== $blueprint->selection && TargetPackageAction::INSTALL !== $item->action )
+			|| ( null !== $blueprint->release_configuration
+				&& TargetPackageAction::ADOPT !== $item->action ) ) {
 			return new BlueprintPlanItem( $blueprint, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
 		}
 		return $item;

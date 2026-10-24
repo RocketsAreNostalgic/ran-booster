@@ -476,13 +476,20 @@ final readonly class PortabilityController {
 	 * @return array<string, mixed>
 	 */
 	private function row( BlueprintPlanItem $item, ?int $credential_ordinal = null, ?string $selected_credential_id = null, bool $credential_recovery = false, ?array &$provider_list = null ): array {
+		$reason = $item->reason->message();
+		if ( TargetPackageAction::ADOPT === $item->action
+			&& TargetPackageReason::NONE === $item->reason
+			&& null !== $item->package->release_configuration
+			&& null === $item->package->selection ) {
+			$reason = __( 'Repository verified. Release readiness will be checked when applying; files and activation will be preserved.', 'ran-booster' );
+		}
 		$row = array(
 			'provider_expectation' => $item->provider_expectation,
 			'name'                 => $item->package->display_name,
 			'identifier'           => $item->package->identifier,
 			'type'                 => 'plugin' === $item->package->type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
 			'action'               => $item->action->value,
-			'reason'               => $item->reason->message(),
+			'reason'               => $reason,
 		);
 		if ( null !== $credential_ordinal ) {
 			$row['credential_ordinal'] = $credential_ordinal;

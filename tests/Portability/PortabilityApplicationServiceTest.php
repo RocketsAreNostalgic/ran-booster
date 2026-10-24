@@ -8,7 +8,12 @@ use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\Portability\PortabilityCandidate;
+use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\Deployment\DeploymentCoordinator;
+use RAN\Deployment\DeploymentPolicy;
+use RAN\ManagedRepository;
+use RAN\PackageSource;
+use RAN\Plugin;
 use RAN\PackageOperationService;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\Portability\BlueprintPackage;
@@ -16,18 +21,33 @@ use RAN\Portability\BlueprintRepositoryVerifier;
 use RAN\Portability\BlueprintReviewer;
 use RAN\Portability\PackageBlueprint;
 use RAN\Portability\PortabilityApplicationService;
+use RAN\Portability\TargetPackageAction;
+use RAN\Portability\TargetPackageReason;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\RepositoryProvider\RepositoryDescriptor;
 use RAN\RepositoryProvider\RepositoryProvider;
+use RAN\RepositoryProvider\RepositoryReleaseCandidate;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
+use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
+use RAN\RepositoryProvider\RepositoryReleaseInspection;
+use RAN\RepositoryProvider\RepositoryReleaseInspector;
+use RAN\RepositoryProvider\RepositoryReleaseMetadata;
+use RAN\RepositoryProvider\RepositoryReleaseNativeTargets;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\Database;
 use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
+use RAN\Storage\PackageMutationResult;
+use RAN\Storage\PackageStorageOperation;
+use RAN\Tests\Support\RepositorySourceGuardDatabase;
+use RAN\WordPress\ManagedReleaseConfiguration;
+use RAN\WordPress\ManagedReleaseStore;
+use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\WordPressUpdaterLock;
 use ReflectionClass;
 use RuntimeException;
@@ -35,10 +55,18 @@ use RuntimeException;
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';
+require_once __DIR__ . '/WpPusherCoexistenceWordPressFunctions.php';
+require_once __DIR__ . '/../Support/RepositorySourceGuardDatabase.php';
 
 final class PortabilityApplicationServiceTest extends TestCase {
 	/** @var array{provider_code:string,selection_generation:int,implementation_fingerprint:string}|null */
 	private ?array $provider_expectation = null;
+
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
+	protected function setUp(): void {
+		$GLOBALS['ran_booster_wp_pusher_active_plugins']  = array();
+		$GLOBALS['ran_booster_wp_pusher_network_plugins'] = array();
+	}
 
 	public function test_each_service_preview_owns_one_observation_lifetime(): void {
 		$plugins  = $this->createStub( PluginRepository::class );
@@ -65,17 +93,18 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$plugins  = $this->createMock( PluginRepository::class );
 		$themes   = $this->createMock( ThemeRepository::class );
 		$provider = $this->provider();
-		$plugins->expects( self::never() )->method( 'is_installed' );
+		$plugins->expects( self::exactly( 4 ) )->method( 'is_installed' )->willReturn( true );
+		$plugins->expects( self::exactly( 4 ) )->method( 'has_management_record' )->willReturn( false );
 		$themes->expects( self::never() )->method( 'is_installed' );
-		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$provider->expects( self::once() )->method( 'resolve_repository' )->willReturn( $this->descriptor() );
 		$service = $this->service( $plugins, $themes, $provider );
 		foreach ( array(
 			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php' ) ),
 		) as $package ) {
 			$blueprint = new PackageBlueprint( array( $package ) );
 			$item      = $service->review( $blueprint )[0];
-			self::assertSame( 'unsupported_blueprint_operation', $item->reason->value );
-			foreach ( array( 'install', 'adopt', 'managed', 'blocked' ) as $forged_action ) {
+			self::assertSame( 'none', $item->reason->value );
+			foreach ( array( 'install', 'managed', 'blocked' ) as $forged_action ) {
 				self::assertSame( 'skipped', $service->apply( $blueprint, 0, $forged_action, array(), null, true, true, null, $this->provider_expectation )['status'] );
 			}
 		}
@@ -176,6 +205,135 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$result  = $service->apply( new PackageBlueprint( array( $branch, $release ) ), 0, 'install', array(), null, true, true, array( 0, 1 ), $this->provider_expectation );
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertStringContainsString( 'selected packages conflict', $result['message'] );
+	}
+
+	public function test_release_preview_verifies_repository_without_claiming_apply_time_readiness(): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'is_installed' )->with( 'example/example.php' )->willReturn( true );
+		$plugins->expects( self::once() )->method( 'has_management_record' )->with( 'example/example.php' )->willReturn( false );
+		$provider = $this->provider();
+		$provider->expects( self::once() )->method( 'resolve_repository' )->willReturn( $this->descriptor() );
+		$release = new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php' );
+		$package = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, $release );
+
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->review( new PackageBlueprint( array( $package ) ) )[0];
+
+		self::assertSame( TargetPackageAction::ADOPT, $result->action );
+		self::assertSame( TargetPackageReason::NONE, $result->reason );
+	}
+
+	#[DataProvider( 'release_apply_modes' )]
+	public function test_release_apply_adopts_an_installed_plugin_through_the_final_release_facade( string $mode ): void {
+		$writes  = 0;
+		$revoked = false;
+		$plugin  = Plugin::from_wp_array(
+			'example/example.php',
+			array(
+				'Name'        => 'Example',
+				'PluginURI'   => '',
+				'Version'     => '1.0.0',
+				'Description' => '',
+				'Author'      => '',
+				'AuthorURI'   => '',
+				'TextDomain'  => '',
+				'DomainPath'  => '',
+				'Network'     => false,
+				'Title'       => 'Example',
+				'AuthorName'  => '',
+			)
+		);
+		$plugins = $this->createMock( PluginRepository::class );
+		$themes  = $this->createStub( ThemeRepository::class );
+		$plugins->method( 'is_installed' )->willReturn( true );
+		$plugins->method( 'has_management_record' )->willReturn( false );
+		$plugins->method( 'installed_plugin_from_file' )->willReturn( $plugin );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $plugin );
+		$store  = $this->createStub( ManagedReleaseStore::class );
+		$config = new ManagedReleaseConfiguration( 'example', 'example.php' );
+		$store->method( 'configuration' )->willReturn( $config );
+		$plugins->method( 'adopt_release' )->willReturnCallback(
+			static function () use ( &$writes ): PackageMutationResult {
+				++$writes;
+				return PackageMutationResult::changed( PackageStorageOperation::INSERT );
+			}
+		);
+		$provider = $this->createMockForIntersectionOfInterfaces( array( RepositoryProvider::class, RepositoryReleaseMetadata::class, RepositoryReleaseCandidateListing::class, RepositoryReleaseInspector::class, RepositoryReleaseNativeTargets::class ) );
+		$provider->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://github.com/', 'Owner' ) );
+		$provider->method( 'resolve_repository' )->willReturn( new RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/repository', 'example', 'repository-id', false, 'main', 'profile' ) );
+		$provider->method( 'expected_update_uri' )->willReturn( 'https://github.com/owner/repository' );
+		$provider->method( 'release_details_url' )->willReturn( 'https://github.com/owner/repository/releases/tag/v2.0.0' );
+		$provider->method( 'list_release_candidates' )->willReturn( new RepositoryReleaseCandidateList( array( new RepositoryReleaseCandidate( '1', 'v2.0.0', '2.0.0', false, '2026-01-01T00:00:00Z', array( 'example.zip' ) ) ) ) );
+		$provider->method( 'inspect_release' )->willReturnCallback(
+			static function () use ( &$revoked, $mode ): RepositoryReleaseInspection {
+				$revoked = 'revoked' === $mode;
+				return new RepositoryReleaseInspection( '1', 'v2.0.0', '2.0.0', str_repeat( 'a', 40 ), 'example', 'example.php', 'v1:' . str_repeat( 'b', 64 ) );
+			}
+		);
+		$provider->method( 'has_registered_native_target' )->willReturn( false );
+		self::assertInstanceOf( RepositoryProvider::class, $provider );
+		$catalog   = new ProviderSecretPolicyCatalog();
+		$registry  = new ProviderRegistry( array( $provider ), $catalog );
+		$selection = GitHubSelectionTestFixture::bind( $registry );
+		$lock      = $this->createStub( WordPressUpdaterLock::class );
+		$lock->method( 'acquire' )->willReturn( 'lock' );
+		$lock->method( 'release' )->willReturn( 'uncertain' !== $mode );
+		$lock->method( 'current_token' )->willReturn( 'lock' );
+		$guard      = new RepositorySourceGuard( new RepositorySourceGuardDatabase(), $this->createStub( Database::class ) );
+		$registrar  = new ManagedReleaseTargetRegistrar( $plugins, $themes, $store, $lock, $registry, $selection, $guard );
+		$facade     = new NativeReleaseTrackingFacade( $plugins, $themes, $store, $registrar, $lock, $registry, metadata_eligible: static fn (): bool => true, source_guard: $guard );
+		$operations = new PackageOperationService( $plugins, $themes, $this->createStub( DeploymentCoordinator::class ), ( new ReflectionClass( PackageRemovalService::class ) )->newInstanceWithoutConstructor(), $lock, $guard );
+		$secrets    = $this->createMock( SecretsFile::class );
+		$secrets->method( 'credential_profiles' )->willReturnCallback(
+			static function ( ProviderCode|string $provider ) use ( &$revoked ): array {
+				self::assertSame( 'gh', $provider instanceof ProviderCode ? $provider->value : $provider );
+				return $revoked ? array() : array( 'profile' => array() );
+			}
+		);
+		$secrets->method( 'credential_material' )->willReturn(
+			array(
+				'id'       => 'profile',
+				'provider' => 'gh',
+				'kind'     => 'classic',
+				'secret'   => 'synthetic-preview-material',
+			)
+		);
+		$service   = new PortabilityApplicationService( new BlueprintReviewer( $plugins, $themes ), new BlueprintRepositoryVerifier( $registry, $secrets, $selection ), $operations, $secrets, $facade, $store );
+		$blueprint = new PackageBlueprint( array( new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, $config ) ) );
+		$item      = $service->review( $blueprint, array(), array( 0 => 'profile' ) )[0];
+		self::assertSame( TargetPackageReason::NONE, $item->reason );
+		self::assertSame( TargetPackageAction::ADOPT, $item->action );
+		self::assertSame( $selection->expectation(), $item->provider_expectation );
+		if ( 'revoked' === $mode ) {
+			try {
+				$service->apply( $blueprint, 0, 'adopt', array(), 'profile', true, true, null, $item->provider_expectation );
+				self::fail( 'The final credential verification must refuse a revoked target profile.' );
+			} catch ( RuntimeException $failure ) {
+				self::assertStringContainsString( 'not ready for published release tracking', $failure->getMessage() );
+			}
+			self::assertSame( 0, $writes );
+			return;
+		}
+
+		$result = $service->apply( $blueprint, 0, 'adopt', array(), 'profile', true, true, null, $item->provider_expectation );
+		if ( 'uncertain' === $mode ) {
+			self::assertSame( 'failed', $result['status'] );
+			self::assertStringContainsString( 'could not confirm the release adoption outcome', $result['message'] );
+			self::assertNotSame( 'adopted', $result['status'] );
+			self::assertSame( 1, $writes );
+			return;
+		}
+
+		self::assertSame( 'adopted', $result['status'] );
+		self::assertSame( 1, $writes );
+		self::assertSame( PackageSource::RELEASE_ASSET, $plugin->get_source() );
+		self::assertSame( DeploymentPolicy::DISABLED, $plugin->get_deployment_policy() );
+	}
+
+	/** @return iterable<string,array{string}> */
+	public static function release_apply_modes(): iterable {
+		yield 'success' => array( 'success' );
+		yield 'revoked target credential' => array( 'revoked' );
+		yield 'uncertain lock release' => array( 'uncertain' );
 	}
 
 	public function test_unselected_release_does_not_block_branch_and_changed_selection_is_rechecked(): void {

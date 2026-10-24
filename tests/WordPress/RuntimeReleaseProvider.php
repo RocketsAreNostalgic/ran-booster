@@ -31,7 +31,7 @@ final class RuntimeReleaseProvider implements RepositoryProvider, RepositoryRele
 		?callable $list_releases = null,
 		?callable $inspect = null,
 		?callable $target_factory = null,
-		private bool $collision = false
+		private bool|\Throwable $collision = false
 	) {
 		$this->list_releases = null === $list_releases
 			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
@@ -84,6 +84,9 @@ final class RuntimeReleaseProvider implements RepositoryProvider, RepositoryRele
 
 	public function has_registered_native_target( string $package_type, string $installed_identifier ): bool {
 		unset( $package_type, $installed_identifier );
+		if ( $this->collision instanceof \Throwable ) {
+			throw $this->collision;
+		}
 
 		return $this->collision;
 	}

@@ -45,6 +45,7 @@ final class BlueprintRepositoryVerifier {
 		return 'gh' === $provider ? $this->selection->expectation() : null;
 	}
 
+	/** @phpstan-impure */
 	public function provider_review_refusal( string $provider, mixed $expectation ): ?string {
 		if ( 'gh' === $provider ) {
 			return $this->selection->review_refusal( $expectation );
@@ -308,9 +309,10 @@ final class BlueprintRepositoryVerifier {
 		if ( $matches && null !== $key ) {
 			$this->observations[ $key ] = $observation;
 		}
-		return $matches
-			? $item
-			: new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH );
+		if ( ! $matches ) {
+			return new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH );
+		}
+		return $item;
 	}
 
 	private function requires_credential( Throwable $failure ): bool {

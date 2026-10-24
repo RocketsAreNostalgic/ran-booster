@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use RAN\AddOn\Portability\PortabilityApplyResult;
 use RAN\AddOn\Portability\PortabilityCandidate;
 use RAN\AddOn\Portability\PortabilityReviewResult;
+use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Package;
 use RAN\PackageOperation;
@@ -16,6 +17,7 @@ use RAN\PackageSource;
 use RAN\Plugin;
 use RAN\Secrets\SecretsFile;
 use RAN\Theme;
+use RAN\WordPress\ManagedReleaseStore;
 use Throwable;
 
 /**
@@ -29,7 +31,9 @@ final readonly class PortabilityApplicationService {
 		private BlueprintReviewer $reviewer,
 		private BlueprintRepositoryVerifier $verifier,
 		private PackageOperationService $operations,
-		private SecretsFile $secrets
+		private SecretsFile $secrets,
+		private ?NativeReleaseTrackingFacade $release_tracking = null,
+		private ManagedReleaseStore $release_store = new ManagedReleaseStore()
 	) {
 	}
 
@@ -291,9 +295,14 @@ final readonly class PortabilityApplicationService {
 			if ( null !== $this->verifier->provider_review_refusal( $item->package->provider, $item->provider_expectation ) ) {
 				throw new InvalidArgumentException( 'Fresh provider review is required.' );
 			}
-			$result = $this->operations->execute( $operation );
+			$result = null !== $item->package->release_configuration
+				? $this->adopt_release( $operation, $item )
+				: $this->operations->execute( $operation );
 			if ( TargetPackageAction::ADOPT === $item->action ) {
 				$this->assert_disabled_result( $result, $item->package, $credential_id, $repository_private );
+				if ( 'uncertain' === ( $result['status'] ?? null ) ) {
+					return $this->result( 'failed', __( 'Booster could not confirm the release adoption outcome. Review the Transporter Blueprint again before making another change.', 'ran-booster' ), $credential_state );
+				}
 
 				return $this->result( 'adopted', __( 'Adopted: deployment disabled', 'ran-booster' ), $credential_state );
 			}
@@ -312,6 +321,43 @@ final readonly class PortabilityApplicationService {
 				$credential_state
 			);
 		}
+	}
+
+	/** @return array{status: string, package: Package} */
+	private function adopt_release( PackageOperation $operation, BlueprintPlanItem $item ): array {
+		$package = $item->package;
+		if ( null === $this->release_tracking || null === $package->release_configuration ) {
+			throw new InvalidArgumentException( 'Published release adoption is unavailable.' );
+		}
+
+		return $this->operations->adopt_release(
+			$operation,
+			$package->release_configuration,
+			function ( Package $installed ) use ( $item, $package ): bool {
+				if ( null !== $this->verifier->provider_review_refusal( $package->provider, $item->provider_expectation ) ) {
+					return false;
+				}
+				$ready = $this->release_tracking->release_adoption_ready(
+					$package->type,
+					$installed,
+					$package->release_configuration
+				);
+
+				if ( ! $ready ) {
+					return false;
+				}
+				$credential_id = $installed->get_credential_id();
+				$private       = null;
+				$reverified    = $this->verifier->verify( $item, null, null, '' === $credential_id ? null : $credential_id, $private );
+				$expectation   = $this->verifier->provider_expectation( $package->provider );
+
+				return TargetPackageAction::ADOPT === $reverified->action
+					&& is_bool( $private )
+					&& $private === (bool) $installed->is_private()
+					&& $expectation === $item->provider_expectation
+					&& null === $this->verifier->provider_review_refusal( $package->provider, $expectation );
+			}
+		);
 	}
 
 	/**
@@ -336,6 +382,25 @@ final readonly class PortabilityApplicationService {
 		?string $credential_id,
 		bool $repository_private
 	): bool {
+		$release = $blueprint_package->release_configuration;
+		if ( null !== $release ) {
+			try {
+				$stored = $this->release_store->configuration( $blueprint_package->type, $blueprint_package->identifier );
+			} catch ( Throwable ) {
+				return false;
+			}
+			if ( null === $stored ) {
+				return false;
+			}
+			return ! ( ( 'plugin' === $blueprint_package->type && ! $package instanceof Plugin )
+				|| ( 'theme' === $blueprint_package->type && ! $package instanceof Theme )
+				|| PackageSource::RELEASE_ASSET !== $package->get_source()
+				|| ! $blueprint_package->same_management_as( BlueprintPackage::from_managed_package( $blueprint_package->type, $package, $stored ) )
+				|| ( $credential_id ?? '' ) !== $package->get_credential_id()
+				|| $repository_private !== (bool) $package->is_private()
+				|| DeploymentPolicy::DISABLED !== $package->get_deployment_policy() );
+		}
+
 		return ! ( ( 'plugin' === $blueprint_package->type && ! $package instanceof Plugin )
 			|| ( 'theme' === $blueprint_package->type && ! $package instanceof Theme )
 			|| PackageSource::BRANCH !== $package->get_source()

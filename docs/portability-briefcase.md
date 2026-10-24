@@ -5,6 +5,16 @@ RAN Booster. It is based on the classes in `RAN/Portability/` and describes how
 the code classifies, verifies, and moves package blueprints and optional
 credential briefcases.
 
+## Stage 1 published-release adoption
+
+Transporter may directly adopt an installed, unmanaged, unpinned `release_asset`
+plugin or theme when a fresh Apply-time native release eligibility, source admission,
+target collision and provider preflight check succeeds. It preserves the installed
+files and activation state and records a Disabled deployment policy. It never
+claims the installed bytes equal the exported release. Absent Release targets,
+selected Release rows, and every readiness failure remain refused; installation
+is reserved for Stage 2. This changes no Portability API 4 interface.
+
 **Release status:** This reference describes the bounded implementation published
 in [Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
 Read the [dashboard walkthrough](operator-journeys.md) for practical

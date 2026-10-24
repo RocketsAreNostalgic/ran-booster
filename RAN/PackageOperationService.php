@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
 use RAN\Deployment\DeploymentCoordinator;
+use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\PackageMutationGuard;
 use RAN\PackageRemoval\PackageRemovalService;
@@ -13,6 +14,7 @@ use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
+use RAN\WordPress\ManagedReleaseConfiguration;
 use RuntimeException;
 
 /**
@@ -57,6 +59,61 @@ final readonly class PackageOperationService {
 			'unlink', 'unlink-and-delete'     => $this->remove( $operation ),
 			default                           => throw new RuntimeException( 'The package operation is unsupported.' ),
 		};
+	}
+
+	/**
+	 * Adopt an already-installed package directly into the native release
+	 * source. The readiness callback runs under the updater lock after the
+	 * transient package has its final repository and source configuration.
+	 *
+	 * @param callable(Package): bool $ready
+	 * @return array{status: string, package: Package}
+	 */
+	public function adopt_release(
+		PackageOperation $operation,
+		ManagedReleaseConfiguration $configuration,
+		callable $ready
+	): array {
+		PackageMutationGuard::assert_package_mutation_allowed();
+		if ( 'install' !== $operation->operation || ! $operation->link_only
+			|| null === $operation->identifier || null !== $operation->subdirectory
+			|| DeploymentPolicy::DISABLED !== $operation->deployment_policy ) {
+			throw new RuntimeException( 'The release adoption operation is invalid.' );
+		}
+
+		try {
+			$token = $this->updater_lock->acquire();
+		} catch ( \Throwable $failure ) {
+			throw new RuntimeException( 'Another package operation is in progress.', 0, $failure );
+		}
+		$write_attempted = false;
+		$failure         = null;
+		$result          = null;
+		try {
+			$result = $this->link_installed_release( $operation, $configuration, $ready, $token, $write_attempted );
+		} catch ( \Throwable $caught ) {
+			$failure = $caught;
+		}
+		try {
+			$released = $this->updater_lock->release( $token );
+			if ( ! $released ) {
+				throw new RuntimeException( 'The package operation lock could not be released.' );
+			}
+		} catch ( \Throwable $release_failure ) {
+			return $this->uncertain_release_adoption( $operation, $release_failure );
+		}
+		if ( $failure instanceof \Throwable ) {
+			if ( $write_attempted ) {
+				return $this->uncertain_release_adoption( $operation, $failure );
+			}
+
+			throw $failure;
+		}
+		if ( ! is_array( $result ) || ! isset( $result['package'] ) || ! $result['package'] instanceof Package ) {
+			throw new RuntimeException( 'The release adoption result is invalid.' );
+		}
+
+		return $result;
 	}
 
 	/** @return array{status: 'succeeded'|'already-managed'|'failed', package?: Package, correlation_id: string, outcome_code: string} */
@@ -145,6 +202,76 @@ final readonly class PackageOperationService {
 			'status'  => 'linked',
 			'package' => $this->find( $operation->package_type, $identifier ),
 		);
+	}
+
+	/**
+	 * @param callable(Package): bool $ready
+	 * @return array{status: string, package: Package}
+	 */
+	private function link_installed_release( PackageOperation $operation, ManagedReleaseConfiguration $configuration, callable $ready, string $token, bool &$write_attempted ): array {
+		$identifier = $operation->identifier ?? throw new RuntimeException( 'The package identity is unavailable.' );
+		$package    = 'plugin' === $operation->package_type
+			? $this->plugins->installed_plugin_from_file( $identifier )
+			: $this->themes->installed_theme_from_stylesheet( $identifier );
+		if ( $package instanceof Plugin ) {
+			PackageMutationGuard::assert_plugin_file_allowed( $package->get_identifier() );
+		}
+		$this->apply_repository( $package, $operation );
+		$package->set_subdirectory( null );
+		$package->set_source( PackageSource::RELEASE_ASSET, 1 );
+		$this->source_guard->assert_allowed(
+			(string) $package->get_provider_code(),
+			(string) $package->get_provider_repository_id(),
+			'plugin' === $operation->package_type ? 1 : 2,
+			(string) $package->get_identifier(),
+			PackageSource::RELEASE_ASSET
+		);
+		if ( ! $ready( $package ) ) {
+			throw new RuntimeException( 'The package is not ready for published release tracking.' );
+		}
+		if ( 'plugin' === $operation->package_type && function_exists( 'wp_clean_plugins_cache' ) ) {
+			wp_clean_plugins_cache( false );
+		} elseif ( 'theme' === $operation->package_type && function_exists( 'wp_clean_themes_cache' ) ) {
+			wp_clean_themes_cache( false );
+		}
+		$confirmed = 'plugin' === $operation->package_type
+			? $this->plugins->installed_plugin_from_file( $identifier )
+			: $this->themes->installed_theme_from_stylesheet( $identifier );
+		if ( ! hash_equals( $identifier, (string) $confirmed->get_identifier() )
+			|| ! hash_equals( $token, (string) $this->updater_lock->current_token() ) ) {
+			throw new RuntimeException( 'The installed package or updater lock changed during release adoption.' );
+		}
+		if ( 'plugin' === $operation->package_type ) {
+			if ( ! $package instanceof Plugin ) {
+				throw new RuntimeException( 'The installed plugin is unavailable.' );
+			}
+			$write_attempted = true;
+			$adoption        = $this->plugins->adopt_release( $package, $configuration, get_current_user_id() );
+		} else {
+			if ( ! $package instanceof Theme ) {
+				throw new RuntimeException( 'The installed theme is unavailable.' );
+			}
+			$write_attempted = true;
+			$adoption        = $this->themes->adopt_release( $package, $configuration, get_current_user_id() );
+		}
+		$adoption->require_success();
+
+		return array(
+			'status'  => 'linked',
+			'package' => $this->find( $operation->package_type, $identifier ),
+		);
+	}
+
+	/** @return array{status: 'uncertain', package: Package} */
+	private function uncertain_release_adoption( PackageOperation $operation, \Throwable $failure ): array {
+		try {
+			return array(
+				'status'  => 'uncertain',
+				'package' => $this->find( $operation->package_type, $operation->identifier ?? throw new RuntimeException( 'The package identity is unavailable.' ) ),
+			);
+		} catch ( \Throwable ) {
+			throw $failure;
+		}
 	}
 
 	private function matching_existing_target( PackageOperation $operation, Package $requested ): ?Package {

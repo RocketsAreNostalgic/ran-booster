@@ -16,6 +16,8 @@ use RAN\Portability\BlueprintRepositoryVerifier;
 use RAN\Portability\BlueprintReviewer;
 use RAN\Portability\PackageBlueprint;
 use RAN\Portability\PortabilityApplicationService;
+use RAN\Portability\TargetPackageAction;
+use RAN\Portability\TargetPackageReason;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -35,10 +37,17 @@ use RuntimeException;
 require_once __DIR__ . '/../Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/../Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/../Runtime/RuntimeSupportWordPressFunctions.php';
+require_once __DIR__ . '/WpPusherCoexistenceWordPressFunctions.php';
 
 final class PortabilityApplicationServiceTest extends TestCase {
 	/** @var array{provider_code:string,selection_generation:int,implementation_fingerprint:string}|null */
 	private ?array $provider_expectation = null;
+
+	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
+	protected function setUp(): void {
+		$GLOBALS['ran_booster_wp_pusher_active_plugins']  = array();
+		$GLOBALS['ran_booster_wp_pusher_network_plugins'] = array();
+	}
 
 	public function test_each_service_preview_owns_one_observation_lifetime(): void {
 		$plugins  = $this->createStub( PluginRepository::class );
@@ -65,17 +74,18 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$plugins  = $this->createMock( PluginRepository::class );
 		$themes   = $this->createMock( ThemeRepository::class );
 		$provider = $this->provider();
-		$plugins->expects( self::never() )->method( 'is_installed' );
+		$plugins->expects( self::exactly( 4 ) )->method( 'is_installed' )->willReturn( true );
+		$plugins->expects( self::exactly( 4 ) )->method( 'has_management_record' )->willReturn( false );
 		$themes->expects( self::never() )->method( 'is_installed' );
-		$provider->expects( self::never() )->method( 'resolve_repository' );
+		$provider->expects( self::once() )->method( 'resolve_repository' )->willReturn( $this->descriptor() );
 		$service = $this->service( $plugins, $themes, $provider );
 		foreach ( array(
 			new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php' ) ),
 		) as $package ) {
 			$blueprint = new PackageBlueprint( array( $package ) );
 			$item      = $service->review( $blueprint )[0];
-			self::assertSame( 'unsupported_blueprint_operation', $item->reason->value );
-			foreach ( array( 'install', 'adopt', 'managed', 'blocked' ) as $forged_action ) {
+			self::assertSame( 'none', $item->reason->value );
+			foreach ( array( 'install', 'managed', 'blocked' ) as $forged_action ) {
 				self::assertSame( 'skipped', $service->apply( $blueprint, 0, $forged_action, array(), null, true, true, null, $this->provider_expectation )['status'] );
 			}
 		}
@@ -176,6 +186,21 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		$result  = $service->apply( new PackageBlueprint( array( $branch, $release ) ), 0, 'install', array(), null, true, true, array( 0, 1 ), $this->provider_expectation );
 		self::assertSame( 'skipped', $result['status'] );
 		self::assertStringContainsString( 'selected packages conflict', $result['message'] );
+	}
+
+	public function test_release_preview_verifies_repository_without_claiming_apply_time_readiness(): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::once() )->method( 'is_installed' )->with( 'example/example.php' )->willReturn( true );
+		$plugins->expects( self::once() )->method( 'has_management_record' )->with( 'example/example.php' )->willReturn( false );
+		$provider = $this->provider();
+		$provider->expects( self::once() )->method( 'resolve_repository' )->willReturn( $this->descriptor() );
+		$release = new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php' );
+		$package = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/repository', '', null, $release );
+
+		$result = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider )->review( new PackageBlueprint( array( $package ) ) )[0];
+
+		self::assertSame( TargetPackageAction::ADOPT, $result->action );
+		self::assertSame( TargetPackageReason::NONE, $result->reason );
 	}
 
 	public function test_unselected_release_does_not_block_branch_and_changed_selection_is_rechecked(): void {

@@ -111,9 +111,13 @@ lock: later operations follow the saved tracking branch and deployment policy,
 with their normal checks. This is not permission for arbitrary rollback.
 
 An exact selection targeting an already installed or managed package is not the
-ordinary unpinned adoption path. Selected existing-target execution,
-release-source Blueprint execution, verified exact-export evidence and explicit
-configuration reconciliation remain unfinished. A valid record may therefore
+ordinary unpinned adoption path. Stage 1 additionally permits an unpinned
+Published release Blueprint only for an already-installed, unmanaged plugin or
+theme after fresh native release readiness succeeds during Apply. It preserves files and activation,
+records deployment as **Disabled**, and does not prove installed-code equality.
+Absent Release targets remain refused until Stage 2. Selected Release rows,
+managed targets, and failed readiness remain unsupported. The Portability API 4
+surface is unchanged. A valid record may therefore
 show **This Blueprint record is valid, but its source or exact selection is not
 supported for application yet.** Do not remove its selection to bypass refusal.
 Abilities and whole-site V3 are also outside this delivery.

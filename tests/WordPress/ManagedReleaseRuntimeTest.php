@@ -17,6 +17,7 @@ require_once __DIR__ . '/../Support/InMemoryPublicRepositoryLookupProfileStore.p
 require_once __DIR__ . '/../Portability/WpPusherCoexistenceWordPressFunctions.php';
 
 use InvalidArgumentException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -1514,6 +1515,83 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertCount( 1, $store->transitions );
 		self::assertSame( 3, $lock->acquires );
 		self::assertSame( array( 'runtime-lock', 'runtime-lock' ), $lock->releases );
+	}
+
+	#[DataProvider( 'release_adoption_targets' )]
+	public function test_release_adoption_readiness_accepts_unmanaged_plugin_and_theme_targets( string $type, string $identifier, ManagedReleaseConfiguration $configuration ): void {
+		$package = $this->package( $type, $identifier, 'plugin' === $type ? 'example' : 'example-theme', DeploymentPolicy::DISABLED );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'booster_theme_from_stylesheet' )->willReturn( $package );
+		$store     = new RuntimeReleaseStore();
+		$lock      = new RuntimeUpdaterLock();
+		$providers = $this->release_metadata_registry();
+		$facade    = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			metadata_eligible: static fn (): bool => true
+		);
+
+		self::assertTrue( $facade->release_adoption_ready( $type, $package, $configuration ) );
+		self::assertSame( 0, $lock->acquires );
+		self::assertSame( array(), $store->transitions );
+	}
+
+	/** @return iterable<string, array{string,string,ManagedReleaseConfiguration}> */
+	public static function release_adoption_targets(): iterable {
+		yield 'plugin' => array( 'plugin', 'example/example.php', new ManagedReleaseConfiguration( 'example', 'example.php' ) );
+		yield 'theme' => array( 'theme', 'example-theme', new ManagedReleaseConfiguration( 'example-theme', 'style.css' ) );
+	}
+
+	public function test_release_adoption_readiness_refuses_a_provider_native_target_collision(): void {
+		$package = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::DISABLED );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore();
+		$lock      = new RuntimeUpdaterLock();
+		$providers = $this->release_metadata_registry( collision: true );
+		$facade    = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			metadata_eligible: static fn (): bool => true
+		);
+
+		self::assertFalse( $facade->release_adoption_ready( 'plugin', $package, new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
+		self::assertSame( 0, $lock->acquires );
+		self::assertSame( array(), $store->transitions );
+	}
+
+	public function test_release_adoption_readiness_fails_closed_when_the_native_target_probe_is_unavailable(): void {
+		$package = $this->package( 'plugin', 'example/example.php', 'example', DeploymentPolicy::DISABLED );
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes    = $this->createStub( ThemeRepository::class );
+		$store     = new RuntimeReleaseStore();
+		$lock      = new RuntimeUpdaterLock();
+		$providers = $this->release_metadata_registry( collision: new \RuntimeException( 'native target query unavailable' ) );
+		$facade    = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			metadata_eligible: static fn (): bool => true
+		);
+
+		self::assertFalse( $facade->release_adoption_ready( 'plugin', $package, new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
+		self::assertSame( 0, $lock->acquires );
+		self::assertSame( array(), $store->transitions );
 	}
 
 	public function test_read_only_preflight_binds_target_revision_and_channel_without_mutation(): void {
@@ -3315,7 +3393,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		?callable $list_releases = null,
 		?callable $inspect = null,
 		?callable $target_factory = null,
-		bool $collision = false
+		bool|\Throwable $collision = false
 	): ProviderRegistry {
 		$registry = new ProviderRegistry(
 			array( new RuntimeReleaseProvider( $code, $base_url, $list_releases, $inspect, $target_factory, $collision ) )

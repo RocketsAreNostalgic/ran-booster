@@ -643,6 +643,51 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertArrayNotHasKey( 'native_mutation', $this->store->read() );
 	}
 
+	public function test_native_mutation_marker_blocks_only_its_installed_target(): void {
+		$state                    = $this->store->read();
+		$state['native_mutation'] = array(
+			'selection_generation' => 0,
+			'owner_tag'            => str_repeat( 'a', 32 ),
+			'target_type'          => 'plugin',
+			'installed_identity'   => 'target/main.php',
+			'phase'                => 'started',
+		);
+		self::assertTrue( $this->store->compare_and_swap( $this->store->read(), $state ) );
+
+		$context = $this->context();
+		self::assertTrue( $context->native_mutation_blocks_target( 'plugin', 'target/alternate.php' ) );
+		self::assertFalse( $context->native_mutation_blocks_target( 'plugin', 'other/main.php' ) );
+		self::assertFalse( $context->native_mutation_blocks_target( 'theme', 'target' ) );
+
+		$without_marker = $this->store->read();
+		unset( $without_marker['native_mutation'] );
+		self::assertTrue( $this->store->compare_and_swap( $this->store->read(), $without_marker ) );
+		$theme_marker                    = $this->store->read();
+		$theme_marker['native_mutation'] = array(
+			'selection_generation' => 0,
+			'owner_tag'            => str_repeat( 'b', 32 ),
+			'target_type'          => 'theme',
+			'installed_identity'   => 'target',
+			'phase'                => 'started',
+		);
+		self::assertTrue( $this->store->compare_and_swap( $this->store->read(), $theme_marker ) );
+		self::assertTrue( $context->native_mutation_blocks_target( 'theme', 'target' ) );
+		self::assertFalse( $context->native_mutation_blocks_target( 'theme', 'other' ) );
+		self::assertFalse( $context->native_mutation_blocks_target( 'plugin', 'target/main.php' ) );
+
+		$revoked                         = $this->store->read();
+		$revoked['selection_generation'] = 1;
+		$revoked['approval']             = 'revoked';
+		self::assertTrue( $this->store->compare_and_swap( $this->store->read(), $revoked ) );
+		self::assertTrue( $context->native_mutation_blocks_target( 'theme', 'target' ) );
+	}
+
+	public function test_native_mutation_marker_read_failure_propagates(): void {
+		$this->db->selection->rows[0]->option_value = '{}';
+		$this->expectException( DatabaseLifecycleFailure::class );
+		( new GitHubProviderSelection( $this->store, $this->root, $this->bundled ) )->native_mutation_blocks_target( 'plugin', 'target/main.php' );
+	}
+
 	public function test_native_completion_preserves_revocation_and_requires_captured_owner(): void {
 		$context                         = $this->context();
 		$owner                           = $context->begin_native_mutation( 'plugin', 'first.php', static fn (): bool => true );

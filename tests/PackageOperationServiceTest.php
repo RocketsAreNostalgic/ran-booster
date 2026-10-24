@@ -27,9 +27,12 @@ use RAN\PackageRemoval\PackageRemovalGateway;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\PackageSource;
 use RAN\Plugin;
+use RAN\RepositoryProvider\GitHubProviderSelection;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\Storage\PackageMutationResult;
 use RAN\Storage\PackageStorageOperation;
 use RAN\Storage\Database;
+use RAN\Storage\GitHubSelectionStore;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\RepositorySourceGuard;
 use RAN\Tests\Support\RepositorySourceGuardDatabase;
@@ -1444,10 +1447,27 @@ final class PackageOperationServiceTest extends TestCase {
 			$plugins,
 			$themes,
 			$coordinator,
-			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), $attempts, $updater_lock ),
+			new PackageRemovalService( $plugins, $themes, new OperationRemovalGateway(), $attempts, $updater_lock, github_selection: $this->selection() ),
 			$updater_lock,
 			new RepositorySourceGuard( $source_database, $this->createStub( Database::class ) )
 		);
+	}
+
+	private function selection(): GitHubProviderSelection {
+		$store   = new GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' );
+		$bundled = new GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$store->initialize_bundled( $bundled );
+		return new GitHubProviderSelection( $store, '/unused', $bundled );
 	}
 
 	private function dashboard( OperationCoordinator $coordinator, ?Plugin $plugin = null ): Dashboard {
@@ -1544,6 +1564,13 @@ final class OperationUpdaterLock extends WordPressUpdaterLock {
 		}
 
 		return 'fixture-lock';
+	}
+	public function try_acquire_without_reclaim(): ?string {
+		$this->events[] = 'acquire';
+		return $this->available ? 'fixture-lock' : null;
+	}
+	public function current_token(): ?string {
+		return $this->available ? 'fixture-lock' : null;
 	}
 
 	public function release( string $token ): bool {

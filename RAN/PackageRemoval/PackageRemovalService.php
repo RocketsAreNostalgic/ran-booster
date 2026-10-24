@@ -171,11 +171,20 @@ final readonly class PackageRemovalService {
 		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || null === $this->attempts ) {
 			throw new \RuntimeException( 'The recovery operation state is unavailable.' );
 		}
-		$this->updater_lock->run(
-			function () use ( $type, $identifier, $token, $digest, $installed_digest ): void {
-				$this->recover_locked( $type, $identifier, $token, $digest, $installed_digest );
+		$lock_token = $this->updater_lock->try_acquire_without_reclaim();
+		if ( null === $lock_token ) {
+			throw new \RuntimeException( 'The updater lock requires recovery before continuing.' );
+		}
+		try {
+			if ( null !== $this->native_mutation_refusal( $type, $identifier, $lock_token ) ) {
+				throw new \RuntimeException( 'Native mutation ownership prevents recovery.' );
 			}
-		);
+			$this->recover_locked( $type, $identifier, $token, $digest, $installed_digest );
+		} finally {
+			if ( ! $this->updater_lock->release( $lock_token ) ) {
+				throw new \RuntimeException( 'Recovery may have completed; updater lock release requires recovery.' );
+			}
+		}
 	}
 
 	private function recover_locked( string $type, string $identifier, string $token, string $digest, string $installed_digest, ?int $source_revision = null ): void {
@@ -212,6 +221,26 @@ final readonly class PackageRemovalService {
 		}
 	}
 
+	/** @return 'operation_in_progress'|'management_state_uncertain'|null */
+	private function native_mutation_refusal( string $type, string $identifier, string $lock_token ): ?string {
+		if ( $this->updater_lock->current_token() !== $lock_token ) {
+			return 'operation_in_progress';
+		}
+		if ( null === $this->github_selection ) {
+			return 'management_state_uncertain';
+		}
+		try {
+			$blocked = $this->github_selection->native_mutation_blocks_target( $type, $identifier );
+			if ( $this->updater_lock->current_token() !== $lock_token ) {
+				return 'operation_in_progress';
+			}
+			return $blocked ? 'operation_in_progress' : null;
+		} catch ( Throwable $failure ) {
+			$this->log_failure( $failure, 'package_removal_native_ownership' );
+			return 'management_state_uncertain';
+		}
+	}
+
 	public function execute( PackageOperation $operation ): PackageRemovalResult {
 		RuntimeSupport::assert_managed_operations_allowed();
 
@@ -224,8 +253,10 @@ final readonly class PackageRemovalService {
 			PackageMutationGuard::assert_filesystem_mutation_allowed();
 		}
 		try {
-
-			$lock_token = $this->updater_lock->acquire();
+			$lock_token = $this->updater_lock->try_acquire_without_reclaim();
+			if ( null === $lock_token ) {
+				return PackageRemovalResult::failed( 'operation_in_progress' );
+			}
 		} catch ( Throwable $failure ) {
 			$this->log_failure( $failure, 'package_removal_lock_acquire' );
 			return PackageRemovalResult::failed( 'operation_in_progress' );
@@ -240,8 +271,13 @@ final readonly class PackageRemovalService {
 				$result = PackageRemovalResult::failed( 'stale' );
 			} elseif ( 'unlink' === $operation->operation ) {
 				$confirmation = $this->recovery_confirmation( $operation->package_type, $identifier );
-				$this->recover_locked( $operation->package_type, $identifier, $operation->get_expected_adoption_token(), $confirmation['digest'], $confirmation['installed_digest'], $operation->get_expected_source_revision() );
-				$result = PackageRemovalResult::unlinked();
+				$refusal      = $this->native_mutation_refusal( $operation->package_type, $identifier, $lock_token );
+				if ( null !== $refusal ) {
+					$result = PackageRemovalResult::failed( $refusal );
+				} else {
+					$this->recover_locked( $operation->package_type, $identifier, $operation->get_expected_adoption_token(), $confirmation['digest'], $confirmation['installed_digest'], $operation->get_expected_source_revision() );
+					$result = PackageRemovalResult::unlinked();
+				}
 			} elseif ( null === $this->attempts
 				|| $this->attempts->has_unresolved_target_attempt( $operation->package_type, $identifier ) ) {
 				$result = PackageRemovalResult::failed( 'operation_in_progress' );
@@ -250,11 +286,16 @@ final readonly class PackageRemovalService {
 				if ( null !== $blocker ) {
 					$result = PackageRemovalResult::failed( $blocker );
 				} else {
-					$absent = $this->wordpress->deletion_postcondition( $operation->package_type, $identifier );
-					$this->disable( $package );
-					$result = 'plugin' === $operation->package_type
-						? $this->delete_plugin( $identifier, $package, $absent )
-						: $this->delete_theme( $identifier, $package, $absent );
+					$absent  = $this->wordpress->deletion_postcondition( $operation->package_type, $identifier );
+					$refusal = $this->native_mutation_refusal( $operation->package_type, $identifier, $lock_token );
+					if ( null !== $refusal ) {
+						$result = PackageRemovalResult::failed( $refusal );
+					} else {
+						$this->disable( $package );
+						$result = 'plugin' === $operation->package_type
+							? $this->delete_plugin( $identifier, $package, $absent )
+							: $this->delete_theme( $identifier, $package, $absent );
+					}
 				}
 			}
 		} catch ( Throwable $failure ) {

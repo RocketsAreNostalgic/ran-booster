@@ -374,9 +374,13 @@ shell are all Core-owned.
 
 The page uses WordPress plugin-card presentation language without invoking the
 WordPress.org Plugins API or installer. It performs no remote request, mutation,
-entitlement check, update registration or add-on callback. Free acquisition is
-disabled until the corresponding repository and public release pass their
-human-readiness gate. The page stores no sponsorship or entitlement state.
+entitlement check, update registration or add-on callback. Each card names the
+qualified satellite release and API tuple it represents. Core maintainers update
+that fixed metadata in a Core pull request after the satellite release is
+qualified; the page never discovers releases or polls repositories. A card may
+link an administrator to that selected release for manual ZIP installation, or
+explain why a release has not been selected. The page stores no sponsorship or
+entitlement state.
 
 Installed and active state comes only from local WordPress plugin state. Exact
 runtime compatibility remains owned by each installed extension's fail-closed

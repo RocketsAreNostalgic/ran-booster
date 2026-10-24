@@ -173,7 +173,7 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_renders_two_offline_cards_with_truthful_unavailable_controls(): void {
+	public function test_renders_release_specific_manual_install_and_unavailable_states(): void {
 		$this->define_apis_compatible_with_existing_extension_catalogue();
 
 		$output = $this->render();
@@ -197,10 +197,13 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'Get access', $output );
 		self::assertStringNotContainsString( 'Sponsor packages', $output );
 		self::assertSame( 4, substr_count( $output, '>Beta<' ) );
-		self::assertSame( 2, substr_count( $output, '>Install<' ) );
+		self::assertSame( 2, substr_count( $output, '>Open release<' ) );
+		self::assertStringContainsString( 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/tag/v0.1.0-beta.17', $output );
+		self::assertStringContainsString( 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.11', $output );
+		self::assertStringContainsString( 'Download the attached plugin ZIP, then use Plugins &gt; Add New &gt; Upload Plugin.', $output );
 		self::assertStringNotContainsString( '>Sponsor install<', $output );
 		self::assertStringNotContainsString( '>Install unavailable<', $output );
-		self::assertSame( 2, substr_count( $output, ' disabled aria-disabled="true"' ) );
+		self::assertSame( 0, substr_count( $output, ' disabled aria-disabled="true"' ) );
 		self::assertSame( 2, substr_count( $output, 'Compatible with your version of Booster' ) );
 		self::assertSame( 2, substr_count( $output, 'class="compatibility-compatible"' ) );
 		self::assertSame( 4, substr_count( $output, 'with your version of Booster' ) );
@@ -271,7 +274,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 3, substr_count( $output, '>Active<' ) );
 		self::assertSame( 0, substr_count( $output, '>Inactive<' ) );
 		self::assertSame( 0, substr_count( $output, '>Installed, inactive<' ) );
-		self::assertSame( 0, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
+		self::assertSame( 1, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
 		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
 	}
 
@@ -296,6 +299,51 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 3, substr_count( $output, '>Actif<' ) );
 		self::assertSame( 2, substr_count( $output, '>Installé, inactif<' ) );
 		self::assertSame( 1, substr_count( $output, '>Inactive<' ) );
+		self::assertSame( 2, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_installed_migrator_beta_ten_is_not_presented_as_the_selected_beta_eleven_release(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php'] = array(
+			'Name'    => 'WP Pusher Migrator',
+			'Version' => '0.1.0-beta.10',
+		);
+		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php' );
+
+		$output = $this->render();
+
+		self::assertStringContainsString( '>Active<', $output );
+		self::assertStringContainsString( 'The selected version 0.1.0-beta.11 release is compatible with your version of Booster. Your installed version 0.1.0-beta.10 is older; update it in Plugins.', $output );
+		self::assertSame( 1, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_newer_installed_migrator_is_not_offered_a_downgrade_to_the_selected_release(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php'] = array(
+			'Name'    => 'WP Pusher Migrator',
+			'Version' => '0.1.0-beta.12',
+		);
+
+		$output = $this->render();
+
+		self::assertStringContainsString( 'The selected version 0.1.0-beta.11 release is compatible with your version of Booster. Your installed version 0.1.0-beta.12 is newer and has not been qualified for this catalogue. Review it in Plugins.', $output );
+		self::assertStringNotContainsString( 'update it in Plugins', $output );
+		self::assertSame( 1, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_installed_migrator_without_a_version_requires_plugin_review_before_updating(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php'] = array( 'Name' => 'WP Pusher Migrator' );
+
+		$output = $this->render();
+
+		self::assertStringContainsString( 'The selected version 0.1.0-beta.11 release is compatible with your version of Booster. The installed extension version could not be verified; review it in Plugins before updating.', $output );
 		self::assertSame( 1, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
 	}
 
@@ -313,7 +361,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 2, substr_count( $output, '>Incompatible<' ) );
 		self::assertSame( 1, substr_count( $output, '>Inactive<' ) );
 		self::assertStringContainsString( 'ran-booster-badge--error', $output );
-		self::assertStringContainsString( 'Requires a different version of Booster', $output );
+		self::assertStringContainsString( 'requires a different version of Booster. Review its documentation before installing or updating.', $output );
 		self::assertStringNotContainsString( '>Active<', $output );
 	}
 
@@ -337,10 +385,10 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_api_twelve_host_does_not_claim_compatibility_with_api_fourteen_bitbucket(): void {
+	public function test_api_twelve_host_does_not_claim_compatibility_with_api_fifteen_bitbucket(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 12 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 4 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Name' => 'Bitbucket' );
 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-bitbucket/ran-booster-bitbucket.php' );
@@ -348,16 +396,16 @@ final class ExtensionsPageTest extends TestCase {
 		$output = $this->render();
 
 		self::assertSame( 2, substr_count( $output, '>Incompatible<' ) );
-		self::assertStringContainsString( 'Requires a different version of Booster', $output );
+		self::assertStringContainsString( 'requires a different version of Booster. Review its documentation before installing or updating.', $output );
 		self::assertStringNotContainsString( '>Active<', $output );
 	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_api_two_host_does_not_claim_compatibility_with_api_three_migrator(): void {
+	public function test_api_three_host_does_not_claim_compatibility_with_api_four_migrator(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 2 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php'] = array( 'Name' => 'Migrator' );
 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( 'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php' );
@@ -365,7 +413,7 @@ final class ExtensionsPageTest extends TestCase {
 		$output = $this->render();
 
 		self::assertSame( 2, substr_count( $output, '>Incompatible<' ) );
-		self::assertStringContainsString( 'Requires a different version of Booster', $output );
+		self::assertStringContainsString( 'requires a different version of Booster. Review its documentation before installing or updating.', $output );
 		self::assertStringNotContainsString( '>Active<', $output );
 	}
 
@@ -389,7 +437,7 @@ final class ExtensionsPageTest extends TestCase {
 	private function define_apis_compatible_with_existing_extension_catalogue(): void {
 		define( 'RAN_BOOSTER_PROVIDER_API_VERSION', 15 );
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
-		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 3 );
+		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 4 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
 	}
 

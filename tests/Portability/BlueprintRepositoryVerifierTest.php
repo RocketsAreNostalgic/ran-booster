@@ -351,6 +351,37 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertSame( 'target-pat', $provider->temporary_credential_id );
 	}
 
+	public function test_carried_credential_target_choice_forwards_the_saved_profile_to_release_review(): void {
+		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
+		$secrets->save_credential(
+			'gh',
+			'target-pat',
+			array(
+				'label'         => 'Target PAT',
+				'kind'          => 'classic',
+				'configuration' => array(),
+			),
+			self::CLASSIC_TOKEN
+		);
+		$reviewed_credential_id = null;
+
+		$result = $verifier->verify(
+			$this->install_item(),
+			$this->credential(),
+			BlueprintCredentialAction::TARGET,
+			'target-pat',
+			release_reviewer: static function ( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ) use ( &$reviewed_credential_id ): BlueprintPlanItem {
+				self::assertFalse( $repository_private );
+				$reviewed_credential_id = $credential_id;
+				return $item;
+			}
+		);
+
+		self::assertSame( TargetPackageAction::INSTALL, $result->action );
+		self::assertSame( 'target-pat', $reviewed_credential_id );
+		self::assertSame( array( 'target-pat' ), $provider->credential_ids );
+	}
+
 	public function test_wrong_provider_target_choice_blocks_without_any_fallback(): void {
 		$catalog  = new ProviderSecretPolicyCatalog();
 		$secrets  = SecretsFileTestFactory::create( $this->path, array(), $catalog );

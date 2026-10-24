@@ -500,6 +500,73 @@ final class PortabilityControllerTest extends TestCase {
 		}
 	}
 
+	public function test_non_github_release_preview_nonce_round_trips_without_a_provider_expectation(): void {
+		$blueprint = new PackageBlueprint(
+			array(
+				new BlueprintPackage( 'plugin', 'release/release.php', 'Release', 'bb', 'repository-id', 'owner/repository', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php', 'stable' ) ),
+			)
+		);
+		$facade    = $this->createMock( ProspectiveReleaseFacade::class );
+		$facade->method( 'nonce_action' )->willReturn( 'prospective-release-nonce' );
+		$facade->method( 'list_candidates' )->willReturn(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'candidates' => array(
+						array(
+							'release_id' => '366',
+							'tag'        => 'v1.2.3',
+							'version'    => '1.2.3',
+						),
+					),
+				)
+			)
+		);
+		$facade->method( 'inspect' )->willReturn(
+			ProspectiveReleaseResult::success(
+				'release_ready',
+				array(
+					'release_id'   => '366',
+					'tag'          => 'v1.2.3',
+					'version'      => '1.2.3',
+					'channel'      => 'stable',
+					'package_root' => 'release',
+					'main_file'    => 'release.php',
+					'fingerprint'  => 'v2:' . str_repeat( 'a', 64 ),
+				)
+			)
+		);
+		$facade->expects( self::once() )->method( 'install' )->willReturn( ProspectiveReleaseResult::failure( 'release_invalid' ) );
+		$controller = $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ), provider_code: 'bb', prospective: $facade );
+		$review     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
+		$html       = $review->invoke( $controller, $blueprint, array(), array() );
+		self::assertSame( 1, preg_match( '/data-portability-release-review="([^"]+)"/', $html, $review_match ) );
+		self::assertSame( 1, preg_match( '/data-portability-release-review-nonce="([^"]+)"/', $html, $nonce_match ) );
+		self::assertStringNotContainsString( 'data-portability-provider-expectation=', $html );
+		if ( ! isset( $review_match[1], $nonce_match[1] ) ) {
+			self::fail( 'Expected non-GitHub release review and nonce attributes.' );
+		}
+		$file = $this->blueprint_archive( $blueprint );
+		$this->set_uploaded_blueprint( $file );
+		$_POST = array(
+			'row'                  => '0',
+			'review_action'        => 'install',
+			'selected_rows'        => array( '0' ),
+			'release_review'       => html_entity_decode( $review_match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ),
+			'release_review_nonce' => html_entity_decode( $nonce_match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ),
+		);
+
+		try {
+			$result = $controller->handle_apply();
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
+			unlink( $file );
+		}
+
+		self::assertTrue( $result['success'] );
+		self::assertSame( 'failed', $result['data']['status'] );
+	}
+
 	/** @return iterable<string, array{?string}> */
 	public static function invalid_release_review_evidence(): iterable {
 		yield 'missing nonce' => array( null );
@@ -1871,7 +1938,7 @@ final class PortabilityControllerTest extends TestCase {
 	 * @param-out TemporaryCredentialProvider $provider
 	 * @param-out GitHubProviderSelection $selection
 	 */
-	private function preview_controller( SecretsFile $secrets, bool $installed = false, string $type = 'plugin', ?TemporaryCredentialProvider &$provider = null, ?GitHubProviderSelection &$selection = null, ?ProspectiveReleaseFacade $prospective = null ): PortabilityController {
+	private function preview_controller( SecretsFile $secrets, bool $installed = false, string $type = 'plugin', ?TemporaryCredentialProvider &$provider = null, ?GitHubProviderSelection &$selection = null, ?ProspectiveReleaseFacade $prospective = null, string $provider_code = 'gh' ): PortabilityController {
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'is_installed' )->willReturn( $installed && 'plugin' === $type );
@@ -1879,7 +1946,7 @@ final class PortabilityControllerTest extends TestCase {
 		$themes->method( 'is_installed' )->willReturn( $installed && 'theme' === $type );
 		$themes->method( 'has_management_record' )->willReturn( false );
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$provider = new TemporaryCredentialProvider( $secrets->credentials_for( 'gh' ), 0, 'repository-id' );
+		$provider = new TemporaryCredentialProvider( $secrets->credentials_for( $provider_code ), 0, 'repository-id', provider_code: $provider_code );
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
 
 		$selection   = GitHubSelectionTestFixture::bind( $registry );

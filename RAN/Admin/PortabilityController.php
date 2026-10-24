@@ -235,7 +235,8 @@ final readonly class PortabilityController {
 			$row['requirements']        = $local_report['requirements']['packages'][ $index ];
 			$row['repository_conflict'] = isset( $local_report['repository_conflicts'][ $index ] );
 			if ( isset( $row['release_review'] ) ) {
-				$row['release_review_nonce'] = wp_create_nonce( $this->release_review_nonce_action( $blueprint, $index, $row['release_review'], GitHubProviderSelection::normalize_expectation( $item->provider_expectation ), $target_credential_ids[ $index ] ?? null, $credential_decisions ) );
+				$provider_expectation        = null === $item->provider_expectation ? null : GitHubProviderSelection::normalize_expectation( $item->provider_expectation );
+				$row['release_review_nonce'] = wp_create_nonce( $this->release_review_nonce_action( $blueprint, $index, $row['release_review'], $provider_expectation, $target_credential_ids[ $index ] ?? null, $credential_decisions ) );
 			}
 			$rows[] = $row;
 		}

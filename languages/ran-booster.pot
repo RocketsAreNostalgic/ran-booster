@@ -742,8 +742,8 @@ msgstr ""
 #: RAN/Admin/DeploymentAdminPresenter.php:294
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:587
-#: RAN/Admin/PortabilityController.php:713
+#: RAN/Admin/PortabilityController.php:588
+#: RAN/Admin/PortabilityController.php:714
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
 #: RAN/Admin/ProviderSettingsPresenter.php:1534
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -756,8 +756,8 @@ msgstr ""
 #: RAN/Admin/DeploymentAdminPresenter.php:294
 #: RAN/Admin/PackageAdminController.php:347
 #: RAN/Admin/PackageAdminController.php:367
-#: RAN/Admin/PortabilityController.php:587
-#: RAN/Admin/PortabilityController.php:713
+#: RAN/Admin/PortabilityController.php:588
+#: RAN/Admin/PortabilityController.php:714
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
 #: RAN/Admin/ProviderSettingsPresenter.php:1533
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
@@ -1772,29 +1772,29 @@ msgstr ""
 msgid "Choose the same Transporter Blueprint and package row to apply."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:355
+#: RAN/Admin/PortabilityController.php:356
 msgid "The reviewed release evidence changed or expired. Review the Transporter Blueprint again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:408
+#: RAN/Admin/PortabilityController.php:409
 #: views/portability.php:216
 msgid "Choose a Transporter Blueprint password before exporting credentials."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:411
+#: RAN/Admin/PortabilityController.php:412
 #: views/portability.php:216
 msgid "The Transporter Blueprint passwords do not match. Nothing was exported."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:581
+#: RAN/Admin/PortabilityController.php:582
 msgid "Repository verified. Release readiness will be checked when applying; files and activation will be preserved."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:631
+#: RAN/Admin/PortabilityController.php:632
 msgid "Target encrypted credential storage is unavailable. Configure secure storage, then review and apply this row again."
 msgstr ""
 
-#: RAN/Admin/PortabilityController.php:640
+#: RAN/Admin/PortabilityController.php:641
 #: RAN/Portability/PortabilityApplicationService.php:455
 msgid "Booster could not apply this package. Review the Transporter Blueprint again and check repository access."
 msgstr ""

@@ -806,6 +806,99 @@ final class PortabilityApplicationServiceTest extends TestCase {
 		self::assertSame( 'transferred_available', $result['credential_state'] );
 	}
 
+	public function test_transferred_release_target_choice_uses_the_saved_profile_for_preview_fresh_review_and_native_install(): void {
+		$plugins = $this->createMock( PluginRepository::class );
+		$plugins->expects( self::exactly( 4 ) )->method( 'is_installed' )->willReturn( false, false, false, true );
+		$plugins->expects( self::exactly( 4 ) )->method( 'has_management_record' )->willReturn( false, false, false, true );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->release_managed_plugin( 'saved-target-id' ) );
+		$credential = new BlueprintCredential(
+			'gh',
+			'Imported PAT',
+			'classic',
+			array(),
+			'temporary-secret',
+			array(
+				array(
+					'type'       => 'plugin',
+					'identifier' => 'example/example.php',
+				),
+			)
+		);
+		$blueprint  = new PackageBlueprint( array( $this->release_package() ), array( $credential ) );
+		$secrets    = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::never() )->method( 'with_temporary_credential' );
+		$secrets->method( 'credential_profiles' )->willReturn( array( 'saved-target-id' => array( 'id' => 'saved-target-id' ) ) );
+		$secrets->method( 'credential_material' )->willReturnCallback(
+			static fn ( ProviderCode|string $provider, ?string $id ): ?array => 'gh' === (string) $provider && 'saved-target-id' === $id ? array(
+				'id'       => 'saved-target-id',
+				'provider' => 'gh',
+				'source'   => 'file',
+				'kind'     => 'classic',
+				'secret'   => 'temporary-secret',
+			) : null
+		);
+		$secrets->expects( self::never() )->method( 'import_credentials_if_absent' );
+		$provider = $this->provider();
+		$provider->method( 'resolve_repository' )->willReturnCallback( static fn ( \RAN\RepositoryProvider\RepositoryLookupRequest $request ): RepositoryDescriptor => new RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/repository', 'example', 'repository-id', false, 'main', $request->credential_id ) );
+		$facade = $this->createMock( ProspectiveReleaseFacade::class );
+		$facade->method( 'nonce_action' )->willReturn( 'nonce' );
+		$facade->expects( self::exactly( 2 ) )->method( 'list_candidates' )->willReturnCallback(
+			function ( string $type, array $request ): ProspectiveReleaseResult {
+				self::assertSame( 'plugin', $type );
+				self::assertSame( 'saved-target-id', $request['credential_id'] );
+				return $this->release_candidates();
+			}
+		);
+		$facade->expects( self::exactly( 2 ) )->method( 'inspect' )->willReturnCallback(
+			function ( string $type, array $request ): ProspectiveReleaseResult {
+				self::assertSame( 'plugin', $type );
+				self::assertSame( 'saved-target-id', $request['credential_id'] );
+				return $this->release_inspection();
+			}
+		);
+		$facade->expects( self::once() )->method( 'install' )->willReturnCallback(
+			static function ( string $type, array $request ): ProspectiveReleaseResult {
+				self::assertSame( 'plugin', $type );
+				self::assertSame( 'saved-target-id', $request['credential_id'] );
+				return ProspectiveReleaseResult::success( 'installed' );
+			}
+		);
+		$store = $this->createStub( ManagedReleaseStore::class );
+		$store->method( 'configuration' )->willReturn( new ManagedReleaseConfiguration( 'example', 'example.php' ) );
+		$service = $this->service( $plugins, $this->createStub( ThemeRepository::class ), $provider, prospective: $facade, store: $store, secrets: $secrets );
+		$preview = $service->review(
+			$blueprint,
+			array(
+				0 => array(
+					'action'    => \RAN\Portability\BlueprintCredentialAction::TARGET,
+					'target_id' => 'saved-target-id',
+				),
+			)
+		)[0];
+		self::assertSame( TargetPackageAction::INSTALL, $preview->action );
+		self::assertNotNull( $preview->release_review );
+		$result = $service->apply(
+			$blueprint,
+			0,
+			'install',
+			array(
+				0 => array(
+					'action'    => \RAN\Portability\BlueprintCredentialAction::TARGET,
+					'target_id' => 'saved-target-id',
+				),
+			),
+			null,
+			false,
+			true,
+			null,
+			$this->provider_expectation,
+			$preview->release_review
+		);
+
+		self::assertSame( 'installed', $result['status'], $result['message'] );
+		self::assertSame( 'target_selected', $result['credential_state'] );
+	}
+
 	public function test_release_install_refuses_mismatched_authoritative_postinstall_readback(): void {
 		$plugins = $this->createMock( PluginRepository::class );
 		$plugins->expects( self::exactly( 3 ) )->method( 'is_installed' )->with( 'example/example.php' )->willReturn( false, false, true );

@@ -177,7 +177,7 @@ final class BlueprintRepositoryVerifier {
 				}
 
 				try {
-					return $this->verified_item( $item, $target_credential_id, $repository_private );
+					return $this->verified_item( $item, $target_credential_id, $repository_private, $release_reviewer );
 				} catch ( Throwable $failure ) {
 					return $this->blocked_item( $item, $failure );
 				}

@@ -119,8 +119,8 @@ final class BlueprintReviewerTest extends TestCase {
 
 	public function test_release_comparison_is_local_and_does_not_enable_execution(): void {
 		$plugins = $this->createMock( PluginRepository::class );
-		$plugins->expects( self::once() )->method( 'is_installed' )->willReturn( true );
-		$plugins->expects( self::once() )->method( 'has_management_record' )->willReturn( true );
+		$plugins->expects( self::exactly( 2 ) )->method( 'is_installed' )->willReturn( true );
+		$plugins->expects( self::exactly( 2 ) )->method( 'has_management_record' )->willReturn( true );
 		$plugins->method( 'booster_plugin_from_file' )->willReturn( $this->managed_package( 'repository-id', PackageSource::RELEASE_ASSET ) );
 		$release = new ManagedReleaseConfiguration( 'example', 'example.php' );
 		$store   = $this->createMock( ManagedReleaseStore::class );

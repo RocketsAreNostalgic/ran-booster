@@ -263,6 +263,49 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		return $statuses;
 	}
 
+	/**
+	 * Check an in-memory adoption target using the same native release gates as
+	 * the management UI. This is deliberately concrete: Transporter must not
+	 * widen the add-on interface with a package-mutation capability.
+	 */
+	public function release_adoption_ready(
+		string $type,
+		Package $package,
+		ManagedReleaseConfiguration $configuration
+	): bool {
+		try {
+			$identifier  = (string) $package->get_identifier();
+			$eligibility = $this->eligibility( $type, $identifier, $package );
+			if ( ! $eligibility->eligible()
+				|| true !== $this->release_source_available( $type, $package ) ) {
+				return false;
+			}
+			// Do not use the ordinary helper here: an unavailable native-target
+			// probe must never be treated as an available target during adoption.
+			$targets = $this->providers->require_capability(
+				(string) $package->get_provider_code(),
+				RepositoryReleaseNativeTargets::class
+			);
+			if ( $this->registrar->has_reserved_core_self_update_target( $type, $this->target_identity( $type, $identifier ) )
+				|| $targets->has_registered_native_target( $type, $this->target_identity( $type, $identifier ) ) ) {
+				return false;
+			}
+			$preflight = $this->provider_preflight(
+				$type,
+				$package,
+				$configuration->package_root(),
+				$configuration->metadata_file(),
+				$configuration->channel(),
+				false
+			);
+
+			return $preflight->ready();
+		} catch ( Throwable ) {
+			return false;
+		}
+	}
+
+
 	public function preflight(
 		string $type,
 		string $identifier,

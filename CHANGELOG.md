@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.0-beta.38](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.37...v1.0.0-beta.38) (2026-10-24)
+
+
+### Features
+
+* **admin:** keep shared documentation provider-neutral ([#504](https://github.com/RocketsAreNostalgic/ran-booster/issues/504)) ([59d343a](https://github.com/RocketsAreNostalgic/ran-booster/commit/59d343aeb70d4d63ca9af51f32b99c16f096eb23))
+* **provider:** expose guarded native update checkpoints ([#499](https://github.com/RocketsAreNostalgic/ran-booster/issues/499)) ([65369e7](https://github.com/RocketsAreNostalgic/ran-booster/commit/65369e79d281c11180303e5526c7c486abea6afd))
+* **transporter:** adopt installed Release packages directly ([#509](https://github.com/RocketsAreNostalgic/ran-booster/issues/509)) ([6f34480](https://github.com/RocketsAreNostalgic/ran-booster/commit/6f34480e46964f489278675495c67c12b1cb7a8e))
+* **transporter:** install ordinary unpinned Release packages ([#511](https://github.com/RocketsAreNostalgic/ran-booster/issues/511)) ([c558cf3](https://github.com/RocketsAreNostalgic/ran-booster/commit/c558cf334f240c4f8dfa177a25eeed3d4da37197))
+
+
+### Bug Fixes
+
+* **admin:** retain GitHub adoption feedback across redirects ([#502](https://github.com/RocketsAreNostalgic/ran-booster/issues/502)) ([2a97240](https://github.com/RocketsAreNostalgic/ran-booster/commit/2a97240d46e7d0c8821a7fdacddd738f5ddaa381))
+* **extensions:** reconcile catalogue with published satellite releases ([#508](https://github.com/RocketsAreNostalgic/ran-booster/issues/508)) ([f1ec4cb](https://github.com/RocketsAreNostalgic/ran-booster/commit/f1ec4cbc9bb8bcbe983472315c047908afa4cc6e))
+* recover native update queues and surface uncertain results ([#501](https://github.com/RocketsAreNostalgic/ran-booster/issues/501)) ([b026542](https://github.com/RocketsAreNostalgic/ran-booster/commit/b026542da75d88a36eb78ca6b9517ca7bb69433e))
+
 ## [1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.36...v1.0.0-beta.37) (2026-10-21)
 
 

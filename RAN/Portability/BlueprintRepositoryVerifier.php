@@ -45,6 +45,7 @@ final class BlueprintRepositoryVerifier {
 		return 'gh' === $provider ? $this->selection->expectation() : null;
 	}
 
+	/** @phpstan-impure */
 	public function provider_review_refusal( string $provider, mixed $expectation ): ?string {
 		if ( 'gh' === $provider ) {
 			return $this->selection->review_refusal( $expectation );
@@ -140,7 +141,8 @@ final class BlueprintRepositoryVerifier {
 		?BlueprintCredential $credential = null,
 		?BlueprintCredentialAction $credential_action = null,
 		?string $target_credential_id = null,
-		?bool &$repository_private = null
+		?bool &$repository_private = null,
+		?\Closure $release_reviewer = null
 	): BlueprintPlanItem {
 		$repository_private = null;
 		$expectation        = $item->provider_expectation ?? $this->provider_expectation( $item->package->provider );
@@ -175,7 +177,7 @@ final class BlueprintRepositoryVerifier {
 				}
 
 				try {
-					return $this->verified_item( $item, $target_credential_id, $repository_private );
+					return $this->verified_item( $item, $target_credential_id, $repository_private, $release_reviewer );
 				} catch ( Throwable $failure ) {
 					return $this->blocked_item( $item, $failure );
 				}
@@ -190,8 +192,8 @@ final class BlueprintRepositoryVerifier {
 						'configuration' => $credential->configuration,
 					),
 					$credential->secret,
-					function ( string $credential_id ) use ( $item, &$repository_private ): BlueprintPlanItem {
-						return $this->verified_item( $item, $credential_id, $repository_private );
+					function ( string $credential_id ) use ( $item, &$repository_private, $release_reviewer ): BlueprintPlanItem {
+						return $this->verified_item( $item, $credential_id, $repository_private, $release_reviewer );
 					}
 				);
 			} catch ( Throwable $failure ) {
@@ -206,14 +208,14 @@ final class BlueprintRepositoryVerifier {
 				return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::CREDENTIAL_REQUIRED );
 			}
 			try {
-				return $this->verified_item( $item, $target_credential_id, $repository_private );
+				return $this->verified_item( $item, $target_credential_id, $repository_private, $release_reviewer );
 			} catch ( Throwable $failure ) {
 				return $this->blocked_item( $item, $failure );
 			}
 		}
 
 		try {
-			return $this->verified_item( $item, null, $repository_private );
+			return $this->verified_item( $item, null, $repository_private, $release_reviewer );
 		} catch ( Throwable $failure ) {
 			if ( ! $this->requires_credential( $failure ) && 429 !== $failure->getCode() ) {
 				return $this->blocked_item( $item, $failure );
@@ -247,7 +249,7 @@ final class BlueprintRepositoryVerifier {
 	}
 
 	/** @param-out bool $repository_private */
-	private function verified_item( BlueprintPlanItem $item, ?string $credential_id, ?bool &$repository_private ): BlueprintPlanItem {
+	private function verified_item( BlueprintPlanItem $item, ?string $credential_id, ?bool &$repository_private, ?\Closure $release_reviewer = null ): BlueprintPlanItem {
 		$refusal = $this->provider_review_refusal( $item->package->provider, $item->provider_expectation );
 		if ( null !== $refusal ) {
 			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
@@ -308,9 +310,10 @@ final class BlueprintRepositoryVerifier {
 		if ( $matches && null !== $key ) {
 			$this->observations[ $key ] = $observation;
 		}
-		return $matches
-			? $item
-			: new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH );
+		if ( ! $matches ) {
+			return new BlueprintPlanItem( $package, TargetPackageAction::BLOCKED, TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH );
+		}
+		return null === $release_reviewer ? $item : $release_reviewer( $item, $credential_id, $repository_private );
 	}
 
 	private function requires_credential( Throwable $failure ): bool {

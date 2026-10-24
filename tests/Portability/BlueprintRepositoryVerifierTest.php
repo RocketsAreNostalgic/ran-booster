@@ -92,6 +92,57 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertFileDoesNotExist( $this->path );
 	}
 
+	public function test_release_callback_observes_an_imported_temporary_credential_without_persisting_it(): void {
+		$observation                     = new class() {
+			public ?string $credential_id = null;
+
+			public bool $repository_private = true;
+
+			public bool $credential_is_temporary = false;
+		};
+		$provider                        = null;
+		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
+		$callback                        = static function ( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ) use ( $observation, &$provider ): BlueprintPlanItem {
+				$observation->credential_id           = $credential_id;
+				$observation->repository_private      = $repository_private;
+				$observation->credential_is_temporary = $provider->temporary_credential_id === $credential_id;
+				return $item;
+		};
+
+		$result = $verifier->verify( $this->install_item(), $this->credential(), BlueprintCredentialAction::IMPORT, null, $private, $callback );
+
+		self::assertSame( TargetPackageAction::INSTALL, $result->action );
+		self::assertSame( $provider->temporary_credential_id, $observation->credential_id );
+		self::assertFalse( $observation->repository_private );
+		self::assertTrue( $observation->credential_is_temporary );
+		self::assertNull( $secrets->credential_material( 'gh', $provider->temporary_credential_id ) );
+		self::assertSame( array(), $secrets->credential_profiles( 'gh' ) );
+	}
+
+	public function test_release_callback_does_not_run_when_repository_identity_is_blocked(): void {
+		$called                        = false;
+		[$unused, $provider, $secrets] = $this->verifier( 0, 'different-repository-id' );
+		$registry                      = new ProviderRegistry( array( $provider ) );
+		$verifier                      = new BlueprintRepositoryVerifier(
+			$registry,
+			$secrets,
+			GitHubSelectionTestFixture::bind( $registry )
+		);
+
+		self::assertSame(
+			TargetPackageReason::REPOSITORY_IDENTITY_MISMATCH,
+			$verifier->verify(
+				$this->install_item(),
+				release_reviewer: static function ( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ) use ( &$called ): BlueprintPlanItem {
+						unset( $credential_id, $repository_private );
+						$called = true;
+						return $item;
+				}
+			)->reason
+		);
+		self::assertFalse( $called );
+	}
+
 	/** @param array<string, string> $configuration */
 	#[DataProvider( 'transferred_provider_credential_provider' )]
 	public function test_transferred_credential_verification_is_provider_neutral(
@@ -298,6 +349,37 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		self::assertSame( TargetPackageAction::INSTALL, $result->action );
 		self::assertSame( array( 'target-pat' ), $provider->credential_ids );
 		self::assertSame( 'target-pat', $provider->temporary_credential_id );
+	}
+
+	public function test_carried_credential_target_choice_forwards_the_saved_profile_to_release_review(): void {
+		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
+		$secrets->save_credential(
+			'gh',
+			'target-pat',
+			array(
+				'label'         => 'Target PAT',
+				'kind'          => 'classic',
+				'configuration' => array(),
+			),
+			self::CLASSIC_TOKEN
+		);
+		$reviewed_credential_id = null;
+
+		$result = $verifier->verify(
+			$this->install_item(),
+			$this->credential(),
+			BlueprintCredentialAction::TARGET,
+			'target-pat',
+			release_reviewer: static function ( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ) use ( &$reviewed_credential_id ): BlueprintPlanItem {
+				self::assertFalse( $repository_private );
+				$reviewed_credential_id = $credential_id;
+				return $item;
+			}
+		);
+
+		self::assertSame( TargetPackageAction::INSTALL, $result->action );
+		self::assertSame( 'target-pat', $reviewed_credential_id );
+		self::assertSame( array( 'target-pat' ), $provider->credential_ids );
 	}
 
 	public function test_wrong_provider_target_choice_blocks_without_any_fallback(): void {

@@ -30,6 +30,8 @@ use RAN\Portability\PackageBlueprint;
 use RAN\Portability\PortabilityApplicationService;
 use RAN\Portability\TargetPackageAction;
 use RAN\Portability\TargetPackageReason;
+use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
+use RAN\AddOn\ReleaseTracking\ProspectiveReleaseResult;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
@@ -67,7 +69,7 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringContainsString( 'data-portability-row="1" data-portability-action="blocked"', $html );
 		self::assertStringContainsString( 'does not check repository access or inspect package files', $html );
 		self::assertNotNull( $provider );
-		self::assertSame( array( null ), $provider->credential_ids );
+		self::assertSame( array( null, null ), $provider->credential_ids );
 	}
 
 	public function test_exact_selections_remain_visible_and_blocked_without_provider_reads(): void {
@@ -265,6 +267,310 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringContainsString( 'data-portability-provider-expectation="{&quot;provider_code&quot;:&quot;gh&quot;', $html );
 		$row['provider_expectation'] = null;
 		self::assertStringNotContainsString( 'data-portability-provider-expectation', $render->invoke( $controller, array( $row ) ) );
+	}
+
+	public function test_release_review_is_projected_as_escaped_row_bound_evidence(): void {
+		$package                     = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php', 'stable' ) );
+		$review                      = array(
+			'release_id'   => '366',
+			'tag'          => 'v1.2.3<script>',
+			'version'      => '1.2.3',
+			'channel'      => 'stable',
+			'fingerprint'  => 'v2:' . str_repeat( 'a', 64 ),
+			'package_root' => 'example',
+			'main_file'    => 'example.php',
+		);
+		$item                        = new BlueprintPlanItem( $package, TargetPackageAction::INSTALL, TargetPackageReason::NONE, null, $review );
+		$method                      = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'row' );
+		$row                         = $method->invoke( $this->controller(), $item );
+		$row['release_review_nonce'] = 'nonce<review>';
+		$render                      = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'render_review' );
+		$html                        = $render->invoke( $this->controller(), array( $row ) );
+
+		self::assertStringContainsString( 'data-portability-release-review="{&quot;release_id&quot;:&quot;366&quot;', $html );
+		self::assertStringContainsString( 'data-portability-release-review-nonce="nonce&lt;review&gt;"', $html );
+		self::assertStringContainsString( 'Reviewed release 1.2.3 (v1.2.3&lt;script&gt;). Booster will install this first provider-preferred candidate only;', $html );
+	}
+
+	public function test_release_review_nonce_accepts_the_previous_wordpress_nonce_tick(): void {
+		$package    = new BlueprintPackage( 'plugin', 'example/example.php', 'Example', 'gh', 'repository-id', 'owner/example', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'example', 'example.php', 'stable' ) );
+		$blueprint  = new PackageBlueprint( array( $package ) );
+		$review     = array(
+			'release_id'   => '366',
+			'tag'          => 'v1.2.3',
+			'version'      => '1.2.3',
+			'channel'      => 'stable',
+			'fingerprint'  => 'v2:' . str_repeat( 'a', 64 ),
+			'package_root' => 'example',
+			'main_file'    => 'example.php',
+		);
+		$controller = $this->controller();
+		$reflection = new ReflectionClass( PortabilityController::class );
+		$action     = $reflection->getMethod( 'release_review_nonce_action' )->invoke( $controller, $blueprint, 0, $review, null, null, array() );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Test-owned request snapshot restored after nonce-tick verification.
+		$previous = $_POST;
+		$_POST    = array( 'release_review_nonce' => 'nonce-for-' . $action );
+		$GLOBALS['ran_booster_repository_admin_nonce_result'] = 2;
+
+		try {
+			self::assertTrue( $reflection->getMethod( 'valid_release_review_nonce' )->invoke( $controller, $blueprint, 0, $review, null, null, array() ) );
+		} finally {
+			unset( $GLOBALS['ran_booster_repository_admin_nonce_result'] );
+			$_POST = $previous;
+		}
+	}
+
+	#[DataProvider( 'invalid_release_review_evidence' )]
+	public function test_apply_refuses_missing_or_forged_release_review_evidence_before_provider_work( ?string $nonce ): void {
+		$package  = new BlueprintPackage( 'plugin', 'release/release.php', 'Release', 'gh', 'repository-id', 'owner/release', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php', 'stable' ) );
+		$file     = $this->blueprint_archive( new PackageBlueprint( array( $package ) ) );
+		$secrets  = $this->createMock( SecretsFile::class );
+		$provider = null;
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Test-owned request fixture exercises the controller's purpose-specific nonce rejection.
+		$previous = $_POST;
+		$this->set_uploaded_blueprint( $file );
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Test-owned request fixture exercises the controller's purpose-specific nonce rejection.
+		$_POST = array(
+			'row'            => '0',
+			'review_action'  => 'install',
+			'selected_rows'  => array( '0' ),
+			'release_review' => (string) wp_json_encode(
+				array(
+					'release_id'   => '366',
+					'tag'          => 'v1.2.3',
+					'version'      => '1.2.3',
+					'channel'      => 'stable',
+					'fingerprint'  => 'v2:' . str_repeat( 'a', 64 ),
+					'package_root' => 'release',
+					'main_file'    => 'release.php',
+				)
+			),
+		);
+		if ( null !== $nonce ) {
+			$_POST['release_review_nonce'] = $nonce;
+		}
+
+		try {
+			$result = $this->preview_controller( $secrets, provider: $provider )->handle_apply();
+		} finally {
+			$_POST = $previous;
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
+			unlink( $file );
+		}
+
+		self::assertTrue( $result['success'] );
+		self::assertSame( 'skipped', $result['data']['status'] );
+		self::assertStringContainsString( 'reviewed release evidence changed or expired', $result['data']['message'] );
+		self::assertNotNull( $provider );
+		self::assertSame( array(), $provider->credential_ids );
+	}
+
+	public function test_controller_generated_release_review_nonce_accepts_its_exact_apply_round_trip_and_refuses_changed_intent(): void {
+		$release   = new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php', 'stable' );
+		$blueprint = new PackageBlueprint(
+			array(
+				new BlueprintPackage( 'plugin', 'release/release.php', 'Release', 'gh', 'repository-id', 'owner/repository', '', null, $release ),
+				new BlueprintPackage( 'theme', 'release-theme', 'Release theme', 'gh', 'repository-id', 'owner/repository', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release-theme', 'style.css', 'stable' ) ),
+			)
+		);
+		$facade    = $this->createMock( ProspectiveReleaseFacade::class );
+		$facade->method( 'nonce_action' )->willReturn( 'prospective-release-nonce' );
+		$facade->method( 'list_candidates' )->willReturn(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'candidates' => array(
+						array(
+							'release_id' => '366',
+							'tag'        => 'v1.2.3',
+							'version'    => '1.2.3',
+						),
+					),
+				)
+			)
+		);
+		$facade->method( 'inspect' )->willReturnCallback(
+			static function ( string $type ): ProspectiveReleaseResult {
+				return ProspectiveReleaseResult::success(
+					'release_ready',
+					array(
+						'release_id'   => '366',
+						'tag'          => 'v1.2.3',
+						'version'      => '1.2.3',
+						'channel'      => 'stable',
+						'package_root' => 'plugin' === $type ? 'release' : 'release-theme',
+						'main_file'    => 'plugin' === $type ? 'release.php' : 'style.css',
+						'fingerprint'  => 'v2:' . str_repeat( 'a', 64 ),
+					)
+				);
+			}
+		);
+		$install_calls = 0;
+		$facade->method( 'install' )->willReturnCallback(
+			static function () use ( &$install_calls ): ProspectiveReleaseResult {
+				++$install_calls;
+				return ProspectiveReleaseResult::failure( 'release_invalid' );
+			}
+		);
+		$secrets    = new PortabilityReadinessSpySecretsFile( true );
+		$controller = $this->preview_controller( $secrets, provider: $provider, selection: $selection, prospective: $facade );
+		self::assertNotNull( $selection );
+		$review = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
+		$html   = $review->invoke( $controller, $blueprint, array(), array() );
+		self::assertSame( 1, preg_match( '/data-portability-release-review="([^"]+)"/', $html, $review_match ) );
+		self::assertSame( 1, preg_match( '/data-portability-release-review-nonce="([^"]+)"/', $html, $nonce_match ) );
+		self::assertSame( 1, preg_match( '/data-portability-provider-expectation="([^"]+)"/', $html, $expectation_match ) );
+		if ( ! isset( $review_match[1], $nonce_match[1], $expectation_match[1] ) ) {
+			self::fail( 'Expected release review, review nonce, and provider expectation attributes.' );
+		}
+		$review_json      = html_entity_decode( $review_match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
+		$rendered_nonce   = html_entity_decode( $nonce_match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
+		$expectation_json = html_entity_decode( $expectation_match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
+		$release_review   = json_decode( $review_json, true );
+		$expectation      = json_decode( $expectation_json, true );
+		self::assertIsArray( $release_review );
+		self::assertIsArray( $expectation );
+		self::assertNotSame( '', $rendered_nonce );
+		$review_nonce = $rendered_nonce;
+		$file         = $this->blueprint_archive( $blueprint );
+		$this->set_uploaded_blueprint( $file );
+		$_POST = array(
+			'row'                  => '0',
+			'review_action'        => 'install',
+			'selected_rows'        => array( '0' ),
+			'release_review'       => $review_json,
+			'release_review_nonce' => $review_nonce,
+			'provider_expectation' => $expectation_json,
+		);
+
+		try {
+			$accepted = $controller->handle_apply();
+			self::assertTrue( $accepted['success'] );
+			self::assertSame( 'failed', $accepted['data']['status'] );
+			self::assertSame( 1, $install_calls, 'The controller-generated nonce must admit its unchanged apply intent.' );
+
+			$changed_artifact = $this->blueprint_archive(
+				new PackageBlueprint(
+					array(
+						new BlueprintPackage( 'plugin', 'release/release.php', 'Changed release', 'gh', 'repository-id', 'owner/repository', '', null, $release ),
+						$blueprint->packages[1],
+					)
+				)
+			);
+			try {
+				foreach ( array(
+					'changed artifact'             => static function () use ( $changed_artifact ): void {
+						$_FILES['blueprint']['tmp_name'] = $changed_artifact;
+						$GLOBALS['ran_booster_repository_admin_uploaded_files'] = array( $changed_artifact );
+					},
+					'changed row'                  => static function (): void {
+						$_POST['row'] = '1';
+					},
+					'changed credential intent'    => static function (): void {
+						$_POST['target_credentials'] = array( 0 => 'other-profile' );
+					},
+					'changed provider expectation' => static function (): void {
+						$_POST['provider_expectation'] = (string) wp_json_encode(
+							array(
+								'provider_code'        => 'gh',
+								'selection_generation' => 1,
+								'implementation_fingerprint' => str_repeat( 'a', 64 ),
+							)
+						);
+					},
+				) as $label => $change ) {
+					$_POST['row']                  = '0';
+					$_POST['provider_expectation'] = $expectation_json;
+					unset( $_POST['target_credentials'] );
+					$this->set_uploaded_blueprint( $file );
+					$change();
+					$result = $controller->handle_apply();
+					self::assertTrue( $result['success'], $label );
+					self::assertSame( 'skipped', $result['data']['status'], $label );
+					self::assertStringContainsString( 'reviewed release evidence changed or expired', $result['data']['message'], $label );
+					self::assertSame( 1, $install_calls, $label . ' must be refused before release installation.' );
+				}
+			} finally {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
+				unlink( $changed_artifact );
+			}
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
+			unlink( $file );
+		}
+	}
+
+	public function test_non_github_release_preview_nonce_round_trips_without_a_provider_expectation(): void {
+		$blueprint = new PackageBlueprint(
+			array(
+				new BlueprintPackage( 'plugin', 'release/release.php', 'Release', 'bb', 'repository-id', 'owner/repository', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php', 'stable' ) ),
+			)
+		);
+		$facade    = $this->createMock( ProspectiveReleaseFacade::class );
+		$facade->method( 'nonce_action' )->willReturn( 'prospective-release-nonce' );
+		$facade->method( 'list_candidates' )->willReturn(
+			ProspectiveReleaseResult::success(
+				'release_candidates_available',
+				array(
+					'candidates' => array(
+						array(
+							'release_id' => '366',
+							'tag'        => 'v1.2.3',
+							'version'    => '1.2.3',
+						),
+					),
+				)
+			)
+		);
+		$facade->method( 'inspect' )->willReturn(
+			ProspectiveReleaseResult::success(
+				'release_ready',
+				array(
+					'release_id'   => '366',
+					'tag'          => 'v1.2.3',
+					'version'      => '1.2.3',
+					'channel'      => 'stable',
+					'package_root' => 'release',
+					'main_file'    => 'release.php',
+					'fingerprint'  => 'v2:' . str_repeat( 'a', 64 ),
+				)
+			)
+		);
+		$facade->expects( self::once() )->method( 'install' )->willReturn( ProspectiveReleaseResult::failure( 'release_invalid' ) );
+		$controller = $this->preview_controller( new PortabilityReadinessSpySecretsFile( true ), provider_code: 'bb', prospective: $facade );
+		$review     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
+		$html       = $review->invoke( $controller, $blueprint, array(), array() );
+		self::assertSame( 1, preg_match( '/data-portability-release-review="([^"]+)"/', $html, $review_match ) );
+		self::assertSame( 1, preg_match( '/data-portability-release-review-nonce="([^"]+)"/', $html, $nonce_match ) );
+		self::assertStringNotContainsString( 'data-portability-provider-expectation=', $html );
+		if ( ! isset( $review_match[1], $nonce_match[1] ) ) {
+			self::fail( 'Expected non-GitHub release review and nonce attributes.' );
+		}
+		$file = $this->blueprint_archive( $blueprint );
+		$this->set_uploaded_blueprint( $file );
+		$_POST = array(
+			'row'                  => '0',
+			'review_action'        => 'install',
+			'selected_rows'        => array( '0' ),
+			'release_review'       => html_entity_decode( $review_match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ),
+			'release_review_nonce' => html_entity_decode( $nonce_match[1], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' ),
+		);
+
+		try {
+			$result = $controller->handle_apply();
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Test archive is outside WordPress media handling.
+			unlink( $file );
+		}
+
+		self::assertTrue( $result['success'] );
+		self::assertSame( 'failed', $result['data']['status'] );
+	}
+
+	/** @return iterable<string, array{?string}> */
+	public static function invalid_release_review_evidence(): iterable {
+		yield 'missing nonce' => array( null );
+		yield 'forged nonce' => array( 'forged-release-review-nonce' );
 	}
 
 	public function test_selected_row_input_is_bounded_and_strictly_typed(): void {
@@ -1632,7 +1938,7 @@ final class PortabilityControllerTest extends TestCase {
 	 * @param-out TemporaryCredentialProvider $provider
 	 * @param-out GitHubProviderSelection $selection
 	 */
-	private function preview_controller( SecretsFile $secrets, bool $installed = false, string $type = 'plugin', ?TemporaryCredentialProvider &$provider = null, ?GitHubProviderSelection &$selection = null ): PortabilityController {
+	private function preview_controller( SecretsFile $secrets, bool $installed = false, string $type = 'plugin', ?TemporaryCredentialProvider &$provider = null, ?GitHubProviderSelection &$selection = null, ?ProspectiveReleaseFacade $prospective = null, string $provider_code = 'gh' ): PortabilityController {
 		$plugins = $this->createStub( PluginRepository::class );
 		$themes  = $this->createStub( ThemeRepository::class );
 		$plugins->method( 'is_installed' )->willReturn( $installed && 'plugin' === $type );
@@ -1640,7 +1946,7 @@ final class PortabilityControllerTest extends TestCase {
 		$themes->method( 'is_installed' )->willReturn( $installed && 'theme' === $type );
 		$themes->method( 'has_management_record' )->willReturn( false );
 		$catalog  = new ProviderSecretPolicyCatalog();
-		$provider = new TemporaryCredentialProvider( $secrets->credentials_for( 'gh' ), 0, 'repository-id' );
+		$provider = new TemporaryCredentialProvider( $secrets->credentials_for( $provider_code ), 0, 'repository-id', provider_code: $provider_code );
 		$registry = new ProviderRegistry( array( $provider ), $catalog );
 
 		$selection   = GitHubSelectionTestFixture::bind( $registry );
@@ -1648,7 +1954,8 @@ final class PortabilityControllerTest extends TestCase {
 			new BlueprintReviewer( $plugins, $themes ),
 			new BlueprintRepositoryVerifier( $registry, $secrets, $selection ),
 			( new ReflectionClass( PackageOperationService::class ) )->newInstanceWithoutConstructor(),
-			$secrets
+			$secrets,
+			prospective_releases: $prospective
 		);
 
 		return new PortabilityController(

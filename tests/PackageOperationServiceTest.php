@@ -40,6 +40,7 @@ use RAN\Storage\ThemeRepository;
 use RAN\Theme;
 use RAN\Troubleshooting\TroubleshootingService;
 use RAN\WordPress\WordPressUpdaterLock;
+use RAN\WordPress\ManagedReleaseConfiguration;
 
 final class PackageOperationServiceTest extends TestCase {
 
@@ -501,6 +502,166 @@ final class PackageOperationServiceTest extends TestCase {
 		$service->execute(
 			PackageOperation::from_input( 'install-plugin', $this->input( 'install-plugin', array( 'dry-run' => '1' ) ) )
 		);
+	}
+
+	public function test_release_adoption_reads_back_as_uncertain_when_lock_release_acknowledgement_fails(): void {
+		$plugins          = new OperationPluginRepository( $this->plugin() );
+		$lock             = new OperationUpdaterLock();
+		$lock->releasable = false;
+		$service          = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator(), $lock );
+		$operation        = PackageOperation::from_input(
+			'install-plugin',
+			$this->input(
+				'install-plugin',
+				array(
+					'dry-run'           => '1',
+					'exact_identifier'  => '1',
+					'file'              => 'example/example.php',
+					'deployment_policy' => 'disabled',
+				)
+			)
+		);
+
+		$result = $service->adopt_release( $operation, new ManagedReleaseConfiguration( 'example', 'example.php' ), static fn (): bool => true );
+
+		self::assertSame( 'uncertain', $result['status'] );
+		self::assertSame( $plugins->package, $result['package'] );
+		self::assertSame( PackageSource::RELEASE_ASSET, $plugins->package->get_source() );
+		self::assertSame( 1, $plugins->package->get_source_revision() );
+		self::assertSame( DeploymentPolicy::DISABLED, $plugins->package->get_deployment_policy() );
+	}
+
+	public function test_release_adoption_does_not_write_when_readiness_refuses(): void {
+		$plugins   = new OperationPluginRepository( $this->plugin() );
+		$service   = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
+		$operation = PackageOperation::from_input(
+			'install-plugin',
+			$this->input(
+				'install-plugin',
+				array(
+					'dry-run'           => '1',
+					'exact_identifier'  => '1',
+					'file'              => 'example/example.php',
+					'deployment_policy' => 'disabled',
+				)
+			)
+		);
+
+		try {
+			$service->adopt_release( $operation, new ManagedReleaseConfiguration( 'example', 'example.php' ), static fn (): bool => false );
+			self::fail( 'Readiness refusal must prevent release adoption.' );
+		} catch ( \RuntimeException $failure ) {
+			self::assertStringContainsString( 'not ready', $failure->getMessage() );
+		}
+		self::assertSame( 0, $plugins->release_adoptions );
+	}
+
+	public function test_release_adoption_does_not_write_when_the_target_disappears_during_readiness(): void {
+		$plugins   = new OperationPluginRepository( $this->plugin() );
+		$service   = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
+		$operation = PackageOperation::from_input(
+			'install-plugin',
+			$this->input(
+				'install-plugin',
+				array(
+					'dry-run'           => '1',
+					'exact_identifier'  => '1',
+					'file'              => 'example/example.php',
+					'deployment_policy' => 'disabled',
+				)
+			)
+		);
+
+		try {
+			$service->adopt_release(
+				$operation,
+				new ManagedReleaseConfiguration( 'example', 'example.php' ),
+				static function () use ( $plugins ): bool {
+					$plugins->installed = false;
+
+					return true;
+				}
+			);
+		} catch ( \RuntimeException $failure ) {
+			// The re-read is allowed to expose a normal vanished-target failure.
+			self::assertNotSame( '', $failure->getMessage() );
+		}
+
+		self::assertSame( 0, $plugins->release_adoptions );
+	}
+
+	public function test_release_adoption_does_not_write_when_the_updater_lock_token_changes_during_readiness(): void {
+		$plugins   = new OperationPluginRepository( $this->plugin() );
+		$lock      = new OperationUpdaterLock();
+		$service   = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator(), $lock );
+		$operation = PackageOperation::from_input(
+			'install-plugin',
+			$this->input(
+				'install-plugin',
+				array(
+					'dry-run'           => '1',
+					'exact_identifier'  => '1',
+					'file'              => 'example/example.php',
+					'deployment_policy' => 'disabled',
+				)
+			)
+		);
+
+		try {
+			$service->adopt_release(
+				$operation,
+				new ManagedReleaseConfiguration( 'example', 'example.php' ),
+				static function () use ( $lock ): bool {
+					$lock->token = 'replaced-lock';
+
+					return true;
+				}
+			);
+		} catch ( \RuntimeException $failure ) {
+			// Losing the lock is an expected refusal path.
+			self::assertNotSame( '', $failure->getMessage() );
+		}
+
+		self::assertSame( 0, $plugins->release_adoptions );
+	}
+
+	#[DataProvider( 'release_adoption_targets' )]
+	public function test_release_adoption_links_the_installed_plugin_or_theme_only_after_readiness( string $type ): void {
+		$plugins   = new OperationPluginRepository(
+			'plugin' === $type ? $this->plugin() : $this->plugin( 'other/other.php', 'R_other' )
+		);
+		$themes    = new OperationThemeRepository( new OperationTheme( 'example' ) );
+		$service   = $this->service( $plugins, $themes, new OperationCoordinator() );
+		$operation = PackageOperation::from_input(
+			'install-' . $type,
+			$this->input(
+				'install-' . $type,
+				array(
+					'dry-run'           => '1',
+					'exact_identifier'  => '1',
+					'deployment_policy' => 'disabled',
+				)
+			)
+		);
+
+		$result = $service->adopt_release(
+			$operation,
+			new ManagedReleaseConfiguration( 'example', 'plugin' === $type ? 'example.php' : 'style.css' ),
+			static fn (): bool => true
+		);
+
+		self::assertSame( 'linked', $result['status'] );
+		self::assertSame( PackageSource::RELEASE_ASSET, $result['package']->get_source() );
+		self::assertSame( DeploymentPolicy::DISABLED, $result['package']->get_deployment_policy() );
+		self::assertSame( 'plugin' === $type ? 1 : 0, $plugins->release_adoptions );
+		self::assertSame( 'theme' === $type ? 1 : 0, $themes->release_adoptions );
+		self::assertSame( 'plugin' === $type ? $plugins->package : $themes->package, $result['package'] );
+	}
+
+	/** @return iterable<string, array{string}> */
+	public static function release_adoption_targets(): iterable {
+		yield 'plugin' => array( 'plugin' );
+		yield 'theme' => array( 'theme' );
 	}
 
 	public function test_theme_link_edit_and_unlink_use_the_explicit_repositories(): void {
@@ -1554,6 +1715,7 @@ final class OperationCoordinator extends DeploymentCoordinator {
 final class OperationUpdaterLock extends WordPressUpdaterLock {
 	public bool $available  = true;
 	public bool $releasable = true;
+	public ?string $token   = null;
 	/** @var list<string> */
 	public array $events = array();
 
@@ -1563,7 +1725,12 @@ final class OperationUpdaterLock extends WordPressUpdaterLock {
 			throw new \RuntimeException( 'Fixture lock unavailable.' );
 		}
 
-		return 'fixture-lock';
+		$this->token = 'fixture-lock';
+		return $this->token;
+	}
+
+	public function current_token(): ?string {
+		return $this->token;
 	}
 	public function try_acquire_without_reclaim(): ?string {
 		$this->events[] = 'acquire';
@@ -1589,10 +1756,24 @@ final class OperationPluginRepository extends PluginRepository {
 	public ?\Throwable $unlink_failure                    = null;
 	public ?Plugin $fresh_after_mutation                  = null;
 	public ?PackageMutationResult $adoption_result        = null;
+	public int $release_adoptions                         = 0;
 	public function __construct( public Plugin $package ) {}
 	public function from_slug( $slug ) {
 		$this->requested_slug = (string) $slug;
 		return $this->package; }
+	public function installed_plugin_from_file( string $file ): Plugin {
+		unset( $file );
+		if ( ! $this->installed ) {
+			throw new \RuntimeException( 'The fixture package disappeared.' );
+		}
+		return $this->package;
+	}
+	public function adopt_release( Plugin $plugin, ManagedReleaseConfiguration $configuration, int $user_id ): PackageMutationResult {
+		unset( $configuration, $user_id );
+		++$this->release_adoptions;
+		$this->stored = $plugin;
+		return PackageMutationResult::changed( PackageStorageOperation::INSERT );
+	}
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_plugin_from_file retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_plugin_from_file( $file ) {
 		return null !== $this->fresh_after_mutation && ( null !== $this->stored || array() !== $this->edited )
@@ -1661,10 +1842,21 @@ final class OperationThemeRepository extends ThemeRepository {
 	public ?string $unlinked                              = null;
 	public ?string $requested_slug                        = null;
 	public ?Theme $fresh_after_mutation                   = null;
+	public int $release_adoptions                         = 0;
 	public function __construct( public Theme $package ) {}
 	public function from_slug( $slug ) {
 		$this->requested_slug = (string) $slug;
 		return $this->package; }
+	public function installed_theme_from_stylesheet( string $stylesheet ): Theme {
+		unset( $stylesheet );
+		return $this->package;
+	}
+	public function adopt_release( Theme $theme, ManagedReleaseConfiguration $configuration, int $user_id ): PackageMutationResult {
+		unset( $configuration, $user_id );
+		++$this->release_adoptions;
+		$this->stored = $theme;
+		return PackageMutationResult::changed( PackageStorageOperation::INSERT );
+	}
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- The fixture implementation of booster_theme_from_stylesheet retains the production method contract; these inputs do not affect this controlled result.
 	public function booster_theme_from_stylesheet( $stylesheet ) {
 		return null !== $this->fresh_after_mutation && ( null !== $this->stored || array() !== $this->edited )

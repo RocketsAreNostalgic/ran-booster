@@ -43,6 +43,18 @@ function check_ajax_referer( string $action, string $query_arg, bool $stop ): bo
 	return (bool) ( $GLOBALS['ran_booster_repository_admin_nonce_valid'] ?? true );
 }
 
+function wp_verify_nonce( string $nonce, string $action ): int|false {
+	if ( array_key_exists( 'ran_booster_repository_admin_nonce_result', $GLOBALS ) ) {
+		return $GLOBALS['ran_booster_repository_admin_nonce_result'];
+	}
+
+	if ( hash_equals( wp_create_nonce( $action ), $nonce ) ) {
+		return 1;
+	}
+
+	return hash_equals( \wp_create_nonce( $action ), $nonce ) ? 1 : false;
+}
+
 function is_uploaded_file( string $filename ): bool {
 	return in_array( $filename, $GLOBALS['ran_booster_repository_admin_uploaded_files'] ?? array(), true );
 }

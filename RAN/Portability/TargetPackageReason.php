@@ -19,6 +19,8 @@ enum TargetPackageReason: string {
 	case PROVIDER_SELECTION_CHANGED       = 'provider_selection_changed';
 	case PROVIDER_UNAVAILABLE             = 'provider_unavailable';
 	case PROVIDER_TEMPORARILY_UNAVAILABLE = 'provider_temporarily_unavailable';
+	case RELEASE_UNAVAILABLE              = 'release_unavailable';
+	case RELEASE_REVIEW_CHANGED           = 'release_review_changed';
 
 	case PREVIEW_RATE_LIMITED            = 'preview_rate_limited';
 	case PREVIEW_BUDGET_EXHAUSTED        = 'preview_budget_exhausted';
@@ -42,6 +44,8 @@ enum TargetPackageReason: string {
 			self::PROVIDER_SELECTION_CHANGED => __( 'The selected repository provider changed. Review again before applying.', 'ran-booster' ),
 			self::PROVIDER_UNAVAILABLE => __( 'This repository provider is not available on the target.', 'ran-booster' ),
 			self::PROVIDER_TEMPORARILY_UNAVAILABLE => __( 'The repository provider is temporarily unavailable.', 'ran-booster' ),
+			self::RELEASE_UNAVAILABLE => __( 'No eligible published release is available for this package.', 'ran-booster' ),
+			self::RELEASE_REVIEW_CHANGED => __( 'The reviewed release changed. Review the Transporter Blueprint again before applying.', 'ran-booster' ),
 		};
 	}
 }

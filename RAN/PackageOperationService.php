@@ -83,8 +83,8 @@ final readonly class PackageOperationService {
 
 		try {
 			$token = $this->updater_lock->acquire();
-		} catch ( \Throwable $failure ) {
-			throw new RuntimeException( 'Another package operation is in progress.', 0, $failure );
+		} catch ( \Throwable ) {
+			throw new RuntimeException( 'Another package operation is in progress.' );
 		}
 		$write_attempted = false;
 		$failure         = null;

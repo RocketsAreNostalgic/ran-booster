@@ -11,6 +11,16 @@ credential briefcases.
 [Core PR #509](https://github.com/RocketsAreNostalgic/ran-booster/pull/509).
 It is not part of the published beta.37 behavior described below.
 
+**Stage 2 source candidate, pending release:** an ordinary unpinned Release
+Blueprint may install only into an absent, unmanaged target after preview has
+qualified the first provider-preferred candidate and Apply has freshly checked
+that exact tuple. It does not search for or claim the newest eligible release;
+selected Release records and every failed or missing review remain refused.
+Installed-package adoption follows the Stage 1 published-release adoption
+contract. A successful native installation stays inactive with
+deployment Disabled. This is source-candidate documentation, not published
+behavior.
+
 Transporter may directly adopt an installed, unmanaged, unpinned `release_asset`
 plugin or theme when a fresh Apply-time native release eligibility, source admission,
 target collision and provider preflight check succeeds. It preserves the installed
@@ -173,9 +183,11 @@ records and selected installed/adoption targets refuse rather than falling back.
 Review establishes repository access, not historical package availability or
 installed equality. Apply freshly reacquires and verifies the exact selected
 archive and target identity; successful management remains Disabled. The initial
-selection does not lock future updates. Existing unpinned branch operations
-retain their fresh checks. Release installation/adoption, verified exact export
-and explicit reconciliation require their separately qualified operations.
+selection does not lock future updates. Existing unpinned Branch operations
+retain their fresh checks. Stage 2 separately qualifies only the ordinary
+missing-target Release installation described above; Release adoption, selected
+Release records, verified exact export and explicit reconciliation remain out of
+scope and refuse.
 
 V2 object keys are recursively sorted for canonical JSON. Valid V1 input must
 first satisfy its original shape and canonical bytes; it enters the same model

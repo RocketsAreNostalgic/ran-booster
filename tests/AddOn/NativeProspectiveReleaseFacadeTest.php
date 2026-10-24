@@ -305,6 +305,43 @@ final class NativeProspectiveReleaseFacadeTest extends TestCase {
 		self::assertSame( 0, $plugins->adoption_calls );
 	}
 
+	public function test_opaque_repository_identity_expectation_reaches_prospective_candidate_listing_unchanged(): void {
+		$provider   = new ProspectiveRepositoryProvider(
+			candidate_list: new RepositoryReleaseCandidateList(
+				array( new RepositoryReleaseCandidate( '42', 'v1.2.3', '1.2.3', false, '2026-08-17T12:00:00Z', array( 'example-1.2.3.zip' ) ) )
+			),
+			repository_id: "opaque\\id'42"
+		);
+		$facade     = $this->facade( new ProspectivePluginRepository(), new ProspectiveExecutor(), provider: $provider );
+		$repository = array_merge( $this->repository_request(), array( 'provider_repository_id' => "opaque\\id'42" ) );
+
+		$result = $facade->list_candidates( 'plugin', $repository, 'stable', 'valid-nonce' );
+
+		self::assertTrue( $result->successful() );
+		self::assertSame( 1, ProspectiveRepositoryProvider::$listing_calls );
+	}
+
+	public function test_reassigned_opaque_repository_locator_refuses_each_prospective_stage_before_release_activity(): void {
+		$plugins    = new ProspectivePluginRepository();
+		$executor   = new ProspectiveExecutor();
+		$facade     = $this->facade( $plugins, $executor, provider: new ProspectiveRepositoryProvider( repository_id: "opaqueid'42" ) );
+		$repository = array_merge( $this->repository_request(), array( 'provider_repository_id' => "opaque\\id'42" ) );
+
+		$listing      = $facade->list_candidates( 'plugin', $repository, 'stable', 'valid-nonce' );
+		$inspection   = $facade->inspect( 'plugin', $repository, '42', 'v1.2.3', 'stable', 'valid-nonce' );
+		$installation = $facade->install( 'plugin', $repository, '42', 'v1.2.3', self::FINGERPRINT, 'stable', 'valid-nonce', $this->expectation_for( $repository ) );
+
+		self::assertSame( 'unable_to_check', $listing->code() );
+		self::assertSame( 'unable_to_check', $inspection->code() );
+		self::assertSame( 'install_failed', $installation->code() );
+		self::assertSame( 3, ProspectiveRepositoryProvider::$resolve_calls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$listing_calls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$inspection_calls );
+		self::assertSame( 0, ProspectiveRepositoryProvider::$acquisition_calls );
+		self::assertSame( 0, $executor->install_calls );
+		self::assertSame( 0, $plugins->adoption_calls );
+	}
+
 	public function test_registered_provider_without_listing_facet_fails_before_repository_resolution_or_remote_work(): void {
 		$provider = new ProspectiveRepositoryProviderWithoutListing();
 		$facade   = $this->facade(
@@ -1863,7 +1900,8 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 		private readonly string $code = 'gh',
 		private readonly RepositoryReleaseCandidateList|Throwable|null $candidate_list = null,
 		private readonly RepositoryReleaseInspection|Throwable|null $inspection = null,
-		private readonly ?Throwable $resolve_failure = null
+		private readonly ?Throwable $resolve_failure = null,
+		private readonly string $repository_id = '123456789'
 	) {
 	}
 
@@ -1932,7 +1970,7 @@ final class ProspectiveRepositoryProvider implements RepositoryProvider, Reposit
 			ProviderCode::parse( $this->code ),
 			$request->locator,
 			'example',
-			'123456789',
+			$this->repository_id,
 			false,
 			'main',
 			null

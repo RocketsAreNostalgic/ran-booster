@@ -78,7 +78,7 @@ final readonly class BlueprintReviewer {
 		$item = $this->review_local_package( $blueprint, $managed_package );
 		if ( ( null !== $blueprint->selection && TargetPackageAction::INSTALL !== $item->action )
 			|| ( null !== $blueprint->release_configuration
-				&& TargetPackageAction::ADOPT !== $item->action ) ) {
+				&& ! in_array( $item->action, array( TargetPackageAction::INSTALL, TargetPackageAction::ADOPT ), true ) ) ) {
 			return new BlueprintPlanItem( $blueprint, TargetPackageAction::BLOCKED, TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION );
 		}
 		return $item;

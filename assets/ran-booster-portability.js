@@ -1061,6 +1061,17 @@
 					row.getAttribute('data-portability-provider-expectation'),
 				])
 			);
+			const releaseReviews = new Map(
+				rows.map((row) => [
+					row,
+					[
+						row.getAttribute('data-portability-release-review'),
+						row.getAttribute(
+							'data-portability-release-review-nonce'
+						),
+					],
+				])
+			);
 			setApplyBusy(true);
 			try {
 				let appliedEverySelection = true;
@@ -1083,6 +1094,12 @@
 					const providerExpectation = providerExpectations.get(row);
 					if (providerExpectation !== null) {
 						data.set('provider_expectation', providerExpectation);
+					}
+					const [releaseReview, releaseReviewNonce] =
+						releaseReviews.get(row) || [];
+					if (releaseReview !== null && releaseReviewNonce !== null) {
+						data.set('release_review', releaseReview);
+						data.set('release_review_nonce', releaseReviewNonce);
 					}
 					data.set('action', 'ran_booster_apply_blueprint');
 					data.set('nonce', form.dataset.portabilityApplyNonce || '');

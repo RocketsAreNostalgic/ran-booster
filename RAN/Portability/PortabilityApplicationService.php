@@ -9,6 +9,7 @@ use RAN\AddOn\Portability\PortabilityApplyResult;
 use RAN\AddOn\Portability\PortabilityCandidate;
 use RAN\AddOn\Portability\PortabilityReviewResult;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
+use RAN\AddOn\ReleaseTracking\ProspectiveReleaseFacade;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Package;
 use RAN\PackageOperation;
@@ -33,7 +34,8 @@ final readonly class PortabilityApplicationService {
 		private PackageOperationService $operations,
 		private SecretsFile $secrets,
 		private ?NativeReleaseTrackingFacade $release_tracking = null,
-		private ManagedReleaseStore $release_store = new ManagedReleaseStore()
+		private ManagedReleaseStore $release_store = new ManagedReleaseStore(),
+		private ?ProspectiveReleaseFacade $prospective_releases = null
 	) {
 	}
 
@@ -85,11 +87,100 @@ final readonly class PortabilityApplicationService {
 					$item,
 					$credential,
 					$action,
-					$decision['target_id'] ?? ( null === $credential ? ( $target_credential_ids[ $index ] ?? null ) : null )
+					$decision['target_id'] ?? ( null === $credential ? ( $target_credential_ids[ $index ] ?? null ) : null ),
+					$repository_private,
+					fn ( BlueprintPlanItem $verified, ?string $credential_id, bool $repository_private ): BlueprintPlanItem => $this->review_release_install( $verified, $credential_id, $repository_private )
 				);
 		}
 
 		return $verified;
+	}
+
+	/** Runs only for a repository-verified Release INSTALL preview. */
+	private function review_release_install( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ): BlueprintPlanItem {
+		$configuration = $item->package->release_configuration;
+		if ( TargetPackageAction::INSTALL !== $item->action || null === $configuration ) {
+			return $item;
+		}
+		if ( null === $this->prospective_releases ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE );
+		}
+		$refusal = $this->verifier->provider_review_refusal( $item->package->provider, $item->provider_expectation );
+		if ( null !== $refusal ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
+		}
+		$request = $this->release_repository_request( $item, $credential_id, $repository_private, DeploymentPolicy::MANUAL );
+		$channel = $configuration->channel();
+		if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::RELEASE_UNAVAILABLE );
+		}
+		try {
+			$list = $this->prospective_releases->list_candidates(
+				$item->package->type,
+				$request,
+				$channel,
+				wp_create_nonce( $this->prospective_releases->nonce_action( 'list_candidates', $item->package->type, null ) )
+			);
+		} catch ( Throwable ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE );
+		}
+		if ( ! $list->successful() ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, 'unsupported_provider' === $list->code() ? TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION : ( 'no_releases' === $list->code() ? TargetPackageReason::RELEASE_UNAVAILABLE : TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE ) );
+		}
+		$candidates = $list->data()['candidates'] ?? null;
+		if ( ! is_array( $candidates ) || count( $candidates ) > 8 || ! isset( $candidates[0] ) || ! is_array( $candidates[0] )
+			|| ! is_string( $candidates[0]['release_id'] ?? null ) || ! is_string( $candidates[0]['tag'] ?? null ) || ! is_string( $candidates[0]['version'] ?? null ) ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::RELEASE_UNAVAILABLE );
+		}
+		$candidate = $candidates[0];
+		$refusal   = $this->verifier->provider_review_refusal( $item->package->provider, $item->provider_expectation );
+		if ( null !== $refusal ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
+		}
+		try {
+			$inspection = $this->prospective_releases->inspect(
+				$item->package->type,
+				$request,
+				$candidate['release_id'],
+				$candidate['tag'],
+				$channel,
+				wp_create_nonce( $this->prospective_releases->nonce_action( 'inspect', $item->package->type, null ) )
+			);
+		} catch ( Throwable ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE );
+		}
+		$refusal = $this->verifier->provider_review_refusal( $item->package->provider, $item->provider_expectation );
+		if ( null !== $refusal ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::from( $refusal ) );
+		}
+		if ( ! $inspection->successful() ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, 'unsupported_provider' === $inspection->code() ? TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION : ( in_array( $inspection->code(), array( 'no_releases', 'release_unavailable', 'release_invalid' ), true ) ? TargetPackageReason::RELEASE_UNAVAILABLE : TargetPackageReason::PROVIDER_TEMPORARILY_UNAVAILABLE ) );
+		}
+		$data = $inspection->data();
+		if ( ! is_string( $data['release_id'] ?? null ) || ! hash_equals( $candidate['release_id'], $data['release_id'] )
+			|| ! is_string( $data['tag'] ?? null ) || ! hash_equals( $candidate['tag'], $data['tag'] )
+			|| ! is_string( $data['version'] ?? null ) || ! hash_equals( $candidate['version'], $data['version'] )
+			|| ! is_string( $data['channel'] ?? null ) || ! hash_equals( $channel, $data['channel'] )
+			|| ! is_string( $data['package_root'] ?? null ) || ! hash_equals( $configuration->package_root(), $data['package_root'] )
+			|| ! is_string( $data['main_file'] ?? null ) || ! hash_equals( $configuration->metadata_file(), $data['main_file'] )
+			|| ! is_string( $data['fingerprint'] ?? null ) ) {
+			return new BlueprintPlanItem( $item->package, TargetPackageAction::BLOCKED, TargetPackageReason::RELEASE_UNAVAILABLE );
+		}
+		return new BlueprintPlanItem(
+			$item->package,
+			$item->action,
+			$item->reason,
+			$item->provider_expectation,
+			array(
+				'release_id'   => $candidate['release_id'],
+				'tag'          => $candidate['tag'],
+				'version'      => $candidate['version'],
+				'channel'      => $channel,
+				'fingerprint'  => $data['fingerprint'],
+				'package_root' => $configuration->package_root(),
+				'main_file'    => $configuration->metadata_file(),
+			)
+		);
 	}
 
 	public function review_candidate( PortabilityCandidate $candidate ): PortabilityReviewResult {
@@ -166,6 +257,7 @@ final readonly class PortabilityApplicationService {
 	 * @param array<array-key,mixed>|null $selected_rows Untrusted request selection, validated before local reads.
 	 * @return array{status:string,message:string,credential_state:string}
 	 * @param array<string,mixed>|null $provider_expectation
+	 * @param array{release_id:string,tag:string,version:string,channel:string,fingerprint:string,package_root:string,main_file:string}|null $release_review
 	 */
 	public function apply(
 		PackageBlueprint $blueprint,
@@ -176,7 +268,8 @@ final readonly class PortabilityApplicationService {
 		bool $adopt,
 		bool $can_install,
 		?array $selected_rows,
-		?array $provider_expectation
+		?array $provider_expectation,
+		?array $release_review = null
 	): array {
 		$package = $blueprint->packages[ $row ] ?? null;
 		if ( ! $package instanceof BlueprintPackage ) {
@@ -205,7 +298,18 @@ final readonly class PortabilityApplicationService {
 		if ( TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION === $item->reason || ! $this->selected_operation_supported( $item ) ) {
 			return $this->result( 'skipped', TargetPackageReason::UNSUPPORTED_BLUEPRINT_OPERATION->message() );
 		}
-		$item                 = new BlueprintPlanItem( $package, $item->action, $item->reason, $provider_expectation );
+		$item            = new BlueprintPlanItem( $package, $item->action, $item->reason, $provider_expectation );
+		$release_install = TargetPackageAction::INSTALL === $item->action && null !== $package->release_configuration;
+		if ( $release_install ) {
+			if ( null === $release_review ) {
+				return $this->result( 'skipped', TargetPackageReason::RELEASE_REVIEW_CHANGED->message() );
+			}
+			try {
+				new BlueprintPlanItem( $package, TargetPackageAction::INSTALL, TargetPackageReason::NONE, null, $release_review );
+			} catch ( InvalidArgumentException ) {
+				return $this->result( 'skipped', TargetPackageReason::RELEASE_REVIEW_CHANGED->message() );
+			}
+		}
 		$ordinal              = null;
 		$credential           = $this->credential_for( $blueprint, $item, $ordinal );
 		$decision             = null === $ordinal ? null : ( $credential_decisions[ $ordinal ] ?? null );
@@ -226,17 +330,42 @@ final readonly class PortabilityApplicationService {
 		if ( TargetPackageAction::ADOPT === $item->action && ! $adopt ) {
 			return $this->result( 'skipped', __( 'This installed package was not selected for adoption.', 'ran-booster' ) );
 		}
-		if ( BlueprintCredentialAction::IMPORT === $credential_action ) {
+		if ( BlueprintCredentialAction::IMPORT === $credential_action && ! $release_install ) {
 			$this->assert_local_secret_store_ready();
 		}
 		$repository_private = null;
-		$item               = $this->verifier->verify( $item, $credential, $credential_action, $target_credential_id, $repository_private );
+		$item               = $this->verifier->verify(
+			$item,
+			$credential,
+			$credential_action,
+			$target_credential_id,
+			$repository_private,
+			$release_install ? function ( BlueprintPlanItem $verified, ?string $credential_id, bool $repository_private ) use ( $release_review ): BlueprintPlanItem {
+				$reviewed = $this->review_release_install( $verified, $credential_id, $repository_private );
+				return $release_review === $reviewed->release_review
+					? $reviewed
+					: new BlueprintPlanItem( $verified->package, TargetPackageAction::BLOCKED, TargetPackageReason::RELEASE_REVIEW_CHANGED );
+			} : null
+		);
+		if ( TargetPackageReason::RELEASE_REVIEW_CHANGED === $item->reason ) {
+			return $this->result( 'skipped', TargetPackageReason::RELEASE_REVIEW_CHANGED->message() );
+		}
 		if ( $expected_action !== $item->action->value ) {
 			return $this->result(
 				'skipped',
 				__( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ),
 				null !== $credential && in_array( $credential_action, array( BlueprintCredentialAction::IMPORT, BlueprintCredentialAction::TARGET ), true ) ? 'unavailable' : 'none'
 			);
+		}
+		if ( $release_install && TargetPackageAction::INSTALL === $item->action ) {
+			$managed = null;
+			$fresh   = $this->reviewer->review_package( $package, $managed );
+			if ( TargetPackageAction::INSTALL !== $fresh->action ) {
+				return $this->result( 'skipped', __( 'This package appeared on the target during review. Review the Transporter Blueprint again before making any change.', 'ran-booster' ) );
+			}
+			if ( BlueprintCredentialAction::IMPORT === $credential_action ) {
+				$this->assert_local_secret_store_ready();
+			}
 		}
 
 		$source = $credential_action->value ?? ( null !== $target_credential_id && '' !== $target_credential_id ? 'target' : null );
@@ -288,6 +417,12 @@ final readonly class PortabilityApplicationService {
 			if ( null === $repository_private ) {
 				throw new InvalidArgumentException();
 			}
+			if ( null !== $this->verifier->provider_review_refusal( $item->package->provider, $item->provider_expectation ) ) {
+				throw new InvalidArgumentException( 'Fresh provider review is required.' );
+			}
+			if ( TargetPackageAction::INSTALL === $item->action && null !== $item->package->release_configuration ) {
+				return $this->install_release( $item, $credential_id, $repository_private, $credential_state );
+			}
 			$operation = PackageOperation::from_input(
 				'install-' . $item->package->type,
 				$this->operation_input( $item, $credential_id, $repository_private )
@@ -321,6 +456,67 @@ final readonly class PortabilityApplicationService {
 				$credential_state
 			);
 		}
+	}
+
+	/** @return array{status:string,message:string,credential_state:string} */
+	private function install_release( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private, string $credential_state ): array {
+		if ( null === $this->prospective_releases || null === $item->release_review ) {
+			return $this->result( 'failed', __( 'Booster could not install the reviewed release. Review the Transporter Blueprint again.', 'ran-booster' ), $credential_state );
+		}
+		$review  = $item->release_review;
+		$channel = $review['channel'];
+		if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
+			return $this->result( 'failed', __( 'The reviewed release candidate is no longer valid. Review the Transporter Blueprint before making another change.', 'ran-booster' ), $credential_state );
+		}
+		try {
+			$result = $this->prospective_releases->install(
+				$item->package->type,
+				$this->release_repository_request( $item, $credential_id, $repository_private, DeploymentPolicy::DISABLED ),
+				$review['release_id'],
+				$review['tag'],
+				$review['fingerprint'],
+				$channel,
+				wp_create_nonce( $this->prospective_releases->nonce_action( 'install', $item->package->type, $item->provider_expectation, $item->package->identifier, DeploymentPolicy::DISABLED ) ),
+				$item->provider_expectation,
+				$item->package->identifier,
+				DeploymentPolicy::DISABLED
+			);
+		} catch ( Throwable ) {
+			return $this->result( 'failed', __( 'Booster could not install the reviewed release. Review the Transporter Blueprint again.', 'ran-booster' ), $credential_state );
+		}
+		if ( ! $result->successful() ) {
+			$message = match ( $result->code() ) {
+				'installed_but_unmanaged' => __( 'The release files may have been installed, but Booster management was not established. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
+				'management_state_uncertain' => __( 'Booster could not determine the release management state. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
+				'installation_cleanup_failed' => __( 'Booster could not confirm cleanup after installing the reviewed release. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
+				'package_already_exists' => __( 'The target package appeared during installation, so Booster refused to manage it. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
+				'release_repository_conflict' => __( 'The target has a conflicting managed package source, so Booster refused installation. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
+				'release_invalid', 'package_identity_mismatch' => __( 'The reviewed release candidate is no longer valid. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
+				default => __( 'Booster could not confirm installation of the reviewed release. Review the Transporter Blueprint again before making another change.', 'ran-booster' ),
+			};
+			return $this->result( 'failed', $message, $credential_state );
+		}
+		if ( null !== $this->verifier->provider_review_refusal( $item->package->provider, $item->provider_expectation ) ) {
+			return $this->result( 'failed', __( 'Booster could not confirm installation of the reviewed release. Review the Transporter Blueprint again before making another change.', 'ran-booster' ), $credential_state );
+		}
+		$managed = null;
+		$this->reviewer->review_package( $item->package, $managed );
+		if ( ! $managed instanceof Package || ! $this->target_verified( $managed, $item->package, $credential_id, $repository_private ) ) {
+			return $this->result( 'failed', __( 'Booster could not confirm installation of the reviewed release. Review the Transporter Blueprint again before making another change.', 'ran-booster' ), $credential_state );
+		}
+		return $this->result( 'installed', __( 'Package installed and managed by Booster with deployment disabled. Re-enable deployment deliberately when this site is ready.', 'ran-booster' ), $credential_state );
+	}
+
+	/** @return array<string,mixed> */
+	private function release_repository_request( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private, DeploymentPolicy $policy ): array {
+		return array(
+			'provider'               => $item->package->provider,
+			'repository'             => $item->package->repository,
+			'provider_repository_id' => $item->package->provider_repository_id,
+			'credential_id'          => $credential_id,
+			'private'                => $repository_private,
+			'deployment_policy'      => $policy->value,
+		);
 	}
 
 	/** @return array{status: string, package: Package} */

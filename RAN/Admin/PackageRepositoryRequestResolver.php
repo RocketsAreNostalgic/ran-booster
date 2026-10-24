@@ -129,6 +129,16 @@ final readonly class PackageRepositoryRequestResolver {
 			throw new RuntimeException( 'Repository provider returned mismatched repository identity.' );
 		}
 
+		// A supplied ID is an expectation; the fresh provider descriptor stays authoritative.
+		$expected_repository_id = $request['provider_repository_id'] ?? null;
+		if ( array_key_exists( 'provider_repository_id', $request ) && ! is_string( $expected_repository_id ) ) {
+			throw new InvalidArgumentException( 'Choose a valid repository identity expectation.' );
+		}
+		if ( is_string( $expected_repository_id ) && '' !== $expected_repository_id
+			&& ! hash_equals( $expected_repository_id, $repository->provider_repository_id ) ) {
+			throw new RuntimeException( 'Repository identity no longer matches the provider resolution.' );
+		}
+
 		$branch_input = $request['branch'] ?? '';
 		$branch       = is_string( $branch_input ) ? trim( sanitize_text_field( wp_unslash( $branch_input ) ) ) : '';
 

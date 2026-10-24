@@ -185,11 +185,24 @@ final readonly class PortabilityController {
 			} catch ( InvalidArgumentException ) {
 				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Transporter Blueprint again.', 'ran-booster' ) ), 400 );
 			}
+			$release_review = null;
+			$expectation    = null;
+			if ( $package instanceof BlueprintPackage && null !== $package->release_configuration && 'install' === $this->requested_action() ) {
+				try {
+					$release_review = $this->release_review_from_request();
+					$expectation    = $this->provider_expectation();
+				} catch ( InvalidArgumentException ) {
+					return wp_send_json_success( $this->review_again() );
+				}
+				if ( null === $release_review || ! $this->valid_release_review_nonce( $blueprint, $row, $release_review, $expectation, $target_credentials[ $row ] ?? null, $decisions ) ) {
+					return wp_send_json_success( $this->review_again() );
+				}
+			}
 			$can_install = $package instanceof BlueprintPackage
 				&& current_user_can( 'plugin' === $package->type ? 'install_plugins' : 'install_themes' );
 
 			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_apply validates its purpose-specific nonce before reading adopt.
-			return wp_send_json_success( $this->application->apply( $blueprint, $row, $this->requested_action(), $decisions, $target_credentials[ $row ] ?? null, ( '1' === (string) ( $_POST['adopt'] ?? '' ) ), $can_install, $this->selected_rows(), $this->provider_expectation() ) );
+			return wp_send_json_success( $this->application->apply( $blueprint, $row, $this->requested_action(), $decisions, $target_credentials[ $row ] ?? null, ( '1' === (string) ( $_POST['adopt'] ?? '' ) ), $can_install, $this->selected_rows(), null !== $release_review ? $expectation : $this->provider_expectation(), $release_review ) );
 		} catch ( PackageStorageFailure $failure ) {
 			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->is_database_unsupported() ? 503 : 500 );
 		} catch ( Throwable $failure ) {
@@ -221,7 +234,11 @@ final readonly class PortabilityController {
 			$row['comparison']          = $this->application->compare_local( $item->package );
 			$row['requirements']        = $local_report['requirements']['packages'][ $index ];
 			$row['repository_conflict'] = isset( $local_report['repository_conflicts'][ $index ] );
-			$rows[]                     = $row;
+			if ( isset( $row['release_review'] ) ) {
+				$provider_expectation        = null === $item->provider_expectation ? null : GitHubProviderSelection::normalize_expectation( $item->provider_expectation );
+				$row['release_review_nonce'] = wp_create_nonce( $this->release_review_nonce_action( $blueprint, $index, $row['release_review'], $provider_expectation, $target_credential_ids[ $index ] ?? null, $credential_decisions ) );
+			}
+			$rows[] = $row;
 		}
 
 		return $this->render_review( $rows, array() === $blueprint->credentials ? array() : $this->credential_rows( $blueprint, $credential_decisions, $items, $provider_list ), $local_report['requirements']['summary'] );
@@ -258,6 +275,87 @@ final readonly class PortabilityController {
 			throw new InvalidArgumentException();
 		}
 		return GitHubProviderSelection::normalize_expectation( json_decode( wp_unslash( $value ), true ) );
+	}
+
+	/** @return array{release_id:string,tag:string,version:string,channel:string,fingerprint:string,package_root:string,main_file:string}|null */
+	private function release_review_from_request(): ?array {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_apply validates its operation nonce before accepting bounded review evidence.
+		$value = $_POST['release_review'] ?? null;
+		if ( null === $value ) {
+			return null;
+		}
+		if ( ! is_string( $value ) || strlen( $value ) > 4096 ) {
+			throw new InvalidArgumentException();
+		}
+		$review = json_decode( wp_unslash( $value ), true );
+		if ( ! is_array( $review ) || array_keys( $review ) !== array( 'release_id', 'tag', 'version', 'channel', 'fingerprint', 'package_root', 'main_file' ) ) {
+			throw new InvalidArgumentException();
+		}
+		$release_id   = $review['release_id'];
+		$tag          = $review['tag'];
+		$version      = $review['version'];
+		$channel      = $review['channel'];
+		$fingerprint  = $review['fingerprint'];
+		$package_root = $review['package_root'];
+		$main_file    = $review['main_file'];
+		foreach ( array( $release_id, $tag, $version, $channel, $fingerprint, $package_root, $main_file ) as $field ) {
+			if ( ! is_string( $field ) || '' === $field || strlen( $field ) > 255 ) {
+				throw new InvalidArgumentException();
+			}
+		}
+
+		return array(
+			'release_id'   => $release_id,
+			'tag'          => $tag,
+			'version'      => $version,
+			'channel'      => $channel,
+			'fingerprint'  => $fingerprint,
+			'package_root' => $package_root,
+			'main_file'    => $main_file,
+		);
+	}
+
+	/** @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
+	 * @param array{release_id:string,tag:string,version:string,channel:string,fingerprint:string,package_root:string,main_file:string} $release_review
+	 * @param array{provider_code:string,selection_generation:int,implementation_fingerprint:string}|null $provider_expectation */
+	private function valid_release_review_nonce( PackageBlueprint $blueprint, int $row, array $release_review, ?array $provider_expectation, ?string $target_credential_id, array $credential_decisions ): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- This is the purpose-specific review nonce bound to the complete release-install intent.
+		$nonce = $_POST['release_review_nonce'] ?? null;
+
+		return is_string( $nonce ) && false !== wp_verify_nonce( wp_unslash( $nonce ), $this->release_review_nonce_action( $blueprint, $row, $release_review, $provider_expectation, $target_credential_id, $credential_decisions ) );
+	}
+
+	/** @param array<int, array{action:BlueprintCredentialAction,target_id:?string}> $credential_decisions
+	 * @param array{release_id:string,tag:string,version:string,channel:string,fingerprint:string,package_root:string,main_file:string} $release_review
+	 * @param array{provider_code:string,selection_generation:int,implementation_fingerprint:string}|null $provider_expectation */
+	private function release_review_nonce_action( PackageBlueprint $blueprint, int $row, array $release_review, ?array $provider_expectation, ?string $target_credential_id, array $credential_decisions ): string {
+		$decisions = array();
+		foreach ( $credential_decisions as $ordinal => $decision ) {
+			$decisions[ $ordinal ] = array(
+				'action'    => $decision['action']->value,
+				'target_id' => $decision['target_id'],
+			);
+		}
+		ksort( $decisions, SORT_NUMERIC );
+		$scope = array(
+			'artifact_identity'    => $blueprint->artifact_identity(),
+			'row'                  => $row,
+			'release_review'       => $release_review,
+			'provider_expectation' => $provider_expectation,
+			'target_credential_id' => $target_credential_id,
+			'credential_decisions' => $decisions,
+		);
+
+		return 'ran-booster-portability-release-review|' . hash( 'sha256', (string) wp_json_encode( $scope ) );
+	}
+
+	/** @return array{status:string,message:string,credential_state:string} */
+	private function review_again(): array {
+		return array(
+			'status'           => 'skipped',
+			'message'          => __( 'The reviewed release evidence changed or expired. Review the Transporter Blueprint again.', 'ran-booster' ),
+			'credential_state' => 'none',
+		);
 	}
 
 	private function preview_success( string $html ): mixed {
@@ -491,6 +589,9 @@ final readonly class PortabilityController {
 			'action'               => $item->action->value,
 			'reason'               => $reason,
 		);
+		if ( null !== $item->release_review ) {
+			$row['release_review'] = $item->release_review;
+		}
 		if ( null !== $credential_ordinal ) {
 			$row['credential_ordinal'] = $credential_ordinal;
 		}

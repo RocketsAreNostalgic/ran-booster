@@ -479,21 +479,22 @@ final class RAN_Booster_AdoptionRecoveryProof {
 	}
 
 	private function adopt( string $type, string $id, string $slug ): void {
-		$verified = $this->resolver->resolve(
-			array(
-				'credential_id'                            => $this->credential_id,
-				'provider'                                 => 'p2-recovery',
-				'repository'                               => 'example/' . $slug,
-				'provider_repository_id'                   => 'untrusted-browser-value',
-				'branch'                                   => 'main',
-				'dry-run'                                  => '1',
-				'exact_identifier'                         => '1',
-				'plugin' === $type ? 'file' : 'stylesheet' => $id,
-			)
+		$request = array(
+			'credential_id'                            => $this->credential_id,
+			'provider'                                 => 'p2-recovery',
+			'repository'                               => 'example/' . $slug,
+			'provider_repository_id'                   => 'untrusted-browser-value',
+			'branch'                                   => 'main',
+			'dry-run'                                  => '1',
+			'exact_identifier'                         => '1',
+			'plugin' === $type ? 'file' : 'stylesheet' => $id,
 		);
+		$this->expect_failure( fn () => $this->resolver->resolve( $request ), 'stale supplied repository identity refuses before existing-target link' );
+		unset( $request['provider_repository_id'] );
+		$verified = $this->resolver->resolve( $request );
 		$result   = $this->operations->execute( PackageOperation::from_input( 'install-' . $type, $verified ) );
 		$this->check( 'linked' === $result['status'], 'provider-validated existing-target link' );
-		$this->check( sha1( 'p2-recovery' . "\0" . 'example/' . $slug ) === $this->package( $type, $id )->get_provider_repository_id(), 'provider identity replaces browser input' );
+		$this->check( sha1( 'p2-recovery' . "\0" . 'example/' . $slug ) === $this->package( $type, $id )->get_provider_repository_id(), 'provider identity is discovered before existing-target link' );
 	}
 
 	private function package( string $type, string $id ): \RAN\Plugin|\RAN\Theme {

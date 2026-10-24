@@ -245,13 +245,18 @@ $has_credential_decisions         = array() !== array_filter(
 		<?php else : ?>
 			<?php foreach ( $portability_review_rows as $row_index => $row ) : ?>
 				<?php
-				$review_action      = $row['action'];
-				$package_name       = '' !== (string) ( $row['name'] ?? '' ) ? (string) $row['name'] : (string) ( $row['identifier'] ?? '' );
-				$credential_ordinal = isset( $row['credential_ordinal'] ) ? max( 0, (int) $row['credential_ordinal'] ) : null;
+				$review_action        = $row['action'];
+				$package_name         = '' !== (string) ( $row['name'] ?? '' ) ? (string) $row['name'] : (string) ( $row['identifier'] ?? '' );
+				$credential_ordinal   = isset( $row['credential_ordinal'] ) ? max( 0, (int) $row['credential_ordinal'] ) : null;
+				$release_review       = is_array( $row['release_review'] ?? null ) ? $row['release_review'] : null;
+				$release_review_nonce = is_string( $row['release_review_nonce'] ?? null ) ? $row['release_review_nonce'] : null;
 				?>
 				<tr data-portability-row="<?php echo esc_attr( (string) $row_index ); ?>" data-portability-action="<?php echo esc_attr( $review_action ); ?>"
 					<?php if ( isset( $row['provider_expectation'] ) ) : ?>
 					data-portability-provider-expectation="<?php echo esc_attr( (string) wp_json_encode( $row['provider_expectation'] ) ); ?>"<?php endif; ?>
+					<?php if ( null !== $release_review && null !== $release_review_nonce ) : ?>
+					data-portability-release-review="<?php echo esc_attr( (string) wp_json_encode( $release_review ) ); ?>"
+					data-portability-release-review-nonce="<?php echo esc_attr( $release_review_nonce ); ?>"<?php endif; ?>
 				<?php
 				if ( true === ( $row['credential_recovery'] ?? false ) ) :
 					?>
@@ -263,6 +268,10 @@ $has_credential_decisions         = array() !== array_filter(
 					<td><strong><?php echo esc_html( $row['name'] ?? '' ); ?></strong><code><?php echo esc_html( $row['identifier'] ?? '' ); ?></code></td>
 					<td><?php echo esc_html( $row['type'] ?? '' ); ?></td>
 					<td><span class="ran-booster-portability__status ran-booster-portability__status--<?php echo esc_attr( $review_action ); ?>"><?php echo esc_html( $portability_action_labels[ $review_action ][0] ); ?></span><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span>
+					<?php if ( null !== $release_review ) : ?>
+						<?php /* translators: 1: reviewed release version, 2: reviewed release tag. */ ?>
+						<p class="description"><?php echo esc_html( sprintf( __( 'Reviewed release %1$s (%2$s). Booster will install this first provider-preferred candidate only; it does not claim the newest eligible release. The package will remain inactive and deployment Disabled.', 'ran-booster' ), (string) ( $release_review['version'] ?? '' ), (string) ( $release_review['tag'] ?? '' ) ) ); ?></p>
+					<?php endif; ?>
 					<?php if ( true === ( $row['repository_conflict'] ?? false ) ) : ?>
 						<p><?php esc_html_e( 'This Blueprint proposes conflicting sources for this repository. Select multiple branch packages or one release package, not both.', 'ran-booster' ); ?></p>
 					<?php endif; ?>

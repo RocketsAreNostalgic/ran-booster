@@ -37,6 +37,8 @@ final class TargetPackagePlanningTest extends TestCase {
 				'provider_selection_changed',
 				'provider_unavailable',
 				'provider_temporarily_unavailable',
+				'release_unavailable',
+				'release_review_changed',
 				'preview_rate_limited',
 				'preview_budget_exhausted',
 				'unsupported_blueprint_operation',

@@ -127,3 +127,20 @@ unchanged.
   readback before the public facade can return `targetVerified`.
 - Focused characterization covers public upload and Apply handlers, action
   changes, adopt opt-in, capability combinations, and row 127.
+
+## Repository identity expectation correction — 24 October 2026
+
+Transporter Stage 2 reuses the existing optional `provider_repository_id`
+request field as an expectation, not provider authority. After fresh provider,
+credential, and privacy resolution, a non-empty string supplied by the caller
+must exactly match the fresh opaque provider ID; omission and an empty string
+retain ordinary discovery. A mismatch refuses before release listing,
+inspection, acquisition, or WordPress Core installation. This is a 10-line
+production admission-only correction: no new type, public method, interface,
+stored state, API version, or installer seam.
+
+Repository/archive fingerprints cannot generally prove stable provider-ID
+binding, a private facade would duplicate the shared resolver, and post-install
+readback is too late to prevent acquisition or installation for a reassigned
+locator. GitHub's stronger implementation fingerprint remains useful only for
+its own provider-selection continuity, not a general expected Blueprint ID.

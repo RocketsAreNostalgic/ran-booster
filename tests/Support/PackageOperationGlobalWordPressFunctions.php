@@ -41,6 +41,13 @@ if ( ! function_exists( 'wp_verify_nonce' ) ) {
 	}
 }
 
+if ( ! function_exists( 'wp_create_nonce' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
+	function wp_create_nonce( string $action ): string {
+		return 'nonce-for-' . hash( 'sha256', $action );
+	}
+}
+
 if ( ! function_exists( 'get_current_user_id' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function get_current_user_id(): int {

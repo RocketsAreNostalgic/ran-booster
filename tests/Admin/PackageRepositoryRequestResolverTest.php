@@ -60,7 +60,7 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		);
 	}
 
-	public function test_resolved_metadata_overrides_client_values_and_scopes_the_selected_credential(): void {
+	public function test_resolved_metadata_overrides_missing_client_identity_and_scopes_the_selected_credential(): void {
 		$opaque_locator = 'workspace/%2Frepository<tag>';
 		$provider       = $this->resolving_provider(
 			new RepositoryDescriptor(
@@ -79,7 +79,6 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 			array(
 				'provider'                            => 'bb',
 				'repository'                          => $opaque_locator,
-				'provider_repository_id'              => 'forged-id',
 				'provider_repository_identity_source' => 'client',
 				'private'                             => '0',
 				'credential_id'                       => 'bitbucket-deploy',
@@ -102,6 +101,52 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( 'packages/resolved-package', $result['subdirectory'] );
 		self::assertSame( 'bitbucket-deploy', $provider->request->credential_id );
 		self::assertFalse( $provider->request->public_only );
+	}
+
+	public function test_matching_opaque_repository_identity_expectation_is_accepted(): void {
+		$provider = $this->resolving_provider(
+			new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'workspace/repository', 'repository', "opaque\\id'42", false, 'main', null )
+		);
+		$result   = ( new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) ) )->resolve(
+			array(
+				'provider'               => 'bb',
+				'repository'             => 'workspace/repository',
+				'provider_repository_id' => "opaque\\id'42",
+			)
+		);
+
+		self::assertSame( "opaque\\id'42", $result['provider_repository_id'] );
+	}
+
+	public function test_mismatched_or_malformed_repository_identity_expectation_is_refused_after_resolution(): void {
+		$provider = $this->resolving_provider(
+			new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'workspace/repository', 'repository', "opaqueid'42", false, 'main', null )
+		);
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+
+		try {
+			$resolver->resolve(
+				array(
+					'provider'               => 'bb',
+					'repository'             => 'workspace/repository',
+					'provider_repository_id' => "opaque\\id'42",
+				)
+			);
+			self::fail( 'Expected a stale repository identity expectation to be refused.' );
+		} catch ( RuntimeException $exception ) {
+			self::assertSame( 'Repository identity no longer matches the provider resolution.', $exception->getMessage() );
+			self::assertNotNull( $provider->request );
+		}
+
+		$this->expectException( \InvalidArgumentException::class );
+		$this->expectExceptionMessage( 'repository identity expectation' );
+		$resolver->resolve(
+			array(
+				'provider'               => 'bb',
+				'repository'             => 'workspace/repository',
+				'provider_repository_id' => array( "opaqueid'42" ),
+			)
+		);
 	}
 
 	public function test_install_command_derives_its_slug_from_the_configured_subdirectory(): void {

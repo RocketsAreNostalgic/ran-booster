@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.0.0-beta.39](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.38...v1.0.0-beta.39) (2026-10-25)
+
+
+### Bug Fixes
+
+* **deps:** patch fast-uri within existing parent constraints ([#514](https://github.com/RocketsAreNostalgic/ran-booster/issues/514)) ([47f3b44](https://github.com/RocketsAreNostalgic/ran-booster/commit/47f3b44668da2f8d6929985fb046e1a2efd66de3))
+* **removal:** preserve unfinished native update ownership ([#510](https://github.com/RocketsAreNostalgic/ran-booster/issues/510)) ([43f5706](https://github.com/RocketsAreNostalgic/ran-booster/commit/43f570699309aa83566d867237882773447e1490))
+* **updater:** adopt beta.13 theme recovery screen fix ([#512](https://github.com/RocketsAreNostalgic/ran-booster/issues/512)) ([a0e9dd1](https://github.com/RocketsAreNostalgic/ran-booster/commit/a0e9dd1d2c3a2d5fa6bfcd289895bda5b6ea77a2))
+
 ## [1.0.0-beta.38](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.37...v1.0.0-beta.38) (2026-10-24)
 
 

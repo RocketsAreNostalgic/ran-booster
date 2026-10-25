@@ -1734,10 +1734,12 @@ final class OperationUpdaterLock extends WordPressUpdaterLock {
 	}
 	public function try_acquire_without_reclaim(): ?string {
 		$this->events[] = 'acquire';
-		return $this->available ? 'fixture-lock' : null;
-	}
-	public function current_token(): ?string {
-		return $this->available ? 'fixture-lock' : null;
+		if ( ! $this->available ) {
+			return null;
+		}
+
+		$this->token = 'fixture-lock';
+		return $this->token;
 	}
 
 	public function release( string $token ): bool {

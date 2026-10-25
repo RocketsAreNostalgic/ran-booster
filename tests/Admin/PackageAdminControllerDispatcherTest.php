@@ -25,6 +25,8 @@ use RAN\Dispatcher;
 use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
+use RAN\RepositoryProvider\GitHubProviderSelection;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
@@ -37,6 +39,7 @@ use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\Secrets\SecretsFile;
 use RAN\Storage\PluginRepository;
 use RAN\Storage\ThemeRepository;
+use RAN\Storage\GitHubSelectionStore;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider;
 use RAN\Tests\Support\InMemoryPublicRepositoryLookupProfileStore;
@@ -127,10 +130,11 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		$gateway->expects( $allowed ? self::once() : self::never() )->method( 'installed_fingerprint' )->with( $type, $identifier )->willReturn( 'files' );
 		$gateway->expects( $allowed ? self::once() : self::never() )->method( 'invalidate_native_target' )->with( $type, $identifier );
 		$lock = $this->createMock( WordPressUpdaterLock::class );
-		$lock->expects( $allowed ? self::once() : self::never() )->method( 'acquire' )->willReturn( 'fixture-lock' );
+		$lock->expects( $allowed ? self::once() : self::never() )->method( 'try_acquire_without_reclaim' )->willReturn( 'fixture-lock' );
+		$lock->expects( $allowed ? self::exactly( 2 ) : self::never() )->method( 'current_token' )->willReturn( 'fixture-lock' );
 		$lock->expects( $allowed ? self::once() : self::never() )->method( 'release' )->with( 'fixture-lock' )->willReturn( true );
 		$attempts   = new \RAN\Deployment\DeploymentAttemptRepository( new \RAN\Tests\Deployment\AttemptRepositoryDatabase(), 'wp_ran_booster_attempts', database_lifecycle: $this->createStub( \RAN\Storage\Database::class ) );
-		$service    = new \RAN\PackageRemoval\PackageRemovalService( $plugins, $themes, $gateway, $attempts, $lock );
+		$service    = new \RAN\PackageRemoval\PackageRemovalService( $plugins, $themes, $gateway, $attempts, $lock, github_selection: $this->selection() );
 		$controller = new PackageAdminController( removals: $service );
 		$dashboard  = $this->createMock( Dashboard::class );
 		$dashboard->expects( in_array( $boundary, array( 'nonce', 'confirmation' ), true ) ? self::once() : self::never() )->method( 'add_failure_message' );
@@ -161,6 +165,23 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		self::assertSame( $allowed ? null : $original, $record );
 		self::assertSame( array( 'update_' . $type . 's' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( 'capability' === $boundary ? array() : array( PackageAdminController::recovery_action( $type, $identifier, $token, 'row', 'files' ) ), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	private function selection(): GitHubProviderSelection {
+		$store   = new GitHubSelectionStore( new \RAN\Tests\RepositoryProvider\SelectionContextDatabase(), 'wp_options' );
+		$bundled = new GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$store->initialize_bundled( $bundled );
+		return new GitHubProviderSelection( $store, '/unused', $bundled );
 	}
 
 	public function test_unhydrated_package_retains_generic_provider_failure_without_lookup(): void {

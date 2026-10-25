@@ -287,9 +287,10 @@ if ( ! is_array( $ran_booster_race_confirmation )
 }
 $ran_booster_race_owner  = str_ends_with( $ran_booster_race_action, '-owner' );
 $ran_booster_race_paused = false;
-$ran_booster_race_filter = static function ( string $query ) use ( &$ran_booster_race_paused, $ran_booster_race_owner, $ran_booster_race_dir, $ran_booster_race_filesystem ): string {
-	$target = $ran_booster_race_owner ? Database::attempt_table_name() : ran_booster_table_name();
-	if ( ! $ran_booster_race_paused && str_contains( $query, $target ) && str_contains( $query, 'FOR UPDATE' ) ) {
+$ran_booster_race_filter = static function ( string $query ) use ( &$ran_booster_race_paused, $ran_booster_race_action, $ran_booster_race_owner, $ran_booster_race_dir, $ran_booster_race_filesystem, $wpdb ): string {
+	$selection_peer = ! $ran_booster_race_owner && str_starts_with( $ran_booster_race_action, 'recovery-' );
+	$target         = $ran_booster_race_owner ? Database::attempt_table_name() : ( $selection_peer ? $wpdb->options : ran_booster_table_name() );
+	if ( ! $ran_booster_race_paused && str_contains( $query, $target ) && str_contains( $query, 'FOR UPDATE' ) && ( ! $selection_peer || str_contains( $query, \RAN\Storage\GitHubSelectionStore::OPTION ) ) ) {
 		$ran_booster_race_paused = true;
 		if ( ! $ran_booster_race_filesystem->put_contents( $ran_booster_race_dir . ( $ran_booster_race_owner ? '/locked' : '/attempting' ), 'ready', 0600 ) ) {
 			throw new RuntimeException( 'Race barrier unavailable.' );

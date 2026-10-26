@@ -126,6 +126,14 @@ if ( 'exercise' !== $ran_booster_example_phase ) {
 	throw new RuntimeException( 'Unknown Example installed proof phase.' );
 }
 $ran_booster_example_check( $ran_booster_example_status['available'] && 'replacement' === ( $ran_booster_example_status['current']['selected'] ?? null ) && ( $ran_booster_example_status['current']['declaration']['plugin_basename'] ?? null ) === $ran_booster_example_basename, 'fresh request uses the explicitly adopted Example' );
+// Match Example's own installed gate after Core's complete bootstrap. Its
+// factory may run before the selected updater kernel defines lifecycle classes;
+// successful browsing alone cannot prove those later-loaded copies qualify.
+$ran_booster_example_loader = array( 'RAN\\BoosterGitHubExample\\Plugin', 'load_dependencies' );
+if ( ! is_callable( $ran_booster_example_loader ) ) {
+	throw new RuntimeException( 'The installed Example dependency qualification is unavailable.' );
+}
+Closure::fromCallable( $ran_booster_example_loader )();
 $ran_booster_example_requests  = array();
 $ran_booster_example_transport = static function ( mixed $response, array $arguments, string $url ) use ( &$ran_booster_example_requests ): array {
 	unset( $response );

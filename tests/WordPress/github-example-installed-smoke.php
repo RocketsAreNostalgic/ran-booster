@@ -40,8 +40,10 @@ foreach ( array( 'github-replacement/a.php', 'github-replacement/b.php', 'github
 	$ran_booster_example_check( ! is_plugin_active( $ran_booster_example_other ), 'synthetic replacement candidates must be inactive' );
 }
 $ran_booster_example_active = get_option( 'active_plugins', array() );
-if ( ! is_array( $ran_booster_example_active ) || ! array_is_list( $ran_booster_example_active ) ) {
-	throw new RuntimeException( 'Active plugin order must be a list.' );
+// WordPress can preserve sparse numeric keys after plugin deactivation. Retain
+// that exact option shape for restoration while iterating its ordered values.
+if ( ! is_array( $ran_booster_example_active ) ) {
+	throw new RuntimeException( 'Active plugin order must be an array.' );
 }
 foreach ( $ran_booster_example_active as $ran_booster_example_entry ) {
 	$ran_booster_example_check( is_string( $ran_booster_example_entry ), 'active plugin identifiers must be strings' );
@@ -70,7 +72,7 @@ if ( 'core-first' === $ran_booster_example_phase || 'example-first' === $ran_boo
 }
 if ( 'restore-order' === $ran_booster_example_phase ) {
 	$ran_booster_example_original = json_decode( (string) getenv( 'RAN_BOOSTER_EXAMPLE_ORIGINAL_ACTIVE' ), true, 4, JSON_THROW_ON_ERROR );
-	$ran_booster_example_check( is_array( $ran_booster_example_original ) && array_is_list( $ran_booster_example_original ) && ! in_array( $ran_booster_example_basename, $ran_booster_example_original, true ), 'original active order' );
+	$ran_booster_example_check( is_array( $ran_booster_example_original ) && ! in_array( $ran_booster_example_basename, $ran_booster_example_original, true ), 'original active order' );
 	if ( ! is_array( $ran_booster_example_original ) ) {
 		throw new RuntimeException( 'Original active order is unavailable.' );
 	}
@@ -80,6 +82,7 @@ if ( 'restore-order' === $ran_booster_example_phase ) {
 	sort( $ran_booster_example_original_sorted );
 	$ran_booster_example_check( $ran_booster_example_current_sorted === $ran_booster_example_original_sorted, 'restore must not discard other active plugins' );
 	update_option( 'active_plugins', $ran_booster_example_original );
+	$ran_booster_example_check( get_option( 'active_plugins' ) === $ran_booster_example_original, 'original active option restored exactly' );
 	return;
 }
 $ran_booster_example_container = require __DIR__ . '/core-container-fixture.php';

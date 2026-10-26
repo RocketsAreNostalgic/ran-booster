@@ -793,13 +793,30 @@ expose the same provider capability contracts; neither path receives the Core
 container, private storage, credential writer, logger or other implementation
 service.
 
-`tests/RepositoryProvider/GitHubExternalExtensionParityTest.php` and
-`tests/fixtures/ran-booster-github-provider-extension/` are the maintained
-pluginisability proof. They load the provider and updater from a physically
-separate extension tree, exercise registration, browsing, archive composition
-and richer optional capabilities, prove configured artifact-limit parity, and
-verify that Booster self-update does not depend on the GitHub provider being
-active.
+The published `ran-booster-github-example` plugin is the canonical positive
+external Composer consumer. `tests/fixtures/github-example.json` pins its
+immutable release, source commit and ZIP checksum. Run
+`composer fixture:github-example` to prepare that unmodified artifact under
+`vendor/.test-fixtures/`; `composer test:unit` also prepares it automatically. Provider
+and Updater Support references must match Core's lock. The release updater owns
+its independent protocol-qualified bootstrap. Qualify a new fixture pin when
+the shared package references change; do not copy Core's vendor tree into the
+Example or regenerate its autoloader or qualification metadata.
+
+`tests/RepositoryProvider/GitHubExternalExtensionParityTest.php` exercises that
+real plugin's passive replacement declaration, delayed construction, browsing,
+archive composition, optional capabilities and host artifact limits. It also
+retains the provider-independent Core self-update assertion.
+`tests/WordPress/github-example-installed-smoke.sh` exercises actual adoption,
+fresh requests, both plugin load orders and return to bundled on the guarded
+disposable WordPress host. Scripted HTTP keeps this proof deterministic; it does
+not establish live GitHub or browser/operator acceptance.
+
+The smaller `github-replacement` A/B fixtures remain controlled fault oracles
+for conflicts, unavailable candidates, credential boundaries and historical
+archive failures. Provider-owned unit fixtures and the provider-neutral novel-ID
+fixture retain their distinct responsibilities. They are not alternate positive
+Composer consumers. Test artifacts remain excluded from Core's runtime ZIP.
 
 ## Durable activity reporting
 

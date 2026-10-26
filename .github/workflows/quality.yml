@@ -815,6 +815,18 @@ jobs:
                 export WP_CLI_BIN="$(command -v wp)"
                 bash tests/WordPress/github-historical-installed-smoke.sh
 
+          - name: Prove published GitHub Example adoption and both plugin load orders
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_GITHUB_EXAMPLE_DISPOSABLE: '1'
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: |
+                python3 scripts/prepare-github-example-fixture.py
+                PHP_BIN="$(command -v php)"
+                WP_CLI_BIN="$(command -v wp)"
+                export PHP_BIN WP_CLI_BIN
+                bash tests/WordPress/github-example-installed-smoke.sh
+
           - name: Prove immutable Bitbucket remains operational during GitHub switching
             if: ${{ matrix.suite == 'critical' }}
             env:

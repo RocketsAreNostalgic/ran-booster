@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace RAN\Tests\RepositoryProvider;
 
-// Native temporary-plugin materialization proves a physically separate extension layout.
+// The pinned published plugin proves a physically separate extension layout.
 
 require_once dirname( __DIR__ ) . '/Support/ExternalFixturePluginWordPressFunctions.php';
-require_once __DIR__ . '/Support/RepositoryResolverWordPressFunctions.php';
 require_once __DIR__ . '/AuthenticatedPreparedArchiveWordPressFunctions.php';
 require_once __DIR__ . '/BuiltInGitHubRegistrationWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Admin/Interaction/AdminInteractionWordPressFunctions.php';
@@ -24,6 +23,8 @@ use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidence;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
+use RAN\RepositoryProvider\GitHubReplacementDeclaration;
+use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderRegistrationContext;
@@ -41,7 +42,6 @@ use RAN\RepositoryProvider\RepositoryReleaseWorkflowTarget;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
 use RAN\RepositoryProvider\RepositoryWebhookManagement;
 use RAN\Secrets\SecretsFile;
-use RAN_Booster_GitHubProviderExtensionFixture\ReleaseUpdaterRegistrar;
 use RuntimeException;
 
 final class GitHubExternalExtensionParityTest extends TestCase {
@@ -184,60 +184,95 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		define( 'RAN_BOOSTER_RUNTIME_MODE', 'single_site_supported' );
 		$GLOBALS['ran_booster_external_fixture_actions'] = array();
 
-		$extension = $this->materialize_external_extension();
-
-		try {
-			$this->load_generic_fixture();
-			require $extension . '/ran-booster-github-provider-extension.php';
-
-			$registry  = $this->registry( self::ARTIFACT_LIMIT );
-			$callbacks = $GLOBALS['ran_booster_external_fixture_actions']['ran_booster_register_providers'] ?? array();
-			self::assertCount( 2, $callbacks );
-			foreach ( $callbacks as $callback ) {
-				$callback( $registry );
-			}
-			$registry->seal();
-
-			self::assertSame( array( 'fixture-provider', 'gh' ), array_keys( $registry->all() ) );
-			$provider = $registry->get( 'gh' );
-			self::assertInstanceOf( GitHubProvider::class, $provider );
-
-			$source = ( new \ReflectionClass( $provider ) )->getFileName();
-			self::assertIsString( $source );
-			self::assertStringStartsWith(
-				$extension . '/vendor/ran/booster-github-provider/src/',
-				str_replace( '\\', '/', $source )
+		require_once __DIR__ . '/Support/GitHubExampleHttpWordPressFunctions.php';
+		$extension = $this->published_example();
+		$this->load_generic_fixture();
+		require $extension . '/ran-booster-github-example.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the exact passive manifest from the checksum-verified published plugin.
+		$manifest      = json_decode( (string) file_get_contents( $extension . '/ran-booster-github-example.gh-replacement.json' ), true, 8, JSON_THROW_ON_ERROR );
+		$declaration   = new GitHubReplacementDeclaration( $manifest );
+		$approval      = new \ArrayObject( array( 'approved' => false ) );
+		$disclosures   = 0;
+		$limit_reads   = 0;
+		$guard         = static function () use ( $approval, $declaration ): ?array {
+			return $approval['approved'] ? array(
+				'provider_code'              => 'gh',
+				'selection_generation'       => 1,
+				'implementation_fingerprint' => $declaration->implementation_fingerprint,
+				'plugin_basename'            => $declaration->plugin_basename,
+			) : null;
+		};
+		$make_registry = static function () use ( &$disclosures, &$limit_reads, $guard, $declaration ): ProviderRegistry {
+			return new ProviderRegistry(
+				credential_store_factory: static function ( ProviderCode $code ) use ( &$disclosures ): ProviderCredentialStore {
+					if ( 'gh' === $code->value ) {
+						++$disclosures;
+					}
+					return new Phase5CredentialStore();
+				},
+				delivery_evidence_reader_factory: static fn (): AuthenticatedWebhookDeliveryEvidenceReader => new Phase5DeliveryEvidenceReader(),
+				registration_context: new ProviderRegistrationContext(
+					static function () use ( &$limit_reads ): int {
+						++$limit_reads;
+						return self::ARTIFACT_LIMIT;
+					}
+				),
+				github_selection_guard: $guard,
+				github_candidates: array( $declaration->plugin_basename => $declaration )
 			);
-
-			$metadata = $provider->get_metadata();
-			self::assertSame( 'gh', $metadata->code->value );
-			self::assertSame( 'GitHub', $metadata->label );
-			self::assertSame( 'https://github.com/', $metadata->repository_url_base );
-
-			foreach (
-				array(
-					CredentialedPublicRepositoryBrowser::class,
-					RepositoryWebhookFitness::class,
-					RepositoryWebhookManagement::class,
-					RepositoryReleaseMetadata::class,
-					RepositoryReleaseCandidateListing::class,
-					RepositoryReleaseInspector::class,
-					RepositoryReleaseAcquirer::class,
-					RepositoryReleaseNativeTargets::class,
-					RepositoryReleaseWorkflowManagementV4::class,
-				) as $capability
-			) {
-				self::assertSame( $provider, $registry->require_capability( 'gh', $capability ), $capability );
-			}
-
-			$this->prove_anonymous_public_browse( $registry );
-			$this->prove_archive_composition( $provider );
-			$this->prove_external_release_limit( $provider, $extension );
-			$this->assert_no_private_booster_imports( $extension );
-			$this->assert_self_update_is_provider_independent();
-		} finally {
-			$this->remove_tree( $extension );
+		};
+		$callbacks     = $GLOBALS['ran_booster_external_fixture_actions']['ran_booster_register_providers'] ?? array();
+		self::assertCount( 2, $callbacks );
+		self::assertSame( array( 'RAN\\BoosterGitHubExample\\Plugin', 'declare' ), $callbacks[1] );
+		$registry = $make_registry();
+		foreach ( $callbacks as $callback ) {
+			$callback( $registry );
 		}
+		$registry->seal();
+		self::assertSame( 0, $disclosures );
+		self::assertSame( 0, $limit_reads );
+		self::assertFalse( class_exists( GitHubProvider::class, false ), 'Passive declaration must not load the provider.' );
+		$approval['approved'] = true;
+		$registry             = $make_registry();
+		foreach ( $callbacks as $callback ) {
+			$callback( $registry );
+		}
+		$registry->seal();
+		self::assertSame( array( 'fixture-provider', 'gh' ), array_keys( $registry->all() ) );
+		$provider = $registry->get( 'gh' );
+		self::assertInstanceOf( GitHubProvider::class, $provider );
+		self::assertSame( 1, $disclosures );
+		self::assertSame( 0, $limit_reads );
+		$source = ( new \ReflectionClass( $provider ) )->getFileName();
+		self::assertIsString( $source );
+		self::assertStringStartsWith( $extension . '/vendor/ran/booster-github-provider/src/', str_replace( '\\', '/', $source ) );
+
+		$metadata = $provider->get_metadata();
+		self::assertSame( 'gh', $metadata->code->value );
+		self::assertSame( 'GitHub', $metadata->label );
+		self::assertSame( 'https://github.com/', $metadata->repository_url_base );
+
+		foreach (
+			array(
+				CredentialedPublicRepositoryBrowser::class,
+				RepositoryWebhookFitness::class,
+				RepositoryWebhookManagement::class,
+				RepositoryReleaseMetadata::class,
+				RepositoryReleaseCandidateListing::class,
+				RepositoryReleaseInspector::class,
+				RepositoryReleaseAcquirer::class,
+				RepositoryReleaseNativeTargets::class,
+				RepositoryReleaseWorkflowManagementV4::class,
+			) as $capability
+		) {
+			self::assertSame( $provider, $registry->require_capability( 'gh', $capability ), $capability );
+		}
+
+		$this->prove_anonymous_public_browse( $registry );
+		$this->prove_archive_composition( $provider );
+		$this->prove_external_release_limit( $provider, $extension );
+		$this->assert_no_private_booster_imports( $extension );
+		$this->assert_self_update_is_provider_independent();
 	}
 
 	#[RunInSeparateProcess]
@@ -283,32 +318,28 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		);
 	}
 
-	public function test_fixture_declares_native_dependency_and_uses_only_public_composition_surfaces(): void {
-		$root = dirname( __DIR__ ) . '/fixtures/ran-booster-github-provider-extension';
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the local fixture or source bytes whose exact contents this test verifies.
-		$entrypoint = file_get_contents( $root . '/ran-booster-github-provider-extension.php' );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the local fixture or source bytes whose exact contents this test verifies.
+	public function test_published_example_declares_native_dependency_and_uses_only_public_composition_surfaces(): void {
+		$root = $this->published_example();
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect checksum-verified published plugin bytes without modifying or substituting its autoloader.
+		$entrypoint = file_get_contents( $root . '/ran-booster-github-example.php' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Inspect the published public composition root as source data.
 		$plugin = file_get_contents( $root . '/src/Plugin.php' );
-
 		self::assertIsString( $entrypoint );
 		self::assertIsString( $plugin );
 		self::assertStringContainsString( 'Requires Plugins: ran-booster', $entrypoint );
-		self::assertStringContainsString( "require __DIR__ . '/vendor/autoload.php';", $entrypoint );
 		self::assertStringContainsString( 'vendor/ran/wp-release-updater/bootstrap.php', $plugin );
-		self::assertStringContainsString( "register_with_credential_store( 'gh', \$factory )", $plugin );
-		self::assertStringNotContainsString( 'class_exists( ProviderRegistrationContext::class )', $plugin );
-		self::assertStringContainsString( 'ProviderRegistrationContext $registration_context', $plugin );
-		self::assertMatchesRegularExpression(
-			'/\$factory = static function \([\s\S]*?ProviderCredentialStore \$credentials,[\s\S]*?AuthenticatedWebhookDeliveryEvidenceReader \$delivery_evidence,[\s\S]*?ProviderRegistrationContext \$registration_context[\s\S]*?\): RepositoryProvider \{[\s\S]*?GitHubProvider::create\([\s\S]*?\$registrar,[\s\S]*?maximum_artifact_bytes\(\)[\s\S]*?\);[\s\S]*?\};/',
-			$plugin
-		);
-		self::assertStringNotContainsString( 'CoreContainer', $plugin );
-
-		$this->assert_no_forbidden_namespace_text( $root );
+		self::assertStringContainsString( 'declare_github_replacement( new GitHubReplacementDeclaration( $manifest ), self::create( ... ) )', $plugin );
+		self::assertStringContainsString( 'ProviderRegistrationContext $context', $plugin );
+		self::assertStringContainsString( '$context->maximum_artifact_bytes( ... )', $plugin );
+		self::assertStringContainsString( '$context->operation_allowed( ... )', $plugin );
+		self::assertStringContainsString( '$context->begin_native_mutation( ... )', $plugin );
+		self::assertStringContainsString( '$context->complete_native_mutation( ... )', $plugin );
+		self::assertFileExists( $root . '/vendor/composer/autoload_real.php' );
+		$this->assert_no_private_booster_imports( $root );
 	}
 
 	private function prove_anonymous_public_browse( ProviderRegistry $registry ): void {
-		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+		ran_booster_example_http_queue(
 			array(
 				$this->response(
 					array(
@@ -334,7 +365,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 
 		self::assertCount( 1, $result->repositories );
 		self::assertSame( 'RocketsAreNostalgic/ran-booster', $result->repositories[0]->locator );
-		foreach ( \RAN\BoosterGitHubProvider\V1\repository_resolver_http_requests() as $request ) {
+		foreach ( ran_booster_example_http_requests() as $request ) {
 			self::assertArrayNotHasKey( 'Authorization', $request['arguments']['headers'] );
 		}
 	}
@@ -342,7 +373,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	private function prove_archive_composition( object $provider ): void {
 		self::assertInstanceOf( \RAN\RepositoryProvider\RepositoryProvider::class, $provider );
 		$commit = '0123456789abcdef0123456789abcdef01234567';
-		\RAN\BoosterGitHubProvider\V1\repository_resolver_http_queue(
+		ran_booster_example_http_queue(
 			array(
 				$this->response(
 					array(
@@ -375,37 +406,79 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	}
 
 	private function prove_external_release_limit( object $provider, string $extension ): void {
-		self::assertInstanceOf( RepositoryReleaseCandidateListing::class, $provider );
+		self::assertInstanceOf( RepositoryReleaseInspector::class, $provider );
 		$registrar = ( new \ReflectionProperty( GitHubProvider::class, 'registrar' ) )->getValue( $provider );
-		self::assertInstanceOf( ReleaseUpdaterRegistrar::class, $registrar );
+		self::assertIsObject( $registrar );
+		$source = ( new \ReflectionClass( $registrar ) )->getFileName();
+		self::assertIsString( $source );
+		self::assertSame( $extension . '/vendor/ran/wp-release-updater/bootstrap.php', str_replace( '\\', '/', $source ) );
+		$broker = $GLOBALS['ran_wp_release_updater_v1_broker'];
+		self::assertInstanceOf( \RAN\WPReleaseUpdater\V1\Runtime\RequestBroker::class, $broker );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Activate the real release runtime with an explicit synthetic WordPress version; no installed site is loaded.
+		$GLOBALS['wp_version'] = '7.0.0';
 		self::assertSame(
-			$extension . '/vendor/ran/wp-release-updater/bootstrap.php',
-			str_replace( '\\', '/', $registrar->inner_source() )
+			'runtime_active',
+			$broker->activate(
+				array(
+					'php_version'       => PHP_VERSION,
+					'runtime_protocol'  => 6,
+					'wordpress_version' => '7.0.0',
+				)
+			)['code']
 		);
-
-		try {
-			$provider->list_release_candidates(
-				'plugin',
-				new RepositoryReference( 'RocketsAreNostalgic/example-plugin', '987654321', false, null ),
-				'stable'
+		foreach ( array( self::ARTIFACT_LIMIT, self::ARTIFACT_LIMIT + 1 ) as $size ) {
+			ran_booster_example_http_queue(
+				array(
+					$this->response(
+						array(
+							'id'        => 987654321,
+							'full_name' => 'RocketsAreNostalgic/example-plugin',
+						)
+					),
+					$this->response(
+						array(
+							'id'         => 41,
+							'tag_name'   => 'v1.0.0',
+							'draft'      => false,
+							'prerelease' => false,
+							'immutable'  => true,
+							'html_url'   => 'https://github.com/RocketsAreNostalgic/example-plugin/releases/tag/v1.0.0',
+							'assets'     => array(
+								array(
+									'id'     => 42,
+									'name'   => 'example-plugin-1.0.0.zip',
+									'size'   => $size,
+									'state'  => 'uploaded',
+									'digest' => 'sha256:' . str_repeat( 'a', 64 ),
+								),
+							),
+						)
+					),
+					array(
+						'response' => array( 'code' => 500 ),
+						'body'     => '{}',
+					),
+				)
 			);
-			self::fail( 'The copied updater runtime is intentionally inactive in this unit fixture.' );
-		} catch ( RuntimeException ) {
-			self::assertNotNull( $registrar->release_arguments() );
+			try {
+				$provider->inspect_release( 'plugin', new RepositoryReference( 'RocketsAreNostalgic/example-plugin', '987654321', false, null ), '41', 'v1.0.0', 'stable' );
+				self::fail( 'The controlled commit read must stop inspection before any artifact download.' );
+			} catch ( RepositoryReleaseInspectionRejected $failure ) {
+				self::assertSame( self::ARTIFACT_LIMIT + 1, $size );
+				self::assertSame( RepositoryReleaseInspectionRejected::INCOMPATIBLE, $failure->reason );
+			} catch ( RuntimeException $failure ) {
+				self::assertSame( self::ARTIFACT_LIMIT, $size );
+				self::assertSame( 'GitHub could not inspect the selected release.', $failure->getMessage() );
+			}
+			$requests = ran_booster_example_http_requests();
+			self::assertCount( self::ARTIFACT_LIMIT === $size ? 3 : 2, $requests );
+			self::assertSame( 'https://api.github.com/repos/RocketsAreNostalgic/example-plugin/releases/41', $requests[1]['url'] );
+			if ( self::ARTIFACT_LIMIT === $size ) {
+				// The real registrar accepted the nondefault 64-MiB boundary and reached
+				// the next HTTP stage; default 50-MiB policy would reject this metadata.
+				self::assertSame( 'https://api.github.com/repos/RocketsAreNostalgic/example-plugin/commits/v1.0.0', $requests[2]['url'] );
+			}
 		}
-
-		self::assertSame(
-			array(
-				'github',
-				'plugin',
-				'RocketsAreNostalgic/example-plugin',
-				'987654321',
-				'stable',
-				null,
-				self::ARTIFACT_LIMIT,
-			),
-			$registrar->release_arguments()
-		);
 	}
 
 	private function assert_no_private_booster_imports( string $extension ): void {
@@ -455,108 +528,15 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		self::assertStringNotContainsString( 'require_capability', $self_update );
 	}
 
-	private function registry( int $artifact_limit ): ProviderRegistry {
-		$credentials = new Phase5CredentialStore();
-		$delivery    = new Phase5DeliveryEvidenceReader();
-
-		return new ProviderRegistry(
-			array(),
-			new ProviderSecretPolicyCatalog(),
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
-			static fn ( ProviderCode $code ): ProviderCredentialStore => $credentials,
-			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- Provider registration and dependency callbacks retain the production callback arguments; this fixture supplies a controlled provider or service.
-			static fn ( ProviderCode $code ): AuthenticatedWebhookDeliveryEvidenceReader => $delivery,
-			new ProviderRegistrationContext( static fn (): int => $artifact_limit )
-		);
-	}
-
 	private function load_generic_fixture(): void {
 		require dirname( __DIR__ ) . '/fixtures/ran-booster-fixture-provider/ran-booster-fixture-provider.php';
 	}
 
-	private function materialize_external_extension(): string {
-		$root = sys_get_temp_dir() . '/ran-booster-github-extension-' . bin2hex( random_bytes( 6 ) );
-		$this->copy_tree(
-			dirname( __DIR__ ) . '/fixtures/ran-booster-github-provider-extension',
-			$root
-		);
-
-		$repository_root = dirname( __DIR__, 2 );
-		foreach ( array( 'booster-github-provider', 'wp-release-updater', 'updater-support' ) as $package ) {
-			$this->copy_tree(
-				$repository_root . '/vendor/ran/' . $package,
-				$root . '/vendor/ran/' . $package
-			);
-		}
-
-		$autoload = <<<'PHP'
-<?php
-declare(strict_types=1);
-
-$prefixes = array(
-	'RAN\\BoosterGitHubProvider\\V1\\' => __DIR__ . '/ran/booster-github-provider/src/',
-	'RAN\\UpdaterSupport\\V1\\' => __DIR__ . '/ran/updater-support/src/',
-);
-
-spl_autoload_register(
-	static function ( string $class ) use ( $prefixes ): void {
-		foreach ( $prefixes as $prefix => $directory ) {
-			if ( ! str_starts_with( $class, $prefix ) ) {
-				continue;
-			}
-			$file = $directory . str_replace( '\\', '/', substr( $class, strlen( $prefix ) ) ) . '.php';
-			if ( is_file( $file ) ) {
-				require $file;
-			}
-			return;
-		}
-	},
-	true,
-	true
-);
-PHP;
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write only the local test-owned fixture bytes exercised by this contract.
-		self::assertNotFalse( file_put_contents( $root . '/vendor/autoload.php', $autoload ) );
-
+	private function published_example(): string {
+		$root = dirname( __DIR__, 2 ) . '/vendor/.test-fixtures/ran-booster-github-example';
+		self::assertFileExists( $root . '/ran-booster-github-example.php', 'Prepare the pinned published Example with scripts/prepare-github-example-fixture.py.' );
+		self::assertSame( $root, realpath( $root ) );
 		return $root;
-	}
-
-	private function copy_tree( string $source, string $destination ): void {
-		self::assertDirectoryExists( $source );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create this isolated test-owned fixture directory without a WordPress filesystem runtime.
-		self::assertTrue( is_dir( $destination ) || mkdir( $destination, 0700, true ) );
-
-		$iterator = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator( $source, \FilesystemIterator::SKIP_DOTS ),
-			\RecursiveIteratorIterator::SELF_FIRST
-		);
-		foreach ( $iterator as $item ) {
-			self::assertFalse( $item->isLink(), 'Fixture packages must not contain symlinks.' );
-			$relative = substr( $item->getPathname(), strlen( $source ) + 1 );
-			$target   = $destination . '/' . $relative;
-			if ( $item->isDir() ) {
-				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create this isolated test-owned fixture directory without a WordPress filesystem runtime.
-				self::assertTrue( is_dir( $target ) || mkdir( $target, 0700, true ) );
-			} else {
-				self::assertTrue( copy( $item->getPathname(), $target ) );
-			}
-		}
-	}
-
-	private function remove_tree( string $root ): void {
-		if ( ! is_dir( $root ) ) {
-			return;
-		}
-		$iterator = new \RecursiveIteratorIterator(
-			new \RecursiveDirectoryIterator( $root, \FilesystemIterator::SKIP_DOTS ),
-			\RecursiveIteratorIterator::CHILD_FIRST
-		);
-		foreach ( $iterator as $item ) {
-			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir,WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove only this test-owned temporary fixture during cleanup.
-			$item->isDir() ? rmdir( $item->getPathname() ) : unlink( $item->getPathname() );
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove only this test-owned temporary fixture during cleanup.
-		rmdir( $root );
 	}
 
 	/**

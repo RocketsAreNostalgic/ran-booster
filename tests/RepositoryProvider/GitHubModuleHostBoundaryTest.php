@@ -40,6 +40,7 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/WordPress/ManagedReleaseRuntimeTest.php',
 		// The installed database proof verifies the real provider's isolated workflow storage.
 		'tests/WordPress/database-storage-smoke.php',
+		'tests/WordPress/github-example-installed-smoke.php',
 		'tests/WordPress/github-provider-installed-readback.php',
 		// The installed return proof verifies that Core constructs the real bundled implementation.
 		'tests/WordPress/github-replacement-installed-smoke.php',
@@ -48,7 +49,6 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/WordPress/selection-install-lifecycle-proof.php',
 		// The replacement fixture exercises Core's credential boundary using the shipped GitHub policy.
 		'tests/fixtures/github-replacement/provider.php',
-		'tests/fixtures/ran-booster-github-provider-extension/src/Plugin.php',
 	);
 
 	public function test_core_references_only_the_named_git_hub_composition_seam(): void {

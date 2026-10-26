@@ -11,6 +11,16 @@ pnpm check
 
 `composer check` is the ordinary non-mutating PHP aggregate. It retains localisation/generated-state checks, deterministic tests, Admin Shell verification, the independent `lint:syntax` parser sweep, `standards` (PHPCS/WPCS/PHPCompatibility), and the existing blocking `analyze` contract. `composer standards:fix` is the matching mutating PHPCBF command and is not part of the required check.
 
+The positive GitHub replacement proof consumes the published Example ZIP pinned
+in `tests/fixtures/github-example.json`. `composer test:unit` prepares its verified
+bytes in ignored `vendor/.test-fixtures/`; the first preparation requires public GitHub
+access, or the exact ZIP can be placed there beforehand for offline checks.
+`composer fixture:github-example` restores the extracted fixture from the verified
+ZIP, so local edits cannot become qualification evidence. Update this pin through
+review whenever its Provider or Updater Support reference differs from Core's
+lock. Keep the published plugin unmodified and retain the focused failure and
+provider-neutral fixtures described in the provider extension contract.
+
 Runtime, archive, release-candidate, and WordPress lifecycle changes need the focused proof required by [AGENTS.md](AGENTS.md). Do not commit generated release ZIPs, secret sidecars, WordPress runtime state, or credentials.
 
 The guarded `tests/WordPress/adoption-recovery-smoke.sh` proof runs the real

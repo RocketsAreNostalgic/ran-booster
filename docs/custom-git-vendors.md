@@ -417,9 +417,11 @@ assistance and provider-owned workflow state. It receives no Core container,
 logger, credential writer, database repository, sidecar path or other private
 host implementation service.
 
-The maintained Phase 5 fixture in
-`tests/fixtures/ran-booster-github-provider-extension/` composes the released
-GitHub package as a physically separate WordPress extension using only public
-Provider API inputs and a wrapper-owned updater dependency. That proof is the
-reference for the invariant: bundled and external differ in distribution, not
-in capability authority.
+The published `ran-booster-github-example` plugin is the maintained positive
+external consumer. `tests/fixtures/github-example.json` pins the immutable ZIP
+used by `GitHubExternalExtensionParityTest` and the guarded installed-adoption
+proof. It composes the real Composer package using public Provider API inputs
+and its own updater dependency. Controlled A/B and provider-neutral fixtures
+remain for failure cases and distinct contracts; see the
+[fixture responsibilities](provider-extension-contract.md).
+Bundled and external differ in distribution, not in capability authority.

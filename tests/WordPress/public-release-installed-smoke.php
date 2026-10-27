@@ -151,7 +151,7 @@ $ran_booster_http = static function ( mixed $pre, array $args, string $url ) use
 		} elseif ( $path === $base . '/releases/42' || $path === $base . '/releases/tags/v2.0.0' ) {
 			$body = wp_json_encode( $release );
 		} elseif ( is_string( $path ) && str_starts_with( $path, $base . '/commits/' ) ) {
-			$body = wp_json_encode( array( 'sha' => str_repeat( 'a', 40 ) ) );
+			$body = 'application/vnd.github.sha' === ( $args['headers']['Accept'] ?? null ) ? str_repeat( 'a', 40 ) : false;
 		} else {
 			return new WP_Error( 'c4_route_invalid' ); }
 		if ( ! is_string( $body ) ) {

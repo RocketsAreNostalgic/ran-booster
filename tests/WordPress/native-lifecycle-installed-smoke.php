@@ -147,11 +147,14 @@ add_filter(
 			} elseif ( str_contains( $path, '/releases/' ) ) {
 				$body = $release;
 			} elseif ( str_contains( $path, '/commits/' ) ) {
-				$body = array( 'sha' => str_repeat( 'a', 40 ) );
+				if ( 'application/vnd.github.sha' !== ( $args['headers']['Accept'] ?? null ) ) {
+					throw new RuntimeException( 'The native lifecycle commit request must accept a SHA response.' );
+				}
+				$body = str_repeat( 'a', 40 );
 			} else {
 				continue;
 			}
-			$encoded = null === $body ? '' : wp_json_encode( $body );
+			$encoded = null === $body ? '' : ( is_string( $body ) ? $body : wp_json_encode( $body ) );
 			if ( ! is_string( $encoded ) ) {
 				throw new RuntimeException( 'The native lifecycle fixture response could not be encoded.' );
 			}

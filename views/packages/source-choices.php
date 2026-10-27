@@ -53,16 +53,15 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 			$source_heading       = $source_choice['heading'];
 			$source_slug          = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $source_key ) );
 			$tab_id               = 'ran-booster-source-tab-' . $source_slug;
-			$panel_id             = 'ran-booster-source-pane-' . $source_slug;
 			$source_url           = wp_make_link_relative( $source_choice['url'] );
 			$disabled_explanation = $source_choice['disabled'] ? (string) $source_choice['description'] : '';
 			?>
 			<?php if ( $is_navigation_link ) { ?>
-				<a id="<?php echo esc_attr( $tab_id ); ?>" aria-controls="<?php echo esc_attr( $panel_id ); ?>" class="<?php echo esc_attr( $classes ); ?>" href="<?php echo esc_url( $source_url . '#ran-booster-advanced-source-settings' ); ?>" hx-get="<?php echo esc_url( $source_url ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-source-choice="<?php echo esc_attr( $source_key ); ?>">
+				<a id="<?php echo esc_attr( $tab_id ); ?>" class="<?php echo esc_attr( $classes ); ?>" href="<?php echo esc_url( $source_url . '#ran-booster-advanced-source-settings' ); ?>" hx-get="<?php echo esc_url( $source_url ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-source-choice="<?php echo esc_attr( $source_key ); ?>">
 			<?php } elseif ( $is_current_view ) { ?>
-				<span id="<?php echo esc_attr( $tab_id ); ?>" aria-controls="<?php echo esc_attr( $panel_id ); ?>" aria-current="page" class="<?php echo esc_attr( $classes ); ?>" data-ran-booster-source-choice="<?php echo esc_attr( $source_key ); ?>">
+				<span id="<?php echo esc_attr( $tab_id ); ?>" aria-current="page" tabindex="-1" class="<?php echo esc_attr( $classes ); ?>" data-ran-booster-source-choice="<?php echo esc_attr( $source_key ); ?>">
 			<?php } else { ?>
-				<button id="<?php echo esc_attr( $tab_id ); ?>" aria-controls="<?php echo esc_attr( $panel_id ); ?>" aria-pressed="<?php echo $is_selected ? 'true' : 'false'; ?>"<?php echo $source_choice['disabled'] ? ' aria-disabled="true"' : ''; ?><?php echo '' !== $disabled_explanation ? ' title="' . esc_attr( $disabled_explanation ) . '"' : ''; ?> type="button" class="<?php echo esc_attr( $classes ); ?>" data-ran-booster-source-choice="<?php echo esc_attr( $source_key ); ?>" data-ran-booster-source-hydratable="<?php echo $source_choice['client_hydratable'] ? '1' : '0'; ?>">
+				<button id="<?php echo esc_attr( $tab_id ); ?>" aria-pressed="<?php echo $is_selected ? 'true' : 'false'; ?>"<?php echo $source_choice['disabled'] ? ' aria-disabled="true"' : ''; ?><?php echo '' !== $disabled_explanation ? ' title="' . esc_attr( $disabled_explanation ) . '"' : ''; ?> type="button" class="<?php echo esc_attr( $classes ); ?>" data-ran-booster-source-choice="<?php echo esc_attr( $source_key ); ?>" data-ran-booster-source-hydratable="<?php echo $source_choice['client_hydratable'] ? '1' : '0'; ?>">
 			<?php } ?>
 				<?php if ( 'create' === $source_choice_mode ) { ?>
 					<span class="ran-booster-source-choice__radio" aria-hidden="true"></span>

@@ -250,6 +250,11 @@
 	color: var(--ran-booster-text-muted);
 }
 
+.ran-booster-source-choice--navigation:focus-visible {
+	outline: 2px solid var(--ran-booster-link-strong);
+	outline-offset: 2px;
+}
+
 .ran-booster-source-choice.is-selected {
 	padding: calc(var(--ran-booster-space-16) - 1px);
 	border-radius: var(--ran-booster-radius-control)
@@ -509,6 +514,7 @@
 
 .ran-booster-admin .ran-booster-settings-actions {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: flex-start;
 	justify-content: flex-end;
 	gap: var(--ran-booster-space-8);
@@ -519,13 +525,12 @@
 
 .ran-booster-admin .ran-booster-package-operation-settings__body--split {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
 	align-items: start;
 	gap: var(--ran-booster-space-18);
 }
 
 .ran-booster-admin .ran-booster-package-operation-settings__actions {
-	position: relative;
 	display: grid;
 	align-content: start;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -540,36 +545,19 @@
 	text-align: center;
 }
 
+.ran-booster-admin .ran-booster-package-settings .button {
+	min-inline-size: 0;
+	max-inline-size: 100%;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
 .ran-booster-admin
 	.ran-booster-package-operation-settings__actions
 	.description {
+	grid-column: 1 / -1;
 	margin: 0;
-}
-
-@media screen and (min-width: 783px) {
-	.ran-booster-admin
-		.ran-booster-package-operation-settings__actions:has(
-			[data-ran-booster-reinstall-guidance]
-		) {
-		padding-block-end: calc(var(--ran-booster-space-8) + 1.5em);
-	}
-
-	.ran-booster-admin
-		.ran-booster-package-operation-settings__body--split
-		.notice {
-		box-sizing: border-box;
-		inline-size: calc(200% + var(--ran-booster-space-18));
-	}
-
-	.ran-booster-admin
-		.ran-booster-package-operation-settings__actions
-		.description {
-		position: absolute;
-		inset-block-end: 0;
-		inset-inline-end: 0;
-		inline-size: calc(200% + var(--ran-booster-space-18));
-		white-space: nowrap;
-	}
+	overflow-wrap: anywhere;
 }
 
 .ran-booster-admin .ran-booster-package-settings__save-actions {
@@ -582,7 +570,7 @@
 .ran-booster-admin
 	.ran-booster-package-settings__save-actions
 	button[type="submit"] {
-	flex: 1;
+	flex: 1 1 auto;
 }
 
 .ran-booster-admin .ran-booster-package-summary {
@@ -817,7 +805,7 @@
 
 .ran-booster-admin .ran-booster-package-danger-zone__actions {
 	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
 	gap: var(--ran-booster-space-14);
 }
 

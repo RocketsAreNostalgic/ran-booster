@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "852c2b5695bb36afb32e857ac4cb7ce5",
+    "content-hash": "7a37575d1e0319e717dd66cddfb2db40",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -321,16 +321,16 @@
         },
         {
             "name": "ran/wp-release-updater",
-            "version": "v1.0.0-beta.13",
+            "version": "v1.0.0-beta.14",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git",
-                "reference": "5d6570c9275fa5062940e202aec00a597eb13824"
+                "reference": "301908da6164027a43bdf4b2eef1101765886e11"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/5d6570c9275fa5062940e202aec00a597eb13824",
-                "reference": "5d6570c9275fa5062940e202aec00a597eb13824",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/301908da6164027a43bdf4b2eef1101765886e11",
+                "reference": "301908da6164027a43bdf4b2eef1101765886e11",
                 "shasum": ""
             },
             "require": {
@@ -395,6 +395,9 @@
                 "test:wordpress-integration": [
                     "@php tests/Integration/wordpress-integration.php"
                 ],
+                "test:wordpress-automatic-example": [
+                    "@php tests/Integration/wordpress-integration.php --scenario=automatic-example"
+                ],
                 "test:wordpress-bulk": [
                     "php tests/Integration/wordpress-native-mixed-bulk-proof.php"
                 ],
@@ -417,7 +420,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater"
             },
-            "time": "2026-10-25T11:35:58+00:00"
+            "time": "2026-10-26T23:51:00+00:00"
         }
     ],
     "packages-dev": [

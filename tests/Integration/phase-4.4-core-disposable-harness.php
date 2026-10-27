@@ -475,7 +475,7 @@ function ran_booster_phase44_github_response( array $fixture, array $args, strin
 	$asset   = 'https://api.github.com/repos/' . $locator . '/releases/assets/301';
 	$known   = array( 'https://api.github.com/repos/' . $locator . '/releases?per_page=20&page=1', 'https://api.github.com/repositories/101', 'https://api.github.com/repos/' . $locator . '/releases/201', 'https://api.github.com/repos/' . $locator . '/commits/' . $tag, $asset );
 	$headers = $args['headers'] ?? null;
-	if ( ! in_array( $url, $known, true ) || ! is_array( $headers ) || 'Bearer phase44-token' !== ( $headers['Authorization'] ?? null ) || 'ran-wp-release-updater' !== ( $headers['User-Agent'] ?? null ) || ( $asset === $url ? 'application/octet-stream' : 'application/vnd.github+json' ) !== ( $headers['Accept'] ?? null ) ) {
+	if ( ! in_array( $url, $known, true ) || ! is_array( $headers ) || 'Bearer phase44-token' !== ( $headers['Authorization'] ?? null ) || 'ran-wp-release-updater' !== ( $headers['User-Agent'] ?? null ) || ( $asset === $url ? 'application/octet-stream' : ( str_contains( $url, '/commits/' ) ? 'application/vnd.github.sha' : 'application/vnd.github+json' ) ) !== ( $headers['Accept'] ?? null ) ) {
 		return null;
 	}
 	$release = array(
@@ -503,7 +503,7 @@ function ran_booster_phase44_github_response( array $fixture, array $args, strin
 	} elseif ( str_ends_with( $url, '/201' ) ) {
 		$body = $release;
 	} elseif ( str_contains( $url, '/commits/' ) ) {
-		$body = array( 'sha' => str_repeat( 'a', 40 ) );
+		$body = str_repeat( 'a', 40 );
 	} elseif ( true === ( $args['stream'] ?? false ) && is_string( $args['filename'] ?? null ) && copy( $fixture['archive'], $args['filename'] ) ) {
 		$body = null;
 	} else {
@@ -511,7 +511,7 @@ function ran_booster_phase44_github_response( array $fixture, array $args, strin
 	}
 	return array(
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Fixture serializes exact test protocol bytes independently of WordPress JSON filters.
-		'body'     => null === $body ? '' : json_encode( $body, JSON_THROW_ON_ERROR ),
+		'body'     => null === $body ? '' : ( is_string( $body ) ? $body : json_encode( $body, JSON_THROW_ON_ERROR ) ),
 		'headers'  => array(),
 		'response' => array(
 			'code'    => 200,

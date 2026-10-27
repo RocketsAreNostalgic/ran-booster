@@ -127,6 +127,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'role="tab"', $html );
 		self::assertStringContainsString( 'data-ran-booster-source-choice="branch"', $html );
 		self::assertStringContainsString( 'data-ran-booster-source-pane="branch"', $html );
+		self::assertStringNotContainsString( 'aria-controls=', $html );
 		self::assertStringContainsString( 'ran-booster-source-choice__radio', $html );
 		self::assertStringNotContainsString( 'ran-booster-source-choice--navigation', $html );
 		self::assertStringContainsString( 'id="ran-booster-package-configuration-heading"', $form );
@@ -489,70 +490,72 @@ final class RepeatPackageViewTest extends TestCase {
 
 	public function test_edit_source_choices_use_in_place_navigation_with_anchored_fallback(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
-			$identifier_value       = 'plugin' === $package_view->get_type() ? 'example/example.php' : 'example-theme';
-			$package_source_mode    = 'edit';
-			$package_source_view    = 'branch';
-			$package_current_source = 'release_asset';
-			$package_source_choices = array();
-			foreach (
-				array(
-					'branch'        => 'Branch',
-					'release_asset' => 'Releases',
-				) as $source_key => $heading
-			) {
-				$package_source_choices[ $source_key ] = array(
-					'heading'           => $heading,
-					'description'       => $heading . ' description',
-					'meta'              => $heading . ' meta',
-					'url'               => 'https://example.test/wp-admin/admin.php?page=' . $package_view->get_page_slug() . '&source_view=' . $source_key,
-					'disabled'          => false,
-					'client_hydratable' => false,
+			foreach ( array( 'branch', 'release_asset' ) as $package_source_view ) {
+				$identifier_value       = 'plugin' === $package_view->get_type() ? 'example/example.php' : 'example-theme';
+				$package_source_mode    = 'edit';
+				$package_current_source = 'branch' === $package_source_view ? 'release_asset' : 'branch';
+				$package_source_choices = array();
+				foreach (
+					array(
+						'branch'        => 'Branch',
+						'release_asset' => 'Releases',
+					) as $source_key => $heading
+				) {
+					$package_source_choices[ $source_key ] = array(
+						'heading'           => $heading,
+						'description'       => $heading . ' description',
+						'meta'              => $heading . ' meta',
+						'url'               => 'https://example.test/wp-admin/admin.php?page=' . $package_view->get_page_slug() . '&source_view=' . $source_key,
+						'disabled'          => false,
+						'client_hydratable' => false,
+					);
+				}
+
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
+				$html = (string) ob_get_clean();
+
+				self::assertSame( 1, substr_count( $html, '#ran-booster-advanced-source-settings" hx-get=' ), $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, 'hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none"' ), $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, 'hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace"' ), $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $package_view->get_type() );
+				self::assertStringNotContainsString( 'https://example.test', $html, $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $package_view->get_type() );
+				self::assertStringContainsString( '>Branch</strong>', $html, $package_view->get_type() );
+				self::assertStringContainsString( '>Releases</strong>', $html, $package_view->get_type() );
+				self::assertStringContainsString( '<legend class="screen-reader-text">Update source</legend>', $html, $package_view->get_type() );
+				self::assertStringContainsString( '<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title">Update source</h3>', $html, $package_view->get_type() );
+				self::assertStringContainsString( 'ran-booster-package-source--navigation', $html, $package_view->get_type() );
+				self::assertStringContainsString( 'ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix', $html, $package_view->get_type() );
+				self::assertStringContainsString( ' nav-tab ', $html, $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, 'nav-tab-active' ), $package_view->get_type() );
+				self::assertStringContainsString( 'role="navigation" aria-label="Update source settings"', $html, $package_view->get_type() );
+				self::assertStringContainsString( 'Viewing settings does not change the update source.', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( 'aria-controls=', $html, $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, 'ran-booster-source-choice__current-source' ), $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, '>Active</span>' ), $package_view->get_type() );
+				self::assertMatchesRegularExpression(
+					'/<span[^>]*class="ran-booster-source-choice__current-source"[^>]*>Active<\\/span>/',
+					$html,
+					$package_view->get_type()
+				);
+				self::assertStringContainsString( 'ran-booster-source-choice__content', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( 'Current source', $html, $package_view->get_type() );
+				self::assertMatchesRegularExpression(
+					'/data-ran-booster-source-choice="' . $package_current_source . '"[^>]*>[\\s\\S]*?ran-booster-source-choice__current-source[^>]*>Active<\\/span>/',
+					$html,
+					$package_view->get_type()
+				);
+				self::assertStringNotContainsString( 'Branch description', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( 'Releases meta', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( 'ran-booster-source-choice__radio', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( 'ran-booster-source-choice__navigation-cue', $html, $package_view->get_type() );
+				self::assertMatchesRegularExpression(
+					'/<span(?=[^>]*aria-current="page")(?=[^>]*tabindex="-1")(?=[^>]*data-ran-booster-source-choice="' . $package_source_view . '")[^>]*>/',
+					$html,
+					$package_view->get_type()
 				);
 			}
-
-			ob_start();
-			require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
-			$html = (string) ob_get_clean();
-
-			self::assertSame( 1, substr_count( $html, '#ran-booster-advanced-source-settings" hx-get=' ), $package_view->get_type() );
-			self::assertSame( 1, substr_count( $html, 'hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none"' ), $package_view->get_type() );
-			self::assertSame( 1, substr_count( $html, 'hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace"' ), $package_view->get_type() );
-			self::assertSame( 1, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $package_view->get_type() );
-			self::assertStringNotContainsString( 'https://example.test', $html, $package_view->get_type() );
-			self::assertSame( 1, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $package_view->get_type() );
-			self::assertStringContainsString( '>Branch</strong>', $html, $package_view->get_type() );
-			self::assertStringContainsString( '>Releases</strong>', $html, $package_view->get_type() );
-			self::assertStringContainsString( '<legend class="screen-reader-text">Update source</legend>', $html, $package_view->get_type() );
-			self::assertStringContainsString( '<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title">Update source</h3>', $html, $package_view->get_type() );
-			self::assertStringContainsString( 'ran-booster-package-source--navigation', $html, $package_view->get_type() );
-			self::assertStringContainsString( 'ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix', $html, $package_view->get_type() );
-			self::assertStringContainsString( ' nav-tab ', $html, $package_view->get_type() );
-			self::assertSame( 1, substr_count( $html, 'nav-tab-active' ), $package_view->get_type() );
-			self::assertStringContainsString( 'role="navigation" aria-label="Update source settings"', $html, $package_view->get_type() );
-			self::assertStringContainsString( 'Viewing settings does not change the update source.', $html, $package_view->get_type() );
-			self::assertSame( 1, substr_count( $html, 'ran-booster-source-choice__current-source' ), $package_view->get_type() );
-			self::assertSame( 1, substr_count( $html, '>Active</span>' ), $package_view->get_type() );
-			self::assertMatchesRegularExpression(
-				'/<span[^>]*class="ran-booster-source-choice__current-source"[^>]*>Active<\\/span>/',
-				$html,
-				$package_view->get_type()
-			);
-			self::assertStringContainsString( 'ran-booster-source-choice__content', $html, $package_view->get_type() );
-			self::assertStringNotContainsString( 'Current source', $html, $package_view->get_type() );
-			self::assertMatchesRegularExpression(
-				'/data-ran-booster-source-choice="release_asset"[^>]*>[\\s\\S]*?ran-booster-source-choice__current-source[^>]*>Active<\\/span>/',
-				$html,
-				$package_view->get_type()
-			);
-			self::assertStringNotContainsString( 'Branch description', $html, $package_view->get_type() );
-			self::assertStringNotContainsString( 'Releases meta', $html, $package_view->get_type() );
-			self::assertStringNotContainsString( 'ran-booster-source-choice__radio', $html, $package_view->get_type() );
-			self::assertStringNotContainsString( 'ran-booster-source-choice__navigation-cue', $html, $package_view->get_type() );
-			self::assertMatchesRegularExpression(
-				'/<span[^>]*aria-current="page"[^>]*data-ran-booster-source-choice="branch"|<span[^>]*data-ran-booster-source-choice="branch"[^>]*aria-current="page"/',
-				$html,
-				$package_view->get_type()
-			);
 		}
 	}
 
@@ -588,7 +591,47 @@ final class RepeatPackageViewTest extends TestCase {
 			$html
 		);
 		self::assertStringContainsString( 'title="Published releases require the repository root."', $html );
+		self::assertStringNotContainsString( 'aria-controls=', $html );
 		self::assertStringNotContainsString( ' disabled=', $html );
+	}
+
+	public function test_unavailable_edit_source_choice_does_not_reference_a_missing_pane(): void {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			$identifier_value       = 'plugin' === $package_view->get_type() ? 'example/example.php' : 'example-theme';
+			$package_source_mode    = 'edit';
+			$package_source_view    = 'branch';
+			$package_current_source = 'branch';
+			$package_source_choices = array(
+				'branch'        => array(
+					'heading'           => 'Branch',
+					'description'       => 'Deploy the configured branch.',
+					'meta'              => 'Available',
+					'url'               => 'https://example.test/wp-admin/admin.php?page=' . $package_view->get_page_slug() . '&source_view=branch',
+					'disabled'          => false,
+					'client_hydratable' => false,
+				),
+				'release_asset' => array(
+					'heading'           => 'Releases',
+					'description'       => 'Published releases are unavailable.',
+					'meta'              => 'Unavailable',
+					'url'               => '',
+					'disabled'          => true,
+					'client_hydratable' => false,
+				),
+			);
+
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
+			$html = (string) ob_get_clean();
+
+			self::assertStringContainsString( 'aria-disabled="true"', $html, $package_view->get_type() );
+			self::assertStringNotContainsString( 'aria-controls=', $html, $package_view->get_type() );
+			self::assertMatchesRegularExpression(
+				'/<span(?=[^>]*aria-current="page")(?=[^>]*tabindex="-1")(?=[^>]*data-ran-booster-source-choice="branch")[^>]*>/',
+				$html,
+				$package_view->get_type()
+			);
+		}
 	}
 
 	/** @return list<array{PackagePagePresenter, PackageSource, bool}> */

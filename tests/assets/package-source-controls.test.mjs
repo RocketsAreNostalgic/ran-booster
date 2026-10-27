@@ -97,6 +97,7 @@ function tabFixture(sourceName, selected = false) {
 	const tab = {
 		classList: classListFixture(selected ? ['is-selected'] : []),
 		disabled: false,
+		tagName: 'BUTTON',
 		click() {
 			listeners.get('click')?.();
 		},
@@ -290,6 +291,7 @@ test('package source navigation waits for the authoritative response', () => {
 		'href',
 		'https://example.test/wp-admin/admin.php?source_view=release_asset'
 	);
+	state.release.tab.tagName = 'A';
 
 	try {
 		loadInitializer()();
@@ -300,6 +302,23 @@ test('package source navigation waits for the authoritative response', () => {
 		assert.equal(state.branchPane.hidden, false);
 		assert.equal(state.releasePane.hidden, true);
 		assert.equal(state.installActions.hidden, false);
+		assert.deepEqual(state.sourceEvents, []);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('the current edit view remains route navigation when activated', () => {
+	const state = fixture('owner/package');
+	state.branch.tab.tagName = 'SPAN';
+	state.branch.attributes.delete('aria-pressed');
+
+	try {
+		loadInitializer()();
+		state.branch.tab.click();
+
+		assert.equal(state.branch.attributes.has('aria-pressed'), false);
 		assert.deepEqual(state.sourceEvents, []);
 	} finally {
 		delete globalThis.document;

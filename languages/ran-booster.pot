@@ -1680,7 +1680,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:481
 #: views/extensions.php:11
 #: views/extensions.php:51
-#: views/packages/source-choices.php:80
+#: views/packages/source-choices.php:79
 msgid "Active"
 msgstr ""
 

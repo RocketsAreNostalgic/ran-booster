@@ -213,7 +213,7 @@
 				};
 
 				tabs.forEach(function (tab) {
-					if (tab.getAttribute('href') !== null) {
+					if (tab.tagName !== 'BUTTON') {
 						return;
 					}
 					tab.addEventListener('click', function () {

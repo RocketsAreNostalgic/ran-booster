@@ -20,8 +20,6 @@ $result_messages  = array(
 	'installed'         => __( 'Extension installed. Activate it from Plugins when you are ready.', 'ran-booster' ),
 	'already_installed' => __( 'The extension or its destination already exists. Review Plugins and the plugin folder before trying again.', 'ran-booster' ),
 	'incompatible'      => __( 'This extension is not compatible with this version of Booster.', 'ran-booster' ),
-	'denied'            => __( 'You do not have permission to install this extension.', 'ran-booster' ),
-	'busy'              => __( 'Another installation is in progress. Please try again.', 'ran-booster' ),
 	'failed'            => __( 'The extension could not be installed. Please try again or review its release page.', 'ran-booster' ),
 	'uncertain'         => __( 'The installation result could not be confirmed. Check Plugins before trying again.', 'ran-booster' ),
 );

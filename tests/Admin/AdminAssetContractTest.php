@@ -174,7 +174,9 @@ final class AdminAssetContractTest extends TestCase {
 		$settings    = $this->asset( 'ran-booster/65-package-settings.css' );
 
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-eyebrow {', $primitives );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-panel {', $primitives );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-panel,', $primitives );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,', $primitives );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-action-row {', $primitives );
 		self::assertStringContainsString( 'ran-booster-provider__eyebrow ran-booster-eyebrow', $provider );
 		self::assertStringContainsString( 'ran-booster-portability__eyebrow ran-booster-eyebrow', $portability );
@@ -344,9 +346,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-page-heading__title', $portability );
 		self::assertStringContainsString( 'ran-booster-page-heading__title', $documentation );
 		self::assertStringContainsString( 'ran-booster-page-heading__title', $troubleshooting );
-		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-panel ran-booster-onboarding', $onboarding );
-		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-panel ran-booster-documentation', $documentation );
-		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-panel ran-booster-troubleshooting', $troubleshooting );
+		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-onboarding', $onboarding );
+		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-documentation', $documentation );
+		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-troubleshooting', $troubleshooting );
 		self::assertStringContainsString( 'ran-booster-page-shell__body', $documentation );
 		self::assertStringContainsString( 'ran-booster-page-shell__body', $troubleshooting );
 		self::assertStringContainsString( 'ran-booster-section__title', $provider );

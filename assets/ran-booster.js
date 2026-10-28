@@ -700,10 +700,17 @@
 
 			openStates = new Map(
 				details.map(function (detail) {
-					return [detail, detail.open];
+					return [
+						detail,
+						{
+							open: detail.open,
+							name: detail.getAttribute('name'),
+						},
+					];
 				})
 			);
 			details.forEach(function (detail) {
+				detail.removeAttribute('name');
 				detail.open = true;
 			});
 		});
@@ -712,8 +719,13 @@
 				return;
 			}
 
-			openStates.forEach(function (wasOpen, detail) {
-				detail.open = wasOpen;
+			openStates.forEach(function (state, detail) {
+				detail.open = state.open;
+			});
+			openStates.forEach(function (state, detail) {
+				if (state.name !== null) {
+					detail.setAttribute('name', state.name);
+				}
 			});
 			openStates = null;
 		});

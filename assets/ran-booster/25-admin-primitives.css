@@ -21,7 +21,9 @@
 	letter-spacing: 0.06em;
 }
 
-.ran-booster-admin .ran-booster-panel {
+.ran-booster-admin .ran-booster-panel,
+.ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,
+.ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {
 	overflow: hidden;
 	border: 1px solid var(--ran-booster-border);
 	border-radius: var(--ran-booster-radius-surface);
@@ -130,6 +132,19 @@
 	.ran-booster-admin .ran-booster-page-shell__body {
 		padding-inline: var(--ran-booster-space-18);
 	}
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-onboarding,
+		.ran-booster-provider--overview,
+		.ran-booster-troubleshooting,
+		.ran-booster-documentation,
+		.ran-booster-portability
+	)
+	> .ran-booster-page-shell__header {
+	padding: 0;
+	margin-block-end: var(--ran-booster-space-20);
 }
 
 /*

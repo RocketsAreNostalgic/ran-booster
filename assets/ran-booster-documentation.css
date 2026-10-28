@@ -13,13 +13,19 @@
 	grid-template-areas: "main index";
 	grid-template-columns: minmax(0, 1fr) minmax(260px, 290px);
 	align-items: start;
-	margin-block: var(--ran-booster-space-16) var(--ran-booster-space-24);
+	margin: 0;
 	gap: var(--ran-booster-space-24);
 }
 
 .ran-booster-admin .ran-booster-documentation__main {
 	grid-area: main;
 	margin: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-documentation__main
+	> .ran-booster-page-shell__body {
+	padding: 0;
 }
 
 .ran-booster-admin .ran-booster-documentation__index {

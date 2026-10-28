@@ -2128,7 +2128,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/preceding-sibling::h3[normalize-space(.)="Run diagnostics"]' )->length );
 		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/preceding-sibling::form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"]' )->length );
 		self::assertSame( 2, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/section[contains(concat(" ",@class," ")," ran-booster-panel ")]/header/h4' )->length );
-		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-github-provider-diagnostics"]/details/summary[normalize-space(.)="Technical details"]' )->length );
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-github-provider-diagnostics"]/div[contains(concat(" ",normalize-space(@class)," ")," ran-booster-troubleshooting__disclosure-body ")]/details/summary[normalize-space(.)="Technical details"]' )->length );
 		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-core-updates-heading"]/../following-sibling::div/details/summary[normalize-space(.)="Technical details"]' )->length );
 		$installation = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]' )->item( 0 );
 		$report       = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-report"]' )->item( 0 );

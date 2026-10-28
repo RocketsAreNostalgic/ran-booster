@@ -66,8 +66,8 @@ Install/Edit variants use the same roles as dashboard pages. Keep heading
 alignment relative to its content grid, existing page actions beside the title
 where space permits, and a 20px heading-to-task separation. Do not invent
 missing descriptions or shorten existing copy. Remove redundant page decoration
-(Ignition, Guidance, Add-ons and Diagnostics above Troubleshooting); retain
-useful provider, repository and Transporter context and all panel-interior labels.
+(Ignition, Guidance, Add-ons, Diagnostics and the standalone Transporter
+eyebrow); retain useful provider and repository context and panel-interior labels.
 
 Containment follows the task. Install Plugin/Theme keeps its separate white
 Repository configuration, Advanced settings and Package operation sections on
@@ -75,6 +75,13 @@ the grey page. Provider overview tasks use separate white groups with 20px grey
 gutters. Do not add a universal white outer wrapper. Keep each group's wording,
 controls, statuses, help, disclosures, internal borders, columns and arrangement
 intact; outer separation does not authorize an interior redesign.
+
+Overview, Troubleshooting, Documentation and Transporter place their page
+heading and description on the grey background. Overview uses separate task
+and credential-storage panels; Troubleshooting may retain a single white surface
+below its heading. Documentation keeps its index and each disclosure white,
+including expanded content. Transporter's chooser and active flow retain their
+own task surfaces. Preserve its export limitations in the export context.
 
 A subordinate **Back to…** link belongs above the page heading and outside white
 content panels. Keep it within its existing enhanced replacement boundary when

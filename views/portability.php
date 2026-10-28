@@ -39,15 +39,13 @@ $render_portability_extension      = static function ( string $hook, string $ste
 };
 
 ?>
-<section class="ran-booster-page-shell ran-booster-portability ran-booster-panel" aria-labelledby="ran-booster-portability-heading">
+<section class="ran-booster-page-shell ran-booster-portability" aria-labelledby="ran-booster-portability-heading">
 	<header class="ran-booster-page-shell__header ran-booster-portability__header">
-		<p class="ran-booster-portability__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></p>
-		<h2 id="ran-booster-portability-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Transport Booster-managed packages', 'ran-booster' ); ?></h2>
+		<h2 id="ran-booster-portability-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Transporter: Booster migration tools', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Use Transporter to create a Blueprint here or open one from another site.', 'ran-booster' ); ?></p>
-		<p class="description"><?php esc_html_e( 'Known installed requirements are included as observations. Unreadable or invalid declarations are omitted; missing information does not mean compatible. Configuration export does not verify installed files or guarantee exact reproduction.', 'ran-booster' ); ?></p>
 	</header>
 
-	<section class="ran-booster-portability__chooser" aria-labelledby="ran-booster-portability-mode-heading">
+	<section class="ran-booster-panel ran-booster-portability__chooser" aria-labelledby="ran-booster-portability-mode-heading">
 		<h3 id="ran-booster-portability-mode-heading" tabindex="-1"><?php esc_html_e( 'What do you want to do on this site?', 'ran-booster' ); ?></h3>
 		<div class="ran-booster-portability__mode-options">
 			<button type="button" class="ran-booster-portability__mode" data-portability-mode="export" aria-controls="ran-booster-portability-export" aria-expanded="false" aria-pressed="false">
@@ -68,11 +66,12 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		</div>
 	</section>
 
-	<section class="ran-booster-portability__flow" id="ran-booster-portability-export" aria-labelledby="ran-booster-portability-export-heading" hidden>
+	<section class="ran-booster-panel ran-booster-portability__flow" id="ran-booster-portability-export" aria-labelledby="ran-booster-portability-export-heading" hidden>
 		<header class="ran-booster-portability__flow-header">
 			<p class="ran-booster-portability__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></p>
 			<h3 id="ran-booster-portability-export-heading" tabindex="-1"><?php esc_html_e( 'Create a Transporter Blueprint', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', 'ran-booster' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Known installed requirements are included as observations. Unreadable or invalid declarations are omitted; missing information does not mean compatible. Configuration export does not verify installed files or guarantee exact reproduction.', 'ran-booster' ); ?></p>
 		</header>
 		<form class="ran-booster-portability__export-form" method="post" action="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-portability-export-form>
 			<input type="hidden" name="action" value="ran_booster_export_blueprint">
@@ -263,7 +262,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		</form>
 	</section>
 
-	<section class="ran-booster-portability__flow" id="ran-booster-portability-import" aria-labelledby="ran-booster-portability-import-heading" hidden>
+	<section class="ran-booster-panel ran-booster-portability__flow" id="ran-booster-portability-import" aria-labelledby="ran-booster-portability-import-heading" hidden>
 		<header class="ran-booster-portability__flow-header">
 			<p class="ran-booster-portability__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></p>
 			<h3 id="ran-booster-portability-import-heading" tabindex="-1"><?php esc_html_e( 'Open a Transporter Blueprint', 'ran-booster' ); ?></h3>

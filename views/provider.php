@@ -203,7 +203,6 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 <section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ( 'overview' === $provider_view ? ' ran-booster-provider--overview' : '' ); ?>" aria-labelledby="ran-booster-provider-heading">
 	<?php if ( 'overview' === $provider_view && ! $is_repository_detail ) { ?>
 		<header class="ran-booster-page-shell__header ran-booster-provider__header">
-			<p class="ran-booster-provider__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Repository provider', 'ran-booster' ); ?></p>
 			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( $provider['label'] ); ?></h2>
 			<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Manage repository access, integrations and the packages connected to this site.', 'ran-booster' ); ?></p>
 		</header>

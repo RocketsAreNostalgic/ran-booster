@@ -6,6 +6,75 @@
 	background: var(--ran-booster-surface-info);
 }
 
+.ran-booster-admin
+	.ran-booster-troubleshooting__installation-card
+	> .ran-booster-page-shell__header {
+	padding-block-end: var(--ran-booster-space-6);
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__installation-card
+	> .ran-booster-page-shell__body
+	> p:first-child {
+	margin-block-start: 0;
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__disclosure {
+	border: 1px solid var(--ran-booster-divider);
+	border-radius: var(--ran-booster-radius-surface);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__disclosure > summary {
+	padding-block: var(--ran-booster-space-12);
+	padding-inline: var(--ran-booster-space-16);
+	cursor: pointer;
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__disclosure
+	> summary:focus-visible {
+	outline: 2px solid var(--ran-booster-color-blue-300);
+	outline-offset: -2px;
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__disclosure[open] > summary {
+	border-block-end: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__disclosure-body {
+	padding: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__disclosure-body
+	> p:first-child {
+	margin-block-start: 0;
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__fields-list > div {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-4) var(--ran-booster-space-8);
+	margin-block: var(--ran-booster-space-6);
+	margin-inline: 0;
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__fields-list dt {
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__fields-list dd {
+	margin: 0;
+	min-inline-size: 0;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__fields-list code {
+	overflow-wrap: anywhere;
+}
+
 .ran-booster-admin .ran-booster-secondary-nav {
 	display: flex;
 	margin-block: var(--ran-booster-space-18) var(--ran-booster-space-20);

@@ -10,19 +10,13 @@
 .ran-booster-admin .ran-booster-onboarding__columns {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-	border-block-start: 1px solid var(--ran-booster-divider);
+	gap: var(--ran-booster-space-20);
 }
 
 .ran-booster-admin .ran-booster-onboarding__column {
 	min-inline-size: 0;
 	padding-block: var(--ran-booster-space-20) var(--ran-booster-space-22);
 	padding-inline: var(--ran-booster-space-24);
-}
-
-.ran-booster-admin
-	.ran-booster-onboarding__column
-	+ .ran-booster-onboarding__column {
-	border-inline-start: 1px solid var(--ran-booster-divider);
 }
 
 .ran-booster-admin .ran-booster-onboarding__column h3 {
@@ -40,10 +34,9 @@
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage {
+	margin-block-start: var(--ran-booster-space-20);
 	padding-block: var(--ran-booster-space-18) var(--ran-booster-space-20);
 	padding-inline: var(--ran-booster-space-24);
-	border-block-start: 1px solid var(--ran-booster-divider);
-	background: var(--ran-booster-surface-subtle);
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-heading {
@@ -207,7 +200,6 @@
 }
 
 @media screen and (max-width: 782px) {
-	.ran-booster-admin .ran-booster-onboarding__header,
 	.ran-booster-admin .ran-booster-onboarding__column,
 	.ran-booster-admin .ran-booster-onboarding__storage {
 		padding: var(--ran-booster-space-18);
@@ -216,17 +208,9 @@
 	.ran-booster-admin .ran-booster-onboarding__columns {
 		grid-template-columns: minmax(0, 1fr);
 	}
-
-	.ran-booster-admin
-		.ran-booster-onboarding__column
-		+ .ran-booster-onboarding__column {
-		border-block-start: 1px solid var(--ran-booster-divider);
-		border-inline-start: 0;
-	}
 }
 
 @media screen and (max-width: 480px) {
-	.ran-booster-admin .ran-booster-onboarding__header,
 	.ran-booster-admin .ran-booster-onboarding__column,
 	.ran-booster-admin .ran-booster-onboarding__storage {
 		padding: var(--ran-booster-space-16);
@@ -364,11 +348,10 @@
 .ran-booster-admin .ran-booster-portability__flow {
 	padding-block: var(--ran-booster-space-22);
 	padding-inline: var(--ran-booster-space-24);
-	border-block-start: 1px solid var(--ran-booster-divider);
 }
 
-.ran-booster-admin .ran-booster-portability__chooser {
-	background: var(--ran-booster-surface-subtle);
+.ran-booster-admin .ran-booster-portability__flow {
+	margin-block-start: var(--ran-booster-space-20);
 }
 
 .ran-booster-admin .ran-booster-portability__chooser h3,

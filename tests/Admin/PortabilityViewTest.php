@@ -13,7 +13,16 @@ final class PortabilityViewTest extends TestCase {
 	public function test_renders_the_two_modes_and_an_empty_import_review(): void {
 		$html = $this->render_view();
 
-		self::assertStringContainsString( '>Transporter<', $html );
+		self::assertStringContainsString( '>Transporter: Booster migration tools</h2>', $html );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath          = new \DOMXPath( $document );
+		$heading_panels = $xpath->query( '//*[@id="ran-booster-portability-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
+		$export_warning = $xpath->query( '//*[@id="ran-booster-portability-export"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]//*[contains(text(), "Configuration export does not verify installed files")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
+		self::assertInstanceOf( \DOMNodeList::class, $export_warning );
+		self::assertCount( 0, $heading_panels );
+		self::assertCount( 1, $export_warning );
 		self::assertStringContainsString( 'Create a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'Open a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'What do you want to do on this site?', $html );
@@ -603,7 +612,7 @@ final class PortabilityViewTest extends TestCase {
 		);
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_portability_render_migration_flows'] = array(
 			static function (): void {
-				echo '<section class="ran-booster-portability__flow" id="ran-booster-portability-fixture" hidden>Fixture flow</section>';
+				echo '<section class="ran-booster-portability__flow fixture-migration" id="ran-booster-portability-fixture" hidden>Fixture flow</section>';
 			},
 		);
 
@@ -629,6 +638,12 @@ final class PortabilityViewTest extends TestCase {
 		self::assertLessThan( $open, $create );
 		self::assertLessThan( $fixture, $open );
 		self::assertLessThan( $flow, $fixture );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath          = new \DOMXPath( $document );
+		$migration_flow = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability ")]/*[@id="ran-booster-portability-fixture" and @hidden and contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability__flow ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $migration_flow );
+		self::assertCount( 1, $migration_flow );
 	}
 
 	/**

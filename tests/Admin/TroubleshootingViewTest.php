@@ -114,7 +114,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$troubleshooting       = array(
 			'providers'            => array(),
 			'installation_details' => array(
-				'GitHub provider'    => array(
+				'GitHub provider'      => array(
 					'Name'                     => '<Untrusted plugin>',
 					'Version'                  => '1.0',
 					'Source'                   => 'External plugin',
@@ -126,9 +126,12 @@ final class TroubleshootingViewTest extends TestCase {
 					'Declared capabilities'    => '<capability>',
 					'Credential formats'       => '<format>',
 				),
-				'GitHub candidate 1' => array(
+				'GitHub candidate 1'   => array(
 					'Name'        => '<candidate>',
 					'Declaration' => 'Unavailable',
+				),
+				'Booster Core updates' => array(
+					'Marker commit' => '<commit>',
 				),
 			),
 		);
@@ -139,7 +142,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'GitHub provider details', $html );
 		self::assertStringContainsString( 'Local declarations only;', $html );
 		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
-		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>' ) as $claim ) {
+		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>', '<commit>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
 			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
 		}
@@ -148,6 +151,24 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'value="adopt-github"', $html );
 		self::assertStringNotContainsString( 'value="recover-github-native"', $html );
 		self::assertStringNotContainsString( 'Recover management without changing installed files:', $html );
+
+		$document        = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		try {
+			$document->loadHTML( $html );
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous_errors );
+		}
+		$xpath = new \DOMXPath( $document );
+		$rows  = $xpath->query( '//dl[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields-list ")]/div' );
+		self::assertInstanceOf( \DOMNodeList::class, $rows );
+		self::assertSame( 13, $rows->length );
+		foreach ( $rows as $row ) {
+			self::assertInstanceOf( \DOMElement::class, $row );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./dt)', $row ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./dd/code)', $row ) );
+		}
 	}
 
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {
@@ -172,6 +193,15 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertLessThan( $activity_position, $diagnostics_position );
 		self::assertLessThan( $logging_position, $activity_position );
 		self::assertStringContainsString( 'aria-label="Troubleshooting views"', $html );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath          = new \DOMXPath( $document );
+		$heading_panels = $xpath->query( '//*[@id="ran-booster-troubleshooting-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
+		$panel_nav      = $xpath->query( '//*[@id="ran-booster-troubleshooting-diagnostics-region"]//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]//nav[@aria-label="Troubleshooting views"]' );
+		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
+		self::assertInstanceOf( \DOMNodeList::class, $panel_nav );
+		self::assertCount( 0, $heading_panels );
+		self::assertCount( 1, $panel_nav );
 		self::assertStringContainsString( 'panel=debug-capture" aria-current="page"', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading">Logging</h3>', $html );
 		self::assertStringContainsString( 'Start 60-minute capture', $html );
@@ -1016,6 +1046,8 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'ran-booster-provider__header', $html );
+		self::assertStringNotContainsString( '>Repository provider</p>', $html );
+		self::assertStringContainsString( 'Manage repository access, integrations and the packages connected to this site.', $html );
 		self::assertStringNotContainsString( 'id="ran-booster-access-tokens-heading"', $html );
 		self::assertStringNotContainsString( '>Add credential</button>', $html );
 		self::assertStringNotContainsString( 'data-credential-modal="access"', $html );

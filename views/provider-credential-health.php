@@ -4,6 +4,8 @@
 /** @var string $credential_health_label */
 /** @var string|null $credential_validation_message */
 /** @var string|null $credential_validation_error */
+
+defined( 'ABSPATH' ) || exit;
 ?>
 <div id="<?php echo esc_attr( 'ran-booster-credential-validation-error-' . $credential_health_id ); ?>" class="ran-booster-credential-health" data-ran-booster-admin-mutation-error tabindex="-1">
 	<span><?php echo esc_html( $credential_health_label ); ?></span>

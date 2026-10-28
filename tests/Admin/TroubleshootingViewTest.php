@@ -165,6 +165,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertInstanceOf( \DOMNodeList::class, $rows );
 		self::assertSame( 13, $rows->length );
 		foreach ( $rows as $row ) {
+			self::assertInstanceOf( \DOMElement::class, $row );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dt)', $row ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dd/code)', $row ) );
 		}

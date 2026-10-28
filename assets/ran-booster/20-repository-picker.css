@@ -43,6 +43,7 @@ body.ran-booster-repository-picker-open {
 
 .ran-booster-repository-picker__public-limit-notice {
 	margin-block: 0 var(--ran-booster-space-16);
+	background: var(--ran-booster-surface-info);
 }
 
 .ran-booster-repository-picker__credential,

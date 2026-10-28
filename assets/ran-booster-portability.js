@@ -652,7 +652,7 @@
 				...lines.map(function (line) {
 					const fact = document.createElement('span');
 					fact.className = 'ran-booster-portability__apply-fact';
-					fact.textContent = line.replace(/\.$/, '') + '. ';
+					fact.textContent = line + ' ';
 					return fact;
 				})
 			);

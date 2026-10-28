@@ -1213,10 +1213,9 @@ test('target action without an ID only reveals and focuses its select', async ()
 			'%d repository credentials': '%d identifiants de dépôt',
 			'%d saved credential': '%d identifiant enregistré',
 			'%d saved credentials': '%d identifiants enregistrés',
-			'Package changes: %d': 'Changements de paquets : %d',
-			'Credentials to import: %d': 'Identifiants à importer : %d',
-			'Saved credentials to use: %d':
-				'Identifiants enregistrés à utiliser : %d',
+			'Package changes: %d': 'パッケージ変更: %d。',
+			'Credentials to import: %d': 'インポートする認証情報: %d。',
+			'Saved credentials to use: %d': '使用する保存済み認証情報: %d。',
 			'Deployment will remain Disabled.':
 				'Le déploiement restera désactivé.',
 			'Credential permissions have not been assessed.':
@@ -1238,7 +1237,7 @@ test('target action without an ID only reveals and focuses its select', async ()
 		assert.equal(state.apply.disabled, true);
 		assert.equal(
 			state.applySummary.textContent,
-			'Changements de paquets : 1. Identifiants à importer : 0. Identifiants enregistrés à utiliser : 0. Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées. '
+			'パッケージ変更: 1。 インポートする認証情報: 0。 使用する保存済み認証情報: 0。 Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées. '
 		);
 
 		state.credentialTarget.value = 'target-profile';
@@ -1251,7 +1250,7 @@ test('target action without an ID only reveals and focuses its select', async ()
 		assert.equal(state.apply.disabled, true);
 		assert.equal(
 			state.applySummary.textContent,
-			'Changements de paquets : 1. Identifiants à importer : 0. Identifiants enregistrés à utiliser : 1. Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées. '
+			'パッケージ変更: 1。 インポートする認証情報: 0。 使用する保存済み認証情報: 1。 Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées. '
 		);
 	} finally {
 		cleanup();
@@ -1400,12 +1399,12 @@ test('managed credential recovery enables Apply without claiming a package chang
 		assert.equal(state.apply.disabled, false);
 		assert.equal(
 			state.applySummary.textContent,
-			'Package changes: 0. Credentials to import: 1. Saved credentials to use: 0. Managed package settings will remain unchanged. Credential permissions have not been assessed. '
+			'Package changes: 0 Credentials to import: 1 Saved credentials to use: 0 Managed package settings will remain unchanged. Credential permissions have not been assessed. '
 		);
 		assert.equal(state.applySummary.children.length, 5);
 		assert.equal(
 			state.applySummary.children[0].textContent,
-			'Package changes: 0. '
+			'Package changes: 0 '
 		);
 
 		await state.listeners.get('apply:click')();

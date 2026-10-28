@@ -252,7 +252,7 @@ msgid "Source"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:149
-#: views/packages/edit.php:369
+#: views/packages/edit.php:370
 #: views/packages/fields/deployment-policy.php:42
 #: views/packages/fields/deployment-policy.php:45
 #: views/packages/index.php:468
@@ -7288,7 +7288,7 @@ msgstr ""
 #: views/packages/create.php:116
 #: views/packages/edit.php:251
 #: views/packages/edit.php:279
-#: views/packages/edit.php:342
+#: views/packages/edit.php:343
 #: views/packages/recovery.php:31
 #, php-format
 msgid "Back to Managed %s"
@@ -7353,7 +7353,7 @@ msgstr ""
 #. translators: %s is plugin or theme.
 #: views/packages/create.php:178
 #: views/packages/edit.php:278
-#: views/packages/edit.php:341
+#: views/packages/edit.php:342
 #: views/packages/index.php:107
 #, php-format
 msgid "Install another %s"
@@ -7494,7 +7494,7 @@ msgid "Booster will not reinterpret this package as a branch deployment. Restore
 msgstr ""
 
 #: views/packages/edit.php:277
-#: views/packages/edit.php:339
+#: views/packages/edit.php:340
 msgid "Package settings actions"
 msgstr ""
 
@@ -7502,27 +7502,27 @@ msgstr ""
 msgid "The saved repository and access used by this package."
 msgstr ""
 
-#: views/packages/edit.php:326
+#: views/packages/edit.php:327
 msgid "Package operations"
 msgstr ""
 
-#: views/packages/edit.php:355
+#: views/packages/edit.php:356
 msgid "Package summary"
 msgstr ""
 
-#: views/packages/edit.php:357
+#: views/packages/edit.php:358
 msgid "Current source"
 msgstr ""
 
-#: views/packages/edit.php:371
+#: views/packages/edit.php:372
 msgid "Source changes reset Automatic to Manual"
 msgstr ""
 
-#: views/packages/edit.php:374
+#: views/packages/edit.php:375
 msgid "WordPress state"
 msgstr ""
 
-#: views/packages/edit.php:376
+#: views/packages/edit.php:377
 msgid "Independent of package source"
 msgstr ""
 

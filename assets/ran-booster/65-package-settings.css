@@ -530,6 +530,12 @@
 	gap: var(--ran-booster-space-18);
 }
 
+.ran-booster-admin
+	.ran-booster-package-operation-settings__body--split
+	> [data-ran-booster-local-development-warning] {
+	grid-column: 1 / -1;
+}
+
 .ran-booster-admin .ran-booster-package-operation-settings__actions {
 	display: grid;
 	align-content: start;

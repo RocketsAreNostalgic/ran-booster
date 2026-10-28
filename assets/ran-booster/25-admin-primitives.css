@@ -21,7 +21,9 @@
 	letter-spacing: 0.06em;
 }
 
-.ran-booster-admin .ran-booster-panel {
+.ran-booster-admin .ran-booster-panel,
+.ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,
+.ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {
 	overflow: hidden;
 	border: 1px solid var(--ran-booster-border);
 	border-radius: var(--ran-booster-radius-surface);

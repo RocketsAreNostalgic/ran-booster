@@ -446,7 +446,7 @@ final class OnboardingViewTest extends TestCase {
 	public function test_migration_prompt_is_bounded_and_follows_the_primary_setup(): void {
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] = array(
 			static function (): void {
-				echo '<section class="fixture-migration">Migration available</section>';
+				echo '<section class="ran-booster-onboarding__storage fixture-migration">Migration available</section>';
 			},
 		);
 
@@ -461,6 +461,12 @@ final class OnboardingViewTest extends TestCase {
 		self::assertIsInt( $primary );
 		self::assertIsInt( $migration );
 		self::assertLessThan( $migration, $primary );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath  = new \DOMXPath( $document );
+		$prompt = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-onboarding ")]/*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-onboarding__storage ") and contains(concat(" ", normalize-space(@class), " "), " fixture-migration ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $prompt );
+		self::assertCount( 1, $prompt );
 
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] = array(
 			static function (): void {

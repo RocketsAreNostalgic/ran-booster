@@ -612,7 +612,7 @@ final class PortabilityViewTest extends TestCase {
 		);
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_portability_render_migration_flows'] = array(
 			static function (): void {
-				echo '<section class="ran-booster-portability__flow" id="ran-booster-portability-fixture" hidden>Fixture flow</section>';
+				echo '<section class="ran-booster-portability__flow fixture-migration" id="ran-booster-portability-fixture" hidden>Fixture flow</section>';
 			},
 		);
 
@@ -638,6 +638,12 @@ final class PortabilityViewTest extends TestCase {
 		self::assertLessThan( $open, $create );
 		self::assertLessThan( $fixture, $open );
 		self::assertLessThan( $flow, $fixture );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath          = new \DOMXPath( $document );
+		$migration_flow = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability ")]/*[@id="ran-booster-portability-fixture" and @hidden and contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability__flow ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $migration_flow );
+		self::assertCount( 1, $migration_flow );
 	}
 
 	/**

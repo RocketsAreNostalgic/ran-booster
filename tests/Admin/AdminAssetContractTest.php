@@ -174,7 +174,9 @@ final class AdminAssetContractTest extends TestCase {
 		$settings    = $this->asset( 'ran-booster/65-package-settings.css' );
 
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-eyebrow {', $primitives );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-panel {', $primitives );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-panel,', $primitives );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,', $primitives );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-action-row {', $primitives );
 		self::assertStringContainsString( 'ran-booster-provider__eyebrow ran-booster-eyebrow', $provider );
 		self::assertStringContainsString( 'ran-booster-portability__eyebrow ran-booster-eyebrow', $portability );

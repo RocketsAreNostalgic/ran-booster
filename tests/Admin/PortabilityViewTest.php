@@ -240,8 +240,11 @@ final class PortabilityViewTest extends TestCase {
 		$xpath = new \DOMXPath( $document );
 		foreach ( array_keys( $rows ) as $index ) {
 			$row     = '//tr[@data-portability-row="' . $index . '"]';
-			$details = $row . '//details[not(@open)]';
+			$details = '//tr[@data-portability-details-for="' . $index . '"]/td[@colspan="4"]/details[not(@open)]';
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . ')' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $row . '//details)' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//li/strong[.="WordPress minimum"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//li[strong="WordPress minimum"]/code[.="No minimum declared"])' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '/summary[.="Package details"])' ) );
 			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $row . '//li[not(ancestor::details)][contains(.,"No minimum declared")])' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//li[contains(.,"WordPress minimum: No minimum declared")])' ) );

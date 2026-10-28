@@ -466,7 +466,7 @@
 }
 
 .ran-booster-admin .ran-booster-portability__flow-header {
-	max-inline-size: 760px;
+	max-inline-size: 65ch;
 }
 
 .ran-booster-admin .ran-booster-portability__upload,
@@ -803,6 +803,53 @@
 	margin-block-start: var(--ran-booster-space-4);
 }
 
+.ran-booster-admin .ran-booster-portability__review-state > p,
+.ran-booster-admin .ran-booster-portability__review-state > details {
+	margin-block: var(--ran-booster-space-10) 0;
+}
+
+.ran-booster-admin .ran-booster-portability__requirements-exceptions {
+	padding-inline-start: var(--ran-booster-space-10);
+	border-inline-start: 3px solid var(--ran-booster-status-warning-border);
+}
+
+.ran-booster-admin .ran-booster-portability__requirements-details ul {
+	margin-block: var(--ran-booster-space-8) 0;
+}
+
+.ran-booster-admin .ran-booster-portability__package-details {
+	margin-block: var(--ran-booster-space-10) 0;
+}
+
+.ran-booster-admin .ran-booster-portability__package-details > summary {
+	inline-size: fit-content;
+	cursor: pointer;
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-portability__details-body {
+	margin-block: var(--ran-booster-space-10) 0;
+	padding: var(--ran-booster-space-12) var(--ran-booster-space-14);
+	border: 1px solid var(--ran-booster-divider);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin .ran-booster-portability__package-details :is(h6, p) {
+	margin-inline: 0;
+}
+
+.ran-booster-admin .ran-booster-portability__package-details h6 {
+	margin-block: var(--ran-booster-space-10) var(--ran-booster-space-4);
+	font-size: inherit;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__package-details
+	summary:focus-visible {
+	outline: 2px solid var(--ran-booster-color-blue-300);
+	outline-offset: 2px;
+}
+
 .ran-booster-admin .ran-booster-portability__review-table td > code {
 	padding: 0;
 	background: transparent;
@@ -811,36 +858,11 @@
 	word-break: normal;
 }
 
-.ran-booster-admin .ran-booster-portability__status,
 .ran-booster-admin .ran-booster-portability__apply-choice {
 	display: inline-flex;
 	gap: var(--ran-booster-space-7);
 	align-items: center;
 	font-weight: var(--ran-booster-font-weight-semibold);
-}
-
-.ran-booster-admin .ran-booster-portability__status::before {
-	inline-size: 8px;
-	block-size: 8px;
-	border-radius: var(--ran-booster-radius-circle);
-	background: var(--ran-booster-text-subtle);
-	content: "";
-}
-
-.ran-booster-admin .ran-booster-portability__status--install::before {
-	background: var(--ran-booster-status-ok);
-}
-
-.ran-booster-admin .ran-booster-portability__status--adopt::before {
-	background: var(--ran-booster-color-blue-300);
-}
-
-.ran-booster-admin .ran-booster-portability__status--protected::before {
-	background: var(--ran-booster-status-warning-border);
-}
-
-.ran-booster-admin .ran-booster-portability__status--blocked::before {
-	background: var(--ran-booster-danger-strong);
 }
 
 .ran-booster-admin .ran-booster-portability__credential-review {
@@ -886,13 +908,13 @@
 }
 
 .ran-booster-admin .ran-booster-portability__packages-description {
-	max-inline-size: 850px;
+	max-inline-size: 65ch;
 	margin-block: 0 var(--ran-booster-space-12);
 	margin-inline: 0;
 }
 
 .ran-booster-admin .ran-booster-portability__credential-review > p {
-	max-inline-size: 850px;
+	max-inline-size: 65ch;
 	margin: 0;
 }
 
@@ -1075,6 +1097,21 @@
 	flex: 0 0 auto;
 }
 
+.ran-booster-admin .ran-booster-portability__configuration-summary,
+.ran-booster-admin .ran-booster-portability__apply-summary,
+.ran-booster-admin .ran-booster-portability__apply-result p {
+	max-inline-size: 65ch;
+}
+
+.ran-booster-admin .ran-booster-portability__apply-summary {
+	display: grid;
+	gap: var(--ran-booster-space-4);
+}
+
+.ran-booster-admin .ran-booster-portability__apply-fact {
+	display: block;
+}
+
 .ran-booster-admin #ran-booster-portability-review-progress.htmx-indicator {
 	flex: 0 0 auto;
 	margin: 0;
@@ -1141,4 +1178,24 @@
 		align-items: flex-start;
 		flex-direction: column;
 	}
+}
+
+.ran-booster-admin
+	.ran-booster-portability__review-table
+	.ran-booster-portability__package--alternate {
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__review-table
+	.ran-booster-portability__details-cell {
+	padding-block-start: 0;
+}
+
+.ran-booster-admin .ran-booster-portability__details-cell > details {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-portability__details-body code {
+	overflow-wrap: anywhere;
 }

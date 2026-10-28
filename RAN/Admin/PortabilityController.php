@@ -120,9 +120,11 @@ final readonly class PortabilityController {
 		} elseif ( is_array( $parts ) && ( isset( $parts['user'] ) || isset( $parts['pass'] ) || preg_match( '/[^\x00-\x7f]/', $host ) ) ) {
 			$host = '';
 		}
-		$ip = trim( $host, '[]' );
+		$ip      = trim( $host, '[]' );
+		$encoded = false;
 		if ( false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
-			$host = 'ipv6_' . str_replace( ':', '-', $ip );
+			$host    = 'ipv6-' . str_replace( ':', '-', $ip );
+			$encoded = true;
 		} elseif ( preg_match( '/[^\x00-\x7f]/', $host ) ) {
 			try {
 				if ( ! preg_match( '//u', $host ) || preg_match( '/[^a-z0-9.\-\x80-\xff]/i', $host ) ) {
@@ -130,7 +132,8 @@ final readonly class PortabilityController {
 				} elseif ( function_exists( 'idn_to_ascii' ) && defined( 'IDNA_NONTRANSITIONAL_TO_ASCII' ) && defined( 'INTL_IDNA_VARIANT_UTS46' ) ) {
 					$host = (string) idn_to_ascii( $host, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46 );
 				} else {
-					$host = 'utf8_' . bin2hex( $host );
+					$host    = 'utf8-' . bin2hex( $host );
+					$encoded = true;
 				}
 			} catch ( Throwable ) {
 				$host = '';
@@ -138,8 +141,13 @@ final readonly class PortabilityController {
 		} elseif ( preg_match( '/[^a-z0-9.-]/i', $host ) ) {
 			$host = '';
 		}
-		$host = strtolower( rtrim( $host, '.' ) );
-		if ( strlen( $host ) > 213 || ! preg_match( '/^(?:[a-z0-9][a-z0-9.-]*|utf8_(?:[0-9a-f]{2})+|ipv6_[a-f0-9.-]{2,})$/D', $host ) ) {
+		$host  = strtolower( $host );
+		$host  = str_ends_with( $host, '.' ) ? substr( $host, 0, -1 ) : $host;
+		$valid = $encoded
+			? preg_match( '/^(?:utf8-(?:[0-9a-f]{2})+|ipv6-[a-f0-9.-]{2,})$/D', $host )
+			: preg_match( '/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/D', $host );
+		$host  = str_replace( '.', '', $host );
+		if ( strlen( $host ) > 213 || ! $valid ) {
 			$host = 'site';
 		}
 

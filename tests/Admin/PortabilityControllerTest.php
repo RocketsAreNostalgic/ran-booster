@@ -54,6 +54,77 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PortabilityControllerTest extends TestCase {
 
+	#[DataProvider( 'export_filename_sites' )]
+	public function test_export_filename_uses_the_site_host_and_utc( string $site_url, string $host ): void {
+		$controller = ( new ReflectionClass( PortabilityController::class ) )->newInstanceWithoutConstructor();
+		$method     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_filename' );
+		$timezone   = date_default_timezone_get();
+		// phpcs:ignore WordPress.DateTime.RestrictedFunctions.timezone_change_date_default_timezone_set -- Proves UTC output is independent of the PHP process timezone.
+		date_default_timezone_set( 'Pacific/Auckland' );
+		try {
+			$filename = $method->invoke( $controller, $site_url, 1793181600 );
+			self::assertSame( '20261028-100000_' . $host . '_ran_booster_blueprint.zip', $filename );
+			self::assertSame( 1, substr_count( $filename, '.' ) );
+		} finally {
+			// phpcs:ignore WordPress.DateTime.RestrictedFunctions.timezone_change_date_default_timezone_set -- Restores the timezone after this isolation test.
+			date_default_timezone_set( $timezone );
+		}
+	}
+
+	/** @return array<string, array{string, string}> */
+	public static function export_filename_sites(): array {
+		return array(
+			'example'         => array( 'https://example.com/', 'examplecom' ),
+			'domain and port' => array( 'https://WWW.Example.com:8443/path', 'wwwexamplecom' ),
+			'subdomain'       => array( 'https://a.b.example.com/', 'abexamplecom' ),
+			'ipv4 site'       => array( 'http://192.0.2.1:8080/', '192021' ),
+			'local site'      => array( 'http://localhost:10008/', 'localhost' ),
+			'ipv6 site'       => array( 'http://[::1]:8080/', 'ipv6---1' ),
+			'mapped ipv6'     => array( 'http://[::ffff:192.0.2.1]/', 'ipv6---ffff-192021' ),
+			'ipv6 lookalike'  => array( 'https://ipv6---1-address/', 'ipv6---1-address' ),
+			'utf8 lookalike'  => array( 'https://utf8-42c39c434845522e6465/', 'utf8-42c39c434845522e6465' ),
+			'utf8 dns labels' => array( 'https://utf8.42c39c434845522e6465/', 'utf842c39c434845522e6465' ),
+			'collapsed a.bc'  => array( 'https://a.bc/', 'abc' ),
+			'collapsed ab.c'  => array( 'https://ab.c/', 'abc' ),
+			'reserved marker' => array( 'https://utf8__42c39c434845522e6465/', 'site' ),
+			'reserved ipv6'   => array( 'https://ipv6__--1/', 'site' ),
+			'no host'         => array( '/relative', 'site' ),
+			'only dots'       => array( 'https://.../', 'site' ),
+			'empty label'     => array( 'https://example..com/', 'site' ),
+			'bad label'       => array( 'https://-example.com/', 'site' ),
+			'label too long'  => array( 'https://' . str_repeat( 'a', 64 ) . '.com/', 'site' ),
+			'unsafe host'     => array( 'https://foo_bar.example/', 'site' ),
+			'userinfo'        => array( 'https://user:pass@EXAMPLE.com/', 'site' ),
+			'long host'       => array( 'https://' . str_repeat( 'a', 60 ) . '.' . str_repeat( 'b', 60 ) . '/', str_repeat( 'a', 60 ) . str_repeat( 'b', 60 ) ),
+			'maximum host'    => array( 'https://' . implode( '.', array_merge( array_fill( 0, 4, str_repeat( 'a', 50 ) ), array( str_repeat( 'b', 13 ) ) ) ) . '/', str_repeat( 'a', 200 ) . str_repeat( 'b', 13 ) ),
+			'oversized host'  => array( 'https://' . implode( '.', array_merge( array_fill( 0, 4, str_repeat( 'a', 50 ) ), array( str_repeat( 'b', 14 ) ) ) ) . '/', 'site' ),
+			'header control'  => array( "https://example.com\r\nX-Forged.example/", 'site' ),
+		);
+	}
+
+	public function test_export_filename_converts_internationalized_host_or_uses_safe_fallback(): void {
+		$controller = ( new ReflectionClass( PortabilityController::class ) )->newInstanceWithoutConstructor();
+		$method     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_filename' );
+		$has_idna   = function_exists( 'idn_to_ascii' ) && defined( 'IDNA_NONTRANSITIONAL_TO_ASCII' ) && defined( 'INTL_IDNA_VARIANT_UTS46' );
+		foreach ( array(
+			'BÜCHER.de' => 'xn--bcher-kvade',
+			'faß.de'    => 'xn--fa-hiade',
+		) as $host => $ascii ) {
+			$expected = $has_idna ? $ascii : 'utf8-' . bin2hex( $host );
+			$filename = $method->invoke( $controller, 'https://' . $host . '/', 1793181600 );
+			self::assertSame( '20261028-100000_' . $expected . '_ran_booster_blueprint.zip', $filename );
+			self::assertSame( 1, substr_count( $filename, '.' ) );
+		}
+	}
+
+	public function test_export_filename_rejects_unsafe_or_malformed_internationalized_hosts(): void {
+		$controller = ( new ReflectionClass( PortabilityController::class ) )->newInstanceWithoutConstructor();
+		$method     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_filename' );
+		foreach ( array( 'bücher%2f.example', 'bücher_unsafe.example', "bad\xc3.example" ) as $host ) {
+			self::assertSame( '20261028-100000_site_ran_booster_blueprint.zip', $method->invoke( $controller, 'https://' . $host . '/', 1793181600 ) );
+		}
+	}
+
 	public function test_mixed_preview_compares_release_configuration_without_enabling_apply(): void {
 		$release = new BlueprintPackage( 'plugin', 'release/release.php', 'Release', 'gh', 'release-id', 'owner/release', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php', 'stable' ) );
 		$secrets = $this->createMock( SecretsFile::class );

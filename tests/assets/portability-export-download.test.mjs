@@ -222,7 +222,12 @@ test('an unstructured export error uses the safe fallback message', async () => 
 test('a successful export downloads the Blueprint without leaving the Portability page', async () => {
 	const state = fixture(async () => ({
 		blob: async () => new Blob(['zip']),
-		headers: new Headers({ 'content-type': 'application/zip' }),
+		headers: new Headers({
+			'content-type': 'application/zip',
+			'content-disposition':
+				'attachment; filename="20261028-100000_examplecom_ran_booster_blueprint.zip"',
+			'X-RAN-Blueprint-Requirement-Warnings': '1',
+		}),
 		ok: true,
 	}));
 
@@ -230,9 +235,13 @@ test('a successful export downloads the Blueprint without leaving the Portabilit
 		loadFunction('initPortabilityExportDownload')();
 		await state.form.listeners.get('submit')(submitEvent());
 
-		assert.equal(state.message.hidden, true);
+		assert.equal(state.message.hidden, false);
 		assert.equal(state.links.length, 1);
-		assert.equal(state.links[0].download, 'ran-booster-blueprint.zip');
+		assert.equal(
+			state.links[0].download,
+			'20261028-100000_examplecom_ran_booster_blueprint.zip'
+		);
+		assert.equal((state.links[0].download.match(/\./g) || []).length, 1);
 		assert.equal(state.links[0].clicks, 1);
 		assert.equal(state.events.length, 1);
 		assert.equal(
@@ -240,13 +249,120 @@ test('a successful export downloads the Blueprint without leaving the Portabilit
 			'ran-booster:admin-mutation-success'
 		);
 		assert.deepEqual(state.events[0].detail, {
-			message: 'Transporter Blueprint download started.',
+			message:
+				'Transporter Blueprint download started. Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction.',
 		});
 		assert.equal(state.submit.disabled, false);
 	} finally {
 		cleanup();
 	}
 });
+
+test('a valid 213-character hostname is retained in the enhanced download', async () => {
+	const filename =
+		'20261028-100000_' +
+		'a'.repeat(200) +
+		'b'.repeat(13) +
+		'_ran_booster_blueprint.zip';
+	const state = fixture(async () => ({
+		blob: async () => new Blob(['zip']),
+		headers: new Headers({
+			'content-type': 'application/zip',
+			'content-disposition': `attachment; filename="${filename}"`,
+		}),
+		ok: true,
+	}));
+
+	try {
+		loadFunction('initPortabilityExportDownload')();
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.links[0].download, filename);
+	} finally {
+		cleanup();
+	}
+});
+
+test('an encoded international hostname is downloaded exactly as the server names it', async () => {
+	const filename =
+		'20261028-100000_utf8-42c39c434845522e6465_ran_booster_blueprint.zip';
+	const state = fixture(async () => ({
+		blob: async () => new Blob(['zip']),
+		headers: new Headers({
+			'content-type': 'application/zip',
+			'content-disposition': `attachment; filename="${filename}"`,
+		}),
+		ok: true,
+	}));
+
+	try {
+		loadFunction('initPortabilityExportDownload')();
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.links[0].download, filename);
+	} finally {
+		cleanup();
+	}
+});
+
+test('an encoded IPv6 hostname is downloaded exactly as the server names it', async () => {
+	const filename =
+		'20261028-100000_ipv6---ffff-192021_ran_booster_blueprint.zip';
+	const state = fixture(async () => ({
+		blob: async () => new Blob(['zip']),
+		headers: new Headers({
+			'content-type': 'application/zip',
+			'content-disposition': `attachment; filename="${filename}"`,
+		}),
+		ok: true,
+	}));
+
+	try {
+		loadFunction('initPortabilityExportDownload')();
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.links[0].download, filename);
+	} finally {
+		cleanup();
+	}
+});
+
+for (const disposition of [
+	'',
+	'attachment; filename="../../secret.zip"',
+	'attachment; filename="20261028-100000_example.com_ran_booster_blueprint.zip"',
+	'attachment; filename="20261028-100000_utf8_42f_ran_booster_blueprint.zip"',
+	'attachment; filename="20261028-100000_utf8_gg_ran_booster_blueprint.zip"',
+	'attachment; filename="20261028-100000_ipv6_--1-x_ran_booster_blueprint.zip"',
+	'attachment; filename="20261028-100000_examplecom_ran_booster_blueprint.zip"; filename="other.zip"',
+	'attachment; filename="20261028-100000_' +
+		'a'.repeat(214) +
+		'_ran_booster_blueprint.zip"',
+	'attachment; filename="20261028-100000_examplecom_ran_booster_blueprint.zip"\r\nX-Forged: true',
+]) {
+	test(`an absent or invalid filename header uses the safe fallback: ${JSON.stringify(disposition)}`, async () => {
+		const state = fixture(async () => ({
+			blob: async () => new Blob(['zip']),
+			headers: {
+				get(name) {
+					return (
+						{
+							'content-type': 'application/zip',
+							'content-disposition': disposition,
+						}[name] || null
+					);
+				},
+			},
+			ok: true,
+		}));
+
+		try {
+			loadFunction('initPortabilityExportDownload')();
+			await state.form.listeners.get('submit')(submitEvent());
+			assert.equal(state.links[0].download, 'ran-booster-blueprint.zip');
+			assert.equal(state.links[0].clicks, 1);
+		} finally {
+			cleanup();
+		}
+	});
+}
 
 test('a client-side password validation failure does not start a second export request', async () => {
 	let fetches = 0;

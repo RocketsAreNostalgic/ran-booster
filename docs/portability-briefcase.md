@@ -295,8 +295,21 @@ silently dropping the credential.
 
 ## Blueprint archive format
 
-The canonical archive filename is `ran-booster-blueprint.zip` and the JSON entry
-inside the archive is `blueprint.json`.
+Export downloads use `YYYYMMDD-HHMMSS_DOMAIN_ran_booster_blueprint.zip`, with a
+UTC timestamp and the exporting site's hostname, with hostname dots removed:
+`example.com` becomes `examplecom`. The only dot is before `zip`. Removing dots
+can make different hostnames indistinguishable; for example, `a.bc` and `ab.c`
+both become `abc`.
+
+Internationalized hostnames use IDNA when PHP's internationalization extension
+is available; otherwise their UTF-8 bytes are represented as `utf8-` followed by
+hexadecimal. IPv6 hosts use `ipv6-` followed by the address with colons replaced
+by hyphens and any dots removed. These encoded forms can also match a literal
+hostname after normalization. If the hostname is unavailable, unsafe,
+unconvertible or too long to fit, the filename uses `site`.
+An enhanced download also falls back to
+`ran-booster-blueprint.zip` if its filename header is unavailable or invalid.
+The JSON entry inside the archive is always `blueprint.json`.
 
 `PackageBlueprint::from_json()` accepts only canonical JSON that matches the
 computed output exactly. The current format is:

@@ -96,7 +96,7 @@ final readonly class PortabilityController {
 			nocache_headers();
 			header( 'Content-Type: application/zip' );
 			header( 'X-RAN-Blueprint-Requirement-Warnings: ' . (string) count( $report ) );
-			header( 'Content-Disposition: attachment; filename="' . BlueprintArchive::FILENAME . '"' );
+			header( 'Content-Disposition: attachment; filename="' . $this->export_filename( home_url(), time() ) . '"' );
 			header( 'Content-Length: ' . (string) strlen( $bytes ) );
 			echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Emits only the fully read, bounded ZIP after validation.
 		} catch ( Throwable ) {
@@ -109,6 +109,49 @@ final readonly class PortabilityController {
 		}
 
 		exit;
+	}
+
+	private function export_filename( string $site_url, int $timestamp ): string {
+		$parts = wp_parse_url( $site_url );
+		$host  = is_array( $parts ) && is_string( $parts['host'] ?? null ) ? $parts['host'] : '';
+		// Parse the original host before IDNA: parse_url may replace UTF-8 bytes in some locales.
+		if ( is_array( $parts ) && preg_match( '~\Ahttps?://([^/?#@:]+)(?::[0-9]+)?(?:[/?#]|\z)~i', $site_url, $matches ) ) {
+			$host = $matches[1];
+		} elseif ( is_array( $parts ) && ( isset( $parts['user'] ) || isset( $parts['pass'] ) || preg_match( '/[^\x00-\x7f]/', $host ) ) ) {
+			$host = '';
+		}
+		$ip      = trim( $host, '[]' );
+		$encoded = false;
+		if ( false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+			$host    = 'ipv6-' . str_replace( ':', '-', $ip );
+			$encoded = true;
+		} elseif ( preg_match( '/[^\x00-\x7f]/', $host ) ) {
+			try {
+				if ( ! preg_match( '//u', $host ) || preg_match( '/[^a-z0-9.\-\x80-\xff]/i', $host ) ) {
+					$host = '';
+				} elseif ( function_exists( 'idn_to_ascii' ) && defined( 'IDNA_NONTRANSITIONAL_TO_ASCII' ) && defined( 'INTL_IDNA_VARIANT_UTS46' ) ) {
+					$host = (string) idn_to_ascii( $host, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46 );
+				} else {
+					$host    = 'utf8-' . bin2hex( $host );
+					$encoded = true;
+				}
+			} catch ( Throwable ) {
+				$host = '';
+			}
+		} elseif ( preg_match( '/[^a-z0-9.-]/i', $host ) ) {
+			$host = '';
+		}
+		$host  = strtolower( $host );
+		$host  = str_ends_with( $host, '.' ) ? substr( $host, 0, -1 ) : $host;
+		$valid = $encoded
+			? preg_match( '/^(?:utf8-(?:[0-9a-f]{2})+|ipv6-[a-f0-9.-]{2,})$/D', $host )
+			: preg_match( '/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/D', $host );
+		$host  = str_replace( '.', '', $host );
+		if ( strlen( $host ) > 213 || ! $valid ) {
+			$host = 'site';
+		}
+
+		return gmdate( 'Ymd-His', $timestamp ) . '_' . $host . '_ran_booster_blueprint.zip';
 	}
 
 	private function archive_bytes( string $path ): string {

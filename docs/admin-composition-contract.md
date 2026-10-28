@@ -380,19 +380,29 @@ placeholder images, installed-plugin reads, compatibility labels and failure
 shell are all Core-owned.
 
 The page uses WordPress plugin-card presentation language without invoking the
-WordPress.org Plugins API or installer. It performs no remote request, mutation,
-entitlement check, update registration or add-on callback. Each card names the
-qualified satellite release and API tuple it represents. Core maintainers update
-that fixed metadata in a Core pull request after the satellite release is
-qualified; the page never discovers releases or polls repositories. A card may
-link an administrator to that selected release for manual ZIP installation, or
-explain why a release has not been selected. The page stores no sponsorship or
+WordPress.org Plugins API. Rendering the catalogue performs no remote request,
+mutation, entitlement check, update registration or add-on callback. Each card
+names the qualified satellite release and API tuple it represents. Core
+maintainers update that fixed metadata in a Core pull request after the satellite
+release is qualified; the page never discovers releases or polls repositories.
+More Details links to the selected release page.
+
+An administrator with plugin-install permission may explicitly install a
+compatible, absent extension. The nonce-protected POST selects only an ID from
+the fixed catalogue; it does not accept an arbitrary package URL. Core downloads
+the selected release archive and checks its pinned digest, package identity and
+compatibility before handing it to the WordPress plugin installer. Existing
+destinations are not overwritten. Core checks the installed result and attempts
+to remove the temporary archive, and reports an uncertain result when it cannot
+confirm the outcome or cleanup. Installation leaves the extension inactive;
+activation is a separate administrator action. The page stores no sponsorship or
 entitlement state.
 
 Installed and active state comes only from local WordPress plugin state. Exact
 runtime compatibility remains owned by each installed extension's fail-closed
-API guard. The page exposes no new action, filter, facade, registry or persistent
-state, and its local stylesheet is limited to the Extensions screen hook.
+API guard. The install action adds no public filter, facade, registry or
+entitlement state, and the local stylesheet is limited to the Extensions screen
+hook.
 
 ## Provider repository surface
 

@@ -211,8 +211,15 @@
 				return;
 			}
 
+			const isCredential = form.hasAttribute(
+				'data-ran-booster-credential-validation'
+			);
+			const credentialResult = isCredential
+				? region.querySelector?.('[data-ran-booster-credential-result]')
+				: null;
 			const message = (
 				fallbackMessage ||
+				credentialResult?.textContent ||
 				region.textContent ||
 				''
 			).trim();
@@ -221,13 +228,6 @@
 				return;
 			}
 			if (fallbackMessage) {
-				const credentialResult = form.hasAttribute(
-					'data-ran-booster-credential-validation'
-				)
-					? region.querySelector?.(
-							'[data-ran-booster-credential-result]'
-						)
-					: null;
 				if (credentialResult) {
 					credentialResult.textContent = message;
 					credentialResult.className =
@@ -238,9 +238,10 @@
 				}
 			}
 			region.hidden = false;
-			if (form.hasAttribute('data-ran-booster-credential-validation')) {
+			if (isCredential) {
 				region.removeAttribute?.('role');
 				region.focus?.({ preventScroll: true });
+				announce(message, 'error');
 				return;
 			}
 			region.setAttribute('role', 'alert');

@@ -137,6 +137,9 @@ function fixture() {
 		hasAttribute(name) {
 			return errorAttributes.has(name);
 		},
+		removeAttribute(name) {
+			errorAttributes.delete(name);
+		},
 		append(child) {
 			this.appendedChildren.push(child);
 		},
@@ -635,35 +638,45 @@ test('enhanced mutation feedback allows only declared 422 error swaps and keeps 
 	]);
 });
 
-test('credential failure focuses its Health result instead of an unrelated notice', () => {
-	const state = fixture();
-	state.form.hasAttribute = (name) =>
-		name === 'data-ran-booster-credential-validation';
-	const other = {
-		hidden: false,
-		textContent: 'Unrelated error.',
-		focus() {
-			throw new Error('wrong focus');
-		},
-	};
-	state.setRenderedErrors([other]);
-	const init = loadFunction('initEnhancedMutationFeedback', {
-		document: state.document,
-		window: state.window,
-	});
-	init();
-	state.listeners.get('htmx:afterSwap')({
-		detail: {
+test('credential 422 and 500 failures focus and announce only their own result', () => {
+	for (const status of [422, 500]) {
+		const state = fixture();
+		state.form.hasAttribute = (name) =>
+			name === 'data-ran-booster-credential-validation';
+		const result = { textContent: `Credential failure ${status}` };
+		state.error.textContent = `Expiry unknown ${result.textContent}`;
+		state.error.querySelector = (selector) =>
+			selector === '[data-ran-booster-credential-result]' ? result : null;
+		state.errorAttributes.set('role', 'alert');
+		state.setRenderedErrors([
+			{
+				textContent: 'Other credential failure',
+				focus() {
+					throw new Error('wrong focus');
+				},
+			},
+		]);
+		const init = loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		});
+		init();
+		const detail = {
 			elt: state.swapTarget,
 			requestConfig: { elt: state.form },
-			xhr: { status: 422 },
-		},
-	});
-	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
-	assert.deepEqual(state.announcements, []);
+			xhr: { status },
+		};
+		state.listeners.get('htmx:afterSwap')({ detail });
+		state.listeners.get('htmx:responseError')({ detail });
+		assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+		assert.equal(state.errorAttributes.has('role'), false);
+		assert.deepEqual(state.announcements, [
+			{ message: `Credential failure ${status}`, type: 'assertive' },
+		]);
+	}
 });
 
-test('credential transport failure leaves expiry text intact and replaces result', () => {
+test('credential transport failure preserves expiry and announces the replacement result', () => {
 	const state = fixture();
 	state.form.hasAttribute = (name) =>
 		name === 'data-ran-booster-credential-validation';
@@ -686,6 +699,11 @@ test('credential transport failure leaves expiry text intact and replaces result
 	);
 	assert.equal(result.className, 'ran-booster-credential-health__error');
 	assert.equal(result.hidden, false);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.equal(state.errorAttributes.has('role'), false);
+	assert.deepEqual(state.announcements, [
+		{ message: result.textContent, type: 'assertive' },
+	]);
 });
 
 test('removing a credential validation form aborts its own request only', () => {

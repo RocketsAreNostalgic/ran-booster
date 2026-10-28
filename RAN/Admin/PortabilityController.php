@@ -96,7 +96,7 @@ final readonly class PortabilityController {
 			nocache_headers();
 			header( 'Content-Type: application/zip' );
 			header( 'X-RAN-Blueprint-Requirement-Warnings: ' . (string) count( $report ) );
-			header( 'Content-Disposition: attachment; filename="' . BlueprintArchive::FILENAME . '"' );
+			header( 'Content-Disposition: attachment; filename="' . $this->export_filename( home_url(), time() ) . '"' );
 			header( 'Content-Length: ' . (string) strlen( $bytes ) );
 			echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Emits only the fully read, bounded ZIP after validation.
 		} catch ( Throwable ) {
@@ -109,6 +109,27 @@ final readonly class PortabilityController {
 		}
 
 		exit;
+	}
+
+	private function export_filename( string $site_url, int $timestamp ): string {
+		$parts = wp_parse_url( $site_url );
+		$host  = is_array( $parts ) && is_string( $parts['host'] ?? null ) ? $parts['host'] : '';
+		$ip    = trim( $host, '[]' );
+		if ( false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
+			$host = 'ipv6-' . str_replace( ':', '-', $ip ) . '-address';
+		} elseif ( preg_match( '/[^\x00-\x7f]/', $host ) ) {
+			try {
+				$host = class_exists( \WpOrg\Requests\IdnaEncoder::class ) ? \WpOrg\Requests\IdnaEncoder::encode( $host ) : '';
+			} catch ( Throwable ) {
+				$host = '';
+			}
+		}
+		$host = strtolower( rtrim( $host, '.' ) );
+		if ( ! preg_match( '/^[a-z0-9][a-z0-9.-]{0,119}$/D', $host ) ) {
+			$host = 'site';
+		}
+
+		return gmdate( 'Ymd-His', $timestamp ) . '_' . $host . '_ran_booster_blueprint.zip';
 	}
 
 	private function archive_bytes( string $path ): string {

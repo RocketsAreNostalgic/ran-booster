@@ -205,7 +205,15 @@
 				const url = window.URL.createObjectURL(await response.blob());
 				const link = document.createElement('a');
 				link.href = url;
-				link.download = 'ran-booster-blueprint.zip';
+				const disposition =
+					response.headers.get('content-disposition') || '';
+				const filename =
+					/^attachment; filename="(\d{8}-\d{6}_[a-z0-9][a-z0-9.-]{0,119}_ran_booster_blueprint\.zip)"$/.exec(
+						disposition
+					);
+				link.download = filename
+					? filename[1]
+					: 'ran-booster-blueprint.zip';
 				document.body.appendChild(link);
 				link.click();
 				link.remove();

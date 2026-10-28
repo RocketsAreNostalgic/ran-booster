@@ -295,8 +295,11 @@ silently dropping the credential.
 
 ## Blueprint archive format
 
-The canonical archive filename is `ran-booster-blueprint.zip` and the JSON entry
-inside the archive is `blueprint.json`.
+Export downloads use `YYYYMMDD-HHMMSS_DOMAIN_ran_booster_blueprint.zip`, with a
+UTC timestamp and the exporting site's hostname. An unavailable or unsafe
+hostname uses `site`; an enhanced download also falls back to
+`ran-booster-blueprint.zip` if its filename header is unavailable or invalid.
+The JSON entry inside the archive is always `blueprint.json`.
 
 `PackageBlueprint::from_json()` accepts only canonical JSON that matches the
 computed output exactly. The current format is:

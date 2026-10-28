@@ -54,6 +54,35 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class PortabilityControllerTest extends TestCase {
 
+	#[DataProvider( 'export_filename_sites' )]
+	public function test_export_filename_uses_the_site_host_and_utc( string $site_url, string $host ): void {
+		$controller = ( new ReflectionClass( PortabilityController::class ) )->newInstanceWithoutConstructor();
+		$method     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_filename' );
+		$timezone   = date_default_timezone_get();
+		// phpcs:ignore WordPress.DateTime.RestrictedFunctions.timezone_change_date_default_timezone_set -- Proves UTC output is independent of the PHP process timezone.
+		date_default_timezone_set( 'Pacific/Auckland' );
+		try {
+			self::assertSame( '20261028-100000_' . $host . '_ran_booster_blueprint.zip', $method->invoke( $controller, $site_url, 1793181600 ) );
+		} finally {
+			// phpcs:ignore WordPress.DateTime.RestrictedFunctions.timezone_change_date_default_timezone_set -- Restores the timezone after this isolation test.
+			date_default_timezone_set( $timezone );
+		}
+	}
+
+	/** @return array<string, array{string, string}> */
+	public static function export_filename_sites(): array {
+		return array(
+			'domain and port' => array( 'https://WWW.Example.com:8443/path', 'www.example.com' ),
+			'local site'      => array( 'http://localhost:10008/', 'localhost' ),
+			'ipv6 site'       => array( 'http://[::1]:8080/', 'ipv6---1-address' ),
+			'no host'         => array( '/relative', 'site' ),
+			'only dots'       => array( 'https://.../', 'site' ),
+			'unsafe host'     => array( 'https://foo_bar.example/', 'site' ),
+			'long host'       => array( 'https://' . str_repeat( 'a', 121 ) . '/', 'site' ),
+			'header control'  => array( "https://example.com\r\nX-Forged.example/", 'site' ),
+		);
+	}
+
 	public function test_mixed_preview_compares_release_configuration_without_enabling_apply(): void {
 		$release = new BlueprintPackage( 'plugin', 'release/release.php', 'Release', 'gh', 'release-id', 'owner/release', '', null, new \RAN\WordPress\ManagedReleaseConfiguration( 'release', 'release.php', 'stable' ) );
 		$secrets = $this->createMock( SecretsFile::class );

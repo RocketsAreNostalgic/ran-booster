@@ -5465,7 +5465,7 @@ msgid "External replacement"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:81
-#: views/troubleshooting.php:269
+#: views/troubleshooting.php:271
 msgid "Diagnostic provider"
 msgstr ""
 
@@ -5486,7 +5486,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:99
 #: views/troubleshooting.php:244
 #: views/troubleshooting.php:248
-#: views/troubleshooting.php:269
+#: views/troubleshooting.php:271
 msgid "GitHub provider"
 msgstr ""
 
@@ -5549,9 +5549,9 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:112
 #: RAN/Troubleshooting/TroubleshootingService.php:119
-#: views/troubleshooting.php:269
-#: views/troubleshooting.php:302
-#: views/troubleshooting.php:308
+#: views/troubleshooting.php:271
+#: views/troubleshooting.php:306
+#: views/troubleshooting.php:313
 msgid "Booster Core updates"
 msgstr ""
 
@@ -5564,7 +5564,7 @@ msgid "Next check (UTC)"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:122
-#: views/troubleshooting.php:253
+#: views/troubleshooting.php:254
 msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
@@ -8835,7 +8835,7 @@ msgstr ""
 
 #. translators: %s: selected provider plugin name.
 #: views/provider.php:242
-#: views/troubleshooting.php:279
+#: views/troubleshooting.php:282
 msgid "Manage GitHub provider"
 msgstr ""
 
@@ -9619,52 +9619,52 @@ msgstr ""
 msgid "GitHub provider details"
 msgstr ""
 
-#: views/troubleshooting.php:260
-#: views/troubleshooting.php:305
+#: views/troubleshooting.php:261
+#: views/troubleshooting.php:309
 msgid "Technical details"
 msgstr ""
 
-#: views/troubleshooting.php:288
+#: views/troubleshooting.php:292
 msgid "Core update status is unavailable."
 msgstr ""
 
-#: views/troubleshooting.php:290
+#: views/troubleshooting.php:294
 msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
 msgstr ""
 
-#: views/troubleshooting.php:292
+#: views/troubleshooting.php:296
 msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
 msgstr ""
 
-#: views/troubleshooting.php:294
+#: views/troubleshooting.php:298
 msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting.php:296
+#: views/troubleshooting.php:300
 msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting.php:298
+#: views/troubleshooting.php:302
 msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting.php:316
+#: views/troubleshooting.php:322
 msgid "Support report"
 msgstr ""
 
-#: views/troubleshooting.php:319
+#: views/troubleshooting.php:325
 msgid "Copy report"
 msgstr ""
 
-#: views/troubleshooting.php:321
+#: views/troubleshooting.php:327
 msgid "Support report copied to the clipboard."
 msgstr ""
 
-#: views/troubleshooting.php:321
+#: views/troubleshooting.php:327
 msgid "Clipboard access failed. The report is selected; use your browser copy command."
 msgstr ""
 
-#: views/troubleshooting.php:322
+#: views/troubleshooting.php:328
 msgid "This report includes the displayed installation details and diagnostic results. Local declarations and standing Core update status are not diagnostic test results. Review it before sharing."
 msgstr ""
 

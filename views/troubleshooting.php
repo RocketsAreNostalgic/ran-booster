@@ -244,39 +244,43 @@ $repository_placeholder = array() === $locator_examples
 			$github_fields  = $installation[ __( 'GitHub provider', 'ran-booster' ) ] ?? array();
 			$summary_labels = array( __( 'Name', 'ran-booster' ), __( 'Version', 'ran-booster' ), __( 'Source', 'ran-booster' ), __( 'Selection state', 'ran-booster' ), __( 'Operational availability', 'ran-booster' ) );
 			?>
-			<section class="ran-booster-panel ran-booster-page-shell" aria-labelledby="ran-booster-github-details-heading">
+			<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card" aria-labelledby="ran-booster-github-details-heading">
 				<header class="ran-booster-page-shell__header"><h4 id="ran-booster-github-details-heading" class="ran-booster-section__title"><?php esc_html_e( 'GitHub provider', 'ran-booster' ); ?></h4></header>
 				<div class="ran-booster-page-shell__body">
 					<p><?php echo esc_html( implode( ' · ', array_intersect_key( $github_fields, array_fill_keys( array( __( 'Name', 'ran-booster' ), __( 'Source', 'ran-booster' ), __( 'Operational availability', 'ran-booster' ) ), true ) ) ) ); ?></p>
-					<details id="ran-booster-github-provider-diagnostics">
+					<details id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__disclosure">
 						<summary><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></summary>
+						<div class="ran-booster-troubleshooting__disclosure-body">
 						<p><?php esc_html_e( 'Local declarations only; these claims do not verify publisher identity or remote access.', 'ran-booster' ); ?></p>
-						<dl><?php foreach ( $summary_labels as $field_label ) { ?>
+						<dl class="ran-booster-troubleshooting__fields-list"><?php foreach ( $summary_labels as $field_label ) { ?>
 							<?php
 							if ( isset( $github_fields[ $field_label ] ) ) {
 								?>
-								<dt><?php echo esc_html( $field_label ); ?></dt><dd><?php echo esc_html( $github_fields[ $field_label ] ); ?></dd><?php } ?>
+								<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $github_fields[ $field_label ] ); ?></code></dd></div><?php } ?>
 						<?php } ?></dl>
-						<details><summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
-							<dl><?php foreach ( $github_fields as $field_label => $field_value ) { ?>
+						<details class="ran-booster-troubleshooting__disclosure"><summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
+							<div class="ran-booster-troubleshooting__disclosure-body">
+							<dl class="ran-booster-troubleshooting__fields-list"><?php foreach ( $github_fields as $field_label => $field_value ) { ?>
 								<?php
 								if ( ! in_array( $field_label, $summary_labels, true ) ) {
 									?>
-									<dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd><?php } ?>
+									<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd></div><?php } ?>
 							<?php } ?></dl>
 							<?php foreach ( $installation as $context_heading => $context_fields ) { ?>
 								<?php
 								if ( in_array( $context_heading, array( __( 'GitHub provider', 'ran-booster' ), __( 'Booster Core updates', 'ran-booster' ), __( 'Diagnostic provider', 'ran-booster' ) ), true ) ) {
 									continue; }
 								?>
-								<h5><?php echo esc_html( $context_heading ); ?></h5><dl>
+								<h5><?php echo esc_html( $context_heading ); ?></h5><dl class="ran-booster-troubleshooting__fields-list">
 								<?php
 								foreach ( $context_fields as $field_label => $field_value ) {
 									?>
-									<dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd><?php } ?></dl>
+									<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd></div><?php } ?></dl>
 							<?php } ?>
+							</div>
 						</details>
 						<p><a href="<?php echo esc_url( $admin_base . '?page=ran-booster&tab=gh' ); ?>"><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></a></p>
+						</div>
 					</details>
 				</div>
 			</section>
@@ -298,16 +302,18 @@ $repository_placeholder = array() === $locator_examples
 				$self_update_message = __( 'Core updates are off for this source installation. Booster will not check for or replace itself.', 'ran-booster' );
 			}
 			?>
-			<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__core-updates" aria-labelledby="ran-booster-core-updates-heading">
+			<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__core-updates ran-booster-troubleshooting__installation-card" aria-labelledby="ran-booster-core-updates-heading">
 				<header class="ran-booster-page-shell__header"><h4 id="ran-booster-core-updates-heading" class="ran-booster-section__title"><?php esc_html_e( 'Booster Core updates', 'ran-booster' ); ?></h4></header>
 				<div class="ran-booster-page-shell__body">
 					<p><?php echo esc_html( $self_update_message ); ?></p>
-					<details><summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
-						<dl>
+					<details class="ran-booster-troubleshooting__disclosure"><summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
+						<div class="ran-booster-troubleshooting__disclosure-body">
+						<dl class="ran-booster-troubleshooting__fields-list">
 						<?php
 						foreach ( $installation[ __( 'Booster Core updates', 'ran-booster' ) ] ?? array() as $field_label => $field_value ) {
 							?>
-							<dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd><?php } ?></dl>
+							<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd></div><?php } ?></dl>
+						</div>
 					</details>
 				</div>
 			</section>

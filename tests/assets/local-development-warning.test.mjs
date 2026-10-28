@@ -40,7 +40,7 @@ function loadInitializer() {
 	return Function(`"use strict"; return (${source.slice(start, end)});`)();
 }
 
-function fixture(policy, capable = true) {
+function fixture(policy, capable = true, deferred = false, standalone = false) {
 	const listeners = new Map();
 	const select = {
 		value: policy,
@@ -64,6 +64,9 @@ function fixture(policy, capable = true) {
 	};
 	const operation = {
 		querySelector(selector) {
+			if (selector === '[data-ran-booster-local-development-warning]') {
+				return notice;
+			}
 			if (selector === '[data-ran-booster-settings-reinstall]') {
 				return reinstall;
 			}
@@ -80,12 +83,13 @@ function fixture(policy, capable = true) {
 				return select;
 			}
 			if (selector === '[data-ran-booster-local-development-warning]') {
-				return notice;
+				return deferred ? null : notice;
 			}
 			return null;
 		},
 		closest(selector) {
-			return selector === '.ran-booster-package-operation-settings'
+			return !standalone &&
+				selector === '.ran-booster-package-operation-settings'
 				? operation
 				: null;
 		},
@@ -114,8 +118,21 @@ test('disabled automation hides the local overwrite warning', () => {
 	}
 });
 
+test('a standalone policy field still controls its warning', () => {
+	const state = fixture('disabled', true, false, true);
+	try {
+		loadInitializer()();
+		assert.equal(state.notice.hidden, true);
+		state.select.value = 'manual';
+		state.listeners.get('change')();
+		assert.equal(state.notice.hidden, false);
+	} finally {
+		delete globalThis.document;
+	}
+});
+
 test('the warning follows Automation changes without a reload', () => {
-	const state = fixture('manual');
+	const state = fixture('manual', true, true);
 
 	try {
 		loadInitializer()();

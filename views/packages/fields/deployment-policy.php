@@ -21,6 +21,21 @@ $package_field_form               = isset( $package_field_form ) && is_string( $
 $show_development_safety_notice   = ! empty( $development_environment_detected );
 $hide_development_safety_notice   = \RAN\Deployment\DeploymentPolicy::DISABLED->value === $deployment_policy;
 
+$render_development_safety_notice = static function () use ( $show_development_safety_notice, $hide_development_safety_notice, $release_automation, $provider_webhook_available, $push_to_deploy_provider_url, $push_to_deploy_documentation_url ): void {
+	if ( $show_development_safety_notice ) {
+		?>
+	<div class="notice notice-warning inline" data-ran-booster-local-development-warning<?php echo $hide_development_safety_notice ? ' hidden' : ''; ?>>
+		<p>
+			<strong><?php esc_html_e( 'NOTICE: Editing this package’s files on this site? Choose Disabled.', 'ran-booster' ); ?></strong><br/>
+			<?php esc_html_e( 'Manual and Automatic can overwrite local changes when an update or reinstall runs.', 'ran-booster' ); ?>
+			<?php if ( ! $release_automation && $provider_webhook_available ) { ?>
+				<br/><a href="<?php echo esc_url( $push_to_deploy_provider_url ); ?>"><?php esc_html_e( 'Push-to-Deploy setting', 'ran-booster' ); ?></a> | <a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Docs', 'ran-booster' ); ?></a>
+			<?php } ?>
+		</p>
+	</div>
+		<?php
+	}
+};
 ?>
 <?php if ( $package_field_grid ) { ?>
 	<div class="ran-booster-settings-field ran-booster-settings-field--wide ran-booster-deployment-policy-field">
@@ -35,17 +50,10 @@ $hide_development_safety_notice   = \RAN\Deployment\DeploymentPolicy::DISABLED->
 			<option value="<?php echo esc_attr( \RAN\Deployment\DeploymentPolicy::MANUAL->value ); ?>" <?php selected( $deployment_policy, \RAN\Deployment\DeploymentPolicy::MANUAL->value ); ?>><?php esc_html_e( 'Manual — update only when requested', 'ran-booster' ); ?></option>
 			<option value="<?php echo esc_attr( \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value ); ?>" <?php selected( $deployment_policy, \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value ); ?> <?php disabled( ! $automatic_available ); ?>><?php echo esc_html( $release_automation ? __( 'Automatic — install validated releases through WordPress Updates', 'ran-booster' ) : __( 'Automatic — deploy signed repository pushes', 'ran-booster' ) ); ?></option>
 		</select>
-		<?php if ( $show_development_safety_notice ) { ?>
-			<div class="notice notice-warning inline" data-ran-booster-local-development-warning<?php echo $hide_development_safety_notice ? ' hidden' : ''; ?>>
-				<p>
-			<strong><?php esc_html_e( 'NOTICE: Editing this package’s files on this site? Choose Disabled.', 'ran-booster' ); ?></strong><br/>
-			<?php esc_html_e( 'Manual and Automatic can overwrite local changes when an update or reinstall runs.', 'ran-booster' ); ?>
-			<?php if ( ! $release_automation && $provider_webhook_available ) { ?>
-				<br/><a href="<?php echo esc_url( $push_to_deploy_provider_url ); ?>"><?php esc_html_e( 'Push-to-Deploy setting', 'ran-booster' ); ?></a> | <a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Docs', 'ran-booster' ); ?></a>
-			<?php } ?>
-				</p>
-			</div>
-		<?php } ?>
+		<?php
+		if ( empty( $defer_development_safety_notice ) ) {
+			$render_development_safety_notice(); }
+		?>
 		<?php if ( $release_automation ) { ?>
 			<p class="description"><?php esc_html_e( 'Manual waits for an administrator; Automatic lets WordPress install validated published updates.', 'ran-booster' ); ?></p>
 		<?php } elseif ( ! $provider_webhook_available ) { ?>

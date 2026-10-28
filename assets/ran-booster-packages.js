@@ -341,7 +341,7 @@
 				const operation = field.closest(
 					'.ran-booster-package-operation-settings'
 				);
-				const notice = field.querySelector(
+				const notice = (operation ?? field).querySelector(
 					'[data-ran-booster-local-development-warning]'
 				);
 				const reinstall = operation?.querySelector(

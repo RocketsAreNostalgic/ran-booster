@@ -317,7 +317,10 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 					<div class="ran-booster-settings-fields">
 						<?php $package_field_form = 'ran-booster-package-edit-form'; ?>
 						<?php $package_automation_source = $package_current_source; ?>
+						<?php $defer_development_safety_notice = true; ?>
 						<?php require __DIR__ . '/fields/deployment-policy.php'; ?>
+						<?php /** @var \Closure(): void $render_development_safety_notice */ ?>
+						<?php unset( $defer_development_safety_notice ); ?>
 						<?php unset( $package_field_form ); ?>
 					</div>
 					<?php if ( $show_package_operation_actions ) { ?>
@@ -330,6 +333,7 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 						<?php } ?>
 					</div>
 					<?php } ?>
+					<?php $render_development_safety_notice(); ?>
 				</div>
 			</section>
 

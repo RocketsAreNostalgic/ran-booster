@@ -244,8 +244,9 @@ final class RepeatPackageViewTest extends TestCase {
 	): void {
 		$GLOBALS['ran_booster_package_view_multisite']   = $multisite;
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = $multisite;
-		$package                   = $this->package( $package_view );
-		$package_provider_settings = $this->provider_settings( $provider_available );
+		$package                          = $this->package( $package_view );
+		$package_provider_settings        = $this->provider_settings( $provider_available );
+		$development_environment_detected = true;
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
@@ -301,6 +302,8 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertIsInt( $actions_position );
 			$reinstall_position = strpos( $html, 'data-ran-booster-settings-reinstall', $actions_position );
 			self::assertIsInt( $reinstall_position );
+			$notice_position = strpos( $html, 'data-ran-booster-local-development-warning', $reinstall_position );
+			self::assertIsInt( $notice_position );
 			$operation_end = strpos( $html, '</section>', $operation_position );
 			self::assertIsInt( $operation_end );
 			$save_actions_position = strpos( $html, 'class="ran-booster-settings-actions ran-booster-package-settings__save-actions"', $operation_end );
@@ -310,6 +313,8 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertTrue( $readiness_position < $advanced_end );
 			self::assertTrue( $operation_position < $actions_position );
 			self::assertTrue( $actions_position < $reinstall_position );
+			self::assertTrue( $reinstall_position < $notice_position );
+			self::assertTrue( $notice_position < $operation_end );
 			self::assertTrue( $reinstall_position < $operation_end );
 			self::assertTrue( $operation_end < $save_actions_position );
 			self::assertStringContainsString(

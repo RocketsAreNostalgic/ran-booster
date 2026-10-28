@@ -76,7 +76,8 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$render_credential_cell = static function ( array $profile, string $column ) use ( $package_type_labels, $provider, $provider_mutation_fields ): void {
+$credential_validation_feedback = isset( $credential_validation_feedback ) && is_array( $credential_validation_feedback ) ? $credential_validation_feedback : null;
+$render_credential_cell         = static function ( array $profile, string $column ) use ( $package_type_labels, $provider, $provider_mutation_fields, $credential_validation_feedback ): void {
 	if ( 'name' === $column ) {
 		?>
 		<strong><?php echo esc_html( $profile['label'] ); ?></strong>
@@ -106,8 +107,12 @@ $render_credential_cell = static function ( array $profile, string $column ) use
 	}
 
 	if ( 'health' === $column ) {
-		echo esc_html( $profile['health_label'] );
-
+		$credential_health_id          = (string) $profile['id'];
+		$credential_health_label       = (string) $profile['health_label'];
+		$matches                       = ( $credential_validation_feedback['provider'] ?? null ) === $provider['code'] && ( $credential_validation_feedback['id'] ?? null ) === $credential_health_id;
+		$credential_validation_message = $matches ? ( $credential_validation_feedback['message'] ?? null ) : null;
+		$credential_validation_error   = $matches ? ( $credential_validation_feedback['error'] ?? null ) : null;
+		require __DIR__ . '/provider-credential-health.php';
 		return;
 	}
 
@@ -115,11 +120,11 @@ $render_credential_cell = static function ( array $profile, string $column ) use
 	$usage_template_id = 'ran-booster-delete-credential-usage-' . (string) $profile['profile_index'];
 	if ( $profile['configured'] && $provider['capabilities']['credentials'] ) {
 		?>
-		<form method="post" action="" class="ran-booster-inline-form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-credential-validation-error-<?php echo esc_attr( $profile['id'] ); ?>" hx-post="" hx-target="#ran-booster-credential-validation-error-<?php echo esc_attr( $profile['id'] ); ?>" hx-swap="outerHTML" hx-sync="this:drop">
+		<form method="post" action="" class="ran-booster-inline-form" data-ran-booster-enhanced-mutation data-ran-booster-credential-validation data-ran-booster-error-target="#ran-booster-credential-validation-error-<?php echo esc_attr( $profile['id'] ); ?>" hx-post="" hx-target="#ran-booster-credential-validation-error-<?php echo esc_attr( $profile['id'] ); ?>" hx-swap="outerHTML" hx-sync="this:drop">
 		<?php
 		foreach ( $provider_mutation_fields as $name => $value ) {
 			?>
-			<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>"><?php } ?><input type="hidden" name="ran_booster[action]" value="validate-access-profile"><input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>"><input type="hidden" name="ran_booster[id]" value="<?php echo esc_attr( $profile['id'] ); ?>"><button type="submit" class="button"><?php esc_html_e( 'Validate', 'ran-booster' ); ?></button></form><div id="ran-booster-credential-validation-error-<?php echo esc_attr( $profile['id'] ); ?>" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
+			<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>"><?php } ?><input type="hidden" name="ran_booster[action]" value="validate-access-profile"><input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>"><input type="hidden" name="ran_booster[id]" value="<?php echo esc_attr( $profile['id'] ); ?>"><button type="submit" class="button"><?php esc_html_e( 'Validate', 'ran-booster' ); ?></button></form>
 		<?php
 	}
 	if ( ! $profile['editable'] ) {

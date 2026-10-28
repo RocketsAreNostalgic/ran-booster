@@ -1075,3 +1075,12 @@
  * Used by diagnostics, deployment activity and package status text so
  * overview, troubleshooting and diagnostic screens read consistently.
  */
+
+.ran-booster-admin .ran-booster-credential-health p {
+	margin: 0.25em 0 0;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-credential-health__error {
+	color: var(--ran-booster-text-danger);
+}

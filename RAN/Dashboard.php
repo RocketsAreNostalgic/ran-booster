@@ -64,6 +64,9 @@ class Dashboard {
 	 */
 	private $themes;
 
+	/** @var array{provider:string,id:string,message:?string,error:?string}|null */
+	private ?array $credential_validation_feedback = null;
+
 	private ProviderSettingsPresenter $provider_settings;
 	private TroubleshootingService $troubleshooting;
 	/** @var array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}|null */
@@ -234,16 +237,17 @@ class Dashboard {
 		}
 
 		if ( null !== $selected_tab && $selected_tab->is_provider() ) {
-			$provider                    = $selected_tab->get_provider();
-			$data                        = array_merge(
+			$provider                               = $selected_tab->get_provider();
+			$data                                   = array_merge(
 				$data,
 				$this->provider_settings->build( null === $provider ? null : $provider->value )
 			);
-			$data['provider_view']       = $this->requested_provider_view();
-			$data['provider_task']       = $this->requested_provider_task();
-			$data['repository_view']     = $this->requested_provider_repository_view();
-			$data['provider_list_state'] = $this->requested_provider_list_state();
-			$data['replace_credential']  = $this->requested_provider_repository_id( 'replace_credential' );
+			$data['credential_validation_feedback'] = $this->credential_validation_feedback;
+			$data['provider_view']                  = $this->requested_provider_view();
+			$data['provider_task']                  = $this->requested_provider_task();
+			$data['repository_view']                = $this->requested_provider_repository_view();
+			$data['provider_list_state']            = $this->requested_provider_list_state();
+			$data['replace_credential']             = $this->requested_provider_repository_id( 'replace_credential' );
 
 			$data['requested_repository_id']            = $this->requested_provider_repository_id();
 			$data                                       = array_merge( $data, ( new ProviderRepositoryRowsNormalizer() )->project_page( $data, $this->webhook_management, $this->release_workflow ) );
@@ -831,6 +835,16 @@ class Dashboard {
 					$this->requested_advanced_settings_open()
 				)
 			)
+		);
+	}
+
+	/** Keep validation feedback only for this response, never in site storage. */
+	public function set_credential_validation_feedback( string $provider, string $id, ?string $message, ?string $error ): void {
+		$this->credential_validation_feedback = array(
+			'provider' => $provider,
+			'id'       => $id,
+			'message'  => $message,
+			'error'    => $error,
 		);
 	}
 

@@ -1654,6 +1654,91 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'hidden', $html );
 	}
 
+	public function test_validation_feedback_is_scoped_to_the_credential_health_cell(): void {
+		$provider                                = $this->provider_without_optional_settings();
+		$provider['capabilities']['credentials'] = true;
+		$provider['credential_kinds']            = array(
+			array(
+				'code'               => 'token',
+				'label'              => 'Token',
+				'secret_label'       => 'Token',
+				'secret_placeholder' => '',
+				'fields'             => array(),
+			),
+		);
+		$credential_profiles                     = array();
+		foreach ( array( 'profile_one', 'profile_two' ) as $id ) {
+			$credential_profiles[] = array(
+				'id'            => $id,
+				'label'         => $id,
+				'kind'          => 'token',
+				'configuration' => array(),
+				'configured'    => true,
+				'source'        => 'file',
+				'editable'      => true,
+				'usage'         => array(
+					'available' => true,
+					'total'     => 0,
+					'packages'  => array(),
+				),
+				'expiry_status' => array( 'badge_label' => 'Expiry unknown' ),
+			);
+		}
+		$webhook_profiles               = array();
+		$provider_view                  = 'credentials';
+		$credential_validation_feedback = array(
+			'provider' => 'fixture',
+			'id'       => 'profile_one',
+			'message'  => null,
+			'error'    => 'Rejected <unsafe>',
+		);
+		$provider_view_data             = $this->provider_view_data( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $provider_view_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html     = (string) ob_get_clean();
+		$dom      = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		$dom->loadHTML( $html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+		$xpath  = new \DOMXPath( $dom );
+		$first  = $xpath->query( '//*[@id="ran-booster-credential-validation-error-profile_one"]' );
+		$second = $xpath->query( '//*[@id="ran-booster-credential-validation-error-profile_two"]' );
+		$health = $xpath->query( '//td[@data-label="Health"]//*[@id="ran-booster-credential-validation-error-profile_one"]' );
+		self::assertInstanceOf( \DOMNodeList::class, $first );
+		self::assertInstanceOf( \DOMNodeList::class, $second );
+		self::assertInstanceOf( \DOMNodeList::class, $health );
+		self::assertCount( 1, $first );
+		self::assertCount( 1, $second );
+		self::assertCount( 1, $health );
+		self::assertStringContainsString( 'Expiry unknown', (string) $xpath->evaluate( 'string(//*[@id="ran-booster-credential-validation-error-profile_one"])' ) );
+		self::assertStringContainsString( 'Rejected <unsafe>', (string) $xpath->evaluate( 'string(//*[@id="ran-booster-credential-validation-error-profile_one"])' ) );
+		self::assertStringNotContainsString( 'Rejected', (string) $xpath->evaluate( 'string(//*[@id="ran-booster-credential-validation-error-profile_two"])' ) );
+		self::assertStringContainsString( 'Rejected &lt;unsafe&gt;', $html );
+		self::assertSame( 1, substr_count( $html, 'Rejected &lt;unsafe&gt;' ) );
+		self::assertSame( 2, substr_count( $html, 'data-ran-booster-credential-validation' ) );
+
+		$credential_validation_feedback = array(
+			'provider' => 'fixture',
+			'id'       => 'profile_one',
+			'message'  => 'Validation succeeded.',
+			'error'    => null,
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$success_html = (string) ob_get_clean();
+		self::assertSame( 1, substr_count( $success_html, 'Validation succeeded.' ) );
+		self::assertStringNotContainsString( 'Rejected &lt;unsafe&gt;', $success_html );
+
+		$credential_validation_feedback['provider'] = 'another-provider';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$other_provider_html = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'Validation succeeded.', $other_provider_html );
+	}
+
 	public function test_provider_settings_show_usage_links_and_credential_deletion_modal(): void {
 		$provider = $this->provider_without_optional_settings();
 

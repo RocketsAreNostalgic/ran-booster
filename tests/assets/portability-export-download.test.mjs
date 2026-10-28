@@ -284,7 +284,28 @@ test('a valid 213-character hostname is retained in the enhanced download', asyn
 
 test('an encoded international hostname is downloaded exactly as the server names it', async () => {
 	const filename =
-		'20261028-100000_utf8-42c39c434845522e6465_ran_booster_blueprint.zip';
+		'20261028-100000_utf8_42c39c434845522e6465_ran_booster_blueprint.zip';
+	const state = fixture(async () => ({
+		blob: async () => new Blob(['zip']),
+		headers: new Headers({
+			'content-type': 'application/zip',
+			'content-disposition': `attachment; filename="${filename}"`,
+		}),
+		ok: true,
+	}));
+
+	try {
+		loadFunction('initPortabilityExportDownload')();
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.links[0].download, filename);
+	} finally {
+		cleanup();
+	}
+});
+
+test('an encoded IPv6 hostname is downloaded exactly as the server names it', async () => {
+	const filename =
+		'20261028-100000_ipv6_--ffff-192.0.2.1_ran_booster_blueprint.zip';
 	const state = fixture(async () => ({
 		blob: async () => new Blob(['zip']),
 		headers: new Headers({
@@ -306,6 +327,9 @@ test('an encoded international hostname is downloaded exactly as the server name
 for (const disposition of [
 	'',
 	'attachment; filename="../../secret.zip"',
+	'attachment; filename="20261028-100000_utf8_42f_ran_booster_blueprint.zip"',
+	'attachment; filename="20261028-100000_utf8_gg_ran_booster_blueprint.zip"',
+	'attachment; filename="20261028-100000_ipv6_--1-x_ran_booster_blueprint.zip"',
 	'attachment; filename="20261028-100000_example.com_ran_booster_blueprint.zip"; filename="other.zip"',
 	'attachment; filename="20261028-100000_' +
 		'a'.repeat(214) +

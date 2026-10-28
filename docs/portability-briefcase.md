@@ -298,7 +298,8 @@ silently dropping the credential.
 Export downloads use `YYYYMMDD-HHMMSS_DOMAIN_ran_booster_blueprint.zip`, with a
 UTC timestamp and the exporting site's hostname. Internationalized hostnames
 use IDNA when PHP's internationalization extension is available; otherwise their
-UTF-8 bytes are represented as `utf8-` followed by hexadecimal. If the hostname
+UTF-8 bytes are represented as `utf8_` followed by hexadecimal. IPv6 hosts use
+`ipv6_` followed by the address with colons replaced by hyphens. If the hostname
 is unavailable, unsafe, unconvertible or too long to fit, the filename uses `site`.
 An enhanced download also falls back to
 `ran-booster-blueprint.zip` if its filename header is unavailable or invalid.

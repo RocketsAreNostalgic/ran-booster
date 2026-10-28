@@ -74,7 +74,12 @@ final class PortabilityControllerTest extends TestCase {
 		return array(
 			'domain and port' => array( 'https://WWW.Example.com:8443/path', 'www.example.com' ),
 			'local site'      => array( 'http://localhost:10008/', 'localhost' ),
-			'ipv6 site'       => array( 'http://[::1]:8080/', 'ipv6---1-address' ),
+			'ipv6 site'       => array( 'http://[::1]:8080/', 'ipv6_--1' ),
+			'mapped ipv6'     => array( 'http://[::ffff:192.0.2.1]/', 'ipv6_--ffff-192.0.2.1' ),
+			'ipv6 lookalike'  => array( 'https://ipv6---1-address/', 'ipv6---1-address' ),
+			'utf8 lookalike'  => array( 'https://utf8-42c39c434845522e6465/', 'utf8-42c39c434845522e6465' ),
+			'reserved marker' => array( 'https://utf8_42c39c434845522e6465/', 'site' ),
+			'reserved ipv6'   => array( 'https://ipv6_--1/', 'site' ),
 			'no host'         => array( '/relative', 'site' ),
 			'only dots'       => array( 'https://.../', 'site' ),
 			'unsafe host'     => array( 'https://foo_bar.example/', 'site' ),
@@ -94,7 +99,7 @@ final class PortabilityControllerTest extends TestCase {
 			'BÜCHER.de' => 'xn--bcher-kva.de',
 			'faß.de'    => 'xn--fa-hia.de',
 		) as $host => $ascii ) {
-			$expected = $has_idna ? $ascii : 'utf8-' . bin2hex( $host );
+			$expected = $has_idna ? $ascii : 'utf8_' . bin2hex( $host );
 			self::assertSame( '20261028-100000_' . $expected . '_ran_booster_blueprint.zip', $method->invoke( $controller, 'https://' . $host . '/', 1793181600 ) );
 		}
 	}

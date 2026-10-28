@@ -262,6 +262,21 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
+	public function test_install_result_uses_only_fixed_safe_messages(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$_GET['ran_booster_extension_id']     = 'ran-booster-bitbucket';
+		$_GET['ran_booster_extension_result'] = 'failed';
+		self::assertStringContainsString( 'The extension could not be installed.', $this->render() );
+		$_GET['ran_booster_extension_result'] = '<script>alert(1)</script>';
+		$output                               = $this->render();
+		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );
+		self::assertStringNotContainsString( 'The extension could not be installed.', $output );
+		$_GET['ran_booster_extension_result'] = array( 'failed' );
+		self::assertStringNotContainsString( 'The extension could not be installed.', $this->render() );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_renders_translated_catalogue_copy_and_not_installed_state_without_changing_product_data(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Connect Booster to Bitbucket Cloud repositories for managed deployments.'] = 'Connectez Booster aux dépôts Bitbucket Cloud pour des déploiements gérés.';
 

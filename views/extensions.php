@@ -81,7 +81,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 										<input type="hidden" name="action" value="ran_booster_extension_install">
 										<input type="hidden" name="extension_id" value="<?php echo esc_attr( $extension['id'] ); ?>">
 										<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( wp_create_nonce( 'ran_booster_extension_install_' . $extension['id'] ) ); ?>">
-										<button type="submit" class="button button-primary" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Extension name. */ __( 'Install %s', 'ran-booster' ), $extension['name'] ) ); ?>"><?php esc_html_e( 'Install', 'ran-booster' ); ?></button>
+										<button type="submit" class="button button-primary" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Extension name. */ _x( 'Install %s', 'extension action', 'ran-booster' ), $extension['name'] ) ); ?>"><?php esc_html_e( 'Install', 'ran-booster' ); ?></button>
 									</form>
 								<?php elseif ( $extension['compatible'] && '' !== $manual_install_url ) : ?>
 									<span class="description"><?php esc_html_e( 'You do not have permission to install plugins.', 'ran-booster' ); ?></span>

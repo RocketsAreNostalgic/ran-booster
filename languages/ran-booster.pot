@@ -171,7 +171,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:57
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:40
 #: views/debug-capture.php:67
-#: views/extensions.php:153
+#: views/extensions.php:182
 #: views/provider.php:458
 #: views/provider.php:478
 #: views/troubleshooting.php:182
@@ -1681,7 +1681,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:470
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:481
 #: views/extensions.php:11
-#: views/extensions.php:51
+#: views/extensions.php:76
 #: views/packages/source-choices.php:79
 msgid "Active"
 msgstr ""
@@ -4486,7 +4486,7 @@ msgid "Transporter"
 msgstr ""
 
 #: RAN/Booster.php:250
-#: views/extensions.php:17
+#: views/extensions.php:39
 msgid "Extensions"
 msgstr ""
 
@@ -5957,7 +5957,7 @@ msgid "Copyright © %s"
 msgstr ""
 
 #: views/debug-capture.php:40
-#: views/extensions.php:53
+#: views/extensions.php:78
 msgid "Inactive"
 msgstr ""
 
@@ -6127,7 +6127,7 @@ msgid "About RAN Booster"
 msgstr ""
 
 #: views/documentation.php:157
-#: views/extensions.php:161
+#: views/extensions.php:190
 msgid "Documentation"
 msgstr ""
 
@@ -6773,86 +6773,118 @@ msgstr ""
 msgid "Installed, inactive"
 msgstr ""
 
-#: views/extensions.php:18
+#: views/extensions.php:20
+msgid "Extension installed. Activate it from Plugins when you are ready."
+msgstr ""
+
+#: views/extensions.php:21
+msgid "The extension or its destination already exists. Review Plugins and the plugin folder before trying again."
+msgstr ""
+
+#: views/extensions.php:22
+msgid "This extension is not compatible with this version of Booster."
+msgstr ""
+
+#: views/extensions.php:23
+msgid "The extension could not be installed. Please try again or review its release page."
+msgstr ""
+
+#: views/extensions.php:24
+msgid "The installation result could not be confirmed. Check Plugins before trying again."
+msgstr ""
+
+#: views/extensions.php:40
 msgid "Add focused capabilities to Booster."
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:33
+#: views/extensions.php:58
 #, php-format
 msgid "More details about %s"
 msgstr ""
 
-#: views/extensions.php:55
-msgid "Open release"
+#. translators: %s: Extension name.
+#: views/extensions.php:84
+#, php-format
+msgctxt "extension action"
+msgid "Install %s"
 msgstr ""
 
-#: views/extensions.php:61
+#. translators: %s: Extension name.
+#: views/extensions.php:84
+msgid "Install"
+msgstr ""
+
+#: views/extensions.php:87
+msgid "You do not have permission to install plugins."
+msgstr ""
+
+#: views/extensions.php:93
 msgid "More Details"
 msgstr ""
 
-#: views/extensions.php:63
-msgid "Download the attached plugin ZIP, then use Plugins > Add New > Upload Plugin."
-msgstr ""
-
-#: views/extensions.php:66
+#: views/extensions.php:95
 msgid "Open Plugins"
 msgstr ""
 
-#: views/extensions.php:75
+#: views/extensions.php:104
 msgid "By"
 msgstr ""
 
-#: views/extensions.php:78
-#: views/extensions.php:162
+#: views/extensions.php:107
+#: views/extensions.php:194
 msgid "Support"
 msgstr ""
 
-#: views/extensions.php:86
-#: views/extensions.php:152
+#: views/extensions.php:115
+#: views/extensions.php:181
 msgid "Beta"
 msgstr ""
 
-#: views/extensions.php:95
+#: views/extensions.php:124
 msgid "Compatible"
 msgstr ""
 
-#: views/extensions.php:95
+#: views/extensions.php:124
 msgid "with your version of Booster"
 msgstr ""
 
-#: views/extensions.php:127
+#: views/extensions.php:156
 #: views/troubleshooting.php:184
 #: views/troubleshooting.php:227
 msgid "Details"
 msgstr ""
 
-#: views/extensions.php:131
+#: views/extensions.php:160
 msgid "About this extension"
 msgstr ""
 
-#: views/extensions.php:133
+#: views/extensions.php:162
 msgid "What it adds"
 msgstr ""
 
-#: views/extensions.php:139
+#: views/extensions.php:168
 msgid "Before you install"
 msgstr ""
 
-#: views/extensions.php:147
+#: views/extensions.php:176
 msgid "Extension details"
 msgstr ""
 
-#: views/extensions.php:149
+#: views/extensions.php:178
 msgid "Availability"
 msgstr ""
 
-#: views/extensions.php:151
+#: views/extensions.php:180
 msgid "Maturity"
 msgstr ""
 
-#: views/extensions.php:155
+#: views/extensions.php:184
 msgid "Compatibility"
+msgstr ""
+
+#: views/extensions.php:192
+msgid "Release page"
 msgstr ""
 
 #: views/index.php:13

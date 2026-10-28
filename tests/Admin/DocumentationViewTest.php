@@ -58,6 +58,10 @@ final class DocumentationViewTest extends TestCase {
 		self::assertCount( 0, $heading_panels );
 		self::assertCount( 1, $quick_start );
 		self::assertCount( 11, $panels );
+		foreach ( $panels as $panel ) {
+			self::assertInstanceOf( \DOMElement::class, $panel );
+			self::assertSame( 'ran-booster-documentation', $panel->getAttribute( 'name' ) );
+		}
 		self::assertMatchesRegularExpression( '/<details\b[^>]*\bopen\b[^>]*>\s*<summary>Quick start<\/summary>/', $html );
 		self::assertMatchesRegularExpression( '/<summary>\s*GitHub credentials and access\s*<\/summary>/', $html );
 		self::assertMatchesRegularExpression( '/<summary>\s*Bitbucket credentials and access\s*<\/summary>/', $html );
@@ -132,6 +136,7 @@ final class DocumentationViewTest extends TestCase {
 		$html = $this->render_view( $provider_documentation );
 
 		self::assertSame( 13, preg_match_all( '/<details\b/', $html ) );
+		self::assertSame( 13, preg_match_all( '/<details\b[^>]*\bname="ran-booster-documentation"/', $html ) );
 		self::assertStringContainsString( 'id="fixture-gh-guide"', $html );
 		self::assertStringContainsString( 'GitHub fixture guide', $html );
 		self::assertStringNotContainsString( '<script>', $html );
@@ -139,6 +144,36 @@ final class DocumentationViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'About RAN Booster' ), strpos( $html, 'Project X guide' ) );
 		self::assertLessThan( strpos( $html, 'Bitbucket credentials and access' ), strpos( $html, 'GitHub fixture guide' ) );
 		self::assertSame( $expected_metadata, $received_metadata );
+	}
+
+
+	public function test_only_first_requested_add_on_section_is_initially_open(): void {
+		$provider_filter = static function ( array $sections ): array {
+			$sections[] = array(
+				'id'      => 'first-open',
+				'summary' => 'First open',
+				'content' => '<p>First.</p>',
+				'open'    => true,
+			);
+			$sections[] = array(
+				'id'      => 'second-open',
+				'summary' => 'Second open',
+				'content' => '<p>Second.</p>',
+				'open'    => true,
+			);
+			return $sections;
+		};
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_after_provider_gh'][] = $provider_filter;
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_sections_after_provider_gh'][]         = $provider_filter;
+		$html     = $this->render_view( $this->provider_documentation() );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$open  = $xpath->query( '//details[@name="ran-booster-documentation"][@open]' );
+		self::assertInstanceOf( \DOMNodeList::class, $open );
+		self::assertCount( 1, $open );
+		self::assertInstanceOf( \DOMElement::class, $open->item( 0 ) );
+		self::assertSame( 'first-open', $open->item( 0 )->getAttribute( 'id' ) );
 	}
 
 	public function test_renders_one_ordered_page_wide_index_for_top_level_documentation_sections(): void {

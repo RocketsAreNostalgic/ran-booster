@@ -50,7 +50,7 @@ final class DocumentationHookRenderer {
 	public function render_prepared_sections( array $sections ): void {
 		foreach ( $sections as $section ) {
 			?>
-			<details id="<?php echo esc_attr( $section['id'] ); ?>" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section<?php echo $section['open'] ? ' open' : ''; ?>>
+			<details id="<?php echo esc_attr( $section['id'] ); ?>" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation"<?php echo $section['open'] ? ' open' : ''; ?>>
 				<summary><?php echo esc_html( $section['summary'] ); ?></summary>
 				<div class="ran-booster-documentation__content"><?php echo wp_kses_post( $section['content'] ); ?></div>
 			</details>

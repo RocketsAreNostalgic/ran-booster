@@ -34,8 +34,47 @@ function createLink(href) {
 }
 
 function createFixture({ hash = '#first', observer = true } = {}) {
-	const first = { id: 'first', open: false };
-	const second = { id: 'second', open: false };
+	const sections = [];
+	function createSection(id) {
+		let isOpen = false;
+		let name = 'ran-booster-documentation';
+		const section = {
+			id,
+			get open() {
+				return isOpen;
+			},
+			set open(value) {
+				isOpen = value;
+				if (value && name) {
+					sections.forEach((other) => {
+						if (
+							other !== section &&
+							other.getAttribute('name') === name
+						) {
+							other.open = false;
+						}
+					});
+				}
+			},
+			getAttribute(attribute) {
+				return attribute === 'name' ? name : null;
+			},
+			removeAttribute(attribute) {
+				if (attribute === 'name') {
+					name = null;
+				}
+			},
+			setAttribute(attribute, value) {
+				if (attribute === 'name') {
+					name = value;
+				}
+			},
+		};
+		sections.push(section);
+		return section;
+	}
+	const first = createSection('first');
+	const second = createSection('second');
 	const child = {};
 	const links = [createLink('#first'), createLink('#second')];
 	const targets = new Map([
@@ -207,9 +246,21 @@ test('printing opens every documentation disclosure and restores its exact prior
 
 	assert.equal(fixture.first.open, true);
 	assert.equal(fixture.second.open, true);
+	assert.equal(fixture.first.getAttribute('name'), null);
+	assert.equal(fixture.second.getAttribute('name'), null);
 
 	fixture.windowListeners.get('afterprint')();
 
 	assert.equal(fixture.first.open, false);
 	assert.equal(fixture.second.open, true);
+	assert.equal(
+		fixture.first.getAttribute('name'),
+		'ran-booster-documentation'
+	);
+	assert.equal(
+		fixture.second.getAttribute('name'),
+		'ran-booster-documentation'
+	);
+	fixture.first.open = true;
+	assert.equal(fixture.second.open, false);
 });

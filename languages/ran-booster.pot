@@ -8373,7 +8373,7 @@ msgid "On this site"
 msgstr ""
 
 #: views/portability-review.php:332
-msgid "Package files have not been checked."
+msgid "This settings comparison does not inspect package files."
 msgstr ""
 
 #: views/portability-review.php:332

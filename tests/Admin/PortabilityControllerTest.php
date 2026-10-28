@@ -65,7 +65,7 @@ final class PortabilityControllerTest extends TestCase {
 
 		self::assertSame( 2, substr_count( $html, 'This package is not installed on this site.' ) );
 		self::assertSame( 2, substr_count( $html, 'The latest branch commit or release available for this package has not been determined.' ) );
-		self::assertSame( 2, substr_count( $html, 'Package files have not been checked.' ) );
+		self::assertSame( 2, substr_count( $html, 'This settings comparison does not inspect package files.' ) );
 		self::assertStringContainsString( 'data-portability-row="1" data-portability-action="blocked"', $html );
 		self::assertStringContainsString( 'This review does not prove compatibility or that installed files match the Blueprint.', $html );
 		self::assertNotNull( $provider );
@@ -98,7 +98,7 @@ final class PortabilityControllerTest extends TestCase {
 		$html     = $review->invoke( $this->preview_controller( $secrets, false, 'plugin', $provider ), new PackageBlueprint( $packages ), array(), array() );
 
 		self::assertSame( 3, substr_count( $html, 'Requested version or commit' ) );
-		self::assertSame( 3, substr_count( $html, 'Package files have not been checked.' ) );
+		self::assertSame( 3, substr_count( $html, 'This settings comparison does not inspect package files.' ) );
 		self::assertSame( 3, substr_count( $html, 'data-portability-action="blocked"' ) );
 		foreach ( array( str_repeat( 'a', 40 ), str_repeat( 'b', 64 ), str_repeat( 'c', 64 ), str_repeat( 'd', 40 ), 'release&lt;id&gt;', 'tag&lt;script&gt;', '1.0.0&lt;version&gt;', 'artifact&lt;id&gt;', '1234' ) as $value ) {
 			self::assertStringContainsString( '<code>' . $value . '</code>', $html );

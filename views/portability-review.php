@@ -329,7 +329,7 @@ $has_credential_decisions         = array() !== array_filter(
 					<?php if ( is_array( $comparison ) ) : ?>
 						<h6><?php esc_html_e( 'On this site', 'ran-booster' ); ?></h6>
 						<p class="ran-booster-portability__configuration-summary"><?php echo esc_html( $portability_comparison_labels[ $comparison['state'] ] ?? $portability_comparison_labels['unavailable'] ); ?></p>
-						<p><?php echo esc_html( 'absent' === $comparison['state'] ? __( 'Package files have not been checked.', 'ran-booster' ) : __( 'Booster has not checked whether the installed files match the Blueprint.', 'ran-booster' ) ); ?></p>
+						<p><?php echo esc_html( 'absent' === $comparison['state'] ? __( 'This settings comparison does not inspect package files.', 'ran-booster' ) : __( 'Booster has not checked whether the installed files match the Blueprint.', 'ran-booster' ) ); ?></p>
 						<?php if ( is_array( $comparison['requested_selection'] ?? null ) ) : ?>
 							<section>
 								<h6><?php esc_html_e( 'Requested version or commit', 'ran-booster' ); ?></h6>

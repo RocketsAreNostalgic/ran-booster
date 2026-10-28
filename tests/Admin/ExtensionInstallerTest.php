@@ -21,6 +21,7 @@ use ZipArchive;
 final class ExtensionInstallerTest extends TestCase {
 	private string $directory;
 	private string $zip;
+	/** @var array<string, string|bool> */
 	private array $entry;
 	private FakeExtensionLock $lock;
 	private FakeExtensionExecutor $executor;
@@ -112,7 +113,9 @@ final class ExtensionInstallerTest extends TestCase {
 		$before = glob( sys_get_temp_dir() . '/ran-extension-*' );
 		self::assertSame( 'uncertain', $this->installer()->install( 'example' ) );
 		self::assertSame( 0, $this->executor->calls );
-		$after     = glob( sys_get_temp_dir() . '/ran-extension-*' );
+		$after = glob( sys_get_temp_dir() . '/ran-extension-*' );
+		self::assertIsArray( $before );
+		self::assertIsArray( $after );
 		$remaining = array_values( array_diff( $after, $before ) );
 		self::assertCount( 1, $remaining );
 		self::assertFileExists( $remaining[0] . '/release.zip.original' );

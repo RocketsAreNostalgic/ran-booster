@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+/** @param array{filename: string} $args
+ * @return array{response: array{code: int}}
+ */
 function wp_safe_remote_get( string $url, array $args ): array {
 	$GLOBALS['ran_booster_extension_test_url'] = $url;
 	if ( ! empty( $GLOBALS['ran_booster_extension_test_replace_file'] ) ) {
@@ -17,9 +20,11 @@ function wp_safe_remote_get( string $url, array $args ): array {
 function is_wp_error( mixed $value ): bool {
 	return is_object( $value ) && is_a( $value, 'WP_Error' );
 }
+/** @param array{response: array{code: int}} $response */
 function wp_remote_retrieve_response_code( array $response ): int {
 	return $response['response']['code']; }
 function wp_clean_plugins_cache( bool $clear_update_cache = true ): void {}
+/** @return array<string, array<string, string>> */
 function get_plugins(): array {
 	return $GLOBALS['ran_booster_extension_test_plugins'] ?? array(); }
 function is_plugin_active( string $plugin ): bool {

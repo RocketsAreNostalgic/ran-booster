@@ -69,6 +69,7 @@ final class ExtensionInstallerArchiveTest extends TestCase {
 		self::assertFalse( $this->matches_installed( $destination, $files ) );
 	}
 
+	/** @param array<string, string> $entries */
 	#[DataProvider( 'invalid_archive_provider' )]
 	public function test_rejects_invalid_archive( array $entries ): void {
 		$this->expectException( RuntimeException::class );

@@ -212,6 +212,60 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'expiry-canary', $html );
 	}
 
+	public function test_closed_package_details_hide_background_checks_but_keep_cautions_visible(): void {
+		$rows = array();
+		foreach ( array(
+			'not_declared' => 'unmanaged',
+			'failed'       => 'different',
+			'not_supplied' => 'unavailable',
+			'not_checked'  => 'matching',
+		) as $check => $comparison ) {
+			$rows[] = $this->row( 'Package', 'package/plugin.php', 'adopt', 'Action reason' ) + array(
+				'requirements' => array(
+					'basis'        => 'installed_headers',
+					'checks'       => array(
+						'requires_php'       => $check,
+						'requires_wordpress' => 'not_declared',
+					),
+					'dependencies' => array( 'requires_php' => 'missing' ),
+				),
+				'comparison'   => array(
+					'state'       => $comparison,
+					'differences' => array(),
+				),
+			);
+		}
+		$document = new \DOMDocument();
+		$document->loadHTML( '<?xml encoding="UTF-8">' . $this->render_view( $rows ), LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		foreach ( array_keys( $rows ) as $index ) {
+			$row     = '//tr[@data-portability-row="' . $index . '"]';
+			$details = $row . '//details[not(@open)]';
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . ')' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '/summary[.="Package details"])' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $row . '//li[not(ancestor::details)][contains(.,"No minimum declared")])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//li[contains(.,"WordPress minimum: No minimum declared")])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//p[contains(.,"Booster has not checked whether the installed files match")])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//p[contains(.,"The Blueprint does not specify an exact version or commit")])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $row . '//span[not(ancestor::details)][.="Action reason"])' ) );
+			// A dependency slug may match a requirement key; both cautions must survive.
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $row . '//li[not(ancestor::details)][.="requires_php: Not installed or included in the proposed set"])' ) );
+		}
+		foreach ( array(
+			1 => 'Declared minimum not met',
+			2 => 'Observation not supplied',
+			3 => 'Not checked',
+		) as $index => $label ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//tr[@data-portability-row="' . $index . '"]//li[not(ancestor::details)][.="PHP minimum: ' . $label . '"])' ) );
+		}
+		foreach ( array(
+			1 => 'This site’s Booster settings differ from the Blueprint.',
+			2 => 'Booster could not compare this site’s settings with the Blueprint.',
+		) as $index => $label ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//tr[@data-portability-row="' . $index . '"]//p[not(ancestor::details)][.="' . $label . '"])' ) );
+		}
+	}
+
 	public function test_renders_all_actions_and_credential_reconciliation_from_safe_rows(): void {
 		$html = $this->render_view(
 			array(
@@ -242,11 +296,10 @@ final class PortabilityViewTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'ran-booster-portability__status--install', $html );
-		self::assertStringContainsString( 'ran-booster-portability__status--adopt', $html );
-		self::assertStringContainsString( 'ran-booster-portability__status--managed', $html );
-		self::assertStringContainsString( 'ran-booster-portability__status--protected', $html );
-		self::assertStringContainsString( 'ran-booster-portability__status--blocked', $html );
+		self::assertStringContainsString( 'ran-booster-pill ran-booster-pill--ok', $html );
+		self::assertStringContainsString( 'ran-booster-pill ran-booster-pill--info', $html );
+		self::assertStringContainsString( 'ran-booster-pill ran-booster-pill--warning', $html );
+		self::assertStringContainsString( 'ran-booster-pill ran-booster-pill--error', $html );
 		self::assertStringContainsString( 'data-portability-select-all', $html );
 		self::assertSame( 2, substr_count( $html, 'data-portability-select value=' ) );
 		self::assertStringContainsString( 'data-portability-select value="0" checked', $html );

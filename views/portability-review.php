@@ -10,12 +10,19 @@ $portability_action_labels        = array(
 	'protected' => array( __( 'Protected', 'ran-booster' ), __( 'Leave unchanged', 'ran-booster' ) ),
 	'blocked'   => array( __( 'Blocked', 'ran-booster' ), __( 'Cannot apply', 'ran-booster' ) ),
 );
+$portability_action_pills         = array(
+	'install'   => 'ok',
+	'adopt'     => 'info',
+	'managed'   => 'ok',
+	'protected' => 'warning',
+	'blocked'   => 'error',
+);
 $portability_comparison_labels    = array(
-	'absent'      => __( 'Package is not installed.', 'ran-booster' ),
-	'unmanaged'   => __( 'Installed package has no Booster configuration.', 'ran-booster' ),
-	'matching'    => __( 'Local configuration matches this Blueprint.', 'ran-booster' ),
-	'different'   => __( 'Local configuration differs from this Blueprint.', 'ran-booster' ),
-	'unavailable' => __( 'Local configuration could not be compared.', 'ran-booster' ),
+	'absent'      => __( 'This package is not installed on this site.', 'ran-booster' ),
+	'unmanaged'   => __( 'This package is installed, but Booster does not manage it yet.', 'ran-booster' ),
+	'matching'    => __( 'This site’s Booster settings match the Blueprint.', 'ran-booster' ),
+	'different'   => __( 'This site’s Booster settings differ from the Blueprint.', 'ran-booster' ),
+	'unavailable' => __( 'Booster could not compare this site’s settings with the Blueprint.', 'ran-booster' ),
 );
 $portability_configuration_labels = array(
 	'provider'               => __( 'Provider', 'ran-booster' ),
@@ -79,8 +86,9 @@ $has_credential_decisions         = array() !== array_filter(
 
 ?>
 <?php if ( ! empty( $portability_requirements_summary ) ) : ?>
-	<section aria-label="<?php esc_attr_e( 'Proposed package requirements', 'ran-booster' ); ?>">
-		<p><?php esc_html_e( 'Declared floors for all proposed packages, before checkbox selection. These observations do not establish runtime compatibility or describe an unseen newer package.', 'ran-booster' ); ?></p>
+	<details class="ran-booster-portability__package-details ran-booster-portability__blueprint-requirements">
+		<summary><?php esc_html_e( 'Blueprint requirements', 'ran-booster' ); ?></summary>
+		<p><?php esc_html_e( 'Minimum versions reported for all packages in this Blueprint, including packages you have not selected. These reports do not guarantee compatibility.', 'ran-booster' ); ?></p>
 		<ul>
 		<?php foreach ( $portability_requirements_summary as $field => $floor ) : ?>
 			<li>
@@ -100,7 +108,7 @@ $has_credential_decisions         = array() !== array_filter(
 			</li>
 		<?php endforeach; ?>
 		</ul>
-	</section>
+	</details>
 <?php endif; ?>
 <?php if ( array() !== $portability_credential_rows ) : ?>
 	<section class="ran-booster-portability__credential-review" aria-labelledby="ran-booster-portability-credentials-heading">
@@ -233,7 +241,7 @@ $has_credential_decisions         = array() !== array_filter(
 <?php endif; ?>
 <h5 id="ran-booster-portability-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title"><?php esc_html_e( 'Packages', 'ran-booster' ); ?></h5>
 <p class="ran-booster-portability__packages-description"><?php esc_html_e( 'Review the target state of each package and select the eligible changes you want to apply.', 'ran-booster' ); ?></p>
-<p class="description ran-booster-portability__packages-guidance"><?php esc_html_e( 'Requirement observations do not prove compatibility. Dependency observations concern activation; they do not fetch missing dependencies or authorize installation. Local comparisons do not check repository access or inspect package files.', 'ran-booster' ); ?></p>
+<p class="description ran-booster-portability__packages-guidance"><?php esc_html_e( 'This review does not prove compatibility or that installed files match the Blueprint. Dependencies are not installed automatically.', 'ran-booster' ); ?></p>
 <div id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll" role="region" aria-labelledby="ran-booster-portability-packages-heading" tabindex="0">
 	<table class="widefat striped ran-booster-portability__review-table">
 		<caption class="screen-reader-text"><?php esc_html_e( 'Packages in this import review', 'ran-booster' ); ?></caption>
@@ -244,11 +252,15 @@ $has_credential_decisions         = array() !== array_filter(
 		<?php else : ?>
 			<?php foreach ( $portability_review_rows as $row_index => $row ) : ?>
 				<?php
-				$review_action        = $row['action'];
-				$package_name         = '' !== (string) ( $row['name'] ?? '' ) ? (string) $row['name'] : (string) ( $row['identifier'] ?? '' );
-				$credential_ordinal   = isset( $row['credential_ordinal'] ) ? max( 0, (int) $row['credential_ordinal'] ) : null;
-				$release_review       = is_array( $row['release_review'] ?? null ) ? $row['release_review'] : null;
-				$release_review_nonce = is_string( $row['release_review_nonce'] ?? null ) ? $row['release_review_nonce'] : null;
+				$review_action                     = $row['action'];
+				$package_name                      = '' !== (string) ( $row['name'] ?? '' ) ? (string) $row['name'] : (string) ( $row['identifier'] ?? '' );
+				$credential_ordinal                = isset( $row['credential_ordinal'] ) ? max( 0, (int) $row['credential_ordinal'] ) : null;
+				$release_review                    = is_array( $row['release_review'] ?? null ) ? $row['release_review'] : null;
+				$release_review_nonce              = is_string( $row['release_review_nonce'] ?? null ) ? $row['release_review_nonce'] : null;
+				$requirements                      = is_array( $row['requirements'] ?? null ) ? $row['requirements'] : null;
+				$comparison                        = is_array( $row['comparison'] ?? null ) ? $row['comparison'] : null;
+				$requirement_check_exceptions      = is_array( $requirements ) ? array_filter( $requirements['checks'] ?? array(), static fn( string $state ): bool => in_array( $state, array( 'failed', 'not_supplied', 'not_checked' ), true ) ) : array();
+				$requirement_dependency_exceptions = is_array( $requirements ) ? array_filter( $requirements['dependencies'] ?? array(), static fn( string $state ): bool => ! in_array( $state, array( 'active', 'present' ), true ) ) : array();
 				?>
 				<tr data-portability-row="<?php echo esc_attr( (string) $row_index ); ?>" data-portability-action="<?php echo esc_attr( $review_action ); ?>"
 					<?php if ( isset( $row['provider_expectation'] ) ) : ?>
@@ -266,7 +278,7 @@ $has_credential_decisions         = array() !== array_filter(
 					data-portability-credential-ordinal="<?php echo esc_attr( (string) $credential_ordinal ); ?>"<?php endif; ?> data-portability-package-name="<?php echo esc_attr( $package_name ); ?>" data-portability-package-type="<?php echo esc_attr( (string) ( $row['type'] ?? __( 'Package', 'ran-booster' ) ) ); ?>" data-portability-package-identifier="<?php echo esc_attr( (string) ( $row['identifier'] ?? '' ) ); ?>">
 					<td><strong><?php echo esc_html( $row['name'] ?? '' ); ?></strong><code><?php echo esc_html( $row['identifier'] ?? '' ); ?></code></td>
 					<td><?php echo esc_html( $row['type'] ?? '' ); ?></td>
-					<td class="ran-booster-portability__review-state"><span class="ran-booster-portability__status ran-booster-portability__status--<?php echo esc_attr( $review_action ); ?>"><?php echo esc_html( $portability_action_labels[ $review_action ][0] ); ?></span><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span>
+					<td class="ran-booster-portability__review-state"><span class="ran-booster-pill ran-booster-pill--<?php echo esc_attr( $portability_action_pills[ $review_action ] ); ?>"><?php echo esc_html( $portability_action_labels[ $review_action ][0] ); ?></span><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span>
 					<?php if ( null !== $release_review ) : ?>
 						<?php /* translators: 1: reviewed release version, 2: reviewed release tag. */ ?>
 						<p class="description"><?php echo esc_html( sprintf( __( 'Reviewed release %1$s (%2$s). Booster will install this first provider-preferred candidate only; it does not claim the newest eligible release. The package will remain inactive and deployment Disabled.', 'ran-booster' ), (string) ( $release_review['version'] ?? '' ), (string) ( $release_review['tag'] ?? '' ) ) ); ?></p>
@@ -274,53 +286,26 @@ $has_credential_decisions         = array() !== array_filter(
 					<?php if ( true === ( $row['repository_conflict'] ?? false ) ) : ?>
 						<p><?php esc_html_e( 'This Blueprint proposes conflicting sources for this repository. Select multiple branch packages or one release package, not both.', 'ran-booster' ); ?></p>
 					<?php endif; ?>
-					<?php if ( is_array( $row['requirements'] ?? null ) ) : ?>
-						<?php
-						/** @var array{basis:string,checks:array<string,string>,dependencies:array<string,string>} $requirements */
-						$requirements            = $row['requirements'];
-						$has_undeclared_minimum  = in_array( 'not_declared', $requirements['checks'], true );
-						$all_minimums_undeclared = array() !== $requirements['checks'] && array() === array_filter( $requirements['checks'], static fn( string $state ): bool => 'not_declared' !== $state );
-						$requirement_exceptions  = array_filter(
-							$requirements['checks'],
-							static fn( string $state ): bool => in_array( $state, array( 'failed', 'not_supplied', 'not_checked' ), true ) || ( 'not_declared' === $state && ! $all_minimums_undeclared )
-						) + array_filter(
-							$requirements['dependencies'],
-							static fn( string $state ): bool => ! in_array( $state, array( 'active', 'present' ), true )
-						);
-						?>
-						<p class="ran-booster-portability__requirements-summary"><strong><?php esc_html_e( 'Requirements:', 'ran-booster' ); ?></strong>
-						<?php if ( $all_minimums_undeclared ) : ?>
-							<?php esc_html_e( 'No minimum declared.', 'ran-booster' ); ?>
-						<?php elseif ( $has_undeclared_minimum ) : ?>
-							<?php esc_html_e( 'Some minimum declarations are missing.', 'ran-booster' ); ?>
-						<?php else : ?>
-							<?php
-							echo esc_html(
-								match ( $requirements['basis'] ) {
-									'installed_headers' => __( 'Observed in source-site headers; the requested package may differ.', 'ran-booster' ),
-									'selected_package' => __( 'Reported for the selected package; installation checks again.', 'ran-booster' ),
-									default => __( 'Observations were not supplied.', 'ran-booster' ),
-								}
-							);
-							?>
-						<?php endif; ?>
-						</p>
-						<?php if ( array() !== $requirement_exceptions ) : ?>
-							<ul class="ran-booster-portability__requirements-exceptions">
-							<?php foreach ( $requirements['checks'] as $field => $state ) : ?>
-								<?php if ( in_array( $state, array( 'failed', 'not_supplied', 'not_checked' ), true ) || ( 'not_declared' === $state && ! $all_minimums_undeclared ) ) : ?>
-									<li><?php echo esc_html( ( $portability_requirement_labels[ $field ] ?? $field ) . ': ' . ( $portability_requirement_states[ $state ] ?? $portability_requirement_states['not_checked'] ) ); ?></li>
-								<?php endif; ?>
-							<?php endforeach; ?>
-							<?php foreach ( $requirements['dependencies'] as $dependency => $state ) : ?>
-								<?php if ( ! in_array( $state, array( 'active', 'present' ), true ) ) : ?>
-									<li><?php echo esc_html( $dependency . ': ' . ( $portability_dependency_states[ $state ] ?? $portability_dependency_states['unresolved'] ) ); ?></li>
-								<?php endif; ?>
-							<?php endforeach; ?>
-							</ul>
-						<?php endif; ?>
-						<details class="ran-booster-portability__requirements-details">
-							<summary><?php esc_html_e( 'Requirement checks and dependencies', 'ran-booster' ); ?></summary>
+					<?php if ( array() !== $requirement_check_exceptions || array() !== $requirement_dependency_exceptions ) : ?>
+						<ul class="ran-booster-portability__requirements-exceptions">
+						<?php foreach ( $requirement_check_exceptions as $field => $state ) : ?>
+							<li><?php echo esc_html( ( $portability_requirement_labels[ $field ] ?? $field ) . ': ' . ( $portability_requirement_states[ $state ] ?? $portability_requirement_states['not_checked'] ) ); ?></li>
+						<?php endforeach; ?>
+						<?php foreach ( $requirement_dependency_exceptions as $dependency => $state ) : ?>
+							<li><?php echo esc_html( $dependency . ': ' . ( $portability_dependency_states[ $state ] ?? $portability_dependency_states['unresolved'] ) ); ?></li>
+						<?php endforeach; ?>
+						</ul>
+					<?php endif; ?>
+					<?php if ( null !== $comparison && in_array( $comparison['state'], array( 'different', 'unavailable' ), true ) ) : ?>
+						<p class="ran-booster-portability__requirements-exceptions"><?php echo esc_html( $portability_comparison_labels[ $comparison['state'] ] ); ?></p>
+					<?php endif; ?>
+					<?php if ( null !== $requirements || null !== $comparison ) : ?>
+						<details class="ran-booster-portability__package-details">
+							<summary><?php esc_html_e( 'Package details', 'ran-booster' ); ?></summary>
+					<?php endif; ?>
+					<?php if ( is_array( $requirements ) ) : ?>
+						<section class="ran-booster-portability__requirements-details">
+							<h6><?php esc_html_e( 'Requirement checks and dependencies', 'ran-booster' ); ?></h6>
 							<p>
 							<?php
 							echo esc_html(
@@ -339,15 +324,16 @@ $has_credential_decisions         = array() !== array_filter(
 							<li><?php echo esc_html( $dependency . ': ' . ( $portability_dependency_states[ $state ] ?? $portability_dependency_states['unresolved'] ) ); ?></li>
 						<?php endforeach; ?>
 							</ul>
-						</details>
+						</section>
 					<?php endif; ?>
-					<?php if ( is_array( $row['comparison'] ?? null ) ) : ?>
-						<?php $comparison = $row['comparison']; ?>
-						<p class="ran-booster-portability__configuration-summary"><?php echo esc_html( ( $portability_comparison_labels[ $comparison['state'] ] ?? $portability_comparison_labels['unavailable'] ) . ' ' . __( 'Installed code match: unknown.', 'ran-booster' ) ); ?></p>
+					<?php if ( is_array( $comparison ) ) : ?>
+						<h6><?php esc_html_e( 'On this site', 'ran-booster' ); ?></h6>
+						<p class="ran-booster-portability__configuration-summary"><?php echo esc_html( $portability_comparison_labels[ $comparison['state'] ] ?? $portability_comparison_labels['unavailable'] ); ?></p>
+						<p><?php echo esc_html( 'absent' === $comparison['state'] ? __( 'Package files have not been checked.', 'ran-booster' ) : __( 'Booster has not checked whether the installed files match the Blueprint.', 'ran-booster' ) ); ?></p>
 						<?php if ( is_array( $comparison['requested_selection'] ?? null ) ) : ?>
-							<details>
-								<summary><?php esc_html_e( 'Requested initial selection', 'ran-booster' ); ?></summary>
-								<p><?php esc_html_e( 'These are requested identities, not verified installed code or a permanent update lock.', 'ran-booster' ); ?></p>
+							<section>
+								<h6><?php esc_html_e( 'Requested version or commit', 'ran-booster' ); ?></h6>
+								<p><?php esc_html_e( 'These identify the requested starting version. They do not confirm which files are installed or prevent future updates.', 'ran-booster' ); ?></p>
 								<ul>
 								<?php foreach ( $portability_selection_labels as $field => $label ) : ?>
 									<?php if ( isset( $comparison['requested_selection'][ $field ] ) ) : ?>
@@ -355,13 +341,13 @@ $has_credential_decisions         = array() !== array_filter(
 									<?php endif; ?>
 								<?php endforeach; ?>
 								</ul>
-							</details>
+							</section>
 						<?php else : ?>
-							<p class="description"><?php esc_html_e( 'Exact initial selection: not supplied; current branch head or newest eligible release not resolved.', 'ran-booster' ); ?></p>
+							<p class="description"><?php esc_html_e( 'The Blueprint does not specify an exact version or commit. The latest branch commit or release available for this package has not been determined.', 'ran-booster' ); ?></p>
 						<?php endif; ?>
 						<?php if ( 'different' === $comparison['state'] ) : ?>
-							<details>
-								<summary><?php esc_html_e( 'Configuration differences', 'ran-booster' ); ?></summary>
+							<section>
+								<h6><?php esc_html_e( 'Configuration differences', 'ran-booster' ); ?></h6>
 								<?php
 								foreach ( array(
 									'current'   => __( 'Current configuration', 'ran-booster' ),
@@ -378,8 +364,11 @@ $has_credential_decisions         = array() !== array_filter(
 									<?php endforeach; ?>
 									</ul>
 								<?php endforeach; ?>
-							</details>
+							</section>
 						<?php endif; ?>
+					<?php endif; ?>
+					<?php if ( null !== $requirements || null !== $comparison ) : ?>
+						</details>
 					<?php endif; ?>
 					<?php if ( null === $credential_ordinal && is_array( $row['credential'] ?? null ) ) : ?>
 						<?php

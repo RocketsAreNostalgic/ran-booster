@@ -1,6 +1,6 @@
 (function () {
 	'use strict';
-	const { __, _n, sprintf } = wp.i18n;
+	const { __, sprintf } = wp.i18n;
 
 	function onDomReady(callback) {
 		if (document.readyState === 'loading') {
@@ -611,60 +611,51 @@
 					);
 					return;
 				}
-				const packageChangesLabel = sprintf(
-					/* translators: %d: number of managed package changes. */
-					_n(
-						'%d package change',
-						'%d package changes',
-						packageChanges,
-						'ran-booster'
-					),
-					packageChanges
-				);
-				const importsLabel = sprintf(
-					/* translators: %d: number of repository credentials to import. */
-					_n(
-						'%d repository credential',
-						'%d repository credentials',
-						imports.size,
-						'ran-booster'
-					),
-					imports.size
-				);
-				const targetsLabel = sprintf(
-					/* translators: %d: number of saved credentials to use. */
-					_n(
-						'%d saved credential',
-						'%d saved credentials',
-						targets.size,
-						'ran-booster'
-					),
-					targets.size
-				);
-				applySummary.textContent =
+				setApplySummary([
 					sprintf(
-						/* translators: 1: package changes, 2: repository credentials to import, 3: saved credentials to use. */
-						__(
-							'Apply %1$s, import %2$s and use %3$s.',
+						/* translators: %d: selected package-change count. */ __(
+							'Package changes: %d',
 							'ran-booster'
 						),
-						packageChangesLabel,
-						importsLabel,
-						targetsLabel
-					) +
-					' ' +
-					(packageChanges
+						packageChanges
+					),
+					sprintf(
+						/* translators: %d: selected repository-credential import count. */ __(
+							'Credentials to import: %d',
+							'ran-booster'
+						),
+						imports.size
+					),
+					sprintf(
+						/* translators: %d: selected saved-credential count. */ __(
+							'Saved credentials to use: %d',
+							'ran-booster'
+						),
+						targets.size
+					),
+					packageChanges
 						? __('Deployment will remain Disabled.', 'ran-booster')
 						: __(
 								'Managed package settings will remain unchanged.',
 								'ran-booster'
-							)) +
-					' ' +
+							),
 					__(
 						'Credential permissions have not been assessed.',
 						'ran-booster'
-					);
+					),
+				]);
 			}
+		}
+
+		function setApplySummary(lines) {
+			applySummary.replaceChildren(
+				...lines.map(function (line) {
+					const fact = document.createElement('span');
+					fact.className = 'ran-booster-portability__apply-fact';
+					fact.textContent = line.replace(/\.$/, '') + '. ';
+					return fact;
+				})
+			);
 		}
 
 		function restoreSelections() {

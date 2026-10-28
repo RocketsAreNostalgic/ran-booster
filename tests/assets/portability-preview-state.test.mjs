@@ -385,7 +385,16 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 			this.items = [];
 		},
 	};
-	const applySummary = { textContent: '' };
+	const applySummary = {
+		children: [],
+		textContent: '',
+		replaceChildren(...children) {
+			this.children = children;
+			this.textContent = children
+				.map((child) => child.textContent)
+				.join('');
+		},
+	};
 	const reviewError = { hidden: true };
 	let html = '<table>empty</table>';
 	let currentRows = [];
@@ -1204,8 +1213,10 @@ test('target action without an ID only reveals and focuses its select', async ()
 			'%d repository credentials': '%d identifiants de dépôt',
 			'%d saved credential': '%d identifiant enregistré',
 			'%d saved credentials': '%d identifiants enregistrés',
-			'Apply %1$s, import %2$s and use %3$s.':
-				'Appliquer %1$s, importer %2$s et utiliser %3$s.',
+			'Package changes: %d': 'Changements de paquets : %d',
+			'Credentials to import: %d': 'Identifiants à importer : %d',
+			'Saved credentials to use: %d':
+				'Identifiants enregistrés à utiliser : %d',
 			'Deployment will remain Disabled.':
 				'Le déploiement restera désactivé.',
 			'Credential permissions have not been assessed.':
@@ -1227,7 +1238,7 @@ test('target action without an ID only reveals and focuses its select', async ()
 		assert.equal(state.apply.disabled, true);
 		assert.equal(
 			state.applySummary.textContent,
-			'Appliquer 1 modification de paquet, importer 0 identifiants de dépôt et utiliser 0 identifiants enregistrés. Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées.'
+			'Changements de paquets : 1. Identifiants à importer : 0. Identifiants enregistrés à utiliser : 0. Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées. '
 		);
 
 		state.credentialTarget.value = 'target-profile';
@@ -1240,7 +1251,7 @@ test('target action without an ID only reveals and focuses its select', async ()
 		assert.equal(state.apply.disabled, true);
 		assert.equal(
 			state.applySummary.textContent,
-			'Appliquer 1 modification de paquet, importer 0 identifiants de dépôt et utiliser 1 identifiant enregistré. Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées.'
+			'Changements de paquets : 1. Identifiants à importer : 0. Identifiants enregistrés à utiliser : 1. Le déploiement restera désactivé. Les autorisations des identifiants n’ont pas été évaluées. '
 		);
 	} finally {
 		cleanup();
@@ -1389,7 +1400,12 @@ test('managed credential recovery enables Apply without claiming a package chang
 		assert.equal(state.apply.disabled, false);
 		assert.equal(
 			state.applySummary.textContent,
-			'Apply 0 package changes, import 1 repository credential and use 0 saved credentials. Managed package settings will remain unchanged. Credential permissions have not been assessed.'
+			'Package changes: 0. Credentials to import: 1. Saved credentials to use: 0. Managed package settings will remain unchanged. Credential permissions have not been assessed. '
+		);
+		assert.equal(state.applySummary.children.length, 5);
+		assert.equal(
+			state.applySummary.children[0].textContent,
+			'Package changes: 0. '
 		);
 
 		await state.listeners.get('apply:click')();
@@ -1765,7 +1781,10 @@ test('shipped package-only picker serializes the explicit row profile through re
 		await tick();
 		assert.equal(state.rows()[0].targetCredential.value, 'saved-profile');
 		assert.equal(state.apply.disabled, false);
-		assert.match(state.applySummary.textContent, /use 1 saved credential/);
+		assert.match(
+			state.applySummary.textContent,
+			/Saved credentials to use: 1/
+		);
 		await state.listeners.get('apply:click')();
 		assert.ok(
 			state.forms.some(

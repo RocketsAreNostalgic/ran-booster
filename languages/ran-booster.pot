@@ -187,7 +187,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:468
 #: views/packages/index.php:152
 #: views/portability-review.php:25
-#: views/portability-review.php:337
+#: views/portability-review.php:376
 msgid "Branch"
 msgstr ""
 
@@ -234,10 +234,10 @@ msgstr ""
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:352
 #: views/attempts/detail.php:84
 #: views/attempts/index.php:191
-#: views/portability-review.php:241
-#: views/portability-review.php:267
+#: views/portability-review.php:240
+#: views/portability-review.php:266
 #: views/portability.php:232
-#: assets/ran-booster-portability.js:710
+#: assets/ran-booster-portability.js:701
 msgid "Package"
 msgstr ""
 
@@ -958,7 +958,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:91
 #: views/portability-review.php:93
 #: views/troubleshooting.php:210
-#: assets/ran-booster-portability.js:714
+#: assets/ran-booster-portability.js:705
 msgid "Unknown"
 msgstr ""
 
@@ -2226,7 +2226,7 @@ msgstr ""
 #. translators: %d: number of packages using the credential.
 #: RAN/Admin/ProviderSettingsPresenter.php:1594
 #: RAN/Admin/ProviderSettingsPresenter.php:1644
-#: views/portability-review.php:127
+#: views/portability-review.php:125
 #, php-format
 msgctxt "Packages using a credential"
 msgid "%d package"
@@ -3259,8 +3259,8 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:351
 #: RAN/Admin/WebhookManagement/views/panel.php:34
-#: views/portability-review.php:199
-#: views/portability-review.php:357
+#: views/portability-review.php:197
+#: views/portability-review.php:396
 msgid "Choose a saved credential"
 msgstr ""
 
@@ -7455,7 +7455,7 @@ msgid "This package remains linked but cannot be edited or deployed until its pr
 msgstr ""
 
 #: views/packages/edit.php:258
-#: views/portability-review.php:166
+#: views/portability-review.php:164
 #: views/portability.php:159
 msgid "Provider:"
 msgstr ""
@@ -8058,7 +8058,6 @@ msgid "Protected"
 msgstr ""
 
 #: views/portability-review.php:10
-#: views/portability-review.php:215
 msgid "Leave unchanged"
 msgstr ""
 
@@ -8206,27 +8205,19 @@ msgid "Repository credentials"
 msgstr ""
 
 #: views/portability-review.php:109
-msgid "Choose how this site should access repositories needed by the proposed package changes or credential recovery. Booster verifies each exact repository using only your choice."
-msgstr ""
-
-#: views/portability-review.php:110
 msgid "Before you continue:"
 msgstr ""
 
-#: views/portability-review.php:110
-msgid "Booster checks whether the credential can access each required repository, not what other permissions it has. Importing a credential for an already-managed package does not change that package’s saved credential selection."
+#: views/portability-review.php:109
+msgid "For each required repository, Booster checks access using only your choice. Broader credential permissions are unassessed; the active provider handles repository access, and Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: views/portability-review.php:112
+#: views/portability-review.php:111
 msgid "This Blueprint includes repository credentials, but none are needed for package changes on this site."
 msgstr ""
 
-#: views/portability-review.php:114
-msgid "Repository access continues to be handled by the active provider. Booster does not authenticate a third-party publisher."
-msgstr ""
-
 #. translators: %d: number of already-managed packages eligible for credential-only recovery.
-#: views/portability-review.php:132
+#: views/portability-review.php:130
 #, php-format
 msgid "%d managed package"
 msgid_plural "%d managed packages"
@@ -8234,19 +8225,19 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: total package count label, 2: managed package count label.
-#: views/portability-review.php:138
+#: views/portability-review.php:136
 #, php-format
 msgid "Used by %1$s; credential recovery is available for %2$s"
 msgstr ""
 
 #. translators: 1: total package count label, 2: proposed package change count label.
-#: views/portability-review.php:145
+#: views/portability-review.php:143
 #, php-format
 msgid "Used by %1$s; %2$s"
 msgstr ""
 
 #. translators: %d: number of proposed package changes.
-#: views/portability-review.php:149
+#: views/portability-review.php:147
 #, php-format
 msgid "%d package may change"
 msgid_plural "%d packages may change"
@@ -8254,161 +8245,193 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: unchanged package count label.
-#: views/portability-review.php:155
+#: views/portability-review.php:153
 #, php-format
 msgid "Used by %s; all unchanged"
 msgstr ""
 
-#: views/portability-review.php:168
+#: views/portability-review.php:166
 #: views/portability.php:161
 msgid "Credential type:"
 msgstr ""
 
-#: views/portability-review.php:186
+#: views/portability-review.php:184
 msgid "Import this credential"
 msgstr ""
 
-#: views/portability-review.php:186
-msgid "Add the protected credential from this Blueprint to this site."
+#: views/portability-review.php:184
+msgid "Add the protected credential from this Blueprint. It does not change an already-managed package’s saved credential selection."
 msgstr ""
 
-#: views/portability-review.php:193
+#: views/portability-review.php:191
 msgid "Use a saved credential"
 msgstr ""
 
-#: views/portability-review.php:193
+#: views/portability-review.php:191
 msgid "Connect these packages to a credential already stored on this site."
 msgstr ""
 
-#: views/portability-review.php:197
-#: views/portability-review.php:354
+#: views/portability-review.php:195
+#: views/portability-review.php:393
 #: views/troubleshooting.php:135
 msgid "Saved credential"
 msgstr ""
 
-#: views/portability-review.php:208
-#: views/portability-review.php:368
+#: views/portability-review.php:206
+#: views/portability-review.php:407
 msgid "No saved credentials are available for this provider."
 msgstr ""
 
-#: views/portability-review.php:215
+#: views/portability-review.php:213
+msgid "Leave these packages unchanged"
+msgstr ""
+
+#: views/portability-review.php:213
 msgid "Do not install, adopt or import this repository credential."
 msgstr ""
 
-#: views/portability-review.php:221
+#: views/portability-review.php:219
 msgid "No action needed"
 msgstr ""
 
-#: views/portability-review.php:222
-msgid "No credential choice is needed because every affected package will remain unchanged."
+#: views/portability-review.php:220
+msgid "These packages remain unchanged; no credential is imported."
 msgstr ""
 
-#: views/portability-review.php:228
-#: views/portability-review.php:371
+#: views/portability-review.php:226
+#: views/portability-review.php:410
 msgid "Manage repository credentials"
 msgstr ""
 
-#: views/portability-review.php:236
+#: views/portability-review.php:234
 #: views/portability.php:225
 msgid "Packages"
 msgstr ""
 
-#: views/portability-review.php:237
+#: views/portability-review.php:235
 msgid "Review the target state of each package and select the eligible changes you want to apply."
 msgstr ""
 
-#: views/portability-review.php:240
+#: views/portability-review.php:236
+msgid "Requirement observations do not prove compatibility. Dependency observations concern activation; they do not fetch missing dependencies or authorize installation. Local comparisons do not check repository access or inspect package files."
+msgstr ""
+
+#: views/portability-review.php:239
 msgid "Packages in this import review"
 msgstr ""
 
-#: views/portability-review.php:241
+#: views/portability-review.php:240
 #: views/portability.php:233
 msgid "Type"
 msgstr ""
 
-#: views/portability-review.php:241
+#: views/portability-review.php:240
 msgid "Target state"
 msgstr ""
 
-#: views/portability-review.php:241
+#: views/portability-review.php:240
 msgid "Select all actionable changes"
 msgstr ""
 
-#: views/portability-review.php:241
+#: views/portability-review.php:240
 msgid "Apply plan"
 msgstr ""
 
-#: views/portability-review.php:244
+#: views/portability-review.php:243
 msgid "Choose a Transporter Blueprint to review its packages."
 msgstr ""
 
 #. translators: 1: reviewed release version, 2: reviewed release tag.
-#: views/portability-review.php:273
+#: views/portability-review.php:272
 #, php-format
 msgid "Reviewed release %1$s (%2$s). Booster will install this first provider-preferred candidate only; it does not claim the newest eligible release. The package will remain inactive and deployment Disabled."
 msgstr ""
 
-#: views/portability-review.php:276
+#: views/portability-review.php:275
 msgid "This Blueprint proposes conflicting sources for this repository. Select multiple branch packages or one release package, not both."
 msgstr ""
 
-#: views/portability-review.php:287
-msgid "Requirements observed in the source site’s installed headers. The requested package may differ."
+#: views/portability-review.php:291
+msgid "Requirements:"
 msgstr ""
 
-#: views/portability-review.php:288
-msgid "Requirements reported for the selected package. Installation must verify them again."
+#: views/portability-review.php:293
+msgid "No minimum declared."
 msgstr ""
 
-#: views/portability-review.php:289
-msgid "Requirement observations were not supplied."
+#: views/portability-review.php:295
+msgid "Some minimum declarations are missing."
+msgstr ""
+
+#: views/portability-review.php:300
+msgid "Observed in source-site headers; the requested package may differ."
+msgstr ""
+
+#: views/portability-review.php:301
+msgid "Reported for the selected package; installation checks again."
 msgstr ""
 
 #: views/portability-review.php:302
-msgid "Dependency observations concern activation. They do not authorize installation, fetch missing dependencies or prove complete compatibility."
+msgid "Observations were not supplied."
 msgstr ""
 
-#: views/portability-review.php:307
-msgid "Whether the installed code matches is unknown. This local comparison does not check repository access or inspect package files."
-msgstr ""
-
-#: views/portability-review.php:310
-msgid "Requested initial selection"
-msgstr ""
-
-#: views/portability-review.php:311
-msgid "These are requested identities, not verified installed code or a permanent update lock."
-msgstr ""
-
-#: views/portability-review.php:321
-msgid "No exact initial selection was supplied. The current branch head or newest eligible release remains unresolved by this local comparison."
-msgstr ""
-
-#: views/portability-review.php:325
-msgid "Configuration differences"
+#: views/portability-review.php:323
+msgid "Requirement checks and dependencies"
 msgstr ""
 
 #: views/portability-review.php:328
-msgid "Current configuration"
+msgid "Requirements observed in the source site’s installed headers. The requested package may differ."
 msgstr ""
 
 #: views/portability-review.php:329
+msgid "Requirements reported for the selected package. Installation must verify them again."
+msgstr ""
+
+#: views/portability-review.php:330
+msgid "Requirement observations were not supplied."
+msgstr ""
+
+#: views/portability-review.php:346
+msgid "Installed code match: unknown."
+msgstr ""
+
+#: views/portability-review.php:349
+msgid "Requested initial selection"
+msgstr ""
+
+#: views/portability-review.php:350
+msgid "These are requested identities, not verified installed code or a permanent update lock."
+msgstr ""
+
+#: views/portability-review.php:360
+msgid "Exact initial selection: not supplied; current branch head or newest eligible release not resolved."
+msgstr ""
+
+#: views/portability-review.php:364
+msgid "Configuration differences"
+msgstr ""
+
+#: views/portability-review.php:367
+msgid "Current configuration"
+msgstr ""
+
+#: views/portability-review.php:368
 msgid "Requested configuration"
 msgstr ""
 
-#: views/portability-review.php:337
+#: views/portability-review.php:376
 msgid "None"
 msgstr ""
 
-#: views/portability-review.php:337
+#: views/portability-review.php:376
 msgid "Release asset"
 msgstr ""
 
-#: views/portability-review.php:359
+#: views/portability-review.php:398
 msgid "Previously selected credential is unavailable. Choose another credential."
 msgstr ""
 
-#: views/portability-review.php:378
+#: views/portability-review.php:417
 msgid "Import credential only"
 msgstr ""
 
@@ -8688,7 +8711,7 @@ msgid "Rechecking repository access…"
 msgstr ""
 
 #: views/portability.php:289
-msgid "Review repository access decisions, package changes and any credential-only recovery proposed for this site."
+msgid "Choose repository access, then review the changes below."
 msgstr ""
 
 #: views/portability.php:290
@@ -8710,7 +8733,7 @@ msgid "No changes selected."
 msgstr ""
 
 #: views/portability.php:297
-#: assets/ran-booster-portability.js:1086
+#: assets/ran-booster-portability.js:1077
 msgid "Applying…"
 msgstr ""
 
@@ -9709,92 +9732,80 @@ msgstr ""
 msgid "Transporter Blueprint download started."
 msgstr ""
 
-#. translators: %d: number of managed package changes.
+#. translators: %d: selected package-change count.
 #: assets/ran-booster-portability.js:616
 #, js-format
-msgid "%d package change"
-msgid_plural "%d package changes"
-msgstr[0] ""
-msgstr[1] ""
-
-#. translators: %d: number of repository credentials to import.
-#: assets/ran-booster-portability.js:626
-#, js-format
-msgid "%d repository credential"
-msgid_plural "%d repository credentials"
-msgstr[0] ""
-msgstr[1] ""
-
-#. translators: %d: number of saved credentials to use.
-#: assets/ran-booster-portability.js:636
-#, js-format
-msgid "%d saved credential"
-msgid_plural "%d saved credentials"
-msgstr[0] ""
-msgstr[1] ""
-
-#. translators: 1: package changes, 2: repository credentials to import, 3: saved credentials to use.
-#: assets/ran-booster-portability.js:647
-#, js-format
-msgid "Apply %1$s, import %2$s and use %3$s."
+msgid "Package changes: %d"
 msgstr ""
 
-#: assets/ran-booster-portability.js:657
+#. translators: %d: selected repository-credential import count.
+#: assets/ran-booster-portability.js:623
+#, js-format
+msgid "Credentials to import: %d"
+msgstr ""
+
+#. translators: %d: selected saved-credential count.
+#: assets/ran-booster-portability.js:630
+#, js-format
+msgid "Saved credentials to use: %d"
+msgstr ""
+
+#: assets/ran-booster-portability.js:637
 msgid "Deployment will remain Disabled."
 msgstr ""
 
-#: assets/ran-booster-portability.js:658
+#: assets/ran-booster-portability.js:638
 msgid "Managed package settings will remain unchanged."
 msgstr ""
 
-#: assets/ran-booster-portability.js:663
+#: assets/ran-booster-portability.js:642
 msgid "Credential permissions have not been assessed."
 msgstr ""
 
 #. translators: 1: package type, 2: package name.
-#: assets/ran-booster-portability.js:719
+#: assets/ran-booster-portability.js:710
 #, js-format
 msgid "%1$s “%2$s”"
 msgstr ""
 
-#: assets/ran-booster-portability.js:728
+#: assets/ran-booster-portability.js:719
 msgid "Package result unavailable."
 msgstr ""
 
-#: assets/ran-booster-portability.js:735
+#: assets/ran-booster-portability.js:726
 msgid "Transferred credential is available on this site."
 msgstr ""
 
-#: assets/ran-booster-portability.js:739
+#: assets/ran-booster-portability.js:730
 msgid "Selected saved credential was verified for this repository."
 msgstr ""
 
-#: assets/ran-booster-portability.js:743
+#: assets/ran-booster-portability.js:734
 msgid "Repository credential was not made available on this site."
 msgstr ""
 
-#: assets/ran-booster-portability.js:789
+#: assets/ran-booster-portability.js:780
 msgid "Reviewing blueprint…"
 msgstr ""
 
-#: assets/ran-booster-portability.js:807
-#: assets/ran-booster-portability.js:853
+#: assets/ran-booster-portability.js:798
+#: assets/ran-booster-portability.js:844
 msgid "Unable to review this blueprint."
 msgstr ""
 
-#: assets/ran-booster-portability.js:842
+#: assets/ran-booster-portability.js:833
 msgid "Transporter Blueprint reviewed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1134
+#: assets/ran-booster-portability.js:1125
 msgid "Package apply failed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1155
+#: assets/ran-booster-portability.js:1146
 msgid "Package apply failed. Review the blueprint again."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1169
+#: assets/ran-booster-portability.js:1160
 msgid "All selected Transporter Blueprint changes were applied."
 msgstr ""
 

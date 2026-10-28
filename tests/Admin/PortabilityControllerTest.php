@@ -64,10 +64,10 @@ final class PortabilityControllerTest extends TestCase {
 		$html     = $review->invoke( $this->preview_controller( $secrets, false, 'plugin', $provider ), new PackageBlueprint( array( $this->blueprint_package(), $release ) ), array(), array() );
 
 		self::assertSame( 2, substr_count( $html, 'Package is not installed.' ) );
-		self::assertSame( 2, substr_count( $html, 'newest eligible release remains unresolved by this local comparison.' ) );
-		self::assertSame( 2, substr_count( $html, 'Whether the installed code matches is unknown.' ) );
+		self::assertSame( 2, substr_count( $html, 'current branch head or newest eligible release not resolved.' ) );
+		self::assertSame( 2, substr_count( $html, 'Installed code match: unknown.' ) );
 		self::assertStringContainsString( 'data-portability-row="1" data-portability-action="blocked"', $html );
-		self::assertStringContainsString( 'does not check repository access or inspect package files', $html );
+		self::assertStringContainsString( 'Local comparisons do not check repository access or inspect package files', $html );
 		self::assertNotNull( $provider );
 		self::assertSame( array( null, null ), $provider->credential_ids );
 	}
@@ -98,7 +98,7 @@ final class PortabilityControllerTest extends TestCase {
 		$html     = $review->invoke( $this->preview_controller( $secrets, false, 'plugin', $provider ), new PackageBlueprint( $packages ), array(), array() );
 
 		self::assertSame( 3, substr_count( $html, 'Requested initial selection' ) );
-		self::assertSame( 3, substr_count( $html, 'Whether the installed code matches is unknown.' ) );
+		self::assertSame( 3, substr_count( $html, 'Installed code match: unknown.' ) );
 		self::assertSame( 3, substr_count( $html, 'data-portability-action="blocked"' ) );
 		foreach ( array( str_repeat( 'a', 40 ), str_repeat( 'b', 64 ), str_repeat( 'c', 64 ), str_repeat( 'd', 40 ), 'release&lt;id&gt;', 'tag&lt;script&gt;', '1.0.0&lt;version&gt;', 'artifact&lt;id&gt;', '1234' ) as $value ) {
 			self::assertStringContainsString( '<code>' . $value . '</code>', $html );
@@ -213,6 +213,8 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringContainsString( 'missing observations: 1', $html );
 		self::assertStringContainsString( 'Declared minimum not met', $html );
 		self::assertStringContainsString( 'Observation not supplied', $html );
+		self::assertStringContainsString( '<ul class="ran-booster-portability__requirements-exceptions">', $html );
+		self::assertStringContainsString( 'Requirement observations do not prove compatibility.', $html );
 		self::assertStringContainsString( 'requested package may differ', $html );
 		self::assertStringContainsString( 'conflicting sources', $html );
 		self::assertStringContainsString( 'installation and activation are not verified', $html );

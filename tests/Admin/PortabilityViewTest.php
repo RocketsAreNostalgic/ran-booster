@@ -91,7 +91,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'Choose a Transporter Blueprint to review its packages.', $html );
 		self::assertStringContainsString( 'Packages in this import review', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-portability-review-heading" class="ran-booster-portability__review-title">Blueprint review</h4>', $html );
-		self::assertStringContainsString( 'Review repository access decisions, package changes and any credential-only recovery proposed for this site.', $html );
+		self::assertStringContainsString( 'Choose repository access, then review the changes below.', $html );
 		self::assertStringContainsString( '<h5 id="ran-booster-portability-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h5>', $html );
 		self::assertStringContainsString( 'Review the target state of each package and select the eligible changes you want to apply.', $html );
 		self::assertStringContainsString( 'aria-labelledby="ran-booster-portability-packages-heading"', $html );
@@ -379,8 +379,10 @@ final class PortabilityViewTest extends TestCase {
 
 		self::assertStringContainsString( '<h5 id="ran-booster-portability-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title">Repository credentials</h5>', $html );
 		self::assertStringContainsString( '<strong>Before you continue:</strong>', $html );
-		self::assertStringContainsString( 'Booster checks whether the credential can access each required repository, not what other permissions it has.', $html );
-		self::assertStringContainsString( 'Importing a credential for an already-managed package does not change that package’s saved credential selection.', $html );
+		self::assertStringContainsString( 'For each required repository, Booster checks access using only your choice.', $html );
+		self::assertStringContainsString( 'Broader credential permissions are unassessed; the active provider handles repository access, and Booster does not authenticate a third-party publisher.', $html );
+		self::assertStringContainsString( 'It does not change an already-managed package’s saved credential selection.', $html );
+		self::assertStringContainsString( 'Leave these packages unchanged', $html );
 		self::assertStringContainsString( '<legend class="screen-reader-text">GitHub &lt;Cloud&gt; — Imported &lt;PAT&gt;</legend>', $html );
 		self::assertStringContainsString( '<h6 class="ran-booster-portability__credential-name">Imported &lt;PAT&gt;</h6>', $html );
 		self::assertStringContainsString( 'ran-booster-tile ran-booster-portability__credential-provider', $html );
@@ -447,7 +449,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( '<strong>Before you continue:</strong>', $html );
 		self::assertStringContainsString( '<summary>Used by 1 package; all unchanged</summary>', $html );
 		self::assertStringContainsString( '<strong>No action needed</strong>', $html );
-		self::assertStringContainsString( 'No credential choice is needed because every affected package will remain unchanged.', $html );
+		self::assertStringContainsString( 'These packages remain unchanged; no credential is imported.', $html );
 		self::assertStringContainsString( 'Manage repository credentials', $html );
 		self::assertStringNotContainsString( 'name="credential_decisions[0][action]"', $html );
 		self::assertStringNotContainsString( 'data-portability-credential-refresh', $html );

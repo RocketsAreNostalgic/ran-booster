@@ -1025,6 +1025,8 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'ran-booster-provider__header', $html );
+		self::assertStringNotContainsString( '>Repository provider</p>', $html );
+		self::assertStringContainsString( 'Manage repository access, integrations and the packages connected to this site.', $html );
 		self::assertStringNotContainsString( 'id="ran-booster-access-tokens-heading"', $html );
 		self::assertStringNotContainsString( '>Add credential</button>', $html );
 		self::assertStringNotContainsString( 'data-credential-modal="access"', $html );

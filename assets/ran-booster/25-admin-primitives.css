@@ -137,6 +137,7 @@
 .ran-booster-admin
 	:is(
 		.ran-booster-onboarding,
+		.ran-booster-provider--overview,
 		.ran-booster-troubleshooting,
 		.ran-booster-documentation,
 		.ran-booster-portability

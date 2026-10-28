@@ -190,8 +190,8 @@
 }
 
 .ran-booster-admin .ran-booster-attempt-table {
-	--ran-booster-attempt-columns: 142px minmax(140px, 1fr)
-		minmax(118px, 0.85fr) minmax(78px, 0.55fr) minmax(120px, 0.85fr);
+	--ran-booster-attempt-columns: 142px minmax(0, 1.1fr) minmax(0, 0.65fr)
+		minmax(0, 0.65fr) minmax(0, 1.8fr);
 
 	background: var(--ran-booster-surface);
 }
@@ -242,10 +242,6 @@
 
 .ran-booster-admin .ran-booster-attempt-row__summary > [role="cell"] {
 	min-inline-size: 0;
-}
-
-.ran-booster-admin .ran-booster-attempt-row__source,
-.ran-booster-admin .ran-booster-attempt-row__message {
 	overflow-wrap: anywhere;
 }
 

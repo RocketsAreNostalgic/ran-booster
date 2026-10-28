@@ -275,6 +275,50 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( \RAN\Admin\DeploymentOutcomeMessage::for_code( 'provider_unavailable' ), \RAN\Admin\DeploymentOutcomeMessage::for_activity( 'failed', 'provider_unavailable' ) );
 	}
 
+	public function test_activity_outcomes_separate_status_from_wrapping_message(): void {
+		foreach ( array(
+			'incomplete' => array( 'Unconfirmed', 'neutral', 'Completion not recorded' ),
+			'succeeded'  => array( 'Succeeded', 'ok', 'A long <result> with an explanatory message.' ),
+			'failed'     => array( 'Failed', 'error', 'A long <result> with an explanatory message.' ),
+			'rejected'   => array( 'Rejected', 'neutral', 'A long <result> with an explanatory message.' ),
+			'skipped'    => array( 'Skipped', 'neutral', 'A long <result> with an explanatory message.' ),
+			'other'      => array( 'Unknown', 'neutral', 'A long <result> with an explanatory message.' ),
+		) as $state => [ $expected_label, $tone, $message ] ) {
+			$deployment_activity  = array(
+				'items' => array(
+					array(
+						'record_source'      => 'activity',
+						'activity_record_id' => '42',
+						'state'              => $state,
+						'provider_label'     => 'A long source identifier',
+						'package_type'       => 'succeeded' === $state ? 'plugin' : 'provider',
+						'subject_identity'   => 'example/example.php',
+						'provenance'         => 'provider',
+						'operation'          => 'provider.check',
+						'message'            => 'A long <result> with an explanatory message.',
+						'reason'             => 'test.reason',
+						'remediation'        => 'Try again.',
+					),
+				),
+			);
+			$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'data-ran-booster-activity-row="42"', $html );
+			self::assertStringContainsString( 'data-label="Source">A long source identifier</span>', $html );
+			if ( 'succeeded' === $state ) {
+				self::assertStringContainsString( 'Plugin: example/example.php', $html );
+			}
+			self::assertStringContainsString( 'ran-booster-badge--' . $tone . ' ran-booster-deployment-state ran-booster-deployment-state--' . $state . '">' . $expected_label . '</span>', $html );
+			self::assertStringContainsString( '<span class="ran-booster-attempt-row__message">' . esc_html( $message ) . '</span>', $html );
+			self::assertStringContainsString( '<dt>Reported by</dt><dd>Provider-reported</dd>', $html );
+			self::assertStringContainsString( '<dt>Reason</dt><dd>test.reason</dd>', $html );
+			self::assertStringContainsString( '<dt>Remediation</dt><dd>Try again.</dd>', $html );
+			self::assertStringNotContainsString( '<result>', $html );
+		}
+	}
+
 	public function test_activity_renders_only_closed_observation_facts(): void {
 		$deployment_activity  = array(
 			'items' => array(
@@ -435,6 +479,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>Clear filters</a>', $html );
 		self::assertStringContainsString( 'activity_provider=gh&amp;activity_package=%5B%22gh%22%2C%22plugin%22%2C%22example%2Fexample.php%22%5D&amp;before=v1%7Ccursor', $html );
 		self::assertStringContainsString( 'data-label="Source"', $html );
+		self::assertStringContainsString( 'data-label="Source">Branch deployment</span>', $html );
+		self::assertStringContainsString( 'ran-booster-deployment-state--failed">Failed</span>', $html );
 		self::assertStringContainsString( 'data-label="Activity"', $html );
 		self::assertStringContainsString( 'data-label="Outcome"', $html );
 		self::assertStringContainsString( 'Review recorded checks and deployments.', $html );

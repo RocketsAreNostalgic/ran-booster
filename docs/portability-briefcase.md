@@ -296,8 +296,11 @@ silently dropping the credential.
 ## Blueprint archive format
 
 Export downloads use `YYYYMMDD-HHMMSS_DOMAIN_ran_booster_blueprint.zip`, with a
-UTC timestamp and the exporting site's hostname. An unavailable or unsafe
-hostname uses `site`; an enhanced download also falls back to
+UTC timestamp and the exporting site's hostname. Internationalized hostnames
+use IDNA when PHP's internationalization extension is available; otherwise their
+UTF-8 bytes are represented as `utf8-` followed by hexadecimal. If the hostname
+is unavailable, unsafe, unconvertible or too long to fit, the filename uses `site`.
+An enhanced download also falls back to
 `ran-booster-blueprint.zip` if its filename header is unavailable or invalid.
 The JSON entry inside the archive is always `blueprint.json`.
 

@@ -114,18 +114,30 @@ final readonly class PortabilityController {
 	private function export_filename( string $site_url, int $timestamp ): string {
 		$parts = wp_parse_url( $site_url );
 		$host  = is_array( $parts ) && is_string( $parts['host'] ?? null ) ? $parts['host'] : '';
-		$ip    = trim( $host, '[]' );
+		// Parse the original host before IDNA: parse_url may replace UTF-8 bytes in some locales.
+		if ( is_array( $parts ) && preg_match( '~\Ahttps?://([^/?#@:]+)(?::[0-9]+)?(?:[/?#]|\z)~i', $site_url, $matches ) ) {
+			$host = $matches[1];
+		} elseif ( is_array( $parts ) && ( isset( $parts['user'] ) || isset( $parts['pass'] ) || preg_match( '/[^\x00-\x7f]/', $host ) ) ) {
+			$host = '';
+		}
+		$ip = trim( $host, '[]' );
 		if ( false !== filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6 ) ) {
 			$host = 'ipv6-' . str_replace( ':', '-', $ip ) . '-address';
 		} elseif ( preg_match( '/[^\x00-\x7f]/', $host ) ) {
 			try {
-				$host = class_exists( \WpOrg\Requests\IdnaEncoder::class ) ? \WpOrg\Requests\IdnaEncoder::encode( $host ) : '';
+				if ( ! preg_match( '//u', $host ) || preg_match( '/[^a-z0-9.\-\x80-\xff]/i', $host ) ) {
+					$host = '';
+				} elseif ( function_exists( 'idn_to_ascii' ) && defined( 'IDNA_NONTRANSITIONAL_TO_ASCII' ) && defined( 'INTL_IDNA_VARIANT_UTS46' ) ) {
+					$host = (string) idn_to_ascii( $host, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46 );
+				} else {
+					$host = 'utf8-' . bin2hex( $host );
+				}
 			} catch ( Throwable ) {
 				$host = '';
 			}
 		}
 		$host = strtolower( rtrim( $host, '.' ) );
-		if ( ! preg_match( '/^[a-z0-9][a-z0-9.-]{0,119}$/D', $host ) ) {
+		if ( ! preg_match( '/^[a-z0-9][a-z0-9.-]{0,212}$/D', $host ) ) {
 			$host = 'site';
 		}
 

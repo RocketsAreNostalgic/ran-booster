@@ -208,7 +208,7 @@
 				const disposition =
 					response.headers.get('content-disposition') || '';
 				const filename =
-					/^attachment; filename="(\d{8}-\d{6}_[a-z0-9][a-z0-9.-]{0,119}_ran_booster_blueprint\.zip)"$/.exec(
+					/^attachment; filename="(\d{8}-\d{6}_[a-z0-9][a-z0-9.-]{0,212}_ran_booster_blueprint\.zip)"$/.exec(
 						disposition
 					);
 				link.download = filename

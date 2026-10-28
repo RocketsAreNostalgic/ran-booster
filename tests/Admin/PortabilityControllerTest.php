@@ -78,9 +78,33 @@ final class PortabilityControllerTest extends TestCase {
 			'no host'         => array( '/relative', 'site' ),
 			'only dots'       => array( 'https://.../', 'site' ),
 			'unsafe host'     => array( 'https://foo_bar.example/', 'site' ),
-			'long host'       => array( 'https://' . str_repeat( 'a', 121 ) . '/', 'site' ),
+			'userinfo'        => array( 'https://user:pass@EXAMPLE.com/', 'site' ),
+			'long host'       => array( 'https://' . str_repeat( 'a', 60 ) . '.' . str_repeat( 'b', 60 ) . '/', str_repeat( 'a', 60 ) . '.' . str_repeat( 'b', 60 ) ),
+			'maximum host'    => array( 'https://' . implode( '.', array_merge( array_fill( 0, 4, str_repeat( 'a', 50 ) ), array( str_repeat( 'b', 9 ) ) ) ) . '/', implode( '.', array_merge( array_fill( 0, 4, str_repeat( 'a', 50 ) ), array( str_repeat( 'b', 9 ) ) ) ) ),
+			'oversized host'  => array( 'https://' . implode( '.', array_merge( array_fill( 0, 4, str_repeat( 'a', 50 ) ), array( str_repeat( 'b', 10 ) ) ) ) . '/', 'site' ),
 			'header control'  => array( "https://example.com\r\nX-Forged.example/", 'site' ),
 		);
+	}
+
+	public function test_export_filename_converts_internationalized_host_or_uses_safe_fallback(): void {
+		$controller = ( new ReflectionClass( PortabilityController::class ) )->newInstanceWithoutConstructor();
+		$method     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_filename' );
+		$has_idna   = function_exists( 'idn_to_ascii' ) && defined( 'IDNA_NONTRANSITIONAL_TO_ASCII' ) && defined( 'INTL_IDNA_VARIANT_UTS46' );
+		foreach ( array(
+			'BÜCHER.de' => 'xn--bcher-kva.de',
+			'faß.de'    => 'xn--fa-hia.de',
+		) as $host => $ascii ) {
+			$expected = $has_idna ? $ascii : 'utf8-' . bin2hex( $host );
+			self::assertSame( '20261028-100000_' . $expected . '_ran_booster_blueprint.zip', $method->invoke( $controller, 'https://' . $host . '/', 1793181600 ) );
+		}
+	}
+
+	public function test_export_filename_rejects_unsafe_or_malformed_internationalized_hosts(): void {
+		$controller = ( new ReflectionClass( PortabilityController::class ) )->newInstanceWithoutConstructor();
+		$method     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'export_filename' );
+		foreach ( array( 'bücher%2f.example', 'bücher_unsafe.example', "bad\xc3.example" ) as $host ) {
+			self::assertSame( '20261028-100000_site_ran_booster_blueprint.zip', $method->invoke( $controller, 'https://' . $host . '/', 1793181600 ) );
+		}
 	}
 
 	public function test_mixed_preview_compares_release_configuration_without_enabling_apply(): void {

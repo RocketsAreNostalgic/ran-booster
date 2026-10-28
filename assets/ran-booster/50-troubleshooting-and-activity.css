@@ -244,6 +244,19 @@
 	min-inline-size: 0;
 }
 
+.ran-booster-admin .ran-booster-attempt-row__source,
+.ran-booster-admin .ran-booster-attempt-row__message {
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-attempt-row__outcome {
+	display: flex;
+	align-items: flex-start;
+	flex-direction: column;
+	gap: var(--ran-booster-space-4);
+	min-inline-size: 0;
+}
+
 .ran-booster-admin
 	.ran-booster-attempt-table
 	:is(.ran-booster-pill, .ran-booster-badge) {

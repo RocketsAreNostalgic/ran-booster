@@ -62,6 +62,7 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		$dashboard->expects( self::once() )
 			->method( 'add_message' )
 			->with( 'Repository credential validated successfully.' );
+		$dashboard->expects( self::once() )->method( 'set_credential_validation_feedback' )->with( 'bb', 'credential_1', 'Repository credential validated successfully.', null );
 		$dispatcher = $this->dispatcher( $dashboard, CredentialValidationResult::valid() );
 
 		$_POST['ran_booster'] = $this->request();
@@ -70,6 +71,19 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 		self::assertNull( $this->controller->response );
 		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
 		self::assertSame( array( 'ran-booster-save-secrets' ), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	public function test_ordinary_rejection_is_associated_with_the_requested_credential(): void {
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'set_credential_validation_feedback' )->with(
+			'bb',
+			'credential_1',
+			null,
+			'The repository provider rejected this credential.'
+		);
+		$dispatcher           = $this->dispatcher( $dashboard, CredentialValidationResult::invalid() );
+		$_POST['ran_booster'] = $this->request();
+		$dispatcher->dispatch_post_requests();
 	}
 
 	public function test_htmx_post_returns_only_the_safe_success_toast_payload(): void {
@@ -129,6 +143,28 @@ final class CredentialValidationHtmxDispatcherTest extends TestCase {
 			self::assertNull( $response->toast_message );
 			self::assertSame( 'The repository provider rate-limited credential validation. Try again later.', $response->error );
 			self::assertSame( 422, $response->status );
+		}
+	}
+
+	public function test_htmx_unexpected_failure_returns_a_bounded_local_error(): void {
+		$dashboard                  = $this->createMock( Dashboard::class );
+		$dispatcher                 = $this->dispatcher(
+			$dashboard,
+			CredentialValidationResult::valid(),
+			on_validate: static function (): void {
+				throw new \RuntimeException( 'private-provider-payload' );
+			}
+		);
+		$_SERVER['HTTP_HX_REQUEST'] = 'true';
+		$_POST['ran_booster']       = $this->request();
+		try {
+			$dispatcher->dispatch_post_requests();
+			self::fail( 'An HTMX response must end the request.' );
+		} catch ( HtmxCredentialValidationResponse $response ) {
+			self::assertSame( 'credential_1', $response->credential_id );
+			self::assertNull( $response->toast_message );
+			self::assertSame( 'Booster could not complete the credential request.', $response->error );
+			self::assertSame( 500, $response->status );
 		}
 	}
 

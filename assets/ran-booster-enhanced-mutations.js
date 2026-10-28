@@ -221,9 +221,28 @@
 				return;
 			}
 			if (fallbackMessage) {
-				region.textContent = message;
+				const credentialResult = form.hasAttribute(
+					'data-ran-booster-credential-validation'
+				)
+					? region.querySelector?.(
+							'[data-ran-booster-credential-result]'
+						)
+					: null;
+				if (credentialResult) {
+					credentialResult.textContent = message;
+					credentialResult.className =
+						'ran-booster-credential-health__error';
+					credentialResult.hidden = false;
+				} else {
+					region.textContent = message;
+				}
 			}
 			region.hidden = false;
+			if (form.hasAttribute('data-ran-booster-credential-validation')) {
+				region.removeAttribute?.('role');
+				region.focus?.({ preventScroll: true });
+				return;
+			}
 			region.setAttribute('role', 'alert');
 			if (!region.hasAttribute('tabindex')) {
 				region.setAttribute('tabindex', '-1');
@@ -527,6 +546,20 @@
 			}
 		});
 
+		document.addEventListener(
+			'htmx:beforeCleanupElement',
+			function (event) {
+				const element = event.target;
+				if (
+					element?.matches?.(
+						'[data-ran-booster-credential-validation]'
+					)
+				) {
+					window.htmx?.trigger(element, 'htmx:abort');
+				}
+			}
+		);
+
 		document.addEventListener('htmx:beforeTransition', function (event) {
 			if (requestForm(event)) {
 				// The browser's View Transition snapshot occupies the top layer,
@@ -566,6 +599,12 @@
 			}
 
 			if (form && isScopedFailureStatus(event.detail?.xhr?.status)) {
+				if (
+					form.hasAttribute('data-ran-booster-credential-validation')
+				) {
+					focusError(form);
+					return;
+				}
 				if (!focusRenderedFailure(form)) {
 					focusError(form);
 				}

@@ -635,6 +635,77 @@ test('enhanced mutation feedback allows only declared 422 error swaps and keeps 
 	]);
 });
 
+test('credential failure focuses its Health result instead of an unrelated notice', () => {
+	const state = fixture();
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-credential-validation';
+	const other = {
+		hidden: false,
+		textContent: 'Unrelated error.',
+		focus() {
+			throw new Error('wrong focus');
+		},
+	};
+	state.setRenderedErrors([other]);
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	init();
+	state.listeners.get('htmx:afterSwap')({
+		detail: {
+			elt: state.swapTarget,
+			requestConfig: { elt: state.form },
+			xhr: { status: 422 },
+		},
+	});
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, []);
+});
+
+test('credential transport failure leaves expiry text intact and replaces result', () => {
+	const state = fixture();
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-credential-validation';
+	const result = { textContent: 'old success', hidden: false, className: '' };
+	state.error.textContent = 'Expiry unknown';
+	state.error.querySelector = (selector) =>
+		selector === '[data-ran-booster-credential-result]' ? result : null;
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	init();
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: { status: 0 } },
+	});
+	assert.equal(state.error.textContent, 'Expiry unknown');
+	assert.equal(
+		result.textContent,
+		'We could not complete that request. Please try again.'
+	);
+	assert.equal(result.className, 'ran-booster-credential-health__error');
+	assert.equal(result.hidden, false);
+});
+
+test('removing a credential validation form aborts its own request only', () => {
+	const state = fixture();
+	const calls = [];
+	state.window.htmx = { trigger: (...args) => calls.push(args) };
+	state.form.matches = (selector) =>
+		selector === '[data-ran-booster-credential-validation]';
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	init();
+	state.listeners.get('htmx:beforeCleanupElement')({ target: state.form });
+	state.listeners.get('htmx:beforeCleanupElement')({
+		target: { matches: () => false },
+	});
+	assert.deepEqual(calls, [[state.form, 'htmx:abort']]);
+});
+
 test('a package failure focuses and announces its rendered notice without copying it globally', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {

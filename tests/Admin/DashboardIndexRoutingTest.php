@@ -921,7 +921,18 @@ final class DashboardIndexRoutingTest extends TestCase {
 				return array();
 			}
 		};
-		$data                        = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
+		$dashboard                   = $this->dashboard( $secrets, provider_credentials: true );
+		$dashboard->set_credential_validation_feedback( 'bb', 'profile-01', null, 'The repository provider rejected this credential.' );
+		$data = $dashboard->get_index()['data'];
+		self::assertSame(
+			array(
+				'provider' => 'bb',
+				'id'       => 'profile-01',
+				'message'  => null,
+				'error'    => 'The repository provider rejected this credential.',
+			),
+			$data['credential_validation_feedback']
+		);
 
 		// Dashboard supplies a fixed provider-route model; the passive view only renders and escapes it.
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard route model as caller variables required by the production provider view.

@@ -17,6 +17,7 @@ class ProviderProfileAdminController {
 	public const TARGET_KEY      = 'core_provider_profiles';
 	public const TARGET_SELECTOR = '#ran-booster-provider-profile-region';
 	private RepositoryBranchCheckEvidenceStore $branch_check_evidence;
+	private ?ProviderCode $validation_response_provider = null;
 	public function __construct(
 		private Dashboard $dashboard,
 		private ProviderRegistry $providers,
@@ -195,6 +196,10 @@ class ProviderProfileAdminController {
 			$status = $exception instanceof CredentialRequestException ? 422 : 500;
 		}
 
+		if ( ! $htmx_request && $provider instanceof ProviderCode && is_string( $id ) ) {
+			$this->dashboard->set_credential_validation_feedback( $provider->value, $id, $message, $error );
+		}
+		$this->validation_response_provider = $provider;
 		if ( $htmx_request && $provider instanceof ProviderCode && is_string( $id ) ) {
 			$this->respond_to_htmx_credential_validation( $id, $message, $error, $status );
 		}
@@ -654,7 +659,23 @@ class ProviderProfileAdminController {
 	protected function respond_to_htmx_credential_validation( string $credential_id, ?string $message, ?string $error, int $status ): never {
 		status_header( $status );
 		$this->emit_success_header( $message );
-		echo '<div id="' . esc_attr( 'ran-booster-credential-validation-error-' . $credential_id ) . '" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1"' . ( null === $error ? ' hidden' : '' ) . '><p>' . esc_html( $error ?? '' ) . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned escaped fragment. Retain the public named-parameter contract.
+		$credential_health_id          = $credential_id;
+		$credential_validation_message = $message;
+		$credential_validation_error   = $error;
+		$credential_health_label       = __( 'Expiry unknown', 'ran-booster' );
+		try {
+			$provider = $this->validation_response_provider;
+			if ( null !== $provider ) {
+				$profile = $this->secrets->credential_profiles( $provider )[ $credential_id ] ?? null;
+				if ( is_array( $profile ) ) {
+					$credential_health_label = ( new CredentialExpiryReminder( $this->providers, $this->secrets, $this->expiry_observations ) )->status( $provider->value, $profile )['badge_label'];
+				}
+			}
+		} catch ( \Throwable $failure ) {
+			unset( $failure );
+			// The validation result remains useful even when expiry cannot be read back.
+		}
+		require dirname( __DIR__, 2 ) . '/views/provider-credential-health.php';
 		exit;
 	}
 	private function emit_success_header( ?string $message ): void {

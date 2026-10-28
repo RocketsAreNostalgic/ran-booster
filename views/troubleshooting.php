@@ -78,13 +78,13 @@ $repository_placeholder = array() === $locator_examples
 	: implode( ' or ', $locator_examples );
 
 ?>
-<section id="ran-booster-troubleshooting-diagnostics-region" class="ran-booster-page-shell ran-booster-panel ran-booster-troubleshooting" aria-labelledby="ran-booster-troubleshooting-heading">
+<section id="ran-booster-troubleshooting-diagnostics-region" class="ran-booster-page-shell ran-booster-troubleshooting" aria-labelledby="ran-booster-troubleshooting-heading">
 	<header class="ran-booster-page-shell__header ran-booster-troubleshooting__header">
 		<h2 id="ran-booster-troubleshooting-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Troubleshooting', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Run protected checks, temporarily capture Booster events, or review recent update activity.', 'ran-booster' ); ?></p>
 	</header>
 
-	<div class="ran-booster-page-shell__body">
+	<div class="ran-booster-page-shell__body ran-booster-panel">
 		<nav class="ran-booster-secondary-nav" aria-label="<?php echo esc_attr( __( 'Troubleshooting views', 'ran-booster' ) ); ?>">
 		<?php foreach ( $secondary_navigation as $secondary_item ) { ?>
 			<a class="ran-booster-secondary-nav__link<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' is-current' : ''; ?>" href="<?php echo esc_url( $secondary_item['url'] ); ?>"<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $secondary_item['label'] ); ?></a>

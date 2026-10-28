@@ -132,6 +132,18 @@
 	}
 }
 
+.ran-booster-admin
+	:is(
+		.ran-booster-onboarding,
+		.ran-booster-troubleshooting,
+		.ran-booster-documentation,
+		.ran-booster-portability
+	)
+	> .ran-booster-page-shell__header {
+	padding: 0;
+	margin-block-end: var(--ran-booster-space-20);
+}
+
 /*
  * Repository pickers are portalled directly to document.body so they can
  * cover the WordPress admin chrome. Dialog primitives therefore own their

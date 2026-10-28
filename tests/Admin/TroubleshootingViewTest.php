@@ -172,6 +172,15 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertLessThan( $activity_position, $diagnostics_position );
 		self::assertLessThan( $logging_position, $activity_position );
 		self::assertStringContainsString( 'aria-label="Troubleshooting views"', $html );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath          = new \DOMXPath( $document );
+		$heading_panels = $xpath->query( '//*[@id="ran-booster-troubleshooting-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
+		$panel_nav      = $xpath->query( '//*[@id="ran-booster-troubleshooting-diagnostics-region"]//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]//nav[@aria-label="Troubleshooting views"]' );
+		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
+		self::assertInstanceOf( \DOMNodeList::class, $panel_nav );
+		self::assertCount( 0, $heading_panels );
+		self::assertCount( 1, $panel_nav );
 		self::assertStringContainsString( 'panel=debug-capture" aria-current="page"', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading">Logging</h3>', $html );
 		self::assertStringContainsString( 'Start 60-minute capture', $html );

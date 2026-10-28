@@ -29,14 +29,20 @@ final class OnboardingViewTest extends TestCase {
 		$html = $this->render_view();
 
 		self::assertStringContainsString(
-			'<section class="ran-booster-page-shell ran-booster-panel ran-booster-onboarding"',
+			'<section class="ran-booster-page-shell ran-booster-onboarding"',
 			$html
 		);
 		self::assertStringContainsString(
 			'<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title">Start with a repository</h2>',
 			$html
 		);
-		self::assertSame( 2, preg_match_all( '/<section class="ran-booster-onboarding__column"/', $html ) );
+		self::assertSame( 2, preg_match_all( '/<section class="ran-booster-panel ran-booster-onboarding__column"/', $html ) );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath          = new \DOMXPath( $document );
+		$heading_panels = $xpath->query( '//*[@id="ran-booster-onboarding-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
+		self::assertCount( 0, $heading_panels );
 
 		$install = strpos( $html, 'Install a plugin' );
 		$private = strpos( $html, 'Private repository access' );

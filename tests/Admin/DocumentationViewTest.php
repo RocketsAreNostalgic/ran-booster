@@ -40,12 +40,24 @@ final class DocumentationViewTest extends TestCase {
 	public function test_renders_eleven_native_disclosure_sections_with_only_quick_start_open(): void {
 		$html = $this->render_view( $this->provider_documentation() );
 
-		self::assertStringContainsString( 'class="ran-booster-documentation ran-booster-documentation__layout"', $html );
-		self::assertStringContainsString( 'class="ran-booster-page-shell ran-booster-panel ran-booster-documentation__main"', $html );
+		self::assertStringContainsString( 'class="ran-booster-documentation__layout"', $html );
+		self::assertStringContainsString( 'class="ran-booster-documentation__main"', $html );
 		self::assertStringContainsString( 'class="ran-booster-page-shell__header ran-booster-documentation__header"', $html );
 		self::assertStringContainsString( 'class="ran-booster-page-shell__body"', $html );
 		self::assertSame( 11, preg_match_all( '/<details\b/', $html ) );
 		self::assertSame( 1, preg_match_all( '/<details\b[^>]*\bopen\b/', $html ) );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath          = new \DOMXPath( $document );
+		$heading_panels = $xpath->query( '//*[@id="ran-booster-documentation-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
+		$quick_start    = $xpath->query( '//details[@id="ran-booster-quick-start"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")][@open]' );
+		$panels         = $xpath->query( '//details[@data-ran-booster-documentation-section][contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
+		self::assertInstanceOf( \DOMNodeList::class, $quick_start );
+		self::assertInstanceOf( \DOMNodeList::class, $panels );
+		self::assertCount( 0, $heading_panels );
+		self::assertCount( 1, $quick_start );
+		self::assertCount( 11, $panels );
 		self::assertMatchesRegularExpression( '/<details\b[^>]*\bopen\b[^>]*>\s*<summary>Quick start<\/summary>/', $html );
 		self::assertMatchesRegularExpression( '/<summary>\s*GitHub credentials and access\s*<\/summary>/', $html );
 		self::assertMatchesRegularExpression( '/<summary>\s*Bitbucket credentials and access\s*<\/summary>/', $html );
@@ -208,7 +220,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Empty guide', $html );
 		self::assertLessThan( strpos( $html, 'href="#addon-guide"' ), strpos( $html, 'href="#ran-booster-documentation-provider-gh"' ) );
 		self::assertLessThan( strpos( $html, 'href="#ran-booster-documentation-provider-bb"' ), strpos( $html, 'href="#addon-guide"' ) );
-		self::assertLessThan( strpos( $html, 'ran-booster-page-shell ran-booster-panel ran-booster-documentation' ), strpos( $html, 'data-ran-booster-documentation-index' ) );
+		self::assertLessThan( strpos( $html, 'data-ran-booster-documentation-index' ), strpos( $html, 'id="ran-booster-documentation-heading"' ) );
 	}
 
 	public function test_keeps_quick_start_actionable_and_moves_unchanged_requirements_into_the_next_chapter(): void {

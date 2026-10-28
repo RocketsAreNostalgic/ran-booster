@@ -135,7 +135,12 @@ $prepared_global_sections = array_values(
 $add_documentation_item( 'ran-booster-about', __( 'About RAN Booster', 'ran-booster' ) );
 
 ?>
-<div class="ran-booster-documentation ran-booster-documentation__layout" data-ran-booster-documentation-layout>
+<section class="ran-booster-page-shell ran-booster-documentation" aria-labelledby="ran-booster-documentation-heading">
+	<header class="ran-booster-page-shell__header ran-booster-documentation__header">
+		<h2 id="ran-booster-documentation-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Documentation', 'ran-booster' ); ?></h2>
+		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Install from a public repository first. Add private access and Push-to-Deploy only when you need them.', 'ran-booster' ); ?></p>
+	</header>
+<div class="ran-booster-documentation__layout" data-ran-booster-documentation-layout>
 <aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>
 	<nav aria-labelledby="ran-booster-documentation-index-heading">
 		<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading"><?php esc_html_e( 'On this page', 'ran-booster' ); ?></h2>
@@ -147,12 +152,7 @@ $add_documentation_item( 'ran-booster-about', __( 'About RAN Booster', 'ran-boos
 		<p class="ran-booster-tile ran-booster-documentation__search-hint"><span class="ran-booster-tile__label"><?php esc_html_e( 'Search this page with', 'ran-booster' ); ?></span> <kbd>⌘F</kbd> <span><?php esc_html_e( 'or', 'ran-booster' ); ?></span> <kbd>Ctrl+F</kbd></p>
 	</nav>
 </aside>
-<section class="ran-booster-page-shell ran-booster-panel ran-booster-documentation__main" aria-labelledby="ran-booster-documentation-heading">
-	<header class="ran-booster-page-shell__header ran-booster-documentation__header">
-		<h2 id="ran-booster-documentation-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Documentation', 'ran-booster' ); ?></h2>
-		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Install from a public repository first. Add private access and Push-to-Deploy only when you need them.', 'ran-booster' ); ?></p>
-	</header>
-
+<section class="ran-booster-documentation__main" aria-labelledby="ran-booster-documentation-heading">
 	<div class="ran-booster-page-shell__body">
 		<div class="ran-booster-documentation__sections">
 		<details id="ran-booster-quick-start" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section open>
@@ -484,3 +484,4 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 	</div>
 </section>
 </div>
+</section>

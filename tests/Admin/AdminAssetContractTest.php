@@ -344,9 +344,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-page-heading__title', $portability );
 		self::assertStringContainsString( 'ran-booster-page-heading__title', $documentation );
 		self::assertStringContainsString( 'ran-booster-page-heading__title', $troubleshooting );
-		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-panel ran-booster-onboarding', $onboarding );
-		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-panel ran-booster-documentation', $documentation );
-		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-panel ran-booster-troubleshooting', $troubleshooting );
+		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-onboarding', $onboarding );
+		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-documentation', $documentation );
+		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-troubleshooting', $troubleshooting );
 		self::assertStringContainsString( 'ran-booster-page-shell__body', $documentation );
 		self::assertStringContainsString( 'ran-booster-page-shell__body', $troubleshooting );
 		self::assertStringContainsString( 'ran-booster-section__title', $provider );

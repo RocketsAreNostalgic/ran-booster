@@ -69,7 +69,7 @@ $has_storage_details                  = null !== $secrets_storage
 	);
 
 ?>
-<section class="ran-booster-page-shell ran-booster-panel ran-booster-onboarding" aria-labelledby="ran-booster-onboarding-heading">
+<section class="ran-booster-page-shell ran-booster-onboarding" aria-labelledby="ran-booster-onboarding-heading">
 	<header class="ran-booster-page-shell__header ran-booster-onboarding__header">
 		<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Start with a repository', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Public repositories do not need repository credentials or webhooks.', 'ran-booster' ); ?></p>
@@ -81,7 +81,7 @@ $has_storage_details                  = null !== $secrets_storage
 	</header>
 
 	<div class="ran-booster-onboarding__columns">
-		<section class="ran-booster-onboarding__column" aria-labelledby="ran-booster-onboarding-connect-heading">
+		<section class="ran-booster-panel ran-booster-onboarding__column" aria-labelledby="ran-booster-onboarding-connect-heading">
 			<h3 id="ran-booster-onboarding-connect-heading"><?php esc_html_e( 'Private repository access', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'Add a provider credential only when anonymous access is not enough.', 'ran-booster' ); ?></p>
 
@@ -98,7 +98,7 @@ $has_storage_details                  = null !== $secrets_storage
 			<?php } ?>
 		</section>
 
-		<section class="ran-booster-onboarding__column" aria-labelledby="ran-booster-onboarding-next-heading">
+		<section class="ran-booster-panel ran-booster-onboarding__column" aria-labelledby="ran-booster-onboarding-next-heading">
 			<h3 id="ran-booster-onboarding-next-heading"><?php esc_html_e( 'Move or automate later', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'Packages begin in Manual mode. Enable Push-to-Deploy only when the target is ready.', 'ran-booster' ); ?></p>
 			<ul class="ran-booster-onboarding__links">
@@ -126,7 +126,7 @@ $has_storage_details                  = null !== $secrets_storage
 	?>
 
 	<?php if ( null !== $secrets_storage ) { ?>
-		<section class="ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading" data-ran-booster-storage-reason="<?php echo esc_attr( $storage_reason_code ); ?>">
+		<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading" data-ran-booster-storage-reason="<?php echo esc_attr( $storage_reason_code ); ?>">
 			<div class="ran-booster-onboarding__storage-heading">
 				<h3 id="ran-booster-onboarding-storage-heading"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
 				<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status_classes[ $storage_status ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $storage_status ); ?>"><?php echo esc_html( $storage_status_labels[ $storage_status ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>

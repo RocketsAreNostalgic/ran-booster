@@ -27,7 +27,7 @@ msgstr ""
 
 #. Description of the plugin
 #: ran-booster.php
-msgid "Repository deployment management for WordPress themes and plugins."
+msgid "Repository deployment management for WordPress themes and plugins. Deleting Booster permanently removes its owned local credentials and records. Before deleting: activate Booster, export selected configuration and eligible credentials with Transporter, deactivate, then delete. Transporter is not a full backup."
 msgstr ""
 
 #. Author of the plugin
@@ -1005,7 +1005,7 @@ msgid "Completed"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Booster.php:832
+#: RAN/Booster.php:875
 #: views/attempts/index.php:51
 #: views/packages/index.php:64
 #: views/troubleshooting.php:42
@@ -2811,7 +2811,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:712
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:833
+#: RAN/Booster.php:876
 #: views/attempts/index.php:54
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
@@ -4635,75 +4635,87 @@ msgstr ""
 msgid "Compatible with your version of Booster"
 msgstr ""
 
-#: RAN/Booster.php:499
+#: RAN/Booster.php:477
+msgid "Export before deleting"
+msgstr ""
+
+#: RAN/Booster.php:521
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:829
+#: RAN/Booster.php:546
+msgid "Deleting Booster permanently removes its owned local credentials and records."
+msgstr ""
+
+#: RAN/Booster.php:547
+msgid "Before deactivating, use Transporter to export selected supported configuration and explicitly selected eligible credentials. This is not a full backup."
+msgstr ""
+
+#: RAN/Booster.php:872
 #: views/attempts/index.php:46
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:830
+#: RAN/Booster.php:873
 #: views/attempts/index.php:47
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:831
+#: RAN/Booster.php:874
 #: views/attempts/index.php:49
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:834
+#: RAN/Booster.php:877
 #: views/packages/index.php:329
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:835
+#: RAN/Booster.php:878
 #: views/packages/index.php:331
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:836
+#: RAN/Booster.php:879
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:837
+#: RAN/Booster.php:880
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:838
+#: RAN/Booster.php:881
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:839
+#: RAN/Booster.php:882
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:840
+#: RAN/Booster.php:883
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:841
+#: RAN/Booster.php:884
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:937
+#: RAN/Booster.php:980
 msgid "RAN Booster could not save this notice preference. Please try again."
 msgstr ""
 
-#: RAN/Booster.php:974
+#: RAN/Booster.php:1017
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:976
+#: RAN/Booster.php:1019
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:978
+#: RAN/Booster.php:1021
 msgid "Contact a site administrator."
 msgstr ""
 

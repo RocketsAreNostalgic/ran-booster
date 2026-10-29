@@ -48,6 +48,19 @@ destination; manage the target copy's lifecycle separately. If requirement
 observations were omitted because headers were unreadable or invalid, do not
 treat their absence as compatibility evidence.
 
+## Before deleting Booster on the source
+
+Export while Booster is active on **Plugins**. If it is inactive, activate it,
+open **Transporter** to export, then return to Plugins, deactivate it and choose
+**Delete**; deactivation alone preserves its data. Delete removes verified
+Booster-owned credentials and webhook secrets, key, package/deployment/Activity
+records, options, schedules and temporary debug capture, but retains managed
+package files. The Blueprint omits webhook secrets/history, constants and the
+original storage key, and imported or adopted packages remain deployment
+**Disabled**. It is not a full backup: retain matching database, package-file
+and private-storage backups. Clean up remote tokens/PATs and hooks separately;
+extension data and manually authored configuration are not part of the cleanup.
+
 ## Open, review and apply on the destination
 
 1. Install/activate compatible providers and prepare destination credentials when

@@ -494,14 +494,6 @@
 	outline-offset: 2px;
 }
 
-.ran-booster-admin
-	.ran-booster-provider-task-tabs
-	.filter-links
-	li
-	> a:not(.current) {
-	border-block-end-color: transparent;
-}
-
 .ran-booster-admin .ran-booster-provider-task-tab__source-indicator {
 	display: inline-block;
 	inline-size: 8px;

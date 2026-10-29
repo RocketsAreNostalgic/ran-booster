@@ -217,7 +217,12 @@ final class SignedAdminInteractionFlow {
 					AdminInteractionOutcome::UNEXPECTED_FAILURE => 'notice notice-error',
 				};
 				$role = $this->has_success_feedback( $outcome['kind'] ) ? 'status' : 'alert';
-				echo '<div class="' . esc_attr( $class ) . '" role="' . esc_attr( $role ) . '"><p>' . esc_html( $outcome['message'] ) . '</p></div>';
+				\RAN\Admin\BoosterNoticeScope::render(
+					static function () use ( $class, $role, $outcome ): void {
+						$inline = \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : '';
+						echo '<div class="' . esc_attr( $class . $inline ) . '" role="' . esc_attr( $role ) . '"><p>' . esc_html( $outcome['message'] ) . '</p></div>';
+					}
+				);
 			}
 		);
 	}

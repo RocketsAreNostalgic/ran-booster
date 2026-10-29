@@ -408,7 +408,7 @@ class ProviderProfileAdminController {
 				}
 				if ( $is_replacement ) {
 
-					$this->expiry_observations->clear( $provider->value, $saved_id );
+					$this->expiry_observations->reset_for_replacement( $provider->value, $saved_id );
 				}
 				if ( $manual_expiry_submitted && ! $manual_expiry_is_provider_fallback ) {
 
@@ -517,7 +517,7 @@ class ProviderProfileAdminController {
 					$this->public_lookup_profiles->set( $provider->value, null );
 				}
 
-				$this->expiry_observations->clear( $provider->value, $id );
+				$this->expiry_observations->reset_for_replacement( $provider->value, $id );
 				try {
 					$this->branch_check_evidence->bump_profile_generation( $provider->value, $id );
 					if ( $cleared_default ) {

@@ -6,6 +6,7 @@ namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/RepositoryAdminWordPressFunctions.php';
 require_once __DIR__ . '/CredentialExpiryWordPressFunctions.php';
+require_once __DIR__ . '/CredentialExpiryGlobalWordPressFunctions.php';
 
 use DateTimeImmutable;
 use DateTimeZone;
@@ -14,6 +15,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryNoticeController;
 use RAN\Admin\CredentialExpiryReminder;
+use RAN\Admin\NoticePreference;
 use RAN\RepositoryProvider\CredentialExpiryReport;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
@@ -41,6 +43,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 		$GLOBALS['ran_booster_admin_test_translations']       = array();
+		$GLOBALS['ran_booster_expiry_test_screen']            = 'toplevel_page_ran-booster';
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
 
 		$this->directory    = sys_get_temp_dir() . '/ran-booster-expiry-reminder-' . bin2hex( random_bytes( 8 ) );
@@ -74,6 +77,10 @@ final class CredentialExpiryReminderTest extends TestCase {
 			rmdir( $this->directory );
 		}
 		unset(
+			$_POST['mode'],
+			$_POST['state'],
+			$_POST['scope'],
+			$GLOBALS['ran_booster_expiry_test_screen'],
 			$GLOBALS['ran_booster_repository_admin_allowed'],
 			$GLOBALS['ran_booster_repository_admin_nonce_valid'],
 			$GLOBALS['ran_booster_repository_admin_user_id'],
@@ -139,19 +146,21 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringContainsString( 'Review translated GitHub credentials', $html );
 	}
 
-	public function test_dismissal_is_per_user_and_reappears_at_the_next_severity_stage(): void {
+	public function test_dismissal_is_per_user_and_persists_across_severity_stages(): void {
 		$this->credential( 'dismiss_me', 'Dismiss me' );
 		$this->provider_expiry( 'dismiss_me', $this->now->modify( '+8 days' ) );
-		$reminders  = $this->reminders();
-		$controller = new CredentialExpiryNoticeController( $reminders );
+		$reminders     = $this->reminders();
+		$controller    = new CredentialExpiryNoticeController( $reminders );
+		$_POST['mode'] = NoticePreference::MODE_DISMISS;
+		$this->set_notice_state( $this->reminders(), 'booster' );
 
 		$result = $controller->handle();
 
 		self::assertTrue( $result['success'] );
 		$fingerprint = $reminders->fingerprint();
 		self::assertSame(
-			$fingerprint,
-			$GLOBALS['ran_booster_repository_admin_user_meta'][17][ CredentialExpiryNotice::USER_META_KEY ]
+			NoticePreference::MODE_DISMISS,
+			$GLOBALS['ran_booster_repository_admin_user_meta'][17][ CredentialExpiryNotice::USER_META_KEY ]['events']["gh\0dismiss_me"]['mode']
 		);
 		self::assertFalse( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 
@@ -160,29 +169,122 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertNotSame( $fingerprint, $reminders->fingerprint() );
 
 		$this->provider_expiry( 'dismiss_me', $this->now->modify( '+8 days' ) );
+		$this->set_notice_state( $reminders, 'booster' );
 		$controller->handle();
 		$GLOBALS['ran_booster_repository_admin_user_id'] = 18;
 		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 
 		$GLOBALS['ran_booster_repository_admin_user_id'] = 17;
 		$this->advance_clock_one_day();
-		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
-		self::assertNotSame( $fingerprint, $reminders->fingerprint() );
+		self::assertFalse( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
+		self::assertSame( $fingerprint, $reminders->fingerprint() );
 	}
 
 	public function test_dismissal_rejects_unauthorized_invalid_nonce_and_persistence_failure(): void {
 		$this->credential( 'dismiss_failures', 'Dismiss failures' );
 		$this->provider_expiry( 'dismiss_failures', $this->now->modify( '+2 days' ) );
-		$controller = new CredentialExpiryNoticeController( $this->reminders() );
+		$controller    = new CredentialExpiryNoticeController( $this->reminders() );
+		$_POST['mode'] = NoticePreference::MODE_DISMISS;
+		$this->set_notice_state( $this->reminders(), 'booster' );
 
 		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
 		self::assertSame( 403, $controller->handle()['status'] );
 		$GLOBALS['ran_booster_repository_admin_allowed']     = true;
 		$GLOBALS['ran_booster_repository_admin_nonce_valid'] = false;
 		self::assertThat( $controller->handle()['status'], self::identicalTo( 403 ) );
-		$GLOBALS['ran_booster_repository_admin_nonce_valid']           = true;
+		$GLOBALS['ran_booster_repository_admin_nonce_valid'] = true;
+		$_POST['mode']                                       = 'invalid';
+		self::assertSame( 400, $controller->handle()['status'] );
+		$_POST['mode'] = NoticePreference::MODE_DISMISS;
 		$GLOBALS['ran_booster_repository_admin_user_meta_write_fails'] = true;
 		self::assertSame( 500, $controller->handle()['status'] );
+	}
+
+	public function test_same_id_and_expiry_replacement_changes_the_expiry_event_fingerprint(): void {
+		$this->credential( 'replaceable', 'Replaceable' );
+		$this->provider_expiry( 'replaceable', $this->now->modify( '+2 days' ) );
+		$reminders = $this->reminders();
+		$before    = $reminders->fingerprint();
+
+		$this->observations->reset_for_replacement( 'gh', 'replaceable' );
+		$this->provider_expiry( 'replaceable', $this->now->modify( '+2 days' ) );
+
+		self::assertNotSame( $before, $this->reminders()->fingerprint() );
+	}
+
+	private function set_notice_state( CredentialExpiryReminder $reminders, string $scope ): void {
+		$visible        = $reminders->visible( $reminders->affected(), 17, $scope, new NoticePreference() );
+		$_POST['scope'] = $scope;
+		$_POST['state'] = \RAN\Admin\wp_create_nonce( $reminders->state_action( $visible, $scope ) );
+	}
+
+	public function test_stale_render_cannot_dismiss_a_new_event(): void {
+		$this->credential( 'first', 'First' );
+		$this->provider_expiry( 'first', $this->now->modify( '+8 days' ) );
+		$reminders = $this->reminders();
+		$this->set_notice_state( $reminders, 'booster' );
+		$_POST['mode'] = NoticePreference::MODE_DISMISS;
+		$this->credential( 'second', 'Second' );
+		$this->provider_expiry( 'second', $this->now->modify( '+8 days' ) );
+		self::assertSame( 409, ( new CredentialExpiryNoticeController( $reminders ) )->handle()['status'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_user_meta'] );
+	}
+
+	public function test_snoozed_notice_reappears_at_deadline_and_scope_filters_warnings(): void {
+		$this->credential( 'snoozed', 'Snoozed' );
+		$this->provider_expiry( 'snoozed', $this->now->modify( '+10 days' ) );
+		$reminders                                 = $this->reminders();
+		$GLOBALS['ran_booster_expiry_test_screen'] = 'dashboard';
+		self::assertFalse( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
+		$GLOBALS['ran_booster_expiry_test_screen'] = 'toplevel_page_ran-booster';
+		$this->set_notice_state( $reminders, 'booster' );
+		$_POST['mode'] = NoticePreference::MODE_SNOOZE;
+		self::assertTrue( ( new CredentialExpiryNoticeController( $reminders ) )->handle()['success'] );
+		$this->now = $this->now->modify( '+431999 seconds' );
+		self::assertFalse( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
+		$this->now = $this->now->modify( '+1 second' );
+		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
+		$GLOBALS['ran_booster_expiry_test_screen'] = 'dashboard';
+		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
+	}
+
+	public function test_event_preferences_retain_other_current_dismissals(): void {
+		$preferences = new NoticePreference( fn (): DateTimeImmutable => $this->now );
+		self::assertTrue( $preferences->save_events( 17, CredentialExpiryNotice::USER_META_KEY, array( 'a' => 'one' ), NoticePreference::MODE_DISMISS, array( 'a' => 'one' ) ) );
+		self::assertTrue(
+			$preferences->save_events(
+				17,
+				CredentialExpiryNotice::USER_META_KEY,
+				array( 'b' => 'two' ),
+				NoticePreference::MODE_DISMISS,
+				array(
+					'a' => 'one',
+					'b' => 'two',
+				)
+			)
+		);
+		self::assertSame(
+			array( 'a', 'b' ),
+			$preferences->suppressed_events(
+				17,
+				CredentialExpiryNotice::USER_META_KEY,
+				array(
+					'a' => 'one',
+					'b' => 'two',
+				)
+			)
+		);
+	}
+
+	public function test_snooze_requires_every_visible_credential_to_be_more_than_five_days_away(): void {
+		$this->credential( 'allowed', 'Allowed' );
+		$this->credential( 'boundary', 'Boundary' );
+		$this->provider_expiry( 'allowed', $this->now->modify( '+432001 seconds' ) );
+		$this->provider_expiry( 'boundary', $this->now->modify( '+432000 seconds' ) );
+
+		self::assertFalse( $this->reminders()->can_snooze( $this->reminders()->affected() ) );
+		$this->provider_expiry( 'boundary', $this->now->modify( '+432001 seconds' ) );
+		self::assertTrue( $this->reminders()->can_snooze( $this->reminders()->affected() ) );
 	}
 
 	public function test_notice_escapes_content_deep_links_and_renders_only_once_for_administrators(): void {
@@ -245,6 +347,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringContainsString( 'Review encrypted storage', $html );
 		self::assertStringNotContainsString( 'button button-primary', $html );
 		self::assertStringNotContainsString( 'is-dismissible', $html );
+		self::assertStringContainsString( 'notice-error inline', $html );
 		self::assertStringNotContainsString( $this->directory, $html );
 		self::assertStringNotContainsString( 'could not be authenticated', $html );
 		self::assertStringNotContainsString( 'test-token-storage_failure', $html );

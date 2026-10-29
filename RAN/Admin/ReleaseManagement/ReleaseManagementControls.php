@@ -259,7 +259,7 @@ final class ReleaseManagementControls {
 		}
 
 		$status = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $result['type'], $result['identifier'] ), null );
-		$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null );
+		\RAN\Admin\BoosterNoticeScope::render( fn () => $this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status ), null ) );
 	}
 
 	/**

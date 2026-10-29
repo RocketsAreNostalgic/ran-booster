@@ -169,8 +169,9 @@ $origin_labels = array(
 							<span class="ran-booster-attempt-row__message"><?php echo esc_html( $summary ); ?></span>
 						<?php } ?></span></span>
 					</div>
-					<details class="ran-booster-attempt-row__details">
+					<details class="ran-booster-attempt-row__details ran-booster-disclosure">
 						<summary><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>
+						<div class="ran-booster-disclosure__body">
 						<?php if ( $recorded_check ) { ?>
 							<dl class="ran-booster-activity__details">
 								<div><dt><?php esc_html_e( 'Reported by', 'ran-booster' ); ?></dt><dd><?php echo esc_html( 'core' === ( $item['provenance'] ?? '' ) ? __( 'Recorded by Core', 'ran-booster' ) : __( 'Provider-reported', 'ran-booster' ) ); ?></dd></div>
@@ -217,6 +218,7 @@ $origin_labels = array(
 							</form>
 						<?php } ?>
 						<?php } ?>
+						</div>
 					</details>
 				</li>
 			<?php } ?>

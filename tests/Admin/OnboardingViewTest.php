@@ -132,7 +132,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[action]" value="create-secure-storage"', $html );
 		self::assertStringContainsString( 'value="ran-booster-create-secure-storage"', $html );
 		self::assertStringContainsString( 'Create secure storage', $html );
-		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details" open', $html );
+		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details ran-booster-disclosure" open', $html );
 		self::assertStringContainsString( '/private/&lt;canary&gt;/secrets.json', $html );
 		self::assertStringContainsString( 'Storage directory', $html );
 		self::assertStringContainsString( '/private/&lt;canary&gt;', $html );
@@ -168,7 +168,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Path selection', $html );
 		self::assertStringContainsString( 'Booster default', $html );
 		self::assertStringContainsString( 'created when you save the first credential.', $html );
-		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details">', $html );
+		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details ran-booster-disclosure">', $html );
 		self::assertStringNotContainsString( 'Create secure storage', $html );
 		self::assertStringNotContainsString( 'Manual setup instructions', $html );
 	}
@@ -291,10 +291,10 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Custom wp-config.php path', $healthy );
 		self::assertStringContainsString( 'WordPress stores the encryption key separately.', $healthy );
 		self::assertMatchesRegularExpression(
-			'/<h3 id="ran-booster-onboarding-storage-heading">Secure credential storage<\/h3>.*>Storage healthy<\/span>\s*<\/div>\s*<p>Encrypted secrets storage is configured and authenticated\.<\/p>\s*<details class="ran-booster-onboarding__storage-details">/s',
+			'/<h3 id="ran-booster-onboarding-storage-heading">Secure credential storage<\/h3>.*>Storage healthy<\/span>\s*<\/div>\s*<p>Encrypted secrets storage is configured and authenticated\.<\/p>\s*<details class="ran-booster-onboarding__storage-details ran-booster-disclosure">/s',
 			$healthy
 		);
-		$details = strpos( $healthy, 'class="ran-booster-onboarding__storage-details"' );
+		$details = strpos( $healthy, 'class="ran-booster-onboarding__storage-details ran-booster-disclosure"' );
 		$path    = strpos( $healthy, 'Storage file' );
 		$source  = strpos( $healthy, 'Path selection' );
 		$connect = strpos( $healthy, 'Connect a provider' );
@@ -313,7 +313,7 @@ final class OnboardingViewTest extends TestCase {
 
 		$broken = $this->render_storage_status( 'storage_needs_attention', 'manual' );
 		self::assertStringContainsString( '>Storage needs attention</span>', $broken );
-		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details" open', $broken );
+		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details ran-booster-disclosure" open', $broken );
 		self::assertStringNotContainsString( 'WordPress stores the encryption key separately.', $broken );
 		self::assertStringContainsString( 'Use a different storage location', $broken );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $broken );
@@ -347,8 +347,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-storage-status="manual_required"', $html );
 		self::assertStringContainsString( 'Storage directory', $html );
 		self::assertStringContainsString( 'Storage file', $html );
-		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details" open', $html );
-		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-manual" open', $html );
+		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details ran-booster-disclosure" open', $html );
+		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-manual ran-booster-disclosure" open', $html );
 		self::assertStringContainsString( 'Manual setup instructions', $html );
 	}
 

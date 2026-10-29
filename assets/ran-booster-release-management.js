@@ -439,7 +439,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (earlier.length > 0) {
 				const disclosure = document.createElement('details');
 				disclosure.className =
-					'ran-booster-release-settings-disclosure';
+					'ran-booster-release-settings-disclosure ran-booster-disclosure';
 				const summary = document.createElement('summary');
 				summary.textContent = wp.i18n.sprintf(
 					/* translators: %d: number of earlier releases. */
@@ -452,6 +452,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					earlier.length
 				);
 				disclosure.append(summary);
+				const body = document.createElement('div');
+				body.className = 'ran-booster-disclosure__body';
+				disclosure.append(body);
 				if (
 					earlier.some(
 						(candidate) =>
@@ -463,10 +466,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 						'Downgrades are unavailable because package data migrations may not be reversible. For recovery, follow the package-specific instructions or restore a backup.',
 						'ran-booster'
 					);
-					disclosure.append(warning);
+					body.append(warning);
 				}
 				earlier.forEach((candidate) =>
-					appendCandidate(candidate, disclosure)
+					appendCandidate(candidate, body)
 				);
 				candidateList.append(disclosure);
 			}
@@ -1151,7 +1154,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		appendCandidate(releases[0], candidateList);
 		if (releases.length > 1) {
 			const disclosure = document.createElement('details');
-			disclosure.className = 'ran-booster-release-settings-disclosure';
+			disclosure.className =
+				'ran-booster-release-settings-disclosure ran-booster-disclosure';
 			const summary = document.createElement('summary');
 			const earlier = releases.slice(1);
 			summary.textContent = wp.i18n.sprintf(
@@ -1165,9 +1169,10 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				earlier.length
 			);
 			disclosure.append(summary);
-			earlier.forEach((candidate) =>
-				appendCandidate(candidate, disclosure)
-			);
+			const body = document.createElement('div');
+			body.className = 'ran-booster-disclosure__body';
+			disclosure.append(body);
+			earlier.forEach((candidate) => appendCandidate(candidate, body));
 			candidateList.append(disclosure);
 		}
 		setChoiceState(

@@ -61,6 +61,8 @@ final class DocumentationViewTest extends TestCase {
 		foreach ( $panels as $panel ) {
 			self::assertInstanceOf( \DOMElement::class, $panel );
 			self::assertSame( 'ran-booster-documentation', $panel->getAttribute( 'name' ) );
+			self::assertStringContainsString( 'ran-booster-disclosure', $panel->getAttribute( 'class' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-disclosure__body ")])', $panel ) );
 		}
 		self::assertMatchesRegularExpression( '/<details\b[^>]*\bopen\b[^>]*>\s*<summary>Quick start<\/summary>/', $html );
 		self::assertMatchesRegularExpression( '/<summary>\s*GitHub credentials and access\s*<\/summary>/', $html );

@@ -65,74 +65,29 @@
 	padding: var(--ran-booster-space-20);
 }
 
-.ran-booster-admin .ran-booster-settings-disclosure {
-	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-control);
-	background: var(--ran-booster-surface);
-}
-
 .ran-booster-admin .ran-booster-advanced-source-settings {
 	margin-block-start: var(--ran-booster-space-18);
 }
 
-.ran-booster-admin .ran-booster-settings-disclosure > summary:hover {
-	background: var(--ran-booster-color-blue-100);
-	color: var(--ran-booster-brand);
-}
-
-.ran-booster-admin .ran-booster-settings-disclosure > summary {
-	display: grid;
-	grid-template-columns: 10px minmax(0, 1fr) auto;
-	align-items: center;
-	gap: var(--ran-booster-space-12);
-	padding: var(--ran-booster-space-14) var(--ran-booster-space-16);
-	color: var(--ran-booster-link-strong);
-	cursor: pointer;
-	list-style: none;
-}
-
 .ran-booster-admin .ran-booster-settings-disclosure__label {
+	display: inline;
 	color: inherit;
 }
 
-.ran-booster-admin
-	.ran-booster-settings-disclosure
-	> summary::-webkit-details-marker {
-	display: none;
-}
-
-.ran-booster-admin .ran-booster-settings-disclosure > summary::before {
-	inline-size: 7px;
-	block-size: 7px;
-	border-inline-end: 2px solid currentcolor;
-	border-block-end: 2px solid currentcolor;
-	content: "";
-	transform: rotate(-45deg);
-	transform-origin: center;
-	transition: transform 100ms ease-in-out;
-}
-
-.ran-booster-admin .ran-booster-settings-disclosure[open] > summary::before {
-	transform: rotate(45deg);
-}
-
-.ran-booster-admin .ran-booster-settings-disclosure > summary:focus-visible {
-	border-radius: var(--ran-booster-radius-control);
-	outline: 2px solid var(--ran-booster-link-strong);
-	outline-offset: 2px;
-}
-
 .ran-booster-admin .ran-booster-settings-disclosure > summary small {
+	float: inline-end;
+	max-inline-size: min(100%, 32rem);
+	margin-inline-start: var(--ran-booster-space-12);
 	color: var(--ran-booster-text-subtle);
 	font-size: var(--ran-booster-font-size-xs);
 	font-weight: 400;
 	text-align: end;
 }
 
-.ran-booster-admin .ran-booster-settings-disclosure__body {
-	padding: var(--ran-booster-space-20);
-	border-block-start: 1px solid var(--ran-booster-border);
-	background: var(--ran-booster-surface);
+.ran-booster-admin .ran-booster-settings-disclosure > summary::after {
+	display: block;
+	clear: both;
+	content: "";
 }
 
 .ran-booster-admin .ran-booster-package-source-shell {
@@ -800,10 +755,6 @@
 	border-width: var(--ran-booster-radius-control);
 }
 
-.ran-booster-admin .ran-booster-package-danger-zone > summary {
-	grid-template-columns: 10px auto minmax(0, 1fr);
-}
-
 .ran-booster-admin .ran-booster-package-danger-zone > summary small {
 	min-inline-size: 0;
 	overflow-wrap: anywhere;
@@ -848,59 +799,12 @@
 	inline-size: 100%;
 }
 
-.ran-booster-admin .ran-booster-package-disclosure {
-	margin-block: var(--ran-booster-space-16) 0;
-	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-surface);
-	background: var(--ran-booster-surface-subtle);
-}
-
-.ran-booster-admin .ran-booster-package-disclosure > summary {
-	display: grid;
-	grid-template-columns: 10px minmax(0, 1fr) auto;
-	align-items: center;
-	gap: var(--ran-booster-space-8);
-	padding: var(--ran-booster-space-16);
-	cursor: pointer;
-	list-style: none;
-}
-
-.ran-booster-admin
-	.ran-booster-package-disclosure
-	> summary::-webkit-details-marker {
-	display: none;
-}
-
-.ran-booster-admin .ran-booster-package-disclosure > summary::before {
-	inline-size: 0.4rem;
-	block-size: 0.4rem;
-	flex: 0 0 auto;
-	border: solid currentcolor;
-	border-width: 0 2px 2px 0;
-	content: "";
-	transform: rotate(-45deg);
-	transition: transform 120ms ease;
-}
-
 .ran-booster-admin .ran-booster-package-disclosure > summary strong {
 	min-inline-size: 0;
 }
 
-.ran-booster-admin .ran-booster-package-disclosure[open] > summary {
-	border-block-end: 1px solid var(--ran-booster-border);
-}
-
-.ran-booster-admin .ran-booster-package-disclosure[open] > summary::before {
-	transform: rotate(45deg);
-}
-
-.ran-booster-admin .ran-booster-package-disclosure > summary:focus-visible {
-	outline: 2px solid var(--ran-booster-link-strong);
-	outline-offset: -2px;
-}
-
-.ran-booster-admin .ran-booster-package-disclosure__body {
-	padding: 0 var(--ran-booster-space-16) var(--ran-booster-space-16);
+.ran-booster-admin .ran-booster-package-disclosure {
+	margin-block: var(--ran-booster-space-16) 0;
 }
 
 @media screen and (max-width: 960px) {
@@ -925,14 +829,11 @@
 }
 
 @media screen and (max-width: 782px) {
-	.ran-booster-admin .ran-booster-package-danger-zone > summary {
-		grid-template-columns: 10px minmax(0, 1fr);
-		align-items: start;
-		row-gap: var(--ran-booster-space-4);
-	}
-
-	.ran-booster-admin .ran-booster-package-danger-zone > summary small {
-		grid-column: 2;
+	.ran-booster-admin .ran-booster-settings-disclosure > summary small {
+		display: block;
+		float: none;
+		margin-block-start: var(--ran-booster-space-4);
+		margin-inline-start: 0;
 		text-align: start;
 	}
 

@@ -132,15 +132,6 @@
 
 .ran-booster-admin .ran-booster-provider-disclosure {
 	margin-block-start: var(--ran-booster-space-10);
-	border-block-start: 1px solid var(--ran-booster-divider);
-}
-
-.ran-booster-admin .ran-booster-provider-disclosure > summary {
-	display: list-item;
-	padding-block: var(--ran-booster-space-12);
-	padding-inline: 0;
-	cursor: pointer;
-	font-weight: 600;
 }
 
 .ran-booster-admin .ran-booster-provider-disclosure > summary span {
@@ -157,61 +148,6 @@
 	margin-block: var(--ran-booster-space-6) 0;
 	margin-inline: var(--ran-booster-space-16) 0;
 	text-align: start;
-}
-
-.ran-booster-admin .ran-booster-provider-disclosure > summary:focus-visible {
-	outline: 2px solid var(--ran-booster-link);
-	outline-offset: 2px;
-}
-
-.ran-booster-admin
-	:is(
-		.ran-booster-provider-disclosure,
-		.ran-booster-troubleshooting__specific,
-		.ran-booster-package-activity,
-		.ran-booster-attempt-row__details
-	)
-	> summary {
-	cursor: pointer;
-	font-weight: 600;
-}
-
-.ran-booster-admin
-	:is(
-		.ran-booster-provider-disclosure,
-		.ran-booster-troubleshooting__specific,
-		.ran-booster-package-activity,
-		.ran-booster-attempt-row__details
-	)
-	> summary::marker {
-	color: var(--ran-booster-text-subtle);
-}
-
-.ran-booster-admin
-	:is(
-		.ran-booster-provider-disclosure,
-		.ran-booster-troubleshooting__specific,
-		.ran-booster-package-activity,
-		.ran-booster-attempt-row__details
-	)
-	> summary:focus-visible {
-	outline: 2px solid var(--ran-booster-link);
-	outline-offset: 2px;
-}
-
-.ran-booster-admin .ran-booster-provider-disclosure__body {
-	padding-block: var(--ran-booster-space-2) var(--ran-booster-space-16);
-	padding-inline: var(--ran-booster-space-16);
-	border-radius: var(--ran-booster-radius-surface);
-	background: var(--ran-booster-surface-subtle);
-}
-
-.ran-booster-admin .ran-booster-provider-disclosure__body > :first-child {
-	margin-block-start: 0;
-}
-
-.ran-booster-admin .ran-booster-provider-disclosure__body > :last-child {
-	margin-block-end: 0;
 }
 
 .ran-booster-admin .ran-booster-webhook-instructions ol {
@@ -322,23 +258,6 @@
 	.ran-booster-push-deploy__panel
 	> .ran-booster-provider-disclosure {
 	margin-block-start: 0;
-}
-
-.ran-booster-admin
-	.ran-booster-push-deploy__panel
-	> .ran-booster-provider-disclosure
-	> summary {
-	padding-block: var(--ran-booster-space-14);
-	padding-inline: var(--ran-booster-space-20);
-}
-
-.ran-booster-admin
-	.ran-booster-push-deploy__panel
-	> .ran-booster-provider-disclosure
-	> .ran-booster-provider-disclosure__body {
-	padding-block: var(--ran-booster-space-16) var(--ran-booster-space-20);
-	padding-inline: var(--ran-booster-space-20);
-	border-radius: 0;
 }
 
 .ran-booster-admin

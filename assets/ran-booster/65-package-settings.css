@@ -807,6 +807,10 @@
 	margin-block: var(--ran-booster-space-16) 0;
 }
 
+.ran-booster-admin .ran-booster-package-webhook-setup {
+	margin-block-end: var(--ran-booster-space-16);
+}
+
 @media screen and (max-width: 960px) {
 	.ran-booster-admin .ran-booster-package-settings {
 		grid-template-columns: minmax(0, 1fr);

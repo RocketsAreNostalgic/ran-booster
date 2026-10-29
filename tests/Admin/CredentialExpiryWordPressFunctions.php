@@ -62,3 +62,15 @@ if ( ! function_exists( __NAMESPACE__ . '\\is_network_admin' ) ) {
 		return (bool) ( $GLOBALS['ran_booster_expiry_test_network_admin'] ?? false );
 	}
 }
+
+if ( ! function_exists( __NAMESPACE__ . '\\wp_create_nonce' ) ) {
+	function wp_create_nonce( string $action ): string {
+		return 'nonce-for-' . hash( 'sha256', $action );
+	}
+}
+
+if ( ! function_exists( __NAMESPACE__ . '\\get_current_screen' ) ) {
+	function get_current_screen(): object {
+		return (object) array( 'id' => $GLOBALS['ran_booster_expiry_test_screen'] ?? '' );
+	}
+}

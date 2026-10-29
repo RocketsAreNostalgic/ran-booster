@@ -861,7 +861,7 @@ final class ReleaseManagementDisplay {
 				? 'notice-warning'
 				: 'notice-error' );
 		?>
-		<div class="notice <?php echo esc_attr( $tone ); ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?>>
+		<div class="notice <?php echo esc_attr( $tone ); ?><?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?>>
 			<p><?php echo esc_html( $message ); ?></p>
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>
 				<?php $this->render_failure_help( $code, $message ); ?>

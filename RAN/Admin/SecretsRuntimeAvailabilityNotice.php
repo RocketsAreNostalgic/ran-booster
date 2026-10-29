@@ -31,7 +31,7 @@ final class SecretsRuntimeAvailabilityNotice {
 		}
 		$this->rendered = true;
 		?>
-		<div class="notice notice-error" data-ran-booster-secrets-runtime-notice>
+		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-secrets-runtime-notice>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster encrypted credentials are unavailable:', 'ran-booster' ); ?></strong>
 				<?php echo esc_html( $this->availability->message() ); ?>

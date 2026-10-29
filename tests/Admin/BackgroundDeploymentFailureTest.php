@@ -69,6 +69,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
+			$_POST['state'],
 			$GLOBALS['ran_booster_repository_admin_allowed'],
 			$GLOBALS['ran_booster_repository_admin_capabilities'],
 			$GLOBALS['ran_booster_repository_admin_nonce_valid'],
@@ -132,6 +133,13 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=profile_123', $html );
 		self::assertStringNotContainsString( 'secret-canary', $html );
 
+		self::assertMatchesRegularExpression( '/data-ran-booster-notice-state="([^"]+)"/', $html );
+		preg_match( '/data-ran-booster-notice-state="([^"]+)"/', $html, $matches );
+		if ( ! isset( $matches[1] ) ) {
+			self::fail( 'The rendered notice did not include its state nonce.' );
+		}
+		$_POST['state'] = $matches[1];
+		self::assertStringContainsString( 'Acknowledge this incident', $html );
 		$result = ( new DeploymentAdminController( $this->createStub( Dashboard::class ), monitor: $monitor ) )->handle();
 
 		self::assertTrue( $result['success'] );
@@ -143,6 +151,16 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		ob_start();
 		( new DeploymentAdminPresenter( $monitor ) )->render();
 		self::assertSame( '', (string) ob_get_clean() );
+	}
+
+	public function test_stale_incident_state_cannot_acknowledge_a_new_failure(): void {
+		$this->database->rows   = array( $this->row( 1, 'first', 'first', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ) );
+		$fingerprint            = $this->monitor()->fingerprint();
+		$_POST['state']         = \RAN\Admin\wp_create_nonce( DeploymentAdminController::NONCE_ACTION . ':' . $fingerprint );
+		$this->database->rows[] = $this->row( 2, 'second', 'second', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED );
+		$result                 = ( new DeploymentAdminController( $this->createStub( Dashboard::class ), monitor: $this->monitor() ) )->handle();
+		self::assertSame( 409, $result['status'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_user_meta'] );
 	}
 
 	public function test_notice_keeps_unavailable_history_stable_until_the_next_request(): void {
@@ -160,7 +178,9 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		$this->database->rows = array(
 			$this->row( 1, 'affected', 'affected', 'webhook', DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED ),
 		);
-		$controller           = new DeploymentAdminController( $this->createStub( Dashboard::class ), monitor: $this->monitor() );
+		$monitor              = $this->monitor();
+		$controller           = new DeploymentAdminController( $this->createStub( Dashboard::class ), monitor: $monitor );
+		$_POST['state']       = \RAN\Admin\wp_create_nonce( DeploymentAdminController::NONCE_ACTION . ':' . $monitor->fingerprint() );
 
 		$GLOBALS['ran_booster_repository_admin_capabilities']['manage_options'] = false;
 		self::assertSame( 403, $controller->handle()['status'] );

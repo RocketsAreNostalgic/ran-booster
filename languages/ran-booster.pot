@@ -16,7 +16,7 @@ msgstr ""
 
 #. Plugin Name of the plugin
 #: ran-booster.php
-#: views/base.php:72
+#: views/base.php:76
 msgid "RAN Booster"
 msgstr ""
 
@@ -4462,7 +4462,7 @@ msgid "Managed Plugins"
 msgstr ""
 
 #: RAN/Booster.php:246
-#: views/base.php:43
+#: views/base.php:47
 msgid "Plugins"
 msgstr ""
 
@@ -4475,7 +4475,7 @@ msgid "Managed Themes"
 msgstr ""
 
 #: RAN/Booster.php:248
-#: views/base.php:48
+#: views/base.php:52
 msgid "Themes"
 msgstr ""
 
@@ -5942,18 +5942,24 @@ msgstr ""
 msgid "Older activity could not be loaded. Try again."
 msgstr ""
 
-#: views/base.php:74
+#: views/base.php:78
 msgid "Deploy themes and plugins straight from your Git repos."
 msgstr ""
 
-#: views/base.php:80
+#: views/base.php:84
 msgid "RAN Booster sections"
 msgstr ""
 
 #. translators: %s: current year.
-#: views/base.php:108
+#: views/base.php:112
 #, php-format
 msgid "Copyright © %s"
+msgstr ""
+
+#. translators: %s: installed Booster version.
+#: views/base.php:121
+#, php-format
+msgid "Booster %s"
 msgstr ""
 
 #: views/debug-capture.php:40

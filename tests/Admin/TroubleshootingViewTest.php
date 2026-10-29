@@ -2003,12 +2003,12 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 4, substr_count( $status_html, 'hx-get="admin.php?page=ran-booster&amp;tab=bb&amp;panel=' ) );
 		self::assertSame( 4, substr_count( $status_html, 'data-ran-booster-provider-task="' ) );
 		self::assertSame( 2, substr_count( $status_html, 'hx-boost="true"' ) );
-		$dom = new \DOMDocument();
+		$dom             = new \DOMDocument();
 		$previous_errors = libxml_use_internal_errors( true );
 		$dom->loadHTML( $status_html );
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previous_errors );
-		$xpath = new \DOMXPath( $dom );
+		$xpath      = new \DOMXPath( $dom );
 		$task_links = $xpath->query( '//ul[contains(concat(" ", normalize-space(@class), " "), " filter-links ")]/li/a[@data-ran-booster-provider-task]' );
 		self::assertInstanceOf( \DOMNodeList::class, $task_links );
 		self::assertSame( 3, $task_links->length );

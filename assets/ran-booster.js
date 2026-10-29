@@ -320,7 +320,8 @@
 
 		function handlesTaskRegion(event) {
 			const target = event.detail?.target;
-			const requestElement = event.detail?.elt;
+			const requestElement =
+				event.detail?.requestConfig?.elt || event.detail?.elt;
 
 			return (
 				target?.id === 'ran-booster-provider-task-panel' ||

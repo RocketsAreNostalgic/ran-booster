@@ -222,6 +222,15 @@
 .ran-booster-admin .ran-booster-source-choices--navigation {
 	display: flex;
 	align-items: stretch;
+	flex-wrap: wrap;
+}
+
+.ran-booster-source-choice--navigation {
+	box-sizing: border-box;
+	min-inline-size: 0;
+	max-inline-size: 100%;
+	overflow-wrap: anywhere;
+	white-space: normal;
 }
 
 .ran-booster-admin

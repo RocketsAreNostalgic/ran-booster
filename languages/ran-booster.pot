@@ -2018,7 +2018,7 @@ msgstr ""
 
 #. translators: %d is the number of repositories shown.
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:133
-#: assets/ran-booster.js:581
+#: assets/ran-booster.js:582
 #, php-format,js-format
 msgctxt "Provider table repository count"
 msgid "%d repository shown"

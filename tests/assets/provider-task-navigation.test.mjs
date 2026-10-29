@@ -192,7 +192,7 @@ test('provider task requests expose progress and notify swapped controls', () =>
 	assert.equal(state.dispatched[0].detail.root, state.region);
 });
 
-test('repository task swaps restore focus to the active repository subtab', () => {
+test('repository task swaps restore focus when HTMX reports the swapped region as elt', () => {
 	const state = fixture();
 	const init = loadFunction('initProviderTaskNavigation', {
 		CustomEvent: TestCustomEvent,
@@ -202,9 +202,16 @@ test('repository task swaps restore focus to the active repository subtab', () =
 
 	state.setActiveRepositoryTab(state.repositoryTab);
 	init();
-	const detail = { target: state.panel, xhr: {} };
+	const target = { id: 'ran-booster-provider-profile-region' };
+	const link = {
+		closest: (selector) =>
+			selector === '.ran-booster-repository-detail__tabs',
+	};
+	const detail = { target, elt: link, requestConfig: { elt: link }, xhr: {} };
 	state.listeners.get('htmx:beforeRequest')({ detail });
-	state.listeners.get('htmx:afterSwap')({ detail });
+	state.listeners.get('htmx:afterSwap')({
+		detail: { ...detail, elt: target },
+	});
 
 	assert.deepEqual(state.repositoryTab.focusOptions, { preventScroll: true });
 	assert.equal(state.current.focusOptions, null);

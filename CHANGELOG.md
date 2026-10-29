@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.0.0-beta.40](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.39...v1.0.0-beta.40) (2026-10-29)
+
+
+### Features
+
+* **admin:** display installed Booster version in footer ([#545](https://github.com/RocketsAreNostalgic/ran-booster/issues/545)) ([8de338c](https://github.com/RocketsAreNostalgic/ran-booster/commit/8de338c3775f5b0271844084f982839ece4810fb))
+* **extensions:** install selected releases from the catalogue ([#530](https://github.com/RocketsAreNostalgic/ran-booster/issues/530)) ([3b0a210](https://github.com/RocketsAreNostalgic/ran-booster/commit/3b0a210934706b5c6cacc1f47ad22714da7f87c2))
+
+
+### Bug Fixes
+
+* **activity:** separate status from result messages ([#524](https://github.com/RocketsAreNostalgic/ran-booster/issues/524)) ([20ba4b3](https://github.com/RocketsAreNostalgic/ran-booster/commit/20ba4b387c3b2818d9bf92de9a5d967e88ff49c6))
+* **admin:** align local navigation and reserve loading feedback ([#546](https://github.com/RocketsAreNostalgic/ran-booster/issues/546)) ([5c856b6](https://github.com/RocketsAreNostalgic/ran-booster/commit/5c856b6734395f114bf831eece0c137e4cc9d7ce))
+* **admin:** align mobile package selection rows ([#539](https://github.com/RocketsAreNostalgic/ran-booster/issues/539)) ([093393a](https://github.com/RocketsAreNostalgic/ran-booster/commit/093393ad617744e513324ddef4079b6e0af80776))
+* **admin:** align page headings and framing ([#526](https://github.com/RocketsAreNostalgic/ran-booster/issues/526)) ([ee21ced](https://github.com/RocketsAreNostalgic/ran-booster/commit/ee21cedb78a77bc2059f929a1812408c07f43e12))
+* **admin:** align provider diagnostics disclosure ([#536](https://github.com/RocketsAreNostalgic/ran-booster/issues/536)) ([6820ae5](https://github.com/RocketsAreNostalgic/ran-booster/commit/6820ae5a603385ffd738170848a5501ef6e4ecd5))
+* **admin:** contain Booster notices and add reminder preferences ([#552](https://github.com/RocketsAreNostalgic/ran-booster/issues/552)) ([a47112a](https://github.com/RocketsAreNostalgic/ran-booster/commit/a47112adbdf9b75141156b33a0fd0fe31b46e01c))
+* **admin:** contain repository status sidebar badges ([#554](https://github.com/RocketsAreNostalgic/ran-booster/issues/554)) ([794fc61](https://github.com/RocketsAreNostalgic/ran-booster/commit/794fc617b9e8f508b9fe89e935c0ae6d47be906d))
+* **admin:** disable inactive release track settings ([#549](https://github.com/RocketsAreNostalgic/ran-booster/issues/549)) ([1a5a29d](https://github.com/RocketsAreNostalgic/ran-booster/commit/1a5a29d6d0eaf21ea48224df0b8339dac3afd758))
+* **admin:** make Blueprint review easier to scan ([#527](https://github.com/RocketsAreNostalgic/ran-booster/issues/527)) ([d4ddb4e](https://github.com/RocketsAreNostalgic/ran-booster/commit/d4ddb4ee6ecb3d8f59f2f084991e1cd07b9bab72))
+* **admin:** preserve narrow package checkbox gutters ([#553](https://github.com/RocketsAreNostalgic/ran-booster/issues/553)) ([6da0ef9](https://github.com/RocketsAreNostalgic/ran-booster/commit/6da0ef931b64c1352bce11507a8d96a3feeb4984))
+* **admin:** preserve source-route focus and contain package controls ([#522](https://github.com/RocketsAreNostalgic/ran-booster/issues/522)) ([d9caef1](https://github.com/RocketsAreNostalgic/ran-booster/commit/d9caef14feb2ad5a594b7104226886d7729e7b2e))
+* **admin:** remove credential and webhook page eyebrows ([#548](https://github.com/RocketsAreNostalgic/ran-booster/issues/548)) ([259875f](https://github.com/RocketsAreNostalgic/ran-booster/commit/259875f41daf0b1fbc5113fd25bc99633b3efd7b))
+* **admin:** space webhook setup from branch controls ([#551](https://github.com/RocketsAreNostalgic/ran-booster/issues/551)) ([19ba8f3](https://github.com/RocketsAreNostalgic/ran-booster/commit/19ba8f3f2f61329f8e0655f41f9a52ac73912ceb))
+* **admin:** span package safety notice across card ([#533](https://github.com/RocketsAreNostalgic/ran-booster/issues/533)) ([e87530c](https://github.com/RocketsAreNostalgic/ran-booster/commit/e87530c7f55b40d5a909a68c12f9ca4dfba1fb9d))
+* **admin:** tint repository lookup notice ([#532](https://github.com/RocketsAreNostalgic/ran-booster/issues/532)) ([3bcec32](https://github.com/RocketsAreNostalgic/ran-booster/commit/3bcec32154f3dcfa36857458f8c13d4da3b9a1bd))
+* **credentials:** keep validation feedback with health ([#525](https://github.com/RocketsAreNostalgic/ran-booster/issues/525)) ([31ef134](https://github.com/RocketsAreNostalgic/ran-booster/commit/31ef134d3f6ea337511b0f7e9adfe77de16b000f))
+* **deps:** adopt release updater beta.14 ([#520](https://github.com/RocketsAreNostalgic/ran-booster/issues/520)) ([160dac5](https://github.com/RocketsAreNostalgic/ran-booster/commit/160dac5045b8bc16fcdf31821edb929d8d340769))
+* **transporter:** identify Blueprint export downloads ([#523](https://github.com/RocketsAreNostalgic/ran-booster/issues/523)) ([2ca6db0](https://github.com/RocketsAreNostalgic/ran-booster/commit/2ca6db03dd00a73887bdac358dc198d151ca5ff0))
+
 ## [1.0.0-beta.39](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.38...v1.0.0-beta.39) (2026-10-25)
 
 

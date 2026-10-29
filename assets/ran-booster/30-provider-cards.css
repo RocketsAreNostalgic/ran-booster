@@ -475,14 +475,22 @@
 .ran-booster-admin .ran-booster-provider-task-tabs .filter-links {
 	display: flex;
 	flex-wrap: wrap;
-	column-gap: var(--ran-booster-space-20);
+	column-gap: var(--ran-booster-space-4);
 }
 
 .ran-booster-admin .ran-booster-provider-task-tabs .filter-links li > a {
 	margin: 0;
-	padding: 8px 0;
+	padding: 8px;
 	font-weight: 600;
 	text-decoration: none;
+}
+
+.ran-booster-admin
+	.ran-booster-provider-task-tabs
+	.filter-links
+	li
+	> a:not(.current) {
+	border-block-end-color: transparent;
 }
 
 .ran-booster-admin .ran-booster-provider-task-tab__source-indicator {

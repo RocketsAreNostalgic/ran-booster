@@ -209,7 +209,6 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 	<?php } elseif ( 'overview' !== $provider_view ) { ?>
 		<header class="ran-booster-action-row ran-booster-provider-management__header">
 			<div>
-				<p class="ran-booster-provider__eyebrow ran-booster-eyebrow"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Repository access', 'ran-booster' ) : __( 'Push-to-Deploy prerequisite', 'ran-booster' ) ); ?></p>
 				<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></h2>
 				<p class="ran-booster-page-heading__description">
 					<?php

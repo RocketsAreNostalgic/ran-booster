@@ -82,6 +82,16 @@ function checked( mixed $checked, mixed $current = true, bool $display = true ):
 	return $result;
 }
 
+function selected( mixed $selected, mixed $current = true, bool $display = true ): string {
+	$result = (string) $selected === (string) $current ? ' selected="selected"' : '';
+	if ( $display ) {
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed test attribute fragment.
+		echo $result;
+	}
+
+	return $result;
+}
+
 function wp_nonce_field( string $action, string $name ): void {
 	echo '<input type="hidden" name="' . esc_attr( $name ) . '" value="' . esc_attr( wp_create_nonce( $action ) ) . '">';
 }

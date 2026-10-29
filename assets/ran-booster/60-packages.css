@@ -530,7 +530,9 @@
 		display: block;
 	}
 
-	.ran-booster-admin .ran-booster-package-row--primary {
+	.ran-booster-admin
+		.ran-booster-package-table
+		.ran-booster-package-row--primary {
 		display: grid;
 		grid-template-columns: 34px minmax(0, 1fr);
 	}

@@ -178,7 +178,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-action-row {', $primitives );
-		self::assertStringContainsString( 'ran-booster-provider__eyebrow ran-booster-eyebrow', $provider );
+		self::assertStringNotContainsString( 'ran-booster-provider__eyebrow ran-booster-eyebrow', $provider );
 		self::assertStringContainsString( 'ran-booster-portability__eyebrow ran-booster-eyebrow', $portability );
 		self::assertStringContainsString( 'ran-booster-eyebrow ran-booster-eyebrow--compact', $packages );
 		self::assertStringContainsString( 'ran-booster-debug-capture__panel ran-booster-panel', $debug );

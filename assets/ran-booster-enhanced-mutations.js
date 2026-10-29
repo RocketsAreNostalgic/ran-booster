@@ -592,7 +592,9 @@
 		document.addEventListener('htmx:beforeSwap', function (event) {
 			const form = requestForm(event);
 			if (form && isScopedFailureStatus(event.detail?.xhr?.status)) {
-				event.detail.shouldSwap = true;
+				event.detail.shouldSwap = !form.hasAttribute?.(
+					'data-ran-booster-source-choice'
+				);
 			}
 		});
 
@@ -685,6 +687,9 @@
 				if (form && !isStaleSourceRequest(event, form)) {
 					if (
 						eventName === 'htmx:responseError' &&
+						!form.hasAttribute?.(
+							'data-ran-booster-source-choice'
+						) &&
 						isScopedFailureStatus(event.detail?.xhr?.status)
 					) {
 						return;

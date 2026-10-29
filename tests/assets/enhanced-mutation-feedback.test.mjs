@@ -1025,6 +1025,55 @@ test('enhanced mutation feedback also swaps the Core-redacted 500 error locally'
 	]);
 });
 
+test('source navigation HTTP failures retain the view and announce an error', () => {
+	for (const status of [400, 409, 422, 500]) {
+		const state = fixture();
+		state.sourceLinkAttributes.set(
+			'data-ran-booster-source-choice',
+			'branch'
+		);
+		const init = loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+			wp: { i18n: { __: (message) => message } },
+		});
+		init();
+		const detail = {
+			elt: state.sourceLink,
+			xhr: { status },
+			shouldSwap: true,
+		};
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		state.listeners.get('htmx:beforeSwap')({ detail });
+		assert.equal(detail.shouldSwap, false, status);
+		state.listeners.get('htmx:responseError')({ detail });
+		state.listeners.get('htmx:afterRequest')({ detail });
+		assert.equal(state.sourceProgress.hidden, true, status);
+		assert.equal(
+			state.sourceLinkAttributes.has('aria-busy'),
+			false,
+			status
+		);
+		assert.equal(state.error.hidden, false, status);
+		assert.deepEqual(
+			state.error.focusOptions,
+			{ preventScroll: true },
+			status
+		);
+		assert.deepEqual(
+			state.announcements,
+			[
+				{
+					message:
+						'We could not complete that request. Please try again.',
+					type: 'assertive',
+				},
+			],
+			status
+		);
+	}
+});
+
 test('enhanced mutation transport failures reset busy state and keep an error local', () => {
 	for (const eventName of [
 		'htmx:responseError',

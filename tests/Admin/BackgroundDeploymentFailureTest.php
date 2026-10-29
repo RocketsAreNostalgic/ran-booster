@@ -135,6 +135,9 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 
 		self::assertMatchesRegularExpression( '/data-ran-booster-notice-state="([^"]+)"/', $html );
 		preg_match( '/data-ran-booster-notice-state="([^"]+)"/', $html, $matches );
+		if ( ! isset( $matches[1] ) ) {
+			self::fail( 'The rendered notice did not include its state nonce.' );
+		}
 		$_POST['state'] = $matches[1];
 		self::assertStringContainsString( 'Acknowledge this incident', $html );
 		$result = ( new DeploymentAdminController( $this->createStub( Dashboard::class ), monitor: $monitor ) )->handle();

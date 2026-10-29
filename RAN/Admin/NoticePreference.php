@@ -71,8 +71,31 @@ final class NoticePreference {
 		if ( array() === $events || ! in_array( $mode, array( self::MODE_DISMISS, self::MODE_SNOOZE ), true ) ) {
 			return false;
 		}
-		$known  = $known ?? $events;
-		$now    = $now ?? ( $this->clock )()->getTimestamp();
+		global $wpdb;
+		if ( ! is_object( $wpdb ) || ! isset( $wpdb->usermeta ) || ! is_string( $wpdb->usermeta )
+			|| ! method_exists( $wpdb, 'prepare' ) || ! method_exists( $wpdb, 'get_var' ) ) {
+			return false;
+		}
+		$lock = 'ran-notice-' . substr( hash( 'sha256', $wpdb->usermeta . "\0" . $user_id . "\0" . $key ), 0, 48 );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Serializes this user's event-map writes across connections, including initial creation.
+		if ( '1' !== (string) $wpdb->get_var( $wpdb->prepare( 'SELECT GET_LOCK(%s, 5)', $lock ) ) ) {
+			return false;
+		}
+		try {
+			wp_cache_delete( $user_id, 'user_meta' );
+			$saved = $this->save_locked_events( $user_id, $key, $events, $mode, $known ?? $events, $now ?? ( $this->clock )()->getTimestamp() );
+		} finally {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Releases the connection-local advisory lock acquired above.
+			$released = '1' === (string) $wpdb->get_var( $wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+		}
+		return $saved && $released;
+	}
+
+	/**
+	 * @param array<string, string> $events Visible event identities.
+	 * @param array<string, string> $known Current event identities.
+	 */
+	private function save_locked_events( int $user_id, string $key, array $events, string $mode, array $known, int $now ): bool {
 		$value  = get_user_meta( $user_id, $key, true );
 		$stored = array();
 		foreach ( $this->suppressed_events( $user_id, $key, $known, $now ) as $id ) {

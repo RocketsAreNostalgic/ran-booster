@@ -24,6 +24,7 @@ use RAN\Tests\Admin\Support\ExpiryReminderProvider;
 use RAN\Tests\Secrets\InMemorySiteKeyStore;
 use RAN\Tests\Secrets\SecretsFileTestFactory;
 use RAN\Tests\Support\InMemoryCredentialExpiryObservationStore;
+use RAN\Tests\Support\NoticePreferenceLockDatabase;
 
 // Direct local filesystem operations exercise the sidecar-backed reminder fixture.
 
@@ -32,6 +33,8 @@ use RAN\Tests\Support\InMemoryCredentialExpiryObservationStore;
 
 final class CredentialExpiryReminderTest extends TestCase {
 
+	private mixed $previous_wpdb;
+	private NoticePreferenceLockDatabase $lock_database;
 	private string $directory;
 	private string $path;
 	private SecretsFile $secrets;
@@ -42,6 +45,10 @@ final class CredentialExpiryReminderTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		parent::setUp();
+		$this->previous_wpdb = $GLOBALS['wpdb'] ?? null;
+		$this->lock_database = new NoticePreferenceLockDatabase();
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Install the isolated advisory-lock database double for this test.
+		$GLOBALS['wpdb']                                      = $this->lock_database;
 		$GLOBALS['ran_booster_admin_test_translations']       = array();
 		$GLOBALS['ran_booster_expiry_test_screen']            = 'toplevel_page_ran-booster';
 		$GLOBALS['ran_booster_repository_admin_translations'] = array();
@@ -90,6 +97,8 @@ final class CredentialExpiryReminderTest extends TestCase {
 			$GLOBALS['ran_booster_repository_admin_translations']
 		);
 
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Restore the shared WordPress database double.
+		$GLOBALS['wpdb'] = $this->previous_wpdb;
 		parent::tearDown();
 	}
 
@@ -246,6 +255,29 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
 		$GLOBALS['ran_booster_expiry_test_screen'] = 'dashboard';
 		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
+	}
+
+	public function test_first_concurrent_event_saves_preserve_both_successful_acknowledgements(): void {
+		$preferences                      = new NoticePreference( fn (): DateTimeImmutable => $this->now );
+		$known                            = array(
+			'a' => 'one',
+			'b' => 'two',
+		);
+		$inner_success                    = false;
+		$this->lock_database->before_lock = function () use ( $preferences, $known, &$inner_success ): void {
+			$inner_success = $preferences->save_events( 17, CredentialExpiryNotice::USER_META_KEY, $known, NoticePreference::MODE_DISMISS, $known );
+		};
+		$outer_success                    = $preferences->save_events( 17, CredentialExpiryNotice::USER_META_KEY, array( 'b' => 'two' ), NoticePreference::MODE_DISMISS, $known );
+		self::assertTrue( $inner_success );
+		self::assertTrue( $outer_success );
+		self::assertSame( array( 'a', 'b' ), $preferences->suppressed_events( 17, CredentialExpiryNotice::USER_META_KEY, $known ) );
+	}
+
+	public function test_event_save_fails_closed_when_lock_is_contended(): void {
+		$this->lock_database->locked = true;
+		$preferences                 = new NoticePreference();
+		self::assertFalse( $preferences->save_events( 17, CredentialExpiryNotice::USER_META_KEY, array( 'a' => 'one' ), NoticePreference::MODE_DISMISS ) );
+		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_user_meta'] );
 	}
 
 	public function test_event_preferences_retain_other_current_dismissals(): void {

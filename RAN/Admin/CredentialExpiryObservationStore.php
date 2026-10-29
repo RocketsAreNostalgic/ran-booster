@@ -17,7 +17,7 @@ class CredentialExpiryObservationStore {
 	private const SCHEMA_VERSION = 1;
 
 	/**
-	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string}
+	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}
 	 */
 	public function get( string $provider, string $profile_id ): array {
 		$this->require_provider_id( $provider );
@@ -27,7 +27,7 @@ class CredentialExpiryObservationStore {
 	}
 
 	/**
-	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string}>>
+	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}>>
 	 */
 	public function observations(): array {
 		return $this->all( $this->read_option() );
@@ -68,6 +68,13 @@ class CredentialExpiryObservationStore {
 		$this->require_profile_id( $profile_id );
 
 		$this->mutate( $provider, $profile_id, null );
+	}
+
+	/** Clear stale expiry evidence while retaining a non-secret replacement generation. */
+	public function reset_for_replacement( string $provider, string $profile_id ): void {
+		$this->require_provider_id( $provider );
+		$this->require_profile_id( $profile_id );
+		$this->mutate( $provider, $profile_id, null, true );
 	}
 
 	protected function read_option( bool $fresh = false ): mixed {
@@ -112,7 +119,7 @@ class CredentialExpiryObservationStore {
 	}
 
 	/**
-	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string}>>
+	 * @return array<string, array<string, array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}>>
 	 */
 	private function all( mixed $document ): array {
 		if ( ! is_array( $document ) || self::SCHEMA_VERSION !== ( $document['version'] ?? null )
@@ -156,7 +163,7 @@ class CredentialExpiryObservationStore {
 
 	/**
 	 * @param array<string, mixed> $candidate Stored observation candidate.
-	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string}
+	 * @return array{manual_expires_on?: string, provider_expires_at?: string, provider_checked_at?: string, event_generation?: int}
 	 */
 	private function normalise_record( array $candidate ): array {
 		$record = array();
@@ -177,13 +184,16 @@ class CredentialExpiryObservationStore {
 				$record['provider_expires_at'] = $candidate['provider_expires_at'];
 			}
 		}
+		if ( is_int( $candidate['event_generation'] ?? null ) && $candidate['event_generation'] > 0 ) {
+			$record['event_generation'] = $candidate['event_generation'];
+		}
 
 		return $record;
 	}
 
 	/**
-	 * @param array<string, array<string, array<string, string>>> $profiles
-	 * @param array<string, string>                               $record
+	 * @param array<string, array<string, array<string, string|int>>> $profiles
+	 * @param array<string, string|int>                           $record
 	 */
 	private function replace_record( array &$profiles, string $provider, string $profile_id, array $record ): void {
 		if ( array() === $record ) {
@@ -200,11 +210,15 @@ class CredentialExpiryObservationStore {
 	}
 
 	/** @param array<string, string|null>|null $patch Fields to replace, or null to clear the record. */
-	private function mutate( string $provider, string $profile_id, ?array $patch ): void {
+	private function mutate( string $provider, string $profile_id, ?array $patch, bool $replacement = false ): void {
 		for ( $attempt = 0; $attempt < 5; ++$attempt ) {
 			$expected = $this->read_option( true );
 			$profiles = $this->all( $expected );
-			$record   = null === $patch ? array() : ( $profiles[ $provider ][ $profile_id ] ?? array() );
+			$previous = $profiles[ $provider ][ $profile_id ] ?? array();
+			$record   = null === $patch ? array() : $previous;
+			if ( $replacement ) {
+				$record['event_generation'] = ( $previous['event_generation'] ?? 0 ) + 1;
+			}
 			foreach ( $patch ?? array() as $field => $value ) {
 				if ( null === $value ) {
 					unset( $record[ $field ] );

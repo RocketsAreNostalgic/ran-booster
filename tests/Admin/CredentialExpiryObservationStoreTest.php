@@ -10,6 +10,15 @@ use RuntimeException;
 
 final class CredentialExpiryObservationStoreTest extends TestCase {
 
+	public function test_replacement_generation_retries_against_concurrent_replacement(): void {
+		$store               = new InMemoryCredentialExpiryObservationStore();
+		$store->before_write = static function () use ( $store ): void {
+			$store->reset_for_replacement( 'gh', 'public-profile' );
+		};
+		$store->reset_for_replacement( 'gh', 'public-profile' );
+		self::assertSame( array( 'event_generation' => 2 ), $store->get( 'gh', 'public-profile' ) );
+	}
+
 	public function test_stale_matching_snapshot_does_not_skip_a_required_write(): void {
 		$store = new InMemoryCredentialExpiryObservationStore();
 		$store->set_manual_expiry( 'gh', 'public-profile', '2027-01-01' );
@@ -17,7 +26,12 @@ final class CredentialExpiryObservationStoreTest extends TestCase {
 		$store->document['profiles']['gh']['public-profile']['manual_expires_on'] = '2028-01-01';
 		$store->set_manual_expiry( 'gh', 'public-profile', '2027-01-01' );
 		$store->stale_read = null;
-		self::assertSame( array( 'manual_expires_on' => '2027-01-01' ), $store->get( 'gh', 'public-profile' ) );
+		self::assertSame(
+			array(
+				'manual_expires_on' => '2027-01-01',
+			),
+			$store->get( 'gh', 'public-profile' )
+		);
 	}
 
 	public function test_concurrent_provider_observation_survives_manual_expiry_patch(): void {

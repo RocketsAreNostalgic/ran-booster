@@ -17,7 +17,8 @@ final class DeploymentAdminController {
 		private Dashboard $dashboard,
 		private ?DeploymentCoordinator $coordinator = null,
 		private ?DeploymentAttemptRepository $attempts = null,
-		private ?BackgroundDeploymentFailureMonitor $monitor = null
+		private ?BackgroundDeploymentFailureMonitor $monitor = null,
+		private NoticePreference $preferences = new NoticePreference()
 	) {
 	}
 
@@ -33,8 +34,15 @@ final class DeploymentAdminController {
 		if ( $user_id < 1 || null === $fingerprint ) {
 			return wp_send_json_error( array( 'message' => __( 'RAN Booster could not identify an active deployment failure.', 'ran-booster' ) ), 409 );
 		}
-		update_user_meta( $user_id, DeploymentAdminPresenter::USER_META_KEY, $fingerprint );
-		if ( ! hash_equals( $fingerprint, (string) get_user_meta( $user_id, DeploymentAdminPresenter::USER_META_KEY, true ) ) ) {
+		$state = isset( $_POST['state'] ) && is_string( $_POST['state'] ) ? wp_unslash( $_POST['state'] ) : '';
+		if ( ! wp_verify_nonce( $state, self::NONCE_ACTION . ':' . $fingerprint ) ) {
+			return wp_send_json_error( array( 'message' => __( 'The deployment failure changed. Reload the page and try again.', 'ran-booster' ) ), 409 );
+		}
+		$mode = isset( $_POST['mode'] ) && is_string( $_POST['mode'] )
+			? wp_unslash( $_POST['mode'] )
+			: NoticePreference::MODE_ACKNOWLEDGE;
+		if ( NoticePreference::MODE_ACKNOWLEDGE !== $mode
+			|| ! $this->preferences->save( $user_id, DeploymentAdminPresenter::USER_META_KEY, $fingerprint, $mode ) ) {
 			return wp_send_json_error( array( 'message' => __( 'RAN Booster could not remember the notice dismissal.', 'ran-booster' ) ), 500 );
 		}
 

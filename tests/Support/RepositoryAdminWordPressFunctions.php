@@ -52,7 +52,7 @@ function wp_verify_nonce( string $nonce, string $action ): int|false {
 		return 1;
 	}
 
-	return hash_equals( \wp_create_nonce( $action ), $nonce ) ? 1 : false;
+	return function_exists( 'wp_create_nonce' ) && hash_equals( \wp_create_nonce( $action ), $nonce ) ? 1 : false;
 }
 
 function is_uploaded_file( string $filename ): bool {

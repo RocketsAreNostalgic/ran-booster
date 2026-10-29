@@ -660,7 +660,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		);
 
 		self::assertSame( 'success', $response->kind );
-		self::assertSame( array(), $expiry_observations->get( 'fixture', 'credential_existing' ) );
+		self::assertSame( array( 'event_generation' => 1 ), $expiry_observations->get( 'fixture', 'credential_existing' ) );
 		self::assertSame(
 			'Replacement credential',
 			$this->secrets->credential_profiles( 'fixture' )['credential_existing']['label']

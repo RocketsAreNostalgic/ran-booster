@@ -90,6 +90,7 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 ?><div class="wrap ran-booster-admin<?php echo esc_attr( $admin_page_modifier ); ?>">
 	<hr class="wp-header-end">
 	<?php
+	\RAN\Admin\BoosterNoticeScope::render_shell_notices();
 	if ( isset( $core_self_update_development_notice ) ) {
 		$core_self_update_development_notice->render_shell_inline();
 	}

@@ -5655,7 +5655,7 @@ msgstr ""
 msgid "API credential format %d"
 msgstr ""
 
-#: RAN/WordPress/ExtensionUpdates.php:132
+#: RAN/WordPress/ExtensionUpdates.php:134
 msgid "Native extension updates are unavailable in this Booster build. Update Booster, or download the selected ZIP from More Details for manual replacement."
 msgstr ""
 

@@ -7,6 +7,7 @@ namespace RAN\Tests\WordPress;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use RAN\WPReleaseUpdater\V1\Contract\IdentityDescriptor;
+use RAN\Admin\BoosterNoticeScope;
 use RAN\WordPress\ExtensionUpdates;
 use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
 
@@ -155,6 +156,48 @@ final class ExtensionUpdatesTest extends TestCase {
 
 		self::assertSame( array( 'example/example.php' ), $checked );
 		self::assertSame( 0, $runtime->registrations );
+	}
+
+	#[RunInSeparateProcess]
+	public function test_dependency_notice_uses_the_current_admin_shell_scope(): void {
+		require_once dirname( __DIR__ ) . '/Support/BoosterNoticeScopeWordPressFunctions.php';
+		require_once __DIR__ . '/ExtensionUpdatesWordPressFunctions.php';
+
+		foreach ( array( 'ran-booster_page_ran-booster-extensions', 'plugins', 'dashboard' ) as $screen_id ) {
+			$GLOBALS['ran_booster_notice_scope_screen']      = (object) array( 'id' => $screen_id );
+			$GLOBALS['ran_booster_extension_update_actions'] = array();
+			$this->unavailable_updates()->register();
+			$notice = $GLOBALS['ran_booster_extension_update_actions']['admin_notices'][0];
+			ob_start();
+			$notice();
+			$output = (string) ob_get_clean();
+			ob_start();
+			BoosterNoticeScope::render_shell_notices();
+			$deferred = (string) ob_get_clean();
+			if ( 'ran-booster_page_ran-booster-extensions' === $screen_id ) {
+				self::assertSame( '', $output );
+				self::assertStringContainsString( 'notice notice-warning inline', $deferred );
+				self::assertSame( 1, substr_count( $deferred, 'Native extension updates are unavailable' ) );
+			} elseif ( 'plugins' === $screen_id ) {
+				self::assertStringContainsString( 'notice notice-warning', $output );
+				self::assertStringNotContainsString( 'notice notice-warning inline', $output );
+				self::assertSame( '', $deferred );
+			} else {
+				self::assertSame( '', $output );
+				self::assertSame( '', $deferred );
+			}
+			ob_start();
+			BoosterNoticeScope::render_shell_notices();
+			self::assertSame( '', (string) ob_get_clean() );
+		}
+	}
+
+	private function unavailable_updates(): ExtensionUpdates {
+		return new ExtensionUpdates(
+			new ManagedReleaseUpdaterRegistrar( new \stdClass() ),
+			static fn ( string $plugin ): bool => '' === $plugin && false,
+			fn (): array => array( $this->extension( 'Active' ) )
+		);
 	}
 
 	/** @return array<string, mixed> */

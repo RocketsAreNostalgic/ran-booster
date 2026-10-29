@@ -5869,7 +5869,7 @@ msgstr ""
 
 #: views/attempts/index.php:139
 #: views/portability-review.php:30
-#: views/troubleshooting.php:160
+#: views/troubleshooting.php:159
 msgid "Repository"
 msgstr ""
 
@@ -9561,7 +9561,7 @@ msgid "Check credential or repository access (optional)"
 msgstr ""
 
 #: views/troubleshooting.php:135
-#: views/troubleshooting.php:160
+#: views/troubleshooting.php:159
 msgid "(optional)"
 msgstr ""
 
@@ -9573,12 +9573,12 @@ msgstr ""
 msgid "Choose a saved credential only to check private-repository access. This is a credential reference, not the credential secret; Booster never displays the credential secret here."
 msgstr ""
 
-#: views/troubleshooting.php:157
-msgid "The active provider can read every credential saved under its provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher."
+#: views/troubleshooting.php:161
+msgid "Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available."
 msgstr ""
 
-#: views/troubleshooting.php:162
-msgid "Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available."
+#: views/troubleshooting.php:163
+msgid "The active provider can read every credential saved under its provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher."
 msgstr ""
 
 #: views/troubleshooting.php:167

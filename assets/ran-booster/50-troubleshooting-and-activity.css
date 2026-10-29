@@ -122,9 +122,21 @@
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.ran-booster-admin .ran-booster-troubleshooting__specific .description {
+.ran-booster-admin
+	.ran-booster-troubleshooting__specific
+	.ran-booster-troubleshooting__fields
+	> p
+	> .description {
 	display: block;
 	margin-block-start: var(--ran-booster-space-6);
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__provider-notice {
+	box-sizing: border-box;
+	grid-column: 1 / -1;
+	inline-size: 100%;
+	margin: 0;
+	background: var(--ran-booster-surface-info);
 }
 
 .ran-booster-admin .ran-booster-troubleshooting__table-wrap {

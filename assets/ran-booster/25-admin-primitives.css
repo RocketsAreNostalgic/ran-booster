@@ -71,6 +71,51 @@
 	color: var(--ran-booster-text-muted);
 }
 
+/*
+ * Private disclosure hooks keep native details behaviour while giving Core's
+ * diagnostic, configuration and reference disclosures one shared surface.
+ */
+
+.ran-booster-admin .ran-booster-disclosure {
+	border: 1px solid var(--ran-booster-divider);
+	border-radius: var(--ran-booster-radius-surface);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-disclosure > summary {
+	display: list-item;
+	padding-block: var(--ran-booster-space-12);
+	padding-inline: var(--ran-booster-space-16);
+	cursor: pointer;
+	font-size: var(--ran-booster-font-size-base);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-disclosure > summary:hover {
+	color: var(--ran-booster-link-strong);
+}
+
+.ran-booster-admin .ran-booster-disclosure > summary:focus-visible {
+	outline: 2px solid var(--ran-booster-color-blue-300);
+	outline-offset: -2px;
+}
+
+.ran-booster-admin .ran-booster-disclosure[open] > summary {
+	border-block-end: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-disclosure__body {
+	padding: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-disclosure__body > :first-child {
+	margin-block-start: 0;
+}
+
+.ran-booster-admin .ran-booster-disclosure__body > :last-child {
+	margin-block-end: 0;
+}
+
 .ran-booster-admin h2.ran-booster-page-heading__title {
 	margin: 0;
 	padding: 0;

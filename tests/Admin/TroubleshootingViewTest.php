@@ -914,7 +914,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-provider="gh" disabled="disabled" hidden', $html );
 		self::assertStringContainsString( 'maxlength="512"', $html );
 		self::assertStringContainsString( '>Check credential or repository access (optional)</summary>', $html );
-		self::assertStringContainsString( '<details class="ran-booster-troubleshooting__specific ran-booster-troubleshooting__disclosure" open>', $html );
+		self::assertStringContainsString( '<details class="ran-booster-troubleshooting__specific ran-booster-troubleshooting__disclosure ran-booster-disclosure" open>', $html );
 		self::assertStringContainsString( 'Start with a provider to run a general health check.', $html );
 		self::assertStringContainsString( 'check only credential and repository access; they do not scope Push-to-Deploy delivery results.', $html );
 		self::assertStringContainsString( 'This is a credential reference, not the credential secret;', $html );

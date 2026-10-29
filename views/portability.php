@@ -162,13 +162,15 @@ $render_portability_extension      = static function ( string $hook, string $ste
 									</span>
 								</label>
 								<?php if ( 0 < $package_count ) : ?>
-									<details class="ran-booster-portability__credential-packages">
+									<details class="ran-booster-portability__credential-packages ran-booster-disclosure">
 										<summary><?php echo esc_html( $package_summary ); ?></summary>
-										<ul>
+										<div class="ran-booster-disclosure__body">
+											<ul>
 										<?php foreach ( $packages as $package ) : ?>
 											<li><span><?php echo esc_html( (string) ( $package['name'] ?? '' ) ); ?></span> <span class="description"><?php echo esc_html( 'theme' === ( $package['type'] ?? null ) ? __( 'Theme', 'ran-booster' ) : __( 'Plugin', 'ran-booster' ) ); ?></span></li>
 										<?php endforeach; ?>
-										</ul>
+											</ul>
+										</div>
 									</details>
 								<?php endif; ?>
 								<?php if ( $available ) : ?>

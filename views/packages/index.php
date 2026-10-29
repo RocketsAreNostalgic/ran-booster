@@ -505,8 +505,9 @@ $policy_labels = array(
 		</tr>
 		<tr class="ran-booster-package-row ran-booster-package-row--details<?php echo $word_press_plugin_active ? ' ran-booster-package-row--wordpress-active' : ''; ?>">
 			<td colspan="3" class="ran-booster-package-row__details">
-				<details>
+				<details class="ran-booster-disclosure">
 					<summary><?php echo esc_html( $details_label ); ?></summary>
+					<div class="ran-booster-disclosure__body">
 					<dl class="ran-booster-package-row__details-grid<?php echo $release_managed ? '' : ' ran-booster-package-row__details-grid--branch'; ?>">
 						<div>
 							<dt><?php esc_html_e( 'Provider', 'ran-booster' ); ?></dt>
@@ -572,6 +573,7 @@ $policy_labels = array(
 							</div>
 						<?php } ?>
 					</dl>
+					</div>
 				</details>
 			</td>
 		</tr>

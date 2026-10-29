@@ -172,9 +172,9 @@ unset( $prepared_section );
 <section class="ran-booster-documentation__main" aria-labelledby="ran-booster-documentation-heading">
 	<div class="ran-booster-page-shell__body">
 		<div class="ran-booster-documentation__sections">
-		<details id="ran-booster-quick-start" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation"<?php echo $documentation_initial_open ? '' : ' open'; ?>>
+		<details id="ran-booster-quick-start" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation"<?php echo $documentation_initial_open ? '' : ' open'; ?>>
 			<summary><?php esc_html_e( 'Quick start', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
+			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 				<p><a href="#ran-booster-requirements"><?php esc_html_e( 'Check the requirements before you start.', 'ran-booster' ); ?></a></p>
 				<ol>
 					<li>
@@ -205,9 +205,9 @@ unset( $prepared_section );
 			</div>
 		</details>
 
-		<details id="ran-booster-requirements" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation">
+		<details id="ran-booster-requirements" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Requirements', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
+			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 				<p><strong><?php esc_html_e( 'Current limitation:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This plugin currently supports single-site WordPress installations only. Multisite and network activation are not yet supported.', 'ran-booster' ); ?></p>
 				<p><strong><?php esc_html_e( 'Database:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use MySQL 8.0 or newer or MariaDB 10.11 or newer with InnoDB available. MySQL 8.4 LTS is recommended for production. SQLite, PostgreSQL and unverified database-translation drop-ins are not supported.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'If an active site moves outside that database envelope, Booster leaves its stored data unchanged and pauses package storage, Transporter and deployments. Restore a supported database, then use read-only Troubleshooting to confirm compatibility. For planned moves, keep the normal site backup and a current Transporter Blueprint; Booster does not convert custom tables between database engines.', 'ran-booster' ); ?></p>
@@ -215,9 +215,9 @@ unset( $prepared_section );
 			</div>
 		</details>
 
-		<details id="ran-booster-portability-guidance" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation">
+		<details id="ran-booster-portability-guidance" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Move packages between sites', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
+			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 				<h3><?php esc_html_e( 'Move managed packages without copying a development checkout', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'A Transporter Blueprint is a ZIP file that records the Booster-managed packages you select on this site and where their repos live. It is not a copy of the plugin or theme files installed here. The site that opens the Blueprint downloads its files from the committed repository, so local uncommitted changes, and local-only', 'ran-booster' ); ?> <code>node_modules</code> <?php esc_html_e( 'folders, and other ignored and uncommitted dependencies are never included.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Before a database or environment move', 'ran-booster' ); ?></h3>
@@ -244,9 +244,9 @@ unset( $prepared_section );
 			</div>
 		</details>
 
-		<details id="ran-booster-wp-pusher-migration" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation">
+		<details id="ran-booster-wp-pusher-migration" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Migrate from WP Pusher', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
+			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 				<h3><?php esc_html_e( 'Move retained WP Pusher packages into Booster', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'If this site used WP Pusher 3.0.13, the temporary RAN Booster WP Pusher Migrator can adopt supported installed plugins and themes into Booster without reinstalling them. Each adopted package starts with deployment Disabled.', 'ran-booster' ); ?></p>
 
@@ -270,9 +270,9 @@ unset( $prepared_section );
 			</div>
 		</details>
 
-		<details id="ran-booster-file-protection" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation">
+		<details id="ran-booster-file-protection" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Protect your files and know what actually moves', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
+			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 				<h3><?php esc_html_e( 'Deployment modes protect files you are editing', 'ran-booster' ); ?></h3>
 				<ul>
 					<li><strong><?php esc_html_e( 'Disabled', 'ran-booster' ); ?></strong> <?php esc_html_e( 'blocks any replacement, whether triggered by an administrator or by a webhook. Use this for a package whose files on disk you are currently editing.', 'ran-booster' ); ?></li>
@@ -296,9 +296,9 @@ unset( $prepared_section );
 			</div>
 		</details>
 
-		<details id="ran-booster-credential-storage" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation">
+		<details id="ran-booster-credential-storage" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Credential storage, retention and removal', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
+			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 				<h3><?php esc_html_e( 'Where credentials are stored', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Booster stores repository credentials and webhook secrets as authenticated ciphertext in a private JSON file outside the WordPress and plugin directories. Conventional single-site POSIX installations can use the protected Overview’s automatic location. Containers and uncommon layouts should define', 'ran-booster' ); ?> <code>RAN_BOOSTER_ENCRYPTED_SECRETS_DIR</code> <?php esc_html_e( 'as a private directory outside the public web root on durable local storage. The configured value must evaluate to an absolute canonical path; in wp-config.php, an expression such as', 'ran-booster' ); ?> <code>dirname( __DIR__ ) . '/private/ran-booster'</code> <?php esc_html_e( 'provides a safe relative layout anchored to that file. The directory must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages secrets.json inside it. Raw unanchored relative strings are rejected because web, cron and CLI processes may have different working directories. Booster never displays a saved secret back to you once it is stored.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'The file and lock are owner-only. Its independent encryption key is held in the non-autoloaded', 'ran-booster' ); ?> <code>ran_booster_secrets_key_v1</code> <?php esc_html_e( 'WordPress option, so neither the filesystem nor database alone contains usable credentials. Restore the matching encrypted file and database key from the same backup, and protect that backup as secret material.', 'ran-booster' ); ?></p>
@@ -334,14 +334,14 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			$credentials     = isset( $provider_guide['credentials'] ) && is_array( $provider_guide['credentials'] ) ? $provider_guide['credentials'] : array();
 			$settings_url    = $tab_urls[ $provider_code ] ?? '';
 			?>
-			<details class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation" id="ran-booster-documentation-provider-<?php echo esc_attr( $provider_code ); ?>">
+			<details class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation" id="ran-booster-documentation-provider-<?php echo esc_attr( $provider_code ); ?>">
 				<summary>
 					<?php
 					/* translators: %s: Repository provider name. */
 					echo esc_html( sprintf( __( '%s credentials and access', 'ran-booster' ), $provider_label ) );
 					?>
 				</summary>
-				<div class="ran-booster-documentation__content">
+				<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 					<?php if ( $setup_available ) { ?>
 						<h3><?php esc_html_e( 'Minimum credential permissions', 'ran-booster' ); ?></h3>
 						<p><?php echo esc_html( $credentials['summary'] ?? '' ); ?></p>
@@ -376,9 +376,9 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 					<?php $documentation_hooks->render_prepared_sections( $prepared_provider_guide['sections'] ); ?>
 				<?php } ?>
 
-		<details id="ran-booster-installing-and-managing-packages" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation">
+		<details id="ran-booster-installing-and-managing-packages" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Installing and managing packages', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
+			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 				<p><?php esc_html_e( 'Choose a provider, then search for a repository or enter its account and name manually. Booster resolves repository visibility, stable identity, and the default branch before installation.', 'ran-booster' ); ?></p>
 				<ul>
 					<li><a href="<?php echo esc_url( $install_plugin_url ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a></li>
@@ -417,9 +417,9 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			</div>
 		</details>
 
-		<details id="ran-booster-push-to-deploy" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation">
+		<details id="ran-booster-push-to-deploy" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
+			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 				<p><?php esc_html_e( 'Push-to-Deploy is optional and configured separately on every target site. Use the matching provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'The provider screen reports site readiness, stable repository identity and whether a local signing secret applies. Local secret coverage means Booster can authenticate a matching delivery; it does not prove that a remote provider webhook exists. Configure and verify every remote webhook separately.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Security, delivery history and hosting', 'ran-booster' ); ?></h3>
@@ -468,9 +468,9 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 
 				<?php $documentation_hooks->render_prepared_sections( $prepared_global_sections ); ?>
 
-			<details id="ran-booster-about" class="ran-booster-documentation__section ran-booster-panel" data-ran-booster-documentation-section name="ran-booster-documentation">
+			<details id="ran-booster-about" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'About RAN Booster', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content">
+			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
 				<h3><?php esc_html_e( 'Where this came from', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Booster is a developer-focused repository deployment plugin for WordPress. It began as a modified derivative of WP Pusher 3.0.13. WP Pusher was created by Peter Suhm, and the inherited source was distributed under GPLv2. We are grateful for Peter’s original work and its central idea: use WordPress’s updater to deploy plugins and themes from version-controlled repositories.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'WP Pusher changed ownership in 2021 and is a separate product. Booster is an independent fork maintained by Rockets Are Nostalgic. It is not affiliated with or endorsed by Peter Suhm, WP Pusher or its owners. The distributed NOTICE.md and license.txt record the full source provenance and license.', 'ran-booster' ); ?></p>

@@ -489,6 +489,15 @@
 	.ran-booster-provider-task-tabs
 	.filter-links
 	li
+	> a:focus-visible {
+	outline: 2px solid var(--wp-admin-theme-color);
+	outline-offset: 2px;
+}
+
+.ran-booster-admin
+	.ran-booster-provider-task-tabs
+	.filter-links
+	li
 	> a:not(.current) {
 	border-block-end-color: transparent;
 }

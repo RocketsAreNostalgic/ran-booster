@@ -128,9 +128,9 @@ $repository_placeholder = array() === $locator_examples
 		</div>
 		<p class="description"><?php esc_html_e( 'Start with a provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results.', 'ran-booster' ); ?></p>
 
-		<details class="ran-booster-troubleshooting__specific"<?php echo $show_specific_form ? ' open' : ''; ?>>
+		<details class="ran-booster-troubleshooting__specific ran-booster-troubleshooting__disclosure"<?php echo $show_specific_form ? ' open' : ''; ?>>
 			<summary><?php esc_html_e( 'Check credential or repository access (optional)', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-troubleshooting__fields">
+			<div class="ran-booster-troubleshooting__disclosure-body ran-booster-troubleshooting__fields">
 				<p>
 					<label for="ran-booster-troubleshooting-credential"><?php esc_html_e( 'Saved credential', 'ran-booster' ); ?> <span class="description"><?php esc_html_e( '(optional)', 'ran-booster' ); ?></span></label>
 					<select id="ran-booster-troubleshooting-credential" class="ran-booster-troubleshooting__credential" name="ran_booster[credential_id]">

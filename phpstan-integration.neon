@@ -15,6 +15,7 @@ parameters:
 		- tests/fixtures
 		- vendor/ran/wp-release-updater/src
 	scanFiles:
+		- vendor/ran/wp-release-updater/src/Contract/IdentityDescriptor.php
 		- tests/WordPress/disposable-management-cleanup.php
 		- ran-booster.php
 		- tests/WordPress/WordPressOrgUpdateRequestFilterWordPressFunctions.php

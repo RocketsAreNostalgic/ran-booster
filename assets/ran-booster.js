@@ -353,7 +353,11 @@
 				'[data-ran-booster-provider-task-error]'
 			);
 
-			region.toggleAttribute('aria-busy', isBusy);
+			if (isBusy) {
+				region.setAttribute('aria-busy', 'true');
+			} else {
+				region.removeAttribute('aria-busy');
+			}
 			if (progress) {
 				progress.hidden = !isBusy;
 			}

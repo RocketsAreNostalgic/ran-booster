@@ -116,12 +116,11 @@ function fixture() {
 				? [current, other]
 				: [];
 		},
-		toggleAttribute(name, force) {
-			if (force) {
-				attributes.set(name, '');
-			} else {
-				attributes.delete(name);
-			}
+		setAttribute(name, value) {
+			attributes.set(name, value);
+		},
+		removeAttribute(name) {
+			attributes.delete(name);
 		},
 	};
 	const document = {
@@ -175,7 +174,7 @@ test('provider task requests expose progress and notify swapped controls', () =>
 	const detail = { target: state.panel, xhr: {} };
 	state.listeners.get('htmx:beforeRequest')({ detail });
 
-	assert.equal(state.attributes.has('aria-busy'), true);
+	assert.equal(state.attributes.get('aria-busy'), 'true');
 	assert.equal(state.progress.hidden, false);
 
 	state.listeners.get('htmx:afterRequest')({ detail });

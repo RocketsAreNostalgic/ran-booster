@@ -48,4 +48,26 @@ final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
 		self::assertCount( 8, $runtime->arguments );
 		self::assertSame( 1048576, $runtime->arguments[7] );
 	}
+
+	public function test_descriptor_admission_is_unavailable_on_the_pinned_protocol_six_runtime(): void {
+		$registrar = new ManagedReleaseUpdaterRegistrar( new RecordingReleaseUpdaterRuntime() );
+
+		self::assertNull( $registrar->with_descriptor_admission( static fn (): bool => true ) );
+	}
+
+	public function test_descriptor_admission_wraps_the_protocol_seven_clone(): void {
+		$runtime = new class() {
+			public mixed $admission = null;
+
+			public function with_descriptor_admission( callable $admission ): object {
+				$this->admission = $admission;
+				return new class() {};
+			}
+		};
+
+		$admitted = ( new ManagedReleaseUpdaterRegistrar( $runtime ) )->with_descriptor_admission( static fn (): bool => true );
+
+		self::assertInstanceOf( ManagedReleaseUpdaterRegistrar::class, $admitted );
+		self::assertIsCallable( $runtime->admission );
+	}
 }

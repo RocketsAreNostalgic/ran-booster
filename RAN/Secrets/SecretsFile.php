@@ -1424,7 +1424,7 @@ class SecretsFile {
 					'kind'          => $credential->kind,
 					'configuration' => $credential->configuration,
 				),
-				$credential->secret,
+				$credential->reveal_secret(),
 				true
 			);
 			$records[] = array(

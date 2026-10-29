@@ -157,6 +157,13 @@ that it belongs to. The record is normalized and bounded before it is written
 into a blueprint. Source profile IDs and local self-destruct dates are never
 serialized.
 
+`BlueprintCredential` retires its former public `$secret` property and keeps
+the secret privately in PHP's masked `\SensitiveParameterValue`. Plaintext is
+deliberately returned by `reveal_secret()` and `to_array()` for Blueprint
+processing; generic PHP serialization is refused. The canonical Blueprint
+archive format and encryption are unchanged. Revealed strings and arrays remain
+ordinary PHP values, with no isolation or erasure guarantee.
+
 That omission also applies to older Blueprint V1 archives. A target cannot
 reconstruct whether Booster once had a source-local automatic-removal date, so
 legacy archives receive the same explicit import, saved-target or leave choice

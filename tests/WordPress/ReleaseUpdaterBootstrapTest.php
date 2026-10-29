@@ -25,7 +25,7 @@ final class ReleaseUpdaterBootstrapTest extends TestCase {
 		self::assertIsObject( $broker );
 		self::assertTrue( method_exists( $broker, 'protocol_version' ) );
 		self::assertTrue( method_exists( $broker, 'diagnostics' ) );
-		self::assertSame( 6, $broker->protocol_version() );
+		self::assertSame( 7, $broker->protocol_version() );
 		self::assertSame( 1, $broker->diagnostics()['candidate_count'] );
 	}
 }

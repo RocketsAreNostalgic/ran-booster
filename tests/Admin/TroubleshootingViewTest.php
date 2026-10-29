@@ -1996,13 +1996,22 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-provider-tasks"', $status_html );
 		self::assertStringContainsString( 'hx-target="#ran-booster-provider-task-panel"', $status_html );
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-task-panel"', $status_html );
-		self::assertStringContainsString( 'hx-swap="outerHTML transition:true show:none"', $status_html );
+		self::assertStringContainsString( 'hx-swap="outerHTML transition:false show:none"', $status_html );
 		self::assertStringContainsString( 'hx-push-url="true"', $status_html );
 		self::assertStringContainsString( 'hx-history="false"', $status_html );
 		self::assertStringContainsString( 'hx-sync="this:replace"', $status_html );
 		self::assertSame( 4, substr_count( $status_html, 'hx-get="admin.php?page=ran-booster&amp;tab=bb&amp;panel=' ) );
 		self::assertSame( 4, substr_count( $status_html, 'data-ran-booster-provider-task="' ) );
 		self::assertSame( 2, substr_count( $status_html, 'hx-boost="true"' ) );
+		$dom             = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		$dom->loadHTML( $status_html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_errors );
+		$xpath      = new \DOMXPath( $dom );
+		$task_links = $xpath->query( '//ul[contains(concat(" ", normalize-space(@class), " "), " filter-links ")]/li/a[@data-ran-booster-provider-task]' );
+		self::assertInstanceOf( \DOMNodeList::class, $task_links );
+		self::assertSame( 3, $task_links->length );
 		self::assertStringContainsString( 'data-ran-booster-provider-task-progress', $status_html );
 		self::assertStringContainsString( 'data-ran-booster-provider-task-error', $status_html );
 		self::assertMatchesRegularExpression(

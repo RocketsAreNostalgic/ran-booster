@@ -10,6 +10,9 @@ final class DevelopmentSafetyNoticeController {
 	public const NONCE_ACTION  = 'ran-booster-development-safety-notice';
 	public const USER_META_KEY = '_ran_booster_development_safety_notice_dismissed';
 
+	public function __construct( private NoticePreference $preferences = new NoticePreference() ) {
+	}
+
 	public function handle(): mixed {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return wp_send_json_error(
@@ -33,8 +36,11 @@ final class DevelopmentSafetyNoticeController {
 			);
 		}
 
-		update_user_meta( $user_id, self::USER_META_KEY, '1' );
-		if ( '1' !== get_user_meta( $user_id, self::USER_META_KEY, true ) ) {
+		$mode = isset( $_POST['mode'] ) && is_string( $_POST['mode'] )
+			? wp_unslash( $_POST['mode'] )
+			: NoticePreference::MODE_ACKNOWLEDGE;
+		if ( NoticePreference::MODE_ACKNOWLEDGE !== $mode
+			|| ! $this->preferences->save( $user_id, self::USER_META_KEY, '1', $mode ) ) {
 			return wp_send_json_error(
 				array( 'message' => __( 'RAN Booster could not remember the notice dismissal.', 'ran-booster' ) ),
 				500

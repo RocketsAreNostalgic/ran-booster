@@ -85,9 +85,9 @@ $repository_placeholder = array() === $locator_examples
 	</header>
 
 	<div class="ran-booster-page-shell__body ran-booster-panel">
-		<nav class="ran-booster-secondary-nav" aria-label="<?php echo esc_attr( __( 'Troubleshooting views', 'ran-booster' ) ); ?>">
+		<nav class="ran-booster-secondary-nav nav-tab-wrapper wp-clearfix" aria-label="<?php echo esc_attr( __( 'Troubleshooting views', 'ran-booster' ) ); ?>">
 		<?php foreach ( $secondary_navigation as $secondary_item ) { ?>
-			<a class="ran-booster-secondary-nav__link<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' is-current' : ''; ?>" href="<?php echo esc_url( $secondary_item['url'] ); ?>"<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $secondary_item['label'] ); ?></a>
+			<a class="nav-tab<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' nav-tab-active' : ''; ?>" href="<?php echo esc_url( $secondary_item['url'] ); ?>"<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $secondary_item['label'] ); ?></a>
 		<?php } ?>
 		</nav>
 

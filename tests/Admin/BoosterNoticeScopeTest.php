@@ -44,4 +44,47 @@ final class BoosterNoticeScopeTest extends TestCase {
 		self::assertTrue( BoosterNoticeScope::allows() );
 		self::assertTrue( BoosterNoticeScope::is_booster_screen() );
 	}
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_render_defers_only_booster_output_and_cleans_up_after_exceptions(): void {
+		require_once dirname( __DIR__ ) . '/Support/BoosterNoticeScopeWordPressFunctions.php';
+		$GLOBALS['ran_booster_notice_scope_screen'] = (object) array( 'id' => 'plugins' );
+		ob_start();
+		BoosterNoticeScope::render(
+			static function (): void {
+				echo 'global';
+			}
+		);
+		self::assertSame( 'global', ob_get_clean() );
+		$GLOBALS['ran_booster_notice_scope_screen']->id = 'toplevel_page_ran-booster';
+		ob_start();
+		BoosterNoticeScope::render(
+			static function (): void {
+				echo 'first';
+			}
+		);
+		BoosterNoticeScope::render(
+			static function (): void {
+				echo 'second';
+			}
+		);
+		self::assertSame( '', ob_get_clean() );
+		$level = ob_get_level();
+		try {
+			BoosterNoticeScope::render(
+				static function (): void {
+					echo 'discard';
+					throw new \RuntimeException( 'failure' );
+				}
+			);
+			self::fail( 'Expected exception' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertSame( 'failure', $exception->getMessage() );
+		}
+		self::assertSame( $level, ob_get_level() );
+		ob_start();
+		BoosterNoticeScope::render_shell_notices();
+		BoosterNoticeScope::render_shell_notices();
+		self::assertSame( 'firstsecond', ob_get_clean() );
+	}
 }

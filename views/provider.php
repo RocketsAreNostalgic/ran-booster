@@ -450,12 +450,13 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 						class="ran-booster-provider-tasks"
 						hx-target="#ran-booster-provider-task-panel"
 						hx-select="#ran-booster-provider-task-panel"
-						hx-swap="outerHTML transition:true show:none"
+						hx-swap="outerHTML transition:false show:none"
 						hx-push-url="true"
 						hx-history="false"
 						hx-sync="this:replace"
 					>
 						<nav class="ran-booster-provider-task-tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true">
+							<ul class="filter-links">
 							<?php
 							foreach ( array(
 								'status'       => __( 'Status', 'ran-booster' ),
@@ -463,11 +464,12 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 								'setup'        => __( 'Webhook receiver', 'ran-booster' ),
 							) as $task => $label ) {
 								?>
-								<a class="ran-booster-provider-task-tab" href="<?php echo esc_url( $task_urls[ $task ] ); ?>" hx-get="<?php echo esc_url( $task_request_urls[ $task ] ); ?>" data-ran-booster-provider-task="<?php echo esc_attr( $task ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $provider_task === $task ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a>
+								<li><a class="ran-booster-provider-task-tab<?php echo $provider_task === $task ? ' current' : ''; ?>" href="<?php echo esc_url( $task_urls[ $task ] ); ?>" hx-get="<?php echo esc_url( $task_request_urls[ $task ] ); ?>" data-ran-booster-provider-task="<?php echo esc_attr( $task ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $provider_task === $task ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a></li>
 							<?php } ?>
+							</ul>
 							<p class="ran-booster-provider-task-progress" data-ran-booster-provider-task-progress role="status" aria-live="polite" hidden>
 								<span class="spinner is-active" aria-hidden="true"></span>
-								<span><?php esc_html_e( 'Loading provider details…', 'ran-booster' ); ?></span>
+								<span class="screen-reader-text"><?php esc_html_e( 'Loading provider details…', 'ran-booster' ); ?></span>
 							</p>
 						</nav>
 						<div class="notice notice-error inline ran-booster-provider-task-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden>

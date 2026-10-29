@@ -909,12 +909,12 @@ The current contracts are implemented in:
 - `RAN/WordPress/ManagedReleaseTargetRegistrar.php`
 - `RAN/RepositoryProvider/RepositoryReleaseAcquirer.php`
 - `RAN/RepositoryProvider/RepositoryReleaseArtifact.php`
-- `RAN/Booster/GitHub/GitHubReleaseArtifact.php`
+- `vendor/ran/booster-github-provider/src/GitHubReleaseArtifact.php`
 - `RAN/Deployment/PreparedArtifact.php`
 - `RAN/WordPress/CorePackageExecutor.php`
-- `vendor/ran/wp-github-release-updater/src/WordPress/ReleaseAssurance.php`
-- `vendor/ran/wp-github-release-updater/src/WordPress/NativePluginUpdater.php`
-- `vendor/ran/wp-github-release-updater/src/WordPress/ReleaseCandidatePreflight.php`
+- `vendor/ran/wp-release-updater/src/Provider/GitHub/GitHubReleaseService.php`
+- `vendor/ran/wp-release-updater/src/WordPress/NativePackageUpdater.php`
+- `vendor/ran/wp-release-updater/src/Provider/GitHub/ProspectiveReleaseInspection.php`
 - `RAN/Webhook/WebhookProcessor.php`
 - `RAN/Deployment/DeploymentAttemptRepository.php`
 - `RAN/Deployment/DeploymentCoordinator.php`

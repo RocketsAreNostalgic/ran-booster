@@ -468,8 +468,21 @@
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
-	margin-block-start: var(--ran-booster-space-16);
+	margin-block-start: var(--ran-booster-space-8);
 	border-block-end: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-provider-task-tabs .filter-links {
+	display: flex;
+	flex-wrap: wrap;
+	column-gap: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-provider-task-tabs .filter-links li > a {
+	margin: 0;
+	padding: 8px 0;
+	font-weight: 600;
+	text-decoration: none;
 }
 
 .ran-booster-admin .ran-booster-provider-task-tab__source-indicator {

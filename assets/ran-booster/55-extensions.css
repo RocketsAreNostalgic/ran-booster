@@ -46,6 +46,17 @@
 	margin-block-start: var(--ran-booster-space-16);
 }
 
+/* Keep the selected extension modal within the viewport, including its close button. */
+/* stylelint-disable selector-id-pattern, declaration-no-important -- ThickBox owns the ID and writes dimensions and margins inline. */
+#TB_window.ran-booster-extension-modal {
+	box-sizing: border-box;
+	inline-size: min(802px, calc(100vw - 80px)) !important;
+	block-size: min(640px, calc(100vh - 80px)) !important;
+	margin: 0 !important;
+	transform: translate(-50%, -50%);
+}
+/* stylelint-enable selector-id-pattern, declaration-no-important */
+
 /* stylelint-disable-next-line selector-id-pattern -- WordPress ThickBox owns these IDs. */
 #TB_window.plugin-details-modal #TB_ajaxContent {
 	box-sizing: border-box;

@@ -173,7 +173,7 @@ final class ExtensionsPageTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_renders_release_specific_manual_install_and_unavailable_states(): void {
+	public function test_renders_release_specific_install_and_details_actions(): void {
 		$this->define_apis_compatible_with_existing_extension_catalogue();
 
 		$output = $this->render();
@@ -197,10 +197,16 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'Get access', $output );
 		self::assertStringNotContainsString( 'Sponsor packages', $output );
 		self::assertSame( 4, substr_count( $output, '>Beta<' ) );
-		self::assertSame( 2, substr_count( $output, '>Open release<' ) );
+		self::assertSame( 2, substr_count( $output, '>Install</button>' ) );
+		self::assertSame( 2, substr_count( $output, 'name="action" value="ran_booster_extension_install"' ) );
+		self::assertStringContainsString( 'name="extension_id" value="ran-booster-bitbucket"', $output );
+		self::assertStringContainsString( 'name="extension_id" value="ran-booster-wp-pusher-migrator"', $output );
+		self::assertStringContainsString( 'nonce-for-ran_booster_extension_install_ran-booster-bitbucket', $output );
+		self::assertStringContainsString( 'nonce-for-ran_booster_extension_install_ran-booster-wp-pusher-migrator', $output );
 		self::assertStringContainsString( 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/tag/v0.1.0-beta.17', $output );
 		self::assertStringContainsString( 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.11', $output );
-		self::assertStringContainsString( 'Download the attached plugin ZIP, then use Plugins &gt; Add New &gt; Upload Plugin.', $output );
+		self::assertSame( 2, substr_count( $output, '>Release page</a>' ) );
+		self::assertStringNotContainsString( 'Download the attached plugin ZIP', $output );
 		self::assertStringNotContainsString( '>Sponsor install<', $output );
 		self::assertStringNotContainsString( '>Install unavailable<', $output );
 		self::assertSame( 0, substr_count( $output, ' disabled aria-disabled="true"' ) );
@@ -224,9 +230,49 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'install-now', $output );
 		self::assertStringNotContainsString( 'plugin-information?', $output );
 		self::assertStringNotContainsString( '<iframe', $output );
-		self::assertStringNotContainsString( '<form', $output );
+		self::assertSame( 2, substr_count( $output, '<form method="post"' ) );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_', $output );
 		self::assertLessThan( strpos( $output, 'WP Pusher Migrator' ), strpos( $output, 'Bitbucket Cloud' ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_install_action_requires_plugin_install_capability(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$GLOBALS['ran_booster_test_capabilities']['install_plugins'] = false;
+		$output = $this->render();
+		self::assertStringNotContainsString( 'name="action" value="ran_booster_extension_install"', $output );
+		self::assertStringContainsString( 'You do not have permission to install plugins.', $output );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_install_success_notice_requires_matching_inactive_selected_release(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$_GET['ran_booster_extension_result'] = 'installed';
+		$_GET['ran_booster_extension_id']     = 'ran-booster-bitbucket';
+		self::assertStringNotContainsString( 'Extension installed. Activate it', $this->render() );
+		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Version' => '0.1.0-beta.17' );
+		self::assertStringContainsString( 'Extension installed. Activate it', $this->render() );
+		$_GET['ran_booster_extension_id'] = '<script>alert(1)</script>';
+		$output                           = $this->render();
+		self::assertStringNotContainsString( 'Extension installed. Activate it', $output );
+		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_install_result_uses_only_fixed_safe_messages(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$_GET['ran_booster_extension_id']     = 'ran-booster-bitbucket';
+		$_GET['ran_booster_extension_result'] = 'failed';
+		self::assertStringContainsString( 'The extension could not be installed.', $this->render() );
+		$_GET['ran_booster_extension_result'] = '<script>alert(1)</script>';
+		$output                               = $this->render();
+		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );
+		self::assertStringNotContainsString( 'The extension could not be installed.', $output );
+		$_GET['ran_booster_extension_result'] = array( 'failed' );
+		self::assertStringNotContainsString( 'The extension could not be installed.', $this->render() );
 	}
 
 	#[RunInSeparateProcess]

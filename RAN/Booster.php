@@ -109,6 +109,7 @@ class Booster {
 			'wp_ajax_' . \RAN\Admin\PortabilityController::APPLY_ACTION,
 			$this->service_callback( \RAN\Admin\PortabilityController::class, 'handle_apply' )
 		);
+		add_action( 'admin_post_ran_booster_extension_install', array( $this, 'install_extension' ) );
 		add_action( 'activate_plugin', array( WpPusherCoexistencePolicy::class, 'block_wp_pusher_activation' ) );
 		add_action( 'rest_api_init', array( $this, 'register_webhook_routes' ) );
 		add_action( WordPressWorkerWakeup::HOOK, array( $this, 'run_deployment_worker' ), 10, 0 );
@@ -284,6 +285,32 @@ class Booster {
 		}
 	}
 
+	/** Install only a selected, fixed-catalogue extension. */
+	public function install_extension(): void {
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! current_user_can( 'manage_options' ) || ! current_user_can( 'install_plugins' ) ) {
+			wp_die( esc_html__( 'You cannot install plugins.', 'ran-booster' ) );
+		}
+		$id = isset( $_POST['extension_id'] ) && is_string( $_POST['extension_id'] ) ? sanitize_key( wp_unslash( $_POST['extension_id'] ) ) : '';
+		check_admin_referer( 'ran_booster_extension_install_' . $id );
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		$installer = new \RAN\Admin\ExtensionInstaller(
+			$this->service( \RAN\WordPress\WordPressUpdaterLock::class ),
+			$this->service( \RAN\WordPress\CorePackageExecutor::class ),
+			fn(): array => $this->extension_cards( get_plugins() )
+		);
+		$result    = $installer->install( $id );
+		$url       = add_query_arg(
+			array(
+				'page'                         => 'ran-booster-extensions',
+				'ran_booster_extension_id'     => $id,
+				'ran_booster_extension_result' => $result,
+			),
+			admin_url( 'admin.php' )
+		);
+		wp_safe_redirect( $url );
+		exit;
+	}
+
 	/** @param array<string, array<string, mixed>> $installed_plugins
 	 *  @return list<array<string, mixed>>
 	 */
@@ -313,6 +340,8 @@ class Booster {
 				),
 				'release_version'    => '0.1.0-beta.17',
 				'manual_install_url' => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/tag/v0.1.0-beta.17',
+				'asset_url'          => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/download/v0.1.0-beta.17/ran-booster-bitbucket-0.1.0-beta.17.zip',
+				'asset_sha256'       => 'b7963f335c624cf08124040a24a9d51d80c26640faee46e75334783f0547bc5a',
 				'docs_url'           => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket#readme',
 				'support_url'        => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/issues',
 			),
@@ -340,6 +369,8 @@ class Booster {
 				),
 				'release_version'    => '0.1.0-beta.11',
 				'manual_install_url' => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.11',
+				'asset_url'          => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/download/v0.1.0-beta.11/ran-booster-wp-pusher-migrator-0.1.0-beta.11.zip',
+				'asset_sha256'       => 'ff5c581b14ea12b0ee45880c6d3e7b43785be84e39e6193e908fd2573d822d9d',
 				'docs_url'           => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme',
 				'support_url'        => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/issues',
 			),

@@ -20,7 +20,9 @@
 						role: 'dialog',
 						'aria-label': $(this).attr('aria-label'),
 					})
-					.addClass('plugin-details-modal')
+					.addClass(
+						'plugin-details-modal ran-booster-extension-modal'
+					)
 					.removeClass('thickbox-loading');
 				$('#TB_closeWindowButton').trigger('focus');
 			}

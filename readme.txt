@@ -231,16 +231,28 @@ remains bootable and shows a persistent warning on Booster and Plugins screens.
 Managed credential and webhook operations pause; anonymous public-repository
 access and package-only Transporter Blueprints remain available.
 
-Deleting Booster through WordPress permanently removes all verified
-Booster-owned local data, including both custom tables, the encrypted
-credentials file and its separate database key. Before deletion, export a
-password-protected Blueprint with the selected packages and any explicitly
-selected eligible file-stored repository credentials the target may need.
-Blueprints omit webhook
-secrets, provider-side hooks, constants and deployment history, and restored
-packages start Disabled. Revoke provider credentials and remove remote webhooks
-separately first. Booster removes only the exact `wp-config.php` definition it
-created and leaves manually authored configuration untouched.
+Deleting Booster through WordPress is permanent local cleanup; deactivation is
+not. With Booster active, choose **Export settings before deleting** on its
+Plugins row to open the Transporter export section. If it is inactive, activate
+it first, then export before returning to Plugins to deactivate and choose
+**Delete**. Deactivation itself preserves Booster data.
+
+After its safety checks pass, Delete removes verified Booster-owned credentials
+and webhook secrets, their key, managed-package records, deployment journal and
+Activity data, owned options and schedules, temporary debug capture, and only
+the exact managed `wp-config.php` definition, lock and empty automatic storage
+directories. It retains managed plugin/theme files. Provider tokens or PATs and
+remote hooks need separate cleanup; independently owned extension data and
+manually written configuration are outside this promise.
+
+Before deleting, explicitly select eligible file-backed credentials and the
+packages needed on the target; credential-bearing Blueprints are
+password-protected, so retain the ZIP and its password securely. Transporter
+omits webhook secrets and history, constants and the original storage key;
+imported or adopted packages remain deployment
+**Disabled**. It is selective reconstruction, not a full backup. Keep matching
+database, package-file and private-storage backups; if Transporter is unavailable
+or export fails, no successful backup has been made and deletion should wait.
 
 RAN Booster has no WordPress.org release, central authentication service or
 unattended self-update. Source checkouts and unverified directories keep the

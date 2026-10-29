@@ -307,6 +307,13 @@
 	margin-block-start: var(--ran-booster-space-20);
 }
 
+.no-js
+	.ran-booster-admin
+	.ran-booster-portability
+	#ran-booster-portability-export:target {
+	display: block;
+}
+
 .ran-booster-admin .ran-booster-portability__chooser h3,
 .ran-booster-admin .ran-booster-portability__flow h3 {
 	margin-block-start: 0;

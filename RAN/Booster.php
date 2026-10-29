@@ -471,6 +471,20 @@ class Booster {
 
 	/** @return void */
 	public function register_plugin_action_links() {
+		if ( current_user_can( 'manage_options' ) && ! is_multisite() ) {
+			$plugin_file = plugin_basename( $this->booster_path . 'ran-booster.php' );
+			$export_url  = admin_url( 'admin.php?page=ran-booster-transporter#ran-booster-portability-export' );
+			$export_link = '<a href="' . esc_url( $export_url ) . '">' . esc_html__( 'Export settings before deleting', 'ran-booster' ) . '</a>';
+
+			add_filter(
+				'plugin_action_links_' . $plugin_file,
+				function ( $links ) use ( $export_link ) {
+					$links[] = $export_link;
+					return $links;
+				}
+			);
+		}
+
 		if ( $this->is_passive_troubleshooting_request() ) {
 			return;
 		}

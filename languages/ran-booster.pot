@@ -1005,7 +1005,7 @@ msgid "Completed"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Booster.php:832
+#: RAN/Booster.php:846
 #: views/attempts/index.php:51
 #: views/packages/index.php:64
 #: views/troubleshooting.php:42
@@ -2811,7 +2811,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:712
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:833
+#: RAN/Booster.php:847
 #: views/attempts/index.php:54
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
@@ -4635,75 +4635,79 @@ msgstr ""
 msgid "Compatible with your version of Booster"
 msgstr ""
 
-#: RAN/Booster.php:499
+#: RAN/Booster.php:477
+msgid "Export settings before deleting"
+msgstr ""
+
+#: RAN/Booster.php:513
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:829
+#: RAN/Booster.php:843
 #: views/attempts/index.php:46
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:830
+#: RAN/Booster.php:844
 #: views/attempts/index.php:47
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:831
+#: RAN/Booster.php:845
 #: views/attempts/index.php:49
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:834
+#: RAN/Booster.php:848
 #: views/packages/index.php:329
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:835
+#: RAN/Booster.php:849
 #: views/packages/index.php:331
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:836
+#: RAN/Booster.php:850
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:837
+#: RAN/Booster.php:851
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:838
+#: RAN/Booster.php:852
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:839
+#: RAN/Booster.php:853
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:840
+#: RAN/Booster.php:854
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:841
+#: RAN/Booster.php:855
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:937
+#: RAN/Booster.php:951
 msgid "RAN Booster could not save this notice preference. Please try again."
 msgstr ""
 
-#: RAN/Booster.php:974
+#: RAN/Booster.php:988
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:976
+#: RAN/Booster.php:990
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:978
+#: RAN/Booster.php:992
 msgid "Contact a site administrator."
 msgstr ""
 
@@ -8598,7 +8602,7 @@ msgid "The Transporter Blueprint contains managed plugin and theme configuration
 msgstr ""
 
 #: views/portability.php:74
-msgid "Known installed requirements are included as observations. Unreadable or invalid declarations are omitted; missing information does not mean compatible. Configuration export does not verify installed files or guarantee exact reproduction."
+msgid "Deleting Booster removes its saved local credentials and records."
 msgstr ""
 
 #: views/portability.php:81

@@ -18,11 +18,25 @@ final class PortabilityViewTest extends TestCase {
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath          = new \DOMXPath( $document );
 		$heading_panels = $xpath->query( '//*[@id="ran-booster-portability-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
-		$export_warning = $xpath->query( '//*[@id="ran-booster-portability-export"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]//*[contains(text(), "Configuration export does not verify installed files")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
-		self::assertInstanceOf( \DOMNodeList::class, $export_warning );
 		self::assertCount( 0, $heading_panels );
-		self::assertCount( 1, $export_warning );
+		$export_copy       = $xpath->query( '//*[@id="ran-booster-portability-export"]//header/p[not(contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability__eyebrow "))]' );
+		$export_disclosure = $xpath->query( '//*[@id="ran-booster-portability-export"]//header/details' );
+		$deletion_notice   = $xpath->query( '//*[@id="ran-booster-portability-export"]//header//*[contains(concat(" ", normalize-space(@class), " "), " notice ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $export_copy );
+		self::assertInstanceOf( \DOMNodeList::class, $export_disclosure );
+		self::assertInstanceOf( \DOMNodeList::class, $deletion_notice );
+		self::assertCount( 2, $export_copy );
+		self::assertCount( 0, $export_disclosure );
+		self::assertCount( 0, $deletion_notice );
+		$description = $export_copy->item( 0 );
+		$deletion    = $export_copy->item( 1 );
+		self::assertInstanceOf( \DOMElement::class, $description );
+		self::assertInstanceOf( \DOMElement::class, $deletion );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes this platform-owned property in camelCase.
+		self::assertSame( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', trim( $description->textContent ) );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes this platform-owned property in camelCase.
+		self::assertSame( 'Deleting Booster removes its saved local credentials and records.', trim( $deletion->textContent ) );
 		self::assertStringContainsString( 'Create a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'Open a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'What do you want to do on this site?', $html );

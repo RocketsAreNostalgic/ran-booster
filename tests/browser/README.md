@@ -8,11 +8,25 @@ test-fixture setup are complete.
 const checks =
 	await import('file:///absolute/path/to/checkout/tests/browser/package-settings.mjs');
 await checks.assertPackageSettingsContainment(tab);
+await checks.assertNavigationProgress(
+	tab,
+	'[data-ran-booster-source-progress]'
+);
 await checks.assertSourceRouteKeyboardRegression(tab, {
 	source: 'release_asset',
 	expectedPreviousSelector: 'a[data-ran-booster-source-choice="branch"]',
 });
+await checks.assertNavigationProgress(
+	tab,
+	'[data-ran-booster-source-progress]'
+);
 ```
+
+Use `assertNavigationProgress` before and after real navigation for source and
+provider progress (`[data-ran-booster-provider-task-progress]`). Pass `true`
+as its third argument while a request is pending to check the visible busy
+state. The assertion reads the actual spinner's computed visibility and checks
+that the progress slot retains geometry.
 
 Start from a saved fixture package on Branch. Current disposable fixture IDs
 are plugin `a11y-branch-disabled-plugin/a11y-branch-disabled-plugin.php` and

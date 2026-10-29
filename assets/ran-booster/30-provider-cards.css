@@ -496,6 +496,10 @@
 	visibility: hidden;
 }
 
+.ran-booster-admin .ran-booster-provider-task-progress[hidden] .spinner {
+	visibility: hidden;
+}
+
 .ran-booster-admin .ran-booster-provider-task-progress .spinner {
 	float: none;
 	margin: 0;

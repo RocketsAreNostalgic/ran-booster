@@ -324,7 +324,7 @@
             "version": "v1.0.0-beta.15",
             "source": {
                 "type": "git",
-                "url": "git@github.com:RocketsAreNostalgic/ran-wp-release-updater.git",
+                "url": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git",
                 "reference": "2283850d81a3a5b0dfa7fee07beddaba8bf02883"
             },
             "dist": {

@@ -145,6 +145,14 @@ final class ReleaseManagementDisplay {
 					<?php } ?>
 					<div class="ran-booster-source-transition">
 						<p><?php esc_html_e( 'Branch currently active.', 'ran-booster' ); ?></p>
+						<div>
+							<label for="ran-booster-initial-release-track"><?php esc_html_e( 'Initial release track', 'ran-booster' ); ?></label>
+							<select id="ran-booster-initial-release-track" name="release_channel" form="<?php echo esc_attr( $track_form_id ); ?>"<?php disabled( $track_disabled ); ?>>
+								<?php foreach ( array( 'stable', 'prerelease' ) as $channel ) { ?>
+									<option value="<?php echo esc_attr( $channel ); ?>"<?php selected( $channel === $selected_channel ); ?>><?php echo esc_html( $this->release_track_label( $channel ) ); ?></option>
+								<?php } ?>
+							</select>
+						</div>
 						<button type="submit" class="button button-primary" form="<?php echo esc_attr( $track_form_id ); ?>"<?php disabled( $track_disabled ); ?> aria-disabled="<?php echo $track_disabled ? 'true' : 'false'; ?>"><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
 					</div>
 				<?php } elseif ( $status_available && 'release_asset' === $source && $subdirectory_incompatible ) { ?>
@@ -517,7 +525,10 @@ final class ReleaseManagementDisplay {
 			<?php } ?>
 
 		<?php
-		$this->render_release_track( $selected_channel, $mode, $disabled );
+		$this->render_release_track( $selected_channel, $mode, $disabled || 'branch' === $mode );
+		if ( 'branch' === $mode ) {
+			echo '<p class="description">' . esc_html__( 'Activate Releases to change the release track.', 'ran-booster' ) . '</p>';
+		}
 
 		echo '</form>';
 	}

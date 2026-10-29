@@ -125,16 +125,79 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( '<form id="ran-booster-release-track-form"', $html );
 		if ( 'branch' === $source ) {
 			self::assertStringContainsString( 'form="ran-booster-release-track-form"', $html );
+			self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );
+			self::assertStringContainsString( 'id="ran-booster-initial-release-track"', $html );
 		} else {
 			self::assertStringContainsString( 'name="action" value="ran_booster_release_change_channel"', $html );
+			self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control"', $html );
+			self::assertStringNotContainsString( 'id="ran-booster-initial-release-track"', $html );
 		}
 	}
 
 	/** @return array<string,array{string,string,string,string}> */
 	public static function release_track_disclosure_packages(): array {
 		return array(
-			'plugin stable' => array( 'branch', 'plugin', 'stable', 'Stable' ),
-			'theme preview' => array( 'release_asset', 'theme', 'prerelease', 'Preview' ),
+			'plugin stable'   => array( 'branch', 'plugin', 'stable', 'Stable' ),
+			'theme branch'    => array( 'branch', 'theme', 'stable', 'Stable' ),
+			'plugin releases' => array( 'release_asset', 'plugin', 'stable', 'Stable' ),
+			'theme preview'   => array( 'release_asset', 'theme', 'prerelease', 'Preview' ),
+		);
+	}
+
+	#[DataProvider( 'initial_release_tracks' )]
+	public function test_initial_track_is_associated_with_enable_form_and_forwarded( string $type, string $channel ): void {
+		$package = new PackageProjection( 'branch', $type );
+		$status  = ReleaseManagementFixture::status( 'branch', $type );
+		$nonce   = 'nonce-for-release-tracking-enable-' . $type . '-' . $package->identifier() . '-3';
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url(), $channel, array( 'enable' => $nonce ) );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<label for="ran-booster-initial-release-track">Initial release track</label>', $html );
+		self::assertStringContainsString( 'name="release_channel" form="ran-booster-release-track-form"', $html );
+		self::assertStringContainsString( '<option value="' . $channel . '" selected="selected">', $html );
+		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );
+		self::assertStringContainsString( 'Activate Releases to change the release track.', $html );
+
+		$tracking = new ReleaseTrackingFacadeDouble( $status );
+		$request  = array(
+			'expected_type'            => $type,
+			'expected_identifier'      => $package->identifier(),
+			'expected_source_revision' => '3',
+			'_wpnonce'                 => $nonce,
+			'release_channel'          => $channel,
+		);
+		ReleaseManagementFixture::controls( $tracking )->process_admin_post_request( 'enable', $request );
+		self::assertSame( array( array( 'enable', $type, $package->identifier(), 3, $channel, $nonce ) ), $tracking->calls );
+	}
+
+	/** @return array<string,array{string,string}> */
+	public static function initial_release_tracks(): array {
+		return array(
+			'plugin stable'  => array( 'plugin', 'stable' ),
+			'plugin preview' => array( 'plugin', 'prerelease' ),
+			'theme stable'   => array( 'theme', 'stable' ),
+			'theme preview'  => array( 'theme', 'prerelease' ),
+		);
+	}
+
+	#[DataProvider( 'initial_track_gate_failures' )]
+	public function test_initial_track_is_disabled_when_transition_is_blocked( string $eligibility, string $failure, bool $has_nonce ): void {
+		$package = new PackageProjection();
+		$status  = ReleaseManagementFixture::status( eligibility_code: $eligibility, failure_code: $failure );
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url(), 'prerelease', $has_nonce ? array( 'enable' => 'nonce' ) : array() );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'name="release_channel" form="ran-booster-release-track-form" disabled="disabled"', $html );
+		self::assertStringContainsString( 'form="ran-booster-release-track-form" disabled="disabled" aria-disabled="true">Use releases', $html );
+	}
+
+	/** @return array<string,array{string,string,bool}> */
+	public static function initial_track_gate_failures(): array {
+		return array(
+			'missing nonce' => array( 'eligible', '', false ),
+			'ineligible'    => array( 'missing_update_uri', '', true ),
+			'conflict'      => array( 'eligible', 'release_repository_conflict', true ),
 		);
 	}
 
@@ -1017,6 +1080,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertStringContainsString( 'Use releases', $html );
 		self::assertStringContainsString( 'form="ran-booster-release-track-form" disabled="disabled" aria-disabled="true"', $html );
+		self::assertStringContainsString( 'name="release_channel" form="ran-booster-release-track-form" disabled="disabled"', $html );
 		self::assertStringContainsString( 'Published releases cannot be selected because source transition controls are temporarily unavailable.', $html );
 		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );
 	}

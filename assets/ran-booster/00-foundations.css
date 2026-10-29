@@ -13,16 +13,16 @@
  */
 
 /* Hidden notices do not need the shared shell's visible-notice spacing. */
-#wpbody-content > .notice[hidden] + .ran-admin-shell,
-#wpbody-content > div.updated[hidden] + .ran-admin-shell,
-#wpbody-content > div.error[hidden] + .ran-admin-shell {
+#wpbody-content
+	> :is(.notice, div.updated, div.error)[hidden]
+	+ .ran-admin-shell {
 	margin-block-start: 0;
 }
 
 /* Preserve spacing when a hidden placeholder follows a visible notice. */
-#wpbody-content > .notice:not([hidden]) ~ .ran-admin-shell,
-#wpbody-content > div.updated:not([hidden]) ~ .ran-admin-shell,
-#wpbody-content > div.error:not([hidden]) ~ .ran-admin-shell {
+#wpbody-content
+	> :is(.notice, div.updated, div.error):not([hidden])
+	~ .ran-admin-shell {
 	margin-block-start: 20px;
 }
 

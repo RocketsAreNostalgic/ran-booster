@@ -3,7 +3,7 @@
 /**
  * Plugin Name: RAN Booster
  * Plugin URI: https://github.com/RocketsAreNostalgic/ran-booster
- * Description: Repository deployment management for WordPress themes and plugins. Deleting Booster permanently removes its owned local credentials and records. Before deleting: activate Booster, export selected configuration and eligible credentials with Transporter, deactivate, then delete. Transporter is not a full backup.
+ * Description: Repository deployment management for WordPress themes and plugins.
  * x-release-please-start-version
  * Version: 1.0.0-beta.40
  * x-release-please-end

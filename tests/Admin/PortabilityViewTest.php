@@ -23,6 +23,12 @@ final class PortabilityViewTest extends TestCase {
 		self::assertInstanceOf( \DOMNodeList::class, $export_warning );
 		self::assertCount( 0, $heading_panels );
 		self::assertCount( 1, $export_warning );
+		$deletion_guidance = $xpath->query( '//*[@id="ran-booster-portability-export"]//header/p[contains(text(), "Deleting Booster removes its saved local credentials and records.")]' );
+		$deletion_notice   = $xpath->query( '//*[@id="ran-booster-portability-export"]//header//*[contains(concat(" ", normalize-space(@class), " "), " notice ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $deletion_guidance );
+		self::assertInstanceOf( \DOMNodeList::class, $deletion_notice );
+		self::assertCount( 1, $deletion_guidance );
+		self::assertCount( 0, $deletion_notice );
 		self::assertStringContainsString( 'Create a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'Open a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'What do you want to do on this site?', $html );

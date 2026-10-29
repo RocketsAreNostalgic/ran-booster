@@ -72,6 +72,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 			<h3 id="ran-booster-portability-export-heading" tabindex="-1"><?php esc_html_e( 'Create a Transporter Blueprint', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', 'ran-booster' ); ?></p>
 			<p class="description"><?php esc_html_e( 'Known installed requirements are included as observations. Unreadable or invalid declarations are omitted; missing information does not mean compatible. Configuration export does not verify installed files or guarantee exact reproduction.', 'ran-booster' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Deleting Booster removes its saved local credentials and records. Transporter exports selected configuration and eligible credentials you explicitly choose; it is not a full backup and does not include webhook secrets or deployment history.', 'ran-booster' ); ?></p>
 		</header>
 		<form class="ran-booster-portability__export-form" method="post" action="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-portability-export-form>
 			<input type="hidden" name="action" value="ran_booster_export_blueprint">

@@ -232,9 +232,10 @@ Managed credential and webhook operations pause; anonymous public-repository
 access and package-only Transporter Blueprints remain available.
 
 Deleting Booster through WordPress is permanent local cleanup; deactivation is
-not. From **Plugins**, export while Booster is active. If it is inactive,
-activate it, open Booster → **Transporter** to export, then return to Plugins,
-deactivate it and choose **Delete**. Deactivation itself preserves Booster data.
+not. With Booster active, choose **Export settings before deleting** on its
+Plugins row to open the Transporter export section. If it is inactive, activate
+it first, then export before returning to Plugins to deactivate and choose
+**Delete**. Deactivation itself preserves Booster data.
 
 After its safety checks pass, Delete removes verified Booster-owned credentials
 and webhook secrets, their key, managed-package records, deployment journal and

@@ -50,9 +50,10 @@ treat their absence as compatibility evidence.
 
 ## Before deleting Booster on the source
 
-Export while Booster is active on **Plugins**. If it is inactive, activate it,
-open **Transporter** to export, then return to Plugins, deactivate it and choose
-**Delete**; deactivation alone preserves its data. Delete removes verified
+With Booster active on **Plugins**, choose **Export settings before deleting**
+to open the Transporter export section. If it is inactive, activate it first,
+then export before returning to Plugins to deactivate and choose **Delete**;
+deactivation alone preserves its data. Delete removes verified
 Booster-owned credentials and webhook secrets, key, package/deployment/Activity
 records, options, schedules and temporary debug capture, but retains managed
 package files. The Blueprint omits webhook secrets/history, constants and the

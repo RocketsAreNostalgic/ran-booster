@@ -474,7 +474,7 @@ class Booster {
 		if ( current_user_can( 'manage_options' ) && ! is_multisite() ) {
 			$plugin_file = plugin_basename( $this->booster_path . 'ran-booster.php' );
 			$export_url  = admin_url( 'admin.php?page=ran-booster-transporter#ran-booster-portability-export' );
-			$export_link = '<a href="' . esc_url( $export_url ) . '">' . esc_html__( 'Export before deleting', 'ran-booster' ) . '</a>';
+			$export_link = '<a href="' . esc_url( $export_url ) . '">' . esc_html__( 'Export settings before deleting', 'ran-booster' ) . '</a>';
 
 			add_filter(
 				'plugin_action_links_' . $plugin_file,
@@ -482,14 +482,6 @@ class Booster {
 					$links[] = $export_link;
 					return $links;
 				}
-			);
-			add_action(
-				'after_plugin_row_' . $plugin_file,
-				function ( string $plugin_file ): void {
-					$this->render_deletion_guidance( $plugin_file );
-				},
-				10,
-				1
 			);
 		}
 
@@ -529,27 +521,6 @@ class Booster {
 				}
 			);
 		}
-	}
-
-	private function render_deletion_guidance( string $plugin_file ): void {
-		global $wp_list_table;
-
-		$columns = is_object( $wp_list_table ) && method_exists( $wp_list_table, 'get_column_count' )
-			? max( 1, (int) $wp_list_table->get_column_count() )
-			: 4;
-		$active  = function_exists( 'is_plugin_active' ) && is_plugin_active( $plugin_file ) ? ' active' : '';
-		?>
-		<tr class="plugin-update-tr<?php echo esc_attr( $active ); ?>" data-plugin="<?php echo esc_attr( $plugin_file ); ?>" data-ran-booster-deletion-guidance>
-			<td colspan="<?php echo esc_attr( (string) $columns ); ?>" class="plugin-update colspanchange">
-				<div class="update-message notice inline notice-warning notice-alt">
-					<p>
-						<strong><?php esc_html_e( 'Deleting Booster permanently removes its owned local credentials and records.', 'ran-booster' ); ?></strong>
-						<?php esc_html_e( 'Before deactivating, use Transporter to export selected supported configuration and explicitly selected eligible credentials. This is not a full backup.', 'ran-booster' ); ?>
-					</p>
-				</div>
-			</td>
-		</tr>
-		<?php
 	}
 
 	/**

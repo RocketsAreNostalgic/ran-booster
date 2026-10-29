@@ -59,30 +59,10 @@ if ( ! function_exists( __NAMESPACE__ . '\\esc_url' ) ) {
 	}
 }
 
-if ( ! function_exists( __NAMESPACE__ . '\\esc_attr' ) ) {
-	function esc_attr( string $text ): string {
-		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
-	}
-}
-
 if ( ! function_exists( __NAMESPACE__ . '\\esc_html__' ) ) {
 	function esc_html__( string $text, string $domain = 'default' ): string {
 		unset( $domain );
 
 		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
-	}
-}
-
-if ( ! function_exists( __NAMESPACE__ . '\\esc_html' ) ) {
-	function esc_html( string $text ): string {
-		return htmlspecialchars( $text, ENT_QUOTES, 'UTF-8' );
-	}
-}
-
-if ( ! function_exists( __NAMESPACE__ . '\\esc_html_e' ) ) {
-	function esc_html_e( string $text, string $domain = 'default' ): void {
-		unset( $domain );
-
-		echo esc_html( $text );
 	}
 }

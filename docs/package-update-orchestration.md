@@ -59,6 +59,64 @@ Booster's own update target has a separate installation-provenance gate. See
 marker, source-checkout protection, explicit override, runtime-only handoff,
 administrator messaging, and release proof.
 
+## Archived Release Deployments add-on
+
+The standalone
+[`ran-booster-release-deployments` repository](https://github.com/RocketsAreNostalgic/ran-booster-release-deployments)
+is archived. Its release-management tasks now belong to Core's controls and
+the selected provider's capabilities; bundled GitHub supplies these capabilities.
+The [August 2026 removal of standalone product identity](https://github.com/RocketsAreNostalgic/ran-booster/commit/379080c4ceb9764561e283a284a5c7f035032be1)
+is already landed. This is an existing retirement, not a new adaptation or
+retirement program.
+
+The archived README's Add-on API 15 and optional public Prospective Release
+API 5 requirements describe that historical add-on line. Current Core uses
+Add-on API 17 and publishes neither old release-facade ready action nor the
+prospective-release marker. Changing the add-on's required version would not
+restore those contracts. The
+[internal prospective facade](admin-composition-contract.md#add-on-generation-and-service-delivery)
+is not a replacement public API.
+
+| Historical operator task | Current Core path |
+| --- | --- |
+| Switch an eligible managed plugin or theme to releases | Open package settings → Releases → **Use releases**. Core validates before changing source; viewing settings does not change configuration. |
+| Follow stable or preview releases | Choose the release track in package settings. Preview includes eligible prereleases and stable releases, never drafts. Changing track does not install or downgrade. |
+| Refresh an existing release-managed package | **Check releases** on managed Plugins or Themes; **Open WordPress updates** hands installation to WordPress. Disabled, Manual and Automatic retain their distinct authority. |
+| Install a not-yet-managed plugin or theme from a release | Use Core's Install Plugin or Install Theme release controls. Listing is metadata-only; inspection validates and discards the ZIP; Install freshly acquires it and verifies the inspected selection. Partial or uncertain outcomes do not claim adoption. |
+| Return to the retained branch | In the Branch view, **Use branch** changes source authority without deploying files or removing repository webhooks. Source switching preserves Disabled and Manual and resets Automatic to Manual. |
+| Prepare release automation for an eligible repository | Core's release-workflow helper assesses, previews and explicitly proposes an initial draft setup PR, with outcome readback. The maintainer owns merge and subsequent files. |
+
+The historical helper's template-update operations are deliberately absent
+from the current [initial-only workflow contract](provider-release-workflow-api.md#initial-only-contract).
+They are not a remaining retirement task. Providers without the required
+capabilities remain unavailable for the affected controls; ordinary provider
+registration does not promise release parity.
+
+### Retained installations and custody
+
+An archived checkout, old ZIP or compatibility fixture is historical evidence,
+not a supported current extension or an instruction to activate it. Core's
+[hard-cut regression](../tests/Runtime/ReleaseManagementCutoverBootstrapTest.php)
+checks removal of the old seams and leaves obsolete
+`ran_booster_release_deployments_setup_records` untouched without reading or
+migrating them into current workflow authority. Historical record names do not
+establish current ownership or permission to delete them.
+
+Before any separately authorized cleanup, inventory the exact installed Core,
+provider and add-on builds, activation state, package source/configuration,
+workflow records and recovery material. Retain evidence needed to restore or
+explain that installation. Deleting Core removes its verified local records,
+credentials sidecar and database key; a selected
+[Transporter export](portability-briefcase.md) is not a full backup. Installed
+managed package files, remote credentials and provider-side webhooks have
+separate custody. Source inspection or an old disposable-site proof does not
+establish that uninstalling or deleting a retained installation is safe.
+
+This mapping describes current source controls. It does not establish satellite
+publication, qualify an installed build or clear manual acceptance and recovery
+holds. Any demonstrated unmet task needs a separate scoped decision, not an
+adapter to the retired public contract.
+
 ## Adoption identity and recovery
 
 Each managed plugin or theme has one immutable `adoption_token`, stored with

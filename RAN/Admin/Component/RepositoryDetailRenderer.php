@@ -49,9 +49,9 @@ final class RepositoryDetailRenderer {
 					<a class="button" href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s is the repository provider name. */ __( 'Open on %s', 'ran-booster' ), $provider_label ) ); ?></a>
 				<?php } ?>
 			</header>
-			<p class="ran-booster-provider-task-progress" data-ran-booster-provider-task-progress role="status" aria-live="polite" hidden><span class="spinner is-active" aria-hidden="true"></span><span><?php esc_html_e( 'Loading repository details…', 'ran-booster' ); ?></span></p>
 			<div class="notice notice-error inline ran-booster-provider-task-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden><p><?php esc_html_e( 'Booster could not load that repository view. The current view is unchanged; choose the view again to retry.', 'ran-booster' ); ?></p></div>
-			<nav class="ran-booster-provider-task-tabs ran-booster-repository-detail__tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-push-url="true" hx-history="false" hx-sync="this:replace">
+			<nav class="ran-booster-provider-task-tabs ran-booster-repository-detail__tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:false show:none" hx-push-url="true" hx-history="false" hx-sync="this:replace">
+				<ul class="filter-links">
 				<?php
 				foreach ( array(
 					'status'   => __( 'Status', 'ran-booster' ),
@@ -63,10 +63,12 @@ final class RepositoryDetailRenderer {
 					$has_source  = ( 'branch' === $view && in_array( $source_key, array( 'branch', 'mixed' ), true ) )
 						|| ( 'releases' === $view && in_array( $source_key, array( 'release_asset', 'mixed' ), true ) );
 					?>
-					<a class="ran-booster-provider-task-tab" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $request_url ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-profile-region" <?php echo $active_view === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $has_source ) { ?>
+					<li><a class="ran-booster-provider-task-tab<?php echo $active_view === $view ? ' current' : ''; ?>" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $request_url ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-profile-region" <?php echo $active_view === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $has_source ) { ?>
 						<span class="ran-booster-provider-task-tab__source-indicator" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Active for one or more packages in this repository.', 'ran-booster' ); ?></span>
-					<?php } ?></a>
+					<?php } ?></a></li>
 				<?php } ?>
+				</ul>
+				<p class="ran-booster-provider-task-progress" data-ran-booster-provider-task-progress role="status" aria-live="polite" hidden><span class="spinner is-active" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Loading repository details…', 'ran-booster' ); ?></span></p>
 			</nav>
 
 			<div class="ran-booster-repository-detail__layout">

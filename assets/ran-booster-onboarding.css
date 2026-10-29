@@ -102,58 +102,11 @@
 
 .ran-booster-admin .ran-booster-onboarding__storage-details {
 	margin-block-start: var(--ran-booster-space-14);
-	border: 1px solid var(--ran-booster-divider);
-	border-radius: var(--ran-booster-radius-surface);
-	background: var(--ran-booster-surface);
-}
-
-.ran-booster-admin .ran-booster-onboarding__storage-details > summary {
-	padding-block: var(--ran-booster-space-12);
-	padding-inline: var(--ran-booster-space-16);
-	cursor: pointer;
-	font-weight: var(--ran-booster-font-weight-semibold);
-}
-
-.ran-booster-admin
-	.ran-booster-onboarding__storage-details
-	> summary:focus-visible {
-	outline: 2px solid var(--ran-booster-color-blue-300);
-	outline-offset: -2px;
-}
-
-.ran-booster-admin .ran-booster-onboarding__storage-details[open] > summary {
-	border-block-end: 1px solid var(--ran-booster-divider);
-}
-
-.ran-booster-admin .ran-booster-onboarding__storage-details > div {
-	padding: var(--ran-booster-space-16);
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-manual {
 	margin-block: var(--ran-booster-space-16) 0;
 	margin-inline: 0;
-	border: 1px solid var(--ran-booster-divider);
-	border-radius: var(--ran-booster-radius-surface);
-	background: var(--ran-booster-surface-subtle);
-}
-
-.ran-booster-admin .ran-booster-onboarding__storage-manual summary {
-	padding-block: var(--ran-booster-space-12);
-	padding-inline: var(--ran-booster-space-16);
-	cursor: pointer;
-	font-weight: var(--ran-booster-font-weight-semibold);
-}
-
-.ran-booster-admin
-	.ran-booster-onboarding__storage-manual
-	summary:focus-visible {
-	outline: 2px solid var(--ran-booster-color-blue-300);
-	outline-offset: -2px;
-}
-
-.ran-booster-admin .ran-booster-onboarding__storage-manual > div {
-	padding-block: 0 var(--ran-booster-space-16);
-	padding-inline: var(--ran-booster-space-16);
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-manual ol,
@@ -804,19 +757,6 @@
 	margin-block: var(--ran-booster-space-10) 0;
 }
 
-.ran-booster-admin .ran-booster-portability__package-details > summary {
-	inline-size: fit-content;
-	cursor: pointer;
-	font-weight: var(--ran-booster-font-weight-semibold);
-}
-
-.ran-booster-admin .ran-booster-portability__details-body {
-	margin-block: var(--ran-booster-space-10) 0;
-	padding: var(--ran-booster-space-12) var(--ran-booster-space-14);
-	border: 1px solid var(--ran-booster-divider);
-	background: var(--ran-booster-surface-subtle);
-}
-
 .ran-booster-admin .ran-booster-portability__package-details :is(h6, p) {
 	margin-inline: 0;
 }
@@ -824,13 +764,6 @@
 .ran-booster-admin .ran-booster-portability__package-details h6 {
 	margin-block: var(--ran-booster-space-10) var(--ran-booster-space-4);
 	font-size: inherit;
-}
-
-.ran-booster-admin
-	.ran-booster-portability__package-details
-	summary:focus-visible {
-	outline: 2px solid var(--ran-booster-color-blue-300);
-	outline-offset: 2px;
 }
 
 .ran-booster-admin .ran-booster-portability__review-table td > code {
@@ -948,18 +881,7 @@
 }
 
 .ran-booster-admin .ran-booster-portability__credential-packages > summary {
-	inline-size: fit-content;
 	color: var(--ran-booster-text-muted);
-	cursor: pointer;
-	font-size: var(--ran-booster-font-size-sm);
-	font-weight: var(--ran-booster-font-weight-semibold);
-}
-
-.ran-booster-admin
-	.ran-booster-portability__credential-packages
-	> summary:focus-visible {
-	outline: 2px solid var(--ran-booster-color-blue-300);
-	outline-offset: 2px;
 }
 
 .ran-booster-admin .ran-booster-portability__credential-packages ul {

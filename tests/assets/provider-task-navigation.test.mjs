@@ -52,6 +52,7 @@ function fixture() {
 	};
 	const currentAttributes = new Map();
 	const current = {
+		classList: { toggle() {} },
 		dataset: { ranBoosterProviderTask: 'repositories' },
 		focusOptions: null,
 		focus(options) {
@@ -66,6 +67,7 @@ function fixture() {
 	};
 	const otherAttributes = new Map([['aria-current', 'page']]);
 	const other = {
+		classList: { toggle() {} },
 		dataset: { ranBoosterProviderTask: 'status' },
 		removeAttribute(name) {
 			otherAttributes.delete(name);
@@ -114,12 +116,11 @@ function fixture() {
 				? [current, other]
 				: [];
 		},
-		toggleAttribute(name, force) {
-			if (force) {
-				attributes.set(name, '');
-			} else {
-				attributes.delete(name);
-			}
+		setAttribute(name, value) {
+			attributes.set(name, value);
+		},
+		removeAttribute(name) {
+			attributes.delete(name);
 		},
 	};
 	const document = {
@@ -170,12 +171,13 @@ test('provider task requests expose progress and notify swapped controls', () =>
 	});
 
 	init();
-	const detail = { target: state.panel };
+	const detail = { target: state.panel, xhr: {} };
 	state.listeners.get('htmx:beforeRequest')({ detail });
 
-	assert.equal(state.attributes.has('aria-busy'), true);
+	assert.equal(state.attributes.get('aria-busy'), 'true');
 	assert.equal(state.progress.hidden, false);
 
+	state.listeners.get('htmx:afterRequest')({ detail });
 	state.listeners.get('htmx:afterSwap')({ detail });
 
 	assert.equal(state.attributes.has('aria-busy'), false);
@@ -189,7 +191,7 @@ test('provider task requests expose progress and notify swapped controls', () =>
 	assert.equal(state.dispatched[0].detail.root, state.region);
 });
 
-test('repository task swaps restore focus to the active repository subtab', () => {
+test('repository task swaps restore focus when HTMX reports the swapped region as elt', () => {
 	const state = fixture();
 	const init = loadFunction('initProviderTaskNavigation', {
 		CustomEvent: TestCustomEvent,
@@ -199,7 +201,16 @@ test('repository task swaps restore focus to the active repository subtab', () =
 
 	state.setActiveRepositoryTab(state.repositoryTab);
 	init();
-	state.listeners.get('htmx:afterSwap')({ detail: { target: state.panel } });
+	const target = { id: 'ran-booster-provider-profile-region' };
+	const link = {
+		closest: (selector) =>
+			selector === '.ran-booster-repository-detail__tabs',
+	};
+	const detail = { target, elt: link, requestConfig: { elt: link }, xhr: {} };
+	state.listeners.get('htmx:beforeRequest')({ detail });
+	state.listeners.get('htmx:afterSwap')({
+		detail: { ...detail, elt: target },
+	});
 
 	assert.deepEqual(state.repositoryTab.focusOptions, { preventScroll: true });
 	assert.equal(state.current.focusOptions, null);
@@ -214,7 +225,7 @@ test('provider task request failures retain the view and expose its alert', () =
 	});
 
 	init();
-	const detail = { target: state.panel };
+	const detail = { target: state.panel, xhr: {} };
 	state.listeners.get('htmx:beforeRequest')({ detail });
 	state.listeners.get('htmx:sendError')({ detail });
 
@@ -222,6 +233,28 @@ test('provider task request failures retain the view and expose its alert', () =
 	assert.equal(state.progress.hidden, true);
 	assert.equal(state.error.hidden, false);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+});
+
+test('only the owning provider request can clear progress or report failure', () => {
+	const state = fixture();
+	const init = loadFunction('initProviderTaskNavigation', {
+		CustomEvent: TestCustomEvent,
+		document: state.document,
+		initProviderRepositoryFilter() {},
+	});
+	init();
+	const oldRequest = { target: state.panel, xhr: {} };
+	const newRequest = { target: state.panel, xhr: {} };
+	state.listeners.get('htmx:beforeRequest')({ detail: oldRequest });
+	state.listeners.get('htmx:beforeRequest')({ detail: newRequest });
+	state.listeners.get('htmx:sendError')({ detail: oldRequest });
+	state.listeners.get('htmx:afterRequest')({ detail: oldRequest });
+	state.listeners.get('htmx:afterSwap')({ detail: oldRequest });
+	assert.equal(state.progress.hidden, false);
+	assert.equal(state.error.hidden, true);
+	state.listeners.get('htmx:afterRequest')({ detail: newRequest });
+	assert.equal(state.progress.hidden, true);
+	assert.equal(state.attributes.has('aria-busy'), false);
 });
 
 test('provider repository filter formats contextual plural translations in JavaScript', () => {

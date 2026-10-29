@@ -145,6 +145,14 @@ final class ReleaseManagementDisplay {
 					<?php } ?>
 					<div class="ran-booster-source-transition">
 						<p><?php esc_html_e( 'Branch currently active.', 'ran-booster' ); ?></p>
+						<div>
+							<label for="ran-booster-initial-release-track"><?php esc_html_e( 'Initial release track', 'ran-booster' ); ?></label>
+							<select id="ran-booster-initial-release-track" name="release_channel" form="<?php echo esc_attr( $track_form_id ); ?>"<?php disabled( $track_disabled ); ?>>
+								<?php foreach ( array( 'stable', 'prerelease' ) as $channel ) { ?>
+									<option value="<?php echo esc_attr( $channel ); ?>"<?php selected( $channel === $selected_channel ); ?>><?php echo esc_html( $this->release_track_label( $channel ) ); ?></option>
+								<?php } ?>
+							</select>
+						</div>
 						<button type="submit" class="button button-primary" form="<?php echo esc_attr( $track_form_id ); ?>"<?php disabled( $track_disabled ); ?> aria-disabled="<?php echo $track_disabled ? 'true' : 'false'; ?>"><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
 					</div>
 				<?php } elseif ( $status_available && 'release_asset' === $source && $subdirectory_incompatible ) { ?>
@@ -239,14 +247,14 @@ final class ReleaseManagementDisplay {
 			</div>
 		</section>
 		<?php $release_track_summary = null === $selected_channel ? __( 'Unknown', 'ran-booster' ) : $this->release_track_label( $selected_channel ); ?>
-		<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section" data-ran-booster-package-disclosure>
+		<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section ran-booster-disclosure" data-ran-booster-package-disclosure>
 			<summary>
 				<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Release Track', 'ran-booster' ); ?></h3>
 				<small class="ran-booster-advanced-source-summary">
 					<span class="ran-booster-advanced-source-summary__badge" data-ran-booster-release-track-summary><?php echo esc_html( $release_track_summary ); ?></span>
 				</small>
 			</summary>
-			<div class="ran-booster-settings-disclosure__body">
+			<div class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">
 				<?php $this->render_release_track_settings( $track_mode, $track_disabled, $selected_channel, $package, $track_nonce_action, $track_form_id ); ?>
 				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled ); ?>
 			</div>
@@ -517,7 +525,10 @@ final class ReleaseManagementDisplay {
 			<?php } ?>
 
 		<?php
-		$this->render_release_track( $selected_channel, $mode, $disabled );
+		$this->render_release_track( $selected_channel, $mode, $disabled || 'branch' === $mode );
+		if ( 'branch' === $mode ) {
+			echo '<p class="description">' . esc_html__( 'Activate Releases to change the release track.', 'ran-booster' ) . '</p>';
+		}
 
 		echo '</form>';
 	}
@@ -850,7 +861,7 @@ final class ReleaseManagementDisplay {
 				? 'notice-warning'
 				: 'notice-error' );
 		?>
-		<div class="notice <?php echo esc_attr( $tone ); ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?>>
+		<div class="notice <?php echo esc_attr( $tone ); ?><?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?>>
 			<p><?php echo esc_html( $message ); ?></p>
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>
 				<?php $this->render_failure_help( $code, $message ); ?>
@@ -1017,12 +1028,14 @@ final class ReleaseManagementDisplay {
 			admin_url( 'admin.php' )
 		);
 		?>
-		<details>
+		<details class="ran-booster-disclosure">
 			<summary><?php esc_html_e( 'Why this happened and how to fix it', 'ran-booster' ); ?></summary>
+			<div class="ran-booster-disclosure__body">
 			<p><strong><?php esc_html_e( 'What Booster found:', 'ran-booster' ); ?></strong> <?php echo esc_html( '' !== $message ? $message : $this->diagnostic_message( $code ) ); ?></p>
 			<p><strong><?php esc_html_e( 'What to do:', 'ran-booster' ); ?></strong> <?php echo esc_html( $this->diagnostic_action( $code ) ); ?></p>
 			<p><a href="<?php echo esc_url( $troubleshooting_url ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a></p>
 			<p><strong><?php esc_html_e( 'Technical reason:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $code ); ?></code></p>
+			</div>
 		</details>
 		<?php
 	}

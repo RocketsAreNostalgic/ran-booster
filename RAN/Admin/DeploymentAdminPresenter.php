@@ -43,6 +43,8 @@ final class DeploymentAdminPresenter {
 		}
 		$this->rendered = true;
 		$failures       = $this->monitor?->failures() ?? array();
+		$fingerprint    = $this->monitor?->fingerprint() ?? '';
+		$state          = wp_create_nonce( DeploymentAdminController::NONCE_ACTION . ':' . $fingerprint );
 		$primary        = $failures[0];
 		$count          = count( $failures );
 		$summary        = sprintf(
@@ -53,12 +55,12 @@ final class DeploymentAdminPresenter {
 		$credential_link = is_string( $primary['credential_id'] ) && '' !== $primary['credential_id']
 			? '<a class="button" href="' . esc_url( $this->credential_url( $primary ) ) . '">' . esc_html( __( 'Replace credential', 'ran-booster' ) ) . '</a>'
 			: '';
-		echo '<div class="notice notice-error is-dismissible" data-ran-booster-background-failure-notice><p><strong>'
+		echo '<div class="notice notice-error is-dismissible" data-ran-booster-background-failure-notice data-ran-booster-notice-preference="failure" data-ran-booster-notice-state="' . esc_attr( $state ) . '"><p><strong>'
 			. esc_html( __( 'RAN Booster automatic deployment failed:', 'ran-booster' ) ) . '</strong> '
 			. esc_html( $summary ) . ' '
 			. esc_html( (string) $primary['package_slug'] . ' (' . (string) $primary['provider_label'] . '): ' . DeploymentOutcomeMessage::for_code( (string) $primary['outcome_code'] ) )
 			. '</p><p><a class="button button-primary" href="' . esc_url( $this->activity_url( $primary ) ) . '">' . esc_html( __( 'Review deployment', 'ran-booster' ) ) . '</a>'
-			. $credential_link . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every dynamic value is escaped above.
+			. $credential_link . ' <button type="button" class="button" data-ran-booster-notice-preference-mode="acknowledge">' . esc_html( __( 'Acknowledge this incident', 'ran-booster' ) ) . '</button></p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Every dynamic value is escaped above.
 	}
 
 	/** @return array{message: array<string, string>, context: array<string, string>}|null */

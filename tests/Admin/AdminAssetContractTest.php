@@ -178,7 +178,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-action-row {', $primitives );
-		self::assertStringContainsString( 'ran-booster-provider__eyebrow ran-booster-eyebrow', $provider );
+		self::assertStringNotContainsString( 'ran-booster-provider__eyebrow ran-booster-eyebrow', $provider );
 		self::assertStringContainsString( 'ran-booster-portability__eyebrow ran-booster-eyebrow', $portability );
 		self::assertStringContainsString( 'ran-booster-eyebrow ran-booster-eyebrow--compact', $packages );
 		self::assertStringContainsString( 'ran-booster-debug-capture__panel ran-booster-panel', $debug );
@@ -197,13 +197,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'white-space: nowrap;', $settings );
 	}
 
-	public function test_package_source_navigation_pushes_current_source_status_badge_inline_and_right_aligned(): void {
+	public function test_package_source_navigation_preserves_current_source_status_badge(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 
-		self::assertStringContainsString( '.ran-booster-source-choice--navigation {', $settings );
-		self::assertStringContainsString( "\tbox-sizing: border-box;\n\tmargin-block-end: -1px;\n\tdisplay: flex;\n\talign-items: center;", $settings );
-		self::assertStringContainsString( '.ran-booster-source-choice--navigation > .ran-booster-source-choice__content {', $settings );
-		self::assertStringContainsString( "\tmargin-inline-end: var(--ran-booster-space-10);\n\tmin-inline-size: 0;\n\tflex: 1 1 auto;", $settings );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-source-choices--navigation {', $settings );
+		self::assertStringContainsString( ".ran-booster-source-choice--navigation\n\t.ran-booster-source-choice__current-source {", $settings );
 		self::assertStringContainsString( '.ran-booster-source-choice__current-source {', $settings );
 		self::assertStringContainsString( "\tmargin-inline-start: auto;\n\tflex: 0 0 auto;", $settings );
 		self::assertStringContainsString( "\tpadding: 2px var(--ran-booster-space-8);\n\tborder: 1px solid var(--ran-booster-status-ok-border);", $settings );
@@ -436,7 +434,7 @@ final class AdminAssetContractTest extends TestCase {
 			'/@media print \{[\s\S]+\.ran-booster-admin \.ran-booster-documentation__layout \{\s+display: block;\s+grid-template-areas: none;\s+grid-template-columns: none;/',
 			$documentation
 		);
-		self::assertStringContainsString( '.ran-booster-documentation__section:not([open]) > :not(summary)', $documentation );
+		self::assertStringContainsString( '.ran-booster-documentation__section.ran-booster-disclosure:not([open])', $documentation );
 		self::assertStringContainsString( '::-webkit-details-marker', $documentation );
 		self::assertStringContainsString( 'break-inside: avoid-page;', $documentation );
 		self::assertStringContainsString( 'ran-booster-documentation__section', $view );
@@ -716,7 +714,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( "'gh'", $view );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-page-shell__header {', $primitives );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-disclosure > summary:focus-visible', $css );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-disclosure > summary:focus-visible', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-public-lookup-profile__layout {', $css );
 		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-task-panel {', $css );
@@ -952,7 +950,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( "form.setAttribute('aria-busy', 'true');", $script );
 
 		self::assertSame( 2, substr_count( $danger_zone, 'data-ran-booster-confirmed-package-removal' ) );
-		self::assertStringContainsString( 'class="ran-booster-settings-disclosure ran-booster-package-danger-zone"', $danger_zone );
+		self::assertStringContainsString( 'class="ran-booster-settings-disclosure ran-booster-package-danger-zone ran-booster-disclosure"', $danger_zone );
+		self::assertStringContainsString( 'ran-booster-disclosure__body', $danger_zone );
 		self::assertStringContainsString( 'data-ran-booster-package-disclosure', $danger_zone );
 		self::assertSame( 2, substr_count( $danger_zone, 'data-ran-booster-package-mutation' ) );
 		self::assertSame( 2, substr_count( $danger_zone, 'data-ran-booster-native-submit' ) );
@@ -963,9 +962,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "\$package_view->get_action( 'unlink-delete' )", $danger_zone );
 		self::assertStringContainsString( 'disabled data-ran-booster-package-removal-submit', $danger_zone );
 
-		self::assertStringContainsString( '.ran-booster-package-danger-zone > summary {', $css );
-		self::assertStringContainsString( 'grid-template-columns: 10px auto minmax(0, 1fr);', $css );
 		self::assertStringContainsString( 'grid-column: 2;', $css );
+		self::assertStringContainsString( '.ran-booster-package-danger-zone {', $css );
+		self::assertStringContainsString( 'border-color: var(--ran-booster-status-error-border);', $css );
 		self::assertStringContainsString( '.ran-booster-package-danger-zone__actions {', $css );
 		self::assertStringContainsString( 'grid-template-columns: repeat(2, minmax(0, 1fr));', $css );
 		self::assertStringContainsString( '.ran-booster-package-danger-zone__actions .button {', $css );

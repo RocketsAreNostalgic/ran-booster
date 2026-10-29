@@ -26,6 +26,7 @@ use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryNoticeController;
 use RAN\Admin\CredentialExpiryReminder;
+use RAN\Admin\NoticePreference;
 use RAN\Admin\RepositoryBranchCheckEvidenceStore;
 use RAN\Admin\PublicRepositoryLookupProfileStore;
 use RAN\Admin\BackgroundDeploymentFailureEmail;
@@ -81,6 +82,7 @@ final class BoosterServiceProvider {
 	/** @internal Core bootstrap composition only. */
 	public function register( CoreContainer $container, Booster $runtime, object $release_updater, string $self_plugin_identifier ): void {
 		global $wpdb;
+		$container->bind( NoticePreference::class, new NoticePreference() );
 		$bundled          = new GitHubReplacementDeclaration( array_merge( array( 'plugin_basename' => $self_plugin_identifier ), GitHubProvider::compatibility_contract() ) );
 		$database         = new Database( null, $bundled );
 		$selection_store  = new GitHubSelectionStore( $wpdb, $wpdb->options );

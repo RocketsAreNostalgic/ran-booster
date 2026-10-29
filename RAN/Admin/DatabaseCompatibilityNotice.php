@@ -33,7 +33,7 @@ final class DatabaseCompatibilityNotice {
 		}
 		$this->rendered = true;
 		?>
-		<div class="notice notice-error" data-ran-booster-database-compatibility-notice>
+		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-database-compatibility-notice>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster database operations are paused:', 'ran-booster' ); ?></strong>
 				<?php echo esc_html( $this->message() ?? '' ); ?>

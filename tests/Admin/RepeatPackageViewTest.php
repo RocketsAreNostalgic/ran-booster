@@ -94,7 +94,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-settings-fields', $html );
 		self::assertStringNotContainsString( 'class="form-table"', $html );
 		$repository_position = strpos( $html, 'id="ran-booster-package-configuration-heading"' );
-		$advanced_position   = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings"' );
+		$advanced_position   = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure"' );
 		$operation_position  = strpos( $html, 'id="ran-booster-package-operation-heading"' );
 		$automation_position = strpos( $html, 'name="ran_booster[deployment_policy]"' );
 		$link_position       = strpos( $html, 'name="ran_booster[dry-run]"' );
@@ -113,7 +113,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$package_view->get_type()
 		);
 		self::assertStringNotContainsString(
-			'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
+			'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 			$html
 		);
 		self::assertStringContainsString( 'Branch · provider default', $html );
@@ -288,7 +288,7 @@ final class RepeatPackageViewTest extends TestCase {
 				'<a href="https://github.com/owner/example" class="ran-booster-repository-link"',
 				$html
 			);
-			$advanced_position = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings"' );
+			$advanced_position = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure"' );
 			self::assertIsInt( $advanced_position );
 			$advanced_end = strpos( $html, '</details>', $advanced_position );
 			self::assertIsInt( $advanced_end );
@@ -443,7 +443,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 
 			self::assertStringContainsString(
-				'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
+				'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 				$html,
 				$package_view->get_type()
 			);
@@ -890,7 +890,7 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	private function danger_zone( string $html ): string {
-		$start = strpos( $html, '<details id="ran-booster-package-danger-zone" class="ran-booster-settings-disclosure ran-booster-package-danger-zone"' );
+		$start = strpos( $html, '<details id="ran-booster-package-danger-zone" class="ran-booster-settings-disclosure ran-booster-package-danger-zone ran-booster-disclosure"' );
 		self::assertNotFalse( $start, 'The package settings page should include the danger zone.' );
 
 		return substr( $html, $start );

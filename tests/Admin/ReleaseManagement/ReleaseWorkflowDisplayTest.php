@@ -171,7 +171,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			);
 
 			self::assertStringContainsString( 'Booster stopped before contacting the repository provider because this request no longer matched the current page or package.', $html, $diagnostic );
-			self::assertStringContainsString( '<details><summary>Failure details</summary>', $html, $diagnostic );
+			self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html, $diagnostic );
 			self::assertStringContainsString( $message, $html, $diagnostic );
 			self::assertStringContainsString( 'Diagnostic code: <code>' . $diagnostic . '</code>', $html, $diagnostic );
 		}
@@ -193,7 +193,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 				)
 			);
 
-			self::assertStringContainsString( '<details><summary>Failure details</summary>', $html, $diagnostic );
+			self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html, $diagnostic );
 			self::assertStringContainsString( $message, $html, $diagnostic );
 			self::assertStringContainsString( 'Diagnostic code: <code>' . $diagnostic . '</code>', $html, $diagnostic );
 		}
@@ -229,7 +229,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 
 		self::assertStringContainsString( 'Booster could not validate the package release before continuing. No draft was opened.', $html );
 		self::assertStringContainsString( '<div class="notice notice-error inline" data-ran-booster-release-workflow-result><p>', $html );
-		self::assertStringContainsString( '<details><summary>Failure details</summary>', $html );
+		self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html );
 		self::assertStringContainsString( 'Booster could not read release data using the package&#039;s saved repository access. The credential selected for workflow setup is used only after this release check.', $html );
 		self::assertStringContainsString( 'Diagnostic code: <code>provider_unavailable</code>', $html );
 		self::assertStringContainsString( 'Failure reference: <code>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</code>', $html );
@@ -259,7 +259,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( '<details><summary>Failure details</summary>', $html );
+		self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html );
 		self::assertStringContainsString( 'Diagnostic code: <code>package_compatibility_invalid</code>', $html );
 	}
 

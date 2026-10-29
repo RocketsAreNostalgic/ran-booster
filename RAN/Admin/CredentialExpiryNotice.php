@@ -28,20 +28,16 @@ final class CredentialExpiryNotice {
 			return false;
 		}
 
-		$affected = $this->snapshot();
+		$affected = $this->visible( $this->snapshot() );
 		if ( $this->storage_unavailable ) {
 			return true;
 		}
 
-		$fingerprint = $this->reminders->fingerprint( $affected );
-		if ( null === $fingerprint ) {
+		if ( array() === $affected ) {
 			return false;
 		}
 
-		$user_id = get_current_user_id();
-
-		return $user_id > 0
-			&& ! hash_equals( $fingerprint, (string) get_user_meta( $user_id, self::USER_META_KEY, true ) );
+		return get_current_user_id() > 0;
 	}
 
 	public function should_load_dismissal_script(): bool {
@@ -59,7 +55,9 @@ final class CredentialExpiryNotice {
 			return;
 		}
 
-		$affected    = $this->snapshot();
+		$affected    = $this->visible( $this->snapshot() );
+		$scope       = BoosterNoticeScope::is_booster_screen() ? 'booster' : 'global';
+		$state       = wp_create_nonce( $this->reminders->state_action( $affected, $scope ) );
 		$primary     = $affected[0];
 		$count       = count( $affected );
 		$class       = 'warning' === $primary['stage'] ? 'notice-warning' : 'notice-error';
@@ -75,7 +73,7 @@ final class CredentialExpiryNotice {
 			}
 		}
 		?>
-		<div class="notice <?php echo esc_attr( $class ); ?> is-dismissible" data-ran-booster-credential-expiry-notice>
+		<div class="notice <?php echo esc_attr( $class ); ?><?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-credential-expiry-notice data-ran-booster-notice-preference="expiry" data-ran-booster-notice-state="<?php echo esc_attr( $state ); ?>" data-ran-booster-notice-scope="<?php echo esc_attr( $scope ); ?>">
 			<p>
 				<strong><?php esc_html_e( 'Credential expiry reminder:', 'ran-booster' ); ?></strong>
 				<?php
@@ -102,6 +100,12 @@ final class CredentialExpiryNotice {
 					<span><?php esc_html_e( 'This credential is managed by deployment configuration; update it there.', 'ran-booster' ); ?></span>
 				<?php } ?>
 			</p>
+				<p>
+					<?php if ( $this->reminders->can_snooze( $affected ) ) { ?>
+						<button type="button" class="button" data-ran-booster-notice-preference-mode="snooze"><?php esc_html_e( 'Remind me in 5 days', 'ran-booster' ); ?></button>
+					<?php } ?>
+					<button type="button" class="button" data-ran-booster-notice-preference-mode="dismiss"><?php esc_html_e( 'Dismiss this reminder', 'ran-booster' ); ?></button>
+				</p>
 		</div>
 		<?php
 	}
@@ -120,12 +124,25 @@ final class CredentialExpiryNotice {
 		return $this->affected;
 	}
 
+	/**
+	 * @param list<array<string, mixed>> $affected Affected statuses.
+	 * @return list<array<string, mixed>>
+	 */
+	private function visible( array $affected ): array {
+		$user_id = get_current_user_id();
+		if ( $user_id < 1 ) {
+			return array();
+		}
+		$scope = BoosterNoticeScope::is_booster_screen() ? 'booster' : 'global';
+		return $this->reminders->visible( $affected, $user_id, $scope, new NoticePreference() );
+	}
+
 	private function render_storage_unavailable(): void {
 		$base_url = function_exists( 'is_network_admin' ) && is_network_admin()
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
 		?>
-		<div class="notice notice-error" data-ran-booster-secrets-storage-notice>
+		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-secrets-storage-notice>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster encrypted credentials are unavailable:', 'ran-booster' ); ?></strong>
 				<?php esc_html_e( 'The encrypted sidecar and its site key are missing, incomplete, or do not match. Credential-backed operations remain paused.', 'ran-booster' ); ?>

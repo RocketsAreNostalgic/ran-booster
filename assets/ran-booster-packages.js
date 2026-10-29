@@ -72,7 +72,6 @@
 		initBulkPackageControls();
 		initConfirmedPackageRemovals();
 		initPackageUpdateProgress();
-		initDevelopmentSafetyNoticeDismissal();
 	}
 
 	function initPackageSourceControls() {
@@ -476,53 +475,6 @@
 				});
 				synchronize();
 			});
-	}
-
-	function initDevelopmentSafetyNoticeDismissal() {
-		const notice = document.querySelector(
-			'[data-ran-booster-development-safety]'
-		);
-		const settings = window.ranBoosterDevelopmentSafetyNotice || {};
-		if (
-			!notice ||
-			notice.dataset?.ranBoosterDevelopmentSafetyBound === 'true' ||
-			!settings.ajaxUrl ||
-			!settings.action ||
-			!settings.nonce
-		) {
-			return;
-		}
-		if (notice.dataset) {
-			notice.dataset.ranBoosterDevelopmentSafetyBound = 'true';
-		}
-
-		notice.addEventListener('click', function (event) {
-			const dismissButton =
-				event.target && typeof event.target.closest === 'function'
-					? event.target.closest('.notice-dismiss')
-					: null;
-			if (!dismissButton) {
-				return;
-			}
-
-			const body = new window.URLSearchParams();
-			body.set('action', settings.action);
-			body.set('nonce', settings.nonce);
-
-			window
-				.fetch(settings.ajaxUrl, {
-					method: 'POST',
-					credentials: 'same-origin',
-					headers: {
-						'Content-Type':
-							'application/x-www-form-urlencoded; charset=UTF-8',
-					},
-					body: body.toString(),
-				})
-				.catch(function () {
-					// WordPress has already dismissed the current notice.
-				});
-		});
 	}
 
 	function initBulkPackageControls() {

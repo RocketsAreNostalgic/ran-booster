@@ -209,7 +209,6 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 	<?php } elseif ( 'overview' !== $provider_view ) { ?>
 		<header class="ran-booster-action-row ran-booster-provider-management__header">
 			<div>
-				<p class="ran-booster-provider__eyebrow ran-booster-eyebrow"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Repository access', 'ran-booster' ) : __( 'Push-to-Deploy prerequisite', 'ran-booster' ) ); ?></p>
 				<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></h2>
 				<p class="ran-booster-page-heading__description">
 					<?php
@@ -239,7 +238,8 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<section aria-label="<?php esc_attr_e( 'GitHub provider management', 'ran-booster' ); ?>"<?php echo $healthy_replacement ? '' : ' class="notice notice-warning inline"'; ?>>
 			<?php if ( $healthy_replacement && is_array( $current_implementation ) ) { ?>
 				<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provided by %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
-				<details><summary><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></summary>
+				<details class="ran-booster-disclosure"><summary><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></summary>
+				<div class="ran-booster-disclosure__body">
 				<p><?php esc_html_e( 'To change provider, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
 			<?php } else { ?>
 				<?php if ( 'decision_required' === $selection_status['state'] && 1 === count( $selection_status['candidates'] ) ) { ?>
@@ -293,7 +293,8 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<?php } ?>
 				<?php $adoption_review = $github_selection['review']; ?>
 				<?php if ( is_array( $adoption_review ) ) { ?>
-					<details><summary><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Review return to bundled GitHub', 'ran-booster' ) : __( 'Review GitHub provider', 'ran-booster' ) ); ?></summary>
+					<details class="ran-booster-disclosure"><summary><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Review return to bundled GitHub', 'ran-booster' ) : __( 'Review GitHub provider', 'ran-booster' ) ); ?></summary>
+					<div class="ran-booster-disclosure__body">
 					<?php
 					$review_target = $selection_status['candidates'][ $adoption_review['target']['plugin_basename'] ] ?? null;
 					$review_name   = 'bundled' === $adoption_review['selected']
@@ -321,6 +322,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 							<button type="submit" class="button button-primary"><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Return to bundled GitHub', 'ran-booster' ) : __( 'Adopt GitHub implementation', 'ran-booster' ) ); ?></button>
 						</form>
 					<?php } ?>
+					</div>
 					</details>
 				<?php } ?>
 			<?php } ?>
@@ -328,6 +330,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 			<?php
 			if ( $healthy_replacement ) {
 				?>
+				</div>
 				</details><?php } ?>
 		</section>
 	<?php } ?>
@@ -447,12 +450,13 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 						class="ran-booster-provider-tasks"
 						hx-target="#ran-booster-provider-task-panel"
 						hx-select="#ran-booster-provider-task-panel"
-						hx-swap="outerHTML transition:true show:none"
+						hx-swap="outerHTML transition:false show:none"
 						hx-push-url="true"
 						hx-history="false"
 						hx-sync="this:replace"
 					>
 						<nav class="ran-booster-provider-task-tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true">
+							<ul class="filter-links">
 							<?php
 							foreach ( array(
 								'status'       => __( 'Status', 'ran-booster' ),
@@ -460,11 +464,12 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 								'setup'        => __( 'Webhook receiver', 'ran-booster' ),
 							) as $task => $label ) {
 								?>
-								<a class="ran-booster-provider-task-tab" href="<?php echo esc_url( $task_urls[ $task ] ); ?>" hx-get="<?php echo esc_url( $task_request_urls[ $task ] ); ?>" data-ran-booster-provider-task="<?php echo esc_attr( $task ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $provider_task === $task ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a>
+								<li><a class="ran-booster-provider-task-tab<?php echo $provider_task === $task ? ' current' : ''; ?>" href="<?php echo esc_url( $task_urls[ $task ] ); ?>" hx-get="<?php echo esc_url( $task_request_urls[ $task ] ); ?>" data-ran-booster-provider-task="<?php echo esc_attr( $task ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $provider_task === $task ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a></li>
 							<?php } ?>
+							</ul>
 							<p class="ran-booster-provider-task-progress" data-ran-booster-provider-task-progress role="status" aria-live="polite" hidden>
 								<span class="spinner is-active" aria-hidden="true"></span>
-								<span><?php esc_html_e( 'Loading provider details…', 'ran-booster' ); ?></span>
+								<span class="screen-reader-text"><?php esc_html_e( 'Loading provider details…', 'ran-booster' ); ?></span>
 							</p>
 						</nav>
 						<div class="notice notice-error inline ran-booster-provider-task-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden>
@@ -551,9 +556,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									<div><dt><?php esc_html_e( 'Event', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $webhook_setup['event'] ); ?></dd></div><?php } ?>
 							</dl>
 							<?php if ( null !== $webhook_setup ) { ?>
-								<details class="ran-booster-provider-disclosure">
+								<details class="ran-booster-provider-disclosure ran-booster-disclosure">
 									<summary><?php esc_html_e( 'Detailed manual setup and troubleshooting', 'ran-booster' ); ?></summary>
-									<div class="ran-booster-provider-disclosure__body">
+									<div class="ran-booster-provider-disclosure__body ran-booster-disclosure__body">
 										<p><?php echo esc_html( $manual_setup_description ); ?></p>
 										<ol><li><?php esc_html_e( 'Paste the payload URL and a matching signing secret.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Keep SSL verification enabled and select the push event.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Trigger a delivery and confirm the provider records a successful response.', 'ran-booster' ); ?></li></ol>
 										<p><a href="<?php echo esc_url( $webhook_setup['delivery_documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?></a></p>

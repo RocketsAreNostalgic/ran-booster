@@ -8,7 +8,33 @@ namespace RAN\Admin;
  * Prevents Booster-specific notices appearing across unrelated admin screens
  * while retaining the main and network Plugins/Booster routes.
  */
-final readonly class BoosterNoticeScope {
+final class BoosterNoticeScope {
+
+	private static string $pending_html = '';
+
+	/** @internal Capture only Core-owned, escaped notice output for the Booster shell. */
+	public static function render( callable $notice ): void {
+		if ( ! self::is_booster_screen() ) {
+			$notice();
+			return;
+		}
+
+		ob_start();
+		try {
+			$notice();
+			self::$pending_html .= (string) ob_get_contents();
+		} finally {
+			ob_end_clean();
+		}
+	}
+
+	/** @internal Emit captured Core-owned notice HTML once. */
+	public static function render_shell_notices(): void {
+		$html               = self::$pending_html;
+		self::$pending_html = '';
+		echo $html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured Core-owned escaped notice HTML.
+	}
+
 
 	public static function allows( ?string $screen_id = null ): bool {
 		if ( null === $screen_id ) {

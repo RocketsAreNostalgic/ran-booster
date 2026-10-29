@@ -305,18 +305,8 @@
 	background: var(--ran-booster-surface);
 }
 
-.ran-booster-admin .ran-booster-package-row__details details {
-	border-block-start: 1px solid var(--ran-booster-border);
-}
-
 .ran-booster-admin .ran-booster-package-row__details summary {
-	display: list-item;
-	box-sizing: border-box;
-	min-block-size: 42px;
-	padding-block: var(--ran-booster-space-12);
 	color: var(--ran-booster-brand);
-	cursor: pointer;
-	font-weight: 600;
 }
 
 .ran-booster-admin .ran-booster-package-row__details-grid {
@@ -530,9 +520,11 @@
 		display: block;
 	}
 
-	.ran-booster-admin .ran-booster-package-row--primary {
+	.ran-booster-admin
+		.ran-booster-package-table
+		.ran-booster-package-row--primary {
 		display: grid;
-		grid-template-columns: 34px minmax(0, 1fr);
+		grid-template-columns: 56px minmax(0, 1fr);
 	}
 
 	.ran-booster-admin
@@ -588,7 +580,7 @@
 
 	.ran-booster-admin .ran-booster-package-row--details {
 		display: grid;
-		grid-template-columns: 34px minmax(0, 1fr);
+		grid-template-columns: 56px minmax(0, 1fr);
 	}
 
 	.ran-booster-admin .ran-booster-package-row__details {

@@ -190,8 +190,9 @@ test('loading candidates preserves provider order and uses the shared disclosure
 		createElement(tagName) {
 			if (tagName === 'label') {
 				return {
+					children: [],
 					append(...nodes) {
-						this.children = nodes;
+						this.children.push(...nodes);
 					},
 				};
 			}
@@ -199,8 +200,9 @@ test('loading candidates preserves provider order and uses the shared disclosure
 				return createInput();
 			}
 			return {
+				children: [],
 				append(...nodes) {
-					this.children = nodes;
+					this.children.push(...nodes);
 				},
 			};
 		},
@@ -286,7 +288,11 @@ test('loading candidates preserves provider order and uses the shared disclosure
 	assert.equal(candidateList.children[0].children[0].checked, true);
 	assert.equal(
 		candidateList.children[1].className,
-		'ran-booster-release-settings-disclosure'
+		'ran-booster-release-settings-disclosure ran-booster-disclosure'
+	);
+	assert.equal(
+		candidateList.children[1].children[1].className,
+		'ran-booster-disclosure__body'
 	);
 });
 

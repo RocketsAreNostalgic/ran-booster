@@ -86,5 +86,8 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 				</button>
 			<?php } ?>
 		<?php } ?>
+		<?php if ( 'edit' === $source_choice_mode ) { ?>
+			<p class="ran-booster-provider-task-progress" data-ran-booster-source-progress role="status" aria-live="polite" hidden><span class="spinner is-active" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Loading source settings…', 'ran-booster' ); ?></span></p>
+		<?php } ?>
 	</div>
 </div>

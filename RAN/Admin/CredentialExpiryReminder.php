@@ -37,7 +37,7 @@ final class CredentialExpiryReminder {
 
 	/**
 	 * @param array<string, mixed> $profile Display-safe credential profile.
-	 * @return array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:?string,source:?string,stage:string,days:?int,badge_class:string,badge_label:string}
+	 * @return array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:?string,source:?string,stage:string,days:?int,badge_class:string,badge_label:string,event_marker:string}
 	 */
 	public function status( string $provider, array $profile ): array {
 		$id          = is_string( $profile['id'] ?? null ) ? $profile['id'] : '';
@@ -73,6 +73,7 @@ final class CredentialExpiryReminder {
 				'days'                 => null,
 				'badge_class'          => 'ran-booster-badge--neutral',
 				'badge_label'          => __( 'Expiry unknown', 'ran-booster' ),
+				'event_marker'         => (string) ( $observation['event_generation'] ?? '' ),
 			);
 		}
 
@@ -116,11 +117,12 @@ final class CredentialExpiryReminder {
 			'days'                 => $days,
 			'badge_class'          => $badge_class,
 			'badge_label'          => $badge_label,
+			'event_marker'         => (string) ( $observation['event_generation'] ?? '' ),
 		);
 	}
 
 	/**
-	 * @return list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,stage:string,days:int,badge_class:string,badge_label:string}>
+	 * @return list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string}>
 	 */
 	public function affected(): array {
 		$affected = array();
@@ -129,7 +131,7 @@ final class CredentialExpiryReminder {
 			foreach ( $this->secrets->credential_profiles( $provider ) as $profile ) {
 				$status = $this->status( $provider, $profile );
 				if ( in_array( $status['stage'], array( 'warning', 'urgent', 'expired' ), true ) ) {
-					/** @var array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,stage:string,days:int,badge_class:string,badge_label:string} $status */
+					/** @var array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string} $status */
 					$affected[] = $status;
 				}
 			}
@@ -158,6 +160,51 @@ final class CredentialExpiryReminder {
 		return $affected;
 	}
 
+	/** @param list<array<string, mixed>> $affected */
+	public function can_snooze( array $affected ): bool {
+		$now = ( $this->clock )()->getTimestamp();
+		foreach ( $affected as $status ) {
+			if ( ! is_string( $status['effective_expires_at'] ?? null )
+				|| ( new DateTimeImmutable( $status['effective_expires_at'], new DateTimeZone( 'UTC' ) ) )->getTimestamp() - $now <= 432000
+			) {
+				return false;
+			}
+		}
+
+		return array() !== $affected;
+	}
+
+	/**
+	 * @param list<array<string, mixed>> $affected Affected statuses.
+	 * @return array<string, string>
+	 */
+	public function events( array $affected ): array {
+		$events = array();
+		foreach ( $affected as $status ) {
+			$id            = (string) $status['provider'] . "\0" . (string) $status['id'];
+			$events[ $id ] = hash( 'sha256', implode( "\0", array( $id, (string) $status['effective_expires_at'], (string) ( $status['event_marker'] ?? '' ) ) ) );
+		}
+		return $events;
+	}
+
+	public function now(): int {
+		return ( $this->clock )()->getTimestamp();
+	}
+
+	/**
+	 * @param list<array<string, mixed>> $affected Affected statuses.
+	 * @return list<array<string, mixed>>
+	 */
+	public function visible( array $affected, int $user_id, string $scope, NoticePreference $preferences ): array {
+		$suppressed = $preferences->suppressed_events( $user_id, CredentialExpiryNotice::USER_META_KEY, $this->events( $affected ), $this->now() );
+		return array_values( array_filter( $affected, static fn ( array $status ): bool => ( 'booster' === $scope || 'warning' !== $status['stage'] ) && ! in_array( (string) $status['provider'] . "\0" . (string) $status['id'], $suppressed, true ) ) );
+	}
+
+	/** @param list<array<string, mixed>> $visible */
+	public function state_action( array $visible, string $scope ): string {
+		return CredentialExpiryNoticeController::NONCE_ACTION . ':' . $scope . ':' . ( $this->fingerprint( $visible ) ?? '' );
+	}
+
 	/**
 	 * Fingerprint the current sorted reminder state without accepting client data.
 	 *
@@ -174,7 +221,7 @@ final class CredentialExpiryReminder {
 				(string) $status['provider'],
 				(string) $status['id'],
 				(string) $status['effective_expires_at'],
-				(string) $status['stage'],
+				(string) ( $status['event_marker'] ?? '' ),
 			),
 			$affected
 		);

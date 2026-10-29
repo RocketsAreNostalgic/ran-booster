@@ -18,6 +18,13 @@ const packageStyles = fs.readFileSync(
 	),
 	'utf8'
 );
+const primitiveStyles = fs.readFileSync(
+	new URL(
+		'../../assets/ran-booster/25-admin-primitives.css',
+		import.meta.url
+	),
+	'utf8'
+);
 
 class Node {
 	constructor(tagName) {
@@ -295,8 +302,12 @@ test('managed browser selects and inspects the newest current candidate, preserv
 		(node) => node.tagName === 'details'
 	);
 	assert.equal(disclosure.children[0].textContent, 'Show 1 earlier release');
+	assert.equal(
+		disclosure.children[1].className,
+		'ran-booster-disclosure__body'
+	);
 	assert.match(
-		disclosure.children[1].textContent,
+		disclosure.children[1].children[0].textContent,
 		/Downgrades are unavailable/
 	);
 	assert.equal(
@@ -1060,18 +1071,26 @@ test('managed browser removes stale candidates while Refresh releases is pending
 	await flush();
 });
 
-test('release automation and webhook setup share one disclosure shell', () => {
+test('release automation and webhook setup use the shared native disclosure shell', () => {
 	assert.match(
-		packageStyles,
-		/\.ran-booster-package-disclosure \{[\s\S]*border-radius: var\(--ran-booster-radius-surface\)/
+		primitiveStyles,
+		/\.ran-booster-disclosure \{[\s\S]*border-radius: var\(--ran-booster-radius-surface\)/
 	);
 	assert.match(
-		packageStyles,
-		/\.ran-booster-package-disclosure > summary \{[\s\S]*grid-template-columns: 10px minmax\(0, 1fr\) auto[\s\S]*\.ran-booster-package-disclosure > summary::before \{[\s\S]*transform: rotate\(-45deg\)/
+		primitiveStyles,
+		/\.ran-booster-disclosure > summary \{[\s\S]*display: list-item;[\s\S]*cursor: pointer/
 	);
 	assert.match(
+		primitiveStyles,
+		/\.ran-booster-disclosure\[open\] > summary \{[\s\S]*border-block-end: 1px solid var\(--ran-booster-divider\)/
+	);
+	assert.match(
+		primitiveStyles,
+		/\.ran-booster-disclosure__body \{[\s\S]*padding: var\(--ran-booster-space-16\)/
+	);
+	assert.doesNotMatch(
 		packageStyles,
-		/\.ran-booster-package-disclosure\[open\] > summary \{[\s\S]*border-block-end: 1px solid var\(--ran-booster-border\)/
+		/ran-booster-package-disclosure > summary::before/
 	);
 	assert.doesNotMatch(styles, /ran-booster-release-workflow \{/);
 });

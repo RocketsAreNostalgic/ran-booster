@@ -130,20 +130,32 @@ class Booster {
 				$this->load_native_update_warning_script( $hook );
 			}
 		);
-		$expiry_notice = $this->service_callback( \RAN\Admin\CredentialExpiryNotice::class, 'render' );
+		$expiry_renderer = $this->service_callback( \RAN\Admin\CredentialExpiryNotice::class, 'render' );
+		$expiry_notice   = static function () use ( $expiry_renderer ): void {
+			\RAN\Admin\BoosterNoticeScope::render( $expiry_renderer );
+		};
 		add_action( 'admin_notices', $expiry_notice );
 		add_action( 'network_admin_notices', $expiry_notice );
-		$failure_notice = $this->service_callback( \RAN\Admin\DeploymentAdminPresenter::class, 'render' );
+		$failure_renderer = $this->service_callback( \RAN\Admin\DeploymentAdminPresenter::class, 'render' );
+		$failure_notice   = static function () use ( $failure_renderer ): void {
+			\RAN\Admin\BoosterNoticeScope::render( $failure_renderer );
+		};
 		add_action( 'admin_notices', $failure_notice );
 		add_action( 'network_admin_notices', $failure_notice );
-		$runtime_notice = $this->service_callback( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class, 'render' );
+		$runtime_renderer = $this->service_callback( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class, 'render' );
+		$runtime_notice   = static function () use ( $runtime_renderer ): void {
+			\RAN\Admin\BoosterNoticeScope::render( $runtime_renderer );
+		};
 		add_action( 'admin_notices', $runtime_notice );
 		add_action( 'network_admin_notices', $runtime_notice );
-		$database_notice = $this->service_callback( \RAN\Admin\DatabaseCompatibilityNotice::class, 'render' );
+		$database_renderer = $this->service_callback( \RAN\Admin\DatabaseCompatibilityNotice::class, 'render' );
+		$database_notice   = static function () use ( $database_renderer ): void {
+			\RAN\Admin\BoosterNoticeScope::render( $database_renderer );
+		};
 		add_action( 'admin_notices', $database_notice );
 		add_action( 'network_admin_notices', $database_notice );
 		$native_update_warning = function (): void {
-			$this->render_native_update_warning();
+			\RAN\Admin\BoosterNoticeScope::render( fn () => $this->render_native_update_warning() );
 		};
 		add_action( 'admin_notices', $native_update_warning );
 		add_action( 'network_admin_notices', $native_update_warning );
@@ -809,14 +821,10 @@ class Booster {
 		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
 			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->build_package_form();
 
-			wp_localize_script(
-				'ran-booster-packages',
+			$this->load_notice_preference_script(
 				'ranBoosterDevelopmentSafetyNotice',
-				array(
-					'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-					'action'  => \RAN\Admin\DevelopmentSafetyNoticeController::AJAX_ACTION,
-					'nonce'   => wp_create_nonce( \RAN\Admin\DevelopmentSafetyNoticeController::NONCE_ACTION ),
-				)
+				\RAN\Admin\DevelopmentSafetyNoticeController::AJAX_ACTION,
+				\RAN\Admin\DevelopmentSafetyNoticeController::NONCE_ACTION
 			);
 			wp_localize_script(
 				'ran-booster-repository-picker',
@@ -913,25 +921,11 @@ class Booster {
 			return;
 		}
 
-		$script_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/credential-expiry-notice.js';
-		$script_version = $this->asset_version( $script_path );
-		wp_register_script(
-			'ran-booster-credential-expiry-notice',
-			trailingslashit( $this->booster_url ?? '' ) . 'assets/credential-expiry-notice.js',
-			array(),
-			$script_version,
-			true
-		);
-		wp_localize_script(
-			'ran-booster-credential-expiry-notice',
+		$this->load_notice_preference_script(
 			'ranBoosterCredentialExpiryNotice',
-			array(
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'action'  => \RAN\Admin\CredentialExpiryNoticeController::AJAX_ACTION,
-				'nonce'   => wp_create_nonce( \RAN\Admin\CredentialExpiryNoticeController::NONCE_ACTION ),
-			)
+			\RAN\Admin\CredentialExpiryNoticeController::AJAX_ACTION,
+			\RAN\Admin\CredentialExpiryNoticeController::NONCE_ACTION
 		);
-		wp_enqueue_script( 'ran-booster-credential-expiry-notice' );
 	}
 
 	/**
@@ -947,25 +941,27 @@ class Booster {
 			return;
 		}
 
-		$script_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/background-deployment-failure-notice.js';
-		$script_version = $this->asset_version( $script_path );
-		wp_register_script(
-			'ran-booster-background-deployment-failure-notice',
-			trailingslashit( $this->booster_url ?? '' ) . 'assets/background-deployment-failure-notice.js',
-			array(),
-			$script_version,
-			true
-		);
-		wp_localize_script(
-			'ran-booster-background-deployment-failure-notice',
+		$this->load_notice_preference_script(
 			'ranBoosterBackgroundFailureNotice',
+			\RAN\Admin\DeploymentAdminController::AJAX_ACTION,
+			\RAN\Admin\DeploymentAdminController::NONCE_ACTION
+		);
+	}
+
+	private function load_notice_preference_script( string $object_name, string $action, string $nonce_action ): void {
+		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/notice-preference.js';
+		wp_register_script( 'ran-booster-notice-preference', trailingslashit( $this->booster_url ?? '' ) . 'assets/notice-preference.js', array(), $this->asset_version( $path ), true );
+		wp_localize_script(
+			'ran-booster-notice-preference',
+			$object_name,
 			array(
-				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'action'  => \RAN\Admin\DeploymentAdminController::AJAX_ACTION,
-				'nonce'   => wp_create_nonce( \RAN\Admin\DeploymentAdminController::NONCE_ACTION ),
+				'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
+				'action'       => $action,
+				'nonce'        => wp_create_nonce( $nonce_action ),
+				'errorMessage' => __( 'RAN Booster could not save this notice preference. Please try again.', 'ran-booster' ),
 			)
 		);
-		wp_enqueue_script( 'ran-booster-background-deployment-failure-notice' );
+		wp_enqueue_script( 'ran-booster-notice-preference' );
 	}
 
 	/**
@@ -998,7 +994,7 @@ class Booster {
 		$warning    = $this->native_update_warning_state();
 		$can_manage = current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
 		?>
-		<div class="notice notice-warning" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?>><p>
+		<div class="notice notice-warning<?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?>><p>
 			<?php esc_html_e( 'A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed.', 'ran-booster' ); ?>
 			<?php if ( $can_manage ) : ?>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>"><?php esc_html_e( 'Review GitHub management.', 'ran-booster' ); ?></a>

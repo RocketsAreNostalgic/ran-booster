@@ -136,6 +136,37 @@ final class AdminIndexViewTest extends TestCase {
 			$html
 		);
 
+		foreach (
+			array(
+				'  0.1.0-beta.39  '   => 'Booster 0.1.0-beta.39',
+				'1.2.3-rc.1+build.42' => 'Booster 1.2.3-rc.1+build.42',
+				'<script>&'           => 'Booster &lt;script&gt;&amp;',
+			) as $version => $expected
+		) {
+			$GLOBALS['ran_booster_admin_view_plugin_headers']['version'] = $version;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/base.php';
+			$version_html = (string) ob_get_clean();
+			self::assertStringContainsString( $expected, $version_html );
+			self::assertMatchesRegularExpression( '/Header Author<\/a>\s*\|\s*Booster /', $version_html );
+		}
+
+		foreach ( array( null, '', " \t " ) as $version ) {
+			$GLOBALS['ran_booster_admin_view_plugin_headers'] = array( 'author' => 'Fallback Author' );
+			if ( null !== $version ) {
+				$GLOBALS['ran_booster_admin_view_plugin_headers']['version'] = $version;
+			}
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/base.php';
+			$without_version = (string) ob_get_clean();
+			self::assertMatchesRegularExpression( '/Copyright © 2042\s+Fallback Author\s*<\/p>/', $without_version );
+		}
+
+		$GLOBALS['ran_booster_admin_view_plugin_headers'] = array(
+			'author'     => 'Header Author',
+			'author_uri' => 'https://example.test/header-author',
+		);
+
 		$development_safety_notice = false;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/base.php';

@@ -144,16 +144,17 @@ final class BoosterAssetsTest extends TestCase {
 		$booster->load_credential_expiry_notice_script( 'plugins.php' );
 
 		self::assertSame(
-			array( 'ran-booster-credential-expiry-notice' ),
+			array( 'ran-booster-notice-preference' ),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
 			array(
-				'ajaxUrl' => 'https://example.test/wp-admin/admin-ajax.php',
-				'action'  => CredentialExpiryNoticeController::AJAX_ACTION,
-				'nonce'   => 'nonce-for-' . hash( 'sha256', CredentialExpiryNoticeController::NONCE_ACTION ),
+				'ajaxUrl'      => 'https://example.test/wp-admin/admin-ajax.php',
+				'action'       => CredentialExpiryNoticeController::AJAX_ACTION,
+				'nonce'        => 'nonce-for-' . hash( 'sha256', CredentialExpiryNoticeController::NONCE_ACTION ),
+				'errorMessage' => 'RAN Booster could not save this notice preference. Please try again.',
 			),
-			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-credential-expiry-notice']['ranBoosterCredentialExpiryNotice']
+			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-notice-preference']['ranBoosterCredentialExpiryNotice']
 		);
 	}
 
@@ -177,16 +178,17 @@ final class BoosterAssetsTest extends TestCase {
 		$booster->load_background_deployment_failure_notice_script( 'plugins.php' );
 
 		self::assertSame(
-			array( 'ran-booster-background-deployment-failure-notice' ),
+			array( 'ran-booster-notice-preference' ),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
 			array(
-				'ajaxUrl' => 'https://example.test/wp-admin/admin-ajax.php',
-				'action'  => DeploymentAdminController::AJAX_ACTION,
-				'nonce'   => 'nonce-for-' . hash( 'sha256', DeploymentAdminController::NONCE_ACTION ),
+				'ajaxUrl'      => 'https://example.test/wp-admin/admin-ajax.php',
+				'action'       => DeploymentAdminController::AJAX_ACTION,
+				'nonce'        => 'nonce-for-' . hash( 'sha256', DeploymentAdminController::NONCE_ACTION ),
+				'errorMessage' => 'RAN Booster could not save this notice preference. Please try again.',
 			),
-			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-background-deployment-failure-notice']['ranBoosterBackgroundFailureNotice']
+			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-notice-preference']['ranBoosterBackgroundFailureNotice']
 		);
 	}
 
@@ -215,7 +217,15 @@ final class BoosterAssetsTest extends TestCase {
 
 		self::assertSame( array( 'ran-booster-admin-shell', 'ran-booster-styles' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
 		self::assertSame(
-			array( 'ran-booster-htmx', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'ran-booster-packages', 'ran-booster-repository-picker' ),
+			array(
+				'ran-booster-htmx',
+				'ran-booster-notice-preference',
+				'ran-booster-js',
+				'ran-booster-secure-inputs',
+				'ran-booster-enhanced-mutations',
+				'ran-booster-packages',
+				'ran-booster-repository-picker',
+			),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
@@ -324,15 +334,16 @@ final class BoosterAssetsTest extends TestCase {
 		);
 		self::assertArrayNotHasKey(
 			'ranBoosterRepoPicker',
-			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-packages']
+			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-packages'] ?? array()
 		);
 		self::assertSame(
 			array(
-				'ajaxUrl' => 'https://example.test/wp-admin/admin-ajax.php',
-				'action'  => DevelopmentSafetyNoticeController::AJAX_ACTION,
-				'nonce'   => 'nonce-for-' . hash( 'sha256', DevelopmentSafetyNoticeController::NONCE_ACTION ),
+				'ajaxUrl'      => 'https://example.test/wp-admin/admin-ajax.php',
+				'action'       => DevelopmentSafetyNoticeController::AJAX_ACTION,
+				'nonce'        => 'nonce-for-' . hash( 'sha256', DevelopmentSafetyNoticeController::NONCE_ACTION ),
+				'errorMessage' => 'RAN Booster could not save this notice preference. Please try again.',
 			),
-			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-packages']['ranBoosterDevelopmentSafetyNotice']
+			$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-notice-preference']['ranBoosterDevelopmentSafetyNotice']
 		);
 		self::assertSame(
 			'gh',
@@ -350,7 +361,7 @@ final class BoosterAssetsTest extends TestCase {
 		} else {
 			self::assertArrayNotHasKey(
 				'ranBoosterPackageProgress',
-				$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-packages']
+				$GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-packages'] ?? array()
 			);
 		}
 	}

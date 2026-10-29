@@ -275,12 +275,14 @@ if ( ! function_exists( 'get_file_data' ) ) {
 	 */
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function get_file_data( string $file, array $default_headers, string $context = '' ): array {
-		unset( $file, $default_headers, $context );
+		unset( $file, $context );
 
-		return $GLOBALS['ran_booster_admin_view_plugin_headers'] ?? array(
+		$headers = $GLOBALS['ran_booster_admin_view_plugin_headers'] ?? array(
 			'author'     => 'Rockets Are Nostalgic',
 			'author_uri' => 'https://github.com/RocketsAreNostalgic',
 		);
+
+		return array_intersect_key( $headers, $default_headers );
 	}
 }
 

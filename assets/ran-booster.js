@@ -337,6 +337,8 @@
 			);
 		}
 
+		let activeRequest = null;
+
 		function setBusy(isBusy) {
 			const region = currentTaskRegion();
 			if (!region) {
@@ -364,6 +366,10 @@
 				return;
 			}
 
+			if (event.detail?.xhr !== activeRequest) {
+				return;
+			}
+			activeRequest = null;
 			setBusy(false);
 			const error = currentTaskRegion()?.querySelector(
 				'[data-ran-booster-provider-task-error]'
@@ -376,6 +382,7 @@
 
 		document.addEventListener('htmx:beforeRequest', function (event) {
 			if (handlesTaskRegion(event)) {
+				activeRequest = event.detail.xhr;
 				setBusy(true);
 			}
 		});
@@ -385,6 +392,10 @@
 				return;
 			}
 
+			if (event.detail?.xhr !== activeRequest) {
+				return;
+			}
+			activeRequest = null;
 			setBusy(false);
 			const region = currentTaskRegion();
 			if (!region) {
@@ -406,6 +417,7 @@
 					}
 					const isCurrent =
 						tab.dataset.ranBoosterProviderTask === currentTask;
+					tab.classList.toggle('current', isCurrent);
 					if (isCurrent) {
 						tab.setAttribute('aria-current', 'page');
 						currentTab = tab;
@@ -426,6 +438,15 @@
 					detail: { panel, root: region },
 				})
 			);
+		});
+
+		document.addEventListener('htmx:afterRequest', function (event) {
+			if (
+				handlesTaskRegion(event) &&
+				event.detail?.xhr === activeRequest
+			) {
+				setBusy(false);
+			}
 		});
 
 		[

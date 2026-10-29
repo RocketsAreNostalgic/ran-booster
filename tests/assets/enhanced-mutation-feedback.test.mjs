@@ -186,10 +186,14 @@ function fixture() {
 			formAttributes.set(name, String(value));
 		},
 	};
+	const sourceProgress = { hidden: true };
 	const sourceLinkAttributes = new Map();
 	const sourceLink = {
 		classList: classList(),
 		dataset: { ranBoosterErrorTarget: '#ran-booster-local-error' },
+		hasAttribute(name) {
+			return sourceLinkAttributes.has(name);
+		},
 		getAttribute(name) {
 			return sourceLinkAttributes.get(name) ?? null;
 		},
@@ -290,6 +294,9 @@ function fixture() {
 			return id === 'ran-booster-local-error' ? error : null;
 		},
 		querySelector(selector) {
+			if (selector === '[data-ran-booster-source-progress]') {
+				return sourceProgress;
+			}
 			if (selector === '[data-ran-booster-feedback-toast]') {
 				return toast;
 			}
@@ -377,6 +384,7 @@ function fixture() {
 		swapTarget,
 		sourceLink,
 		sourceLinkAttributes,
+		sourceProgress,
 		timeouts,
 		toast,
 		toastMessage,
@@ -455,6 +463,41 @@ test('enhanced source links use the same busy and restore lifecycle', () => {
 		),
 		false
 	);
+});
+
+test('source navigation progress belongs to the newest request', () => {
+	const state = fixture();
+	state.sourceLinkAttributes.set('data-ran-booster-source-choice', 'branch');
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	init();
+	const oldRequest = { elt: state.sourceLink, xhr: {} };
+	state.listeners.get('htmx:beforeRequest')({ detail: oldRequest });
+	assert.equal(state.sourceProgress.hidden, false);
+	assert.equal(
+		state.sourceLink.classList.contains('ran-booster-update-is-active'),
+		false
+	);
+	// A replacement request can originate from the other source link.
+	state.sourceLinkAttributes.delete('aria-busy');
+	const newRequest = { elt: state.sourceLink, xhr: {} };
+	state.listeners.get('htmx:beforeRequest')({ detail: newRequest });
+	state.listeners.get('htmx:afterRequest')({ detail: oldRequest });
+	state.listeners.get('htmx:sendError')({ detail: oldRequest });
+	state.listeners.get('htmx:afterSwap')({ detail: oldRequest });
+	state.listeners.get('htmx:afterSettle')({ detail: oldRequest });
+	assert.equal(state.sourceProgress.hidden, false);
+	assert.equal(state.sourceLinkAttributes.get('aria-busy'), 'true');
+	assert.equal(
+		state.sourceLink.classList.contains(
+			'ran-booster-enhanced-mutation-is-busy'
+		),
+		true
+	);
+	state.listeners.get('htmx:afterRequest')({ detail: newRequest });
+	assert.equal(state.sourceProgress.hidden, true);
 });
 
 test('an external enhanced submitter does not continue with a native form submission', () => {

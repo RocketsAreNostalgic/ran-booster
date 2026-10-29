@@ -48,33 +48,7 @@
 }
 
 .ran-booster-admin .ran-booster-secondary-nav {
-	display: flex;
 	margin-block: var(--ran-booster-space-18) var(--ran-booster-space-20);
-	margin-inline: 0;
-	border-block-end: 1px solid var(--ran-booster-border);
-	gap: var(--ran-booster-space-4);
-}
-
-.ran-booster-admin .ran-booster-secondary-nav__link {
-	margin-block-end: calc(-1 * var(--ran-booster-space-1));
-	padding-block: var(--ran-booster-space-9);
-	padding-inline: var(--ran-booster-space-14);
-	border: 1px solid transparent;
-	color: var(--ran-booster-link);
-	font-weight: 600;
-	text-decoration: none;
-}
-
-.ran-booster-admin .ran-booster-secondary-nav__link:focus,
-.ran-booster-admin .ran-booster-secondary-nav__link:hover {
-	color: var(--ran-booster-link-strong);
-}
-
-.ran-booster-admin .ran-booster-secondary-nav__link.is-current {
-	border-color: var(--ran-booster-border) var(--ran-booster-border)
-		var(--ran-booster-surface-subtle);
-	background: var(--ran-booster-surface-subtle);
-	color: var(--ran-booster-text);
 }
 
 .ran-booster-admin .ran-booster-troubleshooting__form {

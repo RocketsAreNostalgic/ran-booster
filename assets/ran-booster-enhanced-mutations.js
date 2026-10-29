@@ -25,6 +25,7 @@
 		const submitters = new WeakMap();
 		const busyStates = new WeakMap();
 		let pendingInteractionState = null;
+		let sourceRequest = null;
 		const toastAnimations = new WeakMap();
 		const toastTimers = new WeakMap();
 
@@ -44,6 +45,13 @@
 			return (
 				enhancedFormFrom(event.detail?.requestConfig?.elt) ||
 				enhancedFormFrom(event.detail?.elt || event.target)
+			);
+		}
+
+		function isStaleSourceRequest(event, form) {
+			return (
+				form?.hasAttribute?.('data-ran-booster-source-choice') &&
+				event.detail?.xhr !== sourceRequest
 			);
 		}
 
@@ -168,7 +176,9 @@
 			submitter.classList.add(
 				'ran-booster-enhanced-mutation__submitter--busy'
 			);
-			submitter.classList.add('ran-booster-update-is-active');
+			if (!form.hasAttribute?.('data-ran-booster-source-choice')) {
+				submitter.classList.add('ran-booster-update-is-active');
+			}
 		}
 
 		function resetBusy(form) {
@@ -542,6 +552,15 @@
 					return;
 				}
 
+				if (form.hasAttribute?.('data-ran-booster-source-choice')) {
+					sourceRequest = event.detail.xhr;
+					const progress = document.querySelector(
+						'[data-ran-booster-source-progress]'
+					);
+					if (progress) {
+						progress.hidden = false;
+					}
+				}
 				captureInteractionState(form);
 				setBusy(form);
 			}
@@ -579,7 +598,7 @@
 
 		document.addEventListener('htmx:afterSwap', function (event) {
 			const form = requestForm(event) || pendingInteractionState?.form;
-			if (!form) {
+			if (!form || isStaleSourceRequest(event, form)) {
 				return;
 			}
 
@@ -621,7 +640,7 @@
 
 		document.addEventListener('htmx:afterSettle', function (event) {
 			const form = requestForm(event) || pendingInteractionState?.form;
-			if (form) {
+			if (form && !isStaleSourceRequest(event, form)) {
 				const successMessage = pendingInteractionState?.successMessage;
 				restoreInteractionState(true);
 				dispatchSuccess(successMessage);
@@ -640,8 +659,16 @@
 		);
 
 		document.addEventListener('htmx:afterRequest', function (event) {
+			if (event.detail?.xhr === sourceRequest && sourceRequest) {
+				const progress = document.querySelector(
+					'[data-ran-booster-source-progress]'
+				);
+				if (progress) {
+					progress.hidden = true;
+				}
+			}
 			const form = requestForm(event);
-			if (form) {
+			if (form && !isStaleSourceRequest(event, form)) {
 				resetBusy(form);
 			}
 		});
@@ -655,7 +682,7 @@
 		].forEach(function (eventName) {
 			document.addEventListener(eventName, function (event) {
 				const form = requestForm(event);
-				if (form) {
+				if (form && !isStaleSourceRequest(event, form)) {
 					if (
 						eventName === 'htmx:responseError' &&
 						isScopedFailureStatus(event.detail?.xhr?.status)

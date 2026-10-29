@@ -466,36 +466,14 @@
 
 .ran-booster-admin .ran-booster-provider-task-tabs {
 	display: flex;
-	gap: var(--ran-booster-space-20);
+	align-items: center;
+	flex-wrap: wrap;
 	margin-block-start: var(--ran-booster-space-16);
 	border-block-end: 1px solid var(--ran-booster-divider);
 }
 
-.ran-booster-admin .ran-booster-provider-task-tab {
-	position: relative;
-	display: inline-flex;
-	min-block-size: 44px;
-	align-items: center;
-	color: var(--ran-booster-link);
-	font-weight: 600;
-	text-decoration: none;
-}
-
-.ran-booster-admin .ran-booster-provider-task-tab[aria-current="page"] {
-	color: var(--ran-booster-text);
-}
-
-.ran-booster-admin .ran-booster-provider-task-tab[aria-current="page"]::after {
-	position: absolute;
-	inset-block-end: -1px;
-	inset-inline: 0;
-	block-size: 3px;
-	background: var(--ran-booster-link);
-	content: "";
-}
-
 .ran-booster-admin .ran-booster-provider-task-tab__source-indicator {
-	flex: 0 0 auto;
+	display: inline-block;
 	inline-size: 8px;
 	block-size: 8px;
 	margin-inline-start: var(--ran-booster-space-6);
@@ -514,7 +492,8 @@
 }
 
 .ran-booster-admin .ran-booster-provider-task-progress[hidden] {
-	display: none;
+	display: flex;
+	visibility: hidden;
 }
 
 .ran-booster-admin .ran-booster-provider-task-progress .spinner {

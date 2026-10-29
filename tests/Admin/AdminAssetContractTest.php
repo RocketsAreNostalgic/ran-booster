@@ -197,13 +197,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'white-space: nowrap;', $settings );
 	}
 
-	public function test_package_source_navigation_pushes_current_source_status_badge_inline_and_right_aligned(): void {
+	public function test_package_source_navigation_preserves_current_source_status_badge(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 
-		self::assertStringContainsString( '.ran-booster-source-choice--navigation {', $settings );
-		self::assertStringContainsString( "\tbox-sizing: border-box;\n\tmargin-block-end: -1px;\n\tdisplay: flex;\n\talign-items: center;", $settings );
-		self::assertStringContainsString( '.ran-booster-source-choice--navigation > .ran-booster-source-choice__content {', $settings );
-		self::assertStringContainsString( "\tmargin-inline-end: var(--ran-booster-space-10);\n\tmin-inline-size: 0;\n\tflex: 1 1 auto;", $settings );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-source-choices--navigation {', $settings );
+		self::assertStringContainsString( ".ran-booster-source-choice--navigation\n\t.ran-booster-source-choice__current-source {", $settings );
 		self::assertStringContainsString( '.ran-booster-source-choice__current-source {', $settings );
 		self::assertStringContainsString( "\tmargin-inline-start: auto;\n\tflex: 0 0 auto;", $settings );
 		self::assertStringContainsString( "\tpadding: 2px var(--ran-booster-space-8);\n\tborder: 1px solid var(--ran-booster-status-ok-border);", $settings );

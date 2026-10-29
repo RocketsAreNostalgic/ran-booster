@@ -51,6 +51,13 @@
 	margin-block: var(--ran-booster-space-18) var(--ran-booster-space-20);
 }
 
+.ran-booster-admin .ran-booster-secondary-nav .nav-tab {
+	box-sizing: border-box;
+	max-inline-size: calc(100% - 0.5em);
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+
 .ran-booster-admin .ran-booster-troubleshooting__form {
 	background: var(--ran-booster-surface);
 	border: 1px solid var(--ran-booster-border);

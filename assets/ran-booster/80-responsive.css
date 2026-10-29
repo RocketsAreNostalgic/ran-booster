@@ -335,7 +335,10 @@
 		border-color: var(--ran-booster-border);
 	}
 
-	.ran-booster-admin .ran-booster-troubleshooting__fields {
+	.ran-booster-admin .ran-booster-troubleshooting__fields,
+	.ran-booster-admin
+		.ran-booster-troubleshooting__specific
+		.ran-booster-troubleshooting__fields {
 		grid-template-columns: 1fr;
 	}
 

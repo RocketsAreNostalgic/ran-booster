@@ -29,8 +29,14 @@ final class PortabilityViewTest extends TestCase {
 		self::assertCount( 2, $export_copy );
 		self::assertCount( 0, $export_disclosure );
 		self::assertCount( 0, $deletion_notice );
-		self::assertSame( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', trim( $export_copy->item( 0 )->textContent ) );
-		self::assertSame( 'Deleting Booster removes its saved local credentials and records.', trim( $export_copy->item( 1 )->textContent ) );
+		$description = $export_copy->item( 0 );
+		$deletion    = $export_copy->item( 1 );
+		self::assertInstanceOf( \DOMElement::class, $description );
+		self::assertInstanceOf( \DOMElement::class, $deletion );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes this platform-owned property in camelCase.
+		self::assertSame( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', trim( $description->textContent ) );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes this platform-owned property in camelCase.
+		self::assertSame( 'Deleting Booster removes its saved local credentials and records.', trim( $deletion->textContent ) );
 		self::assertStringContainsString( 'Create a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'Open a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'What do you want to do on this site?', $html );

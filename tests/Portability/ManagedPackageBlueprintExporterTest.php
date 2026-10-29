@@ -286,7 +286,7 @@ final class ManagedPackageBlueprintExporterTest extends TestCase {
 			$blueprint = ( new ManagedPackageBlueprintExporter( $plugins, $themes, $secrets, $store ) )->export( array( 'gh' => array( 'credential-id-canary' ) ) );
 
 			self::assertCount( 1, $blueprint->credentials );
-			self::assertSame( 'secret-canary', $blueprint->credentials[0]->secret );
+			self::assertSame( 'secret-canary', $blueprint->credentials[0]->reveal_secret() );
 			self::assertSame(
 				array(
 					array(

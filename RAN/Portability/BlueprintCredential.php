@@ -9,6 +9,7 @@ use RAN\RepositoryProvider\ProviderCode;
 
 /** A normalized, source-ID-free credential carried only inside an encrypted blueprint. */
 final readonly class BlueprintCredential {
+	private \SensitiveParameterValue $secret;
 
 	/**
 	 * @param array<string, mixed> $configuration
@@ -19,9 +20,10 @@ final readonly class BlueprintCredential {
 		public string $label,
 		public string $kind,
 		public array $configuration,
-		#[\SensitiveParameter] public string $secret,
+		#[\SensitiveParameter] string $secret,
 		public array $packages
 	) {
+		$this->secret = new \SensitiveParameterValue( $secret );
 		ProviderCode::parse( $provider );
 		if ( ! self::text( $label, 160 ) || ! self::text( $kind, 64 ) || ! self::text( $secret, 4096 )
 			|| ( array() !== $configuration && array_is_list( $configuration ) )
@@ -53,7 +55,11 @@ final readonly class BlueprintCredential {
 		return new self( $record['provider'], $record['label'], $record['kind'], $record['configuration'], $record['secret'], $record['packages'] );
 	}
 
-	/** @return array{provider:string,label:string,kind:string,configuration:array<string,mixed>|object,secret:string,packages:list<array{type:string,identifier:string}>} */
+	/**
+	 * Deliberately returns plaintext credential material for Blueprint processing.
+	 *
+	 * @return array{provider:string,label:string,kind:string,configuration:array<string,mixed>|object,secret:string,packages:list<array{type:string,identifier:string}>}
+	 */
 	public function to_array(): array {
 		$configuration = self::canonical_configuration( $this->configuration );
 		$packages      = $this->packages;
@@ -64,9 +70,16 @@ final readonly class BlueprintCredential {
 			'label'         => $this->label,
 			'kind'          => $this->kind,
 			'configuration' => array() === $configuration ? (object) array() : $configuration,
-			'secret'        => $this->secret,
+			'secret'        => $this->reveal_secret(),
 			'packages'      => $packages,
 		);
+	}
+
+	public function reveal_secret(): string {
+		/** @var string $secret The constructor only wraps validated string secret material. */
+		$secret = $this->secret->getValue();
+
+		return $secret;
 	}
 
 	private static function text( string $value, int $maximum ): bool {

@@ -446,6 +446,7 @@ try {
 	if ( strlen( $ran_booster_contents ) !== file_put_contents( $ran_booster_fixture_path, $ran_booster_contents ) ) {
 		throw new RuntimeException( 'The database smoke could not create its disposable plugin.' );
 	}
+	wp_clean_plugins_cache( false );
 
 	$ran_booster_packages       = $ran_booster_container->make( PluginRepository::class );
 	$ran_booster_fixture_plugin = $ran_booster_packages->installed_plugin_from_file( $ran_booster_identifier );

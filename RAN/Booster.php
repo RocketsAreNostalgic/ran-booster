@@ -320,10 +320,7 @@ class Booster {
 			$this->service( \RAN\WordPress\ManagedReleaseUpdaterRegistrar::class ),
 			function ( string $plugin ): bool {
 				try {
-					$this->service( 'RAN\\Storage\\PluginRepository' )->booster_plugin_from_file( $plugin );
-					return true;
-				} catch ( \RAN\Storage\PluginNotFound ) {
-					return false;
+					return null !== $this->service( 'RAN\\Storage\\PluginRepository' )->native_recovery_record( $plugin );
 				} catch ( \Throwable ) {
 					return true;
 				}

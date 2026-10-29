@@ -23,8 +23,10 @@ final class ExtensionUpdatesTest extends TestCase {
 			public array $admissions = array();
 			public function with_descriptor_admission( callable $admission ): object {
 				$this->admissions[] = $admission;
-				return new class( function ( array $arguments ): void {
-$this->plugins[] = $arguments; } ) {
+				$plugins            = &$this->plugins;
+				return new class( function ( array $arguments ) use ( &$plugins ): void {
+					$plugins[] = $arguments;
+				} ) {
 					public function __construct( private \Closure $record ) {}
 					public function plugin( mixed ...$arguments ): object {
 						( $this->record )( $arguments );
@@ -87,8 +89,10 @@ $this->plugins[] = $arguments; } ) {
 			public int $registrations = 0;
 			public function with_descriptor_admission( callable $admission ): object {
 				unset( $admission );
-				return new class( function (): void {
-++$this->registrations; } ) {
+				$registrations = &$this->registrations;
+				return new class( function () use ( &$registrations ): void {
+					++$registrations;
+				} ) {
 					public function __construct( private \Closure $record ) {}
 					public function plugin( mixed ...$arguments ): object {
 						unset( $arguments );
@@ -110,6 +114,46 @@ $this->plugins[] = $arguments; } ) {
 
 		$updates->register();
 
+		self::assertSame( 0, $runtime->registrations );
+	}
+
+	public function test_does_not_register_a_compatible_catalogue_extension_with_existing_management(): void {
+		$runtime = new class() {
+			public int $registrations = 0;
+
+			public function with_descriptor_admission( callable $admission ): object {
+				unset( $admission );
+				$registrations = &$this->registrations;
+				return new class( function () use ( &$registrations ): void {
+					++$registrations;
+				} ) {
+					public function __construct( private \Closure $record ) {}
+
+					public function plugin( mixed ...$arguments ): object {
+						unset( $arguments );
+						( $this->record )();
+						return new class() {
+							public function register(): bool {
+								return true;
+							}
+						};
+					}
+				};
+			}
+		};
+		$checked = array();
+		$updates = new ExtensionUpdates(
+			new ManagedReleaseUpdaterRegistrar( $runtime ),
+			static function ( string $plugin ) use ( &$checked ): bool {
+				$checked[] = $plugin;
+				return true;
+			},
+			fn (): array => array( $this->extension( 'Installed, inactive' ) )
+		);
+
+		$updates->register();
+
+		self::assertSame( array( 'example/example.php' ), $checked );
 		self::assertSame( 0, $runtime->registrations );
 	}
 

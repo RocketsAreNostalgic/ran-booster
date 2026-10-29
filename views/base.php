@@ -16,6 +16,7 @@ $footer_plugin_headers     = get_file_data(
 	array(
 		'author'     => 'Author',
 		'author_uri' => 'Author URI',
+		'version'    => 'Version',
 	),
 	'plugin'
 );
@@ -24,6 +25,9 @@ $footer_plugin_author      = is_string( $footer_plugin_headers['author'] ?? null
 	: '';
 $footer_plugin_author_url  = is_string( $footer_plugin_headers['author_uri'] ?? null )
 	? trim( $footer_plugin_headers['author_uri'] )
+	: '';
+$footer_plugin_version     = is_string( $footer_plugin_headers['version'] ?? null )
+	? trim( $footer_plugin_headers['version'] )
 	: '';
 $footer_plugin_author_link = esc_url( $footer_plugin_author_url );
 $admin_page_modifier       = match ( $view ) {
@@ -111,6 +115,10 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 				<a href="<?php echo esc_url( $footer_plugin_author_link ); ?>"><?php echo esc_html( $footer_plugin_author ); ?></a>
 			<?php } else { ?>
 				<?php echo esc_html( $footer_plugin_author ); ?>
+			<?php } ?>
+			<?php if ( '' !== $footer_plugin_version ) { ?>
+				| <?php /* translators: %s: installed Booster version. */ ?>
+				<?php echo esc_html( sprintf( __( 'Booster %s', 'ran-booster' ), $footer_plugin_version ) ); ?>
 			<?php } ?>
 		</p>
 	</div>

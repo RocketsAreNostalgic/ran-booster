@@ -524,7 +524,7 @@
 		.ran-booster-package-table
 		.ran-booster-package-row--primary {
 		display: grid;
-		grid-template-columns: 34px minmax(0, 1fr);
+		grid-template-columns: 56px minmax(0, 1fr);
 	}
 
 	.ran-booster-admin
@@ -580,7 +580,7 @@
 
 	.ran-booster-admin .ran-booster-package-row--details {
 		display: grid;
-		grid-template-columns: 34px minmax(0, 1fr);
+		grid-template-columns: 56px minmax(0, 1fr);
 	}
 
 	.ran-booster-admin .ran-booster-package-row__details {

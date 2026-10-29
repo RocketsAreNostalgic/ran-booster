@@ -70,9 +70,18 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		<header class="ran-booster-portability__flow-header">
 			<p class="ran-booster-portability__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></p>
 			<h3 id="ran-booster-portability-export-heading" tabindex="-1"><?php esc_html_e( 'Create a Transporter Blueprint', 'ran-booster' ); ?></h3>
-			<p><?php esc_html_e( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', 'ran-booster' ); ?></p>
-			<p class="description"><?php esc_html_e( 'Known installed requirements are included as observations. Unreadable or invalid declarations are omitted; missing information does not mean compatible. Configuration export does not verify installed files or guarantee exact reproduction.', 'ran-booster' ); ?></p>
-			<p class="description"><?php esc_html_e( 'Deleting Booster removes its saved local credentials and records. Transporter exports selected configuration and eligible credentials you explicitly choose; it is not a full backup and does not include webhook secrets or deployment history.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'Export selected package settings and optional repository credentials. This is not a full backup.', 'ran-booster' ); ?></p>
+			<details class="ran-booster-disclosure">
+				<summary><?php esc_html_e( 'Export limits', 'ran-booster' ); ?></summary>
+				<div class="ran-booster-disclosure__body">
+					<ul>
+						<li><?php esc_html_e( 'Known installed requirements are observations. Unreadable or invalid declarations are omitted; missing information does not mean compatible.', 'ran-booster' ); ?></li>
+						<li><?php esc_html_e( 'Configuration export does not verify installed files or guarantee exact reproduction.', 'ran-booster' ); ?></li>
+						<li><?php esc_html_e( 'Webhook secrets and deployment history are excluded.', 'ran-booster' ); ?></li>
+						<li><?php esc_html_e( 'Deleting Booster removes its saved local credentials and records.', 'ran-booster' ); ?></li>
+					</ul>
+				</div>
+			</details>
 		</header>
 		<form class="ran-booster-portability__export-form" method="post" action="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-portability-export-form>
 			<input type="hidden" name="action" value="ran_booster_export_blueprint">

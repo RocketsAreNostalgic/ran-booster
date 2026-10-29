@@ -705,6 +705,32 @@
 	margin: 0;
 }
 
+.ran-booster-admin
+	.ran-booster-repository-detail__sidebar
+	.ran-booster-repository-detail__facts
+	:is(dt, dd) {
+	min-inline-size: 0;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-detail__sidebar
+	.ran-booster-repository-detail__facts
+	:is(.ran-booster-pill, .ran-booster-badge) {
+	box-sizing: border-box;
+	max-inline-size: 100%;
+	white-space: normal;
+}
+
+@media screen and (min-width: 961px) {
+	.ran-booster-admin
+		.ran-booster-repository-detail__sidebar
+		.ran-booster-repository-detail__facts
+		> div {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
 ::view-transition-group(ran-booster-provider-task-panel),
 ::view-transition-old(ran-booster-provider-task-panel),
 ::view-transition-new(ran-booster-provider-task-panel) {

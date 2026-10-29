@@ -2,6 +2,38 @@
  * CUA DOM-tab adapter for focused package-settings browser regressions.
  * These assertions inspect rendered geometry and focus, never CSS source.
  */
+export async function assertNavigationProgress(tab, selector, busy = false) {
+	return tab.playwright.evaluate(
+		({ selector, busy }) => {
+			const progress = document.querySelector(selector);
+			const spinner = progress?.querySelector('.spinner.is-active');
+			if (!progress || !spinner)
+				throw new Error('Progress spinner is missing.');
+			const rect = progress.getBoundingClientRect();
+			const spinnerStyle = getComputedStyle(spinner);
+			const progressStyle = getComputedStyle(progress);
+			if (
+				rect.width <= 0 ||
+				rect.height <= 0 ||
+				progressStyle.display === 'none'
+			) {
+				throw new Error('Progress slot is not reserved.');
+			}
+			if ((spinnerStyle.visibility === 'visible') !== busy) {
+				throw new Error(
+					`Spinner visibility is ${spinnerStyle.visibility}; busy is ${busy}.`
+				);
+			}
+			return {
+				width: rect.width,
+				height: rect.height,
+				visibility: spinnerStyle.visibility,
+			};
+		},
+		{ selector, busy }
+	);
+}
+
 export async function assertSourceRouteKeyboardRegression(
 	tab,
 	{

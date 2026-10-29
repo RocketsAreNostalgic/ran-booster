@@ -977,7 +977,7 @@ msgid "Completed"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Booster.php:851
+#: RAN/Booster.php:848
 #: views/attempts/index.php:51
 #: views/packages/index.php:64
 #: views/troubleshooting.php:42
@@ -2775,7 +2775,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:701
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:852
+#: RAN/Booster.php:849
 #: views/attempts/index.php:54
 #: views/onboarding.php:28
 #: views/packages/branch-readiness.php:200
@@ -4502,168 +4502,168 @@ msgstr ""
 msgid "You cannot install plugins."
 msgstr ""
 
-#: RAN/Booster.php:343
+#: RAN/Booster.php:340
 msgid "Connect Booster to Bitbucket Cloud repositories for managed deployments."
 msgstr ""
 
-#: RAN/Booster.php:344
+#: RAN/Booster.php:341
 msgid "Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy."
 msgstr ""
 
-#: RAN/Booster.php:346
+#: RAN/Booster.php:343
 msgid "Connect and configure Bitbucket Cloud repositories in Booster."
 msgstr ""
 
-#: RAN/Booster.php:347
+#: RAN/Booster.php:344
 msgid "Use provider-specific package and credential guidance."
 msgstr ""
 
-#: RAN/Booster.php:348
+#: RAN/Booster.php:345
 msgid "Carry eligible file-stored credentials through Transporter for explicit import on the target site."
 msgstr ""
 
-#: RAN/Booster.php:351
+#: RAN/Booster.php:348
 msgid "WordPress 7.0 or later and PHP 8.2 or later."
 msgstr ""
 
-#: RAN/Booster.php:352
+#: RAN/Booster.php:349
 msgid "A version of Booster compatible with this extension."
 msgstr ""
 
-#: RAN/Booster.php:353
+#: RAN/Booster.php:350
 msgid "Manual Bitbucket webhook setup for Push-to-Deploy."
 msgstr ""
 
-#: RAN/Booster.php:357
-#: RAN/Booster.php:389
+#: RAN/Booster.php:354
+#: RAN/Booster.php:386
 msgid "Free"
 msgstr ""
 
-#: RAN/Booster.php:375
+#: RAN/Booster.php:372
 msgid "Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them."
 msgstr ""
 
-#: RAN/Booster.php:376
+#: RAN/Booster.php:373
 msgid "Review and adopt supported packages from an inactive WP Pusher installation. Adopted packages start with deployments disabled, so enabling deployment remains an explicit decision."
 msgstr ""
 
-#: RAN/Booster.php:378
+#: RAN/Booster.php:375
 msgid "Review retained WP Pusher package records before migration."
 msgstr ""
 
-#: RAN/Booster.php:379
+#: RAN/Booster.php:376
 msgid "Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter."
 msgstr ""
 
-#: RAN/Booster.php:380
+#: RAN/Booster.php:377
 msgid "Migrator removes each WP Pusher entry only after Booster verifies the adopted package with deployments disabled."
 msgstr ""
 
-#: RAN/Booster.php:383
+#: RAN/Booster.php:380
 msgid "WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster."
 msgstr ""
 
-#: RAN/Booster.php:384
+#: RAN/Booster.php:381
 msgid "A single site with a supported WP Pusher installation that is inactive."
 msgstr ""
 
-#: RAN/Booster.php:385
+#: RAN/Booster.php:382
 msgid "Existing Booster credentials for private repositories; GitLab packages are not supported."
 msgstr ""
 
 #. translators: %s: Selected extension release version.
-#: RAN/Booster.php:432
+#: RAN/Booster.php:429
 #, php-format
 msgid "The selected version %s release requires a different version of Booster. Review its documentation before installing or updating."
 msgstr ""
 
 #. translators: 1: Selected extension release version, 2: Installed extension version.
-#: RAN/Booster.php:438
+#: RAN/Booster.php:435
 #, php-format
 msgid "The selected version %1$s release is compatible with your version of Booster. Your installed version %2$s is older; update it in Plugins."
 msgstr ""
 
 #. translators: 1: Selected extension release version, 2: Installed extension version.
-#: RAN/Booster.php:445
+#: RAN/Booster.php:442
 #, php-format
 msgid "The selected version %1$s release is compatible with your version of Booster. Your installed version %2$s is newer and has not been qualified for this catalogue. Review it in Plugins."
 msgstr ""
 
 #. translators: %s: Selected extension release version.
-#: RAN/Booster.php:452
+#: RAN/Booster.php:449
 #, php-format
 msgid "The selected version %s release is compatible with your version of Booster. The installed extension version could not be verified; review it in Plugins before updating."
 msgstr ""
 
-#: RAN/Booster.php:456
+#: RAN/Booster.php:453
 msgid "Compatible with your version of Booster"
 msgstr ""
 
-#: RAN/Booster.php:514
+#: RAN/Booster.php:511
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:848
+#: RAN/Booster.php:845
 #: views/attempts/index.php:46
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:849
+#: RAN/Booster.php:846
 #: views/attempts/index.php:47
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:850
+#: RAN/Booster.php:847
 #: views/attempts/index.php:49
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:853
+#: RAN/Booster.php:850
 #: views/packages/index.php:329
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:854
+#: RAN/Booster.php:851
 #: views/packages/index.php:331
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:855
+#: RAN/Booster.php:852
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:856
+#: RAN/Booster.php:853
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:857
+#: RAN/Booster.php:854
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:858
+#: RAN/Booster.php:855
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:859
+#: RAN/Booster.php:856
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:860
+#: RAN/Booster.php:857
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:1005
+#: RAN/Booster.php:1002
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:1007
+#: RAN/Booster.php:1004
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:1009
+#: RAN/Booster.php:1006
 msgid "Contact a site administrator."
 msgstr ""
 

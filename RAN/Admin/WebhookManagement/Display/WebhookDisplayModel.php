@@ -185,7 +185,7 @@ final class WebhookDisplayModel {
 		$recovery_warning = null;
 		if ( null !== $record && $record->requires_hook_identification() ) {
 			/* translators: %s: repository provider name. */
-			$recovery_warning = sprintf( __( 'Provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' ), $provider_label );
+			$recovery_warning = sprintf( __( 'Git provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' ), $provider_label );
 		} elseif ( null !== $recovery ) {
 			/* translators: %s: repository provider name. */
 			$recovery_warning = sprintf( __( 'Repository webhook management could not persist the returned recovery references. Setup is disabled on this recovery view. Inspect %s and Core manually before leaving or retrying.', 'ran-booster' ), $provider_label );
@@ -298,7 +298,7 @@ final class WebhookDisplayModel {
 			),
 			array(
 				'heading' => $credential_heading,
-				'body'    => __( 'Select an eligible saved Booster credential for the selected repository. Booster resolves the saved credential inside the fixed provider operation; no credential material is returned to webhook management.', 'ran-booster' ),
+				'body'    => __( 'Select an eligible saved Booster credential for the selected repository. Booster resolves the saved credential inside the fixed Git provider operation; no credential material is returned to webhook management.', 'ran-booster' ),
 			),
 			array(
 				'heading' => __( 'Readiness and recorded status', 'ran-booster' ),
@@ -318,29 +318,29 @@ final class WebhookDisplayModel {
 	/** @param array{hook_id: string, profile_id: string}|null $recovery */
 	public function notice( string $code, ?array $recovery = null, ?string $remediation = null ): string {
 		if ( 'orphaned' === $code ) {
-			return __( 'The remote hook may be active without a complete local record. Inspect it manually at the provider before retrying.', 'ran-booster' );
+			return __( 'The remote hook may be active without a complete local record. Inspect it manually at the Git provider before retrying.', 'ran-booster' );
 		}
 		if ( in_array( $code, array( 'recovery_record_failed', 'record_conflict', 'record_update_failed' ), true ) ) {
 			return null === $recovery
 				? ( 'record_conflict' === $code
-						? __( 'A newer webhook-management record won the persistence race. Nothing was overwritten; inspect the current provider and Core state before retrying.', 'ran-booster' )
-						: __( 'Provider state may have changed, but webhook management could not save its non-secret recovery record. Inspect the provider and Core before retrying.', 'ran-booster' ) )
+						? __( 'A newer webhook-management record won the persistence race. Nothing was overwritten; inspect the current Git provider and Core state before retrying.', 'ran-booster' )
+						: __( 'Git provider state may have changed, but webhook management could not save its non-secret recovery record. Inspect the Git provider and Core before retrying.', 'ran-booster' ) )
 					: sprintf(
 						/* translators: 1: provider hook reference ID, 2: Core signing profile ID. */
-						__( 'Provider state may have changed, but the current webhook-management record was not overwritten. Inspect provider hook reference %1$s and Core signing profile %2$s before retrying.', 'ran-booster' ),
+						__( 'Git provider state may have changed, but the current webhook-management record was not overwritten. Inspect Git provider hook reference %1$s and Core signing profile %2$s before retrying.', 'ran-booster' ),
 						$recovery['hook_id'],
 						$recovery['profile_id']
 					);
 		}
 		if ( 'manual_recovery_required' === $code ) {
-			return __( 'Managed operations are disabled because the prior setup did not return a stable hook ID. Inspect the provider and Core manually before retrying.', 'ran-booster' );
+			return __( 'Managed operations are disabled because the prior setup did not return a stable hook ID. Inspect the Git provider and Core manually before retrying.', 'ran-booster' );
 		}
 
 		return match ( $code ) {
 			'ping_requested', 'ping_verified' => __( 'GitHub accepted the ping request for the recorded hook. This does not prove an authenticated inbound delivery or verify the signing secret; recorded status remains needs verification.', 'ran-booster' ),
-			'ping_delivery_failed' => __( 'GitHub recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the provider delivery details.', 'ran-booster' ),
+			'ping_delivery_failed' => __( 'GitHub recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the Git provider delivery details.', 'ran-booster' ),
 			'configured_pending_delivery' => __( 'Webhook management configured the remote hook. Signed delivery verification is still pending.', 'ran-booster' ),
-			'verified' => __( 'Webhook management confirmed the recorded remote configuration. Correlate provider delivery history with the Provider request ID in Booster Activity before treating signed delivery as established.', 'ran-booster' ),
+			'verified' => __( 'Webhook management confirmed the recorded remote configuration. Correlate Git provider delivery history with the Git provider request ID in Booster Activity before treating signed delivery as established.', 'ran-booster' ),
 			'removed' => __( 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.', 'ran-booster' ),
 			'forbidden' => __( 'You are not permitted to manage this repository webhook. Nothing was changed.', 'ran-booster' ),
 			'invalid_request' => __( 'The webhook request was invalid or expired. Nothing was changed; reload this repository and try again.', 'ran-booster' ),
@@ -348,22 +348,22 @@ final class WebhookDisplayModel {
 			'operation_unauthorized' => __( 'Core could not authorize this repository webhook operation. Nothing was changed.', 'ran-booster' ),
 			'repository_identity_unconfirmed' => __( 'Core could not confirm the selected repository identity. Nothing was changed.', 'ran-booster' ),
 			'operation_busy' => __( 'Another webhook operation is already in progress for this repository. Wait for it to finish, then check the recorded state.', 'ran-booster' ),
-			'operation_failed' => __( 'Webhook management could not confirm the operation outcome. Inspect the provider and recorded status before retrying.', 'ran-booster' ),
-			'setup_failed' => __( 'The provider rejected the webhook setup request. No remote hook was established.', 'ran-booster' ),
+			'operation_failed' => __( 'Webhook management could not confirm the operation outcome. Inspect the Git provider and recorded status before retrying.', 'ran-booster' ),
+			'setup_failed' => __( 'The Git provider rejected the webhook setup request. No remote hook was established.', 'ran-booster' ),
 			'setup_compensated' => __( 'Webhook management could not verify the new remote hook, so it removed it. No webhook was established; setup may be tried again.', 'ran-booster' ),
-			'setup_compensation_incomplete' => __( 'Webhook management could not verify or safely remove the new remote hook. Inspect the provider and Core records before retrying.', 'ran-booster' ),
-			'setup_outcome_unknown' => __( 'Webhook management could not confirm whether setup changed the remote hook. Inspect the provider and Core records before retrying.', 'ran-booster' ),
-			'hook_inventory_unavailable', 'hook_inventory_invalid', 'hook_inventory_incomplete', 'matching_hooks_ambiguous' => __( 'Webhook management could not establish the current remote hook state. Nothing should be treated as successful; inspect the provider before retrying.', 'ran-booster' ),
-			'setup_response_invalid' => __( 'The provider response did not identify the new hook. Inspect the provider and Core records before retrying.', 'ran-booster' ),
-			'preconfiguration_read_unavailable', 'reconfigure_readback_unavailable', 'reconfigure_outcome_unknown' => __( 'Webhook management could not confirm the remote hook state after the update request. Run Check or inspect the hook at the provider before retrying an update.', 'ran-booster' ),
-			'reconfigure_failed' => __( 'The provider rejected the webhook update request. Run Check or inspect the hook at the provider before retrying.', 'ran-booster' ),
-			'hook_ownership_unavailable' => __( 'Webhook management could not confirm that the recorded hook belongs to this site. Run Check or inspect the hook at the provider before retrying.', 'ran-booster' ),
-			'predelete_read_unavailable', 'remove_readback_unavailable', 'remove_outcome_unknown' => __( 'Webhook management could not confirm whether the remote hook was removed. Run Check or inspect the hook at the provider before retrying removal.', 'ran-booster' ),
-			'remove_failed' => __( 'The provider rejected the webhook removal request. Run Check or inspect the hook at the provider before retrying.', 'ran-booster' ),
+			'setup_compensation_incomplete' => __( 'Webhook management could not verify or safely remove the new remote hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
+			'setup_outcome_unknown' => __( 'Webhook management could not confirm whether setup changed the remote hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
+			'hook_inventory_unavailable', 'hook_inventory_invalid', 'hook_inventory_incomplete', 'matching_hooks_ambiguous' => __( 'Webhook management could not establish the current remote hook state. Nothing should be treated as successful; inspect the Git provider before retrying.', 'ran-booster' ),
+			'setup_response_invalid' => __( 'The Git provider response did not identify the new hook. Inspect the Git provider and Core records before retrying.', 'ran-booster' ),
+			'preconfiguration_read_unavailable', 'reconfigure_readback_unavailable', 'reconfigure_outcome_unknown' => __( 'Webhook management could not confirm the remote hook state after the update request. Run Check or inspect the hook at the Git provider before retrying an update.', 'ran-booster' ),
+			'reconfigure_failed' => __( 'The Git provider rejected the webhook update request. Run Check or inspect the hook at the Git provider before retrying.', 'ran-booster' ),
+			'hook_ownership_unavailable' => __( 'Webhook management could not confirm that the recorded hook belongs to this site. Run Check or inspect the hook at the Git provider before retrying.', 'ran-booster' ),
+			'predelete_read_unavailable', 'remove_readback_unavailable', 'remove_outcome_unknown' => __( 'Webhook management could not confirm whether the remote hook was removed. Run Check or inspect the hook at the Git provider before retrying removal.', 'ran-booster' ),
+			'remove_failed' => __( 'The Git provider rejected the webhook removal request. Run Check or inspect the hook at the Git provider before retrying.', 'ran-booster' ),
 			'operation_lock_release_failed' => __( 'The webhook operation completed, but Core could not release its coordination lock. Wait for the current request to end, then run Check before retrying.', 'ran-booster' ),
 			'assessment_insufficient' => __( 'Core confirmed that the selected credential is insufficient for this repository webhook operation. Nothing was changed.', 'ran-booster' ),
 			'assessment_stale' => __( 'The credential fitness assessment is stale. Nothing was changed; assess again with current repository authority.', 'ran-booster' ),
-			'assessment_unsupported' => __( 'The bound provider does not support this fixed webhook operation. Nothing was changed.', 'ran-booster' ),
+			'assessment_unsupported' => __( 'The bound Git provider does not support this fixed webhook operation. Nothing was changed.', 'ran-booster' ),
 			'assessment_unavailable' => __( 'Core could not establish safe credential fitness for this operation. Nothing was changed.', 'ran-booster' ),
 			default => null !== $remediation && strlen( $remediation ) <= 255
 				? $remediation
@@ -733,7 +733,7 @@ final class WebhookDisplayModel {
 				if ( is_array( $choice ) && is_string( $choice['id'] ?? null ) && is_string( $choice['label'] ?? null ) && hash_equals( $record->management_credential_id(), $choice['id'] ) ) {
 					return sprintf(
 						/* translators: %s: current saved credential profile label. */
-						__( 'Last managed with %s; provider authority has not been revalidated.', 'ran-booster' ),
+						__( 'Last managed with %s; Git provider authority has not been revalidated.', 'ran-booster' ),
 						$choice['label']
 					);
 				}

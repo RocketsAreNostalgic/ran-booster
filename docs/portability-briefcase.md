@@ -13,8 +13,8 @@ It is not part of the published beta.37 behavior described below.
 
 **Stage 2 source candidate, pending release:** an ordinary unpinned Release
 Blueprint may install only into an absent, unmanaged target after preview has
-qualified the first provider-preferred candidate and Apply has freshly checked
-that exact tuple. It does not search for or claim the newest eligible release;
+qualified the first candidate preferred by the Git provider and Apply has freshly
+checked that exact tuple. It does not search for or claim the newest eligible release;
 selected Release records and every failed or missing review remain refused.
 Installed-package adoption follows the Stage 1 published-release adoption
 contract. A successful native installation stays inactive with

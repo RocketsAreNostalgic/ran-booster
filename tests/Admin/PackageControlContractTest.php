@@ -62,7 +62,7 @@ final class PackageControlContractTest extends TestCase {
 		$defaults = file_get_contents( dirname( __DIR__, 2 ) . '/RAN/Admin/PackagePagePresenter.php' );
 		self::assertIsString( $defaults );
 		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $defaults );
-		self::assertStringContainsString( 'Provider capability required', $defaults );
+		self::assertStringContainsString( 'Git provider capability required', $defaults );
 		self::assertStringNotContainsString( 'Subscriber', $source );
 		self::assertStringNotContainsString( 'Release Deployments', $source );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $readiness );

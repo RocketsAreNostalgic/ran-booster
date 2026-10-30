@@ -200,7 +200,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			self::callback(
 				static fn ( mixed $message ): bool => $message instanceof WP_Error
 				&& 'ran_booster_unavailable_package_provider' === $message->get_error_code()
-				&& 'Booster could not verify the managed package provider. No changes were made.' === $message->get_error_message()
+				&& 'Booster could not verify the managed package Git provider. No changes were made.' === $message->get_error_message()
 			),
 			self::isInstanceOf( \TypeError::class )
 		);

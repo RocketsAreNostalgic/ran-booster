@@ -25,7 +25,7 @@ $portability_comparison_labels    = array(
 	'unavailable' => __( 'Booster could not compare this site’s settings with the Blueprint.', 'ran-booster' ),
 );
 $portability_configuration_labels = array(
-	'provider'               => __( 'Provider', 'ran-booster' ),
+	'provider'               => __( 'Git provider', 'ran-booster' ),
 	'provider_repository_id' => __( 'Repository identity', 'ran-booster' ),
 	'repository'             => __( 'Repository', 'ran-booster' ),
 	'kind'                   => __( 'Source', 'ran-booster' ),
@@ -114,7 +114,7 @@ $has_credential_decisions         = array() !== array_filter(
 	<section class="ran-booster-portability__credential-review" aria-labelledby="ran-booster-portability-credentials-heading">
 		<h5 id="ran-booster-portability-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h5>
 		<?php if ( $has_credential_decisions ) : ?>
-			<p class="description"><strong><?php esc_html_e( 'Before you continue:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'For each required repository, Booster checks access using only your choice. Broader credential permissions are unassessed; the active provider handles repository access, and Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p>
+			<p class="description"><strong><?php esc_html_e( 'Before you continue:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'For each required repository, Booster checks access using only your choice. Broader credential permissions are unassessed; the active Git provider handles repository access, and Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p>
 		<?php else : ?>
 			<p><?php esc_html_e( 'This Blueprint includes repository credentials, but none are needed for package changes on this site.', 'ran-booster' ); ?></p>
 		<?php endif; ?>
@@ -169,7 +169,7 @@ $has_credential_decisions         = array() !== array_filter(
 			<legend class="screen-reader-text"><?php echo esc_html( (string) ( $credential['provider_label'] ?? '' ) ); ?> — <?php echo esc_html( (string) ( $credential['label'] ?? '' ) ); ?></legend>
 			<div class="ran-booster-portability__credential-heading">
 				<h6 class="ran-booster-portability__credential-name"><?php echo esc_html( (string) ( $credential['label'] ?? '' ) ); ?></h6>
-				<span class="ran-booster-tile ran-booster-portability__credential-provider"><span class="screen-reader-text"><?php esc_html_e( 'Provider:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( (string) ( $credential['provider_label'] ?? '' ) ); ?></span></span>
+				<span class="ran-booster-tile ran-booster-portability__credential-provider"><span class="screen-reader-text"><?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( (string) ( $credential['provider_label'] ?? '' ) ); ?></span></span>
 				<?php if ( '' !== (string) ( $credential['kind'] ?? '' ) ) : ?>
 					<span class="ran-booster-tile ran-booster-portability__credential-kind"><span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( (string) ( $credential['kind_label'] ?? $credential['kind'] ) ); ?></span></span>
 				<?php endif; ?>
@@ -213,7 +213,7 @@ $has_credential_decisions         = array() !== array_filter(
 								</select>
 							</div>
 						<?php else : ?>
-							<p class="description ran-booster-portability__credential-unavailable"><?php esc_html_e( 'No saved credentials are available for this provider.', 'ran-booster' ); ?></p>
+							<p class="description ran-booster-portability__credential-unavailable"><?php esc_html_e( 'No saved credentials are available for this Git provider.', 'ran-booster' ); ?></p>
 						<?php endif; ?>
 					</div>
 					<?php endif; ?>
@@ -284,7 +284,7 @@ $has_credential_decisions         = array() !== array_filter(
 					<td class="ran-booster-portability__review-state"><span class="ran-booster-pill ran-booster-pill--<?php echo esc_attr( $portability_action_pills[ $review_action ] ); ?>"><?php echo esc_html( $portability_action_labels[ $review_action ][0] ); ?></span><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span>
 					<?php if ( null !== $release_review ) : ?>
 						<?php /* translators: 1: reviewed release version, 2: reviewed release tag. */ ?>
-						<p class="description"><?php echo esc_html( sprintf( __( 'Reviewed release %1$s (%2$s). Booster will install this first provider-preferred candidate only; it does not claim the newest eligible release. The package will remain inactive and deployment Disabled.', 'ran-booster' ), (string) ( $release_review['version'] ?? '' ), (string) ( $release_review['tag'] ?? '' ) ) ); ?></p>
+						<p class="description"><?php echo esc_html( sprintf( __( 'Reviewed release %1$s (%2$s). Booster will install this first candidate preferred by the Git provider only; it does not claim the newest eligible release. The package will remain inactive and deployment Disabled.', 'ran-booster' ), (string) ( $release_review['version'] ?? '' ), (string) ( $release_review['tag'] ?? '' ) ) ); ?></p>
 					<?php endif; ?>
 					<?php if ( true === ( $row['repository_conflict'] ?? false ) ) : ?>
 						<p><?php esc_html_e( 'This Blueprint proposes conflicting sources for this repository. Select multiple branch packages or one release package, not both.', 'ran-booster' ); ?></p>
@@ -325,7 +325,7 @@ $has_credential_decisions         = array() !== array_filter(
 									<?php endforeach; ?>
 								</select>
 							<?php else : ?>
-								<p class="description ran-booster-portability__credential-unavailable"><?php esc_html_e( 'No saved credentials are available for this provider.', 'ran-booster' ); ?></p>
+								<p class="description ran-booster-portability__credential-unavailable"><?php esc_html_e( 'No saved credentials are available for this Git provider.', 'ran-booster' ); ?></p>
 							<?php endif; ?>
 							<?php if ( ! empty( $row['credential']['settings_url'] ) ) : ?>
 								<a href="<?php echo esc_url( $row['credential']['settings_url'] ); ?>"><?php esc_html_e( 'Manage repository credentials', 'ran-booster' ); ?></a>

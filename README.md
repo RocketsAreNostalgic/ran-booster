@@ -88,7 +88,7 @@ verify the checksum, and install the ZIP through WordPress. GitHub's generated
 Deactivation, updates, and reinstalling Booster preserve its managed packages,
 deployment history, and encrypted credentials. Deleting Booster through
 WordPress permanently removes the local data it can verify belongs to Booster.
-Export a Blueprint, remove remote webhooks, and revoke provider credentials
+Export a Blueprint, remove remote webhooks, and revoke Git provider credentials
 before uninstalling.
 
 ## Operating and extending Booster
@@ -99,15 +99,15 @@ Transporter creates a Blueprint ZIP for selected managed package configuration.
 Explicitly selecting eligible saved credentials adds a password-protected
 briefcase; package-only exports are unencrypted. It gives
 you a reconstruction path for a site move without requiring a development
-checkout. Blueprints do not include webhook secrets, provider-side hooks,
-deployment history, or WordPress content, and every restored package begins
+checkout. Blueprints do not include webhook secrets, hooks registered with the
+Git provider, deployment history, or WordPress content, and every restored package begins
 with deployment **Disabled**. Start with the
 [dashboard walkthrough](docs/operator-journeys.md), then use the detailed
 [Transporter Blueprint reference](docs/portability-briefcase.md).
 
 Credential transfer is a copy operation. It does not move the source site's
 encryption key, revoke or rotate the source credential, or recreate
-provider-side access and webhooks.
+access and webhooks on the Git provider.
 
 ### Choose GitHub support or migrate from WP Pusher
 
@@ -129,7 +129,7 @@ A compatible Migrator release remains a separate prerequisite.
 
 ### Credentials and deployment evidence
 
-Saved provider credentials, such as personal access tokens, are encrypted in a
+Saved Git provider credentials, such as personal access tokens, are encrypted in a
 private file outside WordPress and its plugin directories. The encryption key
 is held separately in the WordPress database, so a copy of either one alone
 cannot reveal the saved tokens.
@@ -150,8 +150,8 @@ to Booster itself, which are separate from the plugins and themes it manages.
 Deployment truthfulness is a design priority. Every branch-source deployment
 records one durable attempt row with an explicit state
 (`queued` → `running` → `succeeded` / `failed` / `needs_attention`), bound to a
-provider-issued repository identity and an immutable commit. Booster validates
-the archive's exact bytes, identity, and paths before WordPress touches the
+repository identity issued by the Git provider and an immutable commit. Booster
+validates the archive's exact bytes, identity, and paths before WordPress touches the
 filesystem, verifies the result afterward, and rejects stale events before
 they can roll back newer code; an exact replay creates no additional attempt.
 
@@ -197,7 +197,7 @@ The old `RAN_BOOSTER_MAX_ATTEMPT_ROWS` setting is retired for clean-start rollou
 
 ### Repository archive limits
 
-Provider deployments download a ZIP of the whole repository; selecting a
+Git provider deployments download a ZIP of the whole repository; selecting a
 package subdirectory does not reduce that download. The target site defaults to
 50 MiB compressed and 200 MiB expanded. A legitimate larger repository can use
 one target-local, site-wide override in `wp-config.php`:
@@ -209,7 +209,7 @@ define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 150 * 1024 * 1024 );
 The compressed value must be an integer from 1 MiB through 536,870,911 bytes (just under 512 MiB), a ceiling that is portable across supported 32- and 64-bit PHP builds. Booster
 derives the expanded limit at four times that value and retains its other ZIP,
 identity, path and free-space checks. The same policy covers every registered
-provider's branch-source manual installs and updates, webhook updates, and
+Git provider's branch-source manual installs and updates, webhook updates, and
 Transporter Blueprint installs. Prospective release installation instead uses
 the released `ran/wp-release-updater` beta.15 public API (Protocol 7), with
 separate archive custody and bounds, and creates no deployment attempt.
@@ -218,14 +218,14 @@ selected release using its opaque `v2:` fingerprint. Earlier selections require
 reinspection. Keep committed development-only files out of the deployed
 ref rather than treating a higher limit as a substitute for repository hygiene.
 
-### Provider add-ons
+### Git provider add-ons
 
-Compatible provider add-ons can support additional Git services without
+Compatible Git provider add-ons can support additional Git services without
 modifying Booster Core. The alpha Bitbucket add-on currently uses manual
 webhook setup rather than Core's guided GitHub webhook management. Third-party
 provider add-ons may have their own service dependencies and policies.
 
-Provider authors should start with the
+Git provider authors should start with the
 [custom Git provider guide](docs/custom-git-vendors.md) and the
 [provider extension contract](docs/provider-extension-contract.md).
 

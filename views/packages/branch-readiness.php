@@ -84,7 +84,7 @@ if ( ! $receiver_ready ) {
 	$receiver_action_label = __( 'Review Booster diagnostics', 'ran-booster' );
 	$receiver_label        = match ( true ) {
 		in_array( 'callback_requires_public_https', $site_reasons, true )
-			=> __( 'This WordPress URL cannot receive provider webhooks. Use a public HTTPS WordPress URL or a secure tunnel. Manual deployments remain available.', 'ran-booster' ),
+			=> __( 'This WordPress URL cannot receive Git provider webhooks. Use a public HTTPS WordPress URL or a secure tunnel. Manual deployments remain available.', 'ran-booster' ),
 		in_array( 'database_unavailable', $site_reasons, true )
 			=> __( 'Booster could not access the local data required for Push-to-Deploy. Manual deployments remain available.', 'ran-booster' ),
 		in_array( 'secrets_storage_unavailable', $site_reasons, true )
@@ -111,7 +111,7 @@ $saved_subdirectory_value         = isset( $saved_subdirectory_value ) && is_str
 	? trim( $saved_subdirectory_value )
 	: '';
 $repository_branch_check_message  = match ( $repository_branch_check_outcome ?? null ) {
-	'provider_unavailable' => __( 'The saved provider is unavailable, so Booster could not check the repository and branch.', 'ran-booster' ),
+	'provider_unavailable' => __( 'The saved Git provider is unavailable, so Booster could not check the repository and branch.', 'ran-booster' ),
 	'unable_to_check'      => __( 'Booster could not access the saved repository and branch. Check the branch name and repository access, then try again.', 'ran-booster' ),
 	'subdirectory_unavailable' => __( 'The saved branch is accessible, but Booster could not find the configured subdirectory. Check the path and try again.', 'ran-booster' ),
 	'subdirectory_unverified'  => __( 'The saved branch is accessible, but Booster could not check the configured subdirectory. Try again later.', 'ran-booster' ),
@@ -130,7 +130,7 @@ if ( in_array( $repository_branch_check_outcome ?? null, array( 'verified', 'sub
 } elseif ( $repository_branch_verified ) {
 	$saved_repository_label = __( 'was accessible at the last check.', 'ran-booster' );
 } elseif ( 'provider_unavailable' === ( $repository_branch_check_outcome ?? null ) ) {
-	$saved_repository_label = __( 'is saved, but the provider is unavailable.', 'ran-booster' );
+	$saved_repository_label = __( 'is saved, but the Git provider is unavailable.', 'ran-booster' );
 } elseif ( 'unable_to_check' === ( $repository_branch_check_outcome ?? null ) ) {
 	$saved_repository_label = __( 'is saved, but access could not be verified.', 'ran-booster' );
 } else {
@@ -140,10 +140,10 @@ $saved_repository_message = $identity_ready
 	? sprintf(
 		/* translators: 1: branch name, 2: repository check status. */
 		__( 'The branch <code>%1$s</code> %2$s', 'ran-booster' ),
-		esc_html( '' !== $branch_value ? $branch_value : __( 'The provider default branch', 'ran-booster' ) ),
+		esc_html( '' !== $branch_value ? $branch_value : __( 'The repository default branch', 'ran-booster' ) ),
 		esc_html( $saved_repository_label )
 	)
-	: __( 'The saved repository needs one stable provider identity.', 'ran-booster' );
+	: __( 'The saved repository needs one stable Git provider identity.', 'ran-booster' );
 $saved_subdirectory_message = '' === $saved_subdirectory_value
 	? __( 'Repository root (no subdirectory).', 'ran-booster' )
 	: match ( $repository_branch_check_outcome ?? null ) {

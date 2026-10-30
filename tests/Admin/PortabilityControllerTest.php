@@ -363,7 +363,7 @@ final class PortabilityControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'data-portability-release-review="{&quot;release_id&quot;:&quot;366&quot;', $html );
 		self::assertStringContainsString( 'data-portability-release-review-nonce="nonce&lt;review&gt;"', $html );
-		self::assertStringContainsString( 'Reviewed release 1.2.3 (v1.2.3&lt;script&gt;). Booster will install this first provider-preferred candidate only;', $html );
+		self::assertStringContainsString( 'Reviewed release 1.2.3 (v1.2.3&lt;script&gt;). Booster will install this first candidate preferred by the Git provider only;', $html );
 	}
 
 	public function test_release_review_nonce_accepts_the_previous_wordpress_nonce_tick(): void {

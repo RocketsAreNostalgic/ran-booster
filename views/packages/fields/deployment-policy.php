@@ -58,7 +58,7 @@ $render_development_safety_notice = static function () use ( $show_development_s
 			<p class="description"><?php esc_html_e( 'Manual waits for an administrator; Automatic lets WordPress install validated published updates.', 'ran-booster' ); ?></p>
 		<?php } elseif ( ! $provider_webhook_available ) { ?>
 			<p class="description">
-				<?php esc_html_e( 'Automatic deployment is unavailable because this provider does not support signed webhooks.', 'ran-booster' ); ?>
+				<?php esc_html_e( 'Automatic deployment is unavailable because this Git provider does not support signed webhooks.', 'ran-booster' ); ?>
 				<a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Read the Push-to-Deploy guide.', 'ran-booster' ); ?></a>
 			</p>
 		<?php } elseif ( ! $show_development_safety_notice ) { ?>

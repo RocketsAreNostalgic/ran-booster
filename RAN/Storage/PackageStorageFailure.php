@@ -61,7 +61,7 @@ final class PackageStorageFailure extends RuntimeException {
 		return new self(
 			PackageStorageOperation::QUERY,
 			'ran_booster_storage_invalid_provider_identity',
-			__( 'Booster could not read a managed package because its repository provider identity is invalid.', 'ran-booster' )
+			__( 'Booster could not read a managed package because its Git provider identity is invalid.', 'ran-booster' )
 		);
 	}
 

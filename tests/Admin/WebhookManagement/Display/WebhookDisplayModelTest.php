@@ -32,7 +32,7 @@ final class WebhookDisplayModelTest extends TestCase {
 
 	public function test_it_translates_known_fixed_core_notice_copy(): void {
 		$GLOBALS['ran_booster_webhook_display_test_translations']['ran-booster'] = array(
-			'The provider rejected the webhook setup request. No remote hook was established.' => 'Le fournisseur a refuse la configuration du webhook. Aucun webhook distant n a ete etabli.',
+			'The Git provider rejected the webhook setup request. No remote hook was established.' => 'Le fournisseur a refuse la configuration du webhook. Aucun webhook distant n a ete etabli.',
 		);
 
 		self::assertSame(
@@ -43,7 +43,7 @@ final class WebhookDisplayModelTest extends TestCase {
 
 	public function test_it_translates_formatted_recovery_copy_without_changing_reference_ids(): void {
 		$GLOBALS['ran_booster_webhook_display_test_translations']['ran-booster'] = array(
-			'Provider state may have changed, but the current webhook-management record was not overwritten. Inspect provider hook reference %1$s and Core signing profile %2$s before retrying.' => 'Profil Core %2$s et reference de webhook %1$s a inspecter.',
+			'Git provider state may have changed, but the current webhook-management record was not overwritten. Inspect Git provider hook reference %1$s and Core signing profile %2$s before retrying.' => 'Profil Core %2$s et reference de webhook %1$s a inspecter.',
 		);
 
 		self::assertSame(

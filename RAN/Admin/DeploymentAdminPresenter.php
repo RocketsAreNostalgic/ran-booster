@@ -271,7 +271,7 @@ final class DeploymentAdminPresenter {
 		$notice = null;
 		foreach ( array( 'activity_subject_type', 'activity_subject_identity', 'activity_operation', 'activity_outcome' ) as $legacy ) {
 			if ( $this->query_has_key( $legacy ) ) {
-				$notice = __( 'Older activity filters were cleared. Use Provider and Activity subject to filter activity.', 'ran-booster' );
+				$notice = __( 'Older activity filters were cleared. Use Git provider and Activity subject to filter activity.', 'ran-booster' );
 				break;
 			}
 		}
@@ -298,10 +298,10 @@ final class DeploymentAdminPresenter {
 		}
 		$provider = $this->activity_filter_value( 'activity_provider' );
 		if ( $this->query_has_key( 'activity_provider' ) && null === $provider && '' !== $this->query_value( 'activity_provider' ) ) {
-			$notice = __( 'That provider filter was cleared.', 'ran-booster' );
+			$notice = __( 'That Git provider filter was cleared.', 'ran-booster' );
 		} elseif ( null !== $provider && ! in_array( $provider, array_column( $providers, 'provider' ), true ) ) {
 			$provider = null;
-			$notice   = __( 'That provider is no longer available in retained activity.', 'ran-booster' );
+			$notice   = __( 'That Git provider is no longer available in retained activity.', 'ran-booster' );
 		}
 		$visible_packages = null === $provider
 			? $package_options
@@ -344,7 +344,7 @@ final class DeploymentAdminPresenter {
 				$notice = __( 'That Activity subject is no longer available in retained activity.', 'ran-booster' );
 			} elseif ( null !== $provider && $provider !== $selected_package['provider'] ) {
 				$selected_package = null;
-				$notice           = __( 'The Activity subject filter was cleared because it does not match the selected provider.', 'ran-booster' );
+				$notice           = __( 'The Activity subject filter was cleared because it does not match the selected Git provider.', 'ran-booster' );
 			}
 		}
 		$reset_cursor = null !== $notice;

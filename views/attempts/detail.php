@@ -77,7 +77,7 @@ $package_settings_label = 'theme' === $package_type
 		<dl class="ran-booster-activity__details">
 			<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) $item['correlation_id'] ); ?></code></dd></div>
 			<?php if ( 'webhook' === $item['source'] && is_string( $item['delivery_id'] ?? null ) && '' !== $item['delivery_id'] ) { ?>
-				<div><dt><?php esc_html_e( 'Provider request ID', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $item['delivery_id'] ); ?></code></dd></div>
+				<div><dt><?php esc_html_e( 'Git provider request ID', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $item['delivery_id'] ); ?></code></dd></div>
 			<?php } ?>
 			<div><dt><?php esc_html_e( 'State', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) $item['state'] ); ?></dd></div>
 			<div><dt><?php esc_html_e( 'Origin', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $origin_labels[ $item['source'] ] ?? (string) $item['source'] ); ?></dd></div>
@@ -90,7 +90,7 @@ $package_settings_label = 'theme' === $package_type
 			} else {
 				?>
 				<?php echo esc_html( (string) $item['package_slug'] ); ?><?php } ?> (<?php echo esc_html( (string) $item['package_type'] ); ?>)</dd></div>
-			<div><dt><?php esc_html_e( 'Provider', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) $item['provider'] ); ?></code></dd></div>
+			<div><dt><?php esc_html_e( 'Git provider', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) $item['provider'] ); ?></code></dd></div>
 			<div><dt><?php esc_html_e( 'Requested reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) $item['requested_ref'] ); ?></code></dd></div>
 			<div><dt><?php esc_html_e( 'Resolved reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) ( $item['resolved_ref'] ?? __( 'Not resolved', 'ran-booster' ) ) ); ?></code></dd></div>
 			<div><dt><?php esc_html_e( 'Mutation began', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) ( $item['mutation_started_at'] ?? __( 'No', 'ran-booster' ) ) ); ?></dd></div>

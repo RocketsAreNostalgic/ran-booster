@@ -89,7 +89,7 @@ $package_source_choices     = isset( $package_source ) && is_array( $package_sou
 $package_advanced_sections  = isset( $package_source ) && is_array( $package_source['advanced_sections'] ?? null ) ? $package_source['advanced_sections'] : array();
 $package_advanced_summary   = isset( $package_source ) && is_string( $package_source['advanced_summary'] ?? null )
 	? $package_source['advanced_summary']
-	: __( 'Branch · provider default', 'ran-booster' );
+	: __( 'Branch · repository default', 'ran-booster' );
 $package_source_view        = 'branch';
 $package_source_mode        = 'create';
 // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.

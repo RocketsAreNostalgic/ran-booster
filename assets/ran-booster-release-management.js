@@ -527,7 +527,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (current === sequence) {
 				showError(
 					wp.i18n.__(
-						'Booster could not load published releases. The repository provider may be temporarily unavailable or rate-limited. Try again later.',
+						'Booster could not load published releases. The Git provider may be temporarily unavailable or rate-limited. Try again later.',
 						'ran-booster'
 					)
 				);
@@ -732,7 +732,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			/* translators: %s is the repository branch name. */
 			wp.i18n.__('Branch · %s', 'ran-booster'),
 			branch?.value.trim() ||
-				wp.i18n.__('provider default', 'ran-booster')
+				wp.i18n.__('repository default', 'ran-booster')
 		);
 	};
 
@@ -877,15 +877,15 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		setChoiceState(
 			'unsupported',
 			wp.i18n.__(
-				'Published releases are not available for this repository provider.',
+				'Published releases are not available for this Git provider.',
 				'ran-booster'
 			),
-			wp.i18n.__('Provider capability unavailable', 'ran-booster')
+			wp.i18n.__('Git provider capability unavailable', 'ran-booster')
 		);
 		setStatus(
 			wp.i18n.__('Published releases are unavailable', 'ran-booster'),
 			wp.i18n.__(
-				'This provider does not expose the complete published-release capability. Use Branch tracking for this repository.',
+				'This Git provider does not expose the complete published-release capability. Use Branch tracking for this repository.',
 				'ran-booster'
 			)
 		);
@@ -1022,7 +1022,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			'ran-booster'
 		);
 		let statusMessage = wp.i18n.__(
-			'Repository access or the provider may be temporarily unavailable.',
+			'Repository access or the Git provider may be temporarily unavailable.',
 			'ran-booster'
 		);
 		let choiceMessage = wp.i18n.__(

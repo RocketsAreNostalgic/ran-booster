@@ -36,7 +36,7 @@ final class RepositoryPickerController {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			return wp_send_json_error(
 				array(
-					'message' => __( 'You are not allowed to browse repository providers.', 'ran-booster' ),
+					'message' => __( 'You are not allowed to browse Git providers.', 'ran-booster' ),
 				),
 				403
 			);
@@ -121,14 +121,14 @@ final class RepositoryPickerController {
 		} catch ( InvalidProviderCode | UnknownProvider ) {
 			return wp_send_json_error(
 				array(
-					'message' => __( 'The selected repository provider is not available.', 'ran-booster' ),
+					'message' => __( 'The selected Git provider is not available.', 'ran-booster' ),
 				),
 				400
 			);
 		} catch ( UnsupportedProviderCapability ) {
 			$message = 'public' === $mode && $public_lookup_requested
-				? __( 'The selected repository provider does not support authenticated public repository browsing.', 'ran-booster' )
-				: __( 'The selected repository provider does not support repository browsing.', 'ran-booster' );
+				? __( 'The selected Git provider does not support authenticated public repository browsing.', 'ran-booster' )
+				: __( 'The selected Git provider does not support repository browsing.', 'ran-booster' );
 
 			return wp_send_json_error(
 				array(
@@ -172,13 +172,13 @@ final class RepositoryPickerController {
 
 	private function error_message_for_status( int $status ): string {
 		return match ( $status ) {
-			400 => __( 'The repository request is invalid. Check the selected provider and repository details.', 'ran-booster' ),
-			401 => __( 'The repository provider rejected the saved credentials.', 'ran-booster' ),
-			403 => __( 'The repository provider denied this request. Check repository access and credential permissions.', 'ran-booster' ),
+			400 => __( 'The repository request is invalid. Check the selected Git provider and repository details.', 'ran-booster' ),
+			401 => __( 'The Git provider rejected the saved credentials.', 'ran-booster' ),
+			403 => __( 'The Git provider denied this request. Check repository access and credential permissions.', 'ran-booster' ),
 			404 => __( 'The requested repository owner could not be found.', 'ran-booster' ),
-			413 => __( 'The repository provider returned too much data. Enter the repository manually or narrow the account.', 'ran-booster' ),
-			422 => __( 'The repository provider returned an invalid response. Try again or enter the repository manually.', 'ran-booster' ),
-			429 => __( 'The repository provider rate limit has been reached. Try again later.', 'ran-booster' ),
+			413 => __( 'The Git provider returned too much data. Enter the repository manually or narrow the account.', 'ran-booster' ),
+			422 => __( 'The Git provider returned an invalid response. Try again or enter the repository manually.', 'ran-booster' ),
+			429 => __( 'The Git provider rate limit has been reached. Try again later.', 'ran-booster' ),
 			503, 504 => __( 'Repository browsing took too long. Try again or enter the repository manually.', 'ran-booster' ),
 			default => __( 'Repository browsing failed. Please try again.', 'ran-booster' ),
 		};
@@ -247,9 +247,9 @@ final class RepositoryPickerController {
 
 		return match ( $result->partial_reason ) {
 			RepositoryBrowseResult::AUTHORIZATION => __( 'Some repositories are shown, but the selected credential stopped authorizing the request.', 'ran-booster' ),
-			RepositoryBrowseResult::RATE_LIMIT => __( 'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.', 'ran-booster' ),
+			RepositoryBrowseResult::RATE_LIMIT => __( 'Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list.', 'ran-booster' ),
 			RepositoryBrowseResult::LIMIT => __( 'The first available repositories are shown. Enter a repository manually if it is not listed.', 'ran-booster' ),
-			RepositoryBrowseResult::PROVIDER => __( 'Some repositories are shown, but the provider could not complete the list.', 'ran-booster' ),
+			RepositoryBrowseResult::PROVIDER => __( 'Some repositories are shown, but the Git provider could not complete the list.', 'ran-booster' ),
 			default => null,
 		};
 	}

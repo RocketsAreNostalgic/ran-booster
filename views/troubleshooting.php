@@ -49,11 +49,11 @@ $status_badge_tones = array(
 	'not_configured' => 'warning',
 );
 $partial_messages   = array(
-	'local_incomplete'         => __( 'Local checks could not finish, so provider checks were not started.', 'ran-booster' ),
+	'local_incomplete'         => __( 'Local checks could not finish, so Git provider checks were not started.', 'ran-booster' ),
 	'deadline_exhausted'       => __( 'The ten-second diagnostic deadline was reached. Completed checks are shown below.', 'ran-booster' ),
-	'remote_calls_exhausted'   => __( 'The five-request provider budget was reached. Completed checks are shown below.', 'ran-booster' ),
-	'provider_unavailable'     => __( 'The selected provider could not complete diagnostics. Local results are still available.', 'ran-booster' ),
-	'provider_results_invalid' => __( 'The provider returned an unsafe or invalid diagnostic result, which Booster omitted.', 'ran-booster' ),
+	'remote_calls_exhausted'   => __( 'The five-request Git provider budget was reached. Completed checks are shown below.', 'ran-booster' ),
+	'provider_unavailable'     => __( 'The selected Git provider could not complete diagnostics. Local results are still available.', 'ran-booster' ),
+	'provider_results_invalid' => __( 'The Git provider returned an unsafe or invalid diagnostic result, which Booster omitted.', 'ran-booster' ),
 	'result_limit_exhausted'   => __( 'The eight-result limit was reached. Earlier results are shown below.', 'ran-booster' ),
 );
 $selected_provider  = $troubleshooting['selected_provider'] ?? '';
@@ -109,7 +109,7 @@ $repository_placeholder = array() === $locator_examples
 		?>
 	<?php } else { ?>
 		<h3 class="ran-booster-section__title" id="ran-booster-run-diagnostics-heading"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a provider and run checks. Results below describe only this diagnostic run.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a Git provider and run checks. Results below describe only this diagnostic run.', 'ran-booster' ); ?></p>
 
 	<form method="post" action="" class="ran-booster-troubleshooting__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-troubleshooting-diagnostics-error" hx-post="" hx-target="#ran-booster-troubleshooting-diagnostics-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
 		<?php wp_nonce_field( 'ran-booster-run-troubleshooting' ); ?>
@@ -118,7 +118,7 @@ $repository_placeholder = array() === $locator_examples
 
 		<div class="ran-booster-troubleshooting__fields ran-booster-troubleshooting__provider-field">
 			<p>
-				<label for="ran-booster-troubleshooting-provider"><?php esc_html_e( 'Provider', 'ran-booster' ); ?></label>
+				<label for="ran-booster-troubleshooting-provider"><?php esc_html_e( 'Git provider', 'ran-booster' ); ?></label>
 				<select id="ran-booster-troubleshooting-provider" class="ran-booster-troubleshooting__provider" name="ran_booster[provider]" required>
 					<?php foreach ( $troubleshooting['providers'] as $code => $label ) { ?>
 						<option value="<?php echo esc_attr( $code ); ?>"<?php selected( $selected_provider, $code ); ?>><?php echo esc_html( $label ); ?></option>
@@ -126,7 +126,7 @@ $repository_placeholder = array() === $locator_examples
 				</select>
 			</p>
 		</div>
-		<p class="description"><?php esc_html_e( 'Start with a provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results.', 'ran-booster' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Start with a Git provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results.', 'ran-booster' ); ?></p>
 
 		<details class="ran-booster-troubleshooting__specific ran-booster-troubleshooting__disclosure ran-booster-disclosure"<?php echo $show_specific_form ? ' open' : ''; ?>>
 			<summary><?php esc_html_e( 'Check credential or repository access (optional)', 'ran-booster' ); ?></summary>
@@ -160,11 +160,11 @@ $repository_placeholder = array() === $locator_examples
 						<input id="ran-booster-troubleshooting-repository" type="text" name="ran_booster[repository]" value="<?php echo esc_attr( $repository ); ?>" maxlength="512" placeholder="<?php echo esc_attr( $repository_placeholder ); ?>">
 					<span class="description"><?php esc_html_e( 'Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available.', 'ran-booster' ); ?></span>
 				</p>
-				<div class="notice notice-info inline ran-booster-troubleshooting__provider-notice"><p><?php esc_html_e( 'The active provider can read every credential saved under its provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p></div>
+				<div class="notice notice-info inline ran-booster-troubleshooting__provider-notice"><p><?php esc_html_e( 'The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p></div>
 			</div>
 		</details>
 
-		<p class="description"><?php esc_html_e( 'The full check makes temporary local marker files and up to five provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report.', 'ran-booster' ); ?></p>
+		<p class="description"><?php esc_html_e( 'The full check makes temporary local marker files and up to five Git provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report.', 'ran-booster' ); ?></p>
 		<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Run full diagnostics', 'ran-booster' ); ?></button></p>
 	</form>
 
@@ -221,7 +221,7 @@ $repository_placeholder = array() === $locator_examples
 									'credential'          => __( 'Credential access', 'ran-booster' ),
 									'repository'          => __( 'Repository access', 'ran-booster' ),
 								);
-								echo esc_html( $check_labels[ $check_family ] ?? __( 'Provider check', 'ran-booster' ) );
+								echo esc_html( $check_labels[ $check_family ] ?? __( 'Git provider check', 'ran-booster' ) );
 								?>
 								<br><code class="description"><?php echo esc_html( $result['code'] ); ?></code></th>
 							<td data-label="<?php esc_attr_e( 'Details', 'ran-booster' ); ?>"><?php echo esc_html( $result['message'] ); ?></td>
@@ -268,7 +268,7 @@ $repository_placeholder = array() === $locator_examples
 							<?php } ?></dl>
 							<?php foreach ( $installation as $context_heading => $context_fields ) { ?>
 								<?php
-								if ( in_array( $context_heading, array( __( 'GitHub provider', 'ran-booster' ), __( 'Booster Core updates', 'ran-booster' ), __( 'Diagnostic provider', 'ran-booster' ) ), true ) ) {
+								if ( in_array( $context_heading, array( __( 'GitHub provider', 'ran-booster' ), __( 'Booster Core updates', 'ran-booster' ), __( 'Diagnostic Git provider', 'ran-booster' ) ), true ) ) {
 									continue; }
 								?>
 								<h5><?php echo esc_html( $context_heading ); ?></h5><dl class="ran-booster-troubleshooting__fields-list">

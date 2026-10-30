@@ -14,7 +14,7 @@ final class BulkPackageActionFailure extends RuntimeException {
 	}
 
 	public static function unavailable_provider(): self {
-		return new self( 'provider_unavailable', __( 'A selected package uses an unavailable repository provider.', 'ran-booster' ) );
+		return new self( 'provider_unavailable', __( 'A selected package uses an unavailable Git provider.', 'ran-booster' ) );
 	}
 
 	public static function unavailable_credential(): self {
@@ -22,7 +22,7 @@ final class BulkPackageActionFailure extends RuntimeException {
 	}
 
 	public static function unavailable_webhook(): self {
-		return new self( 'webhook_unavailable', __( 'A selected package provider does not support Automatic deployment.', 'ran-booster' ) );
+		return new self( 'webhook_unavailable', __( 'A selected package Git provider does not support Automatic deployment.', 'ran-booster' ) );
 	}
 
 	public static function stale_selection(): self {

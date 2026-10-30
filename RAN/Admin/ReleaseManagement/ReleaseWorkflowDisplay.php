@@ -124,9 +124,9 @@ final class ReleaseWorkflowDisplay {
 		$provider_ok = true === ( $model['provider_supported'] ?? false );
 		$html        = '<section class="ran-booster-readiness-panel ran-booster-repository-release-readiness" aria-labelledby="ran-booster-repository-release-readiness-heading">'
 			. '<div class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-release-readiness-heading">' . esc_html__( 'Release readiness', 'ran-booster' ) . '</h4>'
-			. '<p>' . esc_html__( 'Saved repository facts; no live provider check.', 'ran-booster' ) . '</p></div></div><div class="ran-booster-repository-release-readiness__body"><ul class="ran-booster-readiness-list">'
+			. '<p>' . esc_html__( 'Saved repository facts; no live Git provider check.', 'ran-booster' ) . '</p></div></div><div class="ran-booster-repository-release-readiness__body"><ul class="ran-booster-readiness-list">'
 			. '<li class="ran-booster-readiness-item ' . ( $provider_ok ? 'is-ok' : 'is-pending' ) . '"><span class="ran-booster-readiness-icon" aria-hidden="true"></span><strong>'
-			. esc_html__( 'Provider capability', 'ran-booster' ) . '</strong><span>' . esc_html( $provider_ok ? __( 'This provider supports published releases.', 'ran-booster' ) : __( 'This provider does not implement all required release capabilities.', 'ran-booster' ) ) . '</span></li>'
+			. esc_html__( 'Git provider capability', 'ran-booster' ) . '</strong><span>' . esc_html( $provider_ok ? __( 'This Git provider supports published releases.', 'ran-booster' ) : __( 'This Git provider does not implement all required release capabilities.', 'ran-booster' ) ) . '</span></li>'
 			. '<li class="ran-booster-readiness-item ' . ( $relationship_ok ? 'is-ok' : 'is-warning' ) . '"><span class="ran-booster-readiness-icon" aria-hidden="true"></span><strong>'
 			. esc_html__( 'Repository relationship', 'ran-booster' ) . '</strong><span>' . esc_html( $relationship_msg ) . '</span></li>';
 		$package     = $model['package'] ?? null;
@@ -379,13 +379,13 @@ final class ReleaseWorkflowDisplay {
 			'workflow_pr_open' => __( 'The recorded draft pull request remains open.', 'ran-booster' ),
 			'workflow_pr_closed' => __( 'The recorded pull request was closed without a verified merge.', 'ran-booster' ),
 			'workflow_pr_merged' => __( 'Booster verified that the recorded setup pull request was merged and its managed receipt is on the default branch. This does not prove a workflow ran or produced a release.', 'ran-booster' ),
-			'workflow_partial' => __( 'The repository provider may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch.', 'ran-booster' ),
-			'workflow_unauthorised' => __( 'The repository provider did not authorise the operation with the selected saved credential.', 'ran-booster' ),
-			'workflow_rate_limited' => __( 'The repository provider has temporarily rate-limited the release workflow request. Booster made no change.', 'ran-booster' ),
-			'workflow_invalid_response' => __( 'The repository provider returned an incomplete or invalid response. Booster made no change.', 'ran-booster' ),
+			'workflow_partial' => __( 'The Git provider may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch.', 'ran-booster' ),
+			'workflow_unauthorised' => __( 'The Git provider did not authorise the operation with the selected saved credential.', 'ran-booster' ),
+			'workflow_rate_limited' => __( 'The Git provider has temporarily rate-limited the release workflow request. Booster made no change.', 'ran-booster' ),
+			'workflow_invalid_response' => __( 'The Git provider returned an incomplete or invalid response. Booster made no change.', 'ran-booster' ),
 			'workflow_template_unavailable' => __( 'The canonical release template source is temporarily unavailable. Booster made no change.', 'ran-booster' ),
 			'workflow_preflight_unavailable' => __( 'Booster could not validate the package release before continuing. No draft was opened.', 'ran-booster' ),
-			'workflow_remote_unavailable' => __( 'The repository provider or the canonical template source did not provide trustworthy current state. Booster made no change.', 'ran-booster' ),
+			'workflow_remote_unavailable' => __( 'The Git provider or the canonical template source did not provide trustworthy current state. Booster made no change.', 'ran-booster' ),
 			'workflow_release_ready' => __( 'Published releases are available, but Booster cannot tell whether a release workflow produced them.', 'ran-booster' ),
 			'workflow_release_automation_conflict' => __( 'An existing release workflow was found. Booster will not overwrite it. Review it before using Booster setup.', 'ran-booster' ),
 			'workflow_release_automation_present' => __( 'Booster verified an exact canonical release setup in this repository. No setup pull request is needed.', 'ran-booster' ),
@@ -398,7 +398,7 @@ final class ReleaseWorkflowDisplay {
 			'workflow_repository_unsupported' => __( 'This repository does not match the supported WordPress release configuration. Review and reconcile it before setting up a release workflow.', 'ran-booster' ),
 			'workflow_profile_missing', 'workflow_profile_modified' => __( 'The managed release profile is missing or modified. Booster made no change.', 'ran-booster' ),
 			'workflow_target_changed', 'workflow_template_superseded' => __( 'The repository or template identity changed. Assess the current state again.', 'ran-booster' ),
-			'workflow_invalid_request' => __( 'Booster stopped before contacting the repository provider because this request no longer matched the current page or package.', 'ran-booster' ),
+			'workflow_invalid_request' => __( 'Booster stopped before contacting the Git provider because this request no longer matched the current page or package.', 'ran-booster' ),
 			default => __( 'The release workflow request was refused, changed or expired. Assess the repository again.', 'ran-booster' ),
 		};
 	}
@@ -422,14 +422,14 @@ final class ReleaseWorkflowDisplay {
 
 	private function failure_stage_message( string $stage ): string {
 		return match ( $stage ) {
-			'request_validation' => __( 'Booster refused the request before reading saved credentials or contacting the repository provider.', 'ran-booster' ),
+			'request_validation' => __( 'Booster refused the request before reading saved credentials or contacting the Git provider.', 'ran-booster' ),
 			'credential_authorisation' => __( 'Choose a saved repository credential with the required repository permissions, then retry.', 'ran-booster' ),
 			'release_preflight' => __( 'Booster could not validate the package release before continuing. Review the release readiness details, then retry.', 'ran-booster' ),
-			'repository_snapshot' => __( 'The repository provider did not provide a trustworthy current repository snapshot. Check repository access and try the assessment again.', 'ran-booster' ),
+			'repository_snapshot' => __( 'The Git provider did not provide a trustworthy current repository snapshot. Check repository access and try the assessment again.', 'ran-booster' ),
 			'template_pack' => __( 'The canonical release template pack changed or could not be verified. Assess the repository again before opening a draft.', 'ran-booster' ),
 			'preview_storage' => __( 'Booster could not retain the review preview locally. No draft was opened; retry the assessment.', 'ran-booster' ),
-			'repository_mutation' => __( 'The repository provider may have accepted only part of the draft setup. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
-			'local_persistence' => __( 'The draft may exist on the repository provider, but Booster could not retain its verified setup record. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
+			'repository_mutation' => __( 'The Git provider may have accepted only part of the draft setup. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
+			'local_persistence' => __( 'The draft may exist on the Git provider, but Booster could not retain its verified setup record. Review the repository and use the failure reference before retrying.', 'ran-booster' ),
 			default => __( 'Booster stopped before it could verify the release-workflow request. Retry the assessment and use the failure reference when seeking support.', 'ran-booster' ),
 		};
 	}

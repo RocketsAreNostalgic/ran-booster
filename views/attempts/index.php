@@ -68,9 +68,9 @@ $origin_labels = array(
 			<input type="hidden" name="page" value="ran-booster">
 			<input type="hidden" name="tab" value="troubleshooting">
 			<input type="hidden" name="panel" value="activity">
-			<label class="screen-reader-text" for="ran-booster-activity-provider"><?php esc_html_e( 'Provider', 'ran-booster' ); ?></label>
+			<label class="screen-reader-text" for="ran-booster-activity-provider"><?php esc_html_e( 'Git provider', 'ran-booster' ); ?></label>
 			<select id="ran-booster-activity-provider" name="activity_provider">
-				<option value=""><?php esc_html_e( 'All providers', 'ran-booster' ); ?></option>
+				<option value=""><?php esc_html_e( 'All Git providers', 'ran-booster' ); ?></option>
 				<?php foreach ( $filter_options['providers'] ?? array() as $option ) { ?>
 					<?php if ( is_array( $option ) && is_string( $option['value'] ?? null ) && is_string( $option['label'] ?? null ) ) { ?>
 						<option value="<?php echo esc_attr( $option['value'] ); ?>" <?php selected( $option['value'], $selected_provider ); ?>><?php echo esc_html( $option['label'] ); ?></option>
@@ -174,7 +174,7 @@ $origin_labels = array(
 						<div class="ran-booster-disclosure__body">
 						<?php if ( $recorded_check ) { ?>
 							<dl class="ran-booster-activity__details">
-								<div><dt><?php esc_html_e( 'Reported by', 'ran-booster' ); ?></dt><dd><?php echo esc_html( 'core' === ( $item['provenance'] ?? '' ) ? __( 'Recorded by Core', 'ran-booster' ) : __( 'Provider-reported', 'ran-booster' ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Reported by', 'ran-booster' ); ?></dt><dd><?php echo esc_html( 'core' === ( $item['provenance'] ?? '' ) ? __( 'Recorded by Core', 'ran-booster' ) : __( 'Reported by Git provider', 'ran-booster' ) ); ?></dd></div>
 								<?php
 								foreach ( array(
 									'stage'        => __( 'Last recorded stage', 'ran-booster' ),

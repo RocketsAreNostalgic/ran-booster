@@ -622,9 +622,9 @@ final class ReleaseWorkflowPresenter {
 		);
 		$reason = null;
 		if ( null === $provider ) {
-			$reason = __( 'This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available.', 'ran-booster' );
+			$reason = __( 'This Git provider claims release workflow management but does not implement all required release capabilities. Update or correct the Git provider plugin; no operation is available.', 'ran-booster' );
 		} elseif ( null === $state ) {
-			$reason = __( 'The provider could not supply local workflow status. Retry after checking the provider plugin.', 'ran-booster' );
+			$reason = __( 'The Git provider could not supply local workflow status. Retry after checking the Git provider plugin.', 'ran-booster' );
 		} elseif ( ! $status->eligible() ) {
 			$reason = $this->workflow_unavailable_reason( $status );
 		} elseif ( ! $source_guard['allowed'] ) {
@@ -733,7 +733,7 @@ final class ReleaseWorkflowPresenter {
 		return match ( $status->eligibility()->code() ) {
 			'missing_update_uri' => __( 'Open package settings for the required Update URI, add it to the package header, then deploy the corrected package.', 'ran-booster' ),
 			'mismatched_update_uri' => __( 'This package Update URI must match the configured repository.', 'ran-booster' ),
-			'unsupported_provider' => __( 'This repository provider cannot use published-release tracking.', 'ran-booster' ),
+			'unsupported_provider' => __( 'This Git provider cannot use published-release tracking.', 'ran-booster' ),
 			'invalid_repository' => __( 'The saved repository needs attention before a release workflow can be assessed.', 'ran-booster' ),
 			'invalid_package_identity' => __( 'The installed package identity must match the configured repository.', 'ran-booster' ),
 			'subdirectory_not_supported' => __( 'Published releases require this package at the repository root; continue using Branch for a repository subdirectory.', 'ran-booster' ),

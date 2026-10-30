@@ -1074,7 +1074,7 @@ abstract class AbstractPackageRepository {
 		return PackageMutationResult::failed(
 			$operation,
 			'ran_booster_storage_invalid_provider_identity',
-			__( 'Booster could not save this package because its repository provider identity is incomplete.', 'ran-booster' )
+			__( 'Booster could not save this package because its Git provider identity is incomplete.', 'ran-booster' )
 		);
 	}
 

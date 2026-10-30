@@ -134,7 +134,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 							);
 							$package_indexes = implode( ' ', array_map( static fn ( array $package ): string => (string) ( $package['index'] ?? '' ), $packages ) );
 							if ( $available ) {
-								$description = __( 'The provider permissions for this credential have not been assessed.', 'ran-booster' );
+								$description = __( 'The Git provider permissions for this credential have not been assessed.', 'ran-booster' );
 							} elseif ( 'self_destruct' === ( $credential['reason'] ?? null ) ) {
 								$destroy_on = is_string( $credential['destroy_on'] ?? null ) ? $credential['destroy_on'] : '';
 								/* translators: %s: local automatic-removal date. */
@@ -154,7 +154,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 									<?php endif; ?>
 									<span class="ran-booster-portability__credential-heading">
 										<strong class="ran-booster-portability__credential-name"><?php echo esc_html( $label ); ?></strong>
-										<span class="ran-booster-tile ran-booster-portability__credential-provider"><span class="screen-reader-text"><?php esc_html_e( 'Provider:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( $provider_label ); ?></span></span>
+										<span class="ran-booster-tile ran-booster-portability__credential-provider"><span class="screen-reader-text"><?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( $provider_label ); ?></span></span>
 										<?php if ( '' !== $kind_label ) : ?>
 											<span class="ran-booster-tile ran-booster-portability__credential-kind"><span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( $kind_label ); ?></span></span>
 										<?php endif; ?>

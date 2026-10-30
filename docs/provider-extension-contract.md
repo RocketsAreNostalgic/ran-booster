@@ -2,10 +2,10 @@
 
 > Provider API 15 and the GitHub replacement controls are published in [Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37). External providers still require qualification against their exact supported contract and host; earlier API 14 certification does not qualify API 15.
 
-RAN Booster Provider API 15 accepts trusted repository providers through its late
-registration action. A provider plugin attaches a callback from its main plugin
-file during normal plugin loading. Credential-bearing providers use one required
-three-argument factory contract:
+RAN Booster Provider API 15 accepts trusted Git providers, such as GitHub or
+Bitbucket, through its late registration action. A provider plugin attaches a
+callback from its main plugin file during normal plugin loading. Credential-bearing
+providers use one required three-argument factory contract:
 
 ```php
 add_action(

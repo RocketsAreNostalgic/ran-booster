@@ -1226,7 +1226,7 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 		self::assertCount( 1, $dashboard->messages );
 		self::assertSame( 'error', $dashboard->messages[0]['type'] );
-		self::assertStringContainsString( 'repository provider could not prepare', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'Git provider could not prepare', $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( str_repeat( 'c', 32 ), $dashboard->messages[0]['message'] );
 		self::assertStringContainsString( 'View deployment activity', $dashboard->messages[0]['message'] );
 		self::assertStringNotContainsString( 'secret-canary-token', $dashboard->messages[0]['message'] );

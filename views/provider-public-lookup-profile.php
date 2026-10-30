@@ -28,7 +28,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 <section id="ran-booster-public-lookup-profile-region" class="ran-booster-provider-section" data-ran-booster-admin-mutation-region="public-lookup-profile" aria-labelledby="ran-booster-public-lookup-heading">
 	<header class="ran-booster-provider-section__header">
 		<h3 id="ran-booster-public-lookup-heading" class="ran-booster-section__title"><?php esc_html_e( 'Public repository lookup', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose Anonymous, or use a dedicated saved credential to reduce provider rate-limit interruptions.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose Anonymous, or use a dedicated saved credential to reduce Git provider rate-limit interruptions.', 'ran-booster' ); ?></p>
 	</header>
 	<div class="ran-booster-provider-section__body">
 		<div class="ran-booster-public-lookup-profile__panel ran-booster-panel">

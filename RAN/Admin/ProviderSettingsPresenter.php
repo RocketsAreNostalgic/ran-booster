@@ -1528,7 +1528,7 @@ final readonly class ProviderSettingsPresenter {
 			'has_credential_settings'           => $has_credentials,
 			'provider_has_webhook_settings'     => $provider_has_webhooks,
 			'has_webhook_settings'              => ! $storage_unavailable && $provider_has_webhooks,
-			'providerTrustDescription'          => sprintf( /* translators: 1: repository provider name, 2: repository provider code. */ __( 'The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $provider_label, $provider_code ),
+			'providerTrustDescription'          => sprintf( /* translators: 1: repository provider name, 2: repository provider code. */ __( 'The active %1$s provider can read every credential saved under Git provider code %2$s. Install and activate only Git providers you trust; Booster does not authenticate a third-party publisher.', 'ran-booster' ), $provider_label, $provider_code ),
 			'package_type_labels'               => array(
 				'plugin' => __( 'Plugin', 'ran-booster' ),
 				'theme'  => __( 'Theme', 'ran-booster' ),
@@ -1647,8 +1647,8 @@ final readonly class ProviderSettingsPresenter {
 			$target              = is_string( $profile['target'] ?? null ) ? $profile['target'] : '';
 			$health              = ! empty( $profile['configured'] ) ? __( 'Saved · Remote delivery not verified by Core', 'ran-booster' ) : __( 'Local secret not configured', 'ran-booster' );
 			$delete_confirmation = ! empty( $usage['available'] ) && 0 < $usage_total
-				? sprintf( /* translators: %d is the number of managed packages that use the local secret. */ _n( 'Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed.', 'Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed.', $usage_total, 'ran-booster' ), $usage_total )
-				: __( 'Remove this local secret? Remote provider webhooks will not be removed.', 'ran-booster' );
+				? sprintf( /* translators: %d is the number of managed packages that use the local secret. */ _n( 'Remove this local secret? %d managed package may be affected. Remote Git provider webhooks will not be removed.', 'Remove this local secret? %d managed packages may be affected. Remote Git provider webhooks will not be removed.', $usage_total, 'ran-booster' ), $usage_total )
+				: __( 'Remove this local secret? Remote Git provider webhooks will not be removed.', 'ran-booster' );
 			$rows[]              = $profile + array(
 				'scope_label'         => $scope_labels[ $scope ] ?? ucfirst( $scope ),
 				'usage_total'         => $usage_total,
@@ -1736,7 +1736,7 @@ final readonly class ProviderSettingsPresenter {
 			'webhook'    => array(
 				'tone'        => $webhook_problem ? 'attention' : ( 0 < $webhook_count ? 'ready' : 'pending' ),
 				'heading'     => $webhook_problem ? __( 'Webhook signing · Needs attention', 'ran-booster' ) : ( 0 === $webhook_count ? __( 'Webhook signing · No secret saved', 'ran-booster' ) : __( 'Webhook signing · Ready locally', 'ran-booster' ) ),
-				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhook_attention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhook_count ? ( 0 < $automatic_count ? __( 'Automatic branch deployments require local signing material before provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a provider webhook.', 'ran-booster' ) ) : sprintf( /* translators: %d is the number of local secrets that can verify signed deliveries. */ _n( '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhook_count, 'ran-booster' ), $webhook_count ) ) ),
+				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhook_attention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhook_count ? ( 0 < $automatic_count ? __( 'Automatic branch deployments require local signing material before Git provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a Git provider webhook.', 'ran-booster' ) ) : sprintf( /* translators: %d is the number of local secrets that can verify signed deliveries. */ _n( '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhook_count, 'ran-booster' ), $webhook_count ) ) ),
 			),
 		);
 	}

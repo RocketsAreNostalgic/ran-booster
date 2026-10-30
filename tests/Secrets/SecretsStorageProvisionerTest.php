@@ -1044,7 +1044,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertIsArray( $recovery );
 		self::assertSame( 'blocked', $recovery['state'] );
 		self::assertNull( $recovery['token'] );
-		self::assertStringContainsString( 'do not pass their current provider policy', $recovery['message'] );
+		self::assertStringContainsString( 'do not pass their current Git provider policy', $recovery['message'] );
 	}
 
 	private function managed_diagnostic_message_for_code( string $code ): string {

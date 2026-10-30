@@ -28,7 +28,7 @@ $provider_profile_interaction_values = static function ( string $action ): strin
 if ( $has_credential_settings ) {
 	$credential_authorisation_description = sprintf(
 		/* translators: 1: provider label, 2: provider code. */
-		__( 'Saving this credential authorizes the active %1$s provider to read every credential saved under provider code %2$s. Booster does not authenticate a third-party publisher.', 'ran-booster' ),
+		__( 'Saving this credential authorizes the active %1$s provider to read every credential saved under Git provider code %2$s. Booster does not authenticate a third-party publisher.', 'ran-booster' ),
 		$provider['label'],
 		$provider['code']
 	);
@@ -84,7 +84,7 @@ if ( $has_credential_settings ) {
 				<p>
 					<label><input type="checkbox" name="ran_booster[self_destruct]" value="1" class="ran-booster-credential-self-destruct" aria-describedby="ran-booster-expiry-removal-help"> <?php esc_html_e( 'Automatically remove this saved credential after this date', 'ran-booster' ); ?></label>
 				</p>
-				<p id="ran-booster-expiry-removal-help" class="description"><?php esc_html_e( 'Enter the provider expiry date, or choose an earlier one. If automatic removal is enabled, Booster removes the saved credential after this date. A known provider expiry is the latest date allowed.', 'ran-booster' ); ?></p>
+				<p id="ran-booster-expiry-removal-help" class="description"><?php esc_html_e( 'Enter the Git provider expiry date, or choose an earlier one. If automatic removal is enabled, Booster removes the saved credential after this date. A known Git provider expiry is the latest date allowed.', 'ran-booster' ); ?></p>
 				<p data-access-secret-tools>
 					<label for="ran-booster-access-secret"><span class="ran-booster-secret-label"><?php esc_html_e( 'Credential secret', 'ran-booster' ); ?></span></label>
 					<span class="ran-booster-portability__password-input">
@@ -117,7 +117,7 @@ if ( $has_credential_settings ) {
 					<p id="ran-booster-delete-credential-packages-title" class="ran-booster-delete-credential-packages__title"><strong><?php esc_html_e( 'Connected packages', 'ran-booster' ); ?></strong></p>
 					<div data-delete-credential-package-list></div>
 				</div>
-				<p data-delete-credential-public-default hidden><?php echo esc_html( sprintf( /* translators: 1: provider label. */ __( 'This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the provider’s public API limits.', 'ran-booster' ), $provider['label'] ) ); ?></p>
+				<p data-delete-credential-public-default hidden><?php echo esc_html( sprintf( /* translators: 1: provider label. */ __( 'This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the Git provider’s public API limits.', 'ran-booster' ), $provider['label'] ) ); ?></p>
 				<div id="ran-booster-delete-access-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
 				<div class="ran-booster-credential-modal__actions">
 					<button type="submit" class="button button-delete" data-delete-credential-confirm><?php esc_html_e( 'Yes, delete credential', 'ran-booster' ); ?></button>
@@ -206,7 +206,7 @@ if ( $has_webhook_settings ) {
 							</button>
 						</span>
 					</span>
-					<span id="ran-booster-webhook-secret-guidance" class="description ran-booster-secret-help ran-booster-portability__password-guidance"><strong><?php esc_html_e( 'Copy the secret before saving.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Paste the same value into the provider webhook. Booster will not reveal a saved secret again, and saving it here does not create or verify the remote webhook. On edit, leave the field unchanged to retain the saved secret.', 'ran-booster' ); ?></span>
+					<span id="ran-booster-webhook-secret-guidance" class="description ran-booster-secret-help ran-booster-portability__password-guidance"><strong><?php esc_html_e( 'Copy the secret before saving.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Paste the same value into the Git provider webhook. Booster will not reveal a saved secret again, and saving it here does not create or verify the remote webhook. On edit, leave the field unchanged to retain the saved secret.', 'ran-booster' ); ?></span>
 					<span class="ran-booster-portability__password-status" data-webhook-secret-status data-generated-message="<?php esc_attr_e( 'A secure 64-character webhook secret was generated.', 'ran-booster' ); ?>" data-copied-message="<?php esc_attr_e( 'Webhook secret copied to the clipboard.', 'ran-booster' ); ?>" data-generation-failed-message="<?php esc_attr_e( 'Booster could not generate a webhook secret securely in this browser. Enter one manually.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The webhook secret is selected; use your browser’s copy command.', 'ran-booster' ); ?>" role="status" aria-live="polite" aria-atomic="true"></span>
 				</p>
 				<div id="ran-booster-webhook-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>

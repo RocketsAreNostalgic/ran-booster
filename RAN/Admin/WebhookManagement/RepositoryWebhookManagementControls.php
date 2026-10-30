@@ -79,8 +79,8 @@ final class RepositoryWebhookManagementControls {
 		if ( null === $authority || ! $this->supports_provider( $authority['provider_code'] ) ) {
 			$this->render_unavailable_package_webhook_setup(
 				null === $authority
-					? __( 'A stable repository identity and a provider with assisted webhook management are required before setup can begin.', 'ran-booster' )
-					: __( 'This provider does not offer the complete assisted webhook-management capability required by Booster.', 'ran-booster' )
+					? __( 'A stable repository identity and a Git provider with assisted webhook management are required before setup can begin.', 'ran-booster' )
+					: __( 'This Git provider does not offer the complete assisted webhook-management capability required by Booster.', 'ran-booster' )
 			);
 			return;
 		}
@@ -193,7 +193,7 @@ final class RepositoryWebhookManagementControls {
 					array(
 						'class'   => 'notice-warning',
 						/* translators: %s: provider name. */
-						'message' => sprintf( __( '%s webhook configuration is incomplete. Webhook setup is unavailable until the provider supplies its complete management capability.', 'ran-booster' ), $claimed_metadata->label ),
+						'message' => sprintf( __( '%s webhook configuration is incomplete. Webhook setup is unavailable until the Git provider supplies its complete management capability.', 'ran-booster' ), $claimed_metadata->label ),
 					),
 				),
 				false
@@ -264,11 +264,11 @@ final class RepositoryWebhookManagementControls {
 	/** Explain a failed local readiness projection without probing a provider. */
 	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id, ?string $package_identifier = null ): string {
 		$messages = array(
-			'callback_requires_public_https'  => __( 'This site needs a public HTTPS URL before a provider can deliver webhooks. Local receivers cannot be reached remotely.', 'ran-booster' ),
+			'callback_requires_public_https'  => __( 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.', 'ran-booster' ),
 			'database_unavailable'            => __( 'Webhook setup is unavailable because Booster database storage is unavailable.', 'ran-booster' ),
 			'secrets_storage_unavailable'     => __( 'Webhook setup is unavailable because encrypted signing-secret storage is unavailable.', 'ran-booster' ),
 			'managed_packages_unavailable'    => __( 'Webhook setup is unavailable because Booster could not read managed packages.', 'ran-booster' ),
-			'repository_identity_unavailable' => __( 'Webhook setup is unavailable because this repository has no stable provider identity.', 'ran-booster' ),
+			'repository_identity_unavailable' => __( 'Webhook setup is unavailable because this repository has no stable Git provider identity.', 'ran-booster' ),
 			'repository_identity_conflict'    => __( 'Webhook setup is unavailable because managed packages disagree about this repository identity.', 'ran-booster' ),
 			'repository_locator_invalid'      => __( 'Webhook setup is unavailable because the saved repository address is invalid.', 'ran-booster' ),
 		);
@@ -346,17 +346,17 @@ final class RepositoryWebhookManagementControls {
 			),
 			array(
 				'label'   => __( 'Signing profile', 'ran-booster' ),
-				'message' => __( 'Provider configuration is incomplete, so Booster did not inspect signing-secret availability.', 'ran-booster' ),
+				'message' => __( 'Git provider configuration is incomplete, so Booster did not inspect signing-secret availability.', 'ran-booster' ),
 				'state'   => 'is-pending',
 			),
 			array(
-				'label'   => __( 'Provider receiver', 'ran-booster' ),
-				'message' => __( 'Provider configuration is incomplete, so Booster did not inspect receiver readiness.', 'ran-booster' ),
+				'label'   => __( 'Git provider receiver', 'ran-booster' ),
+				'message' => __( 'Git provider configuration is incomplete, so Booster did not inspect receiver readiness.', 'ran-booster' ),
 				'state'   => 'is-pending',
 			),
 			array(
 				'label'   => __( 'Remote hook', 'ran-booster' ),
-				'message' => __( 'Provider configuration is incomplete, so Booster did not inspect remote webhook state.', 'ran-booster' ),
+				'message' => __( 'Git provider configuration is incomplete, so Booster did not inspect remote webhook state.', 'ran-booster' ),
 				'state'   => 'is-pending',
 			),
 		);
@@ -434,7 +434,7 @@ final class RepositoryWebhookManagementControls {
 				'state'   => in_array( $secret_coverage, array( 'repository', 'shared', 'recorded-repository', 'recorded-owner' ), true ) ? 'is-ok' : ( 'none' === $secret_coverage ? 'is-warning' : 'is-pending' ),
 			),
 			array(
-				'label'   => __( 'Provider receiver', 'ran-booster' ),
+				'label'   => __( 'Git provider receiver', 'ran-booster' ),
 				'message' => $receiver_ready
 					? __( 'This site can receive webhook deliveries.', 'ran-booster' )
 					: __( 'This site needs a public HTTPS URL to receive webhooks. Manual updates still work.', 'ran-booster' ),
@@ -447,10 +447,10 @@ final class RepositoryWebhookManagementControls {
 					: ( $record_healthy
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */
-							__( 'Configured at the last recorded check on %s. Run Check to confirm current provider state.', 'ran-booster' ),
+							__( 'Configured at the last recorded check on %s. Run Check to confirm current Git provider state.', 'ran-booster' ),
 							$record->checked_at()
 						)
-						: __( 'The recorded remote webhook needs review. Run Check or inspect it at the provider.', 'ran-booster' ) ),
+						: __( 'The recorded remote webhook needs review. Run Check or inspect it at the Git provider.', 'ran-booster' ) ),
 				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? 'is-pending' : 'is-warning' ),
 			),
 		);

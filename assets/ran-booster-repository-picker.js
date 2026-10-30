@@ -74,7 +74,7 @@
 		button.title = supported
 			? ''
 			: __(
-					'Repository browsing is not available for this provider.',
+					'Repository browsing is not available for this Git provider.',
 					'ran-booster'
 				);
 	}
@@ -377,9 +377,7 @@
 		providerList.forEach(function (provider) {
 			if (provider && typeof provider.code === 'string') {
 				providers[provider.code] = Object.assign({}, provider, {
-					label:
-						provider.label ||
-						__('Repository provider', 'ran-booster'),
+					label: provider.label || __('Git provider', 'ran-booster'),
 					owner_label:
 						provider.owner_label || __('owner', 'ran-booster'),
 					credential_profiles: Array.isArray(
@@ -1067,7 +1065,7 @@
 			if (!activeProvider || !activeProvider.browse) {
 				showError(
 					__(
-						'This repository provider does not support browsing.',
+						'This Git provider does not support browsing.',
 						'ran-booster'
 					)
 				);
@@ -1124,7 +1122,7 @@
 					) {
 						showError(
 							__(
-								'The repository provider returned invalid results.',
+								'The Git provider returned invalid results.',
 								'ran-booster'
 							)
 						);

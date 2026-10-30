@@ -993,7 +993,7 @@ final class ProviderRepositoryRowsNormalizer {
 		$labels   = array(
 			'database_unavailable'           => __( 'Booster database storage must be healthy before Push-to-Deploy can run.', 'ran-booster' ),
 			'secrets_storage_unavailable'    => __( 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ),
-			'callback_requires_public_https' => $is_local ? __( 'This site uses a local URL, so providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy.', 'ran-booster' ) : __( 'The payload URL must use public HTTPS before providers can deliver webhooks to it.', 'ran-booster' ),
+			'callback_requires_public_https' => $is_local ? __( 'This site uses a local URL, so Git providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy.', 'ran-booster' ) : __( 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it.', 'ran-booster' ),
 			'managed_packages_unavailable'   => __( 'Booster could not read the managed package inventory needed for Push-to-Deploy.', 'ran-booster' ),
 		);
 

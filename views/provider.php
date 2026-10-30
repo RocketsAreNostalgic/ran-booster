@@ -240,7 +240,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provided by %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
 				<details class="ran-booster-disclosure"><summary><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></summary>
 				<div class="ran-booster-disclosure__body">
-				<p><?php esc_html_e( 'To change provider, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'To change Git provider, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
 			<?php } else { ?>
 				<?php if ( 'decision_required' === $selection_status['state'] && 1 === count( $selection_status['candidates'] ) ) { ?>
 					<?php $review_candidate = reset( $selection_status['candidates'] ); ?>
@@ -305,7 +305,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 					<p><?php esc_html_e( 'Plugin names and compatibility claims do not verify publisher identity. Approve only a plugin you trust.', 'ran-booster' ); ?></p>
 				<p><?php echo esc_html( is_array( $github_selection['package_counts'] ) ? sprintf( /* translators: 1: managed Branch packages, 2: managed release packages. */ __( 'Affected GitHub packages: %1$d Branch, %2$d Published release.', 'ran-booster' ), $github_selection['package_counts']['branch'], $github_selection['package_counts']['release_asset'] ) : __( 'Affected package inventory could not be checked.', 'ran-booster' ) ); ?></p>
 					<p><?php echo esc_html( sprintf( /* translators: 1: compatible profile count, 2: incompatible profile count. */ __( 'API credential material: %1$d compatible, %2$d incompatible. Counts include any configured constant overlay.', 'ran-booster' ), $adoption_review['compatible_count'], $adoption_review['incompatible_count'] ) ); ?></p>
-					<p><?php esc_html_e( 'Incompatible profiles remain unchanged and unavailable. Packages using them stay paused; Booster will not substitute another credential. Missing provider capabilities also keep affected operations unavailable.', 'ran-booster' ); ?></p>
+					<p><?php esc_html_e( 'Incompatible profiles remain unchanged and unavailable. Packages using them stay paused; Booster will not substitute another credential. Missing Git provider capabilities also keep affected operations unavailable.', 'ran-booster' ); ?></p>
 					<?php if ( ! $github_selection['available'] && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
 							<?php wp_nonce_field( 'ran-booster-adopt-github-' . $adoption_review['digest'] ); ?>
@@ -351,7 +351,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				$repository_list_url,
 				$activity_url,
 				$webhook_assistance_site_ready,
-				$webhook_assistance_site_ready ? __( 'This site can receive provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhook_site_reasons ),
+				$webhook_assistance_site_ready ? __( 'This site can receive Git provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhook_site_reasons ),
 				$repository_view,
 				$repository_view_urls,
 				$repository_view_request_urls,
@@ -469,11 +469,11 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 							</ul>
 							<p class="ran-booster-provider-task-progress" data-ran-booster-provider-task-progress role="status" aria-live="polite" hidden>
 								<span class="spinner is-active" aria-hidden="true"></span>
-								<span class="screen-reader-text"><?php esc_html_e( 'Loading provider details…', 'ran-booster' ); ?></span>
+								<span class="screen-reader-text"><?php esc_html_e( 'Loading Git provider details…', 'ran-booster' ); ?></span>
 							</p>
 						</nav>
 						<div class="notice notice-error inline ran-booster-provider-task-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden>
-							<p><?php esc_html_e( 'Booster could not load that provider view. The current view is unchanged; choose the task again to retry.', 'ran-booster' ); ?></p>
+							<p><?php esc_html_e( 'Booster could not load that Git provider view. The current view is unchanged; choose the task again to retry.', 'ran-booster' ); ?></p>
 						</div>
 
 						<?php if ( 'status' === $provider_task ) { ?>
@@ -481,7 +481,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 							<div class="ran-booster-provider-task-panel__heading">
 								<div>
 									<h4 id="ran-booster-provider-status-heading" class="ran-booster-section__title"><?php esc_html_e( 'Status', 'ran-booster' ); ?></h4>
-									<p class="ran-booster-section__description"><?php esc_html_e( 'Local records only; no provider request is made.', 'ran-booster' ); ?></p>
+									<p class="ran-booster-section__description"><?php esc_html_e( 'Local records only; no Git provider request is made.', 'ran-booster' ); ?></p>
 								</div>
 							</div>
 							<?php
@@ -515,7 +515,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 								);
 							?>
 							<dl class="ran-booster-repository-integration-status">
-								<div><dt><?php esc_html_e( 'Site webhook delivery', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $webhook_assistance_site_ready ? __( 'Ready for public HTTPS delivery', 'ran-booster' ) : __( 'Not ready for provider delivery', 'ran-booster' ) ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Site webhook delivery', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $webhook_assistance_site_ready ? __( 'Ready for public HTTPS delivery', 'ran-booster' ) : __( 'Not ready for Git provider delivery', 'ran-booster' ) ); ?></dd></div>
 								<div><dt><?php esc_html_e( 'Signing profiles', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of locally ready signing profiles. */ _n( '%d ready locally', '%d ready locally', $ready_webhook_profile_count, 'ran-booster' ), $ready_webhook_profile_count ) ); ?></dd></div>
 								<div><dt><?php esc_html_e( 'Repository hooks', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: number of locally recorded hooks, 2: number of hook records needing review. */ __( '%1$d recorded locally · %2$d need review', 'ran-booster' ), $repository_integration_summary['recorded_hooks'], $repository_integration_summary['needs_review'] ) ); ?></dd></div>
 								<div><dt><?php echo esc_html( _x( 'Releases', 'Provider integration status label', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( $published_release_summary ); ?></dd></div>
@@ -536,14 +536,14 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 							<div class="ran-booster-provider-task-panel__heading">
 								<div>
 									<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title"><?php esc_html_e( 'Webhook receiver', 'ran-booster' ); ?></h4>
-									<p class="ran-booster-section__description"><?php esc_html_e( 'This provider uses one shared receiver on this site. Configure and check each repository from Repositories.', 'ran-booster' ); ?></p>
+									<p class="ran-booster-section__description"><?php esc_html_e( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', 'ran-booster' ); ?></p>
 								</div>
 								<?php if ( null !== $webhook_setup ) { ?>
 									<a class="button" href="<?php echo esc_url( $webhook_setup['documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $provider_instructions_label ); ?></a>
 								<?php } ?>
 							</div>
 							<p><a class="button" href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>
-								<div class="notice notice-warning inline"><p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare provider delivery history with the Provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p></div>
+								<div class="notice notice-warning inline"><p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p></div>
 							<dl class="ran-booster-webhook-endpoint">
 								<div>
 									<dt id="ran-booster-webhook-url-label"><?php esc_html_e( 'Payload URL', 'ran-booster' ); ?></dt>
@@ -560,7 +560,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									<summary><?php esc_html_e( 'Detailed manual setup and troubleshooting', 'ran-booster' ); ?></summary>
 									<div class="ran-booster-provider-disclosure__body ran-booster-disclosure__body">
 										<p><?php echo esc_html( $manual_setup_description ); ?></p>
-										<ol><li><?php esc_html_e( 'Paste the payload URL and a matching signing secret.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Keep SSL verification enabled and select the push event.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Trigger a delivery and confirm the provider records a successful response.', 'ran-booster' ); ?></li></ol>
+										<ol><li><?php esc_html_e( 'Paste the payload URL and a matching signing secret.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Keep SSL verification enabled and select the push event.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Trigger a delivery and confirm the Git provider records a successful response.', 'ran-booster' ); ?></li></ol>
 										<p><a href="<?php echo esc_url( $webhook_setup['delivery_documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?></a></p>
 									</div>
 								</details>
@@ -586,7 +586,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 										$repository_list_url,
 										$activity_url,
 										$webhook_assistance_site_ready,
-										$webhook_assistance_site_ready ? __( 'This site can receive provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhook_site_reasons ),
+										$webhook_assistance_site_ready ? __( 'This site can receive Git provider webhook deliveries.', 'ran-booster' ) : implode( ' ', $webhook_site_reasons ),
 										$repository_view,
 										$repository_view_urls,
 										$repository_view_request_urls,

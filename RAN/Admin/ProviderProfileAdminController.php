@@ -95,7 +95,7 @@ class ProviderProfileAdminController {
 				throw new \RuntimeException( 'Fresh removal recovery confirmation is required.' );
 			}
 			$this->package_removal->recover_native_removal( $digest, true, true, $authorized );
-			$this->dashboard->add_message( __( 'Target removal and management disconnection verified; the native installation block is cleared. Cleanup of temporary files from the interrupted process is unverified. Review current provider availability before continuing.', 'ran-booster' ) );
+			$this->dashboard->add_message( __( 'Target removal and management disconnection verified; the native installation block is cleared. Cleanup of temporary files from the interrupted process is unverified. Review current Git provider availability before continuing.', 'ran-booster' ) );
 		} catch ( \Throwable ) {
 			$this->dashboard->add_message( new \WP_Error( 'ran_booster_github_recovery', __( 'Native recovery could not be verified. Review the target, management records, updater lock and current recovery status before trying again.', 'ran-booster' ) ) );
 		}
@@ -152,7 +152,7 @@ class ProviderProfileAdminController {
 			try {
 				$validator = $this->providers->require_capability( $provider, CredentialValidator::class );
 			} catch ( UnsupportedProviderCapability ) {
-				throw new CredentialRequestException( __( 'Credential validation is unavailable for this repository provider.', 'ran-booster' ) );
+				throw new CredentialRequestException( __( 'Credential validation is unavailable for this Git provider.', 'ran-booster' ) );
 			}
 			$activity_id = $this->begin_credential_activity( $provider, $id );
 			$result      = $validator->validate_credential( $id );
@@ -254,10 +254,10 @@ class ProviderProfileAdminController {
 			try {
 				$browser = $this->providers->require_capability( $provider, CredentialedPublicRepositoryBrowser::class );
 			} catch ( UnsupportedProviderCapability ) {
-				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this provider.', 'ran-booster' ) );
+				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this Git provider.', 'ran-booster' ) );
 			}
 			if ( ! $browser->get_public_repository_browse_metadata()->supports_provider_default_profile ) {
-				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this provider.', 'ran-booster' ) );
+				throw new CredentialRequestException( __( 'A default public repository lookup profile is unavailable for this Git provider.', 'ran-booster' ) );
 			}
 			if ( ! array_key_exists( 'profile_id', $request ) || ! is_string( $request['profile_id'] ) ) {
 				throw new CredentialRequestException( __( 'Choose Anonymous or a saved repository credential.', 'ran-booster' ) );
@@ -357,7 +357,7 @@ class ProviderProfileAdminController {
 		}
 		if ( '' === $secret && null !== $manual_expiry && null !== $provider_expiry && $manual_expiry > $provider_expiry ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
-			throw new CredentialRequestException( __( 'The expiry / removal date cannot be later than the expiry reported by the provider.', 'ran-booster' ) );
+			throw new CredentialRequestException( __( 'The expiry / removal date cannot be later than the expiry reported by the Git provider.', 'ran-booster' ) );
 		}
 		$self_destruct = isset( $request['self_destruct'] ) && '1' === $request['self_destruct'];
 		if ( $self_destruct && null === $manual_expiry ) {
@@ -417,7 +417,7 @@ class ProviderProfileAdminController {
 				return $self_destruct
 						? __( 'Repository credential saved with automatic removal enabled.', 'ran-booster' )
 					: ( $is_replacement
-							? __( 'Repository credential replaced. Validate it to refresh provider expiry information.', 'ran-booster' )
+							? __( 'Repository credential replaced. Validate it to refresh Git provider expiry information.', 'ran-booster' )
 							: __( 'Repository credential saved.', 'ran-booster' ) );
 			}
 		);
@@ -560,7 +560,7 @@ class ProviderProfileAdminController {
 	private function authorize( string $nonce ): void {
 		if ( ! current_user_can( 'manage_options' ) ) {
 			$message = 'ran-booster-save-public-lookup-profile' === $nonce
-				? esc_html__( 'You do not have sufficient permissions to manage Booster provider settings.', 'ran-booster' )
+				? esc_html__( 'You do not have sufficient permissions to manage Booster Git provider settings.', 'ran-booster' )
 				: esc_html__( 'You do not have sufficient permissions to manage Booster credentials.', 'ran-booster' );
 			wp_die( $message ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Both closed branches are escaped immediately above.
 		}
@@ -626,14 +626,14 @@ class ProviderProfileAdminController {
 	private function provider_code( array $request ): ProviderCode {
 		try {
 			if ( ! is_string( $request['provider'] ?? null ) ) {
-					throw new CredentialRequestException( __( 'Choose a supported repository provider.', 'ran-booster' ) );
+					throw new CredentialRequestException( __( 'Choose a supported Git provider.', 'ran-booster' ) );
 			}
 			$provider = ProviderCode::parse( wp_unslash( $request['provider'] ) );
 			$this->providers->get( $provider );
 			return $provider;
 		} catch ( \Throwable ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
-			throw new CredentialRequestException( __( 'Choose a supported repository provider.', 'ran-booster' ) );
+			throw new CredentialRequestException( __( 'Choose a supported Git provider.', 'ran-booster' ) );
 		}
 	}
 	private function provider_admin( ProviderCode $provider ): ProviderAdminMetadata {
@@ -641,11 +641,11 @@ class ProviderProfileAdminController {
 			$admin = $this->providers->get( $provider )->get_metadata()->admin;
 		} catch ( \Throwable ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
-			throw new CredentialRequestException( __( 'Choose a supported repository provider.', 'ran-booster' ) );
+			throw new CredentialRequestException( __( 'Choose a supported Git provider.', 'ran-booster' ) );
 		}
 		if ( null === $admin ) {
 			// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Fixed translated failure text is escaped by the controller response boundary, not when thrown.
-			throw new CredentialRequestException( __( 'Repository provider settings are unavailable.', 'ran-booster' ) );
+			throw new CredentialRequestException( __( 'Git provider settings are unavailable.', 'ran-booster' ) );
 		}
 		return $admin;
 	}

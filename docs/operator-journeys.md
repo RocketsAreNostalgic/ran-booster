@@ -9,8 +9,9 @@ a compatible, separately certified Migrator release; see its status below.
 Transporter transfers selected Booster management configuration and, only when
 chosen, eligible repository credentials. It does not copy installed package files,
 WordPress content, database contents, deployment history, webhook secrets or
-provider-side webhooks. Keep a normal database and filesystem backup. This is a
-selective reconstruction journey, not a complete backup or exact-code snapshot.
+webhooks on the Git provider, such as GitHub or Bitbucket. Keep a normal database
+and filesystem backup. This is a selective reconstruction journey, not a complete
+backup or exact-code snapshot.
 The [Blueprint reference](portability-briefcase.md) retains format and policy detail.
 
 ## Create a Blueprint on the source
@@ -64,7 +65,7 @@ extension data and manually authored configuration are not part of the cleanup.
 
 ## Open, review and apply on the destination
 
-1. Install/activate compatible providers and prepare destination credentials when
+1. Install/activate compatible Git providers and prepare destination credentials when
    needed. If changing GitHub implementation, complete the separate
    [provider adoption](github-provider-replacement.md) first.
 2. Open **Transporter** → **Open a Blueprint**, select **Transporter Blueprint
@@ -99,7 +100,7 @@ extension data and manually authored configuration are not part of the cleanup.
 | **Available to adopt** / **Adopt with Booster** | Eligible existing files can be brought under management without replacement; deployment starts Disabled. |
 | **Already managed** / **No change** | No package operation is proposed. **Import credential only** may be offered for explicit credential recovery; it does not change the package's saved credential selection. |
 | **Protected** / **Leave unchanged** | Existing management is different, stale or unreadable. Do not overwrite it through this import. |
-| **Blocked** / **Cannot apply** | Read the reason and resolve access, provider, destination or unsupported-operation problems before a fresh review. |
+| **Blocked** / **Cannot apply** | Read the reason and resolve access, Git provider, destination or unsupported-operation problems before a fresh review. |
 
 **Local configuration matches this Blueprint** compares management settings,
 not installed artifacts. The page explicitly says **Whether the installed code
@@ -152,10 +153,10 @@ Preview may return useful completed rows alongside **Not checked: this credentia
 scope was rate limited during this preview. Review again later.** or **Not checked:
 this preview reached its time budget. Review again before applying.** Those rows
 were not verified and cannot be selected. Wait for rate-limit recovery or fix
-provider/network/credential availability, then review again. A repository-specific
+Git provider/network/credential availability, then review again. A repository-specific
 access failure is not proof that every other repository failed.
 
-If the page says **The selected repository provider changed. Review again before
+If the page says **The selected Git provider changed. Review again before
 applying.**, complete any provider selection first, then choose **Review Transporter
 Blueprint** and make choices against the new review. Do the same after a review
 refresh error; do not rely on choices in a stale browser tab.
@@ -214,7 +215,7 @@ Once a compatible pair is available:
    enter the existing Booster profile ID in **Booster credential**; this is a text
    field, not a credential import or picker. Choose **Check** for one retained
    package at a time. Choose **Adopt** only when the installed package and stable
-   repository identity match the fresh review. A changed provider choice requires
+   repository identity match the fresh review. A changed Git provider choice requires
    review again. Adoption keeps existing files and starts deployment **Disabled**;
    it does not download replacement package files.
 4. Inspect the adopted Booster target and source-row result. Successful adoption
@@ -228,7 +229,8 @@ Once a compatible pair is available:
    or deliberately retain those packages before deleting WP Pusher. Do not take
    a partial migration as permission to discard remaining records.
 6. When finished, delete WP Pusher through WordPress yourself, check its dashboard
-   activation, and review/remove provider-side deployment webhooks separately.
+   activation, and review/remove deployment webhooks on the Git provider
+   separately.
    Its own uninstaller owns its local cleanup and attempts license deactivation.
    Verify packages, then remove the temporary Migrator. Neither Core adoption nor
    the bridge performs those uninstall/webhook steps for you.

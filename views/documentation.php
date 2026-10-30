@@ -45,7 +45,7 @@ $archive_providers          = array_values(
 	)
 );
 $archive_provider_labels    = 0 === count( $archive_providers )
-	? __( 'Repository providers', 'ran-booster' )
+	? __( 'Git providers', 'ran-booster' )
 	: ( 1 === count( $archive_providers ) ? $archive_providers[0] : implode( ' and ', $archive_providers ) );
 $documentation_index        = array();
 $documentation_ids          = array();
@@ -185,7 +185,7 @@ unset( $prepared_section );
 					</li>
 					<li>
 						<strong><?php esc_html_e( 'Add private access only if needed.', 'ran-booster' ); ?></strong>
-						<?php esc_html_e( 'If anonymous access fails, open the provider settings and save the narrowest credential that works for this site.', 'ran-booster' ); ?>
+						<?php esc_html_e( 'If anonymous access fails, open the Git provider settings and save the narrowest credential that works for this site.', 'ran-booster' ); ?>
 						<?php if ( array() !== $provider_documentation ) { ?>
 							<ul class="ran-booster-documentation__inline-links">
 								<?php foreach ( $provider_documentation as $provider_guide ) { ?>
@@ -228,7 +228,7 @@ unset( $prepared_section );
 					<li><?php esc_html_e( 'Keep the normal database and filesystem backup.', 'ran-booster' ); ?></li>
 				</ol>
 				<p><?php esc_html_e( 'Complete database copies inside the supported MySQL or MariaDB and InnoDB envelope are best effort. A Transporter Blueprint is the supported reconstruction route when the copied Booster tables cannot be trusted, but the target database must still satisfy Booster’s requirements. Booster does not convert custom tables between database engines.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'Deployment attempts and delivery-replay history, webhook secrets and provider-side hooks, constants, locks and worker state, and source deployment policy remain target-local. Every installed or adopted package starts with deployment Disabled, so an administrator must deliberately choose a new target policy.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Deployment attempts and delivery-replay history, webhook secrets and hooks registered with the Git provider, constants, locks and worker state, and source deployment policy remain target-local. Every installed or adopted package starts with deployment Disabled, so an administrator must deliberately choose a new target policy.', 'ran-booster' ); ?></p>
 				<p><strong><?php esc_html_e( 'Transporter workflow:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Select packages for a Transporter Blueprint on this site, open it on the other site, review what would change for each package, then apply only the selected changes. Excluded and unchecked packages remain untouched. Reviewing a Transporter Blueprint never installs anything, changes package settings, or stores the uploaded file — nothing happens until you apply it.', 'ran-booster' ); ?></p>
 				<p><a class="button" href="<?php echo esc_url( $portability_url ); ?>"><?php esc_html_e( 'Open Transporter', 'ran-booster' ); ?></a></p>
 
@@ -265,7 +265,7 @@ unset( $prepared_section );
 					<li><?php esc_html_e( 'Confirm the package is managed by Booster before continuing.', 'ran-booster' ); ?></li>
 					<li><?php esc_html_e( 'After every package is migrated, review the optional WP Pusher data cleanup and remove the temporary migrator.', 'ran-booster' ); ?></li>
 				</ol>
-				<p><?php esc_html_e( 'The migrator does not copy credentials, reinstall package files, enable deployments, remove remote webhooks, delete WP Pusher, or contact its license service. Remove provider-side deployment webhooks separately.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'The migrator does not copy credentials, reinstall package files, enable deployments, remove remote webhooks, delete WP Pusher, or contact its license service. Remove deployment webhooks on the Git provider separately.', 'ran-booster' ); ?></p>
 				<p><a class="button" href="<?php echo esc_url( $portability_url ); ?>"><?php esc_html_e( 'Open migration tools', 'ran-booster' ); ?></a></p>
 			</div>
 		</details>
@@ -277,13 +277,13 @@ unset( $prepared_section );
 				<ul>
 					<li><strong><?php esc_html_e( 'Disabled', 'ran-booster' ); ?></strong> <?php esc_html_e( 'blocks any replacement, whether triggered by an administrator or by a webhook. Use this for a package whose files on disk you are currently editing.', 'ran-booster' ); ?></li>
 					<li><strong><?php esc_html_e( 'Manual', 'ran-booster' ); ?></strong> <?php esc_html_e( 'blocks webhook-triggered replacement (Push-to-Deploy) but still lets an administrator replace the package’s files through Booster.', 'ran-booster' ); ?></li>
-					<li><strong><?php esc_html_e( 'Automatic', 'ran-booster' ); ?></strong> <?php esc_html_e( 'allows a matching, signed push from the repository provider to replace the package automatically. Only turn this on for a site that is ready to receive live deployments.', 'ran-booster' ); ?></li>
+					<li><strong><?php esc_html_e( 'Automatic', 'ran-booster' ); ?></strong> <?php esc_html_e( 'allows a matching, signed push from the Git provider to replace the package automatically. Only turn this on for a site that is ready to receive live deployments.', 'ran-booster' ); ?></li>
 				</ul>
 				<p><?php esc_html_e( 'Booster never changes a package’s mode on its own. It may show a reminder when WordPress reports a local or development environment, plugin or theme development mode is active, WP_DEBUG is enabled, the site uses localhost or a loopback address, or its URL has a nonstandard port. These are safety hints only: Booster will not switch a package to Disabled or Manual for you. Choose each package’s mode explicitly.', 'ran-booster' ); ?></p>
 
 				<h3><?php esc_html_e( 'What a Transporter Blueprint includes', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'A Transporter Blueprint records only the Booster-managed plugins and themes selected on the source site. It can optionally include file-stored repository credentials used by those selected packages inside a password-protected ZIP. The ZIP password is only used for that one request and is never saved anywhere. When a package is installed or adopted from a Transporter Blueprint, it starts with deployment Disabled.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'A Transporter Blueprint does not include WordPress content, uploads, the database, the package files themselves, constants, webhook secrets, provider-side hooks, deployment attempts or delivery-replay history, locks or worker state, or source deployment policy. Push-to-Deploy is always configured separately on each site.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'A Transporter Blueprint does not include WordPress content, uploads, the database, the package files themselves, constants, webhook secrets, hooks registered with the Git provider, deployment attempts or delivery-replay history, locks or worker state, or source deployment policy. Push-to-Deploy is always configured separately on each site.', 'ran-booster' ); ?></p>
 
 				<h3><?php esc_html_e( 'Prepare the branch you are deploying', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Booster installs exactly what is committed to the repository ref you select. It does not remove files, run build tools or install dependencies on the target site.', 'ran-booster' ); ?></p>
@@ -316,14 +316,14 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 }</code></pre>
 				<p><?php esc_html_e( 'If credentials already exist, move or restore secrets.json, secrets.json.lock and the matching database key together. Do not create an empty secrets file, copy only the encrypted file, or reset only the database key. If either the file or database key is permanently unavailable, the protected Overview can offer an explicit typed reset after Booster verifies the remaining filesystem material and private path; this discards unrecoverable credentials and webhook secrets before fresh storage can be initialized.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Moving credentials between sites', 'ran-booster' ); ?></h3>
-				<p><?php esc_html_e( 'A plugin ZIP export or a database-only site migration cannot recreate the encrypted store. Transporter, described above, is the supported way to move selected repository credentials: it protects them inside the Transporter Blueprint ZIP, confirms repository identity and access on the target, and re-encrypts them with the target site’s key. Installing or adopting a package associates the imported credential with that package. Credential-only recovery for an already-managed package imports the credential under a new target-local ID but deliberately leaves the package’s saved credential selection unchanged; assign the recovered credential through the package settings if needed. Constants, webhook secrets and credentials already saved on the target are never exported. When Transporter is not the right fit, add credentials directly through the provider settings screens on the target site, or use the supported deployment constants instead.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'A plugin ZIP export or a database-only site migration cannot recreate the encrypted store. Transporter, described above, is the supported way to move selected repository credentials: it protects them inside the Transporter Blueprint ZIP, confirms repository identity and access on the target, and re-encrypts them with the target site’s key. Installing or adopting a package associates the imported credential with that package. Credential-only recovery for an already-managed package imports the credential under a new target-local ID but deliberately leaves the package’s saved credential selection unchanged; assign the recovered credential through the package settings if needed. Constants, webhook secrets and credentials already saved on the target are never exported. When Transporter is not the right fit, add credentials directly through the Git provider settings screens on the target site, or use the supported deployment constants instead.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Do not overwrite an existing target site’s credentials file. If you ever need to restore the whole file as a recovery step, keep a copy of the target’s existing file first, and treat that restore as something only an approved recovery process should do.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Keep the encrypted file and key protected, and exclude the file from version control and from any release archive.', 'ran-booster' ); ?></p>
 
 				<h3><?php esc_html_e( 'What happens on uninstall', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Deactivating Booster keeps all credentials, package settings and deployment history in place. Deleting Booster through WordPress is the permanent local cleanup action: it removes both Booster custom tables, the encrypted credentials file and its separate database key, other Booster options, user notices, scheduled work, locks and temporary Logging capture. If Booster cannot verify or remove one of those artifacts safely, WordPress keeps the plugin files so an administrator can correct the problem and retry.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'Before deleting Booster, export a password-protected Transporter Blueprint with the selected packages and any file-stored repository credentials they use that you may need. A Transporter Blueprint does not include webhook secrets, provider-side webhook registrations, deployment history or constants, and every restored package starts with deployment Disabled.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'Uninstall cannot revoke provider credentials or remove remote webhooks. Revoke credentials with each provider and remove remote hooks before uninstalling. Booster removes only the exact wp-config.php storage definition it created; any manually authored storage definition remains under the site operator’s control.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Before deleting Booster, export a password-protected Transporter Blueprint with the selected packages and any file-stored repository credentials they use that you may need. A Transporter Blueprint does not include webhook secrets, webhook registrations on the Git provider, deployment history or constants, and every restored package starts with deployment Disabled.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Uninstall cannot revoke Git provider credentials or remove remote webhooks. Revoke credentials with each Git provider and remove remote hooks before uninstalling. Booster removes only the exact wp-config.php storage definition it created; any manually authored storage definition remains under the site operator’s control.', 'ran-booster' ); ?></p>
 			</div>
 		</details>
 
@@ -370,8 +370,8 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 							</ul>
 						<?php } ?>
 					<?php } else { ?>
-						<p><?php echo esc_html( $credentials['summary'] ?? __( 'Setup guidance is not available for this provider yet.', 'ran-booster' ) ); ?></p>
-						<p><?php esc_html_e( 'You can still use a public repository or enter repository details manually when the provider supports package deployment.', 'ran-booster' ); ?></p>
+						<p><?php echo esc_html( $credentials['summary'] ?? __( 'Setup guidance is not available for this Git provider yet.', 'ran-booster' ) ); ?></p>
+						<p><?php esc_html_e( 'You can still use a public repository or enter repository details manually when the Git provider supports package deployment.', 'ran-booster' ); ?></p>
 					<?php } ?>
 				</div>
 				</details>
@@ -381,7 +381,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 		<details id="ran-booster-installing-and-managing-packages" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Installing and managing packages', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
-				<p><?php esc_html_e( 'Choose a provider, then search for a repository or enter its account and name manually. Booster resolves repository visibility, stable identity, and the default branch before installation.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Choose a Git provider, then search for a repository or enter its account and name manually. Booster resolves repository visibility, stable identity, and the default branch before installation.', 'ran-booster' ); ?></p>
 				<ul>
 					<li><a href="<?php echo esc_url( $install_plugin_url ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a></li>
 					<li><a href="<?php echo esc_url( $install_theme_url ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a></li>
@@ -422,18 +422,18 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 		<details id="ran-booster-push-to-deploy" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
-				<p><?php esc_html_e( 'Push-to-Deploy is optional and configured separately on every target site. Use the matching provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'The provider screen reports site readiness, stable repository identity and whether a local signing secret applies. Local secret coverage means Booster can authenticate a matching delivery; it does not prove that a remote provider webhook exists. Configure and verify every remote webhook separately.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Push-to-Deploy is optional and configured separately on every target site. Use the matching Git provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that Git provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'The Git provider screen reports site readiness, stable repository identity and whether a local signing secret applies. Local secret coverage means Booster can authenticate a matching delivery; it does not prove that a remote Git provider webhook exists. Configure and verify every remote webhook separately.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Security, delivery history and hosting', 'ran-booster' ); ?></h3>
-				<p><?php esc_html_e( 'HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection for the network, web server, PHP workers or WordPress bootstrap. Use public HTTPS with certificate verification enabled, a unique generated secret for each repository, the provider’s JSON delivery option and only the required push event. Rotate or disable a suspected secret.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection for the network, web server, PHP workers or WordPress bootstrap. Use public HTTPS with certificate verification enabled, a unique generated secret for each repository, the Git provider’s JSON delivery option and only the required push event. Rotate or disable a suspected secret.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Do not cache, challenge, redirect or transform either accepted callback form: the pretty /wp-json/ route or the equivalent ?rest_route= query route. Proxies must preserve the raw body and signature headers. WordPress may already have buffered the body before Booster runs, so Core enforces its measured 256 KiB limit but does not trust or parse Content-Length as transport protection.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'A provider can time out after Booster has durably admitted work. Provider delivery history remains authoritative for request duration, response status and redelivery. Compare the provider identifier with the Provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'At a trusted edge or host, you may bound body and header size, read time and connections for both callback forms. Provider-published IP ranges are optional defence in depth only where the real peer address is trustworthy; keep them current and retain HMAC. Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'A Git provider can time out after Booster has durably admitted work. Git provider delivery history remains authoritative for request duration, response status and redelivery. Compare the Git provider identifier with the Git provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'At a trusted edge or host, you may bound body and header size, read time and connections for both callback forms. IP ranges published by the Git provider are optional defence in depth only where the real peer address is trustworthy; keep them current and retain HMAC. Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity.', 'ran-booster' ); ?></p>
 				<h3 id="ran-booster-webhook-cleanup"><?php esc_html_e( 'Retained webhook setup and cleanup', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup. That package ignores pushes while it remains release-managed, while any branch-managed package using the same repository can continue to need the webhook. Keeping the setup is useful for a temporary switch back and forth.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'Open the repository webhook settings from the provider screen, remove the hook at the provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place.', 'ran-booster' ); ?></p>
-				<p><?php esc_html_e( 'The provider must be able to reach this WordPress site over public HTTPS. Localhost sites need a development tunnel. Test delivery from the provider, then review Deployment activity in Troubleshooting for Booster-managed results.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $troubleshooting_url ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a>.</p>
+				<p><?php esc_html_e( 'For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote Git provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Open the repository webhook settings from the Git provider screen, remove the hook at the Git provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'The Git provider must be able to reach this WordPress site over public HTTPS. Localhost sites need a development tunnel. Test delivery from the Git provider, then review Deployment activity in Troubleshooting for Booster-managed results.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $troubleshooting_url ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a>.</p>
 				<?php foreach ( $provider_documentation as $provider_guide ) { ?>
 					<?php if ( ! empty( $provider_guide['setup_available'] ) && isset( $provider_guide['code'], $provider_guide['label'], $provider_guide['webhook'] ) && is_array( $provider_guide['webhook'] ) ) { ?>
 						<?php $webhook = $provider_guide['webhook']; ?>
@@ -445,7 +445,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 								?>
 							</h3>
 							<dl>
-								<dt><?php esc_html_e( 'Provider location', 'ran-booster' ); ?></dt>
+								<dt><?php esc_html_e( 'Git provider location', 'ran-booster' ); ?></dt>
 								<dd><?php echo esc_html( $webhook['location'] ?? '' ); ?></dd>
 								<dt><?php esc_html_e( 'Payload URL', 'ran-booster' ); ?></dt>
 								<dd><code><?php echo esc_html( rest_url( 'ran-booster/v1/webhooks/' . rawurlencode( $provider_guide['code'] ) ) ); ?></code></dd>

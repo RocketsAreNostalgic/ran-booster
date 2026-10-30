@@ -139,9 +139,9 @@ $policy_labels = array(
 			<?php if ( '' !== $package_list_state['search'] ) { ?>
 				<input type="hidden" name="s" value="<?php echo esc_attr( $package_list_state['search'] ); ?>">
 			<?php } ?>
-			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-provider-filter"><?php esc_html_e( 'Filter by repository provider', 'ran-booster' ); ?></label>
+			<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-provider-filter"><?php esc_html_e( 'Filter by Git provider', 'ran-booster' ); ?></label>
 			<select id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-provider-filter" name="provider">
-				<option value=""><?php esc_html_e( 'All providers', 'ran-booster' ); ?></option>
+				<option value=""><?php esc_html_e( 'All Git providers', 'ran-booster' ); ?></option>
 				<?php foreach ( $package_provider_options as $provider_option ) { ?>
 					<option value="<?php echo esc_attr( $provider_option['code'] ); ?>" <?php selected( $provider_option['code'], $package_list_state['provider'] ); ?>><?php echo esc_html( $provider_option['label'] ); ?></option>
 				<?php } ?>
@@ -316,7 +316,7 @@ $policy_labels = array(
 			if ( $policy_disabled ) {
 				$update_label = __( 'Deployment disabled', 'ran-booster' );
 			} elseif ( $provider_unavailable ) {
-				$update_label = __( 'Provider unavailable', 'ran-booster' );
+				$update_label = __( 'Git provider unavailable', 'ran-booster' );
 			} elseif ( ! $credential_available ) {
 				$update_label = __( 'Credential unavailable', 'ran-booster' );
 			} else {
@@ -344,7 +344,7 @@ $policy_labels = array(
 			$access_label = __( 'Public repository', 'ran-booster' );
 			if ( $package->get_private() ) {
 				if ( $provider_unavailable ) {
-					$access_label = __( 'Private; provider unavailable', 'ran-booster' );
+					$access_label = __( 'Private; Git provider unavailable', 'ran-booster' );
 				} elseif ( is_array( $configured_credential ) ) {
 					$access_label = sprintf(
 						/* translators: %s is the saved credential label. */
@@ -359,7 +359,7 @@ $policy_labels = array(
 			$prominent_status_activity = false;
 			if ( $provider_unavailable ) {
 				$prominent_status = array(
-					'label' => __( 'Provider unavailable', 'ran-booster' ),
+					'label' => __( 'Git provider unavailable', 'ran-booster' ),
 					'tone'  => 'error',
 				);
 			} elseif ( ! $provider_can_deploy ) {
@@ -409,10 +409,10 @@ $policy_labels = array(
 				: sprintf(
 					/* translators: %s is the repository branch name. */
 					__( 'Branch · %s', 'ran-booster' ),
-					'' !== $package->get_branch() ? $package->get_branch() : __( 'provider default', 'ran-booster' )
+					'' !== $package->get_branch() ? $package->get_branch() : __( 'repository default', 'ran-booster' )
 				);
 			if ( $provider_unavailable ) {
-				$status_line = __( 'The saved provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
+				$status_line = __( 'The saved Git provider is unavailable. Restore it before deploying this package.', 'ran-booster' );
 			} elseif ( ! $credential_available ) {
 				$status_line = __( 'The saved repository credential is unavailable.', 'ran-booster' );
 			} elseif ( '' !== ( $package_extension_row['status'] ?? '' ) ) {
@@ -510,7 +510,7 @@ $policy_labels = array(
 					<div class="ran-booster-disclosure__body">
 					<dl class="ran-booster-package-row__details-grid<?php echo $release_managed ? '' : ' ran-booster-package-row__details-grid--branch'; ?>">
 						<div>
-							<dt><?php esc_html_e( 'Provider', 'ran-booster' ); ?></dt>
+							<dt><?php esc_html_e( 'Git provider', 'ran-booster' ); ?></dt>
 							<dd><?php echo esc_html( $provider_label ); ?></dd>
 						</div>
 						<div>

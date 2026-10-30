@@ -24,7 +24,7 @@ $package_field_form = isset( $package_field_form ) && is_string( $package_field_
 		<td>
 <?php } ?>
 		<input id="ran-booster-repository-branch" name="ran_booster[branch]" type="text" class="regular-text ran-booster-branch-input" placeholder="<?php esc_attr_e( 'main, development etc.', 'ran-booster' ); ?>" value="<?php echo esc_attr( $branch_value ); ?>"<?php echo '' !== $package_field_form ? ' form="' . esc_attr( $package_field_form ) . '"' : ''; ?> <?php disabled( $branch_read_only ); ?>>
-		<p class="description"><?php esc_html_e( 'Leave blank to use the repository provider\'s default branch.', 'ran-booster' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Leave blank to use the repository\'s default branch.', 'ran-booster' ); ?></p>
 <?php if ( $package_field_grid ) { ?>
 	</div>
 <?php } else { ?>

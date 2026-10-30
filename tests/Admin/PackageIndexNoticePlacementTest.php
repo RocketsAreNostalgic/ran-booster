@@ -131,6 +131,10 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertTrue( $result_position < $safety_position );
 		self::assertTrue( $safety_position < $table_position );
 		self::assertSame( 1, substr_count( $html, 'Scoped package result.' ) );
+		self::assertSame( 1, substr_count( $html, '<hr class="wp-header-end">' ) );
+		$marker_position = strpos( $html, '<hr class="wp-header-end">' );
+		self::assertIsInt( $marker_position );
+		self::assertTrue( $marker_position < $masthead_position );
 		self::assertSame( 1, substr_count( $html, '<strong>Development safety:</strong>' ) );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-package-intro"' ) );
 		self::assertSame( 1, substr_count( $html, 'notice notice-warning inline is-dismissible' ) );

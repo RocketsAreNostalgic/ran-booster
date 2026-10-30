@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "255cbffa9ddb59050a691e8b32420df2",
+    "content-hash": "661d2990d7e1447668ff6d8ac9d52d86",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1717,16 +1717,16 @@
         },
         {
             "name": "ran/admin-shell",
-            "version": "dev-main",
+            "version": "dev-codex/31-notice-placement",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "496a7d9802bf504d081532ed161f3c8b8ee9ac85"
+                "reference": "56dc2fd75c685fa82038ea60d92608ddc2a131fd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/496a7d9802bf504d081532ed161f3c8b8ee9ac85",
-                "reference": "496a7d9802bf504d081532ed161f3c8b8ee9ac85",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/56dc2fd75c685fa82038ea60d92608ddc2a131fd",
+                "reference": "56dc2fd75c685fa82038ea60d92608ddc2a131fd",
                 "shasum": ""
             },
             "require": {
@@ -1745,7 +1745,6 @@
                 "phpunit/phpunit": "^9.6",
                 "ran/coding-standards": "^1.0"
             },
-            "default-branch": true,
             "bin": [
                 "bin/ran-admin-shell"
             ],
@@ -1783,10 +1782,10 @@
             ],
             "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/main",
+                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/codex/31-notice-placement",
                 "issues": "https://github.com/RocketsAreNostalgic/ran-admin-shell/issues"
             },
-            "time": "2026-10-09T16:10:50+00:00"
+            "time": "2026-10-30T14:28:34+00:00"
         },
         {
             "name": "ran/coding-standards",

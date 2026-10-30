@@ -64,7 +64,7 @@ $status_classes       = array(
 
 		<dl class="ran-booster-debug-capture__facts">
 			<div>
-				<dt class="ran-booster-eyebrow ran-booster-eyebrow--compact"><?php esc_html_e( 'Status', 'ran-booster' ); ?></dt>
+				<dt><?php esc_html_e( 'Status', 'ran-booster' ); ?></dt>
 				<dd>
 					<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_classes[ $capture_state ] ); ?>"><?php echo esc_html( $status_labels[ $capture_state ] ); ?></span>
 					<?php if ( 'active' === $capture_state && '' !== $capture_until ) { ?>

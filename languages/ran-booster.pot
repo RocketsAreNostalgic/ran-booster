@@ -150,21 +150,21 @@ msgid "Back to repositories"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:49
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:48
 #, php-format
 msgid "Open on %s"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:52
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:51
 msgid "Booster could not load that repository view. The current view is unchanged; choose the view again to retry."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:53
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:52
 #: views/provider.php:458
 msgid "Repository integration views"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:57
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:56
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:40
 #: views/debug-capture.php:67
 #: views/extensions.php:182
@@ -175,8 +175,8 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:58
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:274
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:57
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:273
 #: RAN/Admin/PackagePagePresenter.php:277
 #: RAN/Admin/PackagePagePresenter.php:447
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:478
@@ -187,8 +187,8 @@ msgstr ""
 msgid "Branch"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:59
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:274
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:58
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:273
 #: RAN/Admin/PackagePagePresenter.php:287
 #: RAN/Admin/PackagePagePresenter.php:448
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:408
@@ -206,42 +206,42 @@ msgstr ""
 msgid "Releases"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:67
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:66
 msgid "Active for one or more packages in this repository."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:71
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:70
 msgid "Loading repository details…"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:142
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:141
 msgid "Conflicting sources."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:142
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:141
 msgid "Review the package settings before using release workflow."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:146
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:145
 msgid "Packages using this repository"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:147
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:146
 msgid "Repository relationships are read-only here. Change package-owned settings from the linked plugin or theme."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:151
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:150
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:352
 #: views/attempts/detail.php:84
 #: views/attempts/index.php:197
 #: views/portability-review.php:250
 #: views/portability-review.php:281
-#: views/portability.php:233
+#: views/portability.php:232
 #: assets/ran-booster-portability.js:709
 msgid "Package"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:151
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:150
 #: RAN/Troubleshooting/TroubleshootingService.php:86
 #: views/attempts/index.php:119
 #: views/attempts/index.php:166
@@ -251,7 +251,7 @@ msgstr ""
 msgid "Source"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:151
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:150
 #: views/packages/edit.php:370
 #: views/packages/fields/deployment-policy.php:42
 #: views/packages/fields/deployment-policy.php:45
@@ -259,227 +259,227 @@ msgstr ""
 msgid "Updates"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:151
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:150
 msgid "Settings"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:162
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:161
 msgid "Integration status"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:167
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:166
 msgid "Package sources"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:167
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:166
 msgid "Exact counts are unavailable while package inventory is incomplete."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:169
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:168
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:341
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:414
 msgid "Branch demand"
 msgstr ""
 
 #. translators: %d is the number of Branch packages.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:174
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:173
 #, php-format
 msgid "%d package uses Branch"
 msgid_plural "%d packages use Branch"
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:180
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:179
 msgctxt "Repository integration status label"
 msgid "Releases"
 msgstr ""
 
 #. translators: %d is the number of Published-release packages.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:180
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:179
 #, php-format
 msgid "%d package tracks Releases"
 msgid_plural "%d packages track Releases"
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:196
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:195
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:26
 msgid "Release publishing"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:199
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:198
 msgid "Release workflow setup is unavailable for this repository provider. Package release settings remain available."
 msgstr ""
 
 #. translators: %s is a managed package name.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:201
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:200
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:49
 #, php-format
 msgctxt "Managed package settings link"
 msgid "Open %s settings"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:209
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:208
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:569
 msgid "Manage webhook"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:209
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:208
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:327
 msgid "Assess release setup"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:212
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:211
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:412
 msgid "Package inventory incomplete"
 msgstr ""
 
 #. translators: %d is the number of package summaries omitted from repository inventory.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:215
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:214
 #, php-format
 msgid "%d connected package is not shown. Refresh repository inventory before using repository-wide workflow controls."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:228
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:242
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:257
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:227
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:241
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:256
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:316
 #: views/documentation.php:125
 #: views/documentation.php:423
 msgid "Push-to-deploy"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:231
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:230
 msgid "Repository webhook management is temporarily unavailable for this repository."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:232
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:264
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:231
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:263
 msgid "Manage repository webhook"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:245
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:244
 msgid "Core-assisted webhook management is unavailable for this provider. Use the provider webhook settings when available."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:252
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:251
 msgid "Repository webhook management is unavailable until this site can receive provider deliveries."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:253
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:252
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:344
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:416
 msgid "Published-release packages ignore pushes; no Branch package currently uses this repository webhook."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:258
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:257
 msgid "Local readiness and the last recorded remote state."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:261
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:260
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:105
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:118
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:327
 msgid "Webhook setup"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:288
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:287
 msgid "Ignores pushes"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:290
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:289
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:624
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:256
 msgid "Plugin settings"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:290
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:289
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:624
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:256
 msgid "Theme settings"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:303
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:302
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:557
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:608
 msgid "Recorded hook status"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:304
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:312
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:303
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:311
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:558
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:591
 msgid "Managed hook not yet set"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:307
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:306
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:565
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:614
 msgid "Observation"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:308
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:307
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:566
 msgid "No historical observation"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:311
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:310
 msgid "Recorded hook profile"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:315
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:314
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:595
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:638
 msgid "Last checked"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:316
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:315
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:596
 msgid "Never"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:323
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:322
 msgid "Management history"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:324
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:323
 msgid "Repository-scoped records. This is local history, not live provider state."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:327
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:326
 msgid "Webhook"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:330
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:329
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:84
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:529
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:536
 msgid "Release workflow"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:333
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:332
 msgid "View repository activity"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:371
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:370
 msgid "Repository details"
 msgstr ""
 
 #. translators: 1: shown package count, 2: omitted package count, 3: repository source summary.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:454
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:453
 #, php-format
 msgid "%1$d packages shown; %2$d more connected · %3$s"
 msgstr ""
 
 #. translators: 1: number of packages, 2: repository source summary.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:463
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:462
 #, php-format
 msgid "%1$d package · %2$s"
 msgid_plural "%1$d packages · %2$s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:471
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:470
 #: RAN/Admin/PackageAdminController.php:529
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:329
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:390
@@ -491,7 +491,7 @@ msgstr[1] ""
 msgid "Automatic"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:472
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:471
 #: RAN/Admin/PackageAdminController.php:530
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:333
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:390
@@ -503,7 +503,7 @@ msgstr ""
 msgid "Manual"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:473
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:472
 #: RAN/Admin/PackageAdminController.php:496
 #: RAN/Admin/PackageAdminController.php:528
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:337
@@ -777,8 +777,8 @@ msgstr ""
 #: RAN/Admin/ProviderSettingsPresenter.php:1534
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/attempts/index.php:137
-#: views/portability.php:170
-#: views/portability.php:252
+#: views/portability.php:169
+#: views/portability.php:251
 msgid "Theme"
 msgstr ""
 
@@ -791,8 +791,8 @@ msgstr ""
 #: RAN/Admin/ProviderSettingsPresenter.php:1533
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/attempts/index.php:136
-#: views/portability.php:170
-#: views/portability.php:252
+#: views/portability.php:169
+#: views/portability.php:251
 msgid "Plugin"
 msgstr ""
 
@@ -1807,12 +1807,12 @@ msgid "The reviewed release evidence changed or expired. Review the Transporter 
 msgstr ""
 
 #: RAN/Admin/PortabilityController.php:452
-#: views/portability.php:217
+#: views/portability.php:216
 msgid "Choose a Transporter Blueprint password before exporting credentials."
 msgstr ""
 
 #: RAN/Admin/PortabilityController.php:455
-#: views/portability.php:217
+#: views/portability.php:216
 msgid "The Transporter Blueprint passwords do not match. Nothing was exported."
 msgstr ""
 
@@ -4516,8 +4516,6 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:261
-#: views/portability.php:71
-#: views/portability.php:269
 msgid "Transporter"
 msgstr ""
 
@@ -7563,7 +7561,7 @@ msgstr ""
 
 #: views/packages/edit.php:258
 #: views/portability-review.php:172
-#: views/portability.php:158
+#: views/portability.php:157
 msgid "Provider:"
 msgstr ""
 
@@ -8311,7 +8309,7 @@ msgid "%1$s: %2$s. Declared: %3$d; not declared: %4$d; missing observations: %5$
 msgstr ""
 
 #: views/portability-review.php:115
-#: views/portability.php:85
+#: views/portability.php:84
 msgid "Repository credentials"
 msgstr ""
 
@@ -8362,7 +8360,7 @@ msgid "Used by %s; all unchanged"
 msgstr ""
 
 #: views/portability-review.php:174
-#: views/portability.php:160
+#: views/portability.php:159
 msgid "Credential type:"
 msgstr ""
 
@@ -8415,7 +8413,7 @@ msgid "Manage repository credentials"
 msgstr ""
 
 #: views/portability-review.php:244
-#: views/portability.php:226
+#: views/portability.php:225
 msgid "Packages"
 msgstr ""
 
@@ -8432,7 +8430,7 @@ msgid "Packages in this import review"
 msgstr ""
 
 #: views/portability-review.php:250
-#: views/portability.php:234
+#: views/portability.php:233
 msgid "Type"
 msgstr ""
 
@@ -8597,243 +8595,243 @@ msgstr ""
 msgid "Open a Transporter Blueprint created elsewhere and decide what should happen here."
 msgstr ""
 
-#: views/portability.php:72
+#: views/portability.php:71
 msgid "Create a Transporter Blueprint"
 msgstr ""
 
-#: views/portability.php:73
+#: views/portability.php:72
 msgid "The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it."
 msgstr ""
 
-#: views/portability.php:74
+#: views/portability.php:73
 msgid "Deleting Booster removes its saved local credentials and records."
 msgstr ""
 
-#: views/portability.php:81
+#: views/portability.php:80
 msgid "Blueprint contents"
 msgstr ""
 
-#: views/portability.php:83
+#: views/portability.php:82
 msgid "Choose the repository credentials and managed packages to include in this Transporter Blueprint."
 msgstr ""
 
-#: views/portability.php:86
+#: views/portability.php:85
 msgid "Select only the saved credentials that should be copied. Credential permissions have not been assessed."
 msgstr ""
 
-#: views/portability.php:88
+#: views/portability.php:87
 msgid "Booster could not load repository credential choices. You can still create a package-only Blueprint."
 msgstr ""
 
-#: views/portability.php:90
+#: views/portability.php:89
 msgid "No saved repository credentials are available on this site."
 msgstr ""
 
-#: views/portability.php:120
+#: views/portability.php:119
 msgid "credential choices"
 msgstr ""
 
-#: views/portability.php:127
+#: views/portability.php:126
 msgid "Unavailable saved credential"
 msgstr ""
 
 #. translators: %d: number of packages using the credential.
-#: views/portability.php:133
+#: views/portability.php:132
 #, php-format
 msgid "Used by %d package"
 msgid_plural "Used by %d packages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: views/portability.php:138
+#: views/portability.php:137
 msgid "The provider permissions for this credential have not been assessed."
 msgstr ""
 
 #. translators: %s: local automatic-removal date.
-#: views/portability.php:142
+#: views/portability.php:141
 msgid "Booster will automatically remove this saved credential."
 msgstr ""
 
 #. translators: %s: local automatic-removal date.
-#: views/portability.php:142
+#: views/portability.php:141
 #, php-format
 msgid "Booster will automatically remove this saved credential on %s."
 msgstr ""
 
-#: views/portability.php:144
+#: views/portability.php:143
 msgid "No Booster-managed plugin or theme uses this credential."
 msgstr ""
 
-#: views/portability.php:146
+#: views/portability.php:145
 msgid "This credential is supplied by site configuration."
 msgstr ""
 
-#: views/portability.php:146
+#: views/portability.php:145
 msgid "This saved credential no longer exists."
 msgstr ""
 
-#: views/portability.php:179
+#: views/portability.php:178
 msgid "Unavailable for transfer"
 msgstr ""
 
-#: views/portability.php:193
+#: views/portability.php:192
 msgid "Transporter Blueprint password"
 msgstr ""
 
-#: views/portability.php:197
+#: views/portability.php:196
 msgid "Show password"
 msgstr ""
 
-#: views/portability.php:197
+#: views/portability.php:196
 msgid "Hide password"
 msgstr ""
 
-#: views/portability.php:200
+#: views/portability.php:199
 msgid "Generate password"
 msgstr ""
 
-#: views/portability.php:201
-#: views/portability.php:209
+#: views/portability.php:200
+#: views/portability.php:208
 msgid "Copy password"
 msgstr ""
 
-#: views/portability.php:201
+#: views/portability.php:200
 msgid "Password copied"
 msgstr ""
 
-#: views/portability.php:213
+#: views/portability.php:212
 msgid "A secure 32-character password was generated."
 msgstr ""
 
-#: views/portability.php:213
+#: views/portability.php:212
 msgid "Password copied to the clipboard."
 msgstr ""
 
-#: views/portability.php:213
+#: views/portability.php:212
 msgid "Booster could not generate a password securely in this browser. Enter one manually."
 msgstr ""
 
-#: views/portability.php:213
+#: views/portability.php:212
 msgid "Clipboard access failed. The password is selected; use your browser’s copy command."
 msgstr ""
 
-#: views/portability.php:215
+#: views/portability.php:214
 msgid "Confirm password"
 msgstr ""
 
-#: views/portability.php:216
+#: views/portability.php:215
 msgid "Generate a secure 32-character password or enter at least 20 characters of your own."
 msgstr ""
 
-#: views/portability.php:220
+#: views/portability.php:219
 msgid "Only transfer this Transporter Blueprint between sites you control."
 msgstr ""
 
-#: views/portability.php:220
+#: views/portability.php:219
 msgid "Transporter Blueprints can contain file-backed repository credentials and must be handled as sensitive material."
 msgstr ""
 
-#: views/portability.php:221
+#: views/portability.php:220
 msgid "Passwords are never stored by Booster. Keep yours safe; it is required to open this Transporter Blueprint."
 msgstr ""
 
-#: views/portability.php:227
+#: views/portability.php:226
 msgid "Review the managed plugins and themes that will be recorded in this Transporter Blueprint."
 msgstr ""
 
-#: views/portability.php:230
+#: views/portability.php:229
 msgid "Managed packages available for export"
 msgstr ""
 
-#: views/portability.php:232
+#: views/portability.php:231
 msgid "Select all managed packages"
 msgstr ""
 
-#: views/portability.php:238
+#: views/portability.php:237
 msgid "Booster could not load the managed package list. Reload this page and try again."
 msgstr ""
 
-#: views/portability.php:240
+#: views/portability.php:239
 msgid "Booster is not managing any packages on this site yet."
 msgstr ""
 
 #. translators: %s: managed plugin or theme name.
-#: views/portability.php:250
+#: views/portability.php:249
 #, php-format
 msgid "Include %s"
 msgstr ""
 
-#: views/portability.php:261
+#: views/portability.php:260
 msgid "1 package"
 msgstr ""
 
-#: views/portability.php:261
+#: views/portability.php:260
 msgid "1 selected repository credential profile"
 msgstr ""
 
-#: views/portability.php:262
+#: views/portability.php:261
 msgid "Download Transporter Blueprint"
 msgstr ""
 
-#: views/portability.php:270
+#: views/portability.php:268
 msgid "Open a Transporter Blueprint"
 msgstr ""
 
-#: views/portability.php:271
+#: views/portability.php:269
 msgid "Choose a Transporter Blueprint and Booster will validate it and build a review before anything can change."
 msgstr ""
 
-#: views/portability.php:276
+#: views/portability.php:274
 msgid "Choose a Transporter Blueprint"
 msgstr ""
 
-#: views/portability.php:278
+#: views/portability.php:276
 msgid "Transporter Blueprint ZIP"
 msgstr ""
 
-#: views/portability.php:279
+#: views/portability.php:277
 msgid "ZIP password (optional)"
 msgstr ""
 
-#: views/portability.php:280
+#: views/portability.php:278
 msgid "Review Transporter Blueprint"
 msgstr ""
 
-#: views/portability.php:280
+#: views/portability.php:278
 msgid "Reviewing Transporter Blueprint…"
 msgstr ""
 
-#: views/portability.php:287
+#: views/portability.php:285
 msgid "Blueprint review"
 msgstr ""
 
-#: views/portability.php:288
+#: views/portability.php:286
 msgid "Rechecking repository access…"
 msgstr ""
 
-#: views/portability.php:290
+#: views/portability.php:288
 msgid "Choose repository access, then review the changes below."
 msgstr ""
 
-#: views/portability.php:291
+#: views/portability.php:289
 msgid "The review could not be updated. Choose again or review the Transporter Blueprint before applying changes."
 msgstr ""
 
-#: views/portability.php:295
-#: views/portability.php:298
+#: views/portability.php:293
+#: views/portability.php:296
 msgid "Apply selected changes"
 msgstr ""
 
-#: views/portability.php:296
+#: views/portability.php:294
 msgid "Eligible package changes and credential-only recovery rows are applied independently. Credential-only recovery does not change an already-managed package’s settings."
 msgstr ""
 
-#: views/portability.php:297
+#: views/portability.php:295
 #: assets/ran-booster-portability.js:616
 msgid "No changes selected."
 msgstr ""
 
-#: views/portability.php:298
+#: views/portability.php:296
 #: assets/ran-booster-portability.js:1085
 msgid "Applying…"
 msgstr ""

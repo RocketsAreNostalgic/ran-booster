@@ -38,7 +38,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 					<?php wp_nonce_field( 'ran-booster-save-public-lookup-profile' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="save-public-lookup-profile">
 					<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
-					<label class="ran-booster-public-lookup-profile__label ran-booster-eyebrow ran-booster-eyebrow--compact" for="ran-booster-public-lookup-profile"><?php esc_html_e( 'Lookup credential', 'ran-booster' ); ?></label>
+					<label class="ran-booster-public-lookup-profile__label" for="ran-booster-public-lookup-profile"><?php esc_html_e( 'Lookup credential', 'ran-booster' ); ?></label>
 					<div class="ran-booster-public-lookup-profile__controls">
 						<select id="ran-booster-public-lookup-profile" name="ran_booster[profile_id]">
 							<option value="" <?php selected( '', $public_lookup_profile['configured_id'] ); ?>><?php esc_html_e( 'Anonymous', 'ran-booster' ); ?></option>

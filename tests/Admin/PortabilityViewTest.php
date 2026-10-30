@@ -20,7 +20,7 @@ final class PortabilityViewTest extends TestCase {
 		$heading_panels = $xpath->query( '//*[@id="ran-booster-portability-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
 		self::assertCount( 0, $heading_panels );
-		$export_copy       = $xpath->query( '//*[@id="ran-booster-portability-export"]//header/p[not(contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability__eyebrow "))]' );
+		$export_copy       = $xpath->query( '//*[@id="ran-booster-portability-export"]//header/p' );
 		$export_disclosure = $xpath->query( '//*[@id="ran-booster-portability-export"]//header/details' );
 		$deletion_notice   = $xpath->query( '//*[@id="ran-booster-portability-export"]//header//*[contains(concat(" ", normalize-space(@class), " "), " notice ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $export_copy );

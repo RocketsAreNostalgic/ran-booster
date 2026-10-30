@@ -8985,7 +8985,7 @@ msgid "Manage GitHub provider"
 msgstr ""
 
 #: views/provider.php:243
-msgid "To change Git provider, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review."
+msgid "To change the GitHub provider integration, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review."
 msgstr ""
 
 #. translators: %s: candidate provider plugin name.

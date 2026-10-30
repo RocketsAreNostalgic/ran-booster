@@ -240,7 +240,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provided by %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
 				<details class="ran-booster-disclosure"><summary><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></summary>
 				<div class="ran-booster-disclosure__body">
-				<p><?php esc_html_e( 'To change Git provider, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'To change the GitHub provider integration, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
 			<?php } else { ?>
 				<?php if ( 'decision_required' === $selection_status['state'] && 1 === count( $selection_status['candidates'] ) ) { ?>
 					<?php $review_candidate = reset( $selection_status['candidates'] ); ?>

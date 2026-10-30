@@ -268,7 +268,7 @@ final class ExtensionsPageTest extends TestCase {
 		$this->define_apis_compatible_with_existing_extension_catalogue();
 		$_GET['ran_booster_extension_id']     = 'ran-booster-bitbucket';
 		$_GET['ran_booster_extension_result'] = 'failed';
-		$output = $this->render();
+		$output                               = $this->render();
 		self::assertStringContainsString( 'The extension could not be installed.', $output );
 		self::assertStringContainsString( 'class="notice inline notice-warning"', $output );
 		$_GET['ran_booster_extension_result'] = '<script>alert(1)</script>';

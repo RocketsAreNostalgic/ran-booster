@@ -5999,13 +5999,13 @@ msgid "RAN Booster sections"
 msgstr ""
 
 #. translators: %s: current year.
-#: views/base.php:114
+#: views/base.php:113
 #, php-format
 msgid "Copyright © %s"
 msgstr ""
 
 #. translators: %s: installed Booster version.
-#: views/base.php:123
+#: views/base.php:122
 #, php-format
 msgid "Booster %s"
 msgstr ""

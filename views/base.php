@@ -85,9 +85,8 @@ $ran_admin_shell = array(
 	'navigation'       => $ran_admin_shell_navigation,
 );
 
-?>
-<div class="ran-admin-shell-notices"><hr class="wp-header-end"></div>
-<?php require __DIR__ . '/generated/ran-admin-shell.php';
+echo '<div class="ran-admin-shell-notices"><hr class="wp-header-end"></div>';
+require __DIR__ . '/generated/ran-admin-shell.php';
 
 ?><div class="wrap ran-booster-admin<?php echo esc_attr( $admin_page_modifier ); ?>">
 	<?php

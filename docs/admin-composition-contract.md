@@ -381,11 +381,19 @@ shell are all Core-owned.
 
 The page uses WordPress plugin-card presentation language without invoking the
 WordPress.org Plugins API. Rendering the catalogue performs no remote request,
-mutation, entitlement check, update registration or add-on callback. Each card
-names the qualified satellite release and API tuple it represents. Core
-maintainers update that fixed metadata in a Core pull request after the satellite
-release is qualified; the page never discovers releases or polls repositories.
-More Details links to the selected release page.
+mutation, entitlement check or add-on callback. Each card names the qualified
+satellite release and API tuple it represents. Core maintainers update that fixed
+metadata in a Core pull request after the satellite release is qualified; the
+page never discovers releases or polls repositories. More Details links to the
+selected release page.
+
+After provider registration, Core may register an installed, active or inactive
+catalogue extension for manual native updates only. The shared updater must first
+offer its descriptor-admission capability; Core then re-reads the same catalogue
+entry and accepts only its exact version, digest, canonical URI, repository and
+basename. Any incompatible, absent or already Booster-managed package loses its
+offer. A missing capability keeps the catalogue manual and shows a bounded notice;
+it creates no registry, adoption, persisted verdict or installer path.
 
 An administrator with plugin-install permission may explicitly install a
 compatible, absent extension. The nonce-protected POST selects only an ID from

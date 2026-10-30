@@ -10,6 +10,8 @@ use PHPUnit\Framework\TestCase;
 use RAN\Portability\BlueprintCredential;
 use RAN\Portability\BlueprintPackage;
 use RAN\Portability\PackageBlueprint;
+use RAN\Secrets\SecretsFile;
+use RuntimeException;
 
 #[CoversClass( PackageBlueprint::class )]
 #[CoversClass( BlueprintPackage::class )]
@@ -86,6 +88,138 @@ final class PackageBlueprintTest extends TestCase {
 		self::assertStringContainsString( '"configuration":{"owner":"team","scope":"repo"}', $json );
 		self::assertStringContainsString( '"secret":"secret-canary-value"', $json );
 		self::assertStringNotContainsString( 'source_id', $json );
+	}
+
+	public function test_credential_keeps_the_secret_private_but_projects_exact_portable_material(): void {
+		$secret     = 'private-storage-secret-marker';
+		$credential = new BlueprintCredential(
+			'gh',
+			'Team token',
+			'fine-grained',
+			array(
+				'zeta'  => true,
+				'alpha' => array(
+					'second' => 2,
+					'first'  => 1,
+				),
+			),
+			$secret,
+			array(
+				$this->identity( 'theme', 'example-theme' ),
+				$this->identity(),
+			)
+		);
+
+		self::assertSame( $secret, $credential->reveal_secret() );
+		self::assertSame(
+			array(
+				'provider'      => 'gh',
+				'label'         => 'Team token',
+				'kind'          => 'fine-grained',
+				'configuration' => array(
+					'alpha' => array(
+						'first'  => 1,
+						'second' => 2,
+					),
+					'zeta'  => true,
+				),
+				'secret'        => $secret,
+				'packages'      => array(
+					$this->identity(),
+					$this->identity( 'theme', 'example-theme' ),
+				),
+			),
+			$credential->to_array()
+		);
+
+		$empty = new BlueprintCredential( 'gh', 'Empty', 'custom', array(), $secret, array( $this->identity() ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Assert the portable empty-configuration JSON object shape.
+		self::assertSame( '{}', json_encode( $empty->to_array()['configuration'], JSON_THROW_ON_ERROR ) );
+	}
+
+	public function test_nested_credential_secret_is_absent_from_default_object_inspection(): void {
+		$marker     = 'private-storage-secret-marker';
+		$credential = new BlueprintCredential( 'gh', 'Token', 'classic', array(), $marker, array( $this->identity() ) );
+		$blueprint  = new PackageBlueprint(
+			array( $this->package() ),
+			array( $credential )
+		);
+
+		foreach ( array( $credential, $blueprint ) as $value ) {
+			foreach ( self::inspection_outputs( $value ) as $output ) {
+				self::assertStringNotContainsString( $marker, $output );
+			}
+		}
+	}
+
+	public function test_raw_secret_array_remains_detectable_by_each_object_inspection_control(): void {
+		$marker = 'private-storage-secret-marker';
+		$raw    = array( 'secret' => $marker );
+
+		foreach ( self::inspection_outputs( $raw ) as $output ) {
+			self::assertStringContainsString( $marker, $output );
+		}
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Positive control proves raw PHP serialization retains ordinary array strings.
+		self::assertStringContainsString( $marker, serialize( $raw ) );
+	}
+
+	public function test_unannotated_forwarding_trace_and_exception_rendering_redact_credential_objects(): void {
+		$marker     = 'unannotated-forwarding-secret-marker';
+		$credential = new BlueprintCredential( 'gh', 'Token', 'classic', array(), $marker, array( $this->identity() ) );
+		$blueprint  = new PackageBlueprint( array( $this->package() ), array( $credential ) );
+		$previous   = ini_get( 'zend.exception_ignore_args' );
+		self::assertIsString( $previous );
+		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Test-only setting forces unannotated forwarding arguments into the trace.
+		self::assertNotFalse( ini_set( 'zend.exception_ignore_args', '0' ) );
+
+		try {
+			try {
+				self::throw_from_unannotated_forwarding_frame( $credential, $blueprint );
+				self::fail( 'Expected the synthetic forwarding frame to throw.' );
+			} catch ( RuntimeException $exception ) {
+				$trace = $exception->getTrace();
+				self::assertSame( $credential, $trace[0]['args'][0] ?? null );
+				self::assertSame( $blueprint, $trace[0]['args'][1] ?? null );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only raw trace rendering verifies private sensitive values remain masked.
+				self::assertStringNotContainsString( $marker, var_export( $trace, true ) );
+				self::assertStringNotContainsString( $marker, (string) $exception );
+			}
+		} finally {
+			// phpcs:ignore WordPress.PHP.IniSet.Risky -- Restore the test process setting after the forwarding-trace assertion.
+			ini_set( 'zend.exception_ignore_args', $previous );
+		}
+
+		self::assertSame( $previous, ini_get( 'zend.exception_ignore_args' ) );
+	}
+
+	public function test_credential_bearing_blueprint_refuses_php_serialization_without_secret_leakage(): void {
+		$marker    = 'private-storage-secret-marker';
+		$blueprint = new PackageBlueprint(
+			array( $this->package() ),
+			array( new BlueprintCredential( 'gh', 'Token', 'classic', array(), $marker, array( $this->identity() ) ) )
+		);
+		$previous  = ini_get( 'zend.exception_ignore_args' );
+		self::assertIsString( $previous );
+		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Test-only setting forces trace arguments on for the redaction assertion.
+		self::assertNotFalse( ini_set( 'zend.exception_ignore_args', '0' ) );
+
+		try {
+			try {
+				// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Assert native serialization refuses the private sensitive value.
+				serialize( $blueprint );
+				self::fail( 'A credential-bearing blueprint must not be PHP serializable.' );
+			} catch ( \Throwable $exception ) {
+				self::assertStringContainsString( 'Serialization', $exception->getMessage() );
+				self::assertStringNotContainsString( $marker, $exception->getMessage() );
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection proves exception arguments stay redacted with arguments enabled.
+				self::assertStringNotContainsString( $marker, var_export( $exception->getTrace(), true ) );
+			}
+		} finally {
+			// phpcs:ignore WordPress.PHP.IniSet.Risky -- Restore the test process setting after the redaction assertion.
+			ini_set( 'zend.exception_ignore_args', $previous );
+		}
+
+		self::assertSame( $previous, ini_get( 'zend.exception_ignore_args' ) );
 	}
 
 	public function test_empty_and_structured_credential_configuration_round_trips(): void {
@@ -165,13 +299,25 @@ final class PackageBlueprintTest extends TestCase {
 	}
 
 	public function test_credential_secret_is_redacted_from_constructor_trace(): void {
+		$previous = ini_get( 'zend.exception_ignore_args' );
+		self::assertIsString( $previous );
+		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Test-only setting forces trace arguments on for the redaction assertion.
+		self::assertNotFalse( ini_set( 'zend.exception_ignore_args', '0' ) );
+
 		try {
-			new BlueprintCredential( 'gh', 'Token', 'classic', array(), "trace-secret-canary\n", array( $this->identity() ) );
-			self::fail( 'Expected an invalid credential secret.' );
-		} catch ( InvalidArgumentException $exception ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection of redacted exception arguments.
-			self::assertStringNotContainsString( 'trace-secret-canary', var_export( $exception->getTrace(), true ) );
+			try {
+				new BlueprintCredential( 'gh', 'Token', 'classic', array(), "trace-secret-canary\n", array( $this->identity() ) );
+				self::fail( 'Expected an invalid credential secret.' );
+			} catch ( InvalidArgumentException $exception ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection of redacted exception arguments with arguments enabled.
+				self::assertStringNotContainsString( 'trace-secret-canary', var_export( $exception->getTrace(), true ) );
+			}
+		} finally {
+			// phpcs:ignore WordPress.PHP.IniSet.Risky -- Restore the test process setting after the redaction assertion.
+			ini_set( 'zend.exception_ignore_args', $previous );
 		}
+
+		self::assertSame( $previous, ini_get( 'zend.exception_ignore_args' ) );
 	}
 
 	public function test_credential_secret_is_redacted_from_parser_trace(): void {
@@ -181,12 +327,41 @@ final class PackageBlueprintTest extends TestCase {
 		) )->canonical_json();
 		$json = str_replace( '"kind":"classic"', '"kind":""', $json );
 
+		$previous = ini_get( 'zend.exception_ignore_args' );
+		self::assertIsString( $previous );
+		// phpcs:ignore WordPress.PHP.IniSet.Risky -- Test-only setting forces trace arguments on for the redaction assertion.
+		self::assertNotFalse( ini_set( 'zend.exception_ignore_args', '0' ) );
+
 		try {
-			PackageBlueprint::from_json( $json );
-			self::fail( 'Expected an invalid credential record.' );
-		} catch ( InvalidArgumentException $exception ) {
-			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection of redacted exception arguments.
-			self::assertStringNotContainsString( 'parser-trace-secret-canary', var_export( $exception->getTrace(), true ) );
+			try {
+				PackageBlueprint::from_json( $json );
+				self::fail( 'Expected an invalid credential record.' );
+			} catch ( InvalidArgumentException $exception ) {
+				// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection of redacted exception arguments with arguments enabled.
+				self::assertStringNotContainsString( 'parser-trace-secret-canary', var_export( $exception->getTrace(), true ) );
+			}
+		} finally {
+			// phpcs:ignore WordPress.PHP.IniSet.Risky -- Restore the test process setting after the redaction assertion.
+			ini_set( 'zend.exception_ignore_args', $previous );
+		}
+
+		self::assertSame( $previous, ini_get( 'zend.exception_ignore_args' ) );
+	}
+
+	public function test_secret_changes_remain_distinct_for_blueprint_membership_and_canonical_identity(): void {
+		$known     = new BlueprintCredential( 'gh', 'Token', 'classic', array(), 'first-secret-marker', array( $this->identity() ) );
+		$different = new BlueprintCredential( 'gh', 'Token', 'classic', array(), 'second-secret-marker', array( $this->identity() ) );
+		$blueprint = new PackageBlueprint( array( $this->package() ), array( $known ) );
+		$changed   = new PackageBlueprint( array( $this->package() ), array( $different ) );
+
+		self::assertNotSame( $blueprint->canonical_json(), $changed->canonical_json() );
+		self::assertNotSame( $blueprint->artifact_identity(), $changed->artifact_identity() );
+
+		try {
+			( new SecretsFile( null, array() ) )->import_credentials_if_absent( $blueprint, $different );
+			self::fail( 'A credential with different secret material must not match blueprint membership.' );
+		} catch ( RuntimeException $exception ) {
+			self::assertSame( 'The portability credential is not part of this blueprint.', $exception->getMessage() );
 		}
 	}
 
@@ -550,6 +725,36 @@ final class PackageBlueprintTest extends TestCase {
 		return array(
 			'type'       => $type,
 			'identifier' => $identifier,
+		);
+	}
+
+	private static function throw_from_unannotated_forwarding_frame( BlueprintCredential $credential, PackageBlueprint $blueprint ): void {
+		if ( 'gh' !== $credential->provider || array() === $blueprint->packages ) {
+			throw new RuntimeException( 'Synthetic forwarding fixture is invalid.' );
+		}
+		throw new RuntimeException( 'Synthetic forwarding failure.' );
+	}
+
+	/** @return array<string, string> */
+	private static function inspection_outputs( mixed $value ): array {
+		ob_start();
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_dump -- Test-only inspection of default object dumping behavior.
+		var_dump( $value );
+		$dump = ob_get_clean();
+		self::assertIsString( $dump );
+
+		return array(
+			'var_dump'        => $dump,
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- Test-only inspection of default object printing behavior.
+			'print_r'         => print_r( $value, true ),
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection of default object export behavior.
+			'var_export'      => var_export( $value, true ),
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Test-only inspection of default JSON object projection.
+			'json'            => json_encode( $value, JSON_THROW_ON_ERROR ),
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection of array casting behavior.
+			'array_cast'      => var_export( (array) $value, true ),
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export -- Test-only inspection of public-object-variable behavior.
+			'get_object_vars' => var_export( get_object_vars( is_object( $value ) ? $value : (object) $value ), true ),
 		);
 	}
 }

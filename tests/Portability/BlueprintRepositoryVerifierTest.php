@@ -102,10 +102,24 @@ final class BlueprintRepositoryVerifierTest extends TestCase {
 		};
 		$provider                        = null;
 		[$verifier, $provider, $secrets] = $this->verifier( 404, 'repository-id' );
-		$callback                        = static function ( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ) use ( $observation, &$provider ): BlueprintPlanItem {
+		$callback                        = static function ( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private ) use ( $observation, &$provider, $secrets ): BlueprintPlanItem {
 				$observation->credential_id           = $credential_id;
 				$observation->repository_private      = $repository_private;
 				$observation->credential_is_temporary = $provider->temporary_credential_id === $credential_id;
+				self::assertNotNull( $credential_id );
+				self::assertSame(
+					array(
+						'id'            => $credential_id,
+						'provider'      => 'gh',
+						'label'         => 'Imported credential',
+						'kind'          => 'classic',
+						'configuration' => array( 'owner' => '' ),
+						'secret'        => self::CLASSIC_TOKEN,
+						'source'        => 'temporary',
+						'immutable'     => true,
+					),
+					$secrets->credentials_for( 'gh' )->credential_material( $credential_id )
+				);
 				return $item;
 		};
 

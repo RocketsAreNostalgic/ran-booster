@@ -22,3 +22,5 @@ parameters:
 			- ./coverage/*
 	scanDirectories:
 		- vendor/ran/wp-release-updater/src
+	scanFiles:
+		- vendor/ran/wp-release-updater/src/Contract/IdentityDescriptor.php

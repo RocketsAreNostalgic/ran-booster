@@ -178,6 +178,7 @@ $ran_booster_core_development_notice->register();
 					array( 'step' => 'managed_release_target_registration' )
 				);
 			}
+			$ran_booster_runtime->register_extension_updates();
 
 			$portability       = $ran_booster_container->make( PortabilityFacade::class );
 			$admin_interaction = $ran_booster_container->make( AdminInteractionFacade::class );

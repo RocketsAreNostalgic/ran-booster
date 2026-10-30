@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.0-beta.41](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.40...v1.0.0-beta.41) (2026-10-30)
+
+
+### Features
+
+* **admin:** offer Transporter export before Booster deletion ([#547](https://github.com/RocketsAreNostalgic/ran-booster/issues/547)) ([dcbcdd3](https://github.com/RocketsAreNostalgic/ran-booster/commit/dcbcdd3e99df5a99a9c67568cdb25ec2b52f38cd))
+* integrate Beta41 safety and extension updates ([#556](https://github.com/RocketsAreNostalgic/ran-booster/issues/556)) ([dcfe7b7](https://github.com/RocketsAreNostalgic/ran-booster/commit/dcfe7b7a20f4d2dee0b730d7f5d8f218363f1b4e))
+
+
+### Bug Fixes
+
+* **admin:** prevent hidden notices flashing shell spacing ([#559](https://github.com/RocketsAreNostalgic/ran-booster/issues/559)) ([532595c](https://github.com/RocketsAreNostalgic/ran-booster/commit/532595cc7f5cb81b9a225e3dbe847b1eec56940b))
+
 ## [1.0.0-beta.40](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.39...v1.0.0-beta.40) (2026-10-29)
 
 

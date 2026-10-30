@@ -165,24 +165,15 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'background: var(--ran-booster-surface-info);', $troubleshooting );
 	}
 
-	public function test_admin_primitives_own_shared_eyebrow_panel_and_action_row_contracts(): void {
-		$primitives  = $this->asset( 'ran-booster/25-admin-primitives.css' );
-		$provider    = $this->view( 'provider.php' );
-		$portability = $this->view( 'portability.php' );
-		$packages    = $this->view( 'packages/edit.php' );
-		$debug       = $this->view( 'debug-capture.php' );
-		$settings    = $this->asset( 'ran-booster/65-package-settings.css' );
+	public function test_admin_primitives_own_shared_panel_and_action_row_contracts(): void {
+		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		$debug      = $this->view( 'debug-capture.php' );
 
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-eyebrow {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-panel,', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-action-row {', $primitives );
-		self::assertStringNotContainsString( 'ran-booster-provider__eyebrow ran-booster-eyebrow', $provider );
-		self::assertStringContainsString( 'ran-booster-portability__eyebrow ran-booster-eyebrow', $portability );
-		self::assertStringContainsString( 'ran-booster-eyebrow ran-booster-eyebrow--compact', $packages );
 		self::assertStringContainsString( 'ran-booster-debug-capture__panel ran-booster-panel', $debug );
-		self::assertStringNotContainsString( '.ran-booster-package-summary__eyebrow {', $settings );
 	}
 
 	public function test_package_summary_contains_long_copy_and_truncates_only_the_repository_link(): void {

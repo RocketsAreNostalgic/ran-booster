@@ -41,7 +41,6 @@ final class RepositoryDetailRenderer {
 			<p class="ran-booster-repository-detail__back"><a href="<?php echo esc_url( $list_url ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
 			<header class="ran-booster-repository-detail__header">
 				<div>
-					<p class="ran-booster-eyebrow"><?php echo esc_html( $provider_label ); ?></p>
 					<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title"><?php echo esc_html( $repository ); ?></h2>
 					<p class="ran-booster-page-heading__description"><?php echo esc_html( $this->summary( $packages, $source, $omitted ) ); ?></p>
 				</div>

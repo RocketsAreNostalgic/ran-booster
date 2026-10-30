@@ -5,22 +5,6 @@
  * responsible for placement, content, state and interaction hooks.
  */
 
-.ran-booster-admin .ran-booster-eyebrow {
-	margin-block: 0 var(--ran-booster-space-6);
-	margin-inline: 0;
-	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-xs);
-	font-weight: var(--ran-booster-font-weight-semibold);
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-}
-
-.ran-booster-admin .ran-booster-eyebrow--compact {
-	color: var(--ran-booster-text-subtle);
-	font-size: 11px;
-	letter-spacing: 0.06em;
-}
-
 .ran-booster-admin .ran-booster-panel,
 .ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,
 .ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {

@@ -28,7 +28,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 				<input type="hidden" name="return_url" value="<?php echo esc_url( $model['return_url'] ); ?>">
 				<div id="repository-webhook-management-error"></div>
 					<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
-						<label class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label" for="repository-webhook-management-saved-credential"><?php esc_html_e( 'Management credential', 'ran-booster' ); ?></label>
+						<label class="ran-booster-public-lookup-profile__label" for="repository-webhook-management-saved-credential"><?php esc_html_e( 'Management credential', 'ran-booster' ); ?></label>
 						<div class="ran-booster-repository-webhook-management__select-action">
 							<select id="repository-webhook-management-saved-credential" name="booster_credential_id"<?php disabled( $disabled ); ?><?php echo $disabled ? '' : ' required'; ?>>
 								<option value=""><?php esc_html_e( 'Choose a saved credential', 'ran-booster' ); ?></option>
@@ -42,7 +42,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 					</div>
 
 					<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
-						<label class="ran-booster-eyebrow ran-booster-eyebrow--compact ran-booster-public-lookup-profile__label" for="repository-webhook-management-webhook-profile"><?php esc_html_e( 'Signing secret', 'ran-booster' ); ?></label>
+						<label class="ran-booster-public-lookup-profile__label" for="repository-webhook-management-webhook-profile"><?php esc_html_e( 'Signing secret', 'ran-booster' ); ?></label>
 						<div class="ran-booster-repository-webhook-management__select-action">
 							<select id="repository-webhook-management-webhook-profile" name="webhook_profile_id"<?php disabled( $profile_disabled ); ?><?php echo $profile_disabled ? '' : ' required'; ?>>
 								<option value="" selected disabled><?php echo esc_html( $model['webhook_profile_placeholder'] ); ?></option>

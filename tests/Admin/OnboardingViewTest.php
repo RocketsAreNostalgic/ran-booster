@@ -15,12 +15,12 @@ final class OnboardingViewTest extends TestCase {
 		$GLOBALS['ran_booster_admin_test_translations'] = array();
 	}
 
-	public function test_omits_redundant_page_eyebrow_without_changing_the_onboarding_destinations(): void {
+	public function test_omits_redundant_page_label_without_changing_the_onboarding_destinations(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Ignition'] = 'Allumage';
 
 		$html = $this->render_view();
 
-		self::assertStringNotContainsString( '<p class="ran-booster-eyebrow">Allumage</p>', $html );
+		self::assertStringNotContainsString( '>Allumage</p>', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins-create', $html );
 		self::assertStringContainsString( 'page=ran-booster-themes-create', $html );
 	}

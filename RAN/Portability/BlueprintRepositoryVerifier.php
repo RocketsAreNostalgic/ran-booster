@@ -191,7 +191,7 @@ final class BlueprintRepositoryVerifier {
 						'kind'          => $credential->kind,
 						'configuration' => $credential->configuration,
 					),
-					$credential->secret,
+					$credential->reveal_secret(),
 					function ( string $credential_id ) use ( $item, &$repository_private, $release_reviewer ): BlueprintPlanItem {
 						return $this->verified_item( $item, $credential_id, $repository_private, $release_reviewer );
 					}

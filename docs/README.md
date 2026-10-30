@@ -5,6 +5,8 @@ sanitized Booster-specific evidence.
 
 ## Operator journeys
 
+- [Archived Release Deployments replacement path](package-update-orchestration.md#archived-release-deployments-add-on):
+  current Core controls, retired public contracts and retained-installation custody.
 - [Choose GitHub support](github-provider-replacement.md): review a replacement,
   approve compatible credential access, resolve paused states and return to bundled.
 - [Transporter dashboard walkthrough](operator-journeys.md): select/export,

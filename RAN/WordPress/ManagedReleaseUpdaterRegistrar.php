@@ -20,6 +20,21 @@ final readonly class ManagedReleaseUpdaterRegistrar {
 		return new self( $this->invoke( 'with_native_mutation_callbacks', array( $begin, $complete ) ) );
 	}
 
+	/** Return null until the separately released Protocol 7 dependency is pinned. */
+	public function with_descriptor_admission( callable $descriptor_admission ): ?self {
+		$callable = array( $this->registrar, 'with_descriptor_admission' );
+		if ( ! is_callable( $callable ) ) {
+			return null;
+		}
+		try {
+			$result = Closure::fromCallable( $callable )( $descriptor_admission );
+		} catch ( \Throwable ) {
+			return null;
+		}
+
+		return is_object( $result ) ? new self( $result ) : null;
+	}
+
 	public function plugin( mixed ...$arguments ): object {
 		return $this->invoke( 'plugin', $arguments );
 	}

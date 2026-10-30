@@ -11,6 +11,8 @@ parameters:
 		- tests
 		- vendor/ran/wp-release-updater/src
 		- vendor/squizlabs/php_codesniffer/src
+	scanFiles:
+		- vendor/ran/wp-release-updater/src/Contract/IdentityDescriptor.php
 	excludePaths:
 		analyseAndScan:
 			# Deliberately unloadable historical contracts: exact identities are pinned by the coverage test.

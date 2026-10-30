@@ -50,7 +50,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 	</header>
 	<div class="ran-booster-page-shell__body ran-booster-extensions__body">
 		<?php if ( null !== $result_extension && isset( $result_messages[ $result ] ) ) : ?>
-			<div class="notice <?php echo in_array( $result, array( 'installed', 'activated' ), true ) ? 'notice-success' : 'notice-warning'; ?>" role="status"><p><?php echo esc_html( $result_messages[ $result ] ); ?></p></div>
+			<div class="notice inline <?php echo in_array( $result, array( 'installed', 'activated' ), true ) ? 'notice-success' : 'notice-warning'; ?>" role="status"><p><?php echo esc_html( $result_messages[ $result ] ); ?></p></div>
 		<?php endif; ?>
 		<div id="the-list" class="plugin-group ran-booster-extensions__grid">
 		<?php foreach ( $extensions as $extension ) : ?>

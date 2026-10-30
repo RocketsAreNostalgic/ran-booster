@@ -253,7 +253,9 @@ final class ExtensionsPageTest extends TestCase {
 		$_GET['ran_booster_extension_id']     = 'ran-booster-bitbucket';
 		self::assertStringNotContainsString( 'Extension installed. Activate it', $this->render() );
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Version' => '0.1.0-beta.17' );
-		self::assertStringContainsString( 'Extension installed. Activate it', $this->render() );
+		$output = $this->render();
+		self::assertStringContainsString( 'Extension installed. Activate it', $output );
+		self::assertStringContainsString( 'class="notice inline notice-success"', $output );
 		$_GET['ran_booster_extension_id'] = '<script>alert(1)</script>';
 		$output                           = $this->render();
 		self::assertStringNotContainsString( 'Extension installed. Activate it', $output );
@@ -266,7 +268,9 @@ final class ExtensionsPageTest extends TestCase {
 		$this->define_apis_compatible_with_existing_extension_catalogue();
 		$_GET['ran_booster_extension_id']     = 'ran-booster-bitbucket';
 		$_GET['ran_booster_extension_result'] = 'failed';
-		self::assertStringContainsString( 'The extension could not be installed.', $this->render() );
+		$output = $this->render();
+		self::assertStringContainsString( 'The extension could not be installed.', $output );
+		self::assertStringContainsString( 'class="notice inline notice-warning"', $output );
 		$_GET['ran_booster_extension_result'] = '<script>alert(1)</script>';
 		$output                               = $this->render();
 		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );
@@ -518,7 +522,9 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'Extension activated.', $this->render() );
 
 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( $plugin );
-		self::assertStringContainsString( 'Extension activated.', $this->render() );
+		$output = $this->render();
+		self::assertStringContainsString( 'Extension activated.', $output );
+		self::assertStringContainsString( 'class="notice inline notice-success"', $output );
 	}
 
 	public function test_denied_request_renders_nothing(): void {

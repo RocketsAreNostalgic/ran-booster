@@ -77,12 +77,12 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub does not automatically redeliver failed deliveries', $html );
 		self::assertStringContainsString( 'enable Request History before you need it', $html );
 		self::assertStringContainsString( 'do not assume it remains stable across automatic attempts', $html );
-		self::assertStringContainsString( 'Provider request ID shown on a webhook attempt in Booster Activity', $html );
+		self::assertStringContainsString( 'Git provider request ID shown on a webhook attempt in Booster Activity', $html );
 		self::assertStringContainsString( 'Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-webhook-cleanup">Retained webhook setup and cleanup</h3>', $html );
 		self::assertStringContainsString( 'Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup', $html );
 		self::assertStringContainsString( 'any branch-managed package using the same repository can continue to need the webhook', $html );
-		self::assertStringContainsString( 'Remove the remote provider webhook first, then remove only a local signing secret that is no longer used', $html );
+		self::assertStringContainsString( 'Remove the remote Git provider webhook first, then remove only a local signing secret that is no longer used', $html );
 		self::assertStringContainsString( 'Never remove an owner-shared secret merely because one package changed source', $html );
 		self::assertStringNotContainsString( 'the verified Remove action can remove the remote hook', $html );
 		self::assertStringContainsString( 'then use Manage signing secrets to remove an unused local secret', $html );
@@ -469,9 +469,9 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'removes both Booster custom tables, the encrypted credentials file and its separate database key', $html );
 		self::assertStringContainsString( 'WordPress keeps the plugin files', $html );
 		self::assertStringContainsString( 'export a password-protected Transporter Blueprint with the selected packages and any file-stored repository credentials they use', $html );
-		self::assertStringContainsString( 'does not include webhook secrets, provider-side webhook registrations, deployment history or constants', $html );
+		self::assertStringContainsString( 'does not include webhook secrets, webhook registrations on the Git provider, deployment history or constants', $html );
 		self::assertStringContainsString( 'starts with deployment Disabled', $html );
-		self::assertStringContainsString( 'Uninstall cannot revoke provider credentials or remove remote webhooks', $html );
+		self::assertStringContainsString( 'Uninstall cannot revoke Git provider credentials or remove remote webhooks', $html );
 		self::assertStringContainsString( 'removes only the exact wp-config.php storage definition it created', $html );
 		self::assertStringContainsString( 'remains under the site operator’s control', $html );
 		self::assertStringNotContainsString( 'gitignored', $html );
@@ -497,7 +497,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'inside the supported MySQL or MariaDB and InnoDB envelope are best effort', $html );
 		self::assertStringContainsString( 'target database must still satisfy Booster’s requirements', $html );
 		self::assertStringContainsString( 'Deployment attempts and delivery-replay history', $html );
-		self::assertStringContainsString( 'webhook secrets and provider-side hooks', $html );
+		self::assertStringContainsString( 'webhook secrets and hooks registered with the Git provider', $html );
 		self::assertStringContainsString( 'locks and worker state', $html );
 		self::assertStringContainsString( 'source deployment policy remain target-local', $html );
 		self::assertStringContainsString( 'administrator must deliberately choose a new target policy', $html );
@@ -522,8 +522,8 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'URL has a nonstandard port', $html );
 		self::assertStringContainsString( 'it starts with deployment Disabled', $html );
 		self::assertStringContainsString( 'Push-to-Deploy is always configured separately on each site', $html );
-		self::assertStringContainsString( 'Use the matching provider tab as the source of truth', $html );
-		self::assertStringContainsString( 'Follow that provider’s webhook instructions', $html );
+		self::assertStringContainsString( 'Use the matching Git provider tab as the source of truth', $html );
+		self::assertStringContainsString( 'Follow that Git provider’s webhook instructions', $html );
 		self::assertStringContainsString( 'only then deliberately set the installed package to Automatic', $html );
 		self::assertStringNotContainsString( 'For GitHub, choose an owner-shared secret', $html );
 		self::assertStringNotContainsString( 'Webhooks: Read and write permission', $html );

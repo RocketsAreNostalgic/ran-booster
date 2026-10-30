@@ -342,7 +342,7 @@ final class TroubleshootingViewTest extends TestCase {
 			}
 			self::assertStringContainsString( 'ran-booster-badge--' . $tone . ' ran-booster-deployment-state ran-booster-deployment-state--' . $state . '">' . $expected_label . '</span>', $html );
 			self::assertStringContainsString( '<span class="ran-booster-attempt-row__message">' . esc_html( $message ) . '</span>', $html );
-			self::assertStringContainsString( '<dt>Reported by</dt><dd>Provider-reported</dd>', $html );
+			self::assertStringContainsString( '<dt>Reported by</dt><dd>Reported by Git provider</dd>', $html );
 			self::assertStringContainsString( '<dt>Reason</dt><dd>test.reason</dd>', $html );
 			self::assertStringContainsString( '<dt>Remediation</dt><dd>Try again.</dd>', $html );
 			self::assertStringNotContainsString( '<result>', $html );
@@ -395,7 +395,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 	public function test_activity_distinguishes_provider_reports_from_core_records(): void {
 		foreach ( array(
-			'provider' => 'Provider-reported',
+			'provider' => 'Reported by Git provider',
 			'core'     => 'Recorded by Core',
 		) as $provenance => $expected_label ) {
 			$deployment_activity  = array(
@@ -500,7 +500,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( '<span role="columnheader">Details</span>', $html );
 		self::assertStringContainsString( 'data-label="Subject"', $html );
 		self::assertStringContainsString( '<select id="ran-booster-activity-provider" name="activity_provider">', $html );
-		self::assertStringContainsString( '<option value="">All providers</option>', $html );
+		self::assertStringContainsString( '<option value="">All Git providers</option>', $html );
 		self::assertStringContainsString( 'value="gh"  selected="selected">GitHub</option>', $html );
 		self::assertStringContainsString( '<label class="screen-reader-text" for="ran-booster-activity-package">Activity subject</label>', $html );
 		self::assertStringContainsString( '<option value="">All subjects</option>', $html );
@@ -516,7 +516,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Review recorded checks and deployments.', $html );
 		self::assertStringNotContainsString( 'Published release', $html );
 		self::assertStringContainsString( '<dl class="ran-booster-activity__details">', $html );
-		self::assertStringContainsString( '<dt>Failure reason</dt><dd>The repository provider rate limit was reached.', $html );
+		self::assertStringContainsString( '<dt>Failure reason</dt><dd>The Git provider rate limit was reached.', $html );
 		self::assertStringContainsString( 'Wait for its quota to reset', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=plugin%2Fexample.php', $html );
 		self::assertStringContainsString( 'Open plugin settings', $html );
@@ -726,7 +726,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<dt>Origin</dt><dd>Repository webhook</dd>', $html );
-		self::assertStringContainsString( '<dt>Provider request ID</dt><dd><code>delivery-7</code></dd>', $html );
+		self::assertStringContainsString( '<dt>Git provider request ID</dt><dd><code>delivery-7</code></dd>', $html );
 		self::assertStringContainsString( 'name="_wpnonce" value="ran-booster-resolve-needs-attention"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="resolve-needs-attention"', $html );
 		self::assertStringContainsString( 'name="ran_booster[attempt_id]" value="7"', $html );
@@ -828,7 +828,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Checking the box only clears the retry block. It does not change the package or prove what happened before.', $html );
 		self::assertStringContainsString( 'activity #8', $html );
 		self::assertStringContainsString( 'Allow retry', $html );
-		self::assertStringNotContainsString( 'Provider request ID', $html );
+		self::assertStringNotContainsString( 'Git provider request ID', $html );
 	}
 
 	public function test_exhausted_deployment_history_offers_the_latest_page(): void {
@@ -915,7 +915,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'maxlength="512"', $html );
 		self::assertStringContainsString( '>Check credential or repository access (optional)</summary>', $html );
 		self::assertStringContainsString( '<details class="ran-booster-troubleshooting__specific ran-booster-troubleshooting__disclosure ran-booster-disclosure" open>', $html );
-		self::assertStringContainsString( 'Start with a provider to run a general health check.', $html );
+		self::assertStringContainsString( 'Start with a Git provider to run a general health check.', $html );
 		self::assertStringContainsString( 'check only credential and repository access; they do not scope Push-to-Deploy delivery results.', $html );
 		self::assertStringContainsString( 'This is a credential reference, not the credential secret;', $html );
 		$document = new \DOMDocument();
@@ -939,7 +939,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 2.0, $xpath->evaluate( 'count(preceding-sibling::p)', $provider_notice ) );
 		$notice_text = $xpath->evaluate( 'string(.)', $provider_notice );
 		self::assertIsString( $notice_text );
-		self::assertSame( 'The active provider can read every credential saved under its provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', trim( $notice_text ) );
+		self::assertSame( 'The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', trim( $notice_text ) );
 		self::assertStringContainsString( 'placeholder="owner/repository (GitHub) or workspace/repository (Bitbucket)"', $html );
 		self::assertStringContainsString( 'class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap"', $html );
 		self::assertStringContainsString( 'class="widefat ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table"', $html );
@@ -957,7 +957,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'for="ran-booster-troubleshooting-credential"', $html );
 		self::assertStringContainsString( 'for="ran-booster-troubleshooting-repository"', $html );
 		self::assertStringContainsString( '<caption class="screen-reader-text">', $html );
-		self::assertStringContainsString( 'The five-request provider budget was reached.', $html );
+		self::assertStringContainsString( 'The five-request Git provider budget was reached.', $html );
 		self::assertStringContainsString( '>local.runtime.ready</code>', $html );
 		self::assertStringContainsString( '<textarea', $html );
 		self::assertStringContainsString( 'RAN Booster troubleshooting report', $html );
@@ -1257,7 +1257,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', $setup_html );
 		self::assertStringContainsString( 'unique generated repository secret', $setup_html );
-		self::assertStringContainsString( 'Provider request ID in Booster Activity', $setup_html );
+		self::assertStringContainsString( 'Git provider request ID in Booster Activity', $setup_html );
 		self::assertStringContainsString( 'tab=documentation#ran-booster-push-to-deploy', html_entity_decode( $setup_html ) );
 
 		$requested_repository_id = 'repo-42';
@@ -1271,7 +1271,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Back to repositories', $repository_html );
 		self::assertStringContainsString( 'Packages using this repository', $repository_html );
 		self::assertStringContainsString( 'Management history', $repository_html );
-		self::assertStringContainsString( 'This is local history, not live provider state.', $repository_html );
+		self::assertStringContainsString( 'This is local history, not live Git provider state.', $repository_html );
 		self::assertStringNotContainsString( '#ran-booster-branch-readiness', html_entity_decode( $repository_html ) );
 		self::assertStringNotContainsString( 'data-ran-booster-provider-repository-filter', $repository_html );
 		self::assertSame( 0, substr_count( $repository_html, 'data-ran-booster-provider-repository' ) );
@@ -1497,7 +1497,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$repository_html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '>Push-to-deploy</h3>', $repository_html );
-		self::assertStringContainsString( 'Repository webhook management is unavailable until this site can receive provider deliveries.', $repository_html );
+		self::assertStringContainsString( 'Repository webhook management is unavailable until this site can receive Git provider deliveries.', $repository_html );
 		self::assertStringContainsString( 'disabled aria-disabled="true">Manage repository webhook</button>', $repository_html );
 	}
 
@@ -1639,13 +1639,13 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'hx-target="#ran-booster-public-lookup-profile-region"', $html );
 		self::assertStringContainsString( 'hx-swap="outerHTML transition:true show:none"', $html );
 		self::assertStringContainsString( 'id="ran-booster-public-lookup-profile-error"', $html );
-		self::assertStringContainsString( 'reduce provider rate-limit interruptions', $html );
+		self::assertStringContainsString( 'reduce Git provider rate-limit interruptions', $html );
 		self::assertStringContainsString( 'Lookup credential', $html );
 		self::assertStringContainsString( '>Anonymous</option>', $html );
 		self::assertStringContainsString( 'Public lookup (public_lookup)', $html );
 		self::assertStringContainsString( 'dedicated, expiring, least-privilege credential', $html );
 		self::assertStringContainsString( 'Credential guidance', $html );
-		self::assertStringNotContainsString( 'The active provider can read every credential saved under its provider code', $html );
+		self::assertStringNotContainsString( 'The active Git provider can read every credential saved under its Git provider code', $html );
 		self::assertStringContainsString( 'Deleting it returns Fixture public lookup to Anonymous', $html );
 		self::assertStringContainsString( 'ran-booster-credential-self-destruct', $html );
 		self::assertStringNotContainsString( 'ran-booster-provider-disclosure ran-booster-public-lookup-profile', $html );
@@ -2040,7 +2040,7 @@ final class TroubleshootingViewTest extends TestCase {
 			$setup_html
 		);
 		self::assertStringContainsString( '<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title">Webhook receiver</h4>', $setup_html );
-		self::assertStringContainsString( 'This provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $setup_html );
+		self::assertStringContainsString( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $setup_html );
 		self::assertStringContainsString( 'Manage repositories', $setup_html );
 		self::assertStringContainsString( 'panel=repositories', $setup_html );
 		self::assertStringContainsString( 'Payload URL', $setup_html );
@@ -2153,7 +2153,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'value="workspace/one" data-webhook-profile-id="repository-hook" disabled>workspace/one — already configured</option>', $html );
 		self::assertStringContainsString( '<option value="other-workspace">other-workspace</option>', $html );
 		self::assertStringContainsString( '<option value="workspace/two">workspace/two</option>', $html );
-		self::assertStringContainsString( 'Remote provider webhooks will not be removed.', $html );
+		self::assertStringContainsString( 'Remote Git provider webhooks will not be removed.', $html );
 		self::assertStringNotContainsString( 'GitHub', $html );
 	}
 

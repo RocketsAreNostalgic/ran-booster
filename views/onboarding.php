@@ -83,9 +83,9 @@ $has_storage_details                  = null !== $secrets_storage
 	<div class="ran-booster-onboarding__columns">
 		<section class="ran-booster-panel ran-booster-onboarding__column" aria-labelledby="ran-booster-onboarding-connect-heading">
 			<h3 id="ran-booster-onboarding-connect-heading"><?php esc_html_e( 'Private repository access', 'ran-booster' ); ?></h3>
-			<p><?php esc_html_e( 'Add a provider credential only when anonymous access is not enough.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'Add a credential for a Git provider, such as GitHub or Bitbucket, only when anonymous access is not enough.', 'ran-booster' ); ?></p>
 
-			<h4 class="ran-booster-onboarding__provider-heading"><?php esc_html_e( 'Connect a provider', 'ran-booster' ); ?></h4>
+			<h4 class="ran-booster-onboarding__provider-heading"><?php esc_html_e( 'Connect a Git provider', 'ran-booster' ); ?></h4>
 			<?php if ( array() !== $onboarding['provider_links'] ) { ?>
 				<ul class="ran-booster-onboarding__links">
 					<?php foreach ( $onboarding['provider_links'] as $provider_link ) { ?>
@@ -94,7 +94,7 @@ $has_storage_details                  = null !== $secrets_storage
 					<?php } ?>
 				</ul>
 			<?php } else { ?>
-				<p><?php esc_html_e( 'Provider settings will appear here when an integration is available.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Git provider settings will appear here when an integration is available.', 'ran-booster' ); ?></p>
 			<?php } ?>
 		</section>
 
@@ -204,7 +204,7 @@ $has_storage_details                  = null !== $secrets_storage
 									<?php if ( null !== $storage_recovery['candidate_directory'] ) { ?>
 										<p class="description"><strong><?php esc_html_e( 'Verified storage directory:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $storage_recovery['candidate_directory'] ); ?></code></p>
 									<?php } ?>
-									<p class="description"><?php esc_html_e( 'This proves decryption, canonical storage and the current registered provider credential shape. It does not contact a provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files.', 'ran-booster' ); ?></p>
+									<p class="description"><?php esc_html_e( 'This proves decryption, canonical storage and the current registered Git provider credential shape. It does not contact a Git provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files.', 'ran-booster' ); ?></p>
 									<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secrets_storage['action_url'] ); ?>">
 										<?php wp_nonce_field( 'ran-booster-adopt-secure-storage' ); ?>
 										<input type="hidden" name="ran_booster[action]" value="adopt-secure-storage">

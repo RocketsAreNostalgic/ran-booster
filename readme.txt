@@ -9,13 +9,13 @@ Stable tag: 1.0.0-beta.41
 License: GPL-2.0-only
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Deploy WordPress themes and plugins directly from supported repository providers.
+Deploy WordPress themes and plugins directly from supported Git providers.
 
 == Description ==
 
 RAN Booster is a self-hosted repository deployment plugin for WordPress. GitHub
 is the bundled provider for repository discovery, immutable installs and
-updates, and signed Push-to-Deploy. Compatible provider add-ons use the same
+updates, and signed Push-to-Deploy. Compatible Git provider add-ons use the same
 public provider contract and retain their own credential and webhook guidance.
 It does not use a licence service, vendor updater, cloud OAuth flow, or external
 repository picker service.
@@ -40,7 +40,7 @@ For operational providers, it can search public repositories without a token or
 list repositories accessible to a saved credential profile. Manual repository
 account/name entry remains available and is verified through the provider API.
 
-When the selected provider implements the complete release capability set, a
+When the selected Git provider implements the complete release capability set, a
 not-yet-installed plugin or theme can be inspected through Core's bundled
 release controls. Install performs fresh fingerprint-bound
 acquisition and delegates mutation to WordPress Core; the target must be absent
@@ -62,14 +62,14 @@ source-revision fenced and lock-protected; plugins are deactivated and use
 WordPress's uninstall/delete path, while active themes, parent themes,
 dependencies, unsafe paths and in-flight package work are refused.
 
-Private repositories use named, provider-scoped credential profiles saved to a
-site-owned secrets file outside this plugin. Tokens are never stored in the
+Private repositories use named credential profiles scoped to the Git provider,
+saved to a site-owned secrets file outside this plugin. Tokens are never stored in the
 WordPress database. Deployment-provided constants take precedence when present.
-Push-to-Deploy uses manually configured, signed provider webhooks. Secrets can
+Push-to-Deploy uses manually configured, signed Git provider webhooks. Secrets can
 follow provider policy. GitHub supports one secret shared by repositories under
 a canonical organization or user, or an exact secret bound to one stable
 repository ID; the exact repository secret takes precedence.
-Each provider tab shows the callback URL, required event, repository context,
+Each Git provider tab shows the callback URL, required event, repository context,
 and manual setup links beside the saved local secrets. Every repository still
 needs its own remote webhook; a saved local secret alone is not a ready hook.
 Bundled GitHub webhook management can set up, check, reconfigure and remove
@@ -91,7 +91,7 @@ callback or its `?rest_route=` form. Provider delivery history is authoritative
 for timeouts and response status. GitHub does not automatically redeliver failed
 deliveries. Enable Bitbucket Request History in advance and use its request UUID
 only as a cross-reference; do not assume it is stable across automatic attempts.
-Compare the provider identifier with the Provider request ID shown for webhook
+Compare the provider identifier with the Git provider request ID shown for webhook
 attempts in Booster Activity; absence from Activity is inconclusive for probes,
 ignored events, and zero targets.
 
@@ -143,7 +143,7 @@ where Booster's
 managed-package and deployment-attempt tables use InnoDB,
 WordPress's direct filesystem method is available and WP-Cron works. Booster
 does not restrict the WordPress options-table engine. File modifications,
-outbound provider HTTPS requests and secure writes to WordPress temporary,
+outbound Git provider HTTPS requests and secure writes to WordPress temporary,
 content, plugin and theme directories must be available. Multisite and network
 activation are not supported for package deployment.
 
@@ -182,7 +182,7 @@ and current Activity observations. Retention targets can therefore be exceeded;
 the journal refuses new work when safe capacity is unavailable. Activity pages
 display at most 25 records, with Load older activity pagination.
 
-Provider deployments download the whole repository ZIP, even when a package
+Git provider deployments download the whole repository ZIP, even when a package
 subdirectory is selected. The target-site default is 50 MiB compressed and
 200 MiB expanded. Operators can set a site-wide compressed limit from 1 MiB
 through 536,870,911 bytes (just under 512 MiB) with

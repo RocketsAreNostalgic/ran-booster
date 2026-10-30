@@ -488,8 +488,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-portability__password-visibility[hidden]', $styles );
 		self::assertStringContainsString( 'ran-booster-credential-modal__field-row', $modals );
 		self::assertStringContainsString( 'Expiry / removal date', $modals );
-		self::assertStringContainsString( 'Enter the provider expiry date, or choose an earlier one.', $modals );
-		self::assertStringContainsString( 'A known provider expiry is the latest date allowed.', $modals );
+		self::assertStringContainsString( 'Enter the Git provider expiry date, or choose an earlier one.', $modals );
+		self::assertStringContainsString( 'A known Git provider expiry is the latest date allowed.', $modals );
 		self::assertStringContainsString( 'Automatically remove this saved credential after this date', $modals );
 		self::assertStringNotContainsString( 'ran_booster[destroy_on]', $modals );
 		self::assertStringNotContainsString( 'ran-booster-credential-destroy-date', $modals );

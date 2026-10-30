@@ -221,7 +221,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 
 		self::assertStringContainsString( 'plugin-update-tr', $html );
 		self::assertStringContainsString( 'notice-error', $html );
-		self::assertStringContainsString( 'repository provider rejected', $html );
+		self::assertStringContainsString( 'Git provider rejected', $html );
 		self::assertStringContainsString( 'Replace credential', $html );
 		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=profile_123', $html );
 	}
@@ -237,7 +237,7 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 		$sent = $GLOBALS['ran_booster_background_failure_mail'][0];
 		self::assertSame( 'admin@example.test', $sent['to'] );
 		self::assertStringContainsString( 'Example & Site', $sent['subject'] );
-		self::assertStringContainsString( 'repository provider rejected', $sent['message'] );
+		self::assertStringContainsString( 'Git provider rejected', $sent['message'] );
 		self::assertStringContainsString( 'Support reference:', $sent['message'] );
 		self::assertStringNotContainsString( 'profile_123', $sent['message'] );
 		self::assertStringNotContainsString( 'secret-canary', $sent['message'] );

@@ -228,7 +228,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertFalse( $result['success'] );
 		self::assertSame( 501, $result['status'] );
 		self::assertSame(
-			'The selected repository provider does not support authenticated public repository browsing.',
+			'The selected Git provider does not support authenticated public repository browsing.',
 			$result['data']['message']
 		);
 		self::assertNull( $provider->request );
@@ -325,7 +325,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertFalse( $result['success'] );
 		self::assertSame( 501, $result['status'] );
 		self::assertSame(
-			'The selected repository provider does not support repository browsing.',
+			'The selected Git provider does not support repository browsing.',
 			$result['data']['message']
 		);
 	}
@@ -342,7 +342,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 
 		self::assertFalse( $unavailable['success'] );
 		self::assertSame( 400, $unavailable['status'] );
-		self::assertSame( 'The selected repository provider is not available.', $unavailable['data']['message'] );
+		self::assertSame( 'The selected Git provider is not available.', $unavailable['data']['message'] );
 		self::assertNull( $github->request );
 
 		$code        = ProviderCode::parse( 'temporarily-offline' );
@@ -425,7 +425,7 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertFalse( $result['success'] );
 		self::assertSame( 429, $result['status'] );
 		self::assertSame(
-			'The repository provider rate limit has been reached. Try again later.',
+			'The Git provider rate limit has been reached. Try again later.',
 			$result['data']['message']
 		);
 		self::assertStringNotContainsString( 'upstream-response-canary', $result['data']['message'] );
@@ -463,13 +463,13 @@ final class RepositoryPickerControllerTest extends TestCase {
 		self::assertTrue( $result['success'], isset( $result['data']['message'] ) ? (string) $result['data']['message'] : 'Expected successful partial results.' );
 		self::assertTrue( $result['data']['partial'] );
 		self::assertSame(
-			'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.',
+			'Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list.',
 			$result['data']['message']
 		);
 	}
 
 	public function test_partial_result_display_copy_uses_the_plugin_translation_domain(): void {
-		$source = 'Some repositories are shown. The provider rate limit was reached; try again later for a complete list.';
+		$source = 'Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list.';
 		$GLOBALS['ran_booster_repository_admin_translations'] = array(
 			'ran-booster' => array( $source => 'Les dépôts affichés sont incomplets.' ),
 		);

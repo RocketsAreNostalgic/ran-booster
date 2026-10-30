@@ -87,7 +87,7 @@ msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:17
 #: RAN/Admin/PackageAdminController.php:430
-msgid "A selected package uses an unavailable repository provider."
+msgid "A selected package uses an unavailable Git provider."
 msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:21
@@ -97,7 +97,7 @@ msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:25
 #: RAN/Admin/PackageAdminController.php:433
-msgid "A selected package provider does not support Automatic deployment."
+msgid "A selected package Git provider does not support Automatic deployment."
 msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:29
@@ -308,7 +308,7 @@ msgid "Release publishing"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:198
-msgid "Release workflow setup is unavailable for this repository provider. Package release settings remain available."
+msgid "Release workflow setup is unavailable for this Git provider. Package release settings remain available."
 msgstr ""
 
 #. translators: %s is a managed package name.
@@ -359,11 +359,11 @@ msgid "Manage repository webhook"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:244
-msgid "Core-assisted webhook management is unavailable for this provider. Use the provider webhook settings when available."
+msgid "Core-assisted webhook management is unavailable for this Git provider. Use the Git provider webhook settings when available."
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:251
-msgid "Repository webhook management is unavailable until this site can receive provider deliveries."
+msgid "Repository webhook management is unavailable until this site can receive Git provider deliveries."
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:252
@@ -443,7 +443,7 @@ msgid "Management history"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:323
-msgid "Repository-scoped records. This is local history, not live provider state."
+msgid "Repository-scoped records. This is local history, not live Git provider state."
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:326
@@ -765,7 +765,7 @@ msgid "Bitbucket"
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:274
-msgid "Older activity filters were cleared. Use Provider and Activity subject to filter activity."
+msgid "Older activity filters were cleared. Use Git provider and Activity subject to filter activity."
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:296
@@ -797,11 +797,11 @@ msgid "Plugin"
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:301
-msgid "That provider filter was cleared."
+msgid "That Git provider filter was cleared."
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:304
-msgid "That provider is no longer available in retained activity."
+msgid "That Git provider is no longer available in retained activity."
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:320
@@ -818,7 +818,7 @@ msgid "That Activity subject is no longer available in retained activity."
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:347
-msgid "The Activity subject filter was cleared because it does not match the selected provider."
+msgid "The Activity subject filter was cleared because it does not match the selected Git provider."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:12
@@ -1057,7 +1057,7 @@ msgid "Booster already manages the installed package. Its existing package setti
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:95
-msgid "The repository provider could not prepare the deployment, but no exact cause was recorded. Check the repository and credential settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats."
+msgid "The Git provider could not prepare the deployment, but no exact cause was recorded. Check the repository and credential settings, then retry once; enable Troubleshooting logging and submit a redacted report if it repeats."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:96
@@ -1065,15 +1065,15 @@ msgid "The repository or credential configuration is invalid. Review the managed
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:97
-msgid "The repository provider rejected the selected credential. Replace or update it."
+msgid "The Git provider rejected the selected credential. Replace or update it."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:98
-msgid "The repository provider denied access. Check the credential permissions and repository access."
+msgid "The Git provider denied access. Check the credential permissions and repository access."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:99
-msgid "The repository provider could not find the repository or revision. Check that it exists and that the selected credential can access it."
+msgid "The Git provider could not find the repository or revision. Check that it exists and that the selected credential can access it."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:100
@@ -1081,15 +1081,15 @@ msgid "The requested repository revision is no longer available. Review the conf
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:101
-msgid "The repository provider rate limit was reached. Wait for its quota to reset or use an authenticated credential."
+msgid "The Git provider rate limit was reached. Wait for its quota to reset or use an authenticated credential."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:102
-msgid "The GitHub implementation changed after this deployment was requested. Review the current provider and submit a new deployment."
+msgid "The GitHub implementation changed after this deployment was requested. Review the current Git provider and submit a new deployment."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:103
-msgid "The repository provider could not be reached or returned an invalid response. Try again later."
+msgid "The Git provider could not be reached or returned an invalid response. Try again later."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:104
@@ -1298,7 +1298,7 @@ msgid "The package archive contains a link or device entry. Rebuild the archive 
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:155
-msgid "Booster could not safely clean up a temporary archive or provider authentication. Check server temporary-file access and the repository provider integration, then retry."
+msgid "Booster could not safely clean up a temporary archive or Git provider authentication. Check server temporary-file access and the Git provider integration, then retry."
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:156
@@ -1343,7 +1343,7 @@ msgid "This managed package does not have a stable repository identity. Re-save 
 msgstr ""
 
 #: RAN/Admin/ManagedPackageWebhookAuthorityResolver.php:55
-msgid "Choose a managed repository with exactly one stable provider identity before creating a repository-scoped webhook secret."
+msgid "Choose a managed repository with exactly one stable Git provider identity before creating a repository-scoped webhook secret."
 msgstr ""
 
 #: RAN/Admin/ManagedPackageWebhookAuthorityResolver.php:84
@@ -1451,7 +1451,9 @@ msgid "deployment disabled"
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:465
-msgid "provider unavailable"
+#: views/packages/index.php:319
+#: views/packages/index.php:362
+msgid "Git provider unavailable"
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:466
@@ -1510,20 +1512,20 @@ msgid "Changed %1$d %2$s to %3$s. Already in that state: %4$d."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:566
-msgid "This package cannot be edited until its stored repository provider is registered again."
+msgid "This package cannot be edited until its stored Git provider is registered again."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:568
-msgid "Booster could not verify the managed package provider. No changes were made."
+msgid "Booster could not verify the managed package Git provider. No changes were made."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:595
 #: RAN/Admin/RepositoryPickerController.php:124
-msgid "The selected repository provider is not available."
+msgid "The selected Git provider is not available."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:597
-msgid "The selected repository provider does not yet support this package operation."
+msgid "The selected Git provider does not yet support this package operation."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:599
@@ -1531,15 +1533,15 @@ msgid "Enter a repository-relative subdirectory. Do not use a leading slash, emp
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:601
-msgid "Check the repository provider, account, repository, and credential fields."
+msgid "Check the Git provider, account, repository, and credential fields."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:604
-msgid "The repository provider rejected the selected credential."
+msgid "The Git provider rejected the selected credential."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:605
-msgid "The repository provider denied access. Check credential permissions or rate limits."
+msgid "The Git provider denied access. Check credential permissions or rate limits."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:606
@@ -1548,7 +1550,7 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:607
 #: RAN/Admin/RepositoryPickerController.php:181
-msgid "The repository provider rate limit has been reached. Try again later."
+msgid "The Git provider rate limit has been reached. Try again later."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:608
@@ -1672,7 +1674,7 @@ msgid "Included with Booster"
 msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:289
-msgid "Install verified packages from a supported provider's published releases."
+msgid "Install verified packages from a supported Git provider's published releases."
 msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:290
@@ -1682,7 +1684,7 @@ msgid "Install published releases through WordPress."
 msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:291
-msgid "Provider capability required"
+msgid "Git provider capability required"
 msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:400
@@ -1701,7 +1703,7 @@ msgstr ""
 #: views/packages/edit.php:240
 #: views/packages/index.php:412
 #: assets/ran-booster-release-management.js:735
-msgid "provider default"
+msgid "repository default"
 msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:459
@@ -1846,7 +1848,7 @@ msgid "You do not have sufficient permissions to recover the GitHub installation
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:98
-msgid "Target removal and management disconnection verified; the native installation block is cleared. Cleanup of temporary files from the interrupted process is unverified. Review current provider availability before continuing."
+msgid "Target removal and management disconnection verified; the native installation block is cleared. Cleanup of temporary files from the interrupted process is unverified. Review current Git provider availability before continuing."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:100
@@ -1862,7 +1864,7 @@ msgid "Choose a repository credential to validate."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:155
-msgid "Credential validation is unavailable for this repository provider."
+msgid "Credential validation is unavailable for this Git provider."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:177
@@ -1871,7 +1873,7 @@ msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:257
 #: RAN/Admin/ProviderProfileAdminController.php:260
-msgid "A default public repository lookup profile is unavailable for this provider."
+msgid "A default public repository lookup profile is unavailable for this Git provider."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:263
@@ -1913,7 +1915,7 @@ msgid "Enter a valid expiry / removal date."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:360
-msgid "The expiry / removal date cannot be later than the expiry reported by the provider."
+msgid "The expiry / removal date cannot be later than the expiry reported by the Git provider."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:365
@@ -1929,7 +1931,7 @@ msgid "Repository credential saved with automatic removal enabled."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:420
-msgid "Repository credential replaced. Validate it to refresh provider expiry information."
+msgid "Repository credential replaced. Validate it to refresh Git provider expiry information."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:421
@@ -2001,7 +2003,7 @@ msgid "Push-to-Deploy secret removed."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:563
-msgid "You do not have sufficient permissions to manage Booster provider settings."
+msgid "You do not have sufficient permissions to manage Booster Git provider settings."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:564
@@ -2020,11 +2022,11 @@ msgstr ""
 #: RAN/Admin/ProviderProfileAdminController.php:629
 #: RAN/Admin/ProviderProfileAdminController.php:636
 #: RAN/Admin/ProviderProfileAdminController.php:644
-msgid "Choose a supported repository provider."
+msgid "Choose a supported Git provider."
 msgstr ""
 
 #: RAN/Admin/ProviderProfileAdminController.php:648
-msgid "Repository provider settings are unavailable."
+msgid "Git provider settings are unavailable."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:30
@@ -2196,11 +2198,11 @@ msgid "Encrypted credential storage must be healthy before Push-to-Deploy can ve
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:996
-msgid "This site uses a local URL, so providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy."
+msgid "This site uses a local URL, so Git providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:996
-msgid "The payload URL must use public HTTPS before providers can deliver webhooks to it."
+msgid "The payload URL must use public HTTPS before Git providers can deliver webhooks to it."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:997
@@ -2246,7 +2248,7 @@ msgstr ""
 #. translators: 1: repository provider name, 2: repository provider code.
 #: RAN/Admin/ProviderSettingsPresenter.php:1531
 #, php-format
-msgid "The active %1$s provider can read every credential saved under provider code %2$s. Install and activate only providers you trust; Booster does not authenticate a third-party publisher."
+msgid "The active %1$s provider can read every credential saved under Git provider code %2$s. Install and activate only Git providers you trust; Booster does not authenticate a third-party publisher."
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1585
@@ -2290,14 +2292,14 @@ msgstr ""
 #. translators: %d is the number of managed packages that use the local secret.
 #: RAN/Admin/ProviderSettingsPresenter.php:1650
 #, php-format
-msgid "Remove this local secret? %d managed package may be affected. Remote provider webhooks will not be removed."
-msgid_plural "Remove this local secret? %d managed packages may be affected. Remote provider webhooks will not be removed."
+msgid "Remove this local secret? %d managed package may be affected. Remote Git provider webhooks will not be removed."
+msgid_plural "Remove this local secret? %d managed packages may be affected. Remote Git provider webhooks will not be removed."
 msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of managed packages that use the local secret.
 #: RAN/Admin/ProviderSettingsPresenter.php:1651
-msgid "Remove this local secret? Remote provider webhooks will not be removed."
+msgid "Remove this local secret? Remote Git provider webhooks will not be removed."
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1733
@@ -2357,11 +2359,11 @@ msgid "Review saved signing material whose configuration or managed-package usag
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1739
-msgid "Automatic branch deployments require local signing material before provider webhooks can be used safely."
+msgid "Automatic branch deployments require local signing material before Git provider webhooks can be used safely."
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1739
-msgid "Add local signing material before configuring a provider webhook."
+msgid "Add local signing material before configuring a Git provider webhook."
 msgstr ""
 
 #. translators: %d is the number of local secrets that can verify signed deliveries.
@@ -2424,12 +2426,12 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:151
 #: assets/ran-booster-release-management.js:879
-msgid "Published releases are not available for this repository provider."
+msgid "Published releases are not available for this Git provider."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:152
 #: assets/ran-booster-release-management.js:883
-msgid "Provider capability unavailable"
+msgid "Git provider capability unavailable"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:285
@@ -2441,7 +2443,7 @@ msgid "Prepare an eligible release"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:288
-msgid "Use your provider’s release guidance to publish an eligible installable plugin or theme ZIP."
+msgid "Use your Git provider’s release guidance to publish an eligible installable plugin or theme ZIP."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:289
@@ -2465,7 +2467,7 @@ msgid "For a not-yet-managed package, candidate listing is metadata-only. Choose
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:295
-msgid "Install performs a fresh exact acquisition. Before WordPress changes files, Booster rechecks fingerprint continuity, archive shape and size, provider and local digests, headers and package identity. WordPress installs synchronously, then Booster verifies the installed identity and unchanged target activation before adoption."
+msgid "Install performs a fresh exact acquisition. Before WordPress changes files, Booster rechecks fingerprint continuity, archive shape and size, Git provider and local digests, headers and package identity. WordPress installs synchronously, then Booster verifies the installed identity and unchanged target activation before adoption."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:296
@@ -2489,7 +2491,7 @@ msgid "Installed but unmanaged means a package now exists but Booster did not ad
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:301
-msgid "If a release is blocked, publish a corrected release rather than editing installed metadata. You can return the package to branch management from its settings. If the selected provider capability becomes unavailable, Booster preserves package source state while suppressing release offers, downloads and mutations."
+msgid "If a release is blocked, publish a corrected release rather than editing installed metadata. You can return the package to branch management from its settings. If the selected Git provider capability becomes unavailable, Booster preserves package source state while suppressing release offers, downloads and mutations."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:302
@@ -2885,7 +2887,7 @@ msgid "You are not authorized to perform this published release operation. No pa
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:897
-msgid "Published releases are not available for this repository provider. Use Branch tracking instead."
+msgid "Published releases are not available for this Git provider. Use Branch tracking instead."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:898
@@ -3115,7 +3117,7 @@ msgid "This package header Update URI does not match its configured repository."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1051
-msgid "The repository provider does not support published release tracking."
+msgid "The Git provider does not support published release tracking."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1052
@@ -3147,7 +3149,7 @@ msgid "Matches, but this package already registers its own updater."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1064
-msgid "Cannot be validated until the provider and repository are ready."
+msgid "Cannot be validated until the Git provider and repository are ready."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:17
@@ -3185,19 +3187,19 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:127
-msgid "Saved repository facts; no live provider check."
+msgid "Saved repository facts; no live Git provider check."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:129
-msgid "Provider capability"
+msgid "Git provider capability"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:129
-msgid "This provider supports published releases."
+msgid "This Git provider supports published releases."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:129
-msgid "This provider does not implement all required release capabilities."
+msgid "This Git provider does not implement all required release capabilities."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:131
@@ -3305,7 +3307,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:359
 #: RAN/Admin/WebhookManagement/views/panel.php:39
 #: views/provider.php:396
-#: assets/ran-booster-repository-picker.js:789
+#: assets/ran-booster-repository-picker.js:787
 msgid "Manage credentials"
 msgstr ""
 
@@ -3347,19 +3349,19 @@ msgid "Booster verified that the recorded setup pull request was merged and its 
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:382
-msgid "The repository provider may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch."
+msgid "The Git provider may have accepted only part of the request. Booster will not overwrite or repair the deterministic branch."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:383
-msgid "The repository provider did not authorise the operation with the selected saved credential."
+msgid "The Git provider did not authorise the operation with the selected saved credential."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:384
-msgid "The repository provider has temporarily rate-limited the release workflow request. Booster made no change."
+msgid "The Git provider has temporarily rate-limited the release workflow request. Booster made no change."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:385
-msgid "The repository provider returned an incomplete or invalid response. Booster made no change."
+msgid "The Git provider returned an incomplete or invalid response. Booster made no change."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:386
@@ -3371,7 +3373,7 @@ msgid "Booster could not validate the package release before continuing. No draf
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:388
-msgid "The repository provider or the canonical template source did not provide trustworthy current state. Booster made no change."
+msgid "The Git provider or the canonical template source did not provide trustworthy current state. Booster made no change."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:389
@@ -3423,7 +3425,7 @@ msgid "The repository or template identity changed. Assess the current state aga
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:401
-msgid "Booster stopped before contacting the repository provider because this request no longer matched the current page or package."
+msgid "Booster stopped before contacting the Git provider because this request no longer matched the current page or package."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:402
@@ -3471,7 +3473,7 @@ msgid "Correct the package Requires PHP or Requires at least header, publish a c
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:425
-msgid "Booster refused the request before reading saved credentials or contacting the repository provider."
+msgid "Booster refused the request before reading saved credentials or contacting the Git provider."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:426
@@ -3483,7 +3485,7 @@ msgid "Booster could not validate the package release before continuing. Review 
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:428
-msgid "The repository provider did not provide a trustworthy current repository snapshot. Check repository access and try the assessment again."
+msgid "The Git provider did not provide a trustworthy current repository snapshot. Check repository access and try the assessment again."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:429
@@ -3495,11 +3497,11 @@ msgid "Booster could not retain the review preview locally. No draft was opened;
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:431
-msgid "The repository provider may have accepted only part of the draft setup. Review the repository and use the failure reference before retrying."
+msgid "The Git provider may have accepted only part of the draft setup. Review the repository and use the failure reference before retrying."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:432
-msgid "The draft may exist on the repository provider, but Booster could not retain its verified setup record. Review the repository and use the failure reference before retrying."
+msgid "The draft may exist on the Git provider, but Booster could not retain its verified setup record. Review the repository and use the failure reference before retrying."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:433
@@ -3712,11 +3714,11 @@ msgid "Booster could not confirm this package. Reload its settings and try again
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:625
-msgid "This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available."
+msgid "This Git provider claims release workflow management but does not implement all required release capabilities. Update or correct the Git provider plugin; no operation is available."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:627
-msgid "The provider could not supply local workflow status. Retry after checking the provider plugin."
+msgid "The Git provider could not supply local workflow status. Retry after checking the Git provider plugin."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:632
@@ -3740,7 +3742,7 @@ msgid "This package Update URI must match the configured repository."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:736
-msgid "This repository provider cannot use published-release tracking."
+msgid "This Git provider cannot use published-release tracking."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:737
@@ -3764,7 +3766,7 @@ msgid "Resolve Release readiness before assessing a workflow."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:39
-msgid "You are not allowed to browse repository providers."
+msgid "You are not allowed to browse Git providers."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:48
@@ -3776,11 +3778,11 @@ msgid "Encrypted credential storage is unavailable. Restore the matching sidecar
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:130
-msgid "The selected repository provider does not support authenticated public repository browsing."
+msgid "The selected Git provider does not support authenticated public repository browsing."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:131
-msgid "The selected repository provider does not support repository browsing."
+msgid "The selected Git provider does not support repository browsing."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:166
@@ -3789,15 +3791,15 @@ msgid "Repository browsing failed. Please try again."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:175
-msgid "The repository request is invalid. Check the selected provider and repository details."
+msgid "The repository request is invalid. Check the selected Git provider and repository details."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:176
-msgid "The repository provider rejected the saved credentials."
+msgid "The Git provider rejected the saved credentials."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:177
-msgid "The repository provider denied this request. Check repository access and credential permissions."
+msgid "The Git provider denied this request. Check repository access and credential permissions."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:178
@@ -3805,11 +3807,11 @@ msgid "The requested repository owner could not be found."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:179
-msgid "The repository provider returned too much data. Enter the repository manually or narrow the account."
+msgid "The Git provider returned too much data. Enter the repository manually or narrow the account."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:180
-msgid "The repository provider returned an invalid response. Try again or enter the repository manually."
+msgid "The Git provider returned an invalid response. Try again or enter the repository manually."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:182
@@ -3821,7 +3823,7 @@ msgid "Some repositories are shown, but the selected credential stopped authoriz
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:250
-msgid "Some repositories are shown. The provider rate limit was reached; try again later for a complete list."
+msgid "Some repositories are shown. The Git provider rate limit was reached; try again later for a complete list."
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:251
@@ -3829,7 +3831,7 @@ msgid "The first available repositories are shown. Enter a repository manually i
 msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:252
-msgid "Some repositories are shown, but the provider could not complete the list."
+msgid "Some repositories are shown, but the Git provider could not complete the list."
 msgstr ""
 
 #: RAN/Admin/SecretsRuntimeAvailabilityNotice.php:38
@@ -3903,7 +3905,7 @@ msgstr ""
 #. translators: %s: repository provider name.
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:188
 #, php-format
-msgid "Provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled."
+msgid "Git provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled."
 msgstr ""
 
 #. translators: %s: repository provider name.
@@ -3979,7 +3981,7 @@ msgid "Switching a package to Published releases does not remove the remote hook
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:301
-msgid "Select an eligible saved Booster credential for the selected repository. Booster resolves the saved credential inside the fixed provider operation; no credential material is returned to webhook management."
+msgid "Select an eligible saved Booster credential for the selected repository. Booster resolves the saved credential inside the fixed Git provider operation; no credential material is returned to webhook management."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:304
@@ -3995,25 +3997,25 @@ msgid "Cleanup after switching package source"
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:321
-msgid "The remote hook may be active without a complete local record. Inspect it manually at the provider before retrying."
+msgid "The remote hook may be active without a complete local record. Inspect it manually at the Git provider before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:326
-msgid "A newer webhook-management record won the persistence race. Nothing was overwritten; inspect the current provider and Core state before retrying."
+msgid "A newer webhook-management record won the persistence race. Nothing was overwritten; inspect the current Git provider and Core state before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:327
-msgid "Provider state may have changed, but webhook management could not save its non-secret recovery record. Inspect the provider and Core before retrying."
+msgid "Git provider state may have changed, but webhook management could not save its non-secret recovery record. Inspect the Git provider and Core before retrying."
 msgstr ""
 
 #. translators: 1: provider hook reference ID, 2: Core signing profile ID.
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:330
 #, php-format
-msgid "Provider state may have changed, but the current webhook-management record was not overwritten. Inspect provider hook reference %1$s and Core signing profile %2$s before retrying."
+msgid "Git provider state may have changed, but the current webhook-management record was not overwritten. Inspect Git provider hook reference %1$s and Core signing profile %2$s before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:336
-msgid "Managed operations are disabled because the prior setup did not return a stable hook ID. Inspect the provider and Core manually before retrying."
+msgid "Managed operations are disabled because the prior setup did not return a stable hook ID. Inspect the Git provider and Core manually before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:340
@@ -4021,7 +4023,7 @@ msgid "GitHub accepted the ping request for the recorded hook. This does not pro
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:341
-msgid "GitHub recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the provider delivery details."
+msgid "GitHub recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the Git provider delivery details."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:342
@@ -4029,7 +4031,7 @@ msgid "Webhook management configured the remote hook. Signed delivery verificati
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:343
-msgid "Webhook management confirmed the recorded remote configuration. Correlate provider delivery history with the Provider request ID in Booster Activity before treating signed delivery as established."
+msgid "Webhook management confirmed the recorded remote configuration. Correlate Git provider delivery history with the Git provider request ID in Booster Activity before treating signed delivery as established."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:344
@@ -4061,11 +4063,11 @@ msgid "Another webhook operation is already in progress for this repository. Wai
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:351
-msgid "Webhook management could not confirm the operation outcome. Inspect the provider and recorded status before retrying."
+msgid "Webhook management could not confirm the operation outcome. Inspect the Git provider and recorded status before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:352
-msgid "The provider rejected the webhook setup request. No remote hook was established."
+msgid "The Git provider rejected the webhook setup request. No remote hook was established."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:353
@@ -4073,39 +4075,39 @@ msgid "Webhook management could not verify the new remote hook, so it removed it
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:354
-msgid "Webhook management could not verify or safely remove the new remote hook. Inspect the provider and Core records before retrying."
+msgid "Webhook management could not verify or safely remove the new remote hook. Inspect the Git provider and Core records before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:355
-msgid "Webhook management could not confirm whether setup changed the remote hook. Inspect the provider and Core records before retrying."
+msgid "Webhook management could not confirm whether setup changed the remote hook. Inspect the Git provider and Core records before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:356
-msgid "Webhook management could not establish the current remote hook state. Nothing should be treated as successful; inspect the provider before retrying."
+msgid "Webhook management could not establish the current remote hook state. Nothing should be treated as successful; inspect the Git provider before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:357
-msgid "The provider response did not identify the new hook. Inspect the provider and Core records before retrying."
+msgid "The Git provider response did not identify the new hook. Inspect the Git provider and Core records before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:358
-msgid "Webhook management could not confirm the remote hook state after the update request. Run Check or inspect the hook at the provider before retrying an update."
+msgid "Webhook management could not confirm the remote hook state after the update request. Run Check or inspect the hook at the Git provider before retrying an update."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:359
-msgid "The provider rejected the webhook update request. Run Check or inspect the hook at the provider before retrying."
+msgid "The Git provider rejected the webhook update request. Run Check or inspect the hook at the Git provider before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:360
-msgid "Webhook management could not confirm that the recorded hook belongs to this site. Run Check or inspect the hook at the provider before retrying."
+msgid "Webhook management could not confirm that the recorded hook belongs to this site. Run Check or inspect the hook at the Git provider before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:361
-msgid "Webhook management could not confirm whether the remote hook was removed. Run Check or inspect the hook at the provider before retrying removal."
+msgid "Webhook management could not confirm whether the remote hook was removed. Run Check or inspect the hook at the Git provider before retrying removal."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:362
-msgid "The provider rejected the webhook removal request. Run Check or inspect the hook at the provider before retrying."
+msgid "The Git provider rejected the webhook removal request. Run Check or inspect the hook at the Git provider before retrying."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:363
@@ -4121,7 +4123,7 @@ msgid "The credential fitness assessment is stale. Nothing was changed; assess a
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:366
-msgid "The bound provider does not support this fixed webhook operation. Nothing was changed."
+msgid "The bound Git provider does not support this fixed webhook operation. Nothing was changed."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:367
@@ -4254,7 +4256,7 @@ msgstr ""
 #. translators: %s: current saved credential profile label.
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:736
 #, php-format
-msgid "Last managed with %s; provider authority has not been revalidated."
+msgid "Last managed with %s; Git provider authority has not been revalidated."
 msgstr ""
 
 #. translators: %s: saved credential profile ID.
@@ -4264,11 +4266,11 @@ msgid "Previously used saved credential profile %s is unavailable."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:82
-msgid "A stable repository identity and a provider with assisted webhook management are required before setup can begin."
+msgid "A stable repository identity and a Git provider with assisted webhook management are required before setup can begin."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:83
-msgid "This provider does not offer the complete assisted webhook-management capability required by Booster."
+msgid "This Git provider does not offer the complete assisted webhook-management capability required by Booster."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:90
@@ -4282,7 +4284,7 @@ msgstr ""
 #. translators: %s: provider name.
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:196
 #, php-format
-msgid "%s webhook configuration is incomplete. Webhook setup is unavailable until the provider supplies its complete management capability."
+msgid "%s webhook configuration is incomplete. Webhook setup is unavailable until the Git provider supplies its complete management capability."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:210
@@ -4290,7 +4292,7 @@ msgid "Webhook operations are unavailable while no eligible Branch package uses 
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:267
-msgid "This site needs a public HTTPS URL before a provider can deliver webhooks. Local receivers cannot be reached remotely."
+msgid "This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:268
@@ -4306,7 +4308,7 @@ msgid "Webhook setup is unavailable because Booster could not read managed packa
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:271
-msgid "Webhook setup is unavailable because this repository has no stable provider identity."
+msgid "Webhook setup is unavailable because this repository has no stable Git provider identity."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:272
@@ -4336,16 +4338,16 @@ msgid "Signing profile"
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:349
-msgid "Provider configuration is incomplete, so Booster did not inspect signing-secret availability."
+msgid "Git provider configuration is incomplete, so Booster did not inspect signing-secret availability."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:353
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:437
-msgid "Provider receiver"
+msgid "Git provider receiver"
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:354
-msgid "Provider configuration is incomplete, so Booster did not inspect receiver readiness."
+msgid "Git provider configuration is incomplete, so Booster did not inspect receiver readiness."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:358
@@ -4354,7 +4356,7 @@ msgid "Remote hook"
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:359
-msgid "Provider configuration is incomplete, so Booster did not inspect remote webhook state."
+msgid "Git provider configuration is incomplete, so Booster did not inspect remote webhook state."
 msgstr ""
 
 #. translators: %d: number of Automatic Branch packages using the repository webhook.
@@ -4400,11 +4402,11 @@ msgstr ""
 #. translators: %s: UTC timestamp of the last recorded webhook check.
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:450
 #, php-format
-msgid "Configured at the last recorded check on %s. Run Check to confirm current provider state."
+msgid "Configured at the last recorded check on %s. Run Check to confirm current Git provider state."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:453
-msgid "The recorded remote webhook needs review. Run Check or inspect it at the provider."
+msgid "The recorded remote webhook needs review. Run Check or inspect it at the Git provider."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:463
@@ -4446,7 +4448,7 @@ msgid "%s webhook management"
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/views/panel.php:41
-msgid "Choose the saved credential used to manage this repository webhook. A current selection does not prove provider authority until the operation checks it."
+msgid "Choose the saved credential used to manage this repository webhook. A current selection does not prove Git provider authority until the operation checks it."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/views/panel.php:49
@@ -4549,7 +4551,7 @@ msgid "Connect Booster to Bitbucket Cloud repositories for managed deployments."
 msgstr ""
 
 #: RAN/Booster.php:395
-msgid "Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy."
+msgid "Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy."
 msgstr ""
 
 #: RAN/Booster.php:397
@@ -4557,7 +4559,7 @@ msgid "Connect and configure Bitbucket Cloud repositories in Booster."
 msgstr ""
 
 #: RAN/Booster.php:398
-msgid "Use provider-specific package and credential guidance."
+msgid "Use package and credential guidance for your Git provider."
 msgstr ""
 
 #: RAN/Booster.php:399
@@ -4987,15 +4989,15 @@ msgid "The destination package conflicts with this Transporter Blueprint."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:44
-msgid "The selected repository provider changed. Review again before applying."
+msgid "The selected Git provider changed. Review again before applying."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:45
-msgid "This repository provider is not available on the target."
+msgid "This Git provider is not available on the target."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:46
-msgid "The repository provider is temporarily unavailable."
+msgid "The Git provider is temporarily unavailable."
 msgstr ""
 
 #: RAN/Portability/TargetPackageReason.php:47
@@ -5100,7 +5102,7 @@ msgid "Booster authenticated prior credential storage, but its location does not
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:294
-msgid "Booster authenticated prior credential storage, but one or more credentials do not pass their current provider policy. Review or restore the matching storage set before using it."
+msgid "Booster authenticated prior credential storage, but one or more credentials do not pass their current Git provider policy. Review or restore the matching storage set before using it."
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:295
@@ -5112,7 +5114,7 @@ msgid "Booster authenticated prior credential storage, but it crosses an unsuppo
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:310
-msgid "Booster found one prior storage set that authenticates with this site's database key and whose credentials pass their current provider policies."
+msgid "Booster found one prior storage set that authenticates with this site's database key and whose credentials pass their current Git provider policies."
 msgstr ""
 
 #: RAN/Secrets/SecretsStorageProvisioner.php:325
@@ -5461,7 +5463,7 @@ msgid "The managed package source changed before this operation. No package chan
 msgstr ""
 
 #: RAN/Storage/AbstractPackageRepository.php:1077
-msgid "Booster could not save this package because its repository provider identity is incomplete."
+msgid "Booster could not save this package because its Git provider identity is incomplete."
 msgstr ""
 
 #: RAN/Storage/AbstractPackageRepository.php:1085
@@ -5493,7 +5495,7 @@ msgid "Booster package storage is paused because this site does not meet the dat
 msgstr ""
 
 #: RAN/Storage/PackageStorageFailure.php:64
-msgid "Booster could not read a managed package because its repository provider identity is invalid."
+msgid "Booster could not read a managed package because its Git provider identity is invalid."
 msgstr ""
 
 #: RAN/Storage/PackageStorageFailure.php:73
@@ -5520,20 +5522,23 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:81
 #: views/troubleshooting.php:271
-msgid "Diagnostic provider"
+msgid "Diagnostic Git provider"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:82
 #: views/attempts/detail.php:93
 #: views/attempts/index.php:71
+#: views/packages/fields/provider.php:19
+#: views/packages/fields/provider.php:22
 #: views/packages/index.php:513
 #: views/portability-review.php:28
 #: views/troubleshooting.php:121
-msgid "Provider"
+#: assets/ran-booster-repository-picker.js:380
+msgid "Git provider"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:83
-msgid "Provider code"
+msgid "Git provider code"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:85
@@ -5755,7 +5760,7 @@ msgid "Support reference"
 msgstr ""
 
 #: views/attempts/detail.php:80
-msgid "Provider request ID"
+msgid "Git provider request ID"
 msgstr ""
 
 #: views/attempts/detail.php:82
@@ -5869,7 +5874,7 @@ msgstr ""
 
 #: views/attempts/index.php:73
 #: views/packages/index.php:144
-msgid "All providers"
+msgid "All Git providers"
 msgstr ""
 
 #: views/attempts/index.php:80
@@ -5957,7 +5962,7 @@ msgid "Recorded by Core"
 msgstr ""
 
 #: views/attempts/index.php:177
-msgid "Provider-reported"
+msgid "Reported by Git provider"
 msgstr ""
 
 #: views/attempts/index.php:180
@@ -6136,7 +6141,7 @@ msgid "Temporary logging capture is unavailable because Booster cannot safely us
 msgstr ""
 
 #: views/documentation.php:48
-msgid "Repository providers"
+msgid "Git providers"
 msgstr ""
 
 #: views/documentation.php:90
@@ -6237,7 +6242,7 @@ msgid "Add private access only if needed."
 msgstr ""
 
 #: views/documentation.php:188
-msgid "If anonymous access fails, open the provider settings and save the narrowest credential that works for this site."
+msgid "If anonymous access fails, open the Git provider settings and save the narrowest credential that works for this site."
 msgstr ""
 
 #: views/documentation.php:200
@@ -6313,7 +6318,7 @@ msgid "Complete database copies inside the supported MySQL or MariaDB and InnoDB
 msgstr ""
 
 #: views/documentation.php:231
-msgid "Deployment attempts and delivery-replay history, webhook secrets and provider-side hooks, constants, locks and worker state, and source deployment policy remain target-local. Every installed or adopted package starts with deployment Disabled, so an administrator must deliberately choose a new target policy."
+msgid "Deployment attempts and delivery-replay history, webhook secrets and hooks registered with the Git provider, constants, locks and worker state, and source deployment policy remain target-local. Every installed or adopted package starts with deployment Disabled, so an administrator must deliberately choose a new target policy."
 msgstr ""
 
 #: views/documentation.php:232
@@ -6405,7 +6410,7 @@ msgid "After every package is migrated, review the optional WP Pusher data clean
 msgstr ""
 
 #: views/documentation.php:268
-msgid "The migrator does not copy credentials, reinstall package files, enable deployments, remove remote webhooks, delete WP Pusher, or contact its license service. Remove provider-side deployment webhooks separately."
+msgid "The migrator does not copy credentials, reinstall package files, enable deployments, remove remote webhooks, delete WP Pusher, or contact its license service. Remove deployment webhooks on the Git provider separately."
 msgstr ""
 
 #: views/documentation.php:269
@@ -6425,7 +6430,7 @@ msgid "blocks webhook-triggered replacement (Push-to-Deploy) but still lets an a
 msgstr ""
 
 #: views/documentation.php:280
-msgid "allows a matching, signed push from the repository provider to replace the package automatically. Only turn this on for a site that is ready to receive live deployments."
+msgid "allows a matching, signed push from the Git provider to replace the package automatically. Only turn this on for a site that is ready to receive live deployments."
 msgstr ""
 
 #: views/documentation.php:282
@@ -6441,7 +6446,7 @@ msgid "A Transporter Blueprint records only the Booster-managed plugins and them
 msgstr ""
 
 #: views/documentation.php:286
-msgid "A Transporter Blueprint does not include WordPress content, uploads, the database, the package files themselves, constants, webhook secrets, provider-side hooks, deployment attempts or delivery-replay history, locks or worker state, or source deployment policy. Push-to-Deploy is always configured separately on each site."
+msgid "A Transporter Blueprint does not include WordPress content, uploads, the database, the package files themselves, constants, webhook secrets, hooks registered with the Git provider, deployment attempts or delivery-replay history, locks or worker state, or source deployment policy. Push-to-Deploy is always configured separately on each site."
 msgstr ""
 
 #: views/documentation.php:288
@@ -6526,7 +6531,7 @@ msgid "Moving credentials between sites"
 msgstr ""
 
 #: views/documentation.php:319
-msgid "A plugin ZIP export or a database-only site migration cannot recreate the encrypted store. Transporter, described above, is the supported way to move selected repository credentials: it protects them inside the Transporter Blueprint ZIP, confirms repository identity and access on the target, and re-encrypts them with the target site’s key. Installing or adopting a package associates the imported credential with that package. Credential-only recovery for an already-managed package imports the credential under a new target-local ID but deliberately leaves the package’s saved credential selection unchanged; assign the recovered credential through the package settings if needed. Constants, webhook secrets and credentials already saved on the target are never exported. When Transporter is not the right fit, add credentials directly through the provider settings screens on the target site, or use the supported deployment constants instead."
+msgid "A plugin ZIP export or a database-only site migration cannot recreate the encrypted store. Transporter, described above, is the supported way to move selected repository credentials: it protects them inside the Transporter Blueprint ZIP, confirms repository identity and access on the target, and re-encrypts them with the target site’s key. Installing or adopting a package associates the imported credential with that package. Credential-only recovery for an already-managed package imports the credential under a new target-local ID but deliberately leaves the package’s saved credential selection unchanged; assign the recovered credential through the package settings if needed. Constants, webhook secrets and credentials already saved on the target are never exported. When Transporter is not the right fit, add credentials directly through the Git provider settings screens on the target site, or use the supported deployment constants instead."
 msgstr ""
 
 #: views/documentation.php:320
@@ -6546,11 +6551,11 @@ msgid "Deactivating Booster keeps all credentials, package settings and deployme
 msgstr ""
 
 #: views/documentation.php:325
-msgid "Before deleting Booster, export a password-protected Transporter Blueprint with the selected packages and any file-stored repository credentials they use that you may need. A Transporter Blueprint does not include webhook secrets, provider-side webhook registrations, deployment history or constants, and every restored package starts with deployment Disabled."
+msgid "Before deleting Booster, export a password-protected Transporter Blueprint with the selected packages and any file-stored repository credentials they use that you may need. A Transporter Blueprint does not include webhook secrets, webhook registrations on the Git provider, deployment history or constants, and every restored package starts with deployment Disabled."
 msgstr ""
 
 #: views/documentation.php:326
-msgid "Uninstall cannot revoke provider credentials or remove remote webhooks. Revoke credentials with each provider and remove remote hooks before uninstalling. Booster removes only the exact wp-config.php storage definition it created; any manually authored storage definition remains under the site operator’s control."
+msgid "Uninstall cannot revoke Git provider credentials or remove remote webhooks. Revoke credentials with each Git provider and remove remote hooks before uninstalling. Booster removes only the exact wp-config.php storage definition it created; any manually authored storage definition remains under the site operator’s control."
 msgstr ""
 
 #: views/documentation.php:348
@@ -6569,15 +6574,15 @@ msgid "Official setup guidance"
 msgstr ""
 
 #: views/documentation.php:373
-msgid "Setup guidance is not available for this provider yet."
+msgid "Setup guidance is not available for this Git provider yet."
 msgstr ""
 
 #: views/documentation.php:374
-msgid "You can still use a public repository or enter repository details manually when the provider supports package deployment."
+msgid "You can still use a public repository or enter repository details manually when the Git provider supports package deployment."
 msgstr ""
 
 #: views/documentation.php:384
-msgid "Choose a provider, then search for a repository or enter its account and name manually. Booster resolves repository visibility, stable identity, and the default branch before installation."
+msgid "Choose a Git provider, then search for a repository or enter its account and name manually. Booster resolves repository visibility, stable identity, and the default branch before installation."
 msgstr ""
 
 #: views/documentation.php:387
@@ -6640,11 +6645,11 @@ msgid "The value may range from 1 MiB through 536,870,911 bytes (just under 512 
 msgstr ""
 
 #: views/documentation.php:425
-msgid "Push-to-Deploy is optional and configured separately on every target site. Use the matching provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic."
+msgid "Push-to-Deploy is optional and configured separately on every target site. Use the matching Git provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that Git provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic."
 msgstr ""
 
 #: views/documentation.php:426
-msgid "The provider screen reports site readiness, stable repository identity and whether a local signing secret applies. Local secret coverage means Booster can authenticate a matching delivery; it does not prove that a remote provider webhook exists. Configure and verify every remote webhook separately."
+msgid "The Git provider screen reports site readiness, stable repository identity and whether a local signing secret applies. Local secret coverage means Booster can authenticate a matching delivery; it does not prove that a remote Git provider webhook exists. Configure and verify every remote webhook separately."
 msgstr ""
 
 #: views/documentation.php:427
@@ -6652,7 +6657,7 @@ msgid "Security, delivery history and hosting"
 msgstr ""
 
 #: views/documentation.php:428
-msgid "HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection for the network, web server, PHP workers or WordPress bootstrap. Use public HTTPS with certificate verification enabled, a unique generated secret for each repository, the provider’s JSON delivery option and only the required push event. Rotate or disable a suspected secret."
+msgid "HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection for the network, web server, PHP workers or WordPress bootstrap. Use public HTTPS with certificate verification enabled, a unique generated secret for each repository, the Git provider’s JSON delivery option and only the required push event. Rotate or disable a suspected secret."
 msgstr ""
 
 #: views/documentation.php:429
@@ -6660,11 +6665,11 @@ msgid "Do not cache, challenge, redirect or transform either accepted callback f
 msgstr ""
 
 #: views/documentation.php:430
-msgid "A provider can time out after Booster has durably admitted work. Provider delivery history remains authoritative for request duration, response status and redelivery. Compare the provider identifier with the Provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive."
+msgid "A Git provider can time out after Booster has durably admitted work. Git provider delivery history remains authoritative for request duration, response status and redelivery. Compare the Git provider identifier with the Git provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive."
 msgstr ""
 
 #: views/documentation.php:431
-msgid "At a trusted edge or host, you may bound body and header size, read time and connections for both callback forms. Provider-published IP ranges are optional defence in depth only where the real peer address is trustworthy; keep them current and retain HMAC. Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity."
+msgid "At a trusted edge or host, you may bound body and header size, read time and connections for both callback forms. IP ranges published by the Git provider are optional defence in depth only where the real peer address is trustworthy; keep them current and retain HMAC. Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity."
 msgstr ""
 
 #: views/documentation.php:432
@@ -6676,15 +6681,15 @@ msgid "Switching a package to Published releases does not remove any existing re
 msgstr ""
 
 #: views/documentation.php:434
-msgid "For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source."
+msgid "For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote Git provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source."
 msgstr ""
 
 #: views/documentation.php:435
-msgid "Open the repository webhook settings from the provider screen, remove the hook at the provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place."
+msgid "Open the repository webhook settings from the Git provider screen, remove the hook at the Git provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place."
 msgstr ""
 
 #: views/documentation.php:436
-msgid "The provider must be able to reach this WordPress site over public HTTPS. Localhost sites need a development tunnel. Test delivery from the provider, then review Deployment activity in Troubleshooting for Booster-managed results."
+msgid "The Git provider must be able to reach this WordPress site over public HTTPS. Localhost sites need a development tunnel. Test delivery from the Git provider, then review Deployment activity in Troubleshooting for Booster-managed results."
 msgstr ""
 
 #. translators: %s: Repository provider name.
@@ -6694,7 +6699,7 @@ msgid "%s webhook settings"
 msgstr ""
 
 #: views/documentation.php:448
-msgid "Provider location"
+msgid "Git provider location"
 msgstr ""
 
 #: views/documentation.php:450
@@ -7056,11 +7061,11 @@ msgid "Private repository access"
 msgstr ""
 
 #: views/onboarding.php:86
-msgid "Add a provider credential only when anonymous access is not enough."
+msgid "Add a credential for a Git provider, such as GitHub or Bitbucket, only when anonymous access is not enough."
 msgstr ""
 
 #: views/onboarding.php:88
-msgid "Connect a provider"
+msgid "Connect a Git provider"
 msgstr ""
 
 #. translators: %s is the display name of a registered Git provider.
@@ -7070,7 +7075,7 @@ msgid "Add %s access"
 msgstr ""
 
 #: views/onboarding.php:97
-msgid "Provider settings will appear here when an integration is available."
+msgid "Git provider settings will appear here when an integration is available."
 msgstr ""
 
 #: views/onboarding.php:102
@@ -7162,7 +7167,7 @@ msgid "Verified storage directory:"
 msgstr ""
 
 #: views/onboarding.php:207
-msgid "This proves decryption, canonical storage and the current registered provider credential shape. It does not contact a provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files."
+msgid "This proves decryption, canonical storage and the current registered Git provider credential shape. It does not contact a Git provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files."
 msgstr ""
 
 #: views/onboarding.php:212
@@ -7254,7 +7259,7 @@ msgstr ""
 #: views/packages/advanced-source-settings.php:7
 #: views/packages/create.php:92
 #: views/packages/edit.php:138
-msgid "Branch · provider default"
+msgid "Branch · repository default"
 msgstr ""
 
 #: views/packages/advanced-source-settings.php:41
@@ -7286,7 +7291,7 @@ msgid "Review Booster diagnostics"
 msgstr ""
 
 #: views/packages/branch-readiness.php:87
-msgid "This WordPress URL cannot receive provider webhooks. Use a public HTTPS WordPress URL or a secure tunnel. Manual deployments remain available."
+msgid "This WordPress URL cannot receive Git provider webhooks. Use a public HTTPS WordPress URL or a secure tunnel. Manual deployments remain available."
 msgstr ""
 
 #: views/packages/branch-readiness.php:89
@@ -7311,7 +7316,7 @@ msgid "Review WordPress URLs"
 msgstr ""
 
 #: views/packages/branch-readiness.php:114
-msgid "The saved provider is unavailable, so Booster could not check the repository and branch."
+msgid "The saved Git provider is unavailable, so Booster could not check the repository and branch."
 msgstr ""
 
 #: views/packages/branch-readiness.php:115
@@ -7335,7 +7340,7 @@ msgid "was accessible at the last check."
 msgstr ""
 
 #: views/packages/branch-readiness.php:133
-msgid "is saved, but the provider is unavailable."
+msgid "is saved, but the Git provider is unavailable."
 msgstr ""
 
 #: views/packages/branch-readiness.php:135
@@ -7353,11 +7358,11 @@ msgid "The branch <code>%1$s</code> %2$s"
 msgstr ""
 
 #: views/packages/branch-readiness.php:143
-msgid "The provider default branch"
+msgid "The repository default branch"
 msgstr ""
 
 #: views/packages/branch-readiness.php:146
-msgid "The saved repository needs one stable provider identity."
+msgid "The saved repository needs one stable Git provider identity."
 msgstr ""
 
 #: views/packages/branch-readiness.php:148
@@ -7601,7 +7606,7 @@ msgid "Unavailable update source"
 msgstr ""
 
 #: views/packages/edit.php:243
-msgid "The update source provider is unavailable"
+msgid "The update source Git provider is unavailable"
 msgstr ""
 
 #. translators: %s is the item being edited.
@@ -7612,17 +7617,17 @@ msgid "Edit %s"
 msgstr ""
 
 #: views/packages/edit.php:256
-msgid "Provider unavailable."
+msgid "Git provider unavailable."
 msgstr ""
 
 #: views/packages/edit.php:256
-msgid "This package remains linked but cannot be edited or deployed until its provider is registered again."
+msgid "This package remains linked but cannot be edited or deployed until its Git provider is registered again."
 msgstr ""
 
 #: views/packages/edit.php:258
 #: views/portability-review.php:172
 #: views/portability.php:157
-msgid "Provider:"
+msgid "Git provider:"
 msgstr ""
 
 #: views/packages/edit.php:259
@@ -7630,7 +7635,7 @@ msgid "Repository:"
 msgstr ""
 
 #: views/packages/edit.php:260
-msgid "Provider repository ID:"
+msgid "Git provider repository ID:"
 msgstr ""
 
 #: views/packages/edit.php:270
@@ -7688,7 +7693,7 @@ msgid "main, development etc."
 msgstr ""
 
 #: views/packages/fields/branch.php:27
-msgid "Leave blank to use the repository provider's default branch."
+msgid "Leave blank to use the repository's default branch."
 msgstr ""
 
 #: views/packages/fields/credential.php:21
@@ -7707,7 +7712,7 @@ msgid "Private repos require a PAT with appropriate access."
 msgstr ""
 
 #: views/packages/fields/credential.php:44
-msgid "Only install provider integrations you trust: an active provider can read its saved credentials. Booster does not authenticate a third-party publisher."
+msgid "Only install Git provider integrations you trust: an active Git provider can read its saved credentials. Booster does not authenticate a third-party publisher."
 msgstr ""
 
 #: views/packages/fields/deployment-policy.php:29
@@ -7749,21 +7754,15 @@ msgid "Manual waits for an administrator; Automatic lets WordPress install valid
 msgstr ""
 
 #: views/packages/fields/deployment-policy.php:61
-msgid "Automatic deployment is unavailable because this provider does not support signed webhooks."
+msgid "Automatic deployment is unavailable because this Git provider does not support signed webhooks."
 msgstr ""
 
 #: views/packages/fields/deployment-policy.php:62
 msgid "Read the Push-to-Deploy guide."
 msgstr ""
 
-#: views/packages/fields/provider.php:19
-#: views/packages/fields/provider.php:22
-#: assets/ran-booster-repository-picker.js:382
-msgid "Repository provider"
-msgstr ""
-
 #: views/packages/fields/provider.php:27
-msgid " — Provider unavailable"
+msgid " — Git provider unavailable"
 msgstr ""
 
 #: views/packages/fields/provider.php:27
@@ -7792,7 +7791,7 @@ msgid "Pick %1$s repository"
 msgstr ""
 
 #: views/packages/fields/repository.php:30
-msgid "Repository locator supplied by the selected provider."
+msgid "Repository locator supplied by the selected Git provider."
 msgstr ""
 
 #. translators: %s: package type, such as plugin or theme.
@@ -7824,7 +7823,7 @@ msgid "Booster could not safely identify the affected management record. Review 
 msgstr ""
 
 #: views/packages/index.php:142
-msgid "Filter by repository provider"
+msgid "Filter by Git provider"
 msgstr ""
 
 #: views/packages/index.php:149
@@ -7852,7 +7851,7 @@ msgstr ""
 #: views/packages/index.php:178
 #: views/provider.php:657
 #: views/provider.php:677
-#: assets/ran-booster-repository-picker.js:806
+#: assets/ran-booster-repository-picker.js:804
 msgid "Search"
 msgstr ""
 
@@ -7948,11 +7947,6 @@ msgstr ""
 msgid "Deployment disabled"
 msgstr ""
 
-#: views/packages/index.php:319
-#: views/packages/index.php:362
-msgid "Provider unavailable"
-msgstr ""
-
 #: views/packages/index.php:321
 #: views/packages/index.php:372
 msgid "Credential unavailable"
@@ -7982,7 +7976,7 @@ msgid "Public repository"
 msgstr ""
 
 #: views/packages/index.php:347
-msgid "Private; provider unavailable"
+msgid "Private; Git provider unavailable"
 msgstr ""
 
 #. translators: %s is the saved credential label.
@@ -8000,7 +7994,7 @@ msgid "Integration unavailable"
 msgstr ""
 
 #: views/packages/index.php:415
-msgid "The saved provider is unavailable. Restore it before deploying this package."
+msgid "The saved Git provider is unavailable. Restore it before deploying this package."
 msgstr ""
 
 #: views/packages/index.php:417
@@ -8378,7 +8372,7 @@ msgid "Before you continue:"
 msgstr ""
 
 #: views/portability-review.php:117
-msgid "For each required repository, Booster checks access using only your choice. Broader credential permissions are unassessed; the active provider handles repository access, and Booster does not authenticate a third-party publisher."
+msgid "For each required repository, Booster checks access using only your choice. Broader credential permissions are unassessed; the active Git provider handles repository access, and Booster does not authenticate a third-party publisher."
 msgstr ""
 
 #: views/portability-review.php:119
@@ -8448,7 +8442,7 @@ msgstr ""
 
 #: views/portability-review.php:216
 #: views/portability-review.php:328
-msgid "No saved credentials are available for this provider."
+msgid "No saved credentials are available for this Git provider."
 msgstr ""
 
 #: views/portability-review.php:223
@@ -8513,7 +8507,7 @@ msgstr ""
 #. translators: 1: reviewed release version, 2: reviewed release tag.
 #: views/portability-review.php:287
 #, php-format
-msgid "Reviewed release %1$s (%2$s). Booster will install this first provider-preferred candidate only; it does not claim the newest eligible release. The package will remain inactive and deployment Disabled."
+msgid "Reviewed release %1$s (%2$s). Booster will install this first candidate preferred by the Git provider only; it does not claim the newest eligible release. The package will remain inactive and deployment Disabled."
 msgstr ""
 
 #: views/portability-review.php:290
@@ -8704,7 +8698,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: views/portability.php:137
-msgid "The provider permissions for this credential have not been assessed."
+msgid "The Git provider permissions for this credential have not been assessed."
 msgstr ""
 
 #. translators: %s: local automatic-removal date.
@@ -8901,7 +8895,7 @@ msgid "Public repository lookup"
 msgstr ""
 
 #: views/provider-public-lookup-profile.php:31
-msgid "Choose Anonymous, or use a dedicated saved credential to reduce provider rate-limit interruptions."
+msgid "Choose Anonymous, or use a dedicated saved credential to reduce Git provider rate-limit interruptions."
 msgstr ""
 
 #: views/provider-public-lookup-profile.php:41
@@ -8909,7 +8903,7 @@ msgid "Lookup credential"
 msgstr ""
 
 #: views/provider-public-lookup-profile.php:44
-#: assets/ran-booster-repository-picker.js:913
+#: assets/ran-booster-repository-picker.js:911
 msgid "Anonymous"
 msgstr ""
 
@@ -8991,7 +8985,7 @@ msgid "Manage GitHub provider"
 msgstr ""
 
 #: views/provider.php:243
-msgid "To change provider, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review."
+msgid "To change the GitHub provider integration, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review."
 msgstr ""
 
 #. translators: %s: candidate provider plugin name.
@@ -9094,7 +9088,7 @@ msgstr ""
 
 #. translators: 1: compatible profile count, 2: incompatible profile count.
 #: views/provider.php:308
-msgid "Incompatible profiles remain unchanged and unavailable. Packages using them stay paused; Booster will not substitute another credential. Missing provider capabilities also keep affected operations unavailable."
+msgid "Incompatible profiles remain unchanged and unavailable. Packages using them stay paused; Booster will not substitute another credential. Missing Git provider capabilities also keep affected operations unavailable."
 msgstr ""
 
 #: views/provider.php:314
@@ -9139,7 +9133,7 @@ msgstr ""
 
 #: views/provider.php:354
 #: views/provider.php:589
-msgid "This site can receive provider webhook deliveries."
+msgid "This site can receive Git provider webhook deliveries."
 msgstr ""
 
 #: views/provider.php:374
@@ -9181,15 +9175,15 @@ msgid "Webhook receiver"
 msgstr ""
 
 #: views/provider.php:472
-msgid "Loading provider details…"
+msgid "Loading Git provider details…"
 msgstr ""
 
 #: views/provider.php:476
-msgid "Booster could not load that provider view. The current view is unchanged; choose the task again to retry."
+msgid "Booster could not load that Git provider view. The current view is unchanged; choose the task again to retry."
 msgstr ""
 
 #: views/provider.php:484
-msgid "Local records only; no provider request is made."
+msgid "Local records only; no Git provider request is made."
 msgstr ""
 
 #. translators: %d is the number of packages using releases.
@@ -9237,7 +9231,7 @@ msgid "Ready for public HTTPS delivery"
 msgstr ""
 
 #: views/provider.php:518
-msgid "Not ready for provider delivery"
+msgid "Not ready for Git provider delivery"
 msgstr ""
 
 #: views/provider.php:519
@@ -9288,7 +9282,7 @@ msgid "View Activity"
 msgstr ""
 
 #: views/provider.php:539
-msgid "This provider uses one shared receiver on this site. Configure and check each repository from Repositories."
+msgid "This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories."
 msgstr ""
 
 #: views/provider.php:545
@@ -9300,7 +9294,7 @@ msgid "Webhook signatures authorize deployment; they do not protect your host fr
 msgstr ""
 
 #: views/provider.php:546
-msgid "Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare provider delivery history with the Provider request ID in Booster Activity."
+msgid "Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity."
 msgstr ""
 
 #: views/provider.php:546
@@ -9336,7 +9330,7 @@ msgid "Keep SSL verification enabled and select the push event."
 msgstr ""
 
 #: views/provider.php:563
-msgid "Trigger a delivery and confirm the provider records a successful response."
+msgid "Trigger a delivery and confirm the Git provider records a successful response."
 msgstr ""
 
 #: views/provider.php:574
@@ -9417,7 +9411,7 @@ msgstr ""
 #. translators: 1: provider label, 2: provider code.
 #: views/provider/modals.php:31
 #, php-format
-msgid "Saving this credential authorizes the active %1$s provider to read every credential saved under provider code %2$s. Booster does not authenticate a third-party publisher."
+msgid "Saving this credential authorizes the active %1$s provider to read every credential saved under Git provider code %2$s. Booster does not authenticate a third-party publisher."
 msgstr ""
 
 #. translators: 1: credential label.
@@ -9454,7 +9448,7 @@ msgid "Automatically remove this saved credential after this date"
 msgstr ""
 
 #: views/provider/modals.php:87
-msgid "Enter the provider expiry date, or choose an earlier one. If automatic removal is enabled, Booster removes the saved credential after this date. A known provider expiry is the latest date allowed."
+msgid "Enter the Git provider expiry date, or choose an earlier one. If automatic removal is enabled, Booster removes the saved credential after this date. A known Git provider expiry is the latest date allowed."
 msgstr ""
 
 #: views/provider/modals.php:89
@@ -9503,7 +9497,7 @@ msgstr ""
 #. translators: 1: provider label.
 #: views/provider/modals.php:120
 #, php-format
-msgid "This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the provider’s public API limits."
+msgid "This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the Git provider’s public API limits."
 msgstr ""
 
 #: views/provider/modals.php:123
@@ -9584,7 +9578,7 @@ msgid "Copy the secret before saving."
 msgstr ""
 
 #: views/provider/modals.php:209
-msgid "Paste the same value into the provider webhook. Booster will not reveal a saved secret again, and saving it here does not create or verify the remote webhook. On edit, leave the field unchanged to retain the saved secret."
+msgid "Paste the same value into the Git provider webhook. Booster will not reveal a saved secret again, and saving it here does not create or verify the remote webhook. On edit, leave the field unchanged to retain the saved secret."
 msgstr ""
 
 #: views/provider/modals.php:210
@@ -9620,7 +9614,7 @@ msgid "Warning"
 msgstr ""
 
 #: views/troubleshooting.php:52
-msgid "Local checks could not finish, so provider checks were not started."
+msgid "Local checks could not finish, so Git provider checks were not started."
 msgstr ""
 
 #: views/troubleshooting.php:53
@@ -9628,15 +9622,15 @@ msgid "The ten-second diagnostic deadline was reached. Completed checks are show
 msgstr ""
 
 #: views/troubleshooting.php:54
-msgid "The five-request provider budget was reached. Completed checks are shown below."
+msgid "The five-request Git provider budget was reached. Completed checks are shown below."
 msgstr ""
 
 #: views/troubleshooting.php:55
-msgid "The selected provider could not complete diagnostics. Local results are still available."
+msgid "The selected Git provider could not complete diagnostics. Local results are still available."
 msgstr ""
 
 #: views/troubleshooting.php:56
-msgid "The provider returned an unsafe or invalid diagnostic result, which Booster omitted."
+msgid "The Git provider returned an unsafe or invalid diagnostic result, which Booster omitted."
 msgstr ""
 
 #: views/troubleshooting.php:57
@@ -9664,11 +9658,11 @@ msgid "Run diagnostics"
 msgstr ""
 
 #: views/troubleshooting.php:112
-msgid "Choose a provider and run checks. Results below describe only this diagnostic run."
+msgid "Choose a Git provider and run checks. Results below describe only this diagnostic run."
 msgstr ""
 
 #: views/troubleshooting.php:129
-msgid "Start with a provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results."
+msgid "Start with a Git provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results."
 msgstr ""
 
 #: views/troubleshooting.php:132
@@ -9693,11 +9687,11 @@ msgid "Enter a repository only when diagnosing a particular access issue. Withou
 msgstr ""
 
 #: views/troubleshooting.php:163
-msgid "The active provider can read every credential saved under its provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher."
+msgid "The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher."
 msgstr ""
 
 #: views/troubleshooting.php:167
-msgid "The full check makes temporary local marker files and up to five provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report."
+msgid "The full check makes temporary local marker files and up to five Git provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report."
 msgstr ""
 
 #: views/troubleshooting.php:168
@@ -9755,7 +9749,7 @@ msgid "Credential access"
 msgstr ""
 
 #: views/troubleshooting.php:224
-msgid "Provider check"
+msgid "Git provider check"
 msgstr ""
 
 #: views/troubleshooting.php:240
@@ -10112,7 +10106,7 @@ msgid "Every available release is older. WordPress Updates will not downgrade th
 msgstr ""
 
 #: assets/ran-booster-release-management.js:529
-msgid "Booster could not load published releases. The repository provider may be temporarily unavailable or rate-limited. Try again later."
+msgid "Booster could not load published releases. The Git provider may be temporarily unavailable or rate-limited. Try again later."
 msgstr ""
 
 #: assets/ran-booster-release-management.js:535
@@ -10166,7 +10160,7 @@ msgid "Published releases are unavailable"
 msgstr ""
 
 #: assets/ran-booster-release-management.js:887
-msgid "This provider does not expose the complete published-release capability. Use Branch tracking for this repository."
+msgid "This Git provider does not expose the complete published-release capability. Use Branch tracking for this repository."
 msgstr ""
 
 #: assets/ran-booster-release-management.js:906
@@ -10203,7 +10197,7 @@ msgid "Booster is checking release metadata without downloading a package."
 msgstr ""
 
 #: assets/ran-booster-release-management.js:1024
-msgid "Repository access or the provider may be temporarily unavailable."
+msgid "Repository access or the Git provider may be temporarily unavailable."
 msgstr ""
 
 #: assets/ran-booster-release-management.js:1028
@@ -10311,164 +10305,164 @@ msgid "The selected release passed initial inspection. Review the pre-flight che
 msgstr ""
 
 #: assets/ran-booster-repository-picker.js:76
-msgid "Repository browsing is not available for this provider."
+msgid "Repository browsing is not available for this Git provider."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:384
+#: assets/ran-booster-repository-picker.js:382
 msgid "owner"
 msgstr ""
 
 #. translators: %s: repository provider label.
-#: assets/ran-booster-repository-picker.js:548
+#: assets/ran-booster-repository-picker.js:546
 #, js-format
 msgid "Pick a theme repository from %s"
 msgstr ""
 
 #. translators: %s: repository provider label.
-#: assets/ran-booster-repository-picker.js:556
+#: assets/ran-booster-repository-picker.js:554
 #, js-format
 msgid "Pick a plugin repository from %s"
 msgstr ""
 
 #. translators: %s: provider-specific repository owner label.
-#: assets/ran-booster-repository-picker.js:612
+#: assets/ran-booster-repository-picker.js:610
 #, js-format
 msgid "Enter the %s to search."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:729
+#: assets/ran-booster-repository-picker.js:727
 msgid "Pick a repository"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:734
+#: assets/ran-booster-repository-picker.js:732
 msgid "Close repository picker"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:740
+#: assets/ran-booster-repository-picker.js:738
 msgid "Repository source"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:742
+#: assets/ran-booster-repository-picker.js:740
 msgid "Public repositories"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:746
+#: assets/ran-booster-repository-picker.js:744
 msgid "Find public repositories by owner using anonymous or saved access."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:752
+#: assets/ran-booster-repository-picker.js:750
 msgid "Public only"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:753
+#: assets/ran-booster-repository-picker.js:751
 msgid "Accessible repositories"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:757
+#: assets/ran-booster-repository-picker.js:755
 msgid "Browse repositories available to a saved access profile."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:763
+#: assets/ran-booster-repository-picker.js:761
 msgid "Saved access required"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:769
+#: assets/ran-booster-repository-picker.js:767
 msgid "Repository access profile"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:774
+#: assets/ran-booster-repository-picker.js:772
 msgid "Anonymous API requests have lower rate limits."
 msgstr ""
 
 #. translators: %s: Manage credentials link.
-#: assets/ran-booster-repository-picker.js:781
+#: assets/ran-booster-repository-picker.js:779
 #, js-format
 msgid "%s to add a search credential for more reliable repository lookup."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:800
+#: assets/ran-booster-repository-picker.js:798
 msgid "Repository owner"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:803
+#: assets/ran-booster-repository-picker.js:801
 msgid "e.g. organisation-or-user"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:809
+#: assets/ran-booster-repository-picker.js:807
 msgid "Filter repository results"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:812
+#: assets/ran-booster-repository-picker.js:810
 msgid "Filter repository results…"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:863
-#: assets/ran-booster-repository-picker.js:930
+#: assets/ran-booster-repository-picker.js:861
+#: assets/ran-booster-repository-picker.js:928
 msgid "Repository credential"
 msgstr ""
 
 #. translators: 1: repository provider label, 2: provider-specific repository owner label.
-#: assets/ran-booster-repository-picker.js:896
+#: assets/ran-booster-repository-picker.js:894
 #, js-format
 msgid "%1$s %2$s"
 msgstr ""
 
 #. translators: 1: provider-specific repository owner label, 2: repository provider label.
-#: assets/ran-booster-repository-picker.js:1012
-#: assets/ran-booster-repository-picker.js:1384
+#: assets/ran-booster-repository-picker.js:1010
+#: assets/ran-booster-repository-picker.js:1382
 #, js-format
 msgid "Enter the %1$s to find public repositories on %2$s."
 msgstr ""
 
 #. translators: %s: repository provider label.
-#: assets/ran-booster-repository-picker.js:1036
+#: assets/ran-booster-repository-picker.js:1034
 #, js-format
 msgid "Add a repository access credential for %s to browse accessible repositories."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1069
-msgid "This repository provider does not support browsing."
+#: assets/ran-booster-repository-picker.js:1067
+msgid "This Git provider does not support browsing."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1081
+#: assets/ran-booster-repository-picker.js:1079
 msgid "Loading repositories…"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1126
-msgid "The repository provider returned invalid results."
+#: assets/ran-booster-repository-picker.js:1124
+msgid "The Git provider returned invalid results."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1209
+#: assets/ran-booster-repository-picker.js:1207
 msgid "No repositories are available to the selected access profile."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1215
+#: assets/ran-booster-repository-picker.js:1213
 msgid "No repositories match your filter."
 msgstr ""
 
 #. translators: %s: provider-specific repository owner label.
-#: assets/ran-booster-repository-picker.js:1222
+#: assets/ran-booster-repository-picker.js:1220
 #, js-format
 msgid "No public repositories were found for this %s."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1255
+#: assets/ran-booster-repository-picker.js:1253
 msgid "Private"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1256
+#: assets/ran-booster-repository-picker.js:1254
 msgid "Public"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1368
+#: assets/ran-booster-repository-picker.js:1366
 msgid "Repositories could not be loaded."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1397
+#: assets/ran-booster-repository-picker.js:1395
 msgid "Public repositories could not be loaded. Check the owner name and try again."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1401
+#: assets/ran-booster-repository-picker.js:1399
 msgid "Repositories could not be loaded. Check the selected access profile and try again."
 msgstr ""
 

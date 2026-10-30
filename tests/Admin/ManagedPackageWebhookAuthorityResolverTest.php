@@ -54,7 +54,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 	}
 
 	public function test_it_rejects_conflicting_stable_identities_for_one_locator(): void {
-		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster']['Choose a managed repository with exactly one stable provider identity before creating a repository-scoped webhook secret.'] = 'Identité unique traduite.';
+		$GLOBALS['ran_booster_repository_admin_translations']['ran-booster']['Choose a managed repository with exactly one stable Git provider identity before creating a repository-scoped webhook secret.'] = 'Identité unique traduite.';
 		$resolver = $this->resolver(
 			array( AuthorityPackage::make( 'plugin/example.php', 'owner/example', 'gh', 'repository-42' ) ),
 			array( AuthorityPackage::make( 'example-theme', 'owner/example', 'gh', 'repository-99' ) )
@@ -85,7 +85,7 @@ final class ManagedPackageWebhookAuthorityResolverTest extends TestCase {
 		);
 
 		$this->expectException( CredentialRequestException::class );
-		$this->expectExceptionMessage( 'exactly one stable provider identity' );
+		$this->expectExceptionMessage( 'exactly one stable Git provider identity' );
 		$resolver->resolve( ProviderCode::parse( 'gh' ), new AuthorityWebhookPolicy(), 'owner/example' );
 	}
 

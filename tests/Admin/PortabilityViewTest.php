@@ -219,7 +219,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-tile__value">Personal access token (classic)</span>', $html );
 		self::assertStringContainsString( '<summary>Used by 1 package</summary>', $html );
 		self::assertStringContainsString( 'Example &lt;Plugin&gt;', $html );
-		self::assertStringContainsString( 'The provider permissions for this credential have not been assessed.', $html );
+		self::assertStringContainsString( 'The Git provider permissions for this credential have not been assessed.', $html );
 		self::assertStringContainsString( '<strong>Unavailable for transfer</strong>', $html );
 		self::assertStringContainsString( 'ran-booster-portability__credential-decision-state--unavailable', $html );
 		self::assertStringContainsString( 'Booster will automatically remove this saved credential on 2026-08-31', $html );
@@ -390,12 +390,12 @@ final class PortabilityViewTest extends TestCase {
 
 		$row['credential']['choices'] = array();
 		$html                         = $this->render_view( array( $row ) );
-		self::assertStringContainsString( 'No saved credentials are available for this provider.', $html );
+		self::assertStringContainsString( 'No saved credentials are available for this Git provider.', $html );
 		self::assertStringContainsString( 'Manage repository credentials', $html );
 		self::assertStringNotContainsString( 'data-portability-target-credential', $html );
 
 		$row['credential_ordinal'] = 0;
-		self::assertStringNotContainsString( 'No saved credentials are available for this provider.', $this->render_view( array( $row ) ) );
+		self::assertStringNotContainsString( 'No saved credentials are available for this Git provider.', $this->render_view( array( $row ) ) );
 	}
 
 	public function test_export_shows_empty_and_unavailable_states_without_an_enabled_download(): void {
@@ -459,7 +459,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( '<h5 id="ran-booster-portability-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title">Repository credentials</h5>', $html );
 		self::assertStringContainsString( '<strong>Before you continue:</strong>', $html );
 		self::assertStringContainsString( 'For each required repository, Booster checks access using only your choice.', $html );
-		self::assertStringContainsString( 'Broader credential permissions are unassessed; the active provider handles repository access, and Booster does not authenticate a third-party publisher.', $html );
+		self::assertStringContainsString( 'Broader credential permissions are unassessed; the active Git provider handles repository access, and Booster does not authenticate a third-party publisher.', $html );
 		self::assertStringContainsString( 'It does not change an already-managed package’s saved credential selection.', $html );
 		self::assertStringContainsString( 'Leave these packages unchanged', $html );
 		self::assertStringContainsString( '<legend class="screen-reader-text">GitHub &lt;Cloud&gt; — Imported &lt;PAT&gt;</legend>', $html );

@@ -427,10 +427,10 @@ final class PackageAdminController {
 			$errors = array(
 				'credential_unavailable' => __( 'A selected package does not have its required repository credential.', 'ran-booster' ),
 				'invalid_request'        => __( 'Choose a bulk action and a supported number of managed packages.', 'ran-booster' ),
-				'provider_unavailable'   => __( 'A selected package uses an unavailable repository provider.', 'ran-booster' ),
+				'provider_unavailable'   => __( 'A selected package uses an unavailable Git provider.', 'ran-booster' ),
 				'stale'                  => __( 'A selected managed package changed or is no longer available. Refresh and try again.', 'ran-booster' ),
 				'unavailable'            => __( 'Booster could not safely complete this bulk action. No success was reported.', 'ran-booster' ),
-				'webhook_unavailable'    => __( 'A selected package provider does not support Automatic deployment.', 'ran-booster' ),
+				'webhook_unavailable'    => __( 'A selected package Git provider does not support Automatic deployment.', 'ran-booster' ),
 			);
 
 			$add_context_message(
@@ -462,7 +462,7 @@ final class PackageAdminController {
 					'busy'                   => __( 'already queued, running, or needs attention', 'ran-booster' ),
 					'credential_unavailable' => __( 'credential unavailable', 'ran-booster' ),
 					'disabled'               => __( 'deployment disabled', 'ran-booster' ),
-					'provider_unavailable'   => __( 'provider unavailable', 'ran-booster' ),
+					'provider_unavailable'   => __( 'Git provider unavailable', 'ran-booster' ),
 					'release_source'         => __( 'published-release source', 'ran-booster' ),
 					'self_update'            => __( 'Booster self-update blocked', 'ran-booster' ),
 					'stale'                  => __( 'selection stale', 'ran-booster' ),
@@ -563,9 +563,9 @@ final class PackageAdminController {
 			$this->providers->get( $package->get_provider_code() ?? throw new \TypeError( 'The managed package provider is unavailable.' ) );
 			return $package;
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
-			$message = __( 'This package cannot be edited until its stored repository provider is registered again.', 'ran-booster' );
+			$message = __( 'This package cannot be edited until its stored Git provider is registered again.', 'ran-booster' );
 		} catch ( Throwable $failure ) {
-			$message = __( 'Booster could not verify the managed package provider. No changes were made.', 'ran-booster' );
+			$message = __( 'Booster could not verify the managed package Git provider. No changes were made.', 'ran-booster' );
 		}
 		$dashboard->add_failure_message(
 			new WP_Error( 'ran_booster_unavailable_package_provider', $message ),
@@ -592,19 +592,19 @@ final class PackageAdminController {
 
 			return $this->repositories?->resolve( $request ) ?? throw new RuntimeException( 'Package repository resolution is unavailable.' );
 		} catch ( InvalidProviderCode | UnknownProvider $failure ) {
-			$message = __( 'The selected repository provider is not available.', 'ran-booster' );
+			$message = __( 'The selected Git provider is not available.', 'ran-booster' );
 		} catch ( UnsupportedProviderCapability $failure ) {
-			$message = __( 'The selected repository provider does not yet support this package operation.', 'ran-booster' );
+			$message = __( 'The selected Git provider does not yet support this package operation.', 'ran-booster' );
 		} catch ( InvalidPackageSubdirectory $failure ) {
 			$message = __( 'Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments.', 'ran-booster' );
 		} catch ( InvalidArgumentException $failure ) {
-			$message = __( 'Check the repository provider, account, repository, and credential fields.', 'ran-booster' );
+			$message = __( 'Check the Git provider, account, repository, and credential fields.', 'ran-booster' );
 		} catch ( RuntimeException $failure ) {
 			$message = match ( $failure->getCode() ) {
-				401 => __( 'The repository provider rejected the selected credential.', 'ran-booster' ),
-				403 => __( 'The repository provider denied access. Check credential permissions or rate limits.', 'ran-booster' ),
+				401 => __( 'The Git provider rejected the selected credential.', 'ran-booster' ),
+				403 => __( 'The Git provider denied access. Check credential permissions or rate limits.', 'ran-booster' ),
 				404 => __( 'The repository could not be found, or the selected credential cannot access it.', 'ran-booster' ),
-				429 => __( 'The repository provider rate limit has been reached. Try again later.', 'ran-booster' ),
+				429 => __( 'The Git provider rate limit has been reached. Try again later.', 'ran-booster' ),
 				default => __( 'Booster could not verify the repository. Please try again.', 'ran-booster' ),
 			};
 		} catch ( Throwable $failure ) {

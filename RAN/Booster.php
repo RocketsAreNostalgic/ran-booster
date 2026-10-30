@@ -392,10 +392,10 @@ class Booster {
 				'id'                   => 'ran-booster-bitbucket',
 				'name'                 => 'Bitbucket Cloud',
 				'description'          => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
-				'details'              => __( 'Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
+				'details'              => __( 'Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
 				'features'             => array(
 					__( 'Connect and configure Bitbucket Cloud repositories in Booster.', 'ran-booster' ),
-					__( 'Use provider-specific package and credential guidance.', 'ran-booster' ),
+					__( 'Use package and credential guidance for your Git provider.', 'ran-booster' ),
 					__( 'Carry eligible file-stored credentials through Transporter for explicit import on the target site.', 'ran-booster' ),
 				),
 				'requirements'         => array(

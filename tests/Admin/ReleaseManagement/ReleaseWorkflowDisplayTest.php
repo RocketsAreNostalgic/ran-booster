@@ -149,7 +149,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( '<div class="notice notice-warning inline"', $html );
-		self::assertStringContainsString( 'The repository provider has temporarily rate-limited the release workflow request.', $html );
+		self::assertStringContainsString( 'The Git provider has temporarily rate-limited the release workflow request.', $html );
 		self::assertStringNotContainsString( 'selected saved credential', $html );
 	}
 
@@ -170,7 +170,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 				)
 			);
 
-			self::assertStringContainsString( 'Booster stopped before contacting the repository provider because this request no longer matched the current page or package.', $html, $diagnostic );
+			self::assertStringContainsString( 'Booster stopped before contacting the Git provider because this request no longer matched the current page or package.', $html, $diagnostic );
 			self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html, $diagnostic );
 			self::assertStringContainsString( $message, $html, $diagnostic );
 			self::assertStringContainsString( 'Diagnostic code: <code>' . $diagnostic . '</code>', $html, $diagnostic );

@@ -297,7 +297,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( '1 Automatic Branch package uses this repository webhook.', $html );
 		self::assertStringContainsString( 'Signing profile', $html );
 		self::assertStringContainsString( 'A signing secret is ready for this repository.', $html );
-		self::assertStringContainsString( 'Provider receiver', $html );
+		self::assertStringContainsString( 'Git provider receiver', $html );
 		self::assertStringContainsString( 'Remote hook', $html );
 		self::assertStringNotContainsString( 'Bundled webhook management', $html );
 		self::assertStringContainsString( 'Create a repository signing secret', $html );
@@ -435,7 +435,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				'state'   => 'is-pending',
 			),
 			array(
-				'label'   => 'Provider receiver',
+				'label'   => 'Git provider receiver',
 				'message' => 'Known receiver.',
 				'state'   => 'is-ok',
 			),
@@ -533,12 +533,12 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 
 		self::assertStringContainsString( 'Webhook readiness', $html );
 		self::assertStringContainsString( 'Webhook setup', $html );
-		self::assertStringContainsString( 'This site needs a public HTTPS URL before a provider can deliver webhooks. Local receivers cannot be reached remotely.', $html );
+		self::assertStringContainsString( 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.', $html );
 		self::assertLessThan(
 			strpos( $html, 'Webhook readiness' ),
-			strpos( $html, 'This site needs a public HTTPS URL before a provider can deliver webhooks. Local receivers cannot be reached remotely.' )
+			strpos( $html, 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.' )
 		);
-		self::assertSame( 1, substr_count( $html, 'This site needs a public HTTPS URL before a provider can deliver webhooks. Local receivers cannot be reached remotely.' ) );
+		self::assertSame( 1, substr_count( $html, 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.' ) );
 		self::assertStringNotContainsString( 'Bundled webhook management', $html );
 		self::assertStringContainsString( 'name="booster_credential_id" disabled="disabled"', $html );
 		self::assertStringContainsString( 'name="webhook_profile_id" disabled="disabled"', $html );
@@ -593,19 +593,19 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		ob_start();
 		$controls->render_package_webhook_setup( 'edit', 'plugin', 'branch', $projection, 'https://example.test/settings' );
 		$package_html = (string) ob_get_clean();
-		self::assertStringContainsString( 'this repository has no stable provider identity', $package_html );
+		self::assertStringContainsString( 'this repository has no stable Git provider identity', $package_html );
 
 		ob_start();
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
 		$repository_html = (string) ob_get_clean();
 		self::assertStringContainsString( 'until Booster can confirm this managed repository', $repository_html );
-		self::assertStringNotContainsString( 'this repository has no stable provider identity', $repository_html );
+		self::assertStringNotContainsString( 'this repository has no stable Git provider identity', $repository_html );
 
 		ob_start();
 		$controls->render_package_webhook_setup( 'edit', 'plugin', 'branch', $projection, 'https://example.test/settings' );
 		$current_html = (string) ob_get_clean();
 		self::assertStringContainsString( 'encrypted signing-secret storage is unavailable', $current_html );
-		self::assertStringNotContainsString( 'this repository has no stable provider identity', $current_html );
+		self::assertStringNotContainsString( 'this repository has no stable Git provider identity', $current_html );
 	}
 
 	public function test_partial_provider_keeps_release_row_history_local_and_inert(): void {

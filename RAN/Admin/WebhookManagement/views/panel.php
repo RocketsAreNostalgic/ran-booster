@@ -38,7 +38,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 							</select>
 							<a class="button" href="<?php echo esc_url( $model['credentials_url'] ); ?>"><?php esc_html_e( 'Manage credentials', 'ran-booster' ); ?></a>
 						</div>
-						<span class="description"><?php esc_html_e( 'Choose the saved credential used to manage this repository webhook. A current selection does not prove provider authority until the operation checks it.', 'ran-booster' ); ?></span>
+						<span class="description"><?php esc_html_e( 'Choose the saved credential used to manage this repository webhook. A current selection does not prove Git provider authority until the operation checks it.', 'ran-booster' ); ?></span>
 					</div>
 
 					<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">

@@ -135,7 +135,7 @@ $package_source_choices          = is_array( $package_source['choices'] ?? null 
 $package_advanced_sections       = is_array( $package_source['advanced_sections'] ?? null ) ? $package_source['advanced_sections'] : array();
 $package_advanced_summary        = is_string( $package_source['advanced_summary'] ?? null )
 	? $package_source['advanced_summary']
-	: __( 'Branch · provider default', 'ran-booster' );
+	: __( 'Branch · repository default', 'ran-booster' );
 $package_source_view             = is_string( $package_source['selected'] ?? null ) ? $package_source['selected'] : $package->get_source()->value;
 $package_current_source          = is_string( $package_source['current'] ?? null ) ? $package_source['current'] : $package->get_source()->value;
 $package_source_unavailable      = array_key_exists( 'unavailable', $package_source ?? array() )
@@ -237,10 +237,10 @@ $source_summary                 = 'branch' === $package_current_source
 	? sprintf(
 		/* translators: %s is the repository branch name. */
 		__( 'Branch · %s', 'ran-booster' ),
-		'' !== (string) $package->get_branch() ? (string) $package->get_branch() : __( 'provider default', 'ran-booster' )
+		'' !== (string) $package->get_branch() ? (string) $package->get_branch() : __( 'repository default', 'ran-booster' )
 	)
 	: (string) ( $package_source_choices[ $package_current_source ]['heading'] ?? __( 'Unavailable update source', 'ran-booster' ) );
-$source_summary_meta = (string) ( $package_source_choices[ $package_current_source ]['meta'] ?? __( 'The update source provider is unavailable', 'ran-booster' ) );
+$source_summary_meta = (string) ( $package_source_choices[ $package_current_source ]['meta'] ?? __( 'The update source Git provider is unavailable', 'ran-booster' ) );
 $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 	\RAN\Deployment\DeploymentPolicy::DISABLED->value => __( 'Disabled', 'ran-booster' ),
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
@@ -253,11 +253,11 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 
 <?php if ( $provider_unavailable ) { ?>
 	<div class="notice notice-error inline">
-		<p><strong><?php esc_html_e( 'Provider unavailable.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This package remains linked but cannot be edited or deployed until its provider is registered again.', 'ran-booster' ); ?></p>
+		<p><strong><?php esc_html_e( 'Git provider unavailable.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This package remains linked but cannot be edited or deployed until its Git provider is registered again.', 'ran-booster' ); ?></p>
 		<p>
-			<?php esc_html_e( 'Provider:', 'ran-booster' ); ?> <code><?php echo esc_html( $stored_provider_code ); ?></code><br>
+			<?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> <code><?php echo esc_html( $stored_provider_code ); ?></code><br>
 			<?php esc_html_e( 'Repository:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) $package->repository ); ?></code><br>
-			<?php esc_html_e( 'Provider repository ID:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) ( $package->get_provider_repository_id() ?? '' ) ); ?></code>
+			<?php esc_html_e( 'Git provider repository ID:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) ( $package->get_provider_repository_id() ?? '' ) ); ?></code>
 		</p>
 	</div>
 <?php } ?>

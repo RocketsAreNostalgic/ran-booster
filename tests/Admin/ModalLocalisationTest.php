@@ -32,7 +32,7 @@ final class ModalLocalisationTest extends TestCase {
 				'Delete repository credential?' => 'Supprimer l’identifiant de depot ?',
 				'You are about to delete %1$s from this site. This removes its saved secret and cannot be undone.' => 'Cette suppression ne peut pas etre annulee : %1$s sera retire de ce site avec son secret.',
 				'Booster has verified that no managed package currently uses this credential.' => 'Booster a verifie qu’aucun paquet gere n’utilise cet identifiant.',
-				'This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the provider’s public API limits.' => 'Cet identifiant est celui de la recherche publique par defaut. Le supprimer rend la recherche publique de %1$s a Anonymous et aux limites de l’API publique du fournisseur.',
+				'This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the Git provider’s public API limits.' => 'Cet identifiant est celui de la recherche publique par defaut. Le supprimer rend la recherche publique de %1$s a Anonymous et aux limites de l’API publique du fournisseur.',
 				'Yes, delete credential'        => 'Oui, supprimer l’identifiant',
 				'%1$s — already configured'     => '%1$s — deja configure',
 			),

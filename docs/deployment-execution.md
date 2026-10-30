@@ -18,7 +18,8 @@ stored tables or schema-version option.
 
 This guide documents the current runtime deployment path in RAN Booster. It is
 based on the implementation in `RAN/Deployment/`, the normalized branch-updater
-package, and the supporting provider, storage, and WordPress integration types.
+package, and the supporting Git provider, storage, and WordPress integration
+types.
 
 For the operator-level trigger sequence and every Booster, shared-updater, and
 WordPress handoff for both published releases and tracked branches, begin with
@@ -232,7 +233,7 @@ The key fields are:
 - `requested_ref` and `resolved_ref`: the requested ref and the provider-verified
   immutable ref
 - `delivery_id` and `delivery_digest`: webhook delivery identity when relevant;
-  administrator-only Activity displays `delivery_id` as **Provider request ID**
+  administrator-only Activity displays `delivery_id` as **Git provider request ID**
   for cross-reference with provider delivery history
 - `state`: the current `DeploymentState`
 - `mutation_started_at`: the mutation fence

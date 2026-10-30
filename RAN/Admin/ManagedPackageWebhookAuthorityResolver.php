@@ -52,7 +52,7 @@ final readonly class ManagedPackageWebhookAuthorityResolver {
 		if ( 1 !== count( $matches ) ) {
 			throw new CredentialRequestException(
 				// phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- Exception remains a plain administrator message.
-				__( 'Choose a managed repository with exactly one stable provider identity before creating a repository-scoped webhook secret.', 'ran-booster' )
+				__( 'Choose a managed repository with exactly one stable Git provider identity before creating a repository-scoped webhook secret.', 'ran-booster' )
 			);
 		}
 

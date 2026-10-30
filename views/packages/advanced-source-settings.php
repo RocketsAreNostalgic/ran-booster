@@ -4,7 +4,7 @@ defined( 'WPINC' ) || die;
 
 $package_advanced_summary                    = isset( $package_advanced_summary ) && is_string( $package_advanced_summary )
 	? $package_advanced_summary
-	: __( 'Branch · provider default', 'ran-booster' );
+	: __( 'Branch · repository default', 'ran-booster' );
 $package_advanced_open                       = isset( $package_advanced_open ) && true === $package_advanced_open;
 $package_advanced_body                       = isset( $package_advanced_body ) && is_string( $package_advanced_body )
 	? $package_advanced_body

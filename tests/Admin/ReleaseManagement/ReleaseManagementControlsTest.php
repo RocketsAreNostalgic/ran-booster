@@ -151,7 +151,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'add-on', strtolower( $html ) );
 		self::assertStringContainsString( 'Treat a published release asset as immutable.', $html );
 		self::assertStringContainsString( 'publish a corrected release instead of replacing its ZIP or changing installed metadata.', $html );
-		self::assertStringContainsString( 'Use your provider’s release guidance to publish an eligible installable plugin or theme ZIP.', $html );
+		self::assertStringContainsString( 'Use your Git provider’s release guidance to publish an eligible installable plugin or theme ZIP.', $html );
 		self::assertStringContainsString( 'Keep package identity consistent from release selection through installation.', $html );
 		self::assertStringContainsString( 'https://github.com/RocketsAreNostalgic/ran-booster/blob/main/docs/package-update-orchestration.md', $html );
 		self::assertStringContainsString( 'Package update orchestration guide', $html );
@@ -293,7 +293,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		$fallback = file_get_contents( dirname( __DIR__, 3 ) . '/RAN/Admin/PackagePagePresenter.php' );
 		self::assertIsString( $fallback );
 		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $fallback );
-		self::assertStringContainsString( 'Provider capability required', $fallback );
+		self::assertStringContainsString( 'Git provider capability required', $fallback );
 		self::assertStringNotContainsString( 'Release Deployments add-on', $fallback );
 		self::assertStringNotContainsString( 'Subscriber feature', $fallback );
 	}

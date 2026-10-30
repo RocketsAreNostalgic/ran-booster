@@ -116,12 +116,12 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<strong>Provider unavailable.</strong>', $html );
+		self::assertStringContainsString( '<strong>Git provider unavailable.</strong>', $html );
 		self::assertStringContainsString( '<code>temporarily-offline</code>', $html );
 		self::assertStringContainsString( '<code>owner/exact-repository</code>', $html );
 		self::assertStringContainsString( '<code>stable-provider-id</code>', $html );
 		self::assertStringContainsString( '<fieldset  disabled="disabled"', $html );
-		self::assertStringContainsString( 'temporarily-offline — Provider unavailable', $html );
+		self::assertStringContainsString( 'temporarily-offline — Git provider unavailable', $html );
 		self::assertStringNotContainsString( 'href="https://github.com/owner/exact-repository"', $html );
 		self::assertStringContainsString( 'id="ran-booster-package-edit-form"', $html );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
@@ -153,7 +153,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 		self::assertStringContainsString( 'owner/exact-repository', $html );
 		self::assertStringContainsString( 'temporarily-offline', $html );
-		self::assertStringContainsString( 'ran-booster-badge--error">Provider unavailable</span>', $html );
+		self::assertStringContainsString( 'ran-booster-badge--error">Git provider unavailable</span>', $html );
 		self::assertStringNotContainsString( 'Recover package management', $html );
 		self::assertStringNotContainsString( 'recovery=1', $html );
 		self::assertStringNotContainsString( 'Review management removal', $html );
@@ -194,7 +194,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( '>Automatic</span>', $html );
 		self::assertStringContainsString( 'Branch · release', $html );
 		self::assertStringNotContainsString( 'Branch · release · Push-to-Deploy', $html );
-		self::assertStringContainsString( 'The saved provider is unavailable.', $html );
+		self::assertStringContainsString( 'The saved Git provider is unavailable.', $html );
 		self::assertSame( 1, substr_count( $html, '<span class="ran-booster-badge ' ) );
 		self::assertStringContainsString( 'Review package health, deploy saved branches', $html );
 		self::assertStringContainsString( 'Deployment activity', $html );
@@ -282,7 +282,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'Branch · release', $html );
 		self::assertStringNotContainsString( 'Branch · release · Disabled', $html );
 		self::assertStringContainsString( 'Booster will not overwrite this package', $html );
-		self::assertStringContainsString( 'Provider', $html );
+		self::assertStringContainsString( 'Git provider', $html );
 		self::assertStringContainsString( 'Access', $html );
 		self::assertStringContainsString( '>Version</dt>', $html );
 		self::assertStringContainsString( 'Last activity', $html );
@@ -576,7 +576,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/fields/repository.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Repository locator supplied by the selected provider.', $html );
+		self::assertStringContainsString( 'Repository locator supplied by the selected Git provider.', $html );
 		self::assertStringNotContainsString( 'Repository account and name', $html );
 		self::assertStringContainsString( 'name="ran_booster[repository]"', $html );
 		self::assertMatchesRegularExpression( '/ran-booster-open-repository-picker"[^>]* hidden\s+disabled="disabled"/', $html );

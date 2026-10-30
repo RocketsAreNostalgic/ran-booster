@@ -259,7 +259,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 			'save webhook'       => array( 'save-webhook-profile', 'You do not have sufficient permissions to manage Booster credentials.' ),
 			'delete webhook'     => array( 'delete-webhook-profile', 'You do not have sufficient permissions to manage Booster credentials.' ),
 			'validate access'    => array( 'validate-access-profile', 'You do not have sufficient permissions to manage Booster credentials.' ),
-			'save public lookup' => array( 'save-public-lookup-profile', 'You do not have sufficient permissions to manage Booster provider settings.' ),
+			'save public lookup' => array( 'save-public-lookup-profile', 'You do not have sufficient permissions to manage Booster Git provider settings.' ),
 		);
 	}
 
@@ -573,7 +573,7 @@ final class CredentialProfileInteractionDispatcherTest extends TestCase {
 		self::assertThat( $response, self::logicalNot( self::isNull() ) );
 		self::assertSame( 'validation_failure', $response->kind );
 		self::assertSame(
-			'The expiry / removal date cannot be later than the expiry reported by the provider.',
+			'The expiry / removal date cannot be later than the expiry reported by the Git provider.',
 			$response->feedback_message
 		);
 		self::assertSame(

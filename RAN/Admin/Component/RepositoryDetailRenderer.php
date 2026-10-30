@@ -195,7 +195,7 @@ final class RepositoryDetailRenderer {
 				<h3 id="ran-booster-repository-release-heading"><?php esc_html_e( 'Release publishing', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-settings-section__body">
-				<p><?php esc_html_e( 'Release workflow setup is unavailable for this repository provider. Package release settings remain available.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Release workflow setup is unavailable for this Git provider. Package release settings remain available.', 'ran-booster' ); ?></p>
 				<?php foreach ( $packages as $package ) { ?>
 					<p><a class="button" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ _x( 'Open %s settings', 'Managed package settings link', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
 				<?php } ?>
@@ -241,14 +241,14 @@ final class RepositoryDetailRenderer {
 					<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
 				</header>
 				<div class="ran-booster-settings-section__body">
-					<p><?php esc_html_e( 'Core-assisted webhook management is unavailable for this provider. Use the provider webhook settings when available.', 'ran-booster' ); ?></p>
+					<p><?php esc_html_e( 'Core-assisted webhook management is unavailable for this Git provider. Use the Git provider webhook settings when available.', 'ran-booster' ); ?></p>
 				</div>
 			</section>
 			<?php
 			return;
 		}
 		$message = $has_branch_consumer && ! $receiver_ready
-			? __( 'Repository webhook management is unavailable until this site can receive provider deliveries.', 'ran-booster' )
+			? __( 'Repository webhook management is unavailable until this site can receive Git provider deliveries.', 'ran-booster' )
 			: __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' );
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">
@@ -320,7 +320,7 @@ final class RepositoryDetailRenderer {
 		<section class="ran-booster-settings-section" aria-labelledby="ran-booster-repository-activity-heading">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-activity-heading"><?php esc_html_e( 'Management history', 'ran-booster' ); ?></h3>
-				<p class="description"><?php esc_html_e( 'Repository-scoped records. This is local history, not live provider state.', 'ran-booster' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Repository-scoped records. This is local history, not live Git provider state.', 'ran-booster' ); ?></p>
 			</header>
 			<div class="ran-booster-settings-section__body">
 			<h4><?php esc_html_e( 'Webhook', 'ran-booster' ); ?></h4>

@@ -41,9 +41,9 @@ enum TargetPackageReason: string {
 			self::REPOSITORY_ACCESS_FAILED => __( 'Booster could not confirm repository access.', 'ran-booster' ),
 			self::REPOSITORY_IDENTITY_MISMATCH => __( 'The repository does not match this Transporter Blueprint.', 'ran-booster' ),
 			self::DESTINATION_CONFLICT => __( 'The destination package conflicts with this Transporter Blueprint.', 'ran-booster' ),
-			self::PROVIDER_SELECTION_CHANGED => __( 'The selected repository provider changed. Review again before applying.', 'ran-booster' ),
-			self::PROVIDER_UNAVAILABLE => __( 'This repository provider is not available on the target.', 'ran-booster' ),
-			self::PROVIDER_TEMPORARILY_UNAVAILABLE => __( 'The repository provider is temporarily unavailable.', 'ran-booster' ),
+			self::PROVIDER_SELECTION_CHANGED => __( 'The selected Git provider changed. Review again before applying.', 'ran-booster' ),
+			self::PROVIDER_UNAVAILABLE => __( 'This Git provider is not available on the target.', 'ran-booster' ),
+			self::PROVIDER_TEMPORARILY_UNAVAILABLE => __( 'The Git provider is temporarily unavailable.', 'ran-booster' ),
 			self::RELEASE_UNAVAILABLE => __( 'No eligible published release is available for this package.', 'ran-booster' ),
 			self::RELEASE_REVIEW_CHANGED => __( 'The reviewed release changed. Review the Transporter Blueprint again before applying.', 'ran-booster' ),
 		};

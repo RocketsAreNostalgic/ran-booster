@@ -35,8 +35,8 @@ release Reinstall path and its receipt/finalizer NO-GO; this guide does not
 present that retired operation as current behavior.
 
 [PU-035 and PU-036](package-update-orchestration-decision-register.md#2026-08-28-repository-exclusivity-and-multi-package-releases)
-record the repository relationship policy: on this site, one exact provider and
-stable repository ID supplies multiple Branch packages or one Release package,
+record the repository relationship policy: on this site, one exact Git provider
+and stable repository ID supplies multiple Branch packages or one Release package,
 never both. Inactive packages and Disabled policies still count. A sole root
 package can switch modes; subdirectory packages remain Branch-only. Existing
 conflicts pause Release updates without changing files or records and use the

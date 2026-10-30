@@ -291,7 +291,7 @@ class SecretsStorageProvisioner {
 		if ( ! $candidate['safe'] || ! $candidate['fit'] || ! $owned || ! $same_device ) {
 			$message = match ( true ) {
 				! $candidate['safe'] => __( 'Booster authenticated prior credential storage, but its location does not pass the current private-path policy. Move the matching storage set to a verified private location before using it.', 'ran-booster' ),
-				! $candidate['fit'] => __( 'Booster authenticated prior credential storage, but one or more credentials do not pass their current provider policy. Review or restore the matching storage set before using it.', 'ran-booster' ),
+				! $candidate['fit'] => __( 'Booster authenticated prior credential storage, but one or more credentials do not pass their current Git provider policy. Review or restore the matching storage set before using it.', 'ran-booster' ),
 				! $owned => __( 'Booster authenticated prior credential storage, but the active wp-config.php definition is operator-managed. Configure the verified private path manually.', 'ran-booster' ),
 				default => __( 'Booster authenticated prior credential storage, but it crosses an unsupported filesystem boundary. Configure the verified private path manually.', 'ran-booster' ),
 			};
@@ -307,7 +307,7 @@ class SecretsStorageProvisioner {
 
 		return array(
 			'state'          => 'available',
-			'message'        => __( 'Booster found one prior storage set that authenticates with this site\'s database key and whose credentials pass their current provider policies.', 'ran-booster' ),
+			'message'        => __( 'Booster found one prior storage set that authenticates with this site\'s database key and whose credentials pass their current Git provider policies.', 'ran-booster' ),
 			'candidate_path' => $candidate['candidate_path'],
 			'token'          => $candidate['token'],
 			'confirmation'   => null,

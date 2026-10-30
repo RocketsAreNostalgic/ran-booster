@@ -152,9 +152,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertTrue( $release_history_position < $legacy_history_position );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
-		self::assertStringNotContainsString( 'Provider receiver', $html );
+		self::assertStringNotContainsString( 'Git provider receiver', $html );
 		self::assertStringNotContainsString( 'Receiver ready.', $html );
-		self::assertStringContainsString( 'This is local history, not live provider state.', $html );
+		self::assertStringContainsString( 'This is local history, not live Git provider state.', $html );
 		self::assertStringContainsString( 'ran-booster-badge--warning', $html );
 		self::assertStringContainsString( '<time datetime="2026-08-20T01:02:03Z">August 20, 2026</time>', $html );
 		self::assertStringContainsString( 'Repository details', $html );
@@ -500,7 +500,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-release-heading">Release publishing</h3>', $html );
-		self::assertStringContainsString( 'Release workflow setup is unavailable for this repository provider.', $html );
+		self::assertStringContainsString( 'Release workflow setup is unavailable for this Git provider.', $html );
 		self::assertStringContainsString( 'Open Theme settings', $html );
 		self::assertStringNotContainsString( 'Assess release setup', $html );
 	}
@@ -576,8 +576,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
-		self::assertStringContainsString( 'Core-assisted webhook management is unavailable for this provider.', $html );
-		self::assertStringContainsString( 'Use the provider webhook settings when available.', $html );
+		self::assertStringContainsString( 'Core-assisted webhook management is unavailable for this Git provider.', $html );
+		self::assertStringContainsString( 'Use the Git provider webhook settings when available.', $html );
 		self::assertStringNotContainsString( 'no Branch package currently uses this repository webhook', $html );
 		self::assertStringNotContainsString( 'Manage repository webhook', $html );
 	}

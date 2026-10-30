@@ -374,7 +374,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		);
 
 		self::assertSame( 'Management credential', $result['1234']['details'][2]['label'] );
-		self::assertSame( 'Last managed with Temporary; provider authority has not been revalidated.', $result['1234']['details'][2]['value'] );
+		self::assertSame( 'Last managed with Temporary; Git provider authority has not been revalidated.', $result['1234']['details'][2]['value'] );
 		self::assertSame( 'Recorded signing secret', $result['1234']['details'][3]['label'] );
 		self::assertSame( 'Repository signing secret; current local profile metadata is available.', $result['1234']['details'][3]['value'] );
 	}
@@ -1271,7 +1271,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'notice notice-error inline ran-booster-repository-webhook-management__notice', $html );
-		self::assertStringContainsString( 'Run Check or inspect the hook at the provider before retrying an update', $html );
+		self::assertStringContainsString( 'Run Check or inspect the hook at the Git provider before retrying an update', $html );
 		self::assertStringContainsString( 'value="check"', $html );
 		self::assertStringContainsString( 'value="reconfigure"', $html );
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Update webhook</button>', $html );
@@ -1392,7 +1392,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$_GET = array( 'webhook_management_result' => 'verified' );
 		$html = $this->render_panel();
 
-		self::assertStringContainsString( 'Provider request ID in Booster Activity', $html );
+		self::assertStringContainsString( 'Git provider request ID in Booster Activity', $html );
 		self::assertStringNotContainsString( 'confirmed the recorded remote configuration and signed delivery state', $html );
 	}
 

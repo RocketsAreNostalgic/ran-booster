@@ -3,7 +3,7 @@
 > Provider API 15 / workflow V4 is published in [Core v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37). External providers still need qualification against their exact supported host and contract. Publication does not clear separate manual acceptance gates.
 
 Provider API 15 keeps release-workflow setup as an optional, separately versioned
-provider facet. The base provider registration seam does not change when this
+Git provider facet. The base provider registration seam does not change when this
 facet evolves.
 
 ## Initial-only contract

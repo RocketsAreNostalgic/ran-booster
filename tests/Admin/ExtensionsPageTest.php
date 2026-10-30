@@ -284,7 +284,7 @@ final class ExtensionsPageTest extends TestCase {
 	public function test_renders_translated_catalogue_copy_and_not_installed_state_without_changing_product_data(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Connect Booster to Bitbucket Cloud repositories for managed deployments.'] = 'Connectez Booster aux dépôts Bitbucket Cloud pour des déploiements gérés.';
 
-		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Add Bitbucket Cloud as a first-party repository provider while Booster continues to own credentials, webhook verification, and deployment policy.'] = 'Ajoutez Bitbucket Cloud comme fournisseur de dépôts intégré.';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.'] = 'Ajoutez Bitbucket Cloud comme fournisseur de dépôts intégré.';
 
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Connect and configure Bitbucket Cloud repositories in Booster.'] = 'Connectez et configurez les dépôts Bitbucket Cloud dans Booster.';
 

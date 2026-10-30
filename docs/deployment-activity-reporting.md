@@ -52,7 +52,7 @@ consistency trade-off. Ordinary optional check reporting retains its separate
 failure policy. A database rollback cannot undo a filesystem mutation; an
 uncertain outcome remains recoverable through the operational journal.
 
-No transaction spans provider calls or filesystem mutation. If a process stops
+No transaction spans Git provider calls or filesystem mutation. If a process stops
 after a filesystem mutation begins, the Activity row remains incomplete until
 the operational ledger can confirm or reconcile the outcome. A needs-attention
 row stays visibly uncertain; operator review records progress but does not turn

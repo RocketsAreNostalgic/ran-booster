@@ -139,7 +139,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$service = new TroubleshootingService( new TroubleshootingLocalFixture( array() ), new ProviderRegistry() );
 		$payload = $service->with_installation_context( $service->form_payload(), null );
 		self::assertSame( 'Unknown', $payload['installation_details']['GitHub provider']['Source'] );
-		self::assertSame( 'Unavailable', $payload['installation_details']['Diagnostic provider']['Provider'] );
+		self::assertSame( 'Unavailable', $payload['installation_details']['Diagnostic Git provider']['Git provider'] );
 		$selection = array(
 			'state'      => 'missing',
 			'available'  => false,

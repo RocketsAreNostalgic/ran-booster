@@ -894,7 +894,7 @@ final class ReleaseManagementDisplay {
 			'source_changed' => __( 'Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'This package already registers its own release updater. Use one release owner only.', 'ran-booster' ),
 			'forbidden' => __( 'You are not authorized to perform this published release operation. No package was installed or adopted.', 'ran-booster' ),
-			'unsupported_provider' => __( 'Published releases are not available for this repository provider. Use Branch tracking instead.', 'ran-booster' ),
+			'unsupported_provider' => __( 'Published releases are not available for this Git provider. Use Branch tracking instead.', 'ran-booster' ),
 			'invalid_request' => __( 'The published release request was invalid. No package was installed or adopted. Reload and try again.', 'ran-booster' ),
 			'service_unavailable' => __( 'Published release controls are temporarily unavailable. No package settings were changed. No package was installed.', 'ran-booster' ),
 			'package_already_exists' => __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' ),
@@ -1048,7 +1048,7 @@ final class ReleaseManagementDisplay {
 				: __( 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.', 'ran-booster' ),
 			'missing_update_uri' => __( 'This package header does not declare an Update URI for its configured repository.', 'ran-booster' ),
 			'mismatched_update_uri' => __( 'This package header Update URI does not match its configured repository.', 'ran-booster' ),
-			'unsupported_provider' => __( 'The repository provider does not support published release tracking.', 'ran-booster' ),
+			'unsupported_provider' => __( 'The Git provider does not support published release tracking.', 'ran-booster' ),
 			'invalid_repository' => __( 'The configured repository is invalid.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'This package already registers its own release updater. Use either that updater or Booster published-release tracking, not both.', 'ran-booster' ),
 			default => __( 'The installed plugin or theme identity is not eligible for published release tracking.', 'ran-booster' ),
@@ -1061,7 +1061,7 @@ final class ReleaseManagementDisplay {
 			'missing_update_uri' => __( 'Missing from the installed package header.', 'ran-booster' ),
 			'mismatched_update_uri' => __( 'Does not match the configured repository.', 'ran-booster' ),
 			'target_already_uses_ran_updater' => __( 'Matches, but this package already registers its own updater.', 'ran-booster' ),
-			default => __( 'Cannot be validated until the provider and repository are ready.', 'ran-booster' ),
+			default => __( 'Cannot be validated until the Git provider and repository are ready.', 'ran-booster' ),
 		};
 	}
 

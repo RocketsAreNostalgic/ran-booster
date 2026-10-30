@@ -78,11 +78,11 @@ final class TroubleshootingService {
 			default => __( 'Unknown', 'ran-booster' ),
 		};
 		$sections = array(
-			__( 'Diagnostic provider', 'ran-booster' ) => array(
-				__( 'Provider', 'ran-booster' )      => $this->installation_text( $payload['providers'][ $selected ] ?? null ),
-				__( 'Provider code', 'ran-booster' ) => $this->installation_text( $selected ),
+			__( 'Diagnostic Git provider', 'ran-booster' ) => array(
+				__( 'Git provider', 'ran-booster' )      => $this->installation_text( $payload['providers'][ $selected ] ?? null ),
+				__( 'Git provider code', 'ran-booster' ) => $this->installation_text( $selected ),
 			),
-			__( 'GitHub provider', 'ran-booster' )     => array(
+			__( 'GitHub provider', 'ran-booster' )         => array(
 				__( 'Source', 'ran-booster' )          => $source,
 				__( 'Selection state', 'ran-booster' ) => $this->installation_text( $github_selection['state'] ?? null ),
 				__( 'Operational availability', 'ran-booster' ) => match ( $github_selection['available'] ?? null ) {

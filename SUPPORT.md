@@ -8,10 +8,11 @@ for ordinary support, reproducible non-sensitive defects, and feature requests.
 There is no guaranteed response or resolution time.
 
 Before opening an issue, gather the RAN Booster, WordPress, PHP, and database
-versions. Include the repository provider and package operation involved, the
-steps needed to reproduce the problem, and the expected and actual result. A
-Booster support reference is useful when one is available. Never include private
-repository or site identities in a public issue or pull request; redact them and
+versions. Include the Git provider, such as GitHub or Bitbucket, the package
+operation involved, the steps needed to reproduce the problem, and the expected
+and actual result. A Booster support reference is useful when one is available.
+Never include private repository or site identities in a public issue or pull
+request; redact them and
 reduce the report to a non-sensitive reproducer. If that is not possible, do not
 publish the private material.
 

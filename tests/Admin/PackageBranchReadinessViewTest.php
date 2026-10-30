@@ -36,7 +36,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$branch_value               = 'main';
 		$subdirectory_value         = '';
 		$package_advanced_sections  = array();
-		$package_advanced_summary   = 'Branch · provider default';
+		$package_advanced_summary   = 'Branch · repository default';
 		$package_advanced_open      = false;
 		$package_repository_ready   = true;
 		$package_source             = array();
@@ -571,7 +571,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		return array(
 			'verified'             => array( 'verified', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
 			'unable to check'      => array( 'unable_to_check', 'is-warning', 'The branch <code>test</code> is saved, but access could not be verified.' ),
-			'provider unavailable' => array( 'provider_unavailable', 'is-warning', 'The branch <code>test</code> is saved, but the provider is unavailable.' ),
+			'provider unavailable' => array( 'provider_unavailable', 'is-warning', 'The branch <code>test</code> is saved, but the Git provider is unavailable.' ),
 			'subdirectory missing' => array( 'subdirectory_unavailable', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
 			'subdirectory unknown' => array( 'subdirectory_unverified', 'is-ok', 'The branch <code>test</code> is accessible with the saved repository settings.' ),
 		);

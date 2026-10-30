@@ -116,7 +116,7 @@ final class RepeatPackageViewTest extends TestCase {
 			'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 			$html
 		);
-		self::assertStringContainsString( 'Branch · provider default', $html );
+		self::assertStringContainsString( 'Branch · repository default', $html );
 		self::assertStringContainsString( 'class="ran-booster-package-source-shell" data-ran-booster-source-controls', $html );
 		self::assertStringContainsString( 'class="regular-text ran-booster-repository-input"', $html );
 		self::assertMatchesRegularExpression(
@@ -277,7 +277,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertLessThan( $install_another_position, $save_position );
 		self::assertLessThan( $back_position, $install_another_position );
 		if ( ! $provider_available ) {
-			self::assertStringContainsString( '<strong>Provider unavailable.</strong>', $html );
+			self::assertStringContainsString( '<strong>Git provider unavailable.</strong>', $html );
 			self::assertMatchesRegularExpression(
 				'/<p class="ran-booster-package-summary__meta">\s*<code>owner\/example<\/code>/',
 				$html,

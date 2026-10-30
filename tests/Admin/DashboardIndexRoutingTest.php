@@ -2139,7 +2139,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
 		self::assertStringContainsString( 'unknown' === $state ? 'Unknown' : $state, $report->textContent );
 		foreach ( $payload['installation_details'] as $heading => $fields ) {
-			if ( 'Diagnostic provider' === $heading ) {
+			if ( 'Diagnostic Git provider' === $heading ) {
 				continue;
 			}
 			foreach ( $fields as $value ) {

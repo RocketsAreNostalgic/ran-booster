@@ -94,7 +94,7 @@ final class OnboardingViewTest extends TestCase {
 	public function test_provides_aprovider_fallback_and_uses_the_plugin_text_domain(): void {
 		$html = $this->render_view( array() );
 
-		self::assertStringContainsString( 'Provider settings will appear here when an integration is available.', $html );
+		self::assertStringContainsString( 'Git provider settings will appear here when an integration is available.', $html );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture source is inspected without a WordPress runtime.
 		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/views/onboarding.php' );
@@ -204,7 +204,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'value="ran-booster-adopt-secure-storage"', $html );
 		self::assertStringContainsString( 'name="ran_booster[recovery_token]" value="' . $token . '"', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[candidate_path]"', $html );
-		self::assertStringContainsString( 'current registered provider credential shape', $html );
+		self::assertStringContainsString( 'current registered Git provider credential shape', $html );
 	}
 
 	public function test_renders_an_explicit_typed_orphaned_key_reset_with_permanent_loss_warning(): void {
@@ -297,7 +297,7 @@ final class OnboardingViewTest extends TestCase {
 		$details = strpos( $healthy, 'class="ran-booster-onboarding__storage-details ran-booster-disclosure"' );
 		$path    = strpos( $healthy, 'Storage file' );
 		$source  = strpos( $healthy, 'Path selection' );
-		$connect = strpos( $healthy, 'Connect a provider' );
+		$connect = strpos( $healthy, 'Connect a Git provider' );
 		$move    = strpos( $healthy, 'Move or automate later' );
 		$storage = strpos( $healthy, 'Secure credential storage' );
 		self::assertIsInt( $details );

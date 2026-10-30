@@ -286,9 +286,9 @@ final class PackagePagePresenter {
 				'key'               => 'release_asset',
 				'heading'           => __( 'Releases', 'ran-booster' ),
 				'description'       => $fallback
-					? __( 'Install verified packages from a supported provider\'s published releases.', 'ran-booster' )
+					? __( 'Install verified packages from a supported Git provider\'s published releases.', 'ran-booster' )
 					: __( 'Install published releases through WordPress.', 'ran-booster' ),
-				'meta'              => $fallback ? __( 'Provider capability required', 'ran-booster' ) : __( 'Included with Booster', 'ran-booster' ),
+				'meta'              => $fallback ? __( 'Git provider capability required', 'ran-booster' ) : __( 'Included with Booster', 'ran-booster' ),
 				'url'               => '',
 				'disabled'          => true,
 				'hydrated'          => false,
@@ -405,7 +405,7 @@ final class PackagePagePresenter {
 				$source_label,
 				null !== $package && '' !== (string) $package->get_branch()
 					? (string) $package->get_branch()
-					: __( 'provider default', 'ran-booster' )
+					: __( 'repository default', 'ran-booster' )
 			)
 			: $source_label;
 

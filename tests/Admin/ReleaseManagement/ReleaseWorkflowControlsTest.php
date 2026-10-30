@@ -192,7 +192,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-release-workflow-result', $html );
-		self::assertStringContainsString( 'Booster stopped before contacting the repository provider', $html );
+		self::assertStringContainsString( 'Booster stopped before contacting the Git provider', $html );
 		self::assertStringNotContainsString( '<form', $html );
 	}
 
@@ -754,8 +754,8 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 	#[DataProvider( 'unavailable_workflow_provider' )]
 	public function test_empty_translations_cannot_enable_unavailable_workflows( string $failure, bool $competing_failure ): void {
 		$messages = array(
-			'provider'           => 'This provider claims release workflow management but does not implement all required release capabilities. Update or correct the provider plugin; no operation is available.',
-			'status'             => 'The provider could not supply local workflow status. Retry after checking the provider plugin.',
+			'provider'           => 'This Git provider claims release workflow management but does not implement all required release capabilities. Update or correct the Git provider plugin; no operation is available.',
+			'status'             => 'The Git provider could not supply local workflow status. Retry after checking the Git provider plugin.',
 			'eligibility'        => 'Open package settings for the required Update URI, add it to the package header, then deploy the corrected package.',
 			'source_unavailable' => 'Booster could not safely read this package\'s repository source relationship. Check package storage and retry.',
 			'source_conflict'    => 'Releases require a repository used by only one managed package. Review the repository package list.',

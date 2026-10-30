@@ -92,7 +92,7 @@ final class TroubleshootingViewTest extends TestCase {
 		);
 	}
 
-	public function test_omits_redundant_page_eyebrow_without_changing_the_active_panel(): void {
+	public function test_omits_redundant_page_label_without_changing_the_active_panel(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Diagnostics'] = 'Diagnostic traduit';
 		$troubleshooting_panel = 'diagnostics';
 		$troubleshooting       = array( 'providers' => array() );
@@ -105,7 +105,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringNotContainsString( '<p class="ran-booster-eyebrow">Diagnostic traduit</p>', $html );
+		self::assertStringNotContainsString( '>Diagnostic traduit</p>', $html );
 		self::assertStringContainsString( 'panel=diagnostics" aria-current="page"', $html );
 	}
 

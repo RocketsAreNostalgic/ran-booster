@@ -68,7 +68,6 @@ $render_portability_extension      = static function ( string $hook, string $ste
 
 	<section class="ran-booster-panel ran-booster-portability__flow" id="ran-booster-portability-export" aria-labelledby="ran-booster-portability-export-heading" hidden>
 		<header class="ran-booster-portability__flow-header">
-			<p class="ran-booster-portability__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></p>
 			<h3 id="ran-booster-portability-export-heading" tabindex="-1"><?php esc_html_e( 'Create a Transporter Blueprint', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', 'ran-booster' ); ?></p>
 			<p class="description"><?php esc_html_e( 'Deleting Booster removes its saved local credentials and records.', 'ran-booster' ); ?></p>
@@ -266,7 +265,6 @@ $render_portability_extension      = static function ( string $hook, string $ste
 
 	<section class="ran-booster-panel ran-booster-portability__flow" id="ran-booster-portability-import" aria-labelledby="ran-booster-portability-import-heading" hidden>
 		<header class="ran-booster-portability__flow-header">
-			<p class="ran-booster-portability__eyebrow ran-booster-eyebrow"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></p>
 			<h3 id="ran-booster-portability-import-heading" tabindex="-1"><?php esc_html_e( 'Open a Transporter Blueprint', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'Choose a Transporter Blueprint and Booster will validate it and build a review before anything can change.', 'ran-booster' ); ?></p>
 		</header>

@@ -789,10 +789,7 @@
 	font-size: 14px;
 }
 
-.ran-booster-admin
-	.ran-booster-readiness-overview
-	article
-	> p:not(.ran-booster-provider__eyebrow) {
+.ran-booster-admin .ran-booster-readiness-overview article > p {
 	margin-block: var(--ran-booster-space-4) var(--ran-booster-space-10);
 	margin-inline: 0;
 	color: var(--ran-booster-text-muted);

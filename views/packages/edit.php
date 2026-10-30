@@ -355,7 +355,7 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 
 	<aside class="ran-booster-package-summary" aria-label="<?php esc_attr_e( 'Package summary', 'ran-booster' ); ?>">
 			<div>
-				<p class="ran-booster-eyebrow ran-booster-eyebrow--compact"><?php esc_html_e( 'Current source', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Current source', 'ran-booster' ); ?></p>
 				<p class="ran-booster-package-summary__value"><?php echo esc_html( $source_summary ); ?></p>
 				<p class="ran-booster-package-summary__meta">
 					<?php if ( $provider_unavailable ) { ?>
@@ -367,12 +367,12 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 				<p class="ran-booster-package-summary__meta"><?php echo esc_html( $source_summary_meta ); ?></p>
 		</div>
 		<div>
-			<p class="ran-booster-eyebrow ran-booster-eyebrow--compact"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'Updates', 'ran-booster' ); ?></p>
 			<p class="ran-booster-package-summary__value"><?php echo esc_html( $automation_summary ); ?></p>
 			<p class="ran-booster-package-summary__meta"><?php esc_html_e( 'Source changes reset Automatic to Manual', 'ran-booster' ); ?></p>
 		</div>
 		<div>
-			<p class="ran-booster-eyebrow ran-booster-eyebrow--compact"><?php esc_html_e( 'WordPress state', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'WordPress state', 'ran-booster' ); ?></p>
 			<p class="ran-booster-package-summary__value"><?php echo esc_html( $word_press_state ); ?></p>
 			<p class="ran-booster-package-summary__meta"><?php esc_html_e( 'Independent of package source', 'ran-booster' ); ?></p>
 		</div>

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0f1adc9621a13ea65a708bc7860c71ca",
+    "content-hash": "661d2990d7e1447668ff6d8ac9d52d86",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1717,7 +1717,7 @@
         },
         {
             "name": "ran/admin-shell",
-            "version": "dev-main",
+            "version": "dev-codex/31-notice-placement",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
@@ -1745,7 +1745,6 @@
                 "phpunit/phpunit": "^9.6",
                 "ran/coding-standards": "^1.0"
             },
-            "default-branch": true,
             "bin": [
                 "bin/ran-admin-shell"
             ],
@@ -1782,7 +1781,7 @@
                 "GPL-2.0-or-later"
             ],
             "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
-            "time": "2026-10-09T16:10:50+00:00"
+            "time": "2026-10-30T11:24:34+00:00"
         },
         {
             "name": "ran/coding-standards",

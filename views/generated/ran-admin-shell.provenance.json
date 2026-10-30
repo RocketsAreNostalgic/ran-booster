@@ -1,7 +1,7 @@
 {
     "schema": 1,
     "package": "ran/admin-shell",
-    "version": "dev-main",
+    "version": "dev-codex/31-notice-placement",
     "reference": "0fc59293474cd32acda6c41d0235e5123509fbf3",
     "files": {
         "assets/ran-admin-shell.css": "sha256:858ba9b27e30c7f8f8f798a56dec08898195297e545215d45156baa6961cfb2c",

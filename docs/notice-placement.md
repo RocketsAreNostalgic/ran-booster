@@ -34,11 +34,14 @@ No new production types, public seams, persistent keys or notice framework exist
 Admin Shell PR [#32](https://github.com/RocketsAreNostalgic/ran-admin-shell/pull/32)
 was independently reviewed at base `496a7d9802bf504d081532ed161f3c8b8ee9ac85`
 and head/resource revision `0fc59293474cd32acda6c41d0235e5123509fbf3`, with
-no actionable findings. This dependent candidate explicitly pins that immutable
-revision using Composer's normal commit-reference constraint, updates only the
-shell dependency, then runs `composer admin-shell:sync` and immutable verification.
+no actionable findings. This dependent candidate selects that reviewed shell PR
+branch with Composer's normal development-branch constraint and binds its full
+immutable revision in `composer.lock`, updates only the shell dependency, then
+runs `composer admin-shell:sync` and immutable verification.
 The synchronized PHP bytes are unchanged; CSS and provenance are regenerated.
 No local/path repository, fake installed metadata or generated-file edits are used.
+Strict Composer validation rejects commit-reference constraints in the manifest;
+the branch constraint plus reviewed full lock reference preserves the normal gate.
 
 Keep this consumer PR a dependent draft while the shell PR is unmerged. After the
 owner's shell merge, qualify its actual immutable main revision, refresh the

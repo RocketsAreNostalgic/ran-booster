@@ -110,6 +110,7 @@ class Booster {
 			$this->service_callback( \RAN\Admin\PortabilityController::class, 'handle_apply' )
 		);
 		add_action( 'admin_post_ran_booster_extension_install', array( $this, 'install_extension' ) );
+		add_action( 'admin_post_ran_booster_extension_activate', array( $this, 'activate_extension' ) );
 		add_action( 'activate_plugin', array( WpPusherCoexistencePolicy::class, 'block_wp_pusher_activation' ) );
 		add_action( 'rest_api_init', array( $this, 'register_webhook_routes' ) );
 		add_action( WordPressWorkerWakeup::HOOK, array( $this, 'run_deployment_worker' ), 10, 0 );
@@ -323,6 +324,47 @@ class Booster {
 		exit;
 	}
 
+
+	/** Activate only an installed catalogue extension using WordPress's native checks. */
+	public function activate_extension(): void {
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? '' ) || ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You cannot activate plugins.', 'ran-booster' ) );
+		}
+		$id = isset( $_POST['extension_id'] ) && is_string( $_POST['extension_id'] ) ? sanitize_key( wp_unslash( $_POST['extension_id'] ) ) : '';
+		require_once ABSPATH . 'wp-admin/includes/plugin.php';
+		$extension = null;
+		foreach ( $this->extension_cards( get_plugins() ) as $candidate ) {
+			if ( $candidate['id'] === $id ) {
+				$extension = $candidate;
+				break;
+			}
+		}
+		if ( null === $extension || ! current_user_can( 'activate_plugin', $extension['plugin'] ) ) {
+			wp_die( esc_html__( 'You cannot activate this plugin.', 'ran-booster' ) );
+		}
+		check_admin_referer( 'activate-plugin_' . $extension['plugin'] );
+		$url = add_query_arg(
+			array(
+				'page'                         => 'ran-booster-extensions',
+				'ran_booster_extension_id'     => $id,
+				'ran_booster_extension_result' => 'activation_failed',
+			),
+			admin_url( 'admin.php' )
+		);
+		if ( $extension['active'] ) {
+			$url = add_query_arg( 'ran_booster_extension_result', 'activated', $url );
+		} elseif ( 'Installed, inactive' === $extension['state'] && ! ( is_multisite() && is_network_only_plugin( $extension['plugin'] ) ) ) {
+			$result = activate_plugin( $extension['plugin'], $url, false );
+			if ( is_wp_error( $result ) && in_array( $result->get_error_code(), array( 'plugin_php_incompatible', 'plugin_wp_incompatible', 'plugin_wp_php_incompatible', 'plugin_missing_dependencies' ), true ) ) {
+				$url = add_query_arg( 'ran_booster_extension_result', $result->get_error_code(), $url );
+			} elseif ( ! is_wp_error( $result ) && is_plugin_active( $extension['plugin'] ) ) {
+				$url = add_query_arg( 'ran_booster_extension_result', 'activated', $url );
+			}
+		}
+		wp_safe_redirect( $url );
+		exit;
+	}
+
 	/** Register native updates for installed fixed-catalogue extensions. */
 	public function register_extension_updates(): void {
 		if ( ! function_exists( 'get_plugins' ) ) {
@@ -430,6 +472,9 @@ class Booster {
 				? 'selected'
 				: ( '' === $installed_version ? 'unknown' : ( version_compare( $installed_version, $release_version, '<' ) ? 'older' : 'newer' ) );
 
+			$extension['installed_name']                = $installed && is_string( $installed_plugins[ $extension['plugin'] ]['Name'] ?? null ) ? $installed_plugins[ $extension['plugin'] ]['Name'] : $extension['name'];
+			$extension['installed']                     = $installed;
+			$extension['active']                        = $active;
 			$extension['image_url']                     = trailingslashit( $this->booster_url ?? '' ) . 'assets/extensions/' . $extension['image'];
 			$extension['compatible']                    = $compatible;
 			$extension['installed_version']             = $installed_version;

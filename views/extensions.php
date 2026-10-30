@@ -17,11 +17,17 @@ $result = isset( $_GET['ran_booster_extension_result'] ) && is_string( $_GET['ra
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The ID is matched against the fixed catalogue before use.
 $result_id        = isset( $_GET['ran_booster_extension_id'] ) && is_string( $_GET['ran_booster_extension_id'] ) ? wp_unslash( $_GET['ran_booster_extension_id'] ) : '';
 $result_messages  = array(
-	'installed'         => __( 'Extension installed. Activate it from Plugins when you are ready.', 'ran-booster' ),
-	'already_installed' => __( 'The extension or its destination already exists. Review Plugins and the plugin folder before trying again.', 'ran-booster' ),
-	'incompatible'      => __( 'This extension is not compatible with this version of Booster.', 'ran-booster' ),
-	'failed'            => __( 'The extension could not be installed. Please try again or review its release page.', 'ran-booster' ),
-	'uncertain'         => __( 'The installation result could not be confirmed. Check Plugins before trying again.', 'ran-booster' ),
+	'installed'                   => __( 'Extension installed. Activate it when you are ready.', 'ran-booster' ),
+	'activated'                   => __( 'Extension activated.', 'ran-booster' ),
+	'plugin_php_incompatible'     => __( 'This plugin requires a different PHP version. Review its requirements in Plugins.', 'ran-booster' ),
+	'plugin_wp_incompatible'      => __( 'This plugin requires a different WordPress version. Review its requirements in Plugins.', 'ran-booster' ),
+	'plugin_wp_php_incompatible'  => __( 'This plugin requires different WordPress and PHP versions. Review its requirements in Plugins.', 'ran-booster' ),
+	'plugin_missing_dependencies' => __( 'This plugin requires other plugins to be installed and active. Review its dependencies in Plugins.', 'ran-booster' ),
+	'activation_failed'           => __( 'Activation could not be confirmed. Check the extension status and try again or manage it in Plugins.', 'ran-booster' ),
+	'already_installed'           => __( 'The extension or its destination already exists. Review Plugins and the plugin folder before trying again.', 'ran-booster' ),
+	'incompatible'                => __( 'This extension is not compatible with this version of Booster.', 'ran-booster' ),
+	'failed'                      => __( 'The extension could not be installed. Please try again or review its release page.', 'ran-booster' ),
+	'uncertain'                   => __( 'The installation result could not be confirmed. Check Plugins before trying again.', 'ran-booster' ),
 );
 $result_extension = null;
 foreach ( $extensions as $candidate ) {
@@ -29,6 +35,9 @@ foreach ( $extensions as $candidate ) {
 		$result_extension = $candidate;
 		break;
 	}
+}
+if ( 'activated' === $result && ( null === $result_extension || ! $result_extension['active'] ) ) {
+	$result = '';
 }
 if ( 'installed' === $result && ( null === $result_extension || 'Installed, inactive' !== $result_extension['state'] || ! ( $result_extension['selected_release_is_installed'] ?? false ) ) ) {
 	$result = '';
@@ -41,7 +50,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 	</header>
 	<div class="ran-booster-page-shell__body ran-booster-extensions__body">
 		<?php if ( null !== $result_extension && isset( $result_messages[ $result ] ) ) : ?>
-			<div class="notice <?php echo 'installed' === $result ? 'notice-success' : 'notice-warning'; ?>" role="status"><p><?php echo esc_html( $result_messages[ $result ] ); ?></p></div>
+			<div class="notice inline <?php echo in_array( $result, array( 'installed', 'activated' ), true ) ? 'notice-success' : 'notice-warning'; ?>" role="status"><p><?php echo esc_html( $result_messages[ $result ] ); ?></p></div>
 		<?php endif; ?>
 		<div id="the-list" class="plugin-group ran-booster-extensions__grid">
 		<?php foreach ( $extensions as $extension ) : ?>
@@ -72,16 +81,26 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 					<div class="action-links">
 						<ul class="plugin-action-buttons">
 								<li>
-								<?php if ( 'Active' === $extension['state'] ) : ?>
+								<?php if ( $extension['active'] ) : ?>
 									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Active', 'ran-booster' ); ?></button>
-								<?php elseif ( 'Not installed' !== $extension['state'] ) : ?>
+								<?php elseif ( 'Installed, inactive' === $extension['state'] && current_user_can( 'activate_plugin', $extension['plugin'] ) && ! ( is_multisite() && is_network_only_plugin( $extension['plugin'] ) ) ) : ?>
+									<form method="post" class="ran-booster-extension-action" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+										<input type="hidden" name="action" value="ran_booster_extension_activate">
+										<input type="hidden" name="extension_id" value="<?php echo esc_attr( $extension['id'] ); ?>">
+										<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( wp_create_nonce( 'activate-plugin_' . $extension['plugin'] ) ); ?>">
+										<button type="submit" class="button button-primary" data-pending="<?php esc_attr_e( 'Activating…', 'ran-booster' ); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Extension name. */ _x( 'Activate %s', 'extension action', 'ran-booster' ), $extension['name'] ) ); ?>"><?php esc_html_e( 'Activate', 'ran-booster' ); ?></button>
+									</form>
+								<?php elseif ( $extension['installed'] ) : ?>
 									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Inactive', 'ran-booster' ); ?></button>
+									<?php if ( $extension['compatible'] ) : ?>
+										<span class="description"><?php echo esc_html( is_multisite() && is_network_only_plugin( $extension['plugin'] ) ? __( 'A network administrator must activate this plugin.', 'ran-booster' ) : __( 'You do not have permission to activate this plugin.', 'ran-booster' ) ); ?></span>
+									<?php endif; ?>
 								<?php elseif ( $extension['compatible'] && '' !== $manual_install_url && current_user_can( 'install_plugins' ) ) : ?>
-									<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+									<form method="post" class="ran-booster-extension-action" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 										<input type="hidden" name="action" value="ran_booster_extension_install">
 										<input type="hidden" name="extension_id" value="<?php echo esc_attr( $extension['id'] ); ?>">
 										<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( wp_create_nonce( 'ran_booster_extension_install_' . $extension['id'] ) ); ?>">
-										<button type="submit" class="button button-primary" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Extension name. */ _x( 'Install %s', 'extension action', 'ran-booster' ), $extension['name'] ) ); ?>"><?php esc_html_e( 'Install', 'ran-booster' ); ?></button>
+										<button type="submit" class="button button-primary" data-pending="<?php esc_attr_e( 'Installing…', 'ran-booster' ); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Extension name. */ _x( 'Install %s', 'extension action', 'ran-booster' ), $extension['name'] ) ); ?>"><?php esc_html_e( 'Install', 'ran-booster' ); ?></button>
 									</form>
 								<?php elseif ( $extension['compatible'] && '' !== $manual_install_url ) : ?>
 									<span class="description"><?php esc_html_e( 'You do not have permission to install plugins.', 'ran-booster' ); ?></span>
@@ -91,8 +110,8 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 								</li>
 								<li>
 									<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a>
-								<?php if ( 'Not installed' !== $extension['state'] && ( 'Active' !== $extension['state'] || ! $release_is_installed ) ) : ?>
-									<br><a href="<?php echo esc_url( $plugins_url ); ?>"><?php esc_html_e( 'Open Plugins', 'ran-booster' ); ?></a>
+								<?php if ( $extension['installed'] ) : ?>
+									<br><a href="<?php echo esc_url( add_query_arg( 's', $extension['installed_name'], $plugins_url ) ); ?>"><?php esc_html_e( 'Manage plugin', 'ran-booster' ); ?></a>
 								<?php endif; ?>
 								</li>
 						</ul>

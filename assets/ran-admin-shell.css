@@ -15,6 +15,22 @@
 	margin-block-start: 20px;
 }
 
+/* Opt-in native notice destination; empty or hidden output reserves no space. */
+.ran-admin-shell-notices {
+	display: flow-root;
+}
+
+.ran-admin-shell-notices > .wp-header-end {
+	display: none;
+}
+
+/* Keep native horizontal margins before and after WordPress relocation. */
+#wpbody-content
+	> :is(div.notice, div.updated, div.error):has(~ .ran-admin-shell-notices),
+.ran-admin-shell-notices > :is(div.notice, div.updated, div.error) {
+	margin-block-end: 20px;
+}
+
 .ran-admin-shell *,
 .ran-admin-shell *::before,
 .ran-admin-shell *::after {

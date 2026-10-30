@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "255cbffa9ddb59050a691e8b32420df2",
+    "content-hash": "0f1adc9621a13ea65a708bc7860c71ca",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1721,12 +1721,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "496a7d9802bf504d081532ed161f3c8b8ee9ac85"
+                "reference": "0fc59293474cd32acda6c41d0235e5123509fbf3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/496a7d9802bf504d081532ed161f3c8b8ee9ac85",
-                "reference": "496a7d9802bf504d081532ed161f3c8b8ee9ac85",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/0fc59293474cd32acda6c41d0235e5123509fbf3",
+                "reference": "0fc59293474cd32acda6c41d0235e5123509fbf3",
                 "shasum": ""
             },
             "require": {
@@ -1782,10 +1782,6 @@
                 "GPL-2.0-or-later"
             ],
             "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
-            "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/main",
-                "issues": "https://github.com/RocketsAreNostalgic/ran-admin-shell/issues"
-            },
             "time": "2026-10-09T16:10:50+00:00"
         },
         {
@@ -3170,5 +3166,5 @@
     "platform-overrides": {
         "php": "8.2.0"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }

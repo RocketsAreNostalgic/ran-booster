@@ -127,8 +127,9 @@ final class AdminIndexViewTest extends TestCase {
 		}
 		self::assertTrue( $strapline_position < $navigation_position );
 		self::assertTrue( $navigation_position < $wrap_position );
-		self::assertTrue( $wrap_position < $marker_position );
-		self::assertTrue( $marker_position < $core_notice_position );
+		self::assertTrue( $marker_position < $strapline_position );
+		self::assertTrue( $wrap_position < $core_notice_position );
+		self::assertStringContainsString( '<div class="ran-admin-shell-notices"><hr class="wp-header-end"></div>', $html );
 		self::assertTrue( $core_notice_position < $notice_position );
 		self::assertStringContainsString( 'Copyright © 2042', $html );
 		self::assertStringContainsString(

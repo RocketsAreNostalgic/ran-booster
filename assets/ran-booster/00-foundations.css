@@ -12,6 +12,20 @@
  * 1100px/1101px is the managed-packages table boundary.
  */
 
+/* Hidden notices do not need the shared shell's visible-notice spacing. */
+#wpbody-content
+	> :is(.notice, div.updated, div.error)[hidden]
+	+ .ran-admin-shell {
+	margin-block-start: 0;
+}
+
+/* Preserve spacing when a hidden placeholder follows a visible notice. */
+#wpbody-content
+	> :is(.notice, div.updated, div.error):not([hidden])
+	~ .ran-admin-shell {
+	margin-block-start: 20px;
+}
+
 :root {
 	--ran-booster-color-neutral-0: #fff;
 	--ran-booster-color-neutral-100: #f0f0f1;

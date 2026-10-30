@@ -1721,12 +1721,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "0fc59293474cd32acda6c41d0235e5123509fbf3"
+                "reference": "56dc2fd75c685fa82038ea60d92608ddc2a131fd"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/0fc59293474cd32acda6c41d0235e5123509fbf3",
-                "reference": "0fc59293474cd32acda6c41d0235e5123509fbf3",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/56dc2fd75c685fa82038ea60d92608ddc2a131fd",
+                "reference": "56dc2fd75c685fa82038ea60d92608ddc2a131fd",
                 "shasum": ""
             },
             "require": {
@@ -1781,7 +1781,11 @@
                 "GPL-2.0-or-later"
             ],
             "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
-            "time": "2026-10-30T11:24:34+00:00"
+            "support": {
+                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/codex/31-notice-placement",
+                "issues": "https://github.com/RocketsAreNostalgic/ran-admin-shell/issues"
+            },
+            "time": "2026-10-30T14:28:34+00:00"
         },
         {
             "name": "ran/coding-standards",
@@ -3165,5 +3169,5 @@
     "platform-overrides": {
         "php": "8.2.0"
     },
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }

@@ -33,15 +33,24 @@ No new production types, public seams, persistent keys or notice framework exist
 
 Admin Shell PR [#32](https://github.com/RocketsAreNostalgic/ran-admin-shell/pull/32)
 was independently reviewed at base `496a7d9802bf504d081532ed161f3c8b8ee9ac85`
-and head/resource revision `0fc59293474cd32acda6c41d0235e5123509fbf3`, with
-no actionable findings. This dependent candidate selects that reviewed shell PR
+and earlier head `0fc59293474cd32acda6c41d0235e5123509fbf3`, with no actionable
+findings at that tuple. The revised head/resource candidate is
+`56dc2fd75c685fa82038ea60d92608ddc2a131fd` and requires review at its own exact
+PR tuple. This dependent candidate selects that shell PR
 branch with Composer's normal development-branch constraint and binds its full
 immutable revision in `composer.lock`, updates only the shell dependency, then
 runs `composer admin-shell:sync` and immutable verification.
 The synchronized PHP bytes are unchanged; CSS and provenance are regenerated.
 No local/path repository, fake installed metadata or generated-file edits are used.
 Strict Composer validation rejects commit-reference constraints in the manifest;
-the branch constraint plus reviewed full lock reference preserves the normal gate.
+the branch constraint plus full lock reference preserves the normal gate, subject
+to review of the revised candidate.
+
+Local testing found that native floated Help and Screen Options controls could
+compress the notice destination and shell on mobile. The revised Shell candidate
+passively clears those floats for the opt-in destination and notices. Its regression
+fixture now models native floats instead of positioning the controls absolutely.
+Installed acceptance of the fix remains pending a rerun.
 
 Keep this consumer PR a dependent draft while the shell PR is unmerged. After the
 owner's shell merge, qualify its actual immutable main revision, refresh the

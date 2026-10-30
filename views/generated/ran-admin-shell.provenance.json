@@ -2,9 +2,9 @@
     "schema": 1,
     "package": "ran/admin-shell",
     "version": "dev-codex/31-notice-placement",
-    "reference": "0fc59293474cd32acda6c41d0235e5123509fbf3",
+    "reference": "56dc2fd75c685fa82038ea60d92608ddc2a131fd",
     "files": {
-        "assets/ran-admin-shell.css": "sha256:858ba9b27e30c7f8f8f798a56dec08898195297e545215d45156baa6961cfb2c",
+        "assets/ran-admin-shell.css": "sha256:c91af8c12c709fca8572e75dbbd00382ac85b74c0886e811dc55be4a49d02cb6",
         "views/generated/ran-admin-shell.php": "sha256:a5ba855de3918a91703177d35275ddececb8e6858c2d5351ee2513275490a5be"
     }
 }

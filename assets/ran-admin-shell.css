@@ -17,6 +17,7 @@
 
 /* Opt-in native notice destination; empty or hidden output reserves no space. */
 .ran-admin-shell-notices {
+	clear: both;
 	display: flow-root;
 }
 
@@ -28,6 +29,7 @@
 #wpbody-content
 	> :is(div.notice, div.updated, div.error):has(~ .ran-admin-shell-notices),
 .ran-admin-shell-notices > :is(div.notice, div.updated, div.error) {
+	clear: both;
 	margin-block-end: 20px;
 }
 

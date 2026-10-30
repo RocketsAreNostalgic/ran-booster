@@ -39,6 +39,9 @@ reconciliation, Abilities and whole-site V3 remain outside this delivery.
   policy, and the release builder/verifier.
 - [Multisite quarantine evidence](evidence/multisite-quarantine-2026-07-28/README.md)
   is retained proof output, not a restore fixture.
+- [Multisite groundwork](multisite-groundwork.md) records the initial one-network
+  planning target, ownership and authority boundaries, deferred implementation
+  sequence, and qualification required before changing single-site admission.
 - [Core V3 C2-C3 operator-journey map](characterization/core-v3-c2-c3-operator-journey-map.md)
   freezes the post-C1 request, operation, readback and page boundaries and the
   only bounded follow-up packets currently proposed for the two admin hotspots.

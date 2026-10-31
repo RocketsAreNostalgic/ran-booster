@@ -637,17 +637,17 @@ final class TroubleshootingServiceTest extends TestCase {
 	public function test_retained_server_results_survive_navigation_without_repeating_diagnostics(): void {
 		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 		$GLOBALS['ran_booster_test_capabilities'] = array();
-		$memory     = new DiagnosticRunMemory();
-		$runs       = new DiagnosticRunFixture( $memory );
-		$runs->time = microtime( true ) + 10.0;
-		$provider   = new TroubleshootingProviderFixture(
+		$memory                                   = new DiagnosticRunMemory();
+		$runs                                     = new DiagnosticRunFixture( $memory );
+		$runs->time                               = microtime( true ) + 10.0;
+		$provider                                 = new TroubleshootingProviderFixture(
 			'gh',
 			static fn (): array => array(
 				new ProviderDiagnosticResult( 'fail', 'gh.credential.invalid', 'Private project prose canary.', 'Contact private-person@example.test.' ),
 				new ProviderDiagnosticResult( 'warning', 'gh.privatecanary', 'Private repository prose canary.', 'Review private ref canary.' ),
 			)
 		);
-		$second     = new TroubleshootingProviderFixture(
+		$second                                   = new TroubleshootingProviderFixture(
 			'bb',
 			static function ( ProviderDiagnosticRequest $request ): array {
 				for ( $index = 0; $index < 6; ++$index ) {
@@ -656,10 +656,10 @@ final class TroubleshootingServiceTest extends TestCase {
 				return array();
 			}
 		);
-		$registry   = new ProviderRegistry( array( $provider, $second ) );
-		$local      = new TroubleshootingLocalFixture( $this->local_results() );
-		$service    = new TroubleshootingService( $local, $registry, retained_runs: $runs );
-		$immediate  = $service->diagnose( 'gh', 'credential-canary', 'private-owner/private-repository' );
+		$registry                                 = new ProviderRegistry( array( $provider, $second ) );
+		$local                                    = new TroubleshootingLocalFixture( $this->local_results() );
+		$service                                  = new TroubleshootingService( $local, $registry, retained_runs: $runs );
+		$immediate                                = $service->diagnose( 'gh', 'credential-canary', 'private-owner/private-repository' );
 		self::assertSame( true, $immediate['retention_available'] ?? null );
 		self::assertSame( 'Private project prose canary.', $immediate['results'][5]['message'] );
 		$partial = $service->diagnose( 'bb', null, null );
@@ -693,20 +693,26 @@ final class TroubleshootingServiceTest extends TestCase {
 		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 		$GLOBALS['ran_booster_test_capabilities'] = array();
-		$requests = array();
-		$first    = new TroubleshootingProviderFixture( 'gh', function ( ProviderDiagnosticRequest $request ) use ( &$requests ): array {
-			$requests[] = $request;
-			return array( $this->diagnostic_result( 'gh.basic' ) );
-		} );
-		$second   = new TroubleshootingProviderFixture( 'bb', function ( ProviderDiagnosticRequest $request ) use ( &$requests ): array {
-			$requests[] = $request;
-			return array( $this->diagnostic_result( 'bb.basic' ) );
-		} );
-		$memory   = new DiagnosticRunMemory();
-		$runs     = new DiagnosticRunFixture( $memory );
-		$local    = new TroubleshootingLocalFixture( $this->local_results() );
-		$registry = new ProviderRegistry( array( $first, $second ) );
-		$service  = new TroubleshootingService( $local, $registry, retained_runs: $runs, support_report: new SupportReport( new InstallationFacts( $registry ), $runs ) );
+		$requests                                 = array();
+		$first                                    = new TroubleshootingProviderFixture(
+			'gh',
+			function ( ProviderDiagnosticRequest $request ) use ( &$requests ): array {
+				$requests[] = $request;
+				return array( $this->diagnostic_result( 'gh.basic' ) );
+			}
+		);
+		$second                                   = new TroubleshootingProviderFixture(
+			'bb',
+			function ( ProviderDiagnosticRequest $request ) use ( &$requests ): array {
+				$requests[] = $request;
+				return array( $this->diagnostic_result( 'bb.basic' ) );
+			}
+		);
+		$memory                                   = new DiagnosticRunMemory();
+		$runs                                     = new DiagnosticRunFixture( $memory );
+		$local                                    = new TroubleshootingLocalFixture( $this->local_results() );
+		$registry                                 = new ProviderRegistry( array( $first, $second ) );
+		$service                                  = new TroubleshootingService( $local, $registry, retained_runs: $runs, support_report: new SupportReport( new InstallationFacts( $registry ), $runs ) );
 
 		$report = $service->generate_support_report( array() )['text'];
 
@@ -730,18 +736,18 @@ final class TroubleshootingServiceTest extends TestCase {
 		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 		$GLOBALS['ran_booster_test_capabilities'] = array();
-		$provider = new TroubleshootingProviderFixture( 'gh', static fn(): array => throw new \RuntimeException( 'provider-private-canary' ) );
-		$registry = new ProviderRegistry( array( $provider ) );
-		$local    = new TroubleshootingLocalFixture( array( $this->diagnostic_result( 'local.partial' ) ), true );
-		$service  = new TroubleshootingService( $local, $registry, support_report: new SupportReport( new InstallationFacts( $registry ) ) );
-		$report   = $service->generate_support_report( array() )['text'];
+		$provider                                 = new TroubleshootingProviderFixture( 'gh', static fn(): array => throw new \RuntimeException( 'provider-private-canary' ) );
+		$registry                                 = new ProviderRegistry( array( $provider ) );
+		$local                                    = new TroubleshootingLocalFixture( array( $this->diagnostic_result( 'local.partial' ) ), true );
+		$service                                  = new TroubleshootingService( $local, $registry, support_report: new SupportReport( new InstallationFacts( $registry ) ) );
+		$report                                   = $service->generate_support_report( array() )['text'];
 		self::assertSame( 1, $local->support_runs );
 		self::assertSame( 0, $provider->runs );
 		self::assertStringContainsString( 'Provider checks not run because the fresh local observation was partial.', $report );
 
-		$local    = new TroubleshootingLocalFixture( $this->local_results() );
-		$service  = new TroubleshootingService( $local, $registry, support_report: new SupportReport( new InstallationFacts( $registry ) ) );
-		$report   = $service->generate_support_report( array() )['text'];
+		$local   = new TroubleshootingLocalFixture( $this->local_results() );
+		$service = new TroubleshootingService( $local, $registry, support_report: new SupportReport( new InstallationFacts( $registry ) ) );
+		$report  = $service->generate_support_report( array() )['text'];
 		self::assertStringContainsString( 'Group state: provider_unavailable', $report );
 		self::assertStringNotContainsString( 'provider-private-canary', $report );
 	}
@@ -850,7 +856,7 @@ final class TroubleshootingServiceTest extends TestCase {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 class TroubleshootingLocalFixture extends LocalTroubleshootingService {
-	public int $runs = 0;
+	public int $runs         = 0;
 	public int $support_runs = 0;
 
 	/** @param list<ProviderDiagnosticResult> $results */

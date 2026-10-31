@@ -249,9 +249,9 @@ final class SupportReport {
 	 * @return array{string,list<string>}
 	 */
 	private function diagnostics( array $fresh = array(), bool $include_retained = true ): array {
-		$fresh_state = $fresh['state'] ?? 'unavailable';
+		$fresh_state    = $fresh['state'] ?? 'unavailable';
 		$fresh_coverage = 'completed' === $fresh_state ? 'Included' : ( 'unavailable' === $fresh_state ? 'Unavailable' : 'Partial' );
-		$fresh_lines = array();
+		$fresh_lines    = array();
 		if ( 'permission_skipped' === $fresh_state ) {
 			$fresh_lines[] = 'Fresh basic checks not run: this administrator lacks one or more diagnostics capabilities.';
 		} elseif ( in_array( $fresh_state, array( 'completed', 'local_incomplete' ), true ) ) {
@@ -283,7 +283,7 @@ final class SupportReport {
 				$fresh_lines[] = 'Provider checks not run because the fresh local observation was partial.';
 			}
 			if ( is_int( $fresh['omitted'] ?? null ) && $fresh['omitted'] > 0 ) {
-				$fresh_lines[] = 'Provider groups not included because the report limit is 32: ' . $fresh['omitted'];
+				$fresh_lines[]  = 'Provider groups not included because the report limit is 32: ' . $fresh['omitted'];
 				$fresh_coverage = 'Truncated';
 			}
 			foreach ( $fresh['provider_states'] ?? array() as $state ) {

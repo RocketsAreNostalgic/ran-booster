@@ -106,11 +106,17 @@ final class TroubleshootingService {
 				'omitted'         => 0,
 			);
 		}
-		$started       = $this->now();
+		$started = $this->now();
 		try {
 			$local = $this->local->diagnose_for_support_report();
 		} catch ( \Throwable ) {
-			return array( 'state' => 'local_incomplete', 'local' => array(), 'providers' => array(), 'provider_states' => array(), 'omitted' => 0 );
+			return array(
+				'state'           => 'local_incomplete',
+				'local'           => array(),
+				'providers'       => array(),
+				'provider_states' => array(),
+				'omitted'         => 0,
+			);
 		}
 		$local_results = array_map( static fn( ProviderDiagnosticResult $result ): array => $result->to_array(), $local['results'] );
 		if ( $local['partial'] ) {
@@ -134,7 +140,7 @@ final class TroubleshootingService {
 			}
 			$request = null;
 			try {
-				$request                          = new ProviderDiagnosticRequest( null, null, min( ProviderDiagnosticRequest::MAX_REMOTE_CALLS, 20 - $claims ), min( ProviderDiagnosticRequest::MAX_SECONDS, max( 0.001, 20.0 - ( $this->now() - $started ) ) ), $this->clock );
+				$request = new ProviderDiagnosticRequest( null, null, min( ProviderDiagnosticRequest::MAX_REMOTE_CALLS, 20 - $claims ), min( ProviderDiagnosticRequest::MAX_SECONDS, max( 0.001, 20.0 - ( $this->now() - $started ) ) ), $this->clock );
 				$results = $this->providers->get( $metadata->code )->get_provider_diagnostics()->diagnose( $request );
 				$seen    = array();
 				$valid   = array();

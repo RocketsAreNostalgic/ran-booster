@@ -104,14 +104,14 @@ final class InstallationFacts {
 		foreach ( array( 'flock', 'rename', 'chmod', 'random_bytes', 'fsync' ) as $function ) {
 			$rows[ 'PHP function ' . $function ] = function_exists( $function ) ? 'Available' : 'Unavailable';
 		}
-		$rows['cURL library']    = self::library_version( function_exists( 'curl_version' ) ? ( curl_version()['version'] ?? null ) : null );
-		$rows['OpenSSL library'] = self::library_version( defined( 'OPENSSL_VERSION_TEXT' ) ? OPENSSL_VERSION_TEXT : null );
-		$rows['libzip library']  = self::library_version( class_exists( 'ZipArchive' ) && defined( 'ZipArchive::LIBZIP_VERSION' ) ? \ZipArchive::LIBZIP_VERSION : null );
-		$rows['Sodium library']  = self::library_version( defined( 'SODIUM_LIBRARY_VERSION' ) ? SODIUM_LIBRARY_VERSION : null );
-		$method                        = defined( 'FS_METHOD' ) ? constant( 'FS_METHOD' ) : null;
-		$rows['Filesystem method']     = in_array( $method, array( 'direct', 'ssh2', 'ftpext', 'ftpsockets' ), true ) ? $method : 'Automatic; not tested';
-		$environment                   = function_exists( 'wp_get_environment_type' ) ? wp_get_environment_type() : null;
-		$rows['Environment type']      = in_array( $environment, array( 'local', 'development', 'staging', 'production' ), true ) ? $environment : 'Unknown';
+		$rows['cURL library']      = self::library_version( function_exists( 'curl_version' ) ? ( curl_version()['version'] ?? null ) : null );
+		$rows['OpenSSL library']   = self::library_version( defined( 'OPENSSL_VERSION_TEXT' ) ? OPENSSL_VERSION_TEXT : null );
+		$rows['libzip library']    = self::library_version( class_exists( 'ZipArchive' ) && defined( 'ZipArchive::LIBZIP_VERSION' ) ? \ZipArchive::LIBZIP_VERSION : null );
+		$rows['Sodium library']    = self::library_version( defined( 'SODIUM_LIBRARY_VERSION' ) ? SODIUM_LIBRARY_VERSION : null );
+		$method                    = defined( 'FS_METHOD' ) ? constant( 'FS_METHOD' ) : null;
+		$rows['Filesystem method'] = in_array( $method, array( 'direct', 'ssh2', 'ftpext', 'ftpsockets' ), true ) ? $method : 'Automatic; not tested';
+		$environment               = function_exists( 'wp_get_environment_type' ) ? wp_get_environment_type() : null;
+		$rows['Environment type']  = in_array( $environment, array( 'local', 'development', 'staging', 'production' ), true ) ? $environment : 'Unknown';
 		return $rows;
 	}
 
@@ -177,7 +177,13 @@ final class InstallationFacts {
 		);
 		try {
 			foreach ( ( new GeneralPreferenceStore() )->projection() as $key => $field ) {
-				$name = array( 'hide_github' => 'RAN_BOOSTER_HIDE_GITHUB_UI', 'self_update_discovery' => 'RAN_BOOSTER_SELF_UPDATE_MODE', 'history_rows' => 'RAN_BOOSTER_HISTORY_ROWS', 'history_days' => 'RAN_BOOSTER_HISTORY_DAYS', 'max_archive_bytes' => 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' )[ $key ];
+				$name  = array(
+					'hide_github'           => 'RAN_BOOSTER_HIDE_GITHUB_UI',
+					'self_update_discovery' => 'RAN_BOOSTER_SELF_UPDATE_MODE',
+					'history_rows'          => 'RAN_BOOSTER_HISTORY_ROWS',
+					'history_days'          => 'RAN_BOOSTER_HISTORY_DAYS',
+					'max_archive_bytes'     => 'RAN_BOOSTER_MAX_ARCHIVE_BYTES',
+				)[ $key ];
 				$value = is_bool( $field['value'] ) ? ( $field['value'] ? 'Enabled' : 'Disabled' ) : (string) $field['value'];
 				if ( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' === $name && 'invalid_code' === ( $field['error'] ?? null ) ) {
 					$rows[ $name ] = 'Invalid code value; archive admission refused';
@@ -188,7 +194,7 @@ final class InstallationFacts {
 					continue;
 				}
 				if ( 'RAN_BOOSTER_HIDE_GITHUB_UI' === $name ) {
-					$rows[ $name ] = ( $field['error'] ?? null ) ? 'Invalid ' . $field['source'] . ' value; requested ' . $value : 'Requested ' . $value;
+					$rows[ $name ]  = ( $field['error'] ?? null ) ? 'Invalid ' . $field['source'] . ' value; requested ' . $value : 'Requested ' . $value;
 					$rows[ $name ] .= '; source=' . $field['source'] . ( $field['locked'] ? '; locked' : '' );
 					continue;
 				}
@@ -198,8 +204,8 @@ final class InstallationFacts {
 			$rows += array_fill_keys( array( 'RAN_BOOSTER_HIDE_GITHUB_UI', 'RAN_BOOSTER_SELF_UPDATE_MODE', 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS', 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ), 'Unavailable' );
 		}
 		if ( defined( 'RAN_BOOSTER_SELF_UPDATE_MODE' ) ) {
-			$raw  = constant( 'RAN_BOOSTER_SELF_UPDATE_MODE' );
-			$mode = is_string( $raw ) ? strtolower( trim( $raw ) ) : '';
+			$raw                                  = constant( 'RAN_BOOSTER_SELF_UPDATE_MODE' );
+			$mode                                 = is_string( $raw ) ? strtolower( trim( $raw ) ) : '';
 			$rows['RAN_BOOSTER_SELF_UPDATE_MODE'] = in_array( $mode, array( 'auto', 'enabled', 'disabled' ), true ) ? $mode . '; source=code; locked' : 'Invalid; source=code; locked';
 		}
 		foreach ( array( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', 'RAN_BOOSTER_GITHUB_TOKEN' ) as $name ) {

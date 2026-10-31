@@ -99,11 +99,11 @@ $has_storage_details          = null !== $secrets_storage
 								<?php } ?>
 							</dl>
 							<?php if ( 'setup_available' === $storage_status ) { ?>
-								<p class="description"><?php esc_html_e( 'Booster selected this private location automatically; you do not need to choose a path.', 'ran-booster' ); ?></p>
+								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'Booster selected this private location automatically; you do not need to choose a path.', 'ran-booster' ); ?></p>
 							<?php } elseif ( 'path_configured' === $storage_status ) { ?>
-								<p class="description"><?php esc_html_e( 'The encrypted file and its separate database key are created when you save the first credential.', 'ran-booster' ); ?></p>
+								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'The encrypted file and its separate database key are created when you save the first credential.', 'ran-booster' ); ?></p>
 							<?php } elseif ( 'storage_healthy' === $storage_status ) { ?>
-								<p class="description"><?php esc_html_e( 'Credentials are encrypted in this file. WordPress stores the encryption key separately.', 'ran-booster' ); ?></p>
+								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'Credentials are encrypted in this file. WordPress stores the encryption key separately.', 'ran-booster' ); ?></p>
 							<?php } ?>
 						<?php } ?>
 

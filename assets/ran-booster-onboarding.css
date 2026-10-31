@@ -91,6 +91,10 @@
 	font-size: var(--ran-booster-font-size-xs);
 }
 
+.ran-booster-admin .ran-booster-onboarding__storage-facts-note {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-onboarding__storage-actions {
 	margin-block-start: var(--ran-booster-space-14);
 }

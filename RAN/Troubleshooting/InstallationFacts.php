@@ -7,6 +7,7 @@ namespace RAN\Troubleshooting;
 use Closure;
 use RAN\Admin\AdminAddOnRegistry;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\Runtime\RuntimeSupport;
 use RAN\Settings\GeneralPreferenceStore;
 
 /** Fixed local observations, shared by Installation and the support capture. */
@@ -105,7 +106,7 @@ final class InstallationFacts {
 		}
 		$rows['cURL library']    = self::library_version( function_exists( 'curl_version' ) ? ( curl_version()['version'] ?? null ) : null );
 		$rows['OpenSSL library'] = self::library_version( defined( 'OPENSSL_VERSION_TEXT' ) ? OPENSSL_VERSION_TEXT : null );
-		$rows['libzip library']  = self::library_version( defined( 'LIBZIP_VERSION' ) ? LIBZIP_VERSION : null );
+		$rows['libzip library']  = self::library_version( class_exists( 'ZipArchive' ) && defined( 'ZipArchive::LIBZIP_VERSION' ) ? \ZipArchive::LIBZIP_VERSION : null );
 		$rows['Sodium library']  = self::library_version( defined( 'SODIUM_LIBRARY_VERSION' ) ? SODIUM_LIBRARY_VERSION : null );
 		$method                        = defined( 'FS_METHOD' ) ? constant( 'FS_METHOD' ) : null;
 		$rows['Filesystem method']     = in_array( $method, array( 'direct', 'ssh2', 'ftpext', 'ftpsockets' ), true ) ? $method : 'Automatic; not tested';
@@ -148,7 +149,7 @@ final class InstallationFacts {
 	}
 
 	private function is_runtime_supported(): bool {
-		return ( ! function_exists( 'is_multisite' ) || ! is_multisite() ) && version_compare( PHP_VERSION, '8.2', '>=' );
+		return RuntimeSupport::current()->allows_managed_operations();
 	}
 
 	public function components_truncated(): bool {

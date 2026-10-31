@@ -110,9 +110,9 @@ msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:87
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:128
-#: RAN/Troubleshooting/TroubleshootingService.php:279
+#: RAN/Troubleshooting/TroubleshootingService.php:296
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:118
+#: views/troubleshooting-installation.php:119
 msgid "Name"
 msgstr ""
 
@@ -246,12 +246,12 @@ msgid "Package"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:150
-#: RAN/Troubleshooting/TroubleshootingService.php:211
+#: RAN/Troubleshooting/TroubleshootingService.php:228
 #: views/attempts/index.php:119
 #: views/attempts/index.php:166
 #: views/portability-review.php:31
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:118
+#: views/troubleshooting-installation.php:119
 msgid "Source"
 msgstr ""
 
@@ -990,8 +990,8 @@ msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:79
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:249
-#: RAN/Troubleshooting/TroubleshootingService.php:203
-#: RAN/Troubleshooting/TroubleshootingService.php:216
+#: RAN/Troubleshooting/TroubleshootingService.php:220
+#: RAN/Troubleshooting/TroubleshootingService.php:233
 #: views/attempts/index.php:168
 #: views/overview-dashboard.php:48
 #: views/overview-dashboard.php:49
@@ -2595,13 +2595,13 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:174
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:345
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:494
-#: RAN/Troubleshooting/TroubleshootingService.php:215
-#: RAN/Troubleshooting/TroubleshootingService.php:245
-#: RAN/Troubleshooting/TroubleshootingService.php:252
-#: RAN/Troubleshooting/TroubleshootingService.php:256
-#: RAN/Troubleshooting/TroubleshootingService.php:257
-#: RAN/Troubleshooting/TroubleshootingService.php:310
-#: RAN/Troubleshooting/TroubleshootingService.php:313
+#: RAN/Troubleshooting/TroubleshootingService.php:232
+#: RAN/Troubleshooting/TroubleshootingService.php:262
+#: RAN/Troubleshooting/TroubleshootingService.php:269
+#: RAN/Troubleshooting/TroubleshootingService.php:273
+#: RAN/Troubleshooting/TroubleshootingService.php:274
+#: RAN/Troubleshooting/TroubleshootingService.php:327
+#: RAN/Troubleshooting/TroubleshootingService.php:330
 #: views/debug-capture.php:43
 #: views/onboarding.php:80
 #: views/settings-storage.php:25
@@ -5618,8 +5618,8 @@ msgid "Booster could not verify package management data after a database change.
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:71
-#: RAN/Troubleshooting/TroubleshootingService.php:206
-#: views/troubleshooting-installation.php:139
+#: RAN/Troubleshooting/TroubleshootingService.php:223
+#: views/troubleshooting-installation.php:140
 msgid "Diagnostic Git provider"
 msgstr ""
 
@@ -5627,15 +5627,15 @@ msgstr ""
 msgid "Support collection is unavailable. No diagnostics were run."
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:201
+#: RAN/Troubleshooting/TroubleshootingService.php:218
 msgid "Bundled with Booster"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:202
+#: RAN/Troubleshooting/TroubleshootingService.php:219
 msgid "External replacement"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:207
+#: RAN/Troubleshooting/TroubleshootingService.php:224
 #: views/attempts/detail.php:93
 #: views/attempts/index.php:71
 #: views/packages/fields/provider.php:19
@@ -5647,158 +5647,158 @@ msgstr ""
 msgid "Git provider"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:208
+#: RAN/Troubleshooting/TroubleshootingService.php:225
 msgid "Git provider code"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:210
-#: RAN/Troubleshooting/TroubleshootingService.php:224
+#: RAN/Troubleshooting/TroubleshootingService.php:227
+#: RAN/Troubleshooting/TroubleshootingService.php:241
 #: views/troubleshooting-installation.php:9
-#: views/troubleshooting-installation.php:116
-#: views/troubleshooting-installation.php:139
+#: views/troubleshooting-installation.php:117
+#: views/troubleshooting-installation.php:140
 msgid "GitHub provider"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:212
+#: RAN/Troubleshooting/TroubleshootingService.php:229
 #: views/troubleshooting-installation.php:10
 msgid "Selection state"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:213
+#: RAN/Troubleshooting/TroubleshootingService.php:230
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:118
+#: views/troubleshooting-installation.php:119
 msgid "Operational availability"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:214
+#: RAN/Troubleshooting/TroubleshootingService.php:231
 msgid "Available"
 msgstr ""
 
 #. translators: %d: enabled replacement candidate number.
-#: RAN/Troubleshooting/TroubleshootingService.php:222
+#: RAN/Troubleshooting/TroubleshootingService.php:239
 #, php-format
 msgid "GitHub candidate %d"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:224
+#: RAN/Troubleshooting/TroubleshootingService.php:241
 msgid "Enabled candidates"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:227
+#: RAN/Troubleshooting/TroubleshootingService.php:244
 msgid "Installed version"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:228
+#: RAN/Troubleshooting/TroubleshootingService.php:245
 msgid "Requested mode"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:229
+#: RAN/Troubleshooting/TroubleshootingService.php:246
 msgid "Effective mode"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:230
+#: RAN/Troubleshooting/TroubleshootingService.php:247
 msgid "Policy reason"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:231
+#: RAN/Troubleshooting/TroubleshootingService.php:248
 msgid "Updater state"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:232
+#: RAN/Troubleshooting/TroubleshootingService.php:249
 msgid "Updater code"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:233
+#: RAN/Troubleshooting/TroubleshootingService.php:250
 msgid "Offered version"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:234
+#: RAN/Troubleshooting/TroubleshootingService.php:251
 msgid "Marker version"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:235
+#: RAN/Troubleshooting/TroubleshootingService.php:252
 msgid "Marker commit"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:238
-#: RAN/Troubleshooting/TroubleshootingService.php:245
-#: RAN/Troubleshooting/TroubleshootingService.php:252
-#: RAN/Troubleshooting/TroubleshootingService.php:256
-#: RAN/Troubleshooting/TroubleshootingService.php:257
-#: views/troubleshooting-installation.php:77
-#: views/troubleshooting-installation.php:84
-#: views/troubleshooting-installation.php:139
+#: RAN/Troubleshooting/TroubleshootingService.php:255
+#: RAN/Troubleshooting/TroubleshootingService.php:262
+#: RAN/Troubleshooting/TroubleshootingService.php:269
+#: RAN/Troubleshooting/TroubleshootingService.php:273
+#: RAN/Troubleshooting/TroubleshootingService.php:274
+#: views/troubleshooting-installation.php:78
+#: views/troubleshooting-installation.php:85
+#: views/troubleshooting-installation.php:140
 msgid "Booster Core updates"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:241
+#: RAN/Troubleshooting/TroubleshootingService.php:258
 msgid "Last check (UTC)"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:242
+#: RAN/Troubleshooting/TroubleshootingService.php:259
 msgid "Next check (UTC)"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:248
+#: RAN/Troubleshooting/TroubleshootingService.php:265
 msgid "Last successful operator check (UTC)"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:249
+#: RAN/Troubleshooting/TroubleshootingService.php:266
 msgid "Operator check cooldown until (UTC)"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:256
+#: RAN/Troubleshooting/TroubleshootingService.php:273
 msgid "Last operator check outcome"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:257
+#: RAN/Troubleshooting/TroubleshootingService.php:274
 msgid "Last operator check code"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:259
-#: views/troubleshooting-installation.php:122
+#: RAN/Troubleshooting/TroubleshootingService.php:276
+#: views/troubleshooting-installation.php:123
 msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:268
+#: RAN/Troubleshooting/TroubleshootingService.php:285
 msgid "Diagnostic checks"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:269
+#: RAN/Troubleshooting/TroubleshootingService.php:286
 msgid "Not run"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:280
+#: RAN/Troubleshooting/TroubleshootingService.php:297
 #: views/packages/index.php:517
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
 msgid "Version"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:281
+#: RAN/Troubleshooting/TroubleshootingService.php:298
 msgid "Implementation"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:282
+#: RAN/Troubleshooting/TroubleshootingService.php:299
 msgid "Provider API"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:283
+#: RAN/Troubleshooting/TroubleshootingService.php:300
 msgid "Compatibility revision"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:284
+#: RAN/Troubleshooting/TroubleshootingService.php:301
 msgid "Webhook signing format"
 msgstr ""
 
 #. translators: %d: locally declared capability number.
-#: RAN/Troubleshooting/TroubleshootingService.php:291
+#: RAN/Troubleshooting/TroubleshootingService.php:308
 #, php-format
 msgid "Capability %d"
 msgstr ""
 
 #. translators: %d: locally declared credential format number.
-#: RAN/Troubleshooting/TroubleshootingService.php:293
+#: RAN/Troubleshooting/TroubleshootingService.php:310
 #, php-format
 msgid "API credential format %d"
 msgstr ""
@@ -7267,7 +7267,7 @@ msgid "Status unknown"
 msgstr ""
 
 #: views/onboarding.php:131
-#: views/troubleshooting-installation.php:44
+#: views/troubleshooting-installation.php:48
 msgid "Storage status is unavailable."
 msgstr ""
 
@@ -9291,7 +9291,7 @@ msgid "Adopt GitHub implementation"
 msgstr ""
 
 #: views/provider.php:329
-#: views/troubleshooting-installation.php:120
+#: views/troubleshooting-installation.php:121
 msgid "GitHub provider details"
 msgstr ""
 
@@ -10128,73 +10128,81 @@ msgstr ""
 msgid "Save changes"
 msgstr ""
 
-#: views/troubleshooting-installation.php:18
+#: views/troubleshooting-installation.php:16
+msgid "Configuration constant"
+msgstr ""
+
+#: views/troubleshooting-installation.php:17
+msgid "Configured storage location"
+msgstr ""
+
+#: views/troubleshooting-installation.php:22
 #: views/troubleshooting.php:24
 msgid "Installation"
 msgstr ""
 
-#: views/troubleshooting-installation.php:20
+#: views/troubleshooting-installation.php:24
 msgid "Environment"
 msgstr ""
 
-#: views/troubleshooting-installation.php:25
+#: views/troubleshooting-installation.php:29
 msgid "Environment information is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:32
+#: views/troubleshooting-installation.php:36
 msgid "Environment details"
 msgstr ""
 
-#: views/troubleshooting-installation.php:42
+#: views/troubleshooting-installation.php:46
 msgid "Storage"
 msgstr ""
 
-#: views/troubleshooting-installation.php:56
-msgid "Review storage settings"
+#: views/troubleshooting-installation.php:57
+msgid "Storage settings"
 msgstr ""
 
-#: views/troubleshooting-installation.php:63
+#: views/troubleshooting-installation.php:64
 msgid "Core update status is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:65
+#: views/troubleshooting-installation.php:66
 msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:67
+#: views/troubleshooting-installation.php:68
 msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
 msgstr ""
 
-#: views/troubleshooting-installation.php:69
+#: views/troubleshooting-installation.php:70
 msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
 msgstr ""
 
-#: views/troubleshooting-installation.php:71
+#: views/troubleshooting-installation.php:72
 msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:73
+#: views/troubleshooting-installation.php:74
 msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:80
-#: views/troubleshooting-installation.php:129
+#: views/troubleshooting-installation.php:81
+#: views/troubleshooting-installation.php:130
 msgid "Technical details"
 msgstr ""
 
-#: views/troubleshooting-installation.php:92
+#: views/troubleshooting-installation.php:93
 msgid "Providers and extensions"
 msgstr ""
 
-#: views/troubleshooting-installation.php:95
+#: views/troubleshooting-installation.php:96
 msgid "Only the first 32 admitted components are shown, alongside the fixed extension catalogue. Additional declarations are omitted."
 msgstr ""
 
-#: views/troubleshooting-installation.php:100
+#: views/troubleshooting-installation.php:101
 msgid "Provider and extension information is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:118
+#: views/troubleshooting-installation.php:119
 msgid "GitHub provider information is unavailable."
 msgstr ""
 
@@ -10204,7 +10212,7 @@ msgid "Support report"
 msgstr ""
 
 #: views/troubleshooting-support-report.php:12
-msgid "Generate a local, sanitized report. It does not send data or start logging; suitably authorised administrators also receive fresh basic diagnostics without selecting credentials or repositories."
+msgid "Generate a local, sanitized report. The report is not transmitted or logged; suitably authorised administrators also receive fresh basic diagnostics, which may contact admitted providers without selecting credentials or repositories."
 msgstr ""
 
 #: views/troubleshooting-support-report.php:16

@@ -12,6 +12,10 @@ $environment         = is_array( $troubleshooting['environment'] ?? null ) ? $tr
 $environment_summary = array_intersect_key( $environment, array_flip( array( 'WordPress', 'PHP' ) ) );
 $environment_details = array_diff_key( $environment, $environment_summary );
 $storage             = is_array( $troubleshooting['storage'] ?? null ) ? $troubleshooting['storage'] : array();
+$storage_labels      = array(
+	'configuration'       => __( 'Configuration constant', 'ran-booster' ),
+	'configured_location' => __( 'Configured storage location', 'ran-booster' ),
+);
 $components          = is_array( $troubleshooting['components'] ?? null ) ? $troubleshooting['components'] : array();
 ?>
 <section id="ran-booster-installation-details" aria-labelledby="ran-booster-installation-heading">
@@ -45,15 +49,12 @@ if ( array() === $environment ) {
 <?php
 if ( ! empty( $storage['details'] ) && is_array( $storage['details'] ) ) {
 	?>
-	<dl class="ran-booster-troubleshooting__fields-list">
+	<dl class="ran-booster-troubleshooting__fields-list ran-booster-onboarding__storage ran-booster-onboarding__storage-facts">
 	<?php
 	foreach ( $storage['details'] as $label => $value ) {
 		?>
-	<div><dt><?php echo esc_html( $label ); ?></dt><dd><code><?php echo esc_html( $value ); ?></code></dd></div><?php } ?></dl><?php } ?>
-<?php
-if ( 'actionable' === ( $storage['state'] ?? '' ) && ! empty( $storage['url'] ) ) {
-	?>
-	<p><a href="<?php echo esc_url( $storage['url'] ); ?>"><?php esc_html_e( 'Review storage settings', 'ran-booster' ); ?></a></p><?php } ?>
+	<div><dt><?php echo esc_html( $storage_labels[ $label ] ?? $label ); ?></dt><dd><code><?php echo esc_html( $value ); ?></code></dd></div><?php } ?></dl><?php } ?>
+<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ) ); ?>"><?php esc_html_e( 'Storage settings', 'ran-booster' ); ?></a></p>
 </div></section>
 			<?php
 			$self_update_mode   = $core_self_update['effective_mode'] ?? 'disabled';

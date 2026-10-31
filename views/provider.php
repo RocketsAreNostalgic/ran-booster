@@ -326,7 +326,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 					</details>
 				<?php } ?>
 			<?php } ?>
-			<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=diagnostics#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider diagnostics', 'ran-booster' ); ?></a></p>
+			<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
 			<?php
 			if ( $healthy_replacement ) {
 				?>

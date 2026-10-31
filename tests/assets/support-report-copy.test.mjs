@@ -84,7 +84,12 @@ function report(value) {
 		status,
 		copy,
 		classes,
-		event: { target: { closest: () => copy } },
+		event: {
+			target: {
+				closest: (selector) =>
+					selector === '[data-support-report-copy]' ? copy : null,
+			},
+		},
 	};
 }
 
@@ -264,4 +269,109 @@ test('completion for a replaced report cannot announce success or move focus in 
 		assert.equal(old.input.focused, false);
 		assert.equal(current.input.focused, false);
 	}
+});
+
+test('download uses the current UTF-8 report, validates its filename and cleans up', async () => {
+	for (const filename of [
+		'ran-booster-support-20261031-123456.txt',
+		'../private.txt',
+	]) {
+		const listeners = new Map();
+		const blobs = [];
+		const revoked = [];
+		const links = [];
+		const current = report('old');
+		current.input.value = 'current café\n報告';
+		const button = {
+			dataset: { supportReportFilename: filename },
+			closest: () => ({
+				querySelector: (selector) =>
+					selector === 'textarea' ? current.input : current.status,
+			}),
+		};
+		vm.runInNewContext(source, {
+			wp: { i18n: { __: (value) => value } },
+			Blob,
+			document: {
+				readyState: 'loading',
+				addEventListener: (name, callback) =>
+					listeners.set(name, callback),
+				body: { appendChild: (link) => links.push(link) },
+				createElement: () => ({
+					click() {
+						this.clicked = true;
+					},
+					remove() {
+						this.removed = true;
+					},
+				}),
+			},
+			window: {
+				URL: {
+					createObjectURL: (blob) => {
+						blobs.push(blob);
+						return 'blob:report';
+					},
+					revokeObjectURL: (url) => revoked.push(url),
+				},
+			},
+		});
+		await listeners.get('click')({
+			target: {
+				closest: (selector) =>
+					selector === '[data-support-report-download]'
+						? button
+						: null,
+			},
+		});
+		assert.equal(await blobs[0].text(), current.input.value);
+		assert.equal(blobs[0].type, 'text/plain;charset=utf-8');
+		assert.equal(
+			links[0].download,
+			filename.startsWith('ran-') ? filename : 'ran-booster-support.txt'
+		);
+		assert.equal(links[0].clicked, true);
+		assert.equal(links[0].removed, true);
+		assert.deepEqual(revoked, ['blob:report']);
+	}
+});
+
+test('download failure selects the report and announces manual save', async () => {
+	const listeners = new Map();
+	const current = report('unchanged');
+	const button = {
+		dataset: {},
+		closest: () => ({
+			querySelector: (selector) =>
+				selector === 'textarea' ? current.input : current.status,
+		}),
+	};
+	vm.runInNewContext(source, {
+		wp: { i18n: { __: (value) => value } },
+		Blob,
+		document: {
+			readyState: 'loading',
+			addEventListener: (name, callback) => listeners.set(name, callback),
+		},
+		window: {
+			URL: {
+				createObjectURL() {
+					throw new Error();
+				},
+			},
+		},
+	});
+	await listeners.get('click')({
+		target: {
+			closest: (selector) =>
+				selector === '[data-support-report-download]' ? button : null,
+		},
+	});
+	assert.equal(current.input.value, 'unchanged');
+	assert.equal(current.input.focused, true);
+	assert.equal(current.input.selected, true);
+	assert.equal(
+		current.status.textContent,
+		'Download failed. Select the report and save it manually.'
+	);
 });

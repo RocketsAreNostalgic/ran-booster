@@ -151,7 +151,9 @@ namespace RAN\Tests\Storage {
 		public int $capability_reads  = 0;
 
 		/** @var list<string> */
-		public array $queries                              = array();
+		public array $queries = array();
+		/** @var list<string> */
+		public array $read_queries                         = array();
 		public ?string $query_failure_contains             = null;
 		public bool $keep_dropped_tables                   = false;
 		public ?int $successful_table_reads_before_failure = null;
@@ -446,6 +448,7 @@ namespace RAN\Tests\Storage {
 
 		/** @return list<object>|null */
 		public function get_results( string $query ): ?array {
+			$this->read_queries[] = $query;
 			if ( 'SHOW ENGINES' === $query ) {
 				++$this->capability_reads;
 

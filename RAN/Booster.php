@@ -234,6 +234,7 @@ class Booster {
 			// Deactivation must continue when an optional capture is unavailable.
 		}
 
+		( new \RAN\Troubleshooting\DiagnosticRunStore() )->clear();
 		$this->service( WordPressWorkerWakeup::class )->clear();
 	}
 
@@ -621,6 +622,7 @@ class Booster {
 
 	/** Reuse WordPress's daily maintenance hook; never prune from a rendered history. */
 	public function prune_activity(): void {
+		( new \RAN\Troubleshooting\DiagnosticRunStore() )->cleanup();
 		$activity = $this->service( \RAN\Activity\ActivityStore::class );
 		if ( ! $activity->available() ) {
 			return;
@@ -661,6 +663,11 @@ class Booster {
 		$method = isset( $_SERVER['REQUEST_METHOD'] ) && is_string( $_SERVER['REQUEST_METHOD'] )
 			? strtoupper( $_SERVER['REQUEST_METHOD'] )
 			: '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Classification prevents pre-handler repair even when authorization fails.
+		$action = $_POST['ran_booster']['action'] ?? null;
+		if ( 'POST' === $method && 'generate-support-report' === $action ) {
+			return true;
+		}
 		if ( 'GET' !== $method ) {
 			return false;
 		}

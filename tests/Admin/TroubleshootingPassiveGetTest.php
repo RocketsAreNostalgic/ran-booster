@@ -26,15 +26,23 @@ if ( ! defined( 'ABSPATH' ) ) {
 	define( 'ABSPATH', dirname( __DIR__ ) . '/fixtures/wordpress/' );
 }
 
+#[\PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses]
+#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 final class TroubleshootingPassiveGetTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+		require_once dirname( __DIR__ ) . '/Support/ExternalFixturePluginWordPressFunctions.php';
+		require_once __DIR__ . '/BoosterPluginRowWordPressFunctions.php';
 		$_GET                                    = array();
 		$_POST                                   = array();
 		$_SERVER['REQUEST_METHOD']               = 'GET';
 		$GLOBALS['ran_booster_get_test_actions'] = array();
 		$GLOBALS['ran_booster_test_capability_checks'] = array();
+		$GLOBALS['ran_booster_test_nonce_checks']      = array();
+		$GLOBALS['ran_booster_test_capabilities']      = array();
+		$GLOBALS['ran_booster_test_nonce_valid']       = true;
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- The integration fixture must provide WordPress's global database prefix.
 		$GLOBALS['wpdb'] = new \RAN\Tests\RepositoryProvider\HostSelectionDatabase();
 	}
@@ -200,6 +208,75 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		self::assertSame( 1, $fixture['plugins']->reads );
 	}
 
+	/** @return list<array{mixed,bool,bool}> */
+	public static function report_post_provider(): array {
+		return array(
+			array( array( 'action' => 'generate-support-report' ), true, true ),
+			array( array( 'action' => 'generate-support-report' ), false, true ),
+			array(
+				array(
+					'action'  => 'generate-support-report',
+					'results' => array( 'forged' ),
+				),
+				true,
+				true,
+			),
+			array( array( 'action' => 'generate-support-report' ), true, false ),
+		);
+	}
+
+	#[DataProvider( 'report_post_provider' )]
+	public function test_report_post_defers_bootstrap_before_dispatch_authorization( mixed $payload, bool $capability, bool $nonce ): void {
+		$fixture = $this->registered_fixture( true );
+		$this->request( 'POST', 'troubleshooting' );
+		$_GET['panel']        = 'support-report';
+		$_POST['ran_booster'] = $payload;
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = $capability;
+		$GLOBALS['ran_booster_test_nonce_valid']                    = $nonce;
+		$valid = $capability && $nonce && array_keys( $payload ) === array( 'action' );
+		$fixture['dashboard']->expects( $valid ? self::once() : self::never() )->method( 'post_generate_support_report' );
+		$fixture['dashboard']->expects( self::never() )->method( 'post_run_troubleshooting' );
+		try {
+			$this->run_admin_init();
+			self::assertTrue( $valid );
+		} catch ( \RuntimeException $exception ) {
+			self::assertFalse( $valid, $exception->getMessage() );
+		}
+		self::assertSame( 0, $fixture['secrets']->validations );
+		self::assertSame( 0, $fixture['database']->upgrades );
+		self::assertSame( 0, $fixture['plugins']->reads );
+		self::assertContains( 'manage_options', $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( $capability ? array( 'ran-booster-generate-support-report' ) : array(), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	public function test_forged_report_route_is_denied_without_operational_bootstrap(): void {
+		$fixture = $this->registered_fixture( true );
+		$this->request( 'POST', 'overview' );
+		$_POST['ran_booster'] = array( 'action' => 'generate-support-report' );
+		$fixture['dashboard']->expects( self::never() )->method( 'post_generate_support_report' );
+		try {
+			$this->run_admin_init();
+			self::fail( 'The obsolete report destination must be rejected.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertStringContainsString( 'Invalid support report request', $exception->getMessage() );
+		}
+		self::assertSame( 0, $fixture['secrets']->validations );
+		self::assertSame( 0, $fixture['database']->upgrades );
+		self::assertSame( 0, $fixture['plugins']->reads );
+	}
+
+	public function test_scalar_post_is_safely_classified_and_retains_operational_bootstrap(): void {
+		$fixture = $this->registered_fixture( true );
+		$this->request( 'POST', 'troubleshooting' );
+		$_GET['panel']        = 'support-report';
+		$_POST['ran_booster'] = 'malformed';
+		$fixture['dashboard']->expects( self::never() )->method( 'post_generate_support_report' );
+		$this->run_admin_init();
+		self::assertSame( 1, $fixture['secrets']->validations );
+		self::assertSame( 1, $fixture['database']->upgrades );
+		self::assertSame( 1, $fixture['plugins']->reads );
+	}
+
 	public function test_credential_physical_cleanup_runs_only_on_the_admin_lifecycle(): void {
 		$fixture = $this->registered_fixture();
 
@@ -217,17 +294,18 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		self::assertSame( 1, $fixture['secrets']->purges );
 	}
 
-	/** @return list<array{\Throwable}> */
+	/** @return list<array{string}> */
 	public static function unreadable_inventory_provider(): array {
-		return array(
-			array( new \InvalidArgumentException( 'The managed package source revision is invalid.' ) ),
-			array( \RAN\Storage\PackageStorageFailure::query_failed() ),
-			array( \RAN\Storage\PackageStorageFailure::invalid_provider_identity() ),
-		);
+		return array( array( 'invalid' ), array( 'query' ), array( 'identity' ) );
 	}
 
 	#[DataProvider( 'unreadable_inventory_provider' )]
-	public function test_unreadable_optional_action_links_do_not_stop_later_admin_hooks( \Throwable $failure ): void {
+	public function test_unreadable_optional_action_links_do_not_stop_later_admin_hooks( string $kind ): void {
+		$failure = match ( $kind ) {
+			'query' => \RAN\Storage\PackageStorageFailure::query_failed(),
+			'identity' => \RAN\Storage\PackageStorageFailure::invalid_provider_identity(),
+			default => new \InvalidArgumentException( 'The managed package source revision is invalid.' ),
+		};
 		$fixture                          = $this->registered_fixture();
 		$fixture['plugins']->read_failure = $failure;
 		$_GET                             = array(
@@ -275,7 +353,7 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 	}
 
 	/** @return array{secrets: TrackingSecretsFile, database: TrackingDatabase, plugins: TrackingPluginRepository, dashboard: \RAN\Dashboard&\PHPUnit\Framework\MockObject\MockObject} */
-	private function registered_fixture(): array {
+	private function registered_fixture( bool $real_dispatcher = false ): array {
 		$secrets   = null;
 		$database  = new TrackingDatabase();
 		$plugins   = new TrackingPluginRepository();
@@ -318,8 +396,23 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		$container->bind( 'RAN\\Storage\\PluginRepository', $plugins );
 		self::assertInstanceOf( CredentialUsageReader::class, $container->make( CredentialUsageReader::class ) );
 		self::assertInstanceOf( TemporaryDebugCapture::class, $container->make( TemporaryDebugCapture::class ) );
-		$booster->init();
 		self::assertInstanceOf( TrackingSecretsFile::class, $secrets );
+		if ( $real_dispatcher ) {
+			$providers = new \RAN\RepositoryProvider\ProviderRegistry();
+			$themes    = new class() extends \RAN\Storage\ThemeRepository { public function __construct() {} };
+			$container->bind(
+				'RAN\\Dispatcher',
+				new \RAN\Dispatcher(
+					$dashboard,
+					$providers,
+					$secrets,
+					new \RAN\Admin\ManagedPackageWebhookAuthorityResolver( $plugins, $themes ),
+					new \RAN\Admin\PackageAdminController( repositories: new \RAN\Admin\PackageRepositoryRequestResolver( $providers ), plugins: $plugins, themes: $themes, providers: $providers ),
+					$this->createStub( \RAN\WordPress\WordPressUpdaterLock::class )
+				)
+			);
+		}
+		$booster->init();
 
 		return array(
 			'secrets'   => $secrets,

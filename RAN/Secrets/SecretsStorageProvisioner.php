@@ -30,6 +30,20 @@ class SecretsStorageProvisioner {
 	) {
 	}
 
+	/** @internal Read configuration without authenticating or modifying storage.
+	 * @return array{path:string,source:string}|null
+	 */
+	public function configuration_facts(): ?array {
+		$configured = $this->configured_path();
+		if ( ! is_string( $configured ) ) {
+			return null;
+		}
+		return array(
+			'path'   => $configured,
+			'source' => $this->configured_path_source( $configured, $this->validate_configured_candidate( $configured ) ),
+		);
+	}
+
 	public function status(): SecretsStorageProvisioningResult {
 		$environment = $this->runtime_failure();
 		if ( null !== $environment ) {

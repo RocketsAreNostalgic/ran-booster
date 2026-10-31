@@ -12,7 +12,26 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 if ( ! empty( $overview_dashboard_activity ) ) {
-	$activity = $onboarding['activity'] ?? array(
+	$state_tones  = array(
+		'queued'          => 'pending',
+		'running'         => 'pending',
+		'succeeded'       => 'ok',
+		'updated'         => 'ok',
+		'failed'          => 'error',
+		'needs_attention' => 'error',
+	);
+	$state_labels = array(
+		'queued'          => __( 'Queued', 'ran-booster' ),
+		'running'         => __( 'Running', 'ran-booster' ),
+		'incomplete'      => __( 'Unconfirmed', 'ran-booster' ),
+		'succeeded'       => __( 'Succeeded', 'ran-booster' ),
+		'updated'         => __( 'Updated', 'ran-booster' ),
+		'failed'          => __( 'Failed', 'ran-booster' ),
+		'rejected'        => __( 'Rejected', 'ran-booster' ),
+		'skipped'         => __( 'Skipped', 'ran-booster' ),
+		'needs_attention' => __( 'Needs attention', 'ran-booster' ),
+	);
+	$activity     = $onboarding['activity'] ?? array(
 		'available' => false,
 		'records'   => array(),
 	);
@@ -24,9 +43,15 @@ if ( ! empty( $overview_dashboard_activity ) ) {
 		<?php } elseif ( empty( $activity['records'] ) ) { ?>
 			<p><?php esc_html_e( 'No recent activity.', 'ran-booster' ); ?></p>
 		<?php } else { ?>
-			<ul>
-				<?php foreach ( array_slice( $activity['records'], 0, 5 ) as $record ) { ?>
-					<li><?php echo esc_html( $record['operation'] ); ?> — <?php echo esc_html( $record['status'] ); ?> — <?php echo esc_html( $record['sort_at'] ); ?></li>
+			<ul class="ran-booster-overview-activity__list">
+				<?php
+				foreach ( array_slice( $activity['records'], 0, 5 ) as $record ) {
+					$state = $record['status'];
+					?>
+					<li class="ran-booster-overview-activity__row">
+						<div><strong><?php echo esc_html( $record['operation'] ); ?></strong><span class="ran-booster-overview-activity__time"><?php echo esc_html( $record['sort_at'] ); ?></span></div>
+						<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $state_tones[ $state ] ?? 'neutral' ); ?>"><?php echo esc_html( $state_labels[ $state ] ?? __( 'Unknown', 'ran-booster' ) ); ?></span>
+					</li>
 				<?php } ?>
 			</ul>
 		<?php } ?>

@@ -26,6 +26,45 @@ final class TroubleshootingViewTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_legacy_file_constant_takes_precedence_even_with_nonstring_value(): void {
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/configured' );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', false );
+		$dashboard = ( new \ReflectionClass( \RAN\Dashboard::class ) )->newInstanceWithoutConstructor();
+		$details   = $dashboard->storage_installation_projection()['details'] ?? array();
+		self::assertSame( array( 'configuration' => 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' ), $details );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_storage_projection_reads_private_configuration_only_for_both_capabilities(): void {
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/configured' );
+		$provisioner = new class() extends \RAN\Secrets\SecretsStorageProvisioner {
+			public int $reads = 0;
+			public function configuration_facts(): array {
+				++$this->reads;
+				return array(
+					'path'   => '/private/configured/secrets.json',
+					'source' => 'manual',
+				);
+			}
+		};
+		$dashboard   = ( new \ReflectionClass( \RAN\Dashboard::class ) )->newInstanceWithoutConstructor();
+		( new \ReflectionProperty( \RAN\Dashboard::class, 'secrets_storage' ) )->setValue( $dashboard, $provisioner );
+		foreach ( array( 'manage_options', 'activate_plugins' ) as $denied ) {
+			$GLOBALS['ran_booster_test_capabilities'] = array( $denied => false );
+			self::assertArrayNotHasKey( 'details', $dashboard->storage_installation_projection() );
+		}
+		self::assertSame( 0, $provisioner->reads );
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$details                                  = $dashboard->storage_installation_projection()['details'] ?? array();
+		self::assertSame( '/private/configured', $details['configured_location'] );
+		self::assertSame( '/private/configured/secrets.json', $details['storage_file'] );
+		self::assertSame( 'manual', $details['path_source'] );
+		self::assertSame( 1, $provisioner->reads );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_journal_outcomes_translate_when_rendered(): void {
 		foreach ( array(
 			'diagnostics.partial'                   => 'Diagnostics returned a partial report.',
@@ -192,7 +231,12 @@ final class TroubleshootingViewTest extends TestCase {
 				'state'   => 'actionable',
 				'message' => '<storage>',
 				'url'     => 'https://example.test/settings',
-				'details' => array( 'Location' => '<location>' ),
+				'details' => array(
+					'configuration'       => '<constant>',
+					'configured_location' => '<location>',
+					'storage_file'        => '<file>',
+					'path_source'         => 'manual',
+				),
 			),
 			'components'  => array( array( 'Name' => '<component>' ) ),
 		);
@@ -202,11 +246,15 @@ final class TroubleshootingViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertStringContainsString( 'panel=installation" aria-current="page"', $html );
 			self::assertStringNotContainsString( 'value="run-troubleshooting"', $html );
-			foreach ( array( '<wordpress>', '<runtime>', '<database>', '<storage>', '<location>', '<component>' ) as $value ) {
+			foreach ( array( '<wordpress>', '<runtime>', '<database>', '<storage>', '<constant>', '<location>', '<file>', '<component>' ) as $value ) {
 				self::assertStringNotContainsString( $value, $html );
 				self::assertStringContainsString( htmlspecialchars( $value, ENT_QUOTES ), $html );
 			}
 			self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage"', $html );
+			self::assertStringContainsString( 'Configuration constant: <code>&lt;constant&gt;</code>', $html );
+			self::assertStringContainsString( '<dt>Storage directory</dt>', $html );
+			self::assertStringContainsString( '<dt>Storage file</dt>', $html );
+			self::assertStringContainsString( 'Path selection: Custom wp-config.php path', $html );
 			self::assertStringContainsString( '<summary>Environment details</summary>', $html );
 			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary>Environment details</summary>', $html );
 			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open><summary>Environment details</summary>', $html );

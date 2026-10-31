@@ -416,7 +416,16 @@ final class SupportReportTest extends TestCase {
 		$report = new SupportReport( new InstallationFacts( new ProviderRegistry() ) );
 		self::assertStringContainsString( 'Configuration source: none', $report->generate( array( 'source' => 'constant' ) )['text'] );
 		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/configured-path-canary' );
-		$text = $report->generate( array( 'source' => '/private/incorrect-source-canary' ) )['text'];
+		$text = $report->generate(
+			array(
+				'source'  => '/private/incorrect-source-canary',
+				'details' => array(
+					'configured_location' => '/private/directory-canary',
+					'storage_file'        => '/private/file-canary/secrets.json',
+					'path_source'         => 'source-canary',
+				),
+			)
+		)['text'];
 		self::assertStringContainsString( 'Configuration source: constant', $text );
 		self::assertStringNotContainsString( 'canary', $text );
 	}

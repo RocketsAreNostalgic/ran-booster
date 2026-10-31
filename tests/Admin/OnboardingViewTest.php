@@ -417,7 +417,7 @@ final class OnboardingViewTest extends TestCase {
 	}
 
 	public function test_dashboard_reports_unknown_counts_and_escapes_bounded_activity(): void {
-		$records = array_fill(
+		$records              = array_fill(
 			0,
 			6,
 			array(
@@ -426,7 +426,8 @@ final class OnboardingViewTest extends TestCase {
 				'sort_at'   => '<time>',
 			)
 		);
-		$html    = $this->render_view(
+		$records[0]['status'] = 'failed';
+		$html                 = $this->render_view(
 			null,
 			null,
 			array(
@@ -455,7 +456,10 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Current credential expiry is unknown', $html );
 		self::assertSame( 5, substr_count( $html, '&lt;operation&gt;' ) );
 		self::assertStringNotContainsString( '<operation>', $html );
-		self::assertStringContainsString( '&lt;status&gt;', $html );
+		self::assertStringNotContainsString( '&lt;status&gt;', $html );
+		self::assertStringContainsString( 'ran-booster-badge--error', $html );
+		self::assertStringContainsString( '>Failed</span>', $html );
+		self::assertStringContainsString( 'ran-booster-badge--neutral', $html );
 		self::assertStringContainsString( '&lt;time&gt;', $html );
 		self::assertStringContainsString( 'value="onboarding"', $html );
 		self::assertStringContainsString( 'ran-booster-overview-presentation', $html );

@@ -957,7 +957,7 @@ msgid "Diagnostics not configured"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:64
-#: views/overview-dashboard.php:71
+#: views/overview-dashboard.php:96
 msgid "Credential expiry"
 msgstr ""
 
@@ -990,13 +990,14 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:224
 #: RAN/Troubleshooting/TroubleshootingService.php:237
 #: views/attempts/index.php:168
-#: views/overview-dashboard.php:48
-#: views/overview-dashboard.php:49
-#: views/overview-dashboard.php:50
+#: views/overview-dashboard.php:53
+#: views/overview-dashboard.php:73
+#: views/overview-dashboard.php:74
+#: views/overview-dashboard.php:75
 #: views/portability-review.php:101
 #: views/settings.php:93
 #: views/settings.php:145
-#: views/troubleshooting-installation.php:109
+#: views/troubleshooting-installation.php:130
 #: views/troubleshooting.php:227
 #: assets/ran-booster-portability.js:713
 msgid "Unknown"
@@ -1017,6 +1018,7 @@ msgstr ""
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
 #: RAN/Booster.php:943
 #: views/attempts/index.php:51
+#: views/overview-dashboard.php:29
 #: views/packages/index.php:64
 #: views/troubleshooting.php:52
 msgid "Failed"
@@ -1365,7 +1367,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1479
+#: RAN/Dashboard.php:1482
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1374,7 +1376,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:820
+#: RAN/Dashboard.php:823
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -2831,6 +2833,7 @@ msgstr ""
 #: views/attempts/index.php:54
 #: views/onboarding.php:79
 #: views/onboarding.php:97
+#: views/overview-dashboard.php:32
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
 #: views/packages/index.php:333
@@ -4535,7 +4538,7 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:264
-#: views/overview-dashboard.php:53
+#: views/overview-dashboard.php:78
 msgid "Transporter"
 msgstr ""
 
@@ -4671,18 +4674,21 @@ msgstr ""
 
 #: RAN/Booster.php:940
 #: views/attempts/index.php:46
+#: views/overview-dashboard.php:24
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
 #: RAN/Booster.php:941
 #: views/attempts/index.php:47
+#: views/overview-dashboard.php:25
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
 #: RAN/Booster.php:942
 #: views/attempts/index.php:49
+#: views/overview-dashboard.php:27
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
@@ -4790,51 +4796,51 @@ msgstr ""
 msgid "Storage health has not been checked in this request."
 msgstr ""
 
-#: RAN/Dashboard.php:830
+#: RAN/Dashboard.php:833
 msgid "Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package."
 msgstr ""
 
-#: RAN/Dashboard.php:849
+#: RAN/Dashboard.php:852
 msgid "Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it."
 msgstr ""
 
-#: RAN/Dashboard.php:864
+#: RAN/Dashboard.php:867
 msgid "Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:865
+#: RAN/Dashboard.php:868
 msgid "Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:870
+#: RAN/Dashboard.php:873
 msgid "Booster cannot verify this installed package and its management record. No management changes have been made."
 msgstr ""
 
-#: RAN/Dashboard.php:895
+#: RAN/Dashboard.php:898
 msgid "Booster’s saved update revision is invalid. It cannot safely use this package’s management settings."
 msgstr ""
 
-#: RAN/Dashboard.php:896
+#: RAN/Dashboard.php:899
 msgid "Booster’s saved update source is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:897
+#: RAN/Dashboard.php:900
 msgid "Booster’s saved deployment policy is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:898
+#: RAN/Dashboard.php:901
 msgid "Booster’s saved repository credential reference is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:899
+#: RAN/Dashboard.php:902
 msgid "Booster’s saved repository privacy setting is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:900
+#: RAN/Dashboard.php:903
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:1151
+#: RAN/Dashboard.php:1154
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 
@@ -5139,363 +5145,363 @@ msgstr ""
 msgid "Read the version-specific Multisite recovery guide"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:43
+#: RAN/Secrets/SecretsStorageProvisioner.php:57
 msgid "The encrypted secrets path constant is not a valid absolute path."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:54
+#: RAN/Secrets/SecretsStorageProvisioner.php:68
 msgid "The resolved configured storage directory is not a verified private location. It may be inside the public web root, use a symbolic link or cross another unsafe path boundary. Choose a real local directory outside the public web root."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:89
+#: RAN/Secrets/SecretsStorageProvisioner.php:103
 msgid "Automatic secure storage setup requires a direct local POSIX filesystem."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:99
-#: RAN/Secrets/SecretsStorageProvisioner.php:107
+#: RAN/Secrets/SecretsStorageProvisioner.php:113
+#: RAN/Secrets/SecretsStorageProvisioner.php:121
 msgid "Booster could not determine a safe private storage location."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:116
-#: RAN/Secrets/SecretsStorageProvisioner.php:135
-#: RAN/Secrets/SecretsStorageProvisioner.php:365
+#: RAN/Secrets/SecretsStorageProvisioner.php:130
+#: RAN/Secrets/SecretsStorageProvisioner.php:149
+#: RAN/Secrets/SecretsStorageProvisioner.php:379
 msgid "Booster could not safely identify the wp-config.php loaded by WordPress."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:148
+#: RAN/Secrets/SecretsStorageProvisioner.php:162
 msgid "The private storage filesystem did not pass Booster's safety checks."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:155
+#: RAN/Secrets/SecretsStorageProvisioner.php:169
 msgid "The private storage location changed or did not pass Booster's final path-safety check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:163
+#: RAN/Secrets/SecretsStorageProvisioner.php:177
 msgid "The private storage location and WordPress configuration are not on one verified local filesystem."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:179
-#: RAN/Secrets/SecretsStorageProvisioner.php:1054
-#: RAN/Secrets/SecretsStorageProvisioner.php:1062
+#: RAN/Secrets/SecretsStorageProvisioner.php:193
+#: RAN/Secrets/SecretsStorageProvisioner.php:1068
+#: RAN/Secrets/SecretsStorageProvisioner.php:1076
 msgid "The WordPress configuration could not be updated safely."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:214
+#: RAN/Secrets/SecretsStorageProvisioner.php:228
 msgid "Booster found plausible prior storage material that it could not inspect completely. Restore or review that material manually before resetting credential storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:228
+#: RAN/Secrets/SecretsStorageProvisioner.php:242
 msgid "Booster found encrypted credential storage without its matching database key. Restore the matching database key if possible, or explicitly discard the unauthenticated ciphertext and start with empty credential storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:240
+#: RAN/Secrets/SecretsStorageProvisioner.php:254
 msgid "Booster found a database encryption key without its matching encrypted file. Restore the matching file if possible, or explicitly reset this empty credential store."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:258
+#: RAN/Secrets/SecretsStorageProvisioner.php:272
 msgid "Booster found prior storage material, but no database key is available to authenticate it. Restore the matching database key before adopting or resetting storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:270
+#: RAN/Secrets/SecretsStorageProvisioner.php:284
 msgid "Booster found more than one authenticated prior storage set. Choose and configure the correct private location manually."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:293
+#: RAN/Secrets/SecretsStorageProvisioner.php:307
 msgid "Booster authenticated prior credential storage, but its location does not pass the current private-path policy. Move the matching storage set to a verified private location before using it."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:294
+#: RAN/Secrets/SecretsStorageProvisioner.php:308
 msgid "Booster authenticated prior credential storage, but one or more credentials do not pass their current Git provider policy. Review or restore the matching storage set before using it."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:295
+#: RAN/Secrets/SecretsStorageProvisioner.php:309
 msgid "Booster authenticated prior credential storage, but the active wp-config.php definition is operator-managed. Configure the verified private path manually."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:296
+#: RAN/Secrets/SecretsStorageProvisioner.php:310
 msgid "Booster authenticated prior credential storage, but it crosses an unsupported filesystem boundary. Configure the verified private path manually."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:310
+#: RAN/Secrets/SecretsStorageProvisioner.php:324
 msgid "Booster found one prior storage set that authenticates with this site's database key and whose credentials pass their current Git provider policies."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:325
+#: RAN/Secrets/SecretsStorageProvisioner.php:339
 msgid "The empty-storage reset request is invalid. Review the current storage state and try again."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:330
+#: RAN/Secrets/SecretsStorageProvisioner.php:344
 msgid "The credential storage state changed and was not reset. Review it again before continuing."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:340
+#: RAN/Secrets/SecretsStorageProvisioner.php:354
 msgid "The incomplete credential storage could not be reset safely. No storage reset was confirmed."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:350
+#: RAN/Secrets/SecretsStorageProvisioner.php:364
 msgid "The storage recovery request is invalid. Review the current storage state and try again."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:360
+#: RAN/Secrets/SecretsStorageProvisioner.php:374
 msgid "The recoverable storage candidate is no longer uniquely safe and authenticated. Review the current storage state again."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:377
+#: RAN/Secrets/SecretsStorageProvisioner.php:391
 msgid "The recoverable storage path could not be adopted safely."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:382
+#: RAN/Secrets/SecretsStorageProvisioner.php:396
 msgid "Booster could not require a fresh WordPress configuration check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:727
+#: RAN/Secrets/SecretsStorageProvisioner.php:741
 msgid "PHP cannot see the configured storage directory. It may be absent, or PHP may lack execute/traverse permission on a parent directory. Keep the storage directory itself owner-only with mode 0700."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:733
+#: RAN/Secrets/SecretsStorageProvisioner.php:747
 msgid "The configured secrets directory must be a real directory on a supported local filesystem, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:741
+#: RAN/Secrets/SecretsStorageProvisioner.php:755
 msgid "Booster could not verify the configured secrets directory."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:758
+#: RAN/Secrets/SecretsStorageProvisioner.php:772
 msgid "The configured secrets file must be a regular file, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:765
+#: RAN/Secrets/SecretsStorageProvisioner.php:779
 msgid "Booster could not verify the configured secrets file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:770
+#: RAN/Secrets/SecretsStorageProvisioner.php:784
 msgid "The configured secrets file has additional hard links."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:783
+#: RAN/Secrets/SecretsStorageProvisioner.php:797
 msgid "The secrets file exists, but its matching lock file is missing. Restore the matching storage set from one backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:789
+#: RAN/Secrets/SecretsStorageProvisioner.php:803
 msgid "The configured secrets lock must be a regular file, not a symbolic link."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:796
+#: RAN/Secrets/SecretsStorageProvisioner.php:810
 msgid "Booster could not verify the configured secrets lock file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:801
+#: RAN/Secrets/SecretsStorageProvisioner.php:815
 msgid "The configured secrets lock file has additional hard links."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:819
+#: RAN/Secrets/SecretsStorageProvisioner.php:833
 msgctxt "Configured secrets storage item"
 msgid "directory"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:820
+#: RAN/Secrets/SecretsStorageProvisioner.php:834
 msgctxt "Configured secrets storage item"
 msgid "file"
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:821
+#: RAN/Secrets/SecretsStorageProvisioner.php:835
 msgctxt "Configured secrets storage item"
 msgid "lock file"
 msgstr ""
 
 #. translators: 1: configured secrets storage item, 2: current octal mode, 3: required octal mode.
-#: RAN/Secrets/SecretsStorageProvisioner.php:829
+#: RAN/Secrets/SecretsStorageProvisioner.php:843
 #, php-format
 msgid "The configured secrets %1$s uses mode %2$04o; mode %3$04o is required."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:838
+#: RAN/Secrets/SecretsStorageProvisioner.php:852
 #, php-format
 msgid "The configured secrets %s is not owned by the PHP process user."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:845
+#: RAN/Secrets/SecretsStorageProvisioner.php:859
 #, php-format
 msgid "The configured secrets %s is not readable by PHP."
 msgstr ""
 
 #. translators: %s: configured secrets storage item.
-#: RAN/Secrets/SecretsStorageProvisioner.php:853
+#: RAN/Secrets/SecretsStorageProvisioner.php:867
 #, php-format
 msgid "The configured secrets %s is not writable by PHP."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:873
+#: RAN/Secrets/SecretsStorageProvisioner.php:887
 msgid "secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:877
+#: RAN/Secrets/SecretsStorageProvisioner.php:891
 msgid "The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:881
+#: RAN/Secrets/SecretsStorageProvisioner.php:895
 msgid "Only secrets.json.lock remains; no secrets file or database encryption key was found."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:885
+#: RAN/Secrets/SecretsStorageProvisioner.php:899
 msgid "Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:889
+#: RAN/Secrets/SecretsStorageProvisioner.php:903
 msgid "Booster could not safely use the encrypted secrets store."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:899
+#: RAN/Secrets/SecretsStorageProvisioner.php:913
 msgid "The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:903
+#: RAN/Secrets/SecretsStorageProvisioner.php:917
 msgid "The secrets file could not be authenticated with this site's database key. Restore both from the same backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:908
+#: RAN/Secrets/SecretsStorageProvisioner.php:922
 msgid "The secrets file authenticated but its encrypted document is invalid."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:912
+#: RAN/Secrets/SecretsStorageProvisioner.php:926
 msgid "Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:918
+#: RAN/Secrets/SecretsStorageProvisioner.php:932
 msgid "The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:926
+#: RAN/Secrets/SecretsStorageProvisioner.php:940
 msgid "The secrets lock file could not be used safely. Verify its ownership and mode 0600."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:930
+#: RAN/Secrets/SecretsStorageProvisioner.php:944
 msgid "Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1030
+#: RAN/Secrets/SecretsStorageProvisioner.php:1044
 msgid "The encrypted secrets path is already configured."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1031
+#: RAN/Secrets/SecretsStorageProvisioner.php:1045
 msgid "The WordPress configuration directory is not safe and writable."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1032
+#: RAN/Secrets/SecretsStorageProvisioner.php:1046
 msgid "The encrypted secrets path is not safe for automatic configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1033
+#: RAN/Secrets/SecretsStorageProvisioner.php:1047
 msgid "The supplied WordPress configuration path is not an absolute safe POSIX file path."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1034
+#: RAN/Secrets/SecretsStorageProvisioner.php:1048
 msgid "The WordPress configuration changed before it could be edited."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1035
+#: RAN/Secrets/SecretsStorageProvisioner.php:1049
 msgid "Could not secure the WordPress configuration edit lock."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1036
+#: RAN/Secrets/SecretsStorageProvisioner.php:1050
 msgid "Could not lock the WordPress configuration for editing."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1037
+#: RAN/Secrets/SecretsStorageProvisioner.php:1051
 msgid "The WordPress configuration does not pass Booster's writable private regular-file checks."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1038
+#: RAN/Secrets/SecretsStorageProvisioner.php:1052
 msgid "The WordPress configuration is group- or world-writable."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1039
+#: RAN/Secrets/SecretsStorageProvisioner.php:1053
 msgid "The WordPress configuration has an unsupported size."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1040
+#: RAN/Secrets/SecretsStorageProvisioner.php:1054
 msgid "The WordPress configuration is not owned by the current process owner."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1041
+#: RAN/Secrets/SecretsStorageProvisioner.php:1055
 msgid "Could not read the complete WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1042
+#: RAN/Secrets/SecretsStorageProvisioner.php:1056
 msgid "The WordPress configuration must contain one standard stop-editing marker."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1043
+#: RAN/Secrets/SecretsStorageProvisioner.php:1057
 msgid "The encrypted secrets path constant is already defined."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1044
+#: RAN/Secrets/SecretsStorageProvisioner.php:1058
 msgid "The automatic encrypted secrets definition is ambiguous."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1045
+#: RAN/Secrets/SecretsStorageProvisioner.php:1059
 msgid "The edited WordPress configuration did not pass the expected definition check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1046
+#: RAN/Secrets/SecretsStorageProvisioner.php:1060
 msgid "Could not secure the temporary WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1047
+#: RAN/Secrets/SecretsStorageProvisioner.php:1061
 msgid "Could not preserve WordPress configuration ownership."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1048
+#: RAN/Secrets/SecretsStorageProvisioner.php:1062
 msgid "Could not flush the edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1049
+#: RAN/Secrets/SecretsStorageProvisioner.php:1063
 msgid "Could not synchronize the edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1050
+#: RAN/Secrets/SecretsStorageProvisioner.php:1064
 msgid "The edited WordPress configuration failed its read-back check."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1051
+#: RAN/Secrets/SecretsStorageProvisioner.php:1065
 msgid "The edited WordPress configuration metadata could not be verified."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1052
+#: RAN/Secrets/SecretsStorageProvisioner.php:1066
 msgid "Could not atomically replace the WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1053
+#: RAN/Secrets/SecretsStorageProvisioner.php:1067
 msgid "The installed WordPress configuration failed verification."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1055
+#: RAN/Secrets/SecretsStorageProvisioner.php:1069
 msgid "The WordPress configuration does not parse as supported PHP."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1056
+#: RAN/Secrets/SecretsStorageProvisioner.php:1070
 msgid "The WordPress configuration uses unsupported line endings."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1057
+#: RAN/Secrets/SecretsStorageProvisioner.php:1071
 msgid "The WordPress configuration edit lock is not safe."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1058
+#: RAN/Secrets/SecretsStorageProvisioner.php:1072
 msgid "Could not write the complete edited WordPress configuration."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1059
+#: RAN/Secrets/SecretsStorageProvisioner.php:1073
 msgid "The temporary WordPress configuration is not safe."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1060
+#: RAN/Secrets/SecretsStorageProvisioner.php:1074
 msgid "Could not open the WordPress configuration edit lock."
 msgstr ""
 
-#: RAN/Secrets/SecretsStorageProvisioner.php:1061
+#: RAN/Secrets/SecretsStorageProvisioner.php:1075
 msgid "Could not create a private temporary WordPress configuration."
 msgstr ""
 
@@ -5617,7 +5623,7 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:71
 #: RAN/Troubleshooting/TroubleshootingService.php:227
-#: views/troubleshooting-installation.php:161
+#: views/troubleshooting-installation.php:182
 msgid "Diagnostic Git provider"
 msgstr ""
 
@@ -5652,7 +5658,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:231
 #: RAN/Troubleshooting/TroubleshootingService.php:245
 #: views/troubleshooting-installation.php:9
-#: views/troubleshooting-installation.php:161
+#: views/troubleshooting-installation.php:182
 msgid "GitHub provider"
 msgstr ""
 
@@ -5721,9 +5727,9 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:273
 #: RAN/Troubleshooting/TroubleshootingService.php:277
 #: RAN/Troubleshooting/TroubleshootingService.php:278
-#: views/troubleshooting-installation.php:78
-#: views/troubleshooting-installation.php:85
-#: views/troubleshooting-installation.php:161
+#: views/troubleshooting-installation.php:99
+#: views/troubleshooting-installation.php:106
+#: views/troubleshooting-installation.php:182
 msgid "Booster Core updates"
 msgstr ""
 
@@ -5752,7 +5758,7 @@ msgid "Last operator check code"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:280
-#: views/troubleshooting-installation.php:148
+#: views/troubleshooting-installation.php:169
 msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
@@ -5975,18 +5981,22 @@ msgid "Reconcile stopped worker"
 msgstr ""
 
 #: views/attempts/index.php:48
+#: views/overview-dashboard.php:26
 msgid "Unconfirmed"
 msgstr ""
 
 #: views/attempts/index.php:50
+#: views/overview-dashboard.php:28
 msgid "Updated"
 msgstr ""
 
 #: views/attempts/index.php:52
+#: views/overview-dashboard.php:30
 msgid "Rejected"
 msgstr ""
 
 #: views/attempts/index.php:53
+#: views/overview-dashboard.php:31
 msgid "Skipped"
 msgstr ""
 
@@ -6370,7 +6380,7 @@ msgstr ""
 #: views/documentation.php:182
 #: views/documentation.php:386
 #: views/onboarding.php:178
-#: views/overview-dashboard.php:53
+#: views/overview-dashboard.php:78
 #: views/provider.php:626
 msgid "Install a plugin"
 msgstr ""
@@ -6733,7 +6743,7 @@ msgstr ""
 
 #: views/documentation.php:387
 #: views/onboarding.php:179
-#: views/overview-dashboard.php:53
+#: views/overview-dashboard.php:78
 #: views/provider.php:627
 msgid "Install a theme"
 msgstr ""
@@ -6769,6 +6779,7 @@ msgstr ""
 #: views/documentation.php:408
 #: views/settings-storage.php:39
 #: views/settings.php:42
+#: views/troubleshooting-installation.php:68
 msgid "Booster default"
 msgstr ""
 
@@ -7279,7 +7290,7 @@ msgid "Status unknown"
 msgstr ""
 
 #: views/onboarding.php:131
-#: views/troubleshooting-installation.php:48
+#: views/troubleshooting-installation.php:50
 msgid "Storage status is unavailable."
 msgstr ""
 
@@ -7300,7 +7311,7 @@ msgid "3. Add credentials if needed"
 msgstr ""
 
 #: views/onboarding.php:148
-#: views/overview-dashboard.php:57
+#: views/overview-dashboard.php:82
 msgid "Repository access has not been checked here."
 msgstr ""
 
@@ -7312,24 +7323,24 @@ msgstr ""
 
 #. translators: %s is the display name of a registered Git provider.
 #: views/onboarding.php:153
-#: views/overview-dashboard.php:62
+#: views/overview-dashboard.php:87
 msgid "Admitted"
 msgstr ""
 
 #. translators: %s is the display name of a registered Git provider.
 #: views/onboarding.php:153
-#: views/overview-dashboard.php:62
+#: views/overview-dashboard.php:87
 msgid "Not admitted"
 msgstr ""
 
 #. translators: %s is the display name of a registered Git provider.
 #: views/onboarding.php:153
-#: views/overview-dashboard.php:62
+#: views/overview-dashboard.php:87
 msgid "Admission unknown"
 msgstr ""
 
 #: views/onboarding.php:157
-#: views/overview-dashboard.php:66
+#: views/overview-dashboard.php:91
 msgid "Selection unknown"
 msgstr ""
 
@@ -7365,74 +7376,74 @@ msgstr ""
 msgid "Return to onboarding"
 msgstr ""
 
-#: views/overview-dashboard.php:21
+#: views/overview-dashboard.php:40
 msgid "Recent Activity"
 msgstr ""
 
-#: views/overview-dashboard.php:23
+#: views/overview-dashboard.php:42
 msgid "Activity is unavailable."
 msgstr ""
 
-#: views/overview-dashboard.php:25
+#: views/overview-dashboard.php:44
 msgid "No recent activity."
 msgstr ""
 
-#: views/overview-dashboard.php:33
+#: views/overview-dashboard.php:58
 #: views/provider.php:531
 msgid "View Activity"
 msgstr ""
 
-#: views/overview-dashboard.php:46
+#: views/overview-dashboard.php:71
 msgid "Managed packages"
 msgstr ""
 
-#: views/overview-dashboard.php:48
+#: views/overview-dashboard.php:73
 msgid "Plugins:"
 msgstr ""
 
-#: views/overview-dashboard.php:49
+#: views/overview-dashboard.php:74
 msgid "Themes:"
 msgstr ""
 
-#: views/overview-dashboard.php:50
+#: views/overview-dashboard.php:75
 msgid "Updates disabled:"
 msgstr ""
 
-#: views/overview-dashboard.php:52
+#: views/overview-dashboard.php:77
 msgid "Manage plugins"
 msgstr ""
 
-#: views/overview-dashboard.php:52
+#: views/overview-dashboard.php:77
 msgid "Manage themes"
 msgstr ""
 
-#: views/overview-dashboard.php:56
+#: views/overview-dashboard.php:81
 msgid "Providers and access"
 msgstr ""
 
-#: views/overview-dashboard.php:59
+#: views/overview-dashboard.php:84
 msgid "No provider settings are currently available."
 msgstr ""
 
-#: views/overview-dashboard.php:73
+#: views/overview-dashboard.php:98
 msgid "These reminders cover credentials with actionable expiry information; they are not a complete credential inventory."
 msgstr ""
 
-#: views/overview-dashboard.php:75
+#: views/overview-dashboard.php:100
 msgid "No actionable expiry reminders were captured."
 msgstr ""
 
 #. translators: 1: displayed reminders, 2: total actionable reminders.
-#: views/overview-dashboard.php:84
+#: views/overview-dashboard.php:109
 #, php-format
 msgid "Showing %1$d of %2$d actionable expiry reminders."
 msgstr ""
 
-#: views/overview-dashboard.php:88
+#: views/overview-dashboard.php:113
 msgid "Credential expiry reminders are unavailable. Review credentials in provider settings."
 msgstr ""
 
-#: views/overview-dashboard.php:90
+#: views/overview-dashboard.php:115
 msgid "Current credential expiry is unknown. Review credentials in provider settings."
 msgstr ""
 
@@ -9303,7 +9314,7 @@ msgid "Adopt GitHub implementation"
 msgstr ""
 
 #: views/provider.php:329
-#: views/troubleshooting-installation.php:149
+#: views/troubleshooting-installation.php:170
 msgid "GitHub provider details"
 msgstr ""
 
@@ -9778,6 +9789,7 @@ msgid "Save webhook secret"
 msgstr ""
 
 #: views/settings-storage.php:40
+#: views/troubleshooting-installation.php:69
 msgid "Custom wp-config.php path"
 msgstr ""
 
@@ -9786,14 +9798,18 @@ msgid "Storage details"
 msgstr ""
 
 #: views/settings-storage.php:86
+#: views/troubleshooting-installation.php:17
 msgid "Storage directory"
 msgstr ""
 
 #: views/settings-storage.php:91
+#: views/troubleshooting-installation.php:18
 msgid "Storage file"
 msgstr ""
 
 #: views/settings-storage.php:96
+#: views/troubleshooting-installation.php:19
+#: views/troubleshooting-installation.php:73
 msgid "Path selection"
 msgstr ""
 
@@ -10141,76 +10157,73 @@ msgid "Save changes"
 msgstr ""
 
 #: views/troubleshooting-installation.php:16
+#: views/troubleshooting-installation.php:56
 msgid "Configuration constant"
 msgstr ""
 
-#: views/troubleshooting-installation.php:17
-msgid "Configured storage location"
-msgstr ""
-
-#: views/troubleshooting-installation.php:22
+#: views/troubleshooting-installation.php:24
 #: views/troubleshooting.php:24
 msgid "Installation"
 msgstr ""
 
-#: views/troubleshooting-installation.php:24
+#: views/troubleshooting-installation.php:26
 msgid "Environment"
 msgstr ""
 
-#: views/troubleshooting-installation.php:29
+#: views/troubleshooting-installation.php:31
 msgid "Environment information is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:36
+#: views/troubleshooting-installation.php:38
 msgid "Environment details"
 msgstr ""
 
-#: views/troubleshooting-installation.php:46
+#: views/troubleshooting-installation.php:48
 msgid "Storage"
 msgstr ""
 
-#: views/troubleshooting-installation.php:57
+#: views/troubleshooting-installation.php:78
 msgid "Storage settings"
 msgstr ""
 
-#: views/troubleshooting-installation.php:64
+#: views/troubleshooting-installation.php:85
 msgid "Core update status is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:66
+#: views/troubleshooting-installation.php:87
 msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:68
+#: views/troubleshooting-installation.php:89
 msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
 msgstr ""
 
-#: views/troubleshooting-installation.php:70
+#: views/troubleshooting-installation.php:91
 msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
 msgstr ""
 
-#: views/troubleshooting-installation.php:72
+#: views/troubleshooting-installation.php:93
 msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:74
+#: views/troubleshooting-installation.php:95
 msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:81
-#: views/troubleshooting-installation.php:136
+#: views/troubleshooting-installation.php:102
+#: views/troubleshooting-installation.php:157
 msgid "Technical details"
 msgstr ""
 
-#: views/troubleshooting-installation.php:94
+#: views/troubleshooting-installation.php:115
 msgid "Providers and extensions"
 msgstr ""
 
-#: views/troubleshooting-installation.php:96
+#: views/troubleshooting-installation.php:117
 msgid "Only the first 32 components are shown. Additional components are omitted."
 msgstr ""
 
-#: views/troubleshooting-installation.php:101
+#: views/troubleshooting-installation.php:122
 msgid "Provider and extension information is unavailable."
 msgstr ""
 

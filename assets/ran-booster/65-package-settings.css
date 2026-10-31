@@ -966,7 +966,7 @@
 .ran-booster-admin .ran-booster-settings__switch-control::after {
 	position: absolute;
 	inset-block-start: 50%;
-	inset-inline-start: 0.1875rem;
+	inset-inline-start: 0.25rem;
 	inline-size: 1rem;
 	block-size: 1rem;
 	border-radius: 50%;

@@ -715,12 +715,15 @@ class Dashboard {
 			}
 		}
 		if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
-			foreach ( array( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' ) as $constant ) {
-				if ( defined( $constant ) && is_string( constant( $constant ) ) ) {
-					$projection['details'] = array(
-						'configuration'       => $constant,
-						'configured_location' => constant( $constant ),
-					);
+			foreach ( array( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) as $constant ) {
+				if ( defined( $constant ) ) {
+					$projection['details'] = array( 'configuration' => $constant );
+					$facts                 = ( $this->secrets_storage ?? new SecretsStorageProvisioner() )->configuration_facts();
+					if ( null !== $facts ) {
+						$projection['details']['configured_location'] = dirname( $facts['path'] );
+						$projection['details']['storage_file']        = $facts['path'];
+						$projection['details']['path_source']         = $facts['source'];
+					}
 					break;
 				}
 			}

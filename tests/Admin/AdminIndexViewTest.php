@@ -111,7 +111,7 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Set up GitHub deployments', $html );
 		self::assertStringContainsString( 'Deploy themes and plugins straight from your Git repos.', $html );
 		self::assertStringContainsString( 'Install from a public repository first. Add private access and Push-to-Deploy only when you need them.', $html );
-		self::assertStringNotContainsString( 'Start with a repository', $html );
+		self::assertStringNotContainsString( 'Prepare your site', $html );
 		self::assertStringContainsString( 'class="notice notice-warning inline is-dismissible"', $html );
 		self::assertStringContainsString( 'data-ran-booster-development-safety', $html );
 		self::assertStringContainsString( '<strong>Development safety:</strong>', $html );
@@ -196,6 +196,6 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $overview ) );
 		self::assertSame( 1, substr_count( $overview, 'aria-current="page"' ) );
 		self::assertStringContainsString( '>Overview</a>', $overview );
-		self::assertStringContainsString( '<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title">Start with a repository</h2>', $overview );
+		self::assertStringContainsString( '<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title">Prepare your site</h2>', $overview );
 	}
 }

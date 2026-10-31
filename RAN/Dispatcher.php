@@ -101,6 +101,11 @@ class Dispatcher {
 				? $request['action']
 				: '';
 
+			if ( 'overview-presentation' === $action ) {
+				$this->overview_presentation( $request );
+				return;
+			}
+
 			if ( 'run-troubleshooting' === $action ) {
 				$this->run_troubleshooting( $request );
 
@@ -244,6 +249,28 @@ class Dispatcher {
 		}
 		wp_safe_redirect( $url );
 		exit;
+	}
+
+	/** @param array<string,mixed> $request */
+	private function overview_presentation( array $request ): void {
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? null ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You cannot change the Overview preference.', 'ran-booster' ) );
+		}
+		check_admin_referer( 'ran-booster-overview-presentation' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The purpose nonce above protects this fixed destination.
+		if ( 'ran-booster' !== ( $_GET['page'] ?? null ) || ! in_array( $request['presentation'] ?? null, array( 'dashboard', 'onboarding' ), true )
+			|| array() !== array_diff( array_keys( $request ), array( 'action', 'presentation' ) ) ) {
+			wp_die( esc_html__( 'Invalid Overview preference. Reload Overview and try again.', 'ran-booster' ) );
+		}
+		$value = $request['presentation'];
+		update_option( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, $value, false );
+		if ( get_option( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, null ) !== $value ) {
+			wp_die( esc_html__( 'The Overview preference could not be saved. Try again.', 'ran-booster' ) );
+		}
+		$this->redirect_to( admin_url( 'admin.php?page=ran-booster&tab=overview' ) );
 	}
 
 	private function create_secure_storage(): void {

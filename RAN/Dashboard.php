@@ -81,6 +81,7 @@ class Dashboard {
 	private ?ProviderDocumentationPresenter $provider_documentation;
 	private ?PackageAdminController $package_admin = null;
 	private DeploymentAdminPresenter $deployment_admin;
+	private ?\RAN\Activity\ActivityStore $overview_activity = null;
 	private PackagePagePresenter $plugin_pages;
 	private PackagePagePresenter $theme_pages;
 	private ?TemporaryDebugCapture $debug_capture                     = null;
@@ -122,10 +123,11 @@ class Dashboard {
 		private ?\RAN\PackageRemoval\PackageRemovalService $removals = null,
 		?\RAN\Activity\ActivityStore $activity = null
 	) {
-		$this->db      = $db;
-		$this->plugins = $plugins;
-		$this->booster = $booster;
-		$this->themes  = $themes;
+		$this->overview_activity = $activity;
+		$this->db                = $db;
+		$this->plugins           = $plugins;
+		$this->booster           = $booster;
+		$this->themes            = $themes;
 
 		$this->provider_settings = $provider_settings;
 		$this->troubleshooting   = $troubleshooting;
@@ -209,10 +211,14 @@ class Dashboard {
 		}
 
 		if ( null !== $selected_tab && 'overview' === $selected_tab->get_key() ) {
-			$data['onboarding'] = ( new OnboardingPresenter() )->build(
+			$data['onboarding'] = ( new OnboardingPresenter() )->build_overview(
 				$tabs,
 				$admin_url . '?page=ran-booster-plugins-create',
-				$admin_url . '?page=ran-booster-themes-create'
+				$admin_url . '?page=ran-booster-themes-create',
+				$this->plugins,
+				$this->themes,
+				$this->overview_activity,
+				null
 			);
 			$secrets_storage    = $this->secrets_storage;
 			if ( null !== $secrets_storage ) {

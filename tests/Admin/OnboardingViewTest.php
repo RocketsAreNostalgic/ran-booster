@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
+#[RunTestsInSeparateProcesses]
+#[PreserveGlobalState( false )]
 final class OnboardingViewTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
@@ -25,7 +29,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'page=ran-booster-themes-create', $html );
 	}
 
-	public function test_leads_with_public_installation_before_optional_access_and_automation(): void {
+	public function test_guidance_places_storage_before_provider_credentials_and_installation(): void {
 		$html = $this->render_view();
 
 		self::assertStringContainsString(
@@ -33,7 +37,7 @@ final class OnboardingViewTest extends TestCase {
 			$html
 		);
 		self::assertStringContainsString(
-			'<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title">Start with a repository</h2>',
+			'<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title">Prepare your site</h2>',
 			$html
 		);
 		self::assertSame( 2, preg_match_all( '/<section class="ran-booster-panel ran-booster-onboarding__column"/', $html ) );
@@ -45,13 +49,13 @@ final class OnboardingViewTest extends TestCase {
 		self::assertCount( 0, $heading_panels );
 
 		$install = strpos( $html, 'Install a plugin' );
-		$private = strpos( $html, 'Private repository access' );
+		$private = strpos( $html, '2. Choose a Git provider' );
 		$move    = strpos( $html, 'Move or automate later' );
 
 		self::assertIsInt( $install );
 		self::assertIsInt( $private );
 		self::assertIsInt( $move );
-		self::assertLessThan( $private, $install );
+		self::assertLessThan( $install, $private );
 		self::assertLessThan( $move, $private );
 		self::assertStringContainsString( 'Public repositories do not need repository credentials or webhooks.', $html );
 		self::assertStringContainsString( 'Install and manage custom plugins and themes from supported Git repositories; private access and Push-to-Deploy are optional.', $html );
@@ -100,7 +104,7 @@ final class OnboardingViewTest extends TestCase {
 		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/views/onboarding.php' );
 
 		self::assertStringContainsString(
-			"esc_html_e( 'Start with a repository', 'ran-booster' )",
+			"esc_html_e( 'Prepare your site', 'ran-booster' )",
 			$source
 		);
 		self::assertStringContainsString( "__( 'Add %s access', 'ran-booster' )", $source );
@@ -297,7 +301,7 @@ final class OnboardingViewTest extends TestCase {
 		$details = strpos( $healthy, 'class="ran-booster-onboarding__storage-details ran-booster-disclosure"' );
 		$path    = strpos( $healthy, 'Storage file' );
 		$source  = strpos( $healthy, 'Path selection' );
-		$connect = strpos( $healthy, 'Connect a Git provider' );
+		$connect = strpos( $healthy, '3. Add credentials if needed' );
 		$move    = strpos( $healthy, 'Move or automate later' );
 		$storage = strpos( $healthy, 'Secure credential storage' );
 		self::assertIsInt( $details );
@@ -308,8 +312,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertIsInt( $storage );
 		self::assertLessThan( $path, $details );
 		self::assertLessThan( $source, $details );
-		self::assertLessThan( $storage, $connect );
-		self::assertLessThan( $storage, $move );
+		self::assertLessThan( $connect, $storage );
+		self::assertLessThan( $move, $storage );
 
 		$broken = $this->render_storage_status( 'storage_needs_attention', 'manual' );
 		self::assertStringContainsString( '>Storage needs attention</span>', $broken );
@@ -414,6 +418,158 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="configured_path_unsafe"', $html );
 	}
 
+	public function test_dashboard_reports_unknown_counts_and_escapes_bounded_activity(): void {
+		$records = array_fill(
+			0,
+			6,
+			array(
+				'operation' => '<operation>',
+				'status'    => '<status>',
+				'sort_at'   => '<time>',
+			)
+		);
+		$html    = $this->render_view(
+			null,
+			null,
+			array(
+				'view'         => 'dashboard',
+				'inventory'    => array(
+					'plugins'  => 0,
+					'themes'   => null,
+					'disabled' => null,
+					'complete' => false,
+				),
+				'activity'     => array(
+					'available' => true,
+					'records'   => $records,
+				),
+				'plugins_url'  => '/plugins',
+				'themes_url'   => '/themes',
+				'activity_url' => '/activity',
+			)
+		);
+		self::assertLessThan( strpos( $html, 'Managed packages' ), strpos( $html, 'Needs attention' ) );
+		self::assertStringContainsString( 'Plugins: 0', $html );
+		self::assertStringContainsString( 'Themes: Unknown', $html );
+		self::assertStringContainsString( 'Current credential expiry is unknown', $html );
+		self::assertSame( 5, substr_count( $html, '&lt;operation&gt;' ) );
+		self::assertStringNotContainsString( '<operation>', $html );
+		self::assertStringContainsString( '&lt;status&gt;', $html );
+		self::assertStringContainsString( '&lt;time&gt;', $html );
+		self::assertStringContainsString( 'value="onboarding"', $html );
+		self::assertStringContainsString( 'ran-booster-overview-presentation', $html );
+	}
+
+	public function test_presentation_controls_and_activity_availability(): void {
+		$extra = array(
+			'view'         => 'dashboard',
+			'plugins_url'  => '/plugins',
+			'themes_url'   => '/themes',
+			'activity_url' => '/activity',
+		);
+		$html  = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'Activity is unavailable.', $html );
+		$extra['activity'] = array(
+			'available' => true,
+			'records'   => array(),
+		);
+		self::assertStringContainsString( 'No recent activity.', $this->render_view( null, null, $extra ) );
+		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
+		try {
+			self::assertStringNotContainsString( 'overview-presentation', $this->render_view( null, null, $extra ) );
+		} finally {
+			unset( $GLOBALS['ran_booster_test_capabilities']['manage_options'] );
+		}
+		self::assertStringContainsString( 'value="dashboard"', $this->render_view() );
+	}
+
+	public function test_both_presentations_keep_one_storage_action_and_migration_prompt(): void {
+		$storage = array(
+			'status'              => 'setup_available',
+			'message'             => 'Prepare storage.',
+			'candidate_path'      => null,
+			'can_provision'       => true,
+			'action_url'          => '/overview',
+			'config_alternatives' => null,
+		);
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] = array(
+			static function (): void {
+				echo 'migration-marker'; },
+		);
+		try {
+			foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
+				$html = $this->render_view(
+					null,
+					$storage,
+					array(
+						'view'         => $view,
+						'plugins_url'  => '/plugins',
+						'themes_url'   => '/themes',
+						'activity_url' => '/activity',
+					)
+				);
+				self::assertSame( 1, substr_count( $html, 'value="create-secure-storage"' ) );
+				self::assertSame( 1, substr_count( $html, 'ran-booster-create-secure-storage' ) );
+				self::assertSame( 1, substr_count( $html, 'migration-marker' ) );
+				if ( 'onboarding' === $view ) {
+					self::assertLessThan( strpos( $html, '2. Choose a Git provider' ), strpos( $html, 'Secure credential storage' ) );
+					self::assertLessThan( strpos( $html, '4. Install and manage packages' ), strpos( $html, '3. Add credentials if needed' ) );
+				}
+			}
+		} finally {
+			unset( $GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] );
+		}
+	}
+
+	public function test_attention_is_visible_in_both_presentations_for_incomplete_inventory_and_storage_failure(): void {
+		foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
+			$extra = array(
+				'view'            => $view,
+				'inventory'       => array(
+					'plugins'  => null,
+					'themes'   => 0,
+					'disabled' => null,
+					'complete' => false,
+				),
+				'storage_summary' => array(
+					'status'  => 'storage_needs_attention',
+					'message' => '<storage failure>',
+				),
+				'plugins_url'     => '/plugins',
+				'themes_url'      => '/themes',
+				'activity_url'    => '/activity',
+			);
+			$html  = $this->render_view( null, null, $extra );
+			self::assertStringContainsString( 'inventory is incomplete or unavailable', $html );
+			self::assertStringContainsString( '&lt;storage failure&gt;', $html );
+			self::assertStringContainsString( 'Review storage', $html );
+		}
+	}
+
+	public function test_missing_storage_status_is_unavailable_even_with_complete_inventory(): void {
+		foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
+			$extra = array(
+				'view'            => $view,
+				'inventory'       => array(
+					'plugins'  => 0,
+					'themes'   => 0,
+					'disabled' => 0,
+					'complete' => true,
+				),
+				'storage_summary' => null,
+				'plugins_url'     => '/plugins',
+				'themes_url'      => '/themes',
+				'activity_url'    => '/activity',
+			);
+			$html  = $this->render_view( null, null, $extra );
+			self::assertStringContainsString( 'Secure credential storage status is unavailable.', $html );
+			self::assertStringContainsString( 'id="ran-booster-onboarding-storage-heading"', $html );
+			self::assertStringContainsString( 'Review storage', $html );
+			$extra['storage_summary'] = array( 'message' => 'No status' );
+			self::assertStringContainsString( 'Secure credential storage status is unavailable.', $this->render_view( null, null, $extra ) );
+		}
+	}
+
 	private function render_storage_status(
 		string $status,
 		string $source,
@@ -485,7 +641,7 @@ final class OnboardingViewTest extends TestCase {
 	 * @param list<array{label: string, url: string}>|null $provider_links Provider settings links.
 	 * @param array<string, mixed>|null $secrets_storage Protected storage setup payload.
 	 */
-	private function render_view( ?array $provider_links = null, ?array $secrets_storage = null ): string {
+	private function render_view( ?array $provider_links = null, ?array $secrets_storage = null, array $extra = array() ): string {
 		$onboarding = array(
 			'provider_links'      => $provider_links ?? array(
 				array(
@@ -503,6 +659,7 @@ final class OnboardingViewTest extends TestCase {
 			'documentation_url'   => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation',
 			'troubleshooting_url' => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting',
 		);
+		$onboarding = array_merge( $onboarding, $extra );
 		if ( null !== $secrets_storage ) {
 			$onboarding['secrets_storage'] = $secrets_storage;
 		}

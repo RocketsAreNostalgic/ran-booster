@@ -235,6 +235,7 @@ class Booster {
 			// Deactivation must continue when an optional capture is unavailable.
 		}
 
+		( new \RAN\Troubleshooting\DiagnosticRunStore() )->clear();
 		$this->service( WordPressWorkerWakeup::class )->clear();
 	}
 
@@ -623,6 +624,7 @@ class Booster {
 
 	/** Reuse WordPress's daily maintenance hook; never prune from a rendered history. */
 	public function prune_activity(): void {
+		( new \RAN\Troubleshooting\DiagnosticRunStore() )->cleanup();
 		$activity = $this->service( \RAN\Activity\ActivityStore::class );
 		if ( ! $activity->available() ) {
 			return;

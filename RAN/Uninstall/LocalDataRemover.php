@@ -36,6 +36,7 @@ class LocalDataRemover {
 		RepositoryBranchCheckEvidenceStore::OPTION_NAME,
 		WordPressInstallationStore::OPTION_NAME,
 		GeneralPreferenceStore::OPTION_NAME,
+		\RAN\Troubleshooting\DiagnosticRunStore::OPTION_NAME,
 	);
 
 	private const USER_META_KEYS = array(

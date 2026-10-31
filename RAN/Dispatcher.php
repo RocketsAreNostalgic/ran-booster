@@ -106,6 +106,11 @@ class Dispatcher {
 				return;
 			}
 
+			if ( 'generate-support-report' === $action ) {
+				$this->generate_support_report( $request );
+				return;
+			}
+
 			if ( 'run-troubleshooting' === $action ) {
 				$this->run_troubleshooting( $request );
 
@@ -538,6 +543,23 @@ class Dispatcher {
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
 		$this->redirect_to( $admin_url . '?page=ran-booster&tab=troubleshooting&panel=debug-capture' );
+	}
+
+	/** @param array<string,mixed> $request */
+	private function generate_support_report( array $request ): void {
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? null ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have sufficient permissions to generate a support report.', 'ran-booster' ) );
+		}
+		check_admin_referer( 'ran-booster-generate-support-report' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Purpose nonce above protects this fixed POST route.
+		if ( ( $_GET['page'] ?? null ) !== 'ran-booster' || ( $_GET['tab'] ?? null ) !== 'troubleshooting' || ( $_GET['panel'] ?? null ) !== 'support-report'
+			|| array_keys( $request ) !== array( 'action' ) ) {
+			wp_die( esc_html__( 'Invalid support report request. Open Support report and try again.', 'ran-booster' ) );
+		}
+		$this->dashboard->post_generate_support_report();
 	}
 
 	/** @param array<string, mixed> $request */

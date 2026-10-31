@@ -214,6 +214,53 @@ final class GitHubProviderSelection {
 		return $result;
 	}
 
+	/**
+	 * Earlier request-bootstrap declarations only; never refresh authority or scan candidates.
+	 * @return array{state:string,admitted:bool,selected:string,version:string,provider_api:int,compatibility_revision:string,identity:?array{provider_code:string,selection_generation:int,implementation_fingerprint:string}}
+	 */
+	public function support_observation(): array {
+		$result = array(
+			'state'                  => 'storage_unavailable',
+			'admitted'               => false,
+			'selected'               => 'unknown',
+			'version'                => 'Unknown',
+			'provider_api'           => 0,
+			'compatibility_revision' => 'Unknown',
+			'identity'               => null,
+		);
+		if ( null === $this->state ) {
+			return $result;
+		}
+		try {
+			$declaration        = 'bundled' === ( $this->state['selected'] ?? null ) ? $this->bundled : new GitHubReplacementDeclaration( $this->state['declaration'] );
+			$display            = $this->display_declaration( $declaration );
+			$result['admitted'] = null !== $this->registry && isset( $this->registry->metadata()['gh'] );
+			$result['selected'] = 'bundled' === $this->state['selected'] ? 'bundled' : 'external';
+			$result['state']    = match ( true ) {
+				isset( $this->state['native_mutation'] ) => 'recovery_required',
+				count( $this->candidates ) > 1 => 'conflict',
+				in_array( null, $this->candidates, true ) => 'incompatible',
+				! in_array( $declaration->plugin_basename, $this->active, true ) => 'missing',
+				$result['admitted'] => 'admitted',
+				default => 'decision_required',
+			};
+			$result['version']                = is_string( $display['display_version'] ?? null ) ? $display['display_version'] : 'Unknown';
+			$result['provider_api']           = $declaration->provider_api_version;
+			$result['compatibility_revision'] = $declaration->compatibility_revision;
+			$generation                       = $this->state['selection_generation'] ?? null;
+			if ( is_int( $generation ) && $generation >= 0 ) {
+				$result['identity'] = array(
+					'provider_code'              => 'gh',
+					'selection_generation'       => $generation,
+					'implementation_fingerprint' => $declaration->implementation_fingerprint,
+				);
+			}
+		} catch ( \Throwable ) {
+			$result['state'] = 'storage_unavailable';
+		}
+		return $result;
+	}
+
 	/** @return array<string,mixed> Advertised plugin headers are display claims, never authority. */
 	private function display_declaration( GitHubReplacementDeclaration $declaration ): array {
 		$display = get_object_vars( $declaration ) + array(

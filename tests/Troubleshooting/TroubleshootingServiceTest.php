@@ -90,6 +90,42 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( $payload['installation_details'], $ran['installation_details'] );
 	}
 
+	public function test_operator_check_context_projects_only_safe_recorded_values(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$provider                 = new TroubleshootingProviderFixture( 'gh', static fn (): array => array() );
+		$service                  = $this->service( $provider );
+		$form                     = $service->form_payload();
+		$form['core_self_update'] = array(
+			'last_successful_check' => 1699999000,
+			'last_check_outcome'    => 'failed',
+			'last_check_code'       => 'check_failed',
+			'check_cooldown_until'  => 1700000300,
+			'next_check'            => 1700001000,
+		);
+		$rows                     = $service->with_installation_context( $form, null )['installation_details']['Booster Core updates'];
+		self::assertSame( gmdate( 'c', 1699999000 ), $rows['Last successful operator check (UTC)'] );
+		self::assertSame( 'failed', $rows['Last operator check outcome'] );
+		self::assertSame( 'check_failed', $rows['Last operator check code'] );
+		self::assertSame( gmdate( 'c', 1700000300 ), $rows['Operator check cooldown until (UTC)'] );
+		self::assertSame( gmdate( 'c', 1700001000 ), $rows['Next check (UTC)'] );
+		foreach ( array( 'success', 'skipped', 'unknown', 'rejected' ) as $outcome ) {
+			$form['core_self_update']['last_check_outcome'] = $outcome;
+			self::assertSame( $outcome, $service->with_installation_context( $form, null )['installation_details']['Booster Core updates']['Last operator check outcome'] );
+		}
+		$form['core_self_update'] = array(
+			'last_successful_check' => 0,
+			'check_cooldown_until'  => 253402300800,
+			'last_check_outcome'    => 'injected',
+			'last_check_code'       => '/private/path',
+		);
+		$payload                  = $service->with_installation_context( $form, null );
+		foreach ( array( 'Last successful operator check (UTC)', 'Operator check cooldown until (UTC)', 'Last operator check outcome', 'Last operator check code' ) as $label ) {
+			self::assertSame( 'Unavailable', $payload['installation_details']['Booster Core updates'][ $label ] );
+		}
+		self::assertStringNotContainsString( '/private/path', $payload['report'] );
+		self::assertSame( 0, $provider->runs );
+	}
+
 	public function test_installation_context_rejects_unsafe_claims_and_never_serializes_raw_state(): void {
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 		$service               = $this->service();

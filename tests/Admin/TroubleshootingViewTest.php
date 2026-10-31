@@ -288,6 +288,19 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
 		self::assertStringContainsString( '<code>native_discovery_disabled</code>', $html );
 		self::assertStringNotContainsString( 'cannot reach its configured GitHub release feed', $html );
+		$troubleshooting['core_self_update']['requested_mode'] = 'disabled';
+		$troubleshooting['core_self_update']['reason']         = 'preference_disabled';
+		$troubleshooting['core_self_update']['marker_version'] = '1.2.3';
+		$troubleshooting['core_self_update']['marker_commit']  = str_repeat( 'a', 40 );
+		foreach ( array( 'blocked', 'unavailable' ) as $state ) {
+			$troubleshooting['core_self_update']['updater_state'] = $state;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'Core updates are off because this site explicitly disables them.', $html );
+			self::assertStringNotContainsString( 'Core updates are off for this source installation.', $html );
+			self::assertStringNotContainsString( 'retry automatically', $html );
+		}
 	}
 
 	public function test_official_feed_failure_uses_nontechnical_troubleshooting_copy(): void {

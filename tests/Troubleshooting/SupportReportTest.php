@@ -28,6 +28,64 @@ require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
 require_once dirname( __DIR__ ) . '/Logging/LoggingWordPressFunctions.php';
 
 final class SupportReportTest extends TestCase {
+	public function test_core_projection_preserves_recorded_operator_history_and_rejects_untrusted_values(): void {
+		$method = new \ReflectionMethod( SupportReport::class, 'core_update_lines' );
+		$core   = array(
+			'reason'                => 'preference_disabled',
+			'last_check'            => 1700000000,
+			'next_check'            => 1700001000,
+			'last_successful_check' => 1699999000,
+			'last_check_outcome'    => 'failed',
+			'last_check_code'       => 'check_failed',
+			'check_cooldown_until'  => 1700000300,
+		);
+		$lines  = $method->invoke( null, $core );
+		self::assertIsArray( $lines );
+		self::assertContains( 'Recorded operator results and cooldown are separate from target last_check and next_check; no new check was performed.', $lines );
+		self::assertContains( 'reason: preference_disabled', $lines );
+		self::assertContains( 'last_successful_check: ' . gmdate( 'c', 1699999000 ), $lines );
+		self::assertContains( 'last_check_outcome: failed', $lines );
+		self::assertContains( 'last_check_code: check_failed', $lines );
+		self::assertContains( 'check_cooldown_until: ' . gmdate( 'c', 1700000300 ), $lines );
+		self::assertContains( 'next_check: ' . gmdate( 'c', 1700001000 ), $lines );
+		foreach ( array( 'success', 'skipped', 'unknown', 'rejected' ) as $outcome ) {
+			$core['last_check_outcome'] = $outcome;
+			$lines                      = $method->invoke( null, $core );
+			self::assertIsArray( $lines );
+			self::assertContains( 'last_check_outcome: ' . $outcome, $lines );
+		}
+		$core['last_check_outcome']    = 'private_outcome';
+		$core['last_check_code']       = '/private/path';
+		$core['last_successful_check'] = 0;
+		$core['check_cooldown_until']  = 253402300800;
+		$lines                         = $method->invoke( null, $core );
+		self::assertIsArray( $lines );
+		foreach ( array( 'last_check_outcome: Unknown', 'last_check_code: Unknown', 'last_successful_check: Unknown', 'check_cooldown_until: Unknown' ) as $line ) {
+			self::assertContains( $line, $lines );
+		}
+		foreach ( array(
+			array(),
+			array(
+				'last_successful_check' => null,
+				'check_cooldown_until'  => null,
+				'last_check_outcome'    => null,
+				'last_check_code'       => null,
+			),
+			array(
+				'last_successful_check' => '1700000000',
+				'check_cooldown_until'  => '1700000300',
+				'last_check_outcome'    => null,
+				'last_check_code'       => 'private_token_canary',
+			),
+		) as $input ) {
+			$lines = $method->invoke( null, $input );
+			self::assertIsArray( $lines );
+			foreach ( array( 'last_check_outcome: Unknown', 'last_check_code: Unknown', 'last_successful_check: Unknown', 'check_cooldown_until: Unknown' ) as $line ) {
+				self::assertContains( $line, $lines );
+			}
+		}
+	}
+
 	public function test_real_generation_redacts_all_sections_and_uses_consistent_placeholders(): void {
 		$this->environment();
 		$provider             = new SupportReportProvider();

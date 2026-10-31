@@ -106,7 +106,7 @@ msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:87
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:128
-#: RAN/Troubleshooting/TroubleshootingService.php:191
+#: RAN/Troubleshooting/TroubleshootingService.php:202
 #: views/troubleshooting-installation.php:10
 #: views/troubleshooting-installation.php:107
 msgid "Name"
@@ -2585,8 +2585,11 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:494
 #: RAN/Troubleshooting/TroubleshootingService.php:138
 #: RAN/Troubleshooting/TroubleshootingService.php:168
-#: RAN/Troubleshooting/TroubleshootingService.php:222
-#: RAN/Troubleshooting/TroubleshootingService.php:225
+#: RAN/Troubleshooting/TroubleshootingService.php:175
+#: RAN/Troubleshooting/TroubleshootingService.php:179
+#: RAN/Troubleshooting/TroubleshootingService.php:180
+#: RAN/Troubleshooting/TroubleshootingService.php:233
+#: RAN/Troubleshooting/TroubleshootingService.php:236
 #: views/debug-capture.php:43
 #: views/onboarding.php:29
 msgid "Unavailable"
@@ -5629,6 +5632,9 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:161
 #: RAN/Troubleshooting/TroubleshootingService.php:168
+#: RAN/Troubleshooting/TroubleshootingService.php:175
+#: RAN/Troubleshooting/TroubleshootingService.php:179
+#: RAN/Troubleshooting/TroubleshootingService.php:180
 #: views/troubleshooting-installation.php:66
 #: views/troubleshooting-installation.php:73
 #: views/troubleshooting-installation.php:128
@@ -5644,49 +5650,65 @@ msgid "Next check (UTC)"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:171
+msgid "Last successful operator check (UTC)"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:172
+msgid "Operator check cooldown until (UTC)"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:179
+msgid "Last operator check outcome"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:180
+msgid "Last operator check code"
+msgstr ""
+
+#: RAN/Troubleshooting/TroubleshootingService.php:182
 #: views/troubleshooting-installation.php:111
 msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:180
+#: RAN/Troubleshooting/TroubleshootingService.php:191
 msgid "Diagnostic checks"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:181
+#: RAN/Troubleshooting/TroubleshootingService.php:192
 msgid "Not run"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:192
+#: RAN/Troubleshooting/TroubleshootingService.php:203
 #: views/packages/index.php:517
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
 msgid "Version"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:193
+#: RAN/Troubleshooting/TroubleshootingService.php:204
 msgid "Implementation"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:194
+#: RAN/Troubleshooting/TroubleshootingService.php:205
 msgid "Provider API"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:195
+#: RAN/Troubleshooting/TroubleshootingService.php:206
 msgid "Compatibility revision"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:196
+#: RAN/Troubleshooting/TroubleshootingService.php:207
 msgid "Webhook signing format"
 msgstr ""
 
 #. translators: %d: locally declared capability number.
-#: RAN/Troubleshooting/TroubleshootingService.php:203
+#: RAN/Troubleshooting/TroubleshootingService.php:214
 #, php-format
 msgid "Capability %d"
 msgstr ""
 
 #. translators: %d: locally declared credential format number.
-#: RAN/Troubleshooting/TroubleshootingService.php:205
+#: RAN/Troubleshooting/TroubleshootingService.php:216
 #, php-format
 msgid "API credential format %d"
 msgstr ""
@@ -9652,15 +9674,15 @@ msgid "Core update status is unavailable."
 msgstr ""
 
 #: views/troubleshooting-installation.php:54
-msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
+msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
 msgstr ""
 
 #: views/troubleshooting-installation.php:56
-msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
+msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
 msgstr ""
 
 #: views/troubleshooting-installation.php:58
-msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
+msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
 msgstr ""
 
 #: views/troubleshooting-installation.php:60

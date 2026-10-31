@@ -50,12 +50,12 @@ if ( 'actionable' === ( $storage['state'] ?? '' ) && ! empty( $storage['url'] ) 
 			$updater_state      = $core_self_update['updater_state'] ?? null;
 			if ( array() === $core_self_update ) {
 				$self_update_message = __( 'Core update status is unavailable.', 'ran-booster' );
+			} elseif ( in_array( $self_update_reason, array( 'configuration_disabled', 'preference_disabled' ), true ) ) {
+				$self_update_message = __( 'Core updates are off because this site explicitly disables them. Booster will not check for or replace itself.', 'ran-booster' );
 			} elseif ( 'unavailable' === $updater_state || 'blocked' === $updater_state ) {
 				$self_update_message = __( 'RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically.', 'ran-booster' );
 			} elseif ( 'enabled' === $self_update_mode ) {
 				$self_update_message = __( 'Core updates are available manually for this verified release installation. Background Core updates remain off.', 'ran-booster' );
-			} elseif ( 'configuration_disabled' === $self_update_reason ) {
-				$self_update_message = __( 'Core updates are off because this site explicitly disables them. Booster will not check for or replace itself.', 'ran-booster' );
 			} elseif ( 'configuration_invalid' === $self_update_reason ) {
 				$self_update_message = __( 'Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself.', 'ran-booster' );
 			} else {

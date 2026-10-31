@@ -115,18 +115,7 @@ final class SupportReport {
 		$lines[]   = 'GitHub selection at request bootstrap: ' . self::choice( $selection['state'], array( 'storage_unavailable', 'recovery_required', 'conflict', 'incompatible', 'missing', 'admitted', 'decision_required' ) );
 		$lines[]   = 'GitHub admitted=' . ( $selection['admitted'] ? 'Yes' : 'No' ) . '; selected=' . self::choice( $selection['selected'], array( 'bundled', 'external', 'unknown' ) ) . '; version=' . InstallationFacts::version( $selection['version'] ) . '; provider API=' . ( $selection['provider_api'] > 0 && $selection['provider_api'] < 1000 ? (string) $selection['provider_api'] : 'Unknown' );
 		$lines[]   = 'GitHub compatibility revision: ' . InstallationFacts::version( $selection['compatibility_revision'] );
-		foreach ( array( 'requested_mode', 'effective_mode', 'reason', 'updater_state' ) as $key ) {
-			$lines[] = $key . ': ' . self::choice( $core[ $key ] ?? null, array( 'auto', 'enabled', 'disabled', 'invalid', 'configuration_enabled', 'configuration_disabled', 'configuration_invalid', 'source_checkout', 'verified_release', 'release_marker_missing_or_invalid', 'active', 'inactive', 'unavailable', 'blocked' ) );
-		}
-		foreach ( array( 'offered_version', 'marker_version' ) as $key ) {
-			$lines[] = $key . ': ' . InstallationFacts::version( $core[ $key ] ?? null );
-		}
-		$lines[] = 'marker_commit: ' . self::hex( $core['marker_commit'] ?? null, 40 );
-		$lines[] = 'updater_code: ' . self::choice( $core['updater_code'] ?? null, array( 'native_discovery_disabled', 'diagnostics_unavailable', 'github_updater_status_unavailable', 'github_updater_runtime_environment_invalid' ) );
-		foreach ( array( 'last_check', 'next_check' ) as $key ) {
-			$value   = $core[ $key ] ?? null;
-			$lines[] = $key . ': ' . ( is_int( $value ) && $value > 0 && $value <= 253402300799 ? gmdate( 'c', $value ) : 'Unknown; no new check performed' );
-		}
+		$lines     = array_merge( $lines, self::core_update_lines( $core ) );
 		foreach ( $this->facts->components() as $component ) {
 			$name  = $component['Name'] ?? '';
 			$label = in_array( $name, array( 'GitHub', 'Bitbucket Cloud', 'WP Pusher Migrator' ), true ) ? $name : $this->identity( 'Component', $name );
@@ -157,6 +146,34 @@ final class SupportReport {
 			$lines[] = 'Provider and add-on declarations beyond the first 32 are not included.';
 		}
 		return array( $truncated ? 'Truncated' : 'Included', $lines );
+	}
+
+	/**
+	 * @param array<string,mixed> $core
+	 * @return list<string>
+	 */
+	private static function core_update_lines( array $core ): array {
+		$lines = array();
+		foreach ( array( 'requested_mode', 'effective_mode', 'reason', 'updater_state' ) as $key ) {
+			$lines[] = $key . ': ' . self::choice( $core[ $key ] ?? null, array( 'auto', 'enabled', 'disabled', 'invalid', 'configuration_enabled', 'configuration_disabled', 'configuration_invalid', 'preference_disabled', 'source_checkout', 'verified_release', 'release_marker_missing_or_invalid', 'active', 'inactive', 'unavailable', 'blocked' ) );
+		}
+		foreach ( array( 'offered_version', 'marker_version' ) as $key ) {
+			$lines[] = $key . ': ' . InstallationFacts::version( $core[ $key ] ?? null );
+		}
+		$lines[] = 'marker_commit: ' . self::hex( $core['marker_commit'] ?? null, 40 );
+		$lines[] = 'updater_code: ' . self::choice( $core['updater_code'] ?? null, array( 'native_discovery_disabled', 'diagnostics_unavailable', 'github_updater_status_unavailable', 'github_updater_runtime_environment_invalid' ) );
+		foreach ( array( 'last_check', 'next_check' ) as $key ) {
+			$value   = $core[ $key ] ?? null;
+			$lines[] = $key . ': ' . ( is_int( $value ) && $value > 0 && $value <= 253402300799 ? gmdate( 'c', $value ) : 'Unknown; no new check performed' );
+		}
+		$lines[] = 'Recorded operator results and cooldown are separate from target last_check and next_check; no new check was performed.';
+		foreach ( array( 'last_successful_check', 'check_cooldown_until' ) as $key ) {
+			$value   = $core[ $key ] ?? null;
+			$lines[] = $key . ': ' . ( is_int( $value ) && $value > 0 && $value <= 253402300799 ? gmdate( 'c', $value ) : 'Unknown' );
+		}
+		$lines[] = 'last_check_outcome: ' . self::choice( $core['last_check_outcome'] ?? null, array( 'success', 'failed', 'unknown', 'rejected', 'skipped' ) );
+		$lines[] = 'last_check_code: ' . self::choice( $core['last_check_code'] ?? null, array( 'native_discovery_disabled', 'refresh_rejected', 'orchestration_failed', 'check_not_observed', 'check_succeeded', 'check_rejected', 'check_failed', 'claim_lost', 'unexpected_failure', 'runtime_identity_invalid', 'policy_disabled', 'policy_forced_off', 'filesystem_unavailable', 'discovery_not_admitted', 'candidate_not_eligible', 'offer_token_unavailable', 'update_available', 'release_list_failed', 'candidate_invalid', 'candidate_rejected', 'candidate_inspection_failed', 'candidate_descriptor_mismatch', 'candidate_validation_failed', 'no_candidates', 'no_newer_candidate', 'cooldown_active', 'claim_unavailable', 'target_unavailable' ) );
+		return $lines;
 	}
 
 	/**

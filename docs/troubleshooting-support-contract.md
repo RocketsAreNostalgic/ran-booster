@@ -37,6 +37,43 @@ normal operational POST initialization remains intact.
 
 ## Positive collection boundary
 
+### Settings check projection correction (pre-edit contract)
+
+Settings owns policy resolution and durable operator-check observations. This
+bounded correction consumes its optional scalar fields without copying its
+implementation or adding collection: `preference_disabled` means a saved site
+preference disables Core discovery even for a verified release. Installation
+uses explicit site-disabled wording rather than source-checkout wording.
+
+`last_successful_check` is the positive Unix UTC completion time of the last
+matching successful operator check; later failure/skip does not erase it.
+`last_check_outcome` permits only success, failed, unknown, rejected or skipped.
+`last_check_code` exports only the reviewed fixed Core-check/updater reasons
+listed below; arbitrary bounded strings remain Unknown. `check_cooldown_until`
+is positive Unix UTC completion plus 300 seconds, possibly already past; it
+does not promise another check. Missing/invalid fields are unavailable. All new
+timestamps are capped at 253402300799. Existing target `last_check`/`next_check`
+remain separate and never substitute for successful operator-check evidence.
+
+Exported check codes: native_discovery_disabled, refresh_rejected,
+orchestration_failed, check_not_observed, check_succeeded, check_rejected,
+check_failed, claim_lost, cooldown_active, claim_unavailable, target_unavailable,
+unexpected_failure, runtime_identity_invalid,
+policy_disabled, policy_forced_off, filesystem_unavailable,
+discovery_not_admitted, candidate_not_eligible, offer_token_unavailable,
+update_available, release_list_failed, candidate_invalid, candidate_rejected,
+candidate_inspection_failed, candidate_descriptor_mismatch,
+candidate_validation_failed, no_candidates and no_newer_candidate. On-screen
+codes additionally accept pathless lowercase/underscore codes up to 64 bytes;
+the shared export policy remains the closed list above.
+
+Projected correction cost: at most 75 production additions / 20 removals in
+the existing view/report/service, one private pure projection method, no new
+type, public seam, collector, remote request, persisted state or dependency.
+Tests exercise Settings-shaped scalar input in the standalone source branch;
+the Settings-owned composed candidate must also prove its real durable Check
+readback through CoreSelfUpdateStatus and InstallationFacts to both projections.
+
 All sections carry Included, Unavailable, Not run, Not captured, Not included or
 Truncated coverage, collection times and omission context. One section failure
 does not stop the others. The five-second budget is checked between bounded
@@ -157,8 +194,13 @@ and disposable-fixture evidence, not retained-site, deployment or release
 acceptance. Settings owns the complete storage cutover independently; a direct
 Installation request has no invented authenticated health or repair eligibility.
 
-Final measured production delta: 1,501 additions / 122 removals; tests: 2,037
+Final measured production delta: 1,529 additions / 122 removals; tests: 2,144
 additions / 56 removals. Three concrete production types, one bounded temporary
 option, no table, cron, public extension seam or generated-report state. The
 initial production estimate was exceeded by the explicit read/retention and
 captured-declaration boundaries described above; tests/docs do not offset it.
+The subsequent Settings projection correction changes 42 production lines and
+removes 14 against the prior source head (including moved projection lines),
+adds 107 test lines, and stays within its separate pre-edit budget. It adds no
+type, public seam, collector or state. Its standalone tests prove projection
+and redaction; Settings-owned composition must prove durable-check integration.

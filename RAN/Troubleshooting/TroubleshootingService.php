@@ -167,6 +167,17 @@ final class TroubleshootingService {
 			$timestamp = $core[ $key ] ?? null;
 			$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ $label ] = is_int( $timestamp ) && $timestamp >= 0 && $timestamp <= 253402300799 ? gmdate( 'c', $timestamp ) : __( 'Unavailable', 'ran-booster' );
 		}
+		foreach ( array(
+			'last_successful_check' => __( 'Last successful operator check (UTC)', 'ran-booster' ),
+			'check_cooldown_until'  => __( 'Operator check cooldown until (UTC)', 'ran-booster' ),
+		) as $key => $label ) {
+			$timestamp = $core[ $key ] ?? null;
+			$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ $label ] = is_int( $timestamp ) && $timestamp > 0 && $timestamp <= 253402300799 ? gmdate( 'c', $timestamp ) : __( 'Unavailable', 'ran-booster' );
+		}
+		$outcome = $core['last_check_outcome'] ?? null;
+		$code    = $core['last_check_code'] ?? null;
+		$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ __( 'Last operator check outcome', 'ran-booster' ) ] = is_string( $outcome ) && in_array( $outcome, array( 'success', 'failed', 'unknown', 'rejected', 'skipped' ), true ) ? $outcome : __( 'Unavailable', 'ran-booster' );
+		$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ __( 'Last operator check code', 'ran-booster' ) ]    = is_string( $code ) && strlen( $code ) <= 64 && preg_match( '/\A[a-z]+(?:_[a-z]+)*\z/', $code ) === 1 ? $code : __( 'Unavailable', 'ran-booster' );
 		$payload['installation_details'] = $sections;
 		$lines                           = array( 'RAN Booster installation context', __( 'Local declarations only; these claims do not verify publisher identity or remote access.', 'ran-booster' ) );
 		foreach ( $sections as $heading => $rows ) {

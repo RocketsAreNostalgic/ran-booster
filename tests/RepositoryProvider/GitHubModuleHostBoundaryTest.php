@@ -154,8 +154,16 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static Core composition boundary under test.
 		$bootstrap = file_get_contents( $root . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
+		$registrar = strpos( $bootstrap, '->make( ManagedReleaseUpdaterRegistrar::class )' );
+		$guard     = strpos( $bootstrap, '->with_operation_guard(', is_int( $registrar ) ? $registrar : 0 );
+		$admission = strpos( $bootstrap, '->with_descriptor_admission(', is_int( $guard ) ? $guard : 0 );
+
+		self::assertIsInt( $registrar );
+		self::assertIsInt( $guard );
+		self::assertIsInt( $admission );
+		self::assertLessThan( $guard, $registrar );
+		self::assertLessThan( $admission, $guard );
 		self::assertStringContainsString( 'new CoreSelfUpdateNativeTarget( $core_updater )', $bootstrap );
-		self::assertStringContainsString( '->make( ManagedReleaseUpdaterRegistrar::class )->with_descriptor_admission(', $bootstrap );
 		self::assertStringNotContainsString( 'RepositoryReleaseNativeTargets', $bootstrap );
 		self::assertStringNotContainsString( 'RepositoryReference', $bootstrap );
 

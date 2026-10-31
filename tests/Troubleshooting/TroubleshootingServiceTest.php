@@ -634,6 +634,7 @@ final class TroubleshootingServiceTest extends TestCase {
 
 	public function test_retained_server_results_survive_navigation_without_repeating_diagnostics(): void {
 		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
+		$GLOBALS['ran_booster_test_capabilities'] = array();
 		$memory     = new DiagnosticRunMemory();
 		$runs       = new DiagnosticRunFixture( $memory );
 		$runs->time = microtime( true ) + 10.0;
@@ -686,6 +687,7 @@ final class TroubleshootingServiceTest extends TestCase {
 
 	public function test_support_capture_runs_each_admitted_provider_without_selection_or_retention(): void {
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$GLOBALS['ran_booster_test_capabilities'] = array();
 		$requests = array();
 		$first    = new TroubleshootingProviderFixture( 'gh', function ( ProviderDiagnosticRequest $request ) use ( &$requests ): array {
 			$requests[] = $request;
@@ -719,6 +721,7 @@ final class TroubleshootingServiceTest extends TestCase {
 
 	public function test_support_capture_stops_after_local_partial_and_exports_provider_failure_states(): void {
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$GLOBALS['ran_booster_test_capabilities'] = array();
 		$provider = new TroubleshootingProviderFixture( 'gh', static fn(): array => throw new \RuntimeException( 'provider-private-canary' ) );
 		$registry = new ProviderRegistry( array( $provider ) );
 		$local    = new TroubleshootingLocalFixture( array( $this->diagnostic_result( 'local.partial' ) ), true );

@@ -111,8 +111,6 @@ msgstr ""
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:87
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:128
 #: RAN/Troubleshooting/TroubleshootingService.php:300
-#: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:119
 msgid "Name"
 msgstr ""
 
@@ -251,7 +249,6 @@ msgstr ""
 #: views/attempts/index.php:166
 #: views/portability-review.php:31
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:119
 msgid "Source"
 msgstr ""
 
@@ -999,6 +996,7 @@ msgstr ""
 #: views/portability-review.php:101
 #: views/settings.php:93
 #: views/settings.php:145
+#: views/troubleshooting-installation.php:109
 #: views/troubleshooting.php:227
 #: assets/ran-booster-portability.js:713
 msgid "Unknown"
@@ -1017,7 +1015,7 @@ msgid "Completed"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Booster.php:934
+#: RAN/Booster.php:941
 #: views/attempts/index.php:51
 #: views/packages/index.php:64
 #: views/troubleshooting.php:52
@@ -2829,7 +2827,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:712
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:935
+#: RAN/Booster.php:942
 #: views/attempts/index.php:54
 #: views/onboarding.php:79
 #: views/onboarding.php:97
@@ -4636,106 +4634,106 @@ msgid "Existing Booster credentials for private repositories; GitLab packages ar
 msgstr ""
 
 #. translators: %s: Selected extension release version.
-#: RAN/Booster.php:489
+#: RAN/Booster.php:496
 #, php-format
 msgid "The selected version %s release requires a different version of Booster. Review its documentation before installing or updating."
 msgstr ""
 
 #. translators: 1: Selected extension release version, 2: Installed extension version.
-#: RAN/Booster.php:495
+#: RAN/Booster.php:502
 #, php-format
 msgid "The selected version %1$s release is compatible with your version of Booster. Your installed version %2$s is older; update it in Plugins."
 msgstr ""
 
 #. translators: 1: Selected extension release version, 2: Installed extension version.
-#: RAN/Booster.php:502
+#: RAN/Booster.php:509
 #, php-format
 msgid "The selected version %1$s release is compatible with your version of Booster. Your installed version %2$s is newer and has not been qualified for this catalogue. Review it in Plugins."
 msgstr ""
 
 #. translators: %s: Selected extension release version.
-#: RAN/Booster.php:509
+#: RAN/Booster.php:516
 #, php-format
 msgid "The selected version %s release is compatible with your version of Booster. The installed extension version could not be verified; review it in Plugins before updating."
 msgstr ""
 
-#: RAN/Booster.php:513
+#: RAN/Booster.php:520
 msgid "Compatible with your version of Booster"
 msgstr ""
 
-#: RAN/Booster.php:549
+#: RAN/Booster.php:556
 msgid "Export settings before deleting"
 msgstr ""
 
-#: RAN/Booster.php:585
+#: RAN/Booster.php:592
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:931
+#: RAN/Booster.php:938
 #: views/attempts/index.php:46
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:932
+#: RAN/Booster.php:939
 #: views/attempts/index.php:47
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:933
+#: RAN/Booster.php:940
 #: views/attempts/index.php:49
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:936
+#: RAN/Booster.php:943
 #: views/packages/index.php:329
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:937
+#: RAN/Booster.php:944
 #: views/packages/index.php:331
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:938
+#: RAN/Booster.php:945
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:939
+#: RAN/Booster.php:946
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:940
+#: RAN/Booster.php:947
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:941
+#: RAN/Booster.php:948
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:942
+#: RAN/Booster.php:949
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:943
+#: RAN/Booster.php:950
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:1039
+#: RAN/Booster.php:1046
 msgid "RAN Booster could not save this notice preference. Please try again."
 msgstr ""
 
-#: RAN/Booster.php:1076
+#: RAN/Booster.php:1083
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:1078
+#: RAN/Booster.php:1085
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:1080
+#: RAN/Booster.php:1087
 msgid "Contact a site administrator."
 msgstr ""
 
@@ -5619,7 +5617,7 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:71
 #: RAN/Troubleshooting/TroubleshootingService.php:227
-#: views/troubleshooting-installation.php:140
+#: views/troubleshooting-installation.php:161
 msgid "Diagnostic Git provider"
 msgstr ""
 
@@ -5654,8 +5652,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:231
 #: RAN/Troubleshooting/TroubleshootingService.php:245
 #: views/troubleshooting-installation.php:9
-#: views/troubleshooting-installation.php:117
-#: views/troubleshooting-installation.php:140
+#: views/troubleshooting-installation.php:161
 msgid "GitHub provider"
 msgstr ""
 
@@ -5666,7 +5663,6 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:234
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:119
 msgid "Operational availability"
 msgstr ""
 
@@ -5727,7 +5723,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:278
 #: views/troubleshooting-installation.php:78
 #: views/troubleshooting-installation.php:85
-#: views/troubleshooting-installation.php:140
+#: views/troubleshooting-installation.php:161
 msgid "Booster Core updates"
 msgstr ""
 
@@ -5756,7 +5752,7 @@ msgid "Last operator check code"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:280
-#: views/troubleshooting-installation.php:123
+#: views/troubleshooting-installation.php:148
 msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
@@ -9291,7 +9287,7 @@ msgid "Adopt GitHub implementation"
 msgstr ""
 
 #: views/provider.php:329
-#: views/troubleshooting-installation.php:121
+#: views/troubleshooting-installation.php:149
 msgid "GitHub provider details"
 msgstr ""
 
@@ -10186,24 +10182,20 @@ msgid "Core updates are off for this source installation. Booster will not check
 msgstr ""
 
 #: views/troubleshooting-installation.php:81
-#: views/troubleshooting-installation.php:130
+#: views/troubleshooting-installation.php:136
 msgid "Technical details"
 msgstr ""
 
-#: views/troubleshooting-installation.php:93
+#: views/troubleshooting-installation.php:94
 msgid "Providers and extensions"
 msgstr ""
 
 #: views/troubleshooting-installation.php:96
-msgid "Only the first 32 admitted components are shown, alongside the fixed extension catalogue. Additional declarations are omitted."
+msgid "Only the first 32 components are shown. Additional components are omitted."
 msgstr ""
 
 #: views/troubleshooting-installation.php:101
 msgid "Provider and extension information is unavailable."
-msgstr ""
-
-#: views/troubleshooting-installation.php:119
-msgid "GitHub provider information is unavailable."
 msgstr ""
 
 #: views/troubleshooting-support-report.php:11

@@ -113,12 +113,19 @@ final class TroubleshootingViewTest extends TestCase {
 		$troubleshooting_panel = 'installation';
 		$troubleshooting       = array(
 			'providers'            => array(),
+			'components'           => array(
+				array(
+					'Name'           => 'GitHub',
+					'Provider'       => 'gh',
+					'Implementation' => '<component-implementation>',
+				),
+			),
 			'installation_details' => array(
 				'GitHub provider'      => array(
 					'Name'                     => '<Untrusted plugin>',
 					'Version'                  => '1.0',
 					'Source'                   => 'External plugin',
-					'Selection state'          => 'missing',
+					'Selection state'          => 'conflict',
 					'Operational availability' => 'Unavailable',
 					'Implementation'           => '<implementation>',
 					'Provider API'             => '15',
@@ -142,7 +149,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'GitHub provider details', $html );
 		self::assertStringContainsString( 'Local declarations only;', $html );
 		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
-		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>', '<commit>' ) as $claim ) {
+		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
 			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
 		}
@@ -160,9 +167,13 @@ final class TroubleshootingViewTest extends TestCase {
 			libxml_use_internal_errors( $previous_errors );
 		}
 		$xpath = new \DOMXPath( $document );
-		$rows  = $xpath->query( '//dl[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields-list ")]/div' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-github-provider-diagnostics" and not(@open)]//code[text()="<component-implementation>"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/div/dl/div[dt="Selection state"]/dd/code[text()="conflict"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/div/dl/div[dt="Operational availability"]/dd/code[text()="Unavailable"])' ) );
+		$rows = $xpath->query( '//dl[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields-list ")]/div' );
 		self::assertInstanceOf( \DOMNodeList::class, $rows );
-		self::assertSame( 13, $rows->length );
+		self::assertSame( 15, $rows->length );
 		foreach ( $rows as $row ) {
 			self::assertInstanceOf( \DOMElement::class, $row );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dt)', $row ) );
@@ -199,7 +210,7 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertStringContainsString( '<summary>Environment details</summary>', $html );
 			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary>Environment details</summary>', $html );
 			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open><summary>Environment details</summary>', $html );
-			$labels    = array( '>Environment</h4>', '>Storage</h4>', '>Booster Core updates</h4>', '>Providers and extensions</h4>' );
+			$labels    = array( '>Environment</h4>', '>Storage</h4>', '>Booster Core updates</h4>', '>Providers and extensions</h3>' );
 			$positions = array_map( static fn ( $label ) => strpos( $html, $label ), $labels );
 			foreach ( $positions as $position ) {
 				self::assertIsInt( $position ); }

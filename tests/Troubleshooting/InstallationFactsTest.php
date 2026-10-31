@@ -77,7 +77,7 @@ final class InstallationFactsTest extends TestCase {
 		}
 		$facts      = new InstallationFacts( $registry );
 		$components = $facts->components();
-		self::assertCount( 34, $components );
+		self::assertCount( 32, $components );
 		self::assertTrue( $facts->components_truncated() );
 		self::assertSame( 'Component 0', $components[0]['Name'] );
 		self::assertSame( 'provider31', $components[31]['Provider'] );
@@ -86,6 +86,74 @@ final class InstallationFactsTest extends TestCase {
 		$GLOBALS['ran_booster_support_version'] = '1.0.0+private-version-canary';
 		self::assertSame( 'Unknown', $facts->core()['installed_version'] );
 		$GLOBALS['ran_booster_support_version'] = '1.0.0-beta.41';
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_installed_catalogue_package_joins_provider_and_addon_without_executing_it(): void {
+		require_once __DIR__ . '/ExtensionDeclarationFunctions.php';
+		require_once __DIR__ . '/InactivePluginFunction.php';
+		$root = sys_get_temp_dir() . '/booster-components-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated temporary fixture, without WordPress filesystem services.
+		mkdir( $root . '/ran-booster-bitbucket', 0777, true );
+		$file = $root . '/ran-booster-bitbucket/ran-booster-bitbucket.php';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Isolated inert plugin fixture.
+		file_put_contents( $file, '<?php throw new Exception("must not execute");' );
+		define( 'WP_PLUGIN_DIR', $root );
+		try {
+			$providers = new ProviderRegistry( array( new SupportReportProvider( 'bb', 'Bitbucket Cloud' ) ) );
+			$addons    = new AdminAddOnRegistry();
+			$addons->register(
+				new AdminAddOnTab(
+					'ran-booster-bitbucket',
+					'bitbucket',
+					'Bitbucket',
+					static function (): never {
+						throw new \RuntimeException( 'must not render' );
+					}
+				)
+			);
+			$rows = ( new InstallationFacts( $providers, add_ons: $addons ) )->components();
+			self::assertCount( 1, $rows );
+			self::assertSame( 'bb', $rows[0]['Provider'] );
+			self::assertSame( 'Yes', $rows[0]['Installed'] );
+			self::assertSame( 'No', $rows[0]['Active'] );
+			self::assertSame( 'ran-booster-bitbucket', $rows[0]['Add-on'] );
+			self::assertSame( 'bitbucket', $rows[0]['Tab'] );
+			self::assertNotContains( 'WP Pusher Migrator', array_column( $rows, 'Name' ) );
+		} finally {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove the isolated fixture.
+			unlink( $file );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the isolated fixture directory.
+			rmdir( dirname( $file ) );
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the isolated fixture root.
+			rmdir( $root );
+		}
+	}
+
+	public function test_future_provider_capabilities_are_observed_without_callbacks(): void {
+		$provider = new class() implements \RAN\RepositoryProvider\RepositoryProvider, \RAN\RepositoryProvider\CredentialValidator {
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderManualCapabilities;
+
+			public function get_metadata(): \RAN\RepositoryProvider\ProviderMetadata {
+				return new \RAN\RepositoryProvider\ProviderMetadata( \RAN\RepositoryProvider\ProviderCode::parse( 'gl' ), 'GitLab', 'https://gitlab.example/', 'Owner' );
+			}
+			public function get_provider_diagnostics(): \RAN\RepositoryProvider\ProviderDiagnostics {
+				return new class() implements \RAN\RepositoryProvider\ProviderDiagnostics {
+					// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- Fail if passive observation runs diagnostics.
+					public function diagnose( \RAN\RepositoryProvider\ProviderDiagnosticRequest $request ): array {
+						throw new \RuntimeException( 'Diagnostics must not run.' );
+					}
+				};
+			}
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- Fail if passive observation validates credentials.
+			public function validate_credential( string $credential_id ): \RAN\RepositoryProvider\CredentialValidationResult {
+				throw new \RuntimeException( 'Credential validation must not run.' );
+			}
+		};
+		$rows     = ( new InstallationFacts( new ProviderRegistry( array( $provider ) ) ) )->components();
+		self::assertSame( 'GitLab', $rows[0]['Name'] );
+		self::assertStringContainsString( 'CredentialValidator', $rows[0]['Capabilities'] );
 	}
 
 	public function test_github_attribution_is_one_captured_bootstrap_observation(): void {
@@ -134,7 +202,7 @@ final class InstallationFactsTest extends TestCase {
 		}
 		$facts      = new InstallationFacts( new ProviderRegistry(), add_ons: $addons );
 		$components = $facts->components();
-		self::assertCount( 34, $components );
+		self::assertCount( 32, $components );
 		self::assertTrue( $facts->components_truncated() );
 		self::assertSame( 'Private Addon 31', $components[31]['Name'] );
 		self::assertSame( 'Unknown', $components[0]['Version'] );

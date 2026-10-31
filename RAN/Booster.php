@@ -386,11 +386,11 @@ class Booster {
 		) )->register();
 	}
 
-	/** @param array<string, array<string, mixed>> $installed_plugins
-	 *  @return list<array<string, mixed>>
+	/** @internal
+	 * @return list<array<string, mixed>>
 	 */
-	private function extension_cards( array $installed_plugins ): array {
-		$catalogue = array(
+	public static function extension_declarations(): array {
+		return array(
 			array(
 				'id'                   => 'ran-booster-bitbucket',
 				'name'                 => 'Bitbucket Cloud',
@@ -456,6 +456,13 @@ class Booster {
 				'support_url'          => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/issues',
 			),
 		);
+	}
+
+	/** @param array<string, array<string, mixed>> $installed_plugins
+	 *  @return list<array<string, mixed>>
+	 */
+	private function extension_cards( array $installed_plugins ): array {
+		$catalogue = self::extension_declarations();
 
 		foreach ( $catalogue as &$extension ) {
 			$installed                = array_key_exists( $extension['plugin'], $installed_plugins );

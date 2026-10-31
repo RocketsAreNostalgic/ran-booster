@@ -6,6 +6,7 @@ namespace RAN\Troubleshooting;
 
 use Closure;
 use RAN\Admin\AdminAddOnRegistry;
+use RAN\Booster;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\Runtime\RuntimeSupport;
 use RAN\Settings\GeneralPreferenceStore;
@@ -14,6 +15,9 @@ use RAN\Settings\GeneralPreferenceStore;
 final class InstallationFacts {
 	/** @var array{state:string,admitted:bool,selected:string,version:string,provider_api:int,compatibility_revision:string,identity:?array{provider_code:string,selection_generation:int,implementation_fingerprint:string}}|null */
 	private ?array $github_observed = null;
+
+	/** @var list<array<string,string>>|null */
+	private ?array $component_observed = null;
 
 	/**
 	 * @param Closure(): array{state:string,admitted:bool,selected:string,version:string,provider_api:int,compatibility_revision:string,identity:?array{provider_code:string,selection_generation:int,implementation_fingerprint:string}}|null $github_observation
@@ -157,7 +161,7 @@ final class InstallationFacts {
 	}
 
 	public function components_truncated(): bool {
-		return count( $this->providers->metadata() ) + count( $this->add_ons?->all() ?? array() ) > 32;
+		return count( $this->component_rows() ) > 32;
 	}
 
 	/** @return array<string,int|string|null> */
@@ -226,9 +230,26 @@ final class InstallationFacts {
 
 	/** @return list<array<string,string>> */
 	public function components(): array {
+		return array_slice( $this->component_rows(), 0, 32 );
+	}
+
+	/** @return list<array<string,string>> */
+	private function component_rows(): array {
+		if ( null !== $this->component_observed ) {
+			return $this->component_observed;
+		}
 		$rows = array();
-		foreach ( array_slice( $this->providers->metadata(), 0, 32 ) as $code => $metadata ) {
-			$rows[] = array(
+		if ( null !== $this->github_observation && ! isset( $this->providers->metadata()['gh'] ) ) {
+			$rows['provider:gh'] = array(
+				'Name'     => 'GitHub',
+				'Provider' => 'gh',
+			);
+		}
+		foreach ( $this->providers->metadata() as $code => $metadata ) {
+			if ( count( $rows ) >= 33 ) {
+				break;
+			}
+			$rows[ 'provider:' . $code ] = array(
 				'Name'           => $metadata->label,
 				'Provider'       => $code,
 				'Admission'      => 'Admitted',
@@ -237,31 +258,66 @@ final class InstallationFacts {
 				'Implementation' => $this->implementation( $code ),
 				'Archive API'    => (string) $metadata->archive_api_version,
 			);
+			$provider                    = $this->providers->all()[ $code ] ?? null;
+			$capabilities                = array();
+			foreach ( null === $provider ? array() : class_implements( $provider ) as $interface ) {
+				if ( str_starts_with( $interface, 'RAN\\RepositoryProvider\\' ) && is_a( $interface, \RAN\Provider\ProviderCapability::class, true ) ) {
+					$capabilities[] = substr( $interface, strlen( 'RAN\\RepositoryProvider\\' ) );
+				}
+			}
+			if ( array() !== $capabilities ) {
+				$rows[ 'provider:' . $code ]['Capabilities'] = implode( ', ', $capabilities );
+			}
 		}
-		foreach ( array_slice( $this->add_ons?->all() ?? array(), 0, 32 - count( $rows ) ) as $tab ) {
-			$rows[] = array(
-				'Name'         => $tab->label(),
-				'Admission'    => 'Admitted',
-				'Selection'    => 'Not applicable',
-				'Active'       => 'Yes',
-				'Version'      => 'Unknown',
-				'Availability' => 'Available locally; remote access not checked',
+		$catalogue      = defined( 'WP_PLUGIN_DIR' ) ? Booster::extension_declarations() : array();
+		$bitbucket_file = '';
+		foreach ( $catalogue as $extension ) {
+			if ( 'ran-booster-bitbucket' === $extension['id'] && is_string( $extension['plugin'] ) ) {
+				$bitbucket_file = WP_PLUGIN_DIR . '/' . $extension['plugin'];
+			}
+		}
+		foreach ( $this->add_ons?->all() ?? array() as $tab ) {
+			$key = 'ran-booster-bitbucket' === $tab->add_on_slug() && isset( $rows['provider:bb'] ) && '' !== $bitbucket_file && is_file( $bitbucket_file ) ? 'provider:bb' : 'addon:' . $tab->add_on_slug();
+			if ( count( $rows ) >= 33 && ! isset( $rows[ $key ] ) ) {
+				break;
+			}
+			$addon        = array(
+				'Name'      => $tab->label(),
+				'Admission' => 'Admitted',
+				'Selection' => 'Not applicable',
+				'Active'    => 'Yes',
+				'Version'   => 'Unknown',
+				'Add-on'    => $tab->add_on_slug(),
+				'Tab'       => $tab->key(),
+				'Facade'    => $tab->facade_name() ?? 'None',
 			);
+			$rows[ $key ] = ( $rows[ $key ] ?? array() ) + $addon;
 		}
-		foreach ( array(
-			'ran-booster-bitbucket/ran-booster-bitbucket.php' => 'Bitbucket Cloud',
-			'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php' => 'WP Pusher Migrator',
-		) as $file => $label ) {
-			$path      = defined( 'WP_PLUGIN_DIR' ) ? WP_PLUGIN_DIR . '/' . $file : '';
-			$installed = '' !== $path && is_file( $path );
-			$rows[]    = array(
-				'Name'      => $label,
-				'Installed' => $installed ? 'Yes' : 'No',
+		foreach ( $catalogue as $extension ) {
+			$id   = $extension['id'];
+			$file = $extension['plugin'];
+			if ( ! is_string( $id ) || ! is_string( $file ) ) {
+				continue;
+			}
+			$key = 'ran-booster-bitbucket' === $id && isset( $rows['provider:bb'] ) ? 'provider:bb' : 'addon:' . $id;
+			if ( count( $rows ) >= 33 && ! isset( $rows[ $key ] ) ) {
+				continue;
+			}
+			$path = defined( 'WP_PLUGIN_DIR' ) ? WP_PLUGIN_DIR . '/' . $file : '';
+			if ( '' === $path || ! is_file( $path ) ) {
+				continue;
+			}
+			$package      = array(
+				'Name'      => is_string( $extension['name'] ) ? $extension['name'] : $id,
+				'Installed' => 'Yes',
 				'Active'    => function_exists( 'is_plugin_active' ) ? ( is_plugin_active( $file ) ? 'Yes' : 'No' ) : 'Unknown',
-				'Version'   => $installed ? self::version( get_file_data( $path, array( 'Version' => 'Version' ) )['Version'] ?? null ) : 'Not installed',
+				'Version'   => self::version( get_file_data( $path, array( 'Version' => 'Version' ) )['Version'] ?? null ),
 			);
+			$rows[ $key ] = array_replace( $rows[ $key ] ?? array(), $package );
+
 		}
-		return $rows;
+		$this->component_observed = array_values( $rows );
+		return $this->component_observed;
 	}
 
 	/** Internal attribution; never export a concrete provider class or this token. */

@@ -1059,6 +1059,10 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Download JSON report', $html );
 		self::assertStringContainsString( 'data-support-report-filename="ran-booster-support-20261031-120000.json"', $html );
 		self::assertSame( 1, preg_match( '/<textarea[^>]*readonly>(.*?)<\/textarea>/s', $html, $matches ) );
+		self::assertArrayHasKey( 1, $matches );
+		if ( ! isset( $matches[1] ) ) {
+			self::fail( 'Report textarea capture is missing.' );
+		}
 		$preview = html_entity_decode( $matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 		self::assertSame( $report_json, $preview );
 		self::assertSame( 1, json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['schema_version'] );

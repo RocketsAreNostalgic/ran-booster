@@ -47,6 +47,7 @@ final class OperatorActionDispatcherTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		require_once dirname( __DIR__ ) . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
+		$_GET                      = array();
 		$_POST                     = array();
 		$_SERVER['REQUEST_METHOD'] = 'POST';
 		$GLOBALS['ran_booster_test_capability_checks'] = array();
@@ -72,6 +73,67 @@ final class OperatorActionDispatcherTest extends TestCase {
 			}
 		}
 		unset( $_SERVER['REQUEST_METHOD'], $_SERVER['HTTP_HX_REQUEST'], $GLOBALS['ran_booster_test_capability_checks'], $GLOBALS['ran_booster_test_nonce_checks'], $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_nonce_valid'] );
+	}
+
+	/** @return list<array{array<string,mixed>,array<string,mixed>}> */
+	public static function invalid_report_requests(): array {
+		$route = array(
+			'page'  => 'ran-booster',
+			'tab'   => 'troubleshooting',
+			'panel' => 'support-report',
+		);
+		return array(
+			array(
+				array(
+					'action'  => 'generate-support-report',
+					'results' => 'forged',
+				),
+				$route,
+			),
+			array(
+				array(
+					'action' => 'generate-support-report',
+					'extra'  => array(),
+				),
+				$route,
+			),
+			array( array( 'action' => 'generate-support-report' ), array_merge( $route, array( 'panel' => 'diagnostics' ) ) ),
+			array( array( 'action' => 'generate-support-report' ), array_merge( $route, array( 'page' => array( 'ran-booster' ) ) ) ),
+			array( array( 'action' => 'generate-support-report' ), array_merge( $route, array( 'tab' => 'gh' ) ) ),
+		);
+	}
+
+	/** @param array<string,mixed> $payload Request payload.
+	 * @param array<string,mixed> $route Route query.
+	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'invalid_report_requests' )]
+	public function test_report_rejects_forged_payload_and_wrong_route( array $payload, array $route ): void {
+		$_GET                 = $route;
+		$_POST['ran_booster'] = $payload;
+		$dashboard            = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'post_generate_support_report' );
+		try {
+			$this->dispatcher( $dashboard )->dispatch_post_requests();
+			self::fail( 'Invalid request must be rejected.' );
+		} catch ( \RuntimeException $exception ) {
+			self::assertStringContainsString( 'Invalid support report request', $exception->getMessage() );
+		}
+		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( 'ran-booster-generate-support-report' ), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	public function test_report_action_requires_fixed_capability_and_nonce(): void {
+		$_GET                 = array(
+			'page'  => 'ran-booster',
+			'tab'   => 'troubleshooting',
+			'panel' => 'support-report',
+		);
+		$_POST['ran_booster'] = array( 'action' => 'generate-support-report' );
+		$dashboard            = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'post_generate_support_report' );
+		$this->dispatcher( $dashboard )->dispatch_post_requests();
+		self::assertSame( array( 'manage_options' ), $GLOBALS['ran_booster_test_capability_checks'] );
+		self::assertSame( array( 'ran-booster-generate-support-report' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
 	public function test_administrator_can_start_stop_and_delete_debug_capture_with_one_protected_action(): void {

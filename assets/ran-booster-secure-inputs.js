@@ -41,7 +41,13 @@
 	);
 
 	document.addEventListener('htmx:afterSwap', handleProviderProfileSwap);
-	document.addEventListener('click', copySupportReport);
+	document.addEventListener('click', function (event) {
+		if (event.target.closest?.('[data-support-report-download]')) {
+			downloadSupportReport(event);
+		} else {
+			return copySupportReport(event);
+		}
+	});
 	document.addEventListener(
 		'ran-booster:admin-mutation-success',
 		handleProviderProfileSuccess
@@ -91,6 +97,52 @@
 			}
 		} finally {
 			copy.disabled = false;
+		}
+	}
+
+	function downloadSupportReport(event) {
+		const button = event.target.closest?.('[data-support-report-download]');
+		if (!button || button.disabled) {
+			return;
+		}
+		const root = button.closest('[data-support-report-tools]');
+		const input = root?.querySelector('textarea');
+		const status = root?.querySelector('[data-support-report-status]');
+		if (!input || !status) {
+			return;
+		}
+		let url;
+		let link;
+		status.textContent = '';
+		try {
+			const filename = button.dataset.supportReportFilename || '';
+			const blob = new Blob([input.value], {
+				type: 'text/plain;charset=utf-8',
+			});
+			url = window.URL.createObjectURL(blob);
+			link = document.createElement('a');
+			link.href = url;
+			link.download = /^ran-booster-support-\d{8}-\d{6}\.txt$/.test(
+				filename
+			)
+				? filename
+				: 'ran-booster-support.txt';
+			document.body.appendChild(link);
+			link.click();
+		} catch {
+			input.focus();
+			input.select();
+			status.textContent =
+				status.dataset.downloadFailedMessage ||
+				__(
+					'Download failed. Select the report and save it manually.',
+					'ran-booster'
+				);
+		} finally {
+			link?.remove();
+			if (url) {
+				window.URL.revokeObjectURL(url);
+			}
 		}
 	}
 

@@ -37,7 +37,7 @@ final class CredentialExpiryReminder {
 
 	/**
 	 * @param array<string, mixed> $profile Display-safe credential profile.
-	 * @return array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:?string,source:?string,stage:string,days:?int,badge_class:string,badge_label:string,event_marker:string}
+	 * @return array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:?string,source:?string,observed_at:?string,stage:string,days:?int,badge_class:string,badge_label:string,event_marker:string}
 	 */
 	public function status( string $provider, array $profile ): array {
 		$id          = is_string( $profile['id'] ?? null ) ? $profile['id'] : '';
@@ -69,6 +69,7 @@ final class CredentialExpiryReminder {
 				'editable'             => $editable,
 				'effective_expires_at' => null,
 				'source'               => null,
+				'observed_at'          => null,
 				'stage'                => 'unknown',
 				'days'                 => null,
 				'badge_class'          => 'ran-booster-badge--neutral',
@@ -113,6 +114,7 @@ final class CredentialExpiryReminder {
 			'editable'             => $editable,
 			'effective_expires_at' => $effective,
 			'source'               => $source,
+			'observed_at'          => 'provider' === $source ? ( $observation['provider_checked_at'] ?? null ) : null,
 			'stage'                => $stage,
 			'days'                 => $days,
 			'badge_class'          => $badge_class,
@@ -122,7 +124,7 @@ final class CredentialExpiryReminder {
 	}
 
 	/**
-	 * @return list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string}>
+	 * @return list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string}>
 	 */
 	public function affected(): array {
 		$affected = array();
@@ -131,7 +133,7 @@ final class CredentialExpiryReminder {
 			foreach ( $this->secrets->credential_profiles( $provider ) as $profile ) {
 				$status = $this->status( $provider, $profile );
 				if ( in_array( $status['stage'], array( 'warning', 'urgent', 'expired' ), true ) ) {
-					/** @var array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string} $status */
+					/** @var array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string} $status */
 					$affected[] = $status;
 				}
 			}

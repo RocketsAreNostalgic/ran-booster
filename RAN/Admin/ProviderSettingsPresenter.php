@@ -192,6 +192,26 @@ final readonly class ProviderSettingsPresenter {
 		);
 	}
 
+	/** @return array<string, array{admitted:bool,selection:?string}> Local admission and passive GitHub selection only. */
+	public function overview_provider_facts(): array {
+		$metadata = $this->providers->metadata();
+		$facts    = array();
+		foreach ( $metadata as $code => $provider ) {
+			$facts[ $code ] = array(
+				'admitted'  => true,
+				'selection' => null,
+			);
+		}
+		$selection = $this->github_selection_diagnostics();
+		if ( null !== $selection ) {
+			$facts['gh'] = array(
+				'admitted'  => isset( $metadata['gh'] ),
+				'selection' => is_string( $selection['state'] ?? null ) ? $selection['state'] : null,
+			);
+		}
+		return $facts;
+	}
+
 	/** @return array<string,mixed>|null Passive local claims; never credential material. */
 	public function github_selection_diagnostics(): ?array {
 		return $this->github_selection?->status();
@@ -221,7 +241,7 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$review = $this->github_selection->adoption_review( $this->secrets );
 		} catch ( SecretsStorageUnavailable ) {
-			$error = __( 'Set up secure credential storage from Overview before reviewing GitHub adoption.', 'ran-booster' );
+			$error = __( 'Set up secure credential storage from Settings before reviewing GitHub adoption.', 'ran-booster' );
 		} catch ( Throwable ) {
 			$error = __( 'GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first.', 'ran-booster' );
 		}

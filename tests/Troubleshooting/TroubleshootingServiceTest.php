@@ -22,9 +22,13 @@ use RAN\RepositoryProvider\WebhookRequest;
 use RAN\Secrets\SecretsFile;
 use RAN\Troubleshooting\LocalTroubleshootingService;
 use RAN\Troubleshooting\TroubleshootingService;
+use RAN\Troubleshooting\InstallationFacts;
+use RAN\Troubleshooting\SupportReport;
 
 require_once dirname( __DIR__ ) . '/Activity/ActivityConnection.php';
 require_once dirname( __DIR__ ) . '/Activity/ActivityWordPressFunctions.php';
+require_once __DIR__ . '/DiagnosticRunMemory.php';
+require_once __DIR__ . '/DiagnosticRunFixture.php';
 
 final class TroubleshootingServiceTest extends TestCase {
 
@@ -84,6 +88,42 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertStringContainsString( 'Partial: yes', $ran['report'] );
 		self::assertStringContainsString( '[pass] local.snapshot | The check completed safely.', $ran['report'] );
 		self::assertSame( $payload['installation_details'], $ran['installation_details'] );
+	}
+
+	public function test_operator_check_context_projects_only_safe_recorded_values(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$provider                 = new TroubleshootingProviderFixture( 'gh', static fn (): array => array() );
+		$service                  = $this->service( $provider );
+		$form                     = $service->form_payload();
+		$form['core_self_update'] = array(
+			'last_successful_check' => 1699999000,
+			'last_check_outcome'    => 'failed',
+			'last_check_code'       => 'check_failed',
+			'check_cooldown_until'  => 1700000300,
+			'next_check'            => 1700001000,
+		);
+		$rows                     = $service->with_installation_context( $form, null )['installation_details']['Booster Core updates'];
+		self::assertSame( gmdate( 'c', 1699999000 ), $rows['Last successful operator check (UTC)'] );
+		self::assertSame( 'failed', $rows['Last operator check outcome'] );
+		self::assertSame( 'check_failed', $rows['Last operator check code'] );
+		self::assertSame( gmdate( 'c', 1700000300 ), $rows['Operator check cooldown until (UTC)'] );
+		self::assertSame( gmdate( 'c', 1700001000 ), $rows['Next check (UTC)'] );
+		foreach ( array( 'success', 'skipped', 'unknown', 'rejected' ) as $outcome ) {
+			$form['core_self_update']['last_check_outcome'] = $outcome;
+			self::assertSame( $outcome, $service->with_installation_context( $form, null )['installation_details']['Booster Core updates']['Last operator check outcome'] );
+		}
+		$form['core_self_update'] = array(
+			'last_successful_check' => 0,
+			'check_cooldown_until'  => 253402300800,
+			'last_check_outcome'    => 'injected',
+			'last_check_code'       => '/private/path',
+		);
+		$payload                  = $service->with_installation_context( $form, null );
+		foreach ( array( 'Last successful operator check (UTC)', 'Operator check cooldown until (UTC)', 'Last operator check outcome', 'Last operator check code' ) as $label ) {
+			self::assertSame( 'Unavailable', $payload['installation_details']['Booster Core updates'][ $label ] );
+		}
+		self::assertStringNotContainsString( '/private/path', $payload['report'] );
+		self::assertSame( 0, $provider->runs );
 	}
 
 	public function test_installation_context_rejects_unsafe_claims_and_never_serializes_raw_state(): void {
@@ -592,6 +632,206 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( 0, $provider->readiness_runs );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_retained_server_results_survive_navigation_without_repeating_diagnostics(): void {
+		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$memory                                   = new DiagnosticRunMemory();
+		$runs                                     = new DiagnosticRunFixture( $memory );
+		$runs->time                               = microtime( true ) + 10.0;
+		$provider                                 = new TroubleshootingProviderFixture(
+			'gh',
+			static fn (): array => array(
+				new ProviderDiagnosticResult( 'fail', 'gh.credential.invalid', 'Private project prose canary.', 'Contact private-person@example.test.' ),
+				new ProviderDiagnosticResult( 'warning', 'gh.privatecanary', 'Private repository prose canary.', 'Review private ref canary.' ),
+			)
+		);
+		$second                                   = new TroubleshootingProviderFixture(
+			'bb',
+			static function ( ProviderDiagnosticRequest $request ): array {
+				for ( $index = 0; $index < 6; ++$index ) {
+					$request->claim_remote_call();
+				}
+				return array();
+			}
+		);
+		$registry                                 = new ProviderRegistry( array( $provider, $second ) );
+		$local                                    = new TroubleshootingLocalFixture( $this->local_results() );
+		$service                                  = new TroubleshootingService( $local, $registry, retained_runs: $runs );
+		$immediate                                = $service->diagnose( 'gh', 'credential-canary', 'private-owner/private-repository' );
+		self::assertSame( true, $immediate['retention_available'] ?? null );
+		self::assertSame( 'Private project prose canary.', $immediate['results'][5]['message'] );
+		$partial = $service->diagnose( 'bb', null, null );
+		self::assertSame( 'remote_calls_exhausted', $partial['partial_reason'] );
+		self::assertSame( true, $partial['retention_available'] ?? null );
+		self::assertCount( 2, $runs->available()['runs'] );
+		self::assertSame( 'fail', $runs->available()['runs'][0]['results'][5]['status'] );
+		self::assertSame( 'provider.check', $runs->available()['runs'][0]['results'][6]['code'] );
+		$reloaded       = new DiagnosticRunFixture( $memory );
+		$reloaded->time = $runs->time;
+		$report         = new SupportReport( new InstallationFacts( $registry ), $reloaded );
+		$navigation     = new TroubleshootingService( $local, $registry, retained_runs: $reloaded, support_report: $report );
+		$captured       = $navigation->generate_support_report( array() );
+		self::assertStringContainsString( 'Earlier explicit checks, not newly executed tests.', $captured['text'] );
+		self::assertStringContainsString( 'gh.credential.invalid', $captured['text'] );
+		self::assertStringContainsString( 'Partial: remote_calls_exhausted', $captured['text'] );
+		self::assertStringContainsString( 'one saved credential selected; identity withheld', $captured['text'] );
+		self::assertIsString( $memory->raw );
+		foreach ( array( 'canary', 'private-owner/private-repository', 'private-person@example.test', 'gh.privatecanary' ) as $private ) {
+			self::assertStringNotContainsString( $private, $memory->raw );
+			self::assertStringNotContainsString( $private, $captured['text'] );
+		}
+		self::assertSame( 2, $provider->runs );
+		self::assertSame( 2, $second->runs );
+		self::assertSame( 2, $local->runs );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_support_capture_runs_each_admitted_provider_without_selection_or_retention(): void {
+		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$requests                                 = array();
+		$first                                    = new TroubleshootingProviderFixture(
+			'gh',
+			function ( ProviderDiagnosticRequest $request ) use ( &$requests ): array {
+				$requests[] = $request;
+				return array( $this->diagnostic_result( 'gh.basic' ) );
+			}
+		);
+		$second                                   = new TroubleshootingProviderFixture(
+			'bb',
+			function ( ProviderDiagnosticRequest $request ) use ( &$requests ): array {
+				$requests[] = $request;
+				return array( $this->diagnostic_result( 'bb.basic' ) );
+			}
+		);
+		$memory                                   = new DiagnosticRunMemory();
+		$runs                                     = new DiagnosticRunFixture( $memory );
+		$local                                    = new TroubleshootingLocalFixture( $this->local_results() );
+		$registry                                 = new ProviderRegistry( array( $first, $second ) );
+		$service                                  = new TroubleshootingService( $local, $registry, retained_runs: $runs, support_report: new SupportReport( new InstallationFacts( $registry ), $runs ) );
+
+		$report = $service->generate_support_report( array() )['text'];
+
+		self::assertSame( 1, $local->support_runs );
+		self::assertSame( 1, $first->runs );
+		self::assertSame( 1, $second->runs );
+		self::assertCount( 2, $requests );
+		foreach ( $requests as $request ) {
+			self::assertNull( $request->get_credential_id() );
+			self::assertNull( $request->get_repository() );
+		}
+		self::assertNull( $memory->raw );
+		self::assertStringContainsString( 'Fresh general checks:', $report );
+		self::assertStringContainsString( 'Group: GitHub', $report );
+		self::assertStringContainsString( 'Group: Bitbucket Cloud', $report );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_support_capture_stops_after_local_partial_and_exports_provider_failure_states(): void {
+		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$provider                                 = new TroubleshootingProviderFixture( 'gh', static fn(): array => throw new \RuntimeException( 'provider-private-canary' ) );
+		$registry                                 = new ProviderRegistry( array( $provider ) );
+		$local                                    = new TroubleshootingLocalFixture( array( $this->diagnostic_result( 'local.partial' ) ), true );
+		$service                                  = new TroubleshootingService( $local, $registry, support_report: new SupportReport( new InstallationFacts( $registry ) ) );
+		$report                                   = $service->generate_support_report( array() )['text'];
+		self::assertSame( 1, $local->support_runs );
+		self::assertSame( 0, $provider->runs );
+		self::assertStringContainsString( 'Provider checks not run because the fresh local observation was partial.', $report );
+
+		$local   = new TroubleshootingLocalFixture( $this->local_results() );
+		$service = new TroubleshootingService( $local, $registry, support_report: new SupportReport( new InstallationFacts( $registry ) ) );
+		$report  = $service->generate_support_report( array() )['text'];
+		self::assertStringContainsString( 'Group state: provider_unavailable', $report );
+		self::assertStringNotContainsString( 'provider-private-canary', $report );
+	}
+
+	public function test_retention_failure_preserves_immediate_diagnostics_and_invalid_provider_is_not_retained(): void {
+		$memory         = new DiagnosticRunMemory();
+		$memory->refuse = true;
+		$runs           = new DiagnosticRunFixture( $memory );
+		$runs->time     = microtime( true ) + 10.0;
+		$provider       = new TroubleshootingProviderFixture( 'gh', fn (): array => array( $this->diagnostic_result( 'gh.check' ) ) );
+		$service        = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), new ProviderRegistry( array( $provider ) ), retained_runs: $runs );
+		$result         = $service->diagnose( 'gh', null, null );
+		self::assertSame( false, $result['retention_available'] ?? null );
+		self::assertTrue( $result['ran'] );
+		self::assertCount( 6, $result['results'] );
+		self::assertSame( 'gh.check', $result['results'][5]['code'] );
+		self::assertNull( $memory->raw );
+		$writes = $memory->writes;
+		$result = $service->diagnose( 'unknown-provider', null, null );
+		self::assertSame( 'provider_unavailable', $result['partial_reason'] );
+		self::assertSame( $writes, $memory->writes );
+	}
+
+	public function test_standing_installation_facts_never_enumerate_credentials_or_execute_operations(): void {
+		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
+		$provider                  = new TroubleshootingProviderFixture( 'gh', static fn (): array => array() );
+		$registry                  = new ProviderRegistry( array( $provider ) );
+		$provider->reject_metadata = true;
+		$local                     = new TroubleshootingLocalFixture( $this->local_results() );
+		$secrets                   = new TroubleshootingSecretsFixture( array() );
+		$service                   = new TroubleshootingService( $local, $registry, secrets: $secrets );
+		$facts                     = $service->installation_payload( null, array( 'status' => 'not_checked' ) );
+		self::assertSame( array(), $facts['credentials'] );
+		self::assertSame( array( 'status' => 'not_checked' ), $facts['storage'] );
+		self::assertArrayHasKey( 'PHP', $facts['environment'] );
+		self::assertFalse( $facts['ran'] );
+		self::assertSame( 0, $local->runs );
+		self::assertSame( 0, $provider->runs );
+		self::assertSame( 0, $secrets->profile_reads );
+		self::assertSame( 0, $secrets->maintenance_reads );
+	}
+
+	public function test_diagnostics_preserve_immediate_results_if_the_initiating_scope_changes(): void {
+		$memory     = new DiagnosticRunMemory();
+		$runs       = new DiagnosticRunFixture( $memory );
+		$runs->time = microtime( true ) + 10.0;
+		$provider   = new TroubleshootingProviderFixture(
+			'gh',
+			function () use ( $runs ): array {
+				$runs->identity = array(
+					'site' => 1,
+					'user' => 2,
+				);
+				return array( $this->diagnostic_result( 'gh.check' ) );
+			}
+		);
+		$service    = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), new ProviderRegistry( array( $provider ) ), retained_runs: $runs );
+		$result     = $service->diagnose( 'gh', null, null );
+		self::assertTrue( $result['ran'] );
+		self::assertSame( false, $result['retention_available'] ?? null );
+		self::assertCount( 6, $result['results'] );
+		self::assertNull( $memory->raw );
+	}
+
+	public function test_retained_implementation_attribution_does_not_change_with_replacement_class(): void {
+		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
+		$memory     = new DiagnosticRunMemory();
+		$runs       = new DiagnosticRunFixture( $memory );
+		$runs->time = microtime( true ) + 10.0;
+		$registry   = new ProviderRegistry( array( new TroubleshootingProviderFixture( 'gh', static fn (): array => array() ) ) );
+		$service    = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), $registry, retained_runs: $runs );
+		$service->diagnose( 'gh', null, null );
+		$attribution = $runs->available()['runs'][0]['implementation'];
+		$replacement = new class( 'gh', static fn (): array => array() ) extends TroubleshootingProviderFixture {};
+		$current     = new InstallationFacts( new ProviderRegistry( array( $replacement ) ) );
+		self::assertNotSame( $attribution, $current->implementation( 'gh' ) );
+		$report = ( new SupportReport( $current, $runs ) )->generate( array() );
+		self::assertStringContainsString( 'Implementation 1', $report['text'] );
+		self::assertStringContainsString( 'Implementation 2', $report['text'] );
+		self::assertStringNotContainsString( $attribution, $report['text'] );
+		self::assertSame( $attribution, $runs->available()['runs'][0]['implementation'] );
+		self::assertSame( 0, $replacement->runs );
+	}
+
 	/** @return list<ProviderDiagnosticResult> */
 	private function local_results(): array {
 		return array_map( fn( string $code ): ProviderDiagnosticResult => $this->diagnostic_result( $code ), $this->local_codes() );
@@ -616,7 +856,8 @@ final class TroubleshootingServiceTest extends TestCase {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 class TroubleshootingLocalFixture extends LocalTroubleshootingService {
-	public int $runs = 0;
+	public int $runs         = 0;
+	public int $support_runs = 0;
 
 	/** @param list<ProviderDiagnosticResult> $results */
 	public function __construct(
@@ -638,6 +879,14 @@ class TroubleshootingLocalFixture extends LocalTroubleshootingService {
 			'partial' => $this->partial,
 		);
 	}
+
+	public function diagnose_for_support_report(): array {
+		++$this->support_runs;
+		return array(
+			'results' => $this->results,
+			'partial' => $this->partial,
+		);
+	}
 }
 
 /**
@@ -647,12 +896,26 @@ class TroubleshootingLocalFixture extends LocalTroubleshootingService {
  */
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 final class TroubleshootingSecretsFixture extends SecretsFile {
+	public int $profile_reads     = 0;
+	public int $maintenance_reads = 0;
 	/** @param array<string, ProfileWithUnexpectedSecret> $profiles */
 	public function __construct( private array $profiles ) {
 		parent::__construct( '/unused/ran-booster-troubleshooting-secrets.php', array() );
 	}
 
+	public function verify_and_secure(): bool {
+		++$this->maintenance_reads;
+		throw new \RuntimeException( 'Standing facts must not authenticate or secure storage.' );
+	}
+
+	public function recovery_credentials_fit_at( string $path ): bool {
+		unset( $path );
+		++$this->maintenance_reads;
+		throw new \RuntimeException( 'Standing facts must not inspect recovery storage.' );
+	}
+
 	public function credential_profiles( ProviderCode|string $provider ): array {
+		++$this->profile_reads;
 		$provider_code = $provider instanceof ProviderCode ? $provider->value : $provider;
 
 		return isset( $this->profiles[ $provider_code ] )

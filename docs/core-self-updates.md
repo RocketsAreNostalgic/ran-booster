@@ -18,8 +18,8 @@ Booster prevents that accidental replacement with three coordinated controls:
 1. a positive release marker generated only inside verified Booster release
    ZIPs;
 2. an explicit `auto`, `enabled`, or `disabled` site override; and
-3. a shared-updater runtime-only mode that preserves runtime arbitration
-   without registering Core's native discovery or installer hooks.
+3. an exact Core target registered as manual, disabled or forced-off, with live
+   candidate admission and a fail-closed native fence if registration fails.
 
 ## Default policy
 
@@ -38,7 +38,7 @@ The default mode is `auto`.
 wrong-version marker files disable native self-update discovery.
 
 An ordinary source checkout never needs a local configuration change. The
-absence of an official marker is sufficient to keep Core runtime-only.
+absence of an official marker is sufficient to keep Core discovery disabled.
 
 ## Configuration
 
@@ -127,23 +127,24 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads the released `ran/wp-release-updater` beta.9 bootstrap after its
-single-site admission check and retains the returned public registrar. The
-updater schedules Protocol 5 selection and activation at `after_setup_theme`,
-priority `PHP_INT_MAX`; Core does not activate a broker itself. Loading the
-registrar preserves runtime selection and prospective releases even when Core
-declares no self-update target.
+Core loads lock-pinned `ran/wp-release-updater` beta.16 (Protocol 7) after its
+single-site admission check and retains the public registrar. Runtime arbitration
+and prospective releases stay available independently of Core discovery. Other
+physical runtime copies must satisfy the pinned family/provenance selection
+contract; incompatible families fail closed.
 
-The bundled GitHub Provider shares this Composer-installed updater copy. Other
-plugins may register separate protocol-5 copies before the activation boundary;
-all copies must satisfy the updater identity and selection contract. Protocol-4
-and protocol-5 copies cannot jointly update targets: a conflicting copy fails
-closed, so mixed-version installations are not a supported adoption composition.
+The published updater fact selected for this uptake is beta.16 reference
+`aa17eb4dc49dcf6dfb70d3af0e8039a3a2512bef`, with runtime revision
+`a7da1f3a3151f998a679d18cb9ee3ede802bb6da08f1af9ba49ccbd05655c541`.
+This records the released artifact identity; it does not by itself qualify
+Core integration. Qualification belongs to the exact-PR proof and review receipt.
 
-When Core policy disables native discovery, Core omits its self-target
-declaration. No Core native discovery or installation hooks are registered, and
-no self-update credential or feed request is made. Managed targets retain their
-own declarations and policies.
+Core declares its exact target in manual mode when current policy permits, or
+in disabled/forced-off mode otherwise. Disabled registration preserves the
+updater's cached-offer and native mutation fences without contacting the feed.
+If registration fails, Core removes only its cached offer and denies only its
+exact native update target through WordPress's existing hooks. Managed targets
+retain their own declarations and policies.
 
 Core's own target is declared directly through that retained public updater
 registrar; it does not resolve provider code `gh` or require the GitHub provider
@@ -181,7 +182,7 @@ without being mislabeled as a development checkout.
 The passive state is available to qualified administrators at:
 
 ```text
-RAN Booster → Troubleshooting → Diagnostics → Core updates
+RAN Booster → Troubleshooting → Installation → Booster Core updates
 ```
 
 The ordinary message explains whether Core updates are available or safely off.
@@ -311,7 +312,8 @@ A releasable Core change proves:
 - explicit `enabled` and `disabled` overrides win as documented;
 - invalid configuration and every invalid marker shape fail closed;
 - runtime-only still selects a compatible updater runtime;
-- runtime-only registers no Core native hooks and makes no feed request;
+- runtime-only retains exact-Core disabled/forced-off registration and native
+  admission fences without starting a Core feed request;
 - the exact raw Core updater notice is suppressed while managed package notices
   pass through;
 - a source checkout shows only the scoped, nontechnical development notice;
@@ -324,3 +326,48 @@ A releasable Core change proves:
 See [Package update orchestration](package-update-orchestration.md) for the
 larger managed-release and branch deployment model. Historical alternatives and
 reconsideration triggers remain in the private architecture review archive.
+
+## Settings and explicit checking
+
+Booster Settings exposes the discovery preference. Missing/saved true requests
+`auto`; saved false disables discovery. Any defined `RAN_BOOSTER_SELF_UPDATE_MODE`
+locks the field: `auto` still requires provenance eligibility; `disabled` and
+invalid modes stay off; `enabled` remains a code-only bypass. General Save never
+changes a dormant saved value shadowed by a constant.
+
+The exact Core target remains registered with manual/disabled/forced-off policy,
+a fresh operation guard, and a fresh descriptor-admission callback. The selected
+beta.16 updater samples the effective Core policy before native feed discovery;
+it also filters cached offers and rechecks admission during acquisition/install.
+General Save does not install. Check now is a separate authorized action that refreshes target state,
+invalidates WordPress's recent plugin-check transient, then calls
+`wp_update_plugins()`; other plugins may also be checked. A five-minute cooldown
+and a two-minute recoverable claim bound duplicate requests. Expiry permits
+recovery of an interrupted claim; it cannot interrupt a blocking call, and an
+older claimant cannot finalize a replacement claim.
+
+Only the exact updater start/completion observation establishes a successful
+Core check. Passive target timestamps, an accepted refresh and WordPress's
+global `last_checked` do not. Settings shows unknown when no success is proved,
+and retains the latest successful timestamp separately from the latest outcome.
+Update now uses WordPress's native exact-plugin manual upgrade path; the updater
+reacquires/verifies the archive and WordPress installs it. No background install
+is enabled.
+
+## Discovery guard uptake and qualification boundary
+
+Registration reads the saved preference directly, so a new request cannot use a
+stale object-cache value to register enabled after off was saved. The beta.16
+operation guard re-reads the same effective policy before native discovery:
+defined code overrides still take precedence over saved preference, and a saved
+false value denies discovery when no defined code mode shadows it. Explicit Check separately rechecks policy before
+orchestration. The descriptor callback remains the candidate/offer and native
+installation admission fence.
+
+Core #584 composes that guard before descriptor admission. Existing Core
+registration fencing continues to fail closed when a selected physical runtime
+copy lacks the required contract, including older copies. No dummy lifecycle
+callbacks or transport interception are used. Exact real native-filter proof
+and independent review must be bound to the integrated PR tuple before
+admission; this source description is not Core release, installed-site, or
+operator acceptance.

@@ -442,13 +442,13 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Read the local fixture or source bytes whose exact contents this test verifies.
 		$bootstrap = file_get_contents( dirname( __DIR__, 2 ) . '/ran-booster.php' );
 		self::assertIsString( $bootstrap );
-		$start = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
+		$start = strpos( $bootstrap, '$core_policy         = static fn' );
 		self::assertIsInt( $start );
 		$end = strpos( $bootstrap, '$ran_booster_container->bind(', $start );
 		self::assertIsInt( $end );
 		$self_update = substr( $bootstrap, $start, $end - $start );
 
-		self::assertStringContainsString( 'ManagedReleaseUpdaterRegistrar::class )->plugin(', $self_update );
+		self::assertStringContainsString( 'with_descriptor_admission(', $self_update );
 		self::assertStringContainsString( 'new CoreSelfUpdateNativeTarget( $core_updater )', $self_update );
 		self::assertStringNotContainsString( 'ProviderRegistry', $self_update );
 		self::assertStringNotContainsString( 'GitHubProvider', $self_update );

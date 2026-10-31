@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\DeploymentAdminPresenter;
+use RAN\Admin\OnboardingPresenter;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DevelopmentSafetyNoticeController;
@@ -25,6 +26,8 @@ use RAN\Secrets\SiteKeyStore;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 use RAN\Storage\Database;
 use RAN\Uninstall\LocalDataRemover;
+use RAN\Settings\GeneralPreferenceStore;
+use RAN\WordPress\CoreSelfUpdateCheck;
 use RuntimeException;
 
 require_once __DIR__ . '/../Support/WPError.php';
@@ -58,6 +61,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$GLOBALS['ran_booster_uninstall_transients']['auto_updater.lock']   = 'wordpress-lock';
 		$GLOBALS['ran_booster_uninstall_transients']['unrelated_transient'] = 'preserved';
 		$GLOBALS['ran_booster_uninstall_options']                           = array(
+			OnboardingPresenter::PRESENTATION_OPTION      => 'onboarding',
 			Database::VERSION_OPTION                      => '5.0',
 			\RAN\Activity\ActivityStore::VERSION_OPTION   => '1',
 			CredentialExpiryObservationStore::OPTION_NAME => array( 'profiles' => array() ),
@@ -67,6 +71,8 @@ final class LocalDataRemoverTest extends TestCase {
 			$this->updater_authority_option()             => 'owned-updater-state',
 			SiteKeyStore::OPTION_NAME                     => 'encoded-key',
 			WordPressInstallationStore::OPTION_NAME       => array( 'current-webhook-record' ),
+			GeneralPreferenceStore::OPTION_NAME           => array( 'hide_github' => true ),
+			CoreSelfUpdateCheck::OPTION_NAME              => array( 'claim' => str_repeat( 'a', 32 ) ),
 			'unrelated_option'                            => 'preserved',
 		);
 		foreach (
@@ -113,6 +119,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$remover = $this->remover( $secrets, $writer );
 
 		$remover->remove();
+		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 		$remover->remove();
 
 		self::assertSame(
@@ -176,6 +183,24 @@ final class LocalDataRemoverTest extends TestCase {
 		self::assertArrayHasKey( WordPressInstallationStore::OPTION_NAME, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertArrayHasKey( DevelopmentSafetyNoticeController::USER_META_KEY, $this->database->user_meta );
 		self::assertContains( 'wp_ran_booster_packages', $this->database->tables );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_undeletable_core_update_check_option_fails_closed_after_general_preference_removal(): void {
+		$this->setUp();
+		$GLOBALS['ran_booster_uninstall_undeletable_option'] = CoreSelfUpdateCheck::OPTION_NAME;
+
+		try {
+			$this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+			self::fail( 'An undeletable Core update-check option must abort uninstall.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'Booster options could not be removed.', $failure->getMessage() );
+		}
+
+		self::assertArrayNotHasKey( GeneralPreferenceStore::OPTION_NAME, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayHasKey( CoreSelfUpdateCheck::OPTION_NAME, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
 	}
 
 	#[RunInSeparateProcess]

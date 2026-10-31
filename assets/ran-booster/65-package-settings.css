@@ -905,3 +905,123 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+
+.ran-booster-admin .ran-booster-settings > .ran-booster-panel {
+	margin-block: var(--ran-booster-space-20);
+	padding: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin .ran-booster-settings__group {
+	min-inline-size: 0;
+	margin-block: var(--ran-booster-space-20);
+	padding-block-start: var(--ran-booster-space-16);
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-settings__group legend {
+	padding-inline: 0 var(--ran-booster-space-8);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.ran-booster-admin .ran-booster-settings input[type="number"] {
+	inline-size: 15em;
+	max-inline-size: 100%;
+}
+
+.ran-booster-admin .ran-booster-settings__switch-row {
+	margin-block: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-settings__switch {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+	cursor: pointer;
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-settings__switch input {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.ran-booster-admin .ran-booster-settings__switch-control {
+	position: relative;
+	inline-size: 2.5rem;
+	block-size: 1.5rem;
+	border: 1px solid var(--ran-booster-divider);
+	border-radius: 999px;
+	background: var(--ran-booster-surface-subtle);
+	transition:
+		background-color 120ms ease,
+		border-color 120ms ease;
+}
+
+.ran-booster-admin .ran-booster-settings__switch-control::after {
+	position: absolute;
+	inset-block-start: 50%;
+	inset-inline-start: 0.1875rem;
+	inline-size: 1rem;
+	block-size: 1rem;
+	border-radius: 50%;
+	background: var(--ran-booster-surface);
+	box-shadow: var(--ran-booster-shadow-surface);
+	content: "";
+	transform: translateY(-50%);
+	transition: transform 120ms ease;
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch
+	input:checked
+	+ .ran-booster-settings__switch-control {
+	border-color: var(--ran-booster-accent);
+	background: var(--ran-booster-accent);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch
+	input:checked
+	+ .ran-booster-settings__switch-control::after {
+	transform: translateX(1rem) translateY(-50%);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch
+	input:focus-visible
+	+ .ran-booster-settings__switch-control {
+	outline: 2px solid var(--ran-booster-link);
+	outline-offset: 2px;
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch
+	input:disabled
+	+ .ran-booster-settings__switch-control {
+	opacity: 0.55;
+}
+
+.ran-booster-admin .ran-booster-settings__configuration {
+	margin-block: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-settings__configuration p {
+	margin-block: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-settings__save-divider {
+	margin-block: var(--ran-booster-space-20);
+	border: 0;
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-settings .button {
+	max-inline-size: 100%;
+	white-space: normal;
+}

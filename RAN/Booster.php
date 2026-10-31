@@ -26,6 +26,7 @@ class Booster {
 		'ran-booster_page_ran-booster-themes-create',
 		'ran-booster_page_ran-booster-themes',
 		'ran-booster_page_ran-booster-extensions',
+		'ran-booster_page_ran-booster-settings',
 	);
 
 	private const PACKAGE_PAGE_HOOKS = array(
@@ -234,6 +235,7 @@ class Booster {
 			// Deactivation must continue when an optional capture is unavailable.
 		}
 
+		( new \RAN\Troubleshooting\DiagnosticRunStore() )->clear();
 		$this->service( WordPressWorkerWakeup::class )->clear();
 	}
 
@@ -261,6 +263,7 @@ class Booster {
 		add_submenu_page( 'ran-booster', __( 'Managed Themes', 'ran-booster' ), __( 'Themes', 'ran-booster' ), 'manage_options', 'ran-booster-themes', $this->service_callback( 'RAN\Dashboard', 'get_themes' ) );
 		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', $this->service_callback( 'RAN\Dashboard', 'get_transporter' ) );
 		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'render_extensions_page' ) );
+		add_submenu_page( 'ran-booster', __( 'Settings', 'ran-booster' ), __( 'Settings', 'ran-booster' ), 'manage_options', 'ran-booster-settings', $this->service_callback( 'RAN\Dashboard', 'get_settings' ) );
 	}
 
 	/**
@@ -383,42 +386,44 @@ class Booster {
 		) )->register();
 	}
 
-	/** @param array<string, array<string, mixed>> $installed_plugins
-	 *  @return list<array<string, mixed>>
+	/** @internal
+	 * @return list<array<string, mixed>>
 	 */
-	private function extension_cards( array $installed_plugins ): array {
-		$catalogue = array(
+	public static function extension_declarations(): array {
+		return array(
 			array(
-				'id'                   => 'ran-booster-bitbucket',
-				'name'                 => 'Bitbucket Cloud',
-				'description'          => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
-				'details'              => __( 'Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
-				'features'             => array(
+				'id'                      => 'ran-booster-bitbucket',
+				'provider_code'           => 'bb',
+				'provider_implementation' => 'RAN\\Booster\\Bitbucket\\BitbucketProvider',
+				'name'                    => 'Bitbucket Cloud',
+				'description'             => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
+				'details'                 => __( 'Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
+				'features'                => array(
 					__( 'Connect and configure Bitbucket Cloud repositories in Booster.', 'ran-booster' ),
 					__( 'Use package and credential guidance for your Git provider.', 'ran-booster' ),
 					__( 'Carry eligible file-stored credentials through Transporter for explicit import on the target site.', 'ran-booster' ),
 				),
-				'requirements'         => array(
+				'requirements'            => array(
 					__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
 					__( 'A version of Booster compatible with this extension.', 'ran-booster' ),
 					__( 'Manual Bitbucket webhook setup for Push-to-Deploy.', 'ran-booster' ),
 				),
-				'plugin'               => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
-				'image'                => 'bitbucket-cloud.svg',
-				'availability'         => __( 'Free', 'ran-booster' ),
-				'required_apis'        => array(
+				'plugin'                  => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
+				'image'                   => 'bitbucket-cloud.svg',
+				'availability'            => __( 'Free', 'ran-booster' ),
+				'required_apis'           => array(
 					'RAN_BOOSTER_PROVIDER_API_VERSION' => 15,
 					'RAN_BOOSTER_ADDON_API_VERSION'    => 17,
 				),
-				'release_version'      => '0.1.0-beta.17',
-				'manual_install_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/tag/v0.1.0-beta.17',
-				'asset_url'            => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/download/v0.1.0-beta.17/ran-booster-bitbucket-0.1.0-beta.17.zip',
-				'asset_sha256'         => 'b7963f335c624cf08124040a24a9d51d80c26640faee46e75334783f0547bc5a',
-				'repository'           => 'RocketsAreNostalgic/ran-booster-bitbucket',
-				'repository_id'        => '1312284489',
-				'canonical_update_uri' => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket',
-				'docs_url'             => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket#readme',
-				'support_url'          => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/issues',
+				'release_version'         => '0.1.0-beta.17',
+				'manual_install_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/tag/v0.1.0-beta.17',
+				'asset_url'               => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/download/v0.1.0-beta.17/ran-booster-bitbucket-0.1.0-beta.17.zip',
+				'asset_sha256'            => 'b7963f335c624cf08124040a24a9d51d80c26640faee46e75334783f0547bc5a',
+				'repository'              => 'RocketsAreNostalgic/ran-booster-bitbucket',
+				'repository_id'           => '1312284489',
+				'canonical_update_uri'    => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket',
+				'docs_url'                => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket#readme',
+				'support_url'             => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/issues',
 			),
 			array(
 				'id'                   => 'ran-booster-wp-pusher-migrator',
@@ -453,6 +458,13 @@ class Booster {
 				'support_url'          => 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/issues',
 			),
 		);
+	}
+
+	/** @param array<string, array<string, mixed>> $installed_plugins
+	 *  @return list<array<string, mixed>>
+	 */
+	private function extension_cards( array $installed_plugins ): array {
+		$catalogue = self::extension_declarations();
 
 		foreach ( $catalogue as &$extension ) {
 			$installed                = array_key_exists( $extension['plugin'], $installed_plugins );
@@ -621,6 +633,7 @@ class Booster {
 
 	/** Reuse WordPress's daily maintenance hook; never prune from a rendered history. */
 	public function prune_activity(): void {
+		( new \RAN\Troubleshooting\DiagnosticRunStore() )->cleanup();
 		$activity = $this->service( \RAN\Activity\ActivityStore::class );
 		if ( ! $activity->available() ) {
 			return;
@@ -655,12 +668,23 @@ class Booster {
 	}
 
 	/**
-	 * Whether this Troubleshooting request defers sidecar validation during bootstrap.
+	 * Whether this fixed passive admin route defers storage/schema bootstrap.
 	 */
 	public function is_passive_troubleshooting_request(): bool {
 		$method = isset( $_SERVER['REQUEST_METHOD'] ) && is_string( $_SERVER['REQUEST_METHOD'] )
 			? strtoupper( $_SERVER['REQUEST_METHOD'] )
 			: '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Exact route classification only; Dispatcher retains authorization.
+		$fixed_page = $_GET['page'] ?? null;
+		if ( 'GET' === $method && 'ran-booster-settings' === $fixed_page ) {
+			return true;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Classification prevents side effects even for a denied report; it authorizes no action.
+		$report = $_POST['ran_booster']['action'] ?? null;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixed report destination only; authority is checked by Dispatcher.
+		if ( 'POST' === $method && in_array( $report, array( 'generate-support-report', 'save-general-settings' ), true ) ) {
+			return true;
+		}
 		if ( 'GET' !== $method ) {
 			return false;
 		}
@@ -781,6 +805,10 @@ class Booster {
 			$style_dependencies = array( $style_handle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
+		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
+			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array(), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
+		}
+
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {
 
 			$extension_details_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extension-details.js';
@@ -839,7 +867,7 @@ class Booster {
 
 		wp_set_script_translations( 'ran-booster-repository-picker', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 
-		if ( 'toplevel_page_ran-booster' === $hook || $is_transporter_page ) {
+		if ( 'toplevel_page_ran-booster' === $hook || $is_transporter_page || 'ran-booster_page_ran-booster-settings' === $hook ) {
 
 			$onboarding_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-onboarding.css';
 			$onboarding_version = $this->asset_version( $onboarding_path );

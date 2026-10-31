@@ -109,16 +109,23 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'panel=diagnostics" aria-current="page"', $html );
 	}
 
-	public function test_installation_details_escape_local_claims_and_link_to_core_owned_provider_management(): void {
-		$troubleshooting_panel = 'diagnostics';
+	public function test_installation_details_escape_local_claims_without_provider_actions(): void {
+		$troubleshooting_panel = 'installation';
 		$troubleshooting       = array(
 			'providers'            => array(),
+			'components'           => array(
+				array(
+					'Name'           => 'GitHub',
+					'Provider'       => 'gh',
+					'Implementation' => '<component-implementation>',
+				),
+			),
 			'installation_details' => array(
 				'GitHub provider'      => array(
 					'Name'                     => '<Untrusted plugin>',
 					'Version'                  => '1.0',
 					'Source'                   => 'External plugin',
-					'Selection state'          => 'missing',
+					'Selection state'          => 'conflict',
 					'Operational availability' => 'Unavailable',
 					'Implementation'           => '<implementation>',
 					'Provider API'             => '15',
@@ -142,12 +149,11 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'GitHub provider details', $html );
 		self::assertStringContainsString( 'Local declarations only;', $html );
 		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
-		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>', '<commit>' ) as $claim ) {
+		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
 			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
 		}
-		self::assertStringContainsString( 'page=ran-booster&amp;tab=gh', $html );
-		self::assertStringContainsString( 'Manage GitHub provider', $html );
+		self::assertStringNotContainsString( 'Manage GitHub provider', $html );
 		self::assertStringNotContainsString( 'value="adopt-github"', $html );
 		self::assertStringNotContainsString( 'value="recover-github-native"', $html );
 		self::assertStringNotContainsString( 'Recover management without changing installed files:', $html );
@@ -161,14 +167,63 @@ final class TroubleshootingViewTest extends TestCase {
 			libxml_use_internal_errors( $previous_errors );
 		}
 		$xpath = new \DOMXPath( $document );
-		$rows  = $xpath->query( '//dl[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields-list ")]/div' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-github-provider-diagnostics" and not(@open)]//code[text()="<component-implementation>"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/div/dl/div[dt="Selection state"]/dd/code[text()="conflict"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/div/dl/div[dt="Operational availability"]/dd/code[text()="Unavailable"])' ) );
+		$rows = $xpath->query( '//dl[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields-list ")]/div' );
 		self::assertInstanceOf( \DOMNodeList::class, $rows );
-		self::assertSame( 13, $rows->length );
+		self::assertSame( 15, $rows->length );
 		foreach ( $rows as $row ) {
 			self::assertInstanceOf( \DOMElement::class, $row );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dt)', $row ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dd/code)', $row ) );
 		}
+	}
+
+	public function test_installation_is_default_and_renders_ordered_escaped_facts(): void {
+		$troubleshooting = array(
+			'environment' => array(
+				'WordPress' => '<wordpress>',
+				'PHP'       => '<runtime>',
+				'Database'  => '<database>',
+			),
+			'storage'     => array(
+				'state'   => 'actionable',
+				'message' => '<storage>',
+				'url'     => 'https://example.test/settings',
+				'details' => array( 'Location' => '<location>' ),
+			),
+			'components'  => array( array( 'Name' => '<component>' ) ),
+		);
+		foreach ( array( null, 'invalid' ) as $troubleshooting_panel ) {
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'panel=installation" aria-current="page"', $html );
+			self::assertStringNotContainsString( 'value="run-troubleshooting"', $html );
+			foreach ( array( '<wordpress>', '<runtime>', '<database>', '<storage>', '<location>', '<component>' ) as $value ) {
+				self::assertStringNotContainsString( $value, $html );
+				self::assertStringContainsString( htmlspecialchars( $value, ENT_QUOTES ), $html );
+			}
+			self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage"', $html );
+			self::assertStringContainsString( '<summary>Environment details</summary>', $html );
+			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary>Environment details</summary>', $html );
+			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open><summary>Environment details</summary>', $html );
+			$labels    = array( '>Environment</h4>', '>Storage</h4>', '>Booster Core updates</h4>', '>Providers and extensions</h3>' );
+			$positions = array_map( static fn ( $label ) => strpos( $html, $label ), $labels );
+			foreach ( $positions as $position ) {
+				self::assertIsInt( $position ); }
+			self::assertSame( $positions, array_values( array_unique( $positions ) ) );
+			$sorted = $positions;
+			sort( $sorted );
+			self::assertSame( $sorted, $positions );
+		}
+		$troubleshooting['storage']['state'] = 'unknown';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'href="https://example.test/settings"', $html );
 	}
 
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {
@@ -251,6 +306,19 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
 		self::assertStringContainsString( '<code>native_discovery_disabled</code>', $html );
 		self::assertStringNotContainsString( 'cannot reach its configured GitHub release feed', $html );
+		$troubleshooting['core_self_update']['requested_mode'] = 'disabled';
+		$troubleshooting['core_self_update']['reason']         = 'preference_disabled';
+		$troubleshooting['core_self_update']['marker_version'] = '1.2.3';
+		$troubleshooting['core_self_update']['marker_commit']  = str_repeat( 'a', 40 );
+		foreach ( array( 'blocked', 'unavailable' ) as $state ) {
+			$troubleshooting['core_self_update']['updater_state'] = $state;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'Core updates are off because this site explicitly disables them.', $html );
+			self::assertStringNotContainsString( 'Core updates are off for this source installation.', $html );
+			self::assertStringNotContainsString( 'retry automatically', $html );
+		}
 	}
 
 	public function test_official_feed_failure_uses_nontechnical_troubleshooting_copy(): void {
@@ -853,7 +921,8 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function test_renders_protected_provider_form_accessible_results_and_whitelist_report(): void {
-		$troubleshooting = array(
+		$troubleshooting_panel = 'diagnostics';
+		$troubleshooting       = array(
 			'providers'              => array(
 				'gh' => 'GitHub',
 				'bb' => 'Bitbucket',
@@ -959,6 +1028,15 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<caption class="screen-reader-text">', $html );
 		self::assertStringContainsString( 'The five-request Git provider budget was reached.', $html );
 		self::assertStringContainsString( '>local.runtime.ready</code>', $html );
+		self::assertStringNotContainsString( '<textarea', $html );
+		self::assertStringNotContainsString( 'id="ran-booster-installation-details"', $html );
+
+		$troubleshooting_panel               = 'support-report';
+		$troubleshooting['report_generated'] = true;
+		$troubleshooting['report_filename']  = 'ran-booster-support-20261031-120000.txt';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
 		self::assertStringContainsString( '<textarea', $html );
 		self::assertStringContainsString( 'RAN Booster troubleshooting report', $html );
 		self::assertStringContainsString( 'class="ran-booster-troubleshooting__report-field"', $html );
@@ -966,11 +1044,13 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>', $html );
 		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
 		self::assertStringContainsString( 'readonly>RAN Booster troubleshooting report', $html );
+		self::assertStringContainsString( '<summary>Evidence and recovery guidance</summary>', $html );
 	}
 
 	public function test_escapes_every_submitted_and_result_field(): void {
-		$canary          = '<img src=x onerror=alert(1)>';
-		$troubleshooting = array(
+		$troubleshooting_panel = 'diagnostics';
+		$canary                = '<img src=x onerror=alert(1)>';
+		$troubleshooting       = array(
 			'providers'         => array( 'gh" onclick="alert(1)' => $canary ),
 			'credentials'       => array(
 				'gh" onclick="alert(1)' => array(

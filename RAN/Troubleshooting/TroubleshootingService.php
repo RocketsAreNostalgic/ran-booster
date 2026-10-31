@@ -38,14 +38,160 @@ final class TroubleshootingService {
 		private readonly ?Closure $clock = null,
 		private readonly ?SecretsFile $secrets = null,
 		private readonly ?CoreSelfUpdateStatus $core_self_update = null,
-		private readonly ?ActivityStore $activity = null
+		private readonly ?ActivityStore $activity = null,
+		private readonly ?DiagnosticRunStore $retained_runs = null,
+		private readonly ?SupportReport $support_report = null,
+		private readonly ?InstallationFacts $installation_facts = null
 	) {
+	}
+
+	/**
+	 * Standing facts never enumerate credential documents or execute checks.
+	 * @param array<string,mixed>|null $selection
+	 * @param array<string,mixed> $storage
+	 * @return array<string,mixed>
+	 */
+	public function installation_payload( ?array $selection, array $storage ): array {
+		$facts   = $this->installation_facts ?? new InstallationFacts( $this->providers, $this->core_self_update );
+		$payload = array(
+			'providers'              => array(),
+			'provider_locator_hints' => array(),
+			'credentials'            => array(),
+			'selected_provider'      => '',
+			'credential_id'          => '',
+			'repository'             => '',
+			'ran'                    => false,
+			'results'                => array(),
+			'partial'                => false,
+			'partial_reason'         => null,
+			'report'                 => '',
+			'core_self_update'       => $facts->core(),
+		);
+		$payload = $this->with_installation_context( $payload, $selection );
+		unset( $payload['installation_details'][ __( 'Diagnostic Git provider', 'ran-booster' ) ] );
+		$payload['environment']          = $facts->environment();
+		$payload['storage']              = $storage;
+		$payload['components']           = $facts->components();
+		$payload['components_truncated'] = $facts->components_truncated();
+		return $payload;
+	}
+
+	/**
+	 * @param array<string,mixed> $storage
+	 * @return array{text:string,filename:string}
+	 */
+	public function generate_support_report( array $storage ): array {
+		if ( null === $this->support_report ) {
+			return array(
+				'text'     => __( 'Support collection is unavailable. No diagnostics were run.', 'ran-booster' ),
+				'filename' => 'ran-booster-support-' . gmdate( 'Ymd-His' ) . '.txt',
+			);
+		}
+		return $this->support_report->generate( $storage, $this->fresh_support_diagnostics() );
+	}
+
+	/**
+	 * Report generation may make one bounded, credential-free diagnostic sweep.
+	 * It has no Activity or retained-run side effects.
+	 *
+	 * @return array{state:string,local:list<array{status:string,code:string,message:string,remediation:string}>,providers:array<string,list<array{status:string,code:string,message:string,remediation:string}>>,provider_states:array<string,string>,omitted:int}
+	 */
+	private function fresh_support_diagnostics(): array {
+		if ( ! $this->can_generate_active_support_diagnostics() ) {
+			return array(
+				'state'           => 'permission_skipped',
+				'local'           => array(),
+				'providers'       => array(),
+				'provider_states' => array(),
+				'omitted'         => 0,
+			);
+		}
+		$started = $this->now();
+		try {
+			$local = $this->local->diagnose_for_support_report();
+		} catch ( \Throwable ) {
+			return array(
+				'state'           => 'local_incomplete',
+				'local'           => array(),
+				'providers'       => array(),
+				'provider_states' => array(),
+				'omitted'         => 0,
+			);
+		}
+		$local_results = array_map( static fn( ProviderDiagnosticResult $result ): array => $result->to_array(), $local['results'] );
+		if ( $local['partial'] ) {
+			return array(
+				'state'           => 'local_incomplete',
+				'local'           => $local_results,
+				'providers'       => array(),
+				'provider_states' => array(),
+				'omitted'         => 0,
+			);
+		}
+		$claims        = 0;
+		$groups        = array();
+		$states        = array();
+		$metadata_rows = $this->providers->ordered_metadata();
+		foreach ( array_slice( $metadata_rows, 0, 32 ) as $metadata ) {
+			if ( $claims >= 20 || $this->now() - $started >= 20.0 ) {
+				$groups[ $metadata->code->value ] = array();
+				$states[ $metadata->code->value ] = $claims >= 20 ? 'remote_calls_exhausted' : 'deadline_exhausted';
+				continue;
+			}
+			$request = null;
+			try {
+				$request = new ProviderDiagnosticRequest( null, null, min( ProviderDiagnosticRequest::MAX_REMOTE_CALLS, 20 - $claims ), min( ProviderDiagnosticRequest::MAX_SECONDS, max( 0.001, 20.0 - ( $this->now() - $started ) ) ), $this->clock );
+				$results = $this->providers->get( $metadata->code )->get_provider_diagnostics()->diagnose( $request );
+				$seen    = array();
+				$valid   = array();
+				foreach ( array_slice( $results, 0, self::MAX_RESULTS ) as $result ) {
+					if ( ! $this->valid_provider_result( $result, $metadata->code, $seen ) ) {
+						continue;
+					}
+					$seen[ $result->code ] = true;
+					$valid[]               = $result;
+				}
+				$groups[ $metadata->code->value ] = array_map( static fn( ProviderDiagnosticResult $result ): array => $result->to_array(), $valid );
+				$states[ $metadata->code->value ] = $this->now() - $started >= 20.0 || $request->remaining_seconds() <= 0.0 || 'deadline' === $request->get_exhaustion_reason() ? 'deadline_exhausted' : ( 'remote_calls' === $request->get_exhaustion_reason() ? 'remote_calls_exhausted' : ( count( $valid ) === count( $results ) && count( $results ) <= self::MAX_RESULTS ? 'included' : 'provider_results_invalid' ) );
+			} catch ( ProviderDiagnosticBudgetExceeded $failure ) {
+				$groups[ $metadata->code->value ] = array();
+				$states[ $metadata->code->value ] = ProviderDiagnosticBudgetExceeded::DEADLINE === $failure->get_reason() ? 'deadline_exhausted' : 'remote_calls_exhausted';
+			} catch ( \Throwable ) {
+				$groups[ $metadata->code->value ] = array();
+				$states[ $metadata->code->value ] = 'provider_unavailable';
+			} finally {
+				$claims += $request?->get_remote_calls() ?? 0;
+			}
+		}
+		return array(
+			'state'           => 'completed',
+			'local'           => $local_results,
+			'providers'       => $groups,
+			'provider_states' => $states,
+			'omitted'         => max( 0, count( $metadata_rows ) - 32 ),
+		);
+	}
+
+	private function can_generate_active_support_diagnostics(): bool {
+		if ( ! function_exists( 'current_user_can' ) ) {
+			return false;
+		}
+		foreach ( array( 'manage_options', 'install_plugins', 'update_plugins', 'install_themes', 'update_themes' ) as $capability ) {
+			if ( ! current_user_can( $capability ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private function now(): float {
+		return null === $this->clock ? hrtime( true ) / 1_000_000_000 : ( $this->clock )();
 	}
 
 	/**
 	 * Build the read-only GET payload from provider metadata and safe credential labels.
 	 *
-	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>, retention_available?: bool}
 	 */
 
 	public function form_payload(): array {
@@ -65,7 +211,7 @@ final class TroubleshootingService {
 	/**
 	 * Add one captured, passive installation snapshot to both display and support report.
 	 *
-	 * @param array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>} $payload
+	 * @param array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,retention_available?:bool} $payload
 	 * @param array<string,mixed>|null $github_selection
 	 * @return array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,installation_details:array<string,array<string,string>>}
 	 */
@@ -99,14 +245,15 @@ final class TroubleshootingService {
 		$sections[ __( 'GitHub provider', 'ran-booster' ) ][ __( 'Enabled candidates', 'ran-booster' ) ] = (string) count( $candidates );
 		$core        = $payload['core_self_update'];
 		$core_fields = array(
-			'requested_mode'  => __( 'Requested mode', 'ran-booster' ),
-			'effective_mode'  => __( 'Effective mode', 'ran-booster' ),
-			'reason'          => __( 'Policy reason', 'ran-booster' ),
-			'updater_state'   => __( 'Updater state', 'ran-booster' ),
-			'updater_code'    => __( 'Updater code', 'ran-booster' ),
-			'offered_version' => __( 'Offered version', 'ran-booster' ),
-			'marker_version'  => __( 'Marker version', 'ran-booster' ),
-			'marker_commit'   => __( 'Marker commit', 'ran-booster' ),
+			'installed_version' => __( 'Installed version', 'ran-booster' ),
+			'requested_mode'    => __( 'Requested mode', 'ran-booster' ),
+			'effective_mode'    => __( 'Effective mode', 'ran-booster' ),
+			'reason'            => __( 'Policy reason', 'ran-booster' ),
+			'updater_state'     => __( 'Updater state', 'ran-booster' ),
+			'updater_code'      => __( 'Updater code', 'ran-booster' ),
+			'offered_version'   => __( 'Offered version', 'ran-booster' ),
+			'marker_version'    => __( 'Marker version', 'ran-booster' ),
+			'marker_commit'     => __( 'Marker commit', 'ran-booster' ),
 		);
 		foreach ( $core_fields as $key => $label ) {
 			$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ $label ] = $this->installation_text( $core[ $key ] ?? null );
@@ -118,6 +265,17 @@ final class TroubleshootingService {
 			$timestamp = $core[ $key ] ?? null;
 			$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ $label ] = is_int( $timestamp ) && $timestamp >= 0 && $timestamp <= 253402300799 ? gmdate( 'c', $timestamp ) : __( 'Unavailable', 'ran-booster' );
 		}
+		foreach ( array(
+			'last_successful_check' => __( 'Last successful operator check (UTC)', 'ran-booster' ),
+			'check_cooldown_until'  => __( 'Operator check cooldown until (UTC)', 'ran-booster' ),
+		) as $key => $label ) {
+			$timestamp = $core[ $key ] ?? null;
+			$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ $label ] = is_int( $timestamp ) && $timestamp > 0 && $timestamp <= 253402300799 ? gmdate( 'c', $timestamp ) : __( 'Unavailable', 'ran-booster' );
+		}
+		$outcome = $core['last_check_outcome'] ?? null;
+		$code    = $core['last_check_code'] ?? null;
+		$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ __( 'Last operator check outcome', 'ran-booster' ) ] = is_string( $outcome ) && in_array( $outcome, array( 'success', 'failed', 'unknown', 'rejected', 'skipped' ), true ) ? $outcome : __( 'Unavailable', 'ran-booster' );
+		$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ __( 'Last operator check code', 'ran-booster' ) ]    = is_string( $code ) && strlen( $code ) <= 64 && preg_match( '/\A[a-z]+(?:_[a-z]+)*\z/', $code ) === 1 ? $code : __( 'Unavailable', 'ran-booster' );
 		$payload['installation_details'] = $sections;
 		$lines                           = array( 'RAN Booster installation context', __( 'Local declarations only; these claims do not verify publisher identity or remote access.', 'ran-booster' ) );
 		foreach ( $sections as $heading => $rows ) {
@@ -179,12 +337,13 @@ final class TroubleshootingService {
 	/**
 	 * Run local checks and exactly one selected provider in the current request.
 	 *
-	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>, retention_available?: bool}
 	 */
 
 	public function diagnose( string $provider, ?string $credential_id, ?string $repository ): array {
-		$id       = null;
-		$resolved = null;
+		$retention_scope = $this->retained_runs?->scope_key();
+		$id              = null;
+		$resolved        = null;
 		if ( null !== $this->activity ) {
 			try {
 				$resolved = $this->providers->metadata()[ ProviderCode::parse( $provider )->value ] ?? null;
@@ -208,7 +367,36 @@ final class TroubleshootingService {
 				)
 			);
 		}
-		$payload = $this->run_diagnostics( $provider, $credential_id, $repository );
+		$implementation = null;
+		if ( null !== $this->retained_runs && isset( $this->providers->metadata()[ $provider ] ) ) {
+			try {
+				$implementation = ( $this->installation_facts ?? new InstallationFacts( $this->providers ) )->implementation( $provider );
+			} catch ( \Throwable ) {
+				$implementation = null;
+			}
+		}
+		$payload   = $this->run_diagnostics( $provider, $credential_id, $repository );
+		$completed = microtime( true );
+		if ( null !== $this->retained_runs && isset( $this->providers->metadata()[ $provider ] ) ) {
+			try {
+				$retained = null !== $implementation && null !== $retention_scope && $this->retained_runs->save(
+					$provider,
+					array(
+						'completed_at'        => $completed,
+						'implementation'      => $implementation,
+						'credential_selected' => null !== $credential_id,
+						'repository_selected' => null !== $repository,
+						'partial'             => $payload['partial'],
+						'partial_reason'      => $payload['partial_reason'],
+						'results'             => SupportReport::safe_diagnostic_results( $payload['results'] ),
+					),
+					$retention_scope
+				);
+			} catch ( \Throwable ) {
+				$retained = false;
+			}
+			$payload['retention_available'] = $retained;
+		}
 		$this->record_outcome( $id, $payload );
 		return $payload;
 	}
@@ -253,7 +441,7 @@ final class TroubleshootingService {
 		);
 	}
 
-	/** @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>} */
+	/** @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>, retention_available?: bool} */
 	private function run_diagnostics( string $provider, ?string $credential_id, ?string $repository ): array {
 		$input_invalid = false;
 		try {
@@ -509,7 +697,7 @@ final class TroubleshootingService {
 	/**
 	 * @param list<ProviderDiagnosticResult> $results
 	 * @param array<string, string>           $providers
-	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>, retention_available?: bool}
 	 */
 	private function payload(
 		string $provider,

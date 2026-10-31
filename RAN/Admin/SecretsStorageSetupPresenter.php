@@ -7,7 +7,7 @@ namespace RAN\Admin;
 use RAN\Secrets\SecretsStorageProvisioningResult;
 
 /**
- * Builds the privileged Overview payload without exposing private paths to
+ * Builds the privileged Settings payload without exposing private paths to
  * redirects, logs, notices or other admin screens.
  */
 final readonly class SecretsStorageSetupPresenter {

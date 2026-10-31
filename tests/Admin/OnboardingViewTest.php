@@ -692,6 +692,7 @@ final class OnboardingViewTest extends TestCase {
 	/**
 	 * @param list<array{label: string, url: string}>|null $provider_links Provider settings links.
 	 * @param array<string, mixed>|null $secrets_storage Protected storage setup payload.
+	 * @param array<string, mixed> $extra Additional Overview fixture payload.
 	 */
 	private function render_view( ?array $provider_links = null, ?array $secrets_storage = null, array $extra = array() ): string {
 		$onboarding = array(

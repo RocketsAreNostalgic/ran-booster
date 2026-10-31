@@ -108,7 +108,7 @@ General integration projection revised before adding page-local enhancements: +3
 | `RAN/Settings/GeneralPreferenceStore.php` | 473 | 0 |
 | `RAN/Storage/AbstractPackageRepository.php` | 28 | 0 |
 | `RAN/Troubleshooting/CoreSelfUpdateStatus.php` | 47 | 6 |
-| `RAN/Uninstall/LocalDataRemover.php` | 2 | 0 |
+| `RAN/Uninstall/LocalDataRemover.php` | 3 | 0 |
 | `RAN/WordPress/CoreSelfUpdateCheck.php` | 282 | 0 |
 | `RAN/WordPress/CoreSelfUpdatePolicy.php` | 5 | 5 |
 | `RAN/WordPress/ManagedReleaseUpdaterRegistrar.php` | 1 | 1 |
@@ -123,8 +123,8 @@ General integration projection revised before adding page-local enhancements: +3
 
 Category totals (documentation measured before this table refresh):
 
-- Production: +1908/-307.
-- Tests: +1608/-38.
+- Production: +1909/-307.
+- Tests: +1630/-38.
 - Generated catalogues/fixtures: +581/-306.
 - Documentation: +287/-21.
 
@@ -158,8 +158,9 @@ e08619d4dd37704f539512659052c0b90d1dc842. Independent review reproduced:
 - Late native discovery admission: new registration uses a fresh indexed option
   read, but the pinned runtime still begins list/inspection before descriptor
   admission. Explicit Check is prechecked; offers/installations stay fenced.
-  The stronger automatic pre-discovery requirement remains held for owner
-  disposition or a separately reviewed dependency seam. No workaround callbacks,
+  The stronger automatic pre-discovery requirement requires an upstream pinned-runtime
+  change or a separately reviewed dependency seam; this hold is not acceptance of
+  an owner limitation. No workaround callbacks,
   transport interception, dependency repin or release is introduced.
 - Stale runtime-only documentation: corrected to actual beta.15/Protocol-7 and
   registered-disabled behavior.
@@ -168,4 +169,18 @@ The new remediation adds no types, options, extension APIs or storage operation.
 An indexed preference read is performed at Core target registration (when code
 has not supplied the policy) rather than evicting the global options cache.
 
+The exact uninstall allowlist also removes the current Core update-check
+claim/evidence option; an undeletable owned option fails closed while unrelated
+options remain preserved.
+
 Released-updater readback on 31 October 2026 confirms beta.15 remains the latest published prerelease; no released replacement seam was available to repin.
+
+## 31 October composition review: missing uninstall evidence option
+
+The earlier summary incorrectly claimed both new options were allowlisted.
+Source inspection found only General present. Before this correction, the
+projected delta is exactly +1/-0 production line in the existing uninstall
+allowlist, zero new types/APIs/state, and exactly +22 test lines including fixture imports.
+The cleanup regression seeds both options, verifies unrelated state survives,
+and requires an undeletable check option to abort rather than claim cleanup.
+This source correction does not authorize a retained-site uninstall.

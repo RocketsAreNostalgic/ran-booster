@@ -101,6 +101,11 @@ class Dispatcher {
 				? $request['action']
 				: '';
 
+			if ( in_array( $action, array( 'save-general-settings', 'check-core-updates' ), true ) ) {
+				$this->general_settings_action( $action, $request );
+				return;
+			}
+
 			if ( 'run-troubleshooting' === $action ) {
 				$this->run_troubleshooting( $request );
 
@@ -419,6 +424,27 @@ class Dispatcher {
 		}
 
 		$this->dashboard->set_secrets_storage_provisioning_result( $result );
+	}
+
+	/** @param array<string,mixed> $request */
+	private function general_settings_action( string $action, array $request ): void {
+		if ( 'POST' !== ( $_SERVER['REQUEST_METHOD'] ?? null ) ) {
+			return;
+		}
+		if ( ! current_user_can( 'manage_options' ) || ( 'check-core-updates' === $action && ! current_user_can( 'update_plugins' ) ) ) {
+			wp_die( esc_html__( 'You cannot perform this Settings action.', 'ran-booster' ) );
+		}
+		check_admin_referer( 'save-general-settings' === $action ? 'ran-booster-save-general-settings' : 'ran-booster-check-core-updates' );
+		$keys = 'save-general-settings' === $action ? array( 'action', 'token', 'preferences' ) : array( 'action' );
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The purpose nonce protects the fixed Settings route.
+		if ( 'ran-booster-settings' !== ( $_GET['page'] ?? null ) || array() !== array_diff( array_keys( $request ), $keys ) || count( $request ) !== count( $keys ) ) {
+			wp_die( esc_html__( 'Invalid Settings request. Reload Settings and try again.', 'ran-booster' ) );
+		}
+		if ( 'check-core-updates' === $action ) {
+			$this->dashboard->post_check_core_updates();
+		} elseif ( $this->dashboard->post_save_general_settings( wp_unslash( $request ) ) ) {
+			$this->redirect_to( admin_url( 'admin.php?page=ran-booster-settings&general_saved=1#ran-booster-general-heading' ) );
+		}
 	}
 
 	/** @param array<string, mixed> $request */

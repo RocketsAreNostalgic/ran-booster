@@ -238,6 +238,9 @@ final class BoosterServiceProvider {
 		);
 		$github_selection->bind_registry( $providers );
 		$container->bind( ProviderRegistry::class, $providers );
+		$preferences = new \RAN\Settings\GeneralPreferenceStore();
+		$container->bind( \RAN\Settings\GeneralPreferenceStore::class, $preferences );
+		$container->bind( \RAN\Admin\GitHubVisibility::class, new \RAN\Admin\GitHubVisibility( $preferences, $providers, $github_selection, $wpdb ) );
 		$container->bind(
 			ReleaseWorkflowControls::class,
 			static fn ( CoreContainer $container ): ReleaseWorkflowControls => new ReleaseWorkflowControls(

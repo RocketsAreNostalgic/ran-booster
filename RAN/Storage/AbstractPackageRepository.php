@@ -13,6 +13,7 @@ use RAN\Package;
 use RAN\PackageSubdirectory;
 use RAN\PackageSource;
 use RAN\Runtime\RuntimeSupport;
+use RAN\Settings\GeneralPreferenceStore;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use Throwable;
 
@@ -383,6 +384,7 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
+			$this->clear_confirmed_github_hide_request( $model->provider );
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::UPDATE );
@@ -598,6 +600,7 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
+			$this->clear_confirmed_github_hide_request( $model->provider );
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( $verified->get_operation() );
@@ -691,6 +694,7 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
+			$this->clear_confirmed_github_hide_request( $model->provider );
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
@@ -800,6 +804,7 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
+			$this->clear_confirmed_github_hide_request( $model->provider );
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
@@ -811,6 +816,16 @@ abstract class AbstractPackageRepository {
 		} catch ( Throwable $exception ) {
 			$wpdb->query( 'ROLLBACK' );
 			throw $exception;
+		}
+	}
+
+	/**
+	 * The fixed visibility preference is cleared only by a verified GitHub
+	 * management write in this still-open transaction.
+	 */
+	private function clear_confirmed_github_hide_request( string $provider ): void {
+		if ( 'gh' === $provider && ! ( new GeneralPreferenceStore() )->clear_confirmed_github_hide_request() ) {
+			throw new \RuntimeException( 'GitHub visibility preference could not be cleared.' );
 		}
 	}
 

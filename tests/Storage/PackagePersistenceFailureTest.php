@@ -22,6 +22,7 @@ use RAN\Storage\PackageMutationStatus;
 use RAN\Storage\PackageModel;
 use RAN\Storage\PackageStorageFailure;
 use RAN\Storage\PackageStorageOperation;
+use RAN\WordPress\ManagedReleaseConfiguration;
 use RuntimeException;
 use RAN\Tests\RANBoosterTestCase;
 use Throwable;
@@ -549,6 +550,80 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		self::assertSame( array( 'release/release.php' ), array_keys( $this->storage()->all_for_test( PackageSource::RELEASE_ASSET ) ) );
 	}
 
+	public function test_confirmed_github_management_clears_a_true_hide_request_on_every_admission_path(): void {
+		global $wpdb;
+
+		foreach ( array( 'store', 'adopt', 'release_adopt' ) as $path ) {
+			$wpdb->rows = array();
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- The wpdb double stores the byte-for-byte option document used by this persistence boundary.
+			$wpdb->general_settings_value = serialize(
+				array(
+					'hide_github'  => true,
+					'history_days' => 11,
+				)
+			);
+			$package                      = $this->package();
+			$result                       = match ( $path ) {
+				'store' => $this->storage()->store_for_test( $package ),
+				'adopt' => $this->storage()->adopt_for_test( $package ),
+				'release_adopt' => $this->storage()->adopt_release_for_test(
+					$this->release_package(),
+					new ManagedReleaseConfiguration( 'example', 'example.php' )
+				),
+			};
+
+			self::assertTrue( $result->is_successful(), $path );
+			self::assertSame(
+				array(
+					'hide_github'  => false,
+					'history_days' => 11,
+				),
+				// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- The assertion decodes only this fixture-owned option document.
+				unserialize( (string) $wpdb->general_settings_value ),
+				$path
+			);
+		}
+	}
+
+	public function test_confirmed_github_management_preserves_absent_and_false_preferences_without_seeding(): void {
+		global $wpdb;
+
+		foreach ( array(
+			null,
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- The fixture explicitly covers an existing serialized option document.
+			serialize(
+				array(
+					'hide_github'  => false,
+					'history_days' => 11,
+				)
+			),
+		) as $saved ) {
+			$wpdb->rows                   = array();
+			$wpdb->general_settings_value = $saved;
+			$result                       = $this->storage()->adopt_for_test( $this->package() );
+
+			self::assertTrue( $result->is_successful() );
+			self::assertSame( $saved, $wpdb->general_settings_value );
+		}
+	}
+
+	public function test_failed_hide_preference_clear_rolls_back_the_confirmed_github_management_record(): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- The wpdb double needs a serialized precondition for the rollback assertion.
+		$wpdb->general_settings_value      = serialize( array( 'hide_github' => true ) );
+		$wpdb->fail_general_settings_write = true;
+		try {
+			$this->storage()->adopt_for_test( $this->package() );
+			self::fail( 'A failed visibility clear must reject the management write.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'GitHub visibility preference could not be cleared.', $failure->getMessage() );
+		}
+		self::assertSame( array(), $wpdb->rows );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Assert rollback preserves the precise serialized fixture document.
+		self::assertSame( serialize( array( 'hide_github' => true ) ), $wpdb->general_settings_value );
+	}
+
 	private function storage( bool $package_exists = true, ?Database $database = null ): PersistenceFailureTestRepository {
 		return new PersistenceFailureTestRepository( $package_exists, $database );
 	}
@@ -568,6 +643,13 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		$package->set_deployment_policy( DeploymentPolicy::MANUAL );
 		$package->set_subdirectory( '' );
 
+		return $package;
+	}
+
+	private function release_package(): AbstractPackage {
+		$package = $this->package();
+		$package->set_source( PackageSource::RELEASE_ASSET, 1 );
+		$package->set_subdirectory( null );
 		return $package;
 	}
 
@@ -640,6 +722,10 @@ final class PersistenceFailureTestRepository extends AbstractPackageRepository {
 
 	public function adopt_for_test( Package $package ): PackageMutationResult {
 		return $this->adopt_package( $package );
+	}
+
+	public function adopt_release_for_test( Package $package, ManagedReleaseConfiguration $configuration ): PackageMutationResult {
+		return $this->adopt_release_package( $package, $configuration, 1 );
 	}
 
 	/** @param array<string, mixed> $input */

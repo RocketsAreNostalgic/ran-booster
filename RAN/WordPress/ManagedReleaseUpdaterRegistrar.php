@@ -20,7 +20,7 @@ final readonly class ManagedReleaseUpdaterRegistrar {
 		return new self( $this->invoke( 'with_native_mutation_callbacks', array( $begin, $complete ) ) );
 	}
 
-	/** Return null until the separately released Protocol 7 dependency is pinned. */
+	/** Return null when the selected runtime cannot install the live admission fence. */
 	public function with_descriptor_admission( callable $descriptor_admission ): ?self {
 		$callable = array( $this->registrar, 'with_descriptor_admission' );
 		if ( ! is_callable( $callable ) ) {

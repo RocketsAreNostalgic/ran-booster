@@ -64,6 +64,7 @@ use RAN\Troubleshooting\CoreSelfUpdateStatus;
 use RAN\WordPress\BranchUpdaterBootstrap;
 use RAN\WordPress\CoreSelfUpdateNativeTarget;
 use RAN\WordPress\CoreSelfUpdatePolicy;
+use RAN\WordPress\CoreSelfUpdateCheck;
 use RAN\WordPress\ManagedReleaseTargetRegistrar;
 use RAN\WordPress\ManagedReleaseUpdaterRegistrar;
 use RAN\WordPress\ReleaseUpdaterBootstrap;
@@ -133,38 +134,92 @@ $ran_booster_core_development_notice->register();
 			$provider_registry->seal();
 
 			$core_version        = (string) ( get_file_data( __FILE__, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
+			$core_channel        = str_contains( $core_version, '-' ) ? 'prerelease' : 'stable';
+			$core_policy         = static fn (): CoreSelfUpdatePolicy => CoreSelfUpdatePolicy::detect( __FILE__, $core_version, true );
 			$core_release_target = null;
-			if ( $ran_booster_self_update_policy->allows_native_discovery() ) {
-				try {
-					$core_updater        = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->plugin(
-						'github',
-						__FILE__,
-						'RocketsAreNostalgic/ran-booster',
-						'1319710173',
-						str_contains( $core_version, '-' ) ? 'prerelease' : 'stable',
-						'manual',
-						null,
-						PackageArtifactLimit::resolve()
-					);
-					$core_release_target = new CoreSelfUpdateNativeTarget( $core_updater );
-					if ( ! $core_release_target->register() ) {
-						$core_release_target = null;
-					} else {
-						$ran_booster_container
-							->make( ManagedReleaseTargetRegistrar::class )
-							->reserve_core_self_update_target( plugin_basename( __FILE__ ) );
-					}
-				} catch ( Throwable $exception ) {
-					\RAN\Logging\BoosterLogger::log_exception(
-						'core self-update target registration unavailable',
-						$exception,
-						array( 'step' => 'core_self_update_target_registration' )
-					);
+			$core_check          = null;
+			try {
+				$current_policy = $ran_booster_self_update_policy;
+				$update_policy  = $current_policy->allows_native_discovery()
+					? 'manual'
+					: ( defined( CoreSelfUpdatePolicy::CONFIGURATION ) ? 'forced-off' : 'disabled' );
+				$registrar      = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->with_descriptor_admission(
+					static fn (): bool => $core_policy()->allows_native_discovery()
+				);
+				if ( null === $registrar ) {
+					throw new LogicException( 'The selected release updater cannot enforce Core self-update admission.' );
 				}
+				$core_updater            = $registrar->plugin(
+					'github',
+					__FILE__,
+					'RocketsAreNostalgic/ran-booster',
+					'1319710173',
+					$core_channel,
+					$update_policy,
+					null,
+					PackageArtifactLimit::resolve()
+				);
+					$core_release_target = new CoreSelfUpdateNativeTarget( $core_updater );
+				if ( ! $core_release_target->register() ) {
+					$core_release_target = null;
+				} else {
+					$ran_booster_container
+						->make( ManagedReleaseTargetRegistrar::class )
+						->reserve_core_self_update_target( plugin_basename( __FILE__ ) );
+					$core_check = new CoreSelfUpdateCheck( $core_release_target, static fn (): bool => $core_policy()->allows_native_discovery(), plugin_basename( __FILE__ ), $core_channel );
+					$ran_booster_container->bind( CoreSelfUpdateCheck::class, $core_check );
+				}
+			} catch ( Throwable $exception ) {
+				\RAN\Logging\BoosterLogger::log_exception(
+					'core self-update target registration unavailable',
+					$exception,
+					array( 'step' => 'core_self_update_target_registration' )
+				);
+			}
+			if ( null === $core_release_target && function_exists( 'add_filter' ) ) {
+				$core_identifier = plugin_basename( __FILE__ );
+				$matches_core    = static function ( array $hook_extra ) use ( $core_identifier ): bool {
+					if ( 'update' !== ( $hook_extra['action'] ?? null ) || 'plugin' !== ( $hook_extra['type'] ?? null ) ) {
+						return false;
+					}
+					return ( $hook_extra['plugin'] ?? null ) === $core_identifier
+						|| ( is_array( $hook_extra['plugins'] ?? null ) && in_array( $core_identifier, $hook_extra['plugins'], true ) );
+				};
+				$denied_update   = static fn (): \WP_Error => new \WP_Error(
+					'ran_booster_native_update_core_registration_unavailable',
+					__( 'The Core update is unavailable because its updater registration failed.', 'ran-booster' )
+				);
+				add_filter(
+					'site_transient_update_plugins',
+					static function ( mixed $transient ) use ( $core_identifier ): mixed {
+						if ( is_object( $transient ) && is_array( $transient->response ?? null ) ) {
+							unset( $transient->response[ $core_identifier ] );
+						}
+						return $transient;
+					},
+					PHP_INT_MAX
+				);
+				add_filter(
+					'upgrader_pre_download',
+					static function ( mixed $reply, string $package, object $upgrader, array $hook_extra ) use ( $matches_core, $denied_update ): mixed {
+						unset( $package, $upgrader );
+						return $matches_core( $hook_extra ) ? $denied_update() : $reply;
+					},
+					PHP_INT_MIN,
+					4
+				);
+				add_filter(
+					'upgrader_pre_install',
+					static function ( mixed $reply, array $hook_extra ) use ( $matches_core, $denied_update ): mixed {
+						return $matches_core( $hook_extra ) ? $denied_update() : $reply;
+					},
+					PHP_INT_MIN,
+					2
+				);
 			}
 			$ran_booster_container->bind(
 				CoreSelfUpdateStatus::class,
-				new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $core_release_target )
+				new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $core_release_target, $core_check )
 			);
 
 			// Release targets join the package broker after every provider is

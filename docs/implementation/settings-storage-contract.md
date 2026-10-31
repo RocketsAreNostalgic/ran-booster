@@ -31,7 +31,7 @@ Exact engineering projections, not allowances or measured implementation. Reconc
 | Storage views/settings-storage.php (moved markup/helpers) | +243/-0 |
 | Storage views/onboarding.php | +9/-240 |
 | Storage presenter/remediation/docs-view/uninstall wording | +8/-8 |
-| General RAN/Settings/GeneralPreferenceStore.php | +445/-0 |
+| General RAN/Settings/GeneralPreferenceStore.php | +458/-0 |
 | General ActivityStore/PackageArtifactLimit/CoreSelfUpdatePolicy | +24/-4 |
 | General fixed visibility owner/management transaction seam | +240/-0 (GitHubVisibility +145/-0; AbstractPackageRepository +20/-0; GeneralPreferenceStore serialized preference lock/clear +75/-0) |
 | General fixed check claim/evidence owner | +282/-0 |
@@ -88,3 +88,58 @@ authorize creating, resetting or mutating the Overview fixture.
 Foundation measured delta: production +30/-0 (Booster +2, Dashboard +8, fixed view +20); tests +3/-0. Focused Extensions route suite: 22 tests/144 assertions; touched-file standards pass. Existing Overview forms remain authoritative in this unit. Documentation is this contract only; no generated assets/types/state added.
 
 General integration projection revised before adding page-local enhancements: +35 JS, +35 scoped CSS, +10 loader/view lines. The script only reports unsaved changes; native forms remain authoritative. Settings GET and exact preference-only Save POST defer schema/sidecar hardening in the existing classifier; capture/security expiry cleanup is retained. The report owner approved exact report-action deferral even on an invalid route, with Dispatcher retaining strict route/authority checks.
+
+## Measured implementation cost against the frozen baseline
+
+| Production file | Added | Deleted |
+| --- | ---: | ---: |
+| `RAN/Activity/ActivityStore.php` | 6 | 3 |
+| `RAN/Admin/CredentialExpiryNotice.php` | 1 | 1 |
+| `RAN/Admin/DeploymentOutcomeMessage.php` | 3 | 3 |
+| `RAN/Admin/GitHubVisibility.php` | 178 | 0 |
+| `RAN/Admin/ProviderSettingsPresenter.php` | 1 | 1 |
+| `RAN/Admin/SecretsStorageSetupPresenter.php` | 1 | 1 |
+| `RAN/Booster.php` | 19 | 2 |
+| `RAN/BoosterServiceProvider.php` | 3 | 0 |
+| `RAN/Dashboard.php` | 230 | 29 |
+| `RAN/Dispatcher.php` | 66 | 5 |
+| `RAN/PackageArtifactLimit.php` | 1 | 1 |
+| `RAN/Secrets/SecretsStorageProvisioner.php` | 2 | 2 |
+| `RAN/Settings/GeneralPreferenceStore.php` | 454 | 0 |
+| `RAN/Storage/AbstractPackageRepository.php` | 15 | 0 |
+| `RAN/Troubleshooting/CoreSelfUpdateStatus.php` | 47 | 6 |
+| `RAN/Uninstall/LocalDataRemover.php` | 2 | 0 |
+| `RAN/WordPress/CoreSelfUpdateCheck.php` | 282 | 0 |
+| `RAN/WordPress/CoreSelfUpdatePolicy.php` | 5 | 5 |
+| `RAN/WordPress/ManagedReleaseUpdaterRegistrar.php` | 1 | 1 |
+| `assets/ran-booster-settings.js` | 26 | 0 |
+| `assets/ran-booster/65-package-settings.css` | 28 | 0 |
+| `ran-booster.php` | 81 | 26 |
+| `uninstall.php` | 1 | 1 |
+| `views/documentation.php` | 2 | 2 |
+| `views/onboarding.php` | 5 | 218 |
+| `views/settings-storage.php` | 229 | 0 |
+| `views/settings.php` | 181 | 0 |
+
+Category totals (documentation excludes this appended measurement):
+
+- Production: +1870/-307.
+- Tests: +1455/-37.
+- Generated catalogues/fixtures: +581/-306.
+- Documentation: +179/-2.
+
+Three new internal concrete owners: GeneralPreferenceStore, GitHubVisibility and
+CoreSelfUpdateCheck. Zero new extension APIs, provider contracts, schemas, tables,
+cron jobs or storage-backend types. Two exact nonautoloaded option names are
+added to verified uninstall: General's five-key map and the current update-check
+claim/evidence record. The existing code overlay gains only the boolean hide
+request constant. Existing WordPress hook subscriptions implement the necessary
+exact-Core registration-failure fence; they create no new plugin event API.
+
+Executed source evidence includes policy/CAS/locked/stale/cache/route/storage
+and exact-updater checks. Synthetic disposable evidence includes activation,
+database/storage smoke, six MySQL race schedules, failure-registration native
+hooks, maintained native updater proof and desktop/mobile JavaScript/native
+Settings Save. These do not establish a released artifact or retained-site
+operator acceptance. A real newer-Core native install and retained-site storage
+recovery remain separate acceptance work; no merge/deployment/release is implied.

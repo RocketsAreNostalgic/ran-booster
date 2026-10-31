@@ -84,6 +84,14 @@ class Dashboard {
 	private PackagePagePresenter $plugin_pages;
 	private PackagePagePresenter $theme_pages;
 	private ?TemporaryDebugCapture $debug_capture                      = null;
+	private ?\RAN\Settings\GeneralPreferenceStore $general_preferences = null;
+	private ?\RAN\Admin\GitHubVisibility $github_visibility            = null;
+	private ?\RAN\Troubleshooting\CoreSelfUpdateStatus $core_updates   = null;
+	/** @var array<string,string> */
+	private array $general_attempted = array();
+	/** @var array<string,string> */
+	private array $general_errors                                     = array();
+	private ?string $general_feedback                                 = null;
 	private ?SecretsStorageProvisioner $secrets_storage               = null;
 	private ?SecretsStorageProvisioningResult $secrets_storage_result = null;
 	/** @var array<string,mixed>|null */
@@ -122,8 +130,14 @@ class Dashboard {
 		?CoreSelfUpdateDevelopmentNotice $core_self_update_development_notice = null,
 		?ReleaseWorkflowControls $release_workflow = null,
 		private ?\RAN\PackageRemoval\PackageRemovalService $removals = null,
-		?\RAN\Activity\ActivityStore $activity = null
+		?\RAN\Activity\ActivityStore $activity = null,
+		?\RAN\Settings\GeneralPreferenceStore $general_preferences = null,
+		?\RAN\Admin\GitHubVisibility $github_visibility = null,
+		?\RAN\Troubleshooting\CoreSelfUpdateStatus $core_updates = null
 	) {
+		$this->general_preferences = $general_preferences;
+		$this->github_visibility   = $github_visibility;
+		$this->core_updates        = $core_updates;
 		$this->db                  = $db;
 		$this->plugins             = $plugins;
 		$this->booster             = $booster;
@@ -519,11 +533,109 @@ class Dashboard {
 		$this->storage_payload = $storage;
 		return $this->render(
 			'settings',
-			array(
-				'secrets_storage' => $storage,
-				'credential_storage_documentation_url' => admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-credential-storage' ),
+			array_merge(
+				$this->general_settings_data(),
+				array(
+					'secrets_storage'                      => $storage,
+					'credential_storage_documentation_url' => admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-credential-storage' ),
+				)
 			)
 		);
+	}
+
+	/** @return array<string,mixed> */
+	private function general_settings_data(): array {
+		$preferences = $this->general_preferences ?? new \RAN\Settings\GeneralPreferenceStore();
+		try {
+			$snapshot   = $preferences->view_snapshot();
+			$projection = $snapshot['fields'];
+			$token      = $snapshot['token'];
+			if ( $snapshot['malformed'] ) {
+				$this->general_feedback = __( 'The saved Settings document is malformed. Runtime safety defaults remain in effect; no values were repaired.', 'ran-booster' );
+			}
+		} catch ( Throwable ) {
+			$projection = array();
+			$token      = '';
+		}
+		$visibility = array(
+			'hidden'   => false,
+			'eligible' => false,
+			'reason'   => 'github_selection_unknown',
+		);
+		try {
+			$visibility = $this->github_visibility?->projection() ?? $visibility;
+		} catch ( Throwable ) {
+			$visibility['hidden'] = false;
+			// Unavailable local evidence keeps ordinary GitHub access visible.
+		}
+		$status                      = $this->core_updates?->diagnostics() ?? array();
+		$version                     = (string) ( get_file_data( dirname( __DIR__ ) . '/ran-booster.php', array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
+		$status['installed_version'] = $version;
+		$url                         = null;
+		if ( 'enabled' === ( $status['effective_mode'] ?? null ) && 'active' === ( $status['updater_state'] ?? null )
+			&& is_string( $status['offered_version'] ?? null ) && version_compare( $status['offered_version'], $version, '>' ) && current_user_can( 'update_plugins' ) ) {
+			$url = wp_nonce_url( admin_url( 'update.php?action=upgrade-plugin&plugin=' . rawurlencode( plugin_basename( dirname( __DIR__ ) . '/ran-booster.php' ) ) ), 'upgrade-plugin_' . plugin_basename( dirname( __DIR__ ) . '/ran-booster.php' ) );
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixed feedback flag conveys no private data and performs no mutation.
+		$saved = '1' === ( $_GET['general_saved'] ?? null );
+		return array(
+			'general_settings'   => $projection,
+			'general_token'      => $token,
+			'general_feedback'   => $this->general_feedback ?? ( $saved ? __( 'Settings saved.', 'ran-booster' ) : null ),
+			'general_errors'     => $this->general_errors,
+			'general_attempted'  => $this->general_attempted,
+			'github_visibility'  => $visibility,
+			'core_update_status' => $status,
+			'check_available'    => null !== $this->core_updates && $this->core_updates->can_check() && current_user_can( 'update_plugins' ),
+			'native_update_url'  => $url,
+		);
+	}
+
+	/** @param array<string,mixed> $request */
+	public function post_save_general_settings( array $request ): bool {
+		$preferences = $this->general_preferences ?? new \RAN\Settings\GeneralPreferenceStore();
+		$values      = $request['preferences'] ?? null;
+		$token       = $request['token'] ?? null;
+		if ( ! is_array( $values ) || ! is_string( $token ) || null === $this->github_visibility ) {
+			$this->general_feedback = __( 'Settings could not be saved. Reload the page and try again.', 'ran-booster' );
+			return false;
+		}
+		$fields = $preferences->projection();
+		foreach ( $fields as $key => $field ) {
+			if ( ! $field['locked'] && is_string( $values[ $key ] ?? null ) ) {
+				$this->general_attempted[ $key ] = substr( $values[ $key ], 0, 32 );
+				if ( null === $preferences->parse_submission( array( $key => $values[ $key ] ), array( $key ) ) ) {
+					$this->general_errors[ $key ] = __( 'Enter a valid value within the displayed limits.', 'ran-booster' );
+				}
+			}
+		}
+		$result = $preferences->save( $token, $values, $this->github_visibility->with_management_admission_lock( ... ), $this->github_visibility->github_hide_eligible( ... ) );
+		if ( in_array( $result, array( 'saved', 'unchanged' ), true ) ) {
+			// The live descriptor admission fence remains authoritative even if local offer removal fails.
+			if ( ! \RAN\WordPress\CoreSelfUpdatePolicy::detect( dirname( __DIR__ ) . '/ran-booster.php', (string) ( get_file_data( dirname( __DIR__ ) . '/ran-booster.php', array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' ), true )->allows_native_discovery() ) {
+				try {
+					delete_site_transient( 'update_plugins' );
+				} catch ( Throwable ) {
+					$this->general_feedback = __( 'Settings saved; cached update offers could not be cleared. Discovery remains disabled.', 'ran-booster' );
+					return false;
+				}
+			}
+			return true;
+		}
+		$this->general_feedback = 'stale' === $result
+			? __( 'Settings changed or GitHub eligibility changed. Review the current values and save again.', 'ran-booster' )
+			: __( 'Settings were not saved. Check the fields or reload the page and try again.', 'ran-booster' );
+		return false;
+	}
+
+	public function post_check_core_updates(): void {
+		$result                 = $this->core_updates?->check() ?? array(
+			'outcome' => 'failed',
+			'code'    => 'unavailable',
+		);
+		$this->general_feedback = 'success' === $result['outcome']
+			? __( 'The Booster update check completed.', 'ran-booster' )
+			: __( 'The Booster update check did not complete successfully. Review the check status below.', 'ran-booster' );
 	}
 
 	private function storage_status(): ?SecretsStorageProvisioningResult {
@@ -1287,7 +1399,16 @@ class Dashboard {
 			: admin_url( 'admin.php' );
 		$tabs      = array();
 
+		$hidden_provider_key = null;
+		try {
+			$hidden_provider_key = $this->github_visibility?->hidden_navigation_key();
+		} catch ( Throwable ) {
+			$hidden_provider_key = null;
+		}
 		foreach ( $this->admin_tabs->all() as $tab ) {
+			if ( null !== $hidden_provider_key && $hidden_provider_key === $tab->get_key() ) {
+				continue;
+			}
 			$tab_key = $tab->get_key();
 			$tabs[]  = array(
 				'key'      => $tab_key,

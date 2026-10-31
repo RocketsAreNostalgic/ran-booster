@@ -324,3 +324,29 @@ A releasable Core change proves:
 See [Package update orchestration](package-update-orchestration.md) for the
 larger managed-release and branch deployment model. Historical alternatives and
 reconsideration triggers remain in the private architecture review archive.
+
+## Settings and explicit checking
+
+Booster Settings exposes the discovery preference. Missing/saved true requests
+`auto`; saved false disables discovery. Any defined `RAN_BOOSTER_SELF_UPDATE_MODE`
+locks the field: `auto` still requires provenance eligibility; `disabled` and
+invalid modes stay off; `enabled` remains a code-only bypass. General Save never
+changes a dormant saved value shadowed by a constant.
+
+The exact Core target remains registered with manual/disabled/forced-off policy
+and a fresh descriptor-admission callback. The pinned updater filters cached
+offers and rechecks admission during acquisition/install; General Save does not
+install. Check now is a separate authorized action that refreshes target state,
+invalidates WordPress's recent plugin-check transient, then calls
+`wp_update_plugins()`; other plugins may also be checked. A five-minute cooldown
+and a two-minute recoverable claim bound duplicate requests. Expiry permits
+recovery of an interrupted claim; it cannot interrupt a blocking call, and an
+older claimant cannot finalize a replacement claim.
+
+Only the exact updater start/completion observation establishes a successful
+Core check. Passive target timestamps, an accepted refresh and WordPress's
+global `last_checked` do not. Settings shows unknown when no success is proved,
+and retains the latest successful timestamp separately from the latest outcome.
+Update now uses WordPress's native exact-plugin manual upgrade path; the updater
+reacquires/verifies the archive and WordPress installs it. No background install
+is enabled.

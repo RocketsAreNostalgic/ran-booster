@@ -73,9 +73,12 @@ final class ActivityStore {
 
 	/** @return array{valid:bool,maximum_rows:int,maximum_days:int,source:'configured'|'default'} */
 	public static function retention_policy( mixed $rows = null, mixed $days = null ): array {
-		$configured = null !== $rows || null !== $days || defined( 'RAN_BOOSTER_HISTORY_ROWS' ) || defined( 'RAN_BOOSTER_HISTORY_DAYS' );
-		$rows     ??= defined( 'RAN_BOOSTER_HISTORY_ROWS' ) ? constant( 'RAN_BOOSTER_HISTORY_ROWS' ) : 2000;
-		$days     ??= defined( 'RAN_BOOSTER_HISTORY_DAYS' ) ? constant( 'RAN_BOOSTER_HISTORY_DAYS' ) : 30;
+		$preferences = new \RAN\Settings\GeneralPreferenceStore();
+		$saved_rows  = $preferences->history_rows();
+		$saved_days  = $preferences->history_days();
+		$configured  = null !== $rows || null !== $days || null !== $saved_rows || null !== $saved_days || defined( 'RAN_BOOSTER_HISTORY_ROWS' ) || defined( 'RAN_BOOSTER_HISTORY_DAYS' );
+		$rows      ??= defined( 'RAN_BOOSTER_HISTORY_ROWS' ) ? constant( 'RAN_BOOSTER_HISTORY_ROWS' ) : ( $saved_rows ?? 2000 );
+		$days      ??= defined( 'RAN_BOOSTER_HISTORY_DAYS' ) ? constant( 'RAN_BOOSTER_HISTORY_DAYS' ) : ( $saved_days ?? 30 );
 		$valid_rows = is_int( $rows ) && $rows >= 200 && $rows <= 100000;
 		$valid_days = is_int( $days ) && $days >= 1 && $days <= 365;
 		return array(

@@ -16,6 +16,7 @@ use RAN\Admin\WebhookManagement\Installation\WordPressInstallationStore;
 use RAN\BoosterGitHubProvider\V1\ReleaseDeployments\WorkflowAssistance\WorkflowAssistanceState;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\TemporaryDebugCapture;
+use RAN\Settings\GeneralPreferenceStore;
 use RAN\Secrets\PrivateLocationCandidateResolver;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\WpConfigSecretsPathWriter;
@@ -34,6 +35,7 @@ class LocalDataRemover {
 		PublicRepositoryLookupProfileStore::OPTION_NAME,
 		RepositoryBranchCheckEvidenceStore::OPTION_NAME,
 		WordPressInstallationStore::OPTION_NAME,
+		GeneralPreferenceStore::OPTION_NAME,
 	);
 
 	private const USER_META_KEYS = array(

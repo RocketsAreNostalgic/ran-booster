@@ -48,7 +48,7 @@ final class SupportReport {
 			'Installation'     => fn(): array => $this->installation(),
 			'Storage'          => fn(): array => $this->storage( $storage ),
 			'Managed packages' => fn(): array => $this->packages(),
-			'Diagnostics'      => fn(): array => $this->diagnostics( $fresh_diagnostics ),
+			'Diagnostics'      => fn(): array => $this->diagnostics( $fresh_diagnostics, $this->now() - $started < 5.0 ),
 			'Activity'         => fn(): array => $this->activity(),
 			'Logging'          => fn(): array => $this->logging(),
 		) as $name => $collect ) {
@@ -248,7 +248,7 @@ final class SupportReport {
 	 * @param array{state?:string,local?:list<array{status:string,code:string,message:string,remediation:string}>,providers?:array<string,list<array{status:string,code:string,message:string,remediation:string}>>,provider_states?:array<string,string>,omitted?:int} $fresh
 	 * @return array{string,list<string>}
 	 */
-	private function diagnostics( array $fresh = array() ): array {
+	private function diagnostics( array $fresh = array(), bool $include_retained = true ): array {
 		$fresh_state = $fresh['state'] ?? 'unavailable';
 		$fresh_coverage = 'completed' === $fresh_state ? 'Included' : ( 'unavailable' === $fresh_state ? 'Unavailable' : 'Partial' );
 		$fresh_lines = array();
@@ -256,7 +256,15 @@ final class SupportReport {
 			$fresh_lines[] = 'Fresh basic checks not run: this administrator lacks one or more diagnostics capabilities.';
 		} elseif ( in_array( $fresh_state, array( 'completed', 'local_incomplete' ), true ) ) {
 			$fresh_lines[] = 'Fresh general checks: credential and repository selections were not used; provider prose is omitted.';
-			foreach ( array( 'local' => $fresh['local'] ?? array() ) + ( is_array( $fresh['providers'] ?? null ) ? $fresh['providers'] : array() ) as $provider => $results ) {
+			foreach ( array( 'local' => $fresh['local'] ?? array() ) as $provider => $results ) {
+				$fresh_lines[] = 'Group: local';
+				$safe_results  = self::fresh_results( $results );
+				$fresh_lines[] = 'Group state: included';
+				foreach ( self::safe_diagnostic_results( $safe_results ) as $result ) {
+					$fresh_lines[] = implode( ' | ', $result );
+				}
+			}
+			foreach ( is_array( $fresh['providers'] ?? null ) ? $fresh['providers'] : array() as $provider => $results ) {
 				$fresh_lines[] = 'Group: ' . ( 'local' === $provider ? 'local' : $this->provider( $provider ) );
 				$safe_results  = self::fresh_results( $results );
 				$state         = is_string( $fresh['provider_states'][ $provider ] ?? null ) ? $fresh['provider_states'][ $provider ] : 'included';
@@ -283,6 +291,9 @@ final class SupportReport {
 					$fresh_coverage = 'Partial';
 				}
 			}
+		}
+		if ( ! $include_retained ) {
+			return array( 'Partial', array_merge( $fresh_lines, array( 'Earlier explicit diagnostic inputs were not read because the passive collection budget was exhausted.' ) ) );
 		}
 		$snapshot = $this->runs?->available();
 		if ( null === $snapshot || ! $snapshot['available'] ) {

@@ -6183,7 +6183,7 @@ msgid "Capture PHP and WordPress errors"
 msgstr ""
 
 #: views/debug-capture.php:67
-msgid "For broader PHP, WordPress, theme, and plugin error logging, edit the existing definitions in wp-config.php before the “stop editing” line:"
+msgid "For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:"
 msgstr ""
 
 #: views/debug-capture.php:71

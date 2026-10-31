@@ -64,7 +64,7 @@ $status_classes       = array(
 	</p>
 	<details class="ran-booster-debug-capture__wordpress-help">
 		<summary><?php esc_html_e( 'Capture PHP and WordPress errors', 'ran-booster' ); ?></summary>
-		<p><?php esc_html_e( 'For broader PHP, WordPress, theme, and plugin error logging, edit the existing definitions in wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
+		<p><?php esc_html_e( 'For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
 		<pre><code>define( 'WP_DEBUG', true );
 define( 'WP_DEBUG_LOG', true );
 define( 'WP_DEBUG_DISPLAY', false );</code></pre>

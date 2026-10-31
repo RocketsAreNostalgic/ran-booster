@@ -54,7 +54,9 @@ final class SupportReport {
 		) as $name => $collect ) {
 			$at = $this->now();
 			try {
-				[$state, $lines] = $at - $started >= 5.0 ? array( 'Not included', array( 'Collection budget exhausted; no operation was started.' ) ) : $collect();
+				// Fresh diagnostics were already completed before passive serialization;
+				// their safe projection must not be discarded by earlier collectors.
+				[$state, $lines] = $at - $started >= 5.0 && ( 'Diagnostics' !== $name || array() === $fresh_diagnostics ) ? array( 'Not included', array( 'Collection budget exhausted; no operation was started.' ) ) : $collect();
 			} catch ( Throwable ) {
 				[$state, $lines] = array( 'Unavailable', array( 'Local evidence could not be read; no repair was attempted.' ) );
 			}
@@ -248,6 +250,7 @@ final class SupportReport {
 	 */
 	private function diagnostics( array $fresh = array() ): array {
 		$fresh_state = $fresh['state'] ?? 'unavailable';
+		$fresh_coverage = 'completed' === $fresh_state ? 'Included' : ( 'unavailable' === $fresh_state ? 'Unavailable' : 'Partial' );
 		$fresh_lines = array();
 		if ( 'permission_skipped' === $fresh_state ) {
 			$fresh_lines[] = 'Fresh basic checks not run: this administrator lacks one or more diagnostics capabilities.';
@@ -273,14 +276,20 @@ final class SupportReport {
 			}
 			if ( is_int( $fresh['omitted'] ?? null ) && $fresh['omitted'] > 0 ) {
 				$fresh_lines[] = 'Provider groups not included because the report limit is 32: ' . $fresh['omitted'];
+				$fresh_coverage = 'Truncated';
+			}
+			foreach ( $fresh['provider_states'] ?? array() as $state ) {
+				if ( 'included' !== $state ) {
+					$fresh_coverage = 'Partial';
+				}
 			}
 		}
 		$snapshot = $this->runs?->available();
 		if ( null === $snapshot || ! $snapshot['available'] ) {
-			return array( array() === $fresh_lines ? 'Unavailable' : 'Included', array_merge( $fresh_lines, array( 'Earlier explicit diagnostic inputs unavailable.' ) ) );
+			return array( array() === $fresh_lines ? 'Unavailable' : $fresh_coverage, array_merge( $fresh_lines, array( 'Earlier explicit diagnostic inputs unavailable.' ) ) );
 		}
 		if ( array() === $snapshot['runs'] ) {
-			return array( array() === $fresh_lines ? 'Not run' : 'Included', array_merge( $fresh_lines, array( 'No available unexpired earlier explicit run for this administrator and site.' ) ) );
+			return array( array() === $fresh_lines ? 'Not run' : $fresh_coverage, array_merge( $fresh_lines, array( 'No available unexpired earlier explicit run for this administrator and site.' ) ) );
 		}
 		$lines = array_merge( $fresh_lines, array( 'Earlier explicit checks, not newly executed tests. Provider prose is replaced by reviewed result-code descriptions.', 'Implementation labels identify recorded local observations, not verified continuity or checks of a current replacement.' ) );
 		foreach ( $snapshot['runs'] as $run ) {

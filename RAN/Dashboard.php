@@ -314,6 +314,9 @@ class Dashboard {
 			$panel                         = $this->requested_troubleshooting_panel();
 			$data['troubleshooting_panel'] = $panel;
 			if ( 'installation' === $panel ) {
+				if ( 'GET' === ( $_SERVER['REQUEST_METHOD'] ?? '' ) && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
+					$this->storage_status( false );
+				}
 				$data['troubleshooting'] = $this->troubleshooting->installation_payload( $this->provider_settings->github_selection_diagnostics(), $this->storage_installation_projection() );
 			} elseif ( 'support-report' === $panel ) {
 				$data['troubleshooting'] = array(
@@ -667,11 +670,13 @@ class Dashboard {
 			: __( 'The Booster update check did not complete successfully. Review the check status below.', 'ran-booster' );
 	}
 
-	private function storage_status(): ?SecretsStorageProvisioningResult {
+	private function storage_status( bool $log_diagnostics = true ): ?SecretsStorageProvisioningResult {
 		if ( null === $this->secrets_storage_result && null !== $this->secrets_storage ) {
 			try {
 				$this->secrets_storage_result = $this->secrets_storage->status();
-				$this->log_secrets_storage_diagnostic( $this->secrets_storage_result );
+				if ( $log_diagnostics ) {
+					$this->log_secrets_storage_diagnostic( $this->secrets_storage_result );
+				}
 			} catch ( Throwable ) {
 				$this->secrets_storage_result = SecretsStorageProvisioningResult::unsupported(
 					'storage_status_unavailable',
@@ -707,6 +712,7 @@ class Dashboard {
 			$projection['state'] = match ( $result->status() ) {
 				'path_configured' => 'configured', 'storage_healthy' => 'healthy',
 				'setup_available', 'storage_needs_attention', 'manual_required' => 'actionable',
+				'unsupported' => 'unavailable',
 				default => 'unknown',
 			};
 			$projection['message'] = $result->message();

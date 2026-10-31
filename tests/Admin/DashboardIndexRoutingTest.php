@@ -2163,6 +2163,81 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
+	public function test_installation_health_check_is_capability_gated_cached_and_isolated(): void {
+		$provisioner = $this->createMock( \RAN\Secrets\SecretsStorageProvisioner::class );
+		$provisioner->expects( self::once() )->method( 'status' )->willReturn( \RAN\Secrets\SecretsStorageProvisioningResult::storage_healthy( '/private/secrets.json', 'manual' ) );
+		$dashboard                 = $this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner );
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_GET                      = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'installation',
+		);
+		self::assertSame( 'unknown', $dashboard->storage_installation_projection()['state'] );
+		self::assertSame( 'healthy', $dashboard->get_index()['data']['troubleshooting']['storage']['state'] );
+		self::assertSame( 'healthy', $dashboard->get_index()['data']['troubleshooting']['storage']['state'] );
+	}
+
+	public function test_installation_health_check_skips_other_requests_and_both_missing_capabilities(): void {
+		foreach ( array( array( 'POST', 'installation', true, true ), array( 'GET', 'support-report', true, true ), array( 'GET', 'diagnostics', true, true ), array( 'GET', 'installation', false, true ), array( 'GET', 'installation', true, false ) ) as list( $method, $panel, $manage, $activate ) ) {
+			$provisioner = $this->createMock( \RAN\Secrets\SecretsStorageProvisioner::class );
+			$provisioner->expects( self::never() )->method( 'status' );
+			$GLOBALS['ran_booster_test_capabilities'] = array(
+				'manage_options'   => $manage,
+				'activate_plugins' => $activate,
+			);
+			$_SERVER['REQUEST_METHOD']                = $method;
+			$_GET                                     = array(
+				'tab'   => 'troubleshooting',
+				'panel' => $panel,
+			);
+			$this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner )->get_index();
+		}
+	}
+
+	public function test_installation_health_check_does_not_write_to_capture(): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-storage-check-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new TemporaryDebugCapture( $directory . '/secrets.json' );
+		try {
+			$capture->start();
+			\RAN\Logging\BoosterLogger::configure_capture( $capture );
+			$provisioner = $this->createMock( \RAN\Secrets\SecretsStorageProvisioner::class );
+			$provisioner->expects( self::once() )->method( 'status' )->willReturn( \RAN\Secrets\SecretsStorageProvisioningResult::unsupported( 'test_unavailable', 'Unavailable.' ) );
+			$_SERVER['REQUEST_METHOD'] = 'GET';
+			$_GET                      = array(
+				'tab'   => 'troubleshooting',
+				'panel' => 'installation',
+			);
+			$this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner )->get_index();
+			self::assertSame( array(), $capture->snapshot()['entries'] );
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			$capture->delete();
+			foreach ( array( $directory . '/ran-booster-debug.php.lock', $directory . '/ran-booster-debug.php' ) as $path ) {
+				if ( is_file( $path ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable capture fixture cleanup.
+					unlink( $path );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable capture fixture cleanup.
+			rmdir( $directory );
+		}
+	}
+
+	public function test_installation_health_check_failure_does_not_hide_installation(): void {
+		$provisioner = $this->createMock( \RAN\Secrets\SecretsStorageProvisioner::class );
+		$provisioner->expects( self::once() )->method( 'status' )->willThrowException( new RuntimeException( 'private failure' ) );
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_GET                      = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'installation',
+		);
+		$data                      = $this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner )->get_index()['data'];
+		self::assertSame( 'unavailable', $data['troubleshooting']['storage']['state'] );
+		self::assertStringNotContainsString( 'private failure', $data['troubleshooting']['storage']['message'] );
+	}
+
 	public function test_fixed_troubleshooting_routes_default_and_alias(): void {
 		$dashboard = $this->dashboard( $this->throwing_secrets() );
 		foreach ( array(
@@ -3740,7 +3815,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?WordPressUpdaterLock $branch_check_lock = null,
 		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
 		?PackageRemovalService $removals = null,
-		?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null
+		?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null,
+		?\RAN\Secrets\SecretsStorageProvisioner $secrets_storage = null
 	): RoutingDashboard {
 		$providers         = $providers ?? $this->providers( $provider_credentials );
 		$branch_check_lock = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
@@ -3786,7 +3862,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$package_operations,
 			$deployment_attempts,
 			$debug_capture,
-			null,
+			$secrets_storage,
 			$admin_add_ons,
 			removals: $removals,
 			activity: $this->empty_activity_store(),

@@ -123,7 +123,7 @@ serialization of arbitrary source objects is permitted.
 | Runtime | WP/PHP/database numeric versions; OS family; SAPI; known server family; memory/time/post/upload limits; zip/sodium/curl/json/openssl/mbstring presence; filesystem method constant; cron/debug/environment flags | Fixed runtime reads; one database version read; no Site Health dump, phpinfo, remote request or directory traversal |
 | Core/update | installed numeric version, provenance class, effective/requested mode and reviewed reason/state; numeric offered/marker version, commit hex, recorded UTC timestamps | Existing passive policy/target status; no discovery; unavailable check time is unknown |
 | Providers/components | Fixed public GitHub/Bitbucket names; custom providers/components get consistent placeholders; bounded local declaration/version/admission/selection/availability facts | At most 32 in-memory providers and fixed known extension metadata; declarations do not prove remote access or publisher identity |
-| Storage | configured/default source, logical encrypted sidecar label, available runtime state, authentication Not checked; privileged configured location only on screen | Reuse Settings owner's passive projection; no status(), recovery scan, credential enumeration, capacity write probe or repair |
+| Storage | configured/default source, logical encrypted sidecar label and available runtime state; privileged configured location only on screen | Reports use the passive projection; the Installation GET may perform the local read-only status check described below. Neither performs a recovery scan, credential enumeration, capacity write probe or repair |
 | Packages | at most 100 rows, scalar type/provider/source/policy and package/repository/ref identities replaced consistently; counts describe included window | One advisory is_ready read and SQL with explicit LEFT-clipped columns, no hydration/require_ready/schema changes; no new aggregate |
 | Activity | at most 100 rows: numeric ID, hex correlation, UTC timestamps, fixed operation/status/effect/reason/stage codes, placeholder subject identity, known provider or placeholder | Explicit scalar SQL projection with field clipping, existing history scope; omit all message/remediation/context/actor/adoption token/raw facts; no pruning |
 | Diagnostics | at most 8 rows per run: fixed status and reviewed code, code-derived safe detail/remediation; booleans for credential/repository scope; completion/expiry, provider implementation attribution | Server-produced only; unknown arbitrary provider prose omitted explicitly; latest per provider/current administrator/site |
@@ -137,6 +137,14 @@ bounded to depth 4. Invalid UTF-8/control characters never enter export. No raw
 credentials/IDs/labels, keys, recovery material, paths, URLs, actor identities,
 configuration, headers, responses, exceptions or arbitrary log text are exported.
 Preview escaping is additional protection, not the export boundary.
+
+An Installation GET by an administrator with both `manage_options` and
+`activate_plugins` performs the existing local read-only storage status check once
+per request, without writing a diagnostic log entry. It can authenticate the
+local encrypted store; it does not validate remote credentials. The shared file
+lock can wait, so this check has no time-bound guarantee. Other Troubleshooting
+panels and support-report POST collection do not start this check. Storage
+setup and recovery remain in Settings.
 
 ## Diagnostic input storage
 
@@ -228,8 +236,8 @@ routing, diagnostic separation, explicit generation, byte-identical clipboard
 and UTF-8 download, safe filename, no browser errors and no-JavaScript manual
 text. Screenshots were inspected after page transitions settled. This is source
 and disposable-fixture evidence, not retained-site, deployment or release
-acceptance. Settings owns the complete storage cutover independently; a direct
-Installation request has no invented authenticated health or repair eligibility.
+acceptance. Settings owns storage setup and recovery. Installation reports authenticated local
+health only when the current request has actually checked it.
 
 Final measured production delta: 1,529 additions / 122 removals; tests: 2,144
 additions / 56 removals. Three concrete production types, one bounded temporary

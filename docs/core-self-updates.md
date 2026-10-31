@@ -176,7 +176,7 @@ without being mislabeled as a development checkout.
 The passive state is available to qualified administrators at:
 
 ```text
-RAN Booster → Troubleshooting → Diagnostics → Core updates
+RAN Booster → Troubleshooting → Installation → Booster Core updates
 ```
 
 The ordinary message explains whether Core updates are available or safely off.
@@ -306,7 +306,8 @@ A releasable Core change proves:
 - explicit `enabled` and `disabled` overrides win as documented;
 - invalid configuration and every invalid marker shape fail closed;
 - runtime-only still selects a compatible updater runtime;
-- runtime-only registers no Core native hooks and makes no feed request;
+- runtime-only retains exact-Core disabled/forced-off registration and native
+  admission fences without starting a Core feed request;
 - the exact raw Core updater notice is suppressed while managed package notices
   pass through;
 - a source checkout shows only the scoped, nontechnical development notice;

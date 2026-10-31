@@ -56,12 +56,23 @@ $status_classes       = array(
 	<h3 id="ran-booster-debug-capture-heading"><?php esc_html_e( 'Logging', 'ran-booster' ); ?></h3>
 	<div id="ran-booster-debug-capture-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $debug_capture_error ? 'hidden' : ''; ?>><p><?php echo null === $debug_capture_error ? '' : esc_html( $debug_capture_error ); ?></p></div>
 
-	<div class="ran-booster-debug-capture__panel ran-booster-panel">
-		<div class="notice notice-warning inline ran-booster-debug-capture__scope">
-			<p><strong><?php esc_html_e( 'Booster events only', 'ran-booster' ); ?></strong></p>
-			<p><?php esc_html_e( 'This temporary capture does not require or enable WP_DEBUG_LOG. It omits PHP, WordPress, theme, and other-plugin messages.', 'ran-booster' ); ?></p>
-		</div>
+	<p>
+		<?php
+		/* translators: %s: WP_DEBUG_LOG constant. */
+		printf( esc_html__( 'This temporary capture records Booster events only. It does not require or enable %s and excludes PHP, WordPress, theme, and other-plugin messages.', 'ran-booster' ), '<code>WP_DEBUG_LOG</code>' );
+		?>
+	</p>
+	<details class="ran-booster-debug-capture__wordpress-help">
+		<summary><?php esc_html_e( 'Capture PHP and WordPress errors', 'ran-booster' ); ?></summary>
+		<p><?php esc_html_e( 'For broader PHP, WordPress, theme, and plugin error logging, edit the existing definitions in wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
+		<pre><code>define( 'WP_DEBUG', true );
+define( 'WP_DEBUG_LOG', true );
+define( 'WP_DEBUG_DISPLAY', false );</code></pre>
+		<p><?php esc_html_e( 'The log is normally in WP_CONTENT_DIR/debug.log (usually wp-content/debug.log), unless an alternate path is configured. Turn off debugging after reproducing the issue, and review the log privately before sharing it.', 'ran-booster' ); ?></p>
+		<p><a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/"><?php esc_html_e( 'WordPress debugging documentation', 'ran-booster' ); ?></a></p>
+	</details>
 
+	<div class="ran-booster-debug-capture__panel ran-booster-panel">
 		<dl class="ran-booster-debug-capture__facts">
 			<div>
 				<dt><?php esc_html_e( 'Status', 'ran-booster' ); ?></dt>

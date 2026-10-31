@@ -147,7 +147,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin :is(.ran-booster-pill, .ran-booster-badge) {', $utilities );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-tile {', $utilities );
 		self::assertStringContainsString( '.ran-booster-badge--pending', $utilities );
-		self::assertStringContainsString( 'notice notice-warning inline ran-booster-debug-capture__scope', $debug );
+		self::assertStringNotContainsString( 'notice notice-warning inline ran-booster-debug-capture__scope', $debug );
 		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activity_badge_variants[ $latest_activity[\'state\'] ] ?? \'neutral\' ); ?>', $packages );
 		self::assertStringContainsString( 'Stored · Validity checked on use', $projection );
 		self::assertStringContainsString( 'ran-booster-pill--label ran-booster-pill--info ran-booster-delete-credential-package-pill', $provider );

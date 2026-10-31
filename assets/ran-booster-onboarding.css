@@ -53,6 +53,12 @@
 	line-height: var(--ran-booster-line-height-base);
 }
 
+/* Match the WordPress h3 size used by the other Overview cards. */
+.ran-booster-admin #ran-booster-onboarding-storage-heading {
+	font-size: 1.3em;
+	line-height: inherit;
+}
+
 .ran-booster-admin .ran-booster-onboarding__storage > p {
 	margin-block: var(--ran-booster-space-8) 0;
 	margin-inline: 0;
@@ -232,6 +238,10 @@
 	max-inline-size: 1120px;
 }
 
+.ran-booster-admin .ran-booster-debug-capture__panel {
+	margin-block-start: var(--ran-booster-space-20);
+}
+
 .ran-booster-admin .ran-booster-debug-capture__facts {
 	display: grid;
 	margin: 0;
@@ -322,12 +332,6 @@
 
 .ran-booster-admin .ran-booster-debug-capture__panel > .notice {
 	margin: var(--ran-booster-space-20);
-}
-
-.ran-booster-admin
-	.ran-booster-debug-capture__panel
-	> .ran-booster-debug-capture__scope {
-	margin: 0;
 }
 
 @media screen and (max-width: 600px) {

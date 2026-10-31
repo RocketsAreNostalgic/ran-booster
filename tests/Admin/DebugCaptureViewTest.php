@@ -22,9 +22,11 @@ final class DebugCaptureViewTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'This temporary capture does not require or enable WP_DEBUG_LOG.', $html );
+		self::assertStringContainsString( 'This temporary capture records Booster events only. It does not require or enable <code>WP_DEBUG_LOG</code> and excludes PHP, WordPress, theme, and other-plugin messages.', $html );
+		self::assertStringContainsString( '<summary>Capture PHP and WordPress errors</summary>', $html );
+		self::assertStringContainsString( "define( 'WP_DEBUG_DISPLAY', false );", $html );
+		self::assertStringNotContainsString( 'notice-warning', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading">Logging</h3>', $html );
-		self::assertStringContainsString( 'It omits PHP, WordPress, theme, and other-plugin messages.', $html );
 		self::assertStringContainsString( '<code>ran-booster-debug.php</code>', $html );
 		self::assertStringContainsString( 'Beside the credential sidecar', $html );
 		self::assertStringContainsString( 'Starting a capture records Booster events for 60 minutes', $html );

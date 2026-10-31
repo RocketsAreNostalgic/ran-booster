@@ -54,7 +54,8 @@
 }
 
 /* Match the WordPress h3 size used by the other Overview cards. */
-.ran-booster-admin #ran-booster-onboarding-storage-heading {
+.ran-booster-admin #ran-booster-onboarding-storage-heading,
+.ran-booster-admin #ran-booster-storage {
 	font-size: 1.3em;
 	line-height: inherit;
 }
@@ -65,11 +66,13 @@
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-facts {
+	display: grid;
+	gap: var(--ran-booster-space-16);
 	margin: 0;
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-facts dt {
-	margin-block-end: var(--ran-booster-space-5);
+	margin-block-end: var(--ran-booster-space-8);
 	color: var(--ran-booster-text-subtle);
 	font-size: 11px;
 	font-weight: var(--ran-booster-font-weight-semibold);
@@ -81,7 +84,8 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-onboarding__storage code {
+.ran-booster-admin .ran-booster-onboarding__storage code,
+.ran-booster-admin .ran-booster-onboarding__storage-facts code {
 	display: block;
 	padding-block: var(--ran-booster-space-6);
 	padding-inline: var(--ran-booster-space-8);
@@ -90,6 +94,19 @@
 	background: var(--ran-booster-surface);
 	overflow-wrap: anywhere;
 	white-space: normal;
+}
+
+.ran-booster-admin
+	.ran-booster-onboarding__storage
+	code.ran-booster-onboarding__storage-inline,
+.ran-booster-admin
+	.ran-booster-onboarding__storage-facts
+	code.ran-booster-onboarding__storage-inline {
+	display: inline;
+	padding: 0.2em 0.4em;
+	border: 0;
+	border-radius: 0;
+	background: var(--ran-booster-surface-subtle);
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage .description {

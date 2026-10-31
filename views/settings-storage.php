@@ -10,6 +10,7 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+$storage_constant             = defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' ) ? 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' : ( defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) ? 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' : null );
 $storage_status               = null === $secrets_storage ? '' : (string) $secrets_storage['status'];
 $storage_reason_code          = null === $secrets_storage ? '' : (string) ( $secrets_storage['reason_code'] ?? '' );
 $storage_candidate_path       = null === $secrets_storage ? null : ( $secrets_storage['candidate_path'] ?? null );
@@ -53,15 +54,7 @@ $storage_details_open         = in_array(
 );
 $shows_storage_override       = in_array( $storage_status, array( 'storage_needs_attention', 'manual_required' ), true )
 	&& null === ( $secrets_storage['config_alternatives'] ?? null );
-$has_storage_details          = null !== $secrets_storage
-	&& (
-		null !== $secrets_storage['candidate_path']
-		|| $secrets_storage['can_provision']
-		|| null !== $storage_recovery
-		|| array() !== $storage_discarded_candidates
-		|| null !== $secrets_storage['config_alternatives']
-		|| $shows_storage_override
-	);
+$has_storage_details          = null !== $secrets_storage;
 
 ?>
 	<?php if ( null !== $secrets_storage ) { ?>
@@ -79,8 +72,18 @@ $has_storage_details          = null !== $secrets_storage
 				<details class="ran-booster-onboarding__storage-details ran-booster-disclosure"<?php echo $storage_details_open ? ' open' : ''; ?>>
 					<summary><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
 					<div class="ran-booster-disclosure__body">
-						<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
-							<dl class="ran-booster-onboarding__storage-facts">
+						<dl class="ran-booster-onboarding__storage-facts">
+							<div><dt><?php esc_html_e( 'Configuration constant', 'ran-booster' ); ?></dt><dd>
+							<?php
+							if ( null !== $storage_constant ) {
+								?>
+								<code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_constant ); ?></code>
+								<?php
+							} else {
+								esc_html_e( 'Not configured', 'ran-booster' ); }
+							?>
+							</dd></div>
+							<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
 								<?php if ( null !== $storage_directory ) { ?>
 									<div>
 										<dt><?php esc_html_e( 'Storage directory', 'ran-booster' ); ?></dt>
@@ -94,12 +97,14 @@ $has_storage_details          = null !== $secrets_storage
 								<?php if ( is_string( $storage_path_source ) && isset( $storage_path_source_labels[ $storage_path_source ] ) && in_array( $storage_status, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true ) ) { ?>
 									<div>
 										<dt><?php esc_html_e( 'Path selection', 'ran-booster' ); ?></dt>
-										<dd><?php echo esc_html( $storage_path_source_labels[ $storage_path_source ] ); ?></dd>
+										<dd><code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_path_source_labels[ $storage_path_source ] ); ?></code></dd>
 									</div>
 								<?php } ?>
-							</dl>
-							<?php if ( 'setup_available' === $storage_status ) { ?>
-								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'Booster selected this private location automatically; you do not need to choose a path.', 'ran-booster' ); ?></p>
+							<?php } ?>
+						</dl>
+						<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
+							<?php if ( in_array( $storage_status, array( 'setup_available', 'manual_required', 'pending_verification' ), true ) ) { ?>
+								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'This is a proposed location; it is not necessarily configured yet.', 'ran-booster' ); ?></p>
 							<?php } elseif ( 'path_configured' === $storage_status ) { ?>
 								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'The encrypted file and its separate database key are created when you save the first credential.', 'ran-booster' ); ?></p>
 							<?php } elseif ( 'storage_healthy' === $storage_status ) { ?>

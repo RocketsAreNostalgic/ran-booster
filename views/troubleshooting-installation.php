@@ -12,6 +12,14 @@ $environment         = is_array( $troubleshooting['environment'] ?? null ) ? $tr
 $environment_summary = array_intersect_key( $environment, array_flip( array( 'WordPress', 'PHP' ) ) );
 $environment_details = array_diff_key( $environment, $environment_summary );
 $storage             = is_array( $troubleshooting['storage'] ?? null ) ? $troubleshooting['storage'] : array();
+$storage_statuses    = array(
+	'healthy'     => array( __( 'Storage healthy', 'ran-booster' ), 'ok' ),
+	'configured'  => array( __( 'Path configured', 'ran-booster' ), 'neutral' ),
+	'actionable'  => array( __( 'Needs attention', 'ran-booster' ), 'warning' ),
+	'unknown'     => array( __( 'Not checked', 'ran-booster' ), 'neutral' ),
+	'unavailable' => array( __( 'Unavailable', 'ran-booster' ), 'error' ),
+);
+$storage_status      = $storage_statuses[ $storage['state'] ?? 'unknown' ] ?? $storage_statuses['unknown'];
 $storage_labels      = array(
 	'configuration'       => __( 'Configuration constant', 'ran-booster' ),
 	'configured_location' => __( 'Storage directory', 'ran-booster' ),
@@ -45,37 +53,36 @@ if ( array() === $environment ) {
 </details><?php } ?>
 </div></section>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Storage', 'ran-booster' ); ?></h4></header>
+<header class="ran-booster-page-shell__header ran-booster-onboarding__storage-heading"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h4><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status[1] ); ?>"><?php echo esc_html( $storage_status[0] ); ?></span></header>
 <div class="ran-booster-page-shell__body">
 <p><?php echo esc_html( $storage['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
-<?php
-if ( ! empty( $storage['details'] ) && is_array( $storage['details'] ) ) {
-	$storage_details = $storage['details'];
-	if ( isset( $storage_details['configuration'] ) ) {
-		?>
-	<p><?php esc_html_e( 'Configuration constant', 'ran-booster' ); ?>: <code><?php echo esc_html( $storage_details['configuration'] ); ?></code></p>
-		<?php
-	}
-	$storage_paths = array_intersect_key( $storage_details, array_flip( array( 'configured_location', 'storage_file' ) ) );
-	if ( array() !== $storage_paths ) {
-		?>
-	<dl class="ran-booster-troubleshooting__fields-list ran-booster-onboarding__storage ran-booster-onboarding__storage-facts">
-		<?php foreach ( $storage_paths as $label => $value ) { ?>
-	<div><dt><?php echo esc_html( $storage_labels[ $label ] ); ?></dt><dd><code><?php echo esc_html( $value ); ?></code></dd></div><?php } ?></dl>
-		<?php
-	}
-	$source_labels = array(
-		'automatic' => __( 'Booster default', 'ran-booster' ),
-		'manual'    => __( 'Custom wp-config.php path', 'ran-booster' ),
-	);
-	if ( isset( $source_labels[ $storage_details['path_source'] ?? '' ] ) ) {
-		?>
-	<p><?php esc_html_e( 'Path selection', 'ran-booster' ); ?>: <?php echo esc_html( $source_labels[ $storage_details['path_source'] ] ); ?></p>
-		<?php
-	}
-}
-?>
-<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ) ); ?>"><?php esc_html_e( 'Storage settings', 'ran-booster' ); ?></a></p>
+<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
+	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+		<?php if ( ! empty( $storage['details'] ) && is_array( $storage['details'] ) ) { ?>
+		<dl class="ran-booster-onboarding__storage-facts">
+			<?php
+			$source_labels = array(
+				'automatic' => __( 'Booster default', 'ran-booster' ),
+				'manual'    => __( 'Custom wp-config.php path', 'ran-booster' ),
+			);
+			foreach ( $storage_labels as $key => $label ) {
+				$value = $storage['details'][ $key ] ?? null;
+				if ( 'path_source' === $key ) {
+					$value = $source_labels[ $value ?? '' ] ?? null;
+				}
+				if ( ! is_string( $value ) || '' === $value ) {
+					continue;
+				}
+				?>
+				<div><dt><?php echo esc_html( $label ); ?></dt><dd><code<?php echo in_array( $key, array( 'configuration', 'path_source' ), true ) ? ' class="ran-booster-onboarding__storage-inline"' : ''; ?>><?php echo esc_html( $value ); ?></code></dd></div>
+			<?php } ?>
+		</dl>
+		<?php } else { ?>
+			<p><?php esc_html_e( 'Storage details are unavailable for this request.', 'ran-booster' ); ?></p>
+		<?php } ?>
+	</div>
+</details>
+<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ) ); ?>"><?php esc_html_e( 'Open secure credential storage settings', 'ran-booster' ); ?></a></p>
 </div></section>
 			<?php
 			$self_update_mode   = $core_self_update['effective_mode'] ?? 'disabled';

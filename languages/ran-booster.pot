@@ -997,7 +997,7 @@ msgstr ""
 #: views/portability-review.php:101
 #: views/settings.php:93
 #: views/settings.php:145
-#: views/troubleshooting-installation.php:130
+#: views/troubleshooting-installation.php:137
 #: views/troubleshooting.php:227
 #: assets/ran-booster-portability.js:713
 msgid "Unknown"
@@ -2289,6 +2289,7 @@ msgid "Stored · Validity checked on use"
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1618
+#: views/settings-storage.php:83
 #: views/troubleshooting.php:53
 msgid "Not configured"
 msgstr ""
@@ -2604,7 +2605,8 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:334
 #: views/debug-capture.php:43
 #: views/onboarding.php:80
-#: views/settings-storage.php:25
+#: views/settings-storage.php:26
+#: views/troubleshooting-installation.php:20
 msgid "Unavailable"
 msgstr ""
 
@@ -2838,7 +2840,8 @@ msgstr ""
 #: views/packages/index.php:65
 #: views/packages/index.php:333
 #: views/provider.php:677
-#: views/settings-storage.php:24
+#: views/settings-storage.php:25
+#: views/troubleshooting-installation.php:18
 msgid "Needs attention"
 msgstr ""
 
@@ -3277,7 +3280,7 @@ msgid "Failure details"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:264
-#: views/settings-storage.php:75
+#: views/settings-storage.php:68
 msgid "Diagnostic code:"
 msgstr ""
 
@@ -5623,7 +5626,7 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:71
 #: RAN/Troubleshooting/TroubleshootingService.php:227
-#: views/troubleshooting-installation.php:182
+#: views/troubleshooting-installation.php:189
 msgid "Diagnostic Git provider"
 msgstr ""
 
@@ -5658,7 +5661,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:231
 #: RAN/Troubleshooting/TroubleshootingService.php:245
 #: views/troubleshooting-installation.php:9
-#: views/troubleshooting-installation.php:182
+#: views/troubleshooting-installation.php:189
 msgid "GitHub provider"
 msgstr ""
 
@@ -5727,9 +5730,9 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:273
 #: RAN/Troubleshooting/TroubleshootingService.php:277
 #: RAN/Troubleshooting/TroubleshootingService.php:278
-#: views/troubleshooting-installation.php:99
 #: views/troubleshooting-installation.php:106
-#: views/troubleshooting-installation.php:182
+#: views/troubleshooting-installation.php:113
+#: views/troubleshooting-installation.php:189
 msgid "Booster Core updates"
 msgstr ""
 
@@ -5758,7 +5761,7 @@ msgid "Last operator check code"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:280
-#: views/troubleshooting-installation.php:169
+#: views/troubleshooting-installation.php:176
 msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
@@ -6662,7 +6665,7 @@ msgid "Each administrator can dismiss their own credential expiry reminders. A f
 msgstr ""
 
 #: views/documentation.php:308
-#: views/settings-storage.php:176
+#: views/settings-storage.php:181
 msgid "Use a different storage location"
 msgstr ""
 
@@ -6777,9 +6780,9 @@ msgid "This site currently allows repository ZIPs up to %1$d MiB compressed and 
 msgstr ""
 
 #: views/documentation.php:408
-#: views/settings-storage.php:39
+#: views/settings-storage.php:40
 #: views/settings.php:42
-#: views/troubleshooting-installation.php:68
+#: views/troubleshooting-installation.php:65
 msgid "Booster default"
 msgstr ""
 
@@ -7229,27 +7232,29 @@ msgid "This changes the view for all site administrators. It does not reset your
 msgstr ""
 
 #: views/onboarding.php:75
-#: views/settings-storage.php:20
+#: views/settings-storage.php:21
+#: views/troubleshooting-installation.php:17
 msgid "Path configured"
 msgstr ""
 
 #: views/onboarding.php:76
-#: views/settings-storage.php:21
+#: views/settings-storage.php:22
+#: views/troubleshooting-installation.php:16
 msgid "Storage healthy"
 msgstr ""
 
 #: views/onboarding.php:77
-#: views/settings-storage.php:22
+#: views/settings-storage.php:23
 msgid "Storage needs attention"
 msgstr ""
 
 #: views/onboarding.php:78
-#: views/settings-storage.php:23
+#: views/settings-storage.php:24
 msgid "Setup available"
 msgstr ""
 
 #: views/onboarding.php:81
-#: views/settings-storage.php:26
+#: views/settings-storage.php:27
 msgid "Verification pending"
 msgstr ""
 
@@ -7279,18 +7284,19 @@ msgid "Review storage before adding credentials. Public installations remain ava
 msgstr ""
 
 #: views/onboarding.php:128
-#: views/settings-storage.php:70
+#: views/settings-storage.php:63
 #: views/settings.php:101
+#: views/troubleshooting-installation.php:56
 msgid "Secure credential storage"
 msgstr ""
 
 #: views/onboarding.php:129
-#: views/settings-storage.php:71
+#: views/settings-storage.php:64
 msgid "Status unknown"
 msgstr ""
 
 #: views/onboarding.php:131
-#: views/troubleshooting-installation.php:50
+#: views/troubleshooting-installation.php:58
 msgid "Storage status is unavailable."
 msgstr ""
 
@@ -8508,6 +8514,7 @@ msgid "No minimum declared"
 msgstr ""
 
 #: views/portability-review.php:56
+#: views/troubleshooting-installation.php:19
 msgid "Not checked"
 msgstr ""
 
@@ -9314,7 +9321,7 @@ msgid "Adopt GitHub implementation"
 msgstr ""
 
 #: views/provider.php:329
-#: views/troubleshooting-installation.php:170
+#: views/troubleshooting-installation.php:177
 msgid "GitHub provider details"
 msgstr ""
 
@@ -9788,166 +9795,171 @@ msgstr ""
 msgid "Save webhook secret"
 msgstr ""
 
-#: views/settings-storage.php:40
-#: views/troubleshooting-installation.php:69
+#: views/settings-storage.php:41
+#: views/troubleshooting-installation.php:66
 msgid "Custom wp-config.php path"
 msgstr ""
 
-#: views/settings-storage.php:80
+#: views/settings-storage.php:73
+#: views/troubleshooting-installation.php:59
 msgid "Storage details"
 msgstr ""
 
-#: views/settings-storage.php:86
-#: views/troubleshooting-installation.php:17
+#: views/settings-storage.php:76
+#: views/troubleshooting-installation.php:24
+msgid "Configuration constant"
+msgstr ""
+
+#: views/settings-storage.php:89
+#: views/troubleshooting-installation.php:25
 msgid "Storage directory"
 msgstr ""
 
-#: views/settings-storage.php:91
-#: views/troubleshooting-installation.php:18
+#: views/settings-storage.php:94
+#: views/troubleshooting-installation.php:26
 msgid "Storage file"
 msgstr ""
 
-#: views/settings-storage.php:96
-#: views/troubleshooting-installation.php:19
-#: views/troubleshooting-installation.php:73
+#: views/settings-storage.php:99
+#: views/troubleshooting-installation.php:27
 msgid "Path selection"
 msgstr ""
 
-#: views/settings-storage.php:102
-msgid "Booster selected this private location automatically; you do not need to choose a path."
+#: views/settings-storage.php:107
+msgid "This is a proposed location; it is not necessarily configured yet."
 msgstr ""
 
-#: views/settings-storage.php:104
+#: views/settings-storage.php:109
 msgid "The encrypted file and its separate database key are created when you save the first credential."
 msgstr ""
 
-#: views/settings-storage.php:106
+#: views/settings-storage.php:111
 msgid "Credentials are encrypted in this file. WordPress stores the encryption key separately."
 msgstr ""
 
-#: views/settings-storage.php:114
+#: views/settings-storage.php:119
 msgid "Create secure storage"
 msgstr ""
 
-#: views/settings-storage.php:120
+#: views/settings-storage.php:125
 msgid "Automatic locations considered and discarded"
 msgstr ""
 
-#: views/settings-storage.php:121
+#: views/settings-storage.php:126
 msgid "This check is read-only; Booster did not create files in these locations."
 msgstr ""
 
-#: views/settings-storage.php:127
+#: views/settings-storage.php:132
 msgid "Reason:"
 msgstr ""
 
-#: views/settings-storage.php:129
+#: views/settings-storage.php:134
 msgid "Blocking component:"
 msgstr ""
 
-#: views/settings-storage.php:140
+#: views/settings-storage.php:145
 msgid "Start over with empty credential storage"
 msgstr ""
 
-#: views/settings-storage.php:140
+#: views/settings-storage.php:145
 msgid "Existing Booster storage found"
 msgstr ""
 
-#: views/settings-storage.php:144
+#: views/settings-storage.php:149
 msgid "Verified storage directory:"
 msgstr ""
 
-#: views/settings-storage.php:146
+#: views/settings-storage.php:151
 msgid "This proves decryption, canonical storage and the current registered Git provider credential shape. It does not contact a Git provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files."
 msgstr ""
 
-#: views/settings-storage.php:151
+#: views/settings-storage.php:156
 msgid "Adopt existing storage"
 msgstr ""
 
-#: views/settings-storage.php:154
+#: views/settings-storage.php:159
 msgid "Permanent reset:"
 msgstr ""
 
-#: views/settings-storage.php:154
+#: views/settings-storage.php:159
 msgid "Restore the matching secrets.json and database key from the same backup first if they are available. Resetting abandons every repository credential and webhook secret that cannot be recovered from that matching pair."
 msgstr ""
 
-#: views/settings-storage.php:155
+#: views/settings-storage.php:160
 msgid "A Transporter Blueprint is not a complete credential backup. It may transfer selected repository credentials for applicable package rows, including explicit credential-only recovery for an already-managed package, but it never contains webhook secrets."
 msgstr ""
 
 #. translators: %s is the exact confirmation phrase the administrator must type.
-#: views/settings-storage.php:162
+#: views/settings-storage.php:167
 #, php-format
 msgid "Type %s to confirm:"
 msgstr ""
 
-#: views/settings-storage.php:166
+#: views/settings-storage.php:171
 msgid "Reset credential storage"
 msgstr ""
 
-#: views/settings-storage.php:169
+#: views/settings-storage.php:174
 msgid "Automatic adoption remains disabled. Booster will not bypass private-path checks or rewrite an operator-managed storage definition."
 msgstr ""
 
-#: views/settings-storage.php:176
+#: views/settings-storage.php:181
 msgid "Set a storage location manually"
 msgstr ""
 
-#: views/settings-storage.php:178
+#: views/settings-storage.php:183
 msgid "Choose a durable absolute directory outside the public web root. Create it as a real directory owned by the PHP process user with mode 0700. Booster manages secrets.json and its lock inside it; if the file already exists, it must be owned by PHP with mode 0600."
 msgstr ""
 
-#: views/settings-storage.php:179
+#: views/settings-storage.php:184
 msgid "Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:"
 msgstr ""
 
-#: views/settings-storage.php:181
+#: views/settings-storage.php:186
 msgid "Or update the same constant with WP-CLI:"
 msgstr ""
 
-#: views/settings-storage.php:183
+#: views/settings-storage.php:188
 msgid "For environment-managed hosting, replace the existing definition with this wp-config.php bridge. An environment variable by itself is not read by Booster:"
 msgstr ""
 
-#: views/settings-storage.php:188
+#: views/settings-storage.php:193
 msgid "If credentials already exist, move the secrets file together with its matching database key; do not copy or reset only one half."
 msgstr ""
 
-#: views/settings-storage.php:195
+#: views/settings-storage.php:200
 msgid "Set up manually instead"
 msgstr ""
 
-#: views/settings-storage.php:195
+#: views/settings-storage.php:200
 msgid "Manual setup instructions"
 msgstr ""
 
-#: views/settings-storage.php:198
+#: views/settings-storage.php:203
 msgid "Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages secrets.json within it."
 msgstr ""
 
-#: views/settings-storage.php:199
+#: views/settings-storage.php:204
 msgid "Create the owner-only private directories:"
 msgstr ""
 
-#: views/settings-storage.php:205
+#: views/settings-storage.php:210
 msgid "Then choose one configuration method, not both:"
 msgstr ""
 
-#: views/settings-storage.php:208
+#: views/settings-storage.php:213
 msgid "Add this line to wp-config.php:"
 msgstr ""
 
-#: views/settings-storage.php:213
+#: views/settings-storage.php:218
 msgid "Or run this WP-CLI command:"
 msgstr ""
 
-#: views/settings-storage.php:223
+#: views/settings-storage.php:228
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
-#: views/settings-storage.php:224
+#: views/settings-storage.php:229
 msgid "Manual storage override"
 msgstr ""
 
@@ -10156,74 +10168,69 @@ msgstr ""
 msgid "Save changes"
 msgstr ""
 
-#: views/troubleshooting-installation.php:16
-#: views/troubleshooting-installation.php:56
-msgid "Configuration constant"
-msgstr ""
-
-#: views/troubleshooting-installation.php:24
+#: views/troubleshooting-installation.php:32
 #: views/troubleshooting.php:24
 msgid "Installation"
 msgstr ""
 
-#: views/troubleshooting-installation.php:26
+#: views/troubleshooting-installation.php:34
 msgid "Environment"
 msgstr ""
 
-#: views/troubleshooting-installation.php:31
+#: views/troubleshooting-installation.php:39
 msgid "Environment information is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:38
+#: views/troubleshooting-installation.php:46
 msgid "Environment details"
 msgstr ""
 
-#: views/troubleshooting-installation.php:48
-msgid "Storage"
-msgstr ""
-
-#: views/troubleshooting-installation.php:78
-msgid "Storage settings"
+#: views/troubleshooting-installation.php:81
+msgid "Storage details are unavailable for this request."
 msgstr ""
 
 #: views/troubleshooting-installation.php:85
+msgid "Open secure credential storage settings"
+msgstr ""
+
+#: views/troubleshooting-installation.php:92
 msgid "Core update status is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:87
+#: views/troubleshooting-installation.php:94
 msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:89
+#: views/troubleshooting-installation.php:96
 msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
 msgstr ""
 
-#: views/troubleshooting-installation.php:91
+#: views/troubleshooting-installation.php:98
 msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
 msgstr ""
 
-#: views/troubleshooting-installation.php:93
+#: views/troubleshooting-installation.php:100
 msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:95
+#: views/troubleshooting-installation.php:102
 msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:102
-#: views/troubleshooting-installation.php:157
+#: views/troubleshooting-installation.php:109
+#: views/troubleshooting-installation.php:164
 msgid "Technical details"
 msgstr ""
 
-#: views/troubleshooting-installation.php:115
+#: views/troubleshooting-installation.php:122
 msgid "Providers and extensions"
 msgstr ""
 
-#: views/troubleshooting-installation.php:117
+#: views/troubleshooting-installation.php:124
 msgid "Only the first 32 components are shown. Additional components are omitted."
 msgstr ""
 
-#: views/troubleshooting-installation.php:122
+#: views/troubleshooting-installation.php:129
 msgid "Provider and extension information is unavailable."
 msgstr ""
 

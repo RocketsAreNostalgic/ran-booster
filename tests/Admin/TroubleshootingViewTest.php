@@ -251,14 +251,17 @@ final class TroubleshootingViewTest extends TestCase {
 				self::assertStringContainsString( htmlspecialchars( $value, ENT_QUOTES ), $html );
 			}
 			self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage"', $html );
-			self::assertStringContainsString( 'Configuration constant: <code>&lt;constant&gt;</code>', $html );
+			self::assertStringContainsString( '<dt>Configuration constant</dt><dd><code class="ran-booster-onboarding__storage-inline">&lt;constant&gt;</code></dd>', $html );
+			self::assertStringContainsString( '<summary>Storage details</summary>', $html );
+			self::assertStringContainsString( '>Open secure credential storage settings</a>', $html );
+			self::assertStringNotContainsString( '<form', $html );
 			self::assertStringContainsString( '<dt>Storage directory</dt>', $html );
 			self::assertStringContainsString( '<dt>Storage file</dt>', $html );
-			self::assertStringContainsString( 'Path selection: Custom wp-config.php path', $html );
+			self::assertStringContainsString( '<dt>Path selection</dt><dd><code class="ran-booster-onboarding__storage-inline">Custom wp-config.php path</code></dd>', $html );
 			self::assertStringContainsString( '<summary>Environment details</summary>', $html );
 			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary>Environment details</summary>', $html );
 			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open><summary>Environment details</summary>', $html );
-			$labels    = array( '>Environment</h4>', '>Storage</h4>', '>Booster Core updates</h4>', '>Providers and extensions</h3>' );
+			$labels    = array( '>Environment</h4>', '>Secure credential storage</h4>', '>Booster Core updates</h4>', '>Providers and extensions</h3>' );
 			$positions = array_map( static fn ( $label ) => strpos( $html, $label ), $labels );
 			foreach ( $positions as $position ) {
 				self::assertIsInt( $position ); }
@@ -268,10 +271,14 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertSame( $sorted, $positions );
 		}
 		$troubleshooting['storage']['state'] = 'unknown';
+		unset( $troubleshooting['storage']['details'] );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 		self::assertStringNotContainsString( 'href="https://example.test/settings"', $html );
+		self::assertStringContainsString( '>Not checked</span>', $html );
+		self::assertStringContainsString( 'Storage details are unavailable for this request.', $html );
+		self::assertStringNotContainsString( '<dt>Configuration constant</dt>', $html );
 	}
 
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {

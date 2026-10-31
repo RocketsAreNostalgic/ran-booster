@@ -145,7 +145,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Storage directory', $html );
 		self::assertStringContainsString( '/private/&lt;canary&gt;', $html );
 		self::assertStringContainsString( 'Storage file', $html );
-		self::assertStringContainsString( 'Booster selected this private location automatically', $html );
+		self::assertStringContainsString( 'This is a proposed location; it is not necessarily configured yet.', $html );
+		self::assertStringContainsString( '<dt>Configuration constant</dt>', $html );
 		self::assertStringContainsString( 'Set up manually instead', $html );
 		self::assertStringContainsString( 'absolute private directory outside the public web root on durable local storage', $html );
 		self::assertStringContainsString( 'owned by PHP, readable and writable by PHP, and mode 0700', $html );

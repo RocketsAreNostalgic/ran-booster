@@ -177,23 +177,24 @@ $ran_booster_core_development_notice->register();
 					array( 'step' => 'core_self_update_target_registration' )
 				);
 			}
-			if ( null === $core_release_target && function_exists( 'add_filter' ) ) {
-				$core_identifier = plugin_basename( __FILE__ );
-				$matches_core    = static function ( array $hook_extra ) use ( $core_identifier ): bool {
+			if ( function_exists( 'add_filter' ) ) {
+				$core_unavailable = static fn (): bool => null === $core_release_target || ! $core_release_target->status()->active;
+				$core_identifier  = plugin_basename( __FILE__ );
+				$matches_core     = static function ( array $hook_extra ) use ( $core_identifier ): bool {
 					if ( 'update' !== ( $hook_extra['action'] ?? null ) || 'plugin' !== ( $hook_extra['type'] ?? null ) ) {
 						return false;
 					}
 					return ( $hook_extra['plugin'] ?? null ) === $core_identifier
 						|| ( is_array( $hook_extra['plugins'] ?? null ) && in_array( $core_identifier, $hook_extra['plugins'], true ) );
 				};
-				$denied_update   = static fn (): \WP_Error => new \WP_Error(
+				$denied_update    = static fn (): \WP_Error => new \WP_Error(
 					'ran_booster_native_update_core_registration_unavailable',
-					__( 'The Core update is unavailable because its updater registration failed.', 'ran-booster' )
+					__( 'The Core update is unavailable because its updater is not active.', 'ran-booster' )
 				);
 				add_filter(
 					'site_transient_update_plugins',
-					static function ( mixed $transient ) use ( $core_identifier ): mixed {
-						if ( is_object( $transient ) && is_array( $transient->response ?? null ) ) {
+					static function ( mixed $transient ) use ( $core_identifier, $core_unavailable ): mixed {
+						if ( $core_unavailable() && is_object( $transient ) && is_array( $transient->response ?? null ) ) {
 							unset( $transient->response[ $core_identifier ] );
 						}
 						return $transient;
@@ -202,17 +203,17 @@ $ran_booster_core_development_notice->register();
 				);
 				add_filter(
 					'upgrader_pre_download',
-					static function ( mixed $reply, string $package, object $upgrader, array $hook_extra ) use ( $matches_core, $denied_update ): mixed {
+					static function ( mixed $reply, string $package, object $upgrader, array $hook_extra ) use ( $matches_core, $denied_update, $core_unavailable ): mixed {
 						unset( $package, $upgrader );
-						return $matches_core( $hook_extra ) ? $denied_update() : $reply;
+						return $matches_core( $hook_extra ) && $core_unavailable() ? $denied_update() : $reply;
 					},
 					PHP_INT_MIN,
 					4
 				);
 				add_filter(
 					'upgrader_pre_install',
-					static function ( mixed $reply, array $hook_extra ) use ( $matches_core, $denied_update ): mixed {
-						return $matches_core( $hook_extra ) ? $denied_update() : $reply;
+					static function ( mixed $reply, array $hook_extra ) use ( $matches_core, $denied_update, $core_unavailable ): mixed {
+						return $matches_core( $hook_extra ) && $core_unavailable() ? $denied_update() : $reply;
 					},
 					PHP_INT_MIN,
 					2

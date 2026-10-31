@@ -114,7 +114,7 @@ General integration projection revised before adding page-local enhancements: +3
 | `RAN/WordPress/ManagedReleaseUpdaterRegistrar.php` | 1 | 1 |
 | `assets/ran-booster-settings.js` | 26 | 0 |
 | `assets/ran-booster/65-package-settings.css` | 28 | 0 |
-| `ran-booster.php` | 82 | 26 |
+| `ran-booster.php` | 83 | 26 |
 | `uninstall.php` | 1 | 1 |
 | `views/documentation.php` | 2 | 2 |
 | `views/onboarding.php` | 5 | 218 |
@@ -123,8 +123,8 @@ General integration projection revised before adding page-local enhancements: +3
 
 Category totals (documentation measured before this table refresh):
 
-- Production: +1909/-307.
-- Tests: +1630/-38.
+- Production: +1910/-307.
+- Tests: +1981/-38.
 - Generated catalogues/fixtures: +581/-306.
 - Documentation: +287/-21.
 
@@ -184,3 +184,27 @@ allowlist, zero new types/APIs/state, and exactly +22 test lines including fixtu
 The cleanup regression seeds both options, verifies unrelated state survives,
 and requires an undeletable check option to abort rather than claim cleanup.
 This source correction does not authorize a retained-site uninstall.
+
+## Queued registration and late runtime loss
+
+Before the next production edit, the measured proposal changes only the
+existing Core fallback in `ran-booster.php`: +9/-8 production lines, no new
+types, public seams, options, tables or dependencies. Registration occurs at
+`plugins_loaded`; activation occurs later at `after_setup_theme`. A queued
+registration can return true and then become inactive, so immediate failure is
+not the complete admission boundary. Every existing fallback hook must read
+current exact-target activity when invoked. Active target and unrelated
+operations retain their incoming object identity. The existing typed status
+adapter contains malformed or throwing runtime diagnostics.
+
+The regression uses the real public registrar and scheduled activation callback,
+an owned temporary regular plugin fixture, and the actual production fallback
+block. It covers queued activation failure, active pass-through and later broker
+ownership loss. It adds exactly 351 test/shim lines and no installed site
+or unpublished updater fixture. The former conditional fallback is the red
+control. This addresses the queued-failure fence independently of the still-held
+pre-discovery guard-only dependency prerequisite.
+
+The final queued-fence hunk measures +12/-11 after required assignment
+alignment; its cumulative main-relative bootstrap delta is +83/-26 because
+most changed lines were already introduced by this Settings feature.

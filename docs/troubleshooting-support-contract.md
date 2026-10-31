@@ -111,11 +111,11 @@ Tests exercise Settings-shaped scalar input in the standalone source branch;
 the Settings-owned composed candidate must also prove its real durable Check
 readback through CoreSelfUpdateStatus and InstallationFacts to both projections.
 
-All sections carry Included, Unavailable, Not run, Not captured, Not included or
+All sections carry Included, Partial, Unavailable, Not run, Not captured, Not included or
 Truncated coverage, collection times and omission context. One section failure
 does not stop the others. The five-second budget is checked between bounded
 collectors and cannot interrupt a blocking call. Output is at most 1 MiB UTF-8;
-reserve manifest/section statuses before clipping section bodies. No recursive
+retain metadata and omit whole section data from the end when the encoded limit is reached. No recursive
 serialization of arbitrary source objects is permitted.
 
 | Source | Allowed fields and bounds | Cost / effect |
@@ -158,17 +158,33 @@ best effort; uninstall deletes/verifies it through existing local-data custody.
 No new cron, report store or history browser. Attribution stays attached to the
 implementation that ran, including after provider replacement.
 
+## JSON format
+
+The version 1 root has `schema_version`, `capture_started_at`, `capture_ended_at`,
+`coverage`, `observation`, and `sections`. Each section has `state`, `observed_at`,
+and `data`. Sections are `environment`, `installation`, `storage`,
+`managed_packages`, `diagnostics`, `activity`, and `logging`; their named fields
+contain fixed sanitized facts and bounded records. Missing or unavailable data is
+identified by section state or an explicit reason. Strings such as `Unknown`,
+`Not checked`, and `Not included` are sentinels, not measured values; a null
+count is unknown rather than zero. Diagnostic coverage reasons may coexist.
+Private identities are aliases shared across sections in capture order. When the
+encoded byte ceiling is reached, whole section data is replaced by an explicit
+`output_byte_limit_exhausted` reason and the section is marked Truncated; the
+metadata, original section state, and JSON syntax remain intact. Consumers should tolerate additional
+fields within version 1 and check coverage before interpreting absence. Incompatible
+format changes require a new schema version.
+
 ## Frozen outputs and housekeeping
 
-Generate captures text once in request memory. Preview, Copy and browser UTF-8
-text Download use that exact text; filename is timestamped without hostname.
-No JavaScript: selectable text supports manual copy/save. Source expiry cannot
+Generate captures pretty-printed UTF-8 JSON once in request memory. Preview, Copy JSON and browser JSON Download use those exact bytes; filename is timestamped without hostname.
+No JavaScript: selectable JSON supports manual copy/save. Source expiry cannot
 change an existing preview. No sensitive-detail toggle, auto sending or telemetry.
 
 TemporaryDebugCapture snapshot can create/tighten its 0600 lock and delete an
 expired owned capture. Existing credential-expiry security protections remain.
-Reporting adds no provisioning, repair, schema preparation, recovery, diagnostics
-or capture startup. This is not a strict filesystem-immutability claim. Inactive
+Reporting adds no provisioning, repair, schema preparation, recovery, additional
+diagnostics beyond the requested fresh sweep, or capture startup. This is not a strict filesystem-immutability claim. Inactive
 capture cannot distinguish never captured, expired or deleted. No lost-entry
 count is invented. Optional deployment totals are omitted: the existing aggregate
 enters require_ready and recent Activity is not a lifetime deployment journal.

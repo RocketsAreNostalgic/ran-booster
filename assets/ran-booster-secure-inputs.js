@@ -117,16 +117,16 @@
 		try {
 			const filename = button.dataset.supportReportFilename || '';
 			const blob = new Blob([input.value], {
-				type: 'text/plain;charset=utf-8',
+				type: 'application/json;charset=utf-8',
 			});
 			url = window.URL.createObjectURL(blob);
 			link = document.createElement('a');
 			link.href = url;
-			link.download = /^ran-booster-support-\d{8}-\d{6}\.txt$/.test(
+			link.download = /^ran-booster-support-\d{8}-\d{6}\.json$/.test(
 				filename
 			)
 				? filename
-				: 'ran-booster-support.txt';
+				: 'ran-booster-support.json';
 			document.body.appendChild(link);
 			link.click();
 		} catch {

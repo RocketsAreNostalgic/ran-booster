@@ -17,14 +17,14 @@ $report_generated = ! empty( $troubleshooting['report_generated'] );
 </form>
 <?php if ( $report_generated ) { ?>
 <div data-support-report-tools>
-	<p><label for="ran-booster-troubleshooting-report"><strong><?php esc_html_e( 'Sanitized preview', 'ran-booster' ); ?></strong></label></p>
+	<p><label for="ran-booster-troubleshooting-report"><strong><?php esc_html_e( 'Sanitized JSON preview', 'ran-booster' ); ?></strong></label></p>
 	<div class="ran-booster-troubleshooting__report-field">
 		<textarea id="ran-booster-troubleshooting-report" class="large-text code" rows="16" readonly><?php echo esc_textarea( $troubleshooting['report'] ?? '' ); ?></textarea>
-		<button type="button" class="button-link ran-booster-troubleshooting__report-copy hide-if-no-js" data-support-report-copy aria-label="<?php esc_attr_e( 'Copy report', 'ran-booster' ); ?>"><span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>
+		<button type="button" class="button-link ran-booster-troubleshooting__report-copy hide-if-no-js" data-support-report-copy aria-label="<?php esc_attr_e( 'Copy JSON report', 'ran-booster' ); ?>"><span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>
 	</div>
-	<p><button type="button" class="button hide-if-no-js" data-support-report-download data-support-report-filename="<?php echo esc_attr( $troubleshooting['report_filename'] ?? '' ); ?>"><?php esc_html_e( 'Download text report', 'ran-booster' ); ?></button></p>
+	<p><button type="button" class="button hide-if-no-js" data-support-report-download data-support-report-filename="<?php echo esc_attr( $troubleshooting['report_filename'] ?? '' ); ?>"><?php esc_html_e( 'Download JSON report', 'ran-booster' ); ?></button></p>
 	<p data-support-report-status role="status" aria-live="polite" aria-atomic="true" data-copied-message="<?php esc_attr_e( 'Support report copied to the clipboard.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The report is selected; use your browser copy command.', 'ran-booster' ); ?>" data-download-failed-message="<?php esc_attr_e( 'Download failed. Select the report and save it manually.', 'ran-booster' ); ?>"></p>
-		<p class="description"><?php esc_html_e( 'Preview, Copy and Download use this same frozen text. You can select it and copy or save it manually.', 'ran-booster' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Preview, Copy and Download use this same frozen JSON. To save it manually, select and copy the JSON into a text editor, then save it as a .json file.', 'ran-booster' ); ?></p>
 </div>
 <?php } ?>
 <details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">

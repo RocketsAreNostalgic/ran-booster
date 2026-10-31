@@ -40,7 +40,7 @@ msgstr ""
 msgid "https://github.com/RocketsAreNostalgic"
 msgstr ""
 
-#: ran-booster.php:192
+#: ran-booster.php:194
 msgid "The Core update is unavailable because its updater is not active."
 msgstr ""
 

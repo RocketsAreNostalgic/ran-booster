@@ -175,7 +175,7 @@ the total above, not extra growth.
 | `views/onboarding.php` | 114 | 225 |
 | `views/overview-dashboard.php` | 95 | 0 |
 
-## Beta.16 uptake measured source checkpoint
+## Beta.16 uptake measured source checkpoint (`17404e3`)
 
 The runtime guard hunk is +3/-1 production lines; Composer's minimum constraint
 is +1/-1 and its regenerated lock is +6/-6. Only `ran/wp-release-updater` changed;
@@ -189,3 +189,10 @@ The bootstrap test delta is +9/-6; the new automatic-filter/real-SQL proof is
 321 assertions), as do syntax, standards and focused integration analysis. The
 new proof's execution, full aggregate and fresh exact-PR review are pending at
 this checkpoint. No earlier doubled-CAS test is relabelled as real SQL proof.
+
+The subsequent proof-only correction verifies sparse General defaults through
+fresh effective Core policy, rather than mistaking an absent default-true key
+for false. The scoped HTTP observer counts every attempted request before URL
+admission: Off requires attempts/feed 0/0, while the enabled empty-list control
+requires 1/1. The maintained script is now 260 lines. The catalogue is regenerated
+for the guard's source-line changes. Neither correction changes production code.

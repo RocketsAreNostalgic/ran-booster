@@ -35,6 +35,7 @@ final class RAN_Booster_Core_Self_Update_Admission_Race {
 		}
 		$this->assert_fixture();
 		if ( str_starts_with( $this->action, 'save-' ) ) {
+			$this->assert_candidate();
 			$this->save( 'save-on' === $this->action );
 			return;
 		}
@@ -101,8 +102,11 @@ final class RAN_Booster_Core_Self_Update_Admission_Race {
 				$submitted[ $key ] = (string) $field['value'];
 			}
 		}
-		$result = $preferences->save( $snapshot['token'], $submitted, $visibility->with_management_admission_lock( ... ), $visibility->github_hide_eligible( ... ) );
-		if ( ! in_array( $result, array( 'saved', 'unchanged' ), true ) || ( $enabled !== $preferences->self_update_discovery( true ) ) ) {
+		$result    = $preferences->save( $snapshot['token'], $submitted, $visibility->with_management_admission_lock( ... ), $visibility->github_hide_eligible( ... ) );
+		$file      = WP_PLUGIN_DIR . '/' . self::CORE;
+		$version   = (string) ( get_file_data( $file, array( 'Version' => 'Version' ), 'plugin' )['Version'] ?? '' );
+		$effective = CoreSelfUpdatePolicy::detect( $file, $version, true )->allows_native_discovery();
+		if ( ! in_array( $result, array( 'saved', 'unchanged' ), true ) || '' === $version || ( $enabled && true !== $effective ) || ( ! $enabled && false !== $effective ) ) {
 			throw new RuntimeException( 'The separate Settings process did not persist the requested Core discovery preference.' );
 		}
 	}
@@ -114,8 +118,9 @@ final class RAN_Booster_Core_Self_Update_Admission_Race {
 			throw new RuntimeException( 'The old callback was not bootstrapped while Core discovery was enabled.' );
 		}
 		$this->run_child( 'save-off' );
+		$attempts  = 0;
 		$feeds     = 0;
-		$transport = $this->empty_release_transport( $feeds );
+		$transport = $this->empty_release_transport( $attempts, $feeds );
 		add_filter( 'pre_http_request', $transport, PHP_INT_MIN, 3 );
 		try {
 			$headers      = get_file_data(
@@ -132,16 +137,17 @@ final class RAN_Booster_Core_Self_Update_Admission_Race {
 		} finally {
 			remove_filter( 'pre_http_request', $transport, PHP_INT_MIN );
 		}
-		if ( $unrelated !== $pass_through || false !== $fenced || 0 !== $feeds ) {
+		if ( $unrelated !== $pass_through || false !== $fenced || 0 !== $attempts || 0 !== $feeds ) {
 			throw new RuntimeException( 'A saved-off Core discovery request reached the feed or changed an unrelated package.' );
 		}
 	}
 
 	private function prove_new_callback_discovers_empty_feed( Closure $callback ): void {
+		$attempts     = 0;
 		$feeds        = 0;
 		$started      = array();
 		$observations = array();
-		$transport    = $this->empty_release_transport( $feeds );
+		$transport    = $this->empty_release_transport( $attempts, $feeds );
 		$start        = static function ( array $payload ) use ( &$started ): void {
 			$started[] = $payload;
 		};
@@ -168,7 +174,7 @@ final class RAN_Booster_Core_Self_Update_Admission_Race {
 		}
 		$start       = $started[0] ?? null;
 		$observation = $observations[0] ?? null;
-		if ( false !== $offer || 1 !== $feeds || 1 !== count( $started ) || 1 !== count( $observations ) || ! is_array( $start ) || ! is_array( $observation ) || self::CORE !== ( $start['installed_identity'] ?? null ) || 'plugin' !== ( $start['target_type'] ?? null ) || 'github' !== ( $start['provider_code'] ?? null ) || '1319710173' !== ( $start['repository_identity'] ?? null ) || 'prerelease' !== ( $start['channel'] ?? null ) || ! is_string( $start['check_id'] ?? null ) || ( $observation['check_id'] ?? null ) !== $start['check_id'] || 'succeeded' !== ( $observation['status'] ?? null ) || 'no_candidates' !== ( $observation['reason'] ?? null ) || null !== ( $observation['offered_version'] ?? null ) ) {
+		if ( false !== $offer || 1 !== $attempts || 1 !== $feeds || 1 !== count( $started ) || 1 !== count( $observations ) || ! is_array( $start ) || ! is_array( $observation ) || self::CORE !== ( $start['installed_identity'] ?? null ) || 'plugin' !== ( $start['target_type'] ?? null ) || 'github' !== ( $start['provider_code'] ?? null ) || '1319710173' !== ( $start['repository_identity'] ?? null ) || 'prerelease' !== ( $start['channel'] ?? null ) || ! is_string( $start['check_id'] ?? null ) || ( $observation['check_id'] ?? null ) !== $start['check_id'] || 'succeeded' !== ( $observation['status'] ?? null ) || 'no_candidates' !== ( $observation['reason'] ?? null ) || null !== ( $observation['offered_version'] ?? null ) ) {
 			throw new RuntimeException( 'The enabled Core callback did not complete one empty-feed no-candidates discovery.' );
 		}
 	}
@@ -203,9 +209,10 @@ final class RAN_Booster_Core_Self_Update_Admission_Race {
 	}
 
 	/** @return Closure(mixed,array<string,mixed>,string):mixed */
-	private function empty_release_transport( int &$feeds ): Closure {
-		return static function ( mixed $preempt, array $arguments, string $url ) use ( &$feeds ): mixed {
+	private function empty_release_transport( int &$attempts, int &$feeds ): Closure {
+		return static function ( mixed $preempt, array $arguments, string $url ) use ( &$attempts, &$feeds ): mixed {
 			unset( $preempt, $arguments );
+			++$attempts;
 			$parts = wp_parse_url( $url );
 			if ( ! is_array( $parts ) || 'https' !== ( $parts['scheme'] ?? null ) || 'api.github.com' !== ( $parts['host'] ?? null ) || '/repos/RocketsAreNostalgic/ran-booster/releases' !== ( $parts['path'] ?? null ) ) {
 				return new WP_Error( 'ran_booster_admission_race_network_veto', 'Only the local empty release fixture is allowed.' );

@@ -179,6 +179,10 @@ final class GeneralPreferenceStore {
 	 * @return array<string,bool|int>|null
 	 */
 	public function parse_submission( array $submitted, array $editable ): ?array {
+		$submitted = $this->normalize_archive_mib_submission( $submitted, $editable );
+		if ( null === $submitted ) {
+			return null;
+		}
 		$keys = array_keys( $submitted );
 		sort( $keys );
 		$expected = $editable;
@@ -207,6 +211,42 @@ final class GeneralPreferenceStore {
 		}
 
 		return $parsed;
+	}
+
+	/**
+	 * The Settings form accepts a decimal MiB value while the durable preference
+	 * remains the established integer byte limit.
+	 *
+	 * @param array<string,mixed> $submitted
+	 * @param list<string> $editable
+	 * @return array<string,mixed>|null
+	 */
+	private function normalize_archive_mib_submission( array $submitted, array $editable ): ?array {
+		if ( ! in_array( 'max_archive_bytes', $editable, true ) || ! array_key_exists( 'max_archive_mib', $submitted ) ) {
+			return $submitted;
+		}
+		if ( array_key_exists( 'max_archive_bytes', $submitted ) || ! is_string( $submitted['max_archive_mib'] ) ) {
+			return null;
+		}
+		$bytes = $this->mib_to_bytes( $submitted['max_archive_mib'] );
+		if ( null === $bytes ) {
+			return null;
+		}
+		unset( $submitted['max_archive_mib'] );
+		$submitted['max_archive_bytes'] = (string) $bytes;
+		return $submitted;
+	}
+
+	private function mib_to_bytes( string $value ): ?int {
+		if ( 1 !== preg_match( '/\A(?:0|[1-9][0-9]*)(?:\.[0-9]{1,20})?\z/D', $value ) ) {
+			return null;
+		}
+		$mib = (float) $value;
+		if ( ! is_finite( $mib ) || $mib < 1 || $mib > ( 536870911 / 1048576 ) ) {
+			return null;
+		}
+		$bytes = (int) round( $mib * 1048576 );
+		return $this->valid_integer( 'max_archive_bytes', $bytes ) ? $bytes : null;
 	}
 
 	private function saved_integer( string $key, int $minimum, int $maximum ): ?int {

@@ -78,6 +78,10 @@ final class OnboardingViewTest extends TestCase {
 			'page=ran-booster&amp;tab=documentation#ran-booster-credential-storage">Learn how Booster manages credentials and keys</a>',
 			$this->render_storage_status( 'storage_healthy', 'automatic' )
 		);
+			self::assertStringContainsString(
+				'page=ran-booster&amp;tab=documentation#ran-booster-manual-storage-override">Manual storage override</a>',
+				$this->render_storage_status( 'storage_healthy', 'automatic' )
+			);
 	}
 
 	public function test_escapes_provider_labels_and_every_url(): void {
@@ -442,9 +446,12 @@ final class OnboardingViewTest extends TestCase {
 				'activity_url' => '/activity',
 			)
 		);
-		self::assertLessThan( strpos( $html, 'Managed packages' ), strpos( $html, 'Needs attention' ) );
-		self::assertStringContainsString( 'Plugins: 0', $html );
-		self::assertStringContainsString( 'Themes: Unknown', $html );
+		self::assertLessThan( strpos( $html, 'Recent Activity' ), strpos( $html, 'Needs attention' ) );
+		self::assertLessThan( strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ), strpos( $html, 'Recent Activity' ) );
+		self::assertLessThan( strpos( $html, 'Managed packages' ), strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ) );
+		self::assertStringContainsString( '<strong>Plugins:</strong> 0', $html );
+		self::assertStringContainsString( '<strong>Themes:</strong> Unknown', $html );
+		self::assertStringContainsString( 'ran-booster-badge--neutral', $html );
 		self::assertStringContainsString( 'Current credential expiry is unknown', $html );
 		self::assertSame( 5, substr_count( $html, '&lt;operation&gt;' ) );
 		self::assertStringNotContainsString( '<operation>', $html );
@@ -618,9 +625,10 @@ final class OnboardingViewTest extends TestCase {
 			self::assertStringContainsString( '&lt;GitHub&gt;</a>: Provider is not admitted.', $html );
 			self::assertStringNotContainsString( '<GitHub>', $html );
 			if ( 'dashboard' === $view ) {
-				self::assertMatchesRegularExpression( '/Not admitted\s+— Provider selection conflict/', $html );
-				self::assertStringContainsString( 'Bitbucket</a> — Admitted', $html );
-				self::assertStringContainsString( 'Other</a> — Admission unknown', $html );
+				self::assertStringContainsString( 'ran-booster-pill--error">Not admitted</span>', $html );
+				self::assertStringContainsString( 'Provider selection conflict', $html );
+				self::assertStringContainsString( 'ran-booster-pill--ok">Admitted</span>', $html );
+				self::assertStringContainsString( 'ran-booster-pill--info">Admission unknown</span>', $html );
 				self::assertStringContainsString( 'Repository access has not been checked here.', $html );
 			}
 			$extra['provider_summaries'][0]['admitted'] = true;
@@ -670,9 +678,9 @@ final class OnboardingViewTest extends TestCase {
 			self::assertSame( 'dashboard' === $view ? 10 : 5, substr_count( $html, '&lt;credential&gt;' ) );
 			if ( 'dashboard' === $view ) {
 				self::assertStringContainsString( 'Showing 5 of 6 actionable expiry reminders.', $html );
-				self::assertStringContainsString( '&lt;2026-11-02&gt;', $html );
-				self::assertStringContainsString( '&lt;provider&gt;', $html );
-				self::assertStringContainsString( '&lt;2026-10-31&gt;', $html );
+				self::assertStringNotContainsString( '&lt;2026-11-02&gt;', $html );
+				self::assertStringNotContainsString( '&lt;provider&gt;', $html );
+				self::assertStringNotContainsString( '&lt;2026-10-31&gt;', $html );
 				self::assertStringContainsString( 'not a complete credential inventory', $html );
 				self::assertStringContainsString( '>GitHub</a>', $html );
 			}
@@ -722,7 +730,7 @@ final class OnboardingViewTest extends TestCase {
 			),
 		);
 		$html                       = $this->render_view( null, null, $extra );
-		self::assertStringContainsString( 'Source: manual', $html );
+		self::assertStringNotContainsString( 'Source: manual', $html );
 		self::assertStringNotContainsString( 'Observed:', $html );
 	}
 

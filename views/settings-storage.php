@@ -221,6 +221,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 
 						<p class="ran-booster-onboarding__storage-documentation">
 							<a href="<?php echo esc_url( $credential_storage_documentation_url ); ?>"><?php esc_html_e( 'Learn how Booster manages credentials and keys', 'ran-booster' ); ?></a>
+								<span aria-hidden="true"> · </span><a href="<?php echo esc_url( str_replace( '#ran-booster-credential-storage', '#ran-booster-manual-storage-override', $credential_storage_documentation_url ) ); ?>"><?php esc_html_e( 'Manual storage override', 'ran-booster' ); ?></a>
 						</p>
 					</div>
 				</details>

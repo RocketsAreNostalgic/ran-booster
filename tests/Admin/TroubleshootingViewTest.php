@@ -172,7 +172,11 @@ final class TroubleshootingViewTest extends TestCase {
 
 	public function test_installation_is_default_and_renders_ordered_escaped_facts(): void {
 		$troubleshooting = array(
-			'environment' => array( 'PHP' => '<runtime>' ),
+			'environment' => array(
+				'WordPress' => '<wordpress>',
+				'PHP'       => '<runtime>',
+				'Database'  => '<database>',
+			),
 			'storage'     => array(
 				'state'   => 'actionable',
 				'message' => '<storage>',
@@ -187,11 +191,14 @@ final class TroubleshootingViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertStringContainsString( 'panel=installation" aria-current="page"', $html );
 			self::assertStringNotContainsString( 'value="run-troubleshooting"', $html );
-			foreach ( array( '<runtime>', '<storage>', '<location>', '<component>' ) as $value ) {
+			foreach ( array( '<wordpress>', '<runtime>', '<database>', '<storage>', '<location>', '<component>' ) as $value ) {
 				self::assertStringNotContainsString( $value, $html );
 				self::assertStringContainsString( htmlspecialchars( $value, ENT_QUOTES ), $html );
 			}
 			self::assertStringContainsString( 'href="https://example.test/settings"', $html );
+			self::assertStringContainsString( '<summary>Environment details</summary>', $html );
+			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary>Environment details</summary>', $html );
+			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open><summary>Environment details</summary>', $html );
 			$labels    = array( '>Environment</h4>', '>Storage</h4>', '>Booster Core updates</h4>', '>Providers and extensions</h4>' );
 			$positions = array_map( static fn ( $label ) => strpos( $html, $label ), $labels );
 			foreach ( $positions as $position ) {
@@ -1026,6 +1033,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>', $html );
 		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
 		self::assertStringContainsString( 'readonly>RAN Booster troubleshooting report', $html );
+		self::assertStringContainsString( '<summary>Evidence and recovery guidance</summary>', $html );
 	}
 
 	public function test_escapes_every_submitted_and_result_field(): void {

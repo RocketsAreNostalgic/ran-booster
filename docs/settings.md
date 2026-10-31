@@ -15,9 +15,11 @@ even when false or invalid. Removing the constant restores the dormant saved
 value/default. Settings names the constant without assuming its source file.
 Invalid history code retains per-field defaults; invalid archive code refuses
 archive admission. Existing queued operations keep their admitted archive limit.
-Exact bytes remain editable; four times that limit is the derived branch ceiling,
-while hosting, ZIP safety and the release updater's independent expansion limit
-may be stricter. Extension and Blueprint archive limits remain independent.
+The archive control accepts MiB and rounds a decimal value to bytes. Existing
+exact byte limits round trip unchanged. Four times that limit is the derived
+branch ceiling, while hosting, ZIP safety and the release updater's independent
+expansion limit may be stricter. Extension and Blueprint archive limits remain
+independent.
 
 Hide GitHub UI requires another locally admitted provider, no managed GitHub
 packages (including Disabled/release/branch records), no active custom replacement

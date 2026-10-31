@@ -112,7 +112,7 @@ msgstr ""
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:128
 #: RAN/Troubleshooting/TroubleshootingService.php:202
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:107
+#: views/troubleshooting-installation.php:118
 msgid "Name"
 msgstr ""
 
@@ -251,7 +251,7 @@ msgstr ""
 #: views/attempts/index.php:166
 #: views/portability-review.php:31
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:107
+#: views/troubleshooting-installation.php:118
 msgid "Source"
 msgstr ""
 
@@ -265,7 +265,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:150
 #: RAN/Booster.php:266
-#: views/settings.php:76
+#: views/settings.php:97
 msgid "Settings"
 msgstr ""
 
@@ -553,12 +553,12 @@ msgstr ""
 msgid "Core updates are disabled to protect this source checkout."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:124
+#: RAN/Admin/CredentialExpiryNotice.php:128
 msgid "Credential expiry reminder:"
 msgstr ""
 
 #. translators: %d is the number of expiring credentials.
-#: RAN/Admin/CredentialExpiryNotice.php:129
+#: RAN/Admin/CredentialExpiryNotice.php:133
 #, php-format
 msgid "%d credential needs attention."
 msgid_plural "%d credentials need attention."
@@ -566,50 +566,50 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: credential label. 2: repository provider label. 3: credential expiry status.
-#: RAN/Admin/CredentialExpiryNotice.php:136
+#: RAN/Admin/CredentialExpiryNotice.php:140
 #, php-format
 msgid "%1$s (%2$s): %3$s."
 msgstr ""
 
 #. translators: %s is a repository provider label.
-#: RAN/Admin/CredentialExpiryNotice.php:141
+#: RAN/Admin/CredentialExpiryNotice.php:145
 #, php-format
 msgid "Review %s credentials"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:144
+#: RAN/Admin/CredentialExpiryNotice.php:148
 #: RAN/Admin/DeploymentAdminPresenter.php:56
 #: RAN/Admin/ManagedPluginFailureRows.php:70
 msgid "Replace credential"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:146
+#: RAN/Admin/CredentialExpiryNotice.php:150
 msgid "This credential is managed by deployment configuration; update it there."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:151
+#: RAN/Admin/CredentialExpiryNotice.php:155
 msgid "Remind me in 5 days"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:153
+#: RAN/Admin/CredentialExpiryNotice.php:157
 msgid "Dismiss this reminder"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:193
+#: RAN/Admin/CredentialExpiryNotice.php:197
 #: RAN/Admin/SecretsRuntimeAvailabilityNotice.php:36
 msgid "RAN Booster encrypted credentials are unavailable:"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:194
+#: RAN/Admin/CredentialExpiryNotice.php:198
 msgid "The encrypted sidecar and its site key are missing, incomplete, or do not match. Credential-backed operations remain paused."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:197
+#: RAN/Admin/CredentialExpiryNotice.php:201
 #: views/provider.php:340
 msgid "Restore the matching sidecar and site key from the same backup before changing credentials."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:198
+#: RAN/Admin/CredentialExpiryNotice.php:202
 msgid "Review encrypted storage"
 msgstr ""
 
@@ -960,7 +960,7 @@ msgid "Diagnostics not configured"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:64
-#: views/overview-dashboard.php:67
+#: views/overview-dashboard.php:71
 msgid "Credential expiry"
 msgstr ""
 
@@ -993,10 +993,12 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:126
 #: RAN/Troubleshooting/TroubleshootingService.php:139
 #: views/attempts/index.php:168
-#: views/overview-dashboard.php:47
+#: views/overview-dashboard.php:48
+#: views/overview-dashboard.php:49
+#: views/overview-dashboard.php:50
 #: views/portability-review.php:101
-#: views/settings.php:72
-#: views/settings.php:119
+#: views/settings.php:93
+#: views/settings.php:145
 #: views/troubleshooting.php:227
 #: assets/ran-booster-portability.js:713
 msgid "Unknown"
@@ -1365,7 +1367,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1478
+#: RAN/Dashboard.php:1479
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1374,7 +1376,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:819
+#: RAN/Dashboard.php:820
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -2601,6 +2603,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:233
 #: RAN/Troubleshooting/TroubleshootingService.php:236
 #: views/debug-capture.php:43
+#: views/onboarding.php:80
 #: views/settings-storage.php:25
 msgid "Unavailable"
 msgstr ""
@@ -2829,6 +2832,7 @@ msgstr ""
 #: RAN/Booster.php:935
 #: views/attempts/index.php:54
 #: views/onboarding.php:79
+#: views/onboarding.php:97
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
 #: views/packages/index.php:333
@@ -4533,6 +4537,7 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:264
+#: views/overview-dashboard.php:53
 msgid "Transporter"
 msgstr ""
 
@@ -4754,84 +4759,84 @@ msgstr ""
 msgid "Settings could not be saved. Reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:636
+#: RAN/Dashboard.php:637
 msgid "Enter a valid value within the displayed limits."
 msgstr ""
 
-#: RAN/Dashboard.php:647
+#: RAN/Dashboard.php:648
 msgid "Settings saved; cached update offers could not be cleared. Discovery remains disabled."
 msgstr ""
 
-#: RAN/Dashboard.php:654
+#: RAN/Dashboard.php:655
 msgid "Settings changed or GitHub eligibility changed. Review the current values and save again."
 msgstr ""
 
-#: RAN/Dashboard.php:655
+#: RAN/Dashboard.php:656
 msgid "Settings were not saved. Check the fields or reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:665
+#: RAN/Dashboard.php:666
 msgid "The Booster update check completed."
 msgstr ""
 
-#: RAN/Dashboard.php:666
+#: RAN/Dashboard.php:667
 msgid "The Booster update check did not complete successfully. Review the check status below."
 msgstr ""
 
-#: RAN/Dashboard.php:677
-#: views/settings.php:177
+#: RAN/Dashboard.php:678
+#: views/settings.php:101
 msgid "Storage status is unavailable. No setup or recovery action has been performed."
 msgstr ""
 
-#: RAN/Dashboard.php:703
+#: RAN/Dashboard.php:704
 msgid "Storage health has not been checked in this request."
 msgstr ""
 
-#: RAN/Dashboard.php:829
+#: RAN/Dashboard.php:830
 msgid "Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package."
 msgstr ""
 
-#: RAN/Dashboard.php:848
+#: RAN/Dashboard.php:849
 msgid "Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it."
 msgstr ""
 
-#: RAN/Dashboard.php:863
+#: RAN/Dashboard.php:864
 msgid "Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:864
+#: RAN/Dashboard.php:865
 msgid "Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:869
+#: RAN/Dashboard.php:870
 msgid "Booster cannot verify this installed package and its management record. No management changes have been made."
 msgstr ""
 
-#: RAN/Dashboard.php:894
+#: RAN/Dashboard.php:895
 msgid "Booster’s saved update revision is invalid. It cannot safely use this package’s management settings."
 msgstr ""
 
-#: RAN/Dashboard.php:895
+#: RAN/Dashboard.php:896
 msgid "Booster’s saved update source is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:896
+#: RAN/Dashboard.php:897
 msgid "Booster’s saved deployment policy is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:897
+#: RAN/Dashboard.php:898
 msgid "Booster’s saved repository credential reference is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:898
+#: RAN/Dashboard.php:899
 msgid "Booster’s saved repository privacy setting is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:899
+#: RAN/Dashboard.php:900
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:1150
+#: RAN/Dashboard.php:1151
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 
@@ -5614,7 +5619,7 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:71
 #: RAN/Troubleshooting/TroubleshootingService.php:129
-#: views/troubleshooting-installation.php:128
+#: views/troubleshooting-installation.php:139
 msgid "Diagnostic Git provider"
 msgstr ""
 
@@ -5649,8 +5654,8 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:133
 #: RAN/Troubleshooting/TroubleshootingService.php:147
 #: views/troubleshooting-installation.php:9
-#: views/troubleshooting-installation.php:105
-#: views/troubleshooting-installation.php:128
+#: views/troubleshooting-installation.php:116
+#: views/troubleshooting-installation.php:139
 msgid "GitHub provider"
 msgstr ""
 
@@ -5661,7 +5666,7 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:136
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:107
+#: views/troubleshooting-installation.php:118
 msgid "Operational availability"
 msgstr ""
 
@@ -5720,9 +5725,9 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:175
 #: RAN/Troubleshooting/TroubleshootingService.php:179
 #: RAN/Troubleshooting/TroubleshootingService.php:180
-#: views/troubleshooting-installation.php:66
-#: views/troubleshooting-installation.php:73
-#: views/troubleshooting-installation.php:128
+#: views/troubleshooting-installation.php:77
+#: views/troubleshooting-installation.php:84
+#: views/troubleshooting-installation.php:139
 msgid "Booster Core updates"
 msgstr ""
 
@@ -5751,7 +5756,7 @@ msgid "Last operator check code"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:182
-#: views/troubleshooting-installation.php:111
+#: views/troubleshooting-installation.php:122
 msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
@@ -6352,8 +6357,8 @@ msgstr ""
 
 #: views/documentation.php:182
 #: views/documentation.php:386
-#: views/onboarding.php:151
-#: views/overview-dashboard.php:49
+#: views/onboarding.php:178
+#: views/overview-dashboard.php:53
 #: views/provider.php:626
 msgid "Install a plugin"
 msgstr ""
@@ -6715,8 +6720,8 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:387
-#: views/onboarding.php:152
-#: views/overview-dashboard.php:49
+#: views/onboarding.php:179
+#: views/overview-dashboard.php:53
 #: views/provider.php:627
 msgid "Install a theme"
 msgstr ""
@@ -7192,130 +7197,160 @@ msgid "Install and manage custom plugins and themes from supported Git repositor
 msgstr ""
 
 #: views/onboarding.php:58
-msgid "Return to onboarding"
-msgstr ""
-
-#: views/onboarding.php:58
 msgid "Skip onboarding"
 msgstr ""
 
 #: views/onboarding.php:59
+#: views/onboarding.php:209
 msgid "This changes the view for all site administrators. It does not reset your configuration."
 msgstr ""
 
-#: views/onboarding.php:86
-msgid "Provider is not admitted."
+#: views/onboarding.php:75
+#: views/settings-storage.php:20
+msgid "Path configured"
 msgstr ""
 
-#: views/onboarding.php:89
-msgid "The managed package inventory is incomplete or unavailable."
+#: views/onboarding.php:76
+#: views/settings-storage.php:21
+msgid "Storage healthy"
 msgstr ""
 
-#: views/onboarding.php:92
-msgid "Secure credential storage status is unavailable."
+#: views/onboarding.php:77
+#: views/settings-storage.php:22
+msgid "Storage needs attention"
 msgstr ""
 
-#: views/onboarding.php:92
-#: views/onboarding.php:94
-msgid "Review storage"
+#: views/onboarding.php:78
+#: views/settings-storage.php:23
+msgid "Setup available"
+msgstr ""
+
+#: views/onboarding.php:81
+#: views/settings-storage.php:26
+msgid "Verification pending"
 msgstr ""
 
 #: views/onboarding.php:104
-msgid "1. Prepare secure credential storage"
+msgid "Provider is not admitted."
 msgstr ""
 
-#: views/onboarding.php:105
-msgid "Review storage before adding credentials. Public installations remain available while you prepare."
-msgstr ""
-
-#: views/onboarding.php:108
-#: views/settings-storage.php:70
-#: views/settings.php:177
-msgid "Secure credential storage"
-msgstr ""
-
-#: views/onboarding.php:109
-#: views/troubleshooting-installation.php:33
-msgid "Storage status is unavailable."
+#: views/onboarding.php:107
+msgid "The managed package inventory is incomplete or unavailable."
 msgstr ""
 
 #: views/onboarding.php:110
+msgid "Secure credential storage status is unavailable."
+msgstr ""
+
+#: views/onboarding.php:110
+#: views/onboarding.php:112
+msgid "Review storage"
+msgstr ""
+
+#: views/onboarding.php:123
+msgid "1. Prepare secure credential storage"
+msgstr ""
+
+#: views/onboarding.php:124
+msgid "Review storage before adding credentials. Public installations remain available while you prepare."
+msgstr ""
+
+#: views/onboarding.php:128
+#: views/settings-storage.php:70
+#: views/settings.php:101
+msgid "Secure credential storage"
+msgstr ""
+
+#: views/onboarding.php:129
+#: views/settings-storage.php:71
+msgid "Status unknown"
+msgstr ""
+
+#: views/onboarding.php:131
+#: views/troubleshooting-installation.php:44
+msgid "Storage status is unavailable."
+msgstr ""
+
+#: views/onboarding.php:132
 msgid "Review secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:117
+#: views/onboarding.php:144
 msgid "2. Choose a Git provider"
 msgstr ""
 
-#: views/onboarding.php:118
+#: views/onboarding.php:145
 msgid "Add a credential for a Git provider, such as GitHub or Bitbucket, only when anonymous access is not enough."
 msgstr ""
 
-#: views/onboarding.php:120
+#: views/onboarding.php:147
 msgid "3. Add credentials if needed"
 msgstr ""
 
-#: views/onboarding.php:121
-#: views/overview-dashboard.php:53
+#: views/onboarding.php:148
+#: views/overview-dashboard.php:57
 msgid "Repository access has not been checked here."
 msgstr ""
 
 #. translators: %s is the display name of a registered Git provider.
-#: views/onboarding.php:126
+#: views/onboarding.php:153
 #, php-format
 msgid "Add %s access"
 msgstr ""
 
 #. translators: %s is the display name of a registered Git provider.
-#: views/onboarding.php:126
-#: views/overview-dashboard.php:58
+#: views/onboarding.php:153
+#: views/overview-dashboard.php:62
 msgid "Admitted"
 msgstr ""
 
 #. translators: %s is the display name of a registered Git provider.
-#: views/onboarding.php:126
-#: views/overview-dashboard.php:58
+#: views/onboarding.php:153
+#: views/overview-dashboard.php:62
 msgid "Not admitted"
 msgstr ""
 
 #. translators: %s is the display name of a registered Git provider.
-#: views/onboarding.php:126
-#: views/overview-dashboard.php:58
+#: views/onboarding.php:153
+#: views/overview-dashboard.php:62
 msgid "Admission unknown"
 msgstr ""
 
-#: views/onboarding.php:130
-#: views/overview-dashboard.php:62
+#: views/onboarding.php:157
+#: views/overview-dashboard.php:66
 msgid "Selection unknown"
 msgstr ""
 
-#: views/onboarding.php:134
+#: views/onboarding.php:161
 msgid "Git provider settings will appear here when an integration is available."
 msgstr ""
 
-#: views/onboarding.php:139
+#: views/onboarding.php:166
 msgid "Move or automate later"
 msgstr ""
 
-#: views/onboarding.php:140
+#: views/onboarding.php:167
 msgid "Packages begin in Manual mode. Enable Push-to-Deploy only when the target is ready."
 msgstr ""
 
-#: views/onboarding.php:142
-#: views/overview-dashboard.php:49
+#: views/onboarding.php:169
 msgid "Move an existing Booster setup"
 msgstr ""
 
-#: views/onboarding.php:143
+#: views/onboarding.php:170
 msgid "Read the documentation"
 msgstr ""
 
-#: views/onboarding.php:144
+#: views/onboarding.php:171
 msgid "Open troubleshooting"
 msgstr ""
 
-#: views/onboarding.php:149
+#: views/onboarding.php:176
 msgid "4. Install and manage packages"
+msgstr ""
+
+#: views/onboarding.php:208
+msgid "Return to onboarding"
 msgstr ""
 
 #: views/overview-dashboard.php:21
@@ -7339,52 +7374,40 @@ msgstr ""
 msgid "Managed packages"
 msgstr ""
 
-#: views/overview-dashboard.php:47
+#: views/overview-dashboard.php:48
 msgid "Plugins:"
 msgstr ""
 
-#: views/overview-dashboard.php:47
+#: views/overview-dashboard.php:49
 msgid "Themes:"
 msgstr ""
 
-#: views/overview-dashboard.php:47
+#: views/overview-dashboard.php:50
 msgid "Updates disabled:"
 msgstr ""
 
-#: views/overview-dashboard.php:48
+#: views/overview-dashboard.php:52
 msgid "Manage plugins"
 msgstr ""
 
-#: views/overview-dashboard.php:48
+#: views/overview-dashboard.php:52
 msgid "Manage themes"
 msgstr ""
 
-#: views/overview-dashboard.php:52
+#: views/overview-dashboard.php:56
 msgid "Providers and access"
 msgstr ""
 
-#: views/overview-dashboard.php:55
+#: views/overview-dashboard.php:59
 msgid "No provider settings are currently available."
 msgstr ""
 
-#: views/overview-dashboard.php:69
+#: views/overview-dashboard.php:73
 msgid "These reminders cover credentials with actionable expiry information; they are not a complete credential inventory."
 msgstr ""
 
-#: views/overview-dashboard.php:71
+#: views/overview-dashboard.php:75
 msgid "No actionable expiry reminders were captured."
-msgstr ""
-
-#: views/overview-dashboard.php:75
-msgid "Expires:"
-msgstr ""
-
-#: views/overview-dashboard.php:75
-msgid "Source:"
-msgstr ""
-
-#: views/overview-dashboard.php:79
-msgid "Observed:"
 msgstr ""
 
 #. translators: 1: displayed reminders, 2: total actionable reminders.
@@ -9268,7 +9291,7 @@ msgid "Adopt GitHub implementation"
 msgstr ""
 
 #: views/provider.php:329
-#: views/troubleshooting-installation.php:109
+#: views/troubleshooting-installation.php:120
 msgid "GitHub provider details"
 msgstr ""
 
@@ -9742,32 +9765,8 @@ msgstr ""
 msgid "Save webhook secret"
 msgstr ""
 
-#: views/settings-storage.php:20
-msgid "Path configured"
-msgstr ""
-
-#: views/settings-storage.php:21
-msgid "Storage healthy"
-msgstr ""
-
-#: views/settings-storage.php:22
-msgid "Storage needs attention"
-msgstr ""
-
-#: views/settings-storage.php:23
-msgid "Setup available"
-msgstr ""
-
-#: views/settings-storage.php:26
-msgid "Verification pending"
-msgstr ""
-
 #: views/settings-storage.php:40
 msgid "Custom wp-config.php path"
-msgstr ""
-
-#: views/settings-storage.php:71
-msgid "Status unknown"
 msgstr ""
 
 #: views/settings-storage.php:80
@@ -9920,6 +9919,10 @@ msgstr ""
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
+#: views/settings-storage.php:224
+msgid "Manual storage override"
+msgstr ""
+
 #: views/settings.php:31
 msgid "The configured value is invalid. Correct the named constant; runtime safety restrictions still apply."
 msgstr ""
@@ -9941,243 +9944,257 @@ msgid "Set in configuration"
 msgstr ""
 
 #: views/settings.php:47
-msgid "Another active non-GitHub provider is required before this can be hidden."
+msgid "On"
 msgstr ""
 
-#: views/settings.php:48
-msgid "GitHub remains visible while an active GitHub replacement is present."
-msgstr ""
-
-#: views/settings.php:49
-msgid "GitHub remains visible while this site manages GitHub packages."
+#: views/settings.php:47
+msgid "Off"
 msgstr ""
 
 #: views/settings.php:50
-msgid "GitHub remains visible until its local management state is known."
+msgid "Another active non-GitHub provider is required before this can be hidden."
 msgstr ""
 
 #: views/settings.php:51
+msgid "GitHub remains visible while an active GitHub replacement is present."
+msgstr ""
+
+#: views/settings.php:52
+msgid "GitHub remains visible while this site manages GitHub packages."
+msgstr ""
+
+#: views/settings.php:53
+msgid "GitHub remains visible until its local management state is known."
+msgstr ""
+
+#: views/settings.php:54
 msgid "GitHub remains visible until provider availability is known."
 msgstr ""
 
-#: views/settings.php:62
+#: views/settings.php:83
 msgid "This source checkout is protected from native updates."
 msgstr ""
 
-#: views/settings.php:63
+#: views/settings.php:84
 msgid "This installation has no verified release provenance."
 msgstr ""
 
-#: views/settings.php:64
+#: views/settings.php:85
 msgid "Native discovery is disabled by configuration."
 msgstr ""
 
-#: views/settings.php:65
+#: views/settings.php:86
 msgid "The update configuration is invalid."
 msgstr ""
 
-#: views/settings.php:66
+#: views/settings.php:87
 msgid "Native discovery is disabled by the saved preference."
 msgstr ""
 
-#: views/settings.php:77
+#: views/settings.php:98
 msgid "Site-wide Booster preferences and secure credential storage."
 msgstr ""
 
-#: views/settings.php:80
+#: views/settings.php:106
 msgid "General"
 msgstr ""
 
-#: views/settings.php:81
+#: views/settings.php:107
 msgid "You have unsaved changes."
 msgstr ""
 
-#: views/settings.php:95
+#: views/settings.php:121
 msgid "Appearance"
 msgstr ""
 
-#: views/settings.php:100
+#: views/settings.php:126
 msgid "Hide GitHub UI"
 msgstr ""
 
-#: views/settings.php:101
-#: views/settings.php:114
-#: views/settings.php:170
+#: views/settings.php:127
+#: views/settings.php:140
+#: views/settings.php:198
 msgid "Unknown source"
 msgstr ""
 
-#: views/settings.php:101
+#: views/settings.php:127
 msgid "GitHub navigation is currently hidden."
 msgstr ""
 
-#: views/settings.php:101
+#: views/settings.php:127
 msgid "GitHub navigation remains available."
 msgstr ""
 
-#: views/settings.php:108
+#: views/settings.php:134
 msgid "Booster updates"
 msgstr ""
 
-#: views/settings.php:113
+#: views/settings.php:139
 msgid "Check for Booster updates"
 msgstr ""
 
-#: views/settings.php:114
+#: views/settings.php:140
 msgid "Native discovery is currently eligible."
 msgstr ""
 
-#: views/settings.php:114
+#: views/settings.php:140
 msgid "Native discovery is currently unavailable."
 msgstr ""
 
-#: views/settings.php:119
+#: views/settings.php:145
 msgid "Installed version:"
 msgstr ""
 
-#: views/settings.php:119
+#: views/settings.php:145
 msgid "Available version:"
 msgstr ""
 
-#: views/settings.php:119
+#: views/settings.php:145
 msgid "No verified newer offer"
 msgstr ""
 
-#: views/settings.php:120
+#: views/settings.php:146
 msgid "Last successful Booster check:"
 msgstr ""
 
-#: views/settings.php:121
+#: views/settings.php:147
 msgid "Latest check result:"
 msgstr ""
 
-#: views/settings.php:121
+#: views/settings.php:147
 msgid "No completed check recorded"
 msgstr ""
 
-#: views/settings.php:125
+#: views/settings.php:151
 msgid "Check diagnostic code:"
 msgstr ""
 
-#: views/settings.php:126
+#: views/settings.php:152
 msgid "Check now also runs WordPress plugin update discovery. It does not save preferences or install an update."
 msgstr ""
 
-#: views/settings.php:130
+#: views/settings.php:156
 msgid "Check now"
 msgstr ""
 
-#: views/settings.php:134
+#: views/settings.php:160
 msgid "Update now"
 msgstr ""
 
-#: views/settings.php:137
+#: views/settings.php:163
 msgid "History"
 msgstr ""
 
-#: views/settings.php:138
+#: views/settings.php:164
 msgid "Maximum records"
 msgstr ""
 
-#: views/settings.php:143
+#: views/settings.php:169
 msgid "Retention days"
 msgstr ""
 
-#: views/settings.php:148
+#: views/settings.php:174
 msgid "Lowering these values does not delete protected running or recovery records immediately. Retention is irreversible once records are pruned."
 msgstr ""
 
-#: views/settings.php:151
+#: views/settings.php:177
 msgid "Archive limits"
 msgstr ""
 
-#: views/settings.php:152
-msgid "Maximum download size (bytes)"
+#: views/settings.php:178
+msgid "Maximum download size (MiB)"
 msgstr ""
 
-#. translators: 1: exact download bytes, 2: approximate size in MiB.
-#: views/settings.php:157
-#, php-format
-msgid "%1$s bytes is approximately %2$s MiB."
+#: views/settings.php:183
+msgid "One MiB is 1,048,576 bytes. Fractional values are rounded to the nearest byte."
 msgstr ""
 
-#. translators: %s: derived branch expansion ceiling in bytes.
-#: views/settings.php:158
+#. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
+#: views/settings.php:184
 msgid "The derived branch expansion ceiling cannot be calculated on this host."
 msgstr ""
 
-#. translators: %s: derived branch expansion ceiling in bytes.
-#: views/settings.php:158
+#. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
+#: views/settings.php:184
 #, php-format
-msgid "Branch downloads derive a ceiling of %s bytes (4× this download limit). Host and updater safeguards may be stricter."
+msgid "Branch downloads derive a ceiling of %1$s MiB (%2$s bytes; 4× this download limit). Host and updater safeguards may be stricter."
 msgstr ""
 
-#: views/settings.php:173
+#: views/settings.php:187
+msgid "Configuration constants"
+msgstr ""
+
+#: views/settings.php:203
 msgid "Save changes"
 msgstr ""
 
-#: views/troubleshooting-installation.php:16
+#: views/troubleshooting-installation.php:18
 #: views/troubleshooting.php:24
 msgid "Installation"
 msgstr ""
 
-#: views/troubleshooting-installation.php:18
+#: views/troubleshooting-installation.php:20
 msgid "Environment"
 msgstr ""
 
-#: views/troubleshooting-installation.php:23
+#: views/troubleshooting-installation.php:25
 msgid "Environment information is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:31
+#: views/troubleshooting-installation.php:32
+msgid "Environment details"
+msgstr ""
+
+#: views/troubleshooting-installation.php:42
 msgid "Storage"
 msgstr ""
 
-#: views/troubleshooting-installation.php:45
+#: views/troubleshooting-installation.php:56
 msgid "Review storage settings"
 msgstr ""
 
-#: views/troubleshooting-installation.php:52
+#: views/troubleshooting-installation.php:63
 msgid "Core update status is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:54
+#: views/troubleshooting-installation.php:65
 msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:56
+#: views/troubleshooting-installation.php:67
 msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
 msgstr ""
 
-#: views/troubleshooting-installation.php:58
+#: views/troubleshooting-installation.php:69
 msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
 msgstr ""
 
-#: views/troubleshooting-installation.php:60
+#: views/troubleshooting-installation.php:71
 msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:62
+#: views/troubleshooting-installation.php:73
 msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:69
-#: views/troubleshooting-installation.php:118
+#: views/troubleshooting-installation.php:80
+#: views/troubleshooting-installation.php:129
 msgid "Technical details"
 msgstr ""
 
-#: views/troubleshooting-installation.php:81
+#: views/troubleshooting-installation.php:92
 msgid "Providers and extensions"
 msgstr ""
 
-#: views/troubleshooting-installation.php:84
+#: views/troubleshooting-installation.php:95
 msgid "Only the first 32 admitted components are shown, alongside the fixed extension catalogue. Additional declarations are omitted."
 msgstr ""
 
-#: views/troubleshooting-installation.php:89
+#: views/troubleshooting-installation.php:100
 msgid "Provider and extension information is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:107
+#: views/troubleshooting-installation.php:118
 msgid "GitHub provider information is unavailable."
 msgstr ""
 
@@ -10187,7 +10204,7 @@ msgid "Support report"
 msgstr ""
 
 #: views/troubleshooting-support-report.php:12
-msgid "Generate a local, sanitized snapshot. Available diagnostic runs from the last hour for your administrator account and this site are included automatically. This does not run diagnostics, start logging or send data."
+msgid "Generate a local, sanitized report. It does not send data or run diagnostics or logging."
 msgstr ""
 
 #: views/troubleshooting-support-report.php:16
@@ -10220,14 +10237,22 @@ msgid "Download failed. Select the report and save it manually."
 msgstr ""
 
 #: views/troubleshooting-support-report.php:27
-msgid "Preview, Copy and Download use this same frozen text. You can select it and copy or save it manually. Review before sharing; generating a new report collects a new observation."
-msgstr ""
-
-#: views/troubleshooting-support-report.php:30
-msgid "Logging captures Booster events only. When evidence is missing, explicitly start Logging, reproduce the problem, then regenerate. Events from before capture cannot be recovered."
+msgid "Preview, Copy and Download use this same frozen text. You can select it and copy or save it manually."
 msgstr ""
 
 #: views/troubleshooting-support-report.php:31
+msgid "Evidence and recovery guidance"
+msgstr ""
+
+#: views/troubleshooting-support-report.php:33
+msgid "Available diagnostic runs from the last hour for your administrator account and this site are included automatically."
+msgstr ""
+
+#: views/troubleshooting-support-report.php:34
+msgid "Logging captures Booster events only. When evidence is missing, explicitly start Logging, reproduce the problem, then generate another report. Events from before capture cannot be recovered."
+msgstr ""
+
+#: views/troubleshooting-support-report.php:35
 msgid "If Booster or WordPress administration cannot load, use WordPress recovery mode or your hosting support route. External server logs are not collected here."
 msgstr ""
 

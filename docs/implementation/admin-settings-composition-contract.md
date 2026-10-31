@@ -211,3 +211,24 @@ The pending test-only correction explicitly finalizes through the public updater
 after that callback in `finally`. It adds no production, library, pin, or state
 reset. A new exact head, the maintained proof rerun, and full gates remain
 pending; this is not a proof-pass receipt.
+
+## Settings refinement preflight
+
+The current Settings route keeps secure credential-storage operations in their
+own nonce-protected forms and keeps General Save confined to its fixed
+non-secret preference document. Archive limits are persisted and admitted as
+bounded integer bytes; code constants remain authoritative and lock their
+fields. The refinement keeps all three invariants.
+
+The rejected smaller alternative is a label-only bytes-to-MiB change: it would
+leave the submitted unit ambiguous. The accepted bounded change converts a
+strict decimal MiB submission to the existing exact byte preference before the
+existing parser, range checks and CAS write, rounding a newly entered fractional
+byte to the nearest byte. It formats the current integer byte value as an exact
+finite MiB decimal, which round trips through the bounded conversion.
+
+Projected production delta: one view, the existing GeneralPreferenceStore and
+Dashboard's existing attempted-value handoff, plus Settings CSS. It introduces
+no type, public seam, option, schema, API, provider, storage backend or
+multisite behavior. Toggle markup retains native checkboxes and ordinary POST
+semantics without JavaScript; CSS only supplies the accessible visual control.

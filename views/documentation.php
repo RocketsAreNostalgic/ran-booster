@@ -305,7 +305,7 @@ unset( $prepared_section );
 
 				<p><?php esc_html_e( 'Each administrator can dismiss their own credential expiry reminders. A five-day snooze is available only when every credential in the reminder expires more than five days from now. A new or replaced expiry will warn you again. Acknowledging a deployment failure banner does not resolve the incident.', 'ran-booster' ); ?></p>
 
-				<h3><?php esc_html_e( 'Use a different storage location', 'ran-booster' ); ?></h3>
+					<h3 id="ran-booster-manual-storage-override"><?php esc_html_e( 'Use a different storage location', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'Choose a durable directory outside the public web root that is owned by the same PHP process user used by WordPress web, cron and CLI requests. The directory must use mode 0700. Do not add group access as a workaround: Booster deliberately requires owner-only access. Define the preferred directory constant in wp-config.php before WordPress loads plugins; Booster creates and manages secrets.json and secrets.json.lock inside it with mode 0600:', 'ran-booster' ); ?></p>
 				<code>define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );</code>
 				<p><?php esc_html_e( 'In wp-config.php, __DIR__ is the directory containing wp-config.php and dirname( __DIR__ ) is its parent. If wp-config.php is in public_html, do not append public_html again: choose a sibling directory outside it. Every existing parent directory must let the PHP process traverse it; on shared hosting that may require a host-managed execute permission or ACL on an ancestor. The final Booster storage directory must still be owned by PHP and mode 0700.', 'ran-booster' ); ?></p>

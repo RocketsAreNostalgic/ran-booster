@@ -50,12 +50,12 @@ $provider_attention        = array_filter(
 		<?php } else { ?>
 			<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Overview', 'ran-booster' ); ?></h2>
 		<?php } ?>
-		<?php if ( current_user_can( 'manage_options' ) ) { ?>
+		<?php if ( 'onboarding' === $overview_view && current_user_can( 'manage_options' ) ) { ?>
 			<form method="post" action="<?php echo esc_url( $overview_url ); ?>">
 				<?php wp_nonce_field( 'ran-booster-overview-presentation' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="overview-presentation">
-				<input type="hidden" name="ran_booster[presentation]" value="<?php echo esc_attr( 'dashboard' === $overview_view ? 'onboarding' : 'dashboard' ); ?>">
-				<button type="submit" class="button"><?php echo esc_html( 'dashboard' === $overview_view ? __( 'Return to onboarding', 'ran-booster' ) : __( 'Skip onboarding', 'ran-booster' ) ); ?></button>
+				<input type="hidden" name="ran_booster[presentation]" value="dashboard">
+				<button type="submit" class="button"><?php esc_html_e( 'Skip onboarding', 'ran-booster' ); ?></button>
 				<p class="description"><?php esc_html_e( 'This changes the view for all site administrators. It does not reset your configuration.', 'ran-booster' ); ?></p>
 			</form>
 		<?php } ?>
@@ -71,6 +71,24 @@ $provider_attention        = array_filter(
 	$overview_storage_summary      = $onboarding['storage_summary'] ?? null;
 	$overview_storage_url          = $overview_storage_summary['url'] ?? admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' );
 	$overview_storage_status       = is_array( $overview_storage_summary ) ? (string) ( $overview_storage_summary['status'] ?? '' ) : '';
+	$overview_storage_labels       = array(
+		'path_configured'         => __( 'Path configured', 'ran-booster' ),
+		'storage_healthy'         => __( 'Storage healthy', 'ran-booster' ),
+		'storage_needs_attention' => __( 'Storage needs attention', 'ran-booster' ),
+		'setup_available'         => __( 'Setup available', 'ran-booster' ),
+		'manual_required'         => __( 'Needs attention', 'ran-booster' ),
+		'unsupported'             => __( 'Unavailable', 'ran-booster' ),
+		'pending_verification'    => __( 'Verification pending', 'ran-booster' ),
+	);
+	$overview_storage_classes      = array(
+		'path_configured'         => 'neutral',
+		'storage_healthy'         => 'ok',
+		'storage_needs_attention' => 'warning',
+		'setup_available'         => 'neutral',
+		'manual_required'         => 'warning',
+		'unsupported'             => 'error',
+		'pending_verification'    => 'pending',
+	);
 	$overview_storage_unknown      = '' === $overview_storage_status;
 	$overview_storage_problem      = in_array( $overview_storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true );
 	?>
@@ -79,7 +97,7 @@ $provider_attention        = array_filter(
 			<h3 id="ran-booster-overview-attention"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></h3>
 			<?php if ( 'captured' === $credential_expiry['status'] ) { ?>
 				<?php foreach ( $credential_expiry['items'] as $expiry_item ) { ?>
-					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> — <?php echo esc_html( $expiry_item['badge_label'] ); ?></p>
+					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> <span class="ran-booster-pill ran-booster-pill--<?php echo esc_attr( in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'error' : 'warning' ); ?>"><?php echo esc_html( $expiry_item['badge_label'] ); ?></span></p>
 				<?php } ?>
 			<?php } ?>
 			<?php foreach ( $provider_attention as $provider ) { ?>
@@ -97,6 +115,7 @@ $provider_attention        = array_filter(
 	<?php } ?>
 
 	<?php if ( 'dashboard' === $overview_view ) { ?>
+		<?php $overview_dashboard_activity = true; ?>
 		<?php require __DIR__ . '/overview-dashboard.php'; ?>
 	<?php } ?>
 
@@ -105,10 +124,18 @@ $provider_attention        = array_filter(
 		<p><?php esc_html_e( 'Review storage before adding credentials. Public installations remain available while you prepare.', 'ran-booster' ); ?></p>
 	<?php } ?>
 	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading">
-		<h3 id="ran-booster-onboarding-storage-heading"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
+		<div class="ran-booster-onboarding__storage-heading">
+			<h3 id="ran-booster-onboarding-storage-heading"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
+			<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $overview_storage_classes[ $overview_storage_status ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $overview_storage_status ); ?>"><?php echo esc_html( $overview_storage_labels[ $overview_storage_status ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>
+		</div>
 		<p><?php echo esc_html( $overview_storage_summary['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
 		<p><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>
 	</section>
+
+	<?php if ( 'dashboard' === $overview_view ) { ?>
+		<?php unset( $overview_dashboard_activity ); ?>
+		<?php require __DIR__ . '/overview-dashboard.php'; ?>
+	<?php } ?>
 
 	<?php if ( 'onboarding' === $overview_view ) { ?>
 
@@ -173,8 +200,13 @@ $provider_attention        = array_filter(
 	}
 	?>
 
-	<?php if ( 'dashboard' === $overview_view ) { ?>
-		<?php $overview_dashboard_activity = true; ?>
-		<?php require __DIR__ . '/overview-dashboard.php'; ?>
+	<?php if ( 'dashboard' === $overview_view && current_user_can( 'manage_options' ) ) { ?>
+		<form class="ran-booster-onboarding__presentation-control" method="post" action="<?php echo esc_url( $overview_url ); ?>">
+			<?php wp_nonce_field( 'ran-booster-overview-presentation' ); ?>
+			<input type="hidden" name="ran_booster[action]" value="overview-presentation">
+			<input type="hidden" name="ran_booster[presentation]" value="onboarding">
+			<button type="submit" class="button"><?php esc_html_e( 'Return to onboarding', 'ran-booster' ); ?></button>
+			<p class="description"><?php esc_html_e( 'This changes the view for all site administrators. It does not reset your configuration.', 'ran-booster' ); ?></p>
+		</form>
 	<?php } ?>
 </section>

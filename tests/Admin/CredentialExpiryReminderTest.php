@@ -220,7 +220,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		$overview_html = (string) ob_get_clean();
 		self::assertSame( $reads, $this->observations->read_count );
 		self::assertSame( 2, substr_count( $overview_html, 'Overview credential' ) );
-		self::assertStringContainsString( 'tab=gh&amp;view=credentials', $overview_html );
+		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=overview_expiry', $overview_html );
 		self::assertStringNotContainsString( 'test-token-overview_expiry', $overview_html );
 		self::assertSame(
 			array(
@@ -263,7 +263,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertSame( 1, $summary['total'] );
 		self::assertSame( array( 'provider', 'provider_label', 'label', 'badge_label', 'stage', 'effective_expires_at', 'source', 'observed_at', 'url' ), array_keys( $summary['items'][0] ) );
 		self::assertSame( '2026-07-23T12:00:00Z', $summary['items'][0]['observed_at'] );
-		self::assertStringContainsString( 'page=ran-booster&tab=gh&view=credentials', $summary['items'][0]['url'] );
+		self::assertStringContainsString( 'page=ran-booster&tab=gh&view=credentials&replace_credential=cached', $summary['items'][0]['url'] );
 	}
 
 	public function test_cached_summary_is_bounded_and_requires_current_admin_login(): void {

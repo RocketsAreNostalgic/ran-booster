@@ -50,6 +50,10 @@ final class CredentialExpiryNotice {
 			: admin_url( 'admin.php' );
 		$items    = array();
 		foreach ( array_slice( $this->affected, 0, 5 ) as $row ) {
+			$url = $base_url . '?page=ran-booster&tab=' . rawurlencode( $row['provider'] ) . '&view=credentials';
+			if ( $row['editable'] && '' !== $row['id'] ) {
+				$url .= '&replace_credential=' . rawurlencode( $row['id'] );
+			}
 			$items[] = array(
 				'provider'             => $row['provider'],
 				'provider_label'       => $row['provider_label'],
@@ -59,7 +63,7 @@ final class CredentialExpiryNotice {
 				'effective_expires_at' => $row['effective_expires_at'],
 				'source'               => $row['source'],
 				'observed_at'          => $row['observed_at'],
-				'url'                  => $base_url . '?page=ran-booster&tab=' . rawurlencode( $row['provider'] ) . '&view=credentials',
+				'url'                  => $url,
 			);
 		}
 		return array(

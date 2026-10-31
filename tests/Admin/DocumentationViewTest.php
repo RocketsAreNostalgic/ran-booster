@@ -92,7 +92,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Protect your files and know what actually moves</summary>', $html );
 		self::assertStringContainsString( '<summary>Credential storage, retention and removal</summary>', $html );
 		self::assertStringContainsString( 'id="ran-booster-credential-storage"', $html );
-		self::assertStringContainsString( '<h3>Use a different storage location</h3>', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-manual-storage-override">Use a different storage location</h3>', $html );
 		self::assertStringContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );", $html );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $html );
 		self::assertStringContainsString( 'Do not add group access as a workaround', $html );

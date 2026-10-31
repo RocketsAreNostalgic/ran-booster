@@ -160,6 +160,37 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		);
 	}
 
+	public function test_archive_mib_submission_rounds_new_values_and_preserves_existing_exact_bytes(): void {
+		$store  = new GeneralPreferenceStore();
+		$values = $this->submission();
+		unset( $values['max_archive_bytes'] );
+
+		$values['max_archive_mib'] = '50.5';
+		$parsed                    = $store->parse_submission( $values, array_keys( $this->submission() ) );
+		self::assertIsArray( $parsed );
+		self::assertSame( 52953088, $parsed['max_archive_bytes'] );
+		$values['max_archive_mib'] = '50.1';
+		$parsed                    = $store->parse_submission( $values, array_keys( $this->submission() ) );
+		self::assertIsArray( $parsed );
+		self::assertSame( 52533658, $parsed['max_archive_bytes'] );
+
+		$values['max_archive_mib'] = '50.00000095367431640625';
+		$parsed                    = $store->parse_submission( $values, array_keys( $this->submission() ) );
+		self::assertIsArray( $parsed );
+		self::assertSame( 52428801, $parsed['max_archive_bytes'], 'An existing exact byte limit must round trip through its finite MiB representation.' );
+		$this->seed( array( 'max_archive_bytes' => 52428801 ) );
+		self::assertSame(
+			'unchanged',
+			$store->save( $store->snapshot()['token'], $values, static fn ( callable $operation ): string => $operation(), static fn (): bool => true )
+		);
+		self::assertSame( 52428801, \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['max_archive_bytes'] );
+
+		foreach ( array( '0', '-1', '512', '5e1', '999999999999999999999999' ) as $mib ) {
+			$values['max_archive_mib'] = $mib;
+			self::assertNull( $store->parse_submission( $values, array_keys( $this->submission() ) ), $mib );
+		}
+	}
+
 	public function test_unchanged_and_failed_writes_are_reported_honestly(): void {
 		$store = new GeneralPreferenceStore();
 		$token = $store->snapshot()['token'];

@@ -5,17 +5,19 @@
  */
 if ( ! defined( 'WPINC' ) ) {
 	die; }
-$installation   = is_array( $troubleshooting['installation_details'] ?? null ) ? $troubleshooting['installation_details'] : array();
-$github_fields  = $installation[ __( 'GitHub provider', 'ran-booster' ) ] ?? array();
-$summary_labels = array( __( 'Name', 'ran-booster' ), __( 'Version', 'ran-booster' ), __( 'Source', 'ran-booster' ), __( 'Selection state', 'ran-booster' ), __( 'Operational availability', 'ran-booster' ) );
-$environment    = is_array( $troubleshooting['environment'] ?? null ) ? $troubleshooting['environment'] : array();
-$storage        = is_array( $troubleshooting['storage'] ?? null ) ? $troubleshooting['storage'] : array();
-$components     = is_array( $troubleshooting['components'] ?? null ) ? $troubleshooting['components'] : array();
+$installation        = is_array( $troubleshooting['installation_details'] ?? null ) ? $troubleshooting['installation_details'] : array();
+$github_fields       = $installation[ __( 'GitHub provider', 'ran-booster' ) ] ?? array();
+$summary_labels      = array( __( 'Name', 'ran-booster' ), __( 'Version', 'ran-booster' ), __( 'Source', 'ran-booster' ), __( 'Selection state', 'ran-booster' ), __( 'Operational availability', 'ran-booster' ) );
+$environment         = is_array( $troubleshooting['environment'] ?? null ) ? $troubleshooting['environment'] : array();
+$environment_summary = array_intersect_key( $environment, array_flip( array( 'WordPress', 'PHP' ) ) );
+$environment_details = array_diff_key( $environment, $environment_summary );
+$storage             = is_array( $troubleshooting['storage'] ?? null ) ? $troubleshooting['storage'] : array();
+$components          = is_array( $troubleshooting['components'] ?? null ) ? $troubleshooting['components'] : array();
 ?>
 <section id="ran-booster-installation-details" aria-labelledby="ran-booster-installation-heading">
 <h3 id="ran-booster-installation-heading"><?php esc_html_e( 'Installation', 'ran-booster' ); ?></h3>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header"><h4><?php esc_html_e( 'Environment', 'ran-booster' ); ?></h4></header>
+<header class="ran-booster-page-shell__header"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Environment', 'ran-booster' ); ?></h4></header>
 <div class="ran-booster-page-shell__body">
 <?php
 if ( array() === $environment ) {
@@ -23,12 +25,21 @@ if ( array() === $environment ) {
 	<p><?php esc_html_e( 'Environment information is unavailable.', 'ran-booster' ); ?></p><?php } else { ?>
 <dl class="ran-booster-troubleshooting__fields-list">
 	<?php
-	foreach ( $environment as $label => $value ) {
+	foreach ( $environment_summary as $label => $value ) {
 		?>
 	<div><dt><?php echo esc_html( $label ); ?></dt><dd><code><?php echo esc_html( $value ); ?></code></dd></div><?php } ?></dl><?php } ?>
+<?php if ( array() !== $environment_details ) { ?>
+<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary><?php esc_html_e( 'Environment details', 'ran-booster' ); ?></summary>
+	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+		<dl class="ran-booster-troubleshooting__fields-list">
+		<?php foreach ( $environment_details as $label => $value ) { ?>
+			<div><dt><?php echo esc_html( $label ); ?></dt><dd><code><?php echo esc_html( $value ); ?></code></dd></div><?php } ?>
+		</dl>
+	</div>
+</details><?php } ?>
 </div></section>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header"><h4><?php esc_html_e( 'Storage', 'ran-booster' ); ?></h4></header>
+<header class="ran-booster-page-shell__header"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Storage', 'ran-booster' ); ?></h4></header>
 <div class="ran-booster-page-shell__body">
 <p><?php echo esc_html( $storage['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
 <?php
@@ -78,7 +89,7 @@ if ( 'actionable' === ( $storage['state'] ?? '' ) && ! empty( $storage['url'] ) 
 				</div>
 			</section>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header"><h4><?php esc_html_e( 'Providers and extensions', 'ran-booster' ); ?></h4></header>
+<header class="ran-booster-page-shell__header"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Providers and extensions', 'ran-booster' ); ?></h4></header>
 <div class="ran-booster-page-shell__body">
 <?php if ( ! empty( $troubleshooting['components_truncated'] ) ) { ?>
 <p><?php esc_html_e( 'Only the first 32 admitted components are shown, alongside the fixed extension catalogue. Additional declarations are omitted.', 'ran-booster' ); ?></p>

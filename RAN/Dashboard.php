@@ -630,9 +630,10 @@ class Dashboard {
 		}
 		$fields = $preferences->projection();
 		foreach ( $fields as $key => $field ) {
-			if ( ! $field['locked'] && is_string( $values[ $key ] ?? null ) ) {
-				$this->general_attempted[ $key ] = substr( $values[ $key ], 0, 32 );
-				if ( null === $preferences->parse_submission( array( $key => $values[ $key ] ), array( $key ) ) ) {
+			$request_key = 'max_archive_bytes' === $key ? 'max_archive_mib' : $key;
+			if ( ! $field['locked'] && is_string( $values[ $request_key ] ?? null ) ) {
+				$this->general_attempted[ $key ] = substr( $values[ $request_key ], 0, 32 );
+				if ( null === $preferences->parse_submission( array( $request_key => $values[ $request_key ] ), array( $key ) ) ) {
 					$this->general_errors[ $key ] = __( 'Enter a valid value within the displayed limits.', 'ran-booster' );
 				}
 			}

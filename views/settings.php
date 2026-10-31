@@ -17,7 +17,7 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
-$field              = static function ( string $key ) use ( $general_settings ): array {
+$field               = static function ( string $key ) use ( $general_settings ): array {
 	return $general_settings[ $key ] ?? array(
 		'value'  => 0,
 		'source' => 'default',
@@ -25,7 +25,7 @@ $field              = static function ( string $key ) use ( $general_settings ):
 		'error'  => 'unavailable',
 	);
 };
-$field_error        = static function ( string $key ) use ( $general_errors, $field ): ?string {
+$field_error         = static function ( string $key ) use ( $general_errors, $field ): ?string {
 	$value = $general_errors[ $key ] ?? $field( $key )['error'];
 	return match ( $value ) {
 		'invalid_code' => __( 'The configured value is invalid. Correct the named constant; runtime safety restrictions still apply.', 'ran-booster' ),
@@ -34,48 +34,74 @@ $field_error        = static function ( string $key ) use ( $general_errors, $fi
 		default => is_string( $value ) && '' !== $value ? $value : null,
 	};
 };
-$value              = static function ( string $key ) use ( $general_attempted, $field ): string {
+$value               = static function ( string $key ) use ( $general_attempted, $field ): string {
 	$attempted = $general_attempted[ $key ] ?? null;
 	return is_string( $attempted ) ? $attempted : (string) $field( $key )['value'];
 };
-$source_labels      = array(
+$source_labels       = array(
 	'default' => __( 'Booster default', 'ran-booster' ),
 	'saved'   => __( 'Saved for this site', 'ran-booster' ),
 	'code'    => __( 'Set in configuration', 'ran-booster' ),
 );
-$visibility_reasons = array(
+$configuration_value = static function ( bool|int $value ): string {
+	return is_bool( $value ) ? ( $value ? __( 'On', 'ran-booster' ) : __( 'Off', 'ran-booster' ) ) : (string) $value;
+};
+$visibility_reasons  = array(
 	'no_other_provider'         => __( 'Another active non-GitHub provider is required before this can be hidden.', 'ran-booster' ),
 	'active_github_replacement' => __( 'GitHub remains visible while an active GitHub replacement is present.', 'ran-booster' ),
 	'github_management_present' => __( 'GitHub remains visible while this site manages GitHub packages.', 'ran-booster' ),
 	'github_selection_unknown'  => __( 'GitHub remains visible until its local management state is known.', 'ran-booster' ),
 	'provider_registry_unknown' => __( 'GitHub remains visible until provider availability is known.', 'ran-booster' ),
 );
-$hide               = $field( 'hide_github' );
-$discovery          = $field( 'self_update_discovery' );
-$hide_locked        = true === $hide['locked'] || ! $github_visibility['eligible'];
-$hide_display_value = $github_visibility['eligible'] && '1' === ( $general_attempted['hide_github'] ?? ( $hide['value'] ? '1' : '0' ) );
-$archive_bytes      = (int) $field( 'max_archive_bytes' )['value'];
-$branch_ceiling     = $archive_bytes <= intdiv( PHP_INT_MAX, 4 ) ? $archive_bytes * 4 : null;
-$status_mode        = is_string( $core_update_status['effective_mode'] ?? null ) ? $core_update_status['effective_mode'] : 'disabled';
-$status_reason      = is_string( $core_update_status['reason'] ?? null ) ? $core_update_status['reason'] : '';
-$update_reasons     = array(
+$hide                = $field( 'hide_github' );
+$discovery           = $field( 'self_update_discovery' );
+$hide_locked         = true === $hide['locked'] || ! $github_visibility['eligible'];
+$hide_display_value  = $github_visibility['eligible'] && '1' === ( $general_attempted['hide_github'] ?? ( $hide['value'] ? '1' : '0' ) );
+$archive_bytes       = (int) $field( 'max_archive_bytes' )['value'];
+$mib_value           = static function ( int $bytes ): string {
+	$whole     = intdiv( $bytes, 1048576 );
+	$remainder = $bytes % 1048576;
+	if ( 0 === $remainder ) {
+		return (string) $whole;
+	}
+	$fraction = '';
+	for ( $index = 0; $index < 20 && 0 !== $remainder; ++$index ) {
+		$remainder *= 10;
+		$fraction  .= (string) intdiv( $remainder, 1048576 );
+		$remainder %= 1048576;
+	}
+	return $whole . '.' . $fraction;
+};
+$archive_mib_value   = is_string( $general_attempted['max_archive_bytes'] ?? null )
+	? $general_attempted['max_archive_bytes']
+	: $mib_value( $archive_bytes );
+$branch_ceiling      = $archive_bytes <= intdiv( PHP_INT_MAX, 4 ) ? $archive_bytes * 4 : null;
+$branch_ceiling_mib  = null === $branch_ceiling ? null : $mib_value( $branch_ceiling );
+$status_mode         = is_string( $core_update_status['effective_mode'] ?? null ) ? $core_update_status['effective_mode'] : 'disabled';
+$status_reason       = is_string( $core_update_status['reason'] ?? null ) ? $core_update_status['reason'] : '';
+$update_reasons      = array(
 	'source_checkout'                   => __( 'This source checkout is protected from native updates.', 'ran-booster' ),
 	'release_marker_missing_or_invalid' => __( 'This installation has no verified release provenance.', 'ran-booster' ),
 	'configuration_disabled'            => __( 'Native discovery is disabled by configuration.', 'ran-booster' ),
 	'configuration_invalid'             => __( 'The update configuration is invalid.', 'ran-booster' ),
 	'preference_disabled'               => __( 'Native discovery is disabled by the saved preference.', 'ran-booster' ),
 );
-$installed_version  = is_string( $core_update_status['installed_version'] ?? null ) ? $core_update_status['installed_version'] : null;
-$offered_version    = is_string( $core_update_status['offered_version'] ?? null ) ? $core_update_status['offered_version'] : null;
-$success_at         = $core_update_status['last_successful_check'] ?? null;
-$success_label      = is_int( $success_at ) ? wp_date( 'Y-m-d H:i:s T', $success_at ) : false;
-$success_label      = is_string( $success_label ) ? $success_label : __( 'Unknown', 'ran-booster' );
+$installed_version   = is_string( $core_update_status['installed_version'] ?? null ) ? $core_update_status['installed_version'] : null;
+$offered_version     = is_string( $core_update_status['offered_version'] ?? null ) ? $core_update_status['offered_version'] : null;
+$success_at          = $core_update_status['last_successful_check'] ?? null;
+$success_label       = is_int( $success_at ) ? wp_date( 'Y-m-d H:i:s T', $success_at ) : false;
+$success_label       = is_string( $success_label ) ? $success_label : __( 'Unknown', 'ran-booster' );
 ?>
 <section class="ran-booster-page-shell ran-booster-settings" aria-labelledby="ran-booster-settings-heading">
 	<header class="ran-booster-page-shell__header">
 		<h2 id="ran-booster-settings-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Settings', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Site-wide Booster preferences and secure credential storage.', 'ran-booster' ); ?></p>
 	</header>
+		<?php if ( null === $secrets_storage ) { ?>
+			<section class="ran-booster-panel" aria-labelledby="ran-booster-storage"><h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3><p><?php esc_html_e( 'Storage status is unavailable. No setup or recovery action has been performed.', 'ran-booster' ); ?></p></section>
+		<?php } else { ?>
+			<?php require __DIR__ . '/settings-storage.php'; ?>
+		<?php } ?>
 	<section class="ran-booster-panel" aria-labelledby="ran-booster-general-heading">
 		<h3 id="ran-booster-general-heading"><?php esc_html_e( 'General', 'ran-booster' ); ?></h3>
 		<p data-ran-booster-unsaved hidden role="status"><?php esc_html_e( 'You have unsaved changes.', 'ran-booster' ); ?></p>
@@ -97,7 +123,7 @@ $success_label      = is_string( $success_label ) ? $success_label : __( 'Unknow
 				if ( ! $hide_locked ) {
 					?>
 					<input type="hidden" name="ran_booster[preferences][hide_github]" value="0"><?php } ?>
-				<p><label for="ran-booster-hide-github"><input id="ran-booster-hide-github" type="checkbox" name="ran_booster[preferences][hide_github]" value="1"<?php checked( true, $hide_display_value ); ?><?php disabled( $hide_locked ); ?><?php echo null === $field_error( 'hide_github' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-hide-github-error"'; ?>> <?php esc_html_e( 'Hide GitHub UI', 'ran-booster' ); ?></label></p>
+						<p class="ran-booster-settings__switch-row"><label class="ran-booster-settings__switch" for="ran-booster-hide-github"><input id="ran-booster-hide-github" type="checkbox" name="ran_booster[preferences][hide_github]" value="1"<?php checked( true, $hide_display_value ); ?><?php disabled( $hide_locked ); ?><?php echo null === $field_error( 'hide_github' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-hide-github-error"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span><span><?php esc_html_e( 'Hide GitHub UI', 'ran-booster' ); ?></span></label></p>
 				<p class="description"><?php echo esc_html( $source_labels[ $hide['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?>. <?php echo esc_html( $visibility_reasons[ $github_visibility['reason'] ] ?? ( $github_visibility['hidden'] ? __( 'GitHub navigation is currently hidden.', 'ran-booster' ) : __( 'GitHub navigation remains available.', 'ran-booster' ) ) ); ?></p>
 				<?php
 				if ( null !== $field_error( 'hide_github' ) ) {
@@ -110,15 +136,15 @@ $success_label      = is_string( $success_label ) ? $success_label : __( 'Unknow
 				if ( ! $discovery['locked'] ) {
 					?>
 					<input type="hidden" name="ran_booster[preferences][self_update_discovery]" value="0"><?php } ?>
-				<p><label for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-self-update-discovery-error"'; ?>> <?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></label></p>
+						<p class="ran-booster-settings__switch-row"><label class="ran-booster-settings__switch" for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-self-update-discovery-error"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span><span><?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></span></label></p>
 				<p class="description"><?php echo esc_html( $source_labels[ $discovery['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?>. <?php /* The effective policy supplies one fixed, translated reason. */ ?><?php echo esc_html( 'enabled' === $status_mode ? __( 'Native discovery is currently eligible.', 'ran-booster' ) : $update_reasons[ $status_reason ] ?? __( 'Native discovery is currently unavailable.', 'ran-booster' ) ); ?></p>
 				<?php
 				if ( null !== $field_error( 'self_update_discovery' ) ) {
 					?>
 					<p id="ran-booster-self-update-discovery-error" class="notice notice-error inline"><?php echo esc_html( $field_error( 'self_update_discovery' ) ); ?></p><?php } ?>
-				<p><?php esc_html_e( 'Installed version:', 'ran-booster' ); ?> <?php echo esc_html( $installed_version ?? __( 'Unknown', 'ran-booster' ) ); ?><br><?php esc_html_e( 'Available version:', 'ran-booster' ); ?> <?php echo esc_html( $offered_version ?? __( 'No verified newer offer', 'ran-booster' ) ); ?></p>
-				<p><?php esc_html_e( 'Last successful Booster check:', 'ran-booster' ); ?> <?php echo esc_html( $success_label ); ?><br>
-				<?php esc_html_e( 'Latest check result:', 'ran-booster' ); ?> <?php echo esc_html( $core_update_status['last_check_outcome'] ?? __( 'No completed check recorded', 'ran-booster' ) ); ?></p>
+					<p><strong><?php esc_html_e( 'Installed version:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $installed_version ?? __( 'Unknown', 'ran-booster' ) ); ?></code><br><strong><?php esc_html_e( 'Available version:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $offered_version ?? __( 'No verified newer offer', 'ran-booster' ) ); ?></code></p>
+					<p><strong><?php esc_html_e( 'Last successful Booster check:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $success_label ); ?></code><br>
+					<strong><?php esc_html_e( 'Latest check result:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $core_update_status['last_check_outcome'] ?? __( 'No completed check recorded', 'ran-booster' ) ); ?></code></p>
 				<?php
 				if ( is_string( $core_update_status['last_check_code'] ?? null ) ) {
 					?>
@@ -149,15 +175,17 @@ $success_label      = is_string( $success_label ) ? $success_label : __( 'Unknow
 			</fieldset>
 			<fieldset class="ran-booster-settings__group">
 				<legend><?php esc_html_e( 'Archive limits', 'ran-booster' ); ?></legend>
-				<p><label for="ran-booster-max-archive-bytes"><?php esc_html_e( 'Maximum download size (bytes)', 'ran-booster' ); ?></label><br><input id="ran-booster-max-archive-bytes" type="number" min="1048576" max="536870911" step="1" name="ran_booster[preferences][max_archive_bytes]" value="<?php echo esc_attr( $value( 'max_archive_bytes' ) ); ?>"<?php disabled( $field( 'max_archive_bytes' )['locked'] ); ?><?php echo null === $field_error( 'max_archive_bytes' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-max-archive-bytes-error"'; ?>></p>
+					<p><label for="ran-booster-max-archive-mib"><?php esc_html_e( 'Maximum download size (MiB)', 'ran-booster' ); ?></label><br><input id="ran-booster-max-archive-mib" type="number" min="1" max="511.99999904632568359375" step="any" inputmode="decimal" name="ran_booster[preferences][max_archive_mib]" value="<?php echo esc_attr( $archive_mib_value ); ?>"<?php disabled( $field( 'max_archive_bytes' )['locked'] ); ?><?php echo null === $field_error( 'max_archive_bytes' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-max-archive-mib-error"'; ?>></p>
 				<?php
 				if ( null !== $field_error( 'max_archive_bytes' ) ) {
 					?>
-					<p id="ran-booster-max-archive-bytes-error" class="notice notice-error inline"><?php echo esc_html( $field_error( 'max_archive_bytes' ) ); ?></p><?php } ?>
-				<p class="description"><?php /* translators: 1: exact download bytes, 2: approximate size in MiB. */ ?><?php echo esc_html( sprintf( __( '%1$s bytes is approximately %2$s MiB.', 'ran-booster' ), number_format_i18n( $archive_bytes ), number_format_i18n( $archive_bytes / 1048576, 2 ) ) ); ?></p>
-				<p class="description"><?php /* translators: %s: derived branch expansion ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch downloads derive a ceiling of %s bytes (4× this download limit). Host and updater safeguards may be stricter.', 'ran-booster' ), number_format_i18n( $branch_ceiling ) ) ); ?></p>
+						<p id="ran-booster-max-archive-mib-error" class="notice notice-error inline"><?php echo esc_html( $field_error( 'max_archive_bytes' ) ); ?></p><?php } ?>
+						<p class="description"><?php esc_html_e( 'One MiB is 1,048,576 bytes. Fractional values are rounded to the nearest byte.', 'ran-booster' ); ?></p>
+					<p class="description"><?php /* translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch downloads derive a ceiling of %1$s MiB (%2$s bytes; 4× this download limit). Host and updater safeguards may be stricter.', 'ran-booster' ), $branch_ceiling_mib, number_format_i18n( $branch_ceiling ) ) ); ?></p>
 			</fieldset>
-			<dl class="description">
+				<details class="ran-booster-disclosure ran-booster-settings__configuration">
+					<summary><?php esc_html_e( 'Configuration constants', 'ran-booster' ); ?></summary>
+					<div class="ran-booster-disclosure__body">
 				<?php
 				foreach ( array(
 					'hide_github'           => 'RAN_BOOSTER_HIDE_GITHUB_UI',
@@ -167,15 +195,12 @@ $success_label      = is_string( $success_label ) ? $success_label : __( 'Unknow
 					'max_archive_bytes'     => 'RAN_BOOSTER_MAX_ARCHIVE_BYTES',
 				) as $setting_key => $configuration_constant ) {
 					?>
-					<dt><code><?php echo esc_html( $configuration_constant ); ?></code></dt><dd><?php echo esc_html( $source_labels[ $field( $setting_key )['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?></dd>
+						<p><code><?php echo esc_html( $configuration_constant ); ?></code>: <?php echo esc_html( $source_labels[ $field( $setting_key )['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?> — <code><?php echo esc_html( $configuration_value( $field( $setting_key )['value'] ) ); ?></code></p>
 				<?php } ?>
-			</dl>
+					</div>
+				</details>
+				<hr class="ran-booster-settings__save-divider">
 			<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button></p>
 		</form>
 	</section>
-	<?php if ( null === $secrets_storage ) { ?>
-		<section class="ran-booster-panel" aria-labelledby="ran-booster-storage"><h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3><p><?php esc_html_e( 'Storage status is unavailable. No setup or recovery action has been performed.', 'ran-booster' ); ?></p></section>
-	<?php } else { ?>
-		<?php require __DIR__ . '/settings-storage.php'; ?>
-	<?php } ?>
 </section>

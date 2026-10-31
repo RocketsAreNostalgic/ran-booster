@@ -52,7 +52,16 @@
 
 .ran-booster-admin .ran-booster-documentation__index-chapter h3,
 .ran-booster-admin .ran-booster-documentation__chapter > h3 {
-	margin: 0;
+	margin: 0 0 var(--ran-booster-space-8);
+	padding-block-end: var(--ran-booster-space-8);
+	border-block-end: 1px solid var(--ran-booster-divider);
+	font-size: var(--ran-booster-font-size-base);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
+.ran-booster-admin .ran-booster-documentation__index-chapter h3 {
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-documentation__index-list {

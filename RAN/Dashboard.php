@@ -72,6 +72,9 @@ class Dashboard {
 	/** @var array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}|null */
 	private ?array $troubleshooting_payload = null;
 
+	/** @var array{text:string,filename:string}|null */
+	private ?array $support_report_payload = null;
+
 	private ?AdminTabRegistry $admin_tabs;
 	private ?AdminAddOnRegistry $admin_add_ons;
 	private ?RepositoryWebhookManagementControls $webhook_management;
@@ -301,7 +304,15 @@ class Dashboard {
 		} elseif ( null !== $selected_tab && 'troubleshooting' === $selected_tab->get_key() ) {
 			$panel                         = $this->requested_troubleshooting_panel();
 			$data['troubleshooting_panel'] = $panel;
-			if ( 'debug-capture' === $panel ) {
+			if ( 'installation' === $panel ) {
+				$data['troubleshooting'] = $this->troubleshooting->installation_payload( $this->provider_settings->github_selection_diagnostics(), $this->storage_installation_projection() );
+			} elseif ( 'support-report' === $panel ) {
+				$data['troubleshooting'] = array(
+					'report'           => $this->support_report_payload['text'] ?? '',
+					'report_filename'  => $this->support_report_payload['filename'] ?? '',
+					'report_generated' => null !== $this->support_report_payload,
+				);
+			} elseif ( 'debug-capture' === $panel ) {
 				$data['troubleshooting'] = array();
 				$data['debug_capture']   = $this->debug_capture_payload();
 			} elseif ( 'activity' === $panel ) {
@@ -442,6 +453,11 @@ class Dashboard {
 		);
 	}
 
+	/** Capture once; subsequent rendering and browser tools consume this frozen text. */
+	public function post_generate_support_report(): void {
+		$this->support_report_payload = $this->troubleshooting->generate_support_report( $this->storage_installation_projection() );
+	}
+
 	/** Render the Core-owned Diagnostics panel after an explicit HTMX request. */
 	public function render_troubleshooting_diagnostics_region(): string {
 
@@ -506,6 +522,42 @@ class Dashboard {
 	public function get_themes_create() {
 		return $this->render_package_create( $this->theme_pages );
 	}
+
+	/** Read-only configuration projection; never starts authentication or recovery.
+	 *
+	 * @return array{state:string,message:string,url?:string,details?:array<string,string>}
+	 */
+	public function storage_installation_projection(): array {
+		$result     = $this->secrets_storage_result;
+		$projection = array(
+			'state'   => 'unknown',
+			'message' => __( 'Storage health has not been checked in this request.', 'ran-booster' ),
+		);
+		if ( null !== $result ) {
+			$projection['state'] = match ( $result->status() ) {
+				'path_configured' => 'configured', 'storage_healthy' => 'healthy',
+				'setup_available', 'storage_needs_attention', 'manual_required' => 'actionable',
+				default => 'unknown',
+			};
+			$projection['message'] = $result->message();
+			if ( 'actionable' === $projection['state'] ) {
+				$projection['url'] = admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' );
+			}
+		}
+		if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
+			foreach ( array( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' ) as $constant ) {
+				if ( defined( $constant ) && is_string( constant( $constant ) ) ) {
+					$projection['details'] = array(
+						'configuration'       => $constant,
+						'configured_location' => constant( $constant ),
+					);
+					break;
+				}
+			}
+		}
+		return $projection;
+	}
+
 
 	/**
 	 * @param list<array<string, mixed>> $extensions
@@ -1029,18 +1081,24 @@ class Dashboard {
 	}
 
 	private function requested_troubleshooting_panel(): string {
+		if ( null !== $this->support_report_payload ) {
+			return 'support-report';
+		}
+		if ( null !== $this->troubleshooting_payload ) {
+			return 'diagnostics';
+		}
 		// Read-only allowlisted routing state.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only panel selection is sanitized and restricted to the fixed diagnostics, debug-capture and activity routes.
 		$panel = isset( $_GET['panel'] ) && is_string( $_GET['panel'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Sanitize the panel before the fixed route allowlist; no mutation is performed.
 			? sanitize_key( wp_unslash( $_GET['panel'] ) )
-			: 'diagnostics';
+			: 'installation';
 
 		if ( 'deployment-activity' === $panel ) {
 			return 'activity';
 		}
 
-		return in_array( $panel, array( 'diagnostics', 'debug-capture', 'activity' ), true ) ? $panel : 'diagnostics';
+		return in_array( $panel, array( 'installation', 'diagnostics', 'debug-capture', 'activity', 'support-report' ), true ) ? $panel : 'installation';
 	}
 
 	private function requested_provider_view(): string {

@@ -131,6 +131,21 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( array( 'selection_generation', 'selected', 'declaration', 'approval' ), array_keys( $status['current'] ) );
 	}
 
+	public function test_support_observation_reuses_bootstrap_without_authority_or_candidate_rescans(): void {
+		$context               = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
+		$reads                 = $this->db->active_reads;
+		$this->db->fail_active = true;
+		$this->activate( array( 'unrelated.php' ) );
+		$observed = $context->support_observation();
+		self::assertSame( $reads, $this->db->active_reads );
+		self::assertSame( 'bundled', $observed['selected'] );
+		self::assertSame( 'decision_required', $observed['state'] );
+		self::assertFalse( $observed['admitted'] );
+		self::assertSame( $this->bundled->provider_api_version, $observed['provider_api'] );
+		self::assertIsArray( $observed['identity'] );
+		self::assertSame( $this->bundled->implementation_fingerprint, $observed['identity']['implementation_fingerprint'] );
+	}
+
 	public function test_healthy_provider_presentation_never_reviews_credential_adoption(): void {
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::never() )->method( 'with_github_adoption_inventory' );

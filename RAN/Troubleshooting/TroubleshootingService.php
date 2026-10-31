@@ -38,8 +38,56 @@ final class TroubleshootingService {
 		private readonly ?Closure $clock = null,
 		private readonly ?SecretsFile $secrets = null,
 		private readonly ?CoreSelfUpdateStatus $core_self_update = null,
-		private readonly ?ActivityStore $activity = null
+		private readonly ?ActivityStore $activity = null,
+		private readonly ?DiagnosticRunStore $retained_runs = null,
+		private readonly ?SupportReport $support_report = null,
+		private readonly ?InstallationFacts $installation_facts = null
 	) {
+	}
+
+	/**
+	 * Standing facts never enumerate credential documents or execute checks.
+	 * @param array<string,mixed>|null $selection
+	 * @param array<string,mixed> $storage
+	 * @return array<string,mixed>
+	 */
+	public function installation_payload( ?array $selection, array $storage ): array {
+		$facts   = $this->installation_facts ?? new InstallationFacts( $this->providers, $this->core_self_update );
+		$payload = array(
+			'providers'              => array(),
+			'provider_locator_hints' => array(),
+			'credentials'            => array(),
+			'selected_provider'      => '',
+			'credential_id'          => '',
+			'repository'             => '',
+			'ran'                    => false,
+			'results'                => array(),
+			'partial'                => false,
+			'partial_reason'         => null,
+			'report'                 => '',
+			'core_self_update'       => $facts->core(),
+		);
+		$payload = $this->with_installation_context( $payload, $selection );
+		unset( $payload['installation_details'][ __( 'Diagnostic Git provider', 'ran-booster' ) ] );
+		$payload['environment']          = $facts->environment();
+		$payload['storage']              = $storage;
+		$payload['components']           = $facts->components();
+		$payload['components_truncated'] = $facts->components_truncated();
+		return $payload;
+	}
+
+	/**
+	 * @param array<string,mixed> $storage
+	 * @return array{text:string,filename:string}
+	 */
+	public function generate_support_report( array $storage ): array {
+		if ( null === $this->support_report ) {
+			return array(
+				'text'     => __( 'Support collection is unavailable. No diagnostics were run.', 'ran-booster' ),
+				'filename' => 'ran-booster-support-' . gmdate( 'Ymd-His' ) . '.txt',
+			);
+		}
+		return $this->support_report->generate( $storage );
 	}
 
 	/**
@@ -99,14 +147,15 @@ final class TroubleshootingService {
 		$sections[ __( 'GitHub provider', 'ran-booster' ) ][ __( 'Enabled candidates', 'ran-booster' ) ] = (string) count( $candidates );
 		$core        = $payload['core_self_update'];
 		$core_fields = array(
-			'requested_mode'  => __( 'Requested mode', 'ran-booster' ),
-			'effective_mode'  => __( 'Effective mode', 'ran-booster' ),
-			'reason'          => __( 'Policy reason', 'ran-booster' ),
-			'updater_state'   => __( 'Updater state', 'ran-booster' ),
-			'updater_code'    => __( 'Updater code', 'ran-booster' ),
-			'offered_version' => __( 'Offered version', 'ran-booster' ),
-			'marker_version'  => __( 'Marker version', 'ran-booster' ),
-			'marker_commit'   => __( 'Marker commit', 'ran-booster' ),
+			'installed_version' => __( 'Installed version', 'ran-booster' ),
+			'requested_mode'    => __( 'Requested mode', 'ran-booster' ),
+			'effective_mode'    => __( 'Effective mode', 'ran-booster' ),
+			'reason'            => __( 'Policy reason', 'ran-booster' ),
+			'updater_state'     => __( 'Updater state', 'ran-booster' ),
+			'updater_code'      => __( 'Updater code', 'ran-booster' ),
+			'offered_version'   => __( 'Offered version', 'ran-booster' ),
+			'marker_version'    => __( 'Marker version', 'ran-booster' ),
+			'marker_commit'     => __( 'Marker commit', 'ran-booster' ),
 		);
 		foreach ( $core_fields as $key => $label ) {
 			$sections[ __( 'Booster Core updates', 'ran-booster' ) ][ $label ] = $this->installation_text( $core[ $key ] ?? null );
@@ -183,8 +232,9 @@ final class TroubleshootingService {
 	 */
 
 	public function diagnose( string $provider, ?string $credential_id, ?string $repository ): array {
-		$id       = null;
-		$resolved = null;
+		$retention_scope = $this->retained_runs?->scope_key();
+		$id              = null;
+		$resolved        = null;
 		if ( null !== $this->activity ) {
 			try {
 				$resolved = $this->providers->metadata()[ ProviderCode::parse( $provider )->value ] ?? null;
@@ -208,7 +258,36 @@ final class TroubleshootingService {
 				)
 			);
 		}
-		$payload = $this->run_diagnostics( $provider, $credential_id, $repository );
+		$implementation = null;
+		if ( null !== $this->retained_runs && isset( $this->providers->metadata()[ $provider ] ) ) {
+			try {
+				$implementation = ( $this->installation_facts ?? new InstallationFacts( $this->providers ) )->implementation( $provider );
+			} catch ( \Throwable ) {
+				$implementation = null;
+			}
+		}
+		$payload   = $this->run_diagnostics( $provider, $credential_id, $repository );
+		$completed = microtime( true );
+		if ( null !== $this->retained_runs && isset( $this->providers->metadata()[ $provider ] ) ) {
+			try {
+				$retained = null !== $implementation && null !== $retention_scope && $this->retained_runs->save(
+					$provider,
+					array(
+						'completed_at'        => $completed,
+						'implementation'      => $implementation,
+						'credential_selected' => null !== $credential_id,
+						'repository_selected' => null !== $repository,
+						'partial'             => $payload['partial'],
+						'partial_reason'      => $payload['partial_reason'],
+						'results'             => SupportReport::safe_diagnostic_results( $payload['results'] ),
+					),
+					$retention_scope
+				);
+			} catch ( \Throwable ) {
+				$retained = false;
+			}
+			$payload['retention_available'] = $retained;
+		}
 		$this->record_outcome( $id, $payload );
 		return $payload;
 	}

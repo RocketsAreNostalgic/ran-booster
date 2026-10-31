@@ -124,9 +124,9 @@ General integration projection revised before adding page-local enhancements: +3
 Category totals (documentation measured before this table refresh):
 
 - Production: +1910/-307.
-- Tests: +1981/-38.
+- Tests: +1984/-38.
 - Generated catalogues/fixtures: +581/-306.
-- Documentation: +287/-21.
+- Documentation: +328/-21.
 
 Three new internal concrete owners: GeneralPreferenceStore, GitHubVisibility and
 CoreSelfUpdateCheck. Zero new extension APIs, provider contracts, schemas, tables,

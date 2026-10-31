@@ -55,10 +55,10 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
 	}
 
-	public function test_failed_core_registration_installs_only_the_exact_target_denial_fence(): void {
+	public function test_unavailable_core_targets_install_only_the_exact_fresh_state_denial_fence(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
-		$fallback = strpos( $bootstrap, "if ( null === \$core_release_target && function_exists( 'add_filter' ) )" );
+		$fallback = strpos( $bootstrap, "if ( function_exists( 'add_filter' ) )" );
 		$status   = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $current_policy, $core_release_target, $core_check )' );
 
 		self::assertIsInt( $fallback );
@@ -72,6 +72,9 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertStringContainsString( "'plugin' !== ( \$hook_extra['type'] ?? null )", $bootstrap );
 		self::assertStringContainsString( "\$hook_extra['plugin'] ?? null", $bootstrap );
 		self::assertStringContainsString( "\$hook_extra['plugins']", $bootstrap );
+		self::assertStringContainsString( 'null === $core_release_target || ! $core_release_target->status()->active', $bootstrap );
+		self::assertSame( 3, substr_count( substr( $bootstrap, $fallback, $status - $fallback ), '$core_unavailable()' ) );
+		self::assertStringContainsString( '$matches_core( $hook_extra ) && $core_unavailable()', $bootstrap );
 		self::assertStringNotContainsString( "'auto_update_plugin'", substr( $bootstrap, $fallback, $status - $fallback ) );
 	}
 

@@ -1,7 +1,7 @@
 # Overview implementation contract (#568)
 
 Source baseline: `c0f127a29ab5e136986169b4b5a99f6f5d9bc546` (live main, 31 October 2026).
-Accepted design: canonical Workbench `plans/P1-core-568-overview-design.md` and implementation plan at Workbench `2e8855e`.
+Accepted public design: [Core #568](https://github.com/RocketsAreNostalgic/ran-booster/issues/568), read 31 October 2026; cross-page ownership follows [#561](https://github.com/RocketsAreNostalgic/ran-booster/issues/561).
 
 ## Invariants frozen before production edits
 

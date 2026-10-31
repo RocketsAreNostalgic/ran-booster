@@ -121,7 +121,8 @@ class Dashboard {
 		?CoreSelfUpdateDevelopmentNotice $core_self_update_development_notice = null,
 		?ReleaseWorkflowControls $release_workflow = null,
 		private ?\RAN\PackageRemoval\PackageRemovalService $removals = null,
-		?\RAN\Activity\ActivityStore $activity = null
+		?\RAN\Activity\ActivityStore $activity = null,
+		private ?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null
 	) {
 		$this->overview_activity = $activity;
 		$this->db                = $db;
@@ -211,7 +212,7 @@ class Dashboard {
 		}
 
 		if ( null !== $selected_tab && 'overview' === $selected_tab->get_key() ) {
-			$data['onboarding'] = ( new OnboardingPresenter() )->build_overview(
+			$data['onboarding']                      = ( new OnboardingPresenter() )->build_overview(
 				$tabs,
 				$admin_url . '?page=ran-booster-plugins-create',
 				$admin_url . '?page=ran-booster-themes-create',
@@ -221,7 +222,12 @@ class Dashboard {
 				null,
 				$this->provider_settings->overview_provider_facts()
 			);
-			$secrets_storage    = $this->secrets_storage;
+			$data['onboarding']['credential_expiry'] = $this->credential_expiry_notice?->overview_summary() ?? array(
+				'status' => 'unknown',
+				'total'  => null,
+				'items'  => array(),
+			);
+			$secrets_storage                         = $this->secrets_storage;
 			if ( null !== $secrets_storage ) {
 				$include_storage_details = current_user_can( 'manage_options' )
 					&& current_user_can( 'activate_plugins' );

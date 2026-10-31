@@ -119,15 +119,25 @@ $has_storage_details                  = null !== $secrets_storage
 	</header>
 
 	<?php
+	$credential_expiry             = $onboarding['credential_expiry'] ?? array(
+		'status' => 'unknown',
+		'total'  => null,
+		'items'  => array(),
+	);
 	$overview_inventory_incomplete = isset( $onboarding['inventory'] ) && empty( $onboarding['inventory']['complete'] );
 	$overview_storage_summary      = $onboarding['storage_summary'] ?? $secrets_storage;
 	$overview_storage_status       = is_array( $overview_storage_summary ) ? (string) ( $overview_storage_summary['status'] ?? '' ) : '';
 	$overview_storage_unknown      = '' === $overview_storage_status;
 	$overview_storage_problem      = in_array( $overview_storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true );
 	?>
-	<?php if ( $overview_inventory_incomplete || $overview_storage_unknown || $overview_storage_problem || array() !== $provider_attention ) { ?>
+	<?php if ( $overview_inventory_incomplete || $overview_storage_unknown || $overview_storage_problem || array() !== $provider_attention || ( 'captured' === $credential_expiry['status'] && array() !== $credential_expiry['items'] ) ) { ?>
 		<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-attention">
 			<h3 id="ran-booster-overview-attention"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></h3>
+			<?php if ( 'captured' === $credential_expiry['status'] ) { ?>
+				<?php foreach ( $credential_expiry['items'] as $expiry_item ) { ?>
+					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> — <?php echo esc_html( $expiry_item['badge_label'] ); ?></p>
+				<?php } ?>
+			<?php } ?>
 			<?php foreach ( $provider_attention as $provider ) { ?>
 				<p><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>: <?php echo esc_html( false === $provider['admitted'] ? __( 'Provider is not admitted.', 'ran-booster' ) : $provider_selection_labels[ $provider['selection'] ] ); ?></p>
 			<?php } ?>

@@ -5,6 +5,7 @@
  * @var array<string, mixed> $onboarding
  * @var list<array{code: string, label: string, url: string, admitted: ?bool, selection: ?string}> $provider_summaries
  * @var array<string, string> $provider_selection_labels
+ * @var array{status: string, total: ?int, items: list<array{provider: string, provider_label: string, label: string, badge_label: string, stage: string, effective_expires_at: string, source: string, observed_at: ?string, url: string}>} $credential_expiry
  */
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -64,7 +65,30 @@ $inventory = $onboarding['inventory'] ?? array(
 </section>
 <section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-expiry">
 	<h3 id="ran-booster-overview-expiry"><?php esc_html_e( 'Credential expiry', 'ran-booster' ); ?></h3>
-	<p><?php esc_html_e( 'Current credential expiry is unknown. Review credentials in provider settings.', 'ran-booster' ); ?></p>
+	<?php if ( 'captured' === $credential_expiry['status'] ) { ?>
+		<p><?php esc_html_e( 'These reminders cover credentials with actionable expiry information; they are not a complete credential inventory.', 'ran-booster' ); ?></p>
+		<?php if ( array() === $credential_expiry['items'] ) { ?>
+			<p><?php esc_html_e( 'No actionable expiry reminders were captured.', 'ran-booster' ); ?></p>
+		<?php } else { ?>
+			<ul>
+				<?php foreach ( $credential_expiry['items'] as $expiry_item ) { ?>
+					<li><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> — <?php echo esc_html( $expiry_item['badge_label'] ); ?>; <?php esc_html_e( 'Expires:', 'ran-booster' ); ?> <?php echo esc_html( $expiry_item['effective_expires_at'] ); ?>; <?php esc_html_e( 'Source:', 'ran-booster' ); ?> <?php echo esc_html( $expiry_item['source'] ); ?>
+					<?php
+					if ( null !== $expiry_item['observed_at'] ) {
+						?>
+						; <?php esc_html_e( 'Observed:', 'ran-booster' ); ?> <?php echo esc_html( $expiry_item['observed_at'] ); ?><?php } ?></li>
+				<?php } ?>
+			</ul>
+			<?php if ( null !== $credential_expiry['total'] && $credential_expiry['total'] > count( $credential_expiry['items'] ) ) { ?>
+				<?php // translators: 1: displayed reminders, 2: total actionable reminders. ?>
+				<p><?php echo esc_html( sprintf( __( 'Showing %1$d of %2$d actionable expiry reminders.', 'ran-booster' ), count( $credential_expiry['items'] ), $credential_expiry['total'] ) ); ?></p>
+			<?php } ?>
+		<?php } ?>
+	<?php } elseif ( 'unavailable' === $credential_expiry['status'] ) { ?>
+		<p><?php esc_html_e( 'Credential expiry reminders are unavailable. Review credentials in provider settings.', 'ran-booster' ); ?></p>
+	<?php } else { ?>
+		<p><?php esc_html_e( 'Current credential expiry is unknown. Review credentials in provider settings.', 'ran-booster' ); ?></p>
+	<?php } ?>
 	<?php foreach ( $onboarding['provider_links'] as $provider_link ) { ?>
 		<a href="<?php echo esc_url( $provider_link['url'] ); ?>"><?php echo esc_html( $provider_link['label'] ); ?></a>
 	<?php } ?>

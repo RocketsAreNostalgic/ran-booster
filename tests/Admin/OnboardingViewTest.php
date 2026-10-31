@@ -622,6 +622,97 @@ final class OnboardingViewTest extends TestCase {
 		}
 	}
 
+	public function test_expiry_reminders_are_shared_with_attention_and_dashboard(): void {
+		$item = array(
+			'provider'             => 'gh',
+			'provider_label'       => '<GitHub>',
+			'label'                => '<credential>',
+			'badge_label'          => '<Expires soon>',
+			'stage'                => 'warning',
+			'effective_expires_at' => '<2026-11-02>',
+			'source'               => '<provider>',
+			'observed_at'          => '<2026-10-31>',
+			'url'                  => '/credentials',
+		);
+		foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
+			$html = $this->render_view(
+				null,
+				null,
+				array(
+					'view'              => $view,
+					'plugins_url'       => '/plugins',
+					'themes_url'        => '/themes',
+					'activity_url'      => '/activity',
+					'credential_expiry' => array(
+						'status' => 'captured',
+						'total'  => 6,
+						'items'  => array_fill( 0, 5, $item ),
+					),
+				)
+			);
+			self::assertStringContainsString( 'href="/credentials"', $html );
+			self::assertStringContainsString( '&lt;Expires soon&gt;', $html );
+			self::assertStringNotContainsString( '<credential>', $html );
+			self::assertStringNotContainsString( 'Current credential expiry is unknown', $html );
+			self::assertSame( 'dashboard' === $view ? 10 : 5, substr_count( $html, '&lt;credential&gt;' ) );
+			if ( 'dashboard' === $view ) {
+				self::assertStringContainsString( 'Showing 5 of 6 actionable expiry reminders.', $html );
+				self::assertStringContainsString( '&lt;2026-11-02&gt;', $html );
+				self::assertStringContainsString( '&lt;provider&gt;', $html );
+				self::assertStringContainsString( '&lt;2026-10-31&gt;', $html );
+				self::assertStringContainsString( 'not a complete credential inventory', $html );
+				self::assertStringContainsString( '>GitHub</a>', $html );
+			}
+		}
+	}
+
+	public function test_expiry_snapshot_states_are_distinct(): void {
+		$extra = array(
+			'view'         => 'dashboard',
+			'plugins_url'  => '/plugins',
+			'themes_url'   => '/themes',
+			'activity_url' => '/activity',
+		);
+		self::assertStringContainsString( 'Current credential expiry is unknown', $this->render_view( null, null, $extra ) );
+		$extra['credential_expiry'] = array(
+			'status' => 'unavailable',
+			'total'  => null,
+			'items'  => array(),
+		);
+		$html                       = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'Credential expiry reminders are unavailable', $html );
+		self::assertStringNotContainsString( 'Current credential expiry is unknown', $html );
+		$extra['credential_expiry'] = array(
+			'status' => 'captured',
+			'total'  => 0,
+			'items'  => array(),
+		);
+		$html                       = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'No actionable expiry reminders were captured', $html );
+		self::assertStringContainsString( 'not a complete credential inventory', $html );
+		self::assertStringNotContainsString( 'Current credential expiry is unknown', $html );
+		$extra['credential_expiry'] = array(
+			'status' => 'captured',
+			'total'  => 1,
+			'items'  => array(
+				array(
+					'provider'             => 'gh',
+					'provider_label'       => 'GitHub',
+					'label'                => 'Manual credential',
+					'badge_label'          => 'Expires soon',
+					'stage'                => 'warning',
+					'effective_expires_at' => '2026-11-02',
+					'source'               => 'manual',
+					'observed_at'          => null,
+					'url'                  => '/credentials',
+				),
+			),
+		);
+		$html                       = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'Source: manual', $html );
+		self::assertStringNotContainsString( 'Observed:', $html );
+	}
+
 	private function render_storage_status(
 		string $status,
 		string $source,

@@ -28,21 +28,24 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 	public function test_core_self_target_uses_the_selected_updater_without_provider_capability(): void {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
-		$seal         = strpos( $bootstrap, '$provider_registry->seal()' );
-		$policy_guard = strpos( $bootstrap, '$core_policy         = static fn' );
-		$core_updater = strpos( $bootstrap, 'with_descriptor_admission(' );
-		$repository   = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
-		$adapter      = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $core_updater )' );
-		$status_bind  = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $current_policy, $core_release_target, $core_check )' );
+		$seal            = strpos( $bootstrap, '$provider_registry->seal()' );
+		$policy_guard    = strpos( $bootstrap, '$core_policy         = static fn' );
+		$core_updater    = strpos( $bootstrap, 'with_descriptor_admission(' );
+		$operation_guard = strpos( $bootstrap, 'with_operation_guard(' );
+		$repository      = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
+		$adapter         = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $core_updater )' );
+		$status_bind     = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $current_policy, $core_release_target, $core_check )' );
 
 		self::assertIsInt( $seal );
 		self::assertIsInt( $policy_guard );
 		self::assertIsInt( $core_updater );
+		self::assertIsInt( $operation_guard );
 		self::assertIsInt( $repository );
 		self::assertIsInt( $adapter );
 		self::assertIsInt( $status_bind );
 		self::assertLessThan( $policy_guard, $seal );
 		self::assertLessThan( $core_updater, $policy_guard );
+		self::assertLessThan( $core_updater, $operation_guard );
 		self::assertLessThan( $repository, $core_updater );
 		self::assertLessThan( $adapter, $repository );
 		self::assertLessThan( $status_bind, $adapter );

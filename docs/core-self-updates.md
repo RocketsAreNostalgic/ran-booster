@@ -127,11 +127,17 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads lock-pinned `ran/wp-release-updater` beta.15 (Protocol 7) after its
+Core loads lock-pinned `ran/wp-release-updater` beta.16 (Protocol 7) after its
 single-site admission check and retains the public registrar. Runtime arbitration
 and prospective releases stay available independently of Core discovery. Other
 physical runtime copies must satisfy the pinned family/provenance selection
 contract; incompatible families fail closed.
+
+The published updater fact selected for this uptake is beta.16 reference
+`aa17eb4dc49dcf6dfb70d3af0e8039a3a2512bef`, with runtime revision
+`a7da1f3a3151f998a679d18cb9ee3ede802bb6da08f1af9ba49ccbd05655c541`.
+This records the released artifact identity; it does not by itself qualify
+Core integration. Qualification belongs to the exact-PR proof and review receipt.
 
 Core declares its exact target in manual mode when current policy permits, or
 in disabled/forced-off mode otherwise. Disabled registration preserves the
@@ -329,10 +335,11 @@ locks the field: `auto` still requires provenance eligibility; `disabled` and
 invalid modes stay off; `enabled` remains a code-only bypass. General Save never
 changes a dormant saved value shadowed by a constant.
 
-The exact Core target remains registered with manual/disabled/forced-off policy
-and a fresh descriptor-admission callback. The pinned updater filters cached
-offers and rechecks admission during acquisition/install; General Save does not
-install. Check now is a separate authorized action that refreshes target state,
+The exact Core target remains registered with manual/disabled/forced-off policy,
+a fresh operation guard, and a fresh descriptor-admission callback. The selected
+beta.16 updater samples the effective Core policy before native feed discovery;
+it also filters cached offers and rechecks admission during acquisition/install.
+General Save does not install. Check now is a separate authorized action that refreshes target state,
 invalidates WordPress's recent plugin-check transient, then calls
 `wp_update_plugins()`; other plugins may also be checked. A five-minute cooldown
 and a two-minute recoverable claim bound duplicate requests. Expiry permits
@@ -347,17 +354,20 @@ Update now uses WordPress's native exact-plugin manual upgrade path; the updater
 reacquires/verifies the archive and WordPress installs it. No background install
 is enabled.
 
-## Discovery admission limitation awaiting owner disposition
+## Discovery guard uptake and qualification boundary
 
 Registration reads the saved preference directly, so a new request cannot use a
-stale object-cache value to register enabled after off was saved. Explicit Check
-now also rechecks policy before orchestration. The descriptor callback refreshes
-policy for candidate/offer and native installation admission.
+stale object-cache value to register enabled after off was saved. The beta.16
+operation guard re-reads the same effective policy before native discovery:
+defined code overrides still take precedence over saved preference, and a saved
+false value denies discovery when no defined code mode shadows it. Explicit Check separately rechecks policy before
+orchestration. The descriptor callback remains the candidate/offer and native
+installation admission fence.
 
-The pinned runtime lists releases and inspects candidates before that descriptor
-callback. A request that registered manual before another administrator saved
-off can therefore begin discovery afterward. Its result cannot become an offer
-or installation once admission is off. This is not the stronger pre-discovery
-revocation promised by the accepted plan. The source PR remains held on that
-requirement until owner disposition or a separately reviewed updater seam is
-available; no dummy lifecycle callbacks or dependency change are included.
+Core #584 composes that guard before descriptor admission. Existing Core
+registration fencing continues to fail closed when a selected physical runtime
+copy lacks the required contract, including older copies. No dummy lifecycle
+callbacks or transport interception are used. Exact real native-filter proof
+and independent review must be bound to the integrated PR tuple before
+admission; this source description is not Core release, installed-site, or
+operator acceptance.

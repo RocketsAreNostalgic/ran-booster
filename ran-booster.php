@@ -144,7 +144,9 @@ $ran_booster_core_development_notice->register();
 				$update_policy  = $current_policy->allows_native_discovery()
 					? 'manual'
 					: ( defined( CoreSelfUpdatePolicy::CONFIGURATION ) ? 'forced-off' : 'disabled' );
-				$registrar      = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->with_descriptor_admission(
+				$registrar      = $ran_booster_container->make( ManagedReleaseUpdaterRegistrar::class )->with_operation_guard(
+					static fn (): bool => $core_policy()->allows_native_discovery()
+				)->with_descriptor_admission(
 					static fn (): bool => $core_policy()->allows_native_discovery()
 				);
 				if ( null === $registrar ) {

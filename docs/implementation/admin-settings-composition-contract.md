@@ -28,12 +28,37 @@ only its already captured expiry snapshot; missing lifetime-first-use evidence
 still selects the neutral dashboard. Automatic fresh-site guidance remains
 unproven; no invented history or completion flag was added.
 
-The current released updater pin is still beta.15/protocol 7. Upstream draft
-#148 is a separate source prerequisite and is not bundled here. Its guard-only
-validation, development-tooling compatibility and fixture corrections must pass
-review/checks before an owner publication decision. A new immutable published
-pin and fresh Core guard-admission proof remain required before this candidate
-can clear the pre-discovery hold. No current source/CI result clears that hold.
+At the reviewed `40b4b164` checkpoint the updater pin was beta.15/protocol 7,
+so the stronger pre-discovery requirement remained held. That historical source
+qualification did not include the later dependency uptake described below.
+The current integration selects published beta.16 and adds the fresh guard;
+automatic-filter/SQL proof and exact-head review must be bound to its PR
+receipt before admission. This source description does not grant Core release,
+installed-site admission or operator acceptance.
+
+## Published beta.16 uptake preflight (31 October 2026)
+
+The coordinator authorized bounded uptake after verifying published immutable
+`v1.0.0-beta.16`, release 429877054, commit
+`aa17eb4dc49dcf6dfb70d3af0e8039a3a2512bef`, runtime revision
+`a7da1f3a3151f998a679d18cb9ee3ede802bb6da08f1af9ba49ccbd05655c541`,
+protocol 7. The reviewed pre-uptake candidate remains `40b4b164`.
+
+Before production edits, the exact prepared runtime delta is +3/-1 lines in
+`ran-booster.php`, chaining the existing fresh operation guard before descriptor
+admission. The minimum Composer constraint changes by +1/-1 line; the lock must
+be regenerated from the published tag, preserving all unaffected package refs.
+The existing bootstrap test hunk is +9/-6 including alignment. The new marked
+WordPress/SQL/controlled-transport race proof is projected at no more than 310
+test lines. No new production types, APIs, persistent state, schemas, cron jobs,
+storage backends or lifecycle callbacks are introduced. Packaging policy remains
+versionless. No Core main merge, release or localhost:10013 operation is granted.
+
+The decisive proof invokes the automatic native plugin filter through a handle
+registered while enabled, after a separate actual General Save Off commit. The
+off path must make zero GitHub feed requests; an enabled empty-list control must
+make one. Explicit Check preflight and cached-transient filtering cannot prove
+this boundary. An HTTP request already in flight is not cancelled.
 
 ## Ownership and handoff
 
@@ -149,3 +174,18 @@ the total above, not extra growth.
 | `RAN/Uninstall/LocalDataRemover.php` | 5 | 0 |
 | `views/onboarding.php` | 114 | 225 |
 | `views/overview-dashboard.php` | 95 | 0 |
+
+## Beta.16 uptake measured source checkpoint
+
+The runtime guard hunk is +3/-1 production lines; Composer's minimum constraint
+is +1/-1 and its regenerated lock is +6/-6. Only `ran/wp-release-updater` changed;
+every other production/development package record is byte-equivalent as decoded
+JSON. Its source/dist reference is the published `aa17eb4d` commit, with runtime
+revision `a7da1f3a…55c541`/protocol 7. Packaging projection and installed-surface
+verification pass without changing the versionless packaging policy.
+
+The bootstrap test delta is +9/-6; the new automatic-filter/real-SQL proof is
+253 test lines. Focused Core updater/source-boundary tests pass (21 tests,
+321 assertions), as do syntax, standards and focused integration analysis. The
+new proof's execution, full aggregate and fresh exact-PR review are pending at
+this checkpoint. No earlier doubled-CAS test is relabelled as real SQL proof.

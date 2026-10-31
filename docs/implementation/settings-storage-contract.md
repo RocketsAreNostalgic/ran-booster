@@ -14,7 +14,7 @@ One existing bootstrap classifier owns Settings GET and narrowly routed report P
 
 Preferences: defined code > sparse saved > default > runtime constraints; preserve explicit false and invalid code. Save preserves dormant locked values; confirmed GitHub management alone clears an existing saved hide request. Atomic option CAS plus package-management transaction must serialize Save/clear; stale form cannot resurrect hiding after management/removal. No API registry, provider tabs, new storage backend, multisite support or public extension seam.
 
-Updater: exact pinned beta.15/protocol-7 supports disabled target, late candidate/final-install descriptor admission and cached response filtering. Registration reads fresh policy; the descriptor callback does not run before feed discovery. Check is separate POST (manage_options + update_plugins), atomic claim/cooldown, native wp_update_plugins scope, bounded current evidence, no installation. Native Update owns installation. A refresh/global last_checked is not successful Core-check evidence; exact check-completed event is. Five-minute cooldown; two-minute claim expiry (existing HTTP timeout 10s, bounded check collection; expiry allows recovery but old claim cannot finalize newer claim).
+Updater: exact pinned beta.16/protocol-7 supports disabled target, fresh operation-guard admission before native feed discovery, late candidate/final-install descriptor admission and cached response filtering. The guard samples the effective policy with defined code override ahead of saved preference; saved false denies discovery. Registration reads fresh policy. Check is separate POST (manage_options + update_plugins), atomic claim/cooldown, native wp_update_plugins scope, bounded current evidence, no installation. Native Update owns installation. A refresh/global last_checked is not successful Core-check evidence; exact check-completed event is. Five-minute cooldown; two-minute claim expiry (existing HTTP timeout 10s, bounded check collection; expiry allows recovery but old claim cannot finalize newer claim).
 
 ## Pre-edit projected production cost
 
@@ -145,7 +145,7 @@ operator acceptance. A real newer-Core native install and retained-site storage
 recovery remain separate acceptance work; no merge/deployment/release is implied.
 
 
-## Exact-PR review remediation and remaining hold
+## Exact-PR review history and superseded #583 hold
 
 Initial PR #583 tuple: c0f127a29ab5e136986169b4b5a99f6f5d9bc546 →
 e08619d4dd37704f539512659052c0b90d1dc842. Independent review reproduced:
@@ -155,14 +155,14 @@ e08619d4dd37704f539512659052c0b90d1dc842. Independent review reproduced:
 - Precommit cache eviction: removed; four confirmed-management owners invalidate
   only after successful commit. A stale-cache repopulation regression and failed
   commit case cover the ordering; navigation reads a direct fresh hide snapshot.
-- Late native discovery admission: new registration uses a fresh indexed option
+- Late native discovery admission (historical #583/beta.15 hold): new registration uses a fresh indexed option
   read, but the pinned runtime still begins list/inspection before descriptor
   admission. Explicit Check is prechecked; offers/installations stay fenced.
   The stronger automatic pre-discovery requirement requires an upstream pinned-runtime
   change or a separately reviewed dependency seam; this hold is not acceptance of
   an owner limitation. No workaround callbacks,
   transport interception, dependency repin or release is introduced.
-- Stale runtime-only documentation: corrected to actual beta.15/Protocol-7 and
+- Stale runtime-only documentation: corrected at that review to actual beta.15/Protocol-7 and
   registered-disabled behavior.
 
 The new remediation adds no types, options, extension APIs or storage operation.
@@ -173,7 +173,7 @@ The exact uninstall allowlist also removes the current Core update-check
 claim/evidence option; an undeletable owned option fails closed while unrelated
 options remain preserved.
 
-Released-updater readback on 31 October 2026 confirms beta.15 remains the latest published prerelease; no released replacement seam was available to repin.
+Released-updater readback before the 31 October 2026 10:53:01 UTC beta.16 publication confirmed beta.15 remained the latest published prerelease; no released replacement seam was then available to repin. This dated #583 source-hold history is superseded for the #584 integration uptake, whose exact proof and independent review remain pending.
 
 ## 31 October composition review: missing uninstall evidence option
 
@@ -202,8 +202,9 @@ an owned temporary regular plugin fixture, and the actual production fallback
 block. It covers queued activation failure, active pass-through and later broker
 ownership loss. It adds exactly 351 test/shim lines and no installed site
 or unpublished updater fixture. The former conditional fallback is the red
-control. This addresses the queued-failure fence independently of the still-held
-pre-discovery guard-only dependency prerequisite.
+control. This addresses the queued-failure fence independently of the #584
+beta.16 guard uptake; its exact native-filter proof and independent review
+remain pending.
 
 The final queued-fence hunk measures +12/-11 after required assignment
 alignment; its cumulative main-relative bootstrap delta is +83/-26 because

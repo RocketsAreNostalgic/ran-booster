@@ -157,7 +157,7 @@ and disposable-fixture evidence, not retained-site, deployment or release
 acceptance. Settings owns the complete storage cutover independently; a direct
 Installation request has no invented authenticated health or repair eligibility.
 
-Final measured production delta: 1,496 additions / 117 removals; tests: 2,012
+Final measured production delta: 1,501 additions / 122 removals; tests: 2,037
 additions / 56 removals. Three concrete production types, one bounded temporary
 option, no table, cron, public extension seam or generated-report state. The
 initial production estimate was exceeded by the explicit read/retention and

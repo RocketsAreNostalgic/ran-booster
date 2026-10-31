@@ -621,11 +621,11 @@ final class TroubleshootingServiceTest extends TestCase {
 		$local      = new TroubleshootingLocalFixture( $this->local_results() );
 		$service    = new TroubleshootingService( $local, $registry, retained_runs: $runs );
 		$immediate  = $service->diagnose( 'gh', 'credential-canary', 'private-owner/private-repository' );
-		self::assertTrue( $immediate['retention_available'] );
+		self::assertSame( true, $immediate['retention_available'] ?? null );
 		self::assertSame( 'Private project prose canary.', $immediate['results'][5]['message'] );
 		$partial = $service->diagnose( 'bb', null, null );
 		self::assertSame( 'remote_calls_exhausted', $partial['partial_reason'] );
-		self::assertTrue( $partial['retention_available'] );
+		self::assertSame( true, $partial['retention_available'] ?? null );
 		self::assertCount( 2, $runs->available()['runs'] );
 		self::assertSame( 'fail', $runs->available()['runs'][0]['results'][5]['status'] );
 		self::assertSame( 'provider.check', $runs->available()['runs'][0]['results'][6]['code'] );
@@ -638,6 +638,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertStringContainsString( 'gh.credential.invalid', $captured['text'] );
 		self::assertStringContainsString( 'Partial: remote_calls_exhausted', $captured['text'] );
 		self::assertStringContainsString( 'one saved credential selected; identity withheld', $captured['text'] );
+		self::assertIsString( $memory->raw );
 		foreach ( array( 'canary', 'private-owner/private-repository', 'private-person@example.test', 'gh.privatecanary' ) as $private ) {
 			self::assertStringNotContainsString( $private, $memory->raw );
 			self::assertStringNotContainsString( $private, $captured['text'] );
@@ -655,7 +656,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$provider       = new TroubleshootingProviderFixture( 'gh', fn (): array => array( $this->diagnostic_result( 'gh.check' ) ) );
 		$service        = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), new ProviderRegistry( array( $provider ) ), retained_runs: $runs );
 		$result         = $service->diagnose( 'gh', null, null );
-		self::assertFalse( $result['retention_available'] );
+		self::assertSame( false, $result['retention_available'] ?? null );
 		self::assertTrue( $result['ran'] );
 		self::assertCount( 6, $result['results'] );
 		self::assertSame( 'gh.check', $result['results'][5]['code'] );
@@ -702,7 +703,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		$service    = new TroubleshootingService( new TroubleshootingLocalFixture( $this->local_results() ), new ProviderRegistry( array( $provider ) ), retained_runs: $runs );
 		$result     = $service->diagnose( 'gh', null, null );
 		self::assertTrue( $result['ran'] );
-		self::assertFalse( $result['retention_available'] );
+		self::assertSame( false, $result['retention_available'] ?? null );
 		self::assertCount( 6, $result['results'] );
 		self::assertNull( $memory->raw );
 	}

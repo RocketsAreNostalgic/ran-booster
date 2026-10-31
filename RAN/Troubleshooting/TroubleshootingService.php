@@ -93,7 +93,7 @@ final class TroubleshootingService {
 	/**
 	 * Build the read-only GET payload from provider metadata and safe credential labels.
 	 *
-	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>, retention_available?: bool}
 	 */
 
 	public function form_payload(): array {
@@ -113,7 +113,7 @@ final class TroubleshootingService {
 	/**
 	 * Add one captured, passive installation snapshot to both display and support report.
 	 *
-	 * @param array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>} $payload
+	 * @param array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,retention_available?:bool} $payload
 	 * @param array<string,mixed>|null $github_selection
 	 * @return array{providers:array<string,string>,provider_locator_hints:array<string,string>,credentials:array<string,list<array{id:string,label:string}>>,selected_provider:string,credential_id:string,repository:string,ran:bool,results:list<array{status:string,code:string,message:string,remediation:string}>,partial:bool,partial_reason:?string,report:string,core_self_update:array<string,mixed>,installation_details:array<string,array<string,string>>}
 	 */
@@ -228,7 +228,7 @@ final class TroubleshootingService {
 	/**
 	 * Run local checks and exactly one selected provider in the current request.
 	 *
-	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>, retention_available?: bool}
 	 */
 
 	public function diagnose( string $provider, ?string $credential_id, ?string $repository ): array {
@@ -332,7 +332,7 @@ final class TroubleshootingService {
 		);
 	}
 
-	/** @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>} */
+	/** @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>, retention_available?: bool} */
 	private function run_diagnostics( string $provider, ?string $credential_id, ?string $repository ): array {
 		$input_invalid = false;
 		try {
@@ -588,7 +588,7 @@ final class TroubleshootingService {
 	/**
 	 * @param list<ProviderDiagnosticResult> $results
 	 * @param array<string, string>           $providers
-	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>}
+	 * @return array{providers: array<string, string>, provider_locator_hints: array<string, string>, credentials: array<string, list<array{id: string, label: string}>>, selected_provider: string, credential_id: string, repository: string, ran: bool, results: list<array{status: string, code: string, message: string, remediation: string}>, partial: bool, partial_reason: string|null, report: string, core_self_update: array<string, mixed>, retention_available?: bool}
 	 */
 	private function payload(
 		string $provider,

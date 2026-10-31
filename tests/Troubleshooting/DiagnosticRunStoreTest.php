@@ -9,6 +9,10 @@ use RAN\Troubleshooting\DiagnosticRunStore;
 require_once __DIR__ . '/DiagnosticRunMemory.php';
 require_once __DIR__ . '/DiagnosticRunFixture.php';
 
+/**
+ * @phpstan-import-type DiagnosticRun from DiagnosticRunStore
+ * @phpstan-import-type DiagnosticRow from DiagnosticRunStore
+ */
 final class DiagnosticRunStoreTest extends TestCase {
 	public function test_initiating_scope_cannot_be_reassigned_to_another_administrator(): void {
 		$memory = new DiagnosticRunMemory();
@@ -62,7 +66,8 @@ final class DiagnosticRunStoreTest extends TestCase {
 		self::assertSame( array(), $store->available()['runs'] );
 		self::assertSame( $original, $memory->raw );
 		$store->cleanup();
-		self::assertSame( array(), json_decode( $memory->raw, true )['entries'] );
+		self::assertIsString( $memory->raw );
+		self::assertSame( array(), json_decode( $memory->raw, true, flags: JSON_THROW_ON_ERROR )['entries'] );
 	}
 
 	public function test_later_completed_run_wins_even_when_older_write_arrives_last(): void {
@@ -70,10 +75,10 @@ final class DiagnosticRunStoreTest extends TestCase {
 		self::assertTrue( $store->save( 'gh', $this->safe_run( 1002.0 ) ) );
 		self::assertTrue( $store->save( 'gh', $this->safe_run( 1001.0 ) ) );
 		self::assertSame( 1002.0, $store->available()['runs'][0]['completed_at'] );
-		$failure                         = $this->safe_run( 1003.0 );
-		$failure['partial']              = true;
-		$failure['partial_reason']       = 'provider_unavailable';
-		$failure['results'][0]['status'] = 'fail';
+		$failure                   = $this->safe_run( 1003.0 );
+		$failure['partial']        = true;
+		$failure['partial_reason'] = 'provider_unavailable';
+		$failure['results']        = array( $this->safe_row( 'fail' ) );
 		self::assertTrue( $store->save( 'gh', $failure ) );
 		self::assertTrue( $store->available()['runs'][0]['partial'] );
 		self::assertSame( 'fail', $store->available()['runs'][0]['results'][0]['status'] );
@@ -111,7 +116,8 @@ final class DiagnosticRunStoreTest extends TestCase {
 		self::assertSame( $before, $memory->raw );
 		$store->time = 4600.0;
 		self::assertTrue( $store->save( 'gh', $this->safe_run( 4600.0 ) ) );
-		self::assertCount( 1, json_decode( $memory->raw, true )['entries'] );
+		self::assertIsString( $memory->raw );
+		self::assertCount( 1, json_decode( $memory->raw, true, flags: JSON_THROW_ON_ERROR )['entries'] );
 	}
 
 	public function test_failures_invalid_storage_and_conflicts_are_unavailable_without_throwing(): void {
@@ -156,7 +162,7 @@ final class DiagnosticRunStoreTest extends TestCase {
 			$invalid[]                    = $run;
 		}
 		foreach ( $invalid as $run ) {
-			self::assertFalse( $store->save( 'gh', $run ) );
+			self::assertFalse( $this->save_unchecked( $store, 'gh', $run ) );
 		}
 		self::assertFalse( $store->save( '../private', $this->safe_run() ) );
 		self::assertTrue( $store->save( 'gh', $this->safe_run() ) );
@@ -170,27 +176,26 @@ final class DiagnosticRunStoreTest extends TestCase {
 		$memory = new DiagnosticRunMemory();
 		$store  = new DiagnosticRunFixture( $memory );
 		self::assertTrue( $store->save( 'gh', $this->safe_run() ) );
-		$document                               = json_decode( $memory->raw, true );
+		self::assertIsString( $memory->raw );
+		$document                               = json_decode( $memory->raw, true, flags: JSON_THROW_ON_ERROR );
 		$document['entries']['1:1:gh']['nonce'] = str_repeat( 'f', 32 );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact boundary fixture JSON preserves fractional completion timestamps.
-		$memory->raw                  = json_encode( $document, JSON_PRESERVE_ZERO_FRACTION );
-		$tied                         = $this->safe_run();
-		$tied['results'][0]['status'] = 'fail';
+		$memory->raw     = json_encode( $document, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION );
+		$tied            = $this->safe_run();
+		$tied['results'] = array( $this->safe_row( 'fail' ) );
 		self::assertTrue( $store->save( 'gh', $tied ) );
 		self::assertSame( 'pass', $store->available()['runs'][0]['results'][0]['status'] );
 		$document['entries']['1:1:gh']['run']['actor'] = 'private-canary';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exact boundary fixture JSON preserves fractional completion timestamps.
-		$memory->raw = json_encode( $document, JSON_PRESERVE_ZERO_FRACTION );
+		$memory->raw = json_encode( $document, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION );
 		self::assertFalse( $store->available()['available'] );
 	}
 
 	public function test_entry_size_and_authorization_changes_refuse_writes(): void {
-		$memory                           = new DiagnosticRunMemory();
-		$store                            = new DiagnosticRunFixture( $memory );
-		$run                              = $this->safe_run();
-		$run['results'][0]['message']     = str_repeat( 'a', 512 );
-		$run['results'][0]['remediation'] = str_repeat( 'a', 512 );
-		$run['results']                   = array_fill( 0, 8, $run['results'][0] );
+		$memory         = new DiagnosticRunMemory();
+		$store          = new DiagnosticRunFixture( $memory );
+		$run            = $this->safe_run();
+		$run['results'] = array_fill( 0, 8, $this->safe_row( 'pass', str_repeat( 'a', 512 ), str_repeat( 'a', 512 ) ) );
 		self::assertFalse( $store->save( 'gh', $run ) );
 		self::assertNull( $memory->raw );
 		$memory->conflict = static function () use ( $store ): void {
@@ -203,7 +208,26 @@ final class DiagnosticRunStoreTest extends TestCase {
 		self::assertNull( $memory->raw );
 	}
 
-	/** @return array<string,mixed> */
+	/** Exercise malformed boundary input without weakening the production contract.
+	 * @param array<string,mixed> $run
+	 */
+	private function save_unchecked( DiagnosticRunStore $store, string $provider, array $run ): bool {
+		$result = ( new \ReflectionMethod( DiagnosticRunStore::class, 'save' ) )->invoke( $store, $provider, $run );
+		self::assertIsBool( $result );
+		return $result;
+	}
+
+	/** @return DiagnosticRow */
+	private function safe_row( string $status = 'pass', ?string $message = null, ?string $remediation = null ): array {
+		return array(
+			'status'      => $status,
+			'code'        => 'provider.check',
+			'message'     => $message ?? 'Provider result details omitted by the sharing policy.',
+			'remediation' => $remediation ?? 'Review the immediate diagnostic results locally.',
+		);
+	}
+
+	/** @return DiagnosticRun */
 	private function safe_run( float $completed_at = 1000.0 ): array {
 		return array(
 			'completed_at'        => $completed_at,

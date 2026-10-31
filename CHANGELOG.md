@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0-beta.42](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.41...v1.0.0-beta.42) (2026-10-31)
+
+
+### Features
+
+* **extensions:** complete activation and management journey ([#566](https://github.com/RocketsAreNostalgic/ran-booster/issues/566)) ([69ec1ac](https://github.com/RocketsAreNostalgic/ran-booster/commit/69ec1aca3b511b21727f3e8c031cfbc96736a7de))
+
+
+### Bug Fixes
+
+* **admin:** adopt pre-shell native notice placement ([#562](https://github.com/RocketsAreNostalgic/ran-booster/issues/562)) ([8ede3fc](https://github.com/RocketsAreNostalgic/ran-booster/commit/8ede3fc1d9936a1a37471c003a06dc43fedc31f4))
+* **admin:** clarify Git provider terminology ([#570](https://github.com/RocketsAreNostalgic/ran-booster/issues/570)) ([0dea2b6](https://github.com/RocketsAreNostalgic/ran-booster/commit/0dea2b658a12d3211ef3302f1dd04d039e65bfde))
+* **admin:** remove remaining eyebrow markup and styles ([#563](https://github.com/RocketsAreNostalgic/ran-booster/issues/563)) ([599a7cc](https://github.com/RocketsAreNostalgic/ran-booster/commit/599a7cc9218d0064095f11ef26cce8c200e81c04))
+
 ## [1.0.0-beta.41](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.40...v1.0.0-beta.41) (2026-10-30)
 
 

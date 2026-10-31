@@ -632,6 +632,8 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( 0, $provider->readiness_runs );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_retained_server_results_survive_navigation_without_repeating_diagnostics(): void {
 		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 		$GLOBALS['ran_booster_test_capabilities'] = array();
@@ -685,7 +687,10 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( 2, $local->runs );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_support_capture_runs_each_admitted_provider_without_selection_or_retention(): void {
+		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 		$GLOBALS['ran_booster_test_capabilities'] = array();
 		$requests = array();
@@ -719,7 +724,10 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertStringContainsString( 'Group: Bitbucket Cloud', $report );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_support_capture_stops_after_local_partial_and_exports_provider_failure_states(): void {
+		require_once dirname( __DIR__ ) . '/Admin/AdminViewWordPressFunctions.php';
 		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
 		$GLOBALS['ran_booster_test_capabilities'] = array();
 		$provider = new TroubleshootingProviderFixture( 'gh', static fn(): array => throw new \RuntimeException( 'provider-private-canary' ) );

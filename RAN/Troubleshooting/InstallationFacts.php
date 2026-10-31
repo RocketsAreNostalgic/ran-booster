@@ -120,7 +120,7 @@ final class InstallationFacts {
 		if ( ! is_string( $value ) ) {
 			return 'Unknown';
 		}
-		return preg_match( '/\A-?[0-9]{1,12}\z/', $value ) === 1 ? ( '-1' === $value ? 'Unlimited' : $value ) : 'Unknown';
+		return preg_match( '/\A-?[0-9]{1,12}\z/', $value ) === 1 ? $value : 'Unknown';
 	}
 
 	private static function ini_boolean( string $key ): string {
@@ -146,7 +146,7 @@ final class InstallationFacts {
 		}
 		$value = constant( $name );
 		if ( is_bool( $value ) ) {
-			return $value ? 'Enabled' : 'Disabled';
+			return 'Invalid';
 		}
 		return is_int( $value ) || ( is_string( $value ) && preg_match( '/\A[0-9]{1,12}[KMG]?\z/i', $value ) === 1 ) ? (string) $value : 'Invalid';
 	}
@@ -188,7 +188,8 @@ final class InstallationFacts {
 					continue;
 				}
 				if ( 'RAN_BOOSTER_HIDE_GITHUB_UI' === $name ) {
-					$rows[ $name ] = 'Requested ' . $value . '; source=' . $field['source'] . ( $field['locked'] ? '; locked' : '' );
+					$rows[ $name ] = ( $field['error'] ?? null ) ? 'Invalid ' . $field['source'] . ' value; requested ' . $value : 'Requested ' . $value;
+					$rows[ $name ] .= '; source=' . $field['source'] . ( $field['locked'] ? '; locked' : '' );
 					continue;
 				}
 				$rows[ $name ] = ( $field['error'] ?? null ) ? 'Invalid; effective default ' . $value : $value . '; source=' . $field['source'] . ( $field['locked'] ? '; locked' : '' );

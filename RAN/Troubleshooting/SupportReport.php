@@ -265,7 +265,7 @@ final class SupportReport {
 				}
 			}
 			foreach ( is_array( $fresh['providers'] ?? null ) ? $fresh['providers'] : array() as $provider => $results ) {
-				$fresh_lines[] = 'Group: ' . ( 'local' === $provider ? 'local' : $this->provider( $provider ) );
+				$fresh_lines[] = 'Group: ' . $this->provider( $provider );
 				$safe_results  = self::fresh_results( $results );
 				$state         = is_string( $fresh['provider_states'][ $provider ] ?? null ) ? $fresh['provider_states'][ $provider ] : 'included';
 				$fresh_lines[] = 'Group state: ' . self::choice( $state, array( 'included', 'provider_unavailable', 'provider_results_invalid', 'deadline_exhausted', 'remote_calls_exhausted' ) );

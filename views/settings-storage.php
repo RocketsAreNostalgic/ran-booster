@@ -84,6 +84,12 @@ $has_storage_details          = null !== $secrets_storage;
 							?>
 							</dd></div>
 							<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
+								<?php if ( is_string( $storage_path_source ) && isset( $storage_path_source_labels[ $storage_path_source ] ) && in_array( $storage_status, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true ) ) { ?>
+									<div>
+										<dt><?php esc_html_e( 'Path selection', 'ran-booster' ); ?></dt>
+										<dd><code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_path_source_labels[ $storage_path_source ] ); ?></code></dd>
+									</div>
+								<?php } ?>
 								<?php if ( null !== $storage_directory ) { ?>
 									<div>
 										<dt><?php esc_html_e( 'Storage directory', 'ran-booster' ); ?></dt>
@@ -94,12 +100,7 @@ $has_storage_details          = null !== $secrets_storage;
 									<dt><?php esc_html_e( 'Storage file', 'ran-booster' ); ?></dt>
 									<dd><code><?php echo esc_html( $secrets_storage['candidate_path'] ); ?></code></dd>
 								</div>
-								<?php if ( is_string( $storage_path_source ) && isset( $storage_path_source_labels[ $storage_path_source ] ) && in_array( $storage_status, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true ) ) { ?>
-									<div>
-										<dt><?php esc_html_e( 'Path selection', 'ran-booster' ); ?></dt>
-										<dd><code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_path_source_labels[ $storage_path_source ] ); ?></code></dd>
-									</div>
-								<?php } ?>
+
 							<?php } ?>
 						</dl>
 						<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>

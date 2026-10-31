@@ -22,9 +22,9 @@ $storage_statuses    = array(
 $storage_status      = $storage_statuses[ $storage['state'] ?? 'unknown' ] ?? $storage_statuses['unknown'];
 $storage_labels      = array(
 	'configuration'       => __( 'Configuration constant', 'ran-booster' ),
+	'path_source'         => __( 'Path selection', 'ran-booster' ),
 	'configured_location' => __( 'Storage directory', 'ran-booster' ),
 	'storage_file'        => __( 'Storage file', 'ran-booster' ),
-	'path_source'         => __( 'Path selection', 'ran-booster' ),
 );
 $components          = is_array( $troubleshooting['components'] ?? null ) ? $troubleshooting['components'] : array();
 ?>

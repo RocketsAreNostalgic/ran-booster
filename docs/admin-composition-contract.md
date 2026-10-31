@@ -757,3 +757,16 @@ Successful removal recovery does not verify cleanup of temporary files left by t
 interrupted process. Current provider availability and fresh installation review
 remain mandatory before another operation. Browser acceptance and installed
 qualification against the feature-bearing immutable dependencies are separate gates.
+
+## Fixed Settings destination
+
+`ran-booster-settings` is the plain WordPress submenu after Extensions. It uses
+the base shell with no selected horizontal item. General is one explicit Save
+form; Core update checking and secure storage actions use separate forms/nonces.
+There is no provider Settings tab registry or contribution API.
+
+Settings owns the privileged storage presenter, manual instructions and local
+operation failures. Overview retains its old storage anchor as a bounded
+summary/link. Installation may show authorized configured locations without
+starting authentication or recovery. No report may serialize that private
+on-screen projection. See [Settings](settings.md) for operator behavior.

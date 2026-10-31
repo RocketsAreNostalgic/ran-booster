@@ -24,6 +24,13 @@ namespace {
 		}
 	}
 
+	if ( ! function_exists( 'current_time' ) ) {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- WordPress function double preserves the host-owned callback signature; this fixture has no need for type or GMT semantics.
+		function current_time( string $type, bool $gmt = false ): string {
+			return '2026-10-31 00:00:00';
+		}
+	}
+
 	if ( ! function_exists( '__' ) ) {
 		/**
 		 * @param string $text
@@ -98,6 +105,7 @@ namespace {
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress cache boundary test double retains the host function name.
 		function wp_cache_delete( string $key, string $group = '' ): bool {
 			$GLOBALS['ran_booster_attempt_cache_deletes'][] = array( $key, $group );
+			unset( $GLOBALS['ran_booster_storage_test_persistent_cache'][ $group . ':' . $key ] );
 			return true;
 		}
 	}
@@ -127,11 +135,13 @@ namespace RAN\Tests\Storage {
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
 	final class StorageTestWpdb extends \RAN\Storage\SchemaConnection {
 
-		public string $prefix           = 'wp_';
-		public string $base_prefix      = 'wp_';
-		public string $options          = 'wp_options';
-		public ?string $selection_value = null;
-		public string $last_error       = '';
+		public string $prefix                    = 'wp_';
+		public string $base_prefix               = 'wp_';
+		public string $options                   = 'wp_options';
+		public ?string $selection_value          = null;
+		public ?string $general_settings_value   = null;
+		public bool $fail_general_settings_write = false;
+		public string $last_error                = '';
 
 		/** @var list<string> */
 		public array $schemas = array();
@@ -178,10 +188,13 @@ namespace RAN\Tests\Storage {
 		public bool $read_failure                    = false;
 		public ?int $successful_reads_before_failure = null;
 		public bool $apply_writes                    = true;
+		public bool $fail_commit                     = false;
+		public ?\Closure $before_commit              = null;
 		public bool $coerce_private_as_mysql_tinyint = false;
 		/** @var list<array<string, mixed>>|null */
-		private ?array $transaction_rows = null;
-		private int $update_calls        = 0;
+		private ?array $transaction_rows                    = null;
+		private ?string $transaction_general_settings_value = null;
+		private int $update_calls                           = 0;
 		/** @var list<mixed>|null */
 		public ?array $forced_results = null;
 
@@ -231,6 +244,24 @@ namespace RAN\Tests\Storage {
 			$this->queries[] = $query;
 			if ( null !== $this->query_failure_contains && str_contains( $query, $this->query_failure_contains ) ) {
 				return false;
+			}
+			if ( str_starts_with( $query, 'UPDATE' ) && str_contains( $query, 'ran_booster_general_settings' ) ) {
+				if ( $this->fail_general_settings_write ) {
+					return false;
+				}
+				$new_start       = strlen( "UPDATE `wp_options` SET option_value = '" );
+				$new_end         = strpos( $query, "', autoload = 'off'" );
+				$expected_marker = "BINARY option_value = BINARY '";
+				$expected_start  = strrpos( $query, $expected_marker );
+				if ( false === $new_end || false === $expected_start || null === $this->general_settings_value ) {
+					return 0;
+				}
+				$expected = substr( $query, $expected_start + strlen( $expected_marker ), -1 );
+				if ( ! hash_equals( $this->general_settings_value, stripslashes( $expected ) ) ) {
+					return 0;
+				}
+				$this->general_settings_value = stripslashes( substr( $query, $new_start, $new_end - $new_start ) );
+				return 1;
 			}
 			if ( preg_match( "/^INSERT IGNORE INTO `wp_options` .* VALUES \('ran_booster_github_selection', '(.*)', 'no'\)$/", $query, $selection ) ) {
 				if ( null !== $this->selection_value ) {
@@ -291,20 +322,30 @@ namespace RAN\Tests\Storage {
 				return 1;
 			}
 			if ( 'START TRANSACTION' === $query ) {
-				$this->transaction_rows = $this->rows;
+				$this->transaction_rows                   = $this->rows;
+				$this->transaction_general_settings_value = $this->general_settings_value;
 
 				return 1;
 			}
 			if ( 'COMMIT' === $query ) {
-				$this->transaction_rows = null;
+				if ( null !== $this->before_commit ) {
+					( $this->before_commit )();
+				}
+				if ( $this->fail_commit ) {
+					return false;
+				}
+				$this->transaction_rows                   = null;
+				$this->transaction_general_settings_value = null;
 
 				return 1;
 			}
 			if ( 'ROLLBACK' === $query ) {
 				if ( null !== $this->transaction_rows ) {
-					$this->rows = $this->transaction_rows;
+					$this->rows                   = $this->transaction_rows;
+					$this->general_settings_value = $this->transaction_general_settings_value;
 				}
-				$this->transaction_rows = null;
+				$this->transaction_rows                   = null;
+				$this->transaction_general_settings_value = null;
 
 				return 1;
 			}
@@ -331,6 +372,13 @@ namespace RAN\Tests\Storage {
 					)
 				);
 			}
+			if ( 1 === preg_match( "/^INSERT INTO `wp_options` \(option_name, option_value, autoload\) VALUES \('ran_booster_general_settings', '(.*)', 'off'\)$/", $query, $matches ) ) {
+				if ( null !== $this->general_settings_value ) {
+					return 0;
+				}
+				$this->general_settings_value = stripslashes( $matches[1] );
+				return 1;
+			}
 			return 0;
 		}
 
@@ -338,6 +386,9 @@ namespace RAN\Tests\Storage {
 			if ( $this->read_failure ) {
 				$this->last_error = 'database details must not escape';
 				return null;
+			}
+			if ( str_starts_with( $query, 'SELECT option_value FROM' ) && str_contains( $query, 'ran_booster_general_settings' ) ) {
+				return $this->general_settings_value;
 			}
 
 			if ( 1 === preg_match( "/^SELECT adoption_token FROM `[^`]+` WHERE id = '([0-9]+)'$/", $query, $matches ) ) {
@@ -348,7 +399,6 @@ namespace RAN\Tests\Storage {
 				}
 				return null;
 			}
-
 			if ( 1 === preg_match( "/^SHOW TABLES LIKE '(.+)'$/", $query, $matches ) ) {
 				if ( 0 === $this->successful_table_reads_before_failure ) {
 					$this->last_error = 'database details must not escape';

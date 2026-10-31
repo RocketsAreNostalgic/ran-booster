@@ -14,7 +14,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$registration = strpos( $bootstrap, 'ReleaseUpdaterBootstrap::register();' );
-		$core_target  = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
+		$core_target  = strpos( $bootstrap, 'with_descriptor_admission(' );
 		$target       = strpos( $bootstrap, 'ManagedReleaseTargetRegistrar::class )->register()' );
 
 		self::assertIsInt( $registration );
@@ -29,11 +29,11 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$seal         = strpos( $bootstrap, '$provider_registry->seal()' );
-		$policy_guard = strpos( $bootstrap, 'if ( $ran_booster_self_update_policy->allows_native_discovery() )' );
-		$core_updater = strpos( $bootstrap, 'ManagedReleaseUpdaterRegistrar::class )->plugin(' );
+		$policy_guard = strpos( $bootstrap, '$core_policy         = static fn' );
+		$core_updater = strpos( $bootstrap, 'with_descriptor_admission(' );
 		$repository   = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
 		$adapter      = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $core_updater )' );
-		$status_bind  = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $core_release_target )' );
+		$status_bind  = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $current_policy, $core_release_target, $core_check )' );
 
 		self::assertIsInt( $seal );
 		self::assertIsInt( $policy_guard );
@@ -46,13 +46,36 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		self::assertLessThan( $repository, $core_updater );
 		self::assertLessThan( $adapter, $repository );
 		self::assertLessThan( $status_bind, $adapter );
-		self::assertStringContainsString( "\t\t\t\t\t\t'github'", $bootstrap );
-		self::assertStringContainsString( "\t\t\t\t\t\t'manual'", $bootstrap );
+		self::assertStringContainsString( "'github'", $bootstrap );
+		self::assertStringContainsString( "? 'manual'", $bootstrap );
+		self::assertStringContainsString( "? 'forced-off' : 'disabled'", $bootstrap );
 		self::assertStringContainsString( 'PackageArtifactLimit::resolve()', $bootstrap );
 		self::assertStringNotContainsString( "requireCapability( 'gh', RepositoryReleaseNativeTargets::class )", $bootstrap );
 		self::assertStringNotContainsString( 'new RepositoryReference(', $bootstrap );
-		self::assertStringNotContainsString( "? 'forced-off' : 'disabled'", $bootstrap );
 		self::assertStringNotContainsString( 'new GitHubReleaseNativeTarget(', $bootstrap );
+	}
+
+	public function test_unavailable_core_targets_install_only_the_exact_fresh_state_denial_fence(): void {
+		$bootstrap = $this->source( 'ran-booster.php' );
+
+		$fallback = strpos( $bootstrap, "if ( function_exists( 'add_filter' ) )" );
+		$status   = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $current_policy, $core_release_target, $core_check )' );
+
+		self::assertIsInt( $fallback );
+		self::assertIsInt( $status );
+		self::assertLessThan( $status, $fallback );
+		self::assertStringContainsString( "'site_transient_update_plugins'", $bootstrap );
+		self::assertStringContainsString( "'upgrader_pre_download'", $bootstrap );
+		self::assertStringContainsString( "'upgrader_pre_install'", $bootstrap );
+		self::assertStringContainsString( "'ran_booster_native_update_core_registration_unavailable'", $bootstrap );
+		self::assertStringContainsString( "'update' !== ( \$hook_extra['action'] ?? null )", $bootstrap );
+		self::assertStringContainsString( "'plugin' !== ( \$hook_extra['type'] ?? null )", $bootstrap );
+		self::assertStringContainsString( "\$hook_extra['plugin'] ?? null", $bootstrap );
+		self::assertStringContainsString( "\$hook_extra['plugins']", $bootstrap );
+		self::assertStringContainsString( 'null === $core_release_target || ! $core_release_target->status()->active', $bootstrap );
+		self::assertSame( 3, substr_count( substr( $bootstrap, $fallback, $status - $fallback ), '$core_unavailable()' ) );
+		self::assertStringContainsString( '$matches_core( $hook_extra ) && $core_unavailable()', $bootstrap );
+		self::assertStringNotContainsString( "'auto_update_plugin'", substr( $bootstrap, $fallback, $status - $fallback ) );
 	}
 
 	public function test_current_orchestration_documentation_names_no_removed_handoff(): void {

@@ -51,6 +51,11 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 		return array(
 			array(
 				'GET',
+				array( 'page' => 'ran-booster-settings' ),
+				true,
+			),
+			array(
+				'GET',
 				array(
 					'page' => 'ran-booster',
 					'tab'  => 'troubleshooting',
@@ -160,6 +165,18 @@ final class TroubleshootingPassiveGetTest extends TestCase {
 	public function test_real_admin_init_hooks_defer_sidecar_validation_for_diagnostics_get(): void {
 		$fixture = $this->registered_fixture();
 		$this->request( 'GET', 'troubleshooting' );
+
+		$this->run_admin_init();
+
+		self::assertSame( 0, $fixture['secrets']->validations );
+		self::assertSame( 0, $fixture['database']->upgrades );
+		self::assertSame( 0, $fixture['plugins']->reads );
+	}
+
+	public function test_real_admin_init_hooks_defer_sidecar_validation_for_settings_get(): void {
+		$fixture                   = $this->registered_fixture();
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_GET                      = array( 'page' => 'ran-booster-settings' );
 
 		$this->run_admin_init();
 

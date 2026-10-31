@@ -905,3 +905,31 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+
+.ran-booster-admin .ran-booster-settings > .ran-booster-panel {
+	margin-block: var(--ran-booster-space-20);
+	padding: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin .ran-booster-settings__group {
+	min-inline-size: 0;
+	margin-block: var(--ran-booster-space-20);
+	padding-block-start: var(--ran-booster-space-16);
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-settings__group legend {
+	padding-inline: 0 var(--ran-booster-space-8);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.ran-booster-admin .ran-booster-settings input[type="number"] {
+	inline-size: 15em;
+	max-inline-size: 100%;
+}
+
+.ran-booster-admin .ran-booster-settings .button {
+	max-inline-size: 100%;
+	white-space: normal;
+}

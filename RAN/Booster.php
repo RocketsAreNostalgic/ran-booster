@@ -26,6 +26,7 @@ class Booster {
 		'ran-booster_page_ran-booster-themes-create',
 		'ran-booster_page_ran-booster-themes',
 		'ran-booster_page_ran-booster-extensions',
+		'ran-booster_page_ran-booster-settings',
 	);
 
 	private const PACKAGE_PAGE_HOOKS = array(
@@ -261,6 +262,7 @@ class Booster {
 		add_submenu_page( 'ran-booster', __( 'Managed Themes', 'ran-booster' ), __( 'Themes', 'ran-booster' ), 'manage_options', 'ran-booster-themes', $this->service_callback( 'RAN\Dashboard', 'get_themes' ) );
 		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', $this->service_callback( 'RAN\Dashboard', 'get_transporter' ) );
 		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'render_extensions_page' ) );
+		add_submenu_page( 'ran-booster', __( 'Settings', 'ran-booster' ), __( 'Settings', 'ran-booster' ), 'manage_options', 'ran-booster-settings', $this->service_callback( 'RAN\Dashboard', 'get_settings' ) );
 	}
 
 	/**
@@ -655,12 +657,23 @@ class Booster {
 	}
 
 	/**
-	 * Whether this Troubleshooting request defers sidecar validation during bootstrap.
+	 * Whether this fixed passive admin route defers storage/schema bootstrap.
 	 */
 	public function is_passive_troubleshooting_request(): bool {
 		$method = isset( $_SERVER['REQUEST_METHOD'] ) && is_string( $_SERVER['REQUEST_METHOD'] )
 			? strtoupper( $_SERVER['REQUEST_METHOD'] )
 			: '';
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Exact route classification only; Dispatcher retains authorization.
+		$fixed_page = $_GET['page'] ?? null;
+		if ( 'GET' === $method && 'ran-booster-settings' === $fixed_page ) {
+			return true;
+		}
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Classification prevents side effects even for a denied report; it authorizes no action.
+		$report = $_POST['ran_booster']['action'] ?? null;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixed report destination only; authority is checked by Dispatcher.
+		if ( 'POST' === $method && in_array( $report, array( 'generate-support-report', 'save-general-settings' ), true ) ) {
+			return true;
+		}
 		if ( 'GET' !== $method ) {
 			return false;
 		}
@@ -781,6 +794,10 @@ class Booster {
 			$style_dependencies = array( $style_handle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
+		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
+			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array(), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
+		}
+
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {
 
 			$extension_details_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extension-details.js';
@@ -839,7 +856,7 @@ class Booster {
 
 		wp_set_script_translations( 'ran-booster-repository-picker', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 
-		if ( 'toplevel_page_ran-booster' === $hook || $is_transporter_page ) {
+		if ( 'toplevel_page_ran-booster' === $hook || $is_transporter_page || 'ran-booster_page_ran-booster-settings' === $hook ) {
 
 			$onboarding_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-onboarding.css';
 			$onboarding_version = $this->asset_version( $onboarding_path );

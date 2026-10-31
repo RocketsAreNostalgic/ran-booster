@@ -602,6 +602,33 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $development_environment_detected ) );
 	}
 
+	public function test_overview_uses_only_the_same_notice_request_snapshot(): void {
+		$_GET['tab'] = 'overview';
+		$provider    = new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'gh' );
+		$providers   = new ProviderRegistry( array( $provider ) );
+		$secrets     = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::once() )->method( 'credential_profiles' )->with( 'gh' )->willReturn( array() );
+		$reminders = new \RAN\Admin\CredentialExpiryReminder( $providers, $secrets, new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() );
+		$notice    = new \RAN\Admin\CredentialExpiryNotice( $reminders );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), credential_expiry_notice: $notice );
+		$unknown   = array(
+			'status' => 'unknown',
+			'total'  => null,
+			'items'  => array(),
+		);
+		self::assertSame( $unknown, $this->dashboard( $this->throwing_secrets() )->get_index()['data']['onboarding']['credential_expiry'] );
+		self::assertSame( $unknown, $dashboard->get_index()['data']['onboarding']['credential_expiry'] );
+		self::assertFalse( $notice->should_render() );
+		self::assertSame(
+			array(
+				'status' => 'captured',
+				'total'  => 0,
+				'items'  => array(),
+			),
+			$dashboard->get_index()['data']['onboarding']['credential_expiry']
+		);
+	}
+
 	public function test_paused_github_route_renders_passive_status_without_provider_and_preserves_bitbucket(): void {
 		$bundled   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
 			array(
@@ -3716,7 +3743,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		?WordPressUpdaterLock $branch_check_lock = null,
 		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
-		?PackageRemovalService $removals = null
+		?PackageRemovalService $removals = null,
+		?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null
 	): RoutingDashboard {
 		$providers         = $providers ?? $this->providers( $provider_credentials );
 		$branch_check_lock = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
@@ -3765,7 +3793,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			null,
 			$admin_add_ons,
 			removals: $removals,
-			activity: $this->empty_activity_store()
+			activity: $this->empty_activity_store(),
+			credential_expiry_notice: $credential_expiry_notice
 		);
 	}
 

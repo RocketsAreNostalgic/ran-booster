@@ -192,6 +192,26 @@ final readonly class ProviderSettingsPresenter {
 		);
 	}
 
+	/** @return array<string, array{admitted:bool,selection:?string}> Local admission and passive GitHub selection only. */
+	public function overview_provider_facts(): array {
+		$metadata = $this->providers->metadata();
+		$facts    = array();
+		foreach ( $metadata as $code => $provider ) {
+			$facts[ $code ] = array(
+				'admitted'  => true,
+				'selection' => null,
+			);
+		}
+		$selection = $this->github_selection_diagnostics();
+		if ( null !== $selection ) {
+			$facts['gh'] = array(
+				'admitted'  => isset( $metadata['gh'] ),
+				'selection' => is_string( $selection['state'] ?? null ) ? $selection['state'] : null,
+			);
+		}
+		return $facts;
+	}
+
 	/** @return array<string,mixed>|null Passive local claims; never credential material. */
 	public function github_selection_diagnostics(): ?array {
 		return $this->github_selection?->status();

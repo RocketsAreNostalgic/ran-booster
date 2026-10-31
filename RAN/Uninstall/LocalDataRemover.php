@@ -28,6 +28,7 @@ use RuntimeException;
 class LocalDataRemover {
 
 	private const OPTION_NAMES = array(
+		'ran_booster_overview_presentation',
 		Database::VERSION_OPTION,
 		\RAN\Activity\ActivityStore::VERSION_OPTION,
 		CredentialExpiryObservationStore::OPTION_NAME,

@@ -69,7 +69,12 @@ $status_classes       = array(
 			<pre><code>define( 'WP_DEBUG', true );
 define( 'WP_DEBUG_LOG', true );
 define( 'WP_DEBUG_DISPLAY', false );</code></pre>
-			<p><?php esc_html_e( 'The log is normally in WP_CONTENT_DIR/debug.log (usually wp-content/debug.log), unless an alternate path is configured. Turn off debugging after reproducing the issue, and review the log privately before sharing it.', 'ran-booster' ); ?></p>
+			<p>
+				<?php
+				/* translators: 1: Debug log path using WP_CONTENT_DIR, 2: Typical debug log path. */
+				printf( esc_html__( 'The log is normally in %1$s (usually %2$s), unless an alternate path is configured. Turn off debugging after reproducing the issue, and review the log privately before sharing it.', 'ran-booster' ), '<code>WP_CONTENT_DIR/debug.log</code>', '<code>wp-content/debug.log</code>' );
+				?>
+			</p>
 			<p><a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/"><?php esc_html_e( 'WordPress debugging documentation', 'ran-booster' ); ?></a></p>
 		</div>
 	</details>

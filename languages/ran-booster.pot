@@ -168,7 +168,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:56
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:40
-#: views/debug-capture.php:78
+#: views/debug-capture.php:85
 #: views/extensions.php:201
 #: views/provider.php:462
 #: views/provider.php:483
@@ -6182,104 +6182,106 @@ msgstr ""
 msgid "Capture PHP and WordPress errors"
 msgstr ""
 
-#: views/debug-capture.php:67
+#: views/debug-capture.php:68
 msgid "For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:"
 msgstr ""
 
-#: views/debug-capture.php:71
-msgid "The log is normally in WP_CONTENT_DIR/debug.log (usually wp-content/debug.log), unless an alternate path is configured. Turn off debugging after reproducing the issue, and review the log privately before sharing it."
+#. translators: 1: Debug log path using WP_CONTENT_DIR, 2: Typical debug log path.
+#: views/debug-capture.php:75
+#, php-format
+msgid "The log is normally in %1$s (usually %2$s), unless an alternate path is configured. Turn off debugging after reproducing the issue, and review the log privately before sharing it."
 msgstr ""
 
-#: views/debug-capture.php:72
+#: views/debug-capture.php:78
 msgid "WordPress debugging documentation"
 msgstr ""
 
 #. translators: %s: UTC capture end time.
-#: views/debug-capture.php:87
+#: views/debug-capture.php:94
 #, php-format
 msgid "until %s."
 msgstr ""
 
 #. translators: %s: UTC automatic deletion time.
-#: views/debug-capture.php:99
+#: views/debug-capture.php:106
 #, php-format
 msgid "retained until %s."
 msgstr ""
 
-#: views/debug-capture.php:109
+#: views/debug-capture.php:116
 msgid "Capture file"
 msgstr ""
 
-#: views/debug-capture.php:110
+#: views/debug-capture.php:117
 msgid "Beside the credential sidecar; the server path is not shown."
 msgstr ""
 
-#: views/debug-capture.php:116
+#: views/debug-capture.php:123
 msgid "No temporary logging capture is active."
 msgstr ""
 
-#: views/debug-capture.php:117
+#: views/debug-capture.php:124
 msgid "Starting a capture records Booster events for 60 minutes and replaces any retained capture."
 msgstr ""
 
-#: views/debug-capture.php:121
+#: views/debug-capture.php:128
 msgid "Start 60-minute capture"
 msgstr ""
 
-#: views/debug-capture.php:127
-#: views/debug-capture.php:132
+#: views/debug-capture.php:134
+#: views/debug-capture.php:139
 msgid "Captured Booster events"
 msgstr ""
 
-#: views/debug-capture.php:128
+#: views/debug-capture.php:135
 msgid "Newest activity is shown in a bounded, read-only excerpt."
 msgstr ""
 
-#: views/debug-capture.php:135
+#: views/debug-capture.php:142
 msgid "Copy captured events"
 msgstr ""
 
-#: views/debug-capture.php:137
+#: views/debug-capture.php:144
 msgid "Captured events copied to the clipboard."
 msgstr ""
 
-#: views/debug-capture.php:137
+#: views/debug-capture.php:144
 msgid "Clipboard access failed. The captured events are selected; use your browser copy command."
 msgstr ""
 
-#: views/debug-capture.php:140
+#: views/debug-capture.php:147
 msgid "No Booster events have been captured yet."
 msgstr ""
 
-#: views/debug-capture.php:140
+#: views/debug-capture.php:147
 msgid "No Booster events were captured."
 msgstr ""
 
-#: views/debug-capture.php:144
+#: views/debug-capture.php:151
 msgid "Logging capture actions"
 msgstr ""
 
-#: views/debug-capture.php:149
+#: views/debug-capture.php:156
 msgid "Refresh"
 msgstr ""
 
-#: views/debug-capture.php:150
+#: views/debug-capture.php:157
 msgid "Stop capture"
 msgstr ""
 
-#: views/debug-capture.php:152
+#: views/debug-capture.php:159
 msgid "Start new capture"
 msgstr ""
 
-#: views/debug-capture.php:158
+#: views/debug-capture.php:165
 msgid "Delete capture"
 msgstr ""
 
-#: views/debug-capture.php:163
+#: views/debug-capture.php:170
 msgid "The temporary capture file could not be read safely. Booster left it unchanged."
 msgstr ""
 
-#: views/debug-capture.php:167
+#: views/debug-capture.php:174
 msgid "Temporary logging capture is unavailable because Booster cannot safely use its capture file location."
 msgstr ""
 

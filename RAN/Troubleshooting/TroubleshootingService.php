@@ -144,17 +144,15 @@ final class TroubleshootingService {
 				$results = $this->providers->get( $metadata->code )->get_provider_diagnostics()->diagnose( $request );
 				$seen    = array();
 				$valid   = array();
-				if ( is_array( $results ) ) {
-					foreach ( array_slice( $results, 0, self::MAX_RESULTS ) as $result ) {
-						if ( ! $this->valid_provider_result( $result, $metadata->code, $seen ) ) {
-							continue;
-						}
-						$seen[ $result->code ] = true;
-						$valid[]               = $result;
+				foreach ( array_slice( $results, 0, self::MAX_RESULTS ) as $result ) {
+					if ( ! $this->valid_provider_result( $result, $metadata->code, $seen ) ) {
+						continue;
 					}
+					$seen[ $result->code ] = true;
+					$valid[]               = $result;
 				}
 				$groups[ $metadata->code->value ] = array_map( static fn( ProviderDiagnosticResult $result ): array => $result->to_array(), $valid );
-				$states[ $metadata->code->value ] = $this->now() - $started >= 20.0 || $request->remaining_seconds() <= 0.0 || 'deadline' === $request->get_exhaustion_reason() ? 'deadline_exhausted' : ( 'remote_calls' === $request->get_exhaustion_reason() ? 'remote_calls_exhausted' : ( is_array( $results ) && count( $valid ) === count( $results ) && count( $results ) <= self::MAX_RESULTS ? 'included' : 'provider_results_invalid' ) );
+				$states[ $metadata->code->value ] = $this->now() - $started >= 20.0 || $request->remaining_seconds() <= 0.0 || 'deadline' === $request->get_exhaustion_reason() ? 'deadline_exhausted' : ( 'remote_calls' === $request->get_exhaustion_reason() ? 'remote_calls_exhausted' : ( count( $valid ) === count( $results ) && count( $results ) <= self::MAX_RESULTS ? 'included' : 'provider_results_invalid' ) );
 			} catch ( ProviderDiagnosticBudgetExceeded $failure ) {
 				$groups[ $metadata->code->value ] = array();
 				$states[ $metadata->code->value ] = ProviderDiagnosticBudgetExceeded::DEADLINE === $failure->get_reason() ? 'deadline_exhausted' : 'remote_calls_exhausted';

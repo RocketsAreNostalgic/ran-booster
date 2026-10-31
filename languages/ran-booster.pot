@@ -110,7 +110,7 @@ msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:87
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:128
-#: RAN/Troubleshooting/TroubleshootingService.php:302
+#: RAN/Troubleshooting/TroubleshootingService.php:300
 #: views/troubleshooting-installation.php:10
 #: views/troubleshooting-installation.php:119
 msgid "Name"
@@ -246,7 +246,7 @@ msgid "Package"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:150
-#: RAN/Troubleshooting/TroubleshootingService.php:234
+#: RAN/Troubleshooting/TroubleshootingService.php:232
 #: views/attempts/index.php:119
 #: views/attempts/index.php:166
 #: views/portability-review.php:31
@@ -990,8 +990,8 @@ msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:79
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:249
-#: RAN/Troubleshooting/TroubleshootingService.php:226
-#: RAN/Troubleshooting/TroubleshootingService.php:239
+#: RAN/Troubleshooting/TroubleshootingService.php:224
+#: RAN/Troubleshooting/TroubleshootingService.php:237
 #: views/attempts/index.php:168
 #: views/overview-dashboard.php:48
 #: views/overview-dashboard.php:49
@@ -2595,13 +2595,13 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:174
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:345
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:494
-#: RAN/Troubleshooting/TroubleshootingService.php:238
-#: RAN/Troubleshooting/TroubleshootingService.php:268
-#: RAN/Troubleshooting/TroubleshootingService.php:275
-#: RAN/Troubleshooting/TroubleshootingService.php:279
-#: RAN/Troubleshooting/TroubleshootingService.php:280
-#: RAN/Troubleshooting/TroubleshootingService.php:333
-#: RAN/Troubleshooting/TroubleshootingService.php:336
+#: RAN/Troubleshooting/TroubleshootingService.php:236
+#: RAN/Troubleshooting/TroubleshootingService.php:266
+#: RAN/Troubleshooting/TroubleshootingService.php:273
+#: RAN/Troubleshooting/TroubleshootingService.php:277
+#: RAN/Troubleshooting/TroubleshootingService.php:278
+#: RAN/Troubleshooting/TroubleshootingService.php:331
+#: RAN/Troubleshooting/TroubleshootingService.php:334
 #: views/debug-capture.php:43
 #: views/onboarding.php:80
 #: views/settings-storage.php:25
@@ -5618,7 +5618,7 @@ msgid "Booster could not verify package management data after a database change.
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:71
-#: RAN/Troubleshooting/TroubleshootingService.php:229
+#: RAN/Troubleshooting/TroubleshootingService.php:227
 #: views/troubleshooting-installation.php:140
 msgid "Diagnostic Git provider"
 msgstr ""
@@ -5627,15 +5627,15 @@ msgstr ""
 msgid "Support collection is unavailable. No diagnostics were run."
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:224
+#: RAN/Troubleshooting/TroubleshootingService.php:222
 msgid "Bundled with Booster"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:225
+#: RAN/Troubleshooting/TroubleshootingService.php:223
 msgid "External replacement"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:230
+#: RAN/Troubleshooting/TroubleshootingService.php:228
 #: views/attempts/detail.php:93
 #: views/attempts/index.php:71
 #: views/packages/fields/provider.php:19
@@ -5647,158 +5647,158 @@ msgstr ""
 msgid "Git provider"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:231
+#: RAN/Troubleshooting/TroubleshootingService.php:229
 msgid "Git provider code"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:233
-#: RAN/Troubleshooting/TroubleshootingService.php:247
+#: RAN/Troubleshooting/TroubleshootingService.php:231
+#: RAN/Troubleshooting/TroubleshootingService.php:245
 #: views/troubleshooting-installation.php:9
 #: views/troubleshooting-installation.php:117
 #: views/troubleshooting-installation.php:140
 msgid "GitHub provider"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:235
+#: RAN/Troubleshooting/TroubleshootingService.php:233
 #: views/troubleshooting-installation.php:10
 msgid "Selection state"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:236
+#: RAN/Troubleshooting/TroubleshootingService.php:234
 #: views/troubleshooting-installation.php:10
 #: views/troubleshooting-installation.php:119
 msgid "Operational availability"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:237
+#: RAN/Troubleshooting/TroubleshootingService.php:235
 msgid "Available"
 msgstr ""
 
 #. translators: %d: enabled replacement candidate number.
-#: RAN/Troubleshooting/TroubleshootingService.php:245
+#: RAN/Troubleshooting/TroubleshootingService.php:243
 #, php-format
 msgid "GitHub candidate %d"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:247
+#: RAN/Troubleshooting/TroubleshootingService.php:245
 msgid "Enabled candidates"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:250
+#: RAN/Troubleshooting/TroubleshootingService.php:248
 msgid "Installed version"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:251
+#: RAN/Troubleshooting/TroubleshootingService.php:249
 msgid "Requested mode"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:252
+#: RAN/Troubleshooting/TroubleshootingService.php:250
 msgid "Effective mode"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:253
+#: RAN/Troubleshooting/TroubleshootingService.php:251
 msgid "Policy reason"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:254
+#: RAN/Troubleshooting/TroubleshootingService.php:252
 msgid "Updater state"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:255
+#: RAN/Troubleshooting/TroubleshootingService.php:253
 msgid "Updater code"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:256
+#: RAN/Troubleshooting/TroubleshootingService.php:254
 msgid "Offered version"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:257
+#: RAN/Troubleshooting/TroubleshootingService.php:255
 msgid "Marker version"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:258
+#: RAN/Troubleshooting/TroubleshootingService.php:256
 msgid "Marker commit"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:261
-#: RAN/Troubleshooting/TroubleshootingService.php:268
-#: RAN/Troubleshooting/TroubleshootingService.php:275
-#: RAN/Troubleshooting/TroubleshootingService.php:279
-#: RAN/Troubleshooting/TroubleshootingService.php:280
+#: RAN/Troubleshooting/TroubleshootingService.php:259
+#: RAN/Troubleshooting/TroubleshootingService.php:266
+#: RAN/Troubleshooting/TroubleshootingService.php:273
+#: RAN/Troubleshooting/TroubleshootingService.php:277
+#: RAN/Troubleshooting/TroubleshootingService.php:278
 #: views/troubleshooting-installation.php:78
 #: views/troubleshooting-installation.php:85
 #: views/troubleshooting-installation.php:140
 msgid "Booster Core updates"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:264
+#: RAN/Troubleshooting/TroubleshootingService.php:262
 msgid "Last check (UTC)"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:265
+#: RAN/Troubleshooting/TroubleshootingService.php:263
 msgid "Next check (UTC)"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:271
+#: RAN/Troubleshooting/TroubleshootingService.php:269
 msgid "Last successful operator check (UTC)"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:272
+#: RAN/Troubleshooting/TroubleshootingService.php:270
 msgid "Operator check cooldown until (UTC)"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:279
+#: RAN/Troubleshooting/TroubleshootingService.php:277
 msgid "Last operator check outcome"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:280
+#: RAN/Troubleshooting/TroubleshootingService.php:278
 msgid "Last operator check code"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:282
+#: RAN/Troubleshooting/TroubleshootingService.php:280
 #: views/troubleshooting-installation.php:123
 msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:291
+#: RAN/Troubleshooting/TroubleshootingService.php:289
 msgid "Diagnostic checks"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:292
+#: RAN/Troubleshooting/TroubleshootingService.php:290
 msgid "Not run"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:303
+#: RAN/Troubleshooting/TroubleshootingService.php:301
 #: views/packages/index.php:517
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
 msgid "Version"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:304
+#: RAN/Troubleshooting/TroubleshootingService.php:302
 msgid "Implementation"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:305
+#: RAN/Troubleshooting/TroubleshootingService.php:303
 msgid "Provider API"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:306
+#: RAN/Troubleshooting/TroubleshootingService.php:304
 msgid "Compatibility revision"
 msgstr ""
 
-#: RAN/Troubleshooting/TroubleshootingService.php:307
+#: RAN/Troubleshooting/TroubleshootingService.php:305
 msgid "Webhook signing format"
 msgstr ""
 
 #. translators: %d: locally declared capability number.
-#: RAN/Troubleshooting/TroubleshootingService.php:314
+#: RAN/Troubleshooting/TroubleshootingService.php:312
 #, php-format
 msgid "Capability %d"
 msgstr ""
 
 #. translators: %d: locally declared credential format number.
-#: RAN/Troubleshooting/TroubleshootingService.php:316
+#: RAN/Troubleshooting/TroubleshootingService.php:314
 #, php-format
 msgid "API credential format %d"
 msgstr ""

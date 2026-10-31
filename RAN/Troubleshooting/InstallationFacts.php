@@ -70,8 +70,11 @@ final class InstallationFacts {
 			$value        = ini_get( $key );
 			$rows[ $key ] = is_string( $value ) && preg_match( '/\A-?[0-9]{1,12}[KMG]?\z/i', $value ) === 1 ? $value : 'Unknown';
 		}
-		foreach ( array( 'max_input_time', 'default_socket_timeout', 'max_file_uploads', 'file_uploads', 'allow_url_fopen', 'display_errors', 'log_errors', 'error_reporting', 'opcache.enable' ) as $key ) {
-			$rows[ 'PHP INI ' . $key ] = self::ini_scalar( $key );
+		foreach ( array( 'max_input_time', 'default_socket_timeout', 'max_file_uploads', 'error_reporting' ) as $key ) {
+			$rows[ 'PHP INI ' . $key ] = self::ini_number( $key );
+		}
+		foreach ( array( 'file_uploads', 'allow_url_fopen', 'display_errors', 'log_errors', 'opcache.enable' ) as $key ) {
+			$rows[ 'PHP INI ' . $key ] = self::ini_boolean( $key );
 		}
 		foreach ( array( 'open_basedir', 'sys_temp_dir', 'upload_tmp_dir', 'curl.cainfo', 'openssl.cafile', 'openssl.capath' ) as $key ) {
 			$rows[ 'PHP INI ' . $key ] = self::ini_presence( $key );
@@ -111,18 +114,20 @@ final class InstallationFacts {
 		return $rows;
 	}
 
-	private static function ini_scalar( string $key ): string {
+	private static function ini_number( string $key ): string {
 		$value = ini_get( $key );
 		if ( ! is_string( $value ) ) {
 			return 'Unknown';
 		}
-		if ( in_array( strtolower( $value ), array( '', '0', 'off', 'false', 'no' ), true ) ) {
-			return 'Disabled';
+		return preg_match( '/\A-?[0-9]{1,12}\z/', $value ) === 1 ? ( '-1' === $value ? 'Unlimited' : $value ) : 'Unknown';
+	}
+
+	private static function ini_boolean( string $key ): string {
+		$value = ini_get( $key );
+		if ( ! is_string( $value ) ) {
+			return 'Unknown';
 		}
-		if ( in_array( strtolower( $value ), array( '1', 'on', 'true', 'yes' ), true ) ) {
-			return 'Enabled';
-		}
-		return preg_match( '/\A-?[0-9]{1,12}[KMG]?\z/i', $value ) === 1 ? $value : 'Configured';
+		return in_array( strtolower( $value ), array( '1', 'on', 'true', 'yes' ), true ) ? 'Enabled' : ( in_array( strtolower( $value ), array( '', '0', 'off', 'false', 'no' ), true ) ? 'Disabled' : 'Unknown' );
 	}
 
 	private static function ini_presence( string $key ): string {
@@ -168,10 +173,22 @@ final class InstallationFacts {
 		try {
 			foreach ( ( new GeneralPreferenceStore() )->projection() as $key => $field ) {
 				$name = array( 'hide_github' => 'RAN_BOOSTER_HIDE_GITHUB_UI', 'self_update_discovery' => 'RAN_BOOSTER_SELF_UPDATE_MODE', 'history_rows' => 'RAN_BOOSTER_HISTORY_ROWS', 'history_days' => 'RAN_BOOSTER_HISTORY_DAYS', 'max_archive_bytes' => 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' )[ $key ];
-				$rows[ $name ] = ( $field['error'] ?? null ) ? 'Invalid; effective default ' . ( is_bool( $field['value'] ) ? ( $field['value'] ? 'Enabled' : 'Disabled' ) : (string) $field['value'] ) : ( is_bool( $field['value'] ) ? ( $field['value'] ? 'Enabled' : 'Disabled' ) : (string) $field['value'] ) . '; source=' . $field['source'] . ( $field['locked'] ? '; locked' : '' );
+				$value = is_bool( $field['value'] ) ? ( $field['value'] ? 'Enabled' : 'Disabled' ) : (string) $field['value'];
+				if ( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' === $name && null !== ( $field['error'] ?? null ) ) {
+					$rows[ $name ] = 'Invalid; archive admission refused';
+					continue;
+				}
+				if ( 'RAN_BOOSTER_HIDE_GITHUB_UI' === $name ) {
+					$rows[ $name ] = 'Requested ' . $value . '; source=' . $field['source'] . ( $field['locked'] ? '; locked' : '' );
+					continue;
+				}
+				$rows[ $name ] = ( $field['error'] ?? null ) ? 'Invalid; effective default ' . $value : $value . '; source=' . $field['source'] . ( $field['locked'] ? '; locked' : '' );
 			}
 		} catch ( \Throwable ) {
 			$rows += array_fill_keys( array( 'RAN_BOOSTER_HIDE_GITHUB_UI', 'RAN_BOOSTER_SELF_UPDATE_MODE', 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS', 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ), 'Unavailable' );
+		}
+		if ( defined( 'RAN_BOOSTER_SELF_UPDATE_MODE' ) ) {
+			$rows['RAN_BOOSTER_SELF_UPDATE_MODE'] = self::choice_constant( 'RAN_BOOSTER_SELF_UPDATE_MODE', array( 'auto', 'enabled', 'disabled' ) ) . '; source=code; locked';
 		}
 		foreach ( array( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', 'RAN_BOOSTER_GITHUB_TOKEN' ) as $name ) {
 			$rows[ $name ] = defined( $name ) ? 'Configured; value withheld' : 'Undefined';

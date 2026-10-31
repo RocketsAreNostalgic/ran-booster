@@ -727,6 +727,97 @@ local unavailable message.
 Deactivating an add-on removes its contributions on the next request; every
 Core route and administration surface remains usable.
 
+### Documentation chapters
+
+Documentation has one level of chapters containing articles. Core supplies
+**Booster Core concepts**, one chapter per registered provider, and **Reference**.
+The same chapter/article order appears in the side navigation and document.
+Chapter headings are plain text, not links or disclosures. Existing article
+anchors, the shared disclosure group and print behavior remain unchanged.
+Requirements still follows Quick start, and About remains the last article.
+
+An extension registers an additional chapter with this append-only filter:
+
+```php
+add_filter(
+	'ran_booster_documentation_chapters',
+	static function ( array $chapters, string $documentation_url, string $scope ): array {
+		$chapters[] = array(
+			'id'    => 'example-guides',
+			'title' => __( 'Example guides', 'example-extension' ),
+		);
+
+		return $chapters;
+	},
+	10,
+	3
+);
+```
+
+The filter receives the chapter list, canonical Documentation URL and `site`
+or `network` scope. Registration is request-local and must not perform remote
+requests, read credentials or mutate settings. Use a plugin-prefixed stable
+identifier: at most 128 bytes, starting with a lowercase letter and containing
+at least two hyphen-separated lowercase alphanumeric segments. Titles are
+trimmed, nonempty plain-text strings of at most 200 bytes; raw control
+characters are rejected and rendered titles are escaped. Malformed definitions
+are ignored. The identifiers `core`, `reference` and the `provider-` prefix are
+reserved; the first valid custom definition owns a repeated identifier.
+
+Add articles with the existing general filter and an optional chapter ID:
+
+```php
+add_filter(
+	'ran_booster_documentation_sections_before_about',
+	static function ( array $sections ): array {
+		$sections[] = array(
+			'id'      => 'example-first-guide',
+			'summary' => __( 'First guide', 'example-extension' ),
+			'content' => '<p>Read-only guidance.</p>',
+			'chapter' => 'example-guides',
+		);
+		$sections[] = array(
+			'id'      => 'example-second-guide',
+			'summary' => __( 'Second guide', 'example-extension' ),
+			'content' => '<p>More read-only guidance.</p>',
+			'chapter' => 'example-guides',
+		);
+
+		return $sections;
+	}
+);
+```
+
+Custom chapters follow the provider chapters in registration-list order;
+WordPress callback priority determines how callbacks build that list. Articles
+retain their contribution order within their selected chapter. Only general
+articles may select a registered custom chapter. Provider-hook articles stay
+immediately after their matching Core guide in that provider's chapter,
+regardless of a supplied `chapter` field. Their optional fourth argument still
+carries the exact registered provider metadata object; general callbacks still
+receive `null`, and three-argument callbacks remain compatible.
+
+Missing, malformed, unknown or reserved chapter references fall back to
+Reference, with existing general contributions in their original relative
+order before About. Chapter assignment does not change collection precedence
+for duplicate article IDs. Chapters with no accepted articles are omitted.
+Core allocates heading IDs after accepting articles so chapter headings cannot
+take over an existing article or internal anchor. Content callbacks run once,
+including when one article supplies both the index and body; a callback failure
+retains the article's assigned chapter and existing unavailable message. The
+first requested open article is selected in final page order.
+
+Deactivation removes an extension's definitions and articles on the next
+request. If a surviving article refers to a removed chapter, it falls back to
+Reference. No chapter preferences or registration records are stored. There
+are no subchapters or nested article-registration records.
+
+On older Core versions without the chapter filter, the filter has no caller
+and an extra `chapter` field is ignored by existing article normalization, so
+otherwise compatible articles render flat. An extension must still honor the
+Core/Add-on API versions it declares; chapter support does not bypass admission
+or require a change to those existing markers.
+
 Prospective API9 carries the destination-local `provider_expectation` from exact
 inspection to installation. GitHub uses Core's provider code, selection generation
 and implementation fingerprint; unaffected providers carry null. Installation

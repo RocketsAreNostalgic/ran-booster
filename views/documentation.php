@@ -134,8 +134,78 @@ $prepared_global_sections = array_values(
 );
 $add_documentation_item( 'ran-booster-about', __( 'About RAN Booster', 'ran-booster' ) );
 
-// A named disclosure group may have only one initially open member. Honor the
-// first add-on request in page order; otherwise start with Quick start open.
+// Collect first so duplicate article precedence does not depend on display order.
+/** @var array<string, array{title: string, items: list<array{id: string, summary: string}>, sections: list<array{id: string, summary: string, content: string, open: bool, chapter: ?string}>, heading_id?: string}> $chapters */
+$chapters = array(
+	'core' => array(
+		'title'    => __( 'Booster Core concepts', 'ran-booster' ),
+		'items'    => array_values( array_filter( $documentation_index, static fn ( array $item ): bool => in_array( $item['id'], array( 'ran-booster-quick-start', 'ran-booster-requirements', 'ran-booster-portability-guidance', 'ran-booster-wp-pusher-migration', 'ran-booster-file-protection', 'ran-booster-credential-storage', 'ran-booster-installing-and-managing-packages', 'ran-booster-push-to-deploy' ), true ) ) ),
+		'sections' => array(),
+	),
+);
+foreach ( $prepared_provider_documentation as $prepared_provider_guide ) {
+	$guide                           = $prepared_provider_guide['guide'];
+	$code                            = $guide['code'];
+	$ids                             = array_merge( array( 'ran-booster-documentation-provider-' . $code ), array_column( $prepared_provider_guide['sections'], 'id' ) );
+	$chapters[ 'provider-' . $code ] = array(
+		'title'    => $guide['label'],
+		'items'    => array_values( array_filter( $documentation_index, static fn ( array $item ): bool => in_array( $item['id'], $ids, true ) ) ),
+		'sections' => array(),
+	);
+}
+$definitions = apply_filters( 'ran_booster_documentation_chapters', array(), $documentation_url, $documentation_scope );
+if ( is_array( $definitions ) ) {
+	foreach ( $definitions as $definition ) {
+		if ( ! is_array( $definition ) || ! is_string( $definition['id'] ?? null ) || ! is_string( $definition['title'] ?? null ) ) {
+			continue;
+		}
+		$definition_id    = $definition['id'];
+		$definition_title = trim( $definition['title'] );
+		if ( strlen( $definition_id ) > 128 || 1 !== preg_match( '/\A[a-z][a-z0-9]*(?:-[a-z0-9]+)+\z/', $definition_id ) || str_starts_with( $definition_id, 'provider-' ) || isset( $chapters[ $definition_id ] ) || '' === $definition_title || strlen( $definition_title ) > 200 || 1 === preg_match( '/[\x00-\x1f\x7f]/', $definition['title'] ) ) {
+			continue;
+		}
+		$chapters[ $definition_id ] = array(
+			'title'    => $definition_title,
+			'items'    => array(),
+			'sections' => array(),
+		);
+	}
+}
+$chapters['reference'] = array(
+	'title'    => __( 'Reference', 'ran-booster' ),
+	'items'    => array(),
+	'sections' => array(),
+);
+foreach ( $prepared_global_sections as $section ) {
+	$chapter = $section['chapter'];
+	if ( null === $chapter || ! isset( $chapters[ $chapter ] ) || 'core' === $chapter || 'reference' === $chapter || str_starts_with( $chapter, 'provider-' ) ) {
+		$chapter = 'reference';
+	}
+	$chapters[ $chapter ]['items'][]    = array(
+		'id'      => $section['id'],
+		'summary' => $section['summary'],
+	);
+	$chapters[ $chapter ]['sections'][] = $section;
+}
+$chapters['reference']['items'][] = array(
+	'id'      => 'ran-booster-about',
+	'summary' => __( 'About RAN Booster', 'ran-booster' ),
+);
+$chapters                         = array_filter( $chapters, static fn ( array $chapter ): bool => array() !== $chapter['items'] );
+$heading_ids                      = $reserved_documentation_ids + $documentation_ids;
+foreach ( $chapters as $chapter_id => &$chapter ) {
+	$base       = 'ran-booster-documentation-chapter-' . $chapter_id;
+	$heading_id = $base;
+	$suffix     = 2;
+	while ( isset( $heading_ids[ $heading_id ] ) ) {
+		$heading_id = $base . '-' . ( $suffix++ );
+	}
+	$heading_ids[ $heading_id ] = true;
+	$chapter['heading_id']      = $heading_id;
+}
+unset( $chapter );
+
+// Honor the first requested open article in final display order.
 $documentation_initial_open = false;
 foreach ( $prepared_provider_documentation as &$prepared_provider_guide ) {
 	foreach ( $prepared_provider_guide['sections'] as &$prepared_section ) {
@@ -145,11 +215,14 @@ foreach ( $prepared_provider_documentation as &$prepared_provider_guide ) {
 	unset( $prepared_section );
 }
 unset( $prepared_provider_guide );
-foreach ( $prepared_global_sections as &$prepared_section ) {
-	$prepared_section['open']   = $prepared_section['open'] && ! $documentation_initial_open;
-	$documentation_initial_open = $documentation_initial_open || $prepared_section['open'];
+foreach ( $chapters as &$chapter ) {
+	foreach ( $chapter['sections'] as &$prepared_section ) {
+		$prepared_section['open']   = $prepared_section['open'] && ! $documentation_initial_open;
+		$documentation_initial_open = $documentation_initial_open || $prepared_section['open'];
+	}
+	unset( $prepared_section );
 }
-unset( $prepared_section );
+unset( $chapter );
 
 ?>
 <section class="ran-booster-page-shell ran-booster-documentation" aria-labelledby="ran-booster-documentation-heading">
@@ -161,17 +234,26 @@ unset( $prepared_section );
 <aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>
 	<nav aria-labelledby="ran-booster-documentation-index-heading">
 		<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading"><?php esc_html_e( 'On this page', 'ran-booster' ); ?></h2>
-		<ul class="ran-booster-documentation__index-list">
-			<?php foreach ( $documentation_index as $documentation_index_item ) { ?>
-				<li><a class="ran-booster-documentation__index-link" href="#<?php echo esc_attr( $documentation_index_item['id'] ); ?>"><?php echo esc_html( $documentation_index_item['summary'] ); ?></a></li>
+		<div class="ran-booster-documentation__chapters">
+			<?php foreach ( $chapters as $chapter ) { ?>
+				<div class="ran-booster-documentation__index-chapter">
+					<h3><?php echo esc_html( $chapter['title'] ); ?></h3>
+					<ul class="ran-booster-documentation__index-list">
+						<?php foreach ( $chapter['items'] as $documentation_index_item ) { ?>
+							<li><a class="ran-booster-documentation__index-link" href="#<?php echo esc_attr( $documentation_index_item['id'] ); ?>"><?php echo esc_html( $documentation_index_item['summary'] ); ?></a></li>
+						<?php } ?>
+					</ul>
+				</div>
 			<?php } ?>
-		</ul>
+		</div>
 		<p class="ran-booster-tile ran-booster-documentation__search-hint"><span class="ran-booster-tile__label"><?php esc_html_e( 'Search this page with', 'ran-booster' ); ?></span> <kbd>⌘F</kbd> <span><?php esc_html_e( 'or', 'ran-booster' ); ?></span> <kbd>Ctrl+F</kbd></p>
 	</nav>
 </aside>
 <section class="ran-booster-documentation__main" aria-labelledby="ran-booster-documentation-heading">
 	<div class="ran-booster-page-shell__body">
 		<div class="ran-booster-documentation__sections">
+		<section class="ran-booster-documentation__chapter" aria-labelledby="<?php echo esc_attr( $chapters['core']['heading_id'] ); ?>">
+			<h3 id="<?php echo esc_attr( $chapters['core']['heading_id'] ); ?>"><?php echo esc_html( $chapters['core']['title'] ); ?></h3>
 		<details id="ran-booster-quick-start" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation"<?php echo $documentation_initial_open ? '' : ' open'; ?>>
 			<summary><?php esc_html_e( 'Quick start', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
@@ -327,57 +409,6 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			</div>
 		</details>
 
-		<?php foreach ( $prepared_provider_documentation as $prepared_provider_guide ) { ?>
-			<?php
-			$provider_guide  = $prepared_provider_guide['guide'];
-			$provider_code   = isset( $provider_guide['code'] ) && is_string( $provider_guide['code'] ) ? $provider_guide['code'] : '';
-			$provider_label  = isset( $provider_guide['label'] ) && is_string( $provider_guide['label'] ) ? $provider_guide['label'] : '';
-			$setup_available = ! empty( $provider_guide['setup_available'] );
-			$credentials     = isset( $provider_guide['credentials'] ) && is_array( $provider_guide['credentials'] ) ? $provider_guide['credentials'] : array();
-			$settings_url    = $tab_urls[ $provider_code ] ?? '';
-			?>
-			<details class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation" id="ran-booster-documentation-provider-<?php echo esc_attr( $provider_code ); ?>">
-				<summary>
-					<?php
-					/* translators: %s: Repository provider name. */
-					echo esc_html( sprintf( __( '%s credentials and access', 'ran-booster' ), $provider_label ) );
-					?>
-				</summary>
-				<div class="ran-booster-documentation__content ran-booster-disclosure__body">
-					<?php if ( $setup_available ) { ?>
-						<h3><?php esc_html_e( 'Minimum credential permissions', 'ran-booster' ); ?></h3>
-						<p><?php echo esc_html( $credentials['summary'] ?? '' ); ?></p>
-						<?php if ( '' !== $settings_url ) { ?>
-							<p><a class="button" href="<?php echo esc_url( $settings_url ); ?>">
-								<?php
-								/* translators: %s: Repository provider name. */
-								echo esc_html( sprintf( _x( 'Open %s settings', 'Repository provider settings link', 'ran-booster' ), $provider_label ) );
-								?>
-							</a></p>
-						<?php } ?>
-						<?php if ( ! empty( $credentials['links'] ) && is_array( $credentials['links'] ) ) { ?>
-							<h3><?php esc_html_e( 'Official setup guidance', 'ran-booster' ); ?></h3>
-							<ul>
-								<?php foreach ( $credentials['links'] as $credential_link ) { ?>
-									<?php if ( isset( $credential_link['label'], $credential_link['url'] ) ) { ?>
-										<li>
-											<a href="<?php echo esc_url( $credential_link['url'] ); ?>" target="_blank" rel="noopener noreferrer">
-												<?php echo esc_html( $credential_link['label'] ); ?><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span>
-											</a>
-										</li>
-									<?php } ?>
-								<?php } ?>
-							</ul>
-						<?php } ?>
-					<?php } else { ?>
-						<p><?php echo esc_html( $credentials['summary'] ?? __( 'Setup guidance is not available for this Git provider yet.', 'ran-booster' ) ); ?></p>
-						<p><?php esc_html_e( 'You can still use a public repository or enter repository details manually when the Git provider supports package deployment.', 'ran-booster' ); ?></p>
-					<?php } ?>
-				</div>
-				</details>
-					<?php $documentation_hooks->render_prepared_sections( $prepared_provider_guide['sections'] ); ?>
-				<?php } ?>
-
 		<details id="ran-booster-installing-and-managing-packages" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Installing and managing packages', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
@@ -468,7 +499,75 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			</div>
 			</details>
 
-				<?php $documentation_hooks->render_prepared_sections( $prepared_global_sections ); ?>
+		</section>
+
+		<?php foreach ( $prepared_provider_documentation as $prepared_provider_guide ) { ?>
+			<?php
+			$provider_guide  = $prepared_provider_guide['guide'];
+			$provider_code   = isset( $provider_guide['code'] ) && is_string( $provider_guide['code'] ) ? $provider_guide['code'] : '';
+			$provider_label  = isset( $provider_guide['label'] ) && is_string( $provider_guide['label'] ) ? $provider_guide['label'] : '';
+			$setup_available = ! empty( $provider_guide['setup_available'] );
+			$credentials     = isset( $provider_guide['credentials'] ) && is_array( $provider_guide['credentials'] ) ? $provider_guide['credentials'] : array();
+			$settings_url    = $tab_urls[ $provider_code ] ?? '';
+			?>
+			<section class="ran-booster-documentation__chapter" aria-labelledby="<?php echo esc_attr( $chapters[ 'provider-' . $provider_code ]['heading_id'] ); ?>">
+				<h3 id="<?php echo esc_attr( $chapters[ 'provider-' . $provider_code ]['heading_id'] ); ?>"><?php echo esc_html( $provider_label ); ?></h3>
+			<details class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation" id="ran-booster-documentation-provider-<?php echo esc_attr( $provider_code ); ?>">
+				<summary>
+					<?php
+					/* translators: %s: Repository provider name. */
+					echo esc_html( sprintf( __( '%s credentials and access', 'ran-booster' ), $provider_label ) );
+					?>
+				</summary>
+				<div class="ran-booster-documentation__content ran-booster-disclosure__body">
+					<?php if ( $setup_available ) { ?>
+						<h3><?php esc_html_e( 'Minimum credential permissions', 'ran-booster' ); ?></h3>
+						<p><?php echo esc_html( $credentials['summary'] ?? '' ); ?></p>
+						<?php if ( '' !== $settings_url ) { ?>
+							<p><a class="button" href="<?php echo esc_url( $settings_url ); ?>">
+								<?php
+								/* translators: %s: Repository provider name. */
+								echo esc_html( sprintf( _x( 'Open %s settings', 'Repository provider settings link', 'ran-booster' ), $provider_label ) );
+								?>
+							</a></p>
+						<?php } ?>
+						<?php if ( ! empty( $credentials['links'] ) && is_array( $credentials['links'] ) ) { ?>
+							<h3><?php esc_html_e( 'Official setup guidance', 'ran-booster' ); ?></h3>
+							<ul>
+								<?php foreach ( $credentials['links'] as $credential_link ) { ?>
+									<?php if ( isset( $credential_link['label'], $credential_link['url'] ) ) { ?>
+										<li>
+											<a href="<?php echo esc_url( $credential_link['url'] ); ?>" target="_blank" rel="noopener noreferrer">
+												<?php echo esc_html( $credential_link['label'] ); ?><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span>
+											</a>
+										</li>
+									<?php } ?>
+								<?php } ?>
+							</ul>
+						<?php } ?>
+					<?php } else { ?>
+						<p><?php echo esc_html( $credentials['summary'] ?? __( 'Setup guidance is not available for this Git provider yet.', 'ran-booster' ) ); ?></p>
+						<p><?php esc_html_e( 'You can still use a public repository or enter repository details manually when the Git provider supports package deployment.', 'ran-booster' ); ?></p>
+					<?php } ?>
+				</div>
+				</details>
+					<?php $documentation_hooks->render_prepared_sections( $prepared_provider_guide['sections'] ); ?>
+			</section>
+				<?php } ?>
+
+		<?php foreach ( $chapters as $chapter_id => $chapter ) { ?>
+			<?php
+			if ( 'core' === $chapter_id || 'reference' === $chapter_id || str_starts_with( $chapter_id, 'provider-' ) ) {
+				continue; }
+			?>
+			<section class="ran-booster-documentation__chapter" aria-labelledby="<?php echo esc_attr( $chapter['heading_id'] ); ?>">
+				<h3 id="<?php echo esc_attr( $chapter['heading_id'] ); ?>"><?php echo esc_html( $chapter['title'] ); ?></h3>
+				<?php $documentation_hooks->render_prepared_sections( $chapter['sections'] ); ?>
+			</section>
+		<?php } ?>
+		<section class="ran-booster-documentation__chapter" aria-labelledby="<?php echo esc_attr( $chapters['reference']['heading_id'] ); ?>">
+			<h3 id="<?php echo esc_attr( $chapters['reference']['heading_id'] ); ?>"><?php echo esc_html( $chapters['reference']['title'] ); ?></h3>
+			<?php $documentation_hooks->render_prepared_sections( $chapters['reference']['sections'] ); ?>
 
 			<details id="ran-booster-about" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'About RAN Booster', 'ran-booster' ); ?></summary>
@@ -499,6 +598,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			</div>
 		</details>
 
+		</section>
 		</div>
 	</div>
 </section>

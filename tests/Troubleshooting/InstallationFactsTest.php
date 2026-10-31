@@ -23,7 +23,7 @@ final class InstallationFactsTest extends TestCase {
 		$rows = ( new InstallationFacts( new ProviderRegistry() ) )->core_configuration();
 		self::assertSame( 'Configured; value withheld', $rows['RAN_BOOSTER_GITHUB_TOKEN'] );
 		self::assertSame( 'Configured; value withheld', $rows['RAN_BOOSTER_ENCRYPTED_SECRETS_DIR'] );
-		self::assertSame( 'Invalid; archive admission refused', $rows['RAN_BOOSTER_MAX_ARCHIVE_BYTES'] );
+		self::assertSame( 'Invalid code value; archive admission refused', $rows['RAN_BOOSTER_MAX_ARCHIVE_BYTES'] );
 		self::assertStringNotContainsString( 'canary', implode( ' ', $rows ) );
 	}
 

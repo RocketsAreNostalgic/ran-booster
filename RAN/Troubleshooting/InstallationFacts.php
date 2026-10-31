@@ -145,11 +145,15 @@ final class InstallationFacts {
 			return 'Default';
 		}
 		$value = constant( $name );
-		return is_bool( $value ) || is_int( $value ) || ( is_string( $value ) && preg_match( '/\A[0-9]{1,12}[KMG]?\z/i', $value ) === 1 ) ? (string) $value : 'Invalid';
+		if ( is_bool( $value ) ) {
+			return $value ? 'Enabled' : 'Disabled';
+		}
+		return is_int( $value ) || ( is_string( $value ) && preg_match( '/\A[0-9]{1,12}[KMG]?\z/i', $value ) === 1 ) ? (string) $value : 'Invalid';
 	}
 
 	private function is_runtime_supported(): bool {
-		return RuntimeSupport::current()->allows_managed_operations();
+		global $wp_version;
+		return RuntimeSupport::current()->allows_managed_operations() && version_compare( PHP_VERSION, '8.2', '>=' ) && is_string( $wp_version ?? null ) && version_compare( $wp_version, '7.0', '>=' );
 	}
 
 	public function components_truncated(): bool {
@@ -175,8 +179,12 @@ final class InstallationFacts {
 			foreach ( ( new GeneralPreferenceStore() )->projection() as $key => $field ) {
 				$name = array( 'hide_github' => 'RAN_BOOSTER_HIDE_GITHUB_UI', 'self_update_discovery' => 'RAN_BOOSTER_SELF_UPDATE_MODE', 'history_rows' => 'RAN_BOOSTER_HISTORY_ROWS', 'history_days' => 'RAN_BOOSTER_HISTORY_DAYS', 'max_archive_bytes' => 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' )[ $key ];
 				$value = is_bool( $field['value'] ) ? ( $field['value'] ? 'Enabled' : 'Disabled' ) : (string) $field['value'];
+				if ( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' === $name && 'invalid_code' === ( $field['error'] ?? null ) ) {
+					$rows[ $name ] = 'Invalid code value; archive admission refused';
+					continue;
+				}
 				if ( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' === $name && null !== ( $field['error'] ?? null ) ) {
-					$rows[ $name ] = 'Invalid; archive admission refused';
+					$rows[ $name ] = 'Invalid saved value; effective default ' . $value;
 					continue;
 				}
 				if ( 'RAN_BOOSTER_HIDE_GITHUB_UI' === $name ) {
@@ -189,7 +197,9 @@ final class InstallationFacts {
 			$rows += array_fill_keys( array( 'RAN_BOOSTER_HIDE_GITHUB_UI', 'RAN_BOOSTER_SELF_UPDATE_MODE', 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS', 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ), 'Unavailable' );
 		}
 		if ( defined( 'RAN_BOOSTER_SELF_UPDATE_MODE' ) ) {
-			$rows['RAN_BOOSTER_SELF_UPDATE_MODE'] = self::choice_constant( 'RAN_BOOSTER_SELF_UPDATE_MODE', array( 'auto', 'enabled', 'disabled' ) ) . '; source=code; locked';
+			$raw  = constant( 'RAN_BOOSTER_SELF_UPDATE_MODE' );
+			$mode = is_string( $raw ) ? strtolower( trim( $raw ) ) : '';
+			$rows['RAN_BOOSTER_SELF_UPDATE_MODE'] = in_array( $mode, array( 'auto', 'enabled', 'disabled' ), true ) ? $mode . '; source=code; locked' : 'Invalid; source=code; locked';
 		}
 		foreach ( array( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', 'RAN_BOOSTER_GITHUB_TOKEN' ) as $name ) {
 			$rows[ $name ] = defined( $name ) ? 'Configured; value withheld' : 'Undefined';

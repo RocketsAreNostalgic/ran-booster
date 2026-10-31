@@ -1,5 +1,11 @@
 <?php // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Included view bindings are supplied by the caller.
-/** Dashboard sections share the Overview payload and storage flow. */
+/**
+ * Dashboard sections share the Overview payload and storage flow.
+ *
+ * @var array<string, mixed> $onboarding
+ * @var list<array{code: string, label: string, url: string, admitted: ?bool, selection: ?string}> $provider_summaries
+ * @var array<string, string> $provider_selection_labels
+ */
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
@@ -44,11 +50,15 @@ $inventory = $onboarding['inventory'] ?? array(
 <section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-providers">
 	<h3 id="ran-booster-overview-providers"><?php esc_html_e( 'Providers and access', 'ran-booster' ); ?></h3>
 	<p><?php esc_html_e( 'Repository access has not been checked here.', 'ran-booster' ); ?></p>
-	<?php if ( empty( $onboarding['provider_links'] ) ) { ?>
+	<?php if ( array() === $provider_summaries ) { ?>
 		<p><?php esc_html_e( 'No provider settings are currently available.', 'ran-booster' ); ?></p>
 	<?php } else { ?>
-		<ul><?php foreach ( $onboarding['provider_links'] as $provider_link ) { ?>
-			<li><a href="<?php echo esc_url( $provider_link['url'] ); ?>"><?php echo esc_html( $provider_link['label'] ); ?></a></li>
+		<ul><?php foreach ( $provider_summaries as $provider ) { ?>
+			<li><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a> — <?php echo esc_html( true === $provider['admitted'] ? __( 'Admitted', 'ran-booster' ) : ( false === $provider['admitted'] ? __( 'Not admitted', 'ran-booster' ) : __( 'Admission unknown', 'ran-booster' ) ) ); ?>
+			<?php
+			if ( 'gh' === $provider['code'] ) {
+				?>
+				— <?php echo esc_html( $provider_selection_labels[ $provider['selection'] ?? '' ] ?? __( 'Selection unknown', 'ran-booster' ) ); ?><?php } ?></li>
 		<?php } ?></ul>
 	<?php } ?>
 </section>

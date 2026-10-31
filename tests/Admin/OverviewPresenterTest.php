@@ -81,6 +81,71 @@ final class OverviewPresenterTest extends TestCase {
 		unset( $GLOBALS['ran_booster_storage_test_options'][ OnboardingPresenter::PRESENTATION_OPTION ] );
 	}
 
+	public function test_provider_facts_are_scoped_to_provider_tabs_without_inventing_admission(): void {
+		$tabs = array();
+		foreach ( array( 'portability', 'documentation', 'troubleshooting', 'gh', 'bb', 'unknown' ) as $key ) {
+			$tabs[] = array(
+				'key'      => $key,
+				'label'    => strtoupper( $key ),
+				'url'      => '/' . $key,
+				'active'   => false,
+				'provider' => in_array( $key, array( 'gh', 'bb', 'unknown' ), true ),
+			);
+		}
+		foreach ( array( 'conflict', 'missing', 'recovery_required', 'storage_unavailable', 'available' ) as $state ) {
+			$result = ( new OnboardingPresenter() )->build_overview(
+				$tabs,
+				'/install',
+				'/theme',
+				$this->plugins( array() ),
+				$this->themes( array() ),
+				null,
+				null,
+				array(
+					'gh'     => array(
+						'admitted'  => false,
+						'selection' => $state,
+					),
+					'bb'     => array(
+						'admitted'  => true,
+						'selection' => null,
+					),
+					'hidden' => array(
+						'admitted'  => true,
+						'selection' => null,
+					),
+				)
+			);
+			self::assertSame(
+				array(
+					array(
+						'code'      => 'gh',
+						'label'     => 'GH',
+						'url'       => '/gh',
+						'admitted'  => false,
+						'selection' => $state,
+					),
+					array(
+						'code'      => 'bb',
+						'label'     => 'BB',
+						'url'       => '/bb',
+						'admitted'  => true,
+						'selection' => null,
+					),
+					array(
+						'code'      => 'unknown',
+						'label'     => 'UNKNOWN',
+						'url'       => '/unknown',
+						'admitted'  => null,
+						'selection' => null,
+					),
+				),
+				$result['provider_summaries']
+			);
+			self::assertCount( 3, $result['provider_links'] );
+		}
+	}
+
 	public function test_activity_projects_only_safe_fields_and_distinguishes_empty_from_unavailable(): void {
 		$connection                              = new ActivityConnection();
 		$activity                                = new ActivityStore( $connection );

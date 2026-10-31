@@ -218,7 +218,8 @@ class Dashboard {
 				$this->plugins,
 				$this->themes,
 				$this->overview_activity,
-				null
+				null,
+				$this->provider_settings->overview_provider_facts()
 			);
 			$secrets_storage    = $this->secrets_storage;
 			if ( null !== $secrets_storage ) {

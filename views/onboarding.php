@@ -14,6 +14,31 @@ if ( ! defined( 'WPINC' ) ) {
 $overview_view = ( $onboarding['view'] ?? 'onboarding' ) === 'dashboard' ? 'dashboard' : 'onboarding';
 $overview_url  = $onboarding['overview_url'] ?? admin_url( 'admin.php?page=ran-booster&tab=overview' );
 
+$provider_summaries        = $onboarding['provider_summaries'] ?? array_map(
+	static fn( array $link ): array => array(
+		'code'      => '',
+		'label'     => $link['label'],
+		'url'       => $link['url'],
+		'admitted'  => null,
+		'selection' => null,
+	),
+	$onboarding['provider_links']
+);
+$provider_selection_labels = array(
+	'available'           => __( 'Selection available', 'ran-booster' ),
+	'conflict'            => __( 'Provider selection conflict', 'ran-booster' ),
+	'incompatible'        => __( 'Provider selection is incompatible', 'ran-booster' ),
+	'missing'             => __( 'Selected provider is missing', 'ran-booster' ),
+	'recovery_required'   => __( 'Provider selection needs recovery', 'ran-booster' ),
+	'decision_required'   => __( 'Provider selection needs a decision', 'ran-booster' ),
+	'storage_unavailable' => __( 'Provider selection storage is unavailable', 'ran-booster' ),
+);
+$provider_attention        = array_filter(
+	$provider_summaries,
+	static fn( array $provider ): bool => false === $provider['admitted']
+		|| ( 'gh' === $provider['code'] && in_array( $provider['selection'], array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'storage_unavailable' ), true ) )
+);
+
 $secrets_storage                      = isset( $onboarding['secrets_storage'] ) && is_array( $onboarding['secrets_storage'] )
 	? $onboarding['secrets_storage']
 	: null;
@@ -100,9 +125,12 @@ $has_storage_details                  = null !== $secrets_storage
 	$overview_storage_unknown      = '' === $overview_storage_status;
 	$overview_storage_problem      = in_array( $overview_storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true );
 	?>
-	<?php if ( $overview_inventory_incomplete || $overview_storage_unknown || $overview_storage_problem ) { ?>
+	<?php if ( $overview_inventory_incomplete || $overview_storage_unknown || $overview_storage_problem || array() !== $provider_attention ) { ?>
 		<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-attention">
 			<h3 id="ran-booster-overview-attention"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></h3>
+			<?php foreach ( $provider_attention as $provider ) { ?>
+				<p><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>: <?php echo esc_html( false === $provider['admitted'] ? __( 'Provider is not admitted.', 'ran-booster' ) : $provider_selection_labels[ $provider['selection'] ] ); ?></p>
+			<?php } ?>
 			<?php if ( $overview_inventory_incomplete ) { ?>
 				<p><?php esc_html_e( 'The managed package inventory is incomplete or unavailable.', 'ran-booster' ); ?></p>
 			<?php } ?>
@@ -299,11 +327,16 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 			<p><?php esc_html_e( 'Add a credential for a Git provider, such as GitHub or Bitbucket, only when anonymous access is not enough.', 'ran-booster' ); ?></p>
 
 			<h4 class="ran-booster-onboarding__provider-heading"><?php esc_html_e( '3. Add credentials if needed', 'ran-booster' ); ?></h4>
-			<?php if ( array() !== $onboarding['provider_links'] ) { ?>
+			<p><?php esc_html_e( 'Repository access has not been checked here.', 'ran-booster' ); ?></p>
+			<?php if ( array() !== $provider_summaries ) { ?>
 				<ul class="ran-booster-onboarding__links">
-					<?php foreach ( $onboarding['provider_links'] as $provider_link ) { ?>
+					<?php foreach ( $provider_summaries as $provider ) { ?>
 						<?php // translators: %s is the display name of a registered Git provider. ?>
-						<li><a href="<?php echo esc_url( $provider_link['url'] ); ?>"><?php echo esc_html( sprintf( __( 'Add %s access', 'ran-booster' ), $provider_link['label'] ) ); ?></a></li>
+						<li><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( sprintf( __( 'Add %s access', 'ran-booster' ), $provider['label'] ) ); ?></a> — <?php echo esc_html( true === $provider['admitted'] ? __( 'Admitted', 'ran-booster' ) : ( false === $provider['admitted'] ? __( 'Not admitted', 'ran-booster' ) : __( 'Admission unknown', 'ran-booster' ) ) ); ?>
+						<?php
+						if ( 'gh' === $provider['code'] ) {
+							?>
+							— <?php echo esc_html( $provider_selection_labels[ $provider['selection'] ?? '' ] ?? __( 'Selection unknown', 'ran-booster' ) ); ?><?php } ?></li>
 					<?php } ?>
 				</ul>
 			<?php } else { ?>

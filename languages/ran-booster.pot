@@ -774,7 +774,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:631
 #: RAN/Admin/PortabilityController.php:757
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1534
+#: RAN/Admin/ProviderSettingsPresenter.php:1554
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/attempts/index.php:137
 #: views/portability.php:169
@@ -788,7 +788,7 @@ msgstr ""
 #: RAN/Admin/PortabilityController.php:631
 #: RAN/Admin/PortabilityController.php:757
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:345
-#: RAN/Admin/ProviderSettingsPresenter.php:1533
+#: RAN/Admin/ProviderSettingsPresenter.php:1553
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:134
 #: views/attempts/index.php:136
 #: views/portability.php:169
@@ -954,7 +954,7 @@ msgid "Diagnostics not configured"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:64
-#: views/overview-dashboard.php:56
+#: views/overview-dashboard.php:66
 msgid "Credential expiry"
 msgstr ""
 
@@ -987,7 +987,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:78
 #: RAN/Troubleshooting/TroubleshootingService.php:91
 #: views/attempts/index.php:168
-#: views/overview-dashboard.php:40
+#: views/overview-dashboard.php:46
 #: views/portability-review.php:101
 #: views/troubleshooting.php:210
 #: assets/ran-booster-portability.js:713
@@ -1357,7 +1357,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1249
+#: RAN/Dashboard.php:1250
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1366,7 +1366,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:605
+#: RAN/Dashboard.php:606
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -2032,7 +2032,7 @@ msgid "Git provider settings are unavailable."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:30
-#: RAN/Admin/ProviderSettingsPresenter.php:1482
+#: RAN/Admin/ProviderSettingsPresenter.php:1502
 msgid "Owner"
 msgstr ""
 
@@ -2235,31 +2235,31 @@ msgstr ""
 msgid "No managed %s repositories are available yet. Install a package to add its repository."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:224
+#: RAN/Admin/ProviderSettingsPresenter.php:244
 msgid "Set up secure credential storage from Overview before reviewing GitHub adoption."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:226
+#: RAN/Admin/ProviderSettingsPresenter.php:246
 msgid "GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:233
+#: RAN/Admin/ProviderSettingsPresenter.php:253
 msgid "Native recovery details could not be verified. Restore access to selection and management storage before continuing."
 msgstr ""
 
 #. translators: 1: repository provider name, 2: repository provider code.
-#: RAN/Admin/ProviderSettingsPresenter.php:1531
+#: RAN/Admin/ProviderSettingsPresenter.php:1551
 #, php-format
 msgid "The active %1$s provider can read every credential saved under Git provider code %2$s. Install and activate only Git providers you trust; Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1585
+#: RAN/Admin/ProviderSettingsPresenter.php:1605
 msgid "Account"
 msgstr ""
 
 #. translators: %d: number of packages using the credential.
-#: RAN/Admin/ProviderSettingsPresenter.php:1594
-#: RAN/Admin/ProviderSettingsPresenter.php:1644
+#: RAN/Admin/ProviderSettingsPresenter.php:1614
+#: RAN/Admin/ProviderSettingsPresenter.php:1664
 #: views/portability-review.php:133
 #, php-format
 msgctxt "Packages using a credential"
@@ -2269,30 +2269,30 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: Label shown when package usage cannot be determined.
-#: RAN/Admin/ProviderSettingsPresenter.php:1595
-#: RAN/Admin/ProviderSettingsPresenter.php:1644
+#: RAN/Admin/ProviderSettingsPresenter.php:1615
+#: RAN/Admin/ProviderSettingsPresenter.php:1664
 msgid "Usage unavailable"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1597
+#: RAN/Admin/ProviderSettingsPresenter.php:1617
 msgid "Stored · Validity checked on use"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1598
+#: RAN/Admin/ProviderSettingsPresenter.php:1618
 #: views/troubleshooting.php:43
 msgid "Not configured"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1648
+#: RAN/Admin/ProviderSettingsPresenter.php:1668
 msgid "Saved · Remote delivery not verified by Core"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1648
+#: RAN/Admin/ProviderSettingsPresenter.php:1668
 msgid "Local secret not configured"
 msgstr ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1650
+#: RAN/Admin/ProviderSettingsPresenter.php:1670
 #, php-format
 msgid "Remove this local secret? %d managed package may be affected. Remote Git provider webhooks will not be removed."
 msgid_plural "Remove this local secret? %d managed packages may be affected. Remote Git provider webhooks will not be removed."
@@ -2300,20 +2300,20 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of managed packages that use the local secret.
-#: RAN/Admin/ProviderSettingsPresenter.php:1651
+#: RAN/Admin/ProviderSettingsPresenter.php:1671
 msgid "Remove this local secret? Remote Git provider webhooks will not be removed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1733
+#: RAN/Admin/ProviderSettingsPresenter.php:1753
 msgid "Repository access needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1733
+#: RAN/Admin/ProviderSettingsPresenter.php:1753
 msgid "No credential saved"
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1733
+#: RAN/Admin/ProviderSettingsPresenter.php:1753
 #, php-format
 msgid "Ready · %d credential"
 msgid_plural "Ready · %d credentials"
@@ -2321,55 +2321,55 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1734
+#: RAN/Admin/ProviderSettingsPresenter.php:1754
 msgid "Restore encrypted credential storage before reviewing or changing saved repository access."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1734
+#: RAN/Admin/ProviderSettingsPresenter.php:1754
 msgid "Review saved credentials that are incomplete, expired, or approaching expiry."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1734
+#: RAN/Admin/ProviderSettingsPresenter.php:1754
 msgid "Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits."
 msgstr ""
 
 #. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1734
+#: RAN/Admin/ProviderSettingsPresenter.php:1754
 msgid "Private repository access is available. Open credential management to validate, replace, or review usage."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1738
+#: RAN/Admin/ProviderSettingsPresenter.php:1758
 msgid "Webhook signing · Needs attention"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1738
+#: RAN/Admin/ProviderSettingsPresenter.php:1758
 msgid "Webhook signing · No secret saved"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1738
+#: RAN/Admin/ProviderSettingsPresenter.php:1758
 msgid "Webhook signing · Ready locally"
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1739
+#: RAN/Admin/ProviderSettingsPresenter.php:1759
 msgid "Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1739
+#: RAN/Admin/ProviderSettingsPresenter.php:1759
 msgid "Review saved signing material whose configuration or managed-package usage could not be confirmed."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1739
+#: RAN/Admin/ProviderSettingsPresenter.php:1759
 msgid "Automatic branch deployments require local signing material before Git provider webhooks can be used safely."
 msgstr ""
 
-#: RAN/Admin/ProviderSettingsPresenter.php:1739
+#: RAN/Admin/ProviderSettingsPresenter.php:1759
 msgid "Add local signing material before configuring a Git provider webhook."
 msgstr ""
 
 #. translators: %d is the number of local secrets that can verify signed deliveries.
-#: RAN/Admin/ProviderSettingsPresenter.php:1739
+#: RAN/Admin/ProviderSettingsPresenter.php:1759
 #, php-format
 msgid "%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists."
 msgid_plural "%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist."
@@ -2377,7 +2377,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: item count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1798
+#: RAN/Admin/ProviderSettingsPresenter.php:1818
 #: views/packages/index.php:96
 #, php-format
 msgid "%d item"
@@ -2386,25 +2386,25 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: current page number, 2: total page count.
-#: RAN/Admin/ProviderSettingsPresenter.php:1799
+#: RAN/Admin/ProviderSettingsPresenter.php:1819
 #, php-format
 msgid "Page %1$d of %2$d"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1830
+#: RAN/Admin/ProviderSettingsPresenter.php:1850
 #, php-format
 msgid "Back to %s overview"
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1831
+#: RAN/Admin/ProviderSettingsPresenter.php:1851
 #, php-format
 msgid "Manage saved credentials used for %s repository access."
 msgstr ""
 
 #. translators: %s is the repository provider name.
-#: RAN/Admin/ProviderSettingsPresenter.php:1832
+#: RAN/Admin/ProviderSettingsPresenter.php:1852
 #, php-format
 msgid "Manage local signing material used to verify %s webhook deliveries."
 msgstr ""
@@ -2590,7 +2590,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:173
 #: RAN/Troubleshooting/TroubleshootingService.php:176
 #: views/debug-capture.php:43
-#: views/onboarding.php:32
+#: views/onboarding.php:57
 msgid "Unavailable"
 msgstr ""
 
@@ -2817,8 +2817,8 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
 #: RAN/Booster.php:916
 #: views/attempts/index.php:54
-#: views/onboarding.php:31
-#: views/onboarding.php:105
+#: views/onboarding.php:56
+#: views/onboarding.php:130
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
 #: views/packages/index.php:333
@@ -3261,7 +3261,7 @@ msgid "Failure details"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:264
-#: views/onboarding.php:138
+#: views/onboarding.php:166
 msgid "Diagnostic code:"
 msgstr ""
 
@@ -4491,7 +4491,7 @@ msgid "RAN Booster could not complete its database setup, so WordPress left the 
 msgstr ""
 
 #: RAN/Booster.php:257
-#: views/onboarding.php:83
+#: views/onboarding.php:108
 msgid "Overview"
 msgstr ""
 
@@ -4727,51 +4727,51 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dashboard.php:615
+#: RAN/Dashboard.php:616
 msgid "Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package."
 msgstr ""
 
-#: RAN/Dashboard.php:634
+#: RAN/Dashboard.php:635
 msgid "Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it."
 msgstr ""
 
-#: RAN/Dashboard.php:649
+#: RAN/Dashboard.php:650
 msgid "Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:650
+#: RAN/Dashboard.php:651
 msgid "Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:655
+#: RAN/Dashboard.php:656
 msgid "Booster cannot verify this installed package and its management record. No management changes have been made."
 msgstr ""
 
-#: RAN/Dashboard.php:680
+#: RAN/Dashboard.php:681
 msgid "Booster’s saved update revision is invalid. It cannot safely use this package’s management settings."
 msgstr ""
 
-#: RAN/Dashboard.php:681
+#: RAN/Dashboard.php:682
 msgid "Booster’s saved update source is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:682
+#: RAN/Dashboard.php:683
 msgid "Booster’s saved deployment policy is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:683
+#: RAN/Dashboard.php:684
 msgid "Booster’s saved repository credential reference is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:684
+#: RAN/Dashboard.php:685
 msgid "Booster’s saved repository privacy setting is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:685
+#: RAN/Dashboard.php:686
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:936
+#: RAN/Dashboard.php:937
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 
@@ -6240,8 +6240,8 @@ msgstr ""
 
 #: views/documentation.php:182
 #: views/documentation.php:386
-#: views/onboarding.php:327
-#: views/overview-dashboard.php:42
+#: views/onboarding.php:360
+#: views/overview-dashboard.php:48
 #: views/provider.php:626
 msgid "Install a plugin"
 msgstr ""
@@ -6523,7 +6523,7 @@ msgid "Each administrator can dismiss their own credential expiry reminders. A f
 msgstr ""
 
 #: views/documentation.php:308
-#: views/onboarding.php:239
+#: views/onboarding.php:267
 msgid "Use a different storage location"
 msgstr ""
 
@@ -6603,8 +6603,8 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:387
-#: views/onboarding.php:328
-#: views/overview-dashboard.php:42
+#: views/onboarding.php:361
+#: views/overview-dashboard.php:48
 #: views/provider.php:627
 msgid "Install a theme"
 msgstr ""
@@ -6638,7 +6638,7 @@ msgid "This site currently allows repository ZIPs up to %1$d MiB compressed and 
 msgstr ""
 
 #: views/documentation.php:408
-#: views/onboarding.php:46
+#: views/onboarding.php:71
 msgid "Booster default"
 msgstr ""
 
@@ -7038,339 +7038,395 @@ msgstr ""
 msgid "Booster can replace managed plugin and theme directories. Before editing a managed package on this site, set Updates to Disabled. Manual still allows an administrator-triggered replacement; Automatic also accepts configured repository webhooks."
 msgstr ""
 
-#: views/onboarding.php:27
-msgid "Path configured"
-msgstr ""
-
 #: views/onboarding.php:28
-msgid "Storage healthy"
+msgid "Selection available"
 msgstr ""
 
 #: views/onboarding.php:29
-msgid "Storage needs attention"
+msgid "Provider selection conflict"
 msgstr ""
 
 #: views/onboarding.php:30
-msgid "Setup available"
+msgid "Provider selection is incompatible"
+msgstr ""
+
+#: views/onboarding.php:31
+msgid "Selected provider is missing"
+msgstr ""
+
+#: views/onboarding.php:32
+msgid "Provider selection needs recovery"
 msgstr ""
 
 #: views/onboarding.php:33
+msgid "Provider selection needs a decision"
+msgstr ""
+
+#: views/onboarding.php:34
+msgid "Provider selection storage is unavailable"
+msgstr ""
+
+#: views/onboarding.php:52
+msgid "Path configured"
+msgstr ""
+
+#: views/onboarding.php:53
+msgid "Storage healthy"
+msgstr ""
+
+#: views/onboarding.php:54
+msgid "Storage needs attention"
+msgstr ""
+
+#: views/onboarding.php:55
+msgid "Setup available"
+msgstr ""
+
+#: views/onboarding.php:58
 msgid "Verification pending"
 msgstr ""
 
-#: views/onboarding.php:47
+#: views/onboarding.php:72
 msgid "Custom wp-config.php path"
 msgstr ""
 
-#: views/onboarding.php:78
+#: views/onboarding.php:103
 msgid "Prepare your site"
 msgstr ""
 
-#: views/onboarding.php:79
+#: views/onboarding.php:104
 msgid "Public repositories do not need repository credentials or webhooks."
 msgstr ""
 
-#: views/onboarding.php:80
+#: views/onboarding.php:105
 msgid "Install and manage custom plugins and themes from supported Git repositories; private access and Push-to-Deploy are optional."
 msgstr ""
 
-#: views/onboarding.php:90
+#: views/onboarding.php:115
 msgid "Return to onboarding"
 msgstr ""
 
-#: views/onboarding.php:90
+#: views/onboarding.php:115
 msgid "Skip onboarding"
 msgstr ""
 
-#: views/onboarding.php:91
+#: views/onboarding.php:116
 msgid "This changes the view for all site administrators. It does not reset your configuration."
 msgstr ""
 
-#: views/onboarding.php:107
+#: views/onboarding.php:132
+msgid "Provider is not admitted."
+msgstr ""
+
+#: views/onboarding.php:135
 msgid "The managed package inventory is incomplete or unavailable."
 msgstr ""
 
-#: views/onboarding.php:110
+#: views/onboarding.php:138
 msgid "Secure credential storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:110
-#: views/onboarding.php:112
+#: views/onboarding.php:138
+#: views/onboarding.php:140
 msgid "Review storage"
 msgstr ""
 
-#: views/onboarding.php:122
+#: views/onboarding.php:150
 msgid "1. Prepare secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:123
+#: views/onboarding.php:151
 msgid "Review storage before adding credentials. Public installations remain available while you prepare."
 msgstr ""
 
-#: views/onboarding.php:127
-#: views/onboarding.php:133
+#: views/onboarding.php:155
+#: views/onboarding.php:161
 msgid "Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:128
+#: views/onboarding.php:156
 msgid "Storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:134
+#: views/onboarding.php:162
 msgid "Status unknown"
 msgstr ""
 
-#: views/onboarding.php:143
+#: views/onboarding.php:171
 msgid "Storage details"
 msgstr ""
 
-#: views/onboarding.php:149
+#: views/onboarding.php:177
 msgid "Storage directory"
 msgstr ""
 
-#: views/onboarding.php:154
+#: views/onboarding.php:182
 msgid "Storage file"
 msgstr ""
 
-#: views/onboarding.php:159
+#: views/onboarding.php:187
 msgid "Path selection"
 msgstr ""
 
-#: views/onboarding.php:165
+#: views/onboarding.php:193
 msgid "Booster selected this private location automatically; you do not need to choose a path."
 msgstr ""
 
-#: views/onboarding.php:167
+#: views/onboarding.php:195
 msgid "The encrypted file and its separate database key are created when you save the first credential."
 msgstr ""
 
-#: views/onboarding.php:169
+#: views/onboarding.php:197
 msgid "Credentials are encrypted in this file. WordPress stores the encryption key separately."
 msgstr ""
 
-#: views/onboarding.php:177
+#: views/onboarding.php:205
 msgid "Create secure storage"
 msgstr ""
 
-#: views/onboarding.php:183
+#: views/onboarding.php:211
 msgid "Automatic locations considered and discarded"
 msgstr ""
 
-#: views/onboarding.php:184
+#: views/onboarding.php:212
 msgid "This check is read-only; Booster did not create files in these locations."
 msgstr ""
 
-#: views/onboarding.php:190
+#: views/onboarding.php:218
 msgid "Reason:"
 msgstr ""
 
-#: views/onboarding.php:192
+#: views/onboarding.php:220
 msgid "Blocking component:"
 msgstr ""
 
-#: views/onboarding.php:203
+#: views/onboarding.php:231
 msgid "Start over with empty credential storage"
 msgstr ""
 
-#: views/onboarding.php:203
+#: views/onboarding.php:231
 msgid "Existing Booster storage found"
 msgstr ""
 
-#: views/onboarding.php:207
+#: views/onboarding.php:235
 msgid "Verified storage directory:"
 msgstr ""
 
-#: views/onboarding.php:209
+#: views/onboarding.php:237
 msgid "This proves decryption, canonical storage and the current registered Git provider credential shape. It does not contact a Git provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files."
 msgstr ""
 
-#: views/onboarding.php:214
+#: views/onboarding.php:242
 msgid "Adopt existing storage"
 msgstr ""
 
-#: views/onboarding.php:217
+#: views/onboarding.php:245
 msgid "Permanent reset:"
 msgstr ""
 
-#: views/onboarding.php:217
+#: views/onboarding.php:245
 msgid "Restore the matching secrets.json and database key from the same backup first if they are available. Resetting abandons every repository credential and webhook secret that cannot be recovered from that matching pair."
 msgstr ""
 
-#: views/onboarding.php:218
+#: views/onboarding.php:246
 msgid "A Transporter Blueprint is not a complete credential backup. It may transfer selected repository credentials for applicable package rows, including explicit credential-only recovery for an already-managed package, but it never contains webhook secrets."
 msgstr ""
 
 #. translators: %s is the exact confirmation phrase the administrator must type.
-#: views/onboarding.php:225
+#: views/onboarding.php:253
 #, php-format
 msgid "Type %s to confirm:"
 msgstr ""
 
-#: views/onboarding.php:229
+#: views/onboarding.php:257
 msgid "Reset credential storage"
 msgstr ""
 
-#: views/onboarding.php:232
+#: views/onboarding.php:260
 msgid "Automatic adoption remains disabled. Booster will not bypass private-path checks or rewrite an operator-managed storage definition."
 msgstr ""
 
-#: views/onboarding.php:239
+#: views/onboarding.php:267
 msgid "Set a storage location manually"
 msgstr ""
 
-#: views/onboarding.php:241
+#: views/onboarding.php:269
 msgid "Choose a durable absolute directory outside the public web root. Create it as a real directory owned by the PHP process user with mode 0700. Booster manages secrets.json and its lock inside it; if the file already exists, it must be owned by PHP with mode 0600."
 msgstr ""
 
-#: views/onboarding.php:242
+#: views/onboarding.php:270
 msgid "Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:"
 msgstr ""
 
-#: views/onboarding.php:244
+#: views/onboarding.php:272
 msgid "Or update the same constant with WP-CLI:"
 msgstr ""
 
-#: views/onboarding.php:246
+#: views/onboarding.php:274
 msgid "For environment-managed hosting, replace the existing definition with this wp-config.php bridge. An environment variable by itself is not read by Booster:"
 msgstr ""
 
-#: views/onboarding.php:251
+#: views/onboarding.php:279
 msgid "If credentials already exist, move the secrets file together with its matching database key; do not copy or reset only one half."
 msgstr ""
 
-#: views/onboarding.php:258
+#: views/onboarding.php:286
 msgid "Set up manually instead"
 msgstr ""
 
-#: views/onboarding.php:258
+#: views/onboarding.php:286
 msgid "Manual setup instructions"
 msgstr ""
 
-#: views/onboarding.php:261
+#: views/onboarding.php:289
 msgid "Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages secrets.json within it."
 msgstr ""
 
-#: views/onboarding.php:262
+#: views/onboarding.php:290
 msgid "Create the owner-only private directories:"
 msgstr ""
 
-#: views/onboarding.php:268
+#: views/onboarding.php:296
 msgid "Then choose one configuration method, not both:"
 msgstr ""
 
-#: views/onboarding.php:271
+#: views/onboarding.php:299
 msgid "Add this line to wp-config.php:"
 msgstr ""
 
-#: views/onboarding.php:276
+#: views/onboarding.php:304
 msgid "Or run this WP-CLI command:"
 msgstr ""
 
-#: views/onboarding.php:286
+#: views/onboarding.php:314
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
-#: views/onboarding.php:298
+#: views/onboarding.php:326
 msgid "2. Choose a Git provider"
 msgstr ""
 
-#: views/onboarding.php:299
+#: views/onboarding.php:327
 msgid "Add a credential for a Git provider, such as GitHub or Bitbucket, only when anonymous access is not enough."
 msgstr ""
 
-#: views/onboarding.php:301
+#: views/onboarding.php:329
 msgid "3. Add credentials if needed"
 msgstr ""
 
+#: views/onboarding.php:330
+#: views/overview-dashboard.php:52
+msgid "Repository access has not been checked here."
+msgstr ""
+
 #. translators: %s is the display name of a registered Git provider.
-#: views/onboarding.php:306
+#: views/onboarding.php:335
 #, php-format
 msgid "Add %s access"
 msgstr ""
 
-#: views/onboarding.php:310
+#. translators: %s is the display name of a registered Git provider.
+#: views/onboarding.php:335
+#: views/overview-dashboard.php:57
+msgid "Admitted"
+msgstr ""
+
+#. translators: %s is the display name of a registered Git provider.
+#: views/onboarding.php:335
+#: views/overview-dashboard.php:57
+msgid "Not admitted"
+msgstr ""
+
+#. translators: %s is the display name of a registered Git provider.
+#: views/onboarding.php:335
+#: views/overview-dashboard.php:57
+msgid "Admission unknown"
+msgstr ""
+
+#: views/onboarding.php:339
+#: views/overview-dashboard.php:61
+msgid "Selection unknown"
+msgstr ""
+
+#: views/onboarding.php:343
 msgid "Git provider settings will appear here when an integration is available."
 msgstr ""
 
-#: views/onboarding.php:315
+#: views/onboarding.php:348
 msgid "Move or automate later"
 msgstr ""
 
-#: views/onboarding.php:316
+#: views/onboarding.php:349
 msgid "Packages begin in Manual mode. Enable Push-to-Deploy only when the target is ready."
 msgstr ""
 
-#: views/onboarding.php:318
-#: views/overview-dashboard.php:42
+#: views/onboarding.php:351
+#: views/overview-dashboard.php:48
 msgid "Move an existing Booster setup"
 msgstr ""
 
-#: views/onboarding.php:319
+#: views/onboarding.php:352
 msgid "Read the documentation"
 msgstr ""
 
-#: views/onboarding.php:320
+#: views/onboarding.php:353
 msgid "Open troubleshooting"
 msgstr ""
 
-#: views/onboarding.php:325
+#: views/onboarding.php:358
 msgid "4. Install and manage packages"
 msgstr ""
 
-#: views/overview-dashboard.php:14
+#: views/overview-dashboard.php:20
 msgid "Recent Activity"
 msgstr ""
 
-#: views/overview-dashboard.php:16
+#: views/overview-dashboard.php:22
 msgid "Activity is unavailable."
 msgstr ""
 
-#: views/overview-dashboard.php:18
+#: views/overview-dashboard.php:24
 msgid "No recent activity."
 msgstr ""
 
-#: views/overview-dashboard.php:26
+#: views/overview-dashboard.php:32
 #: views/provider.php:531
 msgid "View Activity"
 msgstr ""
 
-#: views/overview-dashboard.php:39
+#: views/overview-dashboard.php:45
 msgid "Managed packages"
 msgstr ""
 
-#: views/overview-dashboard.php:40
+#: views/overview-dashboard.php:46
 msgid "Plugins:"
 msgstr ""
 
-#: views/overview-dashboard.php:40
+#: views/overview-dashboard.php:46
 msgid "Themes:"
 msgstr ""
 
-#: views/overview-dashboard.php:40
+#: views/overview-dashboard.php:46
 msgid "Updates disabled:"
 msgstr ""
 
-#: views/overview-dashboard.php:41
+#: views/overview-dashboard.php:47
 msgid "Manage plugins"
 msgstr ""
 
-#: views/overview-dashboard.php:41
+#: views/overview-dashboard.php:47
 msgid "Manage themes"
 msgstr ""
 
-#: views/overview-dashboard.php:45
+#: views/overview-dashboard.php:51
 msgid "Providers and access"
 msgstr ""
 
-#: views/overview-dashboard.php:46
-msgid "Repository access has not been checked here."
-msgstr ""
-
-#: views/overview-dashboard.php:48
+#: views/overview-dashboard.php:54
 msgid "No provider settings are currently available."
 msgstr ""
 
-#: views/overview-dashboard.php:57
+#: views/overview-dashboard.php:67
 msgid "Current credential expiry is unknown. Review credentials in provider settings."
 msgstr ""
 

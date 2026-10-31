@@ -65,9 +65,10 @@ final readonly class OnboardingPresenter {
 	/**
 	 * @param list<array{key: string, label: string, url: string, active: bool, provider: bool}> $tabs Allowlisted admin navigation.
 	 * @param array<string, mixed>|null $storage_summary Previously inspected storage state.
+	 * @param array<string, array{admitted:bool,selection:?string}> $provider_facts Local admission and selection facts.
 	 * @return array<string, mixed>
 	 */
-	public function build_overview( array $tabs, string $install_plugin_url, string $install_theme_url, PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity, ?array $storage_summary = null ): array {
+	public function build_overview( array $tabs, string $install_plugin_url, string $install_theme_url, PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity, ?array $storage_summary = null, array $provider_facts = array() ): array {
 		$overview         = $this->build( $tabs, $install_plugin_url, $install_theme_url );
 		$choice           = get_option( self::PRESENTATION_OPTION );
 		$overview['view'] = 'onboarding' === $choice ? 'onboarding' : 'dashboard';
@@ -123,6 +124,20 @@ final readonly class OnboardingPresenter {
 			$overview['activity'] = array(
 				'available' => false,
 				'records'   => array(),
+			);
+		}
+		$overview['provider_summaries'] = array();
+		foreach ( $tabs as $tab ) {
+			if ( ! $tab['provider'] ) {
+				continue;
+			}
+			$fact                             = $provider_facts[ $tab['key'] ] ?? null;
+			$overview['provider_summaries'][] = array(
+				'code'      => $tab['key'],
+				'label'     => $tab['label'],
+				'url'       => $tab['url'],
+				'admitted'  => $fact['admitted'] ?? null,
+				'selection' => $fact['selection'] ?? null,
 			);
 		}
 		$overview['storage_summary'] = $storage_summary;

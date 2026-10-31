@@ -570,6 +570,58 @@ final class OnboardingViewTest extends TestCase {
 		}
 	}
 
+	public function test_provider_admission_and_selection_remediation_use_shared_facts(): void {
+		foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
+			$extra = array(
+				'view'               => $view,
+				'plugins_url'        => '/plugins',
+				'themes_url'         => '/themes',
+				'activity_url'       => '/activity',
+				'provider_summaries' => array(
+					array(
+						'code'      => 'gh',
+						'label'     => '<GitHub>',
+						'url'       => '/github',
+						'admitted'  => false,
+						'selection' => 'conflict',
+					),
+					array(
+						'code'      => 'bb',
+						'label'     => 'Bitbucket',
+						'url'       => '/bitbucket',
+						'admitted'  => true,
+						'selection' => null,
+					),
+					array(
+						'code'      => 'other',
+						'label'     => 'Other',
+						'url'       => '/other',
+						'admitted'  => null,
+						'selection' => null,
+					),
+				),
+			);
+			$html  = $this->render_view( null, null, $extra );
+			self::assertStringContainsString( '&lt;GitHub&gt;</a>: Provider is not admitted.', $html );
+			self::assertStringNotContainsString( '<GitHub>', $html );
+			if ( 'dashboard' === $view ) {
+				self::assertMatchesRegularExpression( '/Not admitted\s+— Provider selection conflict/', $html );
+				self::assertStringContainsString( 'Bitbucket</a> — Admitted', $html );
+				self::assertStringContainsString( 'Other</a> — Admission unknown', $html );
+				self::assertStringContainsString( 'Repository access has not been checked here.', $html );
+			}
+			$extra['provider_summaries'][0]['admitted'] = true;
+			$html                                       = $this->render_view( null, null, $extra );
+			self::assertStringContainsString( '&lt;GitHub&gt;</a>: Provider selection conflict', $html );
+			$extra['provider_summaries'][0]['selection'] = null;
+			$html                                        = $this->render_view( null, null, $extra );
+			self::assertStringNotContainsString( '&lt;GitHub&gt;</a>:', $html );
+			if ( 'dashboard' === $view ) {
+				self::assertStringContainsString( 'Selection unknown', $html );
+			}
+		}
+	}
+
 	private function render_storage_status(
 		string $status,
 		string $source,

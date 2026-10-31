@@ -83,9 +83,11 @@ class Dashboard {
 	private DeploymentAdminPresenter $deployment_admin;
 	private PackagePagePresenter $plugin_pages;
 	private PackagePagePresenter $theme_pages;
-	private ?TemporaryDebugCapture $debug_capture                     = null;
+	private ?TemporaryDebugCapture $debug_capture                      = null;
 	private ?SecretsStorageProvisioner $secrets_storage               = null;
 	private ?SecretsStorageProvisioningResult $secrets_storage_result = null;
+	/** @var array<string,mixed>|null */
+	private ?array $storage_payload = null;
 
 	/**
 	 * @param Database $db
@@ -122,10 +124,10 @@ class Dashboard {
 		private ?\RAN\PackageRemoval\PackageRemovalService $removals = null,
 		?\RAN\Activity\ActivityStore $activity = null
 	) {
-		$this->db      = $db;
-		$this->plugins = $plugins;
-		$this->booster = $booster;
-		$this->themes  = $themes;
+		$this->db                  = $db;
+		$this->plugins             = $plugins;
+		$this->booster             = $booster;
+		$this->themes              = $themes;
 
 		$this->provider_settings = $provider_settings;
 		$this->troubleshooting   = $troubleshooting;
@@ -209,31 +211,12 @@ class Dashboard {
 		}
 
 		if ( null !== $selected_tab && 'overview' === $selected_tab->get_key() ) {
-			$data['onboarding'] = ( new OnboardingPresenter() )->build(
+			$data['onboarding']                    = ( new OnboardingPresenter() )->build(
 				$tabs,
 				$admin_url . '?page=ran-booster-plugins-create',
 				$admin_url . '?page=ran-booster-themes-create'
 			);
-			$secrets_storage    = $this->secrets_storage;
-			if ( null !== $secrets_storage ) {
-				$include_storage_details = current_user_can( 'manage_options' )
-					&& current_user_can( 'activate_plugins' );
-				$wordpress_root          = defined( 'ABSPATH' ) && is_string( constant( 'ABSPATH' ) )
-					? constant( 'ABSPATH' )
-					: '';
-				$result                  = $this->secrets_storage_result ?? $secrets_storage->status();
-				$this->log_secrets_storage_diagnostic( $result );
-				$recovery                              = $include_storage_details
-					? $secrets_storage->recovery_state( $result )
-					: null;
-				$data['onboarding']['secrets_storage'] = ( new SecretsStorageSetupPresenter() )->build(
-					$result,
-					$admin_url . '?page=ran-booster&tab=overview',
-					$wordpress_root,
-					$include_storage_details,
-					$recovery
-				);
-			}
+			$data['onboarding']['storage_summary'] = $this->storage_summary();
 		}
 
 		if ( null !== $selected_tab && $selected_tab->is_provider() ) {
@@ -307,7 +290,7 @@ class Dashboard {
 			} elseif ( 'activity' === $panel ) {
 				$data['troubleshooting'] = array();
 				$provider_labels         = array();
-				foreach ( $this->admin_tabs?->all() ?? array() as $tab ) {
+				foreach ( $this->admin_tabs->all() as $tab ) {
 					if ( $tab->is_provider() ) {
 						$provider_labels[ $tab->get_key() ] = $tab->get_label();
 					}
@@ -370,6 +353,7 @@ class Dashboard {
 
 	public function set_secrets_storage_provisioning_result( SecretsStorageProvisioningResult $result ): void {
 		$this->secrets_storage_result = $result;
+		$this->storage_payload        = null;
 	}
 
 	private function log_secrets_storage_diagnostic( SecretsStorageProvisioningResult $result ): void {
@@ -393,7 +377,7 @@ class Dashboard {
 				'outcome_code'  => $result->code(),
 				'source'        => 'admin',
 				'state'         => $result->status(),
-				'step'          => 'overview_status',
+				'step'          => 'storage_status',
 			)
 		);
 	}
@@ -512,7 +496,95 @@ class Dashboard {
 	 * @return mixed The included template result.
 	 */
 	public function get_settings() {
-		return $this->render( 'settings' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You cannot access Booster Settings.', 'ran-booster' ) );
+		}
+		$result  = $this->storage_status();
+		$storage = $this->storage_payload;
+		if ( null === $storage && null !== $result ) {
+			$private = current_user_can( 'activate_plugins' );
+			try {
+				$recovery = $private && null !== $this->secrets_storage ? $this->secrets_storage->recovery_state( $result ) : null;
+			} catch ( Throwable ) {
+				$recovery = null;
+			}
+			$storage = ( new SecretsStorageSetupPresenter() )->build(
+				$result,
+				admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ),
+				defined( 'ABSPATH' ) ? ABSPATH : '',
+				$private,
+				$recovery
+			);
+		}
+		$this->storage_payload = $storage;
+		return $this->render(
+			'settings',
+			array(
+				'secrets_storage' => $storage,
+				'credential_storage_documentation_url' => admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-credential-storage' ),
+			)
+		);
+	}
+
+	private function storage_status(): ?SecretsStorageProvisioningResult {
+		if ( null === $this->secrets_storage_result && null !== $this->secrets_storage ) {
+			try {
+				$this->secrets_storage_result = $this->secrets_storage->status();
+				$this->log_secrets_storage_diagnostic( $this->secrets_storage_result );
+			} catch ( Throwable ) {
+				$this->secrets_storage_result = SecretsStorageProvisioningResult::unsupported(
+					'storage_status_unavailable',
+					__( 'Storage status is unavailable. No setup or recovery action has been performed.', 'ran-booster' )
+				);
+			}
+		}
+		return $this->secrets_storage_result;
+	}
+
+	/** @return array{status:string,reason_code:string,message:string,url:string}|null */
+	public function storage_summary(): ?array {
+		$result = $this->storage_status();
+		return null === $result ? null : array(
+			'status'      => $result->status(),
+			'reason_code' => $result->code(),
+			'message'     => $result->message(),
+			'url'         => admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ),
+		);
+	}
+
+	/** Read-only configuration projection; never starts authentication or recovery.
+	 *
+	 * @return array{state:string,message:string,url?:string,details?:array<string,string>}
+	 */
+	public function storage_installation_projection(): array {
+		$result     = $this->secrets_storage_result;
+		$projection = array(
+			'state'   => 'unknown',
+			'message' => __( 'Storage health has not been checked in this request.', 'ran-booster' ),
+		);
+		if ( null !== $result ) {
+			$projection['state'] = match ( $result->status() ) {
+				'path_configured' => 'configured', 'storage_healthy' => 'healthy',
+				'setup_available', 'storage_needs_attention', 'manual_required' => 'actionable',
+				default => 'unknown',
+			};
+			$projection['message'] = $result->message();
+			if ( 'actionable' === $projection['state'] ) {
+				$projection['url'] = admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' );
+			}
+		}
+		if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
+			foreach ( array( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' ) as $constant ) {
+				if ( defined( $constant ) && is_string( constant( $constant ) ) ) {
+					$projection['details'] = array(
+						'configuration'       => $constant,
+						'configured_location' => constant( $constant ),
+					);
+					break;
+				}
+			}
+		}
+		return $projection;
 	}
 
 	/**

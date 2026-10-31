@@ -291,25 +291,19 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Custom wp-config.php path', $healthy );
 		self::assertStringContainsString( 'WordPress stores the encryption key separately.', $healthy );
 		self::assertMatchesRegularExpression(
-			'/<h3 id="ran-booster-onboarding-storage-heading">Secure credential storage<\/h3>.*>Storage healthy<\/span>\s*<\/div>\s*<p>Encrypted secrets storage is configured and authenticated\.<\/p>\s*<details class="ran-booster-onboarding__storage-details ran-booster-disclosure">/s',
+			'/<h3 id="ran-booster-storage">Secure credential storage<\/h3>.*>Storage healthy<\/span>\s*<\/div>\s*<p>Encrypted secrets storage is configured and authenticated\.<\/p>\s*<details class="ran-booster-onboarding__storage-details ran-booster-disclosure">/s',
 			$healthy
 		);
 		$details = strpos( $healthy, 'class="ran-booster-onboarding__storage-details ran-booster-disclosure"' );
 		$path    = strpos( $healthy, 'Storage file' );
 		$source  = strpos( $healthy, 'Path selection' );
-		$connect = strpos( $healthy, 'Connect a Git provider' );
-		$move    = strpos( $healthy, 'Move or automate later' );
 		$storage = strpos( $healthy, 'Secure credential storage' );
 		self::assertIsInt( $details );
 		self::assertIsInt( $path );
 		self::assertIsInt( $source );
-		self::assertIsInt( $connect );
-		self::assertIsInt( $move );
 		self::assertIsInt( $storage );
 		self::assertLessThan( $path, $details );
 		self::assertLessThan( $source, $details );
-		self::assertLessThan( $storage, $connect );
-		self::assertLessThan( $storage, $move );
 
 		$broken = $this->render_storage_status( 'storage_needs_attention', 'manual' );
 		self::assertStringContainsString( '>Storage needs attention</span>', $broken );
@@ -508,7 +502,12 @@ final class OnboardingViewTest extends TestCase {
 		}
 
 		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/onboarding.php';
+		if ( null !== $secrets_storage ) {
+			$credential_storage_documentation_url = $onboarding['documentation_url'] . '#ran-booster-credential-storage';
+			require dirname( __DIR__, 2 ) . '/views/settings-storage.php';
+		} else {
+			require dirname( __DIR__, 2 ) . '/views/onboarding.php';
+		}
 
 		return (string) ob_get_clean();
 	}

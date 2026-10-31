@@ -221,7 +221,7 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$review = $this->github_selection->adoption_review( $this->secrets );
 		} catch ( SecretsStorageUnavailable ) {
-			$error = __( 'Set up secure credential storage from Overview before reviewing GitHub adoption.', 'ran-booster' );
+			$error = __( 'Set up secure credential storage from Settings before reviewing GitHub adoption.', 'ran-booster' );
 		} catch ( Throwable ) {
 			$error = __( 'GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first.', 'ran-booster' );
 		}

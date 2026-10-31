@@ -1,5 +1,9 @@
 <?php // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound -- Included view bindings are supplied by the caller; declarations and hooks still require prefixes.
 
+/**
+ * @var array<string,mixed>|null $secrets_storage
+ * @var string $credential_storage_documentation_url
+ */
 if ( ! defined( 'WPINC' ) ) {
 	die;
 }
@@ -13,8 +17,12 @@ if ( ! defined( 'WPINC' ) ) {
 		<h3 id="ran-booster-general-heading"><?php esc_html_e( 'General', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Booster currently uses its configured policy defaults.', 'ran-booster' ); ?></p>
 	</section>
-	<section class="ran-booster-panel" aria-labelledby="ran-booster-storage">
-		<h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
-		<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=overview#ran-booster-onboarding-storage-heading' ) ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>
-	</section>
+	<?php if ( null !== $secrets_storage ) { ?>
+		<?php require __DIR__ . '/settings-storage.php'; ?>
+	<?php } else { ?>
+		<section class="ran-booster-panel" aria-labelledby="ran-booster-storage">
+			<h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
+			<p><?php esc_html_e( 'Storage status is unavailable. No setup or recovery action has been performed.', 'ran-booster' ); ?></p>
+		</section>
+	<?php } ?>
 </section>

@@ -14,7 +14,7 @@ One existing bootstrap classifier owns Settings GET and narrowly routed report P
 
 Preferences: defined code > sparse saved > default > runtime constraints; preserve explicit false and invalid code. Save preserves dormant locked values; confirmed GitHub management alone clears an existing saved hide request. Atomic option CAS plus package-management transaction must serialize Save/clear; stale form cannot resurrect hiding after management/removal. No API registry, provider tabs, new storage backend, multisite support or public extension seam.
 
-Updater: exact pinned beta.15/protocol-7 supports disabled target and descriptor admission before discovery/final install and cached response filtering. Callback consults fresh policy. Check is separate POST (manage_options + update_plugins), atomic claim/cooldown, native wp_update_plugins scope, bounded current evidence, no installation. Native Update owns installation. A refresh/global last_checked is not successful Core-check evidence; exact check-completed event is. Five-minute cooldown; two-minute claim expiry (existing HTTP timeout 30s, bounded check collection; expiry allows recovery but old claim cannot finalize newer claim).
+Updater: exact pinned beta.15/protocol-7 supports disabled target and descriptor admission before discovery/final install and cached response filtering. Callback consults fresh policy. Check is separate POST (manage_options + update_plugins), atomic claim/cooldown, native wp_update_plugins scope, bounded current evidence, no installation. Native Update owns installation. A refresh/global last_checked is not successful Core-check evidence; exact check-completed event is. Five-minute cooldown; two-minute claim expiry (existing HTTP timeout 10s, bounded check collection; expiry allows recovery but old claim cannot finalize newer claim).
 
 ## Pre-edit projected production cost
 
@@ -31,11 +31,13 @@ Exact engineering projections, not allowances or measured implementation. Reconc
 | Storage views/settings-storage.php (moved markup/helpers) | +243/-0 |
 | Storage views/onboarding.php | +9/-240 |
 | Storage presenter/remediation/docs-view/uninstall wording | +8/-8 |
-| General RAN/Settings/GeneralPreferenceStore.php | +280/-0 |
+| General RAN/Settings/GeneralPreferenceStore.php | +445/-0 |
 | General ActivityStore/PackageArtifactLimit/CoreSelfUpdatePolicy | +24/-4 |
-| General fixed visibility owner/management transaction seam | +180/-0 (GitHubVisibility +85/-0; AbstractPackageRepository +20/-0; GeneralPreferenceStore serialized preference lock/clear +75/-0) |
-| General fixed check claim/evidence owner | +235/-0 |
+| General fixed visibility owner/management transaction seam | +240/-0 (GitHubVisibility +145/-0; AbstractPackageRepository +20/-0; GeneralPreferenceStore serialized preference lock/clear +75/-0) |
+| General fixed check claim/evidence owner | +282/-0 |
 | General existing updater adapter/status/bootstrap | +65/-15 |
+| General Core registration-failure fallback (ran-booster.php; focused tests) | +55/-0 production; +95/-0 tests |
+| General Core registration-failure installed admission smoke | +100/-0 tests |
 | General Settings view/Save/actions/unsaved enhancement | +240/-8 |
 | General exact uninstall option allowlist | +2/-0 |
 
@@ -72,4 +74,17 @@ selection transition invokes the clear.
 
 Required composer check, pnpm check, parser and affected storage/updater WordPress proofs. Source, artifact and installed/browser evidence remain separate. Each opened PR gets independent exact-base/head review. Passing tests grant no merge or installed acceptance.
 
+### #460 race-proof projection
+
+Before any disposable database fixture is selected or mutated, the projected
+delta is test-only: `tests/WordPress/general-settings-race.php` and its
+non-mutating shell runner, approximately +260 test lines and +0 production
+lines. The proof must receive an explicitly supplied disposable WordPress path,
+database identity and marker; it must refuse every other target. It will prove
+the stale-General-Save versus confirmed-`gh` management race for initially
+absent, false and true preferences against MySQL row/range locks. It does not
+authorize creating, resetting or mutating the Overview fixture.
+
 Foundation measured delta: production +30/-0 (Booster +2, Dashboard +8, fixed view +20); tests +3/-0. Focused Extensions route suite: 22 tests/144 assertions; touched-file standards pass. Existing Overview forms remain authoritative in this unit. Documentation is this contract only; no generated assets/types/state added.
+
+General integration projection revised before adding page-local enhancements: +35 JS, +35 scoped CSS, +10 loader/view lines. The script only reports unsaved changes; native forms remain authoritative. Settings GET and exact preference-only Save POST defer schema/sidecar hardening in the existing classifier; capture/security expiry cleanup is retained. The report owner approved exact report-action deferral even on an invalid route, with Dispatcher retaining strict route/authority checks.

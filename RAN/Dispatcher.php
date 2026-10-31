@@ -114,7 +114,7 @@ class Dispatcher {
 			}
 
 			if ( 'create-secure-storage' === $action ) {
-				$this->create_secure_storage();
+				$this->create_secure_storage( $request );
 
 				return;
 			}
@@ -246,7 +246,8 @@ class Dispatcher {
 		exit;
 	}
 
-	private function create_secure_storage(): void {
+	/** @param array<string, mixed> $request */
+	private function create_secure_storage( array $request ): void {
 		if ( ! isset( $_SERVER['REQUEST_METHOD'] )
 			|| ! is_string( $_SERVER['REQUEST_METHOD'] )
 			|| 'POST' !== strtoupper( $_SERVER['REQUEST_METHOD'] ) ) {
@@ -259,6 +260,9 @@ class Dispatcher {
 		}
 
 		check_admin_referer( 'ran-booster-create-secure-storage' );
+		if ( ! $this->storage_route_is_current( $request ) ) {
+			return;
+		}
 
 		try {
 			$result = null === $this->secrets_storage
@@ -291,7 +295,7 @@ class Dispatcher {
 			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirect_to( $admin_url . '?page=ran-booster&tab=overview' );
+			$this->redirect_to( $admin_url . '?page=ran-booster-settings#ran-booster-storage' );
 		}
 
 		// Keep a failed attempt local to this protected POST response. Paths and
@@ -313,6 +317,9 @@ class Dispatcher {
 		}
 
 		check_admin_referer( 'ran-booster-adopt-secure-storage' );
+		if ( ! $this->storage_route_is_current( $request ) ) {
+			return;
+		}
 		$request = wp_unslash( $request );
 		$token   = is_string( $request['recovery_token'] ?? null )
 			? sanitize_text_field( $request['recovery_token'] )
@@ -349,7 +356,7 @@ class Dispatcher {
 			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirect_to( $admin_url . '?page=ran-booster&tab=overview' );
+			$this->redirect_to( $admin_url . '?page=ran-booster-settings#ran-booster-storage' );
 		}
 
 		$this->dashboard->set_secrets_storage_provisioning_result( $result );
@@ -369,6 +376,9 @@ class Dispatcher {
 		}
 
 		check_admin_referer( 'ran-booster-reset-empty-storage' );
+		if ( ! $this->storage_route_is_current( $request ) ) {
+			return;
+		}
 		$request      = wp_unslash( $request );
 		$confirmation = is_string( $request['reset_confirmation'] ?? null )
 			? sanitize_text_field( $request['reset_confirmation'] )
@@ -405,10 +415,35 @@ class Dispatcher {
 			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirect_to( $admin_url . '?page=ran-booster&tab=overview' );
+			$this->redirect_to( $admin_url . '?page=ran-booster-settings#ran-booster-storage' );
 		}
 
 		$this->dashboard->set_secrets_storage_provisioning_result( $result );
+	}
+
+	/** @param array<string, mixed> $request */
+	private function storage_route_is_current( array $request ): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Each storage action verified its purpose nonce before this route/payload check.
+		$page   = $_GET['page'] ?? null;
+		$action = $request['action'] ?? null;
+		$fields = match ( $action ) {
+			'create-secure-storage' => array( 'action' ),
+			'adopt-secure-storage' => array( 'action', 'recovery_token' ),
+			'reset-empty-storage' => array( 'action', 'reset_confirmation' ),
+			default => array(),
+		};
+		if ( 'ran-booster-settings' === $page && array() !== $fields
+			&& array() === array_diff( array_keys( $request ), $fields )
+			&& count( $request ) === count( array_filter( $request, 'is_string' ) ) ) {
+			return true;
+		}
+		$this->dashboard->add_message(
+			new \WP_Error(
+				'ran_booster_storage_route_changed',
+				__( 'Storage controls have moved. Open Settings → Secure credential storage and submit a fresh form.', 'ran-booster' ) . ' <a href="' . esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ) ) . '">' . esc_html__( 'Open secure credential storage', 'ran-booster' ) . '</a>'
+			)
+		);
+		return false;
 	}
 
 	/** @param array<string, mixed> $request */

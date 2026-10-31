@@ -26,6 +26,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		$_GET                      = array( 'page' => 'ran-booster-settings' );
 		$_POST                     = array(
 			'ran_booster' => array( 'action' => 'create-secure-storage' ),
 		);
@@ -40,6 +41,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
+		$_GET  = array();
 		$_POST = array();
 		unset(
 			$_SERVER['REQUEST_METHOD'],
@@ -147,6 +149,22 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 	}
 
+	public function test_old_overview_form_is_rejected_without_provisioning(): void {
+		$_GET        = array(
+			'page' => 'ran-booster',
+			'tab'  => 'overview',
+		);
+		$provisioner = new SetupActionProvisioner( SecretsStorageProvisioningResult::setup_available( '/private/canary/secrets.json' ) );
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_message' )->with(
+			self::callback(
+				static fn ( \WP_Error $error ): bool => 'ran_booster_storage_route_changed' === $error->get_error_code()
+			)
+		);
+		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
+		self::assertSame( 0, $provisioner->provision_calls );
+	}
+
 	public function test_protected_post_provisions_and_redirects_without_result_data_in_the_url(): void {
 		$provisioner = new SetupActionProvisioner(
 			SecretsStorageProvisioningResult::pending_verification( '/private/canary/secrets.json' )
@@ -157,7 +175,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			self::fail( 'Successful setup must redirect for a fresh configuration load.' );
 		} catch ( SetupActionRedirect $redirect ) {
 			self::assertSame(
-				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
+				'https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage',
 				$redirect->url
 			);
 			self::assertStringNotContainsString( 'private', $redirect->url );
@@ -257,7 +275,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			self::fail( 'Successful recovery must redirect for fresh configuration verification.' );
 		} catch ( SetupActionRedirect $redirect ) {
 			self::assertSame(
-				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
+				'https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage',
 				$redirect->url
 			);
 		}
@@ -306,7 +324,7 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 			self::fail( 'Successful reset must redirect to a fresh protected Overview response.' );
 		} catch ( SetupActionRedirect $redirect ) {
 			self::assertSame(
-				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
+				'https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage',
 				$redirect->url
 			);
 			self::assertStringNotContainsString( 'private', $redirect->url );

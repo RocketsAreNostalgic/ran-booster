@@ -392,36 +392,38 @@ class Booster {
 	public static function extension_declarations(): array {
 		return array(
 			array(
-				'id'                   => 'ran-booster-bitbucket',
-				'name'                 => 'Bitbucket Cloud',
-				'description'          => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
-				'details'              => __( 'Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
-				'features'             => array(
+				'id'                      => 'ran-booster-bitbucket',
+				'provider_code'           => 'bb',
+				'provider_implementation' => 'RAN\\Booster\\Bitbucket\\BitbucketProvider',
+				'name'                    => 'Bitbucket Cloud',
+				'description'             => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
+				'details'                 => __( 'Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
+				'features'                => array(
 					__( 'Connect and configure Bitbucket Cloud repositories in Booster.', 'ran-booster' ),
 					__( 'Use package and credential guidance for your Git provider.', 'ran-booster' ),
 					__( 'Carry eligible file-stored credentials through Transporter for explicit import on the target site.', 'ran-booster' ),
 				),
-				'requirements'         => array(
+				'requirements'            => array(
 					__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
 					__( 'A version of Booster compatible with this extension.', 'ran-booster' ),
 					__( 'Manual Bitbucket webhook setup for Push-to-Deploy.', 'ran-booster' ),
 				),
-				'plugin'               => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
-				'image'                => 'bitbucket-cloud.svg',
-				'availability'         => __( 'Free', 'ran-booster' ),
-				'required_apis'        => array(
+				'plugin'                  => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
+				'image'                   => 'bitbucket-cloud.svg',
+				'availability'            => __( 'Free', 'ran-booster' ),
+				'required_apis'           => array(
 					'RAN_BOOSTER_PROVIDER_API_VERSION' => 15,
 					'RAN_BOOSTER_ADDON_API_VERSION'    => 17,
 				),
-				'release_version'      => '0.1.0-beta.17',
-				'manual_install_url'   => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/tag/v0.1.0-beta.17',
-				'asset_url'            => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/download/v0.1.0-beta.17/ran-booster-bitbucket-0.1.0-beta.17.zip',
-				'asset_sha256'         => 'b7963f335c624cf08124040a24a9d51d80c26640faee46e75334783f0547bc5a',
-				'repository'           => 'RocketsAreNostalgic/ran-booster-bitbucket',
-				'repository_id'        => '1312284489',
-				'canonical_update_uri' => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket',
-				'docs_url'             => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket#readme',
-				'support_url'          => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/issues',
+				'release_version'         => '0.1.0-beta.17',
+				'manual_install_url'      => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/tag/v0.1.0-beta.17',
+				'asset_url'               => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/releases/download/v0.1.0-beta.17/ran-booster-bitbucket-0.1.0-beta.17.zip',
+				'asset_sha256'            => 'b7963f335c624cf08124040a24a9d51d80c26640faee46e75334783f0547bc5a',
+				'repository'              => 'RocketsAreNostalgic/ran-booster-bitbucket',
+				'repository_id'           => '1312284489',
+				'canonical_update_uri'    => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket',
+				'docs_url'                => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket#readme',
+				'support_url'             => 'https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/issues',
 			),
 			array(
 				'id'                   => 'ran-booster-wp-pusher-migrator',

@@ -90,9 +90,11 @@ final class InstallationFactsTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
-	public function test_installed_catalogue_package_joins_provider_and_addon_without_executing_it(): void {
+	public function test_catalogue_joins_only_active_official_provider_without_executing_package(): void {
 		require_once __DIR__ . '/ExtensionDeclarationFunctions.php';
 		require_once __DIR__ . '/InactivePluginFunction.php';
+		require_once __DIR__ . '/OfficialBitbucketProviderFixture.php';
+		require_once __DIR__ . '/CustomBitbucketProviderFixture.php';
 		$root = sys_get_temp_dir() . '/booster-components-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated temporary fixture, without WordPress filesystem services.
 		mkdir( $root . '/ran-booster-bitbucket', 0777, true );
@@ -101,8 +103,7 @@ final class InstallationFactsTest extends TestCase {
 		file_put_contents( $file, '<?php throw new Exception("must not execute");' );
 		define( 'WP_PLUGIN_DIR', $root );
 		try {
-			$providers = new ProviderRegistry( array( new SupportReportProvider( 'bb', 'Bitbucket Cloud' ) ) );
-			$addons    = new AdminAddOnRegistry();
+			$addons = new AdminAddOnRegistry();
 			$addons->register(
 				new AdminAddOnTab(
 					'ran-booster-bitbucket',
@@ -113,14 +114,33 @@ final class InstallationFactsTest extends TestCase {
 					}
 				)
 			);
-			$rows = ( new InstallationFacts( $providers, add_ons: $addons ) )->components();
+			foreach ( array( false, true ) as $active ) {
+				$GLOBALS['ran_booster_test_plugin_active'] = $active;
+				$custom                                    = new ProviderRegistry( array( new \RAN\Booster\Bitbucket\CustomBitbucketProvider() ) );
+				$rows                                      = ( new InstallationFacts( $custom, add_ons: $addons ) )->components();
+				self::assertCount( 3, $rows );
+				self::assertSame( 'Custom provider', $rows[0]['Name'] );
+				self::assertStringContainsString( 'CredentialValidator', $rows[0]['Capabilities'] );
+				self::assertArrayNotHasKey( 'Installed', $rows[0] );
+				self::assertSame( 'bitbucket', $rows[1]['Tab'] );
+				self::assertSame( 'Admitted', $rows[1]['Admission'] );
+				self::assertArrayNotHasKey( 'Installed', $rows[1] );
+				self::assertSame( 'Bitbucket Cloud', $rows[2]['Name'] );
+				self::assertSame( $active ? 'Yes' : 'No', $rows[2]['Active'] );
+				self::assertSame( '1.0.0-beta.41', $rows[2]['Version'] );
+				self::assertArrayNotHasKey( 'Admission', $rows[2] );
+				self::assertNotContains( 'WP Pusher Migrator', array_column( $rows, 'Name' ) );
+			}
+			$official = new ProviderRegistry( array( new \RAN\Booster\Bitbucket\BitbucketProvider() ) );
+			$rows     = ( new InstallationFacts( $official, add_ons: $addons ) )->components();
 			self::assertCount( 1, $rows );
 			self::assertSame( 'bb', $rows[0]['Provider'] );
-			self::assertSame( 'Yes', $rows[0]['Installed'] );
-			self::assertSame( 'No', $rows[0]['Active'] );
+			self::assertSame( 'Yes', $rows[0]['Active'] );
 			self::assertSame( 'ran-booster-bitbucket', $rows[0]['Add-on'] );
-			self::assertSame( 'bitbucket', $rows[0]['Tab'] );
-			self::assertNotContains( 'WP Pusher Migrator', array_column( $rows, 'Name' ) );
+			$GLOBALS['ran_booster_test_plugin_active'] = false;
+			$rows                                      = ( new InstallationFacts( new ProviderRegistry() ) )->components();
+			self::assertCount( 1, $rows );
+			self::assertSame( 'No', $rows[0]['Active'] );
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove the isolated fixture.
 			unlink( $file );

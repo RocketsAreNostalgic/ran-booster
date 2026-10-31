@@ -269,15 +269,23 @@ final class InstallationFacts {
 				$rows[ 'provider:' . $code ]['Capabilities'] = implode( ', ', $capabilities );
 			}
 		}
-		$catalogue      = defined( 'WP_PLUGIN_DIR' ) ? Booster::extension_declarations() : array();
-		$bitbucket_file = '';
+		$catalogue = defined( 'WP_PLUGIN_DIR' ) ? Booster::extension_declarations() : array();
+		$joins     = array();
 		foreach ( $catalogue as $extension ) {
-			if ( 'ran-booster-bitbucket' === $extension['id'] && is_string( $extension['plugin'] ) ) {
-				$bitbucket_file = WP_PLUGIN_DIR . '/' . $extension['plugin'];
+			$id             = $extension['id'] ?? null;
+			$file           = $extension['plugin'] ?? null;
+			$code           = $extension['provider_code'] ?? null;
+			$implementation = $extension['provider_implementation'] ?? null;
+			if ( ! is_string( $id ) || ! is_string( $file ) || ! is_string( $code ) || ! is_string( $implementation ) ) {
+				continue;
+			}
+			$provider = $this->providers->all()[ $code ] ?? null;
+			if ( isset( $rows[ 'provider:' . $code ] ) && null !== $provider && $provider::class === $implementation && is_file( WP_PLUGIN_DIR . '/' . $file ) && function_exists( 'is_plugin_active' ) && is_plugin_active( $file ) ) {
+				$joins[ $id ] = 'provider:' . $code;
 			}
 		}
 		foreach ( $this->add_ons?->all() ?? array() as $tab ) {
-			$key = 'ran-booster-bitbucket' === $tab->add_on_slug() && isset( $rows['provider:bb'] ) && '' !== $bitbucket_file && is_file( $bitbucket_file ) ? 'provider:bb' : 'addon:' . $tab->add_on_slug();
+			$key = $joins[ $tab->add_on_slug() ] ?? 'addon:' . $tab->add_on_slug();
 			if ( count( $rows ) >= 33 && ! isset( $rows[ $key ] ) ) {
 				break;
 			}
@@ -299,7 +307,7 @@ final class InstallationFacts {
 			if ( ! is_string( $id ) || ! is_string( $file ) ) {
 				continue;
 			}
-			$key = 'ran-booster-bitbucket' === $id && isset( $rows['provider:bb'] ) ? 'provider:bb' : 'addon:' . $id;
+			$key = $joins[ $id ] ?? 'package:' . $file;
 			if ( count( $rows ) >= 33 && ! isset( $rows[ $key ] ) ) {
 				continue;
 			}

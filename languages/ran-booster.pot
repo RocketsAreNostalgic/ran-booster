@@ -40,8 +40,8 @@ msgstr ""
 msgid "https://github.com/RocketsAreNostalgic"
 msgstr ""
 
-#: ran-booster.php:191
-msgid "The Core update is unavailable because its updater registration failed."
+#: ran-booster.php:192
+msgid "The Core update is unavailable because its updater is not active."
 msgstr ""
 
 #: RAN/AddOn/Portability/NativePortabilityFacade.php:44

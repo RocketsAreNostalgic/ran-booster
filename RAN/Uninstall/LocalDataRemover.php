@@ -37,6 +37,7 @@ class LocalDataRemover {
 		WordPressInstallationStore::OPTION_NAME,
 		GeneralPreferenceStore::OPTION_NAME,
 		\RAN\Troubleshooting\DiagnosticRunStore::OPTION_NAME,
+		\RAN\WordPress\CoreSelfUpdateCheck::OPTION_NAME,
 	);
 
 	private const USER_META_KEYS = array(

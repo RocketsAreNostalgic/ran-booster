@@ -300,7 +300,7 @@ final class SupportReport {
 				$lines[] = implode( ' | ', $result );
 			}
 		}
-		return array( 'Included', $lines );
+		return array( array() === $fresh_lines ? 'Included' : $fresh_coverage, $lines );
 	}
 
 	/**

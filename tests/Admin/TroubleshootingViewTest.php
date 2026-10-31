@@ -195,7 +195,7 @@ final class TroubleshootingViewTest extends TestCase {
 				self::assertStringNotContainsString( $value, $html );
 				self::assertStringContainsString( htmlspecialchars( $value, ENT_QUOTES ), $html );
 			}
-			self::assertStringContainsString( 'href="https://example.test/settings"', $html );
+			self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage"', $html );
 			self::assertStringContainsString( '<summary>Environment details</summary>', $html );
 			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary>Environment details</summary>', $html );
 			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open><summary>Environment details</summary>', $html );

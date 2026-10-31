@@ -18,8 +18,8 @@ Booster prevents that accidental replacement with three coordinated controls:
 1. a positive release marker generated only inside verified Booster release
    ZIPs;
 2. an explicit `auto`, `enabled`, or `disabled` site override; and
-3. a shared-updater runtime-only mode that preserves runtime arbitration
-   without registering Core's native discovery or installer hooks.
+3. an exact Core target registered as manual, disabled or forced-off, with live
+   candidate admission and a fail-closed native fence if registration fails.
 
 ## Default policy
 
@@ -38,7 +38,7 @@ The default mode is `auto`.
 wrong-version marker files disable native self-update discovery.
 
 An ordinary source checkout never needs a local configuration change. The
-absence of an official marker is sufficient to keep Core runtime-only.
+absence of an official marker is sufficient to keep Core discovery disabled.
 
 ## Configuration
 
@@ -127,23 +127,18 @@ Use a verified release ZIP.
 
 ## Shared-updater handoff
 
-Core loads the released `ran/wp-release-updater` beta.9 bootstrap after its
-single-site admission check and retains the returned public registrar. The
-updater schedules Protocol 5 selection and activation at `after_setup_theme`,
-priority `PHP_INT_MAX`; Core does not activate a broker itself. Loading the
-registrar preserves runtime selection and prospective releases even when Core
-declares no self-update target.
+Core loads lock-pinned `ran/wp-release-updater` beta.15 (Protocol 7) after its
+single-site admission check and retains the public registrar. Runtime arbitration
+and prospective releases stay available independently of Core discovery. Other
+physical runtime copies must satisfy the pinned family/provenance selection
+contract; incompatible families fail closed.
 
-The bundled GitHub Provider shares this Composer-installed updater copy. Other
-plugins may register separate protocol-5 copies before the activation boundary;
-all copies must satisfy the updater identity and selection contract. Protocol-4
-and protocol-5 copies cannot jointly update targets: a conflicting copy fails
-closed, so mixed-version installations are not a supported adoption composition.
-
-When Core policy disables native discovery, Core omits its self-target
-declaration. No Core native discovery or installation hooks are registered, and
-no self-update credential or feed request is made. Managed targets retain their
-own declarations and policies.
+Core declares its exact target in manual mode when current policy permits, or
+in disabled/forced-off mode otherwise. Disabled registration preserves the
+updater's cached-offer and native mutation fences without contacting the feed.
+If registration fails, Core removes only its cached offer and denies only its
+exact native update target through WordPress's existing hooks. Managed targets
+retain their own declarations and policies.
 
 Core's own target is declared directly through that retained public updater
 registrar; it does not resolve provider code `gh` or require the GitHub provider
@@ -350,3 +345,18 @@ and retains the latest successful timestamp separately from the latest outcome.
 Update now uses WordPress's native exact-plugin manual upgrade path; the updater
 reacquires/verifies the archive and WordPress installs it. No background install
 is enabled.
+
+## Discovery admission limitation awaiting owner disposition
+
+Registration reads the saved preference directly, so a new request cannot use a
+stale object-cache value to register enabled after off was saved. Explicit Check
+now also rechecks policy before orchestration. The descriptor callback refreshes
+policy for candidate/offer and native installation admission.
+
+The pinned runtime lists releases and inspects candidates before that descriptor
+callback. A request that registered manual before another administrator saved
+off can therefore begin discovery afterward. Its result cannot become an offer
+or installation once admission is off. This is not the stronger pre-discovery
+revocation promised by the accepted plan. The source PR remains held on that
+requirement until owner disposition or a separately reviewed updater seam is
+available; no dummy lifecycle callbacks or dependency change are included.

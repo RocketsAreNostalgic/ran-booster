@@ -29,7 +29,9 @@ final class RAN_Booster_General_Settings_Race {
 		$this->assert_arguments();
 		$this->assert_disposable_site();
 		match ( $this->action ) {
-			'setup' => $this->setup(), 'cleanup' => $this->cleanup(), 'assert' => $this->assert_result(), 'save' => $this->save(), 'adopt' => $this->adopt() };
+			'setup' => $this->setup(), 'cleanup' => $this->cleanup(), 'assert' => $this->assert_result(), 'save' => $this->save(), 'adopt' => $this->adopt(),
+			default => throw new RuntimeException( 'Invalid General Settings race action.' ),
+		};
 	}
 	private function assert_arguments(): void {
 		if ( ! in_array( $this->action, array( 'setup', 'save', 'adopt', 'assert', 'cleanup' ), true ) || 1 !== preg_match( '/\A[a-f0-9]{24}\z/D', $this->run ) || ! in_array( $this->state, array( 'absent', 'false', 'true' ), true ) || ! in_array( $this->order, array( 'saved-first', 'managed-first' ), true ) ) {
@@ -96,7 +98,7 @@ final class RAN_Booster_General_Settings_Race {
 		$entry   = array_merge( $adopt, $save );
 		$value   = get_option( $this->option, null );
 		$rows    = $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM %i WHERE package_type = %d AND package = %s AND provider = %s', $this->table, 1, $this->identifier, 'gh' ) );
-		$invalid = ! is_array( $entry ) || 1 !== (int) $rows || true !== ( $entry['adopted'] ?? null ) || ( 'saved-first' === ( $entry['order'] ?? null ) && ! in_array( $entry['save'] ?? null, array( 'saved', 'unchanged' ), true ) ) || ( 'managed-first' === ( $entry['order'] ?? null ) && 'stale' !== ( $entry['save'] ?? null ) ) || ( is_array( $value ) && true === ( $value['hide_github'] ?? null ) );
+		$invalid = 1 !== (int) $rows || true !== ( $entry['adopted'] ?? null ) || ( 'saved-first' === ( $entry['order'] ?? null ) && ! in_array( $entry['save'] ?? null, array( 'saved', 'unchanged' ), true ) ) || ( 'managed-first' === ( $entry['order'] ?? null ) && 'stale' !== ( $entry['save'] ?? null ) ) || ( is_array( $value ) && true === ( $value['hide_github'] ?? null ) );
 		if ( $invalid ) {
 			throw new RuntimeException(
 				'General Save survived or reintroduced GitHub hiding: ' . wp_json_encode(

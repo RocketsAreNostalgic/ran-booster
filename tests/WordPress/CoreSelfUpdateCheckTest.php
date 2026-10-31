@@ -99,7 +99,8 @@ final class CoreSelfUpdateCheckTest extends TestCase {
 		};
 		$times  = array( 1000, 1025 );
 		$clock  = static function () use ( &$times ): int {
-			return array_shift( $times );
+			$time = array_shift( $times );
+			return is_int( $time ) ? $time : 1025;
 		};
 		$check  = new CoreSelfUpdateCheck( $target, static fn (): bool => true, 'ran-booster/ran-booster.php', 'stable', $run, $clock );
 		self::assertSame(
@@ -223,7 +224,8 @@ final class CoreSelfUpdateCheckTest extends TestCase {
 		);
 	}
 
-	private function target(): object {
+	/** @return RepositoryReleaseNativeTarget&object{refreshes: int} */
+	private function target(): RepositoryReleaseNativeTarget {
 		return new class() implements RepositoryReleaseNativeTarget {
 			public int $refreshes = 0;
 			public function matches_check_source( string $runtime_provider, string $repository_identity, string $channel ): bool {

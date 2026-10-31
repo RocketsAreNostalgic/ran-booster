@@ -105,6 +105,7 @@ namespace {
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress cache boundary test double retains the host function name.
 		function wp_cache_delete( string $key, string $group = '' ): bool {
 			$GLOBALS['ran_booster_attempt_cache_deletes'][] = array( $key, $group );
+			unset( $GLOBALS['ran_booster_storage_test_persistent_cache'][ $group . ':' . $key ] );
 			return true;
 		}
 	}
@@ -187,6 +188,8 @@ namespace RAN\Tests\Storage {
 		public bool $read_failure                    = false;
 		public ?int $successful_reads_before_failure = null;
 		public bool $apply_writes                    = true;
+		public bool $fail_commit                     = false;
+		public ?\Closure $before_commit              = null;
 		public bool $coerce_private_as_mysql_tinyint = false;
 		/** @var list<array<string, mixed>>|null */
 		private ?array $transaction_rows                    = null;
@@ -325,6 +328,12 @@ namespace RAN\Tests\Storage {
 				return 1;
 			}
 			if ( 'COMMIT' === $query ) {
+				if ( null !== $this->before_commit ) {
+					( $this->before_commit )();
+				}
+				if ( $this->fail_commit ) {
+					return false;
+				}
 				$this->transaction_rows                   = null;
 				$this->transaction_general_settings_value = null;
 

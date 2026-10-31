@@ -105,8 +105,13 @@ final class GitHubVisibility {
 		if ( defined( 'RAN_BOOSTER_HIDE_GITHUB_UI' ) ) {
 			return true === constant( 'RAN_BOOSTER_HIDE_GITHUB_UI' );
 		}
-		$projection = $this->preferences->projection();
-		return true === ( $projection['hide_github']['value'] ?? false );
+		try {
+			$snapshot = $this->preferences->view_snapshot();
+			$field    = $snapshot['fields']['hide_github'] ?? null;
+			return is_array( $field ) && null === ( $field['error'] ?? null ) && true === ( $field['value'] ?? false );
+		} catch ( \Throwable ) {
+			return false;
+		}
 	}
 
 	private function eligibility_reason(): string {

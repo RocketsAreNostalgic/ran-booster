@@ -138,8 +138,9 @@ $ran_booster_core_development_notice->register();
 			$core_policy         = static fn (): CoreSelfUpdatePolicy => CoreSelfUpdatePolicy::detect( __FILE__, $core_version, true );
 			$core_release_target = null;
 			$core_check          = null;
+			$current_policy      = $ran_booster_self_update_policy;
 			try {
-				$current_policy = $ran_booster_self_update_policy;
+				$current_policy = $core_policy();
 				$update_policy  = $current_policy->allows_native_discovery()
 					? 'manual'
 					: ( defined( CoreSelfUpdatePolicy::CONFIGURATION ) ? 'forced-off' : 'disabled' );
@@ -219,7 +220,7 @@ $ran_booster_core_development_notice->register();
 			}
 			$ran_booster_container->bind(
 				CoreSelfUpdateStatus::class,
-				new CoreSelfUpdateStatus( $ran_booster_self_update_policy, $core_release_target, $core_check )
+				new CoreSelfUpdateStatus( $current_policy, $core_release_target, $core_check )
 			);
 
 			// Release targets join the package broker after every provider is

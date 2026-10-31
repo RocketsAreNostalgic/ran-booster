@@ -28,6 +28,7 @@ use RAN\Tests\RANBoosterTestCase;
 use Throwable;
 
 require_once __DIR__ . '/StorageTestEnvironment.php';
+require_once __DIR__ . '/GitHubVisibilityCacheFunctions.php';
 require_once dirname( __DIR__ ) . '/WordPress/disposable-management-cleanup.php';
 
 final class PackagePersistenceFailureTest extends RANBoosterTestCase {
@@ -42,7 +43,9 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 	protected function setUp(): void {
 		global $ran_booster_storage_test_options, $wpdb;
 
-		$ran_booster_storage_test_options = array();
+		$ran_booster_storage_test_options                     = array();
+		$GLOBALS['ran_booster_attempt_cache_deletes']         = array();
+		$GLOBALS['ran_booster_storage_test_persistent_cache'] = array();
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Focused WordPress database test double.
 		$wpdb = new StorageTestWpdb();
 	}
@@ -622,6 +625,59 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		self::assertSame( array(), $wpdb->rows );
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Assert rollback preserves the precise serialized fixture document.
 		self::assertSame( serialize( array( 'hide_github' => true ) ), $wpdb->general_settings_value );
+	}
+
+	public function test_confirmed_github_management_evicts_repopulated_precommit_cache_only_after_commit(): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Fixture owns the exact stored option value.
+		$wpdb->general_settings_value = serialize(
+			array(
+				'hide_github'  => true,
+				'history_days' => 11,
+			)
+		);
+		$precommit_deletes            = null;
+		$wpdb->before_commit          = static function () use ( &$precommit_deletes ): void {
+			$precommit_deletes                                    = $GLOBALS['ran_booster_attempt_cache_deletes'];
+			$GLOBALS['ran_booster_storage_test_persistent_cache'] = array(
+				'options:ran_booster_general_settings' => array(
+					'hide_github'  => true,
+					'history_days' => 11,
+				),
+				'options:alloptions'                   => array( 'ran_booster_general_settings' => array( 'hide_github' => true ) ),
+				'options:notoptions'                   => array( 'ran_booster_general_settings' => true ),
+			);
+		};
+
+		self::assertTrue( $this->storage()->adopt_for_test( $this->package() )->is_successful() );
+		self::assertSame( array(), $precommit_deletes );
+		self::assertSame( array(), $GLOBALS['ran_booster_storage_test_persistent_cache'] );
+		self::assertSame(
+			array(
+				'hide_github'  => false,
+				'history_days' => 11,
+			),
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Decodes only this fixture-owned stored option.
+			unserialize( (string) $wpdb->general_settings_value )
+		);
+
+		$GLOBALS['ran_booster_attempt_cache_deletes']         = array();
+		$GLOBALS['ran_booster_storage_test_persistent_cache'] = array( 'options:alloptions' => array( 'stale' => true ) );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Replace only the focused database double for failed-COMMIT coverage.
+		$wpdb              = new StorageTestWpdb();
+		$wpdb->fail_commit = true;
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Fixture owns the exact stored option value.
+		$wpdb->general_settings_value = serialize(
+			array(
+				'hide_github'  => true,
+				'history_days' => 11,
+			)
+		);
+
+		self::assertFalse( $this->storage()->adopt_for_test( $this->package() )->is_successful() );
+		self::assertSame( array(), $GLOBALS['ran_booster_attempt_cache_deletes'] );
+		self::assertSame( array( 'options:alloptions' => array( 'stale' => true ) ), $GLOBALS['ran_booster_storage_test_persistent_cache'] );
 	}
 
 	private function storage( bool $package_exists = true, ?Database $database = null ): PersistenceFailureTestRepository {

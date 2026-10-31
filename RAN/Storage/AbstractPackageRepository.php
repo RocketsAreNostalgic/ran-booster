@@ -389,6 +389,7 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::UPDATE );
 			}
+			$this->clear_github_visibility_cache( $model->provider );
 
 			return $verified;
 		} catch ( Throwable $exception ) {
@@ -605,6 +606,7 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( $verified->get_operation() );
 			}
+			$this->clear_github_visibility_cache( $model->provider );
 			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
 				$package->set_adoption_token( $data['adoption_token'] );
 			}
@@ -699,6 +701,7 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 			}
+			$this->clear_github_visibility_cache( $model->provider );
 			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
 				$package->set_adoption_token( $data['adoption_token'] );
 			}
@@ -809,6 +812,7 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 			}
+			$this->clear_github_visibility_cache( $model->provider );
 			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
 				$package->set_adoption_token( $data['adoption_token'] );
 			}
@@ -827,6 +831,15 @@ abstract class AbstractPackageRepository {
 		if ( 'gh' === $provider && ! ( new GeneralPreferenceStore() )->clear_confirmed_github_hide_request() ) {
 			throw new \RuntimeException( 'GitHub visibility preference could not be cleared.' );
 		}
+	}
+
+	private function clear_github_visibility_cache( string $provider ): void {
+		if ( 'gh' !== $provider || ! function_exists( 'wp_cache_delete' ) ) {
+			return;
+		}
+		wp_cache_delete( GeneralPreferenceStore::OPTION_NAME, 'options' );
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
 	}
 
 	/** @return array{0: PackageModel<array{package: mixed}>&object{provider: non-empty-string, provider_repository_id: non-empty-string}, 1: array<string, mixed>} */

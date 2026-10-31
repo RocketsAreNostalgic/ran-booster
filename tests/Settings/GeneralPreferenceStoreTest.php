@@ -30,7 +30,7 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		$GLOBALS['wpdb'] = new GeneralPreferenceDatabase();
 	}
 
-	public function test_projection_preserves_explicit_false_and_rejects_malformed_saved_values(): void {
+	public function test_saved_github_hide_fallback_applies_without_a_code_override_and_rejects_malformed_saved_values(): void {
 		$this->seed(
 			array(
 				'hide_github'  => false,
@@ -178,6 +178,77 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		self::assertSame( 'saved', $store->save( $token, array_merge( $without_hide, array( 'history_rows' => '300' ) ), static fn ( callable $operation ): string => $operation(), static fn (): bool => false ) );
 		self::assertTrue( \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['hide_github'] );
 		self::assertSame( 'stale', $store->save( $store->snapshot()['token'], $this->submission(), static fn ( callable $operation ): string => $operation(), static fn (): bool => false ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_true_github_hide_override_locks_the_code_value(): void {
+		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', true );
+		$this->seed( array( 'hide_github' => false ) );
+
+		$field = ( new GeneralPreferenceStore() )->projection()['hide_github'];
+
+		self::assertSame(
+			array(
+				'value'  => true,
+				'source' => 'code',
+				'locked' => true,
+				'error'  => null,
+			),
+			$field
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_false_github_hide_override_preserves_the_dormant_saved_value_on_save(): void {
+		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', false );
+		$this->seed( array( 'hide_github' => true ) );
+		$store  = new GeneralPreferenceStore();
+		$token  = $store->snapshot()['token'];
+		$values = $this->submission();
+		unset( $values['hide_github'] );
+
+		self::assertSame( 'saved', $store->save( $token, array_merge( $values, array( 'history_rows' => '300' ) ), static fn ( callable $operation ): string => $operation(), static fn (): bool => true ) );
+		self::assertTrue( \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['hide_github'] );
+		$GLOBALS['ran_booster_general_preference_cache'] = array();
+		self::assertTrue( $store->clear_confirmed_github_hide_request() );
+		self::assertFalse( \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['hide_github'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_general_preference_cache'], 'The outer management transaction owns cache invalidation after COMMIT.' );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_null_github_hide_override_is_locked_and_invalid(): void {
+		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', null );
+		$this->seed( array( 'hide_github' => true ) );
+
+		self::assertSame(
+			array(
+				'value'  => false,
+				'source' => 'code',
+				'locked' => true,
+				'error'  => 'invalid_code',
+			),
+			( new GeneralPreferenceStore() )->projection()['hide_github']
+		);
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_non_boolean_github_hide_override_is_locked_and_invalid(): void {
+		define( 'RAN_BOOSTER_HIDE_GITHUB_UI', 'yes' );
+		$this->seed( array( 'hide_github' => true ) );
+
+		self::assertSame(
+			array(
+				'value'  => false,
+				'source' => 'code',
+				'locked' => true,
+				'error'  => 'invalid_code',
+			),
+			( new GeneralPreferenceStore() )->projection()['hide_github']
+		);
 	}
 
 	#[RunInSeparateProcess]

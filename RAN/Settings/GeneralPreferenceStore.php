@@ -152,6 +152,8 @@ final class GeneralPreferenceStore {
 	/**
 	 * Called inside the confirmed GitHub-management transaction, before its COMMIT.
 	 * It locks an absent option gap too, so a concurrent Save cannot insert hide=true.
+	 * The caller must invalidate the WordPress option cache only after its outer
+	 * transaction commits.
 	 */
 	public function clear_confirmed_github_hide_request(): bool {
 		global $wpdb;
@@ -223,12 +225,30 @@ final class GeneralPreferenceStore {
 	 */
 	private function project( array $document ): array {
 		return array(
-			'hide_github'           => $this->boolean_projection( $document, 'hide_github' ),
+			'hide_github'           => $this->github_hide_projection( $document ),
 			'self_update_discovery' => $this->self_update_projection( $document ),
 			'history_rows'          => $this->integer_projection( $document, 'history_rows', 'RAN_BOOSTER_HISTORY_ROWS', 200, 100000 ),
 			'history_days'          => $this->integer_projection( $document, 'history_days', 'RAN_BOOSTER_HISTORY_DAYS', 1, 365 ),
 			'max_archive_bytes'     => $this->integer_projection( $document, 'max_archive_bytes', 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 1048576, 536870911 ),
 		);
+	}
+
+	/**
+	 * @param array<string,mixed> $document
+	 * @return array{value:bool,source:'default'|'saved'|'code',locked:bool,error:?string}
+	 */
+	private function github_hide_projection( array $document ): array {
+		if ( defined( 'RAN_BOOSTER_HIDE_GITHUB_UI' ) ) {
+			$value = constant( 'RAN_BOOSTER_HIDE_GITHUB_UI' );
+			return array(
+				'value'  => is_bool( $value ) ? $value : false,
+				'source' => 'code',
+				'locked' => true,
+				'error'  => is_bool( $value ) ? null : 'invalid_code',
+			);
+		}
+
+		return $this->boolean_projection( $document, 'hide_github' );
 	}
 
 	/**
@@ -400,7 +420,6 @@ final class GeneralPreferenceStore {
 		}
 		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery.DirectQuery -- Exact prepared compare-and-set under the held option row lock.
 		$result = $wpdb->query( $query );
-		$this->clear_cache();
 		return 1 === $result && '' === trim( (string) ( $wpdb->last_error ?? '' ) );
 	}
 

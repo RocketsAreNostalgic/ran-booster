@@ -14,7 +14,7 @@ One existing bootstrap classifier owns Settings GET and narrowly routed report P
 
 Preferences: defined code > sparse saved > default > runtime constraints; preserve explicit false and invalid code. Save preserves dormant locked values; confirmed GitHub management alone clears an existing saved hide request. Atomic option CAS plus package-management transaction must serialize Save/clear; stale form cannot resurrect hiding after management/removal. No API registry, provider tabs, new storage backend, multisite support or public extension seam.
 
-Updater: exact pinned beta.15/protocol-7 supports disabled target and descriptor admission before discovery/final install and cached response filtering. Callback consults fresh policy. Check is separate POST (manage_options + update_plugins), atomic claim/cooldown, native wp_update_plugins scope, bounded current evidence, no installation. Native Update owns installation. A refresh/global last_checked is not successful Core-check evidence; exact check-completed event is. Five-minute cooldown; two-minute claim expiry (existing HTTP timeout 10s, bounded check collection; expiry allows recovery but old claim cannot finalize newer claim).
+Updater: exact pinned beta.15/protocol-7 supports disabled target, late candidate/final-install descriptor admission and cached response filtering. Registration reads fresh policy; the descriptor callback does not run before feed discovery. Check is separate POST (manage_options + update_plugins), atomic claim/cooldown, native wp_update_plugins scope, bounded current evidence, no installation. Native Update owns installation. A refresh/global last_checked is not successful Core-check evidence; exact check-completed event is. Five-minute cooldown; two-minute claim expiry (existing HTTP timeout 10s, bounded check collection; expiry allows recovery but old claim cannot finalize newer claim).
 
 ## Pre-edit projected production cost
 
@@ -31,9 +31,9 @@ Exact engineering projections, not allowances or measured implementation. Reconc
 | Storage views/settings-storage.php (moved markup/helpers) | +243/-0 |
 | Storage views/onboarding.php | +9/-240 |
 | Storage presenter/remediation/docs-view/uninstall wording | +8/-8 |
-| General RAN/Settings/GeneralPreferenceStore.php | +458/-0 |
+| General RAN/Settings/GeneralPreferenceStore.php | +470/-0 |
 | General ActivityStore/PackageArtifactLimit/CoreSelfUpdatePolicy | +24/-4 |
-| General fixed visibility owner/management transaction seam | +240/-0 (GitHubVisibility +145/-0; AbstractPackageRepository +20/-0; GeneralPreferenceStore serialized preference lock/clear +75/-0) |
+| General fixed visibility owner/management transaction seam | +256/-0 (GitHubVisibility +145/-0; AbstractPackageRepository +36/-0; GeneralPreferenceStore serialized preference lock/clear +75/-0; revised +16/-0 before post-commit persistent-cache invalidation) |
 | General fixed check claim/evidence owner | +282/-0 |
 | General existing updater adapter/status/bootstrap | +65/-15 |
 | General Core registration-failure fallback (ran-booster.php; focused tests) | +55/-0 production; +95/-0 tests |
@@ -96,7 +96,7 @@ General integration projection revised before adding page-local enhancements: +3
 | `RAN/Activity/ActivityStore.php` | 6 | 3 |
 | `RAN/Admin/CredentialExpiryNotice.php` | 1 | 1 |
 | `RAN/Admin/DeploymentOutcomeMessage.php` | 3 | 3 |
-| `RAN/Admin/GitHubVisibility.php` | 178 | 0 |
+| `RAN/Admin/GitHubVisibility.php` | 183 | 0 |
 | `RAN/Admin/ProviderSettingsPresenter.php` | 1 | 1 |
 | `RAN/Admin/SecretsStorageSetupPresenter.php` | 1 | 1 |
 | `RAN/Booster.php` | 19 | 2 |
@@ -105,8 +105,8 @@ General integration projection revised before adding page-local enhancements: +3
 | `RAN/Dispatcher.php` | 66 | 5 |
 | `RAN/PackageArtifactLimit.php` | 1 | 1 |
 | `RAN/Secrets/SecretsStorageProvisioner.php` | 2 | 2 |
-| `RAN/Settings/GeneralPreferenceStore.php` | 454 | 0 |
-| `RAN/Storage/AbstractPackageRepository.php` | 15 | 0 |
+| `RAN/Settings/GeneralPreferenceStore.php` | 473 | 0 |
+| `RAN/Storage/AbstractPackageRepository.php` | 28 | 0 |
 | `RAN/Troubleshooting/CoreSelfUpdateStatus.php` | 47 | 6 |
 | `RAN/Uninstall/LocalDataRemover.php` | 2 | 0 |
 | `RAN/WordPress/CoreSelfUpdateCheck.php` | 282 | 0 |
@@ -114,19 +114,19 @@ General integration projection revised before adding page-local enhancements: +3
 | `RAN/WordPress/ManagedReleaseUpdaterRegistrar.php` | 1 | 1 |
 | `assets/ran-booster-settings.js` | 26 | 0 |
 | `assets/ran-booster/65-package-settings.css` | 28 | 0 |
-| `ran-booster.php` | 81 | 26 |
+| `ran-booster.php` | 82 | 26 |
 | `uninstall.php` | 1 | 1 |
 | `views/documentation.php` | 2 | 2 |
 | `views/onboarding.php` | 5 | 218 |
 | `views/settings-storage.php` | 229 | 0 |
 | `views/settings.php` | 181 | 0 |
 
-Category totals (documentation excludes this appended measurement):
+Category totals (documentation measured before this table refresh):
 
-- Production: +1870/-307.
-- Tests: +1455/-37.
+- Production: +1908/-307.
+- Tests: +1608/-38.
 - Generated catalogues/fixtures: +581/-306.
-- Documentation: +179/-2.
+- Documentation: +287/-21.
 
 Three new internal concrete owners: GeneralPreferenceStore, GitHubVisibility and
 CoreSelfUpdateCheck. Zero new extension APIs, provider contracts, schemas, tables,
@@ -143,3 +143,29 @@ hooks, maintained native updater proof and desktop/mobile JavaScript/native
 Settings Save. These do not establish a released artifact or retained-site
 operator acceptance. A real newer-Core native install and retained-site storage
 recovery remain separate acceptance work; no merge/deployment/release is implied.
+
+
+## Exact-PR review remediation and remaining hold
+
+Initial PR #583 tuple: c0f127a29ab5e136986169b4b5a99f6f5d9bc546 →
+e08619d4dd37704f539512659052c0b90d1dc842. Independent review reproduced:
+
+- Missing hide-constant projection lock: fixed with presence/type/source/lock
+  tests, preserving dormant values and the lifecycle-clear exception.
+- Precommit cache eviction: removed; four confirmed-management owners invalidate
+  only after successful commit. A stale-cache repopulation regression and failed
+  commit case cover the ordering; navigation reads a direct fresh hide snapshot.
+- Late native discovery admission: new registration uses a fresh indexed option
+  read, but the pinned runtime still begins list/inspection before descriptor
+  admission. Explicit Check is prechecked; offers/installations stay fenced.
+  The stronger automatic pre-discovery requirement remains held for owner
+  disposition or a separately reviewed dependency seam. No workaround callbacks,
+  transport interception, dependency repin or release is introduced.
+- Stale runtime-only documentation: corrected to actual beta.15/Protocol-7 and
+  registered-disabled behavior.
+
+The new remediation adds no types, options, extension APIs or storage operation.
+An indexed preference read is performed at Core target registration (when code
+has not supplied the policy) rather than evicting the global options cache.
+
+Released-updater readback on 31 October 2026 confirms beta.15 remains the latest published prerelease; no released replacement seam was available to repin.

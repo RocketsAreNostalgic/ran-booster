@@ -44,6 +44,26 @@
 	margin-block: 0 var(--ran-booster-space-12);
 }
 
+.ran-booster-admin .ran-booster-documentation__chapters,
+.ran-booster-admin .ran-booster-documentation__chapter {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-documentation__index-chapter h3,
+.ran-booster-admin .ran-booster-documentation__chapter > h3 {
+	margin: 0 0 var(--ran-booster-space-8);
+	padding-block-end: var(--ran-booster-space-8);
+	border-block-end: 1px solid var(--ran-booster-divider);
+	font-size: var(--ran-booster-font-size-base);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
+.ran-booster-admin .ran-booster-documentation__index-chapter h3 {
+	font-size: var(--ran-booster-font-size-sm);
+}
+
 .ran-booster-admin .ran-booster-documentation__index-list {
 	display: grid;
 	margin: 0;
@@ -200,13 +220,13 @@
 		overflow: visible;
 	}
 
-	.ran-booster-admin .ran-booster-documentation__index-list {
+	.ran-booster-admin .ran-booster-documentation__chapters {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 }
 
 @media screen and (max-width: 600px) {
-	.ran-booster-admin .ran-booster-documentation__index-list {
+	.ran-booster-admin .ran-booster-documentation__chapters {
 		grid-template-columns: 1fr;
 	}
 
@@ -333,9 +353,17 @@
 		padding: 0;
 	}
 
-	.ran-booster-admin .ran-booster-documentation__index-list {
+	.ran-booster-admin .ran-booster-documentation__chapters {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 2pt 12pt;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__index-chapter {
+		break-inside: avoid-page;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__chapter > h3 {
+		break-after: avoid-page;
 	}
 
 	.ran-booster-admin .ran-booster-documentation__index-link {

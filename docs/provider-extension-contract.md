@@ -374,6 +374,19 @@ not the Provider API. It receives the current structured section list,
 canonical Documentation URL and administration scope, not the provider
 registry or provider implementation.
 
+Documentation groups those articles under one chapter per registered provider,
+using the provider's existing ordered metadata. Articles from the provider hook
+remain directly after the Core guide; supplying a `chapter` field cannot move
+them to another provider or a custom chapter. The optional fourth callback
+argument remains the exact registered metadata object, not reconstructed
+identity. General three-argument callbacks remain compatible.
+
+An extension that also needs an independent chapter uses the chapter-definition
+filter and the general article filter described in the
+[Documentation chapters contract](admin-composition-contract.md#documentation-chapters).
+That is a one-level administration composition extension, not a new provider
+capability or a provider-admission change.
+
 Repository locators are provider-owned opaque strings. Booster preserves their
 accepted bytes, rejecting all-whitespace values, control characters and values
 longer than 512 bytes, but does not impose an `owner/repository` shape.

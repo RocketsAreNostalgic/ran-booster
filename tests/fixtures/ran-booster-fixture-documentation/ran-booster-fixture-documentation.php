@@ -39,5 +39,33 @@ add_action(
 			10,
 			3
 		);
+		add_filter(
+			'ran_booster_documentation_chapters',
+			static function ( array $chapters ): array {
+				$chapters[] = array(
+					'id'    => 'fixture-guidance',
+					'title' => 'Fixture guidance',
+				);
+				return $chapters;
+			}
+		);
+		add_filter(
+			'ran_booster_documentation_sections_before_about',
+			static function ( array $sections ): array {
+				$sections[] = array(
+					'id'      => 'fixture-overview',
+					'summary' => 'Fixture overview',
+					'content' => '<p>Overview.</p>',
+					'chapter' => 'fixture-guidance',
+				);
+				$sections[] = array(
+					'id'      => 'fixture-details',
+					'summary' => 'Fixture details',
+					'content' => '<p>Details.</p>',
+					'chapter' => 'fixture-guidance',
+				);
+				return $sections;
+			}
+		);
 	}
 );

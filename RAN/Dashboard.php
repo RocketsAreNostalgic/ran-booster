@@ -507,6 +507,14 @@ class Dashboard {
 		return $this->render_package_create( $this->theme_pages );
 	}
 
+	/** Render the fixed Settings destination without selecting a horizontal item.
+	 *
+	 * @return mixed The included template result.
+	 */
+	public function get_settings() {
+		return $this->render( 'settings' );
+	}
+
 	/**
 	 * @param list<array<string, mixed>> $extensions
 	 * @return mixed The included template result, or an overridden renderer result.

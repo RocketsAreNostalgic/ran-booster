@@ -26,6 +26,7 @@ class Booster {
 		'ran-booster_page_ran-booster-themes-create',
 		'ran-booster_page_ran-booster-themes',
 		'ran-booster_page_ran-booster-extensions',
+		'ran-booster_page_ran-booster-settings',
 	);
 
 	private const PACKAGE_PAGE_HOOKS = array(
@@ -261,6 +262,7 @@ class Booster {
 		add_submenu_page( 'ran-booster', __( 'Managed Themes', 'ran-booster' ), __( 'Themes', 'ran-booster' ), 'manage_options', 'ran-booster-themes', $this->service_callback( 'RAN\Dashboard', 'get_themes' ) );
 		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', $this->service_callback( 'RAN\Dashboard', 'get_transporter' ) );
 		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'render_extensions_page' ) );
+		add_submenu_page( 'ran-booster', __( 'Settings', 'ran-booster' ), __( 'Settings', 'ran-booster' ), 'manage_options', 'ran-booster-settings', $this->service_callback( 'RAN\Dashboard', 'get_settings' ) );
 	}
 
 	/**

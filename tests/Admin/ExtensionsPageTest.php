@@ -64,6 +64,7 @@ final class ExtensionsPageTest extends TestCase {
 				'ran-booster-themes',
 				'ran-booster-transporter',
 				'ran-booster-extensions',
+				'ran-booster-settings',
 			),
 			array_column( $GLOBALS['ran_booster_extensions_page_submenus'], 'menu_slug' )
 		);
@@ -133,6 +134,7 @@ final class ExtensionsPageTest extends TestCase {
 				array( 'ran-booster', 'Apparences gérées', 'Apparences', 'manage_options', 'ran-booster-themes', 'get_themes' ),
 				array( 'ran-booster', 'Transfert', 'Transfert', 'manage_options', 'ran-booster-transporter', 'get_transporter' ),
 				array( 'ran-booster', 'Modules', 'Modules', 'manage_options', 'ran-booster-extensions', 'render_extensions_page' ),
+				array( 'ran-booster', 'Settings', 'Settings', 'manage_options', 'ran-booster-settings', 'get_settings' ),
 			),
 			array_map(
 				static fn ( array $submenu ): array => array(
@@ -565,6 +567,7 @@ final class ExtensionsPageTest extends TestCase {
 			new class() {
 				public function get_index(): void {}
 				public function get_transporter(): void {}
+				public function get_settings(): void {}
 				public function get_plugins_create(): void {}
 				public function get_plugins(): void {}
 				public function get_themes_create(): void {}

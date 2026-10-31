@@ -12,6 +12,7 @@ use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\DeploymentAdminPresenter;
+use RAN\Admin\OnboardingPresenter;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\DevelopmentSafetyNoticeController;
@@ -60,6 +61,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$GLOBALS['ran_booster_uninstall_transients']['auto_updater.lock']   = 'wordpress-lock';
 		$GLOBALS['ran_booster_uninstall_transients']['unrelated_transient'] = 'preserved';
 		$GLOBALS['ran_booster_uninstall_options']                           = array(
+			OnboardingPresenter::PRESENTATION_OPTION      => 'onboarding',
 			Database::VERSION_OPTION                      => '5.0',
 			\RAN\Activity\ActivityStore::VERSION_OPTION   => '1',
 			CredentialExpiryObservationStore::OPTION_NAME => array( 'profiles' => array() ),
@@ -117,6 +119,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$remover = $this->remover( $secrets, $writer );
 
 		$remover->remove();
+		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 		$remover->remove();
 
 		self::assertSame(

@@ -124,13 +124,19 @@ final class CredentialExpiryReminderTest extends TestCase {
 	public function test_provider_expiry_precedes_manual_date_and_missing_metadata_is_unknown(): void {
 		$this->credential( 'precedence', 'Precedence' );
 		$this->credential( 'unknown', 'Unknown' );
+		$this->credential( 'manual', 'Manual' );
+		$this->observations->set_manual_expiry( provider: 'gh', profile_id: 'manual', expires_on: '2026-07-24' );
 		$this->observations->set_manual_expiry( provider: 'gh', profile_id: 'precedence', expires_on: '2026-07-24' );
 		$this->provider_expiry( 'precedence', $this->now->modify( '+40 days' ) );
 
 		$status = $this->reminders()->status( 'gh', $this->profile( 'precedence' ) );
 
 		self::assertSame( 'provider', $status['source'] );
+		self::assertSame( '2026-07-23T12:00:00Z', $status['observed_at'] );
 		self::assertSame( 'future', $status['stage'] );
+		$manual = $this->reminders()->status( 'gh', $this->profile( 'manual' ) );
+		self::assertSame( 'manual', $manual['source'] );
+		self::assertNull( $manual['observed_at'] );
 		self::assertSame( 'Expiry unknown', $this->reminders()->status( 'gh', $this->profile( 'unknown' ) )['badge_label'] );
 	}
 
@@ -155,6 +161,162 @@ final class CredentialExpiryReminderTest extends TestCase {
 		self::assertStringContainsString( 'Review translated GitHub credentials', $html );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_overview_reuses_the_expiry_notice_captured_for_this_request(): void {
+		require_once __DIR__ . '/AdminViewWordPressFunctions.php';
+		$this->credential( 'overview_expiry', 'Overview credential' );
+		$this->provider_expiry( 'overview_expiry', $this->now->modify( '+2 days' ) );
+		$notice = new CredentialExpiryNotice( $this->reminders() );
+		self::assertTrue( $notice->should_load_dismissal_script() );
+		ob_start();
+		$notice->render();
+		$notice_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Overview credential (GitHub): Expires in 2 days.', $notice_html );
+
+		$onboarding = array(
+			'view'                => 'dashboard',
+			'credential_expiry'   => $notice->overview_summary(),
+			'provider_links'      => array(
+				array(
+					'label' => 'GitHub',
+					'url'   => '/provider',
+				),
+			),
+			'provider_summaries'  => array(
+				array(
+					'code'      => 'gh',
+					'label'     => 'GitHub',
+					'url'       => '/provider',
+					'admitted'  => true,
+					'selection' => 'available',
+				),
+			),
+			'install_plugin_url'  => '/install-plugin',
+			'install_theme_url'   => '/install-theme',
+			'portability_url'     => '/portability',
+			'documentation_url'   => '/documentation',
+			'troubleshooting_url' => '/troubleshooting',
+			'plugins_url'         => '/plugins',
+			'themes_url'          => '/themes',
+			'activity_url'        => '/activity',
+			'inventory'           => array(
+				'plugins'  => 0,
+				'themes'   => 0,
+				'disabled' => 0,
+				'complete' => true,
+			),
+			'secrets_storage'     => array(
+				'status'              => 'storage_healthy',
+				'message'             => 'Storage ready.',
+				'candidate_path'      => null,
+				'can_provision'       => false,
+				'config_alternatives' => null,
+			),
+		);
+		$reads      = $this->observations->read_count;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/onboarding.php';
+		$overview_html = (string) ob_get_clean();
+		self::assertSame( $reads, $this->observations->read_count );
+		self::assertSame( 2, substr_count( $overview_html, 'Overview credential' ) );
+		self::assertStringContainsString( 'tab=gh&amp;view=credentials', $overview_html );
+		self::assertStringNotContainsString( 'test-token-overview_expiry', $overview_html );
+		self::assertSame(
+			array(
+				'attention'     => true,
+				'credential'    => true,
+				'false_unknown' => false,
+			),
+			array(
+				'attention'     => str_contains( $overview_html, 'Needs attention' ),
+				'credential'    => str_contains( $overview_html, 'Overview credential' ),
+				'false_unknown' => str_contains( $overview_html, 'Current credential expiry is unknown' ),
+			),
+			'The same captured actionable expiry must be visible in Overview.'
+		);
+	}
+
+	public function test_overview_summary_never_starts_or_repeats_a_credential_or_observation_read(): void {
+		$this->credential( 'cached', 'Cached credential' );
+		$this->provider_expiry( 'cached', $this->now->modify( '+2 days' ) );
+		$profile = $this->profile( 'cached' );
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::once() )->method( 'credential_profiles' )->with( 'gh' )->willReturn( array( 'cached' => $profile ) );
+		$notice = new CredentialExpiryNotice( new CredentialExpiryReminder( $this->providers, $secrets, $this->observations, fn (): DateTimeImmutable => $this->now ) );
+		$reads  = $this->observations->read_count;
+		self::assertSame(
+			array(
+				'status' => 'unknown',
+				'total'  => null,
+				'items'  => array(),
+			),
+			$notice->overview_summary()
+		);
+		self::assertSame( $reads, $this->observations->read_count );
+		self::assertTrue( $notice->should_load_dismissal_script() );
+		$reads   = $this->observations->read_count;
+		$summary = $notice->overview_summary();
+		self::assertSame( $summary, $notice->overview_summary() );
+		self::assertSame( $reads, $this->observations->read_count );
+		self::assertSame( 'captured', $summary['status'] );
+		self::assertSame( 1, $summary['total'] );
+		self::assertSame( array( 'provider', 'provider_label', 'label', 'badge_label', 'stage', 'effective_expires_at', 'source', 'observed_at', 'url' ), array_keys( $summary['items'][0] ) );
+		self::assertSame( '2026-07-23T12:00:00Z', $summary['items'][0]['observed_at'] );
+		self::assertStringContainsString( 'page=ran-booster&tab=gh&view=credentials', $summary['items'][0]['url'] );
+	}
+
+	public function test_cached_summary_is_bounded_and_requires_current_admin_login(): void {
+		for ( $index = 0; $index < 7; ++$index ) {
+			$this->credential( 'bounded_' . $index, 'Credential ' . $index );
+			$this->provider_expiry( 'bounded_' . $index, $this->now->modify( '+2 days' ) );
+		}
+		$notice = new CredentialExpiryNotice( $this->reminders() );
+		self::assertTrue( $notice->should_load_dismissal_script() );
+		$summary = $notice->overview_summary();
+		self::assertSame( 7, $summary['total'] );
+		self::assertCount( 5, $summary['items'] );
+		$GLOBALS['ran_booster_repository_admin_allowed'] = false;
+		self::assertSame( 'unavailable', $notice->overview_summary()['status'] );
+		$GLOBALS['ran_booster_repository_admin_allowed'] = true;
+		$logged_out                                      = new CredentialExpiryNotice( $this->reminders() );
+		self::assertTrue( $logged_out->should_load_dismissal_script() );
+		$GLOBALS['ran_booster_repository_admin_user_id'] = 0;
+		self::assertSame( 'unavailable', $logged_out->overview_summary()['status'] );
+	}
+
+	public function test_empty_fresh_capture_replacement_and_storage_failure_are_distinct(): void {
+		$this->credential( 'changed', 'Before replacement' );
+		$this->provider_expiry( 'changed', $this->now->modify( '+2 days' ) );
+		$notice = new CredentialExpiryNotice( $this->reminders() );
+		self::assertTrue( $notice->should_load_dismissal_script() );
+		self::assertSame( 1, $notice->overview_summary()['total'] );
+		$this->credential( 'changed', 'After replacement' );
+		$this->observations->reset_for_replacement( 'gh', 'changed' );
+		$fresh = new CredentialExpiryNotice( $this->reminders() );
+		self::assertFalse( $fresh->should_load_dismissal_script() );
+		self::assertSame(
+			array(
+				'status' => 'captured',
+				'total'  => 0,
+				'items'  => array(),
+			),
+			$fresh->overview_summary()
+		);
+		$this->make_sidecar_unreadable( 'authentication_failure' );
+		$broken = new CredentialExpiryNotice( $this->reminders() );
+		self::assertFalse( $broken->should_load_dismissal_script() );
+		self::assertSame(
+			array(
+				'status' => 'unavailable',
+				'total'  => null,
+				'items'  => array(),
+			),
+			$broken->overview_summary()
+		);
+		self::assertSame( $broken->overview_summary(), $broken->overview_summary() );
+	}
+
 	public function test_dismissal_is_per_user_and_persists_across_severity_stages(): void {
 		$this->credential( 'dismiss_me', 'Dismiss me' );
 		$this->provider_expiry( 'dismiss_me', $this->now->modify( '+8 days' ) );
@@ -171,7 +333,9 @@ final class CredentialExpiryReminderTest extends TestCase {
 			NoticePreference::MODE_DISMISS,
 			$GLOBALS['ran_booster_repository_admin_user_meta'][17][ CredentialExpiryNotice::USER_META_KEY ]['events']["gh\0dismiss_me"]['mode']
 		);
-		self::assertFalse( ( new CredentialExpiryNotice( $reminders ) )->should_render() );
+		$dismissed = new CredentialExpiryNotice( $reminders );
+		self::assertFalse( $dismissed->should_render() );
+		self::assertSame( 1, $dismissed->overview_summary()['total'] );
 
 		$this->provider_expiry( 'dismiss_me', $this->now->modify( '+9 days' ) );
 		self::assertTrue( ( new CredentialExpiryNotice( $reminders ) )->should_render() );

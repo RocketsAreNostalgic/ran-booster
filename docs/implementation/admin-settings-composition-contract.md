@@ -8,6 +8,33 @@ Pre-edit source baseline: Core main
 preparing bounded review corrections; final membership must record their
 reviewed replacement heads before publication.
 
+## Frozen composition membership
+
+The final lane heads admitted for composition are Settings #583
+`56f9a672f761f3a813acd5b632b95e848a95bf07`, Overview #581
+`1e184d7fb0fcdfc33a04a79d8faadf29eab19451`, and Troubleshooting #582
+`086fb2d114fb790835560f2c1a7f778460647c48`, all independently reviewed
+against main `c0f127a29ab5e136986169b4b5a99f6f5d9bc546`. Their source branches
+remain intact; composition preserves their immutable membership through merge
+parents, with explicit shared-file conflict resolution on this branch only.
+
+Settings now fences immediate registration failure, later queued activation
+failure and broker ownership loss at the actual exact-Core hooks. The real
+public registrar/lifecycle tests protect active and unrelated value identity.
+The earlier missing uninstall check option and stale bootstrap test are fixed.
+Troubleshooting projects recorded successful operator-check evidence separately
+from target last/next checks and uses closed export codes. Overview projects
+only its already captured expiry snapshot; missing lifetime-first-use evidence
+still selects the neutral dashboard. Automatic fresh-site guidance remains
+unproven; no invented history or completion flag was added.
+
+The current released updater pin is still beta.15/protocol 7. Upstream draft
+#148 is a separate source prerequisite and is not bundled here. Its guard-only
+validation, development-tooling compatibility and fixture corrections must pass
+review/checks before an owner publication decision. A new immutable published
+pin and fresh Core guard-admission proof remain required before this candidate
+can clear the pre-discovery hold. No current source/CI result clears that hold.
+
 ## Ownership and handoff
 
 Settings is the sole writer of composed Dashboard, Dispatcher, Booster,
@@ -77,3 +104,48 @@ CoreSelfUpdateStatus, InstallationFacts and report export. Regenerate catalogue
 and any derived assets from final source. Every published source/composition
 PR needs independent exact-base/head review. A green source candidate with an
 unpublished updater prerequisite remains held from installed acceptance.
+
+## Composed production and persistent-state inventory
+
+The admitted lanes add six fixed internal production owners: GeneralPreferenceStore,
+GitHubVisibility, CoreSelfUpdateCheck, DiagnosticRunStore, InstallationFacts and
+SupportReport. Composition adds no further type or public extension API. Four
+nonautoloaded, non-secret site options are added: `ran_booster_general_settings`,
+`ran_booster_core_self_update_check`, `ran_booster_overview_presentation` and
+`ran_booster_diagnostic_runs`. All four have exact verified-uninstall entries.
+There is no new database table, schema version, cron job, provider client,
+storage backend or multisite support.
+
+The final Overview handoff deliberately removes the old private storage payload,
+helpers and forms from its view. Its existing heading anchor remains once in
+both presentations with a safe summary and Settings destination. The combined
+view test passes a legacy private payload as a canary and verifies it is ignored,
+while keeping the protected site-wide presentation form and migration prompt.
+The original full-storage rendering tests continue against Settings storage.
+
+## Final unique source cost against main
+
+- Production: +3809/-442.
+- Documentation: +728/-29.
+- Generated catalogues/fixtures: +1056/-483.
+- Tests: +5641/-105.
+
+Documentation is measured before this final table insertion. Shared and auto-merged
+production files have the following main-relative costs; these are included in
+the total above, not extra growth.
+
+| File | Added | Deleted |
+| --- | ---: | ---: |
+| `RAN/Activity/ActivityStore.php` | 66 | 3 |
+| `RAN/Admin/CredentialExpiryNotice.php` | 49 | 3 |
+| `RAN/Admin/CredentialExpiryReminder.php` | 5 | 3 |
+| `RAN/Admin/OnboardingPresenter.php` | 93 | 0 |
+| `RAN/Admin/ProviderSettingsPresenter.php` | 21 | 1 |
+| `RAN/Booster.php` | 21 | 2 |
+| `RAN/BoosterServiceProvider.php` | 26 | 1 |
+| `RAN/Dashboard.php` | 268 | 33 |
+| `RAN/Dispatcher.php` | 115 | 5 |
+| `RAN/Storage/AbstractPackageRepository.php` | 89 | 0 |
+| `RAN/Uninstall/LocalDataRemover.php` | 5 | 0 |
+| `views/onboarding.php` | 114 | 225 |
+| `views/overview-dashboard.php` | 95 | 0 |

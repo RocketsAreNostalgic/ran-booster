@@ -84,6 +84,7 @@ class Dashboard {
 	private ?ProviderDocumentationPresenter $provider_documentation;
 	private ?PackageAdminController $package_admin = null;
 	private DeploymentAdminPresenter $deployment_admin;
+	private ?\RAN\Activity\ActivityStore $overview_activity = null;
 	private PackagePagePresenter $plugin_pages;
 	private PackagePagePresenter $theme_pages;
 	private ?TemporaryDebugCapture $debug_capture                      = null;
@@ -136,8 +137,10 @@ class Dashboard {
 		?\RAN\Activity\ActivityStore $activity = null,
 		?\RAN\Settings\GeneralPreferenceStore $general_preferences = null,
 		?\RAN\Admin\GitHubVisibility $github_visibility = null,
-		?\RAN\Troubleshooting\CoreSelfUpdateStatus $core_updates = null
+		?\RAN\Troubleshooting\CoreSelfUpdateStatus $core_updates = null,
+		private ?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null
 	) {
+		$this->overview_activity   = $activity;
 		$this->general_preferences = $general_preferences;
 		$this->github_visibility   = $github_visibility;
 		$this->core_updates        = $core_updates;
@@ -228,12 +231,21 @@ class Dashboard {
 		}
 
 		if ( null !== $selected_tab && 'overview' === $selected_tab->get_key() ) {
-			$data['onboarding']                    = ( new OnboardingPresenter() )->build(
+			$data['onboarding']                      = ( new OnboardingPresenter() )->build_overview(
 				$tabs,
 				$admin_url . '?page=ran-booster-plugins-create',
-				$admin_url . '?page=ran-booster-themes-create'
+				$admin_url . '?page=ran-booster-themes-create',
+				$this->plugins,
+				$this->themes,
+				$this->overview_activity,
+				$this->storage_summary(),
+				$this->provider_settings->overview_provider_facts()
 			);
-			$data['onboarding']['storage_summary'] = $this->storage_summary();
+			$data['onboarding']['credential_expiry'] = $this->credential_expiry_notice?->overview_summary() ?? array(
+				'status' => 'unknown',
+				'total'  => null,
+				'items'  => array(),
+			);
 		}
 
 		if ( null !== $selected_tab && $selected_tab->is_provider() ) {

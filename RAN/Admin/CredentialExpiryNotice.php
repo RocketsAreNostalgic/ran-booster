@@ -15,12 +15,58 @@ final class CredentialExpiryNotice {
 
 	private bool $rendered = false;
 
-	/** @var list<array<string, mixed>>|null */
+	/** @var list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string}>|null */
 	private ?array $affected = null;
 
 	private bool $storage_unavailable = false;
 
 	public function __construct( private CredentialExpiryReminder $reminders ) {
+	}
+
+	/**
+	 * Project only facts already captured by the ordinary notice request.
+	 *
+	 * @phpstan-impure Authority and login are rechecked at each call.
+	 *
+	 * @return array{status:'captured'|'unknown'|'unavailable',total:?int,items:list<array{provider:string,provider_label:string,label:string,badge_label:string,stage:string,effective_expires_at:string,source:string,observed_at:?string,url:string}>}
+	 */
+	public function overview_summary(): array {
+		if ( ! current_user_can( 'manage_options' ) || get_current_user_id() < 1 || $this->storage_unavailable ) {
+			return array(
+				'status' => 'unavailable',
+				'total'  => null,
+				'items'  => array(),
+			);
+		}
+		if ( null === $this->affected ) {
+			return array(
+				'status' => 'unknown',
+				'total'  => null,
+				'items'  => array(),
+			);
+		}
+		$base_url = function_exists( 'is_network_admin' ) && is_network_admin()
+			? network_admin_url( 'admin.php' )
+			: admin_url( 'admin.php' );
+		$items    = array();
+		foreach ( array_slice( $this->affected, 0, 5 ) as $row ) {
+			$items[] = array(
+				'provider'             => $row['provider'],
+				'provider_label'       => $row['provider_label'],
+				'label'                => $row['label'],
+				'badge_label'          => $row['badge_label'],
+				'stage'                => $row['stage'],
+				'effective_expires_at' => $row['effective_expires_at'],
+				'source'               => $row['source'],
+				'observed_at'          => $row['observed_at'],
+				'url'                  => $base_url . '?page=ran-booster&tab=' . rawurlencode( $row['provider'] ) . '&view=credentials',
+			);
+		}
+		return array(
+			'status' => 'captured',
+			'total'  => count( $this->affected ),
+			'items'  => $items,
+		);
 	}
 
 	public function should_render(): bool {
@@ -110,7 +156,7 @@ final class CredentialExpiryNotice {
 		<?php
 	}
 
-	/** @return list<array<string, mixed>> */
+	/** @return list<array{provider:string,provider_label:string,id:string,label:string,editable:bool,effective_expires_at:string,source:string,observed_at:?string,stage:string,days:int,badge_class:string,badge_label:string,event_marker:string}> */
 	private function snapshot(): array {
 		if ( null === $this->affected ) {
 			try {

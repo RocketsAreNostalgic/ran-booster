@@ -41,29 +41,22 @@ final class SupportReportTest extends TestCase {
 		);
 		$lines  = $method->invoke( null, $core );
 		self::assertIsArray( $lines );
-		self::assertContains( 'Recorded operator results and cooldown are separate from target last_check and next_check; no new check was performed.', $lines );
-		self::assertContains( 'reason: preference_disabled', $lines );
-		self::assertContains( 'last_successful_check: ' . gmdate( 'c', 1699999000 ), $lines );
-		self::assertContains( 'last_check_outcome: failed', $lines );
-		self::assertContains( 'last_check_code: check_failed', $lines );
-		self::assertContains( 'check_cooldown_until: ' . gmdate( 'c', 1700000300 ), $lines );
-		self::assertContains( 'next_check: ' . gmdate( 'c', 1700001000 ), $lines );
+		self::assertSame( 'preference_disabled', $lines['reason'] );
+		self::assertSame( gmdate( 'c', 1699999000 ), $lines['last_successful_check'] );
+		self::assertSame( 'failed', $lines['last_check_outcome'] );
+		self::assertSame( 'check_failed', $lines['last_check_code'] );
+		self::assertSame( gmdate( 'c', 1700000300 ), $lines['check_cooldown_until'] );
+		self::assertSame( gmdate( 'c', 1700001000 ), $lines['next_check'] );
 		foreach ( array( 'success', 'skipped', 'unknown', 'rejected' ) as $outcome ) {
 			$core['last_check_outcome'] = $outcome;
-			$lines                      = $method->invoke( null, $core );
-			self::assertIsArray( $lines );
-			self::assertContains( 'last_check_outcome: ' . $outcome, $lines );
+			self::assertSame( $outcome, $method->invoke( null, $core )['last_check_outcome'] );
 		}
 		$core['last_check_outcome']    = 'private_outcome';
 		$core['last_check_code']       = '/private/path';
 		$core['last_successful_check'] = 0;
 		$core['check_cooldown_until']  = 253402300800;
-		$lines                         = $method->invoke( null, $core );
-		self::assertIsArray( $lines );
-		foreach ( array( 'last_check_outcome: Unknown', 'last_check_code: Unknown', 'last_successful_check: Unknown', 'check_cooldown_until: Unknown' ) as $line ) {
-			self::assertContains( $line, $lines );
-		}
 		foreach ( array(
+			$core,
 			array(),
 			array(
 				'last_successful_check' => null,
@@ -78,10 +71,9 @@ final class SupportReportTest extends TestCase {
 				'last_check_code'       => 'private_token_canary',
 			),
 		) as $input ) {
-			$lines = $method->invoke( null, $input );
-			self::assertIsArray( $lines );
-			foreach ( array( 'last_check_outcome: Unknown', 'last_check_code: Unknown', 'last_successful_check: Unknown', 'check_cooldown_until: Unknown' ) as $line ) {
-				self::assertContains( $line, $lines );
+			$projection = $method->invoke( null, $input );
+			foreach ( array( 'last_check_outcome', 'last_check_code', 'last_successful_check', 'check_cooldown_until' ) as $key ) {
+				self::assertSame( 'Unknown', $projection[ $key ] );
 			}
 		}
 	}
@@ -146,19 +138,41 @@ final class SupportReportTest extends TestCase {
 			)
 		);
 		$text                                    = $captured['text'];
-		self::assertSame( 'ran-booster-support-19700101-001820.txt', $captured['filename'] );
-		foreach ( array( 'Environment', 'Installation', 'Storage', 'Managed packages', 'Diagnostics', 'Activity', 'Logging' ) as $section ) {
-			self::assertStringContainsString( $section . ': ', $text );
+		self::assertSame( 'ran-booster-support-19700101-001820.json', $captured['filename'] );
+		$data = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 1, $data['schema_version'] );
+		self::assertSame( '1970-01-01T00:18:20+00:00', $data['capture_started_at'] );
+		self::assertSame( '1970-01-01T00:18:20+00:00', $data['capture_ended_at'] );
+		foreach ( array( 'environment', 'installation', 'storage', 'managed_packages', 'diagnostics', 'activity', 'logging' ) as $section ) {
+			self::assertArrayHasKey( 'state', $data['sections'][ $section ] );
+			self::assertSame( $data['capture_started_at'], $data['sections'][ $section ]['observed_at'] );
 		}
-		self::assertStringContainsString( 'policy=automatic', $text );
-		self::assertStringContainsString( 'source=release_asset', $text );
-		self::assertStringContainsString( 'Scope: one saved credential selected; identity withheld; one repository selected; identity withheld', $text );
-		self::assertStringContainsString( 'Partial: provider_unavailable', $text );
-		self::assertStringContainsString( 'gh.repository.denied', $text );
-		self::assertStringContainsString( 'diagnostics.partial', $text );
-		self::assertSame( 2, substr_count( $text, 'Package 1' ) );
-		self::assertSame( 4, substr_count( $text, 'Provider 1' ) );
-		self::assertStringContainsString( 'Included count: plugin; Provider 1; policy=automatic; rows=1', $text );
+		$package = $data['sections']['managed_packages']['data']['records'][0];
+		self::assertSame( 'automatic', $package['policy'] );
+		self::assertSame( 'release_asset', $package['source'] );
+		self::assertSame( 'Package 1', $package['package'] );
+		self::assertSame( 'Provider 1', $package['provider'] );
+		$run = $data['sections']['diagnostics']['data']['retained']['runs'][0];
+		self::assertTrue( $run['credential_selected'] );
+		self::assertTrue( $run['repository_selected'] );
+		self::assertTrue( $run['partial'] );
+		self::assertSame( 'provider_unavailable', $run['partial_reason'] );
+		self::assertSame( 'gh.repository.denied', $run['results'][0]['code'] );
+		$activity = $data['sections']['activity']['data']['records'][0];
+		self::assertSame( 'Package 1', $activity['subject'] );
+		self::assertSame( 'Provider 1', $activity['provider'] );
+		self::assertSame( 'diagnostics.partial', $activity['reason'] );
+		$inspect = static function ( mixed $value ) use ( &$inspect ): void {
+			if ( is_array( $value ) ) {
+				foreach ( $value as $key => $child ) {
+					self::assertStringNotContainsString( 'private', strtolower( (string) $key ) );
+					$inspect( $child );
+				}
+			} elseif ( is_string( $value ) ) {
+				self::assertStringNotContainsString( 'private', strtolower( $value ) );
+			}
+		};
+		$inspect( $data );
 		self::assertStringNotContainsString( 'private', strtolower( $text ) );
 		self::assertStringNotContainsString( 'Private Component Canary', $text );
 		self::assertSame( array(), $connection->inserted );
@@ -178,7 +192,7 @@ final class SupportReportTest extends TestCase {
 		self::assertSame( array(), $runs->available()['runs'] );
 		self::assertSame( $before, $captured['text'] );
 		self::assertStringContainsString( 'gh.repository.denied', $captured['text'] );
-		self::assertStringContainsString( 'Diagnostics [Not run]', $report->generate( array() )['text'] );
+		self::assertSame( 'Not run', json_decode( $report->generate( array() )['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['diagnostics']['data']['retained']['state'] );
 		self::assertSame( 1, $memory->writes );
 	}
 
@@ -195,12 +209,13 @@ final class SupportReportTest extends TestCase {
 		$memory->broken                                = true;
 		$report                                        = new SupportReport( new InstallationFacts( new ProviderRegistry() ), new DiagnosticRunFixture( $memory ) );
 		$text = $report->generate( array() )['text'];
-		self::assertStringContainsString( 'Environment [Included]', $text );
-		self::assertStringContainsString( 'Database: Unknown', $text );
-		self::assertStringContainsString( 'Installation [Unavailable]', $text );
-		self::assertStringContainsString( 'Storage [Included]', $text );
-		self::assertStringContainsString( 'Diagnostics [Unavailable]', $text );
-		self::assertStringContainsString( 'Logging [Unavailable]', $text );
+		$data = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 'Included', $data['sections']['environment']['state'] );
+		self::assertSame( 'Unknown', $data['sections']['environment']['data']['database'] );
+		self::assertSame( 'Unavailable', $data['sections']['installation']['state'] );
+		self::assertSame( 'Included', $data['sections']['storage']['state'] );
+		self::assertSame( 'Unavailable', $data['sections']['diagnostics']['data']['retained']['state'] );
+		self::assertSame( 'Unavailable', $data['sections']['logging']['state'] );
 		self::assertStringNotContainsString( 'canary', $text );
 		self::assertSame( 0, $memory->writes );
 		unset( $GLOBALS['ran_booster_support_header_failure'] );
@@ -219,12 +234,14 @@ final class SupportReportTest extends TestCase {
 		};
 		$GLOBALS['ran_booster_support_header_reads'] = array();
 		$text                                        = ( new SupportReport( new InstallationFacts( new ProviderRegistry() ), clock: static fn(): float => $GLOBALS['wpdb']->time ) )->generate( array() )['text'];
-		self::assertStringContainsString( 'Environment [Included]', $text );
-		foreach ( array( 'Installation', 'Storage', 'Managed packages', 'Diagnostics', 'Activity', 'Logging' ) as $section ) {
-			self::assertStringContainsString( $section . ' [Not included]', $text );
+		$data                                        = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 'Included', $data['sections']['environment']['state'] );
+		foreach ( array( 'installation', 'storage', 'managed_packages', 'diagnostics', 'activity', 'logging' ) as $section ) {
+			self::assertSame( 'Not included', $data['sections'][ $section ]['state'] );
+			self::assertSame( 'collection_budget_exhausted', $data['sections'][ $section ]['data']['reason'] );
 		}
 		self::assertSame( array(), $GLOBALS['ran_booster_support_header_reads'] );
-		self::assertStringContainsString( 'Capture ended UTC: 1970-01-01T00:16:50+00:00', $text );
+		self::assertSame( '1970-01-01T00:16:50+00:00', $data['capture_ended_at'] );
 	}
 
 	public function test_diagnostic_export_does_not_trust_display_prose_or_known_prefixes(): void {
@@ -294,11 +311,16 @@ final class SupportReportTest extends TestCase {
 			)
 		);
 		$text                                    = ( new SupportReport( $facts, activity: new ActivityStore( $connection ) ) )->generate( array() )['text'];
-		self::assertStringContainsString( 'GitHub selection at request bootstrap: missing', $text );
-		self::assertStringContainsString( 'GitHub admitted=No; selected=external; version=2.3.4; provider API=15', $text );
-		self::assertStringContainsString( 'incomplete; stage=deployment.needs_attention', $text );
-		self::assertStringContainsString( 'incomplete; stage=deployment.operator_reviewed', $text );
-		self::assertStringContainsString( 'incomplete; stage=Unknown', $text );
+		$data                                    = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
+		$selection                               = $data['sections']['installation']['data']['github_selection'];
+		self::assertSame( 'missing', $selection['state'] );
+		self::assertFalse( $selection['admitted'] );
+		self::assertSame( 'external', $selection['selected'] );
+		self::assertSame( '2.3.4', $selection['version'] );
+		self::assertSame( 15, $selection['provider_api'] );
+		$records = $data['sections']['activity']['data']['records'];
+		self::assertSame( array( 'deployment.needs_attention', 'deployment.operator_reviewed', 'Unknown' ), array_column( $records, 'stage' ) );
+		self::assertSame( array( 'incomplete', 'incomplete', 'incomplete' ), array_column( $records, 'status' ) );
 		self::assertStringNotContainsString( 'canary', $text );
 	}
 
@@ -316,22 +338,23 @@ final class SupportReportTest extends TestCase {
 		);
 		$report  = new SupportReport( new InstallationFacts( new ProviderRegistry() ), capture: $capture, clock: static fn(): float => 1100.0 );
 		try {
-			self::assertStringContainsString( 'Logging [Not captured]', $report->generate( array() )['text'] );
+			self::assertSame( 'Not captured', json_decode( $report->generate( array() )['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['logging']['state'] );
 			self::assertFileDoesNotExist( $directory . '/ran-booster-debug.php' );
 			self::assertFileDoesNotExist( $directory . '/ran-booster-debug.php.lock' );
 			$capture->start();
-			self::assertStringContainsString( 'Captured entries observed=0; omitted by sharing policy=0', $report->generate( array() )['text'] );
+			self::assertSame( 0, json_decode( $report->generate( array() )['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['logging']['data']['entries_observed'] );
 			self::assertTrue( $capture->append( '[ran-booster] attempt finished {"attempt_id":17,"package_slug":"private-package-canary"}' ) );
 			self::assertTrue( $capture->append( '[ran-booster] private raw message canary' ) );
 			$captured = $report->generate( array() );
-			self::assertStringContainsString( 'Logging [Truncated]', $captured['text'] );
-			self::assertStringContainsString( 'Captured entries observed=2; omitted by sharing policy=1', $captured['text'] );
-			self::assertStringContainsString( 'attempt finished; attempt=17', $captured['text'] );
+			self::assertSame( 'Truncated', json_decode( $captured['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['logging']['state'] );
+			self::assertSame( 2, json_decode( $captured['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['logging']['data']['entries_observed'] );
+			self::assertSame( 1, json_decode( $captured['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['logging']['data']['omitted_by_sharing_policy'] );
+			self::assertSame( '17', json_decode( $captured['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['logging']['data']['entries'][0]['attempt'] );
 			self::assertStringNotContainsString( 'canary', $captured['text'] );
 			$now = 1000 + 3600 + 86400;
-			self::assertStringContainsString( 'Logging [Not captured]', $report->generate( array() )['text'] );
+			self::assertSame( 'Not captured', json_decode( $report->generate( array() )['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['logging']['state'] );
 			self::assertFileDoesNotExist( $directory . '/ran-booster-debug.php' );
-			self::assertStringContainsString( 'attempt finished; attempt=17', $captured['text'] );
+			self::assertSame( '17', json_decode( $captured['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['logging']['data']['entries'][0]['attempt'] );
 		} finally {
 			foreach ( array( $directory . '/ran-booster-debug.php', $directory . '/ran-booster-debug.php.lock' ) as $path ) {
 				if ( is_file( $path ) ) {
@@ -379,11 +402,14 @@ final class SupportReportTest extends TestCase {
 		};
 		$text    = ( new SupportReport( new InstallationFacts( new ProviderRegistry() ), plugins: $plugins, themes: $themes ) )->generate( array() )['text'];
 		self::assertSame( 0, $themes->observed_limit );
-		self::assertStringContainsString( 'Managed packages [Truncated]', $text );
-		self::assertStringContainsString( 'plugin included rows: 100', $text );
-		self::assertStringContainsString( 'theme included rows: 0', $text );
-		self::assertSame( 100, preg_match_all( '/^plugin; Package /m', $text ) );
-		self::assertStringContainsString( 'Included count: plugin; GitHub; policy=disabled; rows=100', $text );
+		$data = json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['managed_packages'];
+		self::assertSame( 'Truncated', $data['state'] );
+		self::assertSame( 100, $data['data']['types']['plugin']['included'] );
+		self::assertSame( 0, $data['data']['types']['theme']['included'] );
+		self::assertCount( 100, $data['data']['records'] );
+		self::assertSame( 'plugin', $data['data']['records'][0]['type'] );
+		self::assertSame( 'GitHub', $data['data']['records'][0]['provider'] );
+		self::assertSame( 'disabled', $data['data']['records'][0]['policy'] );
 		self::assertLessThanOrEqual( SupportReport::MAX_BYTES, strlen( $text ) );
 	}
 
@@ -403,9 +429,13 @@ final class SupportReportTest extends TestCase {
 			);
 		}
 		$text = ( new SupportReport( new InstallationFacts( new ProviderRegistry(), add_ons: $addons ) ) )->generate( array() )['text'];
-		self::assertStringContainsString( 'Installation [Truncated]', $text );
-		self::assertStringContainsString( 'Provider and add-on declarations beyond the first 32 are not included.', $text );
-		self::assertStringContainsString( 'Component 32; Active=Yes; Admission=Admitted; Version=Unknown', $text );
+		$data = json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['installation'];
+		self::assertSame( 'Truncated', $data['state'] );
+		self::assertCount( 32, $data['data']['components'] );
+		self::assertSame( 'Component 32', $data['data']['components'][31]['name'] );
+		self::assertSame( 'Yes', $data['data']['components'][31]['active'] );
+		self::assertSame( 'Admitted', $data['data']['components'][31]['admission'] );
+		self::assertSame( 'Unknown', $data['data']['components'][31]['version'] );
 		self::assertStringNotContainsString( 'Private Addon', $text );
 	}
 
@@ -414,10 +444,10 @@ final class SupportReportTest extends TestCase {
 	public function test_storage_source_comes_from_exact_configuration_presence_without_exporting_value(): void {
 		$this->environment();
 		$report = new SupportReport( new InstallationFacts( new ProviderRegistry() ) );
-		self::assertStringContainsString( 'Configuration source: none', $report->generate( array( 'source' => 'constant' ) )['text'] );
+		self::assertSame( 'none', json_decode( $report->generate( array( 'source' => 'constant' ) )['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['storage']['data']['configuration_source'] );
 		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/configured-path-canary' );
 		$text = $report->generate( array( 'source' => '/private/incorrect-source-canary' ) )['text'];
-		self::assertStringContainsString( 'Configuration source: constant', $text );
+		self::assertSame( 'constant', json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['storage']['data']['configuration_source'] );
 		self::assertStringNotContainsString( 'canary', $text );
 	}
 
@@ -438,11 +468,9 @@ final class SupportReportTest extends TestCase {
 		);
 		$GLOBALS['ran_booster_activity_options'] = array( ActivityStore::VERSION_OPTION => '1' );
 		$text                                    = ( new SupportReport( new InstallationFacts( new ProviderRegistry() ), activity: new ActivityStore( $connection ) ) )->generate( array() )['text'];
-		self::assertSame( 2, substr_count( $text, 'Package 1' ) );
-		self::assertStringContainsString( 'Repository 1', $text );
-		self::assertStringContainsString( 'Provider 1', $text );
-		self::assertStringContainsString( 'Subject 1', $text );
-		self::assertSame( 5, substr_count( $text, '; update;' ) );
+		$records                                 = json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['activity']['data']['records'];
+		self::assertSame( array( 'Package 1', 'Package 1', 'Repository 1', 'Provider 1', 'Subject 1' ), array_column( $records, 'subject' ) );
+		self::assertSame( array_fill( 0, 5, 'update' ), array_column( $records, 'operation' ) );
 		self::assertStringNotContainsString( 'canary', $text );
 	}
 
@@ -483,9 +511,9 @@ final class SupportReportTest extends TestCase {
 		try {
 			$facts = new InstallationFacts( new ProviderRegistry(), new CoreSelfUpdateStatus( CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.0.0-beta.41' ), new CoreSelfUpdateNativeTarget( $updater ) ) );
 			$text  = ( new SupportReport( $facts ) )->generate( array() )['text'];
-			self::assertStringContainsString( 'reason: verified_release', $text );
-			self::assertStringContainsString( 'marker_commit: ' . str_repeat( 'a', 40 ), $text );
-			self::assertStringContainsString( 'updater_code: github_updater_runtime_environment_invalid', $text );
+			self::assertSame( 'verified_release', json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['reason'] );
+			self::assertSame( str_repeat( 'a', 40 ), json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['marker_commit'] );
+			self::assertSame( 'github_updater_runtime_environment_invalid', json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['updater_code'] );
 			self::assertSame( 1, $updater->status_reads );
 		} finally {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove the exact isolated marker fixture.
@@ -493,6 +521,40 @@ final class SupportReportTest extends TestCase {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the isolated provenance fixture directory.
 			rmdir( $directory );
 		}
+	}
+
+	public function test_encoded_output_ceiling_preserves_valid_json_and_reports_truncation(): void {
+		$serialize = new \ReflectionMethod( SupportReport::class, 'serialize' );
+		$sections  = array(
+			'environment' => array(
+				'state'       => 'Included',
+				'observed_at' => '1970-01-01T00:00:01+00:00',
+				'data'        => array( 'value' => str_repeat( "é\\\"\n", SupportReport::MAX_BYTES ) ),
+			),
+			'logging'     => array(
+				'state'       => 'Included',
+				'observed_at' => '1970-01-01T00:00:01+00:00',
+				'data'        => array( 'value' => 'safe' ),
+			),
+		);
+		$text      = $serialize->invoke( null, $sections, 1.0, 2.0 );
+		self::assertIsString( $text );
+		self::assertLessThanOrEqual( SupportReport::MAX_BYTES, strlen( $text ) );
+		$data = json_decode( $text, true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 1, $data['schema_version'] );
+		self::assertSame( 'Partial', $data['coverage'] );
+		self::assertSame( 'Truncated', $data['sections']['environment']['state'] );
+		self::assertSame( 'output_byte_limit_exhausted', $data['sections']['environment']['data']['reason'] );
+	}
+
+	public function test_unavailable_package_counts_are_not_reported_as_zero(): void {
+		$this->environment();
+		$report = ( new SupportReport( new InstallationFacts( new ProviderRegistry() ), themes: $this->empty_themes() ) )->generate( array() );
+		$data   = json_decode( $report['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['managed_packages']['data']['types'];
+		self::assertSame( 'Unavailable', $data['plugin']['state'] );
+		self::assertNull( $data['plugin']['included'] );
+		self::assertSame( 'Included', $data['theme']['state'] );
+		self::assertSame( 0, $data['theme']['included'] );
 	}
 
 	private function environment(): void {

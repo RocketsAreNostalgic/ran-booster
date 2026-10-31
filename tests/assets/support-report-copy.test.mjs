@@ -273,15 +273,16 @@ test('completion for a replaced report cannot announce success or move focus in 
 
 test('download uses the current UTF-8 report, validates its filename and cleans up', async () => {
 	for (const filename of [
+		'ran-booster-support-20261031-123456.json',
+		'../private.json',
 		'ran-booster-support-20261031-123456.txt',
-		'../private.txt',
 	]) {
 		const listeners = new Map();
 		const blobs = [];
 		const revoked = [];
 		const links = [];
 		const current = report('old');
-		current.input.value = 'current café\n報告';
+		current.input.value = '{\n  "message": "café 報告"\n}';
 		const button = {
 			dataset: { supportReportFilename: filename },
 			closest: () => ({
@@ -325,10 +326,13 @@ test('download uses the current UTF-8 report, validates its filename and cleans 
 			},
 		});
 		assert.equal(await blobs[0].text(), current.input.value);
-		assert.equal(blobs[0].type, 'text/plain;charset=utf-8');
+		assert.equal(JSON.parse(await blobs[0].text()).message, 'café 報告');
+		assert.equal(blobs[0].type, 'application/json;charset=utf-8');
 		assert.equal(
 			links[0].download,
-			filename.startsWith('ran-') ? filename : 'ran-booster-support.txt'
+			filename.endsWith('.json') && filename.startsWith('ran-')
+				? filename
+				: 'ran-booster-support.json'
 		);
 		assert.equal(links[0].clicked, true);
 		assert.equal(links[0].removed, true);

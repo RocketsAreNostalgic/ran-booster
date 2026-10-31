@@ -244,10 +244,15 @@ $ran_booster_support_sql_proof = static function ( wpdb $database ): int {
 		foreach ( $queries as $sql ) {
 			$expect( 1 !== preg_match( '/^\s*(CREATE|ALTER|DROP|INSERT|UPDATE|DELETE|REPLACE|TRUNCATE)\b/i', $sql ), 'passive support inputs do not write or prepare schema' );
 		}
-		$expect( strlen( $captured['text'] ) <= SupportReport::MAX_BYTES && str_contains( $captured['text'], 'Truncated' ), 'bounded output with explicit truncation' );
+		$decoded  = json_decode( $captured['text'], true, 512, JSON_THROW_ON_ERROR );
+		$packages = $decoded['sections']['managed_packages'];
+		$history  = $decoded['sections']['activity'];
+		$expect( strlen( $captured['text'] ) <= SupportReport::MAX_BYTES && 'Truncated' === $packages['state'] && 'Truncated' === $history['state'], 'bounded output with explicit truncation' );
+		$expect( 100 === count( $packages['data']['records'] ) && 100 === count( $history['data']['records'] ), 'report preserves bounded package and Activity rows' );
 		$expect( ! str_contains( $captured['text'], 'canary' ) && ! str_contains( $captured['text'], 'private-owner' ), 'whole-report privacy' );
-		$expect( str_contains( $captured['text'], 'source=release_asset' ), 'release asset source remains explicit' );
-		$expect( str_contains( $captured['text'], 'failed; stage=deployment.needs_attention' ) && str_contains( $captured['text'], 'failed; stage=deployment.operator_reviewed' ), 'attention and operator review remain distinct failed records' );
+		$expect( in_array( 'release_asset', array_column( $packages['data']['records'], 'source' ), true ), 'release asset source remains explicit' );
+		$failed_stages = array_column( array_filter( $history['data']['records'], static fn( array $record ): bool => 'failed' === $record['status'] ), 'stage' );
+		$expect( 1 === count( array_keys( $failed_stages, 'deployment.needs_attention', true ) ) && 1 === count( array_keys( $failed_stages, 'deployment.operator_reviewed', true ) ), 'attention and operator review remain distinct failed records' );
 		return $assertions;
 	} finally {
 		if ( null !== $race ) {

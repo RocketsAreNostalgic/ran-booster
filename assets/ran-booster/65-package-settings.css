@@ -935,6 +935,7 @@
 
 .ran-booster-admin .ran-booster-settings__switch {
 	display: inline-flex;
+	min-block-size: 2rem;
 	align-items: center;
 	gap: var(--ran-booster-space-8);
 	cursor: pointer;
@@ -953,9 +954,11 @@
 
 .ran-booster-admin .ran-booster-settings__switch-control {
 	position: relative;
-	inline-size: 2.5rem;
-	block-size: 1.5rem;
-	border: 1px solid var(--ran-booster-divider);
+	box-sizing: border-box;
+	inline-size: 2.75rem;
+	block-size: 1.375rem;
+	flex: none;
+	border: 1px solid var(--ran-booster-text-subtle);
 	border-radius: 999px;
 	background: var(--ran-booster-surface-subtle);
 	transition:
@@ -966,12 +969,13 @@
 .ran-booster-admin .ran-booster-settings__switch-control::after {
 	position: absolute;
 	inset-block-start: 50%;
-	inset-inline-start: 0.25rem;
+	inset-inline-start: 0.125rem;
 	inline-size: 1rem;
 	block-size: 1rem;
+	box-sizing: border-box;
+	border: 1px solid var(--ran-booster-text-subtle);
 	border-radius: 50%;
 	background: var(--ran-booster-surface);
-	box-shadow: var(--ran-booster-shadow-surface);
 	content: "";
 	transform: translateY(-50%);
 	transition: transform 120ms ease;
@@ -981,15 +985,23 @@
 	.ran-booster-settings__switch
 	input:checked
 	+ .ran-booster-settings__switch-control {
-	border-color: var(--ran-booster-accent);
-	background: var(--ran-booster-accent);
+	border-color: var(--ran-booster-status-ok);
+	background: var(--ran-booster-status-ok);
 }
 
 .ran-booster-admin
 	.ran-booster-settings__switch
 	input:checked
 	+ .ran-booster-settings__switch-control::after {
-	transform: translateX(1rem) translateY(-50%);
+	border-color: var(--ran-booster-surface);
+	transform: translateX(1.375rem) translateY(-50%);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch:dir(rtl)
+	input:checked
+	+ .ran-booster-settings__switch-control::after {
+	transform: translateX(-1.375rem) translateY(-50%);
 }
 
 .ran-booster-admin
@@ -1005,6 +1017,54 @@
 	input:disabled
 	+ .ran-booster-settings__switch-control {
 	opacity: 0.55;
+}
+
+@media (pointer: coarse) {
+	.ran-booster-admin .ran-booster-settings__switch {
+		min-block-size: 2.75rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ran-booster-admin .ran-booster-settings__switch-control,
+	.ran-booster-admin .ran-booster-settings__switch-control::after {
+		transition: none;
+	}
+}
+
+@media (forced-colors: active) {
+	.ran-booster-admin .ran-booster-settings__switch-control {
+		border-color: CanvasText;
+		background: Canvas;
+	}
+
+	.ran-booster-admin .ran-booster-settings__switch-control::after {
+		border-color: CanvasText;
+		background: CanvasText;
+	}
+
+	.ran-booster-admin
+		.ran-booster-settings__switch
+		input:checked
+		+ .ran-booster-settings__switch-control {
+		border-color: Highlight;
+		background: Highlight;
+	}
+
+	.ran-booster-admin
+		.ran-booster-settings__switch
+		input:checked
+		+ .ran-booster-settings__switch-control::after {
+		border-color: HighlightText;
+		background: HighlightText;
+	}
+
+	.ran-booster-admin
+		.ran-booster-settings__switch
+		input:focus-visible
+		+ .ran-booster-settings__switch-control {
+		outline-color: Highlight;
+	}
 }
 
 .ran-booster-admin .ran-booster-settings__configuration {

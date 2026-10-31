@@ -106,6 +106,59 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 'storage_status_unavailable', $result['data']['secrets_storage']['reason_code'] );
 	}
 
+	public function test_switches_keep_native_labels_descriptions_errors_and_policy_state(): void {
+		$secrets_storage    = null;
+		$general_settings   = array(
+			'hide_github'           => array(
+				'value'  => true,
+				'source' => 'saved',
+				'locked' => false,
+				'error'  => null,
+			),
+			'self_update_discovery' => array(
+				'value'  => false,
+				'source' => 'code',
+				'locked' => true,
+				'error'  => null,
+			),
+			'max_archive_bytes'     => array(
+				'value'  => PHP_INT_MAX,
+				'source' => 'default',
+				'locked' => true,
+				'error'  => null,
+			),
+		);
+		$general_token      = 'token';
+		$general_feedback   = null;
+		$general_errors     = array( 'hide_github' => 'Invalid selection.' );
+		$general_attempted  = array();
+		$github_visibility  = array(
+			'eligible' => true,
+			'hidden'   => false,
+			'reason'   => '',
+		);
+		$core_update_status = array();
+		$check_available    = false;
+		$native_update_url  = null;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings.php';
+		$html            = (string) ob_get_clean();
+		$dom             = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		$dom->loadHTML( $html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_errors );
+		$xpath = new \DOMXPath( $dom );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Appearance"]//label[@for="ran-booster-hide-github"]//input[@type="checkbox" and @role="switch" and @checked and @aria-invalid="true" and @aria-describedby="ran-booster-hide-github-help ran-booster-hide-github-error"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-help"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-error"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//label[@for="ran-booster-self-update-discovery"]//input[@role="switch" and @disabled and not(@checked) and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-self-update-discovery-help"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@role="switch" and @aria-checked])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][hide_github]" and @value="0"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][self_update_discovery]"])' ) );
+	}
+
 	private function settings_dashboard( SecretsStorageProvisioner $storage ): SettingsPageDashboard {
 		$dashboard = ( new ReflectionClass( SettingsPageDashboard::class ) )->newInstanceWithoutConstructor();
 		foreach ( array(

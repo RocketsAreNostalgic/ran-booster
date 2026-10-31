@@ -965,7 +965,7 @@
 
 .ran-booster-admin .ran-booster-settings__switch-control::after {
 	position: absolute;
-	inset-block-start: 0.1875rem;
+	inset-block-start: 50%;
 	inset-inline-start: 0.1875rem;
 	inline-size: 1rem;
 	block-size: 1rem;
@@ -973,6 +973,7 @@
 	background: var(--ran-booster-surface);
 	box-shadow: var(--ran-booster-shadow-surface);
 	content: "";
+	transform: translateY(-50%);
 	transition: transform 120ms ease;
 }
 
@@ -988,7 +989,7 @@
 	.ran-booster-settings__switch
 	input:checked
 	+ .ran-booster-settings__switch-control::after {
-	transform: translateX(1rem);
+	transform: translateX(1rem) translateY(-50%);
 }
 
 .ran-booster-admin

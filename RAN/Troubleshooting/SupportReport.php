@@ -35,9 +35,10 @@ final class SupportReport {
 
 	/**
 	 * @param array<string,mixed> $storage
+	 * @param array{state?:string,local?:list<array{status:string,code:string,message:string,remediation:string}>,providers?:array<string,list<array{status:string,code:string,message:string,remediation:string}>>,provider_states?:array<string,string>,omitted?:int} $fresh_diagnostics
 	 * @return array{text:string,filename:string}
 	 */
-	public function generate( array $storage ): array {
+	public function generate( array $storage, array $fresh_diagnostics = array() ): array {
 		$this->identities = array();
 		$started          = $this->now();
 		$sections         = array();
@@ -47,7 +48,7 @@ final class SupportReport {
 			'Installation'     => fn(): array => $this->installation(),
 			'Storage'          => fn(): array => $this->storage( $storage ),
 			'Managed packages' => fn(): array => $this->packages(),
-			'Diagnostics'      => fn(): array => $this->diagnostics(),
+			'Diagnostics'      => fn(): array => $this->diagnostics( $fresh_diagnostics ),
 			'Activity'         => fn(): array => $this->activity(),
 			'Logging'          => fn(): array => $this->logging(),
 		) as $name => $collect ) {
@@ -109,8 +110,11 @@ final class SupportReport {
 
 	/** @return array{string,list<string>} */
 	private function installation(): array {
-		$core      = $this->facts->core();
-		$lines     = array( 'Booster: ' . InstallationFacts::version( $core['installed_version'] ?? null ), 'Local declarations do not verify publisher identity or remote access.' );
+		$core  = $this->facts->core();
+		$lines = array( 'Booster: ' . InstallationFacts::version( $core['installed_version'] ?? null ), 'Local declarations do not verify publisher identity or remote access.' );
+		foreach ( $this->facts->core_configuration() as $name => $value ) {
+			$lines[] = $name . ': ' . $value;
+		}
 		$selection = $this->facts->github_selection();
 		$lines[]   = 'GitHub selection at request bootstrap: ' . self::choice( $selection['state'], array( 'storage_unavailable', 'recovery_required', 'conflict', 'incompatible', 'missing', 'admitted', 'decision_required' ) );
 		$lines[]   = 'GitHub admitted=' . ( $selection['admitted'] ? 'Yes' : 'No' ) . '; selected=' . self::choice( $selection['selected'], array( 'bundled', 'external', 'unknown' ) ) . '; version=' . InstallationFacts::version( $selection['version'] ) . '; provider API=' . ( $selection['provider_api'] > 0 && $selection['provider_api'] < 1000 ? (string) $selection['provider_api'] : 'Unknown' );
@@ -238,16 +242,47 @@ final class SupportReport {
 		return array( $truncated ? 'Truncated' : ( $complete ? 'Included' : 'Unavailable' ), $lines );
 	}
 
-	/** @return array{string,list<string>} */
-	private function diagnostics(): array {
+	/**
+	 * @param array{state?:string,local?:list<array{status:string,code:string,message:string,remediation:string}>,providers?:array<string,list<array{status:string,code:string,message:string,remediation:string}>>,provider_states?:array<string,string>,omitted?:int} $fresh
+	 * @return array{string,list<string>}
+	 */
+	private function diagnostics( array $fresh = array() ): array {
+		$fresh_state = $fresh['state'] ?? 'unavailable';
+		$fresh_lines = array();
+		if ( 'permission_skipped' === $fresh_state ) {
+			$fresh_lines[] = 'Fresh basic checks not run: this administrator lacks one or more diagnostics capabilities.';
+		} elseif ( in_array( $fresh_state, array( 'completed', 'local_incomplete' ), true ) ) {
+			$fresh_lines[] = 'Fresh general checks: credential and repository selections were not used; provider prose is omitted.';
+			foreach ( array( 'local' => $fresh['local'] ?? array() ) + ( is_array( $fresh['providers'] ?? null ) ? $fresh['providers'] : array() ) as $provider => $results ) {
+				$fresh_lines[] = 'Group: ' . ( 'local' === $provider ? 'local' : $this->provider( $provider ) );
+				$safe_results  = self::fresh_results( $results );
+				$state         = is_string( $fresh['provider_states'][ $provider ] ?? null ) ? $fresh['provider_states'][ $provider ] : 'included';
+				$fresh_lines[] = 'Group state: ' . self::choice( $state, array( 'included', 'provider_unavailable', 'provider_results_invalid', 'deadline_exhausted', 'remote_calls_exhausted' ) );
+				if ( array() === $safe_results && 'included' === $state ) {
+					$fresh_lines[] = 'No diagnostic result was exported by this included group.';
+				}
+				foreach ( self::safe_diagnostic_results( $safe_results ) as $result ) {
+					$fresh_lines[] = implode( ' | ', $result );
+				}
+				if ( count( $safe_results ) > 8 ) {
+					$fresh_lines[] = 'Group state: Truncated after 8 reviewed results.';
+				}
+			}
+			if ( 'local_incomplete' === $fresh_state ) {
+				$fresh_lines[] = 'Provider checks not run because the fresh local observation was partial.';
+			}
+			if ( is_int( $fresh['omitted'] ?? null ) && $fresh['omitted'] > 0 ) {
+				$fresh_lines[] = 'Provider groups not included because the report limit is 32: ' . $fresh['omitted'];
+			}
+		}
 		$snapshot = $this->runs?->available();
 		if ( null === $snapshot || ! $snapshot['available'] ) {
-			return array( 'Unavailable', array( 'Retained diagnostic inputs unavailable; no diagnostic was run.' ) );
+			return array( array() === $fresh_lines ? 'Unavailable' : 'Included', array_merge( $fresh_lines, array( 'Earlier explicit diagnostic inputs unavailable.' ) ) );
 		}
 		if ( array() === $snapshot['runs'] ) {
-			return array( 'Not run', array( 'No available unexpired run for this administrator and site. Missing evidence may never have been retained, have expired or have been cleared.' ) );
+			return array( array() === $fresh_lines ? 'Not run' : 'Included', array_merge( $fresh_lines, array( 'No available unexpired earlier explicit run for this administrator and site.' ) ) );
 		}
-		$lines = array( 'Earlier explicit checks, not newly executed tests. Provider prose is replaced by reviewed result-code descriptions.', 'Implementation labels identify recorded local observations, not verified continuity or checks of a current replacement.' );
+		$lines = array_merge( $fresh_lines, array( 'Earlier explicit checks, not newly executed tests. Provider prose is replaced by reviewed result-code descriptions.', 'Implementation labels identify recorded local observations, not verified continuity or checks of a current replacement.' ) );
 		foreach ( $snapshot['runs'] as $run ) {
 			$lines[] = $this->provider( $run['provider'] ) . '; ' . $this->identity( 'Implementation', $run['implementation'] ) . '; completed=' . gmdate( 'c', (int) $run['completed_at'] ) . '; expires=' . gmdate( 'c', (int) $run['expires_at'] );
 			$lines[] = 'Scope: ' . ( $run['credential_selected'] ? 'one saved credential selected; identity withheld' : 'no saved credential selected' ) . '; ' . ( $run['repository_selected'] ? 'one repository selected; identity withheld' : 'no repository selected' );
@@ -257,6 +292,27 @@ final class SupportReport {
 			}
 		}
 		return array( 'Included', $lines );
+	}
+
+	/**
+	 * @return list<array{status:string,code:string,message:string,remediation:string}>
+	 */
+	private static function fresh_results( mixed $results ): array {
+		if ( ! is_array( $results ) || ! array_is_list( $results ) ) {
+			return array();
+		}
+		$safe = array();
+		foreach ( $results as $result ) {
+			if ( is_array( $result ) && is_string( $result['status'] ?? null ) && is_string( $result['code'] ?? null ) && is_string( $result['message'] ?? null ) && is_string( $result['remediation'] ?? null ) ) {
+				$safe[] = array(
+					'status'      => $result['status'],
+					'code'        => $result['code'],
+					'message'     => $result['message'],
+					'remediation' => $result['remediation'],
+				);
+			}
+		}
+		return $safe;
 	}
 
 	/** @return array{string,list<string>} */

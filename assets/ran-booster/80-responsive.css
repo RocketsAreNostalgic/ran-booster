@@ -140,7 +140,12 @@
 	}
 }
 
+/* WordPress moves #wpbody by 16em while its open menu remains 190px wide. */
 @media screen and (max-width: 782px) {
+	body:not(.rtl) #wpwrap.wp-responsive-open #wpbody .ran-admin-shell {
+		margin-inline-start: calc(180px - 16em);
+	}
+
 	.ran-booster-admin .ran-booster-provider-section__header,
 	.ran-booster-admin .ran-booster-provider-section__body {
 		padding-inline: var(--ran-booster-space-18);

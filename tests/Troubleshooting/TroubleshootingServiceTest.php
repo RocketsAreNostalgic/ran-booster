@@ -679,9 +679,60 @@ final class TroubleshootingServiceTest extends TestCase {
 			self::assertStringNotContainsString( $private, $memory->raw );
 			self::assertStringNotContainsString( $private, $captured['text'] );
 		}
-		self::assertSame( 1, $provider->runs );
-		self::assertSame( 1, $second->runs );
+		self::assertSame( 2, $provider->runs );
+		self::assertSame( 2, $second->runs );
 		self::assertSame( 2, $local->runs );
+	}
+
+	public function test_support_capture_runs_each_admitted_provider_without_selection_or_retention(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$requests = array();
+		$first    = new TroubleshootingProviderFixture( 'gh', function ( ProviderDiagnosticRequest $request ) use ( &$requests ): array {
+			$requests[] = $request;
+			return array( $this->diagnostic_result( 'gh.basic' ) );
+		} );
+		$second   = new TroubleshootingProviderFixture( 'bb', function ( ProviderDiagnosticRequest $request ) use ( &$requests ): array {
+			$requests[] = $request;
+			return array( $this->diagnostic_result( 'bb.basic' ) );
+		} );
+		$memory   = new DiagnosticRunMemory();
+		$runs     = new DiagnosticRunFixture( $memory );
+		$local    = new TroubleshootingLocalFixture( $this->local_results() );
+		$registry = new ProviderRegistry( array( $first, $second ) );
+		$service  = new TroubleshootingService( $local, $registry, retained_runs: $runs, support_report: new SupportReport( new InstallationFacts( $registry ), $runs ) );
+
+		$report = $service->generate_support_report( array() )['text'];
+
+		self::assertSame( 1, $local->support_runs );
+		self::assertSame( 1, $first->runs );
+		self::assertSame( 1, $second->runs );
+		self::assertCount( 2, $requests );
+		foreach ( $requests as $request ) {
+			self::assertNull( $request->get_credential_id() );
+			self::assertNull( $request->get_repository() );
+		}
+		self::assertNull( $memory->raw );
+		self::assertStringContainsString( 'Fresh general checks:', $report );
+		self::assertStringContainsString( 'Group: GitHub', $report );
+		self::assertStringContainsString( 'Group: Bitbucket Cloud', $report );
+	}
+
+	public function test_support_capture_stops_after_local_partial_and_exports_provider_failure_states(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$provider = new TroubleshootingProviderFixture( 'gh', static fn(): array => throw new \RuntimeException( 'provider-private-canary' ) );
+		$registry = new ProviderRegistry( array( $provider ) );
+		$local    = new TroubleshootingLocalFixture( array( $this->diagnostic_result( 'local.partial' ) ), true );
+		$service  = new TroubleshootingService( $local, $registry, support_report: new SupportReport( new InstallationFacts( $registry ) ) );
+		$report   = $service->generate_support_report( array() )['text'];
+		self::assertSame( 1, $local->support_runs );
+		self::assertSame( 0, $provider->runs );
+		self::assertStringContainsString( 'Provider checks not run because the fresh local observation was partial.', $report );
+
+		$local    = new TroubleshootingLocalFixture( $this->local_results() );
+		$service  = new TroubleshootingService( $local, $registry, support_report: new SupportReport( new InstallationFacts( $registry ) ) );
+		$report   = $service->generate_support_report( array() )['text'];
+		self::assertStringContainsString( 'Group state: provider_unavailable', $report );
+		self::assertStringNotContainsString( 'provider-private-canary', $report );
 	}
 
 	public function test_retention_failure_preserves_immediate_diagnostics_and_invalid_provider_is_not_retained(): void {
@@ -789,6 +840,7 @@ final class TroubleshootingServiceTest extends TestCase {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Keep this private fixture beside the only test/provider double that consumes it.
 class TroubleshootingLocalFixture extends LocalTroubleshootingService {
 	public int $runs = 0;
+	public int $support_runs = 0;
 
 	/** @param list<ProviderDiagnosticResult> $results */
 	public function __construct(
@@ -805,6 +857,14 @@ class TroubleshootingLocalFixture extends LocalTroubleshootingService {
 			( $this->on_run )();
 		}
 
+		return array(
+			'results' => $this->results,
+			'partial' => $this->partial,
+		);
+	}
+
+	public function diagnose_for_support_report(): array {
+		++$this->support_runs;
 		return array(
 			'results' => $this->results,
 			'partial' => $this->partial,

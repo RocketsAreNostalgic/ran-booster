@@ -37,6 +37,43 @@ normal operational POST initialization remains intact.
 
 ## Positive collection boundary
 
+### Owner change: fresh basic diagnostics in a generated report (pre-edit contract)
+
+The owner supersedes the earlier passive-only Generate decision for one narrow
+operation: an admitted administrator may request one fresh **basic** diagnostic
+sweep while creating the local report. The sweep runs local checks once, then
+at most 32 already-admitted registered providers in metadata order. Every
+provider receives a new `ProviderDiagnosticRequest(null, null, ...)`; it must
+not enumerate a credential, accept a repository, test webhook readiness, write
+Activity, retain a diagnostic run, start capture, repair storage or provision
+anything. The normal selected-provider Diagnostics POST remains unchanged.
+
+The fresh sweep has cooperative, monotonic admission checkpoints: a 20-second
+overall window, an aggregate maximum of 20 claimed remote calls, and the
+existing per-provider limits of five claims and ten seconds. Local checks are
+not pre-emptible, so this is not a wall-clock guarantee. The existing five
+second passive serialization budget begins after that sweep. Completed groups
+remain visible; omitted, unavailable, malformed, exhausted and permission-
+skipped groups are explicit. Results stay grouped (local plus each provider),
+with the existing eight-row redaction bound applied per group.
+
+Fresh checks require the same active-diagnostics capabilities as the selected
+Diagnostics operation. A `manage_options`-only administrator still receives a
+safe passive report, with fresh checks explicitly skipped for insufficient
+permission. A local partial result prevents every provider call. The
+report-only local variant omits durable-journal readiness because that existing
+path may prepare storage; Activity's passive evidence continues to describe
+the journal. This keeps generated reports free of schema migration and other
+durable writes.
+
+Final measured delivery: the report change touches the existing Troubleshooting
+service, local diagnostics, report, facts and view files only. It adds no
+tables, options, cron jobs, generated-report state, provider registrations or
+public extension seams. The fresh path calls only already-admitted providers
+with null selection inputs; it does not construct Activity or retained-run
+writes. Environment and configuration values are projected as bounded status
+tokens, and secret/path values are withheld.
+
 ### Settings check projection correction (pre-edit contract)
 
 Settings owns policy resolution and durable operator-check observations. This

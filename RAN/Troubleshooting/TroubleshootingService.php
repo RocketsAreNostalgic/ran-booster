@@ -87,7 +87,84 @@ final class TroubleshootingService {
 				'filename' => 'ran-booster-support-' . gmdate( 'Ymd-His' ) . '.txt',
 			);
 		}
-		return $this->support_report->generate( $storage );
+		return $this->support_report->generate( $storage, $this->fresh_support_diagnostics() );
+	}
+
+	/**
+	 * Report generation may make one bounded, credential-free diagnostic sweep.
+	 * It has no Activity or retained-run side effects.
+	 *
+	 * @return array{state:string,local:list<array{status:string,code:string,message:string,remediation:string}>,providers:array<string,list<array{status:string,code:string,message:string,remediation:string}>>,provider_states:array<string,string>,omitted:int}
+	 */
+	private function fresh_support_diagnostics(): array {
+		if ( ! $this->can_generate_active_support_diagnostics() ) {
+			return array(
+				'state'           => 'permission_skipped',
+				'local'           => array(),
+				'providers'       => array(),
+				'provider_states' => array(),
+				'omitted'         => 0,
+			);
+		}
+		$started       = $this->now();
+		$local         = $this->local->diagnose_for_support_report();
+		$local_results = array_map( static fn( ProviderDiagnosticResult $result ): array => $result->to_array(), $local['results'] );
+		if ( $local['partial'] ) {
+			return array(
+				'state'           => 'local_incomplete',
+				'local'           => $local_results,
+				'providers'       => array(),
+				'provider_states' => array(),
+				'omitted'         => 0,
+			);
+		}
+		$claims        = 0;
+		$groups        = array();
+		$states        = array();
+		$metadata_rows = $this->providers->ordered_metadata();
+		foreach ( array_slice( $metadata_rows, 0, 32 ) as $metadata ) {
+			if ( $claims >= 20 || $this->now() - $started >= 20.0 ) {
+				$groups[ $metadata->code->value ] = array();
+				$states[ $metadata->code->value ] = $claims >= 20 ? 'remote_calls_exhausted' : 'deadline_exhausted';
+				continue;
+			}
+			$request = null;
+			try {
+				$request                          = new ProviderDiagnosticRequest( null, null, min( ProviderDiagnosticRequest::MAX_REMOTE_CALLS, 20 - $claims ), min( ProviderDiagnosticRequest::MAX_SECONDS, max( 0.001, 20.0 - ( $this->now() - $started ) ) ), $this->clock );
+				$results                          = $this->providers->get( $metadata->code )->get_provider_diagnostics()->diagnose( $request );
+				$valid                            = array_values( array_filter( $results, static fn( mixed $result ): bool => $result instanceof ProviderDiagnosticResult ) );
+				$groups[ $metadata->code->value ] = array_map( static fn( ProviderDiagnosticResult $result ): array => $result->to_array(), $valid );
+				$states[ $metadata->code->value ] = $this->now() - $started >= 20.0 ? 'deadline_exhausted' : ( count( $valid ) === count( $results ) ? 'included' : 'provider_results_invalid' );
+			} catch ( \Throwable ) {
+				$groups[ $metadata->code->value ] = array();
+				$states[ $metadata->code->value ] = 'provider_unavailable';
+			} finally {
+				$claims += $request?->get_remote_calls() ?? 0;
+			}
+		}
+		return array(
+			'state'           => 'completed',
+			'local'           => $local_results,
+			'providers'       => $groups,
+			'provider_states' => $states,
+			'omitted'         => max( 0, count( $metadata_rows ) - 32 ),
+		);
+	}
+
+	private function can_generate_active_support_diagnostics(): bool {
+		if ( ! function_exists( 'current_user_can' ) ) {
+			return false;
+		}
+		foreach ( array( 'manage_options', 'install_plugins', 'update_plugins', 'install_themes', 'update_themes' ) as $capability ) {
+			if ( ! current_user_can( $capability ) ) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	private function now(): float {
+		return null === $this->clock ? hrtime( true ) / 1_000_000_000 : ( $this->clock )();
 	}
 
 	/**

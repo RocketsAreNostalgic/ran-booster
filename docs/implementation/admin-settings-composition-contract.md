@@ -196,3 +196,18 @@ for false. The scoped HTTP observer counts every attempted request before URL
 admission: Off requires attempts/feed 0/0, while the enabled empty-list control
 requires 1/1. The maintained script is now 260 lines. The catalogue is regenerated
 for the guard's source-line changes. Neither correction changes production code.
+
+## Maintained installed-proof lifecycle correction pending
+
+The maintained installed proof's first enabled/Off sequence passed. Its
+controlled guard-removal Off scenario failed as expected with one HTTP/feed
+request. The restored enabled repeat made zero HTTP requests and reported
+`discovery_not_admitted` before the expected one-feed discovery: a prior
+WP-CLI `eval-file` direct callback invocation leaves its lease active for 600
+seconds. The private row read is `now=1793445695`, `deadline=1793445960`,
+`generation=2`, `epoch=3`.
+
+The pending test-only correction explicitly finalizes through the public updater
+after that callback in `finally`. It adds no production, library, pin, or state
+reset. A new exact head, the maintained proof rerun, and full gates remain
+pending; this is not a proof-pass receipt.

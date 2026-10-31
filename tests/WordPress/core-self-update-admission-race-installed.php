@@ -138,7 +138,7 @@ final class RAN_Booster_Core_Self_Update_Admission_Race {
 			remove_filter( 'pre_http_request', $transport, PHP_INT_MIN );
 		}
 		if ( $unrelated !== $pass_through || false !== $fenced || 0 !== $attempts || 0 !== $feeds ) {
-			throw new RuntimeException( 'A saved-off Core discovery request reached the feed or changed an unrelated package.' );
+			throw new RuntimeException( 'A saved-off Core discovery request reached the feed or changed an unrelated package; attempts=' . $attempts . ', feeds=' . $feeds . '.' );
 		}
 	}
 
@@ -200,7 +200,12 @@ final class RAN_Booster_Core_Self_Update_Admission_Race {
 							}
 							$list[] = $locale;
 						}
-						return $updater->filter_update( $update, $headers, $identity, $list );
+						try {
+							return $updater->filter_update( $update, $headers, $identity, $list );
+						} finally {
+							// WP-CLI eval-file exits without the normal WordPress shutdown lifecycle; use the updater's public finalizer only after the callback observation completes.
+							$updater->finalize_pending_install();
+						}
 					};
 				}
 			}

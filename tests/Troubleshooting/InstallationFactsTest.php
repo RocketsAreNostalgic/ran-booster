@@ -14,6 +14,19 @@ require_once __DIR__ . '/SupportReportWordPressFunctions.php';
 require_once __DIR__ . '/SupportReportProvider.php';
 
 final class InstallationFactsTest extends TestCase {
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_core_configuration_withholds_sensitive_values_and_marks_invalid_archive_admission(): void {
+		define( 'RAN_BOOSTER_GITHUB_TOKEN', 'github-private-token-canary' );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/path-canary' );
+		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 1 );
+		$rows = ( new InstallationFacts( new ProviderRegistry() ) )->core_configuration();
+		self::assertSame( 'Configured; value withheld', $rows['RAN_BOOSTER_GITHUB_TOKEN'] );
+		self::assertSame( 'Configured; value withheld', $rows['RAN_BOOSTER_ENCRYPTED_SECRETS_DIR'] );
+		self::assertSame( 'Invalid; archive admission refused', $rows['RAN_BOOSTER_MAX_ARCHIVE_BYTES'] );
+		self::assertStringNotContainsString( 'canary', implode( ' ', $rows ) );
+	}
+
 	public function test_environment_uses_selected_technical_fields_and_strips_identity(): void {
 		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Selected runtime version fixture for the environment boundary.
 		$GLOBALS['wp_version']      = '7.0.1';

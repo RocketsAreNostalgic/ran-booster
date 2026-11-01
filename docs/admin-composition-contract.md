@@ -94,15 +94,14 @@ paths described above retain their independent rendering contract.
 These rules refine [Core #478](https://github.com/RocketsAreNostalgic/ran-booster/issues/478)
 and the continuity guidance delivered through
 [Core #462](https://github.com/RocketsAreNostalgic/ran-booster/pull/462).
-Apply them when the future #461 Settings design is implemented; this change
-adds no Settings page, tab API or navigation destination.
+The fixed Settings destination follows the same continuity rules; see
+[Fixed Settings destination](#fixed-settings-destination) below.
 
 This is a product composition rule, not a new shell API. Reuse the generated
 Admin Shell through its existing integration and source workflow; do not hand-edit
 generated output or change the shared shell package merely to add a local page.
-The proposed Settings screen and settings-tab API are specified separately in
-[Core #461](https://github.com/RocketsAreNostalgic/ran-booster/issues/461); this
-document does not declare those features implemented.
+The fixed Core Settings screen is described in [Settings](settings.md).
+Provider Settings tabs and a Settings contribution API remain deferred.
 
 ## Add-on generation and service delivery
 
@@ -757,3 +756,16 @@ Successful removal recovery does not verify cleanup of temporary files left by t
 interrupted process. Current provider availability and fresh installation review
 remain mandatory before another operation. Browser acceptance and installed
 qualification against the feature-bearing immutable dependencies are separate gates.
+
+## Fixed Settings destination
+
+`ran-booster-settings` is the plain WordPress submenu after Extensions. It uses
+the base shell with no selected horizontal item. General is one explicit Save
+form; Core update checking and secure storage actions use separate forms/nonces.
+There is no provider Settings tab registry or contribution API.
+
+Settings owns the privileged storage presenter, manual instructions and local
+operation failures. Overview retains its old storage anchor as a bounded
+summary/link. Installation may show authorized configured locations without
+starting authentication or recovery. No report may serialize that private
+on-screen projection. See [Settings](settings.md) for operator behavior.

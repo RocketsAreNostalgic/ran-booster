@@ -79,13 +79,14 @@ final class StandardsCoverageTest extends TestCase {
 			$discovered = file_get_contents( $tracked[0] );
 			self::assertIsString( $discovered );
 			self::assertTrue( $this->has_blanket_suppression( $discovered ) );
-			foreach ( array( 'template.phtml', 'template.PHTML', 'template.inc', 'template.html', 'template.htm', 'template.custom', 'template.tpl', 'template.png', 'template-command' ) as $name ) {
+			// Distinct stems preserve both suffix cases on case-insensitive filesystems.
+			foreach ( array( 'template.phtml', 'template-uppercase.PHTML', 'template.inc', 'template.html', 'template.htm', 'template.custom', 'template.tpl', 'template.png', 'template-command' ) as $name ) {
 				$template_path = $directory . '/' . $name;
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write inert mixed HTML/PHP beyond the former header bound; never execute it.
 				file_put_contents( $template_path, ( 'template.png' === $name ? "\x89PNG\r\n\x1a\n" : '' ) . str_repeat( '<p>Template</p>', 100 ) . '<?php function ( {' );
 				$this->git_output( $root, array( 'add', '--', 'new-tooling/' . $name ) );
 				self::assertContains( $template_path, $this->tracked_php_files( $root ) );
-				if ( in_array( $name, array( 'template.phtml', 'template.PHTML', 'template-command' ), true ) ) {
+				if ( in_array( $name, array( 'template.phtml', 'template-uppercase.PHTML', 'template-command' ), true ) ) {
 					self::assertNotContains( $template_path, $this->selected_php_files( array( $directory ) ) );
 				}
 			}

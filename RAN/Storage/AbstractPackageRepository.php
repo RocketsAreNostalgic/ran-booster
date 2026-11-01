@@ -13,6 +13,7 @@ use RAN\Package;
 use RAN\PackageSubdirectory;
 use RAN\PackageSource;
 use RAN\Runtime\RuntimeSupport;
+use RAN\Settings\GeneralPreferenceStore;
 use RAN\WordPress\ManagedReleaseConfiguration;
 use Throwable;
 
@@ -23,6 +24,67 @@ abstract class AbstractPackageRepository {
 
 	public function __construct( ?Database $database_lifecycle = null ) {
 		$this->database_lifecycle = $database_lifecycle;
+	}
+
+	/**
+	 * Observe recorded management rows without schema preparation or package hydration.
+	 * The caller allocates one combined detail budget across plugin/theme readers.
+	 *
+	 * @return array{available:bool,records:list<array<string,int|string|null>>,truncated:bool}
+	 * @phpstan-impure
+	 */
+	public function support_snapshot( int $limit = 100 ): array {
+		$unavailable                = array(
+			'available' => false,
+			'records'   => array(),
+			'truncated' => false,
+		);
+		$this->database_lifecycle ??= new Database();
+		if ( $limit < 0 || $limit > 100 || ! $this->database_lifecycle->is_ready() ) {
+			return $unavailable;
+		}
+		global $wpdb;
+		$fields = array(
+			'package'           => 255,
+			'repository'        => 512,
+			'branch'            => 255,
+			'package_type'      => 3,
+			'provider'          => 32,
+			'deployment_policy' => 10,
+			'source'            => 16,
+			'private'           => 1,
+		);
+		$query  = $wpdb->prepare(
+			'SELECT LEFT(package,255) AS package,LEFT(repository,512) AS repository,LEFT(branch,255) AS branch,LEFT(package_type,3) AS package_type,LEFT(provider,32) AS provider,LEFT(deployment_policy,10) AS deployment_policy,LEFT(source,16) AS source,LEFT(private,1) AS private FROM %i WHERE package_type = %d ORDER BY id LIMIT %d',
+			ran_booster_table_name(),
+			$this->package_type(),
+			$limit + 1
+		);
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Fixed columns above; table, type and limit are prepared at this boundary.
+		$rows = $wpdb->get_results( $query );
+		if ( ! is_array( $rows ) || '' !== (string) $wpdb->last_error ) {
+			return $unavailable;
+		}
+		$records = array();
+		foreach ( array_slice( $rows, 0, $limit ) as $row ) {
+			if ( ! is_object( $row ) ) {
+				return $unavailable;
+			}
+			$record = array();
+			foreach ( $fields as $field => $bytes ) {
+				$value = $row->$field ?? null;
+				if ( ! is_int( $value ) && ! is_string( $value ) && null !== $value ) {
+					return $unavailable;
+				}
+				$record[ $field ] = is_string( $value ) ? substr( $value, 0, $bytes ) : $value;
+			}
+			$records[] = $record;
+		}
+		return array(
+			'available' => true,
+			'records'   => $records,
+			'truncated' => count( $rows ) > $limit,
+		);
 	}
 
 	/**
@@ -383,10 +445,12 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
+			$this->clear_confirmed_github_hide_request( $model->provider );
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::UPDATE );
 			}
+			$this->clear_github_visibility_cache( $model->provider );
 
 			return $verified;
 		} catch ( Throwable $exception ) {
@@ -598,10 +662,12 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
+			$this->clear_confirmed_github_hide_request( $model->provider );
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( $verified->get_operation() );
 			}
+			$this->clear_github_visibility_cache( $model->provider );
 			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
 				$package->set_adoption_token( $data['adoption_token'] );
 			}
@@ -691,10 +757,12 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
+			$this->clear_confirmed_github_hide_request( $model->provider );
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 			}
+			$this->clear_github_visibility_cache( $model->provider );
 			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
 				$package->set_adoption_token( $data['adoption_token'] );
 			}
@@ -800,10 +868,12 @@ abstract class AbstractPackageRepository {
 				$wpdb->query( 'ROLLBACK' );
 				return $verified;
 			}
+			$this->clear_confirmed_github_hide_request( $model->provider );
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 			}
+			$this->clear_github_visibility_cache( $model->provider );
 			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
 				$package->set_adoption_token( $data['adoption_token'] );
 			}
@@ -812,6 +882,25 @@ abstract class AbstractPackageRepository {
 			$wpdb->query( 'ROLLBACK' );
 			throw $exception;
 		}
+	}
+
+	/**
+	 * The fixed visibility preference is cleared only by a verified GitHub
+	 * management write in this still-open transaction.
+	 */
+	private function clear_confirmed_github_hide_request( string $provider ): void {
+		if ( 'gh' === $provider && ! ( new GeneralPreferenceStore() )->clear_confirmed_github_hide_request() ) {
+			throw new \RuntimeException( 'GitHub visibility preference could not be cleared.' );
+		}
+	}
+
+	private function clear_github_visibility_cache( string $provider ): void {
+		if ( 'gh' !== $provider || ! function_exists( 'wp_cache_delete' ) ) {
+			return;
+		}
+		wp_cache_delete( GeneralPreferenceStore::OPTION_NAME, 'options' );
+		wp_cache_delete( 'alloptions', 'options' );
+		wp_cache_delete( 'notoptions', 'options' );
 	}
 
 	/** @return array{0: PackageModel<array{package: mixed}>&object{provider: non-empty-string, provider_repository_id: non-empty-string}, 1: array<string, mixed>} */

@@ -545,4 +545,58 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertTrue( $this->store->activity_history( array(), $boundary )['available'] );
 		self::assertStringContainsString( 'id < %d', $this->connection->queries[1] );
 	}
+
+	public function test_support_snapshot_projects_bounded_scalars_and_retains_history_scope(): void {
+		$this->connection->read_results = array(
+			array_fill(
+				0,
+				101,
+				(object) array(
+					'id'               => 42,
+					'operation'        => str_repeat( 'x', 120 ),
+					'provider'         => 'gh',
+					'subject_identity' => 'private/private.php',
+					'message'          => 'private prose',
+					'actor'            => 81,
+					'adoption_token'   => 'private token',
+					'facts'            => 'private config',
+				)
+			),
+		);
+		$snapshot                       = $this->store->support_snapshot();
+		self::assertTrue( $snapshot['available'] );
+		self::assertTrue( $snapshot['truncated'] );
+		self::assertCount( 100, $snapshot['records'] );
+		self::assertSame( array( 'id', 'operation', 'provider', 'subject_identity' ), array_keys( $snapshot['records'][0] ) );
+		self::assertSame( str_repeat( 'x', 96 ), $snapshot['records'][0]['operation'] );
+		$query = $this->connection->queries[0];
+		self::assertStringContainsString( 'LEFT(subject_identity,255) AS subject_identity', $query );
+		self::assertStringContainsString( 'LEFT(reason,96) AS reason', $query );
+		self::assertStringContainsString( "JSON_UNQUOTE(JSON_EXTRACT(facts, '$.deployment_state'))", $query );
+		self::assertStringEndsWith( 'ORDER BY activity.sort_at DESC,activity.id DESC LIMIT 101', $query );
+		$selected = explode( ' FROM ', $query )[0];
+		foreach ( array( '*', 'message', 'remediation', 'actor', 'adoption_token', 'facts', 'context' ) as $excluded ) {
+			self::assertStringNotContainsString( $excluded, $selected );
+		}
+		self::assertSame( array(), $this->connection->inserted );
+	}
+
+	public function test_support_snapshot_distinguishes_empty_unavailable_and_malformed(): void {
+		self::assertSame(
+			array(
+				'available' => true,
+				'records'   => array(),
+				'truncated' => false,
+			),
+			$this->store->support_snapshot()
+		);
+		$this->connection->read_results = array( false );
+		self::assertFalse( $this->store->support_snapshot()['available'] );
+		$this->connection->read_results = array( array( array( 'provider' => array( 'bad' ) ) ) );
+		self::assertFalse( $this->store->support_snapshot()['available'] );
+		$GLOBALS['ran_booster_activity_options'] = array();
+		$queries                                 = $this->connection->queries;
+		self::assertFalse( $this->store->support_snapshot()['available'] );
+		self::assertSame( $queries, $this->connection->queries );
+	}
 }

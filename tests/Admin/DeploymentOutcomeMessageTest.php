@@ -41,7 +41,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 			'provider_unavailable'              => 'Try again later',
 			'archive_compressed_too_large'      => 'Reduce the repository size',
 			'archive_expanded_too_large'        => 'Reduce the repository contents',
-			'archive_limit_invalid'             => 'Set it in wp-config.php',
+			'archive_limit_invalid'             => 'Set the configured constant',
 			'preflight_failed'                  => 'enable Troubleshooting logging',
 			'downgrade_blocked'                 => 'Restore a full-site backup',
 			'lock_unavailable'                  => 'Wait for it to finish',
@@ -148,9 +148,9 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		$invalid    = DeploymentOutcomeMessage::for_code( 'archive_limit_invalid' );
 
 		self::assertStringContainsString( 'repository ZIP', $compressed );
-		self::assertStringContainsString( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', $compressed );
+		self::assertStringContainsString( 'Archive limits in Booster Settings', $compressed );
 		self::assertStringContainsString( 'expands beyond', $expanded );
-		self::assertStringContainsString( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', $expanded );
+		self::assertStringContainsString( 'stricter extraction safeguards', $expanded );
 		self::assertStringContainsString( '1 MiB and 536,870,911 bytes', $invalid );
 		self::assertStringContainsString( 'just under 512 MiB', $invalid );
 		self::assertStringNotContainsString( 'Authorization', $compressed . $expanded . $invalid );

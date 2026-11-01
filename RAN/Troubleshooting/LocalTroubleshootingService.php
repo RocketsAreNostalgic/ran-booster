@@ -85,6 +85,39 @@ class LocalTroubleshootingService {
 		);
 	}
 
+	/**
+	 * A report-local observation deliberately omits durable journal and worker
+	 * inspection: those paths may prepare the schema. It keeps the runtime and
+	 * bounded filesystem/destination checks used by ordinary diagnostics.
+	 *
+	 * @return array{results: list<ProviderDiagnosticResult>, partial: bool}
+	 */
+	public function diagnose_for_support_report(): array {
+		$runtime = $this->runtime_result();
+		if ( $this->is_multisite() ) {
+			return array(
+				'results' => array( $runtime ),
+				'partial' => true,
+			);
+		}
+		if ( null !== $this->database && ! $this->database->is_supported() ) {
+			return array(
+				'results' => array( $runtime, new ProviderDiagnosticResult( ProviderDiagnosticResult::FAILED, 'local.database.unsupported', 'The database does not meet RAN Booster storage requirements.', DatabaseCompatibilityFailure::REQUIREMENT ) ),
+				'partial' => true,
+			);
+		}
+		if ( null !== $this->database && ! $this->database->is_ready() ) {
+			return array(
+				'results' => array( $runtime, new ProviderDiagnosticResult( ProviderDiagnosticResult::FAILED, 'local.database.schema_unavailable', 'RAN Booster database storage is not ready.', DatabaseLifecycleFailure::REQUIREMENT ) ),
+				'partial' => true,
+			);
+		}
+		return array(
+			'results' => array( $runtime, $this->filesystem_result(), $this->destination_result() ),
+			'partial' => false,
+		);
+	}
+
 	private function runtime_result(): ProviderDiagnosticResult {
 		if ( $this->is_multisite() ) {
 			return new ProviderDiagnosticResult(

@@ -73,7 +73,7 @@
 				disclosureStates: Object.fromEntries(
 					Array.from(
 						document.querySelectorAll(
-							'[data-ran-booster-package-disclosure]'
+							'[data-ran-booster-package-disclosure], [data-ran-booster-logging-disclosure]'
 						),
 						(disclosure) => [disclosure.id, disclosure.open]
 					).filter(([id]) => id)
@@ -92,7 +92,7 @@
 
 			Array.from(
 				document.querySelectorAll(
-					'[data-ran-booster-package-disclosure]'
+					'[data-ran-booster-package-disclosure], [data-ran-booster-logging-disclosure]'
 				)
 			).forEach(function (disclosure) {
 				const open = state.disclosureStates?.[disclosure.id];

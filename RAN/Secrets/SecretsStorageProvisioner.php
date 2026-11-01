@@ -12,8 +12,8 @@ use Throwable;
  * Composes private-location discovery, destructive POST-only probing and the
  * constrained wp-config.php writer.
  *
- * status() is metadata-only. provision() is the sole mutation entrypoint and
- * reports bounded codes without logging paths or filesystem exceptions.
+ * status() may authenticate configured material. Explicit protected storage
+ * actions perform provisioning/recovery and return bounded diagnostic codes.
  */
 class SecretsStorageProvisioner {
 
@@ -28,6 +28,20 @@ class SecretsStorageProvisioner {
 		private readonly WpConfigSecretsPathWriter $writer = new WpConfigSecretsPathWriter(),
 		private readonly ?SecretsFile $secrets = null
 	) {
+	}
+
+	/** @internal Read configuration without authenticating or modifying storage.
+	 * @return array{path:string,source:string}|null
+	 */
+	public function configuration_facts(): ?array {
+		$configured = $this->configured_path();
+		if ( ! is_string( $configured ) ) {
+			return null;
+		}
+		return array(
+			'path'   => $configured,
+			'source' => $this->configured_path_source( $configured, $this->validate_configured_candidate( $configured ) ),
+		);
 	}
 
 	public function status(): SecretsStorageProvisioningResult {

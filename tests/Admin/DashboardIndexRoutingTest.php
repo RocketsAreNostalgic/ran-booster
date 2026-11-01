@@ -602,6 +602,33 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $development_environment_detected ) );
 	}
 
+	public function test_overview_uses_only_the_same_notice_request_snapshot(): void {
+		$_GET['tab'] = 'overview';
+		$provider    = new \RAN\Tests\RepositoryProvider\Support\ExternalFixtureProvider( 'gh' );
+		$providers   = new ProviderRegistry( array( $provider ) );
+		$secrets     = $this->createMock( SecretsFile::class );
+		$secrets->expects( self::once() )->method( 'credential_profiles' )->with( 'gh' )->willReturn( array() );
+		$reminders = new \RAN\Admin\CredentialExpiryReminder( $providers, $secrets, new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore() );
+		$notice    = new \RAN\Admin\CredentialExpiryNotice( $reminders );
+		$dashboard = $this->dashboard( $this->throwing_secrets(), credential_expiry_notice: $notice );
+		$unknown   = array(
+			'status' => 'unknown',
+			'total'  => null,
+			'items'  => array(),
+		);
+		self::assertSame( $unknown, $this->dashboard( $this->throwing_secrets() )->get_index()['data']['onboarding']['credential_expiry'] );
+		self::assertSame( $unknown, $dashboard->get_index()['data']['onboarding']['credential_expiry'] );
+		self::assertFalse( $notice->should_render() );
+		self::assertSame(
+			array(
+				'status' => 'captured',
+				'total'  => 0,
+				'items'  => array(),
+			),
+			$dashboard->get_index()['data']['onboarding']['credential_expiry']
+		);
+	}
+
 	public function test_paused_github_route_renders_passive_status_without_provider_and_preserves_bitbucket(): void {
 		$bundled   = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
 			array(
@@ -726,7 +753,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 			ob_end_clean();
 			unset( $GLOBALS['ran_booster_test_capabilities'] );
 		}
-		self::assertStringContainsString( 'GitHub provider diagnostics', $html );
+		self::assertStringContainsString( 'GitHub provider details', $html );
+		self::assertStringContainsString( 'panel=installation#ran-booster-github-provider-diagnostics', $html );
 		foreach ( array( 'private-path', 'vendor/internal-implementation', 'internal-revision', 'internal-credential-format', '<Replacement>' ) as $private_detail ) {
 			self::assertStringNotContainsString( $private_detail, $html );
 		}
@@ -2051,14 +2079,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$service = new TroubleshootingService( $local, $providers );
 		$initial = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection )->get_index()['data'];
 		$page    = $this->diagnostics_document( $this->render_diagnostics_page( $initial ) );
-		$this->assert_diagnostics_snapshot( $page, $initial['troubleshooting'], $state, null );
+		$this->assert_diagnostics_snapshot( $page, null );
 
 		for ( $submission = 1; $submission <= 3; ++$submission ) {
 			$dashboard = $this->dashboard( $secrets, $service, providers: $providers, github_selection: $selection );
 			$dashboard->post_run_troubleshooting( array( 'provider' => 'gh' ) );
+			unset( $_GET['panel'] );
 			$data = $dashboard->get_index()['data'];
+			self::assertSame( 'diagnostics', $data['troubleshooting_panel'] );
 			$page = $this->diagnostics_document( $this->render_diagnostics_page( $data ) );
-			$this->assert_diagnostics_snapshot( $page, $data['troubleshooting'], $state, $submission );
+			$this->assert_diagnostics_snapshot( $page, $submission );
 		}
 
 		for ( $submission = 4; $submission <= 6; ++$submission ) {
@@ -2078,7 +2108,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 				$parent->insertBefore( $page->importNode( $child, true ), $target );
 			}
 			$parent->removeChild( $target );
-			$this->assert_diagnostics_snapshot( $page, $dashboard->get_index()['data']['troubleshooting'], $state, $submission );
+			$this->assert_diagnostics_snapshot( $page, $submission );
 		}
 	}
 
@@ -2114,50 +2144,119 @@ final class DashboardIndexRoutingTest extends TestCase {
 		return $nodes;
 	}
 
-	/** @param array{report:string,installation_details:array<string,array<string,string>>} $payload */
-	private function assert_diagnostics_snapshot( \DOMDocument $page, array $payload, string $state, ?int $submission ): void {
+	private function assert_diagnostics_snapshot( \DOMDocument $page, ?int $submission ): void {
 		$xpath = new \DOMXPath( $page );
 		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-diagnostics-region"]' )->length );
-		self::assertSame( 0, $this->diagnostics_nodes( $xpath, '//p[contains(., "Recover management without changing installed files")]' )->length );
-		self::assertSame( 0, $this->diagnostics_nodes( $xpath, '//a[contains(@href,"recovery=1")]' )->length );
-		self::assertSame( null === $submission ? 0 : 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->length );
-		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-github-provider-diagnostics"]' )->length );
 		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//h3[normalize-space(.)="Run diagnostics"]' )->length );
-		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//h3[normalize-space(.)="Installation details"]' )->length );
-		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//h4[normalize-space(.)="Booster Core updates"]' )->length );
-		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/preceding-sibling::h3[normalize-space(.)="Run diagnostics"]' )->length );
-		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/preceding-sibling::form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"]' )->length );
-		self::assertSame( 2, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]/section[contains(concat(" ",@class," ")," ran-booster-panel ")]/header/h4' )->length );
-		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-github-provider-diagnostics"]/div[contains(concat(" ",normalize-space(@class)," ")," ran-booster-troubleshooting__disclosure-body ")]/details/summary[normalize-space(.)="Technical details"]' )->length );
-		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-core-updates-heading"]/../following-sibling::div/details/summary[normalize-space(.)="Technical details"]' )->length );
-		$installation = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details"]' )->item( 0 );
-		$report       = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-report"]' )->item( 0 );
-		self::assertInstanceOf( \DOMElement::class, $installation );
-		self::assertInstanceOf( \DOMElement::class, $report );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
-		self::assertSame( $payload['report'], $report->textContent );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
-		self::assertStringContainsString( 'unknown' === $state ? 'Unknown' : $state, $report->textContent );
-		foreach ( $payload['installation_details'] as $heading => $fields ) {
-			if ( 'Diagnostic Git provider' === $heading ) {
-				continue;
-			}
-			foreach ( $fields as $value ) {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
-				self::assertStringContainsString( $value, $installation->textContent );
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
-				self::assertStringContainsString( $value, $report->textContent );
-			}
-		}
+		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"]' )->length );
+		self::assertSame( 0, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details" or @id="ran-booster-troubleshooting-report"]' )->length );
+		self::assertSame( null === $submission ? 0 : 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->length );
 		if ( null !== $submission ) {
 			$results = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->item( 0 );
 			self::assertInstanceOf( \DOMElement::class, $results );
-			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name.
 			self::assertStringContainsString( 'local.submission_' . $submission, $results->textContent );
 			if ( $submission > 1 ) {
-				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name; exercise the actual browser replacement document.
+				// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns this property name.
 				self::assertStringNotContainsString( 'local.submission_' . ( $submission - 1 ), $page->textContent );
 			}
+		}
+	}
+
+	public function test_installation_health_check_is_capability_gated_cached_and_isolated(): void {
+		$provisioner = $this->createMock( \RAN\Secrets\SecretsStorageProvisioner::class );
+		$provisioner->expects( self::once() )->method( 'status' )->willReturn( \RAN\Secrets\SecretsStorageProvisioningResult::storage_healthy( '/private/secrets.json', 'manual' ) );
+		$dashboard                 = $this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner );
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_GET                      = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'installation',
+		);
+		self::assertSame( 'unknown', $dashboard->storage_installation_projection()['state'] );
+		$initial_state = $dashboard->get_index()['data']['troubleshooting']['storage']['state'];
+		$cached_state  = $dashboard->get_index()['data']['troubleshooting']['storage']['state'];
+		self::assertSame( array( 'healthy', 'healthy' ), array( $initial_state, $cached_state ) );
+	}
+
+	public function test_installation_health_check_skips_other_requests_and_both_missing_capabilities(): void {
+		foreach ( array( array( 'POST', 'installation', true, true ), array( 'GET', 'support-report', true, true ), array( 'GET', 'diagnostics', true, true ), array( 'GET', 'installation', false, true ), array( 'GET', 'installation', true, false ) ) as list( $method, $panel, $manage, $activate ) ) {
+			$provisioner = $this->createMock( \RAN\Secrets\SecretsStorageProvisioner::class );
+			$provisioner->expects( self::never() )->method( 'status' );
+			$GLOBALS['ran_booster_test_capabilities'] = array(
+				'manage_options'   => $manage,
+				'activate_plugins' => $activate,
+			);
+			$_SERVER['REQUEST_METHOD']                = $method;
+			$_GET                                     = array(
+				'tab'   => 'troubleshooting',
+				'panel' => $panel,
+			);
+			$this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner )->get_index();
+		}
+	}
+
+	public function test_installation_health_check_does_not_write_to_capture(): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-storage-check-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable capture fixture.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$capture = new TemporaryDebugCapture( $directory . '/secrets.json' );
+		try {
+			$capture->start();
+			\RAN\Logging\BoosterLogger::configure_capture( $capture );
+			$provisioner = $this->createMock( \RAN\Secrets\SecretsStorageProvisioner::class );
+			$provisioner->expects( self::once() )->method( 'status' )->willReturn( \RAN\Secrets\SecretsStorageProvisioningResult::unsupported( 'test_unavailable', 'Unavailable.' ) );
+			$_SERVER['REQUEST_METHOD'] = 'GET';
+			$_GET                      = array(
+				'tab'   => 'troubleshooting',
+				'panel' => 'installation',
+			);
+			$this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner )->get_index();
+			self::assertSame( array(), $capture->snapshot()['entries'] );
+		} finally {
+			\RAN\Logging\BoosterLogger::configure_capture( null );
+			$capture->delete();
+			foreach ( array( $directory . '/ran-booster-debug.php.lock', $directory . '/ran-booster-debug.php' ) as $path ) {
+				if ( is_file( $path ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable capture fixture cleanup.
+					unlink( $path );
+				}
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable capture fixture cleanup.
+			rmdir( $directory );
+		}
+	}
+
+	public function test_installation_health_check_failure_does_not_hide_installation(): void {
+		$provisioner = $this->createMock( \RAN\Secrets\SecretsStorageProvisioner::class );
+		$provisioner->expects( self::once() )->method( 'status' )->willThrowException( new RuntimeException( 'private failure' ) );
+		$_SERVER['REQUEST_METHOD'] = 'GET';
+		$_GET                      = array(
+			'tab'   => 'troubleshooting',
+			'panel' => 'installation',
+		);
+		$data                      = $this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner )->get_index()['data'];
+		self::assertSame( 'unavailable', $data['troubleshooting']['storage']['state'] );
+		self::assertStringNotContainsString( 'private failure', $data['troubleshooting']['storage']['message'] );
+	}
+
+	public function test_fixed_troubleshooting_routes_default_and_alias(): void {
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
+		foreach ( array(
+			array( null, 'installation' ),
+			array( 'invalid', 'installation' ),
+			array( array( 'diagnostics' ), 'installation' ),
+			array( 'installation', 'installation' ),
+			array( 'diagnostics', 'diagnostics' ),
+			array( 'activity', 'activity' ),
+			array( 'deployment-activity', 'activity' ),
+			array( 'debug-capture', 'debug-capture' ),
+			array( 'support-report', 'support-report' ),
+		) as list( $panel, $expected ) ) {
+			$_GET = array( 'tab' => 'troubleshooting' );
+			if ( null !== $panel ) {
+				$_GET['panel'] = $panel;
+			}
+			self::assertSame( $expected, $dashboard->get_index()['data']['troubleshooting_panel'] );
 		}
 	}
 
@@ -2195,6 +2294,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( array(), $data['troubleshooting'] );
 			self::assertSame( 'active', $data['debug_capture']['state'] );
 			self::assertSame( 'ran-booster-debug.php', $data['debug_capture']['filename'] );
+			self::assertSame( $directory . '/ran-booster-debug.php', $data['debug_capture']['configured_path'] );
+			$GLOBALS['ran_booster_test_capabilities']['activate_plugins'] = false;
+			$limited = $this->dashboard( $this->throwing_secrets(), null, null, null, null, null, $capture )->get_index()['data'];
+			self::assertNull( $limited['debug_capture']['configured_path'] );
+			unset( $GLOBALS['ran_booster_test_capabilities']['activate_plugins'] );
 			self::assertStringContainsString( '[ran-booster] safe dashboard event', $data['debug_capture']['content'] );
 			self::assertArrayNotHasKey( 'deployment_activity', $data );
 		} finally {
@@ -3716,7 +3820,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 		?WebhookAssistanceReadinessEvaluator $webhook_assistance = null,
 		?WordPressUpdaterLock $branch_check_lock = null,
 		?\RAN\RepositoryProvider\GitHubProviderSelection $github_selection = null,
-		?PackageRemovalService $removals = null
+		?PackageRemovalService $removals = null,
+		?\RAN\Admin\CredentialExpiryNotice $credential_expiry_notice = null,
+		?\RAN\Secrets\SecretsStorageProvisioner $secrets_storage = null
 	): RoutingDashboard {
 		$providers         = $providers ?? $this->providers( $provider_credentials );
 		$branch_check_lock = $branch_check_lock ?? new DashboardBranchCheckUpdaterLock();
@@ -3762,10 +3868,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$package_operations,
 			$deployment_attempts,
 			$debug_capture,
-			null,
+			$secrets_storage,
 			$admin_add_ons,
 			removals: $removals,
-			activity: $this->empty_activity_store()
+			activity: $this->empty_activity_store(),
+			credential_expiry_notice: $credential_expiry_notice
 		);
 	}
 

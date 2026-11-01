@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
+use RAN\Admin\AdminAddOnRegistry;
+
 use RAN\AddOn\Portability\NativePortabilityFacade;
 use RAN\AddOn\Portability\PortabilityFacade;
 use RAN\AddOn\ReleaseTracking\NativeReleaseTrackingFacade;
@@ -238,6 +240,9 @@ final class BoosterServiceProvider {
 		);
 		$github_selection->bind_registry( $providers );
 		$container->bind( ProviderRegistry::class, $providers );
+		$preferences = new \RAN\Settings\GeneralPreferenceStore();
+		$container->bind( \RAN\Settings\GeneralPreferenceStore::class, $preferences );
+		$container->bind( \RAN\Admin\GitHubVisibility::class, new \RAN\Admin\GitHubVisibility( $preferences, $providers, $github_selection, $wpdb ) );
 		$container->bind(
 			ReleaseWorkflowControls::class,
 			static fn ( CoreContainer $container ): ReleaseWorkflowControls => new ReleaseWorkflowControls(
@@ -333,6 +338,16 @@ final class BoosterServiceProvider {
 				$container->make( WordPressUpdaterLock::class )
 			)
 		);
+		$container->bind( \RAN\Troubleshooting\DiagnosticRunStore::class, new \RAN\Troubleshooting\DiagnosticRunStore() );
+		$container->bind(
+			\RAN\Troubleshooting\InstallationFacts::class,
+			static fn ( CoreContainer $container ): \RAN\Troubleshooting\InstallationFacts => new \RAN\Troubleshooting\InstallationFacts(
+				$container->make( ProviderRegistry::class ),
+				$container->make( \RAN\Troubleshooting\CoreSelfUpdateStatus::class ),
+				$container->make( GitHubProviderSelection::class )->support_observation( ... ),
+				$container->make( AdminAddOnRegistry::class )
+			)
+		);
 		$container->bind(
 			TroubleshootingService::class,
 			static function ( CoreContainer $container ): TroubleshootingService {
@@ -342,7 +357,17 @@ final class BoosterServiceProvider {
 					null,
 					$container->make( SecretsFile::class ),
 					$container->make( \RAN\Troubleshooting\CoreSelfUpdateStatus::class ),
-					activity: $container->make( \RAN\Activity\ActivityStore::class )
+					activity: $container->make( \RAN\Activity\ActivityStore::class ),
+					retained_runs: $container->make( \RAN\Troubleshooting\DiagnosticRunStore::class ),
+					support_report: new \RAN\Troubleshooting\SupportReport(
+						$container->make( \RAN\Troubleshooting\InstallationFacts::class ),
+						$container->make( \RAN\Troubleshooting\DiagnosticRunStore::class ),
+						$container->make( \RAN\Activity\ActivityStore::class ),
+						$container->make( PluginRepository::class ),
+						$container->make( ThemeRepository::class ),
+						$container->make( TemporaryDebugCapture::class )
+					),
+					installation_facts: $container->make( \RAN\Troubleshooting\InstallationFacts::class )
 				);
 			}
 		);

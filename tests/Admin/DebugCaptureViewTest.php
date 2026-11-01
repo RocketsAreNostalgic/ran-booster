@@ -28,8 +28,7 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringNotContainsString( 'notice-warning', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading">Logging</h3>', $html );
 		self::assertStringContainsString( 'Booster event capture', $html );
-		self::assertStringContainsString( 'Configured capture file:', $html );
-		self::assertStringContainsString( '<code>ran-booster-debug.php</code>', $html );
+		self::assertStringNotContainsString( 'Configured capture file:', $html );
 		self::assertStringNotContainsString( 'No temporary logging capture is active.', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="manage-debug-capture"', $html );
 		self::assertStringContainsString( 'name="ran_booster[operation]" value="start"', $html );
@@ -73,7 +72,6 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringContainsString( 'next &amp; event', $html );
 		self::assertStringContainsString( 'panel=debug-capture', $html );
 		self::assertStringContainsString( 'class="ran-booster-debug-capture__primary-actions"', $html );
-		self::assertStringContainsString( '<code>ran-booster-debug.php</code>', $html );
 		self::assertStringContainsString( 'rows="10" readonly', $html );
 		self::assertStringContainsString( '>Refresh</a>', $html );
 		self::assertStringContainsString( 'name="ran_booster[operation]" value="stop"', $html );
@@ -153,8 +151,7 @@ final class DebugCaptureViewTest extends TestCase {
 			);
 
 			self::assertStringContainsString( $message, $html );
-			self::assertStringContainsString( 'Configured capture file:', $html );
-			self::assertStringContainsString( '<code>ran-booster-debug.php</code>', $html );
+			self::assertStringNotContainsString( 'Configured capture file:', $html );
 			self::assertStringNotContainsString( 'unsafe-content-canary', $html );
 			self::assertStringNotContainsString( 'unsafe-time-canary', $html );
 			self::assertStringNotContainsString( 'unsafe-delete-canary', $html );

@@ -15,9 +15,6 @@ $capture_state       = isset( $debug_capture['state'] ) && in_array(
 )
 	? $debug_capture['state']
 	: 'unavailable';
-$filename            = is_string( $debug_capture['filename'] ?? null )
-	? basename( str_replace( '\\', '/', $debug_capture['filename'] ) )
-	: 'ran-booster-debug.php';
 $configured_path     = is_string( $debug_capture['configured_path'] ?? null ) ? $debug_capture['configured_path'] : null;
 $capture_until       = is_string( $debug_capture['capture_until'] ?? null )
 	? $debug_capture['capture_until']
@@ -95,7 +92,6 @@ $status_classes       = array(
 				printf( esc_html__( 'This temporary capture records Booster events only. It does not require or enable %s and excludes PHP, WordPress, theme, and other-plugin messages.', 'ran-booster' ), '<code>WP_DEBUG_LOG</code>' );
 				?>
 			</p>
-			<p class="description"><?php esc_html_e( 'Configured capture file:', 'ran-booster' ); ?> <code><?php echo esc_html( $filename ); ?></code></p>
 			<p class="description ran-booster-debug-capture__retained-note"<?php echo 'retained' === $capture_state ? '' : ' aria-hidden="true"'; ?>><?php esc_html_e( 'Starting a new capture replaces this retained capture.', 'ran-booster' ); ?></p>
 			<div class="ran-booster-debug-capture__events">
 				<div class="ran-booster-debug-capture__events-header">

@@ -83,8 +83,18 @@ final class TroubleshootingService {
 	public function generate_support_report( array $storage ): array {
 		if ( null === $this->support_report ) {
 			return array(
-				'text'     => __( 'Support collection is unavailable. No diagnostics were run.', 'ran-booster' ),
-				'filename' => 'ran-booster-support-' . gmdate( 'Ymd-His' ) . '.txt',
+				'text'     => json_encode( // phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Fixed local fallback must remain valid JSON.
+					array(
+						'schema_version'     => 1,
+						'capture_started_at' => gmdate( 'c' ),
+						'capture_ended_at'   => gmdate( 'c' ),
+						'coverage'           => 'Unavailable',
+						'observation'        => 'Support collection is unavailable. No diagnostics were run.',
+						'sections'           => new \stdClass(),
+					),
+					JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+				),
+				'filename' => 'ran-booster-support-' . gmdate( 'Ymd-His' ) . '.json',
 			);
 		}
 		return $this->support_report->generate( $storage, $this->fresh_support_diagnostics() );

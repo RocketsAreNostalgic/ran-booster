@@ -673,10 +673,12 @@ final class TroubleshootingServiceTest extends TestCase {
 		$report         = new SupportReport( new InstallationFacts( $registry ), $reloaded );
 		$navigation     = new TroubleshootingService( $local, $registry, retained_runs: $reloaded, support_report: $report );
 		$captured       = $navigation->generate_support_report( array() );
-		self::assertStringContainsString( 'Earlier explicit checks, not newly executed tests.', $captured['text'] );
-		self::assertStringContainsString( 'gh.credential.invalid', $captured['text'] );
-		self::assertStringContainsString( 'Partial: remote_calls_exhausted', $captured['text'] );
-		self::assertStringContainsString( 'one saved credential selected; identity withheld', $captured['text'] );
+		$data           = json_decode( $captured['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['diagnostics']['data']['retained'];
+		self::assertSame( 'Included', $data['state'] );
+		self::assertSame( 'gh.credential.invalid', $data['runs'][0]['results'][5]['code'] );
+		self::assertTrue( $data['runs'][0]['credential_selected'] );
+		self::assertTrue( $data['runs'][1]['partial'] );
+		self::assertSame( 'remote_calls_exhausted', $data['runs'][1]['partial_reason'] );
 		self::assertIsString( $memory->raw );
 		foreach ( array( 'canary', 'private-owner/private-repository', 'private-person@example.test', 'gh.privatecanary' ) as $private ) {
 			self::assertStringNotContainsString( $private, $memory->raw );
@@ -725,9 +727,9 @@ final class TroubleshootingServiceTest extends TestCase {
 			self::assertNull( $request->get_repository() );
 		}
 		self::assertNull( $memory->raw );
-		self::assertStringContainsString( 'Fresh general checks:', $report );
-		self::assertStringContainsString( 'Group: GitHub', $report );
-		self::assertStringContainsString( 'Group: Bitbucket Cloud', $report );
+		$data = json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['diagnostics']['data']['fresh'];
+		self::assertSame( 'completed', $data['state'] );
+		self::assertEqualsCanonicalizing( array( 'GitHub', 'Bitbucket Cloud' ), array_column( $data['providers'], 'provider' ) );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
@@ -743,12 +745,15 @@ final class TroubleshootingServiceTest extends TestCase {
 		$report                                   = $service->generate_support_report( array() )['text'];
 		self::assertSame( 1, $local->support_runs );
 		self::assertSame( 0, $provider->runs );
-		self::assertStringContainsString( 'Provider checks not run because the fresh local observation was partial.', $report );
+		self::assertSame( 'local_incomplete', json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['diagnostics']['data']['fresh']['state'] );
+		self::assertSame( array(), json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['diagnostics']['data']['fresh']['providers'] );
+		self::assertContains( 'local_incomplete', json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['diagnostics']['data']['coverage_reasons'] );
 
 		$local   = new TroubleshootingLocalFixture( $this->local_results() );
 		$service = new TroubleshootingService( $local, $registry, support_report: new SupportReport( new InstallationFacts( $registry ) ) );
 		$report  = $service->generate_support_report( array() )['text'];
-		self::assertStringContainsString( 'Group state: provider_unavailable', $report );
+		self::assertSame( 'provider_unavailable', json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['diagnostics']['data']['fresh']['providers'][0]['state'] );
+		self::assertContains( 'provider_unavailable', json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['diagnostics']['data']['coverage_reasons'] );
 		self::assertStringNotContainsString( 'provider-private-canary', $report );
 	}
 
@@ -826,10 +831,24 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertNotSame( $attribution, $current->implementation( 'gh' ) );
 		$report = ( new SupportReport( $current, $runs ) )->generate( array() );
 		self::assertStringContainsString( 'Implementation 1', $report['text'] );
-		self::assertStringContainsString( 'Implementation 2', $report['text'] );
+		self::assertSame( 'Implementation 2', json_decode( $report['text'], true, 512, JSON_THROW_ON_ERROR )['sections']['diagnostics']['data']['retained']['runs'][0]['implementation'] );
 		self::assertStringNotContainsString( $attribution, $report['text'] );
 		self::assertSame( $attribution, $runs->available()['runs'][0]['implementation'] );
 		self::assertSame( 0, $replacement->runs );
+	}
+
+	public function test_missing_report_collector_returns_valid_json_without_active_checks(): void {
+		$provider = new TroubleshootingProviderFixture( 'gh', static fn(): array => array() );
+		$local    = new TroubleshootingLocalFixture( $this->local_results() );
+		$service  = new TroubleshootingService( $local, new ProviderRegistry( array( $provider ) ) );
+		$report   = $service->generate_support_report( array() );
+		$data     = json_decode( $report['text'], true, 512, JSON_THROW_ON_ERROR );
+		self::assertSame( 1, $data['schema_version'] );
+		self::assertSame( 'Unavailable', $data['coverage'] );
+		self::assertSame( array(), $data['sections'] );
+		self::assertMatchesRegularExpression( '/^ran-booster-support-\d{8}-\d{6}\.json$/', $report['filename'] );
+		self::assertSame( 0, $local->support_runs );
+		self::assertSame( 0, $provider->runs );
 	}
 
 	/** @return list<ProviderDiagnosticResult> */

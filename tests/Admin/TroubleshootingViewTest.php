@@ -1038,7 +1038,20 @@ final class TroubleshootingViewTest extends TestCase {
 
 	public function test_renders_protected_provider_form_accessible_results_and_whitelist_report(): void {
 		$troubleshooting_panel = 'diagnostics';
-		$troubleshooting       = array(
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exercise a deterministic frozen JSON fixture with strict encoding errors.
+		$report_json     = json_encode(
+			array(
+				'schema_version' => 1,
+				'sections'       => array(
+					'environment' => array(
+						'state' => 'Included',
+						'data'  => array( 'example' => '<tag> & \"quoted\"' ),
+					),
+				),
+			),
+			JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
+		);
+		$troubleshooting = array(
 			'providers'              => array(
 				'gh' => 'GitHub',
 				'bb' => 'Bitbucket',
@@ -1067,7 +1080,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'ran'                    => true,
 			'partial'                => true,
 			'partial_reason'         => 'remote_calls_exhausted',
-			'report'                 => "RAN Booster troubleshooting report\n[pass] local.runtime.ready",
+			'report'                 => $report_json,
 			'results'                => array(
 				array(
 					'status'      => 'pass',
@@ -1149,17 +1162,27 @@ final class TroubleshootingViewTest extends TestCase {
 
 		$troubleshooting_panel               = 'support-report';
 		$troubleshooting['report_generated'] = true;
-		$troubleshooting['report_filename']  = 'ran-booster-support-20261031-120000.txt';
+		$troubleshooting['report_filename']  = 'ran-booster-support-20261031-120000.json';
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( '<textarea', $html );
-		self::assertStringContainsString( 'RAN Booster troubleshooting report', $html );
+		self::assertStringContainsString( 'Sanitized JSON preview', $html );
 		self::assertStringContainsString( 'class="ran-booster-troubleshooting__report-field"', $html );
-		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy report"', $html );
+		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy JSON report"', $html );
 		self::assertStringContainsString( '<span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>', $html );
 		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
-		self::assertStringContainsString( 'readonly>RAN Booster troubleshooting report', $html );
+		self::assertStringContainsString( 'Download JSON report', $html );
+		self::assertStringContainsString( 'data-support-report-filename="ran-booster-support-20261031-120000.json"', $html );
+		self::assertSame( 1, preg_match( '/<textarea[^>]*readonly>(.*?)<\/textarea>/s', $html, $matches ) );
+		self::assertArrayHasKey( 1, $matches );
+		if ( ! isset( $matches[1] ) ) {
+			self::fail( 'Report textarea capture is missing.' );
+		}
+		$preview = html_entity_decode( $matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		self::assertSame( $report_json, $preview );
+		self::assertSame( 1, json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['schema_version'] );
+		self::assertSame( '<tag> & \"quoted\"', json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['sections']['environment']['data']['example'] );
 		self::assertStringContainsString( '<summary>Evidence and recovery guidance</summary>', $html );
 	}
 

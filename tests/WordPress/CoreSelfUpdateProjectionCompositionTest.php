@@ -73,8 +73,8 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 		[$success_payload, $success_report] = $this->projections( new CoreSelfUpdateStatus( $this->enabled_policy(), $target, $success ) );
 		self::assertSame( 1000, $success_payload['core_self_update']['last_successful_check'] );
 		self::assertSame( 'success', $success_payload['core_self_update']['last_check_outcome'] );
-		self::assertStringContainsString( 'last_successful_check: ' . gmdate( 'c', 1000 ), $success_report );
-		self::assertStringContainsString( 'last_check_outcome: success', $success_report );
+		self::assertSame( gmdate( 'c', 1000 ), json_decode( $success_report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_successful_check'] );
+		self::assertSame( 'success', json_decode( $success_report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_check_outcome'] );
 
 		$failure = new CoreSelfUpdateCheck( $target, static fn (): bool => true, 'ran-booster/ran-booster.php', 'stable', static function (): void {}, static fn (): int => 1400 );
 		self::assertSame(
@@ -100,10 +100,10 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 		}
 		self::assertSame( gmdate( 'c', 1000 ), $payload['installation_details']['Booster Core updates']['Last successful operator check (UTC)'] );
 		self::assertSame( 'unknown', $payload['installation_details']['Booster Core updates']['Last operator check outcome'] );
-		self::assertStringContainsString( 'last_check: ' . gmdate( 'c', 1700000000 ), $report );
-		self::assertStringContainsString( 'next_check: ' . gmdate( 'c', 1700000900 ), $report );
-		self::assertStringContainsString( 'last_successful_check: ' . gmdate( 'c', 1000 ), $report );
-		self::assertStringContainsString( 'last_check_code: check_not_observed', $report );
+		self::assertSame( gmdate( 'c', 1700000000 ), json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_check'] );
+		self::assertSame( gmdate( 'c', 1700000900 ), json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['next_check'] );
+		self::assertSame( gmdate( 'c', 1000 ), json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_successful_check'] );
+		self::assertSame( 'check_not_observed', json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_check_code'] );
 	}
 
 	public function test_skipped_active_claim_and_past_cooldown_keep_operator_and_target_state_distinct(): void {
@@ -167,8 +167,8 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 		self::assertSame( 'bounded_unreviewed_code', $payload['core_self_update']['last_check_code'] );
 		self::assertSame( gmdate( 'c', 1700001900 ), $payload['installation_details']['Booster Core updates']['Next check (UTC)'] );
 		self::assertSame( 'bounded_unreviewed_code', $payload['installation_details']['Booster Core updates']['Last operator check code'] );
-		self::assertStringContainsString( 'next_check: ' . gmdate( 'c', 1700001900 ), $report );
-		self::assertStringContainsString( 'last_check_code: Unknown', $report );
+		self::assertSame( gmdate( 'c', 1700001900 ), json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['next_check'] );
+		self::assertSame( 'Unknown', json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_check_code'] );
 	}
 
 	/** @return array{0:array<string,mixed>,1:string} */
@@ -231,7 +231,7 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 		}
 		self::assertSame( gmdate( 'c', $target_next_check ), $payload['installation_details']['Booster Core updates']['Next check (UTC)'] );
 		foreach ( array( 'last_successful_check', 'last_check_outcome', 'last_check_code', 'check_cooldown_until' ) as $key ) {
-			self::assertStringContainsString( $key . ': Unknown', $report );
+			self::assertSame( 'Unknown', json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update'][ $key ] );
 		}
 	}
 

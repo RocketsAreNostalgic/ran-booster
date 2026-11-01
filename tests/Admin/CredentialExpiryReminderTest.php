@@ -14,10 +14,14 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\CredentialExpiryNotice;
 use RAN\Admin\CredentialExpiryNoticeController;
+use RAN\Admin\CredentialExpiryObservationStore;
 use RAN\Admin\CredentialExpiryReminder;
 use RAN\Admin\NoticePreference;
 use RAN\RepositoryProvider\CredentialExpiryReport;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\RepositoryProvider\ProviderSecretPolicyCatalog;
 use RAN\Secrets\SecretsFile;
 use RAN\Tests\Admin\Support\ExpiryReminderProvider;
@@ -504,6 +508,89 @@ final class CredentialExpiryReminderTest extends TestCase {
 		ob_start();
 		( new CredentialExpiryNotice( $this->reminders() ) )->render();
 		self::assertSame( '', (string) ob_get_clean() );
+	}
+
+	public function test_notice_pairs_each_credential_with_its_own_action_across_providers(): void {
+		$other = $this->createMock( RepositoryProvider::class );
+		$other->method( 'get_metadata' )->willReturn( new ProviderMetadata( ProviderCode::parse( 'other' ), 'Other <provider>', 'https://example.com/', 'Owner' ) );
+		$providers = new ProviderRegistry( array( new ExpiryReminderProvider(), $other ) );
+		$secrets   = $this->createMock( SecretsFile::class );
+		$secrets->method( 'credential_profiles' )->willReturnCallback(
+			static fn ( string $provider ): array => 'gh' === $provider
+				? array(
+					array(
+						'id'        => 'immutable',
+						'label'     => 'Immutable A',
+						'immutable' => true,
+					),
+					array(
+						'id'    => 'editable',
+						'label' => 'Editable B',
+					),
+				)
+				: array(
+					array(
+						'id'    => 'bad&"id',
+						'label' => '<script>Other C</script>',
+					),
+				)
+		);
+		$this->provider_expiry( 'immutable', $this->now->modify( '-1 day' ) );
+		$this->observations->set_manual_expiry( provider: 'gh', profile_id: 'editable', expires_on: '2026-07-25' );
+		$observations = $this->createMock( CredentialExpiryObservationStore::class );
+		$observations->method( 'get' )->willReturnCallback(
+			fn ( string $provider, string $id ): array => 'other' === $provider
+				? array( 'provider_expires_at' => '2026-07-26T12:00:00Z' )
+				: $this->observations->get( $provider, $id )
+		);
+		$notice = new CredentialExpiryNotice( new CredentialExpiryReminder( $providers, $secrets, $observations, fn (): DateTimeImmutable => $this->now ) );
+		ob_start();
+		$notice->render();
+		$html = (string) ob_get_clean();
+		preg_match_all( '/<li>(.*?)<\/li>/s', $html, $matches );
+		self::assertCount( 3, $matches[1] );
+		self::assertStringContainsString( 'Immutable A (GitHub): Expired 2026-07-22.', $matches[1][0] );
+		self::assertStringContainsString( 'managed by deployment configuration', $matches[1][0] );
+		self::assertStringNotContainsString( 'replace_credential=', $matches[1][0] );
+		self::assertStringContainsString( 'Editable B (GitHub): Expires in 2 days.', $matches[1][1] );
+		self::assertStringContainsString( 'replace_credential=editable', $matches[1][1] );
+		self::assertStringContainsString( 'Replace Editable B', $matches[1][1] );
+		self::assertStringContainsString( '&lt;script&gt;Other C&lt;/script&gt; (Other &lt;provider&gt;)', $matches[1][2] );
+		self::assertStringContainsString( 'tab=other&amp;view=credentials&amp;replace_credential=bad%26%22id', $matches[1][2] );
+		self::assertStringContainsString( 'Replace &lt;script&gt;Other C&lt;/script&gt;', $matches[1][2] );
+		self::assertStringNotContainsString( '<script>', $html );
+		self::assertStringContainsString( 'Review GitHub credentials', $html );
+		self::assertStringContainsString( 'Review Other &lt;provider&gt; credentials', $html );
+	}
+
+	public function test_notice_gives_each_immutable_credential_its_own_instruction(): void {
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->method( 'credential_profiles' )->willReturn(
+			array(
+				array(
+					'id'     => 'first',
+					'label'  => 'First',
+					'source' => 'constant',
+				),
+				array(
+					'id'        => 'second',
+					'label'     => 'Second',
+					'immutable' => true,
+				),
+			)
+		);
+		$this->provider_expiry( 'first', $this->now );
+		$this->provider_expiry( 'second', $this->now->modify( '+1 day' ) );
+		ob_start();
+		( new CredentialExpiryNotice( new CredentialExpiryReminder( $this->providers, $secrets, $this->observations, fn (): DateTimeImmutable => $this->now ) ) )->render();
+		$html = (string) ob_get_clean();
+		preg_match_all( '/<li>(.*?)<\/li>/s', $html, $matches );
+		self::assertCount( 2, $matches[1] );
+		foreach ( array( 'First', 'Second' ) as $index => $label ) {
+			self::assertStringContainsString( $label . ' (GitHub):', $matches[1][ $index ] );
+			self::assertStringContainsString( 'managed by deployment configuration', $matches[1][ $index ] );
+			self::assertStringNotContainsString( 'replace_credential=', $matches[1][ $index ] );
+		}
 	}
 
 	/**

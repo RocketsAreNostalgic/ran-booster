@@ -6,8 +6,8 @@
 $ran_booster_core_admission_marker = ABSPATH . '.ran-booster-disposable-test-site';
 $ran_booster_core_admission_plugin = 'ran-booster/ran-booster.php';
 
-if ( ! defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' )
-	|| 0 !== constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' )
+if ( ! defined( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' )
+	|| 0 !== constant( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' )
 	|| is_multisite()
 	|| ! is_file( $ran_booster_core_admission_marker )
 	|| is_link( $ran_booster_core_admission_marker )

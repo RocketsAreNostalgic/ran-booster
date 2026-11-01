@@ -116,7 +116,7 @@ recovery actions read the operational journal. Both use the shared policy with
 separate safety exceptions and maintenance batches. Different row populations
 mean equal settings do not guarantee identical retained membership.
 
-## Repository archive limits
+## Repository download limits
 
 GitHub and Bitbucket return an archive of the whole repository. A configured
 package subdirectory is inspected after download and does not reduce the
@@ -128,7 +128,7 @@ compressed ceiling.
 
 - 50 MiB compressed by default.
 - 200 MiB expanded by default.
-- An optional `RAN_BOOSTER_MAX_ARCHIVE_BYTES` integer in `wp-config.php` may set
+- An optional `RAN_BOOSTER_MAX_DOWNLOAD_BYTES` integer in `wp-config.php` may set
   the compressed limit from 1 MiB through 536,870,911 bytes (just under 512 MiB),
   a ceiling that is portable across supported 32- and 64-bit PHP builds.
 - The expanded limit is always four times the compressed limit.
@@ -136,7 +136,7 @@ compressed ceiling.
 For example:
 
 ```php
-define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 150 * 1024 * 1024 );
+define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 150 * 1024 * 1024 );
 ```
 
 The Booster host adapter uses the same snapshotted compressed limit to bound the
@@ -145,9 +145,10 @@ additional host-side capacity checks after the normalized updater has validated
 the archive. Entry-count, path-depth, package-identity and containment
 validation belong to the normalized branch updater. An invalid site override
 fails closed when a new attempt is admitted. Provider branch-source manual
-installs, updates and webhook updates use this admitted path. Prospective
-published-release installation instead uses the release updater's archive
-custody and bounds. Neither adoption path downloads an archive.
+installs, updates and webhook updates use this admitted path. GitHub release inspection, prospective installation and managed updates receive
+the compressed limit through the release updater. Its expanded archive safeguards
+and release custody are separate; Core also checks prospective release custody
+against the current compressed limit. Neither adoption path downloads an archive.
 
 ## Manual and web hook entry points
 

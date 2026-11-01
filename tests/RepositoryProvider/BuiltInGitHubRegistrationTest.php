@@ -253,7 +253,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_core_supplies_configured_artifact_limit_to_bundled_git_hub(): void {
 		$configured_limit = 67_108_864;
-		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', $configured_limit );
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', $configured_limit );
 
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );
@@ -274,7 +274,7 @@ final class BuiltInGitHubRegistrationTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_invalid_configured_artifact_limit_does_not_abort_core_registration(): void {
-		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 512 );
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 512 );
 
 		$container = new CoreContainer();
 		$runtime   = new Booster( $container );

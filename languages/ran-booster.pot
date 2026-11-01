@@ -556,12 +556,12 @@ msgstr ""
 msgid "Core updates are disabled to protect this source checkout."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:128
+#: RAN/Admin/CredentialExpiryNotice.php:124
 msgid "Credential expiry reminder:"
 msgstr ""
 
 #. translators: %d is the number of expiring credentials.
-#: RAN/Admin/CredentialExpiryNotice.php:133
+#: RAN/Admin/CredentialExpiryNotice.php:129
 #, php-format
 msgid "%d credential needs attention."
 msgid_plural "%d credentials need attention."
@@ -574,39 +574,39 @@ msgstr[1] ""
 msgid "%1$s (%2$s): %3$s."
 msgstr ""
 
-#. translators: %s is a repository provider label.
+#. translators: %s is the credential label.
+#: RAN/Admin/CredentialExpiryNotice.php:143
+#, php-format
+msgid "Replace %s"
+msgstr ""
+
 #: RAN/Admin/CredentialExpiryNotice.php:145
+msgid "This credential is managed by deployment configuration; update it there."
+msgstr ""
+
+#. translators: %s is a repository provider label.
+#: RAN/Admin/CredentialExpiryNotice.php:152
 #, php-format
 msgid "Review %s credentials"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:148
-#: RAN/Admin/DeploymentAdminPresenter.php:56
-#: RAN/Admin/ManagedPluginFailureRows.php:70
-msgid "Replace credential"
-msgstr ""
-
-#: RAN/Admin/CredentialExpiryNotice.php:150
-msgid "This credential is managed by deployment configuration; update it there."
-msgstr ""
-
-#: RAN/Admin/CredentialExpiryNotice.php:155
+#: RAN/Admin/CredentialExpiryNotice.php:157
 msgid "Remind me in 5 days"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:157
+#: RAN/Admin/CredentialExpiryNotice.php:159
 msgid "Dismiss this reminder"
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:197
+#: RAN/Admin/CredentialExpiryNotice.php:199
 msgid "Booster cannot read saved credentials."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:198
+#: RAN/Admin/CredentialExpiryNotice.php:200
 msgid "Credential-backed operations remain paused."
 msgstr ""
 
-#: RAN/Admin/CredentialExpiryNotice.php:201
+#: RAN/Admin/CredentialExpiryNotice.php:203
 #: views/provider.php:340
 msgid "Review Secure credential storage in Settings"
 msgstr ""
@@ -724,6 +724,11 @@ msgid "%d managed package needs attention."
 msgid_plural "%d managed packages need attention."
 msgstr[0] ""
 msgstr[1] ""
+
+#: RAN/Admin/DeploymentAdminPresenter.php:56
+#: RAN/Admin/ManagedPluginFailureRows.php:70
+msgid "Replace credential"
+msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:59
 msgid "RAN Booster automatic deployment failed:"

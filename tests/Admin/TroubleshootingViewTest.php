@@ -2318,6 +2318,8 @@ final class TroubleshootingViewTest extends TestCase {
 
 
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_provider_status_shows_supplied_workflow_observation_and_retains_recovery(): void {
 		$provider                             = $this->provider_without_optional_settings();
 		$provider['capabilities']['webhooks'] = true;

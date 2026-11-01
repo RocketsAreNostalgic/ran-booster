@@ -139,7 +139,10 @@ $success_label        = is_string( $success_label ) ? $success_label : __( 'Unkn
 				if ( ! $discovery['locked'] ) {
 					?>
 					<input type="hidden" name="ran_booster[preferences][self_update_discovery]" value="0"><?php } ?>
-						<p class="ran-booster-settings__switch-row"><label class="ran-booster-settings__switch" for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" role="switch" aria-describedby="ran-booster-self-update-discovery-help<?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' ran-booster-self-update-discovery-error'; ?>" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span><span><?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></span></label></p>
+				<div class="ran-booster-settings__update-controls">
+					<p class="ran-booster-settings__switch-row"><label class="ran-booster-settings__switch" for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" role="switch" aria-describedby="ran-booster-self-update-discovery-help<?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' ran-booster-self-update-discovery-error'; ?>" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span><span><?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></span></label></p>
+					<button form="ran-booster-check-core-updates" type="submit" class="button"<?php echo $check_available ? '' : ( 'enabled' === $status_mode ? ' aria-describedby="ran-booster-check-updates-unavailable"' : ' aria-describedby="ran-booster-self-update-discovery-help"' ); ?><?php disabled( ! $check_available ); ?>><?php esc_html_e( 'Check for updates', 'ran-booster' ); ?></button>
+				</div>
 				<p id="ran-booster-self-update-discovery-help" class="description"><?php echo esc_html( 'enabled' === $status_mode ? __( 'Booster update checks are enabled.', 'ran-booster' ) : $update_reasons[ $status_reason ] ?? __( 'Booster update checks are currently unavailable.', 'ran-booster' ) ); ?></p>
 				<?php
 				if ( null !== $field_error( 'self_update_discovery' ) ) {
@@ -156,8 +159,7 @@ $success_label        = is_string( $success_label ) ? $success_label : __( 'Unkn
 						<div><dt><?php esc_html_e( 'Check diagnostic code', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $core_update_status['last_check_code'] ); ?></code></dd></div>
 					<?php } ?>
 				</dl>
-				<p><button form="ran-booster-check-core-updates" type="submit" class="button" aria-describedby="ran-booster-check-updates-help<?php echo $check_available ? '' : ( 'enabled' === $status_mode ? ' ran-booster-check-updates-unavailable' : ' ran-booster-self-update-discovery-help' ); ?>"<?php disabled( ! $check_available ); ?>><?php esc_html_e( 'Check now', 'ran-booster' ); ?></button></p>
-				<p id="ran-booster-check-updates-help" class="description"><?php esc_html_e( 'Checks for Booster and other plugin updates. Nothing is installed.', 'ran-booster' ); ?></p>
+
 				<?php if ( ! $check_available && 'enabled' === $status_mode ) { ?>
 					<p id="ran-booster-check-updates-unavailable" class="description"><?php esc_html_e( 'Checking is unavailable for this site or your account.', 'ran-booster' ); ?></p>
 				<?php } ?>

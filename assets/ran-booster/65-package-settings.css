@@ -936,6 +936,14 @@
 	background: var(--ran-booster-surface-info);
 }
 
+.ran-booster-admin .ran-booster-settings__update-controls {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-8) var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-settings__update-facts {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));

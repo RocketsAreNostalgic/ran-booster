@@ -27,9 +27,9 @@ multisite in Core.
 
 ## Current ownership versus the implementation contract
 
-Source baseline: Core `0dea2b658a12d3211ef3302f1dd04d039e65bfde`, with locked
-Branch beta.13 `b1cdb63d8fded52e372054a4461d0a056f9998d3` and Release beta.15
-`2283850d81a3a5b0dfa7fee07beddaba8bf02883`. Refresh these observations before
+Source baseline: Core `32214bc68ca552f40d7d70facd3f101f2d7a87e6`, with locked
+Branch beta.13 `b1cdb63d8fded52e372054a4461d0a056f9998d3` and Release beta.16
+`aa17eb4dc49dcf6dfb70d3af0e8039a3a2512bef`. Refresh these observations before
 implementation; the right column defines obligations, not a selected SQL schema.
 
 | Concern | Current source behavior | Required owner for the initial target |
@@ -45,7 +45,7 @@ implementation; the right column defines obligations, not a selected SQL schema.
 | Mutation lock | Core delegates to Branch's current-blog `auto_updater.lock` adapter | Exclusion follows shared installed files and coordinates with native WordPress, not whichever blog is ambient |
 | Release target fence | Base-prefix storage; key includes network/type/installed identity | Retain bounded discovery/operation fencing; it is not a replacement for the installation mutation barrier |
 | Activation and theme usage | Core admitted facts describe current-site options; Branch compares `active:bool` | Explicit site/network intent and sufficient postconditions for every admitted consumer |
-| Preferences and previews | Notice acknowledgments use user metadata; other form/preview state has its own current scope | Keep actor/presentation state distinct from package authority; define contextual identity where needed, without promoting everything to shared state |
+| Preferences and presentation | General Settings and the Overview onboarding/dashboard choice use nonautoloaded current-site options; notice acknowledgments use user metadata | Keep actor/presentation state distinct from package authority; define contextual identity where needed, without promoting everything to shared state |
 | Configuration and uninstall | Converted-site cleanup requires main-site/base-prefix custody before shared removal | Distinguish site/network detach from installation uninstall; shared resources have one proven cleanup owner |
 
 The relevant implementations are [bootstrap package naming](../ran-booster.php),
@@ -60,6 +60,17 @@ The relevant implementations are [bootstrap package naming](../ran-booster.php),
 [worker wakeup](../RAN/Deployment/WordPressWorkerWakeup.php),
 [notice preferences](../RAN/Admin/NoticePreference.php), and
 [cleanup](../RAN/Uninstall/LocalDataRemover.php).
+
+The current single-site administration homes are Overview for presentation and
+onboarding guidance, Settings for General preferences and credential-storage
+actions, and Troubleshooting for Installation, Diagnostics, Activity, Logging
+and support reports. The Overview choice is shared across the site and does not
+reset configuration. These homes describe the existing single-site interface;
+they do not determine a future network-admin routing or authorization contract.
+General Settings constants can override saved values, and protected storage
+actions retain their separate capabilities and nonces. See
+[Settings](settings.md), the [Overview contract](implementation/overview-568-contract.md)
+and [Troubleshooting](troubleshooting-support-contract.md) for their current boundaries.
 
 ## Actor and operation authority
 

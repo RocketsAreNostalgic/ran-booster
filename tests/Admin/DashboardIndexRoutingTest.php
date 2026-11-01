@@ -660,7 +660,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'GitHub operations are paused.', $html );
-		self::assertStringContainsString( 'Selection storage is unavailable.', $html );
+		self::assertStringContainsString( 'GitHub provider selection is unavailable', $html );
+		self::assertStringContainsString( 'Booster could not verify its saved GitHub provider choice. Review GitHub provider details before continuing.', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
 		$_GET['tab'] = 'bb';
 		self::assertSame( 'bb', $dashboard->get_index()['data']['selected_provider'] );
@@ -680,7 +681,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	/** @return iterable<string,array{string,bool,bool,bool}> */
 	public static function replacement_presentations(): iterable {
-		foreach ( array( 'available', 'decision_required', 'missing', 'conflict', 'incompatible' ) as $state ) {
+		foreach ( array( 'available', 'decision_required', 'missing', 'conflict', 'incompatible', 'storage_unavailable' ) as $state ) {
 			yield $state => array( $state, false, true, true );
 		}
 		yield 'missing A with B enabled' => array( 'missing', true, true, true );
@@ -733,10 +734,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 					'selected'    => 'replacement',
 					'declaration' => $current_declaration,
 				),
-				'candidates' => 'missing' === $state && ! $switch_replacement ? array() : array( 'private-path/replacement.php' => $declaration ),
+				'candidates' => 'missing' === $state && ! $switch_replacement ? array() : array( 'private-path/replacement.php' => $declaration ) + ( 'incompatible' === $state ? array( '<unsafe>/plugin.php' => null ) : array() ),
 			),
 			'review'         => $review,
-			'error'          => '',
+			'error'          => 'Generic adoption error',
 			'recovery'       => null,
 			'package_counts' => array(
 				'branch'        => 2,
@@ -766,15 +767,42 @@ final class DashboardIndexRoutingTest extends TestCase {
 		} else {
 			self::assertStringContainsString( 'GitHub operations are paused.', $html );
 		}
+		$headings = array(
+			'conflict'            => 'Multiple GitHub providers are active',
+			'incompatible'        => 'A GitHub provider is incompatible',
+			'missing'             => 'The selected GitHub provider is missing',
+			'storage_unavailable' => 'GitHub provider selection is unavailable',
+		);
+		if ( isset( $headings[ $state ] ) ) {
+			self::assertMatchesRegularExpression( '/<h3>\s*' . preg_quote( $headings[ $state ], '/' ) . '\s*<\/h3>/', $html );
+		}
+		if ( in_array( $state, array( 'conflict', 'incompatible' ), true ) ) {
+			self::assertStringContainsString( '&lt;Replacement&gt;', $html );
+		}
+		if ( 'storage_unavailable' === $state ) {
+			self::assertStringContainsString( 'Booster could not verify its saved GitHub provider choice.', $html );
+		}
+		if ( 'incompatible' === $state ) {
+			self::assertStringContainsString( '&lt;unsafe&gt;/plugin.php', $html );
+			self::assertStringNotContainsString( '<unsafe>/plugin.php', $html );
+		}
+		if ( in_array( $state, array( 'conflict', 'incompatible', 'storage_unavailable' ), true ) ) {
+			self::assertStringNotContainsString( 'Generic adoption error', $html );
+		} elseif ( 'available' !== $state ) {
+			self::assertStringContainsString( 'Generic adoption error', $html );
+		}
 		if ( null === $review ) {
 			self::assertStringNotContainsString( 'value="adopt-github"', $html );
 			return;
 		}
 		if ( $switch_replacement ) {
-			self::assertStringNotContainsString( 'Previous provider A', $html );
+			self::assertStringContainsString( 'Missing provider: Previous provider A', $html );
 			self::assertStringContainsString( 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
 		}
 		self::assertStringContainsString( 'Affected GitHub packages: 2 Branch, 1 Published release.', $html );
+		self::assertStringContainsString( 'Saved GitHub access credentials: 2 compatible, 1 incompatible.', $html );
+		self::assertStringContainsString( 'Booster will not substitute another credential.', $html );
+		self::assertStringContainsString( 'Approve only a plugin you trust.', $html );
 		if ( ! $manage_options || ! $activate_plugins ) {
 			self::assertStringNotContainsString( 'value="adopt-github"', $html );
 			self::assertStringNotContainsString( 'name="ran_booster[review_digest]"', $html );

@@ -128,6 +128,10 @@ $provider_attention        = array_filter(
 	<?php } ?>
 
 
+	<?php if ( 'dashboard' === $overview_view ) { ?>
+		<?php unset( $overview_dashboard_activity ); ?>
+		<?php require __DIR__ . '/overview-dashboard.php'; ?>
+	<?php } ?>
 	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading">
 		<div class="ran-booster-onboarding__storage-heading">
 			<h3 id="ran-booster-onboarding-storage-heading"><?php echo esc_html( 'onboarding' === $overview_view ? __( '1. Secure credential storage', 'ran-booster' ) : __( 'Secure credential storage', 'ran-booster' ) ); ?></h3>
@@ -137,10 +141,7 @@ $provider_attention        = array_filter(
 		<p><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>
 	</section>
 
-	<?php if ( 'dashboard' === $overview_view ) { ?>
-		<?php unset( $overview_dashboard_activity ); ?>
-		<?php require __DIR__ . '/overview-dashboard.php'; ?>
-	<?php } ?>
+
 
 	<?php if ( 'onboarding' === $overview_view ) { ?>
 

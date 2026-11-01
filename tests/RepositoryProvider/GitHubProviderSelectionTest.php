@@ -157,8 +157,11 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$diagnostics = $presenter->github_selection_diagnostics();
 		self::assertNotNull( $diagnostics );
 		self::assertSame( 'available', $diagnostics['state'] );
+		self::assertSame( 'bundled', $presenter->overview_provider_facts()['gh']['source_kind'] );
 
 		$candidate = $this->candidate( 'replacement.php' );
+		$this->write( 'replacement.php', "<?php\n/*\nPlugin Name: Selected Example\nRAN Booster GitHub Replacement: 1\n*/" );
+		self::assertSame( 'bundled', $presenter->overview_provider_facts()['gh']['source_kind'], 'An inactive candidate must not change the selected origin.' );
 		$this->activate( array( 'booster.php', 'replacement.php' ) );
 		$this->adopt( $candidate );
 		$context   = $this->context();
@@ -167,6 +170,8 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertIsArray( $selection );
 		self::assertTrue( $selection['available'] );
 		self::assertSame( 'replacement', $selection['status']['current']['selected'] );
+		self::assertSame( 'replacement', $presenter->overview_provider_facts()['gh']['source_kind'] );
+		self::assertSame( 'Selected Example', $presenter->overview_provider_facts()['gh']['source_name'] );
 		self::assertNull( $selection['review'] );
 		self::assertNull( $selection['package_counts'] );
 		self::assertNull( $selection['recovery'] );

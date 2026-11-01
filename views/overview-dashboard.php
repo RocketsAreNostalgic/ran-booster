@@ -3,7 +3,7 @@
  * Dashboard sections share the Overview payload and storage flow.
  *
  * @var array<string, mixed> $onboarding
- * @var list<array{code: string, label: string, url: string, admitted: ?bool, selection: ?string}> $provider_summaries
+ * @var list<array{code: string, label: string, url: string, admitted: ?bool, selection: ?string, source_kind?: ?string, source_name?: ?string}> $provider_summaries
  * @var array<string, string> $provider_selection_labels
  * @var array{status: string, total: ?int, items: list<array{provider: string, provider_label: string, label: string, badge_label: string, stage: string, effective_expires_at: string, source: string, observed_at: ?string, url: string}>} $credential_expiry
  */
@@ -86,17 +86,25 @@ $inventory = $onboarding['inventory'] ?? array(
 	</div>
 </section>
 <section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-providers">
-	<h3 id="ran-booster-overview-providers"><?php esc_html_e( 'Providers and access', 'ran-booster' ); ?></h3>
-	<p><?php esc_html_e( 'Repository access has not been checked here.', 'ran-booster' ); ?></p>
+	<h3 id="ran-booster-overview-providers"><?php esc_html_e( 'Git providers', 'ran-booster' ); ?></h3>
 	<?php if ( array() === $provider_summaries ) { ?>
 		<p><?php esc_html_e( 'No provider settings are currently available.', 'ran-booster' ); ?></p>
 	<?php } else { ?>
 		<ul><?php foreach ( $provider_summaries as $provider ) { ?>
-			<li><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a> <span class="ran-booster-pill ran-booster-pill--<?php echo esc_attr( true === $provider['admitted'] ? 'ok' : ( false === $provider['admitted'] ? 'error' : 'info' ) ); ?>"><?php echo esc_html( true === $provider['admitted'] ? __( 'Admitted', 'ran-booster' ) : ( false === $provider['admitted'] ? __( 'Not admitted', 'ran-booster' ) : __( 'Admission unknown', 'ran-booster' ) ) ); ?></span>
-			<?php
-			if ( 'gh' === $provider['code'] ) {
-				?>
-				— <?php echo esc_html( $provider_selection_labels[ $provider['selection'] ?? '' ] ?? __( 'Selection unknown', 'ran-booster' ) ); ?><?php } ?></li>
+			<li><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>
+				<?php if ( 'bundled' === ( $provider['source_kind'] ?? null ) ) { ?>
+					— <?php esc_html_e( 'Included with Booster', 'ran-booster' ); ?>
+				<?php } elseif ( is_string( $provider['source_name'] ?? null ) && '' !== $provider['source_name'] ) { ?>
+					<?php /* translators: %s: selected provider plugin name. */ ?>
+					— <?php echo esc_html( sprintf( __( 'Provided by %s', 'ran-booster' ), $provider['source_name'] ) ); ?>
+				<?php } else { ?>
+					— <?php esc_html_e( 'Provider source unknown', 'ran-booster' ); ?>
+				<?php } ?>
+				<?php
+				if ( 'replacement' === ( $provider['source_kind'] ?? null ) ) {
+					?>
+					<span class="ran-booster-badge ran-booster-badge--neutral"><?php esc_html_e( 'Custom provider', 'ran-booster' ); ?></span><?php } ?>
+			</li>
 		<?php } ?></ul>
 	<?php } ?>
 </section>

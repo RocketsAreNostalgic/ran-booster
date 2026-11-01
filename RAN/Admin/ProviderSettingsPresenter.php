@@ -192,21 +192,43 @@ final readonly class ProviderSettingsPresenter {
 		);
 	}
 
-	/** @return array<string, array{admitted:bool,selection:?string}> Local admission and passive GitHub selection only. */
+	/**
+	 * Local admission and passive selected implementation.
+	 *
+	 * @phpstan-impure
+	 * @return array<string, array{admitted:bool,selection:?string,source_kind:?string,source_name:?string}>
+	 */
 	public function overview_provider_facts(): array {
 		$metadata = $this->providers->metadata();
 		$facts    = array();
 		foreach ( $metadata as $code => $provider ) {
 			$facts[ $code ] = array(
-				'admitted'  => true,
-				'selection' => null,
+				'admitted'    => true,
+				'selection'   => null,
+				'source_kind' => null,
+				'source_name' => null,
 			);
+		}
+		foreach ( \RAN\Booster::extension_declarations() as $extension ) {
+			$code           = $extension['provider_code'] ?? null;
+			$file           = $extension['plugin'] ?? null;
+			$implementation = $extension['provider_implementation'] ?? null;
+			$provider       = is_string( $code ) ? ( $this->providers->all()[ $code ] ?? null ) : null;
+			if ( is_string( $code ) && isset( $facts[ $code ] ) && null !== $provider && is_string( $file ) && is_string( $implementation ) && $provider::class === $implementation && defined( 'WP_PLUGIN_DIR' ) && is_file( WP_PLUGIN_DIR . '/' . $file ) && function_exists( 'is_plugin_active' ) && is_plugin_active( $file ) && is_string( $extension['name'] ?? null ) ) {
+				$facts[ $code ]['source_kind'] = 'extension';
+				$facts[ $code ]['source_name'] = $extension['name'];
+			}
 		}
 		$selection = $this->github_selection_diagnostics();
 		if ( null !== $selection ) {
+			$current     = is_array( $selection['current'] ?? null ) ? $selection['current'] : array();
+			$selected    = isset( $metadata['gh'] ) && true === ( $selection['available'] ?? false ) ? ( $current['selected'] ?? null ) : null;
+			$name        = $current['declaration']['display_name'] ?? null;
 			$facts['gh'] = array(
-				'admitted'  => isset( $metadata['gh'] ),
-				'selection' => is_string( $selection['state'] ?? null ) ? $selection['state'] : null,
+				'admitted'    => isset( $metadata['gh'] ),
+				'selection'   => is_string( $selection['state'] ?? null ) ? $selection['state'] : null,
+				'source_kind' => in_array( $selected, array( 'bundled', 'replacement' ), true ) ? $selected : null,
+				'source_name' => 'replacement' === $selected && is_string( $name ) && '' !== trim( $name ) ? $name : null,
 			);
 		}
 		return $facts;

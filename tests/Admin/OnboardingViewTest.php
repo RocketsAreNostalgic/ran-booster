@@ -449,7 +449,8 @@ final class OnboardingViewTest extends TestCase {
 		);
 		self::assertLessThan( strpos( $html, 'Recent Activity' ), strpos( $html, 'Needs attention' ) );
 		self::assertLessThan( strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ), strpos( $html, 'Recent Activity' ) );
-		self::assertLessThan( strpos( $html, 'Managed packages' ), strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ) );
+		self::assertLessThan( strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ), strpos( $html, 'Git providers' ) );
+		self::assertLessThan( strpos( $html, 'Git providers' ), strpos( $html, 'Managed packages' ) );
 		self::assertStringContainsString( '<strong>Plugins:</strong> 0', $html );
 		self::assertStringContainsString( '<strong>Themes:</strong> Unknown', $html );
 		self::assertStringContainsString( 'ran-booster-badge--neutral', $html );
@@ -467,8 +468,13 @@ final class OnboardingViewTest extends TestCase {
 		$xpath   = new \DOMXPath( $document );
 		$actions = $xpath->query( '//div[contains(@class, "ran-booster-overview-package-actions__group")]/a' );
 		self::assertInstanceOf( \DOMNodeList::class, $actions );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns textContent.
-		self::assertSame( array( 'Install a plugin', 'Manage plugins', 'Install a theme', 'Manage themes' ), array_map( static fn ( \DOMNode $node ): string => trim( $node->textContent ), iterator_to_array( $actions ) ) );
+		$action_labels = array();
+		foreach ( $actions as $action ) {
+			self::assertInstanceOf( \DOMElement::class, $action );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns textContent.
+			$action_labels[] = trim( $action->textContent );
+		}
+		self::assertSame( array( 'Install a plugin', 'Manage plugins', 'Install a theme', 'Manage themes' ), $action_labels );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Plugins"][a[1]="Install a plugin" and a[2]="Manage plugins"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Themes"][a[1]="Install a theme" and a[2]="Manage themes"])' ) );
 		self::assertStringNotContainsString( 'This changes the view for all site administrators.', $html );
@@ -640,11 +646,9 @@ final class OnboardingViewTest extends TestCase {
 			self::assertStringContainsString( '&lt;GitHub&gt;</a>: Provider is not admitted.', $html );
 			self::assertStringNotContainsString( '<GitHub>', $html );
 			if ( 'dashboard' === $view ) {
-				self::assertStringContainsString( 'ran-booster-pill--error">Not admitted</span>', $html );
-				self::assertStringContainsString( 'Provider selection conflict', $html );
-				self::assertStringContainsString( 'ran-booster-pill--ok">Admitted</span>', $html );
-				self::assertStringContainsString( 'ran-booster-pill--info">Admission unknown</span>', $html );
-				self::assertStringContainsString( 'Repository access has not been checked here.', $html );
+				self::assertStringContainsString( 'Provider source unknown', $html );
+				self::assertStringNotContainsString( 'ran-booster-pill--ok">Admitted</span>', $html );
+				self::assertStringNotContainsString( 'Repository access has not been checked here.', $html );
 			}
 			$extra['provider_summaries'][0]['admitted'] = true;
 			$html                                       = $this->render_view( null, null, $extra );
@@ -653,9 +657,53 @@ final class OnboardingViewTest extends TestCase {
 			$html                                        = $this->render_view( null, null, $extra );
 			self::assertStringNotContainsString( '&lt;GitHub&gt;</a>:', $html );
 			if ( 'dashboard' === $view ) {
-				self::assertStringContainsString( 'Selection unknown', $html );
+				self::assertStringContainsString( 'Provider source unknown', $html );
 			}
 		}
+	}
+
+	public function test_dashboard_shows_selected_provider_origin_without_operational_claims(): void {
+		$extra = array(
+			'view'               => 'dashboard',
+			'plugins_url'        => '/plugins',
+			'themes_url'         => '/themes',
+			'activity_url'       => '/activity',
+			'provider_summaries' => array(
+				array(
+					'code'        => 'gh',
+					'label'       => 'GitHub',
+					'url'         => '/github',
+					'admitted'    => true,
+					'selection'   => 'available',
+					'source_kind' => 'bundled',
+					'source_name' => null,
+				),
+				array(
+					'code'        => 'bb',
+					'label'       => 'Bitbucket',
+					'url'         => '/bitbucket',
+					'admitted'    => true,
+					'selection'   => null,
+					'source_kind' => 'extension',
+					'source_name' => 'Bitbucket Cloud',
+				),
+			),
+		);
+		$html  = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'Included with Booster', $html );
+		self::assertStringContainsString( 'Provided by Bitbucket Cloud', $html );
+		self::assertStringNotContainsString( 'Custom provider', $html );
+		$extra['provider_summaries'][0]['source_kind'] = 'replacement';
+		$extra['provider_summaries'][0]['source_name'] = '<Selected Plugin>';
+		$html = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'Provided by &lt;Selected Plugin&gt;', $html );
+		self::assertStringContainsString( 'Custom provider', $html );
+		self::assertStringNotContainsString( '<Selected Plugin>', $html );
+		$extra['provider_summaries'][0]['source_kind'] = null;
+		$extra['provider_summaries'][0]['source_name'] = null;
+		$html = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'Provider source unknown', $html );
+		self::assertStringNotContainsString( 'Custom provider', $html );
 	}
 
 	public function test_expiry_reminders_are_shared_with_attention_and_dashboard(): void {

@@ -472,6 +472,84 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		}
 	}
 
+	public function test_structured_results_are_escaped_and_rendered_in_both_surfaces(): void {
+		$display      = ( new \ReflectionClass( \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::class ) )->newInstanceWithoutConstructor();
+		$presentation = new \ReflectionMethod( $display, 'result_presentation' );
+		$panel        = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
+		$section      = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
+		foreach ( array( 'configured_pending_delivery', 'verified', 'ping_requested', 'ping_verified', 'ping_delivery_failed', 'removed', 'orphaned', 'manual_recovery_required', 'recovery_record_failed', 'record_conflict', 'record_update_failed' ) as $code ) {
+			$result = $presentation->invoke(
+				$display,
+				$code,
+				array(
+					'hook_id'    => '<hook>',
+					'profile_id' => '<profile>',
+				),
+				null
+			);
+			self::assertNotEmpty( $result['heading'], $code );
+			if ( in_array( $code, array( 'verified', 'ping_requested', 'ping_verified' ), true ) ) {
+				self::assertStringContainsString( 'signed delivery unverified', $result['heading'] );
+			}
+			if ( 'removed' === $code ) {
+				self::assertArrayNotHasKey( 'details', $result );
+			}
+			$model                     = $this->webhook_panel_model( false, false, array() );
+			$model['result']           = $result;
+			$warning                   = array(
+				'class'   => 'notice-warning',
+				'heading' => 'Manual recovery',
+				'message' => 'Setup is disabled on this recovery view.',
+				'details' => array(),
+			);
+			$model['recovery_warning'] = $warning;
+			ob_start();
+			$panel_html = $panel->invoke( $this->controls(), $model );
+			ob_end_clean();
+			ob_start();
+			$section->invoke( $this->controls(), array(), '', true, array( $result, $warning ) );
+			$section_html = (string) ob_get_clean();
+			foreach ( array( $panel_html, $section_html ) as $html ) {
+				self::assertStringContainsString( $result['heading'], $html, $code );
+				self::assertStringContainsString( htmlspecialchars( $result['message'], ENT_QUOTES ), $html, $code );
+				self::assertStringNotContainsString( '<hook>', $html, $code );
+				if ( in_array( $code, array( 'recovery_record_failed', 'record_conflict', 'record_update_failed' ), true ) ) {
+					self::assertSame( 1, substr_count( $html, 'Inspect the Git provider and Core manually before leaving this view or retrying.' ), $code );
+					self::assertSame( 1, substr_count( $html, 'Inspect the Git provider' ), $code );
+					self::assertStringContainsString( 'record_conflict' === $code ? 'Nothing was overwritten' : 'record was not overwritten', $html, $code );
+					if ( 'record_conflict' === $code ) {
+						self::assertStringContainsString( 'newer webhook-management record won the persistence race', $html );
+					}
+					self::assertSame( 1, substr_count( $html, 'Git provider hook reference: &lt;hook&gt;' ), $code );
+					self::assertSame( 1, substr_count( $html, 'Core signing profile: &lt;profile&gt;' ), $code );
+					self::assertStringNotContainsString( '<profile>', $html, $code );
+				}
+			}
+		}
+		$warning                   = array(
+			'class'   => 'notice-warning',
+			'heading' => 'Manual recovery',
+			'message' => 'Setup disabled on this recovery view.',
+			'details' => array( 'Provider: <provider>', 'Hook: <hook>', 'Profile: <profile>' ),
+		);
+		$model                     = $this->webhook_panel_model( false, false, array() );
+		$model['recovery_warning'] = $warning;
+		$panel_html                = $panel->invoke( $this->controls(), $model );
+		ob_start();
+		$section->invoke( $this->controls(), array(), '', true, array( $warning ) );
+		$section_html = (string) ob_get_clean();
+		foreach ( array( $panel_html, $section_html ) as $html ) {
+			foreach ( array( 'provider', 'hook', 'profile' ) as $value ) {
+				self::assertStringContainsString( '&lt;' . $value . '&gt;', $html );
+				self::assertStringNotContainsString( '<' . $value . '>', $html );
+			}
+		}
+		$result          = $presentation->invoke( $display, 'unknown', null, '<script>provider</script>' );
+		$model           = $this->webhook_panel_model( false, false, array() );
+		$model['result'] = $result;
+		self::assertStringNotContainsString( '<script>provider</script>', $panel->invoke( $this->controls(), $model ) );
+	}
+
 	public function test_webhook_control_template_keeps_credential_secret_and_operation_identities_across_record_states(): void {
 		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
 		$states = array(

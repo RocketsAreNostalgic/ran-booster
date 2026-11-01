@@ -816,35 +816,97 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
 	}
 
-	/** @return iterable<string,array{bool}> */
+	/** @return iterable<string,array{string}> */
+	public static function native_recovery_presenter_cases(): iterable {
+		yield 'snapshot' => array( 'snapshot' );
+		yield 'snapshot error' => array( 'error' );
+		yield 'missing service' => array( 'missing' );
+		yield 'adoption storage error' => array( 'adoption' );
+	}
+
+	#[DataProvider( 'native_recovery_presenter_cases' )]
+	public function test_native_recovery_presenter_skips_adoption_and_requires_verified_details( string $scenario ): void {
+		$_GET['tab'] = 'gh';
+		$db          = new AttemptRepositoryDatabase();
+		$store       = new \RAN\Storage\GitHubSelectionStore( $db, 'wp_options' );
+		$bundled     = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'booster.php',
+				'implementation_id'      => 'bundled',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$state       = $store->initialize_bundled( $bundled );
+		if ( 'adoption' !== $scenario ) {
+			$marked                    = $state;
+			$marked['native_mutation'] = array(
+				'selection_generation' => 0,
+				'owner_tag'            => str_repeat( 'a', 32 ),
+				'target_type'          => 'plugin',
+				'installed_identity'   => 'target/main.php',
+				'phase'                => 'started',
+			);
+			self::assertTrue( $store->compare_and_swap( $state, $marked ) );
+		}
+		$selection = new \RAN\RepositoryProvider\GitHubProviderSelection( $store, '/unused', $bundled );
+		$secrets   = $this->createMock( SecretsFile::class );
+		$adoption  = $secrets->expects( 'adoption' === $scenario ? self::once() : self::never() )->method( 'with_github_adoption_inventory' );
+		if ( 'adoption' === $scenario ) {
+			$adoption->willThrowException( new \RAN\Secrets\SecretsStorageUnavailable( 'unavailable' ) );
+		}
+		$plugins = $this->createMock( PluginRepository::class );
+		if ( 'error' === $scenario ) {
+			$plugins->method( 'native_recovery_record' )->willThrowException( new RuntimeException( 'unavailable' ) );
+		} else {
+			$plugins->method( 'native_recovery_record' )->willReturn( null );
+		}
+		$removals = 'missing' === $scenario ? null : new PackageRemovalService( $plugins, $this->createStub( ThemeRepository::class ), $this->createStub( \RAN\PackageRemoval\PackageRemovalGateway::class ), null, new WordPressUpdaterLock(), github_selection: $selection );
+		$data     = $this->dashboard( $secrets, github_selection: $selection, removals: $removals )->get_index()['data']['github_selection'];
+		if ( 'snapshot' === $scenario ) {
+			self::assertSame( 'target/main.php', $data['recovery']['identifier'] );
+			self::assertSame( '', $data['error'] );
+		} else {
+			self::assertNull( $data['recovery'] );
+			self::assertStringContainsString( 'adoption' === $scenario ? 'Set up secure credential storage' : 'Native recovery details could not be verified', $data['error'] );
+		}
+		self::assertNull( $data['review'] );
+	}
+
+	/** @return iterable<string,array{bool,bool,string,bool}> */
 	public static function native_recovery_permissions(): iterable {
-		yield 'authorized' => array( true );
-		yield 'denied' => array( false );
+		yield 'authorized plugin available' => array( true, true, 'plugin', true );
+		yield 'authorized theme paused' => array( true, false, 'theme', true );
+		yield 'denied plugin paused' => array( false, false, 'plugin', true );
+		yield 'missing details' => array( true, false, 'plugin', false );
 	}
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	#[DataProvider( 'native_recovery_permissions' )]
-	public function test_provider_view_renders_bounded_native_recovery_confirmation( bool $authorized ): void {
+	public function test_provider_view_renders_bounded_native_recovery_confirmation( bool $authorized, bool $available, string $type, bool $has_snapshot ): void {
 		$_GET['tab']                              = 'bb';
 		$GLOBALS['ran_booster_test_capabilities'] = array( 'activate_plugins' => $authorized );
 		$data                                     = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
 		$data['github_selection']                 = array(
-			'available'      => true,
+			'available'      => $available,
 			'status'         => array(
 				'state'      => 'recovery_required',
 				'candidates' => array(),
 				'current'    => null,
 			),
-			'error'          => '',
+			'error'          => $has_snapshot ? '' : 'Native recovery details could not be verified.',
 			'package_counts' => null,
 			'review'         => null,
-			'recovery'       => array(
+			'recovery'       => $has_snapshot ? array(
 				'digest'     => str_repeat( 'b', 64 ),
-				'type'       => 'plugin',
+				'type'       => $type,
 				'identifier' => '<target>/main.php',
 				'managed'    => false,
-			),
+			) : null,
 		);
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the fixed Dashboard model to its production view.
 		extract( $data );
@@ -856,7 +918,21 @@ final class DashboardIndexRoutingTest extends TestCase {
 			ob_end_clean();
 			unset( $GLOBALS['ran_booster_test_capabilities'] );
 		}
-		self::assertStringContainsString( 'Recover an interrupted native installation', $html );
+		self::assertStringContainsString( 'An installation needs recovery', $html );
+		self::assertStringContainsString( 'could not confirm whether the installation or update completed', $html );
+		if ( ! $available ) {
+			self::assertLessThan( strpos( $html, 'GitHub operations are paused.' ), strpos( $html, 'An installation needs recovery' ) );
+		}
+		if ( ! $has_snapshot ) {
+			self::assertStringContainsString( 'Native recovery details could not be verified.', $html );
+			self::assertStringNotContainsString( 'value="recover-github-native"', $html );
+			return;
+		}
+		self::assertStringContainsString( '<code>Affected ' . $type . ': &lt;target&gt;/main.php</code>', $html );
+		self::assertStringContainsString( '<summary>Recovery details</summary>', $html );
+		self::assertStringContainsString( 'A missing main file alone is insufficient for a plugin or theme with a folder.', $html );
+		self::assertStringContainsString( 'does not delete files or repair the installation', $html );
+		self::assertStringContainsString( 'Cleanup of temporary files from the interrupted process remains unverified.', $html );
 		self::assertStringContainsString( '&lt;target&gt;/main.php', $html );
 		self::assertStringNotContainsString( '<target>/main.php', $html );
 		if ( ! $authorized ) {
@@ -867,9 +943,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[action]" value="recover-github-native"', $html );
 		self::assertStringContainsString( 'name="ran_booster[confirmed_stopped]" value="1" required', $html );
 		self::assertStringContainsString( 'name="ran_booster[confirmed_removal]" value="1" required', $html );
-		self::assertStringContainsString( 'A missing main file alone is insufficient.', $html );
-		self::assertStringContainsString( 'does not delete files or repair an installation', $html );
-		self::assertStringContainsString( 'Cleanup of temporary files from the interrupted process remains unverified.', $html );
+		self::assertStringContainsString( 'Verify removal and disconnect', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
 	}
 
@@ -3889,7 +3963,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			$plugin_repository,
 			new Booster(),
 			$theme_repository,
-			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock, $github_selection ),
+			new ProviderSettingsPresenter( $providers, $secrets, new CredentialUsageReader( new CredentialUsageDatabase(), 'wp_ran_booster_packages' ), $public_lookup_profiles ?? new InMemoryPublicRepositoryLookupProfileStore(), new \RAN\Tests\Support\InMemoryCredentialExpiryObservationStore(), null, $plugin_repository, $theme_repository, $webhook_assistance, $branch_check_evidence ?? new DashboardBranchCheckEvidenceStore(), $branch_check_lock, $github_selection, package_removal: $removals ),
 			$troubleshooting ?? new TroubleshootingService( new LocalTroubleshootingService( $secrets ), $providers ),
 			new AdminTabRegistry( $providers, $github_selection ),
 			new ProviderDocumentationPresenter( $providers ),

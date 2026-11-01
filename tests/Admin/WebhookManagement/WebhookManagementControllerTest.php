@@ -951,8 +951,8 @@ final class WebhookManagementControllerTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url,WordPress.Security.NonceVerification.Recommended -- Test parses a local redirect into display-only query state.
 		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $_GET );
 		$html = $this->render_panel( $gateway, $store );
-		self::assertStringContainsString( 'provider hook reference 77', $html );
-		self::assertStringContainsString( 'Core signing profile wh_0123456789abcdef01234567', $html );
+		self::assertSame( 1, substr_count( $html, 'Git provider hook reference: 77' ) );
+		self::assertSame( 1, substr_count( $html, 'Core signing profile: wh_0123456789abcdef01234567' ) );
 		self::assertStringContainsString( 'value="setup"', $html );
 		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
 	}

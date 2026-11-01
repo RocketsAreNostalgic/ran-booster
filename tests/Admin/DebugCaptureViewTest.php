@@ -23,7 +23,7 @@ final class DebugCaptureViewTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'This temporary capture records Booster events only. It does not require or enable <code>WP_DEBUG_LOG</code> and excludes PHP, WordPress, theme, and other-plugin messages.', $html );
-		self::assertStringContainsString( '<summary>Capture PHP and WordPress errors</summary>', $html );
+		self::assertStringContainsString( '<summary>Logging details</summary>', $html );
 		self::assertStringContainsString( 'define( &#039;WP_DEBUG_DISPLAY&#039;, false );', $html );
 		self::assertStringNotContainsString( 'notice-warning', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading">Logging</h3>', $html );
@@ -44,7 +44,7 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringNotContainsString( 'inactive-secret-canary', $html );
 		self::assertStringNotContainsString( 'ignored-time', $html );
 		self::assertStringNotContainsString( 'ignored-delete-time', $html );
-		self::assertStringNotContainsString( 'data-support-report-copy', $html );
+		$this->assert_empty_capture_field( $html );
 		$this->assert_capture_footer( $html, array( 'start' ) );
 	}
 
@@ -130,8 +130,7 @@ final class DebugCaptureViewTest extends TestCase {
 				)
 			);
 
-			self::assertStringNotContainsString( 'data-support-report-copy', $html );
-			self::assertStringNotContainsString( 'ran-booster-debug-capture-content', $html );
+			$this->assert_empty_capture_field( $html );
 		}
 	}
 
@@ -163,8 +162,16 @@ final class DebugCaptureViewTest extends TestCase {
 			self::assertStringNotContainsString( '<form', $html );
 			self::assertStringNotContainsString( 'ran_booster[operation]', $html );
 			self::assertStringNotContainsString( 'ran-booster-debug-capture__footer', $html );
-			self::assertStringNotContainsString( 'data-support-report-copy', $html );
+			$this->assert_empty_capture_field( $html );
 		}
+	}
+
+	private function assert_empty_capture_field( string $html ): void {
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//textarea[@id="ran-booster-debug-capture-content" and @readonly and @rows="10" and @placeholder="No Booster events have been captured yet."])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//button[@data-support-report-copy and @disabled])' ) );
 	}
 
 	/** @param list<string> $operations */
@@ -179,6 +186,19 @@ final class DebugCaptureViewTest extends TestCase {
 		}
 		self::assertSame( count( $operations ), substr_count( $html, 'name="_wpnonce" value="ran-booster-manage-debug-capture"' ) );
 		self::assertLessThan( strpos( $html, 'ran-booster-debug-capture__wordpress-help' ), strpos( $html, 'ran-booster-debug-capture__footer' ) );
+	}
+
+	public function test_logging_details_escape_configured_capture_path(): void {
+		$html = $this->render_view(
+			array(
+				'state'           => 'inactive',
+				'configured_path' => '/private/<site>/ran-booster-debug.php',
+			)
+		);
+		self::assertStringContainsString( '<code>/private/&lt;site&gt;/ran-booster-debug.php</code>', $html );
+		self::assertStringNotContainsString( '/private/<site>/', $html );
+		self::assertStringContainsString( '<code>WP_DEBUG</code> and <code>WP_DEBUG_LOG</code>', $html );
+		self::assertStringContainsString( '<code>.php</code> guard', $html );
 	}
 
 	public function test_mutation_error_stays_visible_and_escaped(): void {

@@ -2294,6 +2294,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( array(), $data['troubleshooting'] );
 			self::assertSame( 'active', $data['debug_capture']['state'] );
 			self::assertSame( 'ran-booster-debug.php', $data['debug_capture']['filename'] );
+			self::assertSame( $directory . '/ran-booster-debug.php', $data['debug_capture']['configured_path'] );
+			$GLOBALS['ran_booster_test_capabilities']['activate_plugins'] = false;
+			$limited = $this->dashboard( $this->throwing_secrets(), null, null, null, null, null, $capture )->get_index()['data'];
+			self::assertNull( $limited['debug_capture']['configured_path'] );
+			unset( $GLOBALS['ran_booster_test_capabilities']['activate_plugins'] );
 			self::assertStringContainsString( '[ran-booster] safe dashboard event', $data['debug_capture']['content'] );
 			self::assertArrayNotHasKey( 'deployment_activity', $data );
 		} finally {

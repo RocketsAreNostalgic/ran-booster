@@ -1373,7 +1373,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1500
+#: RAN/Dashboard.php:1505
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -2613,7 +2613,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:278
 #: RAN/Troubleshooting/TroubleshootingService.php:331
 #: RAN/Troubleshooting/TroubleshootingService.php:334
-#: views/debug-capture.php:60
+#: views/debug-capture.php:61
 #: views/onboarding.php:79
 #: views/settings-storage.php:26
 #: views/troubleshooting-installation.php:20
@@ -6198,147 +6198,155 @@ msgstr ""
 msgid "Booster %s"
 msgstr ""
 
-#: views/debug-capture.php:45
+#: views/debug-capture.php:46
 msgid "Keep the existing WP_DEBUG_LOG destination."
 msgstr ""
 
-#: views/debug-capture.php:57
+#: views/debug-capture.php:58
 #: views/extensions.php:94
 #: views/troubleshooting-installation.php:155
 msgid "Inactive"
 msgstr ""
 
-#: views/debug-capture.php:58
+#: views/debug-capture.php:59
 msgid "Capture active"
 msgstr ""
 
-#: views/debug-capture.php:59
+#: views/debug-capture.php:60
 msgid "Capture retained"
 msgstr ""
 
-#: views/debug-capture.php:61
+#: views/debug-capture.php:62
 msgid "File needs attention"
 msgstr ""
 
-#: views/debug-capture.php:73
+#: views/debug-capture.php:74
 #: views/troubleshooting.php:39
 msgid "Logging"
 msgstr ""
 
-#: views/debug-capture.php:79
+#: views/debug-capture.php:80
 msgid "Booster event capture"
 msgstr ""
 
 #. translators: %s: UTC capture end time.
-#: views/debug-capture.php:82
+#: views/debug-capture.php:84
 #, php-format
 msgid "until %s."
 msgstr ""
 
 #. translators: %s: UTC automatic deletion time.
-#: views/debug-capture.php:84
+#: views/debug-capture.php:86
 #, php-format
 msgid "retained until %s."
 msgstr ""
 
 #. translators: %s: WP_DEBUG_LOG constant.
-#: views/debug-capture.php:92
+#: views/debug-capture.php:95
 #, php-format
 msgid "This temporary capture records Booster events only. It does not require or enable %s and excludes PHP, WordPress, theme, and other-plugin messages."
 msgstr ""
 
-#: views/debug-capture.php:95
+#: views/debug-capture.php:98
 msgid "Configured capture file:"
 msgstr ""
 
-#: views/debug-capture.php:97
+#: views/debug-capture.php:99
 msgid "Starting a new capture replaces this retained capture."
 msgstr ""
 
 #: views/debug-capture.php:102
-#: views/debug-capture.php:107
+#: views/debug-capture.php:105
 msgid "Captured Booster events"
 msgstr ""
 
-#: views/debug-capture.php:103
-msgid "Newest activity is shown in a bounded, read-only excerpt."
-msgstr ""
-
-#: views/debug-capture.php:110
-msgid "Copy captured events"
-msgstr ""
-
-#: views/debug-capture.php:112
-msgid "Captured events copied to the clipboard."
-msgstr ""
-
-#: views/debug-capture.php:112
-msgid "Clipboard access failed. The captured events are selected; use your browser copy command."
-msgstr ""
-
-#: views/debug-capture.php:115
+#: views/debug-capture.php:107
 msgid "No Booster events have been captured yet."
 msgstr ""
 
-#: views/debug-capture.php:115
-msgid "No Booster events were captured."
+#: views/debug-capture.php:108
+msgid "Copy captured events"
 msgstr ""
 
-#: views/debug-capture.php:119
+#: views/debug-capture.php:110
+msgid "Captured events copied to the clipboard."
+msgstr ""
+
+#: views/debug-capture.php:110
+msgid "Clipboard access failed. The captured events are selected; use your browser copy command."
+msgstr ""
+
+#: views/debug-capture.php:114
 msgid "The temporary capture file could not be read safely. Booster left it unchanged."
 msgstr ""
 
-#: views/debug-capture.php:121
+#: views/debug-capture.php:116
 msgid "Temporary logging capture is unavailable because Booster cannot safely use its capture file location."
 msgstr ""
 
-#: views/debug-capture.php:125
+#: views/debug-capture.php:120
 msgid "Logging capture actions"
 msgstr ""
 
-#: views/debug-capture.php:130
+#: views/debug-capture.php:125
 msgid "Refresh"
 msgstr ""
 
-#: views/debug-capture.php:131
+#: views/debug-capture.php:126
 msgid "Stop capture"
 msgstr ""
 
-#: views/debug-capture.php:133
+#: views/debug-capture.php:128
 msgid "Start new capture"
 msgstr ""
 
-#: views/debug-capture.php:133
+#: views/debug-capture.php:128
 msgid "Start 60-minute capture"
 msgstr ""
 
-#: views/debug-capture.php:140
+#: views/debug-capture.php:135
 msgid "Delete capture"
 msgstr ""
 
-#: views/debug-capture.php:148
-msgid "Capture PHP and WordPress errors"
+#: views/debug-capture.php:143
+msgid "Logging details"
 msgstr ""
 
-#: views/debug-capture.php:150
+#. translators: %s: configured temporary Booster capture path.
+#: views/debug-capture.php:149
+#, php-format
+msgid "Booster capture location: %s."
+msgstr ""
+
+#: views/debug-capture.php:153
+msgid "Booster capture location is unavailable."
+msgstr ""
+
+#. translators: 1: WP_DEBUG constant, 2: WP_DEBUG_LOG constant, 3: capture file extension.
+#: views/debug-capture.php:157
+#, php-format
+msgid "Booster events can also go to PHP’s error log when %1$s and %2$s are enabled. The temporary capture records Booster events only, not PHP errors. Its %3$s guard helps prevent direct access to the capture file."
+msgstr ""
+
+#: views/debug-capture.php:160
 msgid "For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:"
 msgstr ""
 
-#: views/debug-capture.php:154
+#: views/debug-capture.php:164
 msgid "A custom log destination is configured. Review wp-config.php for its location."
 msgstr ""
 
 #. translators: %s: WordPress debug log path.
-#: views/debug-capture.php:158
+#: views/debug-capture.php:168
 #, php-format
 msgid "Log location when enabled: %s."
 msgstr ""
 
-#: views/debug-capture.php:162
+#: views/debug-capture.php:172
 msgid "Turn off debugging after reproducing the issue, and review the log privately before sharing it."
 msgstr ""
 
-#: views/debug-capture.php:163
+#: views/debug-capture.php:173
 msgid "WordPress debugging documentation"
 msgstr ""
 

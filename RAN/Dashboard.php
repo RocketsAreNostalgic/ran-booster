@@ -1404,16 +1404,20 @@ class Dashboard {
 	/** @return array<string, mixed> */
 	private function debug_capture_payload(): array {
 		$fallback = array(
-			'state'         => 'unavailable',
-			'filename'      => 'ran-booster-debug.php',
-			'capture_until' => '',
-			'delete_after'  => '',
-			'content'       => '',
+			'state'           => 'unavailable',
+			'filename'        => 'ran-booster-debug.php',
+			'configured_path' => null,
+			'capture_until'   => '',
+			'delete_after'    => '',
+			'content'         => '',
 		);
 		if ( null === $this->debug_capture ) {
 			return $fallback;
 		}
 
+		if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) {
+			$fallback['configured_path'] = $this->debug_capture->configured_path();
+		}
 		try {
 			$snapshot = $this->debug_capture->snapshot();
 		} catch ( Throwable $failure ) {
@@ -1434,11 +1438,12 @@ class Dashboard {
 		}
 
 		return array(
-			'state'         => $snapshot['state'],
-			'filename'      => $snapshot['filename'],
-			'capture_until' => $snapshot['active_until'] ?? '',
-			'delete_after'  => $snapshot['expires_at'] ?? '',
-			'content'       => implode( "\n", $lines ),
+			'state'           => $snapshot['state'],
+			'filename'        => $snapshot['filename'],
+			'configured_path' => $fallback['configured_path'],
+			'capture_until'   => $snapshot['active_until'] ?? '',
+			'delete_after'    => $snapshot['expires_at'] ?? '',
+			'content'         => implode( "\n", $lines ),
 		);
 	}
 

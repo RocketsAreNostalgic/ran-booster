@@ -327,7 +327,9 @@
 
 .ran-booster-admin .ran-booster-debug-capture__header {
 	display: flex;
-	align-items: center;
+	box-sizing: border-box;
+	min-block-size: 5rem;
+	align-items: flex-start;
 	flex-wrap: wrap;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-12);
@@ -346,6 +348,15 @@
 	margin: 0;
 }
 
+.ran-booster-admin .ran-booster-debug-capture__deadline {
+	min-inline-size: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-debug-capture__retained-note[aria-hidden="true"] {
+	visibility: hidden;
+}
+
 .ran-booster-admin .ran-booster-debug-capture__body {
 	padding: 0 var(--ran-booster-space-20) var(--ran-booster-space-20);
 }
@@ -360,6 +371,9 @@
 
 .ran-booster-admin .ran-booster-debug-capture__footer {
 	display: flex;
+	box-sizing: border-box;
+	min-block-size: 4rem;
+	align-content: flex-start;
 	align-items: center;
 	flex-wrap: wrap;
 	gap: var(--ran-booster-space-8);
@@ -387,6 +401,7 @@
 	box-sizing: border-box;
 	inline-size: 100%;
 	max-inline-size: none;
+	block-size: 15rem;
 	padding: var(--ran-booster-space-12);
 	border-color: var(--ran-booster-strong-divider);
 	background: var(--ran-booster-surface-subtle);
@@ -394,12 +409,14 @@
 	resize: vertical;
 }
 
-.ran-booster-admin .ran-booster-debug-capture__no-events {
-	margin: 0;
-	padding: var(--ran-booster-space-18);
-	border: 1px dashed var(--ran-booster-border);
-	background: var(--ran-booster-surface-subtle);
-	color: var(--ran-booster-text-muted);
+@media screen and (max-width: 600px) {
+	.ran-booster-admin .ran-booster-debug-capture__header {
+		min-block-size: 9rem;
+	}
+
+	.ran-booster-admin .ran-booster-debug-capture__footer {
+		min-block-size: 8.125rem;
+	}
 }
 
 .ran-booster-admin .ran-booster-portability__chooser,

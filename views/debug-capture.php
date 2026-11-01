@@ -18,6 +18,7 @@ $capture_state       = isset( $debug_capture['state'] ) && in_array(
 $filename            = is_string( $debug_capture['filename'] ?? null )
 	? basename( str_replace( '\\', '/', $debug_capture['filename'] ) )
 	: 'ran-booster-debug.php';
+$configured_path     = is_string( $debug_capture['configured_path'] ?? null ) ? $debug_capture['configured_path'] : null;
 $capture_until       = is_string( $debug_capture['capture_until'] ?? null )
 	? $debug_capture['capture_until']
 	: '';
@@ -78,11 +79,13 @@ $status_classes       = array(
 			<div class="ran-booster-debug-capture__heading">
 				<h4 class="ran-booster-section__title"><?php esc_html_e( 'Booster event capture', 'ran-booster' ); ?></h4>
 				<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_classes[ $capture_state ] ); ?>"><?php echo esc_html( $status_labels[ $capture_state ] ); ?></span>
-				<?php if ( 'active' === $capture_state && '' !== $capture_until ) { ?>
-					<span class="description"><?php echo esc_html( sprintf( /* translators: %s: UTC capture end time. */ __( 'until %s.', 'ran-booster' ), $capture_until ) ); ?></span>
-				<?php } elseif ( 'retained' === $capture_state && '' !== $delete_after ) { ?>
-					<span class="description"><?php echo esc_html( sprintf( /* translators: %s: UTC automatic deletion time. */ __( 'retained until %s.', 'ran-booster' ), $delete_after ) ); ?></span>
-				<?php } ?>
+				<span class="ran-booster-debug-capture__deadline description">
+					<?php if ( 'active' === $capture_state && '' !== $capture_until ) { ?>
+						<?php echo esc_html( sprintf( /* translators: %s: UTC capture end time. */ __( 'until %s.', 'ran-booster' ), $capture_until ) ); ?>
+					<?php } elseif ( 'retained' === $capture_state && '' !== $delete_after ) { ?>
+						<?php echo esc_html( sprintf( /* translators: %s: UTC automatic deletion time. */ __( 'retained until %s.', 'ran-booster' ), $delete_after ) ); ?>
+					<?php } ?>
+				</span>
 			</div>
 		</div>
 		<div class="ran-booster-debug-capture__body">
@@ -93,29 +96,21 @@ $status_classes       = array(
 				?>
 			</p>
 			<p class="description"><?php esc_html_e( 'Configured capture file:', 'ran-booster' ); ?> <code><?php echo esc_html( $filename ); ?></code></p>
-			<?php if ( 'retained' === $capture_state ) { ?>
-				<p class="description"><?php esc_html_e( 'Starting a new capture replaces this retained capture.', 'ran-booster' ); ?></p>
-			<?php } ?>
-			<?php if ( in_array( $capture_state, array( 'active', 'retained' ), true ) ) { ?>
-				<div class="ran-booster-debug-capture__events">
-					<div class="ran-booster-debug-capture__events-header">
-						<h4 id="ran-booster-debug-capture-events-heading"><?php esc_html_e( 'Captured Booster events', 'ran-booster' ); ?></h4>
-						<p class="description"><?php esc_html_e( 'Newest activity is shown in a bounded, read-only excerpt.', 'ran-booster' ); ?></p>
-					</div>
-					<?php if ( '' !== $content ) { ?>
-						<div data-support-report-tools>
-							<label class="screen-reader-text" for="ran-booster-debug-capture-content"><?php esc_html_e( 'Captured Booster events', 'ran-booster' ); ?></label>
-							<div class="ran-booster-troubleshooting__report-field">
-								<textarea id="ran-booster-debug-capture-content" class="large-text code" rows="10" readonly aria-labelledby="ran-booster-debug-capture-events-heading"><?php echo esc_textarea( $content ); ?></textarea>
-								<button type="button" class="button-link ran-booster-troubleshooting__report-copy hide-if-no-js" data-support-report-copy aria-label="<?php esc_attr_e( 'Copy captured events', 'ran-booster' ); ?>"><span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>
-							</div>
-							<p data-support-report-status role="status" aria-live="polite" aria-atomic="true" data-copied-message="<?php esc_attr_e( 'Captured events copied to the clipboard.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The captured events are selected; use your browser copy command.', 'ran-booster' ); ?>"></p>
-						</div>
-					<?php } else { ?>
-						<p class="ran-booster-debug-capture__no-events"><?php echo esc_html( 'active' === $capture_state ? __( 'No Booster events have been captured yet.', 'ran-booster' ) : __( 'No Booster events were captured.', 'ran-booster' ) ); ?></p>
-					<?php } ?>
+			<p class="description ran-booster-debug-capture__retained-note"<?php echo 'retained' === $capture_state ? '' : ' aria-hidden="true"'; ?>><?php esc_html_e( 'Starting a new capture replaces this retained capture.', 'ran-booster' ); ?></p>
+			<div class="ran-booster-debug-capture__events">
+				<div class="ran-booster-debug-capture__events-header">
+					<h4 id="ran-booster-debug-capture-events-heading"><?php esc_html_e( 'Captured Booster events', 'ran-booster' ); ?></h4>
 				</div>
-			<?php } elseif ( 'malformed' === $capture_state ) { ?>
+				<div data-support-report-tools>
+					<label class="screen-reader-text" for="ran-booster-debug-capture-content"><?php esc_html_e( 'Captured Booster events', 'ran-booster' ); ?></label>
+					<div class="ran-booster-troubleshooting__report-field">
+						<textarea id="ran-booster-debug-capture-content" class="large-text code" rows="10" readonly aria-labelledby="ran-booster-debug-capture-events-heading" placeholder="<?php esc_attr_e( 'No Booster events have been captured yet.', 'ran-booster' ); ?>"><?php echo esc_textarea( in_array( $capture_state, array( 'active', 'retained' ), true ) ? $content : '' ); ?></textarea>
+						<button type="button" class="button-link ran-booster-troubleshooting__report-copy hide-if-no-js" data-support-report-copy aria-label="<?php esc_attr_e( 'Copy captured events', 'ran-booster' ); ?>"<?php disabled( '' === $content || ! in_array( $capture_state, array( 'active', 'retained' ), true ) ); ?>><span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>
+					</div>
+					<p data-support-report-status role="status" aria-live="polite" aria-atomic="true" data-copied-message="<?php esc_attr_e( 'Captured events copied to the clipboard.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The captured events are selected; use your browser copy command.', 'ran-booster' ); ?>"></p>
+				</div>
+			</div>
+			<?php if ( 'malformed' === $capture_state ) { ?>
 				<div class="notice notice-error inline"><p><?php esc_html_e( 'The temporary capture file could not be read safely. Booster left it unchanged.', 'ran-booster' ); ?></p></div>
 			<?php } elseif ( 'unavailable' === $capture_state ) { ?>
 				<div class="notice notice-error inline"><p><?php esc_html_e( 'Temporary logging capture is unavailable because Booster cannot safely use its capture file location.', 'ran-booster' ); ?></p></div>
@@ -144,9 +139,24 @@ $status_classes       = array(
 		<?php } ?>
 	</div>
 
-	<details class="ran-booster-debug-capture__wordpress-help ran-booster-troubleshooting__disclosure ran-booster-disclosure">
-		<summary><?php esc_html_e( 'Capture PHP and WordPress errors', 'ran-booster' ); ?></summary>
+	<details id="ran-booster-logging-details" data-ran-booster-logging-disclosure class="ran-booster-debug-capture__wordpress-help ran-booster-troubleshooting__disclosure ran-booster-disclosure">
+		<summary><?php esc_html_e( 'Logging details', 'ran-booster' ); ?></summary>
 		<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+			<p>
+			<?php
+			if ( null !== $configured_path ) {
+				?>
+				<?php /* translators: %s: configured temporary Booster capture path. */ ?><?php printf( esc_html__( 'Booster capture location: %s.', 'ran-booster' ), '<code>' . esc_html( $configured_path ) . '</code>' ); ?>
+				<?php
+			} else {
+				?>
+				<?php esc_html_e( 'Booster capture location is unavailable.', 'ran-booster' ); ?><?php } ?></p>
+			<p>
+				<?php
+				/* translators: 1: WP_DEBUG constant, 2: WP_DEBUG_LOG constant, 3: capture file extension. */
+				printf( esc_html__( 'Booster events can also go to PHP’s error log when %1$s and %2$s are enabled. The temporary capture records Booster events only, not PHP errors. Its %3$s guard helps prevent direct access to the capture file.', 'ran-booster' ), '<code>WP_DEBUG</code>', '<code>WP_DEBUG_LOG</code>', '<code>.php</code>' );
+				?>
+			</p>
 			<p><?php esc_html_e( 'For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
 			<pre><code><?php echo esc_html( "define( 'WP_DEBUG', true );\n" . $wp_debug_log_example . "\ndefine( 'WP_DEBUG_DISPLAY', false );" ); ?></code></pre>
 			<p>

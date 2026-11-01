@@ -855,6 +855,7 @@ final class ReleaseManagementDisplay {
 		}
 
 		$message = $this->result_message( $code, $successful, $type, $channel, $status );
+		$review  = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
 		$tone    = $successful
 			? 'notice-success'
 			: ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists' ), true )
@@ -862,7 +863,13 @@ final class ReleaseManagementDisplay {
 				: 'notice-error' );
 		?>
 		<div class="notice <?php echo esc_attr( $tone ); ?><?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?>>
+			<?php if ( $review ) { ?>
+				<p><strong><?php echo esc_html( 'installed_but_unmanaged' === $code ? __( 'Package present, Booster management not established', 'ran-booster' ) : __( 'Installation outcome needs review', 'ran-booster' ) ); ?></strong></p>
+			<?php } ?>
 			<p><?php echo esc_html( $message ); ?></p>
+			<?php if ( $review ) { ?>
+				<p><?php esc_html_e( 'Inspect the installed version, activation state and Booster management before using Link installed or retrying.', 'ran-booster' ); ?></p>
+			<?php } ?>
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>
 				<?php $this->render_failure_help( $code, $message ); ?>
 			<?php } ?>
@@ -898,9 +905,9 @@ final class ReleaseManagementDisplay {
 			'invalid_request' => __( 'The published release request was invalid. No package was installed or adopted. Reload and try again.', 'ran-booster' ),
 			'service_unavailable' => __( 'Published release controls are temporarily unavailable. No package settings were changed. No package was installed.', 'ran-booster' ),
 			'package_already_exists' => __( 'That plugin or theme is already installed or managed. No package was overwritten.', 'ran-booster' ),
-			'installed_but_unmanaged' => __( 'A package now exists but Booster did not adopt it. Verify the installed version and activation state before using Link installed or retrying.', 'ran-booster' ),
-			'management_state_uncertain' => __( 'Booster could not confirm the final installed or managed state. Review installed packages and Booster management before retrying.', 'ran-booster' ),
-			'installation_cleanup_failed' => __( 'Installation finalization failed while cleaning the temporary archive or releasing the updater lock. Review installed packages and Booster management before retrying.', 'ran-booster' ),
+			'installed_but_unmanaged' => __( 'A package is present, but Booster did not establish management for it.', 'ran-booster' ),
+			'management_state_uncertain' => __( 'Booster could not confirm the final installation or management state.', 'ran-booster' ),
+			'installation_cleanup_failed' => __( 'Booster could not confirm the installation or management state after finalization failed.', 'ran-booster' ),
 			'wordpress_refused',
 			'wordpress_failed',
 			'wordpress_restored',

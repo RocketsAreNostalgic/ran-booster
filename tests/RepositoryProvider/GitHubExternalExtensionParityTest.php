@@ -243,7 +243,7 @@ final class GitHubExternalExtensionParityTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_bundled_git_hub_passes_the_same_configured_limit_to_release_operations(): void {
-		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', self::ARTIFACT_LIMIT );
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', self::ARTIFACT_LIMIT );
 
 		$updater   = new Phase5BundledReleaseUpdater();
 		$container = new CoreContainer();

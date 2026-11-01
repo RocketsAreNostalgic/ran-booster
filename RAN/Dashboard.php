@@ -644,7 +644,7 @@ class Dashboard {
 		}
 		$fields = $preferences->projection();
 		foreach ( $fields as $key => $field ) {
-			$request_key = 'max_archive_bytes' === $key ? 'max_archive_mib' : $key;
+			$request_key = 'max_download_bytes' === $key ? 'max_download_mib' : $key;
 			if ( ! $field['locked'] && is_string( $values[ $request_key ] ?? null ) ) {
 				$this->general_attempted[ $key ] = substr( $values[ $request_key ], 0, 32 );
 				if ( null === $preferences->parse_submission( array( $request_key => $values[ $request_key ] ), array( $key ) ) ) {

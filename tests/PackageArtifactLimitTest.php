@@ -24,7 +24,7 @@ final class PackageArtifactLimitTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_configured_site_limit_resolves_from_the_single_booster_authority(): void {
-		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 1048576 );
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 1048576 );
 
 		self::assertSame( 1048576, PackageArtifactLimit::resolve() );
 	}
@@ -32,7 +32,7 @@ final class PackageArtifactLimitTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_invalid_configured_site_limit_fails_closed_at_resolution(): void {
-		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES - 1 );
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', PackageArtifactLimit::MINIMUM_ARTIFACT_BYTES - 1 );
 
 		$this->expectException( InvalidArgumentException::class );
 		PackageArtifactLimit::resolve();

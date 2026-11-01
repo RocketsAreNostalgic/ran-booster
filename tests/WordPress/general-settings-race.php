@@ -154,7 +154,7 @@ final class RAN_Booster_General_Settings_Race {
 				'self_update_discovery' => '1',
 				'history_rows'          => '2000',
 				'history_days'          => '17',
-				'max_archive_bytes'     => '52428800',
+				'max_download_bytes'    => '52428800',
 			),
 			function ( callable $operation ) use ( &$lock ): string {
 				global $wpdb;

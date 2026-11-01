@@ -69,7 +69,7 @@ $hide                 = $field( 'hide_github' );
 $discovery            = $field( 'self_update_discovery' );
 $hide_locked          = true === $hide['locked'] || ! $github_visibility['eligible'];
 $hide_display_value   = $github_visibility['eligible'] && '1' === ( $general_attempted['hide_github'] ?? ( $hide['value'] ? '1' : '0' ) );
-$archive_bytes        = (int) $field( 'max_archive_bytes' )['value'];
+$download_bytes       = (int) $field( 'max_download_bytes' )['value'];
 $mib_value            = static function ( int $bytes ): string {
 	$whole     = intdiv( $bytes, 1048576 );
 	$remainder = $bytes % 1048576;
@@ -84,10 +84,10 @@ $mib_value            = static function ( int $bytes ): string {
 	}
 	return $whole . '.' . $fraction;
 };
-$archive_mib_value    = is_string( $general_attempted['max_archive_bytes'] ?? null )
-	? $general_attempted['max_archive_bytes']
-	: $mib_value( $archive_bytes );
-$branch_ceiling       = $archive_bytes <= intdiv( PHP_INT_MAX, 4 ) ? $archive_bytes * 4 : null;
+$download_mib_value   = is_string( $general_attempted['max_download_bytes'] ?? null )
+	? $general_attempted['max_download_bytes']
+	: $mib_value( $download_bytes );
+$branch_ceiling       = $download_bytes <= intdiv( PHP_INT_MAX, 4 ) ? $download_bytes * 4 : null;
 $branch_ceiling_mib   = null === $branch_ceiling ? null : $mib_value( $branch_ceiling );
 $status_mode          = is_string( $core_update_status['effective_mode'] ?? null ) ? $core_update_status['effective_mode'] : 'disabled';
 $status_reason        = is_string( $core_update_status['reason'] ?? null ) ? $core_update_status['reason'] : '';
@@ -198,15 +198,15 @@ $success_label        = is_string( $success_label ) ? $success_label : __( 'Unkn
 				?>
 			</fieldset>
 			<fieldset class="ran-booster-settings__group">
-				<legend><?php esc_html_e( 'Archive limits', 'ran-booster' ); ?></legend>
-					<p><label for="ran-booster-max-archive-mib"><?php esc_html_e( 'Maximum download size (MiB)', 'ran-booster' ); ?></label><br><input id="ran-booster-max-archive-mib" type="number" min="1" max="511.99999904632568359375" step="any" inputmode="decimal" name="ran_booster[preferences][max_archive_mib]" value="<?php echo esc_attr( $archive_mib_value ); ?>"<?php disabled( $field( 'max_archive_bytes' )['locked'] ); ?><?php echo null === $field_error( 'max_archive_bytes' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-max-archive-mib-error"'; ?>></p>
+				<legend><?php esc_html_e( 'Download limits', 'ran-booster' ); ?></legend>
+					<p><label for="ran-booster-max-download-mib"><?php esc_html_e( 'Maximum repository ZIP download (MiB)', 'ran-booster' ); ?></label><br><input id="ran-booster-max-download-mib" type="number" min="1" max="511.99999904632568359375" step="any" inputmode="decimal" name="ran_booster[preferences][max_download_mib]" value="<?php echo esc_attr( $download_mib_value ); ?>"<?php disabled( $field( 'max_download_bytes' )['locked'] ); ?><?php echo null === $field_error( 'max_download_bytes' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-max-download-mib-error"'; ?>></p>
 				<?php
-				if ( null !== $field_error( 'max_archive_bytes' ) ) {
+				if ( null !== $field_error( 'max_download_bytes' ) ) {
 					?>
-						<p id="ran-booster-max-archive-mib-error" class="notice notice-error inline"><?php echo esc_html( $field_error( 'max_archive_bytes' ) ); ?></p><?php } ?>
-						<p class="description"><?php esc_html_e( 'One MiB is 1,048,576 bytes. Fractional values are rounded to the nearest byte.', 'ran-booster' ); ?></p>
-					<p class="description"><?php /* translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch downloads derive a ceiling of %1$s MiB (%2$s bytes; 4× this download limit). Host and updater safeguards may be stricter.', 'ran-booster' ), $branch_ceiling_mib, number_format_i18n( $branch_ceiling ) ) ); ?></p>
-				<?php $render_configuration( array( 'max_archive_bytes' => 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ); ?>
+						<p id="ran-booster-max-download-mib-error" class="notice notice-error inline"><?php echo esc_html( $field_error( 'max_download_bytes' ) ); ?></p><?php } ?>
+						<p class="description"><?php esc_html_e( 'Limits the compressed repository ZIP, not installed size or History retention. One MiB is 1,048,576 bytes; fractional values round to the nearest byte.', 'ran-booster' ); ?></p>
+					<p class="description"><?php /* translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit). Host and updater safeguards may be stricter.', 'ran-booster' ), $branch_ceiling_mib, number_format_i18n( $branch_ceiling ) ) ); ?></p>
+				<?php $render_configuration( array( 'max_download_bytes' => 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ) ); ?>
 			</fieldset>
 
 				<hr class="ran-booster-settings__save-divider">

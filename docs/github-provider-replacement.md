@@ -100,12 +100,14 @@ First inspect the exact plugin/theme and WordPress update result. A lost respons
 or partial installation does not mean nothing changed. Keep backups and the
 protected state; never delete locks or recovery markers to force a retry.
 
-When the GitHub page offers **Recover an interrupted native installation**, its
+When the GitHub page shows **Installation needs recovery**, Booster could not
+confirm whether the installation or update completed. Its
 supported action is removal verification, not repair. Confirm the interrupted
 process has stopped. Arrange removal of the **entire exact target** plugin or
-theme identified there, preserving a backup of anything needed; removing only
-its main file is insufficient. Confirm both displayed statements, then choose
-**Verify removal and clear installation block**. Booster verifies absence and
+theme identified there, preserving a backup of anything needed. Remove its folder
+and all contents, or the file itself for a standalone plugin; removing only the
+main file of a plugin or theme with a folder is insufficient. Confirm both displayed statements, then choose
+**Verify removal and disconnect**. Booster verifies absence, clears the installation block, and
 disconnects that management record; the button does not delete files. An occupied
 updater lock prevents recovery and is not cleared merely because it is old.
 Temporary-file cleanup remains unverified.

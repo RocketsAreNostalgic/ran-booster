@@ -258,21 +258,27 @@ final readonly class ProviderSettingsPresenter {
 				'package_counts' => null,
 			);
 		}
-		$review = null;
-		$error  = '';
-		try {
-			$review = $this->github_selection->adoption_review( $this->secrets );
-		} catch ( SecretsStorageUnavailable ) {
-			$error = __( 'Set up secure credential storage from Settings before reviewing GitHub adoption.', 'ran-booster' );
-		} catch ( Throwable ) {
-			$error = __( 'GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first.', 'ran-booster' );
-		}
+		$review   = null;
+		$error    = '';
 		$recovery = null;
-		if ( 'recovery_required' === $status['state'] && null !== $this->package_removal ) {
-			try {
-				$recovery = $this->package_removal->native_recovery_confirmation();
-			} catch ( Throwable ) {
+		if ( 'recovery_required' === $status['state'] ) {
+			if ( null !== $this->package_removal ) {
+				try {
+					$recovery = $this->package_removal->native_recovery_confirmation();
+				} catch ( Throwable ) {
+					$recovery = null;
+				}
+			}
+			if ( null === $recovery ) {
 				$error = __( 'Native recovery details could not be verified. Restore access to selection and management storage before continuing.', 'ran-booster' );
+			}
+		} else {
+			try {
+				$review = $this->github_selection->adoption_review( $this->secrets );
+			} catch ( SecretsStorageUnavailable ) {
+				$error = __( 'Set up secure credential storage from Settings before reviewing GitHub adoption.', 'ran-booster' );
+			} catch ( Throwable ) {
+				$error = __( 'GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first.', 'ran-booster' );
 			}
 		}
 		$package_counts = null;

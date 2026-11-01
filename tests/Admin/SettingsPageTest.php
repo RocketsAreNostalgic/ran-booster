@@ -167,6 +167,10 @@ final class SettingsPageTest extends TestCase {
 			}
 		}
 		self::assertSame( 4.0, $xpath->evaluate( 'count(//details[summary="Configuration constants"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//button[@form="ran-booster-check-core-updates" and @disabled and @aria-describedby="ran-booster-check-updates-help ran-booster-self-update-discovery-help"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@id="ran-booster-check-core-updates"]//input[@name="ran_booster[action]" and @value="check-core-updates"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-check-updates-unavailable"])' ) );
+		self::assertSame( 1, substr_count( $html, 'No completed check recorded' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][hide_github]" and @value="0"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][self_update_discovery]"])' ) );
 		$general_feedback       = 'Settings changed. Review the values.';

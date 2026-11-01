@@ -996,7 +996,7 @@ msgstr ""
 #: views/overview-dashboard.php:75
 #: views/portability-review.php:101
 #: views/settings-general.php:105
-#: views/settings-general.php:151
+#: views/settings-general.php:149
 #: views/troubleshooting-installation.php:137
 #: views/troubleshooting.php:227
 #: assets/ran-booster-portability.js:713
@@ -5691,6 +5691,7 @@ msgid "Enabled candidates"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:248
+#: views/settings-general.php:149
 msgid "Installed version"
 msgstr ""
 
@@ -9829,8 +9830,7 @@ msgid "Configuration constants"
 msgstr ""
 
 #: views/settings-general.php:55
-#: views/settings-general.php:132
-#: views/settings-general.php:146
+#: views/settings-general.php:129
 msgid "Unknown source"
 msgstr ""
 
@@ -9855,23 +9855,23 @@ msgid "GitHub remains visible until provider availability is known."
 msgstr ""
 
 #: views/settings-general.php:95
-msgid "This source checkout is protected from native updates."
+msgid "This development copy cannot receive Booster updates."
 msgstr ""
 
 #: views/settings-general.php:96
-msgid "This installation has no verified release provenance."
+msgid "This installation cannot verify its release information."
 msgstr ""
 
 #: views/settings-general.php:97
-msgid "Native discovery is disabled by configuration."
+msgid "Your site configuration has turned update checks off. This setting cannot be changed here."
 msgstr ""
 
 #: views/settings-general.php:98
-msgid "The update configuration is invalid."
+msgid "Your site’s update configuration is invalid. Correct it before checking."
 msgstr ""
 
 #: views/settings-general.php:99
-msgid "Native discovery is disabled by the saved preference."
+msgid "Update checks are turned off. Enable the switch and save to turn them on."
 msgstr ""
 
 #: views/settings-general.php:108
@@ -9882,118 +9882,118 @@ msgstr ""
 msgid "You have unsaved changes."
 msgstr ""
 
-#: views/settings-general.php:126
+#: views/settings-general.php:123
 msgid "Appearance"
 msgstr ""
 
-#: views/settings-general.php:131
+#: views/settings-general.php:128
 msgid "Hide GitHub UI"
 msgstr ""
 
-#: views/settings-general.php:132
+#: views/settings-general.php:129
 msgid "GitHub navigation is currently hidden."
 msgstr ""
 
-#: views/settings-general.php:132
+#: views/settings-general.php:129
 msgid "GitHub navigation remains available."
 msgstr ""
 
-#: views/settings-general.php:140
+#: views/settings-general.php:137
 msgid "Booster updates"
 msgstr ""
 
-#: views/settings-general.php:145
+#: views/settings-general.php:142
 msgid "Check for Booster updates"
 msgstr ""
 
-#: views/settings-general.php:146
-msgid "Native discovery is currently eligible."
+#: views/settings-general.php:143
+msgid "Booster update checks are enabled."
 msgstr ""
 
-#: views/settings-general.php:146
-msgid "Native discovery is currently unavailable."
+#: views/settings-general.php:143
+msgid "Booster update checks are currently unavailable."
 msgstr ""
 
-#: views/settings-general.php:151
-msgid "Installed version:"
+#: views/settings-general.php:150
+msgid "Available version"
 msgstr ""
 
-#: views/settings-general.php:151
-msgid "Available version:"
-msgstr ""
-
-#: views/settings-general.php:151
+#: views/settings-general.php:150
 msgid "No verified newer offer"
 msgstr ""
 
 #: views/settings-general.php:152
-msgid "Last successful Booster check:"
+msgid "Last successful Booster check"
 msgstr ""
 
-#: views/settings-general.php:153
-msgid "Latest check result:"
+#: views/settings-general.php:154
+msgid "Latest check result"
 msgstr ""
 
-#: views/settings-general.php:153
+#: views/settings-general.php:154
 msgid "No completed check recorded"
 msgstr ""
 
-#: views/settings-general.php:157
-msgid "Check diagnostic code:"
+#: views/settings-general.php:156
+msgid "Check diagnostic code"
 msgstr ""
 
-#: views/settings-general.php:158
-msgid "Check now also runs WordPress plugin update discovery. It does not save preferences or install an update."
-msgstr ""
-
-#: views/settings-general.php:162
+#: views/settings-general.php:159
 msgid "Check now"
 msgstr ""
 
-#: views/settings-general.php:166
+#: views/settings-general.php:160
+msgid "Checks for Booster and other plugin updates. Nothing is installed."
+msgstr ""
+
+#: views/settings-general.php:162
+msgid "Checking is unavailable for this site or your account."
+msgstr ""
+
+#: views/settings-general.php:167
 msgid "Update now"
 msgstr ""
 
-#: views/settings-general.php:170
+#: views/settings-general.php:171
 msgid "History"
 msgstr ""
 
-#: views/settings-general.php:171
+#: views/settings-general.php:172
 msgid "Maximum records"
 msgstr ""
 
-#: views/settings-general.php:176
+#: views/settings-general.php:177
 msgid "Retention days"
 msgstr ""
 
-#: views/settings-general.php:181
+#: views/settings-general.php:182
 msgid "Lowering these values does not delete protected running or recovery records immediately. Retention is irreversible once records are pruned."
 msgstr ""
 
-#: views/settings-general.php:192
+#: views/settings-general.php:193
 msgid "Archive limits"
 msgstr ""
 
-#: views/settings-general.php:193
+#: views/settings-general.php:194
 msgid "Maximum download size (MiB)"
 msgstr ""
 
-#: views/settings-general.php:198
+#: views/settings-general.php:199
 msgid "One MiB is 1,048,576 bytes. Fractional values are rounded to the nearest byte."
 msgstr ""
 
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings-general.php:199
+#: views/settings-general.php:200
 msgid "The derived branch expansion ceiling cannot be calculated on this host."
 msgstr ""
 
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings-general.php:199
+#: views/settings-general.php:200
 #, php-format
 msgid "Branch downloads derive a ceiling of %1$s MiB (%2$s bytes; 4× this download limit). Host and updater safeguards may be stricter."
 msgstr ""
 
-#: views/settings-general.php:204
+#: views/settings-general.php:205
 msgid "Save changes"
 msgstr ""
 

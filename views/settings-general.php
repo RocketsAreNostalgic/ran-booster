@@ -92,11 +92,11 @@ $branch_ceiling_mib   = null === $branch_ceiling ? null : $mib_value( $branch_ce
 $status_mode          = is_string( $core_update_status['effective_mode'] ?? null ) ? $core_update_status['effective_mode'] : 'disabled';
 $status_reason        = is_string( $core_update_status['reason'] ?? null ) ? $core_update_status['reason'] : '';
 $update_reasons       = array(
-	'source_checkout'                   => __( 'This source checkout is protected from native updates.', 'ran-booster' ),
-	'release_marker_missing_or_invalid' => __( 'This installation has no verified release provenance.', 'ran-booster' ),
-	'configuration_disabled'            => __( 'Native discovery is disabled by configuration.', 'ran-booster' ),
-	'configuration_invalid'             => __( 'The update configuration is invalid.', 'ran-booster' ),
-	'preference_disabled'               => __( 'Native discovery is disabled by the saved preference.', 'ran-booster' ),
+	'source_checkout'                   => __( 'This development copy cannot receive Booster updates.', 'ran-booster' ),
+	'release_marker_missing_or_invalid' => __( 'This installation cannot verify its release information.', 'ran-booster' ),
+	'configuration_disabled'            => __( 'Your site configuration has turned update checks off. This setting cannot be changed here.', 'ran-booster' ),
+	'configuration_invalid'             => __( 'Your site’s update configuration is invalid. Correct it before checking.', 'ran-booster' ),
+	'preference_disabled'               => __( 'Update checks are turned off. Enable the switch and save to turn them on.', 'ran-booster' ),
 );
 $installed_version    = is_string( $core_update_status['installed_version'] ?? null ) ? $core_update_status['installed_version'] : null;
 $offered_version      = is_string( $core_update_status['offered_version'] ?? null ) ? $core_update_status['offered_version'] : null;
@@ -114,10 +114,7 @@ $success_label        = is_string( $success_label ) ? $success_label : __( 'Unkn
 		<?php } else { ?>
 			<div id="ran-booster-general-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
 		<?php } ?>
-		<?php
-		if ( $check_available ) {
-			?>
-			<form id="ran-booster-check-core-updates" method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings' ) ); ?>"><?php wp_nonce_field( 'ran-booster-check-core-updates' ); ?><input type="hidden" name="ran_booster[action]" value="check-core-updates"></form><?php } ?>
+		<form id="ran-booster-check-core-updates" method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings' ) ); ?>"><?php wp_nonce_field( 'ran-booster-check-core-updates' ); ?><input type="hidden" name="ran_booster[action]" value="check-core-updates"></form>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-heading' ) ); ?>" class="ran-booster-settings__general-form" data-ran-booster-general-form data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-general-error" hx-post="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings' ) ); ?>" hx-target="#ran-booster-general-region" hx-swap="outerHTML show:none" hx-sync="this:drop">
 			<?php wp_nonce_field( 'ran-booster-save-general-settings' ); ?>
 			<input type="hidden" name="ran_booster[action]" value="save-general-settings">
@@ -143,23 +140,27 @@ $success_label        = is_string( $success_label ) ? $success_label : __( 'Unkn
 					?>
 					<input type="hidden" name="ran_booster[preferences][self_update_discovery]" value="0"><?php } ?>
 						<p class="ran-booster-settings__switch-row"><label class="ran-booster-settings__switch" for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" role="switch" aria-describedby="ran-booster-self-update-discovery-help<?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' ran-booster-self-update-discovery-error'; ?>" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span><span><?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></span></label></p>
-				<p id="ran-booster-self-update-discovery-help" class="description"><?php echo esc_html( $source_labels[ $discovery['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?>. <?php /* The effective policy supplies one fixed, translated reason. */ ?><?php echo esc_html( 'enabled' === $status_mode ? __( 'Native discovery is currently eligible.', 'ran-booster' ) : $update_reasons[ $status_reason ] ?? __( 'Native discovery is currently unavailable.', 'ran-booster' ) ); ?></p>
+				<p id="ran-booster-self-update-discovery-help" class="description"><?php echo esc_html( 'enabled' === $status_mode ? __( 'Booster update checks are enabled.', 'ran-booster' ) : $update_reasons[ $status_reason ] ?? __( 'Booster update checks are currently unavailable.', 'ran-booster' ) ); ?></p>
 				<?php
 				if ( null !== $field_error( 'self_update_discovery' ) ) {
 					?>
 					<p id="ran-booster-self-update-discovery-error" class="notice notice-error inline"><?php echo esc_html( $field_error( 'self_update_discovery' ) ); ?></p><?php } ?>
-					<p><strong><?php esc_html_e( 'Installed version:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $installed_version ?? __( 'Unknown', 'ran-booster' ) ); ?></code><br><strong><?php esc_html_e( 'Available version:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $offered_version ?? __( 'No verified newer offer', 'ran-booster' ) ); ?></code></p>
-					<p><strong><?php esc_html_e( 'Last successful Booster check:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $success_label ); ?></code><br>
-					<strong><?php esc_html_e( 'Latest check result:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $core_update_status['last_check_outcome'] ?? __( 'No completed check recorded', 'ran-booster' ) ); ?></code></p>
-				<?php
-				if ( is_string( $core_update_status['last_check_code'] ?? null ) ) {
-					?>
-					<p class="description"><?php esc_html_e( 'Check diagnostic code:', 'ran-booster' ); ?> <code><?php echo esc_html( $core_update_status['last_check_code'] ); ?></code></p><?php } ?>
-				<p class="description"><?php esc_html_e( 'Check now also runs WordPress plugin update discovery. It does not save preferences or install an update.', 'ran-booster' ); ?></p>
-				<?php
-				if ( $check_available ) {
-					?>
-					<p><button form="ran-booster-check-core-updates" type="submit" class="button"><?php esc_html_e( 'Check now', 'ran-booster' ); ?></button></p><?php } ?>
+				<dl class="ran-booster-settings__update-facts">
+					<div><dt><?php esc_html_e( 'Installed version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $installed_version ?? __( 'Unknown', 'ran-booster' ) ); ?></code></dd></div>
+					<div><dt><?php esc_html_e( 'Available version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $offered_version ?? __( 'No verified newer offer', 'ran-booster' ) ); ?></code></dd></div>
+					<?php if ( is_int( $success_at ) ) { ?>
+						<div><dt><?php esc_html_e( 'Last successful Booster check', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $success_label ); ?></code></dd></div>
+					<?php } ?>
+					<div><dt><?php esc_html_e( 'Latest check result', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $core_update_status['last_check_outcome'] ?? __( 'No completed check recorded', 'ran-booster' ) ); ?></code></dd></div>
+					<?php if ( is_string( $core_update_status['last_check_code'] ?? null ) ) { ?>
+						<div><dt><?php esc_html_e( 'Check diagnostic code', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $core_update_status['last_check_code'] ); ?></code></dd></div>
+					<?php } ?>
+				</dl>
+				<p><button form="ran-booster-check-core-updates" type="submit" class="button" aria-describedby="ran-booster-check-updates-help<?php echo $check_available ? '' : ( 'enabled' === $status_mode ? ' ran-booster-check-updates-unavailable' : ' ran-booster-self-update-discovery-help' ); ?>"<?php disabled( ! $check_available ); ?>><?php esc_html_e( 'Check now', 'ran-booster' ); ?></button></p>
+				<p id="ran-booster-check-updates-help" class="description"><?php esc_html_e( 'Checks for Booster and other plugin updates. Nothing is installed.', 'ran-booster' ); ?></p>
+				<?php if ( ! $check_available && 'enabled' === $status_mode ) { ?>
+					<p id="ran-booster-check-updates-unavailable" class="description"><?php esc_html_e( 'Checking is unavailable for this site or your account.', 'ran-booster' ); ?></p>
+				<?php } ?>
 				<?php
 				if ( null !== $native_update_url && '' !== $native_update_url ) {
 					?>

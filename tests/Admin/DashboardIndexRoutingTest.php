@@ -660,7 +660,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'GitHub operations are paused.', $html );
-		self::assertStringContainsString( 'Selection storage is unavailable.', $html );
+		self::assertStringContainsString( 'GitHub provider selection is unavailable', $html );
+		self::assertStringContainsString( 'Booster could not verify its saved GitHub provider choice. Review GitHub provider details before continuing.', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="adopt-github"', $html );
 		$_GET['tab'] = 'bb';
 		self::assertSame( 'bb', $dashboard->get_index()['data']['selected_provider'] );

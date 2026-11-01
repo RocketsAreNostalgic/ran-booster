@@ -337,7 +337,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 
 	<?php if ( $storage_unavailable && ! $is_repository_detail ) { ?>
 		<div class="notice notice-error inline ran-booster-provider__notice" data-ran-booster-provider-storage-notice>
-			<p><strong><?php esc_html_e( 'Encrypted credential storage is unavailable.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Restore the matching sidecar and site key from the same backup before changing credentials.', 'ran-booster' ); ?></p>
+			<p><strong><?php esc_html_e( 'Saved credentials are unavailable.', 'ran-booster' ); ?></strong> <a href="<?php echo esc_url( ( function_exists( 'is_network_admin' ) && is_network_admin() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster-settings#ran-booster-storage' ); ?>"><?php esc_html_e( 'Review Secure credential storage in Settings', 'ran-booster' ); ?></a></p>
 		</div>
 	<?php } ?>
 

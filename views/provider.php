@@ -33,6 +33,7 @@
  * @var bool $has_credential_settings
  * @var bool $has_webhook_settings
  * @var bool $provider_has_webhook_settings
+ * @var bool $repository_inventory_available
  * @var bool $repository_integration_available
  * @var bool $storage_unavailable
  * @var bool $webhook_assistance_provider_capable
@@ -408,7 +409,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<section class="ran-booster-provider-section" aria-labelledby="ran-booster-access-tokens-heading">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
-					<p class="ran-booster-section__description"><?php echo esc_html( $provider['capabilities']['browse'] ? __( 'Saved credentials enable private repository access; public repository discovery does not require one.', 'ran-booster' ) : __( 'Saved credentials enable access to private repositories entered manually.', 'ran-booster' ) ); ?></p>
+					<p class="ran-booster-section__description"><?php echo esc_html( __( 'Saved credentials can be used for repository access.', 'ran-booster' ) ); ?></p>
 				</header>
 			<div class="ran-booster-provider-section__body">
 				<?php
@@ -471,7 +472,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-repository-integrations-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository integrations', 'ran-booster' ); ?></h3>
 				<p class="ran-booster-section__description">
-						<?php esc_html_e( 'Manage repositories, webhooks and release workflows.', 'ran-booster' ); ?>
+						<?php esc_html_e( 'Review managed repositories and available integrations.', 'ran-booster' ); ?>
 					</p>
 				</header>
 				<div class="ran-booster-provider-section__body">
@@ -515,44 +516,39 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 								</div>
 							</div>
 							<?php
-							$release_package_count    = (int) $repository_integration_summary['release_packages'];
-							$release_repository_count = (int) $repository_integration_summary['release_repositories'];
-							/* translators: %d is the number of packages using releases. */
-							$release_package_count_label = sprintf( _nx( '%d package', '%d packages', $release_package_count, 'Packages using releases', 'ran-booster' ), $release_package_count );
-							/* translators: %d is the number of repositories. */
-							$release_repository_label  = sprintf( _n( '%d repository', '%d repositories', $release_repository_count, 'ran-booster' ), $release_repository_count );
-							$published_release_summary = true === ( $repository_integration_summary['release_totals_incomplete'] ?? false )
-								? sprintf(
-									/* translators: 1: lower-bound package count label, 2: repository count label. */
-									__( 'At least %1$s across %2$s · exact totals unavailable while a repository inventory is incomplete', 'ran-booster' ),
-									$release_package_count_label,
-									$release_repository_label
-								)
-								: ( true === ( $repository_integration_summary['release_workflows_inventory_incomplete'] ?? false )
-									? sprintf(
-										/* translators: 1: number of Published release packages, 2: number of repositories. */
-										__( '%1$d packages in %2$d repositories · workflow state unavailable while a repository inventory is incomplete', 'ran-booster' ),
-										$repository_integration_summary['release_packages'],
-										$repository_integration_summary['release_repositories']
-									)
-									: sprintf(
-										/* translators: 1: number of Published release packages, 2: number of repositories, 3: number of release workflows needing review. */
-										__( '%1$d packages in %2$d repositories · %3$d workflows need review', 'ran-booster' ),
-										$repository_integration_summary['release_packages'],
-										$repository_integration_summary['release_repositories'],
-										$repository_integration_summary['release_workflows_needing_review']
-									)
-								);
+							$release_package_count = (int) $repository_integration_summary['release_packages'];
+							$workflow_review_count = (int) $repository_integration_summary['release_workflows_needing_review'];
 							?>
+							<?php if ( ! $repository_inventory_available ) { ?>
+								<p><?php esc_html_e( 'Repository inventory is unavailable; shown records may be incomplete.', 'ran-booster' ); ?></p>
+							<?php } ?>
 							<dl class="ran-booster-repository-integration-status">
-								<div><dt><?php esc_html_e( 'Site webhook delivery', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $webhook_assistance_site_ready ? __( 'Ready for public HTTPS delivery', 'ran-booster' ) : __( 'Not ready for Git provider delivery', 'ran-booster' ) ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Signing profiles', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of locally ready signing profiles. */ _n( '%d ready locally', '%d ready locally', $ready_webhook_profile_count, 'ran-booster' ), $ready_webhook_profile_count ) ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Repository hooks', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: 1: number of locally recorded hooks, 2: number of hook records needing review. */ __( '%1$d recorded locally · %2$d need review', 'ran-booster' ), $repository_integration_summary['recorded_hooks'], $repository_integration_summary['needs_review'] ) ); ?></dd></div>
-								<div><dt><?php echo esc_html( _x( 'Releases', 'Provider integration status label', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( $published_release_summary ); ?></dd></div>
+								<?php if ( ! empty( $provider['capabilities']['webhooks'] ) ) { ?>
+									<div><dt><?php esc_html_e( 'Site webhook delivery', 'ran-booster' ); ?></dt><dd><?php echo esc_html( ! $webhook_assistance_provider_capable ? __( 'Readiness not assessed', 'ran-booster' ) : ( $webhook_assistance_site_ready ? __( 'Ready for public HTTPS delivery', 'ran-booster' ) : __( 'Not ready for Git provider delivery', 'ran-booster' ) ) ); ?></dd></div>
+									<?php
+									if ( ! $storage_unavailable ) {
+										?>
+										<div><dt><?php esc_html_e( 'Signing profiles', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of locally ready signing profiles. */ _n( '%d ready locally', '%d ready locally', $ready_webhook_profile_count, 'ran-booster' ), $ready_webhook_profile_count ) ); ?></dd></div><?php } ?>
+								<?php } ?>
+								<?php if ( 0 < $release_package_count ) { ?>
+									<div><dt><?php esc_html_e( 'Release packages recorded', 'ran-booster' ); ?></dt><dd>
+									<?php
+										$release_count_label = sprintf( /* translators: %d is the number of recorded release packages. */ _n( '%d package', '%d packages', $release_package_count, 'ran-booster' ), $release_package_count );
+										echo esc_html(
+											! $repository_inventory_available || ! empty( $repository_integration_summary['release_totals_incomplete'] )
+											? sprintf( /* translators: %s is the lower-bound package count. */ __( 'At least %s; exact totals unavailable.', 'ran-booster' ), $release_count_label )
+											: $release_count_label
+										);
+									?>
+										</dd></div>
+								<?php } ?>
+								<?php if ( 0 < $workflow_review_count ) { ?>
+									<div><dt><?php esc_html_e( 'Release workflow observations', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of observations needing review. */ _n( '%d observation shown needs review; coverage may be incomplete.', '%d observations shown need review; coverage may be incomplete.', $workflow_review_count, 'ran-booster' ), $workflow_review_count ) ); ?></dd></div>
+								<?php } ?>
 							</dl>
-							<?php if ( ! $webhook_assistance_provider_capable || ! $webhook_assistance_site_ready ) { ?>
+							<?php if ( $webhook_assistance_provider_capable && ! $webhook_assistance_site_ready ) { ?>
 								<div class="notice <?php echo esc_attr( $webhook_has_hard_failure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice>
-									<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( $webhook_assistance_provider_capable ? implode( ' ', $webhook_site_reasons ) : sprintf( /* translators: %s is the repository provider name. */ __( '%s does not provide Booster with assisted webhook management. Repository inventory remains available.', 'ran-booster' ), $provider['label'] ) ); ?></p>
+									<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?></p>
 								</div>
 							<?php } ?>
 							<div class="ran-booster-provider-task-actions">
@@ -563,6 +559,10 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 					</section>
 				<?php } elseif ( 'setup' === $provider_task ) { ?>
 					<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="setup" aria-labelledby="ran-booster-webhook-instructions-heading">
+							<?php if ( empty( $provider['capabilities']['webhooks'] ) ) { ?>
+								<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title"><?php esc_html_e( 'Webhook receiver', 'ran-booster' ); ?></h4>
+								<p><?php esc_html_e( 'Webhook receiver guidance is unavailable for this provider.', 'ran-booster' ); ?></p>
+							<?php } else { ?>
 							<div class="ran-booster-provider-task-panel__heading">
 								<div>
 									<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title"><?php esc_html_e( 'Webhook receiver', 'ran-booster' ); ?></h4>
@@ -585,7 +585,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									?>
 									<div><dt><?php esc_html_e( 'Event', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $webhook_setup['event'] ); ?></dd></div><?php } ?>
 							</dl>
-							<?php if ( null !== $webhook_setup ) { ?>
+								<?php if ( null !== $webhook_setup ) { ?>
 								<details class="ran-booster-provider-disclosure ran-booster-disclosure">
 									<summary><?php esc_html_e( 'Detailed manual setup and troubleshooting', 'ran-booster' ); ?></summary>
 									<div class="ran-booster-provider-disclosure__body ran-booster-disclosure__body">
@@ -594,6 +594,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 										<p><a href="<?php echo esc_url( $webhook_setup['delivery_documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?></a></p>
 									</div>
 								</details>
+							<?php } ?>
 							<?php } ?>
 				</section>
 				<?php } else { ?>
@@ -650,7 +651,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									</span>
 								</div>
 								<?php $repository_table_renderer->render( 'ran-booster-managed-webhook-repositories-heading', $repository_table_rows ); ?>
-							<?php } elseif ( ! empty( $managed_repositories['available'] ) ) { ?>
+							<?php } elseif ( $repository_inventory_available ) { ?>
 								<div class="ran-booster-provider-empty-actions">
 									<p><?php echo esc_html( $empty_repository_description ); ?></p>
 									<a class="button button-primary" href="<?php echo esc_url( $install_plugin_url ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>

@@ -176,7 +176,7 @@ final class RepositoryDetailRenderer {
 							);
 							?>
 						</dd></div>
-						<div><dt><?php echo esc_html( _x( 'Releases', 'Repository integration status label', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Releases', '%d packages track Releases', $release_count, 'ran-booster' ), $release_count ) ); ?></dd></div>
+						<div><dt><?php echo esc_html( _x( 'Recorded release usage', 'Repository integration status label', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Releases', '%d packages track Releases', $release_count, 'ran-booster' ), $release_count ) ); ?></dd></div>
 					<?php } ?>
 					<?php foreach ( $this->integration_details( $row ) as $detail ) { ?>
 						<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php $this->render_detail_value( $detail ); ?></dd></div>
@@ -195,7 +195,7 @@ final class RepositoryDetailRenderer {
 				<h3 id="ran-booster-repository-release-heading"><?php esc_html_e( 'Release publishing', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-settings-section__body">
-				<p><?php esc_html_e( 'Release workflow setup is unavailable for this Git provider. Package release settings remain available.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Release workflow status is unavailable in this view. Package release settings remain available.', 'ran-booster' ); ?></p>
 				<?php foreach ( $packages as $package ) { ?>
 					<p><a class="button" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ _x( 'Open %s settings', 'Managed package settings link', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
 				<?php } ?>
@@ -241,14 +241,14 @@ final class RepositoryDetailRenderer {
 					<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
 				</header>
 				<div class="ran-booster-settings-section__body">
-					<p><?php esc_html_e( 'Core-assisted webhook management is unavailable for this Git provider. Use the Git provider webhook settings when available.', 'ran-booster' ); ?></p>
+					<p><?php esc_html_e( 'Assisted webhook management is unavailable in this view. Use the Git provider webhook settings when available.', 'ran-booster' ); ?></p>
 				</div>
 			</section>
 			<?php
 			return;
 		}
 		$message = $has_branch_consumer && ! $receiver_ready
-			? __( 'Repository webhook management is unavailable until this site can receive Git provider deliveries.', 'ran-booster' )
+			? __( 'Assisted webhook management is unavailable in this view. Receiver readiness has not been established.', 'ran-booster' )
 			: __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' );
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section" aria-labelledby="ran-booster-repository-webhook-heading">

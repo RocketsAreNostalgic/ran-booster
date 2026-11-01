@@ -112,7 +112,8 @@ final class ProviderRepositoryRowsNormalizer {
 			'webhook_endpoint'                    => $endpoint,
 			'webhook_assistance_provider_capable' => null !== $site,
 			'webhook_assistance_site_ready'       => $site_ready,
-			'repository_integration_available'    => array() !== $model['rows'] || ( ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] ) ),
+			'repository_inventory_available'      => $repositories['available'],
+			'repository_integration_available'    => ! $repositories['available'] || array() !== $model['rows'] || ( ! empty( $provider['capabilities']['webhooks'] ) && ! empty( $provider['webhook_scopes'] ) ),
 			'repository_integration_summary'      => $repository_summary,
 			'webhook_site_reasons'                => $this->site_reasons( $reason_codes, $site_endpoint ),
 			'webhook_has_hard_failure'            => array() !== array_intersect( $reason_codes, array( 'database_unavailable', 'secrets_storage_unavailable', 'managed_packages_unavailable' ) ),
@@ -1010,7 +1011,7 @@ final class ProviderRepositoryRowsNormalizer {
 			'manual_setup_description'       => null === $setup ? '' : sprintf( /* translators: 1: repository provider name, 2: provider webhook settings location. */ __( 'In %1$s, go to %2$s and create the remote webhook.', 'ran-booster' ), $label, $setup['location'] ),
 			'repository_webhook_description' => sprintf(
 				/* translators: %s is the repository provider name. */
-				__( 'Each repository needs its own %s webhook. A saved shared secret may serve multiple repositories.', 'ran-booster' ),
+				__( 'Review packages and local integration records for each managed %s repository.', 'ran-booster' ),
 				$label
 			),
 			'empty_repository_description'   => sprintf(

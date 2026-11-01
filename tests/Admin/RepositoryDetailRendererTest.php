@@ -500,7 +500,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-release-heading">Release publishing</h3>', $html );
-		self::assertStringContainsString( 'Release workflow setup is unavailable for this Git provider.', $html );
+		self::assertStringContainsString( 'Release workflow status is unavailable in this view.', $html );
 		self::assertStringContainsString( 'Open Theme settings', $html );
 		self::assertStringNotContainsString( 'Assess release setup', $html );
 	}
@@ -576,10 +576,70 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
-		self::assertStringContainsString( 'Core-assisted webhook management is unavailable for this Git provider.', $html );
+		self::assertStringContainsString( 'Assisted webhook management is unavailable in this view.', $html );
 		self::assertStringContainsString( 'Use the Git provider webhook settings when available.', $html );
 		self::assertStringNotContainsString( 'no Branch package currently uses this repository webhook', $html );
 		self::assertStringNotContainsString( 'Manage repository webhook', $html );
+	}
+
+
+	public function test_missing_management_and_receiver_readiness_are_independent(): void {
+		foreach ( array( true, false ) as $ready ) {
+			ob_start();
+			( new RepositoryDetailRenderer() )->render(
+				array(
+					'repository'        => 'owner/branch',
+					'source_key'        => 'branch',
+					'package_summaries' => array(),
+					'details'           => array(),
+					'actions'           => array(),
+				),
+				'Fixture',
+				'/repositories',
+				'/activity',
+				$ready,
+				'',
+				'branch',
+				$this->view_urls(),
+				$this->view_request_urls(),
+				null,
+				null
+			);
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'Assisted webhook management is unavailable in this view.', $html );
+			self::assertStringNotContainsString( 'unavailable until', $html );
+			if ( ! $ready ) {
+				self::assertStringContainsString( 'Receiver readiness has not been established.', $html );
+			}
+		}
+	}
+
+	public function test_throwing_release_callback_keeps_neutral_fallback(): void {
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'        => 'owner/release',
+				'source_key'        => 'release_asset',
+				'package_summaries' => array(),
+				'details'           => array(),
+				'actions'           => array(),
+			),
+			'Fixture',
+			'/repositories',
+			'/activity',
+			true,
+			'',
+			'releases',
+			$this->view_urls(),
+			$this->view_request_urls(),
+			null,
+			static function (): void {
+				throw new \RuntimeException( 'failure' );
+			}
+		);
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Release workflow status is unavailable in this view.', $html );
+		self::assertStringNotContainsString( 'unavailable for this Git provider', $html );
 	}
 
 	public function test_bounded_fragments_preserve_preescaped_markup_and_escape_owned_row_values(): void {
@@ -656,7 +716,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					$html = (string) ob_get_contents();
 					self::assertStringNotContainsString( 'discarded partial fragment', $html );
 					self::assertStringNotContainsString( 'private callback failure', $html );
-					self::assertStringContainsString( 'branch' === $view ? 'Repository webhook management is temporarily unavailable' : 'Release workflow setup is unavailable', $html );
+					self::assertStringContainsString( 'branch' === $view ? 'Repository webhook management is temporarily unavailable' : 'Release workflow status is unavailable', $html );
 				} finally {
 					while ( ob_get_level() > $level ) {
 						ob_end_clean();

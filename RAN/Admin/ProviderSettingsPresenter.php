@@ -1778,8 +1778,8 @@ final readonly class ProviderSettingsPresenter {
 		return array(
 			'credential' => array(
 				'tone'        => $credential_problem ? 'attention' : ( 0 < $credential_count ? 'ready' : 'pending' ),
-				'heading'     => $credential_problem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credential_count ? __( 'No credential saved', 'ran-booster' ) : sprintf( /* translators: %d is the number of saved credentials. */ _n( 'Ready · %d credential', 'Ready · %d credentials', $credential_count, 'ran-booster' ), $credential_count ) ),
-				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credential_attention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credential_count ? __( 'Public repositories remain available through anonymous lookup. Add a credential only for private access or steadier API limits.', 'ran-booster' ) : __( 'Private repository access is available. Open credential management to validate, replace, or review usage.', 'ran-booster' ) ) ),
+				'heading'     => $credential_problem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credential_count ? __( 'No credential saved', 'ran-booster' ) : sprintf( /* translators: %d is the number of saved credentials. */ _n( '%d credential saved', '%d credentials saved', $credential_count, 'ran-booster' ), $credential_count ) ),
+				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credential_attention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credential_count ? __( 'Add a credential when repository access requires one.', 'ran-booster' ) : __( 'Open credential management to review saved credentials and their usage.', 'ran-booster' ) ) ),
 			),
 			'webhook'    => array(
 				'tone'        => $webhook_problem ? 'attention' : ( 0 < $webhook_count ? 'ready' : 'pending' ),

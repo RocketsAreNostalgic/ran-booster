@@ -462,6 +462,14 @@ label, while its facet implementation owns remote calls, credentials and
 provider-specific remediation. Branch deployment and manual guidance do not
 depend on the optional helper.
 
+Provider status summaries describe local configuration and supplied observations,
+not remote capability, permission or health. Empty optional release usage and
+workflow aggregates may be omitted; missing observations never mean zero findings.
+Unreadable or incomplete inventory remains explicit, and retained records and
+existing recovery links remain available independently of current facet support.
+Receiver readiness, signing profiles and remote webhook management are separate
+facts. An absent or failed rendering callback does not establish provider incapability.
+
 ## Package screen anatomy
 
 Plugin and theme installation and management use the same information

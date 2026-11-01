@@ -265,6 +265,7 @@
 }
 
 .ran-booster-admin .ran-booster-attempt-row:last-child {
+	display: flow-root;
 	border-block-end: none;
 }
 

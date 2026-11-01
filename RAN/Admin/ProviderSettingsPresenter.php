@@ -258,21 +258,27 @@ final readonly class ProviderSettingsPresenter {
 				'package_counts' => null,
 			);
 		}
-		$review = null;
-		$error  = '';
-		try {
-			$review = $this->github_selection->adoption_review( $this->secrets );
-		} catch ( SecretsStorageUnavailable ) {
-			$error = __( 'Set up secure credential storage from Settings before approving a GitHub provider.', 'ran-booster' );
-		} catch ( Throwable ) {
-			$error = __( 'GitHub provider approval is unavailable. Review the provider status and resolve any unfinished operation or recovery before trying again.', 'ran-booster' );
-		}
+		$review   = null;
+		$error    = '';
 		$recovery = null;
-		if ( 'recovery_required' === $status['state'] && null !== $this->package_removal ) {
-			try {
-				$recovery = $this->package_removal->native_recovery_confirmation();
-			} catch ( Throwable ) {
+		if ( 'recovery_required' === $status['state'] ) {
+			if ( null !== $this->package_removal ) {
+				try {
+					$recovery = $this->package_removal->native_recovery_confirmation();
+				} catch ( Throwable ) {
+					$recovery = null;
+				}
+			}
+			if ( null === $recovery ) {
 				$error = __( 'Native recovery details could not be verified. Restore access to selection and management storage before continuing.', 'ran-booster' );
+			}
+		} else {
+			try {
+				$review = $this->github_selection->adoption_review( $this->secrets );
+			} catch ( SecretsStorageUnavailable ) {
+				$error = __( 'Set up secure credential storage from Settings before approving a GitHub provider.', 'ran-booster' );
+			} catch ( Throwable ) {
+				$error = __( 'GitHub provider approval is unavailable. Review the provider status and resolve any unfinished operation or recovery before trying again.', 'ran-booster' );
 			}
 		}
 		$package_counts = null;

@@ -242,6 +242,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<div class="ran-booster-disclosure__body">
 				<p><?php esc_html_e( 'To change the GitHub provider integration, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
 			<?php } else { ?>
+				<?php $native_recovery = $github_selection['recovery'] ?? null; ?>
 				<?php if ( 'decision_required' !== $selection_status['state'] ) { ?>
 					<div class="notice notice-warning inline">
 						<h3>
@@ -266,12 +267,38 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 							'incompatible' => __( 'Deactivate the incompatible provider plugin, then return here to review your selection.', 'ran-booster' ),
 							'missing' => __( 'Restore the selected plugin or deactivate all replacement plugins, then review a return to bundled GitHub.', 'ran-booster' ),
 							'storage_unavailable' => __( 'Booster could not verify its saved GitHub provider choice. Review GitHub provider details before continuing.', 'ran-booster' ),
-							'recovery_required' => __( 'Recover the interrupted installation before changing providers.', 'ran-booster' ),
+							'recovery_required' => __( 'Booster could not confirm whether the installation or update completed. Resolve this before changing the GitHub provider.', 'ran-booster' ),
 							default => '',
 							}
 						);
 						?>
 						</p>
+						<?php if ( 'recovery_required' === $selection_status['state'] ) { ?>
+							<?php if ( is_array( $native_recovery ) ) { ?>
+						<p><code><?php echo esc_html( sprintf( 'theme' === $native_recovery['type'] ? /* translators: %s: affected theme identifier. */ __( 'Affected theme: %s', 'ran-booster' ) : /* translators: %s: affected plugin identifier. */ __( 'Affected plugin: %s', 'ran-booster' ), $native_recovery['identifier'] ) ); ?></code></p>
+						<ol>
+							<li><?php esc_html_e( 'Confirm the installation or update process has stopped.', 'ran-booster' ); ?></li>
+							<li><?php esc_html_e( 'Back up anything you need, then remove the affected plugin or theme completely.', 'ran-booster' ); ?></li>
+							<li><?php esc_html_e( 'Confirm the statements below to verify removal.', 'ran-booster' ); ?></li>
+						</ol>
+						<p><?php esc_html_e( 'Booster verifies removal, clears the installation block, and disconnects Booster management. It does not delete files or repair the installation.', 'ran-booster' ); ?></p>
+						<details class="ran-booster-disclosure"><summary><?php esc_html_e( 'Recovery details', 'ran-booster' ); ?></summary>
+						<div class="ran-booster-disclosure__body">
+						<p><?php esc_html_e( 'Remove the target folder and all its contents, or the file itself for a standalone plugin. A missing main file alone is insufficient for a plugin or theme with a folder.', 'ran-booster' ); ?></p>
+						<p><?php esc_html_e( 'An occupied updater lock prevents recovery. Booster will not clear it based on its age. Cleanup of temporary files from the interrupted process remains unverified.', 'ran-booster' ); ?></p>
+						</div></details>
+								<?php if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
+							<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
+									<?php wp_nonce_field( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
+								<input type="hidden" name="ran_booster[action]" value="recover-github-native">
+								<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
+								<p><label><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the interrupted installation or update process has stopped.', 'ran-booster' ); ?></label></p>
+								<p><label><input type="checkbox" name="ran_booster[confirmed_removal]" value="1" required> <?php esc_html_e( 'I have removed the entire target and approve disconnecting its management record.', 'ran-booster' ); ?></label></p>
+								<button type="submit" class="button"><?php esc_html_e( 'Verify removal and disconnect', 'ran-booster' ); ?></button>
+							</form>
+						<?php } ?>
+					<?php } ?>
+						<?php } ?>
 						<?php if ( 'missing' === $selection_status['state'] && is_array( $current_implementation ) ) { ?>
 							<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Missing provider: %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
 						<?php } ?>
@@ -289,23 +316,6 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<?php } ?>
 				<?php if ( '' !== $github_selection['error'] && ! in_array( $selection_status['state'], array( 'conflict', 'incompatible', 'storage_unavailable' ), true ) ) { ?>
 					<p role="status"><?php echo esc_html( $github_selection['error'] ); ?></p>
-				<?php } ?>
-				<?php $native_recovery = $github_selection['recovery'] ?? null; ?>
-				<?php if ( is_array( $native_recovery ) ) { ?>
-					<h4><?php esc_html_e( 'Recover an interrupted native installation', 'ran-booster' ); ?></h4>
-					<p><code><?php echo esc_html( $native_recovery['type'] . ': ' . $native_recovery['identifier'] ); ?></code></p>
-					<p><?php esc_html_e( 'First confirm that the interrupted process has stopped and remove the entire target plugin or theme. A missing main file alone is insufficient. This action verifies removal and disconnects its management record; it does not delete files or repair an installation.', 'ran-booster' ); ?></p>
-					<p><?php esc_html_e( 'An occupied updater lock prevents recovery. Booster will not clear it based on its age. Cleanup of temporary files from the interrupted process remains unverified.', 'ran-booster' ); ?></p>
-					<?php if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
-							<?php wp_nonce_field( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
-							<input type="hidden" name="ran_booster[action]" value="recover-github-native">
-							<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
-							<p><label><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the interrupted installation process has stopped.', 'ran-booster' ); ?></label></p>
-							<p><label><input type="checkbox" name="ran_booster[confirmed_removal]" value="1" required> <?php esc_html_e( 'I have removed the entire target and approve disconnecting its management record.', 'ran-booster' ); ?></label></p>
-							<button type="submit" class="button"><?php esc_html_e( 'Verify removal and clear installation block', 'ran-booster' ); ?></button>
-						</form>
-					<?php } ?>
 				<?php } ?>
 				<?php $adoption_review = $github_selection['review']; ?>
 				<?php if ( is_array( $adoption_review ) ) { ?>

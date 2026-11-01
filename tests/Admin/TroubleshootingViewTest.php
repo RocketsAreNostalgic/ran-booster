@@ -2320,6 +2320,56 @@ final class TroubleshootingViewTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_provider_status_shows_incomplete_workflows_with_exact_release_count(): void {
+		$provider              = $this->provider_without_optional_settings();
+		$credential_profiles   = array();
+		$webhook_profiles      = array();
+		$provider_task         = 'status';
+		$provider_repositories = array(
+			'available'    => true,
+			'repositories' => array(
+				array(
+					'target'                    => 'owner/releases',
+					'repository_id'             => 'release-42',
+					'source'                    => 'release_asset',
+					'package_references'        => array( 'first/plugin.php', 'second/plugin.php' ),
+					'package_summaries'         => array(
+						array(
+							'type'              => 'plugin',
+							'identifier'        => 'first/plugin.php',
+							'display_name'      => 'First plugin',
+							'settings_url'      => 'https://example.test/first',
+							'source'            => 'release_asset',
+							'source_revision'   => 1,
+							'branch'            => '',
+							'subdirectory'      => '',
+							'deployment_policy' => 'manual',
+						),
+					),
+					'package_summaries_omitted' => 1,
+				),
+			),
+		);
+		$provider_view_data    = $this->provider_view_data( get_defined_vars() );
+		self::assertTrue( $provider_view_data['repository_inventory_available'] );
+		self::assertSame( 2, $provider_view_data['repository_integration_summary']['release_packages'] );
+		self::assertFalse( $provider_view_data['repository_integration_summary']['release_totals_incomplete'] );
+		self::assertTrue( $provider_view_data['repository_integration_summary']['release_workflows_inventory_incomplete'] );
+		self::assertSame( 0, $provider_view_data['repository_integration_summary']['release_workflows_needing_review'] );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $provider_view_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertMatchesRegularExpression( '/<dt>Release packages recorded<\/dt><dd>\s*2 packages\s*<\/dd>/', $html );
+		self::assertStringContainsString( 'Release workflow observations are incomplete because some package details are omitted.', $html );
+		self::assertStringNotContainsString( '0 workflows need review', $html );
+		self::assertStringNotContainsString( 'observation shown needs review', $html );
+		self::assertStringNotContainsString( 'observations shown need review', $html );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_provider_status_shows_supplied_workflow_observation_and_retains_recovery(): void {
 		$provider                             = $this->provider_without_optional_settings();
 		$provider['capabilities']['webhooks'] = true;

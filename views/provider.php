@@ -546,6 +546,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									<div><dt><?php esc_html_e( 'Release workflow observations', 'ran-booster' ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of observations needing review. */ _n( '%d observation shown needs review; coverage may be incomplete.', '%d observations shown need review; coverage may be incomplete.', $workflow_review_count, 'ran-booster' ), $workflow_review_count ) ); ?></dd></div>
 								<?php } ?>
 							</dl>
+							<?php if ( ! empty( $repository_integration_summary['release_workflows_inventory_incomplete'] ) ) { ?>
+								<p><?php esc_html_e( 'Release workflow observations are incomplete because some package details are omitted.', 'ran-booster' ); ?></p>
+							<?php } ?>
 							<?php if ( $webhook_assistance_provider_capable && ! $webhook_assistance_site_ready ) { ?>
 								<div class="notice <?php echo esc_attr( $webhook_has_hard_failure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice>
 									<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?></p>

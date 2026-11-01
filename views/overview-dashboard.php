@@ -49,7 +49,7 @@ if ( ! empty( $overview_dashboard_activity ) ) {
 					$state = $record['status'];
 					?>
 					<li class="ran-booster-overview-activity__row">
-						<div><strong><?php echo esc_html( $record['operation'] ); ?></strong><span class="ran-booster-overview-activity__time"><?php echo esc_html( $record['sort_at'] ); ?></span></div>
+						<div><strong><?php echo esc_html( $record['operation'] ); ?></strong><span aria-hidden="true"> · </span><span class="ran-booster-overview-activity__time"><?php echo esc_html( $record['sort_at'] ); ?></span></div>
 						<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $state_tones[ $state ] ?? 'neutral' ); ?>"><?php echo esc_html( $state_labels[ $state ] ?? __( 'Unknown', 'ran-booster' ) ); ?></span>
 					</li>
 				<?php } ?>
@@ -74,8 +74,12 @@ $inventory = $onboarding['inventory'] ?? array(
 		<li><strong><?php esc_html_e( 'Themes:', 'ran-booster' ); ?></strong> <?php echo esc_html( null === $inventory['themes'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['themes'] ); ?></li>
 		<li><strong><?php esc_html_e( 'Updates disabled:', 'ran-booster' ); ?></strong> <?php echo esc_html( null === $inventory['disabled'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['disabled'] ); ?></li>
 	</ul>
-	<p><a href="<?php echo esc_url( $onboarding['plugins_url'] ); ?>"><?php esc_html_e( 'Manage plugins', 'ran-booster' ); ?></a> · <a href="<?php echo esc_url( $onboarding['themes_url'] ); ?>"><?php esc_html_e( 'Manage themes', 'ran-booster' ); ?></a></p>
-	<p class="ran-booster-onboarding__actions"><a class="button button-primary" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a> <a class="button" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a> <a class="button" href="<?php echo esc_url( $onboarding['portability_url'] ); ?>"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></a></p>
+	<div class="ran-booster-overview-package-actions">
+		<a class="button button-primary" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
+		<a class="button" href="<?php echo esc_url( $onboarding['plugins_url'] ); ?>"><?php esc_html_e( 'Manage plugins', 'ran-booster' ); ?></a>
+		<a class="button button-primary" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
+		<a class="button" href="<?php echo esc_url( $onboarding['themes_url'] ); ?>"><?php esc_html_e( 'Manage themes', 'ran-booster' ); ?></a>
+	</div>
 </section>
 <section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-providers">
 	<h3 id="ran-booster-overview-providers"><?php esc_html_e( 'Providers and access', 'ran-booster' ); ?></h3>
@@ -90,31 +94,5 @@ $inventory = $onboarding['inventory'] ?? array(
 				?>
 				— <?php echo esc_html( $provider_selection_labels[ $provider['selection'] ?? '' ] ?? __( 'Selection unknown', 'ran-booster' ) ); ?><?php } ?></li>
 		<?php } ?></ul>
-	<?php } ?>
-</section>
-<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-expiry">
-	<h3 id="ran-booster-overview-expiry"><?php esc_html_e( 'Credential expiry', 'ran-booster' ); ?></h3>
-	<?php if ( 'captured' === $credential_expiry['status'] ) { ?>
-		<p><?php esc_html_e( 'These reminders cover credentials with actionable expiry information; they are not a complete credential inventory.', 'ran-booster' ); ?></p>
-		<?php if ( array() === $credential_expiry['items'] ) { ?>
-			<p><?php esc_html_e( 'No actionable expiry reminders were captured.', 'ran-booster' ); ?></p>
-		<?php } else { ?>
-			<ul>
-				<?php foreach ( $credential_expiry['items'] as $expiry_item ) { ?>
-					<li><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> <span class="ran-booster-pill ran-booster-pill--<?php echo esc_attr( in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'error' : 'warning' ); ?>"><?php echo esc_html( $expiry_item['badge_label'] ); ?></span></li>
-				<?php } ?>
-			</ul>
-			<?php if ( null !== $credential_expiry['total'] && $credential_expiry['total'] > count( $credential_expiry['items'] ) ) { ?>
-				<?php // translators: 1: displayed reminders, 2: total actionable reminders. ?>
-				<p><?php echo esc_html( sprintf( __( 'Showing %1$d of %2$d actionable expiry reminders.', 'ran-booster' ), count( $credential_expiry['items'] ), $credential_expiry['total'] ) ); ?></p>
-			<?php } ?>
-		<?php } ?>
-	<?php } elseif ( 'unavailable' === $credential_expiry['status'] ) { ?>
-		<p><?php esc_html_e( 'Credential expiry reminders are unavailable. Review credentials in provider settings.', 'ran-booster' ); ?></p>
-	<?php } else { ?>
-		<p><?php esc_html_e( 'Current credential expiry is unknown. Review credentials in provider settings.', 'ran-booster' ); ?></p>
-	<?php } ?>
-	<?php foreach ( $onboarding['provider_links'] as $provider_link ) { ?>
-		<a href="<?php echo esc_url( $provider_link['url'] ); ?>"><?php echo esc_html( $provider_link['label'] ); ?></a>
 	<?php } ?>
 </section>

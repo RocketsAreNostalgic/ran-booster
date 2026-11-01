@@ -957,7 +957,6 @@ msgid "Diagnostics not configured"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:64
-#: views/overview-dashboard.php:96
 msgid "Credential expiry"
 msgstr ""
 
@@ -4541,8 +4540,7 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:264
-#: views/onboarding.php:152
-#: views/overview-dashboard.php:78
+#: views/onboarding.php:161
 msgid "Transporter"
 msgstr ""
 
@@ -6385,7 +6383,7 @@ msgstr ""
 
 #: views/documentation.php:182
 #: views/documentation.php:386
-#: views/onboarding.php:159
+#: views/onboarding.php:168
 #: views/overview-dashboard.php:78
 #: views/provider.php:626
 msgid "Install a plugin"
@@ -6748,8 +6746,8 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:387
-#: views/onboarding.php:160
-#: views/overview-dashboard.php:78
+#: views/onboarding.php:169
+#: views/overview-dashboard.php:80
 #: views/provider.php:627
 msgid "Install a theme"
 msgstr ""
@@ -7252,82 +7250,88 @@ msgstr ""
 msgid "Verification pending"
 msgstr ""
 
+#. translators: 1: displayed reminders, 2: total actionable reminders.
 #: views/onboarding.php:103
-msgid "Provider is not admitted."
+#, php-format
+msgid "Showing %1$d of %2$d actionable expiry reminders."
 msgstr ""
 
 #: views/onboarding.php:106
+msgid "Credential expiry reminders are unavailable. Review credentials in provider settings."
+msgstr ""
+
+#: views/onboarding.php:112
+msgid "Provider is not admitted."
+msgstr ""
+
+#: views/onboarding.php:115
 msgid "The managed package inventory is incomplete or unavailable."
 msgstr ""
 
-#: views/onboarding.php:109
+#: views/onboarding.php:118
 msgid "Secure credential storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:109
-#: views/onboarding.php:111
+#: views/onboarding.php:118
+#: views/onboarding.php:120
 msgid "Review storage"
 msgstr ""
 
-#: views/onboarding.php:124
+#: views/onboarding.php:133
 msgid "1. Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:124
+#: views/onboarding.php:133
 #: views/settings-storage.php:63
 #: views/settings.php:27
 #: views/troubleshooting-installation.php:56
 msgid "Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:125
+#: views/onboarding.php:134
 #: views/settings-storage.php:64
 msgid "Status unknown"
 msgstr ""
 
-#: views/onboarding.php:127
+#: views/onboarding.php:136
 #: views/troubleshooting-installation.php:58
 msgid "Storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:128
+#: views/onboarding.php:137
 msgid "Review secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:139
+#: views/onboarding.php:148
 msgid "2. Choose a Git provider"
 msgstr ""
 
-#: views/onboarding.php:140
+#: views/onboarding.php:149
 msgid "Add credentials on the provider’s page if needed."
 msgstr ""
 
-#: views/onboarding.php:145
+#: views/onboarding.php:154
 msgid "Install another provider"
 msgstr ""
 
-#: views/onboarding.php:149
+#: views/onboarding.php:158
 msgid "3. Import, export or migrate — optional"
 msgstr ""
 
-#: views/onboarding.php:150
+#: views/onboarding.php:159
 msgid "Import or export a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions."
 msgstr ""
 
-#: views/onboarding.php:153
+#: views/onboarding.php:162
 msgid "Browse extensions"
 msgstr ""
 
-#: views/onboarding.php:157
+#: views/onboarding.php:166
 msgid "4. Install and manage packages"
 msgstr ""
 
-#: views/onboarding.php:189
+#: views/onboarding.php:198
 msgid "Return to onboarding"
-msgstr ""
-
-#: views/onboarding.php:190
-msgid "This changes the view for all site administrators. It does not reset your configuration."
 msgstr ""
 
 #: views/overview-dashboard.php:40
@@ -7363,62 +7367,40 @@ msgstr ""
 msgid "Updates disabled:"
 msgstr ""
 
-#: views/overview-dashboard.php:77
+#: views/overview-dashboard.php:79
 msgid "Manage plugins"
 msgstr ""
 
-#: views/overview-dashboard.php:77
+#: views/overview-dashboard.php:81
 msgid "Manage themes"
 msgstr ""
 
-#: views/overview-dashboard.php:81
+#: views/overview-dashboard.php:85
 msgid "Providers and access"
 msgstr ""
 
-#: views/overview-dashboard.php:82
+#: views/overview-dashboard.php:86
 msgid "Repository access has not been checked here."
 msgstr ""
 
-#: views/overview-dashboard.php:84
+#: views/overview-dashboard.php:88
 msgid "No provider settings are currently available."
 msgstr ""
 
-#: views/overview-dashboard.php:87
+#: views/overview-dashboard.php:91
 msgid "Admitted"
 msgstr ""
 
-#: views/overview-dashboard.php:87
+#: views/overview-dashboard.php:91
 msgid "Not admitted"
 msgstr ""
 
-#: views/overview-dashboard.php:87
+#: views/overview-dashboard.php:91
 msgid "Admission unknown"
 msgstr ""
 
-#: views/overview-dashboard.php:91
+#: views/overview-dashboard.php:95
 msgid "Selection unknown"
-msgstr ""
-
-#: views/overview-dashboard.php:98
-msgid "These reminders cover credentials with actionable expiry information; they are not a complete credential inventory."
-msgstr ""
-
-#: views/overview-dashboard.php:100
-msgid "No actionable expiry reminders were captured."
-msgstr ""
-
-#. translators: 1: displayed reminders, 2: total actionable reminders.
-#: views/overview-dashboard.php:109
-#, php-format
-msgid "Showing %1$d of %2$d actionable expiry reminders."
-msgstr ""
-
-#: views/overview-dashboard.php:113
-msgid "Credential expiry reminders are unavailable. Review credentials in provider settings."
-msgstr ""
-
-#: views/overview-dashboard.php:115
-msgid "Current credential expiry is unknown. Review credentials in provider settings."
 msgstr ""
 
 #: views/packages/advanced-source-settings.php:7

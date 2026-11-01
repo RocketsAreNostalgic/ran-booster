@@ -91,12 +91,21 @@ $provider_attention        = array_filter(
 	$overview_storage_unknown      = '' === $overview_storage_status;
 	$overview_storage_problem      = in_array( $overview_storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true );
 	?>
-	<?php if ( $overview_inventory_incomplete || $overview_storage_unknown || $overview_storage_problem || array() !== $provider_attention || ( 'captured' === $credential_expiry['status'] && array() !== $credential_expiry['items'] ) ) { ?>
+	<?php if ( $overview_inventory_incomplete || $overview_storage_unknown || $overview_storage_problem || array() !== $provider_attention || 'unavailable' === $credential_expiry['status'] || ( 'captured' === $credential_expiry['status'] && array() !== $credential_expiry['items'] ) ) { ?>
 		<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-attention">
 			<h3 id="ran-booster-overview-attention"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></h3>
 			<?php if ( 'captured' === $credential_expiry['status'] ) { ?>
 				<?php foreach ( $credential_expiry['items'] as $expiry_item ) { ?>
 					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> <span class="ran-booster-pill ran-booster-pill--<?php echo esc_attr( in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'error' : 'warning' ); ?>"><?php echo esc_html( $expiry_item['badge_label'] ); ?></span></p>
+				<?php } ?>
+				<?php if ( null !== $credential_expiry['total'] && $credential_expiry['total'] > count( $credential_expiry['items'] ) ) { ?>
+					<?php // translators: 1: displayed reminders, 2: total actionable reminders. ?>
+					<p><?php echo esc_html( sprintf( __( 'Showing %1$d of %2$d actionable expiry reminders.', 'ran-booster' ), count( $credential_expiry['items'] ), $credential_expiry['total'] ) ); ?></p>
+				<?php } ?>
+			<?php } elseif ( 'unavailable' === $credential_expiry['status'] ) { ?>
+				<p><?php esc_html_e( 'Credential expiry reminders are unavailable. Review credentials in provider settings.', 'ran-booster' ); ?></p>
+				<?php foreach ( $onboarding['provider_links'] as $provider_link ) { ?>
+					<a href="<?php echo esc_url( $provider_link['url'] ); ?>"><?php echo esc_html( $provider_link['label'] ); ?></a>
 				<?php } ?>
 			<?php } ?>
 			<?php foreach ( $provider_attention as $provider ) { ?>
@@ -187,7 +196,6 @@ $provider_attention        = array_filter(
 			<input type="hidden" name="ran_booster[action]" value="overview-presentation">
 			<input type="hidden" name="ran_booster[presentation]" value="onboarding">
 			<button type="submit" class="button"><?php esc_html_e( 'Return to onboarding', 'ran-booster' ); ?></button>
-			<p class="description"><?php esc_html_e( 'This changes the view for all site administrators. It does not reset your configuration.', 'ran-booster' ); ?></p>
 		</form>
 	<?php } ?>
 </section>

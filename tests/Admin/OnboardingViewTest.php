@@ -453,7 +453,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( '<strong>Plugins:</strong> 0', $html );
 		self::assertStringContainsString( '<strong>Themes:</strong> Unknown', $html );
 		self::assertStringContainsString( 'ran-booster-badge--neutral', $html );
-		self::assertStringContainsString( 'Current credential expiry is unknown', $html );
+		self::assertStringNotContainsString( 'id="ran-booster-overview-expiry"', $html );
 		self::assertSame( 5, substr_count( $html, '&lt;operation&gt;' ) );
 		self::assertStringNotContainsString( '<operation>', $html );
 		self::assertStringNotContainsString( '&lt;status&gt;', $html );
@@ -461,6 +461,15 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( '>Failed</span>', $html );
 		self::assertStringContainsString( 'ran-booster-badge--neutral', $html );
 		self::assertStringContainsString( '&lt;time&gt;', $html );
+		self::assertStringContainsString( '<strong>&lt;operation&gt;</strong><span aria-hidden="true"> · </span><span class="ran-booster-overview-activity__time">&lt;time&gt;</span>', $html );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath   = new \DOMXPath( $document );
+		$actions = $xpath->query( '//div[contains(@class, "ran-booster-overview-package-actions")]/a' );
+		self::assertInstanceOf( \DOMNodeList::class, $actions );
+		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns textContent.
+		self::assertSame( array( 'Install a plugin', 'Manage plugins', 'Install a theme', 'Manage themes' ), array_map( static fn ( \DOMNode $node ): string => trim( $node->textContent ), iterator_to_array( $actions ) ) );
+		self::assertStringNotContainsString( 'This changes the view for all site administrators.', $html );
 		self::assertStringContainsString( 'value="onboarding"', $html );
 		self::assertStringContainsString( 'ran-booster-overview-presentation', $html );
 	}
@@ -679,14 +688,12 @@ final class OnboardingViewTest extends TestCase {
 			self::assertStringContainsString( '&lt;Expires soon&gt;', $html );
 			self::assertStringNotContainsString( '<credential>', $html );
 			self::assertStringNotContainsString( 'Current credential expiry is unknown', $html );
-			self::assertSame( 'dashboard' === $view ? 10 : 5, substr_count( $html, '&lt;credential&gt;' ) );
+			self::assertSame( 5, substr_count( $html, '&lt;credential&gt;' ) );
 			if ( 'dashboard' === $view ) {
 				self::assertStringContainsString( 'Showing 5 of 6 actionable expiry reminders.', $html );
 				self::assertStringNotContainsString( '&lt;2026-11-02&gt;', $html );
 				self::assertStringNotContainsString( '&lt;provider&gt;', $html );
 				self::assertStringNotContainsString( '&lt;2026-10-31&gt;', $html );
-				self::assertStringContainsString( 'not a complete credential inventory', $html );
-				self::assertStringContainsString( '>GitHub</a>', $html );
 			}
 		}
 	}
@@ -698,7 +705,7 @@ final class OnboardingViewTest extends TestCase {
 			'themes_url'   => '/themes',
 			'activity_url' => '/activity',
 		);
-		self::assertStringContainsString( 'Current credential expiry is unknown', $this->render_view( null, null, $extra ) );
+		self::assertStringNotContainsString( 'Current credential expiry is unknown', $this->render_view( null, null, $extra ) );
 		$extra['credential_expiry'] = array(
 			'status' => 'unavailable',
 			'total'  => null,
@@ -713,8 +720,7 @@ final class OnboardingViewTest extends TestCase {
 			'items'  => array(),
 		);
 		$html                       = $this->render_view( null, null, $extra );
-		self::assertStringContainsString( 'No actionable expiry reminders were captured', $html );
-		self::assertStringContainsString( 'not a complete credential inventory', $html );
+		self::assertStringNotContainsString( 'id="ran-booster-overview-expiry"', $html );
 		self::assertStringNotContainsString( 'Current credential expiry is unknown', $html );
 		$extra['credential_expiry'] = array(
 			'status' => 'captured',

@@ -929,6 +929,13 @@
 	max-inline-size: 100%;
 }
 
+.ran-booster-admin
+	.ran-booster-settings
+	[aria-labelledby="ran-booster-general-heading"]
+	> .notice-info {
+	background: var(--ran-booster-surface-info);
+}
+
 .ran-booster-admin .ran-booster-settings__switch-row {
 	margin-block: var(--ran-booster-space-12);
 }

@@ -44,7 +44,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		);
 
 		self::assertMatchesRegularExpression(
-			'#^' . preg_quote( $this->root . '/account', '#' ) . '/\.ran-booster/[a-f0-9]{16}/secrets\.json$#D',
+			'#^' . preg_quote( $this->root . '/account', '#' ) . '/\.ran-booster/[a-f0-9]{16}/ran-booster-store\.json$#D',
 			(string) $candidate
 		);
 		self::assertSame(
@@ -59,6 +59,22 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		self::assertTrue(
 			$resolver->validate_configured(
 				(string) $candidate,
+				$this->root . '/account/site/public',
+				$this->root . '/account/site/public/wp-content',
+				$this->root . '/account/site/public/wp-content/plugins/ran-booster',
+				$this->root . '/account/site/public'
+			)
+		);
+		self::assertDirectoryDoesNotExist( $this->root . '/account/.ran-booster' );
+	}
+
+	public function test_rejects_the_old_basename_as_a_configured_path_before_creating_directories(): void {
+		$resolver  = new PrivateLocationCandidateResolver( $this->temporary_boundary );
+		$candidate = $this->root . '/account/.ran-booster/' . $this->fingerprint() . '/secrets.json';
+
+		self::assertFalse(
+			$resolver->validate_configured(
+				$candidate,
 				$this->root . '/account/site/public',
 				$this->root . '/account/site/public/wp-content',
 				$this->root . '/account/site/public/wp-content/plugins/ran-booster',
@@ -177,7 +193,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 
 		self::assertTrue(
 			$resolver->validate_configured(
-				$private . '/secrets.json',
+				$private . '/ran-booster-store.json',
 				$wordpress,
 				$content,
 				$plugin,
@@ -186,7 +202,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		);
 		self::assertFalse(
 			$resolver->validate_configured(
-				$content . '/secrets.json',
+				$content . '/ran-booster-store.json',
 				$wordpress,
 				$content,
 				$plugin,
@@ -197,7 +213,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		self::assertTrue( chmod( $private, 0770 ) );
 		self::assertFalse(
 			$resolver->validate_configured(
-				$private . '/secrets.json',
+				$private . '/ran-booster-store.json',
 				$wordpress,
 				$content,
 				$plugin,
@@ -210,7 +226,7 @@ final class PrivateLocationCandidateResolverTest extends TestCase {
 		self::assertTrue( symlink( $private, $this->root . '/account/private-link' ) );
 		self::assertFalse(
 			$resolver->validate_configured(
-				$this->root . '/account/private-link/secrets.json',
+				$this->root . '/account/private-link/ran-booster-store.json',
 				$wordpress,
 				$content,
 				$plugin,

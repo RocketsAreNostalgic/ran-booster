@@ -51,6 +51,8 @@
 /node_modules        export-ignore
 /secrets.json       export-ignore
 /secrets.json.lock  export-ignore
+/ran-booster-store.json       export-ignore
+/ran-booster-store.json.lock  export-ignore
 /.ran-booster       export-ignore
 /boosterlog          export-ignore
 /*.log               export-ignore

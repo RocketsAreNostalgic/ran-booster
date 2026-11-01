@@ -304,7 +304,7 @@ while IFS= read -r path || [[ -n "$path" ]]; do
 		|| fail "unsafe archive path: $path"
 
 	case "$relative" in
-		AGENTS.md|AGENTS.md/*|.agents|.agents/*|.dex|.dex/*|ran-booster-workbench|ran-booster-workbench/*|.github|.github/*|tests|tests/*|scripts|scripts/*|build|build/*|node_modules|node_modules/*|README.md|CHANGELOG.md|release-files.txt|runtime-packaging-policy.json|release-please-config.json|.release-please-manifest.json|package.json|pnpm-lock.yaml|composer.json|composer.lock|.ran-booster|.ran-booster/*|secrets.json|*/secrets.json|secrets.json.lock|*/secrets.json.lock|boosterlog|*.log|*.zip|*.tar|*.tar.gz|*.tgz)
+		AGENTS.md|AGENTS.md/*|.agents|.agents/*|.dex|.dex/*|ran-booster-workbench|ran-booster-workbench/*|.github|.github/*|tests|tests/*|scripts|scripts/*|build|build/*|node_modules|node_modules/*|README.md|CHANGELOG.md|release-files.txt|runtime-packaging-policy.json|release-please-config.json|.release-please-manifest.json|package.json|pnpm-lock.yaml|composer.json|composer.lock|.ran-booster|.ran-booster/*|ran-booster-store.json|*/ran-booster-store.json|ran-booster-store.json.lock|*/ran-booster-store.json.lock|secrets.json|*/secrets.json|secrets.json.lock|*/secrets.json.lock|boosterlog|*.log|*.zip|*.tar|*.tar.gz|*.tgz)
 			fail "development, secret, log, or archive path is forbidden: $path"
 			;;
 		vendor|vendor/|vendor/ran|vendor/ran/)

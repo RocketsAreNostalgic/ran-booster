@@ -59,7 +59,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$this->root           = $canonical_root;
 		$this->wordpress_root = $this->root . '/wordpress';
 		$this->config_path    = $this->wordpress_root . '/wp-config.php';
-		$this->candidate      = $this->root . '/private/.ran-booster/0123456789abcdef/secrets.json';
+		$this->candidate      = $this->root . '/private/.ran-booster/0123456789abcdef/ran-booster-store.json';
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->wordpress_root . '/wp-content/plugins/ran-booster', 0700, true ) );
@@ -131,7 +131,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0755 ) );
 		$provisioner             = $this->provisioner();
-		$provisioner->configured = $directory . '/secrets.json';
+		$provisioner->configured = $directory . '/ran-booster-store.json';
 		$directory_result        = $provisioner->status();
 
 		self::assertSame( 'storage_directory_unusable', $directory_result->code() );
@@ -220,7 +220,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$provisioner                 = $this->provisioner();
-		$provisioner->configured     = $directory . '/secrets.json';
+		$provisioner->configured     = $directory . '/ran-booster-store.json';
 		$provisioner->health_failure = true;
 		$generic                     = \RAN\Secrets\SecretsStorageUnavailable::REASON_GENERIC;
 		$cases                       = array(
@@ -347,12 +347,12 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $manual, 0700 ) );
 		$provisioner             = $this->provisioner();
-		$provisioner->configured = $manual . '/secrets.json';
+		$provisioner->configured = $manual . '/ran-booster-store.json';
 
 		$result = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
-		self::assertSame( $manual . '/secrets.json', $result->candidate_path() );
+		self::assertSame( $manual . '/ran-booster-store.json', $result->candidate_path() );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->path_source() );
 		self::assertTrue( $provisioner->resolver_called );
 		self::assertFalse( $provisioner->probe_called );
@@ -373,8 +373,8 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$result                                  = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
-		self::assertSame( $directory . '/secrets.json', $result->candidate_path() );
-		self::assertSame( $directory . '/secrets.json', ( new SecretsFile() )->path() );
+		self::assertSame( $directory . '/ran-booster-store.json', $result->candidate_path() );
+		self::assertSame( $directory . '/ran-booster-store.json', ( new SecretsFile() )->path() );
 	}
 
 	#[RunInSeparateProcess]
@@ -405,7 +405,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$directory           = dirname( $wp_config_directory ) . '/operator-file';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
-		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $directory . '/secrets.json' );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $directory . '/ran-booster-store.json' );
 
 		$provisioner                             = $this->provisioner();
 		$provisioner->read_runtime_configuration = true;
@@ -436,7 +436,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_raw_relative_file_constant_is_rejected_by_both_consumers(): void {
-		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', 'relative/private/secrets.json' );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', 'relative/private/ran-booster-store.json' );
 
 		$provisioner                             = $this->provisioner();
 		$provisioner->read_runtime_configuration = true;
@@ -453,7 +453,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $manual, 0700 ) );
 		$provisioner             = $this->provisioner();
-		$provisioner->configured = $manual . '/secrets.json';
+		$provisioner->configured = $manual . '/ran-booster-store.json';
 		$provisioner->healthy    = true;
 
 		self::assertSame(
@@ -472,7 +472,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	public function test_configured_path_explains_missing_and_insecure_directory(): void {
 		$directory               = $this->root . '/manual-attention';
 		$provisioner             = $this->provisioner();
-		$provisioner->configured = $directory . '/secrets.json';
+		$provisioner->configured = $directory . '/ran-booster-store.json';
 
 		$result = $provisioner->status();
 		self::assertSame( 'storage_directory_unavailable', $result->code() );
@@ -491,7 +491,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$directory = $this->root . '/manual-file-attention';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
-		$file = $directory . '/secrets.json';
+		$file = $directory . '/ran-booster-store.json';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $file, '{}' ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
@@ -511,7 +511,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		$directory = $this->root . '/manual-lock-attention';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
-		$file = $directory . '/secrets.json';
+		$file = $directory . '/ran-booster-store.json';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $file, '{}' ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
@@ -543,7 +543,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$provisioner                 = $this->provisioner();
-		$provisioner->configured     = $directory . '/secrets.json';
+		$provisioner->configured     = $directory . '/ran-booster-store.json';
 		$provisioner->health_failure = true;
 
 		$provisioner->health_failure_message = 'The encrypted Booster secrets store is incomplete.';
@@ -568,7 +568,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $manual, 0700 ) );
 		$provisioner                 = $this->provisioner();
-		$provisioner->configured     = $manual . '/secrets.json';
+		$provisioner->configured     = $manual . '/ran-booster-store.json';
 		$provisioner->local_platform = false;
 
 		self::assertSame(
@@ -579,20 +579,20 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	public function test_manual_override_inside_word_press_is_rejected_with_privileged_correction_path(): void {
 		$provisioner             = $this->provisioner();
-		$provisioner->configured = $this->wordpress_root . '/secrets.json';
+		$provisioner->configured = $this->wordpress_root . '/ran-booster-store.json';
 
 		$result = $provisioner->status();
 
 		self::assertSame( SecretsStorageProvisioningResult::STORAGE_NEEDS_ATTENTION, $result->status() );
 		self::assertSame( 'configured_path_unsafe', $result->code() );
-		self::assertSame( $this->wordpress_root . '/secrets.json', $result->candidate_path() );
+		self::assertSame( $this->wordpress_root . '/ran-booster-store.json', $result->candidate_path() );
 		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL, $result->path_source() );
 		self::assertStringContainsString( 'outside the public web root', $result->message() );
 		self::assertFalse( $provisioner->resolver_called );
 	}
 
 	public function test_unsafe_booster_owned_directory_definition_is_attributed_to_automatic_setup(): void {
-		$configured = $this->wordpress_root . '/private/secrets.json';
+		$configured = $this->wordpress_root . '/private/ran-booster-store.json';
 		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $configured );
 		$provisioner             = $this->provisioner();
 		$provisioner->configured = $configured;
@@ -612,10 +612,10 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertTrue( symlink( $actual, $link ) );
 
 		$provisioner             = $this->provisioner();
-		$provisioner->configured = $link . '/secrets.json';
+		$provisioner->configured = $link . '/ran-booster-store.json';
 		self::assertSame( 'configured_path_unsafe', $provisioner->status()->code() );
 
-		$provisioner->configured = $actual . '/secrets.json';
+		$provisioner->configured = $actual . '/ran-booster-store.json';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.
 		self::assertNotFalse( file_put_contents( $provisioner->configured, '{}' ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod -- Set native POSIX permission bits required by the private-path security assertion.
@@ -1077,10 +1077,10 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 	private function managed_diagnostic_message_for_code( string $code ): string {
 		return array(
-			'storage_key_missing'           => 'secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.',
-			'storage_file_missing'          => 'The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster.',
-			'storage_orphan_lock'           => 'Only secrets.json.lock remains; no secrets file or database encryption key was found.',
-			'storage_lock_missing'          => 'Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup.',
+			'storage_key_missing'           => 'ran-booster-store.json and ran-booster-store.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.',
+			'storage_file_missing'          => 'The database encryption key exists, but ran-booster-store.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster.',
+			'storage_orphan_lock'           => 'Only ran-booster-store.json.lock remains; no secrets file or database encryption key was found.',
+			'storage_lock_missing'          => 'Managed secrets material exists, but ran-booster-store.json.lock is missing. Restore the matching storage set from one backup.',
 			'unexpected_reason'             => 'Booster could not safely use the encrypted secrets store.',
 			'storage_incomplete'            => 'The secrets file, lock file and database key are incomplete. Restore the matching set from one backup or reset empty storage.',
 			'storage_authentication_failed' => 'The secrets file could not be authenticated with this site\'s database key. Restore both from the same backup.',
@@ -1088,7 +1088,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 			'storage_key_unavailable'       => 'Booster could not read the database-held encryption key. Restore the database and encrypted files from the same backup.',
 			'storage_file_unusable'         => 'The secrets file could not be read safely. Verify its ownership, mode 0600 and that it is a non-empty Booster-managed file.',
 			'storage_lock_unusable'         => 'The secrets lock file could not be used safely. Verify its ownership and mode 0600.',
-			'storage_unavailable'           => 'Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600.',
+			'storage_unavailable'           => 'Booster could not classify the storage failure. Verify PHP owns the directories, ran-booster-store.json and ran-booster-store.json.lock; directories require mode 0700 and both files require mode 0600.',
 		)[ $code ];
 	}
 
@@ -1106,7 +1106,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 	}
 
 	private function recovery_store( string $fingerprint ): string {
-		$path = dirname( dirname( $this->candidate ) ) . '/' . $fingerprint . '/secrets.json';
+		$path = dirname( dirname( $this->candidate ) ) . '/' . $fingerprint . '/ran-booster-store.json';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( dirname( $path ), 0700, true ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.

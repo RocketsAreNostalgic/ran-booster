@@ -121,7 +121,7 @@ final class OnboardingViewTest extends TestCase {
 			array(
 				'status'              => 'setup_available',
 				'message'             => 'Booster can create secure encrypted secrets storage.',
-				'candidate_path'      => '/private/<canary>/secrets.json',
+				'candidate_path'      => '/private/<canary>/ran-booster-store.json',
 				'path_source'         => 'automatic',
 				'can_provision'       => true,
 				'action_url'          => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
@@ -140,7 +140,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'value="ran-booster-create-secure-storage"', $html );
 		self::assertStringContainsString( 'Create secure storage', $html );
 		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details ran-booster-disclosure" open', $html );
-		self::assertStringContainsString( '/private/&lt;canary&gt;/secrets.json', $html );
+		self::assertStringContainsString( '/private/&lt;canary&gt;/ran-booster-store.json', $html );
 		self::assertStringContainsString( 'Storage directory', $html );
 		self::assertStringContainsString( '/private/&lt;canary&gt;', $html );
 		self::assertStringContainsString( 'Storage file', $html );
@@ -158,7 +158,7 @@ final class OnboardingViewTest extends TestCase {
 			array(
 				'status'              => 'path_configured',
 				'message'             => 'The private storage path is configured.',
-				'candidate_path'      => '/private/canary/secrets.json',
+				'candidate_path'      => '/private/canary/ran-booster-store.json',
 				'path_source'         => 'automatic',
 				'can_provision'       => false,
 				'action_url'          => '/admin',
@@ -172,7 +172,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-storage-status="path_configured"', $html );
 		self::assertStringContainsString( '>Path configured</span>', $html );
 		self::assertStringContainsString( 'Storage file', $html );
-		self::assertStringContainsString( '/private/canary/secrets.json', $html );
+		self::assertStringContainsString( '/private/canary/ran-booster-store.json', $html );
 		self::assertStringContainsString( 'Path selection', $html );
 		self::assertStringContainsString( 'Booster default', $html );
 		self::assertStringContainsString( 'created when you save the first credential.', $html );
@@ -189,7 +189,7 @@ final class OnboardingViewTest extends TestCase {
 				'status'              => 'storage_needs_attention',
 				'reason_code'         => 'storage_directory_unavailable',
 				'message'             => 'Current storage is missing.',
-				'candidate_path'      => '/private/.ran-booster/0123456789abcdef/secrets.json',
+				'candidate_path'      => '/private/.ran-booster/0123456789abcdef/ran-booster-store.json',
 				'path_source'         => 'automatic',
 				'can_provision'       => false,
 				'action_url'          => '/admin',
@@ -199,7 +199,7 @@ final class OnboardingViewTest extends TestCase {
 				'recovery'            => array(
 					'state'               => 'available',
 					'message'             => 'Authenticated prior storage found.',
-					'candidate_path'      => '/private/.ran-booster/abcdef0123456789/secrets.json',
+					'candidate_path'      => '/private/.ran-booster/abcdef0123456789/ran-booster-store.json',
 					'candidate_directory' => '/private/.ran-booster/abcdef0123456789',
 					'token'               => $token,
 					'can_adopt'           => true,
@@ -222,7 +222,7 @@ final class OnboardingViewTest extends TestCase {
 				'status'              => 'storage_needs_attention',
 				'reason_code'         => 'storage_file_missing',
 				'message'             => 'The database key exists but the file is missing.',
-				'candidate_path'      => '/private/.ran-booster/0123456789abcdef/secrets.json',
+				'candidate_path'      => '/private/.ran-booster/0123456789abcdef/ran-booster-store.json',
 				'path_source'         => 'automatic',
 				'can_provision'       => false,
 				'action_url'          => '/admin',
@@ -263,7 +263,7 @@ final class OnboardingViewTest extends TestCase {
 				'status'              => 'storage_needs_attention',
 				'reason_code'         => 'storage_key_missing',
 				'message'             => 'The encrypted file exists but its database key is missing.',
-				'candidate_path'      => '/private/.ran-booster/0123456789abcdef/secrets.json',
+				'candidate_path'      => '/private/.ran-booster/0123456789abcdef/ran-booster-store.json',
 				'path_source'         => 'automatic',
 				'can_provision'       => false,
 				'action_url'          => '/admin',
@@ -284,7 +284,7 @@ final class OnboardingViewTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="storage_key_missing"', $html );
-		self::assertStringContainsString( 'Restore the matching secrets.json and database key from the same backup', $html );
+		self::assertStringContainsString( 'Restore the matching ran-booster-store.json and database key from the same backup', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="reset-empty-storage"', $html );
 		self::assertStringContainsString( 'Reset credential storage', $html );
 	}
@@ -333,7 +333,7 @@ final class OnboardingViewTest extends TestCase {
 			array(
 				'status'              => 'manual_required',
 				'message'             => 'The WordPress configuration must be updated manually.',
-				'candidate_path'      => '/private/canary/secrets.json',
+				'candidate_path'      => '/private/canary/ran-booster-store.json',
 				'path_source'         => null,
 				'can_provision'       => false,
 				'action_url'          => '/admin',
@@ -395,7 +395,7 @@ final class OnboardingViewTest extends TestCase {
 				'status'              => 'storage_needs_attention',
 				'reason_code'         => 'configured_path_unsafe',
 				'message'             => 'Choose a private location outside the public web root.',
-				'candidate_path'      => '/var/www/site/public_html/ran-booster/secrets.json',
+				'candidate_path'      => '/var/www/site/public_html/ran-booster/ran-booster-store.json',
 				'candidate_directory' => '/var/www/site/public_html/ran-booster',
 				'path_source'         => 'manual',
 				'can_provision'       => false,
@@ -410,7 +410,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( '<dt>Storage directory</dt>', $html );
 		self::assertStringContainsString( '/var/www/site/public_html/ran-booster</code>', $html );
 		self::assertStringContainsString( '<dt>Storage file</dt>', $html );
-		self::assertStringContainsString( '/var/www/site/public_html/ran-booster/secrets.json</code>', $html );
+		self::assertStringContainsString( '/var/www/site/public_html/ran-booster/ran-booster-store.json</code>', $html );
 		self::assertStringContainsString( 'Custom wp-config.php path', $html );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $html );
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="configured_path_unsafe"', $html );
@@ -805,7 +805,7 @@ final class OnboardingViewTest extends TestCase {
 				'status'              => $status,
 				'reason_code'         => $status,
 				'message'             => $message,
-				'candidate_path'      => '/private/canary/secrets.json',
+				'candidate_path'      => '/private/canary/ran-booster-store.json',
 				'path_source'         => $source,
 				'can_provision'       => false,
 				'action_url'          => '/admin',

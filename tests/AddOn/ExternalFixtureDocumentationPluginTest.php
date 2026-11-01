@@ -43,12 +43,37 @@ final class ExternalFixtureDocumentationPluginTest extends TestCase {
 		$this->load_fixture_plugin();
 		$this->run_hook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_documentation_sections_after_provider_gh', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
+		self::assertArrayNotHasKey( 'ran_booster_documentation_chapters', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
+		self::assertArrayNotHasKey( 'ran_booster_documentation_sections_before_about', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
 
 		$GLOBALS['ran_booster_external_fixture_addon_actions'] = array();
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 15 );
 		$this->load_fixture_plugin();
 		$this->run_hook( 'plugins_loaded' );
 		self::assertArrayNotHasKey( 'ran_booster_documentation_sections_after_provider_gh', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
+		self::assertArrayNotHasKey( 'ran_booster_documentation_chapters', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
+		self::assertArrayNotHasKey( 'ran_booster_documentation_sections_before_about', $GLOBALS['ran_booster_external_fixture_addon_actions'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_plugin_registers_a_chapter_and_multiple_articles(): void {
+		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
+		$this->load_fixture_plugin();
+		$this->run_hook( 'plugins_loaded' );
+		$chapters = $this->run_filter( 'ran_booster_documentation_chapters', array(), 'https://example.test/documentation', 'site' );
+		$sections = $this->run_filter( 'ran_booster_documentation_sections_before_about', array(), 'https://example.test/documentation', 'site', null );
+		self::assertSame(
+			array(
+				array(
+					'id'    => 'fixture-guidance',
+					'title' => 'Fixture guidance',
+				),
+			),
+			$chapters
+		);
+		self::assertSame( array( 'fixture-overview', 'fixture-details' ), array_column( $sections, 'id' ) );
+		self::assertSame( array( 'fixture-guidance', 'fixture-guidance' ), array_column( $sections, 'chapter' ) );
 	}
 
 	private function load_fixture_plugin(): void {

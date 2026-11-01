@@ -325,6 +325,265 @@ final class DocumentationViewTest extends TestCase {
 		}
 	}
 
+	public function test_custom_chapters_preserve_order_fallback_and_safe_unique_anchors(): void {
+		$calls = 0;
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_chapters'][]                      = static function ( array $chapters, string $url, string $scope ): array {
+			self::assertStringContainsString( 'tab=documentation', $url );
+			self::assertSame( 'site', $scope );
+			return array_merge(
+				$chapters,
+				array(
+					array(
+						'id'    => 'fixture-first',
+						'title' => 'First <chapter>',
+					),
+					array(
+						'id'    => 'fixture-first',
+						'title' => 'Duplicate title',
+					),
+					array(
+						'id'    => 'fixture-second',
+						'title' => 'Second chapter',
+					),
+					array(
+						'id'    => 'fixture-empty',
+						'title' => 'Empty chapter',
+					),
+					array(
+						'id'    => 'provider-gh',
+						'title' => 'Reserved title',
+					),
+					array(
+						'id'    => 'bad id',
+						'title' => 'Malformed title',
+					),
+					array(
+						'id'    => 'fixture-control',
+						'title' => "Control\ntitle",
+					),
+					array(
+						'id'    => 'fixture-long',
+						'title' => str_repeat( 'x', 201 ),
+					),
+					array(
+						'id'    => 'core',
+						'title' => 'Reserved core',
+					),
+				)
+			);
+		};
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] = static function ( array $sections, string $url, string $scope, ?ProviderMetadata $metadata ) use ( &$calls ): array {
+			self::assertNull( $metadata );
+			self::assertSame( 'site', $scope );
+			self::assertStringContainsString( 'tab=documentation', $url );
+			$sections[] = array(
+				'id'      => 'fixture-second-article',
+				'summary' => 'Second article',
+				'content' => '<p>Second.</p>',
+				'chapter' => 'fixture-second',
+				'open'    => true,
+			);
+			$sections[] = array(
+				'id'      => 'fixture-first-article',
+				'summary' => 'First article',
+				'content' => static function () use ( &$calls ): void {
+									++$calls;
+									echo '<p>First.</p>';
+				},
+				'chapter' => 'fixture-first',
+				'open'    => true,
+			);
+			$sections[] = array(
+				'id'      => 'fixture-first-other',
+				'summary' => 'Other article',
+				'content' => '<p>Other.</p>',
+				'chapter' => 'fixture-first',
+			);
+			$sections[] = array(
+				'id'      => 'fixture-failed',
+				'summary' => 'Failed article',
+				'content' => static function (): void {
+									throw new \RuntimeException( 'failure' );
+				},
+				'chapter' => 'fixture-first',
+			);
+			$sections[] = array(
+				'id'      => 'ran-booster-documentation-chapter-fixture-first',
+				'summary' => 'Collision article',
+				'content' => '<p>Collision.</p>',
+			);
+			$sections[] = array(
+				'id'      => 'long-fallback',
+				'summary' => 'Long fallback',
+				'content' => '<p>Available.</p>',
+				'chapter' => 'fixture-long',
+			);
+			$sections[] = array(
+				'id'      => 'provider-fallback',
+				'summary' => 'Provider fallback',
+				'content' => '<p>Available.</p>',
+				'chapter' => 'provider-gh',
+			);
+			$sections[] = array(
+				'id'      => 'control-fallback',
+				'summary' => 'Control fallback',
+				'content' => '<p>Available.</p>',
+				'chapter' => 'fixture-control',
+			);
+			$sections[] = array(
+				'id'      => 'reserved-fallback',
+				'summary' => 'Reserved fallback',
+				'content' => '<p>Available.</p>',
+				'chapter' => 'core',
+			);
+			$sections[] = array(
+				'id'      => 'fixture-fallback',
+				'summary' => 'Fallback article',
+				'content' => '<p>Fallback.</p>',
+				'chapter' => 'fixture-missing',
+			);
+			return $sections;
+		};
+		$html = $this->render_view( $this->provider_documentation() );
+		self::assertSame( 1, $calls );
+		self::assertStringNotContainsString( '<chapter>', $html );
+		foreach ( array( 'Duplicate title', 'Empty chapter', 'Reserved title', 'Malformed title' ) as $ignored ) {
+			self::assertStringNotContainsString( $ignored, $html );
+		}
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath       = new \DOMXPath( $document );
+		$nav_groups  = $xpath->query( '//aside//nav//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapters ")]/*[.//a]' );
+		$body_groups = $xpath->query( '//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapter ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $nav_groups );
+		self::assertInstanceOf( \DOMNodeList::class, $body_groups );
+		$nav = array();
+		foreach ( $nav_groups as $group ) {
+			self::assertInstanceOf( \DOMElement::class, $group );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./h3//a | ./h3//button | ./h3//details)', $group ) );
+			$title         = trim( (string) $xpath->evaluate( 'string(./h3)', $group ) );
+			$nav[ $title ] = array();
+			$links         = $xpath->query( './/a', $group );
+			self::assertInstanceOf( \DOMNodeList::class, $links );
+			foreach ( $links as $link ) {
+				self::assertInstanceOf( \DOMElement::class, $link );
+				$nav[ $title ][] = substr( $link->getAttribute( 'href' ), 1 );
+			}
+		}
+		$body = array();
+		foreach ( $body_groups as $group ) {
+			self::assertInstanceOf( \DOMElement::class, $group );
+			$title          = trim( (string) $xpath->evaluate( 'string(./h3)', $group ) );
+			$body[ $title ] = array();
+			$articles       = $xpath->query( './/details[@data-ran-booster-documentation-section]', $group );
+			self::assertInstanceOf( \DOMNodeList::class, $articles );
+			foreach ( $articles as $article ) {
+				self::assertInstanceOf( \DOMElement::class, $article );
+				$body[ $title ][] = $article->getAttribute( 'id' );
+			}
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./h3//a | ./h3//button | ./h3//details)', $group ) );
+		}
+		self::assertSame( $body, $nav );
+		self::assertSame( array( 'Booster Core concepts', 'GitHub', 'Bitbucket', 'First <chapter>', 'Second chapter', 'Reference' ), array_keys( $body ) );
+		self::assertSame( array( 'fixture-first-article', 'fixture-first-other', 'fixture-failed' ), $body['First <chapter>'] );
+		self::assertSame( array( 'fixture-second-article' ), $body['Second chapter'] );
+		self::assertContains( 'fixture-fallback', $body['Reference'] );
+		self::assertContains( 'control-fallback', $body['Reference'] );
+		self::assertContains( 'long-fallback', $body['Reference'] );
+		self::assertContains( 'provider-fallback', $body['Reference'] );
+		self::assertContains( 'reserved-fallback', $body['Reference'] );
+		self::assertSame( 'ran-booster-about', end( $body['Reference'] ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@name="ran-booster-documentation"][@open][@id="fixture-first-article"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@name="ran-booster-documentation"][@open])' ) );
+		self::assertStringContainsString( 'An add-on guide is temporarily unavailable.', $html );
+		$ids      = array();
+		$id_nodes = $xpath->query( '//*[@id]' );
+		self::assertInstanceOf( \DOMNodeList::class, $id_nodes );
+		foreach ( $id_nodes as $node ) {
+			self::assertInstanceOf( \DOMElement::class, $node );
+			$id = $node->getAttribute( 'id' );
+			self::assertArrayNotHasKey( $id, $ids, 'Duplicate ID: ' . $id );
+			$ids[ $id ] = true;
+		}
+	}
+
+	public function test_missing_or_deactivated_chapter_leaves_its_article_in_reference(): void {
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_chapters'][]                      = static fn ( array $chapters ): array => array_merge(
+			$chapters,
+			array(
+				array(
+					'id'    => 'fixture-guidance',
+					'title' => 'Fixture guidance',
+				),
+			)
+		);
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] = static function ( array $sections ): array {
+			$sections[] = array(
+				'id'      => 'surviving-guide',
+				'summary' => 'Surviving guide',
+				'content' => '<p>Still available.</p>',
+				'chapter' => 'fixture-guidance',
+			);
+			return $sections;
+		};
+		$active = $this->render_view( array() );
+		self::assertStringContainsString( 'Fixture guidance', $active );
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_chapters'] = array();
+		$inactive = $this->render_view( array() );
+		self::assertStringNotContainsString( 'Fixture guidance', $inactive );
+		$document = new \DOMDocument();
+		$document->loadHTML( $inactive, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapter ")][h3="Reference"]//details[@id="surviving-guide"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//aside//a[@href="#surviving-guide"])' ) );
+	}
+
+	public function test_provider_articles_stay_with_provider_and_win_duplicate_ids(): void {
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_chapters'][]                           = static fn ( array $chapters ): array => array_merge(
+			$chapters,
+			array(
+				array(
+					'id'    => 'fixture-guidance',
+					'title' => 'Fixture guidance',
+				),
+			)
+		);
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_after_provider_gh'][] = static function ( array $sections, string $url, string $scope ): array {
+			self::assertStringContainsString( 'tab=documentation', $url );
+			self::assertSame( 'site', $scope );
+			$sections[] = array(
+				'id'      => 'shared-guide',
+				'summary' => 'Provider wins',
+				'content' => '<p>Provider content.</p>',
+				'chapter' => 'fixture-guidance',
+			);
+			return $sections;
+		};
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][]      = static function ( array $sections ): array {
+			$sections[] = array(
+				'id'      => 'shared-guide',
+				'summary' => 'Duplicate loses',
+				'content' => '<p>Duplicate.</p>',
+				'chapter' => 'fixture-guidance',
+			);
+			$sections[] = array(
+				'id'      => 'custom-guide',
+				'summary' => 'Custom guide',
+				'content' => '<p>Custom.</p>',
+				'chapter' => 'fixture-guidance',
+			);
+			return $sections;
+		};
+		$html     = $this->render_view( $this->provider_documentation() );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapter ")][h3="GitHub"]//details[@id="shared-guide"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-documentation-provider-gh"]/following-sibling::*[1][@id="shared-guide"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="shared-guide"])' ) );
+		self::assertStringNotContainsString( 'Duplicate loses', $html );
+	}
+
 	public function test_addon_contributions_cannot_take_the_requirements_anchor(): void {
 		foreach ( array( 'ran_booster_documentation_sections_after_provider_gh', 'ran_booster_documentation_sections_before_about' ) as $hook ) {
 			$GLOBALS['ran_booster_documentation_test_filters'][ $hook ][] =

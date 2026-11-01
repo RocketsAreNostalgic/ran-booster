@@ -228,11 +228,8 @@ final class RepositoryWebhookManagementControls {
 			if ( is_array( $model['result'] ?? null ) ) {
 				$notices[] = $model['result'];
 			}
-			if ( is_string( $model['recovery_warning'] ?? null ) ) {
-				$notices[] = array(
-					'class'   => 'notice-warning',
-					'message' => $model['recovery_warning'],
-				);
+			if ( is_array( $model['recovery_warning'] ?? null ) ) {
+				$notices[] = $model['recovery_warning'];
 			}
 			$model['result']           = null;
 			$model['recovery_warning'] = null;
@@ -306,7 +303,7 @@ final class RepositoryWebhookManagementControls {
 
 	/**
 	 * @param list<array{label:string,message:string,state:string}> $items
-	 * @param list<array{class:string,message:string}> $notices
+	 * @param list<array{class:string,message:string,heading?:string,details?:list<string>}> $notices
 	 */
 	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true ): void {
 		$inactive = ! $has_branch_consumer || ! $setup_available;
@@ -318,7 +315,17 @@ final class RepositoryWebhookManagementControls {
 			<div class="ran-booster-settings-section__body">
 				<div class="ran-booster-repository-webhook-management__notices">
 					<?php foreach ( $notices as $notice ) { ?>
-						<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice"><p><?php echo esc_html( $notice['message'] ); ?></p></div>
+						<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice">
+							<?php
+							if ( isset( $notice['heading'] ) ) :
+								?>
+								<p><strong><?php echo esc_html( $notice['heading'] ); ?></strong></p><?php endif; ?>
+							<p><?php echo esc_html( $notice['message'] ); ?></p>
+							<?php
+							foreach ( $notice['details'] ?? array() as $detail ) :
+								?>
+								<p><?php echo esc_html( $detail ); ?></p><?php endforeach; ?>
+						</div>
 					<?php } ?>
 				</div>
 				<?php $this->render_repository_webhook_lifecycle( $items, $inactive ); ?>

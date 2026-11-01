@@ -30,8 +30,8 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
  *   webhooks_url:?string,
  *   return_url:string,
  *   interaction_request:AdminInteractionRequest|null,
- *   result:array{class:string,message:string}|null,
- *   recovery_warning:?string,
+ *   result:array{class:string,message:string,heading?:string,details?:list<string>}|null,
+ *   recovery_warning:array{class:string,message:string,heading?:string,details?:list<string>}|null,
  *   management_credential_id:?string,
  *   credential_choices:list<array{id:string,label:string}>,
  *   webhook_profile_choices:list<array{id:string,label:string,scope:string}>,
@@ -185,10 +185,34 @@ final class WebhookDisplayModel {
 		$recovery_warning = null;
 		if ( null !== $record && $record->requires_hook_identification() ) {
 			/* translators: %s: repository provider name. */
-			$recovery_warning = sprintf( __( 'Git provider state changed without a stable hook ID. Managed operations are disabled for this repository. Inspect its %s webhooks and the recorded Core signing profile manually; do not retry Setup until both sides are reconciled.', 'ran-booster' ), $provider_label );
+			$recovery_warning = array(
+				'class'   => 'notice-warning',
+				'heading' => __( 'Manual webhook recovery required', 'ran-booster' ),
+				'message' => __( 'Managed operations are disabled for this repository. Do not retry Setup until both sides are reconciled.', 'ran-booster' ),
+				'details' => array(
+					/* translators: %s: repository provider name. */
+					sprintf( __( 'The Git provider state changed without a stable hook ID. Inspect its %s webhooks and the recorded Core signing profile manually.', 'ran-booster' ), $provider_label ),
+				),
+			);
 		} elseif ( null !== $recovery ) {
 			/* translators: %s: repository provider name. */
-			$recovery_warning = sprintf( __( 'Repository webhook management could not persist the returned recovery references. Setup is disabled on this recovery view. Inspect %s and Core manually before leaving or retrying.', 'ran-booster' ), $provider_label );
+			$recovery_warning = array(
+				'class'   => 'notice-warning',
+				'heading' => __( 'Manual webhook recovery required', 'ran-booster' ),
+				'message' => __( 'Setup is disabled on this recovery view.', 'ran-booster' ),
+				'details' => array(
+					/* translators: %s: repository provider name. */
+					sprintf( __( 'Repository webhook management could not persist the returned recovery references. Inspect %s and Core manually before leaving or retrying.', 'ran-booster' ), $provider_label ),
+					/* translators: %s: provider hook reference ID. */
+					sprintf( __( 'Git provider hook reference: %s', 'ran-booster' ), $recovery['hook_id'] ),
+					/* translators: %s: Core signing profile ID. */
+					sprintf( __( 'Core signing profile: %s', 'ran-booster' ), $recovery['profile_id'] ),
+				),
+			);
+			if ( in_array( $result_code, array( 'recovery_record_failed', 'record_conflict', 'record_update_failed' ), true ) ) {
+				// The result already identifies both references and the manual inspection step.
+				$recovery_warning['details'] = array();
+			}
 		}
 
 		return array(
@@ -209,10 +233,7 @@ final class WebhookDisplayModel {
 			'webhooks_url'                => $webhooks_url,
 			'return_url'                  => $this->panel_url( $return_url, $repository_id ),
 			'interaction_request'         => AdminInteractionRequest::provider_repositories( 'repository-webhook-management:manage-webhook', $this->panel_url( $return_url, $repository_id ), 'repository-webhook-management-error' ),
-			'result'                      => null === $result_code ? null : array(
-				'class'   => $this->result_notice_class( $result_code ),
-				'message' => $this->notice( $result_code, $recovery, $remediation ),
-			),
+			'result'                      => null === $result_code ? null : $this->result_presentation( $result_code, $recovery, $remediation ),
 			'recovery_warning'            => $recovery_warning,
 			'management_credential_id'    => null === $record ? null : $record->management_credential_id(),
 			'credential_choices'          => $credentials,
@@ -313,6 +334,53 @@ final class WebhookDisplayModel {
 				'body'    => $cleanup,
 			),
 		);
+	}
+
+	/**
+	 * @param array{hook_id:string,profile_id:string}|null $recovery
+	 * @return array{class:string,message:string,heading?:string,details?:list<string>}
+	 */
+	private function result_presentation( string $code, ?array $recovery, ?string $remediation ): array {
+		$result   = array(
+			'class'   => $this->result_notice_class( $code ),
+			'message' => $this->notice( $code, $recovery, $remediation ),
+		);
+		$headings = array(
+			'configured_pending_delivery' => __( 'Webhook configured; delivery unverified', 'ran-booster' ),
+			'verified'                    => __( 'Remote configuration confirmed; signed delivery unverified', 'ran-booster' ),
+			'ping_requested'              => __( 'Ping request accepted; signed delivery unverified', 'ran-booster' ),
+			'ping_verified'               => __( 'Ping request accepted; signed delivery unverified', 'ran-booster' ),
+			'ping_delivery_failed'        => __( 'Ping delivery failed', 'ran-booster' ),
+			'removed'                     => __( 'Webhook removed', 'ran-booster' ),
+			'orphaned'                    => __( 'Manual webhook recovery required', 'ran-booster' ),
+			'manual_recovery_required'    => __( 'Manual webhook recovery required', 'ran-booster' ),
+			'recovery_record_failed'      => __( 'Webhook recovery record not saved', 'ran-booster' ),
+			'record_conflict'             => __( 'Webhook recovery record not saved', 'ran-booster' ),
+			'record_update_failed'        => __( 'Webhook recovery record not saved', 'ran-booster' ),
+		);
+		if ( isset( $headings[ $code ] ) ) {
+			$result['heading'] = $headings[ $code ];
+		}
+		if ( null !== $recovery && in_array( $code, array( 'recovery_record_failed', 'record_conflict', 'record_update_failed' ), true ) ) {
+			$result['message'] = 'record_conflict' === $code
+				? __( 'A newer webhook-management record won the persistence race. Nothing was overwritten. Inspect the Git provider and Core manually before leaving this view or retrying.', 'ran-booster' )
+				: __( 'Git provider state may have changed, but webhook management could not save its non-secret recovery record. The current record was not overwritten. Inspect the Git provider and Core manually before leaving this view or retrying.', 'ran-booster' );
+			$result['details'] = array(
+				/* translators: %s: provider hook reference ID. */
+				sprintf( __( 'Git provider hook reference: %s', 'ran-booster' ), $recovery['hook_id'] ),
+				/* translators: %s: Core signing profile ID. */
+				sprintf( __( 'Core signing profile: %s', 'ran-booster' ), $recovery['profile_id'] ),
+			);
+		}
+		$next_steps = array(
+			'configured_pending_delivery' => __( 'Check Git provider delivery history and Booster Activity to establish signed delivery.', 'ran-booster' ),
+			'ping_requested'              => __( 'Inspect Git provider delivery history and Booster Activity to establish signed delivery.', 'ran-booster' ),
+			'ping_verified'               => __( 'Inspect Git provider delivery history and Booster Activity to establish signed delivery.', 'ran-booster' ),
+		);
+		if ( isset( $next_steps[ $code ] ) ) {
+			$result['details'] = array( $next_steps[ $code ] );
+		}
+		return $result;
 	}
 
 	/** @param array{hook_id: string, profile_id: string}|null $recovery */

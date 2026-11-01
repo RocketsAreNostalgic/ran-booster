@@ -110,7 +110,7 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringContainsString( '[ran-booster] second &amp; event', $html );
 		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy captured events"', $html );
 		self::assertStringContainsString( '>Start new capture</button>', $html );
-		self::assertStringContainsString( 'Starting a new capture replaces this retained capture.', $html );
+		self::assertStringContainsString( 'Starting a new capture replaces any retained capture.', $html );
 		self::assertStringContainsString( 'name="ran_booster[operation]" value="start"', $html );
 		self::assertStringContainsString( 'name="ran_booster[operation]" value="delete"', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[operation]" value="stop"', $html );

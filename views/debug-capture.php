@@ -92,7 +92,6 @@ $status_classes       = array(
 				printf( esc_html__( 'This temporary capture records Booster events only. It does not require or enable %s and excludes PHP, WordPress, theme, and other-plugin messages.', 'ran-booster' ), '<code>WP_DEBUG_LOG</code>' );
 				?>
 			</p>
-			<p class="description ran-booster-debug-capture__retained-note"<?php echo 'retained' === $capture_state ? '' : ' aria-hidden="true"'; ?>><?php esc_html_e( 'Starting a new capture replaces this retained capture.', 'ran-booster' ); ?></p>
 			<div class="ran-booster-debug-capture__events">
 				<div class="ran-booster-debug-capture__events-header">
 					<h4 id="ran-booster-debug-capture-events-heading"><?php esc_html_e( 'Captured Booster events', 'ran-booster' ); ?></h4>
@@ -153,6 +152,7 @@ $status_classes       = array(
 				printf( esc_html__( 'Booster events can also go to PHP’s error log when %1$s and %2$s are enabled. The temporary capture records Booster events only, not PHP errors. Its %3$s guard helps prevent direct access to the capture file.', 'ran-booster' ), '<code>WP_DEBUG</code>', '<code>WP_DEBUG_LOG</code>', '<code>.php</code>' );
 				?>
 			</p>
+			<p><?php esc_html_e( 'Starting a new capture replaces any retained capture.', 'ran-booster' ); ?></p>
 			<p><?php esc_html_e( 'For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
 			<pre><code><?php echo esc_html( "define( 'WP_DEBUG', true );\n" . $wp_debug_log_example . "\ndefine( 'WP_DEBUG_DISPLAY', false );" ); ?></code></pre>
 			<p>

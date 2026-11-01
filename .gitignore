@@ -24,6 +24,8 @@ boosterlog
 .env*
 /secrets.json
 /secrets.json.lock
+/ran-booster-store.json
+/ran-booster-store.json.lock
 /.ran-booster/
 
 # Database backups are local evidence, never repository content.

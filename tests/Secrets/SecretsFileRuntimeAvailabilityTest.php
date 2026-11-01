@@ -709,7 +709,7 @@ final class SecretsFileRuntimeAvailabilityTest extends TestCase {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $root, 0700 ) );
 
-		return array( $root, $root . '/secrets.json' );
+		return array( $root, $root . '/ran-booster-store.json' );
 	}
 
 	private function real_secrets(

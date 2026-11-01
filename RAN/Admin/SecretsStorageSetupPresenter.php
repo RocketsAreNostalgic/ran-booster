@@ -138,7 +138,7 @@ final readonly class SecretsStorageSetupPresenter {
 	private function localized_discarded_candidates( array $candidates ): array {
 		foreach ( $candidates as $index => $candidate ) {
 			$candidates[ $index ]['reason'] = match ( $candidate['code'] ) {
-				'invalid_candidate_path' => __( 'The candidate is not a valid absolute secrets.json path.', 'ran-booster' ),
+				'invalid_candidate_path' => __( 'The candidate is not a valid absolute ran-booster-store.json path.', 'ran-booster' ),
 				'temporary_storage' => __( 'The candidate is inside the operating system temporary directory.', 'ran-booster' ),
 				'inside_unsafe_boundary' => __( 'The candidate is inside a public web or version-control directory.', 'ran-booster' ),
 				'private_anchor_unavailable' => __( 'The private account directory is missing, is not a directory or is a symbolic link.', 'ran-booster' ),

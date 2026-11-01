@@ -64,7 +64,7 @@ final class PosixFilesystemProbe {
 
 	private function valid_candidate( string $path ): bool {
 		return str_starts_with( $path, '/' )
-			&& 'secrets.json' === basename( $path )
+			&& 'ran-booster-store.json' === basename( $path )
 			&& '.ran-booster' === basename( dirname( dirname( $path ) ) )
 			&& 1 === preg_match( '/^[a-f0-9]{16}$/D', basename( dirname( $path ) ) )
 			&& ! str_contains( $path, "\0" )

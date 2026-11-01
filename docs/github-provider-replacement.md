@@ -31,15 +31,15 @@ Plugin names and compatibility declarations do not verify the publisher.
 2. Open Booster's **GitHub** page and expand **Review GitHub provider**. Review
    the plugin attribution, affected Branch and Published release package counts,
    compatible/incompatible API credential counts, and webhook signing notice.
-3. Confirm **I approve this implementation and future normal credential setup
-   within its declared compatible formats.** Where compatible existing API
-   credentials exist, also confirm **Allow this implementation to read and use
-   all compatible existing GitHub API credentials, including any constant
-   overlay.** This is all compatible retained material, not a per-profile picker.
+3. Confirm **I approve this provider and future setup of credentials it
+   supports.** Where compatible existing API credentials exist, also confirm
+   **Allow this provider to read and use all compatible existing GitHub access
+   credentials, including those configured in wp-config.php.** This is all
+   compatible retained material, not a per-profile picker.
    Declining reuse cancels adoption. If retained API material exists but none
    can be reused, acknowledge that compatible credentials must be configured
    afterward. With no retained API material, no reuse acknowledgement is needed.
-4. Choose **Adopt GitHub implementation**. On the refreshed page, confirm
+4. Choose **Approve GitHub provider**. On the refreshed page, confirm
    **Provided by …** identifies the intended plugin. **Manage GitHub provider**
    contains switching guidance; **GitHub provider details** links to the
    current installation details.
@@ -63,12 +63,12 @@ other active PHP plugins.
 
 | Message or state | What to do |
 | --- | --- |
-| **Multiple GitHub candidates are active** | Deactivate extras, leaving only the intended candidate, then review again. Booster does not elect a winner. |
-| **An active GitHub candidate declares an incompatible contract** | Use a compatible version or deactivate it before reviewing another choice. |
-| **The selected GitHub plugin is unavailable** | Restore the approved compatible plugin, or deactivate every replacement and explicitly review a return to bundled GitHub. |
+| **Multiple GitHub providers are active** | Deactivate extras, leaving only the intended candidate, then review again. Booster does not elect a winner. |
+| **A GitHub provider is incompatible** | Use a compatible version or deactivate it before reviewing another choice. |
+| **The selected GitHub provider is missing** | Restore the approved compatible plugin, or deactivate every replacement and explicitly review a return to bundled GitHub. |
 | **Explicit approval is required** | Read the current review and make the consent choices above. |
-| **Selection storage is unavailable** | Restore storage before continuing; do not edit selection records to force a choice. |
-| **An interrupted native installation requires protected recovery** | Follow the recovery procedure below before switching. |
+| **GitHub provider selection is unavailable** | Restore storage before continuing; do not edit selection records to force a choice. |
+| **An installation needs recovery** | Follow the recovery procedure below before switching. |
 
 A refusal that the adoption review or credential reuse consent changed means
 the old form is stale. Reload the GitHub page, inspect the current review and

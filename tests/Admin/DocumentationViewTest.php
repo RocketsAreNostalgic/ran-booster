@@ -826,10 +826,10 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( '<h3>Large repository archives</h3>', $html );
 		self::assertStringContainsString( 'ZIP of the whole repository', $html );
 		self::assertStringContainsString( '50 MiB compressed and 200 MiB expanded', $html );
-		self::assertStringContainsString( 'Booster default', $html );
-		self::assertStringContainsString( "define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 150 * 1024 * 1024 );", $html );
-		self::assertStringContainsString( 'manual installs, manual and webhook updates, and package installation from a Transporter Blueprint', $html );
-		self::assertStringContainsString( 'adopting an already-installed package do not download a repository archive', $html );
+		self::assertStringContainsString( 'Adjust the compressed limit in Booster Settings', $html );
+		self::assertStringContainsString( "define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 150 * 1024 * 1024 );", $html );
+		self::assertStringContainsString( 'branch-source manual installs and updates, webhook updates, and package installation from a Transporter Blueprint', $html );
+		self::assertStringContainsString( 'GitHub release inspection, installation and managed updates also use the compressed limit', $html );
 	}
 
 	public function test_static_copy_uses_the_plugin_text_domain(): void {

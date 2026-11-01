@@ -245,7 +245,7 @@ request.
 Review proves target state and repository access, but it does not download the
 repository archive or predict its final ZIP size. Applying an `install` row
 uses the normal target-site deployment preflight, including that site's
-`RAN_BOOSTER_MAX_ARCHIVE_BYTES` policy. The default is 50 MiB compressed and
+`RAN_BOOSTER_MAX_DOWNLOAD_BYTES` policy. The default is 50 MiB compressed and
 200 MiB expanded; the expanded limit remains four times any configured
 compressed override. An over-limit package fails independently with its
 deployment outcome and support reference, while unrelated selected rows
@@ -427,7 +427,7 @@ Use the following mapping when a Transporter operation fails:
   mode.
 - Package install exceeds the target archive policy: reduce the whole
   repository archive or set a deliberate target-local
-  `RAN_BOOSTER_MAX_ARCHIVE_BYTES` override, then apply that row again. Selecting
+  `RAN_BOOSTER_MAX_DOWNLOAD_BYTES` override, then apply that row again. Selecting
   a subdirectory does not reduce the provider ZIP.
 
 ## What to read next

@@ -216,7 +216,7 @@ pending; this is not a proof-pass receipt.
 
 The current Settings route keeps secure credential-storage operations in their
 own nonce-protected forms and keeps General Save confined to its fixed
-non-secret preference document. Archive limits are persisted and admitted as
+non-secret preference document. Download limits are persisted and admitted as
 bounded integer bytes; code constants remain authoritative and lock their
 fields. The refinement keeps all three invariants.
 

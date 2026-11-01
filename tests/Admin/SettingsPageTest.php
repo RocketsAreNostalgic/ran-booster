@@ -121,7 +121,7 @@ final class SettingsPageTest extends TestCase {
 				'locked' => true,
 				'error'  => null,
 			),
-			'max_archive_bytes'     => array(
+			'max_download_bytes'    => array(
 				'value'  => PHP_INT_MAX,
 				'source' => 'default',
 				'locked' => true,
@@ -159,7 +159,7 @@ final class SettingsPageTest extends TestCase {
 			'Appearance'      => array( 'RAN_BOOSTER_HIDE_GITHUB_UI' ),
 			'Booster updates' => array( 'RAN_BOOSTER_SELF_UPDATE_MODE' ),
 			'History'         => array( 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS' ),
-			'Archive limits'  => array( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ),
+			'Download limits' => array( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ),
 		) as $legend => $constants ) {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="' . $legend . '"]/details[summary="Configuration constants"])' ) );
 			foreach ( $constants as $constant ) {

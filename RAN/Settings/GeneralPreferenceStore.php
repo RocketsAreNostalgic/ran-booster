@@ -14,7 +14,7 @@ final class GeneralPreferenceStore {
 		'self_update_discovery' => true,
 		'history_rows'          => 2000,
 		'history_days'          => 30,
-		'max_archive_bytes'     => 52428800,
+		'max_download_bytes'    => 52428800,
 	);
 
 	/** @return array{exists:bool,token:string,malformed:bool} */
@@ -74,8 +74,8 @@ final class GeneralPreferenceStore {
 		return $this->saved_integer( 'history_days', 1, 365 );
 	}
 
-	public function max_archive_bytes(): ?int {
-		return $this->saved_integer( 'max_archive_bytes', 1048576, 536870911 );
+	public function max_download_bytes(): ?int {
+		return $this->saved_integer( 'max_download_bytes', 1048576, 536870911 );
 	}
 
 	public function self_update_discovery( bool $fresh = false ): ?bool {
@@ -179,7 +179,7 @@ final class GeneralPreferenceStore {
 	 * @return array<string,bool|int>|null
 	 */
 	public function parse_submission( array $submitted, array $editable ): ?array {
-		$submitted = $this->normalize_archive_mib_submission( $submitted, $editable );
+		$submitted = $this->normalize_download_mib_submission( $submitted, $editable );
 		if ( null === $submitted ) {
 			return null;
 		}
@@ -221,19 +221,19 @@ final class GeneralPreferenceStore {
 	 * @param list<string> $editable
 	 * @return array<string,mixed>|null
 	 */
-	private function normalize_archive_mib_submission( array $submitted, array $editable ): ?array {
-		if ( ! in_array( 'max_archive_bytes', $editable, true ) || ! array_key_exists( 'max_archive_mib', $submitted ) ) {
+	private function normalize_download_mib_submission( array $submitted, array $editable ): ?array {
+		if ( ! in_array( 'max_download_bytes', $editable, true ) || ! array_key_exists( 'max_download_mib', $submitted ) ) {
 			return $submitted;
 		}
-		if ( array_key_exists( 'max_archive_bytes', $submitted ) || ! is_string( $submitted['max_archive_mib'] ) ) {
+		if ( array_key_exists( 'max_download_bytes', $submitted ) || ! is_string( $submitted['max_download_mib'] ) ) {
 			return null;
 		}
-		$bytes = $this->mib_to_bytes( $submitted['max_archive_mib'] );
+		$bytes = $this->mib_to_bytes( $submitted['max_download_mib'] );
 		if ( null === $bytes ) {
 			return null;
 		}
-		unset( $submitted['max_archive_mib'] );
-		$submitted['max_archive_bytes'] = (string) $bytes;
+		unset( $submitted['max_download_mib'] );
+		$submitted['max_download_bytes'] = (string) $bytes;
 		return $submitted;
 	}
 
@@ -246,7 +246,7 @@ final class GeneralPreferenceStore {
 			return null;
 		}
 		$bytes = (int) round( $mib * 1048576 );
-		return $this->valid_integer( 'max_archive_bytes', $bytes ) ? $bytes : null;
+		return $this->valid_integer( 'max_download_bytes', $bytes ) ? $bytes : null;
 	}
 
 	private function saved_integer( string $key, int $minimum, int $maximum ): ?int {
@@ -269,7 +269,7 @@ final class GeneralPreferenceStore {
 			'self_update_discovery' => $this->self_update_projection( $document ),
 			'history_rows'          => $this->integer_projection( $document, 'history_rows', 'RAN_BOOSTER_HISTORY_ROWS', 200, 100000 ),
 			'history_days'          => $this->integer_projection( $document, 'history_days', 'RAN_BOOSTER_HISTORY_DAYS', 1, 365 ),
-			'max_archive_bytes'     => $this->integer_projection( $document, 'max_archive_bytes', 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 1048576, 536870911 ),
+			'max_download_bytes'    => $this->integer_projection( $document, 'max_download_bytes', 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 1048576, 536870911 ),
 		);
 	}
 
@@ -366,7 +366,7 @@ final class GeneralPreferenceStore {
 		return match ( $key ) {
 			'history_rows' => $value >= 200 && $value <= 100000,
 			'history_days' => $value >= 1 && $value <= 365,
-			'max_archive_bytes' => $value >= 1048576 && $value <= 536870911,
+			'max_download_bytes' => $value >= 1048576 && $value <= 536870911,
 			default => false,
 		};
 	}
@@ -375,7 +375,7 @@ final class GeneralPreferenceStore {
 		return match ( $key ) {
 			'history_rows' => 2000,
 			'history_days' => 30,
-			'max_archive_bytes' => 52428800,
+			'max_download_bytes' => 52428800,
 			default => throw new \LogicException( 'Unknown integer preference.' ),
 		};
 	}

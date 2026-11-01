@@ -46,6 +46,14 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		self::assertSame( 'invalid_saved', $projection['history_rows']['error'] );
 	}
 
+	public function test_old_archive_preference_is_inert_after_the_beta_rename(): void {
+		$this->seed( array( 'max_archive_bytes' => 1048576 ) );
+		$store = new GeneralPreferenceStore();
+		self::assertSame( 52428800, $store->projection()['max_download_bytes']['value'] );
+		self::assertSame( 'default', $store->projection()['max_download_bytes']['source'] );
+		self::assertSame( 52428800, PackageArtifactLimit::resolve() );
+	}
+
 	public function test_malformed_option_document_is_visible_and_cannot_be_saved(): void {
 		$GLOBALS['ran_booster_general_preference_raw'] = 'not-an-option-document';
 		$store = new GeneralPreferenceStore();
@@ -92,7 +100,7 @@ final class GeneralPreferenceStoreTest extends TestCase {
 				'history_days'          => '7',
 				'hide_github'           => '1',
 				'history_rows'          => '300',
-				'max_archive_bytes'     => '1048576',
+				'max_download_bytes'    => '1048576',
 				'self_update_discovery' => '0',
 			),
 			static fn ( callable $operation ): string => $operation(),
@@ -107,7 +115,7 @@ final class GeneralPreferenceStoreTest extends TestCase {
 				'self_update_discovery' => false,
 				'history_rows'          => 300,
 				'history_days'          => 7,
-				'max_archive_bytes'     => 1048576,
+				'max_download_bytes'    => 1048576,
 			),
 			\RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )
 		);
@@ -139,22 +147,22 @@ final class GeneralPreferenceStoreTest extends TestCase {
 				array( 'history_rows' => '3e2' ),
 				array( 'history_rows' => '999999999999999999999999' ),
 				array( 'history_days' => '0' ),
-				array( 'max_archive_bytes' => '536870912' ),
+				array( 'max_download_bytes' => '536870912' ),
 			) as $change
 		) {
 			$input = array_merge( $values, $change );
 			self::assertNull( $store->parse_submission( $input, array_keys( $values ) ) );
 		}
-		$values['history_rows']      = '200';
-		$values['history_days']      = '365';
-		$values['max_archive_bytes'] = '536870911';
+		$values['history_rows']       = '200';
+		$values['history_days']       = '365';
+		$values['max_download_bytes'] = '536870911';
 		self::assertSame(
 			array(
 				'hide_github'           => false,
 				'self_update_discovery' => true,
 				'history_rows'          => 200,
 				'history_days'          => 365,
-				'max_archive_bytes'     => 536870911,
+				'max_download_bytes'    => 536870911,
 			),
 			$store->parse_submission( $values, array_keys( $values ) )
 		);
@@ -163,30 +171,30 @@ final class GeneralPreferenceStoreTest extends TestCase {
 	public function test_archive_mib_submission_rounds_new_values_and_preserves_existing_exact_bytes(): void {
 		$store  = new GeneralPreferenceStore();
 		$values = $this->submission();
-		unset( $values['max_archive_bytes'] );
+		unset( $values['max_download_bytes'] );
 
-		$values['max_archive_mib'] = '50.5';
-		$parsed                    = $store->parse_submission( $values, array_keys( $this->submission() ) );
+		$values['max_download_mib'] = '50.5';
+		$parsed                     = $store->parse_submission( $values, array_keys( $this->submission() ) );
 		self::assertIsArray( $parsed );
-		self::assertSame( 52953088, $parsed['max_archive_bytes'] );
-		$values['max_archive_mib'] = '50.1';
-		$parsed                    = $store->parse_submission( $values, array_keys( $this->submission() ) );
+		self::assertSame( 52953088, $parsed['max_download_bytes'] );
+		$values['max_download_mib'] = '50.1';
+		$parsed                     = $store->parse_submission( $values, array_keys( $this->submission() ) );
 		self::assertIsArray( $parsed );
-		self::assertSame( 52533658, $parsed['max_archive_bytes'] );
+		self::assertSame( 52533658, $parsed['max_download_bytes'] );
 
-		$values['max_archive_mib'] = '50.00000095367431640625';
-		$parsed                    = $store->parse_submission( $values, array_keys( $this->submission() ) );
+		$values['max_download_mib'] = '50.00000095367431640625';
+		$parsed                     = $store->parse_submission( $values, array_keys( $this->submission() ) );
 		self::assertIsArray( $parsed );
-		self::assertSame( 52428801, $parsed['max_archive_bytes'], 'An existing exact byte limit must round trip through its finite MiB representation.' );
-		$this->seed( array( 'max_archive_bytes' => 52428801 ) );
+		self::assertSame( 52428801, $parsed['max_download_bytes'], 'An existing exact byte limit must round trip through its finite MiB representation.' );
+		$this->seed( array( 'max_download_bytes' => 52428801 ) );
 		self::assertSame(
 			'unchanged',
 			$store->save( $store->snapshot()['token'], $values, static fn ( callable $operation ): string => $operation(), static fn (): bool => true )
 		);
-		self::assertSame( 52428801, \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['max_archive_bytes'] );
+		self::assertSame( 52428801, \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['max_download_bytes'] );
 
 		foreach ( array( '0', '-1', '512', '5e1', '999999999999999999999999' ) as $mib ) {
-			$values['max_archive_mib'] = $mib;
+			$values['max_download_mib'] = $mib;
 			self::assertNull( $store->parse_submission( $values, array_keys( $this->submission() ) ), $mib );
 		}
 	}
@@ -288,13 +296,13 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		define( 'RAN_BOOSTER_SELF_UPDATE_MODE', 'disabled' );
 		define( 'RAN_BOOSTER_HISTORY_ROWS', null );
 		define( 'RAN_BOOSTER_HISTORY_DAYS', 1 );
-		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', false );
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', false );
 		$this->seed(
 			array(
 				'self_update_discovery' => true,
 				'history_rows'          => 300,
 				'history_days'          => 7,
-				'max_archive_bytes'     => 1048576,
+				'max_download_bytes'    => 1048576,
 			)
 		);
 		$store      = new GeneralPreferenceStore();
@@ -303,7 +311,7 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		self::assertTrue( $projection['self_update_discovery']['locked'] );
 		self::assertFalse( $projection['self_update_discovery']['value'] );
 		self::assertSame( 'invalid_code', $projection['history_rows']['error'] );
-		self::assertSame( 'invalid_code', $projection['max_archive_bytes']['error'] );
+		self::assertSame( 'invalid_code', $projection['max_download_bytes']['error'] );
 		self::assertSame( 'saved', $store->save( $store->snapshot()['token'], array( 'hide_github' => '1' ), static fn ( callable $operation ): string => $operation(), static fn (): bool => true ) );
 		$stored = \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] );
 		self::assertSame( true, $stored['self_update_discovery'] );
@@ -315,7 +323,7 @@ final class GeneralPreferenceStoreTest extends TestCase {
 			array(
 				'history_rows'          => 300,
 				'history_days'          => 7,
-				'max_archive_bytes'     => 1048576,
+				'max_download_bytes'    => 1048576,
 				'self_update_discovery' => false,
 			)
 		);
@@ -345,7 +353,7 @@ final class GeneralPreferenceStoreTest extends TestCase {
 			'self_update_discovery' => '1',
 			'history_rows'          => '2000',
 			'history_days'          => '30',
-			'max_archive_bytes'     => '52428800',
+			'max_download_bytes'    => '52428800',
 		);
 	}
 }

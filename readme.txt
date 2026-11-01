@@ -186,7 +186,7 @@ Git provider deployments download the whole repository ZIP, even when a package
 subdirectory is selected. The target-site default is 50 MiB compressed and
 200 MiB expanded. Operators can set a site-wide compressed limit from 1 MiB
 through 536,870,911 bytes (just under 512 MiB) with
-`RAN_BOOSTER_MAX_ARCHIVE_BYTES` in `wp-config.php`; Booster derives the expanded
+`RAN_BOOSTER_MAX_DOWNLOAD_BYTES` in `wp-config.php`; Booster derives the expanded
 limit at four times that value. This policy covers manual and webhook deployments
 and Transporter Blueprint installs without weakening the other archive safety
 checks.

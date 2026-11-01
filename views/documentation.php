@@ -433,21 +433,20 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 					<p>
 						<?php
 						$archive_limit_message = sprintf(
-							/* translators: 1: compressed ZIP limit in MiB, 2: expanded ZIP limit in MiB, 3: configuration source. */
-							__( 'This site currently allows repository ZIPs up to %1$d MiB compressed and %2$d MiB expanded (%3$s).', 'ran-booster' ),
+							/* translators: 1: compressed ZIP limit in MiB, 2: expanded ZIP limit in MiB. */
+							__( 'This site currently allows repository ZIPs up to %1$d MiB compressed and %2$d MiB expanded.', 'ran-booster' ),
 							$compressed_limit_mi_b,
-							$expanded_limit_mi_b,
-							! defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ? __( 'Booster default', 'ran-booster' ) : __( 'configured in wp-config.php', 'ran-booster' )
+							$expanded_limit_mi_b
 						);
 						echo esc_html( $archive_limit_message );
 						?>
 					</p>
 				<?php } else { ?>
-					<p><strong><?php esc_html_e( 'Archive deployments are currently blocked:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES must be an integer from 1 MiB through 536,870,911 bytes (just under 512 MiB).', 'ran-booster' ); ?></p>
+					<p><strong><?php esc_html_e( 'Archive deployments are currently blocked:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES must be an integer from 1 MiB through 536,870,911 bytes (just under 512 MiB).', 'ran-booster' ); ?></p>
 				<?php } ?>
-				<p><?php esc_html_e( 'If a legitimate repository needs more room, set one target-local, site-wide compressed limit in wp-config.php before WordPress loads Booster:', 'ran-booster' ); ?></p>
-				<pre><code>define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 150 * 1024 * 1024 );</code></pre>
-				<p><?php esc_html_e( 'The value may range from 1 MiB through 536,870,911 bytes (just under 512 MiB). Booster derives an expanded-content limit four times as large and still applies its entry-count, path, identity and free-space checks. The setting affects manual installs, manual and webhook updates, and package installation from a Transporter Blueprint; reviewing a Transporter Blueprint and adopting an already-installed package do not download a repository archive.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Adjust the compressed limit in Booster Settings. A target-local constant overrides and locks that preference:', 'ran-booster' ); ?></p>
+				<pre><code>define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 150 * 1024 * 1024 );</code></pre>
+				<p><?php esc_html_e( 'The value may range from 1 MiB through 536,870,911 bytes (just under 512 MiB). Booster derives a separate expanded-content limit four times as large and still applies entry-count, path, identity and free-space checks. It does not set installed size or History retention. It affects branch-source manual installs and updates, webhook updates, and package installation from a Transporter Blueprint. GitHub release inspection, installation and managed updates also use the compressed limit; the release updater has separate expansion safeguards. Extension downloads and Blueprint file imports have independent bounds.', 'ran-booster' ); ?></p>
 			</div>
 		</details>
 

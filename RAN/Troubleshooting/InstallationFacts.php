@@ -186,14 +186,14 @@ final class InstallationFacts {
 					'self_update_discovery' => 'RAN_BOOSTER_SELF_UPDATE_MODE',
 					'history_rows'          => 'RAN_BOOSTER_HISTORY_ROWS',
 					'history_days'          => 'RAN_BOOSTER_HISTORY_DAYS',
-					'max_archive_bytes'     => 'RAN_BOOSTER_MAX_ARCHIVE_BYTES',
+					'max_download_bytes'    => 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES',
 				)[ $key ];
 				$value = is_bool( $field['value'] ) ? ( $field['value'] ? 'Enabled' : 'Disabled' ) : (string) $field['value'];
-				if ( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' === $name && 'invalid_code' === ( $field['error'] ?? null ) ) {
+				if ( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' === $name && 'invalid_code' === ( $field['error'] ?? null ) ) {
 					$rows[ $name ] = 'Invalid code value; archive admission refused';
 					continue;
 				}
-				if ( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' === $name && null !== ( $field['error'] ?? null ) ) {
+				if ( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' === $name && null !== ( $field['error'] ?? null ) ) {
 					$rows[ $name ] = 'Invalid saved value; effective default ' . $value;
 					continue;
 				}
@@ -205,7 +205,7 @@ final class InstallationFacts {
 				$rows[ $name ] = ( $field['error'] ?? null ) ? 'Invalid; effective default ' . $value : $value . '; source=' . $field['source'] . ( $field['locked'] ? '; locked' : '' );
 			}
 		} catch ( \Throwable ) {
-			$rows += array_fill_keys( array( 'RAN_BOOSTER_HIDE_GITHUB_UI', 'RAN_BOOSTER_SELF_UPDATE_MODE', 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS', 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ), 'Unavailable' );
+			$rows += array_fill_keys( array( 'RAN_BOOSTER_HIDE_GITHUB_UI', 'RAN_BOOSTER_SELF_UPDATE_MODE', 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS', 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ), 'Unavailable' );
 		}
 		if ( defined( 'RAN_BOOSTER_SELF_UPDATE_MODE' ) ) {
 			$raw                                  = constant( 'RAN_BOOSTER_SELF_UPDATE_MODE' );

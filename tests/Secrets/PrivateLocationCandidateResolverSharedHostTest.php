@@ -67,7 +67,7 @@ final class PrivateLocationCandidateResolverSharedHostTest extends TestCase {
 		self::assertTrue( $resolver->validate_configured( $candidate, $wordpress, $content, $plugin, $wordpress ) );
 		self::assertTrue(
 			$resolver->validate_configured(
-				$this->root . '/account/private/ran-booster/secrets.json',
+				$this->root . '/account/private/ran-booster/ran-booster-store.json',
 				$wordpress,
 				$content,
 				$plugin,

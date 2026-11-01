@@ -46,7 +46,7 @@ final class PrivateLocationCandidateResolver {
 			16
 		);
 
-		$candidate = $private_base . '/.ran-booster/' . $fingerprint . '/secrets.json';
+		$candidate = $private_base . '/.ran-booster/' . $fingerprint . '/ran-booster-store.json';
 		$failure   = $this->configured_path_failure( $candidate, $boundaries, $private_base );
 		if ( null !== $failure ) {
 			$discarded[] = array(
@@ -90,8 +90,8 @@ final class PrivateLocationCandidateResolver {
 	 * @return array{code:string,message:string,component:string|null}|null
 	 */
 	private function configured_path_failure( string $candidate, array $boundaries, ?string $private_base ): ?array {
-		if ( ! $this->valid_absolute_file_path( $candidate ) || 'secrets.json' !== basename( $candidate ) ) {
-			return $this->failure( 'invalid_candidate_path', 'The candidate is not a valid absolute secrets.json path.' );
+		if ( ! $this->valid_absolute_file_path( $candidate ) || 'ran-booster-store.json' !== basename( $candidate ) ) {
+			return $this->failure( 'invalid_candidate_path', 'The candidate is not a valid absolute ran-booster-store.json path.' );
 		}
 		if ( $this->is_temporary_directory( $candidate ) ) {
 			return $this->failure( 'temporary_storage', 'The candidate is inside the operating system temporary directory.' );

@@ -2103,7 +2103,7 @@ class SecretsFile {
 			$directory = '/' === $value
 				? '/'
 				: rtrim( $value, '/' );
-			$path      = $directory . ( '/' === $directory ? '' : '/' ) . 'secrets.json';
+			$path      = $directory . ( '/' === $directory ? '' : '/' ) . 'ran-booster-store.json';
 
 			return $this->absolute_canonical_configured_path( $path ) ? $path : null;
 		}
@@ -2469,19 +2469,19 @@ class SecretsFile {
 	private function incomplete_store( #[\SensitiveParameter] ?string $key, bool $has_file ): SecretsStorageUnavailable {
 		if ( $has_file && null === $key ) {
 			return $this->unavailable(
-				'The encrypted Booster secrets store is incomplete: secrets.json exists but its database key is missing.',
+				'The encrypted Booster secrets store is incomplete: ran-booster-store.json exists but its database key is missing.',
 				'storage_key_missing'
 			);
 		}
 		if ( ! $has_file && null !== $key ) {
 			return $this->unavailable(
-				'The encrypted Booster secrets store is incomplete: its database key exists but secrets.json is missing.',
+				'The encrypted Booster secrets store is incomplete: its database key exists but ran-booster-store.json is missing.',
 				'storage_file_missing'
 			);
 		}
 
 		return $this->unavailable(
-			'The encrypted Booster secrets store is incomplete: only secrets.json.lock remains.',
+			'The encrypted Booster secrets store is incomplete: only ran-booster-store.json.lock remains.',
 			'storage_orphan_lock'
 		);
 	}

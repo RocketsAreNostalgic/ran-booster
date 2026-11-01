@@ -42,7 +42,7 @@ final class SecretsFileCanonicalPolicyCharacterizationTest extends TestCase {
 		parent::setUp();
 
 		$this->directory = sys_get_temp_dir() . '/ran-booster-canonical-policy-' . bin2hex( random_bytes( 8 ) );
-		$this->path      = $this->directory . '/secrets.json';
+		$this->path      = $this->directory . '/ran-booster-store.json';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $this->directory, 0700 ) );
 		$this->key_store = new InMemorySiteKeyStore( $this->path );

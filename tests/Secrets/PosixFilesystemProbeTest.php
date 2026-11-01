@@ -26,7 +26,7 @@ final class PosixFilesystemProbeTest extends TestCase {
 	}
 
 	public function test_proves_required_operations_without_creating_the_secrets_file(): void {
-		$candidate = $this->root . '/.ran-booster/0123456789abcdef/secrets.json';
+		$candidate = $this->root . '/.ran-booster/0123456789abcdef/ran-booster-store.json';
 
 		self::assertTrue( ( new PosixFilesystemProbe() )->probe( $candidate ) );
 		self::assertFileDoesNotExist( $candidate );
@@ -36,13 +36,21 @@ final class PosixFilesystemProbeTest extends TestCase {
 	}
 
 	public function test_rejects_paths_outside_the_fixed_candidate_shape(): void {
-		self::assertFalse( ( new PosixFilesystemProbe() )->probe( $this->root . '/secrets.json' ) );
+		self::assertFalse( ( new PosixFilesystemProbe() )->probe( $this->root . '/ran-booster-store.json' ) );
+	}
+
+	public function test_rejects_the_old_basename_before_creating_private_directories(): void {
+		$private   = $this->root . '/.ran-booster';
+		$candidate = $private . '/0123456789abcdef/secrets.json';
+
+		self::assertFalse( ( new PosixFilesystemProbe() )->probe( $candidate ) );
+		self::assertDirectoryDoesNotExist( $private );
 	}
 
 	public function test_rejects_an_unsafe_existing_private_directory_without_changing_its_contents(): void {
 		$private   = $this->root . '/.ran-booster';
 		$sentinel  = $private . '/operator-owned-canary';
-		$candidate = $private . '/0123456789abcdef/secrets.json';
+		$candidate = $private . '/0123456789abcdef/ran-booster-store.json';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
 		self::assertTrue( mkdir( $private, 0700 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write exact disposable fixture bytes to exercise native filesystem boundaries.

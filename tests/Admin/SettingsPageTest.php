@@ -79,7 +79,7 @@ final class SettingsPageTest extends TestCase {
 	}
 
 	public function test_settings_caches_status_and_payload_until_an_explicit_result_override(): void {
-		$storage   = new SettingsPageStorageProvisioner( SecretsStorageProvisioningResult::setup_available( '/private/secrets.json' ) );
+		$storage   = new SettingsPageStorageProvisioner( SecretsStorageProvisioningResult::setup_available( '/private/ran-booster-store.json' ) );
 		$dashboard = $this->settings_dashboard( $storage );
 
 		$first  = $dashboard->get_settings();

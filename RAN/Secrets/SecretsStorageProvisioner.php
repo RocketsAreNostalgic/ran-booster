@@ -507,7 +507,7 @@ class SecretsStorageProvisioner {
 			}
 
 			$directory = '/' === $value ? '/' : rtrim( $value, '/' );
-			$path      = $directory . ( '/' === $directory ? '' : '/' ) . 'secrets.json';
+			$path      = $directory . ( '/' === $directory ? '' : '/' ) . 'ran-booster-store.json';
 
 			return $this->absolute_canonical_path( $path ) ? $path : false;
 		}
@@ -633,7 +633,7 @@ class SecretsStorageProvisioner {
 
 				continue;
 			}
-			$candidate = $directory . '/secrets.json';
+			$candidate = $directory . '/ran-booster-store.json';
 			$lock      = $candidate . '.lock';
 			if ( ! file_exists( $candidate )
 				&& ! is_link( $candidate )
@@ -675,7 +675,7 @@ class SecretsStorageProvisioner {
 		$directory = dirname( $current );
 		$base      = dirname( $directory );
 
-		return 'secrets.json' === basename( $current )
+		return 'ran-booster-store.json' === basename( $current )
 			&& 1 === preg_match( '/\A[a-f0-9]{16}\z/D', basename( $directory ) )
 			&& '.ran-booster' === basename( $base )
 			? $base
@@ -884,19 +884,19 @@ class SecretsStorageProvisioner {
 			return match ( $failure->reason() ) {
 				'storage_key_missing' => $this->path_failure(
 					'storage_key_missing',
-					__( 'secrets.json and secrets.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.', 'ran-booster' )
+					__( 'ran-booster-store.json and ran-booster-store.json.lock exist, but the matching database encryption key is missing. Restore the file and database key from the same backup; Booster will not delete unauthenticated ciphertext.', 'ran-booster' )
 				),
 				'storage_file_missing' => $this->path_failure(
 					'storage_file_missing',
-					__( 'The database encryption key exists, but secrets.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster.', 'ran-booster' )
+					__( 'The database encryption key exists, but ran-booster-store.json is missing. Restore the matching encrypted file from the same backup before using or uninstalling Booster.', 'ran-booster' )
 				),
 				'storage_orphan_lock' => $this->path_failure(
 					'storage_orphan_lock',
-					__( 'Only secrets.json.lock remains; no secrets file or database encryption key was found.', 'ran-booster' )
+					__( 'Only ran-booster-store.json.lock remains; no secrets file or database encryption key was found.', 'ran-booster' )
 				),
 				'storage_lock_missing' => $this->path_failure(
 					'storage_lock_missing',
-					__( 'Managed secrets material exists, but secrets.json.lock is missing. Restore the matching storage set from one backup.', 'ran-booster' )
+					__( 'Managed secrets material exists, but ran-booster-store.json.lock is missing. Restore the matching storage set from one backup.', 'ran-booster' )
 				),
 				default => $this->path_failure(
 					$failure->reason(),
@@ -941,7 +941,7 @@ class SecretsStorageProvisioner {
 			),
 			default => $this->path_failure(
 				'storage_unavailable',
-				__( 'Booster could not classify the storage failure. Verify PHP owns the directories, secrets.json and secrets.json.lock; directories require mode 0700 and both files require mode 0600.', 'ran-booster' )
+				__( 'Booster could not classify the storage failure. Verify PHP owns the directories, ran-booster-store.json and ran-booster-store.json.lock; directories require mode 0700 and both files require mode 0600.', 'ran-booster' )
 			),
 		};
 	}

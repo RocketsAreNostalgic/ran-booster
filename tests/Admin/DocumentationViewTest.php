@@ -99,7 +99,9 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'dirname( __DIR__ ) is its parent', $html );
 		self::assertStringContainsString( 'do not append public_html again', $html );
 		self::assertStringContainsString( 'host-managed execute permission or ACL on an ancestor', $html );
-		self::assertStringContainsString( 'move or restore secrets.json, secrets.json.lock and the matching database key together', $html );
+		self::assertStringContainsString( 'move or restore ran-booster-store.json, ran-booster-store.json.lock and the matching database key together', $html );
+		self::assertStringContainsString( 'Prerelease restart required: before installing this version on an installation using secrets.json', $html );
+		self::assertStringContainsString( 'Old files are never discovered, renamed or deleted automatically.', $html );
 		self::assertStringContainsString( '<summary>About RAN Booster</summary>', $html );
 		self::assertLessThan( strpos( $html, 'GitHub credentials and access' ), strpos( $html, 'Move packages between sites' ) );
 	}

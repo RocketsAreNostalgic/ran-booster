@@ -121,11 +121,11 @@ installed release notes before following the replacement instructions.
 For retained WP Pusher packages, start with the
 [connected migration journey](docs/operator-journeys.md#migrate-retained-wp-pusher-packages)
 and the maintained [Migrator instructions](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/blob/main/README.md).
-Published [Migrator v0.1.0-beta.10](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.10)
-uses API 3 and is incompatible with Core beta.37's Portability API 4.
-Migrator's API 4 source has automated certification against immutable Core
-beta.37, but that does not establish Migrator publication or manual acceptance.
-A compatible Migrator release remains a separate prerequisite.
+Published [Migrator v0.1.0-beta.11](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.11)
+requires Portability API 4 and Admin Interaction API 3. Its automated
+released-host certification covers immutable Core beta.37; this does not
+establish a fresh installed migration or manual acceptance. Check the maintained
+guide for the compatible pair and other prerequisites.
 
 ### Credentials and deployment evidence
 

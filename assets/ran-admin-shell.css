@@ -159,6 +159,10 @@
 		margin-inline-start: -10px;
 	}
 
+	body:not(.rtl) #wpwrap.wp-responsive-open #wpbody .ran-admin-shell {
+		margin-inline-start: calc(180px - 16em);
+	}
+
 	.ran-admin-shell__inner {
 		align-items: flex-start;
 		flex-direction: column;

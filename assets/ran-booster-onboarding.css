@@ -7,6 +7,30 @@
 	color: var(--ran-booster-text);
 }
 
+.ran-booster-admin
+	.ran-booster-onboarding--setup
+	.ran-booster-onboarding__header {
+	display: flex;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-onboarding--setup
+	.ran-booster-onboarding__header
+	> form {
+	margin-inline-start: auto;
+}
+
+.ran-booster-admin
+	.ran-booster-onboarding
+	.ran-booster-onboarding__storage
+	> h3 {
+	margin-block: 0 var(--ran-booster-space-8);
+}
+
 .ran-booster-admin .ran-booster-onboarding__columns {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -53,17 +77,26 @@
 	line-height: var(--ran-booster-line-height-base);
 }
 
+/* Match the WordPress h3 size used by the other Overview cards. */
+.ran-booster-admin #ran-booster-onboarding-storage-heading,
+.ran-booster-admin #ran-booster-storage {
+	font-size: 1.3em;
+	line-height: inherit;
+}
+
 .ran-booster-admin .ran-booster-onboarding__storage > p {
 	margin-block: var(--ran-booster-space-8) 0;
 	margin-inline: 0;
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-facts {
+	display: grid;
+	gap: var(--ran-booster-space-16);
 	margin: 0;
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-facts dt {
-	margin-block-end: var(--ran-booster-space-5);
+	margin-block-end: var(--ran-booster-space-8);
 	color: var(--ran-booster-text-subtle);
 	font-size: 11px;
 	font-weight: var(--ran-booster-font-weight-semibold);
@@ -75,7 +108,8 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-onboarding__storage code {
+.ran-booster-admin .ran-booster-onboarding__storage code,
+.ran-booster-admin .ran-booster-onboarding__storage-facts code {
 	display: block;
 	padding-block: var(--ran-booster-space-6);
 	padding-inline: var(--ran-booster-space-8);
@@ -86,9 +120,26 @@
 	white-space: normal;
 }
 
+.ran-booster-admin
+	.ran-booster-onboarding__storage
+	code.ran-booster-onboarding__storage-inline,
+.ran-booster-admin
+	.ran-booster-onboarding__storage-facts
+	code.ran-booster-onboarding__storage-inline {
+	display: inline;
+	padding: 0.2em 0.4em;
+	border: 0;
+	border-radius: 0;
+	background: var(--ran-booster-surface-subtle);
+}
+
 .ran-booster-admin .ran-booster-onboarding__storage .description {
 	color: var(--ran-booster-text-subtle);
 	font-size: var(--ran-booster-font-size-xs);
+}
+
+.ran-booster-admin .ran-booster-onboarding__storage-facts-note {
+	margin-block-start: var(--ran-booster-space-16);
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-actions {
@@ -146,6 +197,31 @@
 	gap: var(--ran-booster-space-8);
 }
 
+.ran-booster-admin .ran-booster-onboarding__package-metrics {
+	display: flex;
+	flex-wrap: wrap;
+	margin: var(--ran-booster-space-12) 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ran-booster-admin .ran-booster-onboarding__package-metrics li {
+	padding-inline: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-onboarding__package-metrics li:first-child {
+	padding-inline-start: 0;
+}
+
+.ran-booster-admin .ran-booster-onboarding__package-metrics li + li {
+	border-inline-start: 2px solid var(--ran-booster-strong-divider);
+}
+
+.ran-booster-admin .ran-booster-onboarding__presentation-control {
+	margin-block-start: var(--ran-booster-space-24);
+	text-align: end;
+}
+
 .ran-booster-admin
 	.ran-booster-onboarding__header
 	.ran-booster-onboarding__actions {
@@ -178,49 +254,127 @@
 		align-items: flex-start;
 		flex-direction: column;
 	}
+
+	.ran-booster-admin .ran-booster-onboarding__package-metrics {
+		display: grid;
+		gap: var(--ran-booster-space-8);
+	}
+
+	.ran-booster-admin .ran-booster-onboarding__package-metrics li {
+		padding: 0;
+	}
+
+	.ran-booster-admin .ran-booster-onboarding__package-metrics li + li {
+		border-block-start: 2px solid var(--ran-booster-strong-divider);
+		border-inline-start: 0;
+		padding-block-start: var(--ran-booster-space-8);
+	}
+
+	.ran-booster-admin .ran-booster-onboarding__presentation-control {
+		text-align: start;
+	}
 }
 
 .ran-booster-admin .ran-booster-debug-capture {
 	max-inline-size: 1120px;
 }
 
-.ran-booster-admin .ran-booster-debug-capture__facts {
-	display: grid;
-	margin: 0;
-	border-block-start: 1px solid var(--ran-booster-divider);
-	grid-template-columns: repeat(2, minmax(0, 1fr));
+.ran-booster-admin .ran-booster-debug-capture > h3,
+.ran-booster-admin .ran-booster-debug-capture > p {
+	margin-block: 0 var(--ran-booster-space-16);
 }
 
-.ran-booster-admin .ran-booster-debug-capture__facts > div {
-	min-inline-size: 0;
-	padding-block: var(--ran-booster-space-16);
+.ran-booster-admin .ran-booster-debug-capture__wordpress-help {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-debug-capture__wordpress-help
+	> .ran-booster-disclosure__body {
+	display: grid;
+	gap: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-debug-capture__wordpress-help
+	> .ran-booster-disclosure__body
+	> * {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-debug-capture__wordpress-help pre {
+	box-sizing: border-box;
+	max-inline-size: 100%;
+	padding: var(--ran-booster-space-16);
+	border: 1px solid var(--ran-booster-divider);
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-surface-subtle);
+	overflow-x: auto;
+}
+
+.ran-booster-admin .ran-booster-debug-capture__wordpress-help pre > code {
+	display: block;
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	line-height: var(--ran-booster-line-height-relaxed);
+	white-space: inherit;
+}
+
+.ran-booster-admin .ran-booster-debug-capture__panel {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-debug-capture__header {
+	display: flex;
+	box-sizing: border-box;
+	min-block-size: 4rem;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-12);
+	padding-block: var(--ran-booster-space-12);
 	padding-inline: var(--ran-booster-space-20);
 }
 
-.ran-booster-admin .ran-booster-debug-capture__facts > div + div {
-	border-inline-start: 1px solid var(--ran-booster-divider);
-}
-
-.ran-booster-admin .ran-booster-debug-capture__facts dt {
-	margin-block-end: var(--ran-booster-space-7);
-}
-
-.ran-booster-admin .ran-booster-debug-capture__facts dd {
+.ran-booster-admin .ran-booster-debug-capture__heading,
+.ran-booster-admin .ran-booster-debug-capture__primary-actions {
 	display: flex;
-	min-inline-size: 0;
 	align-items: center;
 	flex-wrap: wrap;
 	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-debug-capture__heading h4 {
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-debug-capture__facts code {
-	overflow-wrap: anywhere;
+.ran-booster-admin .ran-booster-debug-capture__deadline {
+	min-inline-size: 0;
 }
 
-.ran-booster-admin .ran-booster-debug-capture__events,
-.ran-booster-admin .ran-booster-debug-capture__empty {
-	padding: var(--ran-booster-space-20);
+.ran-booster-admin .ran-booster-debug-capture__body {
+	padding: 0 var(--ran-booster-space-20) var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-debug-capture__body > p:first-child {
+	margin-block: 0;
+}
+
+.ran-booster-admin .ran-booster-debug-capture__events {
+	margin-block-start: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-debug-capture__footer {
+	display: flex;
+	box-sizing: border-box;
+	min-block-size: 4rem;
+	align-content: flex-start;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8);
+	padding-block: var(--ran-booster-space-16);
+	padding-inline: var(--ran-booster-space-20);
 	border-block-start: 1px solid var(--ran-booster-divider);
 }
 
@@ -229,8 +383,7 @@
 }
 
 .ran-booster-admin .ran-booster-debug-capture__events-header h4,
-.ran-booster-admin .ran-booster-debug-capture__events-header p,
-.ran-booster-admin .ran-booster-debug-capture__empty p {
+.ran-booster-admin .ran-booster-debug-capture__events-header p {
 	margin-block-start: 0;
 }
 
@@ -244,7 +397,7 @@
 	box-sizing: border-box;
 	inline-size: 100%;
 	max-inline-size: none;
-	min-height: 260px;
+	block-size: 15rem;
 	padding: var(--ran-booster-space-12);
 	border-color: var(--ran-booster-strong-divider);
 	background: var(--ran-booster-surface-subtle);
@@ -252,48 +405,19 @@
 	resize: vertical;
 }
 
-.ran-booster-admin .ran-booster-debug-capture__no-events {
-	margin: 0;
-	padding: var(--ran-booster-space-18);
-	border: 1px dashed var(--ran-booster-border);
-	background: var(--ran-booster-surface-subtle);
-	color: var(--ran-booster-text-muted);
-}
-
-.ran-booster-admin .ran-booster-debug-capture__actions {
-	align-items: center;
-	padding-block: var(--ran-booster-space-12);
-	padding-inline: var(--ran-booster-space-20);
-	border-block-start: 1px solid var(--ran-booster-divider);
-	background: var(--ran-booster-surface-subtle);
-}
-
-.ran-booster-admin .ran-booster-debug-capture__actions .button-link-delete {
-	margin-inline-start: auto;
-}
-
-.ran-booster-admin .ran-booster-debug-capture__panel > .notice {
-	margin: var(--ran-booster-space-20);
-}
-
-.ran-booster-admin
-	.ran-booster-debug-capture__panel
-	> .ran-booster-debug-capture__scope {
-	margin: 0;
-}
-
 @media screen and (max-width: 600px) {
-	.ran-booster-admin .ran-booster-debug-capture__facts {
-		grid-template-columns: minmax(0, 1fr);
+	.ran-booster-admin .ran-booster-debug-capture__header {
+		min-block-size: 7rem;
 	}
 
-	.ran-booster-admin .ran-booster-debug-capture__facts > div + div {
-		border-block-start: 1px solid var(--ran-booster-divider);
-		border-inline-start: 0;
+	.ran-booster-admin .ran-booster-debug-capture__footer {
+		min-block-size: 8.125rem;
 	}
+}
 
-	.ran-booster-admin .ran-booster-debug-capture__actions .button-link-delete {
-		margin-inline-start: 0;
+@media screen and (max-width: 375px) {
+	.ran-booster-admin .ran-booster-debug-capture__header {
+		min-block-size: 8rem;
 	}
 }
 
@@ -1110,4 +1234,57 @@
 
 .ran-booster-admin .ran-booster-portability__details-body code {
 	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-overview-activity__list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ran-booster-admin .ran-booster-overview-activity__row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-12);
+	padding-block: var(--ran-booster-space-8);
+	border-block-end: 1px solid var(--ran-booster-border);
+}
+
+.ran-booster-admin .ran-booster-overview-activity__row > div {
+	min-width: 0;
+	flex: 1;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-overview-activity__row > .ran-booster-badge {
+	flex: none;
+}
+
+.ran-booster-admin .ran-booster-overview-activity__time {
+	color: var(--ran-booster-text-muted);
+	font-size: var(--ran-booster-font-size-xs);
+}
+
+.ran-booster-admin .ran-booster-overview-package-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8) var(--ran-booster-space-24);
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-overview-package-actions__group {
+	display: grid;
+	min-inline-size: 0;
+	max-inline-size: 100%;
+	grid-template-columns: repeat(2, minmax(0, auto));
+	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-overview-package-actions .button {
+	min-inline-size: 0;
+	text-align: center;
+	overflow-wrap: anywhere;
+	white-space: normal;
 }

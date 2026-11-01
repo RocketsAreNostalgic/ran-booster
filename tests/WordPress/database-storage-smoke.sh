@@ -20,3 +20,5 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 
 "$php_bin" "$wp_cli" plugin is-active ran-booster --path="$wordpress"
 "$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/database-storage-smoke.php" --path="$wordpress"
+
+"$php_bin" "$wp_cli" eval-file "$root/tests/WordPress/support-snapshot-smoke.php" --path="$wordpress"

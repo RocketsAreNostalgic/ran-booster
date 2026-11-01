@@ -316,6 +316,32 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC, $configured->path_source() );
 	}
 
+	public function test_configuration_facts_reuse_source_classification_without_authentication(): void {
+		$provisioner                 = $this->provisioner();
+		$provisioner->configured     = $this->root . '/custom/secrets.json';
+		$provisioner->health_failure = true;
+		self::assertSame(
+			array(
+				'path'   => $provisioner->configured,
+				'source' => 'manual',
+			),
+			$provisioner->configuration_facts()
+		);
+		self::assertFalse( $provisioner->probe_called );
+		self::assertFalse( $provisioner->writer_called );
+		( new WpConfigSecretsPathWriter() )->write( $this->config_path, $this->candidate );
+		$provisioner->configured = $this->candidate;
+		self::assertSame(
+			array(
+				'path'   => $this->candidate,
+				'source' => 'automatic',
+			),
+			$provisioner->configuration_facts()
+		);
+		$provisioner->configured = false;
+		self::assertNull( $provisioner->configuration_facts() );
+	}
+
 	public function test_valid_manual_override_is_handled_before_automatic_suggestion_resolution(): void {
 		$manual = $this->root . '/manual';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
@@ -367,6 +393,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
 		self::assertSame( 'configured_path_invalid', $result->code() );
+		self::assertNull( $provisioner->configuration_facts() );
 		self::assertNull( $result->candidate_path() );
 		self::assertNull( ( new SecretsFile() )->path() );
 	}
@@ -386,6 +413,7 @@ final class SecretsStorageProvisionerTest extends TestCase {
 
 		self::assertSame( SecretsStorageProvisioningResult::MANUAL_REQUIRED, $result->status() );
 		self::assertSame( 'configured_path_invalid', $result->code() );
+		self::assertNull( $provisioner->configuration_facts() );
 		self::assertNull( $result->candidate_path() );
 		self::assertNull( ( new SecretsFile() )->path() );
 	}

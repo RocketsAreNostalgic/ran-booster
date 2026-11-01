@@ -508,10 +508,22 @@
 		initDocumentationPrintDetails(root);
 	}
 
-	function initTroubleshootingCredentialChoices() {
-		const form = document.querySelector(
-			'.ran-booster-troubleshooting__form'
-		);
+	document.addEventListener?.('htmx:afterSwap', function (event) {
+		if (
+			event.detail?.target?.id ===
+			'ran-booster-troubleshooting-diagnostics-region'
+		) {
+			const region = document.querySelector(
+				'#ran-booster-troubleshooting-diagnostics-region'
+			);
+			if (region) {
+				initTroubleshootingCredentialChoices(region);
+			}
+		}
+	});
+
+	function initTroubleshootingCredentialChoices(root = document) {
+		const form = root.querySelector('.ran-booster-troubleshooting__form');
 		if (!form) {
 			return;
 		}
@@ -522,9 +534,14 @@
 		const credential = form.querySelector(
 			'.ran-booster-troubleshooting__credential'
 		);
-		if (!provider || !credential) {
+		if (
+			!provider ||
+			!credential ||
+			form.dataset.ranBoosterCredentialChoicesBound === 'true'
+		) {
 			return;
 		}
+		form.dataset.ranBoosterCredentialChoicesBound = 'true';
 
 		function updateCredentialChoices() {
 			credential

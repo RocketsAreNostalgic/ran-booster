@@ -30,13 +30,13 @@ final class CoreSelfUpdatePolicy {
 	) {
 	}
 
-	public static function detect( string $plugin_file, string $plugin_version ): self {
-		$requested_mode = self::requested_mode();
+	public static function detect( string $plugin_file, string $plugin_version, bool $fresh_preferences = false ): self {
+		$requested_mode = self::requested_mode( $fresh_preferences );
 		if ( self::MODE_ENABLED === $requested_mode ) {
 			return new self( $requested_mode, self::MODE_ENABLED, 'configuration_enabled' );
 		}
 		if ( self::MODE_DISABLED === $requested_mode ) {
-			return new self( $requested_mode, self::MODE_DISABLED, 'configuration_disabled' );
+			return new self( $requested_mode, self::MODE_DISABLED, defined( self::CONFIGURATION ) ? 'configuration_disabled' : 'preference_disabled' );
 		}
 		if ( self::MODE_AUTO !== $requested_mode ) {
 			return new self( 'invalid', self::MODE_DISABLED, 'configuration_invalid' );
@@ -86,9 +86,9 @@ final class CoreSelfUpdatePolicy {
 		);
 	}
 
-	private static function requested_mode(): string {
+	private static function requested_mode( bool $fresh_preferences = false ): string {
 		if ( ! defined( self::CONFIGURATION ) ) {
-			return self::MODE_AUTO;
+			return false === ( new \RAN\Settings\GeneralPreferenceStore() )->self_update_discovery( $fresh_preferences ) ? self::MODE_DISABLED : self::MODE_AUTO;
 		}
 
 		$value = constant( self::CONFIGURATION );

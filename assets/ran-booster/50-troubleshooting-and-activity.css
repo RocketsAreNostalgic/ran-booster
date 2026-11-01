@@ -9,6 +9,7 @@
 .ran-booster-admin
 	.ran-booster-troubleshooting__installation-card
 	> .ran-booster-page-shell__header {
+	padding-block-start: var(--ran-booster-space-18);
 	padding-block-end: var(--ran-booster-space-6);
 }
 
@@ -45,6 +46,18 @@
 
 .ran-booster-admin .ran-booster-troubleshooting__fields-list code {
 	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__card-heading {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__installation-card h4 {
+	margin: 0;
 }
 
 .ran-booster-admin .ran-booster-secondary-nav {

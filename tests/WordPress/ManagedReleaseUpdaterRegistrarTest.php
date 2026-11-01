@@ -49,7 +49,7 @@ final class ManagedReleaseUpdaterRegistrarTest extends TestCase {
 		self::assertSame( 1048576, $runtime->arguments[7] );
 	}
 
-	public function test_descriptor_admission_is_unavailable_on_the_pinned_protocol_six_runtime(): void {
+	public function test_descriptor_admission_fails_closed_on_an_incompatible_runtime(): void {
 		$registrar = new ManagedReleaseUpdaterRegistrar( new RecordingReleaseUpdaterRuntime() );
 
 		self::assertNull( $registrar->with_descriptor_admission( static fn (): bool => true ) );

@@ -182,7 +182,7 @@ model and day-to-day webhook operations.
 
 Booster uses the same ordinary-history policy for Activity reports and the
 operational deployment journal: 30 days and 2,000 rows by default. Sites may set
-bounded integer overrides in `wp-config.php`:
+bounded preferences in **Booster → Settings**. Defined constants override and lock the corresponding preference:
 
 ```php
 define( 'RAN_BOOSTER_HISTORY_ROWS', 5000 ); // 200 through 100000.
@@ -200,7 +200,7 @@ The old `RAN_BOOSTER_MAX_ATTEMPT_ROWS` setting is retired for clean-start rollou
 Git provider deployments download a ZIP of the whole repository; selecting a
 package subdirectory does not reduce that download. The target site defaults to
 50 MiB compressed and 200 MiB expanded. A legitimate larger repository can use
-one target-local, site-wide override in `wp-config.php`:
+the exact-byte preference under **Booster → Settings → Archive limits**. A defined constant overrides and locks that preference:
 
 ```php
 define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 150 * 1024 * 1024 );
@@ -211,7 +211,7 @@ derives the expanded limit at four times that value and retains its other ZIP,
 identity, path and free-space checks. The same policy covers every registered
 Git provider's branch-source manual installs and updates, webhook updates, and
 Transporter Blueprint installs. Prospective release installation instead uses
-the released `ran/wp-release-updater` beta.15 public API (Protocol 7), with
+the released `ran/wp-release-updater` beta.16 public API (Protocol 7), with
 separate archive custody and bounds, and creates no deployment attempt.
 Inspection discards its validation ZIP; installation freshly reacquires the
 selected release using its opaque `v2:` fingerprint. Earlier selections require

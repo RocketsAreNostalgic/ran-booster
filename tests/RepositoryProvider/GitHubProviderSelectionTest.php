@@ -131,6 +131,21 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( array( 'selection_generation', 'selected', 'declaration', 'approval' ), array_keys( $status['current'] ) );
 	}
 
+	public function test_support_observation_reuses_bootstrap_without_authority_or_candidate_rescans(): void {
+		$context               = new GitHubProviderSelection( $this->store, $this->root, $this->bundled );
+		$reads                 = $this->db->active_reads;
+		$this->db->fail_active = true;
+		$this->activate( array( 'unrelated.php' ) );
+		$observed = $context->support_observation();
+		self::assertSame( $reads, $this->db->active_reads );
+		self::assertSame( 'bundled', $observed['selected'] );
+		self::assertSame( 'decision_required', $observed['state'] );
+		self::assertFalse( $observed['admitted'] );
+		self::assertSame( $this->bundled->provider_api_version, $observed['provider_api'] );
+		self::assertIsArray( $observed['identity'] );
+		self::assertSame( $this->bundled->implementation_fingerprint, $observed['identity']['implementation_fingerprint'] );
+	}
+
 	public function test_healthy_provider_presentation_never_reviews_credential_adoption(): void {
 		$secrets = $this->createMock( SecretsFile::class );
 		$secrets->expects( self::never() )->method( 'with_github_adoption_inventory' );
@@ -142,8 +157,11 @@ final class GitHubProviderSelectionTest extends TestCase {
 		$diagnostics = $presenter->github_selection_diagnostics();
 		self::assertNotNull( $diagnostics );
 		self::assertSame( 'available', $diagnostics['state'] );
+		self::assertSame( 'bundled', $presenter->overview_provider_facts()['gh']['source_kind'] );
 
 		$candidate = $this->candidate( 'replacement.php' );
+		$this->write( 'replacement.php', "<?php\n/*\nPlugin Name: Selected Example\nRAN Booster GitHub Replacement: 1\n*/" );
+		self::assertSame( 'bundled', $presenter->overview_provider_facts()['gh']['source_kind'], 'An inactive candidate must not change the selected origin.' );
 		$this->activate( array( 'booster.php', 'replacement.php' ) );
 		$this->adopt( $candidate );
 		$context   = $this->context();
@@ -152,6 +170,8 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertIsArray( $selection );
 		self::assertTrue( $selection['available'] );
 		self::assertSame( 'replacement', $selection['status']['current']['selected'] );
+		self::assertSame( 'replacement', $presenter->overview_provider_facts()['gh']['source_kind'] );
+		self::assertSame( 'Selected Example', $presenter->overview_provider_facts()['gh']['source_name'] );
 		self::assertNull( $selection['review'] );
 		self::assertNull( $selection['package_counts'] );
 		self::assertNull( $selection['recovery'] );

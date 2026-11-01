@@ -71,11 +71,74 @@ final class ActivityStore {
 		return '1' === get_option( self::VERSION_OPTION );
 	}
 
+	/**
+	 * Read bounded support inputs without transferring private text or preparing schema.
+	 * Counts and truncation describe this retained window, never lifetime totals.
+	 *
+	 * @return array{available:bool,records:list<Record>,truncated:bool}
+	 * @phpstan-impure
+	 */
+	public function support_snapshot(): array {
+		$unavailable = array(
+			'available' => false,
+			'records'   => array(),
+			'truncated' => false,
+		);
+		if ( ! $this->available() ) {
+			return $unavailable;
+		}
+		$where = $this->history_scope_where();
+		if ( in_array( null, $where, true ) ) {
+			return $unavailable;
+		}
+		$fields  = array(
+			'id'               => 20,
+			'correlation'      => 32,
+			'sort_at'          => 19,
+			'started_at'       => 19,
+			'completed_at'     => 19,
+			'provider'         => 32,
+			'subject_type'     => 16,
+			'subject_identity' => 255,
+			'operation'        => 96,
+			'status'           => 16,
+			'stage'            => 96,
+			'reason'           => 96,
+			'effect'           => 16,
+		);
+		$columns = array();
+		foreach ( $fields as $field => $bytes ) {
+			$columns[] = "LEFT($field,$bytes) AS $field";
+		}
+		$records = $this->rows( 'SELECT ' . implode( ',', $columns ) . " FROM {$this->table} AS activity WHERE " . implode( ' AND ', $where ) . ' ORDER BY activity.sort_at DESC,activity.id DESC LIMIT 101' );
+		if ( null === $records ) {
+			return $unavailable;
+		}
+		$projected = array();
+		foreach ( array_slice( $records, 0, 100 ) as $record ) {
+			$row = array_intersect_key( $record, $fields );
+			foreach ( $row as $field => $value ) {
+				if ( is_string( $value ) ) {
+					$row[ $field ] = substr( $value, 0, $fields[ $field ] );
+				}
+			}
+			$projected[] = $row;
+		}
+		return array(
+			'available' => true,
+			'records'   => $projected,
+			'truncated' => count( $records ) > 100,
+		);
+	}
+
 	/** @return array{valid:bool,maximum_rows:int,maximum_days:int,source:'configured'|'default'} */
 	public static function retention_policy( mixed $rows = null, mixed $days = null ): array {
-		$configured = null !== $rows || null !== $days || defined( 'RAN_BOOSTER_HISTORY_ROWS' ) || defined( 'RAN_BOOSTER_HISTORY_DAYS' );
-		$rows     ??= defined( 'RAN_BOOSTER_HISTORY_ROWS' ) ? constant( 'RAN_BOOSTER_HISTORY_ROWS' ) : 2000;
-		$days     ??= defined( 'RAN_BOOSTER_HISTORY_DAYS' ) ? constant( 'RAN_BOOSTER_HISTORY_DAYS' ) : 30;
+		$preferences = new \RAN\Settings\GeneralPreferenceStore();
+		$saved_rows  = $preferences->history_rows();
+		$saved_days  = $preferences->history_days();
+		$configured  = null !== $rows || null !== $days || null !== $saved_rows || null !== $saved_days || defined( 'RAN_BOOSTER_HISTORY_ROWS' ) || defined( 'RAN_BOOSTER_HISTORY_DAYS' );
+		$rows      ??= defined( 'RAN_BOOSTER_HISTORY_ROWS' ) ? constant( 'RAN_BOOSTER_HISTORY_ROWS' ) : ( $saved_rows ?? 2000 );
+		$days      ??= defined( 'RAN_BOOSTER_HISTORY_DAYS' ) ? constant( 'RAN_BOOSTER_HISTORY_DAYS' ) : ( $saved_days ?? 30 );
 		$valid_rows = is_int( $rows ) && $rows >= 200 && $rows <= 100000;
 		$valid_days = is_int( $days ) && $days >= 1 && $days <= 365;
 		return array(

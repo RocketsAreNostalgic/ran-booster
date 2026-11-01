@@ -721,6 +721,12 @@ jobs:
                 test ! -L "$wordpress/.ran-booster-disposable-test-site"
                 printf '%s\n' 'RAN Booster disposable test site' > "$wordpress/.ran-booster-disposable-test-site"
 
+          - name: Prove General Settings and GitHub management concurrency
+            if: ${{ matrix.suite == 'critical' }}
+            env:
+                RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress
+            run: bash tests/WordPress/general-settings-race.sh
+
           - name: Prove database activation and storage
             env:
                 RAN_BOOSTER_WORDPRESS_PATH: ${{ github.workspace }}/build/wordpress

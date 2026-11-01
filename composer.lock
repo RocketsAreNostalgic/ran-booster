@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "661d2990d7e1447668ff6d8ac9d52d86",
+    "content-hash": "c5063e3b4428e8fb3cdc64b014e2b448",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -321,16 +321,16 @@
         },
         {
             "name": "ran/wp-release-updater",
-            "version": "v1.0.0-beta.15",
+            "version": "v1.0.0-beta.16",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater.git",
-                "reference": "2283850d81a3a5b0dfa7fee07beddaba8bf02883"
+                "reference": "aa17eb4dc49dcf6dfb70d3af0e8039a3a2512bef"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/2283850d81a3a5b0dfa7fee07beddaba8bf02883",
-                "reference": "2283850d81a3a5b0dfa7fee07beddaba8bf02883",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-release-updater/zipball/aa17eb4dc49dcf6dfb70d3af0e8039a3a2512bef",
+                "reference": "aa17eb4dc49dcf6dfb70d3af0e8039a3a2512bef",
                 "shasum": ""
             },
             "require": {
@@ -420,7 +420,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-release-updater"
             },
-            "time": "2026-10-29T19:46:39+00:00"
+            "time": "2026-10-31T10:45:50+00:00"
         }
     ],
     "packages-dev": [
@@ -1717,16 +1717,16 @@
         },
         {
             "name": "ran/admin-shell",
-            "version": "dev-codex/31-notice-placement",
+            "version": "dev-bnjmnrsh/responsive-menu-gap",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "56dc2fd75c685fa82038ea60d92608ddc2a131fd"
+                "reference": "97ac4d216d1fb0d6d038e69858ea12db86cf2a9d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/56dc2fd75c685fa82038ea60d92608ddc2a131fd",
-                "reference": "56dc2fd75c685fa82038ea60d92608ddc2a131fd",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/97ac4d216d1fb0d6d038e69858ea12db86cf2a9d",
+                "reference": "97ac4d216d1fb0d6d038e69858ea12db86cf2a9d",
                 "shasum": ""
             },
             "require": {
@@ -1782,10 +1782,10 @@
             ],
             "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/codex/31-notice-placement",
+                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/bnjmnrsh/responsive-menu-gap",
                 "issues": "https://github.com/RocketsAreNostalgic/ran-admin-shell/issues"
             },
-            "time": "2026-10-30T14:28:34+00:00"
+            "time": "2026-10-31T22:45:28+00:00"
         },
         {
             "name": "ran/coding-standards",

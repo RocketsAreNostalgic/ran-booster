@@ -44,6 +44,11 @@ final class TemporaryDebugCapture {
 			: Closure::fromCallable( $clock );
 	}
 
+	/** The configured capture location, without inspecting or creating a file. */
+	public function configured_path(): ?string {
+		return $this->path;
+	}
+
 	/**
 	 * Reset any owned capture and begin a fresh sixty-minute window.
 	 *

@@ -194,12 +194,11 @@ final class CredentialExpiryNotice {
 		?>
 		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-secrets-storage-notice>
 			<p>
-				<strong><?php esc_html_e( 'RAN Booster encrypted credentials are unavailable:', 'ran-booster' ); ?></strong>
-				<?php esc_html_e( 'The encrypted sidecar and its site key are missing, incomplete, or do not match. Credential-backed operations remain paused.', 'ran-booster' ); ?>
+				<strong><?php esc_html_e( 'Booster cannot read saved credentials.', 'ran-booster' ); ?></strong>
+				<?php esc_html_e( 'Credential-backed operations remain paused.', 'ran-booster' ); ?>
 			</p>
 			<p>
-				<?php esc_html_e( 'Restore the matching sidecar and site key from the same backup before changing credentials.', 'ran-booster' ); ?>
-				<a href="<?php echo esc_url( $base_url . '?page=ran-booster-settings#ran-booster-storage' ); ?>"><?php esc_html_e( 'Review encrypted storage', 'ran-booster' ); ?></a>
+				<a href="<?php echo esc_url( $base_url . '?page=ran-booster-settings#ran-booster-storage' ); ?>"><?php esc_html_e( 'Review Secure credential storage in Settings', 'ran-booster' ); ?></a>
 			</p>
 		</div>
 		<?php

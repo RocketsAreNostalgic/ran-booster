@@ -18,7 +18,7 @@ final class DocumentationHookRenderer {
 	 *
 	 * @param non-empty-string $filter_hook
 	 * @param ProviderMetadata|null $provider_metadata Exact registered provider metadata for a provider-specific hook.
-	 * @return list<array{id: string, summary: string, content: string, open: bool}>
+	 * @return list<array{id: string, summary: string, content: string, open: bool, chapter: ?string}>
 	 */
 	public function prepare_sections(
 		string $filter_hook,
@@ -45,7 +45,7 @@ final class DocumentationHookRenderer {
 	}
 
 	/**
-	 * @param list<array{id: string, summary: string, content: string, open: bool}> $sections
+	 * @param list<array{id: string, summary: string, content: string, open: bool, chapter: ?string}> $sections
 	 */
 	public function render_prepared_sections( array $sections ): void {
 		foreach ( $sections as $section ) {
@@ -58,7 +58,7 @@ final class DocumentationHookRenderer {
 		}
 	}
 
-	/** @return array{id: string, summary: string, content: string, open: bool}|null */
+	/** @return array{id: string, summary: string, content: string, open: bool, chapter: ?string}|null */
 	private function normalize_section( mixed $section, ?string $provider_code ): ?array {
 		if ( ! is_array( $section ) ) {
 			return null;
@@ -68,6 +68,7 @@ final class DocumentationHookRenderer {
 		$summary = $section['summary'] ?? null;
 		$content = $section['content'] ?? null;
 		$open    = true === ( $section['open'] ?? false );
+		$chapter = is_string( $section['chapter'] ?? null ) ? $section['chapter'] : null;
 
 		if (
 			! is_string( $id )
@@ -106,6 +107,7 @@ final class DocumentationHookRenderer {
 				'summary' => $summary,
 				'content' => '<p>' . esc_html__( 'An add-on guide is temporarily unavailable. Check plugin compatibility and the error log.', 'ran-booster' ) . '</p>',
 				'open'    => $open,
+				'chapter' => $chapter,
 			);
 		}
 
@@ -124,6 +126,7 @@ final class DocumentationHookRenderer {
 			'summary' => $summary,
 			'content' => $content,
 			'open'    => $open,
+			'chapter' => $chapter,
 		);
 	}
 

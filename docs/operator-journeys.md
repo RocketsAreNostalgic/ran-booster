@@ -186,21 +186,20 @@ the blueprint again.**, a timeout, or a lost response:
 
 ## Migrate retained WP Pusher packages
 
-**Separate release prerequisite:** The maintained
+**Separate release prerequisite (1 November 2026):** Published
+[Migrator v0.1.0-beta.11](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.11)
+requires Portability API 4 and Admin Interaction API 3. Its
+[certification metadata](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/blob/933d336454f87f4eccc675fc30c5e691418c65a9/composer.json)
+records automated certification against immutable Core beta.37. Publication and
+that certification do not establish a fresh installed migration or manual
+acceptance. Consult the maintained
 [Migrator instructions](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/blob/main/README.md)
-describe its API 4 source. Published
-[Migrator v0.1.0-beta.10](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.10)
-uses API 3 and is incompatible with Core beta.37's Portability API 4. The API 4
-source has automated certification against immutable Core beta.37, recorded in
-its [certification metadata](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/blob/f454f649f8c816a81d15f62078102fb0bdabbb18/composer.json).
-That source certification does not make the published beta.10 ZIP compatible or
-establish manual acceptance. [Release PR84](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/pull/84)
-proposes beta.11 and remains open at this 22 October 2026 checkpoint. Wait for an
-explicitly compatible immutable Migrator release with its manual gates complete
-before using this as a released-product journey. A Core update alone does not
-complete that prerequisite.
+for the compatible pair, installation and remaining prerequisites.
 
-Once a compatible pair is available:
+At the 22 October 2026 checkpoint, published beta.10 used API 3 and was
+incompatible with Core beta.37; the beta.11 release proposal was still open.
+
+With a compatible pair:
 
 1. Back up the site and deactivate WP Pusher, keeping its retained records.
    Use supported single-site WordPress/PHP and the required Core API markers;

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c5063e3b4428e8fb3cdc64b014e2b448",
+    "content-hash": "14fa816bcb78732bfce1e61a9ee7e4e5",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1717,16 +1717,16 @@
         },
         {
             "name": "ran/admin-shell",
-            "version": "dev-bnjmnrsh/responsive-menu-gap",
+            "version": "v1.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "97ac4d216d1fb0d6d038e69858ea12db86cf2a9d"
+                "reference": "350909995871d11a7f8495bb2c5bfd041190b648"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/97ac4d216d1fb0d6d038e69858ea12db86cf2a9d",
-                "reference": "97ac4d216d1fb0d6d038e69858ea12db86cf2a9d",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/350909995871d11a7f8495bb2c5bfd041190b648",
+                "reference": "350909995871d11a7f8495bb2c5bfd041190b648",
                 "shasum": ""
             },
             "require": {
@@ -1782,10 +1782,10 @@
             ],
             "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/bnjmnrsh/responsive-menu-gap",
+                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/v1.0.0",
                 "issues": "https://github.com/RocketsAreNostalgic/ran-admin-shell/issues"
             },
-            "time": "2026-10-31T22:45:28+00:00"
+            "time": "2026-11-01T11:11:49+00:00"
         },
         {
             "name": "ran/coding-standards",
@@ -3152,7 +3152,6 @@
         "phpcompatibility/php-compatibility": 15,
         "phpcompatibility/phpcompatibility-paragonie": 15,
         "phpcompatibility/phpcompatibility-wp": 15,
-        "ran/admin-shell": 20,
         "ran/booster-github-provider": 10,
         "ran/updater-support": 10,
         "ran/wp-branch-updater": 10,

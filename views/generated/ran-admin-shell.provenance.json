@@ -1,8 +1,8 @@
 {
     "schema": 1,
     "package": "ran/admin-shell",
-    "version": "dev-bnjmnrsh/responsive-menu-gap",
-    "reference": "97ac4d216d1fb0d6d038e69858ea12db86cf2a9d",
+    "version": "v1.0.0",
+    "reference": "350909995871d11a7f8495bb2c5bfd041190b648",
     "files": {
         "assets/ran-admin-shell.css": "sha256:77db707cd28822a4218eb273122d7e5f66f66b5b9e59544a691a7b3840a4ad0b",
         "views/generated/ran-admin-shell.php": "sha256:a5ba855de3918a91703177d35275ddececb8e6858c2d5351ee2513275490a5be"

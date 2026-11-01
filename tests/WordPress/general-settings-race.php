@@ -10,6 +10,7 @@ final class RAN_Booster_General_Settings_Race {
 	private string $release;
 	private string $result;
 	private string $order;
+	private string $attempt;
 	private string $option;
 	private string $table;
 	private string $slug;
@@ -19,6 +20,7 @@ final class RAN_Booster_General_Settings_Race {
 	public function __construct( array $args ) {
 		[$this->action, $this->run, $this->state, $this->ready, $this->release, $this->result] = array_pad( $args, 6, '' );
 		$this->order      = (string) getenv( 'RAN_BOOSTER_GENERAL_RACE_ORDER' );
+		$this->attempt    = (string) getenv( 'RAN_BOOSTER_GENERAL_RACE_ATTEMPT' );
 		$this->option     = \RAN\Settings\GeneralPreferenceStore::OPTION_NAME;
 		$this->table      = ran_booster_table_name();
 		$this->slug       = 'ran-general-race-' . $this->run;
@@ -28,15 +30,31 @@ final class RAN_Booster_General_Settings_Race {
 	public function run(): void {
 		$this->assert_arguments();
 		$this->assert_disposable_site();
+		if ( '' !== $this->attempt ) {
+			add_filter( 'query', fn ( string $query ): string => $this->attempt_filter( $query ) );
+		}
 		match ( $this->action ) {
 			'setup' => $this->setup(), 'cleanup' => $this->cleanup(), 'assert' => $this->assert_result(), 'save' => $this->save(), 'adopt' => $this->adopt(),
 			default => throw new RuntimeException( 'Invalid General Settings race action.' ),
 		};
 	}
+	private function attempt_filter( string $query ): string {
+		global $wpdb;
+		$matches = 'save' === $this->action
+			? $query === $wpdb->prepare( 'SELECT id FROM %i WHERE provider = %s FOR UPDATE', $this->table, 'gh' )
+			: str_starts_with( $query, $wpdb->prepare( 'INSERT INTO %i', $this->table ) ) && str_contains( $query, $wpdb->prepare( '%s', $this->identifier ) );
+		if ( $matches && ! file_exists( $this->attempt ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Atomic owned-file marker before the competing SQL query.
+			if ( false === fopen( $this->attempt, 'x' ) ) {
+				throw new RuntimeException( 'Race attempt marker already exists.' );
+			}
+		}
+		return $query;
+	}
 	private function assert_arguments(): void {
 		if ( ! in_array( $this->action, array( 'setup', 'save', 'adopt', 'assert', 'cleanup' ), true ) || 1 !== preg_match( '/\A[a-f0-9]{24}\z/D', $this->run ) || ! in_array( $this->state, array( 'absent', 'false', 'true' ), true ) || ! in_array( $this->order, array( 'saved-first', 'managed-first' ), true ) ) {
 			throw new RuntimeException( 'Invalid General Settings race arguments.' ); }
-		foreach ( array( $this->ready, $this->release, $this->result ) as $path ) {
+		foreach ( array( $this->ready, $this->release, $this->result, $this->attempt ) as $path ) {
 			if ( '' !== $path && ( ! str_starts_with( $path, sys_get_temp_dir() . DIRECTORY_SEPARATOR ) || is_link( $path ) ) ) {
 				throw new RuntimeException( 'Race barriers must be owned temporary paths.' ); }
 		}

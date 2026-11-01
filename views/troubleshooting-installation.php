@@ -218,8 +218,11 @@ foreach ( $components as $component ) {
 		<div><dt><?php esc_html_e( 'Implemented capabilities', 'ran-booster' ); ?></dt><dd>
 		<?php
 		foreach ( explode( ', ', $component['Capabilities'] ) as $index => $capability ) {
-			?>
-			<?php echo 0 === $index ? '' : ', '; ?><code><?php echo esc_html( $capability ); ?></code><?php } ?></dd></div>
+			echo 0 === $index ? '' : ', ';
+			echo '<code>' . esc_html( $capability ) . '</code>';
+		}
+		?>
+		</dd></div>
 	<?php } ?>
 	<?php if ( $is_github ) { ?>
 		<?php

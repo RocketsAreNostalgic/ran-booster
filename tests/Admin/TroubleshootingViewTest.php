@@ -272,7 +272,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Showing 4 of 8 replacement plugins.', $html );
 		self::assertStringContainsString( 'Implementation fingerprint', $html );
 		self::assertStringContainsString( 'Implementation ID', $html );
-		self::assertMatchesRegularExpression( '/<code>CredentialValidator<\/code>\s*,\s*<code>RepositoryBrowser<\/code>/', $html );
+		self::assertStringContainsString( '<code>CredentialValidator</code>, <code>RepositoryBrowser</code>', $html );
 		self::assertStringContainsString( 'Classic personal access token', $html );
 		self::assertStringNotContainsString( 'RAN\\RepositoryProvider\\CredentialValidator', $html );
 		self::assertStringContainsString( 'Provided by Bitbucket Cloud', $html );

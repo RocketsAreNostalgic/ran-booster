@@ -474,8 +474,14 @@ class Dispatcher {
 		}
 		if ( 'check-core-updates' === $action ) {
 			$this->dashboard->post_check_core_updates();
-		} elseif ( $this->dashboard->post_save_general_settings( wp_unslash( $request ) ) ) {
-			$this->redirect_to( admin_url( 'admin.php?page=ran-booster-settings&general_saved=1#ran-booster-general-heading' ) );
+		} else {
+			$saved = $this->dashboard->post_save_general_settings( wp_unslash( $request ) );
+			if ( $this->is_htmx_request() ) {
+				$this->respond_to_htmx_general_settings( $saved );
+			}
+			if ( $saved ) {
+				$this->redirect_to( admin_url( 'admin.php?page=ran-booster-settings&general_saved=1#ran-booster-general-heading' ) );
+			}
 		}
 	}
 
@@ -641,6 +647,14 @@ class Dispatcher {
 		if ( $this->is_htmx_request() ) {
 			$this->respond_to_htmx_diagnostics( $this->dashboard->troubleshooting_succeeded() );
 		}
+	}
+
+	protected function respond_to_htmx_general_settings( bool $saved ): never {
+		if ( $saved ) {
+			header( 'HX-Trigger-After-Swap: ' . wp_json_encode( array( 'ran-booster:admin-mutation-success' => array( 'message' => __( 'Settings saved.', 'ran-booster' ) ) ) ) );
+		}
+		echo $this->dashboard->render_general_settings_region( $saved ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned escaped view fragment.
+		exit;
 	}
 
 	private function is_htmx_request(): bool {

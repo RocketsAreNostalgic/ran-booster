@@ -745,7 +745,7 @@ class Booster {
 		$requested_tab                    = null;
 		$is_transporter_page              = 'ran-booster_page_ran-booster-transporter' === $hook;
 		$should_enqueue_portability       = false;
-		$should_enqueue_htmx              = $is_transporter_page || in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
+		$should_enqueue_htmx              = $is_transporter_page || 'ran-booster_page_ran-booster-settings' === $hook || in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
 
 		if ( 'toplevel_page_ran-booster' === $hook || $is_transporter_page ) {
 			// Read-only allowlisted navigation state; no action is performed from this value.

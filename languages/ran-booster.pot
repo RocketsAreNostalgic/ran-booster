@@ -262,7 +262,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:150
 #: RAN/Booster.php:266
-#: views/settings.php:97
+#: views/settings.php:23
 msgid "Settings"
 msgstr ""
 
@@ -995,8 +995,8 @@ msgstr ""
 #: views/overview-dashboard.php:74
 #: views/overview-dashboard.php:75
 #: views/portability-review.php:101
-#: views/settings.php:93
-#: views/settings.php:145
+#: views/settings-general.php:105
+#: views/settings-general.php:151
 #: views/troubleshooting-installation.php:137
 #: views/troubleshooting.php:227
 #: assets/ran-booster-portability.js:713
@@ -1367,7 +1367,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1482
+#: RAN/Dashboard.php:1500
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1376,7 +1376,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:823
+#: RAN/Dashboard.php:841
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -4750,100 +4750,101 @@ msgstr ""
 msgid "Booster could not validate the credentials sidecar."
 msgstr ""
 
-#: RAN/Dashboard.php:542
+#: RAN/Dashboard.php:545
 msgid "You cannot access Booster Settings."
 msgstr ""
 
-#: RAN/Dashboard.php:582
+#: RAN/Dashboard.php:596
 msgid "The saved Settings document is malformed. Runtime safety defaults remain in effect; no values were repaired."
 msgstr ""
 
-#: RAN/Dashboard.php:612
+#: RAN/Dashboard.php:626
+#: RAN/Dispatcher.php:654
 msgid "Settings saved."
 msgstr ""
 
-#: RAN/Dashboard.php:628
+#: RAN/Dashboard.php:642
 msgid "Settings could not be saved. Reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:637
+#: RAN/Dashboard.php:651
 msgid "Enter a valid value within the displayed limits."
 msgstr ""
 
-#: RAN/Dashboard.php:648
+#: RAN/Dashboard.php:662
 msgid "Settings saved; cached update offers could not be cleared. Discovery remains disabled."
 msgstr ""
 
-#: RAN/Dashboard.php:655
+#: RAN/Dashboard.php:670
 msgid "Settings changed or GitHub eligibility changed. Review the current values and save again."
 msgstr ""
 
-#: RAN/Dashboard.php:656
+#: RAN/Dashboard.php:671
 msgid "Settings were not saved. Check the fields or reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:666
+#: RAN/Dashboard.php:681
 msgid "The Booster update check completed."
 msgstr ""
 
-#: RAN/Dashboard.php:667
+#: RAN/Dashboard.php:682
 msgid "The Booster update check did not complete successfully. Review the check status below."
 msgstr ""
 
-#: RAN/Dashboard.php:678
-#: views/settings.php:101
+#: RAN/Dashboard.php:695
+#: views/settings.php:27
 msgid "Storage status is unavailable. No setup or recovery action has been performed."
 msgstr ""
 
-#: RAN/Dashboard.php:704
+#: RAN/Dashboard.php:721
 msgid "Storage health has not been checked in this request."
 msgstr ""
 
-#: RAN/Dashboard.php:833
+#: RAN/Dashboard.php:851
 msgid "Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package."
 msgstr ""
 
-#: RAN/Dashboard.php:852
+#: RAN/Dashboard.php:870
 msgid "Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it."
 msgstr ""
 
-#: RAN/Dashboard.php:867
+#: RAN/Dashboard.php:885
 msgid "Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:868
+#: RAN/Dashboard.php:886
 msgid "Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:873
+#: RAN/Dashboard.php:891
 msgid "Booster cannot verify this installed package and its management record. No management changes have been made."
 msgstr ""
 
-#: RAN/Dashboard.php:898
+#: RAN/Dashboard.php:916
 msgid "Booster’s saved update revision is invalid. It cannot safely use this package’s management settings."
 msgstr ""
 
-#: RAN/Dashboard.php:899
+#: RAN/Dashboard.php:917
 msgid "Booster’s saved update source is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:900
+#: RAN/Dashboard.php:918
 msgid "Booster’s saved deployment policy is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:901
+#: RAN/Dashboard.php:919
 msgid "Booster’s saved repository credential reference is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:902
+#: RAN/Dashboard.php:920
 msgid "Booster’s saved repository privacy setting is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:903
+#: RAN/Dashboard.php:921
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:1154
+#: RAN/Dashboard.php:1172
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 
@@ -4903,44 +4904,44 @@ msgstr ""
 msgid "Invalid Settings request. Reload Settings and try again."
 msgstr ""
 
-#: RAN/Dispatcher.php:501
+#: RAN/Dispatcher.php:507
 msgid "Storage controls have moved. Open Settings → Secure credential storage and submit a fresh form."
 msgstr ""
 
-#: RAN/Dispatcher.php:501
+#: RAN/Dispatcher.php:507
 msgid "Open secure credential storage"
 msgstr ""
 
-#: RAN/Dispatcher.php:515
+#: RAN/Dispatcher.php:521
 msgid "You do not have sufficient permissions to manage logging capture."
 msgstr ""
 
-#: RAN/Dispatcher.php:542
-#: RAN/Dispatcher.php:550
+#: RAN/Dispatcher.php:548
+#: RAN/Dispatcher.php:556
 msgid "Booster could not update the temporary logging capture. No deployment was interrupted."
 msgstr ""
 
-#: RAN/Dispatcher.php:564
+#: RAN/Dispatcher.php:570
 msgid "Temporary logging capture started."
 msgstr ""
 
-#: RAN/Dispatcher.php:565
+#: RAN/Dispatcher.php:571
 msgid "Temporary logging capture stopped."
 msgstr ""
 
-#: RAN/Dispatcher.php:581
+#: RAN/Dispatcher.php:587
 msgid "You do not have sufficient permissions to generate a support report."
 msgstr ""
 
-#: RAN/Dispatcher.php:587
+#: RAN/Dispatcher.php:593
 msgid "Invalid support report request. Open Support report and try again."
 msgstr ""
 
-#: RAN/Dispatcher.php:596
+#: RAN/Dispatcher.php:602
 msgid "You do not have sufficient permissions to run troubleshooting."
 msgstr ""
 
-#: RAN/Dispatcher.php:684
+#: RAN/Dispatcher.php:698
 msgid "Diagnostics completed successfully."
 msgstr ""
 
@@ -6780,8 +6781,8 @@ msgid "This site currently allows repository ZIPs up to %1$d MiB compressed and 
 msgstr ""
 
 #: views/documentation.php:408
+#: views/settings-general.php:41
 #: views/settings-storage.php:40
-#: views/settings.php:42
 #: views/troubleshooting-installation.php:65
 msgid "Booster default"
 msgstr ""
@@ -7285,7 +7286,7 @@ msgstr ""
 
 #: views/onboarding.php:128
 #: views/settings-storage.php:63
-#: views/settings.php:101
+#: views/settings.php:27
 #: views/troubleshooting-installation.php:56
 msgid "Secure credential storage"
 msgstr ""
@@ -9795,6 +9796,207 @@ msgstr ""
 msgid "Save webhook secret"
 msgstr ""
 
+#: views/settings-general.php:30
+msgid "The configured value is invalid. Correct the named constant; runtime safety restrictions still apply."
+msgstr ""
+
+#: views/settings-general.php:31
+msgid "The saved preference is invalid. Booster is using its safe fallback."
+msgstr ""
+
+#: views/settings-general.php:32
+msgid "This preference is currently unavailable."
+msgstr ""
+
+#: views/settings-general.php:42
+msgid "Saved for this site"
+msgstr ""
+
+#: views/settings-general.php:43
+msgid "Set in configuration"
+msgstr ""
+
+#: views/settings-general.php:46
+msgid "On"
+msgstr ""
+
+#: views/settings-general.php:46
+msgid "Off"
+msgstr ""
+
+#: views/settings-general.php:52
+msgid "Configuration constants"
+msgstr ""
+
+#: views/settings-general.php:55
+#: views/settings-general.php:132
+#: views/settings-general.php:146
+msgid "Unknown source"
+msgstr ""
+
+#: views/settings-general.php:62
+msgid "Another active non-GitHub provider is required before this can be hidden."
+msgstr ""
+
+#: views/settings-general.php:63
+msgid "GitHub remains visible while an active GitHub replacement is present."
+msgstr ""
+
+#: views/settings-general.php:64
+msgid "GitHub remains visible while this site manages GitHub packages."
+msgstr ""
+
+#: views/settings-general.php:65
+msgid "GitHub remains visible until its local management state is known."
+msgstr ""
+
+#: views/settings-general.php:66
+msgid "GitHub remains visible until provider availability is known."
+msgstr ""
+
+#: views/settings-general.php:95
+msgid "This source checkout is protected from native updates."
+msgstr ""
+
+#: views/settings-general.php:96
+msgid "This installation has no verified release provenance."
+msgstr ""
+
+#: views/settings-general.php:97
+msgid "Native discovery is disabled by configuration."
+msgstr ""
+
+#: views/settings-general.php:98
+msgid "The update configuration is invalid."
+msgstr ""
+
+#: views/settings-general.php:99
+msgid "Native discovery is disabled by the saved preference."
+msgstr ""
+
+#: views/settings-general.php:108
+msgid "General"
+msgstr ""
+
+#: views/settings-general.php:109
+msgid "You have unsaved changes."
+msgstr ""
+
+#: views/settings-general.php:126
+msgid "Appearance"
+msgstr ""
+
+#: views/settings-general.php:131
+msgid "Hide GitHub UI"
+msgstr ""
+
+#: views/settings-general.php:132
+msgid "GitHub navigation is currently hidden."
+msgstr ""
+
+#: views/settings-general.php:132
+msgid "GitHub navigation remains available."
+msgstr ""
+
+#: views/settings-general.php:140
+msgid "Booster updates"
+msgstr ""
+
+#: views/settings-general.php:145
+msgid "Check for Booster updates"
+msgstr ""
+
+#: views/settings-general.php:146
+msgid "Native discovery is currently eligible."
+msgstr ""
+
+#: views/settings-general.php:146
+msgid "Native discovery is currently unavailable."
+msgstr ""
+
+#: views/settings-general.php:151
+msgid "Installed version:"
+msgstr ""
+
+#: views/settings-general.php:151
+msgid "Available version:"
+msgstr ""
+
+#: views/settings-general.php:151
+msgid "No verified newer offer"
+msgstr ""
+
+#: views/settings-general.php:152
+msgid "Last successful Booster check:"
+msgstr ""
+
+#: views/settings-general.php:153
+msgid "Latest check result:"
+msgstr ""
+
+#: views/settings-general.php:153
+msgid "No completed check recorded"
+msgstr ""
+
+#: views/settings-general.php:157
+msgid "Check diagnostic code:"
+msgstr ""
+
+#: views/settings-general.php:158
+msgid "Check now also runs WordPress plugin update discovery. It does not save preferences or install an update."
+msgstr ""
+
+#: views/settings-general.php:162
+msgid "Check now"
+msgstr ""
+
+#: views/settings-general.php:166
+msgid "Update now"
+msgstr ""
+
+#: views/settings-general.php:170
+msgid "History"
+msgstr ""
+
+#: views/settings-general.php:171
+msgid "Maximum records"
+msgstr ""
+
+#: views/settings-general.php:176
+msgid "Retention days"
+msgstr ""
+
+#: views/settings-general.php:181
+msgid "Lowering these values does not delete protected running or recovery records immediately. Retention is irreversible once records are pruned."
+msgstr ""
+
+#: views/settings-general.php:192
+msgid "Archive limits"
+msgstr ""
+
+#: views/settings-general.php:193
+msgid "Maximum download size (MiB)"
+msgstr ""
+
+#: views/settings-general.php:198
+msgid "One MiB is 1,048,576 bytes. Fractional values are rounded to the nearest byte."
+msgstr ""
+
+#. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
+#: views/settings-general.php:199
+msgid "The derived branch expansion ceiling cannot be calculated on this host."
+msgstr ""
+
+#. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
+#: views/settings-general.php:199
+#, php-format
+msgid "Branch downloads derive a ceiling of %1$s MiB (%2$s bytes; 4× this download limit). Host and updater safeguards may be stricter."
+msgstr ""
+
+#: views/settings-general.php:204
+msgid "Save changes"
+msgstr ""
+
 #: views/settings-storage.php:41
 #: views/troubleshooting-installation.php:66
 msgid "Custom wp-config.php path"
@@ -9963,209 +10165,8 @@ msgstr ""
 msgid "Manual storage override"
 msgstr ""
 
-#: views/settings.php:31
-msgid "The configured value is invalid. Correct the named constant; runtime safety restrictions still apply."
-msgstr ""
-
-#: views/settings.php:32
-msgid "The saved preference is invalid. Booster is using its safe fallback."
-msgstr ""
-
-#: views/settings.php:33
-msgid "This preference is currently unavailable."
-msgstr ""
-
-#: views/settings.php:43
-msgid "Saved for this site"
-msgstr ""
-
-#: views/settings.php:44
-msgid "Set in configuration"
-msgstr ""
-
-#: views/settings.php:47
-msgid "On"
-msgstr ""
-
-#: views/settings.php:47
-msgid "Off"
-msgstr ""
-
-#: views/settings.php:50
-msgid "Another active non-GitHub provider is required before this can be hidden."
-msgstr ""
-
-#: views/settings.php:51
-msgid "GitHub remains visible while an active GitHub replacement is present."
-msgstr ""
-
-#: views/settings.php:52
-msgid "GitHub remains visible while this site manages GitHub packages."
-msgstr ""
-
-#: views/settings.php:53
-msgid "GitHub remains visible until its local management state is known."
-msgstr ""
-
-#: views/settings.php:54
-msgid "GitHub remains visible until provider availability is known."
-msgstr ""
-
-#: views/settings.php:83
-msgid "This source checkout is protected from native updates."
-msgstr ""
-
-#: views/settings.php:84
-msgid "This installation has no verified release provenance."
-msgstr ""
-
-#: views/settings.php:85
-msgid "Native discovery is disabled by configuration."
-msgstr ""
-
-#: views/settings.php:86
-msgid "The update configuration is invalid."
-msgstr ""
-
-#: views/settings.php:87
-msgid "Native discovery is disabled by the saved preference."
-msgstr ""
-
-#: views/settings.php:98
+#: views/settings.php:24
 msgid "Site-wide Booster preferences and secure credential storage."
-msgstr ""
-
-#: views/settings.php:106
-msgid "General"
-msgstr ""
-
-#: views/settings.php:107
-msgid "You have unsaved changes."
-msgstr ""
-
-#: views/settings.php:121
-msgid "Appearance"
-msgstr ""
-
-#: views/settings.php:126
-msgid "Hide GitHub UI"
-msgstr ""
-
-#: views/settings.php:127
-#: views/settings.php:140
-#: views/settings.php:198
-msgid "Unknown source"
-msgstr ""
-
-#: views/settings.php:127
-msgid "GitHub navigation is currently hidden."
-msgstr ""
-
-#: views/settings.php:127
-msgid "GitHub navigation remains available."
-msgstr ""
-
-#: views/settings.php:134
-msgid "Booster updates"
-msgstr ""
-
-#: views/settings.php:139
-msgid "Check for Booster updates"
-msgstr ""
-
-#: views/settings.php:140
-msgid "Native discovery is currently eligible."
-msgstr ""
-
-#: views/settings.php:140
-msgid "Native discovery is currently unavailable."
-msgstr ""
-
-#: views/settings.php:145
-msgid "Installed version:"
-msgstr ""
-
-#: views/settings.php:145
-msgid "Available version:"
-msgstr ""
-
-#: views/settings.php:145
-msgid "No verified newer offer"
-msgstr ""
-
-#: views/settings.php:146
-msgid "Last successful Booster check:"
-msgstr ""
-
-#: views/settings.php:147
-msgid "Latest check result:"
-msgstr ""
-
-#: views/settings.php:147
-msgid "No completed check recorded"
-msgstr ""
-
-#: views/settings.php:151
-msgid "Check diagnostic code:"
-msgstr ""
-
-#: views/settings.php:152
-msgid "Check now also runs WordPress plugin update discovery. It does not save preferences or install an update."
-msgstr ""
-
-#: views/settings.php:156
-msgid "Check now"
-msgstr ""
-
-#: views/settings.php:160
-msgid "Update now"
-msgstr ""
-
-#: views/settings.php:163
-msgid "History"
-msgstr ""
-
-#: views/settings.php:164
-msgid "Maximum records"
-msgstr ""
-
-#: views/settings.php:169
-msgid "Retention days"
-msgstr ""
-
-#: views/settings.php:174
-msgid "Lowering these values does not delete protected running or recovery records immediately. Retention is irreversible once records are pruned."
-msgstr ""
-
-#: views/settings.php:177
-msgid "Archive limits"
-msgstr ""
-
-#: views/settings.php:178
-msgid "Maximum download size (MiB)"
-msgstr ""
-
-#: views/settings.php:183
-msgid "One MiB is 1,048,576 bytes. Fractional values are rounded to the nearest byte."
-msgstr ""
-
-#. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings.php:184
-msgid "The derived branch expansion ceiling cannot be calculated on this host."
-msgstr ""
-
-#. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings.php:184
-#, php-format
-msgid "Branch downloads derive a ceiling of %1$s MiB (%2$s bytes; 4× this download limit). Host and updater safeguards may be stricter."
-msgstr ""
-
-#: views/settings.php:187
-msgid "Configuration constants"
-msgstr ""
-
-#: views/settings.php:203
-msgid "Save changes"
 msgstr ""
 
 #: views/troubleshooting-installation.php:32

@@ -421,6 +421,7 @@ final class BoosterAssetsTest extends TestCase {
 		$this->booster()->load_scripts( 'ran-booster_page_ran-booster-settings' );
 		self::assertContains( 'ran-booster-onboarding', $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
 		self::assertContains( 'ran-booster-settings', $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+		self::assertContains( 'ran-booster-htmx', $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
 		self::assertNotContains( 'ran-booster-portability', $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
 	}
 

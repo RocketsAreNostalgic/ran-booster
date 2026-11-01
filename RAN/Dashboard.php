@@ -574,6 +574,17 @@ class Dashboard {
 		);
 	}
 
+	/** Render only General Settings after an enhanced save; storage is untouched. */
+	public function render_general_settings_region( bool $general_save_succeeded ): string {
+		$data                           = $this->general_settings_data();
+		$data['general_save_succeeded'] = $general_save_succeeded;
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed internal General Settings projection binds this view.
+		extract( $data );
+		ob_start();
+		require __DIR__ . '/../views/settings-general.php';
+		return (string) ob_get_clean();
+	}
+
 	/** @return array<string,mixed> */
 	private function general_settings_data(): array {
 		$preferences = $this->general_preferences ?? new \RAN\Settings\GeneralPreferenceStore();
@@ -652,6 +663,7 @@ class Dashboard {
 					return false;
 				}
 			}
+			$this->general_attempted = array();
 			return true;
 		}
 		$this->general_feedback = 'stale' === $result

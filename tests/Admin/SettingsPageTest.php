@@ -155,8 +155,55 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//label[@for="ran-booster-self-update-discovery"]//input[@role="switch" and @disabled and not(@checked) and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@role="switch" and @aria-checked])' ) );
+		foreach ( array(
+			'Appearance'      => array( 'RAN_BOOSTER_HIDE_GITHUB_UI' ),
+			'Booster updates' => array( 'RAN_BOOSTER_SELF_UPDATE_MODE' ),
+			'History'         => array( 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS' ),
+			'Archive limits'  => array( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ),
+		) as $legend => $constants ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="' . $legend . '"]/details[summary="Configuration constants"])' ) );
+			foreach ( $constants as $constant ) {
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="' . $legend . '"]/details//code[text()="' . $constant . '"])' ) );
+			}
+		}
+		self::assertSame( 4.0, $xpath->evaluate( 'count(//details[summary="Configuration constants"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][hide_github]" and @value="0"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][self_update_discovery]"])' ) );
+		$general_feedback       = 'Settings changed. Review the values.';
+		$general_save_succeeded = false;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
+		$failed = (string) ob_get_clean();
+		self::assertStringContainsString( 'id="ran-booster-general-error" class="notice notice-info inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1"', $failed );
+		self::assertStringContainsString( 'Settings changed. Review the values.', $failed );
+		unset( $general_save_succeeded );
+		$general_feedback = 'Settings saved.';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
+		$fallback = (string) ob_get_clean();
+		self::assertStringContainsString( 'Settings saved.', $fallback );
+		self::assertStringNotContainsString( 'data-ran-booster-admin-mutation-error role="alert" tabindex="-1"', $fallback );
+	}
+
+	public function test_enhanced_general_save_reports_only_full_success(): void {
+		$_SERVER['HTTP_HX_REQUEST'] = 'true';
+		$_POST['ran_booster']       = array(
+			'action'      => 'save-general-settings',
+			'token'       => 'token',
+			'preferences' => array(),
+		);
+		foreach ( array( true, false ) as $saved ) {
+			$dashboard = $this->createMock( Dashboard::class );
+			$dashboard->expects( self::once() )->method( 'post_save_general_settings' )->willReturn( $saved );
+			try {
+				$this->dispatcher( $dashboard, true )->dispatch_post_requests();
+				self::fail( 'Enhanced response must terminate the request.' );
+			} catch ( SettingsEnhancedResponse $response ) {
+				self::assertSame( $saved, $response->saved );
+			}
+		}
+		unset( $_SERVER['HTTP_HX_REQUEST'] );
+		self::assertSame( array( 'ran-booster-save-general-settings', 'ran-booster-save-general-settings' ), $GLOBALS['ran_booster_test_nonce_checks'] );
 	}
 
 	private function settings_dashboard( SecretsStorageProvisioner $storage ): SettingsPageDashboard {
@@ -171,11 +218,12 @@ final class SettingsPageTest extends TestCase {
 		return $dashboard;
 	}
 
-	private function dispatcher( Dashboard $dashboard ): Dispatcher {
+	private function dispatcher( Dashboard $dashboard, bool $enhanced = false ): Dispatcher {
 		$providers = new ProviderRegistry();
 		$plugins   = new class() extends PluginRepository { public function __construct() {} };
 		$themes    = new class() extends ThemeRepository { public function __construct() {} };
-		return new Dispatcher(
+		$class     = $enhanced ? SettingsEnhancedDispatcher::class : Dispatcher::class;
+		return new $class(
 			$dashboard,
 			$providers,
 			new SecretsFile( null, array() ),
@@ -219,5 +267,19 @@ final class SettingsPageStorageProvisioner extends SecretsStorageProvisioner {
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClass -- Preserve the provisioning contract while this status double deliberately suppresses recovery work.
 	public function recovery_state( SecretsStorageProvisioningResult $status ): ?array {
 		return null;
+	}
+}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Local dispatcher response spy.
+final class SettingsEnhancedDispatcher extends Dispatcher {
+	protected function respond_to_htmx_general_settings( bool $saved ): never {
+		throw new SettingsEnhancedResponse( $saved );
+	}
+}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Local response sentinel.
+final class SettingsEnhancedResponse extends \RuntimeException {
+	public function __construct( public readonly bool $saved ) {
+		parent::__construct();
 	}
 }

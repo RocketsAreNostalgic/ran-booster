@@ -62,22 +62,6 @@ $status_classes       = array(
 		printf( esc_html__( 'This temporary capture records Booster events only. It does not require or enable %s and excludes PHP, WordPress, theme, and other-plugin messages.', 'ran-booster' ), '<code>WP_DEBUG_LOG</code>' );
 		?>
 	</p>
-	<details class="ran-booster-debug-capture__wordpress-help ran-booster-troubleshooting__disclosure ran-booster-disclosure">
-		<summary><?php esc_html_e( 'Capture PHP and WordPress errors', 'ran-booster' ); ?></summary>
-		<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
-			<p><?php esc_html_e( 'For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
-			<pre><code>define( 'WP_DEBUG', true );
-define( 'WP_DEBUG_LOG', true );
-define( 'WP_DEBUG_DISPLAY', false );</code></pre>
-			<p>
-				<?php
-				/* translators: 1: Debug log path using WP_CONTENT_DIR, 2: Typical debug log path. */
-				printf( esc_html__( 'The log is normally in %1$s (usually %2$s), unless an alternate path is configured. Turn off debugging after reproducing the issue, and review the log privately before sharing it.', 'ran-booster' ), '<code>WP_CONTENT_DIR/debug.log</code>', '<code>wp-content/debug.log</code>' );
-				?>
-			</p>
-			<p><a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/"><?php esc_html_e( 'WordPress debugging documentation', 'ran-booster' ); ?></a></p>
-		</div>
-	</details>
 
 	<div class="ran-booster-debug-capture__panel ran-booster-panel">
 		<dl class="ran-booster-debug-capture__facts">
@@ -175,4 +159,21 @@ define( 'WP_DEBUG_DISPLAY', false );</code></pre>
 			</div>
 		<?php } ?>
 	</div>
+
+	<details class="ran-booster-debug-capture__wordpress-help ran-booster-troubleshooting__disclosure ran-booster-disclosure">
+		<summary><?php esc_html_e( 'Capture PHP and WordPress errors', 'ran-booster' ); ?></summary>
+		<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+			<p><?php esc_html_e( 'For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
+			<pre><code>define( 'WP_DEBUG', true );
+define( 'WP_DEBUG_LOG', true );
+define( 'WP_DEBUG_DISPLAY', false );</code></pre>
+			<p>
+				<?php
+				/* translators: 1: Debug log path using WP_CONTENT_DIR, 2: Typical debug log path. */
+				printf( esc_html__( 'The log is normally in %1$s (usually %2$s), unless an alternate path is configured. Turn off debugging after reproducing the issue, and review the log privately before sharing it.', 'ran-booster' ), '<code>WP_CONTENT_DIR/debug.log</code>', '<code>wp-content/debug.log</code>' );
+				?>
+			</p>
+			<p><a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/"><?php esc_html_e( 'WordPress debugging documentation', 'ran-booster' ); ?></a></p>
+		</div>
+	</details>
 </section>

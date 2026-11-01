@@ -1402,7 +1402,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-provider', $html );
 		self::assertStringContainsString( 'Repository access', $html );
-		self::assertStringContainsString( 'Saved credentials enable access to private repositories entered manually.', $html );
+		self::assertStringContainsString( 'Saved credentials can be used for repository access.', $html );
 		self::assertStringContainsString( '>Add credential</button>', $html );
 		self::assertStringContainsString( 'data-credential-modal="access"', $html );
 		self::assertStringNotContainsString( 'ran-booster-credential-table--access', $html );
@@ -1412,7 +1412,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'id="ran-booster-repository-integrations-heading"' ), strpos( $html, 'id="ran-booster-webhook-secrets-heading"' ) );
 		self::assertSame( 0, substr_count( $html, 'Manage signing secrets' ) );
 		self::assertStringContainsString( 'id="ran-booster-repository-integrations-heading" class="ran-booster-section__title">Repository integrations</h3>', $html );
-		self::assertStringContainsString( 'Manage repositories, webhooks and release workflows.', $html );
+		self::assertStringContainsString( 'Review managed repositories and available integrations.', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-summary--pending' ) );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-dot is-pending' ) );
 		self::assertStringNotContainsString( 'ran-booster-status-summary--attention', $html );
@@ -1716,8 +1716,18 @@ final class TroubleshootingViewTest extends TestCase {
 		$repository_html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '>Push-to-deploy</h3>', $repository_html );
-		self::assertStringContainsString( 'Repository webhook management is unavailable until this site can receive Git provider deliveries.', $repository_html );
+		self::assertStringContainsString( 'Assisted webhook management is unavailable in this view. Receiver readiness has not been established.', $repository_html );
 		self::assertStringContainsString( 'disabled aria-disabled="true">Manage repository webhook</button>', $repository_html );
+
+		$webhook_assistance_readiness = null;
+		$provider_view_data           = $this->provider_view_data( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $provider_view_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$unknown_readiness_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Receiver readiness has not been established.', $unknown_readiness_html );
+		self::assertStringNotContainsString( 'This site is not ready to receive Git provider deliveries.', $unknown_readiness_html );
 	}
 
 	public function test_provider_branch_view_preserves_the_webhook_controls_output(): void {
@@ -2183,6 +2193,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'repositories' => array(),
 		);
 		$provider_repositories                = array(
+			'available'    => true,
 			'repositories' => array(
 				array(
 					'target'                    => 'workspace/partial',
@@ -2245,7 +2256,10 @@ final class TroubleshootingViewTest extends TestCase {
 			$status_html
 		);
 		self::assertStringContainsString( '<h4 id="ran-booster-provider-status-heading" class="ran-booster-section__title">Status</h4>', $status_html );
-		self::assertStringContainsString( 'At least 1 package across 1 repository · exact totals unavailable while a repository inventory is incomplete', $status_html );
+		self::assertStringContainsString( 'At least 1 package; exact totals unavailable.', $status_html );
+		self::assertStringContainsString( 'Release packages recorded', $status_html );
+		self::assertStringNotContainsString( 'workflows need review', $status_html );
+		self::assertStringNotContainsString( 'Repository hooks', $status_html );
 		self::assertStringNotContainsString( 'id="ran-booster-webhook-instructions-heading"', $status_html );
 
 		$provider_task      = 'setup';
@@ -2277,6 +2291,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 		$provider_task         = 'repositories';
 		$provider_repositories = array(
+			'available'    => true,
 			'repositories' => array(),
 		);
 		$provider_view_data    = $this->provider_view_data( get_defined_vars() );
@@ -2299,6 +2314,178 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>Install a theme</a>', $repositories_html );
 		self::assertStringNotContainsString( 'Assisted Hooks', $repositories_html );
 		self::assertStringNotContainsString( 'GitHub', $repositories_html );
+	}
+
+
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_provider_status_shows_incomplete_workflows_with_exact_release_count(): void {
+		$provider              = $this->provider_without_optional_settings();
+		$credential_profiles   = array();
+		$webhook_profiles      = array();
+		$provider_task         = 'status';
+		$provider_repositories = array(
+			'available'    => true,
+			'repositories' => array(
+				array(
+					'target'                    => 'owner/releases',
+					'repository_id'             => 'release-42',
+					'source'                    => 'release_asset',
+					'package_references'        => array( 'first/plugin.php', 'second/plugin.php' ),
+					'package_summaries'         => array(
+						array(
+							'type'              => 'plugin',
+							'identifier'        => 'first/plugin.php',
+							'display_name'      => 'First plugin',
+							'settings_url'      => 'https://example.test/first',
+							'source'            => 'release_asset',
+							'source_revision'   => 1,
+							'branch'            => '',
+							'subdirectory'      => '',
+							'deployment_policy' => 'manual',
+						),
+					),
+					'package_summaries_omitted' => 1,
+				),
+			),
+		);
+		$provider_view_data    = $this->provider_view_data( get_defined_vars() );
+		self::assertTrue( $provider_view_data['repository_inventory_available'] );
+		self::assertSame( 2, $provider_view_data['repository_integration_summary']['release_packages'] );
+		self::assertFalse( $provider_view_data['repository_integration_summary']['release_totals_incomplete'] );
+		self::assertTrue( $provider_view_data['repository_integration_summary']['release_workflows_inventory_incomplete'] );
+		self::assertSame( 0, $provider_view_data['repository_integration_summary']['release_workflows_needing_review'] );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $provider_view_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertMatchesRegularExpression( '/<dt>Release packages recorded<\/dt><dd>\s*2 packages\s*<\/dd>/', $html );
+		self::assertStringContainsString( 'Release workflow observations are incomplete because some package details are omitted.', $html );
+		self::assertStringNotContainsString( '0 workflows need review', $html );
+		self::assertStringNotContainsString( 'observation shown needs review', $html );
+		self::assertStringNotContainsString( 'observations shown need review', $html );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_provider_status_shows_supplied_workflow_observation_and_retains_recovery(): void {
+		$provider                             = $this->provider_without_optional_settings();
+		$provider['capabilities']['webhooks'] = true;
+		$provider['webhook_scopes']           = $this->webhook_scopes();
+		$credential_profiles                  = array();
+		$webhook_profiles                     = array();
+		$provider_repositories                = array(
+			'available'    => true,
+			'repositories' => array(
+				array(
+					'target'            => 'owner/release',
+					'repository_id'     => 'release-42',
+					'source'            => 'release_asset',
+					'package_summaries' => array(
+						array(
+							'type'              => 'plugin',
+							'identifier'        => 'release/plugin.php',
+							'display_name'      => 'Release plugin',
+							'settings_url'      => 'https://example.test/release-settings',
+							'source'            => 'release_asset',
+							'source_revision'   => 1,
+							'branch'            => '',
+							'subdirectory'      => '',
+							'deployment_policy' => 'manual',
+						),
+					),
+					'retained_webhook'  => array(
+						'evidence_available'        => true,
+						'local_secret_coverage'     => 'repository',
+						'branch_package_references' => array(),
+					),
+				),
+			),
+		);
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_provider_repository_rows'][] = static function ( array $rows ): array {
+			$rows['release-42']['details'][] = array(
+				'key'            => 'fixture:workflow-review',
+				'label'          => 'Workflow observation',
+				'value'          => 'Review retained workflow',
+				'tone'           => 'warning',
+				'category'       => 'release_workflow',
+				'review_summary' => true,
+			);
+			return $rows;
+		};
+		$provider_task      = 'status';
+		$provider_view_data = $this->provider_view_data( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $provider_view_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$status_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Release packages recorded', $status_html );
+		self::assertStringContainsString( '1 package', $status_html );
+		self::assertStringContainsString( 'Release workflow observations', $status_html );
+		self::assertStringContainsString( '1 observation shown needs review; coverage may be incomplete.', $status_html );
+		self::assertStringNotContainsString( '0 workflows need review', $status_html );
+		self::assertStringContainsString( 'View Activity', $status_html );
+
+		$provider_task           = 'repositories';
+		$requested_repository_id = 'release-42';
+		$provider_view_data      = $this->provider_view_data( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $provider_view_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$repository_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Review retained workflow', $repository_html );
+		self::assertStringContainsString( 'https://example.test/release-settings', $repository_html );
+		self::assertStringContainsString( 'Back to repositories', $repository_html );
+	}
+
+	public function test_provider_status_distinguishes_empty_and_unavailable_inventory(): void {
+		foreach ( array( true, false ) as $available ) {
+			$provider                             = $this->provider_without_optional_settings();
+			$provider['capabilities']['webhooks'] = true;
+			$provider['webhook_scopes']           = $this->webhook_scopes();
+			$credential_profiles                  = array();
+			$webhook_profiles                     = array();
+			$provider_repositories                = array(
+				'available'    => $available,
+				'repositories' => array(),
+			);
+			$provider_task                        = 'status';
+			$provider_view_data                   = $this->provider_view_data( get_defined_vars() );
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+			extract( $provider_view_data );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'Release packages recorded', $html );
+			self::assertStringNotContainsString( 'workflows need review', $html );
+			self::assertStringNotContainsString( 'Repository hooks', $html );
+			self::assertStringContainsString( 'Readiness not assessed', $html );
+			self::assertSame( ! $available, str_contains( $html, 'Repository inventory is unavailable' ) );
+		}
+	}
+
+	public function test_receiver_route_does_not_offer_setup_without_normalizer(): void {
+		$provider              = $this->provider_without_optional_settings();
+		$credential_profiles   = array();
+		$webhook_profiles      = array();
+		$provider_repositories = array(
+			'available'    => false,
+			'repositories' => array(),
+		);
+		$provider_task         = 'setup';
+		$provider_view_data    = $this->provider_view_data( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $provider_view_data );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'id="ran-booster-webhook-instructions-heading"', $html );
+		self::assertStringContainsString( 'Webhook receiver guidance is unavailable for this provider.', $html );
+		self::assertStringNotContainsString( 'Payload URL', $html );
 	}
 
 	public function test_webhook_secret_management_uses_provider_neutral_inventory_and_actions(): void {

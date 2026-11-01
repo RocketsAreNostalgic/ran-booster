@@ -2173,8 +2173,9 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'panel' => 'installation',
 		);
 		self::assertSame( 'unknown', $dashboard->storage_installation_projection()['state'] );
-		self::assertSame( 'healthy', $dashboard->get_index()['data']['troubleshooting']['storage']['state'] );
-		self::assertSame( 'healthy', $dashboard->get_index()['data']['troubleshooting']['storage']['state'] );
+		$initial_state = $dashboard->get_index()['data']['troubleshooting']['storage']['state'];
+		$cached_state  = $dashboard->get_index()['data']['troubleshooting']['storage']['state'];
+		self::assertSame( array( 'healthy', 'healthy' ), array( $initial_state, $cached_state ) );
 	}
 
 	public function test_installation_health_check_skips_other_requests_and_both_missing_capabilities(): void {

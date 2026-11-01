@@ -626,8 +626,9 @@ final class CredentialExpiryReminderTest extends TestCase {
 
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-secrets-storage-notice' ) );
 		self::assertStringContainsString( 'Credential-backed operations remain paused', $html );
-		self::assertStringContainsString( 'Restore the matching sidecar and site key from the same backup', $html );
-		self::assertStringContainsString( 'Review encrypted storage', $html );
+		self::assertStringContainsString( 'Booster cannot read saved credentials.', $html );
+		self::assertStringContainsString( 'page=ran-booster-settings#ran-booster-storage', $html );
+		self::assertStringContainsString( 'Review Secure credential storage in Settings', $html );
 		self::assertStringNotContainsString( 'button button-primary', $html );
 		self::assertStringNotContainsString( 'is-dismissible', $html );
 		self::assertStringContainsString( 'notice-error inline', $html );

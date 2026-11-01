@@ -599,21 +599,16 @@ msgid "Dismiss this reminder"
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryNotice.php:199
-#: RAN/Admin/SecretsRuntimeAvailabilityNotice.php:36
-msgid "RAN Booster encrypted credentials are unavailable:"
+msgid "Booster cannot read saved credentials."
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryNotice.php:200
-msgid "The encrypted sidecar and its site key are missing, incomplete, or do not match. Credential-backed operations remain paused."
+msgid "Credential-backed operations remain paused."
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryNotice.php:203
 #: views/provider.php:340
-msgid "Restore the matching sidecar and site key from the same backup before changing credentials."
-msgstr ""
-
-#: RAN/Admin/CredentialExpiryNotice.php:204
-msgid "Review encrypted storage"
+msgid "Review Secure credential storage in Settings"
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryNoticeController.php:23
@@ -3872,6 +3867,10 @@ msgstr ""
 
 #: RAN/Admin/RepositoryPickerController.php:252
 msgid "Some repositories are shown, but the Git provider could not complete the list."
+msgstr ""
+
+#: RAN/Admin/SecretsRuntimeAvailabilityNotice.php:36
+msgid "RAN Booster encrypted credentials are unavailable:"
 msgstr ""
 
 #: RAN/Admin/SecretsRuntimeAvailabilityNotice.php:38
@@ -9321,7 +9320,7 @@ msgid "GitHub provider details"
 msgstr ""
 
 #: views/provider.php:340
-msgid "Encrypted credential storage is unavailable."
+msgid "Saved credentials are unavailable."
 msgstr ""
 
 #: views/provider.php:354

@@ -40,13 +40,13 @@ $provider_attention        = array_filter(
 );
 
 ?>
-<section class="ran-booster-page-shell ran-booster-onboarding" aria-labelledby="ran-booster-onboarding-heading">
+<section class="ran-booster-page-shell ran-booster-onboarding<?php echo 'onboarding' === $overview_view ? ' ran-booster-onboarding--setup' : ''; ?>" aria-labelledby="ran-booster-onboarding-heading">
 	<header class="ran-booster-page-shell__header ran-booster-onboarding__header">
 		<?php if ( 'onboarding' === $overview_view ) { ?>
-		<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Prepare your site', 'ran-booster' ); ?></h2>
-		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Public repositories do not need repository credentials or webhooks.', 'ran-booster' ); ?></p>
-		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Install and manage custom plugins and themes from supported Git repositories; private access and Push-to-Deploy are optional.', 'ran-booster' ); ?></p>
-
+			<div>
+				<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Prepare your site', 'ran-booster' ); ?></h2>
+				<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Public repositories do not need credentials or webhooks.', 'ran-booster' ); ?></p>
+			</div>
 		<?php } else { ?>
 			<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Overview', 'ran-booster' ); ?></h2>
 		<?php } ?>
@@ -56,7 +56,6 @@ $provider_attention        = array_filter(
 				<input type="hidden" name="ran_booster[action]" value="overview-presentation">
 				<input type="hidden" name="ran_booster[presentation]" value="dashboard">
 				<button type="submit" class="button"><?php esc_html_e( 'Skip onboarding', 'ran-booster' ); ?></button>
-				<p class="description"><?php esc_html_e( 'This changes the view for all site administrators. It does not reset your configuration.', 'ran-booster' ); ?></p>
 			</form>
 		<?php } ?>
 	</header>
@@ -119,13 +118,10 @@ $provider_attention        = array_filter(
 		<?php require __DIR__ . '/overview-dashboard.php'; ?>
 	<?php } ?>
 
-	<?php if ( 'onboarding' === $overview_view ) { ?>
-		<h3><?php esc_html_e( '1. Prepare secure credential storage', 'ran-booster' ); ?></h3>
-		<p><?php esc_html_e( 'Review storage before adding credentials. Public installations remain available while you prepare.', 'ran-booster' ); ?></p>
-	<?php } ?>
+
 	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading">
 		<div class="ran-booster-onboarding__storage-heading">
-			<h3 id="ran-booster-onboarding-storage-heading"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
+			<h3 id="ran-booster-onboarding-storage-heading"><?php echo esc_html( 'onboarding' === $overview_view ? __( '1. Secure credential storage', 'ran-booster' ) : __( 'Secure credential storage', 'ran-booster' ) ); ?></h3>
 			<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $overview_storage_classes[ $overview_storage_status ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $overview_storage_status ); ?>"><?php echo esc_html( $overview_storage_labels[ $overview_storage_status ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>
 		</div>
 		<p><?php echo esc_html( $overview_storage_summary['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
@@ -139,39 +135,24 @@ $provider_attention        = array_filter(
 
 	<?php if ( 'onboarding' === $overview_view ) { ?>
 
-	<div class="ran-booster-onboarding__columns">
-		<section class="ran-booster-panel ran-booster-onboarding__column" aria-labelledby="ran-booster-onboarding-connect-heading">
-			<h3 id="ran-booster-onboarding-connect-heading"><?php esc_html_e( '2. Choose a Git provider', 'ran-booster' ); ?></h3>
-			<p><?php esc_html_e( 'Add a credential for a Git provider, such as GitHub or Bitbucket, only when anonymous access is not enough.', 'ran-booster' ); ?></p>
-
-			<h4 class="ran-booster-onboarding__provider-heading"><?php esc_html_e( '3. Add credentials if needed', 'ran-booster' ); ?></h4>
-			<p><?php esc_html_e( 'Repository access has not been checked here.', 'ran-booster' ); ?></p>
-			<?php if ( array() !== $provider_summaries ) { ?>
-				<ul class="ran-booster-onboarding__links">
-					<?php foreach ( $provider_summaries as $provider ) { ?>
-						<?php // translators: %s is the display name of a registered Git provider. ?>
-						<li><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( sprintf( __( 'Add %s access', 'ran-booster' ), $provider['label'] ) ); ?></a> — <?php echo esc_html( true === $provider['admitted'] ? __( 'Admitted', 'ran-booster' ) : ( false === $provider['admitted'] ? __( 'Not admitted', 'ran-booster' ) : __( 'Admission unknown', 'ran-booster' ) ) ); ?>
-						<?php
-						if ( 'gh' === $provider['code'] ) {
-							?>
-							— <?php echo esc_html( $provider_selection_labels[ $provider['selection'] ?? '' ] ?? __( 'Selection unknown', 'ran-booster' ) ); ?><?php } ?></li>
-					<?php } ?>
-				</ul>
-			<?php } else { ?>
-				<p><?php esc_html_e( 'Git provider settings will appear here when an integration is available.', 'ran-booster' ); ?></p>
+	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-connect-heading">
+		<h3 id="ran-booster-onboarding-connect-heading"><?php esc_html_e( '2. Choose a Git provider', 'ran-booster' ); ?></h3>
+		<p><?php esc_html_e( 'Add credentials on the provider’s page if needed.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-onboarding__actions">
+			<?php foreach ( $provider_summaries as $provider ) { ?>
+				<a class="button" href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>
 			<?php } ?>
-		</section>
-
-		<section class="ran-booster-panel ran-booster-onboarding__column" aria-labelledby="ran-booster-onboarding-next-heading">
-			<h3 id="ran-booster-onboarding-next-heading"><?php esc_html_e( 'Move or automate later', 'ran-booster' ); ?></h3>
-			<p><?php esc_html_e( 'Packages begin in Manual mode. Enable Push-to-Deploy only when the target is ready.', 'ran-booster' ); ?></p>
-			<ul class="ran-booster-onboarding__links">
-				<li><a href="<?php echo esc_url( $onboarding['portability_url'] ); ?>"><?php esc_html_e( 'Move an existing Booster setup', 'ran-booster' ); ?></a></li>
-				<li><a href="<?php echo esc_url( $onboarding['documentation_url'] ); ?>"><?php esc_html_e( 'Read the documentation', 'ran-booster' ); ?></a></li>
-				<li><a href="<?php echo esc_url( $onboarding['troubleshooting_url'] ); ?>"><?php esc_html_e( 'Open troubleshooting', 'ran-booster' ); ?></a></li>
-			</ul>
-		</section>
-	</div>
+			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Install another provider', 'ran-booster' ); ?></a>
+		</p>
+	</section>
+	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-next-heading">
+		<h3 id="ran-booster-onboarding-next-heading"><?php esc_html_e( '3. Import, export or migrate — optional', 'ran-booster' ); ?></h3>
+		<p><?php esc_html_e( 'Import or export a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-onboarding__actions">
+			<a class="button" href="<?php echo esc_url( $onboarding['portability_url'] ); ?>"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></a>
+			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Browse extensions', 'ran-booster' ); ?></a>
+		</p>
+	</section>
 	<section class="ran-booster-panel ran-booster-onboarding__storage">
 		<h3><?php esc_html_e( '4. Install and manage packages', 'ran-booster' ); ?></h3>
 		<p class="ran-booster-onboarding__actions">

@@ -2604,7 +2604,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:331
 #: RAN/Troubleshooting/TroubleshootingService.php:334
 #: views/debug-capture.php:43
-#: views/onboarding.php:80
+#: views/onboarding.php:79
 #: views/settings-storage.php:26
 #: views/troubleshooting-installation.php:20
 msgid "Unavailable"
@@ -2833,8 +2833,8 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
 #: RAN/Booster.php:944
 #: views/attempts/index.php:54
-#: views/onboarding.php:79
-#: views/onboarding.php:97
+#: views/onboarding.php:78
+#: views/onboarding.php:96
 #: views/overview-dashboard.php:32
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
@@ -4541,6 +4541,7 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:264
+#: views/onboarding.php:152
 #: views/overview-dashboard.php:78
 msgid "Transporter"
 msgstr ""
@@ -6384,7 +6385,7 @@ msgstr ""
 
 #: views/documentation.php:182
 #: views/documentation.php:386
-#: views/onboarding.php:178
+#: views/onboarding.php:159
 #: views/overview-dashboard.php:78
 #: views/provider.php:626
 msgid "Install a plugin"
@@ -6747,7 +6748,7 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:387
-#: views/onboarding.php:179
+#: views/onboarding.php:160
 #: views/overview-dashboard.php:78
 #: views/provider.php:627
 msgid "Install a theme"
@@ -7212,176 +7213,121 @@ msgstr ""
 msgid "Provider selection storage is unavailable"
 msgstr ""
 
-#: views/onboarding.php:46
+#: views/onboarding.php:47
 msgid "Prepare your site"
 msgstr ""
 
-#: views/onboarding.php:47
-msgid "Public repositories do not need repository credentials or webhooks."
-msgstr ""
-
 #: views/onboarding.php:48
-msgid "Install and manage custom plugins and themes from supported Git repositories; private access and Push-to-Deploy are optional."
+msgid "Public repositories do not need credentials or webhooks."
 msgstr ""
 
 #: views/onboarding.php:58
 msgid "Skip onboarding"
 msgstr ""
 
-#: views/onboarding.php:59
-#: views/onboarding.php:209
-msgid "This changes the view for all site administrators. It does not reset your configuration."
-msgstr ""
-
-#: views/onboarding.php:75
+#: views/onboarding.php:74
 #: views/settings-storage.php:21
 #: views/troubleshooting-installation.php:17
 msgid "Path configured"
 msgstr ""
 
-#: views/onboarding.php:76
+#: views/onboarding.php:75
 #: views/settings-storage.php:22
 #: views/troubleshooting-installation.php:16
 msgid "Storage healthy"
 msgstr ""
 
-#: views/onboarding.php:77
+#: views/onboarding.php:76
 #: views/settings-storage.php:23
 msgid "Storage needs attention"
 msgstr ""
 
-#: views/onboarding.php:78
+#: views/onboarding.php:77
 #: views/settings-storage.php:24
 msgid "Setup available"
 msgstr ""
 
-#: views/onboarding.php:81
+#: views/onboarding.php:80
 #: views/settings-storage.php:27
 msgid "Verification pending"
 msgstr ""
 
-#: views/onboarding.php:104
+#: views/onboarding.php:103
 msgid "Provider is not admitted."
 msgstr ""
 
-#: views/onboarding.php:107
+#: views/onboarding.php:106
 msgid "The managed package inventory is incomplete or unavailable."
 msgstr ""
 
-#: views/onboarding.php:110
+#: views/onboarding.php:109
 msgid "Secure credential storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:110
-#: views/onboarding.php:112
+#: views/onboarding.php:109
+#: views/onboarding.php:111
 msgid "Review storage"
 msgstr ""
 
-#: views/onboarding.php:123
-msgid "1. Prepare secure credential storage"
+#: views/onboarding.php:124
+msgid "1. Secure credential storage"
 msgstr ""
 
 #: views/onboarding.php:124
-msgid "Review storage before adding credentials. Public installations remain available while you prepare."
-msgstr ""
-
-#: views/onboarding.php:128
 #: views/settings-storage.php:63
 #: views/settings.php:27
 #: views/troubleshooting-installation.php:56
 msgid "Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:129
+#: views/onboarding.php:125
 #: views/settings-storage.php:64
 msgid "Status unknown"
 msgstr ""
 
-#: views/onboarding.php:131
+#: views/onboarding.php:127
 #: views/troubleshooting-installation.php:58
 msgid "Storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:132
+#: views/onboarding.php:128
 msgid "Review secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:144
+#: views/onboarding.php:139
 msgid "2. Choose a Git provider"
 msgstr ""
 
+#: views/onboarding.php:140
+msgid "Add credentials on the provider’s page if needed."
+msgstr ""
+
 #: views/onboarding.php:145
-msgid "Add a credential for a Git provider, such as GitHub or Bitbucket, only when anonymous access is not enough."
+msgid "Install another provider"
 msgstr ""
 
-#: views/onboarding.php:147
-msgid "3. Add credentials if needed"
+#: views/onboarding.php:149
+msgid "3. Import, export or migrate — optional"
 msgstr ""
 
-#: views/onboarding.php:148
-#: views/overview-dashboard.php:82
-msgid "Repository access has not been checked here."
+#: views/onboarding.php:150
+msgid "Import or export a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions."
 msgstr ""
 
-#. translators: %s is the display name of a registered Git provider.
 #: views/onboarding.php:153
-#, php-format
-msgid "Add %s access"
-msgstr ""
-
-#. translators: %s is the display name of a registered Git provider.
-#: views/onboarding.php:153
-#: views/overview-dashboard.php:87
-msgid "Admitted"
-msgstr ""
-
-#. translators: %s is the display name of a registered Git provider.
-#: views/onboarding.php:153
-#: views/overview-dashboard.php:87
-msgid "Not admitted"
-msgstr ""
-
-#. translators: %s is the display name of a registered Git provider.
-#: views/onboarding.php:153
-#: views/overview-dashboard.php:87
-msgid "Admission unknown"
+msgid "Browse extensions"
 msgstr ""
 
 #: views/onboarding.php:157
-#: views/overview-dashboard.php:91
-msgid "Selection unknown"
-msgstr ""
-
-#: views/onboarding.php:161
-msgid "Git provider settings will appear here when an integration is available."
-msgstr ""
-
-#: views/onboarding.php:166
-msgid "Move or automate later"
-msgstr ""
-
-#: views/onboarding.php:167
-msgid "Packages begin in Manual mode. Enable Push-to-Deploy only when the target is ready."
-msgstr ""
-
-#: views/onboarding.php:169
-msgid "Move an existing Booster setup"
-msgstr ""
-
-#: views/onboarding.php:170
-msgid "Read the documentation"
-msgstr ""
-
-#: views/onboarding.php:171
-msgid "Open troubleshooting"
-msgstr ""
-
-#: views/onboarding.php:176
 msgid "4. Install and manage packages"
 msgstr ""
 
-#: views/onboarding.php:208
+#: views/onboarding.php:189
 msgid "Return to onboarding"
+msgstr ""
+
+#: views/onboarding.php:190
+msgid "This changes the view for all site administrators. It does not reset your configuration."
 msgstr ""
 
 #: views/overview-dashboard.php:40
@@ -7429,8 +7375,28 @@ msgstr ""
 msgid "Providers and access"
 msgstr ""
 
+#: views/overview-dashboard.php:82
+msgid "Repository access has not been checked here."
+msgstr ""
+
 #: views/overview-dashboard.php:84
 msgid "No provider settings are currently available."
+msgstr ""
+
+#: views/overview-dashboard.php:87
+msgid "Admitted"
+msgstr ""
+
+#: views/overview-dashboard.php:87
+msgid "Not admitted"
+msgstr ""
+
+#: views/overview-dashboard.php:87
+msgid "Admission unknown"
+msgstr ""
+
+#: views/overview-dashboard.php:91
+msgid "Selection unknown"
 msgstr ""
 
 #: views/overview-dashboard.php:98

@@ -33,14 +33,14 @@ final class OnboardingViewTest extends TestCase {
 		$html = $this->render_view();
 
 		self::assertStringContainsString(
-			'<section class="ran-booster-page-shell ran-booster-onboarding"',
+			'<section class="ran-booster-page-shell ran-booster-onboarding ran-booster-onboarding--setup"',
 			$html
 		);
 		self::assertStringContainsString(
 			'<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title">Prepare your site</h2>',
 			$html
 		);
-		self::assertSame( 2, preg_match_all( '/<section class="ran-booster-panel ran-booster-onboarding__column"/', $html ) );
+		self::assertStringContainsString( '1. Secure credential storage', $html );
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath          = new \DOMXPath( $document );
@@ -50,30 +50,29 @@ final class OnboardingViewTest extends TestCase {
 
 		$install = strpos( $html, 'Install a plugin' );
 		$private = strpos( $html, '2. Choose a Git provider' );
-		$move    = strpos( $html, 'Move or automate later' );
+		$move    = strpos( $html, '3. Import, export or migrate — optional' );
 
 		self::assertIsInt( $install );
 		self::assertIsInt( $private );
 		self::assertIsInt( $move );
 		self::assertLessThan( $install, $private );
 		self::assertLessThan( $move, $private );
-		self::assertStringContainsString( 'Public repositories do not need repository credentials or webhooks.', $html );
-		self::assertStringContainsString( 'Install and manage custom plugins and themes from supported Git repositories; private access and Push-to-Deploy are optional.', $html );
-		self::assertStringContainsString( 'Packages begin in Manual mode.', $html );
+		self::assertStringContainsString( 'Public repositories do not need credentials or webhooks.', $html );
+		self::assertStringContainsString( 'Add credentials on the provider’s page if needed.', $html );
 	}
 
 	public function test_renders_provider_package_and_help_destinations(): void {
 		$html = $this->render_view();
 
-		self::assertStringContainsString( '>Add GitHub access</a>', $html );
-		self::assertStringContainsString( '>Add Bitbucket access</a>', $html );
+		self::assertStringContainsString( '>GitHub</a>', $html );
+		self::assertStringContainsString( '>Bitbucket</a>', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins-create', $html );
 		self::assertStringContainsString( '>Install a plugin</a>', $html );
 		self::assertStringContainsString( 'page=ran-booster-themes-create', $html );
 		self::assertStringContainsString( '>Install a theme</a>', $html );
-		self::assertStringContainsString( '>Move an existing Booster setup</a>', $html );
-		self::assertStringContainsString( '>Read the documentation</a>', $html );
-		self::assertStringContainsString( '>Open troubleshooting</a>', $html );
+		self::assertStringContainsString( '>Transporter</a>', $html );
+		self::assertStringContainsString( '>Browse extensions</a>', $html );
+		self::assertStringContainsString( '>Install another provider</a>', $html );
 		self::assertStringContainsString(
 			'page=ran-booster&amp;tab=documentation#ran-booster-credential-storage">Learn how Booster manages credentials and keys</a>',
 			$this->render_storage_status( 'storage_healthy', 'automatic' )
@@ -95,14 +94,14 @@ final class OnboardingViewTest extends TestCase {
 		);
 
 		self::assertStringNotContainsString( '<script>', $html );
-		self::assertStringContainsString( 'Add GitLab &lt;script&gt;alert(1)&lt;/script&gt; access', $html );
+		self::assertStringContainsString( 'GitLab &lt;script&gt;alert(1)&lt;/script&gt;', $html );
 		self::assertStringContainsString( 'unsafe=&quot;value&quot;', $html );
 	}
 
 	public function test_provides_aprovider_fallback_and_uses_the_plugin_text_domain(): void {
 		$html = $this->render_view( array() );
 
-		self::assertStringContainsString( 'Git provider settings will appear here when an integration is available.', $html );
+		self::assertStringContainsString( 'Install another provider', $html );
 
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local fixture source is inspected without a WordPress runtime.
 		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/views/onboarding.php' );
@@ -111,7 +110,7 @@ final class OnboardingViewTest extends TestCase {
 			"esc_html_e( 'Prepare your site', 'ran-booster' )",
 			$source
 		);
-		self::assertStringContainsString( "__( 'Add %s access', 'ran-booster' )", $source );
+		self::assertStringContainsString( "esc_html_e( 'Install another provider', 'ran-booster' )", $source );
 		self::assertStringNotContainsString( 'credential_profiles', $source );
 		self::assertStringNotContainsString( 'webhook_profiles', $source );
 	}
@@ -532,7 +531,7 @@ final class OnboardingViewTest extends TestCase {
 					$storage     = strpos( $html, 'Secure credential storage' );
 					$provider    = strpos( $html, '2. Choose a Git provider' );
 					$install     = strpos( $html, '4. Install and manage packages' );
-					$credentials = strpos( $html, '3. Add credentials if needed' );
+					$credentials = strpos( $html, 'Add credentials on the provider’s page if needed.' );
 					self::assertIsInt( $storage );
 					self::assertIsInt( $provider );
 					self::assertIsInt( $install );
@@ -781,7 +780,7 @@ final class OnboardingViewTest extends TestCase {
 			unset( $GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] );
 		}
 
-		$primary   = strpos( $html, 'Move or automate later' );
+		$primary   = strpos( $html, '3. Import, export or migrate — optional' );
 		$migration = strpos( $html, 'Migration available' );
 		self::assertIsInt( $primary );
 		self::assertIsInt( $migration );

@@ -7,6 +7,30 @@
 	color: var(--ran-booster-text);
 }
 
+.ran-booster-admin
+	.ran-booster-onboarding--setup
+	.ran-booster-onboarding__header {
+	display: flex;
+	align-items: flex-start;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-onboarding--setup
+	.ran-booster-onboarding__header
+	> form {
+	margin-inline-start: auto;
+}
+
+.ran-booster-admin
+	.ran-booster-onboarding--setup
+	.ran-booster-onboarding__storage
+	> h3 {
+	margin-block: 0 var(--ran-booster-space-8);
+}
+
 .ran-booster-admin .ran-booster-onboarding__columns {
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));

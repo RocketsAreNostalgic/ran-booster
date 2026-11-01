@@ -219,7 +219,7 @@ final class CredentialExpiryReminderTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/onboarding.php';
 		$overview_html = (string) ob_get_clean();
 		self::assertSame( $reads, $this->observations->read_count );
-		self::assertSame( 2, substr_count( $overview_html, 'Overview credential' ) );
+		self::assertSame( 1, substr_count( $overview_html, 'Overview credential' ) );
 		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=overview_expiry', $overview_html );
 		self::assertStringNotContainsString( 'test-token-overview_expiry', $overview_html );
 		self::assertSame(

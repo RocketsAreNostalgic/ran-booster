@@ -161,6 +161,46 @@ final class WebhookDisplayModelTest extends TestCase {
 			self::assertNotNull( $panel );
 			self::assertSame( array( 'setup', 'check', 'reconfigure', 'test', 'remove' ), array_column( $panel['operations'], 'key' ) );
 			self::assertSame( array( ! $has_credential, true, true, true, true ), array_column( $panel['operations'], 'disabled' ) );
+			$recovery = $display->panel(
+				'fixture-provider',
+				'<Fixture Forge>',
+				'1234',
+				'https://example.test/settings',
+				'recovery_record_failed',
+				array(
+					'hook_id'    => '<hook>',
+					'profile_id' => '<profile>',
+				),
+				true
+			);
+			self::assertNotNull( $recovery );
+			self::assertIsArray( $recovery['recovery_warning'] );
+			self::assertArrayHasKey( 'details', $recovery['recovery_warning'] );
+			self::assertIsArray( $recovery['result'] );
+			self::assertArrayHasKey( 'details', $recovery['result'] );
+			self::assertStringContainsString( 'Setup is disabled on this recovery view', $recovery['recovery_warning']['message'] );
+			self::assertSame( array(), $recovery['recovery_warning']['details'] ?? null );
+			self::assertSame( array( 'Git provider hook reference: <hook>', 'Core signing profile: <profile>' ), $recovery['result']['details'] ?? null );
+			self::assertStringContainsString( 'record was not overwritten', $recovery['result']['message'] );
+			$other_recovery = $display->panel(
+				'fixture-provider',
+				'<Fixture Forge>',
+				'1234',
+				'https://example.test/settings',
+				'operation_failed',
+				array(
+					'hook_id'    => '<hook>',
+					'profile_id' => '<profile>',
+				),
+				true
+			);
+			self::assertNotNull( $other_recovery );
+			self::assertIsArray( $other_recovery['recovery_warning'] );
+			self::assertArrayHasKey( 'details', $other_recovery['recovery_warning'] );
+			self::assertStringContainsString( '<Fixture Forge>', $other_recovery['recovery_warning']['details'][0] ?? '' );
+			self::assertSame( 'Git provider hook reference: <hook>', $other_recovery['recovery_warning']['details'][1] ?? null );
+			self::assertSame( 'Core signing profile: <profile>', $other_recovery['recovery_warning']['details'][2] ?? null );
+			self::assertSame( array( true, true, true, true, true ), array_column( $recovery['operations'], 'disabled' ) );
 			self::assertSame( 'Configurer le webhook', $panel['operations'][0]['label'] );
 			foreach ( $panel['operations'] as $operation ) {
 				self::assertStringContainsString( 'nonce-for-' . hash( 'sha256', 'ran_booster_repository_webhook_' . $operation['key'] . '_fixture-provider_1234' ), $operation['url'] );

@@ -13,12 +13,21 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 ?>
 <div class="ran-booster-repository-webhook-management">
 
-	<?php if ( is_array( $model['result'] ) ) : ?>
-		<div class="notice <?php echo esc_attr( $model['result']['class'] ); ?> inline ran-booster-repository-webhook-management__notice"><p><?php echo esc_html( $model['result']['message'] ); ?></p></div>
-	<?php endif; ?>
-	<?php if ( is_string( $model['recovery_warning'] ) ) : ?>
-		<div class="notice notice-warning inline ran-booster-repository-webhook-management__notice"><p><?php echo esc_html( $model['recovery_warning'] ); ?></p></div>
-	<?php endif; ?>
+	<?php foreach ( array( $model['result'], $model['recovery_warning'] ) as $notice ) : ?>
+		<?php if ( is_array( $notice ) ) : ?>
+			<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice">
+				<?php
+				if ( isset( $notice['heading'] ) ) :
+					?>
+					<p><strong><?php echo esc_html( $notice['heading'] ); ?></strong></p><?php endif; ?>
+				<p><?php echo esc_html( $notice['message'] ); ?></p>
+				<?php
+				foreach ( $notice['details'] ?? array() as $detail ) :
+					?>
+					<p><?php echo esc_html( $detail ); ?></p><?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+	<?php endforeach; ?>
 	<div class="ran-booster-repository-webhook-management__panel">
 		<div class="ran-booster-public-lookup-profile__layout ran-booster-repository-webhook-management__layout">
 			<form method="post" action="<?php echo esc_url( $model['form_action'] ); ?>" class="ran-booster-public-lookup-profile__form ran-booster-repository-webhook-management__form"<?php echo $form_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Exact Core Admin Interaction facade owns these form attributes. ?>>

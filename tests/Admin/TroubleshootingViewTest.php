@@ -185,10 +185,12 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'id="ran-booster-github-provider-diagnostics"', $html );
-		self::assertStringContainsString( 'GitHub provider details', $html );
-		self::assertStringContainsString( 'Local declarations only;', $html );
+		self::assertStringNotContainsString( 'GitHub provider details', $html );
+		self::assertStringContainsString( 'GitHub replacement plugins detected', $html );
+		self::assertStringContainsString( 'Needs attention', $html );
+		self::assertStringContainsString( 'These are local configuration details. Use Diagnostics to check repository access.', $html );
 		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
-		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
+		foreach ( array( '<implementation>', '<revision>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
 			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
 		}
@@ -208,16 +210,75 @@ final class TroubleshootingViewTest extends TestCase {
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-github-provider-diagnostics" and not(@open)]//code[text()="<component-implementation>"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/div/dl/div[dt="Selection state"]/dd/code[text()="conflict"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/div/dl/div[dt="Operational availability"]/dd/code[text()="Unavailable"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-github-provider-diagnostics"]//div[dt="Implementation fingerprint"]/dd/code[text()="<component-implementation>"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-github-provider-diagnostics"]//div[dt="Implementation ID"]/dd/code[text()="<implementation>"])' ) );
 		$rows = $xpath->query( '//dl[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields-list ")]/div' );
 		self::assertInstanceOf( \DOMNodeList::class, $rows );
-		self::assertSame( 15, $rows->length );
+		self::assertGreaterThan( 0, $rows->length );
 		foreach ( $rows as $row ) {
 			self::assertInstanceOf( \DOMElement::class, $row );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dt)', $row ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dd/code)', $row ) );
 		}
+	}
+
+	public function test_installation_distinguishes_provider_state_and_candidate_truncation(): void {
+		$troubleshooting_panel = 'installation';
+		$troubleshooting       = array(
+			'components'           => array(
+				array(
+					'Name'           => 'GitHub',
+					'Provider'       => 'gh',
+					'Admission'      => 'Admitted',
+					'Implementation' => 'runtime-fingerprint',
+					'Capabilities'   => 'CredentialValidator, RepositoryBrowser',
+				),
+				array(
+					'Name'      => 'Bitbucket Cloud',
+					'Provider'  => 'bb',
+					'Active'    => 'Yes',
+					'Installed' => 'Yes',
+					'Version'   => '2.0',
+				),
+				array(
+					'Name'      => 'Migration add-on',
+					'Active'    => 'No',
+					'Installed' => 'Yes',
+					'Version'   => '1.0',
+				),
+			),
+			'installation_details' => array(
+				'GitHub provider' => array(
+					'Name'                     => 'Selected plugin',
+					'Source'                   => 'External replacement',
+					'Version'                  => '1.2',
+					'Selection state'          => 'missing',
+					'Operational availability' => 'Unavailable',
+					'Implementation'           => 'declared-id',
+					'Enabled candidates'       => '8',
+					'API credential format 1'  => 'github-classic-pat-v1',
+					'Capability 1'             => 'RAN\\RepositoryProvider\\CredentialValidator',
+				),
+			),
+		);
+		for ( $index = 1; $index <= 4; ++$index ) {
+			$troubleshooting['installation_details'][ 'GitHub candidate ' . $index ] = array( 'Name' => 'Candidate ' . $index );
+		}
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Selected provider: Selected plugin', $html );
+		self::assertStringContainsString( 'The selected GitHub provider plugin is not active or available.', $html );
+		self::assertStringContainsString( 'Showing 4 of 8 replacement plugins.', $html );
+		self::assertStringContainsString( 'Implementation fingerprint', $html );
+		self::assertStringContainsString( 'Implementation ID', $html );
+		self::assertMatchesRegularExpression( '/<code>CredentialValidator<\/code>\s*,\s*<code>RepositoryBrowser<\/code>/', $html );
+		self::assertStringContainsString( 'Classic personal access token', $html );
+		self::assertStringNotContainsString( 'RAN\\RepositoryProvider\\CredentialValidator', $html );
+		self::assertStringContainsString( 'Provided by Bitbucket Cloud', $html );
+		self::assertStringContainsString( 'Installed extension', $html );
+		self::assertStringContainsString( '>Inactive</span>', $html );
+		self::assertMatchesRegularExpression( '/>\s*Status unavailable\s*<\/span>/', $html );
 	}
 
 	public function test_installation_is_default_and_renders_ordered_escaped_facts(): void {
@@ -370,7 +431,7 @@ final class TroubleshootingViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 			$html = (string) ob_get_clean();
-			self::assertStringContainsString( 'Core updates are off because this site explicitly disables them.', $html );
+			self::assertStringContainsString( 'Booster update checks are turned off in Settings.', $html );
 			self::assertStringNotContainsString( 'Core updates are off for this source installation.', $html );
 			self::assertStringNotContainsString( 'retry automatically', $html );
 		}

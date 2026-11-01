@@ -111,6 +111,9 @@ msgstr ""
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:87
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:128
 #: RAN/Troubleshooting/TroubleshootingService.php:300
+#: views/troubleshooting-installation.php:171
+#: views/troubleshooting-installation.php:172
+#: views/troubleshooting-installation.php:270
 msgid "Name"
 msgstr ""
 
@@ -168,7 +171,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:56
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:40
-#: views/debug-capture.php:85
+#: views/debug-capture.php:69
 #: views/extensions.php:201
 #: views/provider.php:462
 #: views/provider.php:483
@@ -243,12 +246,16 @@ msgstr ""
 msgid "Package"
 msgstr ""
 
+#. translators: %s: configured GitHub provider name.
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:150
 #: RAN/Troubleshooting/TroubleshootingService.php:232
 #: views/attempts/index.php:119
 #: views/attempts/index.php:166
 #: views/portability-review.php:31
 #: views/troubleshooting-installation.php:10
+#: views/troubleshooting-installation.php:169
+#: views/troubleshooting-installation.php:171
+#: views/troubleshooting-installation.php:177
 msgid "Source"
 msgstr ""
 
@@ -996,7 +1003,8 @@ msgstr ""
 #: views/portability-review.php:101
 #: views/settings-general.php:105
 #: views/settings-general.php:152
-#: views/troubleshooting-installation.php:137
+#: views/troubleshooting-installation.php:155
+#: views/troubleshooting-installation.php:190
 #: views/troubleshooting.php:227
 #: assets/ran-booster-portability.js:713
 msgid "Unknown"
@@ -1682,6 +1690,7 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:279
 #: RAN/Admin/PackagePagePresenter.php:291
 #: views/overview-dashboard.php:96
+#: views/troubleshooting-installation.php:170
 msgid "Included with Booster"
 msgstr ""
 
@@ -1725,6 +1734,8 @@ msgstr ""
 #: views/extensions.php:11
 #: views/extensions.php:85
 #: views/packages/source-choices.php:79
+#: views/troubleshooting-installation.php:155
+#: views/troubleshooting-installation.php:156
 msgid "Active"
 msgstr ""
 
@@ -2607,6 +2618,8 @@ msgstr ""
 #: views/onboarding.php:79
 #: views/settings-storage.php:26
 #: views/troubleshooting-installation.php:20
+#: views/troubleshooting-installation.php:153
+#: views/troubleshooting-installation.php:171
 msgid "Unavailable"
 msgstr ""
 
@@ -2842,6 +2855,7 @@ msgstr ""
 #: views/provider.php:677
 #: views/settings-storage.php:25
 #: views/troubleshooting-installation.php:18
+#: views/troubleshooting-installation.php:155
 msgid "Needs attention"
 msgstr ""
 
@@ -5629,7 +5643,6 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:71
 #: RAN/Troubleshooting/TroubleshootingService.php:227
-#: views/troubleshooting-installation.php:189
 msgid "Diagnostic Git provider"
 msgstr ""
 
@@ -5637,11 +5650,15 @@ msgstr ""
 msgid "Support collection is unavailable. No diagnostics were run."
 msgstr ""
 
+#. translators: %s: configured GitHub provider name.
 #: RAN/Troubleshooting/TroubleshootingService.php:222
+#: views/troubleshooting-installation.php:169
+#: views/troubleshooting-installation.php:177
 msgid "Bundled with Booster"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:223
+#: views/troubleshooting-installation.php:171
 msgid "External replacement"
 msgstr ""
 
@@ -5664,31 +5681,36 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:231
 #: RAN/Troubleshooting/TroubleshootingService.php:245
 #: views/troubleshooting-installation.php:9
-#: views/troubleshooting-installation.php:189
 msgid "GitHub provider"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:233
 #: views/troubleshooting-installation.php:10
+#: views/troubleshooting-installation.php:151
 msgid "Selection state"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:234
 #: views/troubleshooting-installation.php:10
+#: views/troubleshooting-installation.php:152
 msgid "Operational availability"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:235
+#: views/troubleshooting-installation.php:155
+#: views/troubleshooting-installation.php:175
 msgid "Available"
 msgstr ""
 
 #. translators: %d: enabled replacement candidate number.
 #: RAN/Troubleshooting/TroubleshootingService.php:243
+#: views/troubleshooting-installation.php:258
 #, php-format
 msgid "GitHub candidate %d"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:245
+#: views/troubleshooting-installation.php:255
 msgid "Enabled candidates"
 msgstr ""
 
@@ -5734,9 +5756,8 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:273
 #: RAN/Troubleshooting/TroubleshootingService.php:277
 #: RAN/Troubleshooting/TroubleshootingService.php:278
-#: views/troubleshooting-installation.php:106
-#: views/troubleshooting-installation.php:113
-#: views/troubleshooting-installation.php:189
+#: views/troubleshooting-installation.php:112
+#: views/troubleshooting-installation.php:128
 msgid "Booster Core updates"
 msgstr ""
 
@@ -5765,7 +5786,6 @@ msgid "Last operator check code"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:280
-#: views/troubleshooting-installation.php:176
 msgid "Local declarations only; these claims do not verify publisher identity or remote access."
 msgstr ""
 
@@ -5781,22 +5801,33 @@ msgstr ""
 #: views/packages/index.php:517
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
+#: views/troubleshooting-installation.php:157
+#: views/troubleshooting-installation.php:270
 msgid "Version"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:302
+#: views/troubleshooting-installation.php:226
+#: views/troubleshooting-installation.php:228
+#: views/troubleshooting-installation.php:270
 msgid "Implementation"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:303
+#: views/troubleshooting-installation.php:229
+#: views/troubleshooting-installation.php:270
 msgid "Provider API"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:304
+#: views/troubleshooting-installation.php:229
+#: views/troubleshooting-installation.php:270
 msgid "Compatibility revision"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:305
+#: views/troubleshooting-installation.php:229
+#: views/troubleshooting-installation.php:270
 msgid "Webhook signing format"
 msgstr ""
 
@@ -5808,6 +5839,7 @@ msgstr ""
 
 #. translators: %d: locally declared credential format number.
 #: RAN/Troubleshooting/TroubleshootingService.php:314
+#: views/troubleshooting-installation.php:239
 #, php-format
 msgid "API credential format %d"
 msgstr ""
@@ -6169,6 +6201,7 @@ msgstr ""
 
 #: views/debug-capture.php:40
 #: views/extensions.php:94
+#: views/troubleshooting-installation.php:155
 msgid "Inactive"
 msgstr ""
 
@@ -6195,111 +6228,111 @@ msgstr ""
 msgid "This temporary capture records Booster events only. It does not require or enable %s and excludes PHP, WordPress, theme, and other-plugin messages."
 msgstr ""
 
-#: views/debug-capture.php:66
-msgid "Capture PHP and WordPress errors"
-msgstr ""
-
-#: views/debug-capture.php:68
-msgid "For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:"
-msgstr ""
-
-#. translators: 1: Debug log path using WP_CONTENT_DIR, 2: Typical debug log path.
-#: views/debug-capture.php:75
-#, php-format
-msgid "The log is normally in %1$s (usually %2$s), unless an alternate path is configured. Turn off debugging after reproducing the issue, and review the log privately before sharing it."
-msgstr ""
-
-#: views/debug-capture.php:78
-msgid "WordPress debugging documentation"
-msgstr ""
-
 #. translators: %s: UTC capture end time.
-#: views/debug-capture.php:94
+#: views/debug-capture.php:78
 #, php-format
 msgid "until %s."
 msgstr ""
 
 #. translators: %s: UTC automatic deletion time.
-#: views/debug-capture.php:106
+#: views/debug-capture.php:90
 #, php-format
 msgid "retained until %s."
 msgstr ""
 
-#: views/debug-capture.php:116
+#: views/debug-capture.php:100
 msgid "Capture file"
 msgstr ""
 
-#: views/debug-capture.php:117
+#: views/debug-capture.php:101
 msgid "Beside the credential sidecar; the server path is not shown."
 msgstr ""
 
-#: views/debug-capture.php:123
+#: views/debug-capture.php:107
 msgid "No temporary logging capture is active."
 msgstr ""
 
-#: views/debug-capture.php:124
+#: views/debug-capture.php:108
 msgid "Starting a capture records Booster events for 60 minutes and replaces any retained capture."
 msgstr ""
 
-#: views/debug-capture.php:128
+#: views/debug-capture.php:112
 msgid "Start 60-minute capture"
 msgstr ""
 
-#: views/debug-capture.php:134
-#: views/debug-capture.php:139
+#: views/debug-capture.php:118
+#: views/debug-capture.php:123
 msgid "Captured Booster events"
 msgstr ""
 
-#: views/debug-capture.php:135
+#: views/debug-capture.php:119
 msgid "Newest activity is shown in a bounded, read-only excerpt."
 msgstr ""
 
-#: views/debug-capture.php:142
+#: views/debug-capture.php:126
 msgid "Copy captured events"
 msgstr ""
 
-#: views/debug-capture.php:144
+#: views/debug-capture.php:128
 msgid "Captured events copied to the clipboard."
 msgstr ""
 
-#: views/debug-capture.php:144
+#: views/debug-capture.php:128
 msgid "Clipboard access failed. The captured events are selected; use your browser copy command."
 msgstr ""
 
-#: views/debug-capture.php:147
+#: views/debug-capture.php:131
 msgid "No Booster events have been captured yet."
 msgstr ""
 
-#: views/debug-capture.php:147
+#: views/debug-capture.php:131
 msgid "No Booster events were captured."
 msgstr ""
 
-#: views/debug-capture.php:151
+#: views/debug-capture.php:135
 msgid "Logging capture actions"
 msgstr ""
 
-#: views/debug-capture.php:156
+#: views/debug-capture.php:140
 msgid "Refresh"
 msgstr ""
 
-#: views/debug-capture.php:157
+#: views/debug-capture.php:141
 msgid "Stop capture"
 msgstr ""
 
-#: views/debug-capture.php:159
+#: views/debug-capture.php:143
 msgid "Start new capture"
 msgstr ""
 
-#: views/debug-capture.php:165
+#: views/debug-capture.php:149
 msgid "Delete capture"
 msgstr ""
 
-#: views/debug-capture.php:170
+#: views/debug-capture.php:154
 msgid "The temporary capture file could not be read safely. Booster left it unchanged."
 msgstr ""
 
-#: views/debug-capture.php:174
+#: views/debug-capture.php:158
 msgid "Temporary logging capture is unavailable because Booster cannot safely use its capture file location."
+msgstr ""
+
+#: views/debug-capture.php:164
+msgid "Capture PHP and WordPress errors"
+msgstr ""
+
+#: views/debug-capture.php:166
+msgid "For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:"
+msgstr ""
+
+#. translators: 1: Debug log path using WP_CONTENT_DIR, 2: Typical debug log path.
+#: views/debug-capture.php:173
+#, php-format
+msgid "The log is normally in %1$s (usually %2$s), unless an alternate path is configured. Turn off debugging after reproducing the issue, and review the log privately before sharing it."
+msgstr ""
+
+#: views/debug-capture.php:176
+msgid "WordPress debugging documentation"
 msgstr ""
 
 #: views/documentation.php:48
@@ -6787,7 +6820,7 @@ msgstr ""
 #: views/documentation.php:408
 #: views/settings-general.php:41
 #: views/settings-storage.php:40
-#: views/troubleshooting-installation.php:65
+#: views/troubleshooting-installation.php:67
 msgid "Booster default"
 msgstr ""
 
@@ -7288,7 +7321,7 @@ msgstr ""
 #: views/onboarding.php:137
 #: views/settings-storage.php:63
 #: views/settings.php:27
-#: views/troubleshooting-installation.php:56
+#: views/troubleshooting-installation.php:58
 msgid "Secure credential storage"
 msgstr ""
 
@@ -7298,7 +7331,7 @@ msgid "Status unknown"
 msgstr ""
 
 #: views/onboarding.php:140
-#: views/troubleshooting-installation.php:58
+#: views/troubleshooting-installation.php:60
 msgid "Storage status is unavailable."
 msgstr ""
 
@@ -7386,11 +7419,14 @@ msgstr ""
 #. translators: %s: selected provider plugin name.
 #: views/overview-dashboard.php:99
 #: views/provider.php:240
+#: views/troubleshooting-installation.php:180
+#: views/troubleshooting-installation.php:186
 #, php-format
 msgid "Provided by %s"
 msgstr ""
 
 #: views/overview-dashboard.php:101
+#: views/troubleshooting-installation.php:199
 msgid "Provider source unknown"
 msgstr ""
 
@@ -9260,7 +9296,6 @@ msgid "Adopt GitHub implementation"
 msgstr ""
 
 #: views/provider.php:329
-#: views/troubleshooting-installation.php:177
 msgid "GitHub provider details"
 msgstr ""
 
@@ -9931,12 +9966,12 @@ msgid "Save changes"
 msgstr ""
 
 #: views/settings-storage.php:41
-#: views/troubleshooting-installation.php:66
+#: views/troubleshooting-installation.php:68
 msgid "Custom wp-config.php path"
 msgstr ""
 
 #: views/settings-storage.php:73
-#: views/troubleshooting-installation.php:59
+#: views/troubleshooting-installation.php:61
 msgid "Storage details"
 msgstr ""
 
@@ -10115,57 +10150,154 @@ msgstr ""
 msgid "Environment information is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:46
+#: views/troubleshooting-installation.php:48
 msgid "Environment details"
 msgstr ""
 
-#: views/troubleshooting-installation.php:81
+#: views/troubleshooting-installation.php:83
 msgid "Storage details are unavailable for this request."
 msgstr ""
 
-#: views/troubleshooting-installation.php:85
+#: views/troubleshooting-installation.php:87
 msgid "Open secure credential storage settings"
 msgstr ""
 
-#: views/troubleshooting-installation.php:92
+#: views/troubleshooting-installation.php:94
+#: views/troubleshooting-installation.php:108
 msgid "Core update status is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:94
-msgid "Core updates are off because this site explicitly disables them. Booster will not check for or replace itself."
-msgstr ""
-
 #: views/troubleshooting-installation.php:96
-msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
+msgid "Site configuration has turned Booster update checks off."
 msgstr ""
 
 #: views/troubleshooting-installation.php:98
-msgid "Core updates are available manually for this verified release installation. Background Core updates remain off."
+msgid "Booster update checks are turned off in Settings."
 msgstr ""
 
 #: views/troubleshooting-installation.php:100
-msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
+msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
 msgstr ""
 
 #: views/troubleshooting-installation.php:102
+msgid "Booster can check for updates. Installing an update remains a manual action."
+msgstr ""
+
+#: views/troubleshooting-installation.php:104
+msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
+msgstr ""
+
+#: views/troubleshooting-installation.php:106
 msgid "Core updates are off for this source installation. Booster will not check for or replace itself."
 msgstr ""
 
-#: views/troubleshooting-installation.php:109
-#: views/troubleshooting-installation.php:164
-msgid "Technical details"
+#: views/troubleshooting-installation.php:116
+msgid "Checks enabled"
 msgstr ""
 
-#: views/troubleshooting-installation.php:122
-msgid "Providers and extensions"
+#: views/troubleshooting-installation.php:117
+msgid "Checks disabled"
+msgstr ""
+
+#: views/troubleshooting-installation.php:118
+msgid "Status unavailable"
 msgstr ""
 
 #: views/troubleshooting-installation.php:124
+#: views/troubleshooting-installation.php:205
+msgid "Technical details"
+msgstr ""
+
+#: views/troubleshooting-installation.php:137
+msgid "Providers and extensions"
+msgstr ""
+
+#: views/troubleshooting-installation.php:139
 msgid "Only the first 32 components are shown. Additional components are omitted."
 msgstr ""
 
-#: views/troubleshooting-installation.php:129
+#: views/troubleshooting-installation.php:144
 msgid "Provider and extension information is unavailable."
+msgstr ""
+
+#: views/troubleshooting-installation.php:160
+msgid "The selected GitHub provider plugin is not active or available. Review provider settings."
+msgstr ""
+
+#: views/troubleshooting-installation.php:161
+msgid "Multiple GitHub provider plugins need review in provider settings."
+msgstr ""
+
+#: views/troubleshooting-installation.php:162
+msgid "A GitHub provider plugin is incompatible. Review provider settings."
+msgstr ""
+
+#: views/troubleshooting-installation.php:163
+msgid "GitHub provider recovery is required. Review provider settings."
+msgstr ""
+
+#: views/troubleshooting-installation.php:164
+msgid "The GitHub provider selection needs a decision. Review provider settings."
+msgstr ""
+
+#: views/troubleshooting-installation.php:165
+msgid "GitHub provider selection could not be checked. Review provider settings."
+msgstr ""
+
+#. translators: %s: configured GitHub provider name.
+#: views/troubleshooting-installation.php:176
+#, php-format
+msgid "Selected provider: %s"
+msgstr ""
+
+#: views/troubleshooting-installation.php:184
+msgid "Installed extension"
+msgstr ""
+
+#: views/troubleshooting-installation.php:203
+msgid "GitHub provider selection needs attention. Review the provider settings before use."
+msgstr ""
+
+#: views/troubleshooting-installation.php:207
+msgid "These are local configuration details. Use Diagnostics to check repository access."
+msgstr ""
+
+#: views/troubleshooting-installation.php:207
+msgid "These are local configuration details."
+msgstr ""
+
+#: views/troubleshooting-installation.php:215
+msgid "Implementation fingerprint"
+msgstr ""
+
+#: views/troubleshooting-installation.php:218
+msgid "Implemented capabilities"
+msgstr ""
+
+#: views/troubleshooting-installation.php:228
+msgid "Implementation ID"
+msgstr ""
+
+#: views/troubleshooting-installation.php:241
+msgid "Classic personal access token"
+msgstr ""
+
+#: views/troubleshooting-installation.php:243
+msgid "Fine-grained personal access token"
+msgstr ""
+
+#: views/troubleshooting-installation.php:247
+msgid "Supported credential types"
+msgstr ""
+
+#: views/troubleshooting-installation.php:264
+msgid "GitHub replacement plugins detected"
+msgstr ""
+
+#. translators: 1: displayed replacement plugins, 2: total replacement plugins.
+#: views/troubleshooting-installation.php:283
+#, php-format
+msgid "Showing %1$d of %2$d replacement plugins."
 msgstr ""
 
 #: views/troubleshooting-support-report.php:11

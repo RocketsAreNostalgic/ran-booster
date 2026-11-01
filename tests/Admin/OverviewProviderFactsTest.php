@@ -22,7 +22,7 @@ final class OverviewProviderFactsTest extends TestCase {
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_extension_origin_requires_matching_active_registered_implementation(): void {
-		require_once dirname( __DIR__ ) . '/Support/OverviewBitbucketFixture.php';
+		require_once dirname( __DIR__ ) . '/Troubleshooting/OfficialBitbucketProviderFixture.php';
 		$root = sys_get_temp_dir() . '/ran-overview-provider-' . bin2hex( random_bytes( 6 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Isolated plugin fixture.
 		mkdir( $root . '/ran-booster-bitbucket', 0700, true );

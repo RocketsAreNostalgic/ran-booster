@@ -171,16 +171,22 @@ $success_label        = is_string( $success_label ) ? $success_label : __( 'Unkn
 			</fieldset>
 			<fieldset class="ran-booster-settings__group">
 				<legend><?php esc_html_e( 'History', 'ran-booster' ); ?></legend>
+				<div class="ran-booster-settings__history-fields">
+					<div>
 				<p><label for="ran-booster-history-rows"><?php esc_html_e( 'Maximum records', 'ran-booster' ); ?></label><br><input id="ran-booster-history-rows" type="number" min="200" max="100000" step="1" name="ran_booster[preferences][history_rows]" value="<?php echo esc_attr( $value( 'history_rows' ) ); ?>"<?php disabled( $field( 'history_rows' )['locked'] ); ?><?php echo null === $field_error( 'history_rows' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-history-rows-error"'; ?>></p>
 				<?php
 				if ( null !== $field_error( 'history_rows' ) ) {
 					?>
 					<p id="ran-booster-history-rows-error" class="notice notice-error inline"><?php echo esc_html( $field_error( 'history_rows' ) ); ?></p><?php } ?>
+					</div>
+					<div>
 				<p><label for="ran-booster-history-days"><?php esc_html_e( 'Retention days', 'ran-booster' ); ?></label><br><input id="ran-booster-history-days" type="number" min="1" max="365" step="1" name="ran_booster[preferences][history_days]" value="<?php echo esc_attr( $value( 'history_days' ) ); ?>"<?php disabled( $field( 'history_days' )['locked'] ); ?><?php echo null === $field_error( 'history_days' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-history-days-error"'; ?>></p>
 				<?php
 				if ( null !== $field_error( 'history_days' ) ) {
 					?>
 					<p id="ran-booster-history-days-error" class="notice notice-error inline"><?php echo esc_html( $field_error( 'history_days' ) ); ?></p><?php } ?>
+					</div>
+				</div>
 				<p class="description"><?php esc_html_e( 'Lowering these values does not delete protected running or recovery records immediately. Retention is irreversible once records are pruned.', 'ran-booster' ); ?></p>
 				<?php
 				$render_configuration(

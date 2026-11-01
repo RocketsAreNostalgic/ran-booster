@@ -9954,42 +9954,42 @@ msgstr ""
 msgid "History"
 msgstr ""
 
-#: views/settings-general.php:174
+#: views/settings-general.php:176
 msgid "Maximum records"
 msgstr ""
 
-#: views/settings-general.php:179
+#: views/settings-general.php:183
 msgid "Retention days"
 msgstr ""
 
-#: views/settings-general.php:184
+#: views/settings-general.php:190
 msgid "Lowering these values does not delete protected running or recovery records immediately. Retention is irreversible once records are pruned."
 msgstr ""
 
-#: views/settings-general.php:195
+#: views/settings-general.php:201
 msgid "Archive limits"
 msgstr ""
 
-#: views/settings-general.php:196
+#: views/settings-general.php:202
 msgid "Maximum download size (MiB)"
 msgstr ""
 
-#: views/settings-general.php:201
+#: views/settings-general.php:207
 msgid "One MiB is 1,048,576 bytes. Fractional values are rounded to the nearest byte."
 msgstr ""
 
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings-general.php:202
+#: views/settings-general.php:208
 msgid "The derived branch expansion ceiling cannot be calculated on this host."
 msgstr ""
 
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings-general.php:202
+#: views/settings-general.php:208
 #, php-format
 msgid "Branch downloads derive a ceiling of %1$s MiB (%2$s bytes; 4× this download limit). Host and updater safeguards may be stricter."
 msgstr ""
 
-#: views/settings-general.php:207
+#: views/settings-general.php:213
 msgid "Save changes"
 msgstr ""
 

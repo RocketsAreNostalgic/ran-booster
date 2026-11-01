@@ -68,7 +68,7 @@ other active PHP plugins.
 | **The selected GitHub plugin is unavailable** | Restore the approved compatible plugin, or deactivate every replacement and explicitly review a return to bundled GitHub. |
 | **Explicit approval is required** | Read the current review and make the consent choices above. |
 | **Selection storage is unavailable** | Restore storage before continuing; do not edit selection records to force a choice. |
-| **An interrupted native installation requires protected recovery** | Follow the recovery procedure below before switching. |
+| **Installation needs recovery** | Follow the recovery procedure below before switching. |
 
 A refusal that the adoption review or credential reuse consent changed means
 the old form is stale. Reload the GitHub page, inspect the current review and
@@ -101,16 +101,17 @@ or partial installation does not mean nothing changed. Keep backups and the
 protected state; never delete locks or recovery markers to force a retry.
 
 When the GitHub page shows **Installation needs recovery**, Booster could not
-confirm whether the installation or update completed. Its
-supported action is removal verification, not repair. Confirm the interrupted
-process has stopped. Arrange removal of the **entire exact target** plugin or
-theme identified there, preserving a backup of anything needed. Remove its folder
-and all contents, or the file itself for a standalone plugin; removing only the
-main file of a plugin or theme with a folder is insufficient. Confirm both displayed statements, then choose
-**Verify removal and disconnect**. Booster verifies absence, clears the installation block, and
-disconnects that management record; the button does not delete files. An occupied
-updater lock prevents recovery and is not cleared merely because it is old.
-Temporary-file cleanup remains unverified.
+confirm whether the installation or update completed. Its supported action is
+removal verification, not repair. Confirm the interrupted process has stopped.
+Arrange removal of the **entire exact target** plugin or theme identified there,
+preserving a backup of anything needed. Remove its folder and all contents, or
+the file itself for a standalone plugin; removing only the main file of a
+plugin or theme with a folder is insufficient. Confirm both displayed
+statements, then choose **Verify removal and disconnect**. Booster verifies
+absence, clears the installation block, and disconnects that management record;
+the button does not delete files. An occupied updater lock prevents recovery
+and is not cleared merely because it is old. Temporary-file cleanup remains
+unverified.
 
 After successful recovery, make a fresh installation/review. If the target
 cannot safely be removed, or the process/lock state is uncertain, stop and use

@@ -1275,10 +1275,18 @@
 }
 
 .ran-booster-admin .ran-booster-overview-package-actions {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: var(--ran-booster-space-8);
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8) var(--ran-booster-space-24);
 	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-overview-package-actions__group {
+	display: grid;
+	min-inline-size: 0;
+	max-inline-size: 100%;
+	grid-template-columns: repeat(2, minmax(0, auto));
+	gap: var(--ran-booster-space-8);
 }
 
 .ran-booster-admin .ran-booster-overview-package-actions .button {

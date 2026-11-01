@@ -4523,6 +4523,7 @@ msgstr ""
 
 #: RAN/Booster.php:261
 #: views/base.php:47
+#: views/overview-dashboard.php:78
 msgid "Plugins"
 msgstr ""
 
@@ -4536,6 +4537,7 @@ msgstr ""
 
 #: RAN/Booster.php:263
 #: views/base.php:52
+#: views/overview-dashboard.php:82
 msgid "Themes"
 msgstr ""
 
@@ -6384,7 +6386,7 @@ msgstr ""
 #: views/documentation.php:182
 #: views/documentation.php:386
 #: views/onboarding.php:168
-#: views/overview-dashboard.php:78
+#: views/overview-dashboard.php:79
 #: views/provider.php:626
 msgid "Install a plugin"
 msgstr ""
@@ -6747,7 +6749,7 @@ msgstr ""
 
 #: views/documentation.php:387
 #: views/onboarding.php:169
-#: views/overview-dashboard.php:80
+#: views/overview-dashboard.php:83
 #: views/provider.php:627
 msgid "Install a theme"
 msgstr ""
@@ -7367,39 +7369,39 @@ msgstr ""
 msgid "Updates disabled:"
 msgstr ""
 
-#: views/overview-dashboard.php:79
+#: views/overview-dashboard.php:80
 msgid "Manage plugins"
 msgstr ""
 
-#: views/overview-dashboard.php:81
+#: views/overview-dashboard.php:84
 msgid "Manage themes"
 msgstr ""
 
-#: views/overview-dashboard.php:85
+#: views/overview-dashboard.php:89
 msgid "Providers and access"
 msgstr ""
 
-#: views/overview-dashboard.php:86
+#: views/overview-dashboard.php:90
 msgid "Repository access has not been checked here."
 msgstr ""
 
-#: views/overview-dashboard.php:88
+#: views/overview-dashboard.php:92
 msgid "No provider settings are currently available."
 msgstr ""
 
-#: views/overview-dashboard.php:91
+#: views/overview-dashboard.php:95
 msgid "Admitted"
 msgstr ""
 
-#: views/overview-dashboard.php:91
+#: views/overview-dashboard.php:95
 msgid "Not admitted"
 msgstr ""
 
-#: views/overview-dashboard.php:91
+#: views/overview-dashboard.php:95
 msgid "Admission unknown"
 msgstr ""
 
-#: views/overview-dashboard.php:95
+#: views/overview-dashboard.php:99
 msgid "Selection unknown"
 msgstr ""
 

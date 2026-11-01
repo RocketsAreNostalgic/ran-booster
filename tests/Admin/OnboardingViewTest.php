@@ -465,10 +465,12 @@ final class OnboardingViewTest extends TestCase {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath   = new \DOMXPath( $document );
-		$actions = $xpath->query( '//div[contains(@class, "ran-booster-overview-package-actions")]/a' );
+		$actions = $xpath->query( '//div[contains(@class, "ran-booster-overview-package-actions__group")]/a' );
 		self::assertInstanceOf( \DOMNodeList::class, $actions );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns textContent.
 		self::assertSame( array( 'Install a plugin', 'Manage plugins', 'Install a theme', 'Manage themes' ), array_map( static fn ( \DOMNode $node ): string => trim( $node->textContent ), iterator_to_array( $actions ) ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Plugins"][a[1]="Install a plugin" and a[2]="Manage plugins"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Themes"][a[1]="Install a theme" and a[2]="Manage themes"])' ) );
 		self::assertStringNotContainsString( 'This changes the view for all site administrators.', $html );
 		self::assertStringContainsString( 'value="onboarding"', $html );
 		self::assertStringContainsString( 'ran-booster-overview-presentation', $html );

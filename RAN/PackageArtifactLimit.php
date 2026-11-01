@@ -30,7 +30,7 @@ final class PackageArtifactLimit {
 			return self::require_valid( constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) );
 		}
 
-		return self::require_valid( self::DEFAULT_MAXIMUM_ARTIFACT_BYTES );
+		return self::require_valid( ( new \RAN\Settings\GeneralPreferenceStore() )->max_archive_bytes() ?? self::DEFAULT_MAXIMUM_ARTIFACT_BYTES );
 	}
 
 	public static function require_valid( mixed $value ): int {

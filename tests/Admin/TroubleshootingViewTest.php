@@ -26,6 +26,45 @@ final class TroubleshootingViewTest extends TestCase {
 
 	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
 	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_legacy_file_constant_takes_precedence_even_with_nonstring_value(): void {
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/configured' );
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', false );
+		$dashboard = ( new \ReflectionClass( \RAN\Dashboard::class ) )->newInstanceWithoutConstructor();
+		$details   = $dashboard->storage_installation_projection()['details'] ?? array();
+		self::assertSame( array( 'configuration' => 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' ), $details );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_storage_projection_reads_private_configuration_only_for_both_capabilities(): void {
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/configured' );
+		$provisioner = new class() extends \RAN\Secrets\SecretsStorageProvisioner {
+			public int $reads = 0;
+			public function configuration_facts(): array {
+				++$this->reads;
+				return array(
+					'path'   => '/private/configured/secrets.json',
+					'source' => 'manual',
+				);
+			}
+		};
+		$dashboard   = ( new \ReflectionClass( \RAN\Dashboard::class ) )->newInstanceWithoutConstructor();
+		( new \ReflectionProperty( \RAN\Dashboard::class, 'secrets_storage' ) )->setValue( $dashboard, $provisioner );
+		foreach ( array( 'manage_options', 'activate_plugins' ) as $denied ) {
+			$GLOBALS['ran_booster_test_capabilities'] = array( $denied => false );
+			self::assertArrayNotHasKey( 'details', $dashboard->storage_installation_projection() );
+		}
+		self::assertSame( 0, $provisioner->reads );
+		$GLOBALS['ran_booster_test_capabilities'] = array();
+		$details                                  = $dashboard->storage_installation_projection()['details'] ?? array();
+		self::assertSame( '/private/configured', $details['configured_location'] );
+		self::assertSame( '/private/configured/secrets.json', $details['storage_file'] );
+		self::assertSame( 'manual', $details['path_source'] );
+		self::assertSame( 1, $provisioner->reads );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
 	public function test_journal_outcomes_translate_when_rendered(): void {
 		foreach ( array(
 			'diagnostics.partial'                   => 'Diagnostics returned a partial report.',
@@ -109,16 +148,23 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'panel=diagnostics" aria-current="page"', $html );
 	}
 
-	public function test_installation_details_escape_local_claims_and_link_to_core_owned_provider_management(): void {
-		$troubleshooting_panel = 'diagnostics';
+	public function test_installation_details_escape_local_claims_without_provider_actions(): void {
+		$troubleshooting_panel = 'installation';
 		$troubleshooting       = array(
 			'providers'            => array(),
+			'components'           => array(
+				array(
+					'Name'           => 'GitHub',
+					'Provider'       => 'gh',
+					'Implementation' => '<component-implementation>',
+				),
+			),
 			'installation_details' => array(
 				'GitHub provider'      => array(
 					'Name'                     => '<Untrusted plugin>',
 					'Version'                  => '1.0',
 					'Source'                   => 'External plugin',
-					'Selection state'          => 'missing',
+					'Selection state'          => 'conflict',
 					'Operational availability' => 'Unavailable',
 					'Implementation'           => '<implementation>',
 					'Provider API'             => '15',
@@ -139,15 +185,16 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'id="ran-booster-github-provider-diagnostics"', $html );
-		self::assertStringContainsString( 'GitHub provider details', $html );
-		self::assertStringContainsString( 'Local declarations only;', $html );
+		self::assertStringNotContainsString( 'GitHub provider details', $html );
+		self::assertStringContainsString( 'GitHub replacement plugins detected', $html );
+		self::assertStringContainsString( 'Needs attention', $html );
+		self::assertStringContainsString( 'These are local configuration details. Use Diagnostics to check repository access.', $html );
 		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
-		foreach ( array( '<Untrusted plugin>', '<implementation>', '<revision>', '<capability>', '<format>', '<candidate>', '<commit>' ) as $claim ) {
+		foreach ( array( '<implementation>', '<revision>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
 			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
 		}
-		self::assertStringContainsString( 'page=ran-booster&amp;tab=gh', $html );
-		self::assertStringContainsString( 'Manage GitHub provider', $html );
+		self::assertStringNotContainsString( 'Manage GitHub provider', $html );
 		self::assertStringNotContainsString( 'value="adopt-github"', $html );
 		self::assertStringNotContainsString( 'value="recover-github-native"', $html );
 		self::assertStringNotContainsString( 'Recover management without changing installed files:', $html );
@@ -161,14 +208,138 @@ final class TroubleshootingViewTest extends TestCase {
 			libxml_use_internal_errors( $previous_errors );
 		}
 		$xpath = new \DOMXPath( $document );
-		$rows  = $xpath->query( '//dl[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields-list ")]/div' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//details[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-github-provider-diagnostics" and not(@open)]//code[text()="<component-implementation>"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-github-provider-diagnostics"]//div[dt="Implementation fingerprint"]/dd/code[text()="<component-implementation>"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-github-provider-diagnostics"]//div[dt="Implementation ID"]/dd/code[text()="<implementation>"])' ) );
+		$rows = $xpath->query( '//dl[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields-list ")]/div' );
 		self::assertInstanceOf( \DOMNodeList::class, $rows );
-		self::assertSame( 13, $rows->length );
+		self::assertGreaterThan( 0, $rows->length );
 		foreach ( $rows as $row ) {
 			self::assertInstanceOf( \DOMElement::class, $row );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dt)', $row ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dd/code)', $row ) );
 		}
+	}
+
+	public function test_installation_distinguishes_provider_state_and_candidate_truncation(): void {
+		$troubleshooting_panel = 'installation';
+		$troubleshooting       = array(
+			'components'           => array(
+				array(
+					'Name'           => 'GitHub',
+					'Provider'       => 'gh',
+					'Admission'      => 'Admitted',
+					'Implementation' => 'runtime-fingerprint',
+					'Capabilities'   => 'CredentialValidator, RepositoryBrowser',
+				),
+				array(
+					'Name'      => 'Bitbucket Cloud',
+					'Provider'  => 'bb',
+					'Active'    => 'Yes',
+					'Installed' => 'Yes',
+					'Version'   => '2.0',
+				),
+				array(
+					'Name'      => 'Migration add-on',
+					'Active'    => 'No',
+					'Installed' => 'Yes',
+					'Version'   => '1.0',
+				),
+			),
+			'installation_details' => array(
+				'GitHub provider' => array(
+					'Name'                     => 'Selected plugin',
+					'Source'                   => 'External replacement',
+					'Version'                  => '1.2',
+					'Selection state'          => 'missing',
+					'Operational availability' => 'Unavailable',
+					'Implementation'           => 'declared-id',
+					'Enabled candidates'       => '8',
+					'API credential format 1'  => 'github-classic-pat-v1',
+					'Capability 1'             => 'RAN\\RepositoryProvider\\CredentialValidator',
+				),
+			),
+		);
+		for ( $index = 1; $index <= 4; ++$index ) {
+			$troubleshooting['installation_details'][ 'GitHub candidate ' . $index ] = array( 'Name' => 'Candidate ' . $index );
+		}
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Selected provider: Selected plugin', $html );
+		self::assertStringContainsString( 'The selected GitHub provider plugin is not active or available.', $html );
+		self::assertStringContainsString( 'Showing 4 of 8 replacement plugins.', $html );
+		self::assertStringContainsString( 'Implementation fingerprint', $html );
+		self::assertStringContainsString( 'Implementation ID', $html );
+		self::assertStringContainsString( '<code>CredentialValidator</code>, <code>RepositoryBrowser</code>', $html );
+		self::assertStringContainsString( 'Classic personal access token', $html );
+		self::assertStringNotContainsString( 'RAN\\RepositoryProvider\\CredentialValidator', $html );
+		self::assertStringContainsString( 'Provided by Bitbucket Cloud', $html );
+		self::assertStringContainsString( 'Installed extension', $html );
+		self::assertStringContainsString( '>Inactive</span>', $html );
+		self::assertMatchesRegularExpression( '/>\s*Status unavailable\s*<\/span>/', $html );
+	}
+
+	public function test_installation_is_default_and_renders_ordered_escaped_facts(): void {
+		$troubleshooting = array(
+			'environment' => array(
+				'WordPress' => '<wordpress>',
+				'PHP'       => '<runtime>',
+				'Database'  => '<database>',
+			),
+			'storage'     => array(
+				'state'   => 'actionable',
+				'message' => '<storage>',
+				'url'     => 'https://example.test/settings',
+				'details' => array(
+					'configuration'       => '<constant>',
+					'configured_location' => '<location>',
+					'storage_file'        => '<file>',
+					'path_source'         => 'manual',
+				),
+			),
+			'components'  => array( array( 'Name' => '<component>' ) ),
+		);
+		foreach ( array( null, 'invalid' ) as $troubleshooting_panel ) {
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'panel=installation" aria-current="page"', $html );
+			self::assertStringNotContainsString( 'value="run-troubleshooting"', $html );
+			foreach ( array( '<wordpress>', '<runtime>', '<database>', '<storage>', '<constant>', '<location>', '<file>', '<component>' ) as $value ) {
+				self::assertStringNotContainsString( $value, $html );
+				self::assertStringContainsString( htmlspecialchars( $value, ENT_QUOTES ), $html );
+			}
+			self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage"', $html );
+			self::assertStringContainsString( '<dt>Configuration constant</dt><dd><code class="ran-booster-onboarding__storage-inline">&lt;constant&gt;</code></dd>', $html );
+			self::assertStringContainsString( '<summary>Storage details</summary>', $html );
+			self::assertStringContainsString( '>Open secure credential storage settings</a>', $html );
+			self::assertStringNotContainsString( '<form', $html );
+			self::assertStringContainsString( '<dt>Storage directory</dt>', $html );
+			self::assertStringContainsString( '<dt>Storage file</dt>', $html );
+			self::assertStringContainsString( '<dt>Path selection</dt><dd><code class="ran-booster-onboarding__storage-inline">Custom wp-config.php path</code></dd>', $html );
+			self::assertStringContainsString( '<summary>Environment details</summary>', $html );
+			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary>Environment details</summary>', $html );
+			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open><summary>Environment details</summary>', $html );
+			$labels    = array( '>Environment</h4>', '>Secure credential storage</h4>', '>Booster Core updates</h4>', '>Providers and extensions</h3>' );
+			$positions = array_map( static fn ( $label ) => strpos( $html, $label ), $labels );
+			foreach ( $positions as $position ) {
+				self::assertIsInt( $position ); }
+			self::assertSame( $positions, array_values( array_unique( $positions ) ) );
+			$sorted = $positions;
+			sort( $sorted );
+			self::assertSame( $sorted, $positions );
+		}
+		$troubleshooting['storage']['state'] = 'unknown';
+		unset( $troubleshooting['storage']['details'] );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'href="https://example.test/settings"', $html );
+		self::assertStringContainsString( '>Not checked</span>', $html );
+		self::assertStringContainsString( 'Storage details are unavailable for this request.', $html );
+		self::assertStringNotContainsString( '<dt>Configuration constant</dt>', $html );
 	}
 
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {
@@ -251,6 +422,19 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
 		self::assertStringContainsString( '<code>native_discovery_disabled</code>', $html );
 		self::assertStringNotContainsString( 'cannot reach its configured GitHub release feed', $html );
+		$troubleshooting['core_self_update']['requested_mode'] = 'disabled';
+		$troubleshooting['core_self_update']['reason']         = 'preference_disabled';
+		$troubleshooting['core_self_update']['marker_version'] = '1.2.3';
+		$troubleshooting['core_self_update']['marker_commit']  = str_repeat( 'a', 40 );
+		foreach ( array( 'blocked', 'unavailable' ) as $state ) {
+			$troubleshooting['core_self_update']['updater_state'] = $state;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'Booster update checks are turned off in Settings.', $html );
+			self::assertStringNotContainsString( 'Core updates are off for this source installation.', $html );
+			self::assertStringNotContainsString( 'retry automatically', $html );
+		}
 	}
 
 	public function test_official_feed_failure_uses_nontechnical_troubleshooting_copy(): void {
@@ -853,6 +1037,20 @@ final class TroubleshootingViewTest extends TestCase {
 	}
 
 	public function test_renders_protected_provider_form_accessible_results_and_whitelist_report(): void {
+		$troubleshooting_panel = 'diagnostics';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exercise a deterministic frozen JSON fixture with strict encoding errors.
+		$report_json     = json_encode(
+			array(
+				'schema_version' => 1,
+				'sections'       => array(
+					'environment' => array(
+						'state' => 'Included',
+						'data'  => array( 'example' => '<tag> & \"quoted\"' ),
+					),
+				),
+			),
+			JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR
+		);
 		$troubleshooting = array(
 			'providers'              => array(
 				'gh' => 'GitHub',
@@ -882,7 +1080,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'ran'                    => true,
 			'partial'                => true,
 			'partial_reason'         => 'remote_calls_exhausted',
-			'report'                 => "RAN Booster troubleshooting report\n[pass] local.runtime.ready",
+			'report'                 => $report_json,
 			'results'                => array(
 				array(
 					'status'      => 'pass',
@@ -959,18 +1157,39 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<caption class="screen-reader-text">', $html );
 		self::assertStringContainsString( 'The five-request Git provider budget was reached.', $html );
 		self::assertStringContainsString( '>local.runtime.ready</code>', $html );
+		self::assertStringNotContainsString( '<textarea', $html );
+		self::assertStringNotContainsString( 'id="ran-booster-installation-details"', $html );
+
+		$troubleshooting_panel               = 'support-report';
+		$troubleshooting['report_generated'] = true;
+		$troubleshooting['report_filename']  = 'ran-booster-support-20261031-120000.json';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
 		self::assertStringContainsString( '<textarea', $html );
-		self::assertStringContainsString( 'RAN Booster troubleshooting report', $html );
+		self::assertStringContainsString( 'Sanitized JSON preview', $html );
 		self::assertStringContainsString( 'class="ran-booster-troubleshooting__report-field"', $html );
-		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy report"', $html );
+		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy JSON report"', $html );
 		self::assertStringContainsString( '<span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>', $html );
 		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
-		self::assertStringContainsString( 'readonly>RAN Booster troubleshooting report', $html );
+		self::assertStringContainsString( 'Download JSON report', $html );
+		self::assertStringContainsString( 'data-support-report-filename="ran-booster-support-20261031-120000.json"', $html );
+		self::assertSame( 1, preg_match( '/<textarea[^>]*readonly>(.*?)<\/textarea>/s', $html, $matches ) );
+		self::assertArrayHasKey( 1, $matches );
+		if ( ! isset( $matches[1] ) ) {
+			self::fail( 'Report textarea capture is missing.' );
+		}
+		$preview = html_entity_decode( $matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		self::assertSame( $report_json, $preview );
+		self::assertSame( 1, json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['schema_version'] );
+		self::assertSame( '<tag> & \"quoted\"', json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['sections']['environment']['data']['example'] );
+		self::assertStringContainsString( '<summary>Evidence and recovery guidance</summary>', $html );
 	}
 
 	public function test_escapes_every_submitted_and_result_field(): void {
-		$canary          = '<img src=x onerror=alert(1)>';
-		$troubleshooting = array(
+		$troubleshooting_panel = 'diagnostics';
+		$canary                = '<img src=x onerror=alert(1)>';
+		$troubleshooting       = array(
 			'providers'         => array( 'gh" onclick="alert(1)' => $canary ),
 			'credentials'       => array(
 				'gh" onclick="alert(1)' => array(

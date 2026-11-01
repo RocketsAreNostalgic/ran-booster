@@ -905,3 +905,231 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+
+.ran-booster-admin .ran-booster-settings > .ran-booster-panel {
+	margin-block: var(--ran-booster-space-20);
+	padding: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin .ran-booster-settings__group {
+	min-inline-size: 0;
+	margin-block: var(--ran-booster-space-20);
+	padding-block-start: var(--ran-booster-space-16);
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-settings__group legend {
+	padding-inline: 0 var(--ran-booster-space-8);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.ran-booster-admin .ran-booster-settings input[type="number"] {
+	inline-size: 15em;
+	max-inline-size: 100%;
+}
+
+.ran-booster-admin
+	.ran-booster-settings
+	[aria-labelledby="ran-booster-general-heading"]
+	> .notice-info {
+	background: var(--ran-booster-surface-info);
+}
+
+.ran-booster-admin .ran-booster-settings__history-fields {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+	gap: 0 var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-settings__history-fields > div {
+	min-inline-size: 0;
+}
+
+.ran-booster-admin .ran-booster-settings__history-fields input[type="number"] {
+	margin-inline: 0;
+}
+
+.ran-booster-admin .ran-booster-settings__update-controls {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-8) var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-settings__update-facts {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+	gap: var(--ran-booster-space-12) var(--ran-booster-space-20);
+	margin-block: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-settings__update-facts dt {
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-settings__update-facts dd {
+	margin: var(--ran-booster-space-5) 0 0;
+}
+
+.ran-booster-admin .ran-booster-settings__switch-row {
+	margin-block: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-settings__switch {
+	display: inline-flex;
+	min-block-size: 2rem;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+	cursor: pointer;
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-settings__switch input {
+	position: absolute;
+	inline-size: 1px;
+	block-size: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+.ran-booster-admin .ran-booster-settings__switch-control {
+	position: relative;
+	box-sizing: border-box;
+	inline-size: 2.75rem;
+	block-size: 1.375rem;
+	flex: none;
+	border: 1px solid var(--ran-booster-color-neutral-450);
+	border-radius: 999px;
+	background: var(--ran-booster-color-neutral-450);
+	transition:
+		background-color 120ms ease,
+		border-color 120ms ease;
+}
+
+.ran-booster-admin .ran-booster-settings__switch-control::after {
+	position: absolute;
+	inset-block-start: 50%;
+	inset-inline-start: 0.125rem;
+	inline-size: 1rem;
+	block-size: 1rem;
+	box-sizing: border-box;
+	border: 1px solid var(--ran-booster-surface);
+	border-radius: 50%;
+	background: var(--ran-booster-surface);
+	content: "";
+	transform: translateY(-50%);
+	transition: transform 120ms ease;
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch
+	input:checked
+	+ .ran-booster-settings__switch-control {
+	border-color: var(--ran-booster-status-ok);
+	background: var(--ran-booster-status-ok);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch
+	input:checked
+	+ .ran-booster-settings__switch-control::after {
+	border-color: var(--ran-booster-surface);
+	transform: translateX(1.375rem) translateY(-50%);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch:dir(rtl)
+	input:checked
+	+ .ran-booster-settings__switch-control::after {
+	transform: translateX(-1.375rem) translateY(-50%);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch
+	input:focus-visible
+	+ .ran-booster-settings__switch-control {
+	outline: 2px solid var(--ran-booster-link);
+	outline-offset: 2px;
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch
+	input:disabled
+	+ .ran-booster-settings__switch-control {
+	cursor: not-allowed;
+}
+
+.ran-booster-admin .ran-booster-settings__switch:has(input:disabled) {
+	cursor: not-allowed;
+}
+
+@media (pointer: coarse) {
+	.ran-booster-admin .ran-booster-settings__switch {
+		min-block-size: 2.75rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.ran-booster-admin .ran-booster-settings__switch-control,
+	.ran-booster-admin .ran-booster-settings__switch-control::after {
+		transition: none;
+	}
+}
+
+@media (forced-colors: active) {
+	.ran-booster-admin .ran-booster-settings__switch-control {
+		border-color: CanvasText;
+		background: Canvas;
+	}
+
+	.ran-booster-admin .ran-booster-settings__switch-control::after {
+		border-color: CanvasText;
+		background: CanvasText;
+	}
+
+	.ran-booster-admin
+		.ran-booster-settings__switch
+		input:checked
+		+ .ran-booster-settings__switch-control {
+		border-color: Highlight;
+		background: Highlight;
+	}
+
+	.ran-booster-admin
+		.ran-booster-settings__switch
+		input:checked
+		+ .ran-booster-settings__switch-control::after {
+		border-color: HighlightText;
+		background: HighlightText;
+	}
+
+	.ran-booster-admin
+		.ran-booster-settings__switch
+		input:focus-visible
+		+ .ran-booster-settings__switch-control {
+		outline-color: Highlight;
+	}
+}
+
+.ran-booster-admin .ran-booster-settings__configuration {
+	margin-block: var(--ran-booster-space-20);
+}
+
+.ran-booster-admin .ran-booster-settings__configuration p {
+	margin-block: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-settings__save-divider {
+	margin-block: var(--ran-booster-space-20);
+	border: 0;
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-settings .button {
+	max-inline-size: 100%;
+	white-space: normal;
+}

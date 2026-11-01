@@ -304,7 +304,10 @@ function fixture() {
 			return null;
 		},
 		querySelectorAll(selector) {
-			if (selector === '[data-ran-booster-package-disclosure]') {
+			if (
+				selector ===
+				'[data-ran-booster-package-disclosure], [data-ran-booster-logging-disclosure]'
+			) {
 				return packageDisclosures;
 			}
 			if (
@@ -580,6 +583,30 @@ test('enhanced mutations preserve viewport and package disclosure states', () =>
 		state.animationFrames.shift()();
 		assert.deepEqual(state.scrollCalls, [{ x: 0, y: 512 }]);
 	}
+});
+
+test('logging swaps restore the open details and viewport', () => {
+	const state = fixture();
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	const replacement = { id: 'ran-booster-logging-details', open: false };
+	state.setPackageDisclosures([{ id: replacement.id, open: true }]);
+	state.window.scrollY = 317;
+	init();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.setPackageDisclosures([replacement]);
+	state.window.scrollY = 500;
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.swapTarget, xhr: { status: 200 } },
+	});
+	assert.equal(replacement.open, true);
+	state.listeners.get('htmx:afterSettle')({
+		detail: { elt: state.swapTarget },
+	});
+	state.animationFrames.shift()();
+	assert.deepEqual(state.scrollCalls, [{ x: 0, y: 317 }]);
 });
 
 test('enhanced disclosure restoration is keyed by stable IDs and ignores absent replacements', () => {

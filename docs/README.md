@@ -20,11 +20,11 @@ sanitized Booster-specific evidence.
 The Core journeys describe published
 [v1.0.0-beta.37](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.37).
 Core beta.36's bundled-only GitHub behavior is retained as historical context.
-Published [Migrator v0.1.0-beta.10](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.10)/API 3
-is incompatible with Core beta.37's Portability API 4. Migrator's API 4 source
-has automated certification against that immutable Core host; satellite
-publication and manual acceptance remain separate. Check the guides' status
-notices before migration.
+Published [Migrator v0.1.0-beta.11](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/releases/tag/v0.1.0-beta.11)
+requires Portability API 4 and Admin Interaction API 3 and has automated
+released-host certification against immutable Core beta.37. Publication and
+certification do not establish a fresh installed migration or manual acceptance.
+Check the guides' status notices and prerequisites before migration.
 Verified exact export, selected existing-target/release-source Blueprint execution,
 reconciliation, Abilities and whole-site V3 remain outside this delivery.
 

@@ -19,11 +19,11 @@ final class InstallationFactsTest extends TestCase {
 	public function test_core_configuration_withholds_sensitive_values_and_marks_invalid_archive_admission(): void {
 		define( 'RAN_BOOSTER_GITHUB_TOKEN', 'github-private-token-canary' );
 		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/path-canary' );
-		define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 1 );
+		define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 1 );
 		$rows = ( new InstallationFacts( new ProviderRegistry() ) )->core_configuration();
 		self::assertSame( 'Configured; value withheld', $rows['RAN_BOOSTER_GITHUB_TOKEN'] );
 		self::assertSame( 'Configured; value withheld', $rows['RAN_BOOSTER_ENCRYPTED_SECRETS_DIR'] );
-		self::assertSame( 'Invalid code value; archive admission refused', $rows['RAN_BOOSTER_MAX_ARCHIVE_BYTES'] );
+		self::assertSame( 'Invalid code value; archive admission refused', $rows['RAN_BOOSTER_MAX_DOWNLOAD_BYTES'] );
 		self::assertStringNotContainsString( 'canary', implode( ' ', $rows ) );
 	}
 

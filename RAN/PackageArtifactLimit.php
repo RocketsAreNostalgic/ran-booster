@@ -26,11 +26,11 @@ final class PackageArtifactLimit {
 			throw new ArgumentCountError( 'Artifact limits resolve from site configuration without arguments.' );
 		}
 
-		if ( defined( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) ) {
-			return self::require_valid( constant( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES' ) );
+		if ( defined( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ) ) {
+			return self::require_valid( constant( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ) );
 		}
 
-		return self::require_valid( ( new \RAN\Settings\GeneralPreferenceStore() )->max_archive_bytes() ?? self::DEFAULT_MAXIMUM_ARTIFACT_BYTES );
+		return self::require_valid( ( new \RAN\Settings\GeneralPreferenceStore() )->max_download_bytes() ?? self::DEFAULT_MAXIMUM_ARTIFACT_BYTES );
 	}
 
 	public static function require_valid( mixed $value ): int {

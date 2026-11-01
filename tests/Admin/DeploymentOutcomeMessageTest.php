@@ -148,7 +148,7 @@ final class DeploymentOutcomeMessageTest extends TestCase {
 		$invalid    = DeploymentOutcomeMessage::for_code( 'archive_limit_invalid' );
 
 		self::assertStringContainsString( 'repository ZIP', $compressed );
-		self::assertStringContainsString( 'Archive limits in Booster Settings', $compressed );
+		self::assertStringContainsString( 'Download limits in Booster Settings', $compressed );
 		self::assertStringContainsString( 'expands beyond', $expanded );
 		self::assertStringContainsString( 'stricter extraction safeguards', $expanded );
 		self::assertStringContainsString( '1 MiB and 536,870,911 bytes', $invalid );

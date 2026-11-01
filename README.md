@@ -195,28 +195,36 @@ refuse new work when protected records exhaust capacity; resolving attention
 never invents a successful deployment. Activity pages render at most 25 rows.
 The old `RAN_BOOSTER_MAX_ATTEMPT_ROWS` setting is retired for clean-start rollout.
 
-### Repository archive limits
+### Repository download limits
 
 Git provider deployments download a ZIP of the whole repository; selecting a
 package subdirectory does not reduce that download. The target site defaults to
 50 MiB compressed and 200 MiB expanded. A legitimate larger repository can use
-the exact-byte preference under **Booster → Settings → Archive limits**. A defined constant overrides and locks that preference:
+the exact-byte preference under **Booster → Settings → Download limits**. A defined constant overrides and locks that preference:
 
 ```php
-define( 'RAN_BOOSTER_MAX_ARCHIVE_BYTES', 150 * 1024 * 1024 );
+define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 150 * 1024 * 1024 );
 ```
 
 The compressed value must be an integer from 1 MiB through 536,870,911 bytes (just under 512 MiB), a ceiling that is portable across supported 32- and 64-bit PHP builds. Booster
 derives the expanded limit at four times that value and retains its other ZIP,
 identity, path and free-space checks. The same policy covers every registered
 Git provider's branch-source manual installs and updates, webhook updates, and
-Transporter Blueprint installs. Prospective release installation instead uses
-the released `ran/wp-release-updater` beta.16 public API (Protocol 7), with
-separate archive custody and bounds, and creates no deployment attempt.
+Transporter Blueprint installs. GitHub release inspection, installation and managed updates also receive the
+compressed limit through the released `ran/wp-release-updater` beta.16 API
+(Protocol 7); that updater has independent expanded-archive safeguards.
+Prospective release installation uses separate custody and creates no deployment attempt.
 Inspection discards its validation ZIP; installation freshly reacquires the
 selected release using its opaque `v2:` fingerprint. Earlier selections require
 reinspection. Keep committed development-only files out of the deployed
 ref rather than treating a higher limit as a substitute for repository hygiene.
+
+This beta rename does not migrate the old `max_archive_bytes` preference or recognize
+`RAN_BOOSTER_MAX_ARCHIVE_BYTES`. Record custom values before upgrading, then
+replace the constant or re-enter the value in Settings. Existing queued operations
+retain their admitted limits; newly admitted work uses the new setting or default.
+The compressed download and derived expanded limit do not set installed size or
+History retention. Extension downloads and Blueprint file imports have independent bounds.
 
 ### Git provider add-ons
 

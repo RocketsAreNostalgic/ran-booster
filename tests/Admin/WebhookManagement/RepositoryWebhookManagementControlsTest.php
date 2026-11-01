@@ -514,6 +514,12 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				self::assertStringContainsString( htmlspecialchars( $result['message'], ENT_QUOTES ), $html, $code );
 				self::assertStringNotContainsString( '<hook>', $html, $code );
 				if ( in_array( $code, array( 'recovery_record_failed', 'record_conflict', 'record_update_failed' ), true ) ) {
+					self::assertSame( 1, substr_count( $html, 'Inspect the Git provider and Core manually before leaving this view or retrying.' ), $code );
+					self::assertSame( 1, substr_count( $html, 'Inspect the Git provider' ), $code );
+					self::assertStringContainsString( 'record_conflict' === $code ? 'Nothing was overwritten' : 'record was not overwritten', $html, $code );
+					if ( 'record_conflict' === $code ) {
+						self::assertStringContainsString( 'newer webhook-management record won the persistence race', $html );
+					}
 					self::assertSame( 1, substr_count( $html, 'Git provider hook reference: &lt;hook&gt;' ), $code );
 					self::assertSame( 1, substr_count( $html, 'Core signing profile: &lt;profile&gt;' ), $code );
 					self::assertStringNotContainsString( '<profile>', $html, $code );

@@ -362,10 +362,9 @@ final class WebhookDisplayModel {
 			$result['heading'] = $headings[ $code ];
 		}
 		if ( null !== $recovery && in_array( $code, array( 'recovery_record_failed', 'record_conflict', 'record_update_failed' ), true ) ) {
-			$result['message'] = $this->notice( $code, null, $remediation );
-			if ( 'record_conflict' !== $code ) {
-				$result['message'] .= ' ' . __( 'The current webhook-management record was not overwritten.', 'ran-booster' );
-			}
+			$result['message'] = 'record_conflict' === $code
+				? __( 'A newer webhook-management record won the persistence race. Nothing was overwritten. Inspect the Git provider and Core manually before leaving this view or retrying.', 'ran-booster' )
+				: __( 'Git provider state may have changed, but webhook management could not save its non-secret recovery record. The current record was not overwritten. Inspect the Git provider and Core manually before leaving this view or retrying.', 'ran-booster' );
 			$result['details'] = array(
 				/* translators: %s: provider hook reference ID. */
 				sprintf( __( 'Git provider hook reference: %s', 'ran-booster' ), $recovery['hook_id'] ),

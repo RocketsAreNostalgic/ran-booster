@@ -263,9 +263,9 @@ final readonly class ProviderSettingsPresenter {
 		try {
 			$review = $this->github_selection->adoption_review( $this->secrets );
 		} catch ( SecretsStorageUnavailable ) {
-			$error = __( 'Set up secure credential storage from Settings before reviewing GitHub adoption.', 'ran-booster' );
+			$error = __( 'Set up secure credential storage from Settings before approving a GitHub provider.', 'ran-booster' );
 		} catch ( Throwable ) {
-			$error = __( 'GitHub adoption is unavailable. Resolve conflicting or incompatible plugins and any outstanding operation or recovery first.', 'ran-booster' );
+			$error = __( 'GitHub provider approval is unavailable. Review the provider status and resolve any unfinished operation or recovery before trying again.', 'ran-booster' );
 		}
 		$recovery = null;
 		if ( 'recovery_required' === $status['state'] && null !== $this->package_removal ) {

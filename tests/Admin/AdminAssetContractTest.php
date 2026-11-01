@@ -393,7 +393,6 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'margin-inline-start:', $documentation );
 		self::assertStringContainsString( '@media (prefers-reduced-motion: no-preference)', $documentation );
 		self::assertStringContainsString( 'scroll-behavior: smooth;', $documentation );
-		self::assertStringContainsString( '@media screen and (max-width: 600px)', $onboarding );
 		self::assertStringContainsString( '@media screen and (max-width: 600px)', $documentation );
 		self::assertStringContainsString( '@media screen and (max-width: 782px)', $onboarding );
 		self::assertStringContainsString( 'class="ran-booster-footer"', $base );

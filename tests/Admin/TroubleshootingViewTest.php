@@ -1800,7 +1800,10 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-assistance-site-notice', $html );
 		self::assertStringContainsString( 'notice-error', $html );
 		self::assertStringContainsString( 'Encrypted credential storage must be healthy before Push-to-Deploy', $html );
-		self::assertStringContainsString( 'Restore the matching sidecar and site key from the same backup', $html );
+		self::assertStringContainsString( 'Saved credentials are unavailable.', $html );
+		self::assertStringContainsString( 'page=ran-booster-settings#ran-booster-storage', $html );
+		self::assertStringContainsString( 'Review Secure credential storage in Settings', $html );
+		self::assertStringNotContainsString( 'Restore the matching sidecar', $html );
 		self::assertStringNotContainsString( '+ Add credential', $html );
 		self::assertStringNotContainsString( '+ Add webhook secret', $html );
 		self::assertStringNotContainsString( 'data-credential-modal=', $html );

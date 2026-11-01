@@ -288,6 +288,67 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Conflicting packages', $html );
 	}
 
+	#[DataProvider( 'installation_review_outcomes' )]
+	public function test_installation_review_notice_orders_state_and_safe_action( string $code, string $heading, string $state ): void {
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		ob_start();
+		$display->render_operation_notice( $code, false );
+		$html   = (string) ob_get_clean();
+		$action = 'Inspect the installed version, activation state and Booster management before using Link installed or retrying.';
+
+		self::assertStringContainsString( 'notice-warning', $html );
+		self::assertStringContainsString( '<strong>' . $heading . '</strong>', $html );
+		self::assertLessThan( strpos( $html, $state ), strpos( $html, $heading ) );
+		self::assertLessThan( strpos( $html, $action ), strpos( $html, $state ) );
+		self::assertSame( 1, substr_count( $html, $action ) );
+		self::assertStringNotContainsString( 'data-ran-booster-package-success', $html );
+		if ( 'installed_but_unmanaged' !== $code ) {
+			self::assertStringNotContainsString( 'A package is present', $html );
+			self::assertStringNotContainsString( 'was installed', $html );
+		}
+	}
+
+	/** @return list<array{string, string, string}> */
+	public static function installation_review_outcomes(): array {
+		return array(
+			array( 'installed_but_unmanaged', 'Package present, Booster management not established', 'A package is present, but Booster did not establish management for it.' ),
+			array( 'management_state_uncertain', 'Installation outcome needs review', 'Booster could not confirm the final installation or management state.' ),
+			array( 'installation_cleanup_failed', 'Installation outcome needs review', 'Booster could not confirm the installation or management state after finalization failed.' ),
+		);
+	}
+
+	public function test_captured_source_pane_keeps_installation_review_notice(): void {
+		$controls = ReleaseManagementFixture::controls();
+		$package  = new PackageProjection();
+		$this->set_conflict_result( 'installation_cleanup_failed' );
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Installation outcome needs review', $html );
+		self::assertStringContainsString( 'Inspect the installed version, activation state and Booster management', $html );
+		self::assertSame( 1, substr_count( $html, 'Installation outcome needs review' ) );
+	}
+
+	public function test_other_operation_notices_keep_success_and_diagnostic_behavior(): void {
+		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
+		ob_start();
+		$display->render_operation_notice( 'installed', true );
+		$success = (string) ob_get_clean();
+		self::assertStringContainsString( 'notice-success', $success );
+		self::assertStringContainsString( 'data-ran-booster-package-success', $success );
+		self::assertStringContainsString( 'The published release was installed and is now managed by Booster.', $success );
+		self::assertStringNotContainsString( 'Installation outcome needs review', $success );
+
+		ob_start();
+		$display->render_operation_notice( 'preflight_unavailable', false );
+		$failure = (string) ob_get_clean();
+		self::assertStringContainsString( 'notice-error', $failure );
+		self::assertStringContainsString( 'Why this happened and how to fix it', $failure );
+		self::assertStringContainsString( 'Open Troubleshooting', $failure );
+		self::assertStringNotContainsString( 'Installation outcome needs review', $failure );
+	}
+
 	public function test_conflict_result_has_actionable_fallback_without_generic_diagnostics(): void {
 		$display = new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay();
 		ob_start();

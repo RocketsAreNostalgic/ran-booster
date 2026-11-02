@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.0.0-beta.42](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.41...v1.0.0-beta.42) (2026-11-02)
+
+
+### ⚠ BREAKING CHANGES
+
+* **secrets:** use ran-booster-store.json for clean prerelease installs ([#608](https://github.com/RocketsAreNostalgic/ran-booster/issues/608))
+* rename archive limits to download limits ([#606](https://github.com/RocketsAreNostalgic/ran-booster/issues/606))
+
+### Features
+
+* add one-level documentation chapters ([#586](https://github.com/RocketsAreNostalgic/ran-booster/issues/586)) ([842175c](https://github.com/RocketsAreNostalgic/ran-booster/commit/842175c060b8e2da23be130dcfb3c8d740a63f7a))
+* **admin:** add responsive Overview card layouts ([#615](https://github.com/RocketsAreNostalgic/ran-booster/issues/615)) ([04283ee](https://github.com/RocketsAreNostalgic/ran-booster/commit/04283ee1147ac22204fa7228d8dfb22456a85f63))
+* **admin:** refine Overview, Settings and Troubleshooting ([#584](https://github.com/RocketsAreNostalgic/ran-booster/issues/584)) ([32214bc](https://github.com/RocketsAreNostalgic/ran-booster/commit/32214bc68ca552f40d7d70facd3f101f2d7a87e6))
+* **extensions:** complete activation and management journey ([#566](https://github.com/RocketsAreNostalgic/ran-booster/issues/566)) ([69ec1ac](https://github.com/RocketsAreNostalgic/ran-booster/commit/69ec1aca3b511b21727f3e8c031cfbc96736a7de))
+* rename archive limits to download limits ([#606](https://github.com/RocketsAreNostalgic/ran-booster/issues/606)) ([0105deb](https://github.com/RocketsAreNostalgic/ran-booster/commit/0105debeaddee300785d2d488021c7b79e445bc8))
+
+
+### Bug Fixes
+
+* **admin:** adopt pre-shell native notice placement ([#562](https://github.com/RocketsAreNostalgic/ran-booster/issues/562)) ([8ede3fc](https://github.com/RocketsAreNostalgic/ran-booster/commit/8ede3fc1d9936a1a37471c003a06dc43fedc31f4))
+* **admin:** associate expiry actions with each credential ([#597](https://github.com/RocketsAreNostalgic/ran-booster/issues/597)) ([357de46](https://github.com/RocketsAreNostalgic/ran-booster/commit/357de466368e03a3670fc896d648d8a90d6495a2))
+* **admin:** clarify Git provider terminology ([#570](https://github.com/RocketsAreNostalgic/ran-booster/issues/570)) ([0dea2b6](https://github.com/RocketsAreNostalgic/ran-booster/commit/0dea2b658a12d3211ef3302f1dd04d039e65bfde))
+* **admin:** clarify installation recovery notice ([#591](https://github.com/RocketsAreNostalgic/ran-booster/issues/591)) ([7f7a5d1](https://github.com/RocketsAreNostalgic/ran-booster/commit/7f7a5d15b39853ab79a52034c88149ce33b98d05))
+* **admin:** clarify saved credential storage failures ([#598](https://github.com/RocketsAreNostalgic/ran-booster/issues/598)) ([afbff0b](https://github.com/RocketsAreNostalgic/ran-booster/commit/afbff0b016932646e671c23cf39dd4a89717979f))
+* **admin:** clarify uncertain installation results ([#599](https://github.com/RocketsAreNostalgic/ran-booster/issues/599)) ([71d5b93](https://github.com/RocketsAreNostalgic/ran-booster/commit/71d5b93d24bba5d574c86136bdc0b09e0fae451e))
+* **admin:** clarify webhook result and recovery notices ([#602](https://github.com/RocketsAreNostalgic/ran-booster/issues/602)) ([f22eb5f](https://github.com/RocketsAreNostalgic/ran-booster/commit/f22eb5f888a551438e48e09f9f8709e248c39e04))
+* **admin:** describe available provider evidence honestly ([#609](https://github.com/RocketsAreNostalgic/ran-booster/issues/609)) ([2d5f51c](https://github.com/RocketsAreNostalgic/ran-booster/commit/2d5f51cbf6f7466587318bc63ad65bb77c9d63fe))
+* **admin:** remove remaining eyebrow markup and styles ([#563](https://github.com/RocketsAreNostalgic/ran-booster/issues/563)) ([599a7cc](https://github.com/RocketsAreNostalgic/ran-booster/commit/599a7cc9218d0064095f11ef26cce8c200e81c04))
+* **admin:** separate provider status and approval ([#601](https://github.com/RocketsAreNostalgic/ran-booster/issues/601)) ([f84b5fb](https://github.com/RocketsAreNostalgic/ran-booster/commit/f84b5fbcc6741cf60aa6ce7fdadb47b2b72b9996))
+* **admin:** start new installations with onboarding ([#610](https://github.com/RocketsAreNostalgic/ran-booster/issues/610)) ([8189485](https://github.com/RocketsAreNostalgic/ran-booster/commit/8189485c544b9417e87140a3061db097cbe10084))
+* contain final Activity row spacing ([#605](https://github.com/RocketsAreNostalgic/ran-booster/issues/605)) ([7de6f87](https://github.com/RocketsAreNostalgic/ran-booster/commit/7de6f874c1443cd31e189034463413cf22f9517d))
+* **deps:** pin Admin Shell v1.0.0 ([#600](https://github.com/RocketsAreNostalgic/ran-booster/issues/600)) ([635ae98](https://github.com/RocketsAreNostalgic/ran-booster/commit/635ae980e93084ff126ee281ca302e88a9a00e10))
+* **secrets:** use ran-booster-store.json for clean prerelease installs ([#608](https://github.com/RocketsAreNostalgic/ran-booster/issues/608)) ([1bc1a8e](https://github.com/RocketsAreNostalgic/ran-booster/commit/1bc1a8efa0dc712fdcef3baab56bbad361d3f4d9))
+
 ## [1.0.0-beta.41](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.40...v1.0.0-beta.41) (2026-10-30)
 
 

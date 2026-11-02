@@ -188,6 +188,24 @@ class Database {
 				$contract['indexes']
 			);
 		}
+		$fresh = null === $installed_version && ! in_array( false, $missing_tables, true )
+			&& isset( $wpdb->options ) && is_string( $wpdb->options ) && '' !== $wpdb->options
+			&& ! defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) && ! defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' )
+			&& ! defined( 'RAN_BOOSTER_GITHUB_TOKEN' );
+		if ( $fresh ) {
+			$wpdb->last_error = '';
+			$query            = $wpdb->prepare( 'SELECT option_name FROM %i WHERE option_name LIKE %s LIMIT 1', $wpdb->options, $wpdb->esc_like( 'ran_booster_' ) . '%' );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Identifiers and the LIKE pattern are prepared above.
+			$existing_option = $wpdb->get_var( $query );
+			$fresh           = '' === (string) $wpdb->last_error && null === $existing_option;
+		}
+		if ( $fresh ) {
+			$wpdb->last_error = '';
+			$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $wpdb->prefix . \RAN\Activity\ActivityStore::TABLE_SUFFIX ) );
+			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The table pattern is prepared above.
+			$activity_table = $wpdb->get_var( $query );
+			$fresh          = '' === (string) $wpdb->last_error && null === $activity_table;
+		}
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		foreach ( $tables as $table => $contract ) {
@@ -219,6 +237,14 @@ class Database {
 		// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- Read the mutable expected version before get_option filters can run.
 		if ( self::$booster_db_version !== get_option( self::VERSION_OPTION, false ) ) {
 			throw new DatabaseLifecycleFailure( 'version_verification_failed' );
+		}
+		if ( $fresh ) {
+			$absent = new \stdClass();
+			add_option( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, 'automatic', '', false );
+			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- The unique sentinel detects an absent option without constraining concurrent explicit choices.
+			if ( $absent === get_option( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, $absent ) ) {
+				throw new DatabaseLifecycleFailure( 'presentation_write_failed' );
+			}
 		}
 
 		return true;

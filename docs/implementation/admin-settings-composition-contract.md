@@ -26,7 +26,7 @@ Troubleshooting projects recorded successful operator-check evidence separately
 from target last/next checks and uses closed export codes. Overview projects
 only its already captured expiry snapshot; missing lifetime-first-use evidence
 still selects the neutral dashboard. Automatic fresh-site guidance remains
-unproven; no invented history or completion flag was added.
+unproven; no invented history or completion flag was added. This describes the original composition checkpoint. The owner-authorized 2 November first-install correction now initializes the same presentation preference from conservative activation-time evidence; see `overview-568-contract.md`. Missing/uncertain existing state remains neutral, and no separate completion flag is introduced.
 
 At the reviewed `40b4b164` checkpoint the updater pin was beta.15/protocol 7,
 so the stronger pre-discovery requirement remained held. That historical source

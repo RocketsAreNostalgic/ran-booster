@@ -663,11 +663,17 @@ abstract class AbstractPackageRepository {
 				return $verified;
 			}
 			$this->clear_confirmed_github_hide_request( $model->provider );
+			$presentation_changed = $this->complete_automatic_presentation();
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( $verified->get_operation() );
 			}
 			$this->clear_github_visibility_cache( $model->provider );
+			if ( $presentation_changed ) {
+				wp_cache_delete( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, 'options' );
+				wp_cache_delete( 'alloptions', 'options' );
+				wp_cache_delete( 'notoptions', 'options' );
+			}
 			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
 				$package->set_adoption_token( $data['adoption_token'] );
 			}
@@ -758,11 +764,17 @@ abstract class AbstractPackageRepository {
 				return $verified;
 			}
 			$this->clear_confirmed_github_hide_request( $model->provider );
+			$presentation_changed = $this->complete_automatic_presentation();
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 			}
 			$this->clear_github_visibility_cache( $model->provider );
+			if ( $presentation_changed ) {
+				wp_cache_delete( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, 'options' );
+				wp_cache_delete( 'alloptions', 'options' );
+				wp_cache_delete( 'notoptions', 'options' );
+			}
 			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
 				$package->set_adoption_token( $data['adoption_token'] );
 			}
@@ -869,11 +881,17 @@ abstract class AbstractPackageRepository {
 				return $verified;
 			}
 			$this->clear_confirmed_github_hide_request( $model->provider );
+			$presentation_changed = $this->complete_automatic_presentation();
 			if ( false === $wpdb->query( 'COMMIT' ) ) {
 				$wpdb->query( 'ROLLBACK' );
 				return $this->post_write_verification_failure( PackageStorageOperation::INSERT );
 			}
 			$this->clear_github_visibility_cache( $model->provider );
+			if ( $presentation_changed ) {
+				wp_cache_delete( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, 'options' );
+				wp_cache_delete( 'alloptions', 'options' );
+				wp_cache_delete( 'notoptions', 'options' );
+			}
 			if ( $package instanceof AbstractPackage && is_string( $data['adoption_token'] ?? null ) ) {
 				$package->set_adoption_token( $data['adoption_token'] );
 			}
@@ -882,6 +900,18 @@ abstract class AbstractPackageRepository {
 			$wpdb->query( 'ROLLBACK' );
 			throw $exception;
 		}
+	}
+
+	private function complete_automatic_presentation(): bool {
+		global $wpdb;
+		( new Database( $wpdb ) )->require_selection_storage( $wpdb->options );
+		$query = $wpdb->prepare( 'UPDATE %i SET option_value = %s WHERE option_name = %s AND BINARY option_value = BINARY %s', $wpdb->options, 'dashboard', \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, 'automatic' );
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- All values and the options table are prepared above.
+		$result = $wpdb->query( $query );
+		if ( false === $result ) {
+			throw new \RuntimeException( 'Overview presentation could not be updated.' );
+		}
+		return 1 === $result;
 	}
 
 	/**

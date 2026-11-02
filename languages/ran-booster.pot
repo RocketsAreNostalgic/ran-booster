@@ -5642,48 +5642,48 @@ msgstr ""
 msgid "Booster found conflicting package management records. No package changes were made."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:752
-#: RAN/Storage/AbstractPackageRepository.php:1067
+#: RAN/Storage/AbstractPackageRepository.php:758
+#: RAN/Storage/AbstractPackageRepository.php:1097
 msgid "Booster could not save the package management record. No success was reported."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:862
+#: RAN/Storage/AbstractPackageRepository.php:874
 msgid "Booster could not save the release management record. The installed package state is uncertain."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:949
+#: RAN/Storage/AbstractPackageRepository.php:979
 msgid "Booster found existing package management data. No package changes were made."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:961
+#: RAN/Storage/AbstractPackageRepository.php:991
 msgid "Booster could not determine the managed repository source state. No package changes were made."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:968
+#: RAN/Storage/AbstractPackageRepository.php:998
 msgid "This repository already has incompatible managed package source records. No package changes were made."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:1081
+#: RAN/Storage/AbstractPackageRepository.php:1111
 msgid "Booster could not verify the saved package management record. No success was reported."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:1114
+#: RAN/Storage/AbstractPackageRepository.php:1144
 msgid "Booster could not remove the package management record. No success was reported."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:1122
+#: RAN/Storage/AbstractPackageRepository.php:1152
 msgid "Booster could not verify removal of the package management record. No success was reported."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:1149
+#: RAN/Storage/AbstractPackageRepository.php:1179
 msgid "The managed package source changed before this operation. No package changes were made."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:1166
+#: RAN/Storage/AbstractPackageRepository.php:1196
 msgid "Booster could not save this package because its Git provider identity is incomplete."
 msgstr ""
 
-#: RAN/Storage/AbstractPackageRepository.php:1174
+#: RAN/Storage/AbstractPackageRepository.php:1204
 msgid "Booster could not save this package because its installed package identity is invalid."
 msgstr ""
 

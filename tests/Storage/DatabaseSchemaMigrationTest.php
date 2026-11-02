@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use RAN\Storage\Database;
+use RAN\Admin\OnboardingPresenter;
 use RAN\RepositoryProvider\GitHubReplacementDeclaration;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -39,6 +40,7 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_storage_test_schema_unset'] );
+		unset( $GLOBALS['ran_booster_test_add_option_failure'] );
 	}
 
 	public function test_partial_capability_connection_keeps_current_schema_readiness_but_cannot_install(): void {
@@ -189,6 +191,67 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'ENGINE=InnoDB', $attempt_schema );
 
 		self::assertSame( '15.0', $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
+	}
+
+	public function test_fresh_install_initializes_automatic_overview_presentation(): void {
+		global $ran_booster_storage_test_options;
+
+		( new Database( bundled_declaration: $this->declaration() ) )->install();
+
+		self::assertSame( 'automatic', $ran_booster_storage_test_options[ OnboardingPresenter::PRESENTATION_OPTION ] ?? null );
+	}
+
+	public function test_install_preserves_explicit_presentation_and_does_not_initialize_existing_schema(): void {
+		global $ran_booster_storage_test_options;
+
+		$ran_booster_storage_test_options[ OnboardingPresenter::PRESENTATION_OPTION ] = 'dashboard';
+		( new Database( bundled_declaration: $this->declaration() ) )->install();
+		self::assertSame( 'dashboard', $ran_booster_storage_test_options[ OnboardingPresenter::PRESENTATION_OPTION ] );
+
+		unset( $ran_booster_storage_test_options[ OnboardingPresenter::PRESENTATION_OPTION ] );
+		( new Database( bundled_declaration: $this->declaration() ) )->install();
+		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );
+	}
+
+	public function test_failed_first_presentation_write_does_not_seed_on_retry(): void {
+		global $ran_booster_storage_test_options;
+		$GLOBALS['ran_booster_test_add_option_failure'] = true;
+		try {
+			( new Database( bundled_declaration: $this->declaration() ) )->install();
+			self::fail( 'A missing first-use option must fail verification.' );
+		} catch ( DatabaseLifecycleFailure $failure ) {
+			self::assertSame( 'presentation_write_failed', $failure->reason() );
+		}
+		unset( $GLOBALS['ran_booster_test_add_option_failure'] );
+		( new Database( bundled_declaration: $this->declaration() ) )->install();
+		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );
+	}
+
+	public function test_ambiguous_existing_state_and_failed_option_probe_remain_neutral(): void {
+		global $ran_booster_storage_test_options, $wpdb;
+		foreach ( array( 'option', 'activity', 'read_failure' ) as $state ) {
+			$ran_booster_storage_test_options = array();
+			// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Isolated lifecycle fixture for each existing-state scenario.
+			$wpdb = new StorageTestWpdb();
+			if ( 'option' === $state ) {
+				$ran_booster_storage_test_options['ran_booster_legacy'] = 'existing';
+			} elseif ( 'activity' === $state ) {
+				$wpdb->schema_tables['wp_ran_booster_activity'] = array();
+			} else {
+				$wpdb->fresh_option_read_failure = true;
+			}
+			( new Database( bundled_declaration: $this->declaration() ) )->install();
+			self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options, $state );
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_existing_configuration_constant_keeps_install_neutral(): void {
+		global $ran_booster_storage_test_options;
+		define( 'RAN_BOOSTER_GITHUB_TOKEN', 'configured' );
+		( new Database( bundled_declaration: $this->declaration() ) )->install();
+		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );
 	}
 
 	/** @return list<array{string, bool}> */

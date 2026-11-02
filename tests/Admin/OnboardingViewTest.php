@@ -47,10 +47,19 @@ final class OnboardingViewTest extends TestCase {
 		$heading_panels = $xpath->query( '//*[@id="ran-booster-onboarding-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
 		self::assertCount( 0, $heading_panels );
+		$cards = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-grid ")]/*' );
+		self::assertInstanceOf( \DOMNodeList::class, $cards );
+		self::assertCount( 4, $cards );
+		foreach ( array( '1. Secure credential storage', '2. Choose a Git provider', '3. Import or migrate (optional)', '4. Install and manage packages' ) as $index => $label ) {
+			$card = $cards->item( $index );
+			self::assertInstanceOf( \DOMNode::class, $card );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode exposes this native property.
+			self::assertStringContainsString( $label, $card->textContent );
+		}
 
 		$install = strpos( $html, 'Install a plugin' );
 		$private = strpos( $html, '2. Choose a Git provider' );
-		$move    = strpos( $html, '3. Import, export or migrate — optional' );
+		$move    = strpos( $html, '3. Import or migrate (optional)' );
 
 		self::assertIsInt( $install );
 		self::assertIsInt( $private );
@@ -447,6 +456,21 @@ final class OnboardingViewTest extends TestCase {
 				'activity_url' => '/activity',
 			)
 		);
+		$document             = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$cards = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-grid ")]/*' );
+		self::assertInstanceOf( \DOMNodeList::class, $cards );
+		self::assertCount( 4, $cards );
+		foreach ( array( 'Recent Activity', 'Managed packages', 'Git providers', 'Secure credential storage' ) as $index => $label ) {
+			$card = $cards->item( $index );
+			self::assertInstanceOf( \DOMNode::class, $card );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode exposes this native property.
+			self::assertStringContainsString( $label, $card->textContent );
+		}
+		$attention = $xpath->query( '//*[@id="ran-booster-overview-attention"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-grid ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $attention );
+		self::assertCount( 0, $attention );
 		self::assertLessThan( strpos( $html, 'Recent Activity' ), strpos( $html, 'Needs attention' ) );
 		self::assertLessThan( strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ), strpos( $html, 'Recent Activity' ) );
 		self::assertLessThan( strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ), strpos( $html, 'Git providers' ) );
@@ -836,7 +860,7 @@ final class OnboardingViewTest extends TestCase {
 			unset( $GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] );
 		}
 
-		$primary   = strpos( $html, '3. Import, export or migrate — optional' );
+		$primary   = strpos( $html, '3. Import or migrate (optional)' );
 		$migration = strpos( $html, 'Migration available' );
 		self::assertIsInt( $primary );
 		self::assertIsInt( $migration );

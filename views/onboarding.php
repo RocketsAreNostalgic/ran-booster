@@ -122,6 +122,7 @@ $provider_attention        = array_filter(
 		</section>
 	<?php } ?>
 
+	<div class="ran-booster-overview-grid">
 	<?php if ( 'dashboard' === $overview_view ) { ?>
 		<?php $overview_dashboard_activity = true; ?>
 		<?php require __DIR__ . '/overview-dashboard.php'; ?>
@@ -156,8 +157,8 @@ $provider_attention        = array_filter(
 		</p>
 	</section>
 	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-next-heading">
-		<h3 id="ran-booster-onboarding-next-heading"><?php esc_html_e( '3. Import, export or migrate — optional', 'ran-booster' ); ?></h3>
-		<p><?php esc_html_e( 'Import or export a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions.', 'ran-booster' ); ?></p>
+		<h3 id="ran-booster-onboarding-next-heading"><?php esc_html_e( '3. Import or migrate (optional)', 'ran-booster' ); ?></h3>
+		<p><?php esc_html_e( 'Import a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
 			<a class="button" href="<?php echo esc_url( $onboarding['portability_url'] ); ?>"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></a>
 			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Browse extensions', 'ran-booster' ); ?></a>
@@ -165,15 +166,15 @@ $provider_attention        = array_filter(
 	</section>
 	<section class="ran-booster-panel ran-booster-onboarding__storage">
 		<h3><?php esc_html_e( '4. Install and manage packages', 'ran-booster' ); ?></h3>
+		<p><?php esc_html_e( 'Install a plugin or theme from a Git repository, or link one already installed on this site.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
 			<a class="button button-primary" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
 			<a class="button" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
 		</p>
 	</section>
 
-
-
 	<?php } ?>
+	</div>
 
 	<?php
 	$migration_prompt_buffer_level = ob_get_level();

@@ -4645,7 +4645,7 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:264
-#: views/onboarding.php:162
+#: views/onboarding.php:163
 msgid "Transporter"
 msgstr ""
 
@@ -6525,7 +6525,7 @@ msgstr ""
 
 #: views/documentation.php:264
 #: views/documentation.php:418
-#: views/onboarding.php:169
+#: views/onboarding.php:171
 #: views/overview-dashboard.php:79
 #: views/provider.php:660
 msgid "Install a plugin"
@@ -6869,7 +6869,7 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:419
-#: views/onboarding.php:170
+#: views/onboarding.php:172
 #: views/overview-dashboard.php:83
 #: views/provider.php:661
 msgid "Install a theme"
@@ -7412,60 +7412,64 @@ msgstr ""
 msgid "Review storage"
 msgstr ""
 
-#: views/onboarding.php:137
+#: views/onboarding.php:138
 msgid "1. Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:137
+#: views/onboarding.php:138
 #: views/settings-storage.php:63
 #: views/settings.php:27
 #: views/troubleshooting-installation.php:58
 msgid "Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:138
+#: views/onboarding.php:139
 #: views/settings-storage.php:64
 msgid "Status unknown"
 msgstr ""
 
-#: views/onboarding.php:140
+#: views/onboarding.php:141
 #: views/troubleshooting-installation.php:60
 msgid "Storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:141
+#: views/onboarding.php:142
 msgid "Review secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:149
+#: views/onboarding.php:150
 msgid "2. Choose a Git provider"
 msgstr ""
 
-#: views/onboarding.php:150
+#: views/onboarding.php:151
 msgid "Add credentials on the provider’s page if needed."
 msgstr ""
 
-#: views/onboarding.php:155
+#: views/onboarding.php:156
 msgid "Install another provider"
 msgstr ""
 
-#: views/onboarding.php:159
-msgid "3. Import, export or migrate — optional"
-msgstr ""
-
 #: views/onboarding.php:160
-msgid "Import or export a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions."
+msgid "3. Import or migrate (optional)"
 msgstr ""
 
-#: views/onboarding.php:163
+#: views/onboarding.php:161
+msgid "Import a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions."
+msgstr ""
+
+#: views/onboarding.php:164
 msgid "Browse extensions"
 msgstr ""
 
-#: views/onboarding.php:167
+#: views/onboarding.php:168
 msgid "4. Install and manage packages"
 msgstr ""
 
-#: views/onboarding.php:199
+#: views/onboarding.php:169
+msgid "Install a plugin or theme from a Git repository, or link one already installed on this site."
+msgstr ""
+
+#: views/onboarding.php:200
 msgid "Return to onboarding"
 msgstr ""
 

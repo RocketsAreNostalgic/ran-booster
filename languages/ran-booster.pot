@@ -6525,7 +6525,7 @@ msgstr ""
 
 #: views/documentation.php:264
 #: views/documentation.php:418
-#: views/onboarding.php:170
+#: views/onboarding.php:171
 #: views/overview-dashboard.php:79
 #: views/provider.php:660
 msgid "Install a plugin"
@@ -6869,7 +6869,7 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:419
-#: views/onboarding.php:171
+#: views/onboarding.php:172
 #: views/overview-dashboard.php:83
 #: views/provider.php:661
 msgid "Install a theme"
@@ -7465,7 +7465,11 @@ msgstr ""
 msgid "4. Install and manage packages"
 msgstr ""
 
-#: views/onboarding.php:199
+#: views/onboarding.php:169
+msgid "Install a plugin or theme from a Git repository, or link one already installed on this site."
+msgstr ""
+
+#: views/onboarding.php:200
 msgid "Return to onboarding"
 msgstr ""
 

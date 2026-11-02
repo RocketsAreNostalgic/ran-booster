@@ -197,14 +197,15 @@ class Database {
 			$query            = $wpdb->prepare( 'SELECT option_name FROM %i WHERE option_name LIKE %s LIMIT 1', $wpdb->options, $wpdb->esc_like( 'ran_booster_' ) . '%' );
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- Identifiers and the LIKE pattern are prepared above.
 			$existing_option = $wpdb->get_var( $query );
-			$fresh           = '' === (string) $wpdb->last_error && null === $existing_option;
+			$fresh           = ! $this->identity_read_failed() && null === $existing_option;
 		}
 		if ( $fresh ) {
 			$wpdb->last_error = '';
-			$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $wpdb->prefix . \RAN\Activity\ActivityStore::TABLE_SUFFIX ) );
+			$activity_name    = substr( $attempt_table, 0, -strlen( 'ran_booster_deployment_attempts' ) ) . \RAN\Activity\ActivityStore::TABLE_SUFFIX;
+			$query            = $wpdb->prepare( 'SHOW TABLES LIKE %s', $wpdb->esc_like( $activity_name ) );
 			// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The table pattern is prepared above.
 			$activity_table = $wpdb->get_var( $query );
-			$fresh          = '' === (string) $wpdb->last_error && null === $activity_table;
+			$fresh          = ! $this->identity_read_failed() && null === $activity_table;
 		}
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';

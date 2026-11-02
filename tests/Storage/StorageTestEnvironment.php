@@ -158,6 +158,7 @@ namespace RAN\Tests\Storage {
 		public bool $fail_general_settings_write         = false;
 		public string $last_error                        = '';
 		public ?string $presentation_value               = null;
+		public ?string $presentation_concurrent_value    = null;
 		public bool $fresh_option_read_failure           = false;
 		private ?string $presentation_before_transaction = null;
 
@@ -272,6 +273,10 @@ namespace RAN\Tests\Storage {
 				$this->presentation_value = $this->presentation_before_transaction;
 			}
 			if ( str_starts_with( $query, 'UPDATE `wp_options` SET option_value' ) && str_contains( $query, 'ran_booster_overview_presentation' ) ) {
+				if ( null !== $this->presentation_concurrent_value ) {
+					$this->presentation_value            = $this->presentation_concurrent_value;
+					$this->presentation_concurrent_value = null;
+				}
 				if ( 'automatic' !== $this->presentation_value ) {
 					return 0;
 				}

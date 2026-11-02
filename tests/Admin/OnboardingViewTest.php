@@ -50,10 +50,12 @@ final class OnboardingViewTest extends TestCase {
 		$cards = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-grid ")]/*' );
 		self::assertInstanceOf( \DOMNodeList::class, $cards );
 		self::assertCount( 4, $cards );
-		self::assertStringContainsString( '1. Secure credential storage', $cards->item( 0 )->textContent );
-		self::assertStringContainsString( '2. Choose a Git provider', $cards->item( 1 )->textContent );
-		self::assertStringContainsString( '3. Import or migrate (optional)', $cards->item( 2 )->textContent );
-		self::assertStringContainsString( '4. Install and manage packages', $cards->item( 3 )->textContent );
+		foreach ( array( '1. Secure credential storage', '2. Choose a Git provider', '3. Import or migrate (optional)', '4. Install and manage packages' ) as $index => $label ) {
+			$card = $cards->item( $index );
+			self::assertInstanceOf( \DOMNode::class, $card );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode exposes this native property.
+			self::assertStringContainsString( $label, $card->textContent );
+		}
 
 		$install = strpos( $html, 'Install a plugin' );
 		$private = strpos( $html, '2. Choose a Git provider' );
@@ -461,7 +463,10 @@ final class OnboardingViewTest extends TestCase {
 		self::assertInstanceOf( \DOMNodeList::class, $cards );
 		self::assertCount( 4, $cards );
 		foreach ( array( 'Recent Activity', 'Managed packages', 'Git providers', 'Secure credential storage' ) as $index => $label ) {
-			self::assertStringContainsString( $label, $cards->item( $index )->textContent );
+			$card = $cards->item( $index );
+			self::assertInstanceOf( \DOMNode::class, $card );
+			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode exposes this native property.
+			self::assertStringContainsString( $label, $card->textContent );
 		}
 		$attention = $xpath->query( '//*[@id="ran-booster-overview-attention"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-grid ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $attention );

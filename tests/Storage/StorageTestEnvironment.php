@@ -101,6 +101,21 @@ namespace {
 		}
 	}
 
+	if ( ! function_exists( 'add_option' ) ) {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound, Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- Preserve the WordPress function signature.
+		function add_option( string $option, mixed $value, string $deprecated = '', bool $autoload = true ): bool {
+			global $ran_booster_storage_test_options;
+			if ( $GLOBALS['ran_booster_test_add_option_failure'] ?? false ) {
+				return false;
+			}
+			if ( array_key_exists( $option, $ran_booster_storage_test_options ) ) {
+				return false;
+			}
+			$ran_booster_storage_test_options[ $option ] = $value;
+			return true;
+		}
+	}
+
 	if ( ! function_exists( 'wp_cache_delete' ) ) {
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress cache boundary test double retains the host function name.
 		function wp_cache_delete( string $key, string $group = '' ): bool {
@@ -135,13 +150,17 @@ namespace RAN\Tests\Storage {
 	// phpcs:ignore Universal.Files.SeparateFunctionsFromOO.Mixed -- The fixture pairs WordPress function doubles with its database class for one isolated test environment.
 	final class StorageTestWpdb extends \RAN\Storage\SchemaConnection {
 
-		public string $prefix                    = 'wp_';
-		public string $base_prefix               = 'wp_';
-		public string $options                   = 'wp_options';
-		public ?string $selection_value          = null;
-		public ?string $general_settings_value   = null;
-		public bool $fail_general_settings_write = false;
-		public string $last_error                = '';
+		public string $prefix                            = 'wp_';
+		public string $base_prefix                       = 'wp_';
+		public string $options                           = 'wp_options';
+		public ?string $selection_value                  = null;
+		public ?string $general_settings_value           = null;
+		public bool $fail_general_settings_write         = false;
+		public string $last_error                        = '';
+		public ?string $presentation_value               = null;
+		public ?string $presentation_concurrent_value    = null;
+		public bool $fresh_option_read_failure           = false;
+		private ?string $presentation_before_transaction = null;
 
 		/** @var list<string> */
 		public array $schemas = array();
@@ -246,6 +265,23 @@ namespace RAN\Tests\Storage {
 			$this->queries[] = $query;
 			if ( null !== $this->query_failure_contains && str_contains( $query, $this->query_failure_contains ) ) {
 				return false;
+			}
+			if ( 'START TRANSACTION' === $query ) {
+				$this->presentation_before_transaction = $this->presentation_value;
+			}
+			if ( 'ROLLBACK' === $query ) {
+				$this->presentation_value = $this->presentation_before_transaction;
+			}
+			if ( str_starts_with( $query, 'UPDATE `wp_options` SET option_value' ) && str_contains( $query, 'ran_booster_overview_presentation' ) ) {
+				if ( null !== $this->presentation_concurrent_value ) {
+					$this->presentation_value            = $this->presentation_concurrent_value;
+					$this->presentation_concurrent_value = null;
+				}
+				if ( 'automatic' !== $this->presentation_value ) {
+					return 0;
+				}
+				$this->presentation_value = 'dashboard';
+				return 1;
 			}
 			if ( str_starts_with( $query, 'UPDATE' ) && str_contains( $query, 'ran_booster_general_settings' ) ) {
 				if ( $this->fail_general_settings_write ) {
@@ -387,6 +423,18 @@ namespace RAN\Tests\Storage {
 		public function get_var( string $query ): int|string|null {
 			if ( $this->read_failure ) {
 				$this->last_error = 'database details must not escape';
+				return null;
+			}
+			if ( str_starts_with( $query, 'SELECT option_name FROM `wp_options` WHERE option_name LIKE' ) ) {
+				if ( $this->fresh_option_read_failure ) {
+					$this->last_error = 'database details must not escape';
+					return null;
+				}
+				foreach ( array_keys( $GLOBALS['ran_booster_storage_test_options'] ) as $name ) {
+					if ( is_string( $name ) && str_starts_with( $name, 'ran_booster_' ) ) {
+						return $name;
+					}
+				}
 				return null;
 			}
 			if ( str_starts_with( $query, 'SELECT option_value FROM' ) && str_contains( $query, 'ran_booster_general_settings' ) ) {

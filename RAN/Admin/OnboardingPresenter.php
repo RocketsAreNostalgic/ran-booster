@@ -93,7 +93,10 @@ final readonly class OnboardingPresenter {
 		} catch ( Throwable $failure ) {
 			$theme_count = null;
 		}
-		$complete              = null !== $plugin_count && null !== $theme_count;
+		$complete = null !== $plugin_count && null !== $theme_count;
+		if ( 'automatic' === $choice && $complete && 0 === $plugin_count && 0 === $theme_count ) {
+			$overview['view'] = 'onboarding';
+		}
 		$overview['inventory'] = array(
 			'plugins'  => $plugin_count,
 			'themes'   => $theme_count,

@@ -588,6 +588,44 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		}
 	}
 
+	public function test_managed_admission_transitions_only_automatic_presentation_on_commit(): void {
+		global $wpdb;
+		foreach ( array( 'store', 'adopt', 'release_adopt' ) as $path ) {
+			foreach ( array( 'automatic', 'onboarding', 'dashboard', null ) as $choice ) {
+				$wpdb->rows               = array();
+				$wpdb->presentation_value = $choice;
+				$result                   = match ( $path ) {
+					'store' => $this->storage()->store_for_test( $this->package() ),
+					'adopt' => $this->storage()->adopt_for_test( $this->package() ),
+					'release_adopt' => $this->storage()->adopt_release_for_test( $this->release_package(), new ManagedReleaseConfiguration( 'example', 'example.php' ) ),
+				};
+				self::assertTrue( $result->is_successful(), $path );
+				self::assertSame( 'automatic' === $choice ? 'dashboard' : $choice, $wpdb->presentation_value, $path );
+			}
+		}
+		$wpdb->rows                                   = array();
+		$wpdb->presentation_value                     = 'automatic';
+		$GLOBALS['ran_booster_attempt_cache_deletes'] = array();
+		$wpdb->query_failure_contains                 = 'COMMIT';
+		self::assertFalse( $this->storage()->store_for_test( $this->package() )->is_successful() );
+		self::assertSame( 'automatic', $wpdb->presentation_value );
+		self::assertNotContains( array( 'ran_booster_overview_presentation', 'options' ), $GLOBALS['ran_booster_attempt_cache_deletes'] );
+		$wpdb->rows                   = array();
+		$wpdb->query_failure_contains = 'ran_booster_overview_presentation';
+		self::assertTrue( $this->storage()->store_for_test( $this->package() )->is_successful() );
+		self::assertSame( 'automatic', $wpdb->presentation_value );
+		$wpdb->query_failure_contains = null;
+		$wpdb->rows                   = array();
+		$wpdb->options_engine         = 'MyISAM';
+		self::assertTrue( $this->storage()->store_for_test( $this->package() )->is_successful() );
+		self::assertSame( 'dashboard', $wpdb->presentation_value );
+		$wpdb->rows                          = array();
+		$wpdb->presentation_value            = 'automatic';
+		$wpdb->presentation_concurrent_value = 'onboarding';
+		self::assertTrue( $this->storage()->store_for_test( $this->package() )->is_successful() );
+		self::assertSame( 'onboarding', $wpdb->presentation_value );
+	}
+
 	public function test_confirmed_github_management_preserves_absent_and_false_preferences_without_seeding(): void {
 		global $wpdb;
 

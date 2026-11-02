@@ -612,13 +612,18 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 		self::assertNotContains( array( 'ran_booster_overview_presentation', 'options' ), $GLOBALS['ran_booster_attempt_cache_deletes'] );
 		$wpdb->rows                   = array();
 		$wpdb->query_failure_contains = 'ran_booster_overview_presentation';
-		self::assertFalse( $this->storage()->store_for_test( $this->package() )->is_successful() );
+		self::assertTrue( $this->storage()->store_for_test( $this->package() )->is_successful() );
 		self::assertSame( 'automatic', $wpdb->presentation_value );
 		$wpdb->query_failure_contains = null;
 		$wpdb->rows                   = array();
 		$wpdb->options_engine         = 'MyISAM';
-		self::assertFalse( $this->storage()->store_for_test( $this->package() )->is_successful() );
-		self::assertSame( 'automatic', $wpdb->presentation_value );
+		self::assertTrue( $this->storage()->store_for_test( $this->package() )->is_successful() );
+		self::assertSame( 'dashboard', $wpdb->presentation_value );
+		$wpdb->rows                          = array();
+		$wpdb->presentation_value            = 'automatic';
+		$wpdb->presentation_concurrent_value = 'onboarding';
+		self::assertTrue( $this->storage()->store_for_test( $this->package() )->is_successful() );
+		self::assertSame( 'onboarding', $wpdb->presentation_value );
 	}
 
 	public function test_confirmed_github_management_preserves_absent_and_false_preferences_without_seeding(): void {

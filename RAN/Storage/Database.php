@@ -239,11 +239,11 @@ class Database {
 			throw new DatabaseLifecycleFailure( 'version_verification_failed' );
 		}
 		if ( $fresh ) {
-			$absent = new \stdClass();
-			add_option( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, 'automatic', '', false );
-			// phpcs:ignore WordPress.PHP.YodaConditions.NotYoda -- The unique sentinel detects an absent option without constraining concurrent explicit choices.
-			if ( $absent === get_option( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, $absent ) ) {
-				throw new DatabaseLifecycleFailure( 'presentation_write_failed' );
+			try {
+				add_option( \RAN\Admin\OnboardingPresenter::PRESENTATION_OPTION, 'automatic', '', false );
+			} catch ( \Throwable ) {
+				// Presentation is optional and cannot prevent activation.
+				return true;
 			}
 		}
 

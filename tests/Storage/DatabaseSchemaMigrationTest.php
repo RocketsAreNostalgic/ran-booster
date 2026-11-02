@@ -216,12 +216,8 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 	public function test_failed_first_presentation_write_does_not_seed_on_retry(): void {
 		global $ran_booster_storage_test_options;
 		$GLOBALS['ran_booster_test_add_option_failure'] = true;
-		try {
-			( new Database( bundled_declaration: $this->declaration() ) )->install();
-			self::fail( 'A missing first-use option must fail verification.' );
-		} catch ( DatabaseLifecycleFailure $failure ) {
-			self::assertSame( 'presentation_write_failed', $failure->reason() );
-		}
+		( new Database( bundled_declaration: $this->declaration() ) )->install();
+		self::assertSame( Database::$booster_db_version, $ran_booster_storage_test_options[ Database::VERSION_OPTION ] );
 		unset( $GLOBALS['ran_booster_test_add_option_failure'] );
 		( new Database( bundled_declaration: $this->declaration() ) )->install();
 		self::assertArrayNotHasKey( OnboardingPresenter::PRESENTATION_OPTION, $ran_booster_storage_test_options );

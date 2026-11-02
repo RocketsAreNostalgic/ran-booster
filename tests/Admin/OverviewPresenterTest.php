@@ -81,6 +81,20 @@ final class OverviewPresenterTest extends TestCase {
 		unset( $GLOBALS['ran_booster_storage_test_options'][ OnboardingPresenter::PRESENTATION_OPTION ] );
 	}
 
+	public function test_automatic_presentation_tracks_managed_inventory_and_explicit_choices_win(): void {
+		$GLOBALS['ran_booster_storage_test_options'][ OnboardingPresenter::PRESENTATION_OPTION ] = 'automatic';
+		self::assertSame( 'onboarding', $this->present( $this->plugins( array() ), $this->themes( array() ) )['view'] );
+		self::assertSame( 'dashboard', $this->present( $this->plugins( array( new Plugin() ) ), $this->themes( array() ) )['view'] );
+		self::assertSame( 'dashboard', $this->present( $this->plugins( array() ), $this->themes( array( new Theme() ) ) )['view'] );
+		self::assertSame( 'dashboard', $this->present( $this->plugins( null ), $this->themes( array() ) )['view'] );
+		self::assertSame( 'dashboard', $this->present( $this->plugins( null ), $this->themes( array( new Theme() ) ) )['view'] );
+
+		$GLOBALS['ran_booster_storage_test_options'][ OnboardingPresenter::PRESENTATION_OPTION ] = 'onboarding';
+		self::assertSame( 'onboarding', $this->present( $this->plugins( array( new Plugin() ) ), $this->themes( array() ) )['view'] );
+		$GLOBALS['ran_booster_storage_test_options'][ OnboardingPresenter::PRESENTATION_OPTION ] = 'dashboard';
+		self::assertSame( 'dashboard', $this->present( $this->plugins( array() ), $this->themes( array() ) )['view'] );
+	}
+
 	public function test_provider_facts_are_scoped_to_provider_tabs_without_inventing_admission(): void {
 		$tabs = array();
 		foreach ( array( 'portability', 'documentation', 'troubleshooting', 'gh', 'bb', 'unknown' ) as $key ) {

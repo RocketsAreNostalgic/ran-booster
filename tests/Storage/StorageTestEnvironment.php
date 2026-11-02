@@ -431,7 +431,7 @@ namespace RAN\Tests\Storage {
 					return null;
 				}
 				foreach ( array_keys( $GLOBALS['ran_booster_storage_test_options'] ) as $name ) {
-					if ( str_starts_with( $name, 'ran_booster_' ) ) {
+					if ( is_string( $name ) && str_starts_with( $name, 'ran_booster_' ) ) {
 						return $name;
 					}
 				}

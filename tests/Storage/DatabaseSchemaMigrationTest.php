@@ -232,7 +232,12 @@ final class DatabaseSchemaMigrationTest extends RANBoosterTestCase {
 			if ( 'option' === $state ) {
 				$ran_booster_storage_test_options['ran_booster_legacy'] = 'existing';
 			} elseif ( 'activity' === $state ) {
-				$wpdb->schema_tables['wp_ran_booster_activity'] = array();
+				$wpdb->schema_tables['wp_ran_booster_activity'] = array(
+					'engine'         => 'InnoDB',
+					'columns'        => array(),
+					'columnMetadata' => array(),
+					'indexes'        => array(),
+				);
 			} else {
 				$wpdb->fresh_option_read_failure = true;
 			}

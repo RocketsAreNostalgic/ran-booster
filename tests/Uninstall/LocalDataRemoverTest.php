@@ -25,6 +25,7 @@ use RAN\Secrets\SecretsFile;
 use RAN\Secrets\SiteKeyStore;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 use RAN\Storage\Database;
+use RAN\Storage\GitHubSelectionStore;
 use RAN\Uninstall\LocalDataRemover;
 use RAN\Settings\GeneralPreferenceStore;
 use RAN\WordPress\CoreSelfUpdateCheck;
@@ -63,6 +64,7 @@ final class LocalDataRemoverTest extends TestCase {
 		$GLOBALS['ran_booster_uninstall_options']                           = array(
 			OnboardingPresenter::PRESENTATION_OPTION      => 'onboarding',
 			Database::VERSION_OPTION                      => '5.0',
+			GitHubSelectionStore::OPTION                  => $this->selection_json(),
 			\RAN\Activity\ActivityStore::VERSION_OPTION   => '1',
 			CredentialExpiryObservationStore::OPTION_NAME => array( 'profiles' => array() ),
 			PublicRepositoryLookupProfileStore::OPTION_NAME => array( 'profiles' => array() ),
@@ -162,6 +164,171 @@ final class LocalDataRemoverTest extends TestCase {
 		);
 	}
 
+
+	/** @return iterable<string, array{string, ?string, mixed, mixed}> */
+	public static function unfinished_attempts(): iterable {
+		yield 'GitHub queued' => array( 'gh', 'queued', null, null );
+		yield 'Bitbucket queued' => array( 'bb', 'queued', null, null );
+		yield 'GitHub running' => array( 'gh', 'running', null, null );
+		yield 'Bitbucket running' => array( 'bb', 'running', null, null );
+		yield 'attention unresolved' => array( 'bb', 'needs_attention', null, null );
+		yield 'attention missing actor' => array( 'gh', 'needs_attention', '2026-01-01 00:00:00', null );
+		yield 'attention missing time' => array( 'bb', 'needs_attention', null, 7 );
+		yield 'unknown state' => array( 'bb', 'pending', null, null );
+		yield 'missing state' => array( 'gh', null, null, null );
+		yield 'noncanonical state' => array( 'bb', 'SUCCEEDED', null, null );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	#[DataProvider( 'unfinished_attempts' )]
+	public function test_unfinished_attempt_refuses_before_any_destructive_step( string $provider, ?string $state, mixed $resolved_at, mixed $resolved_by ): void {
+		$this->setUp();
+		$this->database->attempts = array(
+			array(
+				'provider'    => $provider,
+				'state'       => $state,
+				'resolved_at' => $resolved_at,
+				'resolved_by' => $resolved_by,
+			),
+		);
+		$this->assert_preflight_refuses_without_mutation();
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_terminal_and_resolved_attempts_do_not_block_cleanup(): void {
+		$this->setUp();
+		$this->database->attempts = array(
+			array(
+				'provider'    => 'gh',
+				'state'       => 'succeeded',
+				'resolved_at' => null,
+				'resolved_by' => null,
+			),
+			array(
+				'provider'    => 'bb',
+				'state'       => 'failed',
+				'resolved_at' => null,
+				'resolved_by' => null,
+			),
+			array(
+				'provider'    => 'bb',
+				'state'       => 'needs_attention',
+				'resolved_at' => '2026-01-01 00:00:00',
+				'resolved_by' => 7,
+			),
+		);
+		$this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+		self::assertArrayNotHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_native_marker_and_malformed_selection_refuse_before_cleanup(): void {
+		foreach ( array( $this->selection_json( true ), '{malformed' ) as $selection ) {
+			$this->setUp();
+			$GLOBALS['ran_booster_uninstall_options'][ GitHubSelectionStore::OPTION ] = $selection;
+			$this->assert_preflight_refuses_without_mutation();
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_read_errors_and_unexpected_missing_journal_refuse_before_cleanup(): void {
+		foreach ( array( 'SELECT option_name FROM', 'SELECT option_name, option_value, autoload', 'information_schema.TABLES', 'SELECT id FROM' ) as $failure ) {
+			$this->setUp();
+			$this->database->read_failure_contains = $failure;
+			$this->assert_preflight_refuses_without_mutation();
+		}
+		foreach ( array( 'version', 'selection' ) as $remaining ) {
+			$this->setUp();
+			$this->database->tables = array_values( array_diff( $this->database->tables, array( 'wp_ran_booster_deployment_attempts' ) ) );
+			unset( $GLOBALS['ran_booster_uninstall_options'][ 'version' === $remaining ? GitHubSelectionStore::OPTION : Database::VERSION_OPTION ] );
+			$this->assert_preflight_refuses_without_mutation();
+		}
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_absent_journal_and_authorities_allow_repeat_cleanup(): void {
+		$this->setUp();
+		unset( $GLOBALS['ran_booster_uninstall_options'][ GitHubSelectionStore::OPTION ], $GLOBALS['ran_booster_uninstall_options'][ Database::VERSION_OPTION ] );
+		$this->database->tables = array_values( array_diff( $this->database->tables, array( 'wp_ran_booster_deployment_attempts' ) ) );
+		$remover                = $this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) );
+		$remover->remove();
+		$remover->remove();
+		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_undeletable_selection_fails_after_earlier_cleanup_without_losing_unrelated_options(): void {
+		$this->setUp();
+		$GLOBALS['ran_booster_uninstall_undeletable_option'] = GitHubSelectionStore::OPTION;
+		try {
+			$this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+			self::fail( 'The selection must be verifiably removed.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertSame( 'Booster options could not be removed.', $failure->getMessage() );
+		}
+		self::assertArrayHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayNotHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
+	}
+
+	private function assert_preflight_refuses_without_mutation(): void {
+		$options = $GLOBALS['ran_booster_uninstall_options'];
+		$tables  = $this->database->tables;
+		$secrets = $this->createMock( SecretsFile::class );
+		$secrets->method( 'path' )->willReturn( null );
+		$secrets->expects( self::never() )->method( 'delete_managed_storage' );
+		try {
+			$this->remover( $secrets, $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+			self::fail( 'Unverifiable or unfinished custody must refuse cleanup.' );
+		} catch ( RuntimeException $failure ) {
+			self::assertStringContainsString( 'before cleanup', $failure->getMessage() );
+		}
+		self::assertSame( $options, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertSame( $tables, $this->database->tables );
+		self::assertSame( array(), $GLOBALS['ran_booster_uninstall_deleted_options'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_uninstall_cron_calls'] );
+	}
+
+	private function selection_json( bool $native = false ): string {
+		$declaration = new \RAN\RepositoryProvider\GitHubReplacementDeclaration(
+			array(
+				'plugin_basename'        => 'ran-booster/ran-booster.php',
+				'implementation_id'      => 'fixture',
+				'compatibility_revision' => '1',
+				'provider_api_version'   => 15,
+				'api_credential_formats' => array(),
+				'webhook_signing_format' => null,
+				'facets'                 => array(),
+			)
+		);
+		$manifest    = get_object_vars( $declaration );
+		unset( $manifest['implementation_fingerprint'] );
+		$state = array(
+			'schema'               => 1,
+			'selection_generation' => 0,
+			'selected'             => 'bundled',
+			'declaration'          => $manifest,
+			'approval'             => 'approved',
+			'approved_api_formats' => array(),
+		);
+		if ( $native ) {
+			$state['native_mutation'] = array(
+				'selection_generation' => 0,
+				'owner_tag'            => str_repeat( 'a', 32 ),
+				'target_type'          => 'plugin',
+				'installed_identity'   => 'fixture/fixture.php',
+				'phase'                => 'started',
+			);
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- The selection store requires canonical throwing JSON encoding.
+		return json_encode( $state, JSON_THROW_ON_ERROR );
+	}
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]

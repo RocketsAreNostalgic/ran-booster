@@ -35,7 +35,7 @@ try {
 		esc_html(
 			sprintf(
 				/* translators: %s: stable uninstall diagnostic code. */
-				__( 'RAN Booster could not safely remove all of its local data. WordPress kept the plugin files. Diagnostic code: %s. Reactivate Booster, review Secure credential storage in Settings, correct the reported problem, then try Delete again.', 'ran-booster' ),
+				__( 'RAN Booster could not safely remove all of its local data. WordPress kept the plugin files. Diagnostic code: %s. Some local data may already have been removed. Resolve the reported problem before retrying Delete. Reactivating Booster does not restore removed data.', 'ran-booster' ),
 				$ran_booster_diagnostic
 			)
 		),

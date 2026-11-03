@@ -10322,7 +10322,7 @@ msgstr ""
 msgid "Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages ran-booster-store.json within it."
 msgstr ""
 
-#: views/settings-storage.php:232
+#: views/settings-storage.php:234
 msgid "Create the owner-only private directories:"
 msgstr ""
 
@@ -10366,11 +10366,11 @@ msgstr ""
 msgid "Copy WP-CLI command"
 msgstr ""
 
-#: views/settings-storage.php:275
+#: views/settings-storage.php:277
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
-#: views/settings-storage.php:276
+#: views/settings-storage.php:278
 msgid "Manual storage override"
 msgstr ""
 

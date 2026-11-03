@@ -162,6 +162,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( '<canary>', $html );
 		self::assertStringContainsString( 'readonly aria-label="Directory command 1">mkdir -p -- &#039;/private/&lt;canary&gt;&#039;</textarea>', $html );
 		self::assertStringContainsString( 'readonly aria-label="Directory command 2">test ! -L &#039;/private/&lt;/textarea&gt;&lt;script&gt;&#039;</textarea>', $html );
+		self::assertMatchesRegularExpression( '~<ol>\s*<li>\s*<p>Create the owner-only private directories:</p>.*?</li>\s*<li>\s*<p>Then choose one configuration method, not both:</p>~s', $html );
 		self::assertStringContainsString( 'aria-label="Copy directory command 1"', $html );
 		self::assertStringContainsString( 'aria-label="Copy directory command 2"', $html );
 		self::assertStringContainsString( 'readonly aria-label="wp-config.php line">' . esc_textarea( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/<canary>' );" ) . '</textarea>', $html );

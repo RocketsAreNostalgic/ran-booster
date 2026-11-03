@@ -19,7 +19,10 @@ function loadFunction(name, dependencies = {}) {
 		},
 		...dependencies,
 	};
-	const signature = `\tfunction ${name}(`;
+	const signature =
+		name === 'copyToClipboard'
+			? `\tasync function ${name}(`
+			: `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
 	assert.notEqual(start, -1, `The ${name} function must exist.`);
@@ -171,6 +174,8 @@ function fixture({ clipboard, crypto, secretValue = '' } = {}) {
 		},
 	};
 	globalThis.window = {
+		setTimeout: () => 1,
+		clearTimeout: () => {},
 		btoa(binary) {
 			return Buffer.from(binary, 'binary').toString('base64');
 		},
@@ -192,11 +197,19 @@ function fixture({ clipboard, crypto, secretValue = '' } = {}) {
 	};
 }
 
+const clipboardStates = new WeakMap();
+const resetClipboard = loadFunction('resetClipboard', { clipboardStates });
+const copyToClipboard = loadFunction('copyToClipboard', {
+	clipboardStates,
+	resetClipboard,
+});
 const generateSecureBase64Url = loadFunction('generateSecureBase64Url');
 const initSecretVisibility = loadFunction('initSecretVisibility');
 const initGeneratedSecretTools = loadFunction('initGeneratedSecretTools', {
 	generateSecureBase64Url,
 	initSecretVisibility,
+	resetClipboard,
+	copyToClipboard,
 });
 const accessSecretToolResets = new WeakMap();
 const webhookSecretToolResets = new WeakMap();
@@ -213,7 +226,10 @@ const initWebhookSecretTools = loadFunction('initWebhookSecretTools', {
 });
 const ensureWebhookTargetOption = loadFunction('ensureWebhookTargetOption');
 const updateWebhookFields = loadFunction('updateWebhookFields');
-const initWebhookUrlCopy = loadFunction('initWebhookUrlCopy');
+const initWebhookUrlCopy = loadFunction('initWebhookUrlCopy', {
+	resetClipboard,
+	copyToClipboard,
+});
 
 function initialize(options) {
 	const state = fixture(options);
@@ -283,7 +299,7 @@ test('copy and submission match the server-normalized secret', async () => {
 		assert.deepEqual(copied, ['exact-manual-webhook-secret-value']);
 		assert.equal(state.secret.value, 'exact-manual-webhook-secret-value');
 		assert.equal(state.status.textContent, 'Secret copied.');
-		assert.equal(state.copy.getAttribute('aria-label'), 'Secret copied');
+		assert.equal(state.copy.getAttribute('aria-label'), 'Secret copied.');
 		assert.equal(state.copyIcon.getAttribute('hidden'), '');
 		assert.equal(state.copySuccessIcon.getAttribute('hidden'), null);
 		assert.doesNotMatch(state.status.textContent, /exact-manual/);
@@ -865,6 +881,8 @@ test('payload URL copy uses the exact displayed endpoint', async () => {
 		},
 	};
 	globalThis.window = {
+		setTimeout: () => 1,
+		clearTimeout: () => {},
 		navigator: {
 			clipboard: {
 				async writeText(value) {
@@ -878,7 +896,8 @@ test('payload URL copy uses the exact displayed endpoint', async () => {
 		initWebhookUrlCopy();
 		await copy.listeners.get('click')();
 		assert.deepEqual(copied, [input.value]);
-		assert.equal(copy.textContent, 'URL copied');
+		assert.equal(copy.textContent, 'Copy URL');
+		assert.equal(copy.classList.contains('is-copied'), true);
 		assert.equal(status.textContent, 'Payload URL copied.');
 		assert.equal(status.classList.contains('screen-reader-text'), true);
 	} finally {
@@ -912,7 +931,11 @@ test('payload URL copy failure selects the URL for manual copying', async () => 
 			return selector === '[data-webhook-url-tools]' ? [root] : [];
 		},
 	};
-	globalThis.window = { navigator: {} };
+	globalThis.window = {
+		navigator: {},
+		setTimeout: () => 1,
+		clearTimeout: () => {},
+	};
 
 	try {
 		initWebhookUrlCopy();
@@ -956,6 +979,8 @@ test('pending URL outcomes cannot overwrite changed, detached or newer state', a
 		const pending = [];
 		globalThis.document = { querySelectorAll: () => [root] };
 		globalThis.window = {
+			setTimeout: () => 1,
+			clearTimeout: () => {},
 			navigator: {
 				clipboard: {
 					writeText: () =>
@@ -980,6 +1005,7 @@ test('pending URL outcomes cannot overwrite changed, detached or newer state', a
 			let second;
 			if (scenario === 'repeat') {
 				second = copy.listeners.get('click')();
+				assert.equal(pending.length, 1);
 			}
 			if (scenario === 'rejected') {
 				pending[0].reject(new Error('denied'));
@@ -987,10 +1013,13 @@ test('pending URL outcomes cannot overwrite changed, detached or newer state', a
 				pending[0].resolve();
 			}
 			await first;
-			assert.equal(status.textContent, '', scenario);
+			assert.equal(
+				status.textContent,
+				scenario === 'repeat' ? 'URL copied.' : '',
+				scenario
+			);
 			assert.equal(input.focusCount, 0, scenario);
 			if (second) {
-				pending[1].resolve();
 				await second;
 				assert.equal(status.textContent, 'URL copied.');
 			}

@@ -9,7 +9,10 @@ const source = fs.readFileSync(
 );
 
 function loadFunction(name, dependencies = {}) {
-	const signature = `\tfunction ${name}(`;
+	const signature =
+		name === 'copyToClipboard'
+			? `\tasync function ${name}(`
+			: `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
 	assert.notEqual(start, -1, `The ${name} function must exist.`);
@@ -40,11 +43,19 @@ function loadFunction(name, dependencies = {}) {
 	)(...Object.values(dependencies));
 }
 
+const clipboardStates = new WeakMap();
+const resetClipboard = loadFunction('resetClipboard', { clipboardStates });
+const copyToClipboard = loadFunction('copyToClipboard', {
+	clipboardStates,
+	resetClipboard,
+});
 const generateSecureBase64Url = loadFunction('generateSecureBase64Url');
 const initSecretVisibility = loadFunction('initSecretVisibility');
 const initGeneratedSecretTools = loadFunction('initGeneratedSecretTools', {
 	generateSecureBase64Url,
 	initSecretVisibility,
+	resetClipboard,
+	copyToClipboard,
 });
 
 function control(value = '') {
@@ -180,6 +191,8 @@ function fixture({ clipboard, crypto, passwordValue = '' } = {}) {
 		},
 	};
 	globalThis.window = {
+		setTimeout: () => 1,
+		clearTimeout: () => {},
 		btoa(binary) {
 			return Buffer.from(binary, 'binary').toString('base64');
 		},
@@ -286,8 +299,8 @@ test('copy preserves the exact manual password and tracks empty input', async ()
 			state.status.classList.contains('screen-reader-text'),
 			true
 		);
-		assert.equal(state.copy.getAttribute('aria-label'), 'Password copied');
-		assert.equal(state.copy.getAttribute('title'), 'Password copied');
+		assert.equal(state.copy.getAttribute('aria-label'), 'Password copied.');
+		assert.equal(state.copy.getAttribute('title'), 'Password copied.');
 		assert.equal(state.copyIcon.getAttribute('hidden'), '');
 		assert.equal(state.copySuccessIcon.getAttribute('hidden'), null);
 		assert.doesNotMatch(
@@ -600,14 +613,17 @@ test('pending password outcomes cannot overwrite changed, reset, detached or new
 				pending[0].resolve();
 			}
 			await first;
-			assert.equal(state.status.textContent, '', scenario);
+			assert.equal(
+				state.status.textContent,
+				scenario === 'repeat' ? 'Password copied.' : '',
+				scenario
+			);
 			assert.equal(
 				state.copy.getAttribute('aria-label'),
-				'Copy password',
+				scenario === 'repeat' ? 'Password copied.' : 'Copy password',
 				scenario
 			);
 			if (second) {
-				pending[1].resolve();
 				await second;
 				assert.equal(state.status.textContent, 'Password copied.');
 			}

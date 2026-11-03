@@ -13,8 +13,13 @@ function fixture(clipboard, text = '/private/proposed path') {
 	const timers = new Map();
 	const selected = [];
 	const value = { textContent: text, isConnected: true };
+	const statusClasses = new Set();
 	const status = {
 		textContent: '',
+		classList: {
+			add: (name) => statusClasses.add(name),
+			remove: (name) => statusClasses.delete(name),
+		},
 		dataset: {
 			copiedMessage: 'Copied',
 			copyFailedMessage: 'Select and copy',
@@ -26,7 +31,11 @@ function fixture(clipboard, text = '/private/proposed path') {
 		classList: {
 			add: (name) => classes.add(name),
 			remove: (name) => classes.delete(name),
+			toggle: (name, on) =>
+				on ? classes.add(name) : classes.delete(name),
 		},
+		getAttribute: () => 'Copy',
+		setAttribute() {},
 		closest: () => root,
 	};
 	const root = {
@@ -59,7 +68,11 @@ function fixture(clipboard, text = '/private/proposed path') {
 		},
 	};
 	value.ownerDocument = { ...document, defaultView: window };
-	vm.runInNewContext(source, { document, window, wp: { i18n: {} } });
+	vm.runInNewContext(source, {
+		document,
+		window,
+		wp: { i18n: { __: (message) => message } },
+	});
 	const event = {
 		target: {
 			closest: (selector) =>
@@ -70,6 +83,8 @@ function fixture(clipboard, text = '/private/proposed path') {
 		click: () => listeners.get('click')(event),
 		value,
 		status,
+		statusClasses,
+		window,
 		button,
 		classes,
 		selected,
@@ -86,6 +101,7 @@ test('copies the current displayed value and resets confirmed feedback', async (
 	assert.deepEqual(copied, ['/actual & current']);
 	assert.equal(f.status.textContent, 'Copied');
 	assert.equal(f.classes.has('is-copied'), true);
+	assert.equal(f.statusClasses.has('screen-reader-text'), true);
 	[...f.timers.values()][0]();
 	assert.equal(f.status.textContent, '');
 });
@@ -103,6 +119,7 @@ test('denied and unavailable clipboard select the displayed value and report fai
 		await f.click();
 		assert.deepEqual(f.selected, [f.value]);
 		assert.equal(f.status.textContent, 'Select and copy');
+		assert.equal(f.statusClasses.has('screen-reader-text'), false);
 		assert.equal(f.button.disabled, false);
 	}
 });
@@ -133,4 +150,15 @@ test('changing a displayed value clears prior confirmed feedback', async () => {
 	assert.equal(f.status.textContent, '');
 	assert.equal(f.classes.has('is-copied'), false);
 	assert.equal(f.timers.size, 0);
+});
+
+test('selection failure gives truthful visible manual-copy guidance', async () => {
+	const f = fixture(undefined);
+	f.window.getSelection = () => null;
+	await f.click();
+	assert.equal(
+		f.status.textContent,
+		'Clipboard access failed. Select the value and use your browser copy command.'
+	);
+	assert.equal(f.statusClasses.has('screen-reader-text'), false);
 });

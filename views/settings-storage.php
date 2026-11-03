@@ -195,14 +195,29 @@ $has_storage_details          = null !== $secrets_storage;
 								<div class="ran-booster-disclosure__body">
 									<p><?php esc_html_e( 'Choose a durable absolute directory outside the public web root. Create it as a real directory owned by the PHP process user with mode 0700. Booster manages ran-booster-store.json and its lock inside it; if the file already exists, it must be owned by PHP with mode 0600.', 'ran-booster' ); ?></p>
 									<p><?php esc_html_e( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:', 'ran-booster' ); ?></p>
-									<code>define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );</code>
+									<?php
+									$snippet_value      = 'define( \'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR\', dirname( __DIR__ ) . \'/private/ran-booster\' );';
+									$snippet_label      = __( 'Example wp-config.php line', 'ran-booster' );
+									$snippet_copy_label = __( 'Copy example wp-config.php line', 'ran-booster' );
+									include __DIR__ . '/copy-setup-snippet.php';
+									?>
 									<p><?php esc_html_e( 'Or update the same constant with WP-CLI:', 'ran-booster' ); ?></p>
-									<code>wp config set RAN_BOOSTER_ENCRYPTED_SECRETS_DIR '/absolute/private/path' --type=constant</code>
+									<?php
+									$snippet_value      = 'wp config set RAN_BOOSTER_ENCRYPTED_SECRETS_DIR \'/absolute/private/path\' --type=constant';
+									$snippet_label      = __( 'Example WP-CLI command', 'ran-booster' );
+									$snippet_copy_label = __( 'Copy example WP-CLI command', 'ran-booster' );
+									include __DIR__ . '/copy-setup-snippet.php';
+									?>
 									<p><?php esc_html_e( 'For environment-managed hosting, replace the existing definition with this wp-config.php bridge. An environment variable by itself is not read by Booster:', 'ran-booster' ); ?></p>
-									<pre><code>$ran_booster_secrets_dir = getenv( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' );
-if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_secrets_dir ) ) {
-	define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $ran_booster_secrets_dir );
-}</code></pre>
+									<?php
+									$snippet_value      = '$ran_booster_secrets_dir = getenv( \'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR\' );
+if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secrets_dir ) ) {
+	define( \'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR\', $ran_booster_secrets_dir );
+}';
+									$snippet_label      = __( 'Environment-managed wp-config.php bridge', 'ran-booster' );
+									$snippet_copy_label = __( 'Copy environment-managed wp-config.php bridge', 'ran-booster' );
+									include __DIR__ . '/copy-setup-snippet.php';
+									?>
 									<p><?php esc_html_e( 'If credentials already exist, move the secrets file together with its matching database key; do not copy or reset only one half.', 'ran-booster' ); ?></p>
 								</div>
 							</details>
@@ -216,20 +231,39 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 									<p><?php esc_html_e( 'Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages ran-booster-store.json within it.', 'ran-booster' ); ?></p>
 									<p><?php esc_html_e( 'Create the owner-only private directories:', 'ran-booster' ); ?></p>
 									<ol>
-										<?php foreach ( $secrets_storage['directory_commands'] as $command ) { ?>
-											<li><code><?php echo esc_html( $command ); ?></code></li>
+										<?php foreach ( $secrets_storage['directory_commands'] as $command_index => $command ) { ?>
+											<li>
+												<?php
+												$snippet_value = $command;
+												/* translators: %d: directory command number. */
+												$snippet_label = sprintf( __( 'Directory command %d', 'ran-booster' ), $command_index + 1 );
+												/* translators: %d: directory command number. */
+												$snippet_copy_label = sprintf( __( 'Copy directory command %d', 'ran-booster' ), $command_index + 1 );
+												include __DIR__ . '/copy-setup-snippet.php';
+												?>
+											</li>
 										<?php } ?>
 									</ol>
 									<p><?php esc_html_e( 'Then choose one configuration method, not both:', 'ran-booster' ); ?></p>
 									<ul>
 										<li>
 											<?php esc_html_e( 'Add this line to wp-config.php:', 'ran-booster' ); ?>
-											<code><?php echo esc_html( $secrets_storage['config_alternatives']['define'] ); ?></code>
+											<?php
+												$snippet_value      = $secrets_storage['config_alternatives']['define'];
+												$snippet_label      = __( 'wp-config.php line', 'ran-booster' );
+												$snippet_copy_label = __( 'Copy wp-config.php line', 'ran-booster' );
+												include __DIR__ . '/copy-setup-snippet.php';
+											?>
 										</li>
 										<?php if ( '' !== $secrets_storage['config_alternatives']['wp_cli'] ) { ?>
 											<li>
 												<?php esc_html_e( 'Or run this WP-CLI command:', 'ran-booster' ); ?>
-												<code><?php echo esc_html( $secrets_storage['config_alternatives']['wp_cli'] ); ?></code>
+												<?php
+														$snippet_value      = $secrets_storage['config_alternatives']['wp_cli'];
+														$snippet_label      = __( 'WP-CLI command', 'ran-booster' );
+														$snippet_copy_label = __( 'Copy WP-CLI command', 'ran-booster' );
+														include __DIR__ . '/copy-setup-snippet.php';
+												?>
 											</li>
 										<?php } ?>
 									</ul>

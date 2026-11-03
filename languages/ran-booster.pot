@@ -6292,11 +6292,16 @@ msgid "Booster %s"
 msgstr ""
 
 #: views/copy-displayed-value.php:14
+#: views/copy-setup-snippet.php:16
 msgid "Copied to the clipboard."
 msgstr ""
 
 #: views/copy-displayed-value.php:14
 msgid "Clipboard access failed. The value is selected; use your browser copy command."
+msgstr ""
+
+#: views/copy-setup-snippet.php:16
+msgid "Clipboard access failed. The text is selected; use your browser copy command."
 msgstr ""
 
 #: views/debug-capture.php:43
@@ -10269,51 +10274,103 @@ msgstr ""
 msgid "Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:"
 msgstr ""
 
-#: views/settings-storage.php:199
-msgid "Or update the same constant with WP-CLI:"
+#: views/settings-storage.php:200
+msgid "Example wp-config.php line"
 msgstr ""
 
 #: views/settings-storage.php:201
+msgid "Copy example wp-config.php line"
+msgstr ""
+
+#: views/settings-storage.php:204
+msgid "Or update the same constant with WP-CLI:"
+msgstr ""
+
+#: views/settings-storage.php:207
+msgid "Example WP-CLI command"
+msgstr ""
+
+#: views/settings-storage.php:208
+msgid "Copy example WP-CLI command"
+msgstr ""
+
+#: views/settings-storage.php:211
 msgid "For environment-managed hosting, replace the existing definition with this wp-config.php bridge. An environment variable by itself is not read by Booster:"
 msgstr ""
 
-#: views/settings-storage.php:206
+#: views/settings-storage.php:217
+msgid "Environment-managed wp-config.php bridge"
+msgstr ""
+
+#: views/settings-storage.php:218
+msgid "Copy environment-managed wp-config.php bridge"
+msgstr ""
+
+#: views/settings-storage.php:221
 msgid "If credentials already exist, move the secrets file together with its matching database key; do not copy or reset only one half."
 msgstr ""
 
-#: views/settings-storage.php:213
+#: views/settings-storage.php:228
 msgid "Set up manually instead"
 msgstr ""
 
-#: views/settings-storage.php:213
+#: views/settings-storage.php:228
 msgid "Manual setup instructions"
 msgstr ""
 
-#: views/settings-storage.php:216
+#: views/settings-storage.php:231
 msgid "Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages ran-booster-store.json within it."
 msgstr ""
 
-#: views/settings-storage.php:217
+#: views/settings-storage.php:232
 msgid "Create the owner-only private directories:"
 msgstr ""
 
-#: views/settings-storage.php:223
+#. translators: %d: directory command number.
+#: views/settings-storage.php:239
+#, php-format
+msgid "Directory command %d"
+msgstr ""
+
+#. translators: %d: directory command number.
+#: views/settings-storage.php:241
+#, php-format
+msgid "Copy directory command %d"
+msgstr ""
+
+#: views/settings-storage.php:247
 msgid "Then choose one configuration method, not both:"
 msgstr ""
 
-#: views/settings-storage.php:226
+#: views/settings-storage.php:250
 msgid "Add this line to wp-config.php:"
 msgstr ""
 
-#: views/settings-storage.php:231
+#: views/settings-storage.php:253
+msgid "wp-config.php line"
+msgstr ""
+
+#: views/settings-storage.php:254
+msgid "Copy wp-config.php line"
+msgstr ""
+
+#: views/settings-storage.php:260
 msgid "Or run this WP-CLI command:"
 msgstr ""
 
-#: views/settings-storage.php:241
+#: views/settings-storage.php:263
+msgid "WP-CLI command"
+msgstr ""
+
+#: views/settings-storage.php:264
+msgid "Copy WP-CLI command"
+msgstr ""
+
+#: views/settings-storage.php:275
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
-#: views/settings-storage.php:242
+#: views/settings-storage.php:276
 msgid "Manual storage override"
 msgstr ""
 

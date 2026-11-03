@@ -137,6 +137,7 @@ final class OnboardingViewTest extends TestCase {
 				'manual_preflight'    => 'Verify that existing components are not symbolic links.',
 				'directory_commands'  => array(
 					"mkdir -p -- '/private/<canary>'",
+					"test ! -L '/private/</textarea><script>'",
 				),
 				'config_alternatives' => array(
 					'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/<canary>' );",
@@ -159,6 +160,16 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'absolute private directory outside the public web root on durable local storage', $html );
 		self::assertStringContainsString( 'owned by PHP, readable and writable by PHP, and mode 0700', $html );
 		self::assertStringNotContainsString( '<canary>', $html );
+		self::assertStringContainsString( 'readonly aria-label="Directory command 1">mkdir -p -- &#039;/private/&lt;canary&gt;&#039;</textarea>', $html );
+		self::assertStringContainsString( 'readonly aria-label="Directory command 2">test ! -L &#039;/private/&lt;/textarea&gt;&lt;script&gt;&#039;</textarea>', $html );
+		self::assertStringContainsString( 'aria-label="Copy directory command 1"', $html );
+		self::assertStringContainsString( 'aria-label="Copy directory command 2"', $html );
+		self::assertStringContainsString( 'readonly aria-label="wp-config.php line">' . esc_textarea( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/<canary>' );" ) . '</textarea>', $html );
+		self::assertStringContainsString( 'readonly aria-label="WP-CLI command">' . esc_textarea( "wp --path='/wordpress' config set RAN_BOOSTER_ENCRYPTED_SECRETS_DIR '/private/<canary>' --type=constant" ) . '</textarea>', $html );
+		self::assertStringContainsString( 'aria-label="Copy wp-config.php line"', $html );
+		self::assertStringContainsString( 'aria-label="Copy WP-CLI command"', $html );
+		self::assertStringContainsString( 'data-copy-failed-message="Clipboard access failed. The text is selected; use your browser copy command."', $html );
+		self::assertStringNotContainsString( '<script>', $html );
 	}
 
 	public function test_configured_storage_renders_status_path_and_source_without_setup_controls(): void {
@@ -328,7 +339,11 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'WordPress stores the encryption key separately.', $broken );
 		self::assertStringContainsString( 'Use a different storage location', $broken );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $broken );
-		self::assertStringContainsString( "dirname( __DIR__ ) . '/private/ran-booster'", $broken );
+		self::assertStringContainsString( 'dirname( __DIR__ ) . &#039;/private/ran-booster&#039;', $broken );
+		self::assertStringContainsString( 'aria-label="Copy example wp-config.php line"', $broken );
+		self::assertStringContainsString( 'aria-label="Copy example WP-CLI command"', $broken );
+		self::assertStringContainsString( 'aria-label="Copy environment-managed wp-config.php bridge"', $broken );
+		self::assertStringContainsString( 'if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; &#039;&#039; !== trim( $ran_booster_secrets_dir ) )', $broken );
 		self::assertStringContainsString( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition', $broken );
 		self::assertStringNotContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE'", $broken );
 		self::assertStringContainsString( 'getenv', $broken );

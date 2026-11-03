@@ -353,10 +353,47 @@
 	margin-block-end: 0;
 }
 
+.ran-booster-admin .ran-booster-setup-snippet textarea {
+	box-sizing: border-box;
+}
+
+.ran-booster-admin .ran-booster-onboarding__storage-facts {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.ran-booster-admin .ran-booster-copy-value {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	inline-size: 100%;
+	min-inline-size: 0;
+	max-inline-size: 100%;
+	column-gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-copy-value > code[data-copy-value] {
+	flex: 1 1 0;
+	min-inline-size: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.no-js .ran-booster-admin .ran-booster-copy-value > code[data-copy-value] {
+	overflow: visible;
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+
+.ran-booster-admin .ran-booster-copy-value__status {
+	flex-basis: 100%;
+}
+
 .ran-booster-admin .ran-booster-copy-value__button {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
+	flex: none;
 	min-inline-size: 32px;
 	min-block-size: 32px;
 	padding: 4px;

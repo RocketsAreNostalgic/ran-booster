@@ -996,9 +996,9 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:247
 #: views/attempts/index.php:168
 #: views/overview-dashboard.php:53
-#: views/overview-dashboard.php:73
 #: views/overview-dashboard.php:74
-#: views/overview-dashboard.php:75
+#: views/overview-dashboard.php:79
+#: views/overview-dashboard.php:84
 #: views/portability-review.php:101
 #: views/settings-general.php:105
 #: views/settings-general.php:152
@@ -1688,7 +1688,7 @@ msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:279
 #: RAN/Admin/PackagePagePresenter.php:291
-#: views/overview-dashboard.php:96
+#: views/overview-dashboard.php:94
 #: views/troubleshooting-installation.php:170
 msgid "Included with Booster"
 msgstr ""
@@ -4626,7 +4626,7 @@ msgstr ""
 
 #: RAN/Booster.php:261
 #: views/base.php:47
-#: views/overview-dashboard.php:78
+#: views/overview-dashboard.php:73
 msgid "Plugins"
 msgstr ""
 
@@ -4640,7 +4640,7 @@ msgstr ""
 
 #: RAN/Booster.php:263
 #: views/base.php:52
-#: views/overview-dashboard.php:82
+#: views/overview-dashboard.php:78
 msgid "Themes"
 msgstr ""
 
@@ -6432,7 +6432,7 @@ msgid "WordPress debugging documentation"
 msgstr ""
 
 #: views/documentation.php:48
-#: views/overview-dashboard.php:89
+#: views/overview-dashboard.php:87
 msgid "Git providers"
 msgstr ""
 
@@ -6526,7 +6526,7 @@ msgstr ""
 #: views/documentation.php:264
 #: views/documentation.php:418
 #: views/onboarding.php:171
-#: views/overview-dashboard.php:79
+#: views/overview-dashboard.php:75
 #: views/provider.php:660
 msgid "Install a plugin"
 msgstr ""
@@ -6870,7 +6870,7 @@ msgstr ""
 
 #: views/documentation.php:419
 #: views/onboarding.php:172
-#: views/overview-dashboard.php:83
+#: views/overview-dashboard.php:80
 #: views/provider.php:661
 msgid "Install a theme"
 msgstr ""
@@ -7494,32 +7494,32 @@ msgstr ""
 msgid "Managed packages"
 msgstr ""
 
-#: views/overview-dashboard.php:73
+#: views/overview-dashboard.php:74
 msgid "Plugins:"
 msgstr ""
 
-#: views/overview-dashboard.php:74
-msgid "Themes:"
-msgstr ""
-
-#: views/overview-dashboard.php:75
-msgid "Updates disabled:"
-msgstr ""
-
-#: views/overview-dashboard.php:80
+#: views/overview-dashboard.php:76
 msgid "Manage plugins"
 msgstr ""
 
-#: views/overview-dashboard.php:84
+#: views/overview-dashboard.php:79
+msgid "Themes:"
+msgstr ""
+
+#: views/overview-dashboard.php:81
 msgid "Manage themes"
 msgstr ""
 
-#: views/overview-dashboard.php:91
+#: views/overview-dashboard.php:84
+msgid "Updates disabled:"
+msgstr ""
+
+#: views/overview-dashboard.php:89
 msgid "No provider settings are currently available."
 msgstr ""
 
 #. translators: %s: selected provider plugin name.
-#: views/overview-dashboard.php:99
+#: views/overview-dashboard.php:97
 #: views/provider.php:241
 #: views/troubleshooting-installation.php:180
 #: views/troubleshooting-installation.php:186
@@ -7527,12 +7527,12 @@ msgstr ""
 msgid "Provided by %s"
 msgstr ""
 
-#: views/overview-dashboard.php:101
+#: views/overview-dashboard.php:99
 #: views/troubleshooting-installation.php:199
 msgid "Provider source unknown"
 msgstr ""
 
-#: views/overview-dashboard.php:106
+#: views/overview-dashboard.php:104
 msgid "Custom provider"
 msgstr ""
 

@@ -506,6 +506,70 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-overview-presentation', $html );
 	}
 
+	public function test_package_groups_preserve_inventory_and_destinations(): void {
+		$cases = array(
+			array(
+				array(
+					'plugins'  => 0,
+					'themes'   => 0,
+					'disabled' => 0,
+					'complete' => true,
+				),
+				array( '0', '0', '0' ),
+			),
+			array(
+				array(
+					'plugins'  => 12,
+					'themes'   => 3,
+					'disabled' => 2,
+					'complete' => true,
+				),
+				array( '12', '3', '2' ),
+			),
+			array(
+				array(
+					'plugins'  => null,
+					'themes'   => null,
+					'disabled' => null,
+					'complete' => false,
+				),
+				array( 'Unknown', 'Unknown', 'Unknown' ),
+			),
+			array(
+				array(
+					'plugins'  => 2,
+					'themes'   => null,
+					'disabled' => null,
+					'complete' => false,
+				),
+				array( '2', 'Unknown', 'Unknown' ),
+			),
+		);
+		foreach ( $cases as list( $inventory, $expected ) ) {
+			$html     = $this->render_view(
+				null,
+				null,
+				array(
+					'view'         => 'dashboard',
+					'inventory'    => $inventory,
+					'plugins_url'  => '/plugins',
+					'themes_url'   => '/themes',
+					'activity_url' => '/activity',
+				)
+			);
+			$document = new \DOMDocument();
+			$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+			$xpath = new \DOMXPath( $document );
+			self::assertSame( 'Plugins: ' . $expected[0], trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/p)' ) ) );
+			self::assertSame( 'Themes: ' . $expected[1], trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/p)' ) ) );
+			self::assertSame( 'Updates disabled: ' . $expected[2], trim( (string) $xpath->evaluate( 'string(//*[@aria-labelledby="ran-booster-overview-packages"]/p)' ) ) );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create', $xpath->evaluate( 'string(//div[@aria-label="Plugins"]/a[1]/@href)' ) );
+			self::assertSame( '/plugins', $xpath->evaluate( 'string(//div[@aria-label="Plugins"]/a[2]/@href)' ) );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-themes-create', $xpath->evaluate( 'string(//div[@aria-label="Themes"]/a[1]/@href)' ) );
+			self::assertSame( '/themes', $xpath->evaluate( 'string(//div[@aria-label="Themes"]/a[2]/@href)' ) );
+		}
+	}
+
 	public function test_presentation_controls_and_activity_availability(): void {
 		$extra = array(
 			'view'         => 'dashboard',

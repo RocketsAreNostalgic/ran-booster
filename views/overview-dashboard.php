@@ -69,21 +69,19 @@ $inventory = $onboarding['inventory'] ?? array(
 ?>
 <section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-packages">
 	<h3 id="ran-booster-overview-packages"><?php esc_html_e( 'Managed packages', 'ran-booster' ); ?></h3>
-	<ul class="ran-booster-onboarding__package-metrics">
-		<li><strong><?php esc_html_e( 'Plugins:', 'ran-booster' ); ?></strong> <?php echo esc_html( null === $inventory['plugins'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['plugins'] ); ?></li>
-		<li><strong><?php esc_html_e( 'Themes:', 'ran-booster' ); ?></strong> <?php echo esc_html( null === $inventory['themes'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['themes'] ); ?></li>
-		<li><strong><?php esc_html_e( 'Updates disabled:', 'ran-booster' ); ?></strong> <?php echo esc_html( null === $inventory['disabled'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['disabled'] ); ?></li>
-	</ul>
 	<div class="ran-booster-overview-package-actions">
 		<div class="ran-booster-overview-package-actions__group" role="group" aria-label="<?php esc_attr_e( 'Plugins', 'ran-booster' ); ?>">
-		<a class="button button-primary" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
-		<a class="button" href="<?php echo esc_url( $onboarding['plugins_url'] ); ?>"><?php esc_html_e( 'Manage plugins', 'ran-booster' ); ?></a>
+			<p><strong><?php esc_html_e( 'Plugins:', 'ran-booster' ); ?></strong> <?php echo esc_html( null === $inventory['plugins'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['plugins'] ); ?></p>
+			<a class="button" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
+			<a href="<?php echo esc_url( $onboarding['plugins_url'] ); ?>"><?php esc_html_e( 'Manage plugins', 'ran-booster' ); ?></a>
 		</div>
 		<div class="ran-booster-overview-package-actions__group" role="group" aria-label="<?php esc_attr_e( 'Themes', 'ran-booster' ); ?>">
-		<a class="button button-primary" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
-		<a class="button" href="<?php echo esc_url( $onboarding['themes_url'] ); ?>"><?php esc_html_e( 'Manage themes', 'ran-booster' ); ?></a>
+			<p><strong><?php esc_html_e( 'Themes:', 'ran-booster' ); ?></strong> <?php echo esc_html( null === $inventory['themes'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['themes'] ); ?></p>
+			<a class="button" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
+			<a href="<?php echo esc_url( $onboarding['themes_url'] ); ?>"><?php esc_html_e( 'Manage themes', 'ran-booster' ); ?></a>
 		</div>
 	</div>
+	<p><strong><?php esc_html_e( 'Updates disabled:', 'ran-booster' ); ?></strong> <?php echo esc_html( null === $inventory['disabled'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['disabled'] ); ?></p>
 </section>
 <section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-providers">
 	<h3 id="ran-booster-overview-providers"><?php esc_html_e( 'Git providers', 'ran-booster' ); ?></h3>

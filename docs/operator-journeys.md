@@ -66,7 +66,7 @@ extension data and manually authored configuration are not part of the cleanup.
 Delete also removes the saved GitHub provider selection and approval. Before
 removing data, Booster refuses recorded queued/running deployments, unresolved
 recovery records, a recorded native mutation, or custody it cannot verify. This
-is a preflight snapshot, not a lock against requests already running.
+is a preflight snapshot, not a lock against requests already running. The uninstall diagnostic identifies unfinished deployments, native recovery, or unverifiable custody and directs you to the appropriate next step.
 
 WordPress uninstall is sequential: if cleanup or later file deletion fails, some
 data may already be gone even when plugin files remain. Resolve the reported

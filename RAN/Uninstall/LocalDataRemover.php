@@ -98,8 +98,8 @@ class LocalDataRemover {
 			throw new RuntimeException( 'Bundled GitHub provider state could not be removed.' );
 		}
 		$this->clear_user_metadata();
-		$this->drop_tables();
 		$this->delete_options();
+		$this->drop_tables();
 
 		if ( null !== $config_path ) {
 			if ( null !== $sidecar_path ) {
@@ -140,7 +140,7 @@ class LocalDataRemover {
 				throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
 			}
 			if ( isset( $selection['native_mutation'] ) ) {
-				throw new RuntimeException( 'Booster has unfinished work that must be resolved before cleanup.' );
+				throw new RuntimeException( 'Booster has an unfinished native mutation that must be resolved before cleanup.' );
 			}
 		}
 		$table = $this->verified_table_prefix . 'ran_booster_deployment_attempts';

@@ -266,14 +266,20 @@ final class LocalDataRemoverTest extends TestCase {
 	public function test_undeletable_selection_fails_after_earlier_cleanup_without_losing_unrelated_options(): void {
 		$this->setUp();
 		$GLOBALS['ran_booster_uninstall_undeletable_option'] = GitHubSelectionStore::OPTION;
+		$remover = $this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) );
 		try {
-			$this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) )->remove();
+			$remover->remove();
 			self::fail( 'The selection must be verifiably removed.' );
 		} catch ( RuntimeException $failure ) {
 			self::assertSame( 'Booster options could not be removed.', $failure->getMessage() );
 		}
 		self::assertArrayHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertArrayNotHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
+		$GLOBALS['ran_booster_uninstall_undeletable_option'] = null;
+		$remover->remove();
+		self::assertNotContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
+		self::assertArrayNotHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
 	}
 
@@ -462,9 +468,10 @@ final class LocalDataRemoverTest extends TestCase {
 
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
-	public function test_database_failure_leaves_a_repeatable_partial_cleanup(): void {
+	#[DataProvider( 'failed_drop_tables' )]
+	public function test_database_failure_leaves_a_repeatable_partial_cleanup( string $failed_table ): void {
 		$this->setUp();
-		$this->database->failure_contains = 'wp_ran_booster_deployment_attempts';
+		$this->database->failure_contains = $failed_table;
 		$secrets                          = $this->secrets( null );
 		$secrets->method( 'delete_managed_storage' )
 			->willReturnCallback(
@@ -484,7 +491,10 @@ final class LocalDataRemoverTest extends TestCase {
 		}
 
 		self::assertNotContains( 'wp_ran_booster_packages', $this->database->tables );
-		self::assertContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
+		self::assertContains( $failed_table, $this->database->tables );
+		self::assertSame( 'wp_ran_booster_deployment_attempts' === $failed_table, in_array( 'wp_ran_booster_deployment_attempts', $this->database->tables, true ) );
+		self::assertArrayNotHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayNotHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 
 		$this->database->failure_contains = null;
 		$remover->remove();
@@ -497,6 +507,11 @@ final class LocalDataRemoverTest extends TestCase {
 			$this->database->tables
 		);
 		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
+	}
+
+	/** @return list<array{string}> */
+	public static function failed_drop_tables(): array {
+		return array( array( 'wp_ran_booster_deployment_attempts' ), array( 'wp_ran_booster_activity' ) );
 	}
 
 	#[RunInSeparateProcess]

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "14fa816bcb78732bfce1e61a9ee7e4e5",
+    "content-hash": "937cef85ae1f10458dbdded59c4d353f",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -189,16 +189,16 @@
         },
         {
             "name": "ran/wp-branch-updater",
-            "version": "v1.0.0-beta.13",
+            "version": "v1.0.0-beta.14",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater.git",
-                "reference": "b1cdb63d8fded52e372054a4461d0a056f9998d3"
+                "reference": "555ff7a35e0d1dd35f392e8d4d68f4af356a3271"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-branch-updater/zipball/b1cdb63d8fded52e372054a4461d0a056f9998d3",
-                "reference": "b1cdb63d8fded52e372054a4461d0a056f9998d3",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-wp-branch-updater/zipball/555ff7a35e0d1dd35f392e8d4d68f4af356a3271",
+                "reference": "555ff7a35e0d1dd35f392e8d4d68f4af356a3271",
                 "shasum": ""
             },
             "require": {
@@ -239,6 +239,9 @@
                 ],
                 "test:archive": [
                     "@php tests/archive-normalisation-baseline.php"
+                ],
+                "test:expanded-admission": [
+                    "@php tests/archive-expanded-admission.php"
                 ],
                 "test:prepared-archive": [
                     "@php tests/prepared-archive-facts.php"
@@ -290,6 +293,7 @@
                     "@test:contract",
                     "@test:architecture",
                     "@test:archive",
+                    "@test:expanded-admission",
                     "@test:prepared-archive",
                     "@test:runner",
                     "@test:hard-stop",
@@ -317,7 +321,7 @@
                 "security": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater/security/advisories/new",
                 "source": "https://github.com/RocketsAreNostalgic/ran-wp-branch-updater"
             },
-            "time": "2026-10-29T19:16:35+00:00"
+            "time": "2026-11-03T17:43:48+00:00"
         },
         {
             "name": "ran/wp-release-updater",

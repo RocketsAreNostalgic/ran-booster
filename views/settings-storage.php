@@ -93,12 +93,24 @@ $has_storage_details          = null !== $secrets_storage;
 								<?php if ( null !== $storage_directory ) { ?>
 									<div>
 										<dt><?php esc_html_e( 'Storage directory', 'ran-booster' ); ?></dt>
-										<dd><code><?php echo esc_html( $storage_directory ); ?></code></dd>
+										<dd>
+										<?php
+										$copy_value = $storage_directory;
+										$copy_label = __( 'Copy storage directory', 'ran-booster' );
+										include __DIR__ . '/copy-displayed-value.php';
+										?>
+										</dd>
 									</div>
 								<?php } ?>
 								<div>
 									<dt><?php esc_html_e( 'Storage file', 'ran-booster' ); ?></dt>
-									<dd><code><?php echo esc_html( $secrets_storage['candidate_path'] ); ?></code></dd>
+									<dd>
+									<?php
+									$copy_value = $secrets_storage['candidate_path'];
+									$copy_label = __( 'Copy storage file', 'ran-booster' );
+									include __DIR__ . '/copy-displayed-value.php';
+									?>
+									</dd>
 								</div>
 
 							<?php } ?>

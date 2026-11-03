@@ -352,3 +352,44 @@
 .ran-booster-admin .ran-booster-package-activity li:last-child {
 	margin-block-end: 0;
 }
+
+.ran-booster-admin .ran-booster-copy-value__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-inline-size: 32px;
+	min-block-size: 32px;
+	padding: 4px;
+	vertical-align: middle;
+}
+
+.ran-booster-admin .ran-booster-copy-value__button svg {
+	inline-size: 18px;
+	block-size: 18px;
+}
+
+.ran-booster-admin .ran-booster-copy-value__button.is-copied {
+	color: var(--ran-booster-status-ok);
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__report-copy
+	.ran-booster-copy-check,
+.ran-booster-admin
+	.ran-booster-troubleshooting__report-copy
+	.dashicons-yes
+	.ran-booster-copy-icon {
+	display: none;
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__report-copy
+	.dashicons-yes
+	.ran-booster-copy-check {
+	display: inline;
+}
+
+.no-js .ran-booster-admin .ran-booster-copy-value__button,
+.no-js .ran-booster-admin .ran-booster-troubleshooting__report-copy {
+	display: none;
+}

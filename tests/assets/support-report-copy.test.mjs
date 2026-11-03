@@ -186,6 +186,7 @@ test('copy reads the textarea at activation and announces success only after cli
 	reset();
 	assert.equal(current.classes.has('dashicons-clipboard'), true);
 	assert.equal(current.classes.has('dashicons-yes'), false);
+	assert.equal(current.status.textContent, '');
 });
 
 test('a repeat copy cancels the prior checkmark reset and resets before a denied retry', async () => {
@@ -378,4 +379,23 @@ test('download failure selects the report and announces manual save', async () =
 		current.status.textContent,
 		'Download failed. Select the report and save it manually.'
 	);
+});
+
+test('changed report while copy is pending receives no stale outcome', async () => {
+	for (const fails of [false, true]) {
+		let finish;
+		const click = fixture({
+			writeText: () =>
+				new Promise((resolve, reject) => {
+					finish = fails ? reject : resolve;
+				}),
+		});
+		const current = report('old');
+		const pending = click(current.event);
+		current.input.value = 'new';
+		finish();
+		await pending;
+		assert.equal(current.status.textContent, '');
+		assert.equal(current.input.selected, false);
+	}
 });

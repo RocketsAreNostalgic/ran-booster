@@ -76,7 +76,15 @@ if ( array() === $environment ) {
 					continue;
 				}
 				?>
-				<div><dt><?php echo esc_html( $label ); ?></dt><dd><code<?php echo in_array( $key, array( 'configuration', 'path_source' ), true ) ? ' class="ran-booster-onboarding__storage-inline"' : ''; ?>><?php echo esc_html( $value ); ?></code></dd></div>
+				<div><dt><?php echo esc_html( $label ); ?></dt><dd><?php if ( in_array( $key, array( 'configured_location', 'storage_file' ), true ) ) { ?>
+					<?php
+					$copy_value = $value;
+					$copy_label = 'configured_location' === $key ? __( 'Copy storage directory', 'ran-booster' ) : __( 'Copy storage file', 'ran-booster' );
+					include __DIR__ . '/copy-displayed-value.php';
+					?>
+				<?php } else { ?>
+					<code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $value ); ?></code>
+				<?php } ?></dd></div>
 			<?php } ?>
 		</dl>
 		<?php } else { ?>

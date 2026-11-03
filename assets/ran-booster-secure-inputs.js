@@ -5,6 +5,9 @@
 	const accessSecretToolResets = new WeakMap();
 	const webhookSecretToolResets = new WeakMap();
 	const supportReportCopyResets = new WeakMap();
+	const displayedValueCopyResets = new WeakMap();
+	const displayedValueCopyPending = new WeakSet();
+	const displayedValueCopyObservers = new WeakMap();
 	let activeCredentialButton = null;
 	let credentialRequestHandled = false;
 
@@ -42,6 +45,9 @@
 
 	document.addEventListener('htmx:afterSwap', handleProviderProfileSwap);
 	document.addEventListener('click', function (event) {
+		if (event.target.closest?.('[data-copy-value-button]')) {
+			return copyDisplayedValue(event);
+		}
 		if (event.target.closest?.('[data-support-report-download]')) {
 			downloadSupportReport(event);
 		} else {
@@ -52,6 +58,75 @@
 		'ran-booster:admin-mutation-success',
 		handleProviderProfileSuccess
 	);
+
+	async function copyDisplayedValue(event) {
+		const button = event.target.closest?.('[data-copy-value-button]');
+		const root = button?.closest('[data-copy-value-tools]');
+		const value = root?.querySelector('[data-copy-value]');
+		const status = root?.querySelector('[data-copy-value-status]');
+		if (
+			!value ||
+			!status ||
+			displayedValueCopyPending.has(button) ||
+			!value.textContent
+		) {
+			return;
+		}
+		const text = value.textContent;
+		window.clearTimeout(displayedValueCopyResets.get(button));
+		displayedValueCopyObservers.get(button)?.disconnect();
+		button.classList.remove('is-copied');
+		displayedValueCopyPending.add(button);
+		status.textContent = '';
+		try {
+			if (typeof window.navigator?.clipboard?.writeText !== 'function') {
+				throw new Error();
+			}
+			await window.navigator.clipboard.writeText(text);
+			if (value.isConnected && value.textContent === text) {
+				status.textContent = status.dataset.copiedMessage;
+				button.classList.add('is-copied');
+				const observer = new window.MutationObserver(() => {
+					if (value.textContent !== text) {
+						window.clearTimeout(
+							displayedValueCopyResets.get(button)
+						);
+						button.classList.remove('is-copied');
+						status.textContent = '';
+						observer.disconnect();
+					}
+				});
+				observer.observe(value, {
+					childList: true,
+					characterData: true,
+					subtree: true,
+				});
+				displayedValueCopyObservers.set(button, observer);
+				displayedValueCopyResets.set(
+					button,
+					window.setTimeout(() => {
+						button.classList.remove('is-copied');
+						status.textContent = '';
+						observer.disconnect();
+						displayedValueCopyObservers.delete(button);
+						displayedValueCopyResets.delete(button);
+					}, 2000)
+				);
+			}
+		} catch {
+			if (value.isConnected && value.textContent === text) {
+				const selection =
+					value.ownerDocument.defaultView.getSelection();
+				const range = value.ownerDocument.createRange();
+				range.selectNodeContents(value);
+				selection.removeAllRanges();
+				selection.addRange(range);
+				status.textContent = status.dataset.copyFailedMessage;
+			}
+		} finally {
+			displayedValueCopyPending.delete(button);
+		}
+	}
 
 	async function copySupportReport(event) {
 		const copy = event.target.closest?.('[data-support-report-copy]');
@@ -65,6 +140,7 @@
 		if (!input || !status || !icon) {
 			return;
 		}
+		const value = input.value;
 		window.clearTimeout(supportReportCopyResets.get(copy));
 		icon.classList.replace('dashicons-yes', 'dashicons-clipboard');
 		copy.disabled = true;
@@ -73,8 +149,8 @@
 			if (typeof window.navigator?.clipboard?.writeText !== 'function') {
 				throw new Error();
 			}
-			await window.navigator.clipboard.writeText(input.value);
-			if (!input.isConnected) {
+			await window.navigator.clipboard.writeText(value);
+			if (!input.isConnected || input.value !== value) {
 				return;
 			}
 			icon.classList.replace('dashicons-clipboard', 'dashicons-yes');
@@ -86,11 +162,12 @@
 						'dashicons-yes',
 						'dashicons-clipboard'
 					);
+					status.textContent = '';
 					supportReportCopyResets.delete(copy);
 				}, 2000)
 			);
 		} catch {
-			if (input.isConnected) {
+			if (input.isConnected && input.value === value) {
 				input.focus();
 				input.select();
 				status.textContent = status.dataset.copyFailedMessage;

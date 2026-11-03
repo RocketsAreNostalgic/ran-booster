@@ -312,13 +312,13 @@ final class TroubleshootingViewTest extends TestCase {
 				self::assertStringContainsString( htmlspecialchars( $value, ENT_QUOTES ), $html );
 			}
 			self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage"', $html );
-			self::assertStringContainsString( '<dt>Configuration constant</dt><dd><code class="ran-booster-onboarding__storage-inline">&lt;constant&gt;</code></dd>', $html );
+			self::assertStringContainsString( '<code class="ran-booster-onboarding__storage-inline">&lt;constant&gt;</code>', $html );
 			self::assertStringContainsString( '<summary>Storage details</summary>', $html );
 			self::assertStringContainsString( '>Open secure credential storage settings</a>', $html );
 			self::assertStringNotContainsString( '<form', $html );
 			self::assertStringContainsString( '<dt>Storage directory</dt>', $html );
 			self::assertStringContainsString( '<dt>Storage file</dt>', $html );
-			self::assertStringContainsString( '<dt>Path selection</dt><dd><code class="ran-booster-onboarding__storage-inline">Custom wp-config.php path</code></dd>', $html );
+			self::assertStringContainsString( '<code class="ran-booster-onboarding__storage-inline">Custom wp-config.php path</code>', $html );
 			self::assertStringContainsString( '<summary>Environment details</summary>', $html );
 			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary>Environment details</summary>', $html );
 			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open><summary>Environment details</summary>', $html );
@@ -910,7 +910,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<dt>Origin</dt><dd>Repository webhook</dd>', $html );
-		self::assertStringContainsString( '<dt>Git provider request ID</dt><dd><code>delivery-7</code></dd>', $html );
+		self::assertStringContainsString( '<code data-copy-value>delivery-7</code>', $html );
+		self::assertStringContainsString( 'aria-label="Copy Git provider request ID"', $html );
+		self::assertStringContainsString( 'aria-label="Copy support reference"', $html );
 		self::assertStringContainsString( 'name="_wpnonce" value="ran-booster-resolve-needs-attention"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="resolve-needs-attention"', $html );
 		self::assertStringContainsString( 'name="ran_booster[attempt_id]" value="7"', $html );
@@ -1170,7 +1172,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Sanitized JSON preview', $html );
 		self::assertStringContainsString( 'class="ran-booster-troubleshooting__report-field"', $html );
 		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy JSON report"', $html );
-		self::assertStringContainsString( '<span class="dashicons dashicons-clipboard" aria-hidden="true"></span></button>', $html );
+		self::assertStringContainsString( '<svg class="dashicons dashicons-clipboard"', $html );
 		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
 		self::assertStringContainsString( 'Download JSON report', $html );
 		self::assertStringContainsString( 'data-support-report-filename="ran-booster-support-20261031-120000.json"', $html );

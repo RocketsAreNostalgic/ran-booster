@@ -927,3 +927,75 @@ test('payload URL copy failure selects the URL for manual copying', async () => 
 		cleanup();
 	}
 });
+
+test('pending URL outcomes cannot overwrite changed, detached or newer state', async () => {
+	for (const scenario of [
+		'changed',
+		'rejected',
+		'detached',
+		'same-input',
+		'repeat',
+	]) {
+		const input = control('https://example.test/old');
+		const copy = control();
+		copy.dataset = { copiedLabel: 'URL copied', copyLabel: 'Copy URL' };
+		const status = control();
+		status.dataset = {
+			copiedMessage: 'URL copied.',
+			copyFailedMessage: 'Copy failed.',
+		};
+		const root = {
+			dataset: {},
+			querySelector: (selector) =>
+				({
+					'[data-webhook-url]': input,
+					'[data-webhook-url-copy]': copy,
+					'[data-webhook-url-status]': status,
+				})[selector],
+		};
+		const pending = [];
+		globalThis.document = { querySelectorAll: () => [root] };
+		globalThis.window = {
+			navigator: {
+				clipboard: {
+					writeText: () =>
+						new Promise((resolve, reject) =>
+							pending.push({ resolve, reject })
+						),
+				},
+			},
+		};
+		try {
+			initWebhookUrlCopy();
+			const first = copy.listeners.get('click')();
+			if (scenario === 'detached') {
+				input.isConnected = false;
+			}
+			if (scenario === 'changed' || scenario === 'rejected') {
+				input.value = 'https://example.test/new';
+			}
+			if (scenario === 'same-input') {
+				input.listeners.get('input')();
+			}
+			let second;
+			if (scenario === 'repeat') {
+				second = copy.listeners.get('click')();
+			}
+			if (scenario === 'rejected') {
+				pending[0].reject(new Error('denied'));
+			} else {
+				pending[0].resolve();
+			}
+			await first;
+			assert.equal(status.textContent, '', scenario);
+			assert.equal(input.focusCount, 0, scenario);
+			if (second) {
+				pending[1].resolve();
+				await second;
+				assert.equal(status.textContent, 'URL copied.');
+			}
+		} finally {
+			cleanup();
+		}
+	}
+});

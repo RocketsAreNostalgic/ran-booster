@@ -330,6 +330,7 @@
 			onInput,
 			normalizeValue,
 		} = options;
+		let copyGeneration = 0;
 		function showStatus(message, visuallyHidden = false) {
 			status.textContent = message || '';
 			status.classList.toggle(
@@ -364,6 +365,7 @@
 		);
 
 		function reset() {
+			copyGeneration += 1;
 			visibilityTools.reset();
 			updateCopyState();
 			resetCopyFeedback();
@@ -371,6 +373,8 @@
 		}
 
 		generate.addEventListener('click', function () {
+			copyGeneration += 1;
+			resetCopyFeedback();
 			try {
 				const generated = generateSecureBase64Url(byteLength);
 				input.value = generated;
@@ -394,8 +398,16 @@
 				return;
 			}
 
+			const generation = ++copyGeneration;
+			const isCurrent = () =>
+				generation === copyGeneration &&
+				input.isConnected !== false &&
+				copy.isConnected !== false &&
+				(normalizeValue ? normalizeValue(input.value) : input.value) ===
+					value;
 			try {
 				resetCopyFeedback();
+				showStatus('');
 				input.value = value;
 				if (
 					!window.navigator?.clipboard ||
@@ -405,12 +417,18 @@
 				}
 
 				await window.navigator.clipboard.writeText(value);
+				if (!isCurrent()) {
+					return;
+				}
 				copy.setAttribute('aria-label', copy.dataset.copiedLabel);
 				copy.setAttribute('title', copy.dataset.copiedLabel);
 				copyIcon.setAttribute('hidden', '');
 				copySuccessIcon.removeAttribute('hidden');
 				showStatus(status.dataset.copiedMessage, true);
 			} catch {
+				if (!isCurrent()) {
+					return;
+				}
 				resetCopyFeedback();
 				input.focus();
 				input.select();
@@ -419,6 +437,7 @@
 		});
 
 		input.addEventListener('input', function () {
+			copyGeneration += 1;
 			if (onInput) {
 				onInput();
 			}
@@ -757,8 +776,23 @@
 					return;
 				}
 				toolRoot.dataset.ranBoosterWebhookUrlCopyBound = 'true';
+				let copyGeneration = 0;
+				input.addEventListener('input', function () {
+					copyGeneration += 1;
+					copy.textContent = copy.dataset.copyLabel;
+					status.textContent = '';
+				});
 
 				copy.addEventListener('click', async function () {
+					const value = input.value;
+					const generation = ++copyGeneration;
+					copy.textContent = copy.dataset.copyLabel;
+					status.textContent = '';
+					const isCurrent = () =>
+						generation === copyGeneration &&
+						input.isConnected !== false &&
+						copy.isConnected !== false &&
+						input.value === value;
 					try {
 						if (
 							!window.navigator?.clipboard ||
@@ -767,11 +801,17 @@
 						) {
 							throw new Error();
 						}
-						await window.navigator.clipboard.writeText(input.value);
+						await window.navigator.clipboard.writeText(value);
+						if (!isCurrent()) {
+							return;
+						}
 						copy.textContent = copy.dataset.copiedLabel;
 						status.textContent = status.dataset.copiedMessage;
 						status.classList.add('screen-reader-text');
 					} catch {
+						if (!isCurrent()) {
+							return;
+						}
 						copy.textContent = copy.dataset.copyLabel;
 						input.focus();
 						input.select();

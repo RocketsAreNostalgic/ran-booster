@@ -543,3 +543,76 @@ test('unprotected export bypasses password checks and clears stale warnings', ()
 		cleanup();
 	}
 });
+
+test('pending password outcomes cannot overwrite changed, reset, detached or newer state', async () => {
+	for (const scenario of [
+		'changed',
+		'rejected',
+		'detached',
+		'same-input',
+		'reset',
+		'generate',
+		'repeat',
+	]) {
+		const pending = [];
+		const state = initialize({
+			clipboard: {
+				writeText: () =>
+					new Promise((resolve, reject) =>
+						pending.push({ resolve, reject })
+					),
+			},
+			crypto: { getRandomValues() {} },
+		});
+		try {
+			state.password.value = 'old-synthetic';
+			state.password.listeners.get('input')();
+			const first = state.copy.listeners.get('click')();
+			if (scenario === 'detached') {
+				state.password.isConnected = false;
+			}
+			if (scenario === 'changed' || scenario === 'rejected') {
+				state.password.value = 'new-synthetic';
+				state.password.listeners.get('input')();
+			}
+			if (scenario === 'same-input') {
+				state.password.listeners.get('input')();
+			}
+			if (scenario === 'reset') {
+				state.credentialChoice.checked = false;
+				state.form.listeners.get(
+					'ran-booster:portability-credentials-changed'
+				)();
+				state.password.value = 'old-synthetic';
+			}
+			if (scenario === 'generate') {
+				state.generate.listeners.get('click')();
+				state.password.value = 'old-synthetic';
+				state.status.textContent = '';
+			}
+			let second;
+			if (scenario === 'repeat') {
+				second = state.copy.listeners.get('click')();
+			}
+			if (scenario === 'rejected') {
+				pending[0].reject(new Error('denied'));
+			} else {
+				pending[0].resolve();
+			}
+			await first;
+			assert.equal(state.status.textContent, '', scenario);
+			assert.equal(
+				state.copy.getAttribute('aria-label'),
+				'Copy password',
+				scenario
+			);
+			if (second) {
+				pending[1].resolve();
+				await second;
+				assert.equal(state.status.textContent, 'Password copied.');
+			}
+		} finally {
+			cleanup();
+		}
+	}
+});

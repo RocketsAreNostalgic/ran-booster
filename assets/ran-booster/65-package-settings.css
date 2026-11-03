@@ -937,16 +937,18 @@
 }
 
 .ran-booster-admin .ran-booster-settings__history-fields {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
-	gap: 0 var(--ran-booster-space-20);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 var(--ran-booster-space-24);
 }
 
 .ran-booster-admin .ran-booster-settings__history-fields > div {
 	min-inline-size: 0;
+	max-inline-size: 100%;
 }
 
 .ran-booster-admin .ran-booster-settings__history-fields input[type="number"] {
+	inline-size: 8em;
 	margin-inline: 0;
 }
 

@@ -21,6 +21,8 @@ use RAN\Secrets\PrivateLocationCandidateResolver;
 use RAN\Secrets\SecretsFile;
 use RAN\Secrets\WpConfigSecretsPathWriter;
 use RAN\Storage\Database;
+use RAN\Storage\GitHubSelectionStore;
+use RAN\Storage\SchemaConnection;
 use RuntimeException;
 
 /**
@@ -39,6 +41,7 @@ class LocalDataRemover {
 		GeneralPreferenceStore::OPTION_NAME,
 		\RAN\Troubleshooting\DiagnosticRunStore::OPTION_NAME,
 		\RAN\WordPress\CoreSelfUpdateCheck::OPTION_NAME,
+		GitHubSelectionStore::OPTION,
 	);
 
 	private const USER_META_KEYS = array(
@@ -85,6 +88,7 @@ class LocalDataRemover {
 
 		$this->debug_capture->assert_managed_storage_deletable();
 		$this->assert_automatic_directories_removable( $sidecar_path );
+		$this->assert_no_recorded_custody();
 
 		$this->debug_capture->delete_managed_storage();
 		$this->secrets->delete_managed_storage();
@@ -94,8 +98,8 @@ class LocalDataRemover {
 			throw new RuntimeException( 'Bundled GitHub provider state could not be removed.' );
 		}
 		$this->clear_user_metadata();
-		$this->drop_tables();
 		$this->delete_options();
+		$this->drop_tables();
 
 		if ( null !== $config_path ) {
 			if ( null !== $sidecar_path ) {
@@ -106,6 +110,75 @@ class LocalDataRemover {
 		}
 
 		$this->remove_empty_automatic_directories( $sidecar_path );
+	}
+
+	/** A read-only snapshot; it does not exclude work that begins after this check. */
+	private function assert_no_recorded_custody(): void {
+		$database = $this->database;
+		if ( ( ! $database instanceof \wpdb && ! $database instanceof SchemaConnection ) || ! isset( $database->options ) || ! is_string( $database->options ) || '' === $database->options ) {
+			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+		}
+		$options = $database->prepare(
+			'SELECT option_name FROM %i WHERE BINARY option_name IN (BINARY %s, BINARY %s)',
+			$database->options,
+			Database::VERSION_OPTION,
+			GitHubSelectionStore::OPTION
+		);
+		$rows    = $this->custody_rows( $database, $options );
+		$present = array();
+		foreach ( $rows as $row ) {
+			$name = $row->option_name ?? null;
+			if ( ! is_string( $name ) || ! in_array( $name, array( Database::VERSION_OPTION, GitHubSelectionStore::OPTION ), true ) || isset( $present[ $name ] ) ) {
+				throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+			}
+			$present[ $name ] = true;
+		}
+		if ( isset( $present[ GitHubSelectionStore::OPTION ] ) ) {
+			try {
+				$selection = ( new GitHubSelectionStore( $database, $database->options ) )->read();
+			} catch ( \Throwable ) {
+				throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+			}
+			if ( isset( $selection['native_mutation'] ) ) {
+				throw new RuntimeException( 'Booster has an unfinished native mutation that must be resolved before cleanup.' );
+			}
+		}
+		$table = $this->verified_table_prefix . 'ran_booster_deployment_attempts';
+		$query = $database->prepare( 'SELECT TABLE_NAME AS table_name FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND BINARY TABLE_NAME = BINARY %s', $table );
+		$found = $this->custody_rows( $database, $query );
+		if ( array() === $found ) {
+			if ( array() !== $present ) {
+				throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+			}
+			return;
+		}
+		if ( 1 !== count( $found ) || ( $found[0]->table_name ?? null ) !== $table ) {
+			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+		}
+		$query = $database->prepare( "SELECT id FROM %i WHERE state IS NULL OR BINARY state NOT IN (BINARY 'succeeded', BINARY 'failed', BINARY 'needs_attention') OR (BINARY state = BINARY 'needs_attention' AND (resolved_at IS NULL OR resolved_by IS NULL)) LIMIT 1", $table );
+		if ( array() !== $this->custody_rows( $database, $query ) ) {
+			throw new RuntimeException( 'Booster has unfinished work that must be resolved before cleanup.' );
+		}
+	}
+
+	/** @return list<object> */
+	private function custody_rows( \wpdb|SchemaConnection $database, mixed $query ): array {
+		if ( ! is_string( $query ) ) {
+			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+		}
+		$read_error           = static fn (): string => (string) $database->last_error;
+		$database->last_error = '';
+		// phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Authoritative prepared read; cleanup must distinguish absence from errors.
+		$rows = $database->get_results( $query );
+		if ( ! is_array( $rows ) || '' !== $read_error() ) {
+			throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+		}
+		foreach ( $rows as $row ) {
+			if ( ! is_object( $row ) ) {
+				throw new RuntimeException( 'Booster could not verify recorded work before cleanup.' );
+			}
+		}
+		return array_values( $rows );
 	}
 
 	protected function clear_scheduled_work(): void {

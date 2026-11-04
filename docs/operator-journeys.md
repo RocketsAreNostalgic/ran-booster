@@ -63,6 +63,16 @@ original storage key, and imported or adopted packages remain deployment
 and private-storage backups. Clean up remote tokens/PATs and hooks separately;
 extension data and manually authored configuration are not part of the cleanup.
 
+Delete also removes the saved GitHub provider selection and approval. Before
+removing data, Booster refuses recorded queued/running deployments, unresolved
+recovery records, a recorded native mutation, or custody it cannot verify. This
+is a preflight snapshot, not a lock against requests already running. The uninstall diagnostic identifies unfinished deployments, native recovery, or unverifiable custody and directs you to the appropriate next step.
+
+WordPress uninstall is sequential: if cleanup or later file deletion fails, some
+data may already be gone even when plugin files remain. Resolve the reported
+problem before retrying Delete. Reactivation does not restore removed data;
+keep the backups described above.
+
 ## Open, review and apply on the destination
 
 1. Install/activate compatible Git providers and prepare destination credentials when

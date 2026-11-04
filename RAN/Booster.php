@@ -616,9 +616,9 @@ class Booster {
 
 		try {
 			$this->service( 'RAN\Storage\Database' )->maybe_upgrade();
-		// phpcs:ignore Generic.CodeAnalysis.EmptyStatement.DetectedCatch -- The persistent notice reports the active safe state.
 		} catch ( DatabaseCompatibilityFailure | DatabaseLifecycleFailure ) {
 			// An active plugin stays active but enters the storage-safe state.
+			return;
 		}
 		$this->upgrade_activity();
 	}

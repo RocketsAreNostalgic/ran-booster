@@ -31,7 +31,16 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 		return $value;
 	}
 	public function get_var( string $query ): mixed {
-		$this->reads[] = $query;
+		$this->reads[]    = $query;
+		$this->last_error = '';
+		if ( null !== $this->read_failure_contains && str_contains( $query, $this->read_failure_contains ) ) {
+			$this->last_error = 'synthetic read failure';
+			return null;
+		}
+		if ( preg_match( "/^SELECT 1 FROM `wp_options` WHERE option_name = '([^']+)' LIMIT 1$/", $query, $matches ) === 1 ) {
+			$name = stripslashes( $matches[1] );
+			return array_key_exists( $name, $GLOBALS['ran_booster_uninstall_options'] ) ? '1' : null;
+		}
 		return null;
 	}
 	public function get_row( string $query ): mixed {

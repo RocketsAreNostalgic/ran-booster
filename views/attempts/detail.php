@@ -75,9 +75,21 @@ $package_settings_label = 'theme' === $package_type
 			</section>
 		<?php } ?>
 		<dl class="ran-booster-activity__details">
-			<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) $item['correlation_id'] ); ?></code></dd></div>
+			<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd>
+			<?php
+			$copy_value = (string) $item['correlation_id'];
+			$copy_label = __( 'Copy support reference', 'ran-booster' );
+			include dirname( __DIR__ ) . '/copy-displayed-value.php';
+			?>
+			</dd></div>
 			<?php if ( 'webhook' === $item['source'] && is_string( $item['delivery_id'] ?? null ) && '' !== $item['delivery_id'] ) { ?>
-				<div><dt><?php esc_html_e( 'Git provider request ID', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $item['delivery_id'] ); ?></code></dd></div>
+				<div><dt><?php esc_html_e( 'Git provider request ID', 'ran-booster' ); ?></dt><dd>
+				<?php
+				$copy_value = $item['delivery_id'];
+				$copy_label = __( 'Copy Git provider request ID', 'ran-booster' );
+				include dirname( __DIR__ ) . '/copy-displayed-value.php';
+				?>
+				</dd></div>
 			<?php } ?>
 			<div><dt><?php esc_html_e( 'State', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) $item['state'] ); ?></dd></div>
 			<div><dt><?php esc_html_e( 'Origin', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $origin_labels[ $item['source'] ] ?? (string) $item['source'] ); ?></dd></div>

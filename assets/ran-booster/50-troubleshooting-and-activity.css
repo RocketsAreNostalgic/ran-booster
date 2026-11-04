@@ -352,3 +352,106 @@
 .ran-booster-admin .ran-booster-package-activity li:last-child {
 	margin-block-end: 0;
 }
+
+.ran-booster-admin .ran-booster-setup-snippet textarea {
+	box-sizing: border-box;
+}
+
+.ran-booster-admin .ran-booster-onboarding__storage-facts {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.ran-booster-admin .ran-booster-copy-value {
+	display: inline-flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	inline-size: 100%;
+	min-inline-size: 0;
+	max-inline-size: 100%;
+	column-gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-copy-value > code[data-copy-value] {
+	flex: 1 1 0;
+	min-inline-size: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.no-js .ran-booster-admin .ran-booster-copy-value > code[data-copy-value] {
+	overflow: visible;
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+
+.ran-booster-admin .ran-booster-copy-value__status {
+	flex-basis: 100%;
+}
+
+.ran-booster-admin .ran-booster-copy-value__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: none;
+	min-inline-size: 32px;
+	min-block-size: 32px;
+	padding: 4px;
+	vertical-align: middle;
+}
+
+.ran-booster-admin .ran-booster-copy-value__button svg {
+	inline-size: 18px;
+	block-size: 18px;
+}
+
+.ran-booster-admin
+	.ran-booster-copy-value__button
+	.ran-booster-copy-value__check,
+.ran-booster-admin
+	.ran-booster-copy-value__button.is-copied
+	.ran-booster-copy-value__icon {
+	display: none;
+}
+
+.ran-booster-admin
+	.ran-booster-copy-value__button.is-copied
+	.ran-booster-copy-value__check {
+	display: block;
+}
+
+.ran-booster-admin .ran-booster-copy-value__button.is-copied {
+	color: var(--ran-booster-status-ok);
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__report-copy
+	.ran-booster-copy-check,
+.ran-booster-admin
+	.ran-booster-troubleshooting__report-copy
+	.dashicons-yes
+	.ran-booster-copy-icon {
+	display: none;
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__report-copy
+	.dashicons-yes
+	.ran-booster-copy-check {
+	display: inline;
+}
+
+.no-js .ran-booster-admin .ran-booster-copy-value__button,
+.no-js .ran-booster-admin .ran-booster-troubleshooting__report-copy {
+	display: none;
+}
+
+.ran-booster-admin [data-webhook-url-copy]::before {
+	margin-inline-end: 0.35em;
+	content: "✓";
+	visibility: hidden;
+}
+
+.ran-booster-admin [data-webhook-url-copy].is-copied::before {
+	visibility: visible;
+}

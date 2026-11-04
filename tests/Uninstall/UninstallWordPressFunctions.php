@@ -75,6 +75,9 @@ if ( ! function_exists( 'delete_option' ) ) {
 	function delete_option( string $name ): bool {
 		$GLOBALS['ran_booster_uninstall_deleted_options'][] = $name;
 		if ( ( $GLOBALS['ran_booster_uninstall_undeletable_option'] ?? null ) === $name ) {
+			if ( ! empty( $GLOBALS['ran_booster_uninstall_simulate_negative_cache'] ) ) {
+				$GLOBALS['ran_booster_uninstall_negative_cache'][ $name ] = true;
+			}
 			return false;
 		}
 		unset( $GLOBALS['ran_booster_uninstall_options'][ $name ] );
@@ -85,6 +88,9 @@ if ( ! function_exists( 'delete_option' ) ) {
 
 if ( ! function_exists( 'get_option' ) ) {
 	function get_option( string $name, mixed $default = false ): mixed { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.defaultFound, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Preserve the WordPress function parameter signature. The isolated uninstall fixture must provide this exact WordPress function identity.
+		if ( isset( $GLOBALS['ran_booster_uninstall_negative_cache'][ $name ] ) ) {
+			return $default;
+		}
 		return $GLOBALS['ran_booster_uninstall_options'][ $name ] ?? $default;
 	}
 }

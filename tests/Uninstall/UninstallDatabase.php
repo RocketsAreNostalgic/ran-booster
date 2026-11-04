@@ -69,6 +69,10 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 			);
 		}
 		$options = $GLOBALS['ran_booster_uninstall_options'];
+		if ( preg_match( "/^SELECT option_name FROM `wp_options` WHERE BINARY option_name = BINARY '([^']+)' LIMIT 1$/", $query, $matches ) === 1 ) {
+			$name = stripslashes( $matches[1] );
+			return array_key_exists( $name, $options ) ? array( (object) array( 'option_name' => $name ) ) : array();
+		}
 		if ( str_starts_with( $query, 'SELECT option_name FROM ' ) ) {
 			$names = array( \RAN\Storage\Database::VERSION_OPTION, \RAN\Storage\GitHubSelectionStore::OPTION );
 			return array_map( static fn ( string $name ): object => (object) array( 'option_name' => $name ), array_values( array_filter( $names, static fn ( string $name ): bool => array_key_exists( $name, $options ) ) ) );

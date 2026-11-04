@@ -2299,7 +2299,7 @@ msgid "Stored · Validity checked on use"
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1646
-#: views/settings-storage.php:83
+#: views/settings-storage.php:231
 #: views/troubleshooting.php:53
 msgid "Not configured"
 msgstr ""
@@ -3305,7 +3305,7 @@ msgid "Failure details"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:264
-#: views/settings-storage.php:68
+#: views/settings-storage.php:64
 msgid "Diagnostic code:"
 msgstr ""
 
@@ -6833,7 +6833,7 @@ msgid "Each administrator can dismiss their own credential expiry reminders. A f
 msgstr ""
 
 #: views/documentation.php:391
-#: views/settings-storage.php:194
+#: views/settings-storage.php:114
 msgid "Use a different storage location"
 msgstr ""
 
@@ -7438,14 +7438,14 @@ msgid "1. Secure credential storage"
 msgstr ""
 
 #: views/onboarding.php:138
-#: views/settings-storage.php:63
+#: views/settings-storage.php:59
 #: views/settings.php:27
 #: views/troubleshooting-installation.php:58
 msgid "Secure credential storage"
 msgstr ""
 
 #: views/onboarding.php:139
-#: views/settings-storage.php:64
+#: views/settings-storage.php:60
 msgid "Status unknown"
 msgstr ""
 
@@ -10149,228 +10149,232 @@ msgstr ""
 msgid "Custom wp-config.php path"
 msgstr ""
 
-#: views/settings-storage.php:73
-#: views/troubleshooting-installation.php:61
-msgid "Storage details"
+#: views/settings-storage.php:68
+msgid "Booster checks a private location and, if it is safe, updates wp-config.php. The encrypted file and its separate database key are created when you save the first credential."
 msgstr ""
 
-#: views/settings-storage.php:76
-#: views/troubleshooting-installation.php:24
-msgid "Configuration constant"
-msgstr ""
-
-#: views/settings-storage.php:89
-#: views/troubleshooting-installation.php:25
-msgid "Path selection"
-msgstr ""
-
-#: views/settings-storage.php:95
-#: views/troubleshooting-installation.php:26
-msgid "Storage directory"
-msgstr ""
-
-#: views/settings-storage.php:99
-#: views/troubleshooting-installation.php:82
-msgid "Copy storage directory"
-msgstr ""
-
-#: views/settings-storage.php:106
-#: views/troubleshooting-installation.php:27
-msgid "Storage file"
-msgstr ""
-
-#: views/settings-storage.php:110
-#: views/troubleshooting-installation.php:82
-msgid "Copy storage file"
-msgstr ""
-
-#: views/settings-storage.php:120
-msgid "This is a proposed location; it is not necessarily configured yet."
-msgstr ""
-
-#: views/settings-storage.php:122
-msgid "The encrypted file and its separate database key are created when you save the first credential."
-msgstr ""
-
-#: views/settings-storage.php:124
-msgid "Credentials are encrypted in this file. WordPress stores the encryption key separately."
-msgstr ""
-
-#: views/settings-storage.php:132
+#: views/settings-storage.php:72
 msgid "Create secure storage"
 msgstr ""
 
-#: views/settings-storage.php:138
-msgid "Automatic locations considered and discarded"
-msgstr ""
-
-#: views/settings-storage.php:139
-msgid "This check is read-only; Booster did not create files in these locations."
-msgstr ""
-
-#: views/settings-storage.php:145
-msgid "Reason:"
-msgstr ""
-
-#: views/settings-storage.php:147
-msgid "Blocking component:"
-msgstr ""
-
-#: views/settings-storage.php:158
+#: views/settings-storage.php:78
 msgid "Start over with empty credential storage"
 msgstr ""
 
-#: views/settings-storage.php:158
+#: views/settings-storage.php:78
 msgid "Existing Booster storage found"
 msgstr ""
 
-#: views/settings-storage.php:162
+#: views/settings-storage.php:82
 msgid "Verified storage directory:"
 msgstr ""
 
-#: views/settings-storage.php:164
+#: views/settings-storage.php:84
 msgid "This proves decryption, canonical storage and the current registered Git provider credential shape. It does not contact a Git provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files."
 msgstr ""
 
-#: views/settings-storage.php:169
+#: views/settings-storage.php:89
 msgid "Adopt existing storage"
 msgstr ""
 
-#: views/settings-storage.php:172
+#: views/settings-storage.php:92
 msgid "Permanent reset:"
 msgstr ""
 
-#: views/settings-storage.php:172
+#: views/settings-storage.php:92
 msgid "Restore the matching ran-booster-store.json and database key from the same backup first if they are available. Resetting abandons every repository credential and webhook secret that cannot be recovered from that matching pair."
 msgstr ""
 
-#: views/settings-storage.php:173
+#: views/settings-storage.php:93
 msgid "A Transporter Blueprint is not a complete credential backup. It may transfer selected repository credentials for applicable package rows, including explicit credential-only recovery for an already-managed package, but it never contains webhook secrets."
 msgstr ""
 
 #. translators: %s is the exact confirmation phrase the administrator must type.
-#: views/settings-storage.php:180
+#: views/settings-storage.php:100
 #, php-format
 msgid "Type %s to confirm:"
 msgstr ""
 
-#: views/settings-storage.php:184
+#: views/settings-storage.php:104
 msgid "Reset credential storage"
 msgstr ""
 
-#: views/settings-storage.php:187
+#: views/settings-storage.php:107
 msgid "Automatic adoption remains disabled. Booster will not bypass private-path checks or rewrite an operator-managed storage definition."
 msgstr ""
 
-#: views/settings-storage.php:194
+#: views/settings-storage.php:114
 msgid "Set a storage location manually"
 msgstr ""
 
-#: views/settings-storage.php:196
+#: views/settings-storage.php:116
 msgid "Choose a durable absolute directory outside the public web root. Create it as a real directory owned by the PHP process user with mode 0700. Booster manages ran-booster-store.json and its lock inside it; if the file already exists, it must be owned by PHP with mode 0600."
 msgstr ""
 
-#: views/settings-storage.php:197
+#: views/settings-storage.php:117
 msgid "Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:"
 msgstr ""
 
-#: views/settings-storage.php:200
+#: views/settings-storage.php:120
 msgid "Example wp-config.php line"
 msgstr ""
 
-#: views/settings-storage.php:201
+#: views/settings-storage.php:121
 msgid "Copy example wp-config.php line"
 msgstr ""
 
-#: views/settings-storage.php:204
+#: views/settings-storage.php:124
 msgid "Or update the same constant with WP-CLI:"
 msgstr ""
 
-#: views/settings-storage.php:207
+#: views/settings-storage.php:127
 msgid "Example WP-CLI command"
 msgstr ""
 
-#: views/settings-storage.php:208
+#: views/settings-storage.php:128
 msgid "Copy example WP-CLI command"
 msgstr ""
 
-#: views/settings-storage.php:211
+#: views/settings-storage.php:131
 msgid "For environment-managed hosting, replace the existing definition with this wp-config.php bridge. An environment variable by itself is not read by Booster:"
 msgstr ""
 
-#: views/settings-storage.php:217
+#: views/settings-storage.php:137
 msgid "Environment-managed wp-config.php bridge"
 msgstr ""
 
-#: views/settings-storage.php:218
+#: views/settings-storage.php:138
 msgid "Copy environment-managed wp-config.php bridge"
 msgstr ""
 
-#: views/settings-storage.php:221
+#: views/settings-storage.php:141
 msgid "If credentials already exist, move the secrets file together with its matching database key; do not copy or reset only one half."
 msgstr ""
 
-#: views/settings-storage.php:228
+#: views/settings-storage.php:148
 msgid "Set up manually instead"
 msgstr ""
 
-#: views/settings-storage.php:228
+#: views/settings-storage.php:148
 msgid "Manual setup instructions"
 msgstr ""
 
-#: views/settings-storage.php:231
+#: views/settings-storage.php:151
 msgid "Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages ran-booster-store.json within it."
 msgstr ""
 
-#: views/settings-storage.php:234
+#: views/settings-storage.php:154
 msgid "Create the owner-only private directories:"
 msgstr ""
 
 #. translators: %d: directory command number.
-#: views/settings-storage.php:239
+#: views/settings-storage.php:159
 #, php-format
 msgid "Directory command %d"
 msgstr ""
 
 #. translators: %d: directory command number.
-#: views/settings-storage.php:241
+#: views/settings-storage.php:161
 #, php-format
 msgid "Copy directory command %d"
 msgstr ""
 
-#: views/settings-storage.php:247
+#: views/settings-storage.php:167
 msgid "Then choose one configuration method, not both:"
 msgstr ""
 
-#: views/settings-storage.php:250
+#: views/settings-storage.php:170
 msgid "Add this line to wp-config.php:"
 msgstr ""
 
-#: views/settings-storage.php:253
+#: views/settings-storage.php:173
 msgid "wp-config.php line"
 msgstr ""
 
-#: views/settings-storage.php:254
+#: views/settings-storage.php:174
 msgid "Copy wp-config.php line"
 msgstr ""
 
-#: views/settings-storage.php:260
+#: views/settings-storage.php:180
 msgid "Or run this WP-CLI command:"
 msgstr ""
 
-#: views/settings-storage.php:263
+#: views/settings-storage.php:183
 msgid "WP-CLI command"
 msgstr ""
 
-#: views/settings-storage.php:264
+#: views/settings-storage.php:184
 msgid "Copy WP-CLI command"
 msgstr ""
 
-#: views/settings-storage.php:277
+#: views/settings-storage.php:198
+msgid "Why automatic setup is unavailable"
+msgstr ""
+
+#: views/settings-storage.php:200
+msgid "Automatic locations considered and discarded"
+msgstr ""
+
+#: views/settings-storage.php:201
+msgid "This check is read-only; Booster did not create files in these locations."
+msgstr ""
+
+#: views/settings-storage.php:207
+msgid "Reason:"
+msgstr ""
+
+#: views/settings-storage.php:209
+msgid "Blocking component:"
+msgstr ""
+
+#: views/settings-storage.php:221
+#: views/troubleshooting-installation.php:61
+msgid "Storage details"
+msgstr ""
+
+#: views/settings-storage.php:224
+#: views/troubleshooting-installation.php:24
+msgid "Configuration constant"
+msgstr ""
+
+#: views/settings-storage.php:237
+#: views/troubleshooting-installation.php:25
+msgid "Path selection"
+msgstr ""
+
+#: views/settings-storage.php:243
+#: views/troubleshooting-installation.php:26
+msgid "Storage directory"
+msgstr ""
+
+#: views/settings-storage.php:247
+#: views/troubleshooting-installation.php:82
+msgid "Copy storage directory"
+msgstr ""
+
+#: views/settings-storage.php:254
+#: views/troubleshooting-installation.php:27
+msgid "Storage file"
+msgstr ""
+
+#: views/settings-storage.php:258
+#: views/troubleshooting-installation.php:82
+msgid "Copy storage file"
+msgstr ""
+
+#: views/settings-storage.php:268
+msgid "The encrypted file and its separate database key are created when you save the first credential."
+msgstr ""
+
+#: views/settings-storage.php:270
+msgid "Credentials are encrypted in this file. WordPress stores the encryption key separately."
+msgstr ""
+
+#: views/settings-storage.php:279
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
-#: views/settings-storage.php:278
+#: views/settings-storage.php:280
 msgid "Manual storage override"
 msgstr ""
 

@@ -142,7 +142,33 @@ final class SettingsPageTest extends TestCase {
 		$native_update_url  = null;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/settings.php';
-		$html            = (string) ob_get_clean();
+		$html     = (string) ob_get_clean();
+		$view     = 'settings';
+		$messages = array();
+		$tabs     = array(
+			array(
+				'key'    => 'overview',
+				'label'  => 'Overview',
+				'url'    => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
+				'active' => false,
+			),
+			array(
+				'key'    => 'portability',
+				'label'  => 'Transporter',
+				'url'    => 'https://example.test/wp-admin/admin.php?page=ran-booster-transporter',
+				'active' => false,
+			),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/base.php';
+		$shell_html = (string) ob_get_clean();
+		self::assertSame( 1, preg_match_all( '/<h1\b/', $shell_html ) );
+		self::assertStringContainsString( '>Booster</a>', $shell_html );
+		self::assertStringContainsString( '>Rockets Are Nostalgic</p>', $shell_html );
+		self::assertStringContainsString( '?page=ran-booster-plugins">Plugins</a>', $shell_html );
+		self::assertStringContainsString( '?page=ran-booster-themes">Themes</a>', $shell_html );
+		self::assertStringNotContainsString( 'aria-current=', $shell_html );
+		self::assertStringContainsString( '<h2 id="ran-booster-settings-heading"', $shell_html );
 		$dom             = new \DOMDocument();
 		$previous_errors = libxml_use_internal_errors( true );
 		$dom->loadHTML( $html );

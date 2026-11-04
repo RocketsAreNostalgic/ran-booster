@@ -29,6 +29,43 @@ composition hook or authorization boundary described here.
 
 ## Admin Shell continuity and page navigation
 
+Booster adopts build-time `ran/admin-shell` **2.0.0**, source
+`73abb3f8b35aab5eaaac74cb812a4fe2f3974482`. Change its exact Composer pin and
+lock together, run `composer admin-shell:sync`, then
+`composer admin-shell:check`. The PHP/CSS copies and provenance are generated;
+product styling belongs in `assets/ran-booster/00-foundations.css` after the
+shell stylesheet. The development dependency is not a plugin runtime package.
+
+The inverse identity renders Booster with Rockets Are Nostalgic below it and
+the decorative cream nozzle asset. The consumer supplies the 135-degree
+`#10364E` to `#1E4D6B` gradient. Current destinations keep their indicator;
+hover and keyboard focus receive an underline, with the keyboard outline
+retained. Forced colours use system colours. No branding script or React
+mount is required, and native rendering remains available without JavaScript.
+
+The sticky region contains one H1, the identity and section navigation. Keep
+the shell outside the page `.wrap`, below the native notice destination.
+Help/Screen Options controls must stack above the shell on Booster screens;
+owned dialogs keep their existing higher layer. Use the shell's toolbar
+breakpoints and short-viewport fallback. Verify its default 192px focus/anchor
+allowance against long translations and zoom before changing the offset;
+do not add a cloned heading or a second navigation lifecycle.
+
+| Surface | Retained interaction |
+| --- | --- |
+| Shell sections | Destination links and `aria-current="page"`; Settings and other destinations outside this menu select no unrelated item. |
+| Provider tasks and Troubleshooting sections | Real URLs with current-page indication; existing enhanced replacement, focus, error and history owners remain. |
+| Package source while editing | Destination links, current text and unavailable choices; preserve capability and dirty-state checks. |
+| Package source while creating | Existing `aria-pressed` choice buttons; these are not an ARIA tab widget. |
+
+This native-shell slice does not complete the wider #625 component programme
+or #635 composed acceptance. WordPress floor/current, missing-enhancement,
+overlay, notice, keyboard and repeated-navigation acceptance remain required.
+Shell #36's wider maintained-consumer/template audit also remains open:
+the named Turnstile and EmailOctopus consumers have exact v1 pins, but the
+bounded public starter/template inspection does not establish exhaustive
+coverage. Keep that evidence gap explicit in adoption and release decisions.
+
 Booster's Admin Shell provides continuous product branding and navigation across
 its normal administration pages, including standalone WordPress submenu destinations
 such as Extensions. Keep the shell's logo, header navigation and footer consistent

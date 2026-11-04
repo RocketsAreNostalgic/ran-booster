@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.0-beta.43](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.42...v1.0.0-beta.43) (2026-11-04)
+
+
+### Bug Fixes
+
+* remove settled selection during WordPress uninstall ([#639](https://github.com/RocketsAreNostalgic/ran-booster/issues/639)) ([ff9e2f6](https://github.com/RocketsAreNostalgic/ran-booster/commit/ff9e2f6aecf255c9979e2c4179c45b9f23a634c2))
+* verify uninstall option absence from database ([#648](https://github.com/RocketsAreNostalgic/ran-booster/issues/648)) ([ff3810c](https://github.com/RocketsAreNostalgic/ran-booster/commit/ff3810c7ea6366c94f96a8334184fdcbd90afe4b))
+
 ## [1.0.0-beta.42](https://github.com/RocketsAreNostalgic/ran-booster/compare/v1.0.0-beta.41...v1.0.0-beta.42) (2026-11-02)
 
 

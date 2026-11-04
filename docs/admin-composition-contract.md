@@ -58,6 +58,13 @@ do not add a cloned heading or a second navigation lifecycle.
 | Package source while editing | Destination links, current text and unavailable choices; preserve capability and dirty-state checks. |
 | Package source while creating | Existing `aria-pressed` choice buttons; these are not an ARIA tab widget. |
 
+Provider navigation sets htmx's existing `refreshOnHistoryMiss` policy for its
+document. Ordinary task clicks remain enhanced; a Back/Forward cache miss uses
+a native page load instead of an unreported failed history fetch. Keep
+`hx-history="false"` and do not enable snapshots of credential-bearing pages.
+This policy does not add custom network recovery or change Settings save/leave
+protection; native failure, retry and cancelled-navigation proof remain separate.
+
 This native-shell slice does not complete the wider #625 component programme
 or #635 composed acceptance. WordPress floor/current, missing-enhancement,
 overlay, notice, keyboard and repeated-navigation acceptance remain required.

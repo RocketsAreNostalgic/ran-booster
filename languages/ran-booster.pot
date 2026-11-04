@@ -5932,13 +5932,25 @@ msgstr ""
 msgid "Native extension updates are unavailable in this Booster build. Update Booster, or download the selected ZIP from More Details for manual replacement."
 msgstr ""
 
-#. translators: %s: stable uninstall diagnostic code.
-#: uninstall.php:38
-#, php-format
-msgid "RAN Booster could not safely remove all of its local data. WordPress kept the plugin files. Diagnostic code: %s. Reactivate Booster, review Secure credential storage in Settings, correct the reported problem, then try Delete again."
+#: uninstall.php:26
+msgid "Reactivate Booster if needed, open the Booster GitHub page, and review An installation needs recovery before retrying Delete."
 msgstr ""
 
-#: uninstall.php:42
+#: uninstall.php:30
+msgid "Reactivate Booster if needed and review unfinished deployments before retrying Delete."
+msgstr ""
+
+#: uninstall.php:34
+msgid "Review Troubleshooting or contact support before retrying Delete."
+msgstr ""
+
+#. translators: 1: stable uninstall diagnostic code, 2: recovery guidance.
+#: uninstall.php:55
+#, php-format
+msgid "RAN Booster could not safely remove all of its local data. WordPress kept the plugin files. Diagnostic code: %1$s. Some local data may already have been removed. Resolve the reported problem before retrying Delete. Reactivating Booster does not restore removed data. %2$s"
+msgstr ""
+
+#: uninstall.php:60
 msgid "RAN Booster uninstall stopped"
 msgstr ""
 

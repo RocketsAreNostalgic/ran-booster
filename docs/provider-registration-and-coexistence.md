@@ -181,6 +181,52 @@ path. Current release-workflow assistance state is owned by the GitHub provider
 package, while obsolete prerelease records are cleanup-only. Neither affects
 provider registration.
 
+## Local cleanup ownership
+
+WordPress deactivation retains data. Deleting Booster invokes Core's uninstall
+coordinator, including the bundled GitHub package even if no external provider
+is active. Core owns its options, selection and approval, tables, user notices,
+scheduled work and managed private storage. It also removes the updater
+authority for its own exact plugin target. It does not remove managed package
+files, external add-on state, remote tokens or webhooks.
+
+The bundled GitHub provider owns its workflow-assistance setup option and the
+two retired provider assessment and failure-history options. Its
+`WorkflowAssistanceState::remove_durable_state()` removes those exact records;
+Core calls it before deleting Core options and tables. A custom namespace owns
+its own setup and preview state. For example, the separate GitHub Example
+add-on's [uninstaller at `3293550`](https://github.com/RocketsAreNostalgic/ran-booster-github-example/blob/32935502f8b7ef6cbb25b264d7dcb84d0d9620eb/src/Plugin.php)
+cleans its `github_example` namespace without loading Core. Deleting Core does
+not require that add-on to be installed and does not clean its namespace. Its
+provider dependency uptake is separate from Core's bundled provider version.
+The inspected [Bitbucket add-on at `140a2cb`](https://github.com/RocketsAreNostalgic/ran-booster-bitbucket/blob/140a2cbf556d42e4fb9c96fd99a5bcdb20ce5513/src/Bitbucket/Plugin.php)
+has no corresponding provider-owned durable workflow cleanup; shared Booster
+records remain Core's responsibility. This describes the inspected code, not
+a restriction on future Bitbucket features.
+
+Core and bundled GitHub verify their owned option deletions with database
+readback: a negative option cache cannot establish absence, and a remaining row
+or read error stops cleanup. Uninstall is sequential, not atomic. Earlier
+steps may have removed data when a later step fails; resolving the failure and
+retrying Delete does not require reactivation. Reactivation does not roll back
+or restore deleted state. See [the operator journey](operator-journeys.md#before-deleting-booster-on-the-source)
+for backup and recovery guidance.
+
+Keep the two small verification implementations with their current owners.
+The shared `ran/updater-support` package is WordPress-free; moving this
+WordPress database operation there or introducing a provider cleanup registry
+would add a dependency or ownership mechanism without another current consumer.
+The provider retains its record names and Core retains its own inventory.
+
+`LocalDataRemoverTest` covers the Core inventory, custody refusals, negative
+cache and read failures, provider failure and retry, and partial table cleanup.
+The provider's `WorkflowAssistanceStateTest` covers bundled and custom cleanup,
+negative-cache failures and namespace isolation. A disposable WordPress 10048
+exercise of Core integration `902651b0` tested the bundled provider's failed deletion
+and retry, retained plugin and tables, unrelated sentinels, and a fresh install;
+it does not prove every provider, site configuration, concurrent request or
+remote cleanup path.
+
 ## Failure behavior and operational caveats
 
 Exact collisions are detected early, but not yet gracefully contained. A

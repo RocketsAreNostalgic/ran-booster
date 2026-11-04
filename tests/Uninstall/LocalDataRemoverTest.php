@@ -392,22 +392,35 @@ final class LocalDataRemoverTest extends TestCase {
 	#[PreserveGlobalState( false )]
 	public function test_provider_cleanup_failure_stops_before_core_database_cleanup(): void {
 		$this->setUp();
-		$GLOBALS['ran_booster_uninstall_undeletable_option'] = WorkflowAssistanceState::SETUP_OPTION;
+		$GLOBALS['ran_booster_uninstall_undeletable_option']      = WorkflowAssistanceState::SETUP_OPTION;
+		$GLOBALS['ran_booster_uninstall_simulate_negative_cache'] = true;
+		$remover = $this->remover( $this->secrets( null ), $this->createStub( WpConfigSecretsPathWriter::class ) );
 
 		try {
-			$this->remover(
-				$this->secrets( null ),
-				$this->createStub( WpConfigSecretsPathWriter::class )
-			)->remove();
+			$remover->remove();
 			self::fail( 'An unverifiable bundled-provider cleanup must abort uninstall.' );
 		} catch ( RuntimeException $failure ) {
 			self::assertSame( 'Bundled GitHub provider state could not be removed.', $failure->getMessage() );
 		}
 
 		self::assertArrayHasKey( Database::VERSION_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayHasKey( WorkflowAssistanceState::SETUP_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayHasKey( WorkflowAssistanceState::SETUP_OPTION, $GLOBALS['ran_booster_uninstall_negative_cache'] );
+		self::assertArrayHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertArrayHasKey( WordPressInstallationStore::OPTION_NAME, $GLOBALS['ran_booster_uninstall_options'] );
 		self::assertArrayHasKey( DevelopmentSafetyNoticeController::USER_META_KEY, $this->database->user_meta );
 		self::assertContains( 'wp_ran_booster_packages', $this->database->tables );
+		self::assertContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
+		self::assertContains( 'wp_ran_booster_activity', $this->database->tables );
+
+		$GLOBALS['ran_booster_uninstall_undeletable_option'] = null;
+		$remover->remove();
+		self::assertArrayNotHasKey( WorkflowAssistanceState::SETUP_OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertArrayNotHasKey( GitHubSelectionStore::OPTION, $GLOBALS['ran_booster_uninstall_options'] );
+		self::assertNotContains( 'wp_ran_booster_packages', $this->database->tables );
+		self::assertNotContains( 'wp_ran_booster_deployment_attempts', $this->database->tables );
+		self::assertNotContains( 'wp_ran_booster_activity', $this->database->tables );
+		self::assertSame( 'preserved', $GLOBALS['ran_booster_uninstall_options']['unrelated_option'] );
 	}
 
 	#[RunInSeparateProcess]

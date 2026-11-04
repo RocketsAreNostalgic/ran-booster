@@ -537,14 +537,16 @@ class Booster {
 	}
 
 	/**
-	 * A monochrome rocket silhouette for the admin menu icon. WordPress renders
-	 * custom SVG menu icons at reduced opacity rather than recoloring them, so a
-	 * solid black fill matches the muted look of the other Dashicons.
+	 * Filled equivalents of assets/nozzle-sm-menu-three-rings.svg. Each ring uses
+	 * its original radius plus/minus half its stroke width; even-odd holes let
+	 * WordPress recolor fills without filling the source's transparent centres.
 	 */
 	private function get_menu_icon(): string {
-		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="black">'
-			. '<path d="M10,2 C11.5,2 13,5 13,8 L13,15 L7,15 L7,8 C7,5 8.5,2 10,2 Z '
-			. 'M7,12 L4,17 L7,15 Z M13,12 L16,17 L13,15 Z M8,15 L10,18.5 L12,15 Z" /></svg>';
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="36 36 440 440" width="20" height="20">'
+			. '<path fill="#F2EFE5" fill-rule="evenodd" d="M42 256a214 214 0 1 0 428 0a214 214 0 1 0 -428 0M70 256a186 186 0 1 0 372 0a186 186 0 1 0 -372 0"/>'
+			. '<path fill="#F2EFE5" fill-rule="evenodd" d="M112.833333 242.666667a156.5 156.5 0 1 0 313 0a156.5 156.5 0 1 0 -313 0M133.833333 242.666667a135.5 135.5 0 1 0 271 0a135.5 135.5 0 1 0 -271 0"/>'
+			. '<path fill="#F2EFE5" fill-rule="evenodd" d="M183.666667 229.333333a99 99 0 1 0 198 0a99 99 0 1 0 -198 0M197.666667 229.333333a85 85 0 1 0 170 0a85 85 0 1 0 -170 0"/>'
+			. '<circle cx="296" cy="216" r="42" fill="#F2EFE5"/></svg>';
 
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Base64 is required for this SVG data URI.
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg );

@@ -150,6 +150,39 @@ final class ExtensionsPageTest extends TestCase {
 		);
 	}
 
+	public function test_menu_icon_preserves_source_geometry_for_word_press_recoloring(): void {
+		$this->booster()->admin_menu();
+		$icon = $GLOBALS['ran_booster_extensions_page_menus'][0]['icon_url'];
+		self::assertStringStartsWith( 'data:image/svg+xml;base64,', $icon );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode -- Inspect the registered SVG data URI.
+		$svg = base64_decode( substr( $icon, strlen( 'data:image/svg+xml;base64,' ) ), true );
+		self::assertIsString( $svg );
+		$source   = simplexml_load_file( dirname( __DIR__, 2 ) . '/assets/nozzle-sm-menu-three-rings.svg' );
+		$rendered = simplexml_load_string( $svg );
+		self::assertNotFalse( $source );
+		self::assertNotFalse( $rendered );
+		self::assertSame( (string) $source['viewBox'], (string) $rendered['viewBox'] );
+		$index = 0;
+		foreach ( $rendered->path as $path ) {
+			$circle   = $source->circle[ $index ];
+			$cx       = (float) $circle['cx'];
+			$cy       = (float) $circle['cy'];
+			$outer    = (float) $circle['r'] + (float) $circle['stroke-width'] / 2;
+			$inner    = (float) $circle['r'] - (float) $circle['stroke-width'] / 2;
+			$expected = sprintf( 'M%s %sa%s %s 0 1 0 %s 0a%s %s 0 1 0 -%s 0M%s %sa%s %s 0 1 0 %s 0a%s %s 0 1 0 -%s 0', $cx - $outer, $cy, $outer, $outer, 2 * $outer, $outer, $outer, 2 * $outer, $cx - $inner, $cy, $inner, $inner, 2 * $inner, $inner, $inner, 2 * $inner );
+			self::assertSame( $expected, (string) $path['d'] );
+			self::assertSame( 'evenodd', (string) $path['fill-rule'] );
+			self::assertSame( '#F2EFE5', (string) $path['fill'] );
+			++$index;
+		}
+		self::assertCount( 3, $rendered->path );
+		foreach ( array( 'cx', 'cy', 'r', 'fill' ) as $attribute ) {
+			self::assertSame( (string) $source->circle[3][ $attribute ], (string) $rendered->circle[0][ $attribute ] );
+		}
+		self::assertStringNotContainsString( 'stroke=', $svg );
+		self::assertStringNotContainsString( 'fill="none"', $svg );
+	}
+
 	public function test_dashboard_routes_extensions_through_the_shared_page_frame(): void {
 		$dashboard = new class() extends Dashboard {
 			/** @var array<string, mixed> */

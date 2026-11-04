@@ -734,6 +734,16 @@ local unavailable message.
 Deactivating an add-on removes its contributions on the next request; every
 Core route and administration surface remains usable.
 
+The WP Pusher Migrator contributes `ran-booster-wp-pusher-migration` through the
+general sections filter, in Reference. Other extensions must not claim this ID.
+Core no longer reserves or pre-indexes it: after accepting contributions, Core
+supplies a short discovery entry at the same anchor only if no valid article
+owns it. An accepted unavailable-message article also suppresses that fallback.
+Existing first-valid duplicate precedence and sanitization remain unchanged.
+Deliver the Migrator guide before the Core ownership change; no compatibility
+adapter or new documentation API is involved. The Documentation URL and fragment
+remain unchanged when the extension is inactive, absent or incompatible.
+
 ### Documentation chapters
 
 Documentation has one level of chapters containing articles. Core supplies

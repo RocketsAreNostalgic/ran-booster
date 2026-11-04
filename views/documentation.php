@@ -56,7 +56,6 @@ $reserved_documentation_ids = array_fill_keys(
 		'ran-booster-quick-start',
 		'ran-booster-requirements',
 		'ran-booster-portability-guidance',
-		'ran-booster-wp-pusher-migration',
 		'ran-booster-file-protection',
 		'ran-booster-credential-storage',
 		'ran-booster-installing-and-managing-packages',
@@ -90,7 +89,6 @@ $add_documentation_item = static function ( string $id, string $summary ) use ( 
 $add_documentation_item( 'ran-booster-quick-start', __( 'Quick start', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-requirements', __( 'Requirements', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-portability-guidance', __( 'Move packages between sites', 'ran-booster' ) );
-$add_documentation_item( 'ran-booster-wp-pusher-migration', __( 'Migrate from WP Pusher', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-file-protection', __( 'Protect your files and know what actually moves', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-credential-storage', __( 'Credential storage, retention and removal', 'ran-booster' ) );
 $prepared_provider_documentation = array();
@@ -132,6 +130,17 @@ $prepared_global_sections = array_values(
 		}
 	)
 );
+// Keep saved migration links useful when no extension guide was accepted.
+$migration_summary = __( 'Migrate from WP Pusher', 'ran-booster' );
+if ( $add_documentation_item( 'ran-booster-wp-pusher-migration', $migration_summary ) ) {
+	$prepared_global_sections[] = array(
+		'id'      => 'ran-booster-wp-pusher-migration',
+		'summary' => $migration_summary,
+		'content' => '<p>' . esc_html__( 'The detailed migration guide is supplied by a compatible RAN Booster WP Pusher Migrator. If it is unavailable here, check the extension and consult its installation and compatibility guidance.', 'ran-booster' ) . '</p><p><a href="' . esc_url( 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme' ) . '">' . esc_html__( 'Read the Migrator guidance', 'ran-booster' ) . '</a> ' . esc_html__( 'Repository access may be required.', 'ran-booster' ) . '</p>',
+		'open'    => false,
+		'chapter' => null,
+	);
+}
 $add_documentation_item( 'ran-booster-about', __( 'About RAN Booster', 'ran-booster' ) );
 
 // Collect first so duplicate article precedence does not depend on display order.
@@ -139,7 +148,7 @@ $add_documentation_item( 'ran-booster-about', __( 'About RAN Booster', 'ran-boos
 $chapters = array(
 	'core' => array(
 		'title'    => __( 'Booster Core concepts', 'ran-booster' ),
-		'items'    => array_values( array_filter( $documentation_index, static fn ( array $item ): bool => in_array( $item['id'], array( 'ran-booster-quick-start', 'ran-booster-requirements', 'ran-booster-portability-guidance', 'ran-booster-wp-pusher-migration', 'ran-booster-file-protection', 'ran-booster-credential-storage', 'ran-booster-installing-and-managing-packages', 'ran-booster-push-to-deploy' ), true ) ) ),
+		'items'    => array_values( array_filter( $documentation_index, static fn ( array $item ): bool => in_array( $item['id'], array( 'ran-booster-quick-start', 'ran-booster-requirements', 'ran-booster-portability-guidance', 'ran-booster-file-protection', 'ran-booster-credential-storage', 'ran-booster-installing-and-managing-packages', 'ran-booster-push-to-deploy' ), true ) ) ),
 		'sections' => array(),
 	),
 );
@@ -323,32 +332,6 @@ unset( $chapter );
 					<li><?php esc_html_e( 'Apply only the changes you choose. Booster re-reads the ZIP and re-checks each package and repository right before applying it, so if something changed since your review, that one change is skipped safely and the others continue.', 'ran-booster' ); ?></li>
 					<li><?php esc_html_e( 'On the other site, confirm repository access works and the package behaves as expected. Set up Push-to-Deploy separately, and only once that site is ready to receive automatic deployments.', 'ran-booster' ); ?></li>
 				</ol>
-			</div>
-		</details>
-
-		<details id="ran-booster-wp-pusher-migration" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
-			<summary><?php esc_html_e( 'Migrate from WP Pusher', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
-				<h3><?php esc_html_e( 'Move retained WP Pusher packages into Booster', 'ran-booster' ); ?></h3>
-				<p><?php esc_html_e( 'If this site used WP Pusher 3.0.13, the temporary RAN Booster WP Pusher Migrator can adopt supported installed plugins and themes into Booster without reinstalling them. Each adopted package starts with deployment Disabled.', 'ran-booster' ); ?></p>
-
-				<h3><?php esc_html_e( 'Before you start', 'ran-booster' ); ?></h3>
-				<ul>
-					<li><?php esc_html_e( 'Back up the site and deactivate WP Pusher. Booster and WP Pusher must not control package changes at the same time.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Install and activate the migrator from its verified release package.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'For private repositories, add the replacement repository credential to Booster first. WP Pusher credentials are not copied.', 'ran-booster' ); ?></li>
-				</ul>
-
-				<h3><?php esc_html_e( 'Migration workflow', 'ran-booster' ); ?></h3>
-				<ol>
-					<li><?php esc_html_e( 'Open Transporter and choose Migrate from WP Pusher.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Review one retained plugin or theme at a time.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Adopt the package into Booster as Disabled.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Confirm the package is managed by Booster before continuing.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'After every package is migrated, review the optional WP Pusher data cleanup and remove the temporary migrator.', 'ran-booster' ); ?></li>
-				</ol>
-				<p><?php esc_html_e( 'The migrator does not copy credentials, reinstall package files, enable deployments, remove remote webhooks, delete WP Pusher, or contact its license service. Remove deployment webhooks on the Git provider separately.', 'ran-booster' ); ?></p>
-				<p><a class="button" href="<?php echo esc_url( $portability_url ); ?>"><?php esc_html_e( 'Open migration tools', 'ran-booster' ); ?></a></p>
 			</div>
 		</details>
 

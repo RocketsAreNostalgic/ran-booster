@@ -31,7 +31,7 @@ final class UninstallDatabase extends \RAN\Storage\SchemaConnection {
 		return $value;
 	}
 	public function get_var( string $query ): mixed {
-		$this->reads[] = $query;
+		$this->reads[]    = $query;
 		$this->last_error = '';
 		if ( null !== $this->read_failure_contains && str_contains( $query, $this->read_failure_contains ) ) {
 			$this->last_error = 'synthetic read failure';

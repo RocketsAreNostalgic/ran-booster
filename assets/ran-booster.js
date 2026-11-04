@@ -310,6 +310,9 @@
 		) {
 			return;
 		}
+		if (typeof htmx !== 'undefined' && htmx.config) {
+			htmx.config.refreshOnHistoryMiss = true;
+		}
 
 		function currentTaskRegion() {
 			return (

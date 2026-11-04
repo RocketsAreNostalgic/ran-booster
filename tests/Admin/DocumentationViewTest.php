@@ -586,6 +586,86 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Duplicate loses', $html );
 	}
 
+	public function test_missing_migrator_guide_keeps_a_translated_reference_destination_without_tools(): void {
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Migrate from WP Pusher']     = 'Migrer depuis WP Pusher';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Read the Migrator guidance'] = 'Lire le guide <Migrator>';
+		$html = $this->render_view( $this->provider_documentation() );
+
+		self::assertSame( 1, substr_count( $html, 'id="ran-booster-wp-pusher-migration"' ) );
+		self::assertSame( 1, substr_count( $html, 'href="#ran-booster-wp-pusher-migration"' ) );
+		self::assertStringContainsString( '<summary>Migrer depuis WP Pusher</summary>', $html );
+		self::assertStringContainsString( 'Lire le guide &lt;Migrator&gt;', $html );
+		self::assertStringContainsString( 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme', $html );
+		self::assertStringNotContainsString( 'Open migration tools', $html );
+		self::assertStringNotContainsString( 'Migration workflow', $html );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[h3="Reference"]/details[@id="ran-booster-wp-pusher-migration"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[h3="Booster Core concepts"]/details[@id="ran-booster-wp-pusher-migration"])' ) );
+	}
+
+	public function test_migrator_contribution_owns_one_reference_article_and_suppresses_fallback(): void {
+		$calls = 0;
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] = static function ( array $sections, string $url, string $scope ) use ( &$calls ): array {
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=documentation', $url );
+			self::assertSame( 'site', $scope );
+			$sections[] = array(
+				'id'      => 'ran-booster-wp-pusher-migration',
+				'summary' => 'Migrator guide',
+				'content' => static function () use ( &$calls ): void {
+					++$calls;
+					echo '<p id="nested-migration-anchor">Extension-owned guidance.</p>';
+				},
+			);
+			$sections[] = array(
+				'id'      => 'ran-booster-wp-pusher-migration',
+				'summary' => 'Duplicate guide',
+				'content' => '<p>Duplicate body.</p>',
+			);
+			return $sections;
+		};
+		$html = $this->render_view( $this->provider_documentation() );
+
+		self::assertSame( 1, $calls );
+		self::assertSame( 1, substr_count( $html, 'id="ran-booster-wp-pusher-migration"' ) );
+		self::assertSame( 1, substr_count( $html, 'href="#ran-booster-wp-pusher-migration"' ) );
+		self::assertStringContainsString( 'Extension-owned guidance.', $html );
+		self::assertStringNotContainsString( 'nested-migration-anchor', $html );
+		self::assertStringNotContainsString( 'Duplicate body.', $html );
+		self::assertStringNotContainsString( 'Read the Migrator guidance', $html );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[h3="Reference"]/details[@id="ran-booster-wp-pusher-migration"])' ) );
+	}
+
+	public function test_empty_migrator_content_falls_back_but_failed_callback_keeps_unavailable_article(): void {
+		foreach ( array( false, true ) as $throws ) {
+			$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'] = array(
+				static fn ( array $sections ): array => array_merge(
+					$sections,
+					array(
+						array(
+							'id'      => 'ran-booster-wp-pusher-migration',
+							'summary' => 'Migrator guide',
+							'content' => static function () use ( $throws ): void {
+							if ( $throws ) {
+								throw new \RuntimeException( 'Synthetic guide failure.' );
+							}
+							},
+						),
+					)
+				),
+			);
+			$html = $this->render_view( $this->provider_documentation() );
+			self::assertSame( 1, substr_count( $html, 'id="ran-booster-wp-pusher-migration"' ) );
+			self::assertSame( 1, substr_count( $html, 'href="#ran-booster-wp-pusher-migration"' ) );
+			self::assertSame( ! $throws, str_contains( $html, 'Read the Migrator guidance' ) );
+			self::assertSame( $throws, str_contains( $html, 'An add-on guide is temporarily unavailable.' ) );
+		}
+	}
+
 	public function test_addon_contributions_cannot_take_the_requirements_anchor(): void {
 		foreach ( array( 'ran_booster_documentation_sections_after_provider_gh', 'ran_booster_documentation_sections_before_about' ) as $hook ) {
 			$GLOBALS['ran_booster_documentation_test_filters'][ $hook ][] =
@@ -746,7 +826,6 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-portability-guidance"', $html );
 		self::assertStringContainsString( 'Minimum credential permissions', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-transporter">Open Transporter</a>', $html );
-		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-transporter">Open migration tools</a>', $html );
 		self::assertStringContainsString( 'Move managed packages without copying a development checkout', $html );
 		self::assertStringContainsString( 'local uncommitted changes, and local-only', $html );
 		self::assertStringContainsString( '<code>node_modules</code>', $html );
@@ -765,14 +844,6 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'Commit and push the exact branch, tag or commit', $html );
 		self::assertStringContainsString( '<details id="ran-booster-wp-pusher-migration"', $html );
 		self::assertStringContainsString( '<summary>Migrate from WP Pusher</summary>', $html );
-		self::assertStringContainsString( 'temporary RAN Booster WP Pusher Migrator can adopt supported installed plugins and themes', $html );
-		self::assertStringContainsString( 'WP Pusher credentials are not copied', $html );
-		self::assertStringContainsString( 'Open Transporter and choose Migrate from WP Pusher', $html );
-		self::assertStringContainsString( 'does not copy credentials, reinstall package files, enable deployments', $html );
-		self::assertLessThan(
-			strpos( $html, '<summary>Migrate from WP Pusher</summary>' ),
-			strpos( $html, '<summary>Move packages between sites</summary>' )
-		);
 		self::assertStringContainsString( 'set it to Disabled first', $html );
 		self::assertStringContainsString( '<strong>Disabled</strong>', $html );
 		self::assertStringContainsString( '<strong>Manual</strong>', $html );
@@ -839,7 +910,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( "esc_html_e( 'Quick start', 'ran-booster' )", $source );
 		self::assertStringContainsString( "__( '%s credentials and access', 'ran-booster' )", $source );
 		self::assertStringContainsString( "esc_html_e( 'Move packages between sites', 'ran-booster' )", $source );
-		self::assertStringContainsString( "esc_html_e( 'Migrate from WP Pusher', 'ran-booster' )", $source );
+		self::assertStringContainsString( "__( 'Migrate from WP Pusher', 'ran-booster' )", $source );
 		self::assertStringContainsString( "esc_html_e( 'About RAN Booster', 'ran-booster' )", $source );
 		self::assertStringContainsString( 'ran_booster_documentation_sections_after_provider_', $source );
 		self::assertStringContainsString( 'ran_booster_documentation_sections_before_about', $source );

@@ -925,7 +925,7 @@
 }
 
 .ran-booster-admin .ran-booster-settings input[type="number"] {
-	inline-size: 15em;
+	inline-size: 8em;
 	max-inline-size: 100%;
 }
 
@@ -948,7 +948,6 @@
 }
 
 .ran-booster-admin .ran-booster-settings__history-fields input[type="number"] {
-	inline-size: 8em;
 	margin-inline: 0;
 }
 

@@ -183,7 +183,8 @@ provider registration.
 
 ## Local cleanup ownership
 
-WordPress deactivation retains data. Deleting Booster invokes Core's uninstall
+Deactivation retains durable data, though it may clear transient debug state or
+scheduled work. Deleting Booster invokes Core's uninstall
 coordinator, including the bundled GitHub package even if no external provider
 is active. Core owns its options, selection and approval, tables, user notices,
 scheduled work and managed private storage. It also removes the updater
@@ -214,14 +215,15 @@ for backup and recovery guidance.
 
 Keep the two small verification implementations with their current owners.
 The shared `ran/updater-support` package is WordPress-free; moving this
-WordPress database operation there or introducing a provider cleanup registry
-would add a dependency or ownership mechanism without another current consumer.
+WordPress database operation there would introduce a WordPress-specific public
+contract into that package; a provider cleanup registry would add an ownership
+mechanism without another current consumer.
 The provider retains its record names and Core retains its own inventory.
 
 `LocalDataRemoverTest` covers the Core inventory, custody refusals, negative
 cache and read failures, provider failure and retry, and partial table cleanup.
 The provider's `WorkflowAssistanceStateTest` covers bundled and custom cleanup,
-negative-cache failures and namespace isolation. A disposable WordPress 10048
+negative-cache failures and namespace isolation. A disposable WordPress
 exercise of Core integration `902651b0` tested the bundled provider's failed deletion
 and retry, retained plugin and tables, unrelated sentinels, and a fresh install;
 it does not prove every provider, site configuration, concurrent request or

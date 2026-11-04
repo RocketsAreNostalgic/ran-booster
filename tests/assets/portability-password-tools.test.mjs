@@ -9,7 +9,10 @@ const source = fs.readFileSync(
 );
 
 function loadFunction(name, dependencies = {}) {
-	const signature = `\tfunction ${name}(`;
+	const signature =
+		name === 'copyToClipboard'
+			? `\tasync function ${name}(`
+			: `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
 	assert.notEqual(start, -1, `The ${name} function must exist.`);
@@ -40,11 +43,19 @@ function loadFunction(name, dependencies = {}) {
 	)(...Object.values(dependencies));
 }
 
+const clipboardStates = new WeakMap();
+const resetClipboard = loadFunction('resetClipboard', { clipboardStates });
+const copyToClipboard = loadFunction('copyToClipboard', {
+	clipboardStates,
+	resetClipboard,
+});
 const generateSecureBase64Url = loadFunction('generateSecureBase64Url');
 const initSecretVisibility = loadFunction('initSecretVisibility');
 const initGeneratedSecretTools = loadFunction('initGeneratedSecretTools', {
 	generateSecureBase64Url,
 	initSecretVisibility,
+	resetClipboard,
+	copyToClipboard,
 });
 
 function control(value = '') {
@@ -180,6 +191,8 @@ function fixture({ clipboard, crypto, passwordValue = '' } = {}) {
 		},
 	};
 	globalThis.window = {
+		setTimeout: () => 1,
+		clearTimeout: () => {},
 		btoa(binary) {
 			return Buffer.from(binary, 'binary').toString('base64');
 		},
@@ -286,8 +299,8 @@ test('copy preserves the exact manual password and tracks empty input', async ()
 			state.status.classList.contains('screen-reader-text'),
 			true
 		);
-		assert.equal(state.copy.getAttribute('aria-label'), 'Password copied');
-		assert.equal(state.copy.getAttribute('title'), 'Password copied');
+		assert.equal(state.copy.getAttribute('aria-label'), 'Password copied.');
+		assert.equal(state.copy.getAttribute('title'), 'Password copied.');
 		assert.equal(state.copyIcon.getAttribute('hidden'), '');
 		assert.equal(state.copySuccessIcon.getAttribute('hidden'), null);
 		assert.doesNotMatch(
@@ -541,5 +554,81 @@ test('unprotected export bypasses password checks and clears stale warnings', ()
 		assert.equal(state.confirmation.disabled, false);
 	} finally {
 		cleanup();
+	}
+});
+
+test('pending password outcomes cannot overwrite changed, reset, detached or newer state', async () => {
+	for (const scenario of [
+		'changed',
+		'rejected',
+		'detached',
+		'same-input',
+		'reset',
+		'generate',
+		'repeat',
+	]) {
+		const pending = [];
+		const state = initialize({
+			clipboard: {
+				writeText: () =>
+					new Promise((resolve, reject) =>
+						pending.push({ resolve, reject })
+					),
+			},
+			crypto: { getRandomValues() {} },
+		});
+		try {
+			state.password.value = 'old-synthetic';
+			state.password.listeners.get('input')();
+			const first = state.copy.listeners.get('click')();
+			if (scenario === 'detached') {
+				state.password.isConnected = false;
+			}
+			if (scenario === 'changed' || scenario === 'rejected') {
+				state.password.value = 'new-synthetic';
+				state.password.listeners.get('input')();
+			}
+			if (scenario === 'same-input') {
+				state.password.listeners.get('input')();
+			}
+			if (scenario === 'reset') {
+				state.credentialChoice.checked = false;
+				state.form.listeners.get(
+					'ran-booster:portability-credentials-changed'
+				)();
+				state.password.value = 'old-synthetic';
+			}
+			if (scenario === 'generate') {
+				state.generate.listeners.get('click')();
+				state.password.value = 'old-synthetic';
+				state.status.textContent = '';
+			}
+			let second;
+			if (scenario === 'repeat') {
+				second = state.copy.listeners.get('click')();
+			}
+			if (scenario === 'rejected') {
+				pending[0].reject(new Error('denied'));
+			} else {
+				pending[0].resolve();
+			}
+			await first;
+			assert.equal(
+				state.status.textContent,
+				scenario === 'repeat' ? 'Password copied.' : '',
+				scenario
+			);
+			assert.equal(
+				state.copy.getAttribute('aria-label'),
+				scenario === 'repeat' ? 'Password copied.' : 'Copy password',
+				scenario
+			);
+			if (second) {
+				await second;
+				assert.equal(state.status.textContent, 'Password copied.');
+			}
+		} finally {
+			cleanup();
+		}
 	}
 });

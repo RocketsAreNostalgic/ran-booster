@@ -159,6 +159,50 @@ class TestCustomEvent {
 	}
 }
 
+test('history misses reload only when provider navigation is present', () => {
+	const state = fixture();
+	const htmx = { config: { refreshOnHistoryMiss: false } };
+	const init = loadFunction('initProviderTaskNavigation', {
+		document: state.document,
+		htmx,
+	});
+	init();
+	assert.equal(htmx.config.refreshOnHistoryMiss, true);
+
+	htmx.config.refreshOnHistoryMiss = false;
+	const detail = loadFunction('initProviderTaskNavigation', {
+		document: {
+			...state.document,
+			getElementById: (id) =>
+				id === 'ran-booster-provider-profile-region'
+					? { querySelector: () => ({}) }
+					: null,
+		},
+		htmx,
+	});
+	detail();
+	assert.equal(htmx.config.refreshOnHistoryMiss, true);
+
+	htmx.config.refreshOnHistoryMiss = false;
+	const absent = loadFunction('initProviderTaskNavigation', {
+		document: { getElementById: () => null },
+		htmx,
+	});
+	absent();
+	assert.equal(htmx.config.refreshOnHistoryMiss, false);
+});
+
+test('provider navigation initializes without htmx or its config', () => {
+	const state = fixture();
+	for (const htmx of [undefined, {}]) {
+		const init = loadFunction('initProviderTaskNavigation', {
+			document: state.document,
+			htmx,
+		});
+		assert.doesNotThrow(init);
+	}
+});
+
 test('provider task requests expose progress and notify swapped controls', () => {
 	const state = fixture();
 	const calls = [];

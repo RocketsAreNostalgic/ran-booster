@@ -191,15 +191,28 @@ class LocalDataRemover {
 	}
 
 	protected function clear_updater_state(): void {
-		if ( ! function_exists( 'delete_option' ) || ! function_exists( 'get_option' ) ) {
+		if ( ! function_exists( 'delete_option' ) ) {
 			throw new RuntimeException( 'Booster updater state could not be removed.' );
 		}
 
-		$missing = new \stdClass();
-		$option  = $this->package_updater_authority_option();
+		$option = $this->package_updater_authority_option();
 		delete_option( $option );
-		if ( get_option( $option, $missing ) !== $missing ) {
+		if ( ! $this->option_is_absent( $option ) ) {
 			throw new RuntimeException( 'Booster updater state could not be removed.' );
+		}
+	}
+
+	/** Bypass WordPress option caches after deletion, including their negative cache. */
+	private function option_is_absent( string $option ): bool {
+		$database = $this->database;
+		if ( ( ! $database instanceof \wpdb && ! $database instanceof SchemaConnection ) || ! isset( $database->options ) || ! is_string( $database->options ) || '' === $database->options ) {
+			return false;
+		}
+		try {
+			$query = $database->prepare( 'SELECT option_name FROM %i WHERE BINARY option_name = BINARY %s LIMIT 1', $database->options, $option );
+			return array() === $this->custody_rows( $database, $query );
+		} catch ( \Throwable ) {
+			return false;
 		}
 	}
 
@@ -252,14 +265,13 @@ class LocalDataRemover {
 	}
 
 	protected function delete_options(): void {
-		if ( ! function_exists( 'delete_option' ) || ! function_exists( 'get_option' ) ) {
+		if ( ! function_exists( 'delete_option' ) ) {
 			throw new RuntimeException( 'Booster options could not be removed.' );
 		}
 
-		$missing = new \stdClass();
 		foreach ( array_values( array_unique( self::OPTION_NAMES ) ) as $option ) {
 			delete_option( $option );
-			if ( get_option( $option, $missing ) !== $missing ) {
+			if ( ! $this->option_is_absent( $option ) ) {
 				throw new RuntimeException( 'Booster options could not be removed.' );
 			}
 		}

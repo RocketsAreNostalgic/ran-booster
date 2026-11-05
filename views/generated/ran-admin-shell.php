@@ -32,6 +32,8 @@ $ran_admin_shell_navigation  = isset( $ran_admin_shell['navigation'] ) && is_arr
 $ran_admin_shell_breadcrumbs = isset( $ran_admin_shell['breadcrumbs'] ) && is_array( $ran_admin_shell['breadcrumbs'] ) ? array_values( $ran_admin_shell['breadcrumbs'] ) : array();
 $ran_admin_shell_actions     = isset( $ran_admin_shell['actions'] ) && is_array( $ran_admin_shell['actions'] ) ? $ran_admin_shell['actions'] : array();
 
+$ran_admin_shell_has_home_url = '' !== esc_url( $ran_admin_shell_home_url );
+
 $ran_admin_shell_breadcrumb_last = count( $ran_admin_shell_breadcrumbs ) - 1;
 foreach ( $ran_admin_shell_breadcrumbs as $ran_admin_shell_index => $ran_admin_shell_breadcrumb ) {
 	if ( ! is_array( $ran_admin_shell_breadcrumb )
@@ -93,18 +95,16 @@ $ran_admin_shell_actions        = array_values(
 		<img class="ran-admin-shell__background" src="<?php echo esc_url( (string) $ran_admin_shell_background['url'] ); ?>" width="<?php echo esc_attr( (string) (int) $ran_admin_shell_background['width'] ); ?>" height="<?php echo esc_attr( (string) (int) $ran_admin_shell_background['height'] ); ?>" alt="" aria-hidden="true" />
 	<?php endif; ?>
 	<div class="ran-admin-shell__inner">
-		<div class="ran-admin-shell__identity">
+		<?php if ( $ran_admin_shell_has_home_url ) : ?>
+			<a class="ran-admin-shell__identity" href="<?php echo esc_url( $ran_admin_shell_home_url ); ?>">
+		<?php else : ?>
+			<div class="ran-admin-shell__identity">
+		<?php endif; ?>
 			<?php if ( $ran_admin_shell_has_logo ) : ?>
 				<img class="ran-admin-shell__logo" src="<?php echo esc_url( (string) $ran_admin_shell_logo['url'] ); ?>" width="<?php echo esc_attr( (string) (int) $ran_admin_shell_logo['width'] ); ?>" height="<?php echo esc_attr( (string) (int) $ran_admin_shell_logo['height'] ); ?>" alt="" aria-hidden="true" />
 			<?php endif; ?>
 			<div class="ran-admin-shell__copy">
-				<h1 class="ran-admin-shell__title">
-					<?php if ( '' !== $ran_admin_shell_home_url ) : ?>
-						<a href="<?php echo esc_url( $ran_admin_shell_home_url ); ?>"><?php echo esc_html( $ran_admin_shell_name ); ?></a>
-					<?php else : ?>
-						<?php echo esc_html( $ran_admin_shell_name ); ?>
-					<?php endif; ?>
-				</h1>
+				<h1 class="ran-admin-shell__title"><?php echo esc_html( $ran_admin_shell_name ); ?></h1>
 				<?php if ( '' !== $ran_admin_shell_strapline ) : ?>
 					<p class="ran-admin-shell__strapline"><?php echo esc_html( $ran_admin_shell_strapline ); ?></p>
 				<?php endif; ?>
@@ -112,7 +112,11 @@ $ran_admin_shell_actions        = array_values(
 			<?php if ( '' !== $ran_admin_shell_version ) : ?>
 				<span class="ran-admin-shell__version"><?php echo esc_html( $ran_admin_shell_version ); ?></span>
 			<?php endif; ?>
-		</div>
+		<?php if ( $ran_admin_shell_has_home_url ) : ?>
+			</a>
+		<?php else : ?>
+			</div>
+		<?php endif; ?>
 		<?php if ( $ran_admin_shell_actions ) : ?>
 			<div class="ran-admin-shell__actions">
 				<?php foreach ( $ran_admin_shell_actions as $ran_admin_shell_action ) : ?>

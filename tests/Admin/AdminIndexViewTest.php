@@ -98,12 +98,8 @@ final class AdminIndexViewTest extends TestCase {
 			$html
 		);
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $html ) );
-		self::assertStringContainsString(
-			'<a href="https://example.test/wp-admin/admin.php?page=ran-booster">',
-			$html
-		);
 		self::assertMatchesRegularExpression(
-			'/<h1 class="ran-admin-shell__title">\\s*<a href="https:\\/\\/example\\.test\\/wp-admin\\/admin\\.php\\?page=ran-booster">Booster<\\/a>\\s*<\\/h1>/',
+			'~<a class="ran-admin-shell__identity" href="https://example\.test/wp-admin/admin\.php\?page=ran-booster">\s*<img class="ran-admin-shell__logo"[^>]*>\s*<div class="ran-admin-shell__copy">\s*<h1 class="ran-admin-shell__title">Booster</h1>\s*<p class="ran-admin-shell__strapline">Rockets Are Nostalgic</p>\s*</div>\s*</a>~',
 			$html
 		);
 		self::assertStringContainsString( 'class="ran-admin-shell__logo"', $html );

@@ -1,10 +1,10 @@
 {
     "schema": 1,
     "package": "ran/admin-shell",
-    "version": "v2.0.0",
-    "reference": "73abb3f8b35aab5eaaac74cb812a4fe2f3974482",
+    "version": "dev-fix/whole-identity-home-link",
+    "reference": "61e3543eecf047cfd5e4cb51079162c79593ef81",
     "files": {
-        "assets/ran-admin-shell.css": "sha256:6c4f41c0376780bdd0aa88520142c737a1700cf5ef33d3afda061cb6e959918a",
-        "views/generated/ran-admin-shell.php": "sha256:8195e9eff782dd4e9ba250799ecf92d80858f9a522f3f2c2b16926cb97a79adf"
+        "assets/ran-admin-shell.css": "sha256:1d83a2a60b491b160f3d463ee1ffe0ce361b246d716a9ebcf35a2617af2adc84",
+        "views/generated/ran-admin-shell.php": "sha256:6d1e8fe8e669ccd9e961a88211be831fa76a78709863d8ead943e45e28f7cc2d"
     }
 }

@@ -591,7 +591,7 @@ class Dashboard {
 			// Keep the existing notice when fresh policy state is unavailable.
 			return $html;
 		}
-		$notice = new CoreSelfUpdateDevelopmentNotice( $policy );
+		$notice = new CoreSelfUpdateDevelopmentNotice( $policy, 'ran-booster_page_ran-booster-settings' );
 		ob_start();
 		$notice->render_shell_inline();
 		$notice_html = (string) ob_get_clean();

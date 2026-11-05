@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
 
 const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-packages.js', import.meta.url),
@@ -350,6 +351,10 @@ function sourceUnsavedGuardFixture() {
 	const destination = { type: 'radio', checked: true, value: 'stable' };
 	const form = {
 		dataset: {},
+		attempted: false,
+		hasAttribute(name) {
+			return name === 'data-ran-booster-attempted' && this.attempted;
+		},
 		elements: [text, policy, nonce, destination],
 	};
 	const notice = {
@@ -482,6 +487,23 @@ test('reverted settings and transition-only fields do not block source changes',
 	}
 });
 
+test('failed settings submission blocks source navigation and transitions', () => {
+	const state = sourceUnsavedGuardFixture();
+	state.form.attempted = true;
+	try {
+		loadFunction('initPackageSourceUnsavedGuard')();
+		assert.equal(
+			eventThrough(state.listeners.get('navigation:click'))
+				.defaultPrevented,
+			true
+		);
+		assert.equal(state.transition.requestSubmit().defaultPrevented, true);
+		assert.equal(state.notice.hidden, false);
+	} finally {
+		delete globalThis.document;
+	}
+});
+
 test('HTMX re-initialization keeps the original ordinary-settings baseline', () => {
 	const state = sourceUnsavedGuardFixture();
 
@@ -494,4 +516,104 @@ test('HTMX re-initialization keeps the original ordinary-settings baseline', () 
 	} finally {
 		delete globalThis.document;
 	}
+});
+
+test('package leave warning follows edits, submissions, failed attempts and leaving the form', async () => {
+	const documentListeners = new Map();
+	const windowListeners = new Map();
+	const formListeners = new Map();
+	const text = {
+		name: 'ran_booster[repository]',
+		type: 'text',
+		value: 'old',
+		disabled: false,
+	};
+	const check = {
+		name: 'ran_booster[dry-run]',
+		type: 'checkbox',
+		checked: false,
+		disabled: false,
+	};
+	const radio = {
+		name: 'ran_booster[source]',
+		type: 'radio',
+		checked: false,
+		disabled: false,
+	};
+	let attempted = false;
+	let form = {
+		id: 'ran-booster-package-edit-form',
+		dataset: {},
+		elements: [text, check, radio],
+		hasAttribute: () => attempted,
+		addEventListener: (name, fn) => formListeners.set(name, fn),
+	};
+	const document = {
+		readyState: 'loading',
+		querySelector: (selector) =>
+			selector ===
+			'#ran-booster-package-edit-form, #ran-booster-package-create-form'
+				? form
+				: null,
+		addEventListener: (name, fn) => documentListeners.set(name, fn),
+	};
+	const window = {
+		addEventListener: (name, fn) => windowListeners.set(name, fn),
+	};
+	const instrumented = source.replace(
+		/\}\)\(\);\s*$/,
+		'globalThis.initializeLeaveGuard = initPackageLeaveGuard; })();'
+	);
+	const context = { document, window, wp: { i18n: {} }, queueMicrotask };
+	vm.runInNewContext(instrumented, context);
+	const warning = () => {
+		const event = {
+			prevented: false,
+			preventDefault() {
+				this.prevented = true;
+			},
+		};
+		windowListeners.get('beforeunload')(event);
+		return event.prevented;
+	};
+	context.initializeLeaveGuard();
+	assert.equal(warning(), false);
+	text.value = 'changed';
+	assert.equal(warning(), true);
+	text.value = 'old';
+	assert.equal(warning(), false);
+	check.checked = true;
+	assert.equal(warning(), true);
+	check.checked = false;
+	radio.checked = true;
+	assert.equal(warning(), true);
+	formListeners.get('submit')({ defaultPrevented: true });
+	await Promise.resolve();
+	assert.equal(warning(), true);
+	formListeners.get('submit')({ defaultPrevented: false });
+	await Promise.resolve();
+	assert.equal(warning(), false);
+	windowListeners.get('pageshow')();
+	assert.equal(warning(), true);
+	attempted = true;
+	form = { ...form, dataset: {} };
+	radio.checked = false;
+	context.initializeLeaveGuard();
+	assert.equal(warning(), true);
+	attempted = false;
+	form = {
+		...form,
+		dataset: {
+			ranBoosterLeaveGuardBound: 'true',
+			ranBoosterSourceUnsavedGuardBound: 'true',
+		},
+	};
+	documentListeners.get('htmx:historyRestore')();
+	text.value = 'changed again';
+	assert.equal(warning(), true);
+	text.value = 'old';
+	assert.equal(warning(), false);
+	form = null;
+	documentListeners.get('htmx:historyRestore')();
+	assert.equal(warning(), false);
 });

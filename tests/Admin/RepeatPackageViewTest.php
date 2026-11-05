@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
+require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
 use RAN\Admin\PackagePagePresenter;
@@ -25,6 +28,158 @@ final class RepeatPackageViewTest extends TestCase {
 	protected function tearDown(): void {
 		$_POST = array();
 		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_query_double_preserves_nested_wordpress_query_semantics(): void {
+		$url = add_query_arg(
+			array(
+				'return_s' => 'Rock%26x%3D1',
+				'more'     => array( 'deep' => 'a%2Bb' ),
+			),
+			'https://example.test/wp-admin/admin.php?nested%5Ba%5D=a%26b&nested%5Bdeep%5D%5Bv%5D=one+two~&source=existing#view'
+		);
+		self::assertSame(
+			'https://example.test/wp-admin/admin.php?nested%5Ba%5D=a%26b&nested%5Bdeep%5D%5Bv%5D=one+two%7E&source=existing&return_s=Rock%26x%3D1&more%5Bdeep%5D=a%2Bb#view',
+			$url
+		);
+	}
+
+	public function test_shell_breadcrumbs_render_for_create_and_edit_of_each_type(): void {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			foreach ( array( 'create', 'edit' ) as $operation ) {
+				$view                      = 'packages/' . $operation;
+				$package                   = $this->package( $package_view );
+				$package_provider_settings = $this->provider_settings( true );
+				$explicit_provider         = false;
+				$open_repository_picker    = false;
+				$package_return_list       = array(
+					's'        => 'release',
+					'provider' => 'gh',
+				);
+				$package_return_args       = array(
+					'return_type'     => $package_view->get_type(),
+					'return_s'        => 'release',
+					'return_provider' => 'gh',
+				);
+				$messages                  = array();
+				$tabs                      = array();
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/base.php';
+				$html = (string) ob_get_clean();
+				self::assertStringContainsString( 'page=' . $package_view->get_page_slug() . '&amp;s=release&amp;provider=gh', $html );
+				self::assertStringContainsString( '>' . $package_view->get_plural_label() . '</a>', $html );
+				$current = 'create' === $operation ? 'Install ' . $package_view->get_singular_label() : $package->name;
+				self::assertStringContainsString( 'aria-current="page">' . $current . '</span>', $html );
+				if ( 'edit' === $operation ) {
+					self::assertStringContainsString( 'return_type=' . $package_view->get_type(), $html );
+				}
+			}
+		}
+	}
+
+	public function test_reserved_characters_stay_inside_return_values_on_rendered_routes(): void {
+		$search = 'Rock&provider=bb&page=other#frag+more';
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			$package                   = $this->package( $package_view );
+			$package_provider_settings = $this->provider_settings( true );
+			$package_return_list       = array(
+				's'        => $search,
+				'provider' => 'gh',
+			);
+			$package_return_args       = array(
+				'return_type'     => $package_view->get_type(),
+				'return_s'        => $search,
+				'return_provider' => 'gh',
+			);
+			$messages                  = array();
+			$tabs                      = array();
+			$view                      = 'packages/edit';
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/base.php';
+			$html              = (string) ob_get_clean();
+			$packages          = array( $package );
+			$package_providers = array();
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			$html                      .= (string) ob_get_clean();
+			$managed_package_identifier = $package->get_identifier();
+			$explicit_provider          = false;
+			$open_repository_picker     = false;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+			$html .= (string) ob_get_clean();
+			preg_match_all( '/(?:href|hx-post)="([^"]*(?:return_s|[&?]s)=([^"]*))"/', $html, $matches );
+			self::assertNotEmpty( $matches[1] );
+			foreach ( $matches[1] as $attribute ) {
+				$url   = html_entity_decode( $attribute, ENT_QUOTES, 'UTF-8' );
+				$parts = wp_parse_url( $url );
+				self::assertIsArray( $parts );
+				$query = array();
+				wp_parse_str( $parts['query'] ?? '', $query );
+				self::assertContains( $query['page'] ?? '', array( $package_view->get_page_slug(), $package_view->get_create_page_slug() ) );
+				self::assertSame( $search, $query['return_s'] ?? $query['s'] ?? null );
+				self::assertNotSame( 'bb', $query['provider'] ?? null );
+				self::assertArrayNotHasKey( 'fragment', $parts );
+			}
+		}
+	}
+
+	public function test_filtered_list_row_settings_link_carries_the_same_context(): void {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			$packages            = array( $this->package( $package_view ) );
+			$package_providers   = array();
+			$package_return_args = array(
+				'return_type'     => $package_view->get_type(),
+				'return_s'        => 'release',
+				'return_provider' => 'gh',
+			);
+			$messages            = array();
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			$html = (string) ob_get_clean();
+			self::assertMatchesRegularExpression( '/href="[^"]*page=' . $package_view->get_page_slug() . '&amp;package=[^"]*&amp;return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh" class="button">Edit settings/', $html );
+		}
+	}
+
+	public function test_edit_links_keep_return_filter_separate_from_install_provider_and_hx_routes(): void {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			$package = $this->package( $package_view );
+			$package->set_repository( new ManagedRepository( 'bb', 'owner/example', 'provider-id', 'main' ) );
+			$package_provider_settings = $this->provider_settings( true );
+			$package_return_args       = array(
+				'return_type'     => $package_view->get_type(),
+				'return_s'        => 'release',
+				'return_provider' => 'gh',
+			);
+			$package_return_list       = array(
+				's'        => 'release',
+				'provider' => 'gh',
+			);
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'provider=bb&amp;open_picker=1&amp;return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh', $html );
+			self::assertMatchesRegularExpression( '/hx-post="[^" ]*return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh"/', $html );
+			self::assertStringContainsString( 'page=' . $package_view->get_page_slug() . '&amp;s=release&amp;provider=gh', $html );
+		}
+	}
+
+	public function test_failed_package_submission_marks_form_for_leave_warning(): void {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			foreach ( array( 'create', 'edit' ) as $operation ) {
+				$package                   = $this->package( $package_view );
+				$package_provider_settings = $this->provider_settings( true );
+				$explicit_provider         = false;
+				$open_repository_picker    = false;
+				$_POST['ran_booster']      = array( 'action' => $package_view->get_action( 'create' === $operation ? 'install' : 'edit' ) );
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/packages/' . $operation . '.php';
+				$html = (string) ob_get_clean();
+				self::assertStringContainsString( 'data-ran-booster-attempted', $this->form_by_id( $html, 'ran-booster-package-' . $operation . '-form' ) );
+			}
+		}
 	}
 
 	public function test_incomplete_advanced_summary_projection_uses_plain_summary(): void {
@@ -82,7 +237,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$html
 		);
 		self::assertStringNotContainsString( 'ran-booster-page-shell', $html );
-		self::assertStringContainsString( 'Back to Managed ' . $package_view->get_plural_label(), $html );
+		self::assertStringNotContainsString( 'ran-booster-package-settings__back', $html );
 		self::assertStringContainsString(
 			'<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading ran-booster-page-heading__title">Install New ' . $package_view->get_singular_label() . '</h2>',
 			$html
@@ -210,7 +365,7 @@ final class RepeatPackageViewTest extends TestCase {
 		$base_url   = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
 		$manage_url = $base_url
 			. '?page=' . $package_view->get_page_slug()
-			. '&amp;package=' . rawurlencode( $managed_package_identifier );
+			. '&amp;package=' . $managed_package_identifier;
 
 		self::assertStringContainsString(
 			'<a class="button button-primary" href="' . $manage_url . '">Manage ' . $package_view->get_type() . '</a>',
@@ -498,6 +653,11 @@ final class RepeatPackageViewTest extends TestCase {
 			foreach ( array( 'branch', 'release_asset' ) as $package_source_view ) {
 				$identifier_value       = 'plugin' === $package_view->get_type() ? 'example/example.php' : 'example-theme';
 				$package_source_mode    = 'edit';
+				$package_return_args    = array(
+					'return_type'     => $package_view->get_type(),
+					'return_provider' => 'gh',
+					'return_s'        => 'Rock&provider=bb&page=other#frag+more',
+				);
 				$package_current_source = 'branch' === $package_source_view ? 'release_asset' : 'branch';
 				$package_source_choices = array();
 				foreach (
@@ -526,6 +686,7 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertSame( 1, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $package_view->get_type() );
 				self::assertStringNotContainsString( 'https://example.test', $html, $package_view->get_type() );
 				self::assertSame( 1, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $package_view->get_type() );
+				self::assertMatchesRegularExpression( '/hx-get="[^"]*return_type=' . $package_view->get_type() . '&amp;return_provider=gh&amp;return_s=Rock%26provider%3Dbb%26page%3Dother%23frag%2Bmore"/', $html );
 				self::assertStringContainsString( '>Branch</strong>', $html, $package_view->get_type() );
 				self::assertStringContainsString( '>Releases</strong>', $html, $package_view->get_type() );
 				self::assertStringContainsString( '<legend class="screen-reader-text">Update source</legend>', $html, $package_view->get_type() );
@@ -853,7 +1014,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'name="ran_booster[action]"', $html, $recovery_state );
 			self::assertSame( 'healthy' === $recovery_state, str_contains( $html, 'Open package settings' ), $recovery_state );
 			if ( 'healthy' === $recovery_state ) {
-				self::assertStringContainsString( 'package=' . rawurlencode( $managed_package_identifier ), $html );
+				self::assertStringContainsString( 'package=' . $managed_package_identifier, $html );
 			} else {
 				self::assertStringContainsString( 'A safely bounded &lt;explanation&gt;.', $html, $recovery_state );
 			}

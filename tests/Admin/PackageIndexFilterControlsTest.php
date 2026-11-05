@@ -103,6 +103,35 @@ final class PackageIndexFilterControlsTest extends TestCase {
 	}
 
 	#[DataProvider( 'package_types' )]
+	public function test_filtered_list_install_entry_carries_only_return_context( PackagePagePresenter $package_view, string $page_slug, string $type, string $plural ): void {
+		unset( $plural );
+		$html = $this->render(
+			$package_view,
+			array(
+				'search'   => 'release',
+				'provider' => 'gh',
+				'source'   => 'branch',
+				'policy'   => 'manual',
+			),
+			1,
+			array(
+				array(
+					'code'  => 'gh',
+					'label' => 'GitHub',
+				),
+			),
+			array(
+				'return_type'     => $type,
+				'return_s'        => 'release',
+				'return_provider' => 'gh',
+				'return_source'   => 'branch',
+				'return_policy'   => 'manual',
+			)
+		);
+		self::assertStringContainsString( 'page=' . $page_slug . '-create&amp;return_type=' . $type . '&amp;return_s=release&amp;return_provider=gh&amp;return_source=branch&amp;return_policy=manual', $html );
+	}
+
+	#[DataProvider( 'package_types' )]
 	public function test_raw_empty_inventory_offers_prominent_first_package_onboarding(
 		PackagePagePresenter $package_view,
 		string $page_slug,
@@ -170,13 +199,15 @@ final class PackageIndexFilterControlsTest extends TestCase {
 	/**
 	 * @param array{search:string,provider:string,source:string,policy:string} $package_list_state
 	 * @param list<array{code:string,label:string}>                           $package_provider_options
+	 * @param array<string,string>                                           $package_return_args
 	 */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The included production view reads these parameters as local template variables.
 	private function render(
 		PackagePagePresenter $package_view,
 		array $package_list_state,
 		int $package_list_total,
-		array $package_provider_options
+		array $package_provider_options,
+		array $package_return_args = array()
 	): string {
 		$packages                  = array();
 		$package_providers         = array();

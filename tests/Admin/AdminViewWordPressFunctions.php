@@ -56,14 +56,29 @@ if ( ! function_exists( 'add_query_arg' ) ) {
 		}
 		[ $path, $query ] = array_pad( explode( '?', $base, 2 ), 2, '' );
 		parse_str( $query, $existing );
-		$existing = array_map( 'urlencode', $existing );
-		$values   = array_merge( $existing, $args );
-		$pairs    = array();
-		foreach ( $values as $name => $entry ) {
-			if ( false !== $entry ) {
-				$pairs[] = $name . '=' . $entry;
+		array_walk_recursive(
+			$existing,
+			static function ( mixed &$entry ): void {
+				if ( is_string( $entry ) ) {
+					$entry = str_replace( array( '%20', '~' ), array( '+', '%7E' ), rawurlencode( $entry ) );
+				}
 			}
-		}
+		);
+		$values = array_merge( $existing, $args );
+		/** @param array<array-key, mixed> $items @return list<string> */
+		$build = static function ( array $items, string $prefix = '' ) use ( &$build ): array {
+			$pairs = array();
+			foreach ( $items as $name => $entry ) {
+				$key = '' === $prefix ? (string) $name : $prefix . '%5B' . $name . '%5D';
+				if ( is_array( $entry ) ) {
+					array_push( $pairs, ...$build( $entry, $key ) );
+				} elseif ( null !== $entry && ( '' !== $prefix || false !== $entry ) ) {
+					$pairs[] = $key . '=' . ( false === $entry ? '0' : $entry );
+				}
+			}
+			return $pairs;
+		};
+		$pairs = $build( $values );
 		return $path . ( $pairs ? '?' . implode( '&', $pairs ) : '' ) . $fragment;
 	}
 }

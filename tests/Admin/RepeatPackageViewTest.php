@@ -8,6 +8,8 @@ require_once dirname( __DIR__ ) . '/Support/PackageViewWordPressFunctions.php';
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\TestCase;
 use RAN\AbstractPackage;
 use RAN\Admin\PackagePagePresenter;
@@ -26,6 +28,22 @@ final class RepeatPackageViewTest extends TestCase {
 	protected function tearDown(): void {
 		$_POST = array();
 		unset( $GLOBALS['ran_booster_package_view_multisite'], $GLOBALS['ran_booster_dashboard_test_multisite'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_query_double_preserves_nested_wordpress_query_semantics(): void {
+		$url = add_query_arg(
+			array(
+				'return_s' => 'Rock%26x%3D1',
+				'more'     => array( 'deep' => 'a%2Bb' ),
+			),
+			'https://example.test/wp-admin/admin.php?nested%5Ba%5D=a%26b&nested%5Bdeep%5D%5Bv%5D=one+two~&source=existing#view'
+		);
+		self::assertSame(
+			'https://example.test/wp-admin/admin.php?nested%5Ba%5D=a%26b&nested%5Bdeep%5D%5Bv%5D=one+two%7E&source=existing&return_s=Rock%26x%3D1&more%5Bdeep%5D=a%2Bb#view',
+			$url
+		);
 	}
 
 	public function test_shell_breadcrumbs_render_for_create_and_edit_of_each_type(): void {

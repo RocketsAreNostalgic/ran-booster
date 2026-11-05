@@ -805,6 +805,7 @@ class Booster {
 			$style_dependencies = array( $style_handle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
+		wp_enqueue_style( 'wp-components' );
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
 			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array(), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
 		}
@@ -842,7 +843,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-enhanced-mutations',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-enhanced-mutations.js',
-			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
+			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n', 'wp-element', 'wp-components' ),
 			$enhanced_mutation_script_version,
 			true
 		);

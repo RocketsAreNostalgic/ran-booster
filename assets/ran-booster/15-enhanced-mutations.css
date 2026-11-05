@@ -42,3 +42,9 @@
 	opacity: 1;
 	transform: translateY(0);
 }
+
+/* Inline placement keeps the General controls usable on narrow screens. */
+.ran-booster-general-snackbar .components-snackbar-list {
+	position: static;
+	width: 100%;
+}

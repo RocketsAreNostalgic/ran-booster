@@ -20,6 +20,10 @@
 	 * rendering an authoritative region and emitting a safe named success event.
 	 */
 	function initEnhancedMutationFeedback() {
+		if (window.ranBoosterEnhancedMutationFeedbackInitialized) {
+			return;
+		}
+
 		const enhancedFormSelector = '[data-ran-booster-enhanced-mutation]';
 		const toastSelector = '[data-ran-booster-feedback-toast]';
 		const submitters = new WeakMap();
@@ -707,5 +711,7 @@
 				}
 			});
 		});
+
+		window.ranBoosterEnhancedMutationFeedbackInitialized = true;
 	}
 })();

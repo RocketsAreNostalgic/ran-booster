@@ -92,7 +92,7 @@ if ( in_array( $view, array( 'packages/create', 'packages/edit' ), true ) && iss
 	$package_heading                      = 'packages/create' === $view
 		/* translators: %s is plugin or theme. */
 		? sprintf( __( 'Install %s', 'ran-booster' ), $package_view->get_singular_label() )
-		: ( isset( $package ) && $package instanceof \RAN\Package ? trim( (string) $package->name ) : '' );
+		: ( isset( $package ) && $package instanceof \RAN\Package ? trim( $package->get_display_name() ) : '' );
 	if ( '' === $package_heading ) {
 		$package_heading = $package_view->get_singular_label();
 	}

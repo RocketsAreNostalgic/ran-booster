@@ -412,3 +412,9 @@ if ( ! function_exists( 'current_user_can' ) ) {
 		return $GLOBALS['ran_booster_test_capabilities'][ $capability ] ?? true;
 	}
 }
+
+if ( ! function_exists( 'number_format_i18n' ) ) {
+	function number_format_i18n( float $number, int $decimals = 0 ): string { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress fixture signature.
+		return number_format( $number, $decimals );
+	}
+}

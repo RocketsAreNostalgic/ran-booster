@@ -111,6 +111,14 @@ is a conservative presentation check, not a WordPress API guarantee.
 The transient subtree is removed before HTMX serializes history, so restored
 pages do not replay a cached confirmation.
 
+Core's source-checkout guidance remains a native, non-dismissible informational
+notice with no actions. It is shown to authorized administrators when automatic
+Core discovery is disabled for a source checkout, inline below the Booster shell
+and in the native notice region on Plugins screens. General Settings responses
+refresh its fixed shell slot from fresh policy state; an unavailable read leaves
+the existing notice untouched. Global notices and other notice families retain
+their existing behavior and remain outside this scoped refresh.
+
 ## Required tests
 
 Cover at least:

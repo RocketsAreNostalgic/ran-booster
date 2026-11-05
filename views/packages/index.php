@@ -77,7 +77,7 @@ $bulk_select_all_id           = 'ran-booster-' . $package_view->get_type() . '-s
 $bulk_type_label              = strtolower( $package_view->get_plural_label() );
 $bulk_type_singular           = strtolower( $package_view->get_singular_label() );
 $is_plugin_list               = 'plugin' === $package_view->get_type();
-$install_another_url          = add_query_arg( 'page', $package_view->get_create_page_slug(), $package_admin_url );
+$install_another_url          = add_query_arg( array( 'page' => $package_view->get_create_page_slug() ) + ( $package_return_args ?? array() ), $package_admin_url );
 $clear_filters_url            = add_query_arg( 'page', $package_view->get_page_slug(), $package_admin_url );
 $has_package_list_filters     = array() !== array_filter(
 	$package_list_state,
@@ -396,7 +396,7 @@ $policy_labels = array(
 				array(
 					'page'    => $package_view->get_page_slug(),
 					'package' => $package->get_identifier(),
-				),
+				) + ( $package_return_args ?? array() ),
 				$package_admin_url
 			);
 			$automation_state_label = match ( $deployment_policy ) {

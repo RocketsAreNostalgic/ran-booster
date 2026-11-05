@@ -1,6 +1,7 @@
 (function () {
 	'use strict';
 	const { __, _n, sprintf } = wp.i18n;
+	let packageLeaveState;
 
 	function onDomReady(callback) {
 		if (document.readyState === 'loading') {
@@ -48,6 +49,7 @@
 		initPackageOperationControls();
 		initPackageSourceControls();
 		initPackageSourceUnsavedGuard();
+		initPackageLeaveGuard();
 
 		document
 			.querySelectorAll('.button-update-package')
@@ -73,6 +75,78 @@
 		initConfirmedPackageRemovals();
 		initPackageUpdateProgress();
 	}
+
+	function initPackageLeaveGuard() {
+		const form = document.querySelector(
+			'#ran-booster-package-edit-form, #ran-booster-package-create-form'
+		);
+		if (!form) {
+			packageLeaveState = undefined;
+			return;
+		}
+		if (form.dataset.ranBoosterLeaveGuardBound === 'true') {
+			return;
+		}
+		form.dataset.ranBoosterLeaveGuardBound = 'true';
+		const fingerprint = () =>
+			JSON.stringify(
+				Array.from(form.elements)
+					.filter(
+						(control) =>
+							!control.disabled &&
+							control.name?.startsWith('ran_booster[') &&
+							![
+								'hidden',
+								'button',
+								'submit',
+								'reset',
+								'image',
+							].includes(control.type)
+					)
+					.map((control) => [
+						control.name,
+						['checkbox', 'radio'].includes(control.type)
+							? control.checked
+							: control.value,
+					])
+			);
+		const initial = fingerprint();
+		const attempted = form.hasAttribute('data-ran-booster-attempted');
+		packageLeaveState = {
+			dirty: () => attempted || fingerprint() !== initial,
+			submitting: false,
+		};
+		form.addEventListener('submit', () => {
+			packageLeaveState.submitting = true;
+		});
+		form.addEventListener('htmx:afterRequest', () => {
+			packageLeaveState.submitting = false;
+		});
+	}
+
+	document.addEventListener('htmx:afterRequest', () => {
+		if (packageLeaveState) {
+			packageLeaveState.submitting = false;
+		}
+	});
+	document.addEventListener('htmx:beforeRequest', (event) => {
+		queueMicrotask(() => {
+			if (event.defaultPrevented && packageLeaveState) {
+				packageLeaveState.submitting = false;
+			}
+		});
+	});
+
+	window.addEventListener('beforeunload', (event) => {
+		if (
+			packageLeaveState &&
+			!packageLeaveState.submitting &&
+			packageLeaveState.dirty()
+		) {
+			event.preventDefault();
+			event.returnValue = '';
+		}
+	});
 
 	function initPackageSourceControls() {
 		document

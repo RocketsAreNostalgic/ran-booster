@@ -53,7 +53,7 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 			$source_heading       = $source_choice['heading'];
 			$source_slug          = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $source_key ) );
 			$tab_id               = 'ran-booster-source-tab-' . $source_slug;
-			$source_url           = wp_make_link_relative( $source_choice['url'] );
+			$source_url           = wp_make_link_relative( add_query_arg( $package_return_args ?? array(), $source_choice['url'] ) );
 			$disabled_explanation = $source_choice['disabled'] ? (string) $source_choice['description'] : '';
 			?>
 			<?php if ( $is_navigation_link ) { ?>

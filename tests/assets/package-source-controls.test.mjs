@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
 
 const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-packages.js', import.meta.url),
@@ -494,4 +495,87 @@ test('HTMX re-initialization keeps the original ordinary-settings baseline', () 
 	} finally {
 		delete globalThis.document;
 	}
+});
+
+test('package leave warning follows edits, submissions, failed attempts and leaving the form', async () => {
+	const documentListeners = new Map();
+	const windowListeners = new Map();
+	const formListeners = new Map();
+	const text = {
+		name: 'ran_booster[repository]',
+		type: 'text',
+		value: 'old',
+		disabled: false,
+	};
+	const check = {
+		name: 'ran_booster[dry-run]',
+		type: 'checkbox',
+		checked: false,
+		disabled: false,
+	};
+	const radio = {
+		name: 'ran_booster[source]',
+		type: 'radio',
+		checked: false,
+		disabled: false,
+	};
+	let attempted = false;
+	let form = {
+		id: 'ran-booster-package-edit-form',
+		dataset: {},
+		elements: [text, check, radio],
+		hasAttribute: () => attempted,
+		addEventListener: (name, fn) => formListeners.set(name, fn),
+	};
+	const document = {
+		readyState: 'loading',
+		querySelector: () => form,
+		addEventListener: (name, fn) => documentListeners.set(name, fn),
+	};
+	const window = {
+		addEventListener: (name, fn) => windowListeners.set(name, fn),
+	};
+	const instrumented = source.replace(
+		/\}\)\(\);\s*$/,
+		'globalThis.initializeLeaveGuard = initPackageLeaveGuard; })();'
+	);
+	const context = { document, window, wp: { i18n: {} }, queueMicrotask };
+	vm.runInNewContext(instrumented, context);
+	const warning = () => {
+		const event = {
+			prevented: false,
+			preventDefault() {
+				this.prevented = true;
+			},
+		};
+		windowListeners.get('beforeunload')(event);
+		return event.prevented;
+	};
+	context.initializeLeaveGuard();
+	assert.equal(warning(), false);
+	text.value = 'changed';
+	assert.equal(warning(), true);
+	text.value = 'old';
+	assert.equal(warning(), false);
+	check.checked = true;
+	assert.equal(warning(), true);
+	check.checked = false;
+	radio.checked = true;
+	assert.equal(warning(), true);
+	formListeners.get('submit')();
+	assert.equal(warning(), false);
+	documentListeners.get('htmx:afterRequest')();
+	assert.equal(warning(), true);
+	formListeners.get('submit')();
+	documentListeners.get('htmx:beforeRequest')({ defaultPrevented: true });
+	await Promise.resolve();
+	assert.equal(warning(), true);
+	attempted = true;
+	form = { ...form, dataset: {} };
+	radio.checked = false;
+	context.initializeLeaveGuard();
+	assert.equal(warning(), true);
+	form = null;
+	context.initializeLeaveGuard();
+	assert.equal(warning(), false);
 });

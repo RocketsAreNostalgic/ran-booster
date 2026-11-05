@@ -985,26 +985,27 @@ class Dashboard {
 	 *
 	 * @return array{search: string, provider: string, source: string, policy: string}
 	 */
-	private function requested_package_list_state(): array {
+	private function requested_package_list_state( ?array $input = null ): array {
+		$input ??= $_GET; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation state.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$search = isset( $_GET['s'] ) && is_string( $_GET['s'] )
+		$search = isset( $input['s'] ) && is_string( $input['s'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			? sanitize_text_field( wp_unslash( $_GET['s'] ) )
+			? sanitize_text_field( wp_unslash( $input['s'] ) )
 			: '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$provider = isset( $_GET['provider'] ) && is_string( $_GET['provider'] )
+		$provider = isset( $input['provider'] ) && is_string( $input['provider'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			? sanitize_key( wp_unslash( $_GET['provider'] ) )
+			? sanitize_key( wp_unslash( $input['provider'] ) )
 			: '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$source = isset( $_GET['source'] ) && is_string( $_GET['source'] )
+		$source = isset( $input['source'] ) && is_string( $input['source'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			? sanitize_key( wp_unslash( $_GET['source'] ) )
+			? sanitize_key( wp_unslash( $input['source'] ) )
 			: '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$policy = isset( $_GET['policy'] ) && is_string( $_GET['policy'] )
+		$policy = isset( $input['policy'] ) && is_string( $input['policy'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			? sanitize_key( wp_unslash( $_GET['policy'] ) )
+			? sanitize_key( wp_unslash( $input['policy'] ) )
 			: '';
 
 		return array(
@@ -1020,8 +1021,8 @@ class Dashboard {
 	}
 
 	/** @return array<string, string> */
-	private function package_list_query_arguments(): array {
-		$state = $this->requested_package_list_state();
+	private function package_list_query_arguments( ?array $input = null ): array {
+		$state = $this->requested_package_list_state( $input );
 
 		return array_filter(
 			array(
@@ -1032,6 +1033,20 @@ class Dashboard {
 			),
 			static fn ( string $value ): bool => '' !== $value
 		);
+	}
+
+	/** @return array<string, string> */
+	private function package_return_context( string $type ): array {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation context, never mutation authority.
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || ( $_GET['return_type'] ?? null ) !== $type ) {
+			return array();
+		}
+		$input = array();
+		foreach ( array( 's', 'provider', 'source', 'policy' ) as $key ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded navigation context.
+			$input[ $key ] = $_GET[ 'return_' . $key ] ?? '';
+		}
+		return $this->package_list_query_arguments( $input );
 	}
 
 	private function requested_package_source_view(): string {
@@ -1158,7 +1173,9 @@ class Dashboard {
 			$this,
 			$action,
 			$request,
-			$this->package_list_query_arguments(),
+			( isset( $_GET['package'] ) || ( isset( $_GET['page'] ) && is_string( $_GET['page'] ) && str_contains( $_GET['page'], '-create' ) ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route selection.
+				? $this->package_return_context( str_ends_with( $action, '-theme' ) ? 'theme' : 'plugin' )
+				: $this->package_list_query_arguments(),
 			function ( WP_Error|array $message, array $context ): void {
 				$this->add_message_with_context( $message, $context );
 			}
@@ -1510,8 +1527,16 @@ class Dashboard {
 		$data['development_environment_detected'] = $development_environment_detected;
 
 		$data['development_safety_notice'] = $this->should_show_development_safety_notice( $view, $development_environment_detected );
-		$data['messages']                  = $this->messages;
-		$data['name']                      = $this->booster->get_name();
+		if ( isset( $data['package_view'] ) && $data['package_view'] instanceof PackagePagePresenter ) {
+			$type                        = $data['package_view']->get_type();
+			$data['package_return_list'] = 'packages/index' === $view ? $this->package_list_query_arguments() : $this->package_return_context( $type );
+			$data['package_return_args'] = array( 'return_type' => $type );
+			foreach ( $data['package_return_list'] as $key => $value ) {
+				$data['package_return_args'][ 'return_' . $key ] = $value;
+			}
+		}
+		$data['messages'] = $this->messages;
+		$data['name']     = $this->booster->get_name();
 
 		$data['core_self_update_development_notice'] = $this->core_self_update_development_notice;
 		if ( ! isset( $data['tabs'] ) ) {

@@ -98,7 +98,7 @@ $package_repository_ready   = '' !== trim( $repository_value )
 	&& strlen( $repository_value ) <= 512
 	&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $repository_value );
 $admin_url                  = $package_view->get_admin_url();
-$back_url                   = add_query_arg( 'page', $package_view->get_page_slug(), $admin_url );
+$back_url                   = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + ( $package_return_list ?? array() ), $admin_url );
 $managed_package_identifier = isset( $managed_package_identifier ) && is_string( $managed_package_identifier )
 	? trim( $managed_package_identifier )
 	: '';
@@ -108,12 +108,11 @@ $managed_package_url        = '' === $managed_package_identifier
 		array(
 			'page'    => $package_view->get_page_slug(),
 			'package' => $managed_package_identifier,
-		),
+		) + ( $package_return_args ?? array() ),
 		$admin_url
 	);
 
 ?>
-<p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a></p>
 <h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is Plugin or Theme. */ __( 'Install New %s', 'ran-booster' ), $package_view->get_singular_label() ) ); ?></h2>
 <p class="ran-booster-package-settings__intro ran-booster-page-heading__description"><?php esc_html_e( 'Identify the repository Booster should manage, then adjust source-specific settings when needed.', 'ran-booster' ); ?></p>
 
@@ -125,6 +124,8 @@ $managed_package_url        = '' === $managed_package_identifier
 			method="POST"
 			data-ran-booster-package-mutation
 			data-ran-booster-native-submit
+			<?php // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The dispatcher verifies the action nonce before failed form repopulation. ?>
+			<?php echo isset( $_POST['ran_booster']['action'] ) && $_POST['ran_booster']['action'] === $package_view->get_action( 'install' ) ? 'data-ran-booster-attempted' : ''; ?>
 			data-ran-booster-package-create="1"
 			data-ran-booster-explicit-provider="<?php echo esc_attr( $explicit_provider ? '1' : '0' ); ?>"
 			data-ran-booster-open-picker="<?php echo esc_attr( $open_repository_picker ? '1' : '0' ); ?>"

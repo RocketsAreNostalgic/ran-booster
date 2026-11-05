@@ -71,6 +71,35 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 	}
 
+	public function test_return_context_is_bounded_and_belongs_to_the_current_package_type(): void {
+		$dashboard = ( new \ReflectionClass( Dashboard::class ) )->newInstanceWithoutConstructor();
+		$method    = new \ReflectionMethod( Dashboard::class, 'package_return_context' );
+		$_GET      = array(
+			'return_type'     => 'plugin',
+			'return_s'        => '  release  ',
+			'return_provider' => 'GH!',
+			'return_source'   => 'release_asset',
+			'return_policy'   => 'automatic',
+			'provider'        => 'bb',
+			'return_url'      => 'https://evil.test/',
+		);
+		self::assertSame(
+			array(
+				's'        => 'release',
+				'provider' => 'gh',
+				'source'   => 'release_asset',
+				'policy'   => 'automatic',
+			),
+			$method->invoke( $dashboard, 'plugin' )
+		);
+		self::assertSame( array(), $method->invoke( $dashboard, 'theme' ) );
+		$_GET['return_source'] = array( 'branch' );
+		$_GET['return_policy'] = 'invalid';
+		$_GET['return_s']      = array( 'invalid' );
+		self::assertSame( array( 'provider' => 'gh' ), $method->invoke( $dashboard, 'plugin' ) );
+		$_GET = array();
+	}
+
 	public function test_recovery_is_post_only_and_checks_exact_confirmation_nonce(): void {
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )->method( 'add_failure_message' );

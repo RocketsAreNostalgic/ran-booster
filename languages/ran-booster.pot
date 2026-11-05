@@ -111,9 +111,9 @@ msgstr ""
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:87
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:128
 #: RAN/Troubleshooting/TroubleshootingService.php:310
-#: views/troubleshooting-installation.php:179
 #: views/troubleshooting-installation.php:180
-#: views/troubleshooting-installation.php:281
+#: views/troubleshooting-installation.php:181
+#: views/troubleshooting-installation.php:282
 msgid "Name"
 msgstr ""
 
@@ -252,9 +252,9 @@ msgstr ""
 #: views/attempts/index.php:166
 #: views/portability-review.php:31
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:177
-#: views/troubleshooting-installation.php:179
-#: views/troubleshooting-installation.php:185
+#: views/troubleshooting-installation.php:178
+#: views/troubleshooting-installation.php:180
+#: views/troubleshooting-installation.php:186
 msgid "Source"
 msgstr ""
 
@@ -1002,8 +1002,8 @@ msgstr ""
 #: views/portability-review.php:101
 #: views/settings-general.php:105
 #: views/settings-general.php:152
-#: views/troubleshooting-installation.php:163
-#: views/troubleshooting-installation.php:198
+#: views/troubleshooting-installation.php:158
+#: views/troubleshooting-installation.php:164
 #: views/troubleshooting.php:227
 #: assets/ran-booster-portability.js:713
 msgid "Unknown"
@@ -1689,7 +1689,7 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:279
 #: RAN/Admin/PackagePagePresenter.php:291
 #: views/overview-dashboard.php:94
-#: views/troubleshooting-installation.php:178
+#: views/troubleshooting-installation.php:179
 msgid "Included with Booster"
 msgstr ""
 
@@ -1733,8 +1733,8 @@ msgstr ""
 #: views/extensions.php:11
 #: views/extensions.php:85
 #: views/packages/source-choices.php:79
-#: views/troubleshooting-installation.php:163
 #: views/troubleshooting-installation.php:164
+#: views/troubleshooting-installation.php:165
 msgid "Active"
 msgstr ""
 
@@ -2617,8 +2617,8 @@ msgstr ""
 #: views/onboarding.php:79
 #: views/settings-storage.php:26
 #: views/troubleshooting-installation.php:20
-#: views/troubleshooting-installation.php:161
-#: views/troubleshooting-installation.php:179
+#: views/troubleshooting-installation.php:162
+#: views/troubleshooting-installation.php:180
 msgid "Unavailable"
 msgstr ""
 
@@ -2854,7 +2854,7 @@ msgstr ""
 #: views/provider.php:711
 #: views/settings-storage.php:25
 #: views/troubleshooting-installation.php:18
-#: views/troubleshooting-installation.php:163
+#: views/troubleshooting-installation.php:164
 msgid "Needs attention"
 msgstr ""
 
@@ -5736,13 +5736,13 @@ msgstr ""
 
 #. translators: %s: configured GitHub provider name.
 #: RAN/Troubleshooting/TroubleshootingService.php:232
-#: views/troubleshooting-installation.php:177
-#: views/troubleshooting-installation.php:185
+#: views/troubleshooting-installation.php:178
+#: views/troubleshooting-installation.php:186
 msgid "Bundled with Booster"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:233
-#: views/troubleshooting-installation.php:179
+#: views/troubleshooting-installation.php:180
 msgid "External replacement"
 msgstr ""
 
@@ -5770,31 +5770,31 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:243
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:159
+#: views/troubleshooting-installation.php:160
 msgid "Selection state"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:244
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:160
+#: views/troubleshooting-installation.php:161
 msgid "Operational availability"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:245
-#: views/troubleshooting-installation.php:163
-#: views/troubleshooting-installation.php:183
+#: views/troubleshooting-installation.php:164
+#: views/troubleshooting-installation.php:184
 msgid "Available"
 msgstr ""
 
 #. translators: %d: enabled replacement candidate number.
 #: RAN/Troubleshooting/TroubleshootingService.php:253
-#: views/troubleshooting-installation.php:269
+#: views/troubleshooting-installation.php:270
 #, php-format
 msgid "GitHub candidate %d"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:255
-#: views/troubleshooting-installation.php:266
+#: views/troubleshooting-installation.php:267
 msgid "Enabled candidates"
 msgstr ""
 
@@ -5885,33 +5885,33 @@ msgstr ""
 #: views/packages/index.php:517
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
-#: views/troubleshooting-installation.php:165
-#: views/troubleshooting-installation.php:281
+#: views/troubleshooting-installation.php:166
+#: views/troubleshooting-installation.php:282
 msgid "Version"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:312
-#: views/troubleshooting-installation.php:237
-#: views/troubleshooting-installation.php:239
-#: views/troubleshooting-installation.php:281
+#: views/troubleshooting-installation.php:238
+#: views/troubleshooting-installation.php:240
+#: views/troubleshooting-installation.php:282
 msgid "Implementation"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:313
-#: views/troubleshooting-installation.php:240
-#: views/troubleshooting-installation.php:281
+#: views/troubleshooting-installation.php:241
+#: views/troubleshooting-installation.php:282
 msgid "Provider API"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:314
-#: views/troubleshooting-installation.php:240
-#: views/troubleshooting-installation.php:281
+#: views/troubleshooting-installation.php:241
+#: views/troubleshooting-installation.php:282
 msgid "Compatibility revision"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:315
-#: views/troubleshooting-installation.php:240
-#: views/troubleshooting-installation.php:281
+#: views/troubleshooting-installation.php:241
+#: views/troubleshooting-installation.php:282
 msgid "Webhook signing format"
 msgstr ""
 
@@ -5923,7 +5923,7 @@ msgstr ""
 
 #. translators: %d: locally declared credential format number.
 #: RAN/Troubleshooting/TroubleshootingService.php:324
-#: views/troubleshooting-installation.php:250
+#: views/troubleshooting-installation.php:251
 #, php-format
 msgid "API credential format %d"
 msgstr ""
@@ -6322,7 +6322,7 @@ msgstr ""
 
 #: views/debug-capture.php:55
 #: views/extensions.php:94
-#: views/troubleshooting-installation.php:163
+#: views/troubleshooting-installation.php:164
 msgid "Inactive"
 msgstr ""
 
@@ -7509,14 +7509,14 @@ msgstr ""
 #. translators: %s: selected provider plugin name.
 #: views/overview-dashboard.php:97
 #: views/provider.php:241
-#: views/troubleshooting-installation.php:188
-#: views/troubleshooting-installation.php:194
+#: views/troubleshooting-installation.php:189
+#: views/troubleshooting-installation.php:195
 #, php-format
 msgid "Provided by %s"
 msgstr ""
 
 #: views/overview-dashboard.php:99
-#: views/troubleshooting-installation.php:207
+#: views/troubleshooting-installation.php:208
 msgid "Provider source unknown"
 msgstr ""
 
@@ -10415,8 +10415,9 @@ msgstr ""
 msgid "Status unavailable"
 msgstr ""
 
+#. translators: %s: provider or extension name.
 #: views/troubleshooting-installation.php:132
-#: views/troubleshooting-installation.php:213
+#: views/troubleshooting-installation.php:214
 msgid "Technical details"
 msgstr ""
 
@@ -10432,82 +10433,88 @@ msgstr ""
 msgid "Provider and extension information is unavailable."
 msgstr ""
 
-#: views/troubleshooting-installation.php:168
+#: views/troubleshooting-installation.php:169
 msgid "The selected GitHub provider plugin is not active or available. Review provider settings."
 msgstr ""
 
-#: views/troubleshooting-installation.php:169
+#: views/troubleshooting-installation.php:170
 msgid "Multiple GitHub provider plugins need review in provider settings."
 msgstr ""
 
-#: views/troubleshooting-installation.php:170
+#: views/troubleshooting-installation.php:171
 msgid "A GitHub provider plugin is incompatible. Review provider settings."
 msgstr ""
 
-#: views/troubleshooting-installation.php:171
+#: views/troubleshooting-installation.php:172
 msgid "GitHub provider recovery is required. Review provider settings."
 msgstr ""
 
-#: views/troubleshooting-installation.php:172
+#: views/troubleshooting-installation.php:173
 msgid "The GitHub provider selection needs a decision. Review provider settings."
 msgstr ""
 
-#: views/troubleshooting-installation.php:173
+#: views/troubleshooting-installation.php:174
 msgid "GitHub provider selection could not be checked. Review provider settings."
 msgstr ""
 
 #. translators: %s: configured GitHub provider name.
-#: views/troubleshooting-installation.php:184
+#: views/troubleshooting-installation.php:185
 #, php-format
 msgid "Selected provider: %s"
 msgstr ""
 
-#: views/troubleshooting-installation.php:192
+#: views/troubleshooting-installation.php:193
 msgid "Installed extension"
 msgstr ""
 
-#: views/troubleshooting-installation.php:211
+#: views/troubleshooting-installation.php:212
 msgid "GitHub provider selection needs attention. Review the provider settings before use."
 msgstr ""
 
-#: views/troubleshooting-installation.php:215
+#. translators: %s: provider or extension name.
+#: views/troubleshooting-installation.php:214
+#, php-format
+msgid "Technical details: %s"
+msgstr ""
+
+#: views/troubleshooting-installation.php:216
 msgid "These are local configuration details. Use Diagnostics to check repository access."
 msgstr ""
 
-#: views/troubleshooting-installation.php:215
+#: views/troubleshooting-installation.php:216
 msgid "These are local configuration details."
 msgstr ""
 
-#: views/troubleshooting-installation.php:223
+#: views/troubleshooting-installation.php:224
 msgid "Implementation fingerprint"
 msgstr ""
 
-#: views/troubleshooting-installation.php:226
+#: views/troubleshooting-installation.php:227
 msgid "Implemented capabilities"
 msgstr ""
 
-#: views/troubleshooting-installation.php:239
+#: views/troubleshooting-installation.php:240
 msgid "Implementation ID"
 msgstr ""
 
-#: views/troubleshooting-installation.php:252
+#: views/troubleshooting-installation.php:253
 msgid "Classic personal access token"
 msgstr ""
 
-#: views/troubleshooting-installation.php:254
+#: views/troubleshooting-installation.php:255
 msgid "Fine-grained personal access token"
 msgstr ""
 
-#: views/troubleshooting-installation.php:258
+#: views/troubleshooting-installation.php:259
 msgid "Supported credential types"
 msgstr ""
 
-#: views/troubleshooting-installation.php:275
+#: views/troubleshooting-installation.php:276
 msgid "GitHub replacement plugins detected"
 msgstr ""
 
 #. translators: 1: displayed replacement plugins, 2: total replacement plugins.
-#: views/troubleshooting-installation.php:294
+#: views/troubleshooting-installation.php:295
 #, php-format
 msgid "Showing %1$d of %2$d replacement plugins."
 msgstr ""

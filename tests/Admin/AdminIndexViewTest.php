@@ -130,6 +130,8 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertTrue( $marker_position < $strapline_position );
 		self::assertTrue( $wrap_position < $core_notice_position );
 		self::assertStringContainsString( '<div class="ran-admin-shell-notices"><hr class="wp-header-end"></div>', $html );
+		self::assertSame( 1, substr_count( $html, 'id="ran-booster-core-development-notice-slot"' ) );
+		self::assertStringNotContainsString( 'hx-swap-oob', $html );
 		self::assertTrue( $core_notice_position < $notice_position );
 		self::assertStringContainsString( 'Copyright © 2042', $html );
 		self::assertStringContainsString(

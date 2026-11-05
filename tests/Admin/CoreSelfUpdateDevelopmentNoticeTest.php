@@ -62,6 +62,18 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		);
 	}
 
+	public function test_hidden_notice_loads_tint_only_for_authorized_booster_screen(): void {
+		$policy = CoreSelfUpdatePolicy::detect( '/missing/ran-booster.php', '1.0.0' );
+		( new CoreSelfUpdateDevelopmentNotice( $policy, 'plugins' ) )->enqueue_style();
+		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_inline_styles'] );
+		( new CoreSelfUpdateDevelopmentNotice( $policy, 'toplevel_page_ran-booster' ) )->enqueue_style();
+		self::assertCount( 1, $GLOBALS['ran_booster_repository_admin_inline_styles']['common'] );
+		$GLOBALS['ran_booster_repository_admin_allowed']       = false;
+		$GLOBALS['ran_booster_repository_admin_inline_styles'] = array();
+		( new CoreSelfUpdateDevelopmentNotice( $policy, 'toplevel_page_ran-booster' ) )->enqueue_style();
+		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_inline_styles'] );
+	}
+
 	public function test_plugins_screen_uses_the_global_callback_and_booster_screen_uses_the_shell_callback(): void {
 		$policy = CoreSelfUpdatePolicy::detect( dirname( __DIR__, 2 ) . '/ran-booster.php', '0.1.0-alpha.23' );
 

@@ -582,7 +582,21 @@ class Dashboard {
 		extract( $data );
 		ob_start();
 		require __DIR__ . '/../views/settings-general.php';
-		return (string) ob_get_clean();
+		$html = (string) ob_get_clean();
+		try {
+			$file    = dirname( __DIR__ ) . '/ran-booster.php';
+			$version = (string) ( get_file_data( $file, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
+			$policy  = \RAN\WordPress\CoreSelfUpdatePolicy::detect( $file, $version, true );
+		} catch ( Throwable ) {
+			// Keep the existing notice when fresh policy state is unavailable.
+			return $html;
+		}
+		$notice = new CoreSelfUpdateDevelopmentNotice( $policy );
+		ob_start();
+		$notice->render_shell_inline();
+		$notice_html = (string) ob_get_clean();
+		$html       .= '<div id="ran-booster-core-development-notice-slot" hx-swap-oob="true">' . $notice_html . '</div>';
+		return $html;
 	}
 
 	/** @return array<string,mixed> */

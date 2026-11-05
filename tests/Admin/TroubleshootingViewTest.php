@@ -232,8 +232,11 @@ final class TroubleshootingViewTest extends TestCase {
 					'Provider'       => 'gh',
 					'Implementation' => 'fingerprint',
 				),
-				array( 'Name' => 'Extension "<unsafe>"' ),
-				array(),
+				array(
+					'Name' => 'Extension "<unsafe>"',
+					'Fact' => 'value',
+				),
+				array( 'Fact' => 'value' ),
 			),
 		);
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details: %s'] = 'Détails techniques : %s';
@@ -254,6 +257,105 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<h4 class="ran-booster-section__title">Inconnu', $html );
 		self::assertStringContainsString( 'id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"', $html );
 		self::assertStringContainsString( '<code>fingerprint</code>', $html );
+	}
+
+	public function test_component_details_only_render_when_they_have_facts(): void {
+		$troubleshooting_panel = 'installation';
+		$troubleshooting       = array(
+			'providers'  => array(),
+			'components' => array(
+				array(
+					'Name'      => 'Migrator',
+					'Installed' => 'Yes',
+					'Active'    => 'No',
+					'Version'   => '1.0',
+				),
+				array(),
+				array(
+					'Name'         => 'Empty capabilities',
+					'Capabilities' => '',
+				),
+				array(
+					'Name'         => 'Invalid capabilities',
+					'Capabilities' => array(),
+				),
+				array(
+					'Name'         => 'Facts',
+					'Zero'         => '0',
+					'Numeric zero' => 0,
+					'Unknown'      => 'Unknown',
+					'Unavailable'  => 'Unavailable',
+				),
+				array(
+					'Name'         => 'Capabilities only',
+					'Capabilities' => 'RepositoryBrowser',
+				),
+			),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html            = (string) ob_get_clean();
+		$document        = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		try {
+			$document->loadHTML( $html );
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous_errors );
+		}
+		$xpath = new \DOMXPath( $document );
+		foreach ( array( 'Migrator', 'Unknown', 'Empty capabilities', 'Invalid capabilities' ) as $name ) {
+			$card = '//section[header/h4[starts-with(normalize-space(.), "' . $name . '")]]';
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $card . ')' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $card . '//details | ' . $card . '//div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-disclosure__body ")])' ) );
+		}
+		$migrator = '//section[header/h4[starts-with(normalize-space(.), "Migrator")]]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/h4/code[text()="1.0"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[text()="Inactive"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/div/p[text()="Installed extension"])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[header/h4[normalize-space(.)="Facts"]]//dd/code[text()="0"])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//details[not(@open)])' ) );
+		foreach ( array( '0', 'Unknown', 'Unavailable', 'RepositoryBrowser' ) as $value ) {
+			self::assertStringContainsString( '<code>' . $value . '</code>', $html );
+		}
+		self::assertStringContainsString( 'aria-label="Technical details: Capabilities only"', $html );
+		self::assertStringContainsString( 'Implemented capabilities', $html );
+	}
+
+	public function test_github_details_keep_special_facts_and_candidates_with_provider_row(): void {
+		$troubleshooting_panel = 'installation';
+		$troubleshooting       = array(
+			'providers'            => array(),
+			'components'           => array(
+				array(
+					'Name'     => 'GitHub',
+					'Provider' => 'gh',
+				),
+			),
+			'installation_details' => array(
+				'GitHub provider'    => array(
+					'Provider API'       => '15',
+					'Enabled candidates' => '2',
+				),
+				'GitHub candidate 1' => array( 'Name' => 'Candidate' ),
+			),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '<details id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">', $html );
+		self::assertStringContainsString( 'aria-label="Technical details: GitHub"', $html );
+		self::assertStringContainsString( '<dt>Provider</dt><dd><code>gh</code>', $html );
+		self::assertStringContainsString( '<dt>Provider API</dt><dd><code>15</code>', $html );
+		self::assertStringContainsString( '<dt>Name</dt><dd><code>Candidate</code>', $html );
+		self::assertStringContainsString( 'Showing 1 of 2 replacement plugins.', $html );
+		unset( $troubleshooting['installation_details']['GitHub provider']['Provider API'] );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$candidate_only = (string) ob_get_clean();
+		self::assertStringContainsString( '<details id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">', $candidate_only );
+		self::assertStringContainsString( '<dt>Name</dt><dd><code>Candidate</code>', $candidate_only );
+		self::assertStringContainsString( 'Showing 1 of 2 replacement plugins.', $candidate_only );
 	}
 
 	public function test_installation_distinguishes_provider_state_and_candidate_truncation(): void {

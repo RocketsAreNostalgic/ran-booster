@@ -643,6 +643,253 @@ test('enhanced disclosure restoration is keyed by stable IDs and ignores absent 
 	);
 });
 
+test('re-evaluating feedback initialization preserves the request lifecycle', () => {
+	const state = fixture();
+	const handlers = new Map();
+	state.document.addEventListener = (name, handler) => {
+		const callbacks = handlers.get(name) ?? [];
+		callbacks.push(handler);
+		handlers.set(name, callbacks);
+	};
+	const dependencies = { document: state.document, window: state.window };
+	loadFunction('initEnhancedMutationFeedback', dependencies)();
+	loadFunction('initEnhancedMutationFeedback', dependencies)();
+
+	function dispatch(name) {
+		const event = {
+			defaultPrevented: false,
+			detail: { elt: state.form },
+			preventDefault() {
+				this.defaultPrevented = true;
+			},
+		};
+		for (const handler of handlers.get(name) ?? []) {
+			handler(event);
+		}
+		return event;
+	}
+
+	assert.equal(dispatch('htmx:beforeRequest').defaultPrevented, false);
+	assert.equal(state.formAttributes.get('aria-busy'), 'true');
+	assert.equal(state.button.disabled, true);
+	assert.equal(dispatch('htmx:beforeRequest').defaultPrevented, true);
+	dispatch('htmx:afterRequest');
+	assert.equal(state.formAttributes.has('aria-busy'), false);
+	assert.equal(state.button.disabled, false);
+	assert.equal(dispatch('htmx:beforeRequest').defaultPrevented, false);
+	assert.equal(state.button.disabled, true);
+});
+
+test('General feedback requires the matching response and falls back when Core rendering is unavailable', () => {
+	for (const mode of [
+		'ready',
+		'missing-component',
+		'missing-style',
+		'render-failure',
+	]) {
+		const state = fixture();
+		const sourceListeners = new Map();
+		const xhrListeners = new Map();
+		let region = {
+			id: 'ran-booster-general-region',
+			isConnected: true,
+			contains: () => true,
+		};
+		state.form.isConnected = true;
+		let rendered = 0;
+		let unmounted = 0;
+		state.form.matches = (selector) =>
+			selector === '[data-ran-booster-general-form]' ||
+			selector === '[data-ran-booster-enhanced-mutation]';
+		state.form.addEventListener = (name, callback) =>
+			sourceListeners.set(name, callback);
+		state.form.removeEventListener = (name) => sourceListeners.delete(name);
+		state.document.getElementById = (id) =>
+			id === 'ran-booster-general-region' ? region : state.error;
+		state.document.body = { append() {} };
+		state.document.createElement = () => ({
+			style: {},
+			ownerDocument: state.document,
+			isConnected: true,
+			remove() {},
+			contains: () => false,
+			querySelector: () => (rendered ? {} : null),
+		});
+		state.window.getComputedStyle = () => ({
+			paddingLeft: mode === 'missing-style' ? '0px' : '20px',
+			backgroundColor: mode === 'missing-style' ? 'transparent' : 'black',
+		});
+		state.window.wp.element = {
+			createElement: (component, props) => ({ component, props }),
+			createRoot: () => ({
+				render() {
+					if (mode === 'render-failure') {
+						throw new Error('render');
+					}
+					rendered++;
+				},
+				unmount() {
+					unmounted++;
+				},
+			}),
+			flushSync: (callback) => callback(),
+		};
+		state.window.wp.components =
+			mode === 'missing-component' ? {} : { SnackbarList() {} };
+		const xhr = {
+			addEventListener: (name, callback) =>
+				xhrListeners.set(name, callback),
+			getResponseHeader: () =>
+				JSON.stringify({
+					'ran-booster:admin-mutation-success': { message: 'Saved.' },
+				}),
+		};
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		state.listeners.get('htmx:beforeRequest')({
+			detail: { elt: state.form, target: region, xhr },
+		});
+		sourceListeners.get('htmx:beforeOnLoad')({
+			detail: { xhr },
+			preventDefault() {
+				assert.fail('live response vetoed');
+			},
+		});
+		region.isConnected = false;
+		region = {
+			id: 'ran-booster-general-region',
+			hasAttribute: () => true,
+			insertAdjacentElement() {},
+		};
+		state.listeners.get('htmx:afterSwap')({
+			detail: { elt: state.form, xhr },
+		});
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message: 'Saved.' },
+		});
+		assert.equal(rendered, mode === 'ready' ? 1 : 0, mode);
+		assert.equal(state.toast.hidden, mode === 'ready', mode);
+		if (mode === 'ready') {
+			state.listeners.get('htmx:beforeHistorySave')();
+			state.listeners.get('htmx:beforeHistorySave')();
+			assert.equal(
+				unmounted,
+				1,
+				'Discard once before history serializes markup.'
+			);
+			assert.equal(
+				state.toast.hidden,
+				true,
+				'Keep the unrelated presenter untouched.'
+			);
+		}
+		xhrListeners.get('loadend')();
+		assert.equal(sourceListeners.has('htmx:beforeOnLoad'), false);
+	}
+});
+
+test('focused Snackbar dismissal restores focus when General Save is unavailable', () => {
+	for (const scenario of ['disabled', 'removed', 'focus-fails', 'cleanup']) {
+		const focused = {};
+		const ownerDocument = { activeElement: focused };
+		const host = {
+			ownerDocument,
+			contains: (element) => element === focused,
+		};
+		let saveAttempts = 0;
+		let fallbackAttempts = 0;
+		let failedFallbackAttempts = 0;
+		const save = {
+			isConnected: scenario !== 'removed',
+			disabled: scenario === 'disabled',
+			focus() {
+				saveAttempts++;
+				if (scenario !== 'focus-fails') {
+					ownerDocument.activeElement = save;
+				}
+			},
+		};
+		const fallback = {
+			getClientRects: () => [{}],
+			focus(options) {
+				assert.equal(
+					options,
+					undefined,
+					'Allow visible focus to scroll into view.'
+				);
+				fallbackAttempts++;
+				ownerDocument.activeElement = fallback;
+			},
+		};
+		const document = {
+			querySelector: () => save,
+			querySelectorAll: () => [
+				{
+					getClientRects: () => [],
+					focus: () => assert.fail('Hidden link focused.'),
+				},
+				{
+					getClientRects: () => [{}],
+					focus: () => failedFallbackAttempts++,
+				},
+				fallback,
+			],
+		};
+		const restore = loadFunction('restoreSnackbarFocus', {
+			document,
+			snackbar: { host },
+		});
+		restore(
+			scenario === 'cleanup'
+				? { contains: (element) => element === save }
+				: null
+		);
+		assert.equal(ownerDocument.activeElement, fallback, scenario);
+		assert.equal(fallbackAttempts, 1, scenario);
+		assert.equal(failedFallbackAttempts, 1, scenario);
+		assert.equal(
+			saveAttempts,
+			scenario === 'focus-fails' ? 1 : 0,
+			scenario
+		);
+	}
+});
+
+test('General response from a detached source cannot replace a newer target', () => {
+	const state = fixture();
+	const handlers = new Map();
+	const original = {
+		id: 'ran-booster-general-region',
+		isConnected: true,
+		contains: () => false,
+	};
+	state.form.isConnected = false;
+	state.form.matches = (selector) =>
+		selector === '[data-ran-booster-general-form]' ||
+		selector === '[data-ran-booster-enhanced-mutation]';
+	state.form.addEventListener = (name, handler) =>
+		handlers.set(name, handler);
+	state.document.getElementById = () => original;
+	const xhr = { addEventListener() {} };
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:beforeRequest')({
+		detail: { elt: state.form, target: original, xhr },
+	});
+	let vetoed = false;
+	handlers.get('htmx:beforeOnLoad')({
+		detail: { xhr },
+		preventDefault() {
+			vetoed = true;
+		},
+	});
+	assert.equal(vetoed, true);
+});
+
 test('enhanced mutation feedback rejects a duplicate request from its busy form', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {

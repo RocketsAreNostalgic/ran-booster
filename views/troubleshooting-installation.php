@@ -155,6 +155,7 @@ if ( array() === $components ) {
 $basic_labels          = array( 'Installed', 'Active', 'Version', 'Admission', 'Selection', 'Availability' );
 $github_problem_states = array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'storage_unavailable' );
 foreach ( $components as $component ) {
+	$component_name          = $component['Name'] ?? __( 'Unknown', 'ran-booster' );
 	$is_github               = ( $component['Provider'] ?? '' ) === 'gh';
 	$selection_state         = $github_fields[ __( 'Selection state', 'ran-booster' ) ] ?? null;
 	$github_available        = $github_fields[ __( 'Operational availability', 'ran-booster' ) ] ?? null;
@@ -195,7 +196,7 @@ foreach ( $components as $component ) {
 	}
 	?>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 class="ran-booster-section__title"><?php echo esc_html( $component['Name'] ?? __( 'Unknown', 'ran-booster' ) ); ?>
+<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 class="ran-booster-section__title"><?php echo esc_html( $component_name ); ?>
 	<?php
 	if ( is_string( $version ) && '' !== $version ) {
 		?>
@@ -210,7 +211,7 @@ foreach ( $components as $component ) {
 		?>
 		<p><?php echo esc_html( $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. Review the provider settings before use.', 'ran-booster' ) ); ?></p><?php } ?>
 <details<?php echo $is_github ? ' id="ran-booster-github-provider-diagnostics"' : ''; ?> class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">
-<summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
+<summary aria-label="<?php echo esc_attr( sprintf( /* translators: %s: provider or extension name. */ __( 'Technical details: %s', 'ran-booster' ), $component_name ) ); ?>"><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
 <div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
 <p><?php echo esc_html( isset( $component['Provider'] ) ? __( 'These are local configuration details. Use Diagnostics to check repository access.', 'ran-booster' ) : __( 'These are local configuration details.', 'ran-booster' ) ); ?></p>
 <dl class="ran-booster-troubleshooting__fields-list">

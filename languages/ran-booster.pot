@@ -1373,7 +1373,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1522
+#: RAN/Dashboard.php:1526
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1576,88 +1576,88 @@ msgstr ""
 msgid "Booster could not verify the repository. Please try again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:754
+#: RAN/Admin/PackageAdminController.php:755
 msgid "RAN Booster could not complete this action. Reference: ran_booster_manual_action_failed."
-msgstr ""
-
-#: RAN/Admin/PackageAdminController.php:770
-msgctxt "package type"
-msgid "Plugin"
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:771
 msgctxt "package type"
+msgid "Plugin"
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:772
+msgctxt "package type"
 msgid "Theme"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:773
+#: RAN/Admin/PackageAdminController.php:774
 msgid "Plugin was not removed because an active plugin depends on it."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:774
+#: RAN/Admin/PackageAdminController.php:775
 msgid "Plugin was disabled in Booster, but WordPress could not deactivate it. No files were deleted."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:777
+#: RAN/Admin/PackageAdminController.php:778
 #, php-format
 msgid "%s was disabled in Booster, but WordPress could not delete it."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:782
+#: RAN/Admin/PackageAdminController.php:783
 #, php-format
 msgid "%s was disabled in Booster, but its files are still present."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:787
+#: RAN/Admin/PackageAdminController.php:788
 #, php-format
 msgid "%s removal could not be verified. Review its files and Booster management before retrying."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:792
+#: RAN/Admin/PackageAdminController.php:793
 #, php-format
 msgid "%s was not removed because another Booster operation still owns it."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:797
+#: RAN/Admin/PackageAdminController.php:798
 #, php-format
 msgid "%s removal could not safely acquire or release the WordPress updater lock."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:800
+#: RAN/Admin/PackageAdminController.php:801
 msgid "Plugin was not removed because its directory contains another registered plugin."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:803
+#: RAN/Admin/PackageAdminController.php:804
 #, php-format
 msgid "%s settings changed before this request. Refresh the package settings and try again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:806
+#: RAN/Admin/PackageAdminController.php:807
 msgid "Theme was not removed because it is the active theme."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:807
+#: RAN/Admin/PackageAdminController.php:808
 msgid "Theme was not removed because an installed child theme depends on it."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:808
+#: RAN/Admin/PackageAdminController.php:809
 msgid "Theme was not removed because the active theme depends on it."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:811
+#: RAN/Admin/PackageAdminController.php:812
 #, php-format
 msgid "%s was not removed because WordPress could not verify a safe installed path."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:816
+#: RAN/Admin/PackageAdminController.php:817
 #, php-format
 msgid "%s removal could not be completed safely."
 msgstr ""
@@ -4948,7 +4948,7 @@ msgstr ""
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:1189
+#: RAN/Dashboard.php:1193
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 
@@ -6289,7 +6289,7 @@ msgstr ""
 
 #. translators: %s is plugin or theme.
 #: views/base.php:94
-#: views/packages/create.php:181
+#: views/packages/create.php:180
 #, php-format
 msgid "Install %s"
 msgstr ""
@@ -7745,63 +7745,63 @@ msgid "Save settings and check"
 msgstr ""
 
 #. translators: %s is Plugin or Theme.
-#: views/packages/create.php:116
+#: views/packages/create.php:115
 #, php-format
 msgid "Install New %s"
 msgstr ""
 
 #. translators: %s is Plugin or Theme.
-#: views/packages/create.php:117
+#: views/packages/create.php:116
 msgid "Identify the repository Booster should manage, then adjust source-specific settings when needed."
 msgstr ""
 
-#: views/packages/create.php:136
+#: views/packages/create.php:135
 msgid "Link this exact installed target. To restore published-release management, first link it, then enable release tracking in its settings."
 msgstr ""
 
-#: views/packages/create.php:147
+#: views/packages/create.php:146
 msgid "Choose the repository and access Booster should use for this package."
 msgstr ""
 
-#: views/packages/create.php:154
+#: views/packages/create.php:153
 #: views/packages/edit.php:312
 msgid "Package operation"
 msgstr ""
 
-#: views/packages/create.php:155
+#: views/packages/create.php:154
 #: views/packages/edit.php:313
 msgid "Choose when Booster may update this package."
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:169
+#: views/packages/create.php:168
 #, php-format
 msgid "Link installed %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:171
+#: views/packages/create.php:170
 #, php-format
 msgid "Let Booster manage an already installed %s instead of deploying it now."
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:172
+#: views/packages/create.php:171
 msgid "The installed folder name must match the repository package name."
 msgstr ""
 
-#: views/packages/create.php:176
+#: views/packages/create.php:175
 msgid "Installation actions"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:178
+#: views/packages/create.php:177
 #, php-format
 msgid "Manage %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:179
+#: views/packages/create.php:178
 #: views/packages/edit.php:277
 #: views/packages/edit.php:341
 #: views/packages/index.php:107
@@ -7810,7 +7810,7 @@ msgid "Install another %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:182
+#: views/packages/create.php:181
 msgid "Install and add another"
 msgstr ""
 
@@ -8196,7 +8196,7 @@ msgstr ""
 
 #. translators: %s is plugins or themes.
 #: views/packages/index.php:214
-#: assets/ran-booster-packages.js:605
+#: assets/ran-booster-packages.js:617
 #, php-format,js-format
 msgid "0 %s selected"
 msgstr ""
@@ -10699,16 +10699,16 @@ msgctxt "plugin"
 msgid "%s update failed."
 msgstr ""
 
-#: assets/ran-booster-packages.js:591
+#: assets/ran-booster-packages.js:603
 msgid "package"
 msgstr ""
 
-#: assets/ran-booster-packages.js:594
+#: assets/ran-booster-packages.js:606
 msgid "packages"
 msgstr ""
 
 #. translators: 1: number of selected packages, 2: package type label.
-#: assets/ran-booster-packages.js:632
+#: assets/ran-booster-packages.js:644
 #, js-format
 msgid "%1$d %2$s selected"
 msgid_plural "%1$d %2$s selected"
@@ -10716,27 +10716,27 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: selected-package summary, 2: number eligible for branch reinstall.
-#: assets/ran-booster-packages.js:646
+#: assets/ran-booster-packages.js:658
 #, js-format
 msgid "%1$s. %2$d eligible for branch Reinstall."
 msgstr ""
 
 #. translators: %s: package type label.
-#: assets/ran-booster-packages.js:681
+#: assets/ran-booster-packages.js:693
 #, js-format
 msgid "Select at least one %s."
 msgstr ""
 
-#: assets/ran-booster-packages.js:691
+#: assets/ran-booster-packages.js:703
 msgid "Select at least one branch package eligible for Reinstall."
 msgstr ""
 
-#: assets/ran-booster-packages.js:707
+#: assets/ran-booster-packages.js:719
 msgid "Reinstall cancelled."
 msgstr ""
 
 #. translators: %s: deployment state label.
-#: assets/ran-booster-packages.js:878
+#: assets/ran-booster-packages.js:890
 #, js-format
 msgid "Deployment: %s"
 msgstr ""

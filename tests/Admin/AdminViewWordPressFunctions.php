@@ -47,15 +47,24 @@ if ( ! function_exists( '_x' ) ) {
 if ( ! function_exists( 'add_query_arg' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function add_query_arg( mixed $key, mixed $value = null, mixed $url = null ): string {
-		if ( is_array( $key ) ) {
-			$base = (string) $value;
-
-			return $base . ( str_contains( $base, '?' ) ? '&' : '?' ) . http_build_query( $key );
+		$args     = is_array( $key ) ? $key : array( (string) $key => $value );
+		$base     = (string) ( is_array( $key ) ? $value : $url );
+		$fragment = '';
+		if ( str_contains( $base, '#' ) ) {
+			[ $base, $fragment ] = explode( '#', $base, 2 );
+			$fragment            = '#' . $fragment;
 		}
-
-		$base = (string) $url;
-
-		return $base . ( str_contains( $base, '?' ) ? '&' : '?' ) . http_build_query( array( (string) $key => $value ) );
+		[ $path, $query ] = array_pad( explode( '?', $base, 2 ), 2, '' );
+		parse_str( $query, $existing );
+		$existing = array_map( 'urlencode', $existing );
+		$values   = array_merge( $existing, $args );
+		$pairs    = array();
+		foreach ( $values as $name => $entry ) {
+			if ( false !== $entry ) {
+				$pairs[] = $name . '=' . $entry;
+			}
+		}
+		return $path . ( $pairs ? '?' . implode( '&', $pairs ) : '' ) . $fragment;
 	}
 }
 

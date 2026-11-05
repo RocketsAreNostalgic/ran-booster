@@ -61,6 +61,53 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 	}
 
+	public function test_reserved_characters_stay_inside_return_values_on_rendered_routes(): void {
+		$search = 'Rock&provider=bb&page=other#frag+more';
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			$package                   = $this->package( $package_view );
+			$package_provider_settings = $this->provider_settings( true );
+			$package_return_list       = array(
+				's'        => $search,
+				'provider' => 'gh',
+			);
+			$package_return_args       = array(
+				'return_type'     => $package_view->get_type(),
+				'return_s'        => $search,
+				'return_provider' => 'gh',
+			);
+			$messages                  = array();
+			$tabs                      = array();
+			$view                      = 'packages/edit';
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/base.php';
+			$html              = (string) ob_get_clean();
+			$packages          = array( $package );
+			$package_providers = array();
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			$html                      .= (string) ob_get_clean();
+			$managed_package_identifier = $package->get_identifier();
+			$explicit_provider          = false;
+			$open_repository_picker     = false;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+			$html .= (string) ob_get_clean();
+			preg_match_all( '/(?:href|hx-post)="([^"]*(?:return_s|[&?]s)=([^"]*))"/', $html, $matches );
+			self::assertNotEmpty( $matches[1] );
+			foreach ( $matches[1] as $attribute ) {
+				$url   = html_entity_decode( $attribute, ENT_QUOTES, 'UTF-8' );
+				$parts = wp_parse_url( $url );
+				self::assertIsArray( $parts );
+				$query = array();
+				wp_parse_str( $parts['query'] ?? '', $query );
+				self::assertContains( $query['page'] ?? '', array( $package_view->get_page_slug(), $package_view->get_create_page_slug() ) );
+				self::assertSame( $search, $query['return_s'] ?? $query['s'] ?? null );
+				self::assertNotSame( 'bb', $query['provider'] ?? null );
+				self::assertArrayNotHasKey( 'fragment', $parts );
+			}
+		}
+	}
+
 	public function test_filtered_list_row_settings_link_carries_the_same_context(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
 			$packages            = array( $this->package( $package_view ) );
@@ -300,7 +347,7 @@ final class RepeatPackageViewTest extends TestCase {
 		$base_url   = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
 		$manage_url = $base_url
 			. '?page=' . $package_view->get_page_slug()
-			. '&amp;package=' . rawurlencode( $managed_package_identifier );
+			. '&amp;package=' . $managed_package_identifier;
 
 		self::assertStringContainsString(
 			'<a class="button button-primary" href="' . $manage_url . '">Manage ' . $package_view->get_type() . '</a>',
@@ -591,6 +638,7 @@ final class RepeatPackageViewTest extends TestCase {
 				$package_return_args    = array(
 					'return_type'     => $package_view->get_type(),
 					'return_provider' => 'gh',
+					'return_s'        => 'Rock&provider=bb&page=other#frag+more',
 				);
 				$package_current_source = 'branch' === $package_source_view ? 'release_asset' : 'branch';
 				$package_source_choices = array();
@@ -620,7 +668,7 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertSame( 1, substr_count( $html, 'data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error"' ), $package_view->get_type() );
 				self::assertStringNotContainsString( 'https://example.test', $html, $package_view->get_type() );
 				self::assertSame( 1, substr_count( $html, 'hx-get="/wp-admin/admin.php?' ), $package_view->get_type() );
-				self::assertMatchesRegularExpression( '/hx-get="[^"]*return_type=' . $package_view->get_type() . '&amp;return_provider=gh"/', $html );
+				self::assertMatchesRegularExpression( '/hx-get="[^"]*return_type=' . $package_view->get_type() . '&amp;return_provider=gh&amp;return_s=Rock%26provider%3Dbb%26page%3Dother%23frag%2Bmore"/', $html );
 				self::assertStringContainsString( '>Branch</strong>', $html, $package_view->get_type() );
 				self::assertStringContainsString( '>Releases</strong>', $html, $package_view->get_type() );
 				self::assertStringContainsString( '<legend class="screen-reader-text">Update source</legend>', $html, $package_view->get_type() );
@@ -948,7 +996,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'name="ran_booster[action]"', $html, $recovery_state );
 			self::assertSame( 'healthy' === $recovery_state, str_contains( $html, 'Open package settings' ), $recovery_state );
 			if ( 'healthy' === $recovery_state ) {
-				self::assertStringContainsString( 'package=' . rawurlencode( $managed_package_identifier ), $html );
+				self::assertStringContainsString( 'package=' . $managed_package_identifier, $html );
 			} else {
 				self::assertStringContainsString( 'A safely bounded &lt;explanation&gt;.', $html, $recovery_state );
 			}

@@ -98,7 +98,6 @@ $package_repository_ready   = '' !== trim( $repository_value )
 	&& strlen( $repository_value ) <= 512
 	&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $repository_value );
 $admin_url                  = $package_view->get_admin_url();
-$back_url                   = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + ( $package_return_list ?? array() ), $admin_url );
 $managed_package_identifier = isset( $managed_package_identifier ) && is_string( $managed_package_identifier )
 	? trim( $managed_package_identifier )
 	: '';
@@ -108,7 +107,7 @@ $managed_package_url        = '' === $managed_package_identifier
 		array(
 			'page'    => $package_view->get_page_slug(),
 			'package' => $managed_package_identifier,
-		) + ( $package_return_args ?? array() ),
+		) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 		$admin_url
 	);
 

@@ -186,17 +186,17 @@ $install_another_url        = add_query_arg(
 		'page'        => $package_view->get_create_page_slug(),
 		'provider'    => $stored_provider_code,
 		'open_picker' => '1',
-	) + ( $package_return_args ?? array() ),
+	) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 	$admin_url
 );
 $settings_url               = add_query_arg(
 	array(
 		'page'    => $package_view->get_page_slug(),
 		'package' => $identifier_value,
-	) + ( $package_return_args ?? array() ),
+	) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 	$admin_url
 );
-$back_url                   = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + ( $package_return_list ?? array() ), $admin_url );
+$back_url                   = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + array_map( 'rawurlencode', $package_return_list ?? array() ), $admin_url );
 $show_branch_settings       = 'branch' === $package_source_view;
 $show_branch_operations     = $show_branch_settings && ! $release_managed;
 $repository_read_only       = $release_managed;

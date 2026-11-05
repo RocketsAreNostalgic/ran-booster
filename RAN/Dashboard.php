@@ -983,6 +983,7 @@ class Dashboard {
 	/**
 	 * Normalize read-only package-list filters without granting mutation authority.
 	 *
+	 * @param array<string, mixed>|null $input Read-only query values.
 	 * @return array{search: string, provider: string, source: string, policy: string}
 	 */
 	private function requested_package_list_state( ?array $input = null ): array {
@@ -1020,7 +1021,10 @@ class Dashboard {
 		);
 	}
 
-	/** @return array<string, string> */
+	/**
+	 * @param array<string, mixed>|null $input Read-only query values.
+	 * @return array<string, string>
+	 */
 	private function package_list_query_arguments( ?array $input = null ): array {
 		$state = $this->requested_package_list_state( $input );
 

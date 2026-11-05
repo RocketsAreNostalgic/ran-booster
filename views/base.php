@@ -87,12 +87,12 @@ $ran_admin_shell = array(
 );
 
 if ( in_array( $view, array( 'packages/create', 'packages/edit' ), true ) && isset( $package_view, $package_return_list ) ) {
-	$parent_url                           = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + $package_return_list, $admin_url );
+	$parent_url                           = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + array_map( 'rawurlencode', $package_return_list ), $admin_url );
 	$ran_admin_shell['breadcrumbs_label'] = __( 'Breadcrumbs', 'ran-booster' );
 	$package_heading                      = 'packages/create' === $view
 		/* translators: %s is plugin or theme. */
 		? sprintf( __( 'Install %s', 'ran-booster' ), $package_view->get_singular_label() )
-		: trim( (string) $package->name );
+		: ( isset( $package ) && $package instanceof \RAN\Package ? trim( (string) $package->name ) : '' );
 	if ( '' === $package_heading ) {
 		$package_heading = $package_view->get_singular_label();
 	}

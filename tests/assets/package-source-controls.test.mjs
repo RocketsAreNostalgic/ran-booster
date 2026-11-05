@@ -351,6 +351,10 @@ function sourceUnsavedGuardFixture() {
 	const destination = { type: 'radio', checked: true, value: 'stable' };
 	const form = {
 		dataset: {},
+		attempted: false,
+		hasAttribute(name) {
+			return name === 'data-ran-booster-attempted' && this.attempted;
+		},
 		elements: [text, policy, nonce, destination],
 	};
 	const notice = {
@@ -483,6 +487,23 @@ test('reverted settings and transition-only fields do not block source changes',
 	}
 });
 
+test('failed settings submission blocks source navigation and transitions', () => {
+	const state = sourceUnsavedGuardFixture();
+	state.form.attempted = true;
+	try {
+		loadFunction('initPackageSourceUnsavedGuard')();
+		assert.equal(
+			eventThrough(state.listeners.get('navigation:click'))
+				.defaultPrevented,
+			true
+		);
+		assert.equal(state.transition.requestSubmit().defaultPrevented, true);
+		assert.equal(state.notice.hidden, false);
+	} finally {
+		delete globalThis.document;
+	}
+});
+
 test('HTMX re-initialization keeps the original ordinary-settings baseline', () => {
 	const state = sourceUnsavedGuardFixture();
 
@@ -529,7 +550,11 @@ test('package leave warning follows edits, submissions, failed attempts and leav
 	};
 	const document = {
 		readyState: 'loading',
-		querySelector: () => form,
+		querySelector: (selector) =>
+			selector ===
+			'#ran-booster-package-edit-form, #ran-booster-package-create-form'
+				? form
+				: null,
 		addEventListener: (name, fn) => documentListeners.set(name, fn),
 	};
 	const window = {
@@ -562,20 +587,33 @@ test('package leave warning follows edits, submissions, failed attempts and leav
 	check.checked = false;
 	radio.checked = true;
 	assert.equal(warning(), true);
-	formListeners.get('submit')();
-	assert.equal(warning(), false);
-	documentListeners.get('htmx:afterRequest')();
-	assert.equal(warning(), true);
-	formListeners.get('submit')();
-	documentListeners.get('htmx:beforeRequest')({ defaultPrevented: true });
+	formListeners.get('submit')({ defaultPrevented: true });
 	await Promise.resolve();
+	assert.equal(warning(), true);
+	formListeners.get('submit')({ defaultPrevented: false });
+	await Promise.resolve();
+	assert.equal(warning(), false);
+	windowListeners.get('pageshow')();
 	assert.equal(warning(), true);
 	attempted = true;
 	form = { ...form, dataset: {} };
 	radio.checked = false;
 	context.initializeLeaveGuard();
 	assert.equal(warning(), true);
+	attempted = false;
+	form = {
+		...form,
+		dataset: {
+			ranBoosterLeaveGuardBound: 'true',
+			ranBoosterSourceUnsavedGuardBound: 'true',
+		},
+	};
+	documentListeners.get('htmx:historyRestore')();
+	text.value = 'changed again';
+	assert.equal(warning(), true);
+	text.value = 'old';
+	assert.equal(warning(), false);
 	form = null;
-	context.initializeLeaveGuard();
+	documentListeners.get('htmx:historyRestore')();
 	assert.equal(warning(), false);
 });

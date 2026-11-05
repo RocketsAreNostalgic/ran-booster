@@ -2,6 +2,7 @@
 	'use strict';
 	const { __, _n, sprintf } = wp.i18n;
 	let packageLeaveState;
+	let packageLeaveForm;
 
 	function onDomReady(callback) {
 		if (document.readyState === 'loading') {
@@ -32,6 +33,19 @@
 			}
 			initPackageAdmin();
 		}
+	});
+
+	// History restores replace the form with a clone whose data attributes survive, but listeners do not.
+	document.addEventListener('htmx:historyRestore', function () {
+		const form = document.querySelector(
+			'#ran-booster-package-edit-form, #ran-booster-package-create-form'
+		);
+		if (form && form !== packageLeaveForm) {
+			delete form.dataset.ranBoosterLeaveGuardBound;
+			delete form.dataset.ranBoosterSourceUnsavedGuardBound;
+			initPackageSourceUnsavedGuard();
+		}
+		initPackageLeaveGuard();
 	});
 
 	function consumeAdvancedSettingsOpenRequest() {
@@ -81,6 +95,7 @@
 			'#ran-booster-package-edit-form, #ran-booster-package-create-form'
 		);
 		if (!form) {
+			packageLeaveForm = undefined;
 			packageLeaveState = undefined;
 			return;
 		}
@@ -88,6 +103,7 @@
 			return;
 		}
 		form.dataset.ranBoosterLeaveGuardBound = 'true';
+		packageLeaveForm = form;
 		const fingerprint = () =>
 			JSON.stringify(
 				Array.from(form.elements)
@@ -116,25 +132,18 @@
 			dirty: () => attempted || fingerprint() !== initial,
 			submitting: false,
 		};
-		form.addEventListener('submit', () => {
-			packageLeaveState.submitting = true;
-		});
-		form.addEventListener('htmx:afterRequest', () => {
-			packageLeaveState.submitting = false;
+		const state = packageLeaveState;
+		form.addEventListener('submit', (event) => {
+			queueMicrotask(() => {
+				state.submitting = !event.defaultPrevented;
+			});
 		});
 	}
 
-	document.addEventListener('htmx:afterRequest', () => {
+	window.addEventListener('pageshow', () => {
 		if (packageLeaveState) {
 			packageLeaveState.submitting = false;
 		}
-	});
-	document.addEventListener('htmx:beforeRequest', (event) => {
-		queueMicrotask(() => {
-			if (event.defaultPrevented && packageLeaveState) {
-				packageLeaveState.submitting = false;
-			}
-		});
 	});
 
 	window.addEventListener('beforeunload', (event) => {
@@ -335,9 +344,12 @@
 			})
 		);
 		const isDirty = function () {
-			return controls.some(function (control) {
-				return baseline.get(control) !== settingValue(control);
-			});
+			return (
+				settingsForm.hasAttribute('data-ran-booster-attempted') ||
+				controls.some(function (control) {
+					return baseline.get(control) !== settingValue(control);
+				})
+			);
 		};
 		function settingValue(control) {
 			return ['checkbox', 'radio'].includes(control.type)

@@ -672,6 +672,7 @@ final class PackageAdminController {
 		return $admin_url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 	}
 
+	/** @param array<string, string> $list_arguments */
 	private function repository_branch_check_redirect( PackageOperation $operation, Package $package, array $list_arguments ): string {
 		$identifier = $package->get_identifier();
 		if ( ! is_string( $identifier ) || '' === $identifier ) {

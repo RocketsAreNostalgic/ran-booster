@@ -183,7 +183,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			$result = $controller->manage( $dashboard, 'recover-' . $type, $request, true );
 			if ( $allowed ) {
 				self::assertIsString( $result );
-				self::assertStringContainsString( 'relink=' . rawurlencode( $identifier ), $result );
+				self::assertStringContainsString( 'relink=' . $identifier, $result );
 			} else {
 				self::assertNotSame( 'capability', $boundary, 'Denied capabilities must terminate the request.' );
 				self::assertFalse( $result );

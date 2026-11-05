@@ -13,6 +13,8 @@
  */
 
 :root {
+	--ran-booster-shell-gradient-start: #10364e;
+	--ran-booster-shell-gradient-end: #1e4d6b;
 	--ran-booster-color-neutral-0: #fff;
 	--ran-booster-color-neutral-100: #f0f0f1;
 	--ran-booster-color-neutral-200: #dcdcde;
@@ -138,7 +140,30 @@
 	max-inline-size: 1050px;
 }
 
-#screen-meta-links {
+.ran-admin-shell {
+	background: linear-gradient(
+		135deg,
+		var(--ran-booster-shell-gradient-start) 0%,
+		var(--ran-booster-shell-gradient-end) 100%
+	);
+}
+
+.ran-admin-shell__inner:has(+ .ran-admin-shell__navigation) {
+	padding-block-end: 0;
+}
+
+.ran-admin-shell__navigation > a:hover,
+.ran-admin-shell__navigation > a:focus-visible {
+	border-block-end-color: currentcolor;
+}
+
+body:has(.ran-admin-shell) #screen-meta-links {
 	position: relative;
-	z-index: 2;
+	z-index: 11;
+}
+
+@media (forced-colors: active) {
+	.ran-admin-shell {
+		background: Canvas;
+	}
 }

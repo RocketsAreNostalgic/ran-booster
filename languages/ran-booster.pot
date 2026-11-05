@@ -16,7 +16,6 @@ msgstr ""
 
 #. Plugin Name of the plugin
 #: ran-booster.php
-#: views/base.php:76
 msgid "RAN Booster"
 msgstr ""
 
@@ -32,6 +31,7 @@ msgstr ""
 
 #. Author of the plugin
 #: ran-booster.php
+#: views/base.php:79
 msgid "Rockets Are Nostalgic"
 msgstr ""
 
@@ -2070,7 +2070,7 @@ msgstr ""
 
 #. translators: %d is the number of repositories shown.
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:134
-#: assets/ran-booster.js:603
+#: assets/ran-booster.js:624
 #, php-format,js-format
 msgctxt "Provider table repository count"
 msgid "%d repository shown"
@@ -6275,22 +6275,22 @@ msgstr ""
 msgid "Older activity could not be loaded. Try again."
 msgstr ""
 
-#: views/base.php:78
-msgid "Deploy themes and plugins straight from your Git repos."
+#: views/base.php:76
+msgid "Booster"
 msgstr ""
 
-#: views/base.php:84
+#: views/base.php:85
 msgid "RAN Booster sections"
 msgstr ""
 
 #. translators: %s: current year.
-#: views/base.php:113
+#: views/base.php:114
 #, php-format
 msgid "Copyright © %s"
 msgstr ""
 
 #. translators: %s: installed Booster version.
-#: views/base.php:122
+#: views/base.php:123
 #, php-format
 msgid "Booster %s"
 msgstr ""

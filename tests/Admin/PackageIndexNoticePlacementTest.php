@@ -115,7 +115,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$html = (string) ob_get_clean();
 
-		$masthead_position    = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
+		$masthead_position    = strpos( $html, 'Rockets Are Nostalgic' );
 		$heading_position     = strpos( $html, $heading );
 		$description_position = strpos( $html, 'Review package health, deploy saved branches and hand published releases to WordPress.' );
 		$result_position      = strpos( $html, 'Scoped package result.' );

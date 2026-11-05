@@ -73,13 +73,14 @@ if ( isset( $tabs ) && is_array( $tabs ) ) {
 }
 
 $ran_admin_shell = array(
-	'name'             => __( 'RAN Booster', 'ran-booster' ),
+	'name'             => __( 'Booster', 'ran-booster' ),
+	'color_scheme'     => 'inverse',
 	'home_url'         => $admin_url . '?page=ran-booster',
-	'strapline'        => __( 'Deploy themes and plugins straight from your Git repos.', 'ran-booster' ),
+	'strapline'        => __( 'Rockets Are Nostalgic', 'ran-booster' ),
 	'logo'             => array(
-		'url'    => plugins_url( 'assets/ran-booster-mark.svg', dirname( __DIR__ ) . '/ran-booster.php' ),
-		'width'  => 56,
-		'height' => 56,
+		'url'    => plugins_url( 'assets/booster-nozzle-10364e-cream-transparent.svg', dirname( __DIR__ ) . '/ran-booster.php' ),
+		'width'  => 32,
+		'height' => 32,
 	),
 	'navigation_label' => __( 'RAN Booster sections', 'ran-booster' ),
 	'navigation'       => $ran_admin_shell_navigation,

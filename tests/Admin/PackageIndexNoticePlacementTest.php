@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\PackagePagePresenter;
 
@@ -21,6 +23,22 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_package_view_translations'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_query_double_preserves_nested_wordpress_query_semantics(): void {
+		$url = add_query_arg(
+			array(
+				'return_s' => 'Rock%26x%3D1',
+				'more'     => array( 'deep' => 'a%2Bb' ),
+			),
+			'https://example.test/wp-admin/admin.php?nested%5Ba%5D=a%26b&nested%5Bdeep%5D%5Bv%5D=one+two~&source=existing#view'
+		);
+		self::assertSame(
+			'https://example.test/wp-admin/admin.php?nested%5Ba%5D=a%26b&nested%5Bdeep%5D%5Bv%5D=one+two%7E&source=existing&return_s=Rock%26x%3D1&more%5Bdeep%5D=a%2Bb#view',
+			$url
+		);
 	}
 
 	public function test_structured_contention_info_notice_keeps_its_protected_activity_link(): void {

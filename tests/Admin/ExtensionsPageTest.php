@@ -480,7 +480,7 @@ final class ExtensionsPageTest extends TestCase {
 		$output = $this->render();
 		self::assertStringContainsString( 'name="action" value="ran_booster_extension_activate"', $output );
 		self::assertStringContainsString( 'nonce-for-activate-plugin_ran-booster-bitbucket/ran-booster-bitbucket.php', $output );
-		self::assertStringContainsString( 'plugins.php?s=RAN+Booster+Bitbucket+Cloud', $output );
+		self::assert_plugin_search_link( $output, 'RAN Booster Bitbucket Cloud' );
 		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
 	}
 
@@ -507,8 +507,8 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 2, substr_count( $output, 'disabled aria-disabled="true">Active</button>' ) );
 		self::assertSame( 2, substr_count( $output, '>Manage plugin</a>' ) );
 		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
-		self::assertStringContainsString( 'plugins.php?s=RAN+Booster+Bitbucket+Cloud', $output );
-		self::assertStringContainsString( 'plugins.php?s=RAN+Booster+WP+Pusher+Migrator', $output );
+		self::assert_plugin_search_link( $output, 'RAN Booster Bitbucket Cloud' );
+		self::assert_plugin_search_link( $output, 'RAN Booster WP Pusher Migrator' );
 		self::assertStringNotContainsString( 'name="action" value="ran_booster_extension_install"', $output );
 		self::assertStringNotContainsString( 'name="action" value="ran_booster_extension_activate"', $output );
 	}
@@ -551,6 +551,21 @@ final class ExtensionsPageTest extends TestCase {
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 4 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
+	}
+
+	private static function assert_plugin_search_link( string $html, string $expected ): void {
+		preg_match_all( '/href="([^"]*plugins\.php\?[^"]*)"/', $html, $matches );
+		$searches = array();
+		foreach ( $matches[1] as $attribute ) {
+			$url   = html_entity_decode( $attribute, ENT_QUOTES, 'UTF-8' );
+			$parts = wp_parse_url( $url );
+			$query = is_array( $parts ) ? ( $parts['query'] ?? null ) : null;
+			if ( is_string( $query ) ) {
+				parse_str( $query, $args ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_str_parse_str -- Decode the rendered URL for this assertion.
+				$searches[] = $args['s'] ?? null;
+			}
+		}
+		self::assertContains( $expected, $searches );
 	}
 
 	private function render(): string {

@@ -100,6 +100,10 @@ must still work without JavaScript. Busy state must prevent duplicate submits,
 errors must be announced, focus must move to meaningful refreshed content, and
 the normal POST/redirect/GET path must remain truthful.
 
+The enhanced feedback listeners belong to the document lifetime and initialize
+once, even if history navigation evaluates their script again. React subtrees
+have their own mount and unmount lifecycles independent of these listeners.
+
 ## Required tests
 
 Cover at least:

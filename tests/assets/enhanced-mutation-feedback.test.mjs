@@ -643,6 +643,43 @@ test('enhanced disclosure restoration is keyed by stable IDs and ignores absent 
 	);
 });
 
+test('re-evaluating feedback initialization preserves the request lifecycle', () => {
+	const state = fixture();
+	const handlers = new Map();
+	state.document.addEventListener = (name, handler) => {
+		const callbacks = handlers.get(name) ?? [];
+		callbacks.push(handler);
+		handlers.set(name, callbacks);
+	};
+	const dependencies = { document: state.document, window: state.window };
+	loadFunction('initEnhancedMutationFeedback', dependencies)();
+	loadFunction('initEnhancedMutationFeedback', dependencies)();
+
+	function dispatch(name) {
+		const event = {
+			defaultPrevented: false,
+			detail: { elt: state.form },
+			preventDefault() {
+				this.defaultPrevented = true;
+			},
+		};
+		for (const handler of handlers.get(name) ?? []) {
+			handler(event);
+		}
+		return event;
+	}
+
+	assert.equal(dispatch('htmx:beforeRequest').defaultPrevented, false);
+	assert.equal(state.formAttributes.get('aria-busy'), 'true');
+	assert.equal(state.button.disabled, true);
+	assert.equal(dispatch('htmx:beforeRequest').defaultPrevented, true);
+	dispatch('htmx:afterRequest');
+	assert.equal(state.formAttributes.has('aria-busy'), false);
+	assert.equal(state.button.disabled, false);
+	assert.equal(dispatch('htmx:beforeRequest').defaultPrevented, false);
+	assert.equal(state.button.disabled, true);
+});
+
 test('enhanced mutation feedback rejects a duplicate request from its busy form', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {

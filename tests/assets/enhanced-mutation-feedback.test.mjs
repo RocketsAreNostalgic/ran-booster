@@ -772,6 +772,57 @@ test('General feedback requires the matching response and falls back when Core r
 	}
 });
 
+test('focused Snackbar dismissal restores focus when General Save is unavailable', () => {
+	for (const scenario of ['disabled', 'removed', 'focus-fails', 'cleanup']) {
+		const focused = {};
+		const ownerDocument = { activeElement: focused };
+		const host = {
+			ownerDocument,
+			contains: (element) => element === focused,
+		};
+		let saveAttempts = 0;
+		let fallbackAttempts = 0;
+		const save = {
+			isConnected: scenario !== 'removed',
+			disabled: scenario === 'disabled',
+			focus() {
+				saveAttempts++;
+				if (scenario !== 'focus-fails') {
+					ownerDocument.activeElement = save;
+				}
+			},
+		};
+		const fallback = {
+			isConnected: true,
+			focus() {
+				fallbackAttempts++;
+				ownerDocument.activeElement = fallback;
+			},
+		};
+		const document = {
+			querySelector(selector) {
+				return selector === '#wpadminbar a[href]' ? fallback : save;
+			},
+		};
+		const restore = loadFunction('restoreSnackbarFocus', {
+			document,
+			snackbar: { host },
+		});
+		restore(
+			scenario === 'cleanup'
+				? { contains: (element) => element === save }
+				: null
+		);
+		assert.equal(ownerDocument.activeElement, fallback, scenario);
+		assert.equal(fallbackAttempts, 1, scenario);
+		assert.equal(
+			saveAttempts,
+			scenario === 'focus-fails' ? 1 : 0,
+			scenario
+		);
+	}
+});
+
 test('General response from a detached source cannot replace a newer target', () => {
 	const state = fixture();
 	const handlers = new Map();

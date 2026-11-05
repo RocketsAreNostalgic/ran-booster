@@ -46,7 +46,7 @@
 			previous.host.remove();
 		}
 
-		function restoreSnackbarFocus() {
+		function restoreSnackbarFocus(removing = null) {
 			if (
 				!snackbar?.host.contains(
 					snackbar.host.ownerDocument.activeElement
@@ -57,7 +57,19 @@
 			const button = document.querySelector(
 				'#ran-booster-general-region [data-ran-booster-general-form] [type="submit"]:not([form])'
 			);
-			button?.focus({ preventScroll: true });
+			if (
+				button?.isConnected &&
+				!button.disabled &&
+				!removing?.contains?.(button)
+			) {
+				button.focus({ preventScroll: true });
+			}
+			if (snackbar.host.ownerDocument.activeElement !== button) {
+				const fallback = document.querySelector('#wpadminbar a[href]');
+				if (fallback?.isConnected && !removing?.contains?.(fallback)) {
+					fallback.focus({ preventScroll: true });
+				}
+			}
 		}
 
 		function presentGeneralSnackbar(message) {
@@ -724,7 +736,7 @@
 					(element === snackbar.host ||
 						element?.contains?.(snackbar.host))
 				) {
-					restoreSnackbarFocus();
+					restoreSnackbarFocus(element);
 					disposeSnackbar();
 				}
 				if (

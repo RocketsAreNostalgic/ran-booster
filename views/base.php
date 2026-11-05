@@ -57,6 +57,9 @@ $package_navigation         = array(
 
 if ( isset( $tabs ) && is_array( $tabs ) ) {
 	foreach ( $tabs as $admin_tab ) {
+		if ( 'troubleshooting' === ( $admin_tab['key'] ?? null ) ) {
+			continue;
+		}
 		if ( 'portability' === ( $admin_tab['key'] ?? null ) ) {
 			foreach ( $package_navigation as $package_tab ) {
 				$ran_admin_shell_navigation[] = $package_tab;

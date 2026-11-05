@@ -189,7 +189,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'GitHub replacement plugins detected', $html );
 		self::assertStringContainsString( 'Needs attention', $html );
 		self::assertStringContainsString( 'These are local configuration details. Use Diagnostics to check repository access.', $html );
-		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
+		self::assertStringContainsString( '<summary aria-label="Technical details: GitHub">Technical details</summary>', $html );
 		foreach ( array( '<implementation>', '<revision>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
 			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
@@ -220,6 +220,40 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dt)', $row ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./dd/code)', $row ) );
 		}
+	}
+
+	public function test_component_disclosure_labels_use_translated_format_and_displayed_names(): void {
+		$troubleshooting_panel = 'installation';
+		$troubleshooting       = array(
+			'providers'  => array(),
+			'components' => array(
+				array(
+					'Name'           => 'GitHub',
+					'Provider'       => 'gh',
+					'Implementation' => 'fingerprint',
+				),
+				array( 'Name' => 'Extension "<unsafe>"' ),
+				array(),
+			),
+		);
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details: %s'] = 'Détails techniques : %s';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details']     = 'Détails techniques';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Unknown']               = 'Inconnu';
+		try {
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html = (string) ob_get_clean();
+		} finally {
+			unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details: %s'], $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details'], $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Unknown'] );
+		}
+
+		self::assertStringContainsString( 'aria-label="Détails techniques : GitHub">Détails techniques</summary>', $html );
+		self::assertStringContainsString( 'aria-label="Détails techniques : Extension &quot;&lt;unsafe&gt;&quot;">Détails techniques</summary>', $html );
+		self::assertStringContainsString( 'aria-label="Détails techniques : Inconnu">Détails techniques</summary>', $html );
+		self::assertStringContainsString( '<h4 class="ran-booster-section__title">Extension &quot;&lt;unsafe&gt;&quot;', $html );
+		self::assertStringContainsString( '<h4 class="ran-booster-section__title">Inconnu', $html );
+		self::assertStringContainsString( 'id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"', $html );
+		self::assertStringContainsString( '<code>fingerprint</code>', $html );
 	}
 
 	public function test_installation_distinguishes_provider_state_and_candidate_truncation(): void {

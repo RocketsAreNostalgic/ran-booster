@@ -86,6 +86,13 @@ export async function measureOverviewActivity(tab) {
 				const previous = rows[index - 1]?.getBoundingClientRect();
 				return {
 					height: rect.height,
+					width: row.clientWidth,
+					contentWidth: contentRect.width,
+					contentFontSize: number(getComputedStyle(content).fontSize),
+					sharesVerticalBand:
+						Math.min(contentRect.bottom, badgeRect.bottom) -
+							Math.max(contentRect.top, badgeRect.top) >
+						0.5,
 					marginTop: number(style.marginTop),
 					marginBottom: number(style.marginBottom),
 					paddingTop: number(style.paddingTop),
@@ -177,6 +184,12 @@ export async function assertOverviewActivity(
 			`${label} has a gap from the previous divider.`
 		);
 		assert(!row.overlap, `${label} content overlaps its badge.`);
+		assert(
+			!row.sharesVerticalBand ||
+				row.contentWidth >=
+					Math.min(row.width, 6 * row.contentFontSize) - 1,
+			`${label} content has insufficient readable width alongside its badge.`
+		);
 		assert(!row.overflow && !row.badge.overflow, `${label} overflows.`);
 		assert(row.badge.fontSize >= 12, `${label} badge font is below 12px.`);
 		assert(

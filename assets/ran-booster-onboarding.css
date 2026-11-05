@@ -1291,7 +1291,7 @@
 
 .ran-booster-admin .ran-booster-overview-activity__row > div {
 	min-width: 0;
-	flex: 1;
+	flex: 1 1 50%;
 	overflow-wrap: anywhere;
 }
 

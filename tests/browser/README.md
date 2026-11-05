@@ -50,3 +50,6 @@ await activity.assertOverviewActivity(tab, { expectedRows: 5 });
 Use `expectedRows: 0` for an empty or unavailable Activity card. Set
 `compact: false` to omit the one-line badge height check. The helper reads the
 page only; include narrow layouts and long translated labels in fixture checks.
+When the operation and badge share a row, the operation must retain six times
+its computed font size, capped by the available row width, for readable text.
+The badge can instead wrap below it.

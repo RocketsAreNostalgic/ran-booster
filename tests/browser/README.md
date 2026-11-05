@@ -34,3 +34,19 @@ theme `a11y-branch-disabled-theme`; injected user fixtures are also valid. The
 source assertion activates the route with Enter, awaits the exact incoming
 current-view marker, then checks the expected previous Shift+Tab destination.
 It does not create, install, delete, or mutate a package.
+
+## Overview Activity
+
+After opening Overview on the prepared site, measure the rendered rows before a
+change or assert their spacing, containment and badge readability afterward:
+
+```js
+const activity =
+	await import('file:///absolute/path/to/checkout/tests/browser/overview-activity.mjs');
+const measurements = await activity.measureOverviewActivity(tab);
+await activity.assertOverviewActivity(tab, { expectedRows: 5 });
+```
+
+Use `expectedRows: 0` for an empty or unavailable Activity card. Set
+`compact: false` to omit the one-line badge height check. The helper reads the
+page only; include narrow layouts and long translated labels in fixture checks.

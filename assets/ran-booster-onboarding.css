@@ -1284,6 +1284,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-8);
+	margin: 0;
 	padding-block: var(--ran-booster-space-4);
 	border-block-end: 1px solid var(--ran-booster-border);
 }
@@ -1295,8 +1296,20 @@
 }
 
 .ran-booster-admin .ran-booster-overview-activity__row > .ran-booster-badge {
+	box-sizing: border-box;
+	max-inline-size: 100%;
 	flex: none;
+	padding-block: 0;
 	padding-inline: var(--ran-booster-space-8);
+	line-height: var(--ran-booster-line-height-base);
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin
+	.ran-booster-overview-activity__row
+	> .ran-booster-badge--ok {
+	color: #007c1d;
 }
 
 .ran-booster-admin

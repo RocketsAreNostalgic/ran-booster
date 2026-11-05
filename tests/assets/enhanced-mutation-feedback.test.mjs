@@ -680,6 +680,131 @@ test('re-evaluating feedback initialization preserves the request lifecycle', ()
 	assert.equal(state.button.disabled, true);
 });
 
+test('General feedback requires the matching response and falls back when Core rendering is unavailable', () => {
+	for (const mode of [
+		'ready',
+		'missing-component',
+		'missing-style',
+		'render-failure',
+	]) {
+		const state = fixture();
+		const sourceListeners = new Map();
+		const xhrListeners = new Map();
+		let region = {
+			id: 'ran-booster-general-region',
+			isConnected: true,
+			contains: () => true,
+		};
+		state.form.isConnected = true;
+		let rendered = 0;
+		state.form.matches = (selector) =>
+			selector === '[data-ran-booster-general-form]' ||
+			selector === '[data-ran-booster-enhanced-mutation]';
+		state.form.addEventListener = (name, callback) =>
+			sourceListeners.set(name, callback);
+		state.form.removeEventListener = (name) => sourceListeners.delete(name);
+		state.document.getElementById = (id) =>
+			id === 'ran-booster-general-region' ? region : state.error;
+		state.document.body = { append() {} };
+		state.document.createElement = () => ({
+			style: {},
+			isConnected: true,
+			remove() {},
+			contains: () => false,
+			querySelector: () => (rendered ? {} : null),
+		});
+		state.window.getComputedStyle = () => ({
+			paddingLeft: mode === 'missing-style' ? '0px' : '20px',
+			backgroundColor: mode === 'missing-style' ? 'transparent' : 'black',
+		});
+		state.window.wp.element = {
+			createElement: (component, props) => ({ component, props }),
+			createRoot: () => ({
+				render() {
+					if (mode === 'render-failure') {
+						throw new Error('render');
+					}
+					rendered++;
+				},
+				unmount() {},
+			}),
+			flushSync: (callback) => callback(),
+		};
+		state.window.wp.components =
+			mode === 'missing-component' ? {} : { SnackbarList() {} };
+		const xhr = {
+			addEventListener: (name, callback) =>
+				xhrListeners.set(name, callback),
+			getResponseHeader: () =>
+				JSON.stringify({
+					'ran-booster:admin-mutation-success': { message: 'Saved.' },
+				}),
+		};
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		state.listeners.get('htmx:beforeRequest')({
+			detail: { elt: state.form, target: region, xhr },
+		});
+		sourceListeners.get('htmx:beforeOnLoad')({
+			detail: { xhr },
+			preventDefault() {
+				assert.fail('live response vetoed');
+			},
+		});
+		region.isConnected = false;
+		region = {
+			id: 'ran-booster-general-region',
+			hasAttribute: () => true,
+			insertAdjacentElement() {},
+		};
+		state.listeners.get('htmx:afterSwap')({
+			detail: { elt: state.form, xhr },
+		});
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message: 'Saved.' },
+		});
+		assert.equal(rendered, mode === 'ready' ? 1 : 0, mode);
+		assert.equal(state.toast.hidden, mode === 'ready', mode);
+		xhrListeners.get('loadend')();
+		assert.equal(sourceListeners.has('htmx:beforeOnLoad'), false);
+	}
+});
+
+test('General response from a detached source cannot replace a newer target', () => {
+	const state = fixture();
+	const handlers = new Map();
+	const original = {
+		id: 'ran-booster-general-region',
+		isConnected: true,
+		contains: () => false,
+	};
+	state.form.isConnected = false;
+	state.form.matches = (selector) =>
+		selector === '[data-ran-booster-general-form]' ||
+		selector === '[data-ran-booster-enhanced-mutation]';
+	state.form.addEventListener = (name, handler) =>
+		handlers.set(name, handler);
+	state.document.getElementById = () => original;
+	const xhr = { addEventListener() {} };
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:beforeRequest')({
+		detail: { elt: state.form, target: original, xhr },
+	});
+	let vetoed = false;
+	handlers.get('htmx:beforeOnLoad')({
+		detail: { xhr },
+		preventDefault() {
+			vetoed = true;
+		},
+	});
+	assert.equal(vetoed, true);
+});
+
 test('enhanced mutation feedback rejects a duplicate request from its busy form', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {

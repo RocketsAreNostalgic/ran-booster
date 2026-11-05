@@ -104,6 +104,11 @@ The enhanced feedback listeners belong to the document lifetime and initialize
 once, even if history navigation evaluates their script again. React subtrees
 have their own mount and unmount lifecycles independent of these listeners.
 
+General save confirmations use the Core Snackbar only for the matching saved
+response and live replacement region. If its renderer or presentation styles
+are unavailable, the existing feedback remains the fallback. Style readiness
+is a conservative presentation check, not a WordPress API guarantee.
+
 ## Required tests
 
 Cover at least:

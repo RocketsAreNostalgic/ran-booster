@@ -57,6 +57,9 @@ $package_navigation         = array(
 
 if ( isset( $tabs ) && is_array( $tabs ) ) {
 	foreach ( $tabs as $admin_tab ) {
+		if ( 'troubleshooting' === ( $admin_tab['key'] ?? null ) ) {
+			continue;
+		}
 		if ( 'portability' === ( $admin_tab['key'] ?? null ) ) {
 			foreach ( $package_navigation as $package_tab ) {
 				$ran_admin_shell_navigation[] = $package_tab;
@@ -85,6 +88,25 @@ $ran_admin_shell = array(
 	'navigation_label' => __( 'RAN Booster sections', 'ran-booster' ),
 	'navigation'       => $ran_admin_shell_navigation,
 );
+
+if ( in_array( $view, array( 'packages/create', 'packages/edit' ), true ) && isset( $package_view, $package_return_list ) ) {
+	$parent_url                           = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + array_map( 'rawurlencode', $package_return_list ), $admin_url );
+	$ran_admin_shell['breadcrumbs_label'] = __( 'Breadcrumbs', 'ran-booster' );
+	$package_heading                      = 'packages/create' === $view
+		/* translators: %s is plugin or theme. */
+		? sprintf( __( 'Install %s', 'ran-booster' ), $package_view->get_singular_label() )
+		: ( isset( $package ) && $package instanceof \RAN\Package ? trim( (string) $package->name ) : '' );
+	if ( '' === $package_heading ) {
+		$package_heading = $package_view->get_singular_label();
+	}
+	$ran_admin_shell['breadcrumbs'] = array(
+		array(
+			'label' => $package_view->get_plural_label(),
+			'url'   => $parent_url,
+		),
+		array( 'label' => $package_heading ),
+	);
+}
 
 echo '<div class="ran-admin-shell-notices"><hr class="wp-header-end"></div>';
 require __DIR__ . '/generated/ran-admin-shell.php';

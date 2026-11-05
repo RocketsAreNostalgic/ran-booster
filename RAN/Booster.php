@@ -264,6 +264,20 @@ class Booster {
 		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', $this->service_callback( 'RAN\Dashboard', 'get_transporter' ) );
 		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'render_extensions_page' ) );
 		add_submenu_page( 'ran-booster', __( 'Settings', 'ran-booster' ), __( 'Settings', 'ran-booster' ), 'manage_options', 'ran-booster-settings', $this->service_callback( 'RAN\Dashboard', 'get_settings' ) );
+		add_submenu_page( 'ran-booster', __( 'Troubleshooting', 'ran-booster' ), __( 'Troubleshooting', 'ran-booster' ), 'manage_options', 'admin.php?page=ran-booster&tab=troubleshooting' );
+		add_filter(
+			'submenu_file',
+			static function ( $submenu_file ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only menu selection does not authorize an action.
+				$page = $_GET['page'] ?? null;
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Match the existing allowlisted tab normalization for menu selection only.
+				$tab = $_GET['tab'] ?? null;
+				if ( 'ran-booster' === $page && is_string( $tab ) && 'troubleshooting' === strtolower( trim( wp_unslash( $tab ) ) ) ) {
+					return 'admin.php?page=ran-booster&tab=troubleshooting';
+				}
+				return $submenu_file;
+			}
+		);
 	}
 
 	/**

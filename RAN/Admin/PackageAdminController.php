@@ -284,7 +284,7 @@ final class PackageAdminController {
 			&& ( $result['package'] ?? null ) instanceof Package
 			&& PackageSource::BRANCH === $result['package']->get_source()
 		) {
-			return $this->repository_branch_check_redirect( $operation, $result['package'] );
+			return $this->repository_branch_check_redirect( $operation, $result['package'], $list_arguments );
 		}
 		if ( in_array( $status, array( 'succeeded', 'edited', 'linked' ), true ) && ( $result['package'] ?? null ) instanceof Package ) {
 
@@ -661,27 +661,36 @@ final class PackageAdminController {
 			$args['open_picker'] = '1';
 		} elseif ( in_array( $operation->operation, array( 'install', 'edit' ), true ) || $return_to_settings ) {
 			$args['package'] = $identifier;
-		} elseif ( 'update' === $operation->operation ) {
+		} else {
 			$args = array_merge( $list_arguments, $args );
+		}
+		$args['return_type'] = $type;
+		foreach ( $list_arguments as $key => $value ) {
+			$args[ 'return_' . $key ] = $value;
 		}
 		$admin_url = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 		return $admin_url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 	}
 
-	private function repository_branch_check_redirect( PackageOperation $operation, Package $package ): string {
+	/** @param array<string, string> $list_arguments */
+	private function repository_branch_check_redirect( PackageOperation $operation, Package $package, array $list_arguments ): string {
 		$identifier = $package->get_identifier();
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The managed package identity is unavailable.' );
 		}
-		$type = $operation->package_type;
-		$args = array(
+		$type                = $operation->package_type;
+		$args                = array(
 			'page'                                 => 'ran-booster-' . $type . 's',
 			'package'                              => $identifier,
 			'source_view'                          => 'branch',
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => wp_create_nonce( self::repository_branch_check_action( $package, $type ) ),
 		);
-		$url  = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+		$args['return_type'] = $type;
+		foreach ( $list_arguments as $key => $value ) {
+			$args[ 'return_' . $key ] = $value;
+		}
+		$url = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 
 		return $url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 	}

@@ -112,6 +112,7 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins">Plugins</a>', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-themes">Themes</a>', $html );
 		self::assertStringNotContainsString( '>Transporter</a>', $html );
+		self::assertStringNotContainsString( '>Troubleshooting</a>', $html );
 		self::assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=documentation" aria-current="page">Documentation</a>', $html );
 		self::assertStringNotContainsString( 'aria-current="false"', $html );

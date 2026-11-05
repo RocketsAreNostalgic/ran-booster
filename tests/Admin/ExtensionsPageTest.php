@@ -25,6 +25,7 @@ final class ExtensionsPageTest extends TestCase {
 		$GLOBALS['ran_booster_dashboard_test_actions']            = array();
 		$GLOBALS['ran_booster_extensions_page_menus']             = array();
 		$GLOBALS['ran_booster_extensions_page_submenus']          = array();
+		$GLOBALS['ran_booster_extensions_page_filters']           = array();
 		$GLOBALS['ran_booster_test_capabilities']                 = array( 'manage_options' => true );
 		$GLOBALS['ran_booster_test_capability_checks']            = array();
 		$GLOBALS['ran_booster_extensions_plugins']                = array();
@@ -41,6 +42,7 @@ final class ExtensionsPageTest extends TestCase {
 			$GLOBALS['ran_booster_dashboard_test_actions'],
 			$GLOBALS['ran_booster_extensions_page_menus'],
 			$GLOBALS['ran_booster_extensions_page_submenus'],
+			$GLOBALS['ran_booster_extensions_page_filters'],
 			$GLOBALS['ran_booster_test_capabilities'],
 			$GLOBALS['ran_booster_test_capability_checks'],
 			$GLOBALS['ran_booster_extensions_plugins'],
@@ -51,6 +53,8 @@ final class ExtensionsPageTest extends TestCase {
 		);
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_registers_the_overview_and_transporter_routes_before_extensions(): void {
 		$booster = $this->booster();
 		$booster->admin_menu();
@@ -65,6 +69,7 @@ final class ExtensionsPageTest extends TestCase {
 				'ran-booster-transporter',
 				'ran-booster-extensions',
 				'ran-booster-settings',
+				'admin.php?page=ran-booster&tab=troubleshooting',
 			),
 			array_column( $GLOBALS['ran_booster_extensions_page_submenus'], 'menu_slug' )
 		);
@@ -102,8 +107,21 @@ final class ExtensionsPageTest extends TestCase {
 			array_diff_key( $GLOBALS['ran_booster_extensions_page_submenus'][6], array( 'callback' => true ) )
 		);
 		self::assertSame( array( $booster, 'render_extensions_page' ), $GLOBALS['ran_booster_extensions_page_submenus'][6]['callback'] );
+		self::assertSame(
+			array(
+				'parent_slug' => 'ran-booster',
+				'page_title'  => 'Troubleshooting',
+				'menu_title'  => 'Troubleshooting',
+				'capability'  => 'manage_options',
+				'menu_slug'   => 'admin.php?page=ran-booster&tab=troubleshooting',
+				'callback'    => null,
+			),
+			$GLOBALS['ran_booster_extensions_page_submenus'][8]
+		);
 	}
 
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
 	public function test_registers_translated_menu_copy_without_changing_its_word_press_route_contract(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster'] = array(
 			'Overview'        => 'Vue d’ensemble',
@@ -115,6 +133,7 @@ final class ExtensionsPageTest extends TestCase {
 			'Themes'          => 'Apparences',
 			'Transporter'     => 'Transfert',
 			'Extensions'      => 'Modules',
+			'Troubleshooting' => 'Dépannage',
 		);
 
 		$booster = $this->booster();
@@ -135,6 +154,7 @@ final class ExtensionsPageTest extends TestCase {
 				array( 'ran-booster', 'Transfert', 'Transfert', 'manage_options', 'ran-booster-transporter', 'get_transporter' ),
 				array( 'ran-booster', 'Modules', 'Modules', 'manage_options', 'ran-booster-extensions', 'render_extensions_page' ),
 				array( 'ran-booster', 'Settings', 'Settings', 'manage_options', 'ran-booster-settings', 'get_settings' ),
+				array( 'ran-booster', 'Dépannage', 'Dépannage', 'manage_options', 'admin.php?page=ran-booster&tab=troubleshooting', null ),
 			),
 			array_map(
 				static fn ( array $submenu ): array => array(
@@ -143,7 +163,7 @@ final class ExtensionsPageTest extends TestCase {
 					$submenu['menu_title'],
 					$submenu['capability'],
 					$submenu['menu_slug'],
-					$submenu['callback'][1],
+					$submenu['callback'][1] ?? null,
 				),
 				$GLOBALS['ran_booster_extensions_page_submenus']
 			)
@@ -181,6 +201,55 @@ final class ExtensionsPageTest extends TestCase {
 		}
 		self::assertStringNotContainsString( 'stroke=', $svg );
 		self::assertStringNotContainsString( 'fill="none"', $svg );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_selects_troubleshooting_submenu_only_for_its_existing_route(): void {
+		$this->booster()->admin_menu();
+		$select = $GLOBALS['ran_booster_extensions_page_filters']['submenu_file'];
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Preserve the test's simulated request.
+		$original = $_GET;
+		try {
+			foreach ( array( null, 'installation', 'diagnostics', 'activity', 'debug-capture', 'support-report', 'invalid' ) as $panel ) {
+				$_GET = array(
+					'page' => 'ran-booster',
+					'tab'  => '  TROUBLESHOOTING  ',
+				);
+				if ( null !== $panel ) {
+					$_GET['panel'] = $panel;
+				}
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Capture the simulated request for the immutability assertion.
+				$request = $_GET;
+				self::assertSame( 'admin.php?page=ran-booster&tab=troubleshooting', $select( 'ran-booster' ) );
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verify menu selection does not mutate the simulated request.
+				self::assertSame( $request, $_GET );
+			}
+			foreach ( array(
+				array(
+					'page' => 'other',
+					'tab'  => 'troubleshooting',
+				),
+				array(
+					'page' => 'ran-booster',
+					'tab'  => 'overview',
+				),
+				array(
+					'page' => 'ran-booster',
+					'tab'  => array( 'troubleshooting' ),
+				),
+				array(
+					'page' => array( 'ran-booster' ),
+					'tab'  => 'troubleshooting',
+				),
+				array( 'page' => 'ran-booster' ),
+			) as $request ) {
+				$_GET = $request;
+				self::assertSame( 'existing-menu', $select( 'existing-menu' ) );
+			}
+		} finally {
+			$_GET = $original;
+		}
 	}
 
 	public function test_dashboard_routes_extensions_through_the_shared_page_frame(): void {
@@ -513,7 +582,7 @@ final class ExtensionsPageTest extends TestCase {
 		$output = $this->render();
 		self::assertStringContainsString( 'name="action" value="ran_booster_extension_activate"', $output );
 		self::assertStringContainsString( 'nonce-for-activate-plugin_ran-booster-bitbucket/ran-booster-bitbucket.php', $output );
-		self::assertStringContainsString( 'plugins.php?s=RAN+Booster+Bitbucket+Cloud', $output );
+		self::assert_plugin_search_link( $output, 'RAN Booster Bitbucket Cloud' );
 		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
 	}
 
@@ -540,8 +609,8 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 2, substr_count( $output, 'disabled aria-disabled="true">Active</button>' ) );
 		self::assertSame( 2, substr_count( $output, '>Manage plugin</a>' ) );
 		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
-		self::assertStringContainsString( 'plugins.php?s=RAN+Booster+Bitbucket+Cloud', $output );
-		self::assertStringContainsString( 'plugins.php?s=RAN+Booster+WP+Pusher+Migrator', $output );
+		self::assert_plugin_search_link( $output, 'RAN Booster Bitbucket Cloud' );
+		self::assert_plugin_search_link( $output, 'RAN Booster WP Pusher Migrator' );
 		self::assertStringNotContainsString( 'name="action" value="ran_booster_extension_install"', $output );
 		self::assertStringNotContainsString( 'name="action" value="ran_booster_extension_activate"', $output );
 	}
@@ -584,6 +653,21 @@ final class ExtensionsPageTest extends TestCase {
 		define( 'RAN_BOOSTER_ADDON_API_VERSION', 17 );
 		define( 'RAN_BOOSTER_PORTABILITY_API_VERSION', 4 );
 		define( 'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION', 3 );
+	}
+
+	private static function assert_plugin_search_link( string $html, string $expected ): void {
+		preg_match_all( '/href="([^"]*plugins\.php\?[^"]*)"/', $html, $matches );
+		$searches = array();
+		foreach ( $matches[1] as $attribute ) {
+			$url   = html_entity_decode( $attribute, ENT_QUOTES, 'UTF-8' );
+			$parts = wp_parse_url( $url );
+			$query = is_array( $parts ) ? ( $parts['query'] ?? null ) : null;
+			if ( is_string( $query ) ) {
+				parse_str( $query, $args ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_str_parse_str -- Decode the rendered URL for this assertion.
+				$searches[] = $args['s'] ?? null;
+			}
+		}
+		self::assertContains( $expected, $searches );
 	}
 
 	private function render(): string {

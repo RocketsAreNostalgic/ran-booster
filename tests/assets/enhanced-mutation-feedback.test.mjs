@@ -782,6 +782,7 @@ test('focused Snackbar dismissal restores focus when General Save is unavailable
 		};
 		let saveAttempts = 0;
 		let fallbackAttempts = 0;
+		let failedFallbackAttempts = 0;
 		const save = {
 			isConnected: scenario !== 'removed',
 			disabled: scenario === 'disabled',
@@ -793,16 +794,30 @@ test('focused Snackbar dismissal restores focus when General Save is unavailable
 			},
 		};
 		const fallback = {
-			isConnected: true,
-			focus() {
+			getClientRects: () => [{}],
+			focus(options) {
+				assert.equal(
+					options,
+					undefined,
+					'Allow visible focus to scroll into view.'
+				);
 				fallbackAttempts++;
 				ownerDocument.activeElement = fallback;
 			},
 		};
 		const document = {
-			querySelector(selector) {
-				return selector === '#wpadminbar a[href]' ? fallback : save;
-			},
+			querySelector: () => save,
+			querySelectorAll: () => [
+				{
+					getClientRects: () => [],
+					focus: () => assert.fail('Hidden link focused.'),
+				},
+				{
+					getClientRects: () => [{}],
+					focus: () => failedFallbackAttempts++,
+				},
+				fallback,
+			],
 		};
 		const restore = loadFunction('restoreSnackbarFocus', {
 			document,
@@ -815,6 +830,7 @@ test('focused Snackbar dismissal restores focus when General Save is unavailable
 		);
 		assert.equal(ownerDocument.activeElement, fallback, scenario);
 		assert.equal(fallbackAttempts, 1, scenario);
+		assert.equal(failedFallbackAttempts, 1, scenario);
 		assert.equal(
 			saveAttempts,
 			scenario === 'focus-fails' ? 1 : 0,

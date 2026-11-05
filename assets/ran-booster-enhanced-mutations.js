@@ -62,12 +62,24 @@
 				!button.disabled &&
 				!removing?.contains?.(button)
 			) {
-				button.focus({ preventScroll: true });
+				button.focus();
 			}
 			if (snackbar.host.ownerDocument.activeElement !== button) {
-				const fallback = document.querySelector('#wpadminbar a[href]');
-				if (fallback?.isConnected && !removing?.contains?.(fallback)) {
-					fallback.focus({ preventScroll: true });
+				for (const fallback of document.querySelectorAll(
+					'#wpadminbar a[href]'
+				)) {
+					if (
+						fallback.getClientRects().length &&
+						!removing?.contains?.(fallback)
+					) {
+						fallback.focus();
+						if (
+							snackbar.host.ownerDocument.activeElement ===
+							fallback
+						) {
+							break;
+						}
+					}
 				}
 			}
 		}

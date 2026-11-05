@@ -697,6 +697,7 @@ test('General feedback requires the matching response and falls back when Core r
 		};
 		state.form.isConnected = true;
 		let rendered = 0;
+		let unmounted = 0;
 		state.form.matches = (selector) =>
 			selector === '[data-ran-booster-general-form]' ||
 			selector === '[data-ran-booster-enhanced-mutation]';
@@ -708,6 +709,7 @@ test('General feedback requires the matching response and falls back when Core r
 		state.document.body = { append() {} };
 		state.document.createElement = () => ({
 			style: {},
+			ownerDocument: state.document,
 			isConnected: true,
 			remove() {},
 			contains: () => false,
@@ -726,7 +728,9 @@ test('General feedback requires the matching response and falls back when Core r
 					}
 					rendered++;
 				},
-				unmount() {},
+				unmount() {
+					unmounted++;
+				},
 			}),
 			flushSync: (callback) => callback(),
 		};
@@ -767,6 +771,20 @@ test('General feedback requires the matching response and falls back when Core r
 		});
 		assert.equal(rendered, mode === 'ready' ? 1 : 0, mode);
 		assert.equal(state.toast.hidden, mode === 'ready', mode);
+		if (mode === 'ready') {
+			state.listeners.get('htmx:beforeHistorySave')();
+			state.listeners.get('htmx:beforeHistorySave')();
+			assert.equal(
+				unmounted,
+				1,
+				'Discard once before history serializes markup.'
+			);
+			assert.equal(
+				state.toast.hidden,
+				true,
+				'Keep the unrelated presenter untouched.'
+			);
+		}
 		xhrListeners.get('loadend')();
 		assert.equal(sourceListeners.has('htmx:beforeOnLoad'), false);
 	}

@@ -914,10 +914,12 @@
 			});
 		});
 
-		window.addEventListener('pagehide', function () {
+		const clearSnackbar = function () {
 			restoreSnackbarFocus();
 			disposeSnackbar();
-		});
+		};
+		window.addEventListener('pagehide', clearSnackbar);
+		document.addEventListener('htmx:beforeHistorySave', clearSnackbar);
 		window.ranBoosterEnhancedMutationFeedbackInitialized = true;
 	}
 })();

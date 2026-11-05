@@ -108,6 +108,8 @@ General save confirmations use the Core Snackbar only for the matching saved
 response and live replacement region. If its renderer or presentation styles
 are unavailable, the existing feedback remains the fallback. Style readiness
 is a conservative presentation check, not a WordPress API guarantee.
+The transient subtree is removed before HTMX serializes history, so restored
+pages do not replay a cached confirmation.
 
 ## Required tests
 

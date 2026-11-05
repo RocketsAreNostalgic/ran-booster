@@ -38,7 +38,9 @@ shell stylesheet. The development dependency is not a plugin runtime package.
 
 The inverse identity renders Booster with Rockets Are Nostalgic below it and
 the decorative cream nozzle asset. The consumer supplies the 135-degree
-`#10364E` to `#1E4D6B` gradient. Current destinations keep their indicator;
+`#10364E` to `#1E4D6B` gradient and removes bottom padding from the identity row when section navigation
+follows it. A header without section navigation keeps the Shell spacing.
+Current destinations keep their indicator;
 hover and keyboard focus receive an underline, with the keyboard outline
 retained. Forced colours use system colours. No branding script or React
 mount is required, and native rendering remains available without JavaScript.
@@ -60,7 +62,11 @@ do not add a cloned heading or a second navigation lifecycle.
 
 Provider navigation sets htmx's existing `refreshOnHistoryMiss` policy for its
 document. Ordinary task clicks remain enhanced; a Back/Forward cache miss uses
-a native page load instead of an unreported failed history fetch. Keep
+a native page load instead of an unreported failed history fetch. WordPress
+clears the htmx history marker when it writes the canonical admin URL on
+a full load. On a later unmarked Back or Forward within that provider,
+reload if the destination query differs from the rendered view. Fragment-only
+changes keep their native behavior. Keep
 `hx-history="false"` and do not enable snapshots of credential-bearing pages.
 This policy does not add custom network recovery or change Settings save/leave
 protection; native failure, retry and cancelled-navigation proof remain separate.

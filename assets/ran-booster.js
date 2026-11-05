@@ -310,8 +310,25 @@
 		) {
 			return;
 		}
+		let renderedUrl = new URL(window.location.href);
 		if (typeof htmx !== 'undefined' && htmx.config) {
 			htmx.config.refreshOnHistoryMiss = true;
+			// WordPress clears HTMX's history marker on a full admin page load.
+			window.addEventListener('popstate', function (event) {
+				if (event.state?.htmx) {
+					return;
+				}
+				const destination = new URL(window.location.href);
+				if (
+					destination.pathname === renderedUrl.pathname &&
+					destination.search !== renderedUrl.search &&
+					destination.searchParams.get('page') === 'ran-booster' &&
+					destination.searchParams.get('tab') ===
+						renderedUrl.searchParams.get('tab')
+				) {
+					window.location.reload();
+				}
+			});
 		}
 
 		function currentTaskRegion() {
@@ -410,6 +427,7 @@
 				return;
 			}
 
+			renderedUrl = new URL(window.location.href);
 			initProviderRepositoryFilter(region);
 			const panel = region.querySelector(
 				'#ran-booster-provider-task-panel'

@@ -163,7 +163,7 @@ final class SettingsPageTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$shell_html = (string) ob_get_clean();
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $shell_html ) );
-		self::assertStringContainsString( '>Booster</a>', $shell_html );
+		self::assertStringContainsString( '>Booster</h1>', $shell_html );
 		self::assertStringContainsString( '>Rockets Are Nostalgic</p>', $shell_html );
 		self::assertStringContainsString( '?page=ran-booster-plugins">Plugins</a>', $shell_html );
 		self::assertStringContainsString( '?page=ran-booster-themes">Themes</a>', $shell_html );

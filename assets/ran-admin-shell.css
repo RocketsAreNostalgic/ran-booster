@@ -153,12 +153,12 @@ body.admin-bar .ran-admin-shell {
 	overflow-wrap: anywhere;
 }
 
-.ran-admin-shell__title a {
+.ran-admin-shell__identity:any-link {
 	color: inherit;
 	text-decoration: none;
 }
 
-.ran-admin-shell__title :where(a:hover) {
+.ran-admin-shell__identity:where(a:hover) .ran-admin-shell__title {
 	text-decoration: underline;
 	text-underline-offset: 0.18em;
 }

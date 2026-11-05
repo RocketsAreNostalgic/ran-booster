@@ -33,6 +33,13 @@ function add_submenu_page( string $parent_slug, string $page_title, string $menu
 	);
 }
 
+if ( ! function_exists( __NAMESPACE__ . '\\add_filter' ) ) {
+	function add_filter( string $hook, callable $callback ): bool {
+		$GLOBALS['ran_booster_extensions_page_filters'][ $hook ] = $callback;
+		return true;
+	}
+}
+
 /**
  * @return array<string, array<string, string>>
  */

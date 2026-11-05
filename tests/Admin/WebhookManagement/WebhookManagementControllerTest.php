@@ -1005,7 +1005,11 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertFalse( $store->record->requires_hook_identification() );
 		self::assertSame( 1, $store->save_attempts );
 		self::assertStringContainsString( 'webhook_management_result=record_conflict', $redirect );
-		self::assertStringContainsString( 'recovery_hook=recovery%3Ahook-identity-unavailable', $redirect );
+		$parts = wp_parse_url( $redirect );
+		self::assertIsArray( $parts );
+		$query = $parts['query'] ?? '';
+		parse_str( $query, $arguments ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_str_parse_str -- Decode the redirect for this assertion.
+		self::assertSame( 'recovery:hook-identity-unavailable', $arguments['recovery_hook'] ?? null );
 		self::assertStringContainsString( 'recovery_profile=wh_0123456789abcdef01234567', $redirect );
 	}
 

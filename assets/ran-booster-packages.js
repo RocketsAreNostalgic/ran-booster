@@ -1,6 +1,8 @@
 (function () {
 	'use strict';
 	const { __, _n, sprintf } = wp.i18n;
+	let packageLeaveState;
+	let packageLeaveForm;
 
 	function onDomReady(callback) {
 		if (document.readyState === 'loading') {
@@ -33,6 +35,19 @@
 		}
 	});
 
+	// History restores replace the form with a clone whose data attributes survive, but listeners do not.
+	document.addEventListener('htmx:historyRestore', function () {
+		const form = document.querySelector(
+			'#ran-booster-package-edit-form, #ran-booster-package-create-form'
+		);
+		if (form && form !== packageLeaveForm) {
+			delete form.dataset.ranBoosterLeaveGuardBound;
+			delete form.dataset.ranBoosterSourceUnsavedGuardBound;
+			initPackageSourceUnsavedGuard();
+		}
+		initPackageLeaveGuard();
+	});
+
 	function consumeAdvancedSettingsOpenRequest() {
 		const url = new URL(window.location.href);
 		if (!url.searchParams.has('ran_booster_open_advanced')) {
@@ -48,6 +63,7 @@
 		initPackageOperationControls();
 		initPackageSourceControls();
 		initPackageSourceUnsavedGuard();
+		initPackageLeaveGuard();
 
 		document
 			.querySelectorAll('.button-update-package')
@@ -73,6 +89,73 @@
 		initConfirmedPackageRemovals();
 		initPackageUpdateProgress();
 	}
+
+	function initPackageLeaveGuard() {
+		const form = document.querySelector(
+			'#ran-booster-package-edit-form, #ran-booster-package-create-form'
+		);
+		if (!form) {
+			packageLeaveForm = undefined;
+			packageLeaveState = undefined;
+			return;
+		}
+		if (form.dataset.ranBoosterLeaveGuardBound === 'true') {
+			return;
+		}
+		form.dataset.ranBoosterLeaveGuardBound = 'true';
+		packageLeaveForm = form;
+		const fingerprint = () =>
+			JSON.stringify(
+				Array.from(form.elements)
+					.filter(
+						(control) =>
+							!control.disabled &&
+							control.name?.startsWith('ran_booster[') &&
+							![
+								'hidden',
+								'button',
+								'submit',
+								'reset',
+								'image',
+							].includes(control.type)
+					)
+					.map((control) => [
+						control.name,
+						['checkbox', 'radio'].includes(control.type)
+							? control.checked
+							: control.value,
+					])
+			);
+		const initial = fingerprint();
+		const attempted = form.hasAttribute('data-ran-booster-attempted');
+		packageLeaveState = {
+			dirty: () => attempted || fingerprint() !== initial,
+			submitting: false,
+		};
+		const state = packageLeaveState;
+		form.addEventListener('submit', (event) => {
+			queueMicrotask(() => {
+				state.submitting = !event.defaultPrevented;
+			});
+		});
+	}
+
+	window.addEventListener('pageshow', () => {
+		if (packageLeaveState) {
+			packageLeaveState.submitting = false;
+		}
+	});
+
+	window.addEventListener('beforeunload', (event) => {
+		if (
+			packageLeaveState &&
+			!packageLeaveState.submitting &&
+			packageLeaveState.dirty()
+		) {
+			event.preventDefault();
+			event.returnValue = '';
+		}
+	});
 
 	function initPackageSourceControls() {
 		document
@@ -261,9 +344,12 @@
 			})
 		);
 		const isDirty = function () {
-			return controls.some(function (control) {
-				return baseline.get(control) !== settingValue(control);
-			});
+			return (
+				settingsForm.hasAttribute('data-ran-booster-attempted') ||
+				controls.some(function (control) {
+					return baseline.get(control) !== settingValue(control);
+				})
+			);
 		};
 		function settingValue(control) {
 			return ['checkbox', 'radio'].includes(control.type)

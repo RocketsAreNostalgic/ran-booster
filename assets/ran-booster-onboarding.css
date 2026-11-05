@@ -176,6 +176,12 @@
 	margin-inline: 0;
 }
 
+.ran-booster-admin
+	details.ran-booster-onboarding__storage-manual
+	+ details.ran-booster-onboarding__storage-discarded {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-onboarding__storage-manual ol,
 .ran-booster-admin .ran-booster-onboarding__storage-manual ul {
 	margin-inline-start: var(--ran-booster-space-20);

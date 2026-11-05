@@ -1309,7 +1309,7 @@
 .ran-booster-admin
 	.ran-booster-overview-activity__row
 	> .ran-booster-badge--ok {
-	color: #007c1d;
+	color: var(--ran-booster-color-green-500);
 }
 
 .ran-booster-admin

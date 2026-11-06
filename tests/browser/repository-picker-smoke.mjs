@@ -120,8 +120,10 @@ function scripts(version) {
 		}
 		ordered.push(`js/dist/${name.slice(3)}.min.js`);
 	}
+	visit('wp-components');
 	visit('wp-element');
 	visit('wp-i18n');
+	visit('wp-a11y');
 	visit('react-jsx-runtime');
 	return ordered;
 }
@@ -272,6 +274,7 @@ for (const version of ['7.0', '7.1.4']) {
 			);
 			const exports = await page.evaluate(() => ({
 				version: window.ranBoosterUI?.version,
+				coreComponentsAvailable: Boolean(window.wp?.components?.Modal),
 				Dialog: typeof window.ranBoosterUI?.Dialog,
 				Input: typeof window.ranBoosterUI?.Input,
 				reactVersion: window.React?.version || null,
@@ -279,6 +282,7 @@ for (const version of ['7.0', '7.1.4']) {
 			}));
 			Object.assign(runtimeFiles[version], { [scenario]: exports });
 			assert.equal(exports.foundationIdentity, true);
+			assert.equal(exports.coreComponentsAvailable, true);
 			assert.deepEqual(
 				uiRequests.sort(),
 				[

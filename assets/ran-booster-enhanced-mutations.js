@@ -59,7 +59,7 @@
 					'#ran-booster-save-numeric-bottom'
 				),
 				...document.querySelectorAll(
-					'#ran-booster-general-region [data-ran-booster-core-toggle] input, #ran-booster-general-region input[type="number"], #ran-booster-general-region input[role="switch"]'
+					'#ran-booster-general-region input[type="number"], #ran-booster-general-region input[role="switch"]'
 				),
 				...document.querySelectorAll('#wpadminbar a[href]'),
 			];
@@ -342,12 +342,7 @@
 					(control) =>
 						!(
 							form.dataset?.ranBoosterSettingsScope &&
-							(control.matches?.(
-								'input[role="switch"], fieldset'
-							) ||
-								control.closest?.(
-									'[data-ran-booster-core-toggle]'
-								))
+							control.matches?.('input[role="switch"], fieldset')
 						)
 				)
 				.map(function (control) {

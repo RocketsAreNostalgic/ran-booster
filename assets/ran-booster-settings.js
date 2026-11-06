@@ -29,74 +29,7 @@
 				? state.toggle.checked !== state.confirmed
 				: fingerprint(state.form) !== state.initial)
 		);
-	const unmount = (state) => {
-		if (state.root) {
-			state.root.unmount();
-			state.root = null;
-			state.input = null;
-		}
-		if (state.nativeRow) {
-			state.nativeRow.hidden = false;
-		}
-	};
-	const renderToggle = (state) => {
-		if (!state.root) {
-			return;
-		}
-		const { createElement, flushSync } = window.wp.element;
-		flushSync(() => {
-			state.root.render(
-				createElement(window.wp.components.ToggleControl, {
-					label: state.nativeRow
-						.querySelector('label')
-						.textContent.trim(),
-					checked: state.toggle.checked,
-					disabled: state.toggle.disabled,
-					'aria-describedby':
-						state.toggle.getAttribute('aria-describedby'),
-					'aria-invalid':
-						state.toggle.getAttribute('aria-invalid') || undefined,
-					ref: (input) => {
-						state.input = input;
-					},
-					onChange: (checked) => {
-						state.toggle.checked = checked;
-						state.toggle.dispatchEvent(
-							new Event('change', { bubbles: true })
-						);
-					},
-				})
-			);
-		});
-	};
-	const mount = (state) => {
-		const element = window.wp?.element;
-		if (
-			!state.toggle ||
-			state.root ||
-			!state.host ||
-			!state.nativeRow ||
-			!window.wp?.components?.ToggleControl ||
-			!element?.createRoot ||
-			!element?.createElement ||
-			!element?.flushSync
-		) {
-			return;
-		}
-		try {
-			state.root = element.createRoot(state.host);
-			renderToggle(state);
-			if (state.input) {
-				state.nativeRow.hidden = true;
-			} else {
-				unmount(state);
-			}
-		} catch {
-			unmount(state);
-		}
-	};
 	const update = (state) => {
-		renderToggle(state);
 		const dirty = pending(state);
 		const status = state.form.querySelector(
 			state.toggle
@@ -140,21 +73,12 @@
 		for (const form of document.querySelectorAll(selector)) {
 			const scope = form.dataset.ranBoosterSettingsScope;
 			if (states.get(scope)?.form === form) {
-				mount(states.get(scope));
 				continue;
-			}
-			const old = states.get(scope);
-			if (old) {
-				unmount(old);
 			}
 			const state = {
 				form,
 				scope,
 				toggle: form.querySelector('input[role="switch"]'),
-				host: form.querySelector('[data-ran-booster-core-toggle]'),
-				nativeRow: form.querySelector(
-					'[data-ran-booster-native-toggle]'
-				),
 				confirmed: form.dataset.ranBoosterConfirmed === '1',
 				initial: form.dataset.ranBoosterBaseline,
 				failed: !form.querySelector(
@@ -164,12 +88,10 @@
 				flight: null,
 			};
 			states.set(scope, state);
-			mount(state);
 			update(state);
 		}
 		for (const [scope, state] of states) {
 			if (!state.form.isConnected) {
-				unmount(state);
 				states.delete(scope);
 			}
 		}
@@ -219,7 +141,7 @@
 	});
 	document.addEventListener('change', (event) => {
 		const state = stateFor(event.target);
-		if (!state || (state.host && state.host.contains(event.target))) {
+		if (!state) {
 			return;
 		}
 		update(state);
@@ -299,7 +221,6 @@
 					? origin.id
 					: null,
 				active: origin,
-				coreFocus: origin === state.input,
 				applied: false,
 			};
 			state.flight = record;
@@ -379,11 +300,9 @@
 			const active = state.form.ownerDocument.activeElement;
 			if (record.region.contains(active)) {
 				record.focus = active.id;
-				record.coreFocus = active === state.input;
 				record.active = active;
 			} else if (active !== state.form.ownerDocument.body) {
 				record.focus = null;
-				record.coreFocus = false;
 				record.active = active;
 			}
 			try {
@@ -508,14 +427,13 @@
 		}
 		const active = next.form.ownerDocument.activeElement;
 		const restoreFocus =
-			(record.focus || record.coreFocus) &&
+			record.focus &&
 			(active === record.active ||
 				active === next.form.ownerDocument.body);
 		if (saved && restoreFocus) {
-			(record.coreFocus
-				? next.input
-				: document.getElementById(record.focus)
-			)?.focus({ preventScroll: true });
+			document
+				.getElementById(record.focus)
+				?.focus({ preventScroll: true });
 		}
 		if (!saved && restoreFocus) {
 			region
@@ -555,19 +473,6 @@
 			queueMicrotask(() => submit(next));
 		}
 	});
-	document.addEventListener('htmx:beforeCleanupElement', (event) => {
-		for (const state of states.values()) {
-			if (
-				event.target === state.form ||
-				event.target.contains?.(state.form)
-			) {
-				unmount(state);
-			}
-		}
-	});
-	const unmountAll = () => states.forEach(unmount);
-	document.addEventListener('htmx:beforeHistorySave', unmountAll);
-	window.addEventListener('pagehide', unmountAll);
 	window.addEventListener('beforeunload', (event) => {
 		const submitting = nativeSubmitting;
 		nativeSubmitting = null;

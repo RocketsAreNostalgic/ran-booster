@@ -246,6 +246,9 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//label[@for="ran-booster-self-update-discovery"]//input[@role="switch" and @disabled and not(@checked) and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@role="switch" and @aria-checked])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-core-toggle])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//input[@type="checkbox" and @name="ran_booster[preferences][hide_github]" and @id="ran-booster-hide-github"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//input[@type="checkbox" and @name="ran_booster[preferences][self_update_discovery]" and @id="ran-booster-self-update-discovery"])' ) );
 		foreach ( array(
 			'Appearance'      => array( 'RAN_BOOSTER_HIDE_GITHUB_UI' ),
 			'Booster updates' => array( 'RAN_BOOSTER_SELF_UPDATE_MODE' ),

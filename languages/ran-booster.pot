@@ -354,7 +354,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:256
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:313
 #: views/documentation.php:123
-#: views/documentation.php:437
+#: views/documentation.php:442
 msgid "Push-to-deploy"
 msgstr ""
 
@@ -492,7 +492,7 @@ msgstr[1] ""
 #: RAN/Admin/PackageAdminController.php:529
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:330
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
-#: views/documentation.php:345
+#: views/documentation.php:348
 #: views/packages/edit.php:246
 #: views/packages/index.php:102
 #: views/packages/index.php:158
@@ -504,7 +504,7 @@ msgstr ""
 #: RAN/Admin/PackageAdminController.php:530
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:334
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
-#: views/documentation.php:344
+#: views/documentation.php:347
 #: views/packages/edit.php:247
 #: views/packages/index.php:101
 #: views/packages/index.php:159
@@ -517,7 +517,7 @@ msgstr ""
 #: RAN/Admin/PackageAdminController.php:528
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:338
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
-#: views/documentation.php:343
+#: views/documentation.php:346
 #: views/packages/edit.php:208
 #: views/packages/edit.php:245
 #: views/packages/index.php:100
@@ -548,11 +548,15 @@ msgid_plural "%d packages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:77
+#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:47
+msgid "Booster’s own updates are disabled to protect this source checkout."
+msgstr ""
+
+#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:85
 msgid "RAN Booster development detected:"
 msgstr ""
 
-#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:78
+#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:86
 msgid "Core updates are disabled to protect this source checkout."
 msgstr ""
 
@@ -613,13 +617,14 @@ msgstr ""
 
 #: RAN/Admin/CredentialExpiryNoticeController.php:23
 #: RAN/Admin/DeploymentAdminController.php:27
-#: RAN/Admin/DevelopmentSafetyNoticeController.php:19
+#: RAN/Admin/DevelopmentSafetyNoticeController.php:20
 msgid "You are not allowed to dismiss this notice."
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryNoticeController.php:30
 #: RAN/Admin/DeploymentAdminController.php:30
-#: RAN/Admin/DevelopmentSafetyNoticeController.php:26
+#: RAN/Admin/DevelopmentSafetyNoticeController.php:27
+#: RAN/Admin/DevelopmentSafetyNoticeController.php:46
 msgid "The notice dismissal request expired. Reload the page and try again."
 msgstr ""
 
@@ -645,7 +650,7 @@ msgstr ""
 
 #: RAN/Admin/CredentialExpiryNoticeController.php:75
 #: RAN/Admin/DeploymentAdminController.php:46
-#: RAN/Admin/DevelopmentSafetyNoticeController.php:45
+#: RAN/Admin/DevelopmentSafetyNoticeController.php:53
 msgid "RAN Booster could not remember the notice dismissal."
 msgstr ""
 
@@ -1022,7 +1027,7 @@ msgid "Completed"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Booster.php:976
+#: RAN/Booster.php:978
 #: views/attempts/index.php:51
 #: views/overview-dashboard.php:29
 #: views/packages/index.php:64
@@ -1343,7 +1348,7 @@ msgstr ""
 msgid "Booster recorded an unavailable deployment outcome. Open Troubleshooting, verify the package state before retrying, and submit a redacted report if it repeats."
 msgstr ""
 
-#: RAN/Admin/DevelopmentSafetyNoticeController.php:34
+#: RAN/Admin/DevelopmentSafetyNoticeController.php:35
 msgid "RAN Booster could not identify the current administrator."
 msgstr ""
 
@@ -2522,9 +2527,9 @@ msgid "Package update orchestration guide"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:302
-#: views/documentation.php:472
-#: views/documentation.php:474
-#: views/documentation.php:524
+#: views/documentation.php:477
+#: views/documentation.php:479
+#: views/documentation.php:529
 msgid " (opens in a new tab)"
 msgstr ""
 
@@ -2843,7 +2848,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:712
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:977
+#: RAN/Booster.php:979
 #: views/attempts/index.php:54
 #: views/onboarding.php:78
 #: views/onboarding.php:96
@@ -3141,7 +3146,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1043
 #: views/documentation.php:293
-#: views/documentation.php:450
+#: views/documentation.php:455
 #: views/packages/index.php:130
 #: views/packages/recovery.php:70
 msgid "Open Troubleshooting"
@@ -4786,74 +4791,74 @@ msgstr ""
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:973
+#: RAN/Booster.php:975
 #: views/attempts/index.php:46
 #: views/overview-dashboard.php:24
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:974
+#: RAN/Booster.php:976
 #: views/attempts/index.php:47
 #: views/overview-dashboard.php:25
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:975
+#: RAN/Booster.php:977
 #: views/attempts/index.php:49
 #: views/overview-dashboard.php:27
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:978
+#: RAN/Booster.php:980
 #: views/packages/index.php:329
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:979
+#: RAN/Booster.php:981
 #: views/packages/index.php:331
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:980
+#: RAN/Booster.php:982
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:981
+#: RAN/Booster.php:983
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:982
+#: RAN/Booster.php:984
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:983
+#: RAN/Booster.php:985
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:984
+#: RAN/Booster.php:986
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:985
+#: RAN/Booster.php:987
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:1081
+#: RAN/Booster.php:1083
 msgid "RAN Booster could not save this notice preference. Please try again."
 msgstr ""
 
-#: RAN/Booster.php:1118
+#: RAN/Booster.php:1120
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:1120
+#: RAN/Booster.php:1122
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:1122
+#: RAN/Booster.php:1124
 msgid "Contact a site administrator."
 msgstr ""
 
@@ -6318,14 +6323,30 @@ msgstr ""
 msgid "Install %s"
 msgstr ""
 
+#: views/base.php:127
+msgid "Local development detected"
+msgstr ""
+
+#: views/base.php:128
+msgid "Booster can still download and replace managed plugins and themes on this site. Disable updates for packages you’re editing. Incoming webhooks for branch deployment are generally unavailable on local or private domains."
+msgstr ""
+
+#: views/base.php:133
+msgid "Learn about local development"
+msgstr ""
+
+#: views/base.php:134
+msgid "Dismiss this notice."
+msgstr ""
+
 #. translators: %s: current year.
-#: views/base.php:140
+#: views/base.php:152
 #, php-format
 msgid "Copyright © %s"
 msgstr ""
 
 #. translators: %s: installed Booster version.
-#: views/base.php:149
+#: views/base.php:161
 #, php-format
 msgid "Booster %s"
 msgstr ""
@@ -6517,19 +6538,19 @@ msgid "Protect your files and know what actually moves"
 msgstr ""
 
 #: views/documentation.php:93
-#: views/documentation.php:365
+#: views/documentation.php:370
 msgid "Credential storage, retention and removal"
 msgstr ""
 
 #. translators: %s: Repository provider name.
 #: views/documentation.php:101
-#: views/documentation.php:502
+#: views/documentation.php:507
 #, php-format
 msgid "%s credentials and access"
 msgstr ""
 
 #: views/documentation.php:122
-#: views/documentation.php:397
+#: views/documentation.php:402
 msgid "Installing and managing packages"
 msgstr ""
 
@@ -6551,7 +6572,7 @@ msgstr ""
 
 #: views/documentation.php:144
 #: views/documentation.php:201
-#: views/documentation.php:556
+#: views/documentation.php:561
 msgid "About RAN Booster"
 msgstr ""
 
@@ -6582,7 +6603,7 @@ msgstr ""
 
 #: views/documentation.php:258
 #: views/documentation.php:274
-#: views/documentation.php:574
+#: views/documentation.php:579
 msgid "or"
 msgstr ""
 
@@ -6595,7 +6616,7 @@ msgid "Install a package."
 msgstr ""
 
 #: views/documentation.php:273
-#: views/documentation.php:401
+#: views/documentation.php:406
 #: views/onboarding.php:171
 #: views/overview-dashboard.php:75
 #: views/provider.php:660
@@ -6735,411 +6756,436 @@ msgid "On the other site, confirm repository access works and the package behave
 msgstr ""
 
 #: views/documentation.php:341
-msgid "Deployment modes protect files you are editing"
+msgid "Local development"
+msgstr ""
+
+#: views/documentation.php:342
+msgid "WordPress local or development configuration and localhost addresses provide development context. Debug mode or a nonstandard port alone does not establish that a site is local. These signals do not establish whether incoming webhooks can reach it."
 msgstr ""
 
 #: views/documentation.php:343
-msgid "blocks any replacement, whether triggered by an administrator or by a webhook. Use this for a package whose files on disk you are currently editing."
+msgid "Booster can still download and replace managed plugins and themes on a local site. A local site running an official Booster release may also receive updates for Booster itself. Protection of Booster’s own source checkout is a separate policy; review its effective update status in Settings or Troubleshooting. Dismissing local-development guidance changes neither that protection nor any package’s Updates setting."
 msgstr ""
 
 #: views/documentation.php:344
-msgid "blocks webhook-triggered replacement (Push-to-Deploy) but still lets an administrator replace the package’s files through Booster."
+msgid "Deployment modes protect files you are editing"
 msgstr ""
 
-#: views/documentation.php:345
-msgid "allows a matching, signed push from the Git provider to replace the package automatically. Only turn this on for a site that is ready to receive live deployments."
+#: views/documentation.php:346
+msgid "blocks Booster branch reinstalls and push deployments, and suppresses managed release update offers. Use this for a package whose files on disk you are currently editing."
 msgstr ""
 
 #: views/documentation.php:347
-msgid "Booster never changes a package’s mode on its own. It may show a reminder when WordPress reports a local or development environment, plugin or theme development mode is active, WP_DEBUG is enabled, the site uses localhost or a loopback address, or its URL has a nonstandard port. These are safety hints only: Booster will not switch a package to Disabled or Manual for you. Choose each package’s mode explicitly."
+msgid "allows an administrator-triggered branch reinstall but blocks Push-to-Deploy. For release-managed packages, it preserves WordPress’s existing automatic-update decision; it does not guarantee that automatic updates are disabled."
 msgstr ""
 
-#: views/documentation.php:349
-msgid "What a Transporter Blueprint includes"
+#: views/documentation.php:348
+msgid "allows authenticated matching branch pushes to deploy, or enables WordPress automatic updates for validated published releases, according to the package’s source."
 msgstr ""
 
 #: views/documentation.php:350
-msgid "A Transporter Blueprint records only the Booster-managed plugins and themes selected on the source site. It can optionally include file-stored repository credentials used by those selected packages inside a password-protected ZIP. The ZIP password is only used for that one request and is never saved anywhere. When a package is installed or adopted from a Transporter Blueprint, it starts with deployment Disabled."
+msgid "Booster never changes a package’s mode on its own. It may show a reminder when WordPress reports a local or development environment, plugin or theme development mode is active, WP_DEBUG is enabled, the site uses localhost or a loopback address, or its URL has a nonstandard port. These are safety hints only: Booster will not switch a package to Disabled or Manual for you. Choose each package’s mode explicitly."
 msgstr ""
 
 #: views/documentation.php:351
-msgid "A Transporter Blueprint does not include WordPress content, uploads, the database, the package files themselves, constants, webhook secrets, hooks registered with the Git provider, deployment attempts or delivery-replay history, locks or worker state, or source deployment policy. Push-to-Deploy is always configured separately on each site."
+msgid "These settings govern Booster-managed replacement paths; they do not lock files against other tools. Manual and Automatic can replace local edits. Choose Disabled for each package you are editing."
 msgstr ""
 
-#: views/documentation.php:353
-msgid "Prepare the branch you are deploying"
+#: views/documentation.php:352
+msgid "Incoming branch-deployment webhooks are generally unavailable on local or private domains. A public tunnel can make a local site reachable when the actual configured callback meets the existing public HTTPS requirements. URL acceptance is not a reachability test or proof of authenticated delivery."
+msgstr ""
+
+#: views/documentation.php:352
+#: views/packages/fields/deployment-policy.php:62
+msgid "Read the Push-to-Deploy guide."
 msgstr ""
 
 #: views/documentation.php:354
-msgid "Booster installs exactly what is committed to the repository ref you select. It does not remove files, run build tools or install dependencies on the target site."
+msgid "What a Transporter Blueprint includes"
+msgstr ""
+
+#: views/documentation.php:355
+msgid "A Transporter Blueprint records only the Booster-managed plugins and themes selected on the source site. It can optionally include file-stored repository credentials used by those selected packages inside a password-protected ZIP. The ZIP password is only used for that one request and is never saved anywhere. When a package is installed or adopted from a Transporter Blueprint, it starts with deployment Disabled."
 msgstr ""
 
 #: views/documentation.php:356
-msgid "You, or the package’s maintainer, are responsible for what the repository’s ignore, build and release process leaves in that ref."
-msgstr ""
-
-#: views/documentation.php:357
-msgid "Include compiled or built assets and anything the package needs at runtime."
+msgid "A Transporter Blueprint does not include WordPress content, uploads, the database, the package files themselves, constants, webhook secrets, hooks registered with the Git provider, deployment attempts or delivery-replay history, locks or worker state, or source deployment policy. Push-to-Deploy is always configured separately on each site."
 msgstr ""
 
 #: views/documentation.php:358
+msgid "Prepare the branch you are deploying"
+msgstr ""
+
+#: views/documentation.php:359
+msgid "Booster installs exactly what is committed to the repository ref you select. It does not remove files, run build tools or install dependencies on the target site."
+msgstr ""
+
+#: views/documentation.php:361
+msgid "You, or the package’s maintainer, are responsible for what the repository’s ignore, build and release process leaves in that ref."
+msgstr ""
+
+#: views/documentation.php:362
+msgid "Include compiled or built assets and anything the package needs at runtime."
+msgstr ""
+
+#: views/documentation.php:363
 msgid "is normally only needed to build the package, so it should usually be excluded from the ref."
 msgstr ""
 
-#: views/documentation.php:359
+#: views/documentation.php:364
 msgid "Include the Composer"
 msgstr ""
 
-#: views/documentation.php:359
+#: views/documentation.php:364
 msgid "directory if the package needs it at runtime and does not install it itself."
 msgstr ""
 
-#: views/documentation.php:367
+#: views/documentation.php:372
 msgid "Where credentials are stored"
 msgstr ""
 
-#: views/documentation.php:368
+#: views/documentation.php:373
 msgid "Prerelease restart required: before installing this version on an installation using secrets.json, export any configuration and repository credentials you want to keep, remove the old Booster stack and verify its owned state has been cleared. Provision fresh storage, then review a Transporter import or re-adopt existing packages. Old files are never discovered, renamed or deleted automatically. Transporter does not restore webhook secrets or remote hooks."
 msgstr ""
 
-#: views/documentation.php:369
+#: views/documentation.php:374
 msgid "Booster stores repository credentials and webhook secrets as authenticated ciphertext in a private JSON file outside the WordPress and plugin directories. Conventional single-site POSIX installations can use the protected Settings storage section’s automatic location. Containers and uncommon layouts should define"
 msgstr ""
 
-#: views/documentation.php:369
+#: views/documentation.php:374
 msgid "as a private directory outside the public web root on durable local storage. The configured value must evaluate to an absolute canonical path; in wp-config.php, an expression such as"
 msgstr ""
 
-#: views/documentation.php:369
+#: views/documentation.php:374
 msgid "provides a safe relative layout anchored to that file. The directory must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages ran-booster-store.json inside it. Raw unanchored relative strings are rejected because web, cron and CLI processes may have different working directories. Booster never displays a saved secret back to you once it is stored."
 msgstr ""
 
-#: views/documentation.php:370
+#: views/documentation.php:375
 msgid "The file and lock are owner-only. Its independent encryption key is held in the non-autoloaded"
 msgstr ""
 
-#: views/documentation.php:370
+#: views/documentation.php:375
 msgid "WordPress option, so neither the filesystem nor database alone contains usable credentials. Restore the matching encrypted file and database key from the same backup, and protect that backup as secret material."
 msgstr ""
 
-#: views/documentation.php:372
+#: views/documentation.php:377
 msgid "Each administrator can dismiss their own credential expiry reminders. A five-day snooze is available only when every credential in the reminder expires more than five days from now. A new or replaced expiry will warn you again. Acknowledging a deployment failure banner does not resolve the incident."
 msgstr ""
 
-#: views/documentation.php:374
+#: views/documentation.php:379
 #: views/settings-storage.php:114
 msgid "Use a different storage location"
 msgstr ""
 
-#: views/documentation.php:375
+#: views/documentation.php:380
 msgid "Choose a durable directory outside the public web root that is owned by the same PHP process user used by WordPress web, cron and CLI requests. The directory must use mode 0700. Do not add group access as a workaround: Booster deliberately requires owner-only access. Define the preferred directory constant in wp-config.php before WordPress loads plugins; Booster creates and manages ran-booster-store.json and ran-booster-store.json.lock inside it with mode 0600:"
 msgstr ""
 
-#: views/documentation.php:377
+#: views/documentation.php:382
 msgid "In wp-config.php, __DIR__ is the directory containing wp-config.php and dirname( __DIR__ ) is its parent. If wp-config.php is in public_html, do not append public_html again: choose a sibling directory outside it. Every existing parent directory must let the PHP process traverse it; on shared hosting that may require a host-managed execute permission or ACL on an ancestor. The final Booster storage directory must still be owned by PHP and mode 0700."
 msgstr ""
 
-#: views/documentation.php:378
+#: views/documentation.php:383
 msgid "To use a hosting environment variable, bridge it to the PHP constant in wp-config.php. An environment variable by itself is not read by Booster:"
 msgstr ""
 
-#: views/documentation.php:383
+#: views/documentation.php:388
 msgid "If credentials already exist, move or restore ran-booster-store.json, ran-booster-store.json.lock and the matching database key together. Do not create an empty secrets file, copy only the encrypted file, or reset only the database key. If either the file or database key is permanently unavailable, the protected Settings storage section can offer an explicit typed reset after Booster verifies the remaining filesystem material and private path; this discards unrecoverable credentials and webhook secrets before fresh storage can be initialized."
 msgstr ""
 
-#: views/documentation.php:384
+#: views/documentation.php:389
 msgid "Moving credentials between sites"
 msgstr ""
 
-#: views/documentation.php:385
+#: views/documentation.php:390
 msgid "A plugin ZIP export or a database-only site migration cannot recreate the encrypted store. Transporter, described above, is the supported way to move selected repository credentials: it protects them inside the Transporter Blueprint ZIP, confirms repository identity and access on the target, and re-encrypts them with the target site’s key. Installing or adopting a package associates the imported credential with that package. Credential-only recovery for an already-managed package imports the credential under a new target-local ID but deliberately leaves the package’s saved credential selection unchanged; assign the recovered credential through the package settings if needed. Constants, webhook secrets and credentials already saved on the target are never exported. When Transporter is not the right fit, add credentials directly through the Git provider settings screens on the target site, or use the supported deployment constants instead."
 msgstr ""
 
-#: views/documentation.php:386
+#: views/documentation.php:391
 msgid "Do not overwrite an existing target site’s credentials file. If you ever need to restore the whole file as a recovery step, keep a copy of the target’s existing file first, and treat that restore as something only an approved recovery process should do."
 msgstr ""
 
-#: views/documentation.php:387
+#: views/documentation.php:392
 msgid "Keep the encrypted file and key protected, and exclude the file from version control and from any release archive."
 msgstr ""
 
-#: views/documentation.php:389
+#: views/documentation.php:394
 msgid "What happens on uninstall"
 msgstr ""
 
-#: views/documentation.php:390
+#: views/documentation.php:395
 msgid "Deactivating Booster keeps all credentials, package settings and deployment history in place. Deleting Booster through WordPress is the permanent local cleanup action: it removes both Booster custom tables, the encrypted credentials file and its separate database key, other Booster options, user notices, scheduled work, locks and temporary Logging capture. If Booster cannot verify or remove one of those artifacts safely, WordPress keeps the plugin files so an administrator can correct the problem and retry."
 msgstr ""
 
-#: views/documentation.php:391
+#: views/documentation.php:396
 msgid "Before deleting Booster, export a password-protected Transporter Blueprint with the selected packages and any file-stored repository credentials they use that you may need. A Transporter Blueprint does not include webhook secrets, webhook registrations on the Git provider, deployment history or constants, and every restored package starts with deployment Disabled."
 msgstr ""
 
-#: views/documentation.php:392
+#: views/documentation.php:397
 msgid "Uninstall cannot revoke Git provider credentials or remove remote webhooks. Revoke credentials with each Git provider and remove remote hooks before uninstalling. Booster removes only the exact wp-config.php storage definition it created; any manually authored storage definition remains under the site operator’s control."
 msgstr ""
 
-#: views/documentation.php:399
+#: views/documentation.php:404
 msgid "Choose a Git provider, then search for a repository or enter its account and name manually. Booster resolves repository visibility, stable identity, and the default branch before installation."
 msgstr ""
 
-#: views/documentation.php:402
+#: views/documentation.php:407
 #: views/onboarding.php:172
 #: views/overview-dashboard.php:80
 #: views/provider.php:661
 msgid "Install a theme"
 msgstr ""
 
-#: views/documentation.php:403
+#: views/documentation.php:408
 msgid "Manage deployed plugins"
 msgstr ""
 
-#: views/documentation.php:404
+#: views/documentation.php:409
 msgid "Manage deployed themes"
 msgstr ""
 
-#: views/documentation.php:406
+#: views/documentation.php:411
 msgid "A saved credential is required only when the selected repository is private or otherwise inaccessible anonymously. Keep the configured branch aligned with the branch you intend to deploy."
 msgstr ""
 
-#: views/documentation.php:408
+#: views/documentation.php:413
 msgid "Large repository archives"
 msgstr ""
 
 #. translators: %s: registered repository provider labels.
-#: views/documentation.php:412
+#: views/documentation.php:417
 #, php-format
 msgid "%s provide Booster with a ZIP of the whole repository. Choosing a plugin or theme subdirectory does not make that download smaller. Keep development-only trees such as committed node_modules, caches, test artifacts and unused build output out of the deployed repository ref."
 msgstr ""
 
 #. translators: 1: compressed ZIP limit in MiB, 2: expanded ZIP limit in MiB.
-#: views/documentation.php:420
+#: views/documentation.php:425
 #, php-format
 msgid "This site currently allows repository ZIPs up to %1$d MiB compressed and %2$d MiB expanded."
 msgstr ""
 
-#: views/documentation.php:428
+#: views/documentation.php:433
 msgid "Archive deployments are currently blocked:"
 msgstr ""
 
-#: views/documentation.php:428
+#: views/documentation.php:433
 msgid "RAN_BOOSTER_MAX_DOWNLOAD_BYTES must be an integer from 1 MiB through 536,870,911 bytes (just under 512 MiB)."
 msgstr ""
 
-#: views/documentation.php:430
+#: views/documentation.php:435
 msgid "Adjust the compressed limit in Booster Settings. A target-local constant overrides and locks that preference:"
 msgstr ""
 
-#: views/documentation.php:432
+#: views/documentation.php:437
 msgid "The value may range from 1 MiB through 536,870,911 bytes (just under 512 MiB). Booster derives a separate expanded-content limit four times as large and still applies entry-count, path, identity and free-space checks. It does not set installed size or History retention. It affects branch-source manual installs and updates, webhook updates, and package installation from a Transporter Blueprint. GitHub release inspection, installation and managed updates also use the compressed limit; the release updater has separate expansion safeguards. Extension downloads and Blueprint file imports have independent bounds."
 msgstr ""
 
-#: views/documentation.php:439
+#: views/documentation.php:444
 msgid "Push-to-Deploy is optional and configured separately on every target site. Use the matching Git provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that Git provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic."
 msgstr ""
 
-#: views/documentation.php:440
+#: views/documentation.php:445
 msgid "The Git provider screen reports site readiness, stable repository identity and whether a local signing secret applies. Local secret coverage means Booster can authenticate a matching delivery; it does not prove that a remote Git provider webhook exists. Configure and verify every remote webhook separately."
 msgstr ""
 
-#: views/documentation.php:441
+#: views/documentation.php:446
 msgid "Security, delivery history and hosting"
 msgstr ""
 
-#: views/documentation.php:442
+#: views/documentation.php:447
 msgid "HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection for the network, web server, PHP workers or WordPress bootstrap. Use public HTTPS with certificate verification enabled, a unique generated secret for each repository, the Git provider’s JSON delivery option and only the required push event. Rotate or disable a suspected secret."
 msgstr ""
 
-#: views/documentation.php:443
+#: views/documentation.php:448
 msgid "Do not cache, challenge, redirect or transform either accepted callback form: the pretty /wp-json/ route or the equivalent ?rest_route= query route. Proxies must preserve the raw body and signature headers. WordPress may already have buffered the body before Booster runs, so Core enforces its measured 256 KiB limit but does not trust or parse Content-Length as transport protection."
 msgstr ""
 
-#: views/documentation.php:444
+#: views/documentation.php:449
 msgid "A Git provider can time out after Booster has durably admitted work. Git provider delivery history remains authoritative for request duration, response status and redelivery. Compare the Git provider identifier with the Git provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive."
 msgstr ""
 
-#: views/documentation.php:445
+#: views/documentation.php:450
 msgid "At a trusted edge or host, you may bound body and header size, read time and connections for both callback forms. IP ranges published by the Git provider are optional defence in depth only where the real peer address is trustworthy; keep them current and retain HMAC. Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity."
 msgstr ""
 
-#: views/documentation.php:446
+#: views/documentation.php:451
 msgid "Retained webhook setup and cleanup"
 msgstr ""
 
-#: views/documentation.php:447
+#: views/documentation.php:452
 msgid "Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup. That package ignores pushes while it remains release-managed, while any branch-managed package using the same repository can continue to need the webhook. Keeping the setup is useful for a temporary switch back and forth."
 msgstr ""
 
-#: views/documentation.php:448
+#: views/documentation.php:453
 msgid "For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote Git provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source."
 msgstr ""
 
-#: views/documentation.php:449
+#: views/documentation.php:454
 msgid "Open the repository webhook settings from the Git provider screen, remove the hook at the Git provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place."
 msgstr ""
 
-#: views/documentation.php:450
+#: views/documentation.php:455
 msgid "The Git provider must be able to reach this WordPress site over public HTTPS. Localhost sites need a development tunnel. Test delivery from the Git provider, then review Deployment activity in Troubleshooting for Booster-managed results."
 msgstr ""
 
 #. translators: %s: Repository provider name.
-#: views/documentation.php:458
+#: views/documentation.php:463
 #, php-format
 msgid "%s webhook settings"
 msgstr ""
 
-#: views/documentation.php:462
+#: views/documentation.php:467
 msgid "Git provider location"
 msgstr ""
 
-#: views/documentation.php:464
+#: views/documentation.php:469
 #: views/provider.php:582
 msgid "Payload URL"
 msgstr ""
 
-#: views/documentation.php:466
+#: views/documentation.php:471
 #: views/provider.php:585
 msgid "Content type"
 msgstr ""
 
-#: views/documentation.php:468
+#: views/documentation.php:473
 #: views/provider.php:589
 msgid "Event"
 msgstr ""
 
-#: views/documentation.php:472
+#: views/documentation.php:477
 msgid "Webhook setup instructions"
 msgstr ""
 
-#: views/documentation.php:474
+#: views/documentation.php:479
 #: views/provider.php:597
 msgid "Delivery troubleshooting"
 msgstr ""
 
-#: views/documentation.php:477
+#: views/documentation.php:482
 msgid "For Bitbucket, enable Request History before you need it and treat its request UUID only as a cross-reference; do not assume it remains stable across automatic attempts."
 msgstr ""
 
-#: views/documentation.php:507
+#: views/documentation.php:512
 msgid "Minimum credential permissions"
 msgstr ""
 
 #. translators: %s: Repository provider name.
-#: views/documentation.php:513
+#: views/documentation.php:518
 #, php-format
 msgctxt "Repository provider settings link"
 msgid "Open %s settings"
 msgstr ""
 
-#: views/documentation.php:518
+#: views/documentation.php:523
 msgid "Official setup guidance"
 msgstr ""
 
-#: views/documentation.php:532
+#: views/documentation.php:537
 msgid "Setup guidance is not available for this Git provider yet."
 msgstr ""
 
-#: views/documentation.php:533
+#: views/documentation.php:538
 msgid "You can still use a public repository or enter repository details manually when the Git provider supports package deployment."
 msgstr ""
 
-#: views/documentation.php:558
+#: views/documentation.php:563
 msgid "Where this came from"
 msgstr ""
 
-#: views/documentation.php:559
+#: views/documentation.php:564
 msgid "Booster is a developer-focused repository deployment plugin for WordPress. It began as a modified derivative of WP Pusher 3.0.13. WP Pusher was created by Peter Suhm, and the inherited source was distributed under GPLv2. We are grateful for Peter’s original work and its central idea: use WordPress’s updater to deploy plugins and themes from version-controlled repositories."
 msgstr ""
 
-#: views/documentation.php:560
+#: views/documentation.php:565
 msgid "WP Pusher changed ownership in 2021 and is a separate product. Booster is an independent fork maintained by Rockets Are Nostalgic. It is not affiliated with or endorsed by Peter Suhm, WP Pusher or its owners. The distributed NOTICE.md and license.txt record the full source provenance and license."
 msgstr ""
 
-#: views/documentation.php:562
+#: views/documentation.php:567
 msgid "Why we built this"
 msgstr ""
 
-#: views/documentation.php:563
+#: views/documentation.php:568
 msgid "The inherited release depended on a vendor-hosted licensing, OAuth and repository-picker service just to work at all — repository access, credential storage and even the repository browser all ran through that service. We forked it to remove that dependency. Every credential, webhook and deployment decision now lives on your own site, not a third party’s."
 msgstr ""
 
-#: views/documentation.php:565
+#: views/documentation.php:570
 msgid "What’s different"
 msgstr ""
 
-#: views/documentation.php:567
+#: views/documentation.php:572
 msgid "Safety."
 msgstr ""
 
-#: views/documentation.php:567
+#: views/documentation.php:572
 msgid "Booster verifies a repository’s identity and an archive’s contents before it touches a file, and will not let a delayed or out-of-order webhook roll back code that has already been updated. Saved credentials use authenticated encryption in a file with restrictive"
 msgstr ""
 
-#: views/documentation.php:567
+#: views/documentation.php:572
 msgid "permissions; the independent key remains in the WordPress database, so neither a file-only nor database-only copy contains usable credentials."
 msgstr ""
 
-#: views/documentation.php:568
+#: views/documentation.php:573
 msgid "Transporter."
 msgstr ""
 
-#: views/documentation.php:568
+#: views/documentation.php:573
 msgid "A password-protected Transporter Blueprint moves package and repository configuration, and any credentials you choose, between sites without copying a development checkout."
 msgstr ""
 
-#: views/documentation.php:569
+#: views/documentation.php:574
 msgid "Independence & Security."
 msgstr ""
 
-#: views/documentation.php:569
+#: views/documentation.php:574
 msgid "No vendor-hosted licensing, OAuth broker or repository-picker service. Further, the inherited codebase stored a private repository’s access token as a WordPress option in the database; Booster instead saves your repository credential in a file on your own site, never in the WordPress database."
 msgstr ""
 
-#: views/documentation.php:570
+#: views/documentation.php:575
 msgid "Extensibility."
 msgstr ""
 
-#: views/documentation.php:570
+#: views/documentation.php:575
 msgid "Additional git providers can be added through a documented registration hook without modifying Booster itself."
 msgstr ""
 
-#: views/documentation.php:573
+#: views/documentation.php:578
 msgid "How a deployment stays honest"
 msgstr ""
 
-#: views/documentation.php:574
+#: views/documentation.php:579
 msgid "Every deployment is recorded as one attempt with a clear status —"
 msgstr ""
 
-#: views/documentation.php:574
+#: views/documentation.php:579
 msgid "— so there is always an honest history and something concrete to point to if something goes wrong. Beyond that record, Booster protects a deployment in a few concrete ways:"
 msgstr ""
 
-#: views/documentation.php:576
+#: views/documentation.php:581
 msgid "It will not deploy an old version over a newer one."
 msgstr ""
 
-#: views/documentation.php:576
+#: views/documentation.php:581
 msgid "If a webhook arrives late or out of order, Booster checks the repository’s current commit before replacing anything, so a delayed notification cannot roll back code that has already been updated."
 msgstr ""
 
-#: views/documentation.php:577
+#: views/documentation.php:582
 msgid "It verifies the download before touching any files."
 msgstr ""
 
-#: views/documentation.php:577
+#: views/documentation.php:582
 msgid "Before installing anything, Booster checks the downloaded archive’s exact contents, confirms it matches the expected package, and confirms every file it contains stays inside the expected folder."
 msgstr ""
 
-#: views/documentation.php:578
+#: views/documentation.php:583
 msgid "WordPress Core does the actual file replacement."
 msgstr ""
 
-#: views/documentation.php:578
+#: views/documentation.php:583
 msgid "Booster hands the verified files to WordPress’s own updater, which owns backup behaviour during the swap. Booster then checks the result and will show you a warning rather than reporting success when the outcome is unclear."
 msgstr ""
 
-#: views/documentation.php:580
+#: views/documentation.php:585
 msgid "Booster delegates package replacement to WordPress Core. It does not build, test or make untrusted repository code safe."
 msgstr ""
 
@@ -7323,14 +7369,6 @@ msgstr ""
 
 #: views/index.php:13
 msgid "This Booster add-on could not render its tab. Check the plugin compatibility and error log."
-msgstr ""
-
-#: views/notices.php:26
-msgid "Development safety:"
-msgstr ""
-
-#: views/notices.php:26
-msgid "Booster can replace managed plugin and theme directories. Before editing a managed package on this site, set Updates to Disabled. Manual still allows an administrator-triggered replacement; Automatic also accepts configured repository webhooks."
 msgstr ""
 
 #: views/onboarding.php:28
@@ -8042,10 +8080,6 @@ msgstr ""
 
 #: views/packages/fields/deployment-policy.php:61
 msgid "Automatic deployment is unavailable because this Git provider does not support signed webhooks."
-msgstr ""
-
-#: views/packages/fields/deployment-policy.php:62
-msgid "Read the Push-to-Deploy guide."
 msgstr ""
 
 #: views/packages/fields/provider.php:27

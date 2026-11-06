@@ -94,6 +94,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		);
 		self::assertStringContainsString( 'class="tablenav top ran-booster-package-toolbar"', $html );
 		self::assertStringContainsString( 'class="tablenav-pages one-page"', $html );
+		self::assertStringContainsString( '<table class="wp-list-table widefat plugins ran-booster-package-table" data-package-type="' . $type . '">', $html );
 		self::assertStringContainsString( '<span class="displaying-num">0 of 4 items</span>', $html );
 		self::assertStringContainsString( 'Install another ' . $type, $html );
 		self::assertStringNotContainsString( 'data-ran-booster-bulk-form', $html );

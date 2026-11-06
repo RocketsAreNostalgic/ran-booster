@@ -273,6 +273,34 @@
 	color: var(--ran-booster-text-muted);
 }
 
+.ran-booster-admin
+	.ran-booster-package-table[data-package-type="plugin"]
+	:is(
+		.ran-booster-package-row__management,
+		.ran-booster-package-row__status-line
+	) {
+	overflow-wrap: anywhere;
+}
+
+@media screen and (min-width: 783px) {
+	.ran-booster-admin
+		.ran-booster-package-table[data-package-type="plugin"]
+		:is(
+			.ran-booster-package-row__identity,
+			.ran-booster-package-row__summary,
+			.ran-booster-package-row__actions
+		) {
+		padding-block: var(--ran-booster-space-12);
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-table[data-package-type="plugin"]
+		.ran-booster-package-row
+		> .check-column {
+		padding-block-start: var(--ran-booster-space-14);
+	}
+}
+
 .ran-booster-admin .ran-booster-package-row__action-group {
 	display: flex;
 	flex-wrap: nowrap;

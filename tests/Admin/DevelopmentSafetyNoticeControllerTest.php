@@ -13,6 +13,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
+		$_POST = array( 'state' => DevelopmentSafetyNoticeController::NOTICE_STATE );
 		$GLOBALS['ran_booster_repository_admin_allowed']               = true;
 		$GLOBALS['ran_booster_repository_admin_nonce_valid']           = true;
 		$GLOBALS['ran_booster_repository_admin_user_id']               = 17;
@@ -22,6 +23,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
+		$_POST = array();
 		unset(
 			$GLOBALS['ran_booster_repository_admin_allowed'],
 			$GLOBALS['ran_booster_repository_admin_nonce_valid'],
@@ -37,7 +39,7 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 		self::assertTrue( $result['success'] );
 		self::assertTrue( $result['data']['dismissed'] );
 		self::assertSame(
-			'1',
+			DevelopmentSafetyNoticeController::NOTICE_STATE,
 			$GLOBALS['ran_booster_repository_admin_user_meta'][17][ DevelopmentSafetyNoticeController::USER_META_KEY ]
 		);
 	}
@@ -60,6 +62,16 @@ final class DevelopmentSafetyNoticeControllerTest extends TestCase {
 		self::assertFalse( $result['success'] );
 		self::assertSame( 403, $result['status'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_user_meta'] );
+	}
+
+	public function test_missing_or_stale_state_cannot_acknowledge_current_notice(): void {
+		foreach ( array( '', '1', 'local-development-v1' ) as $state ) {
+			$_POST['state'] = $state;
+			$result         = ( new DevelopmentSafetyNoticeController() )->handle();
+			self::assertFalse( $result['success'] );
+			self::assertSame( 403, $result['status'] );
+			self::assertSame( array(), $GLOBALS['ran_booster_repository_admin_user_meta'] );
+		}
 	}
 
 	public function test_persistence_failure_is_reported(): void {

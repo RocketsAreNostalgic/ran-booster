@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Picker smoke fixture</title>
+		<link
+			rel="stylesheet"
+			href="/wp-includes/css/dist/components/style.min.css"
+		/>
+		<link rel="stylesheet" href="/wp-admin/css/common.min.css" />
+		<link rel="stylesheet" href="/wp-admin/css/forms.min.css" />
+		<link rel="stylesheet" href="/wp-includes/css/buttons.min.css" />
+		<link rel="stylesheet" href="/css/00-foundations.css" />
+		<link rel="stylesheet" href="/css/10-buttons.css" />
+		<link rel="stylesheet" href="/css/20-repository-picker.css" />
+		<link rel="stylesheet" href="/css/25-admin-primitives.css" />
+		<link rel="stylesheet" href="/css/65-package-settings.css" />
+		<link rel="stylesheet" href="/css/80-responsive.css" />
+	</head>
+	<body class="wp-admin wp-core-ui">
+		<main id="wpbody-content">
+			<form
+				data-ran-booster-package-create="1"
+				data-ran-booster-explicit-provider="0"
+			>
+				<label
+					>Provider
+					<select class="ran-booster-provider-input">
+						<option value="gh">GitHub</option>
+						<option value="bb">Bitbucket</option>
+					</select></label
+				><label
+					>Repository
+					<input
+						class="ran-booster-repository-input"
+						name="repository" /></label
+				><input
+					class="ran-booster-provider-repository-id-input"
+				/><input
+					class="ran-booster-provider-repository-identity-source-input"
+				/><input
+					class="ran-booster-public-lookup-profile-input"
+				/><input class="ran-booster-branch-input" /><select
+					class="ran-booster-credential-input"
+				>
+					<option value="">None</option>
+					<option value="profile" data-provider="gh">Profile</option>
+					<option value="bb-profile" data-provider="bb">
+						Bitbucket profile
+					</option></select
+				><button
+					type="button"
+					class="ran-booster-open-repository-picker"
+					data-package-type="plugin"
+				>
+					Browse repositories
+				</button>
+			</form>
+		</main>
+		<script>
+			window.ranBoosterRepoPicker = {
+				ajaxUrl: '/ajax',
+				action: 'fixture',
+				nonce: 'fixture',
+				providers: ['gh', 'bb'].map((code) => ({
+					code,
+					label: code === 'gh' ? 'GitHub' : 'Bitbucket',
+					owner_label: 'Owner',
+					browse: true,
+					webhooks: true,
+					credential_profiles: [
+						{ id: 'profile', label: 'Profile', configured: true },
+					],
+					public_lookup: { supports_default: false },
+				})),
+			};
+			window.contextChanges = [];
+			document.addEventListener(
+				'ran-booster:repository-context-changed',
+				(event) => contextChanges.push(event.detail.reason)
+			);
+		</script>
+	</body>
+</html>

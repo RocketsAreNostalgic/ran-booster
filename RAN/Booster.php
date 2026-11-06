@@ -837,6 +837,17 @@ class Booster {
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
 		wp_enqueue_style( 'wp-components' );
+		if ( in_array( $hook, array( 'ran-booster_page_ran-booster-extensions', 'ran-booster_page_ran-booster-plugins' ), true )
+			|| ( 'toplevel_page_ran-booster' === $hook && in_array( $requested_tab, array( null, '', 'overview' ), true ) )
+		) {
+			wp_enqueue_script(
+				'ran-booster-cards',
+				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
+				array( 'wp-element', 'wp-components' ),
+				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
+				true
+			);
+		}
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
 			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'wp-i18n' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
 			wp_set_script_translations( 'ran-booster-settings', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );

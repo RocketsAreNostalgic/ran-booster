@@ -32,7 +32,7 @@ The following 19 topic heads identify the reviewed source inputs, not merge ance
 
 Source metadata was refreshed on 6 November 2026: all listed PRs remain open, draft and unmerged. Eighteen current heads still match the selected inputs. **#666 has advanced remotely to `86cd3a46083a35b126d9fe2675975b3b6204d521`; that newer head is not included.** Its selected earlier input remains `15f055359552e706a427bd386b8d407690c8f940`. Reconcile later Settings work explicitly instead of merging the current PR wholesale.
 
-## Separate inputs and last verified installation
+## Separate inputs and last verified durable-baseline installation
 
 Build-time Shell resources follow [Shell #39](https://github.com/RocketsAreNostalgic/ran-admin-shell/pull/39) `61e3543eecf047cfd5e4cb51079162c79593ef81` and [Shell #41](https://github.com/RocketsAreNostalgic/ran-admin-shell/pull/41) `5b8d58986503f2e00bcbc418214161db3ff6d3b2`. These are unreleased source inputs, not package publication. [Migrator #89](https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator/pull/89) `b8b82f19757b43e17c3df8c569d6f575672107ca` is a separate inactive external input; extension-first ordering remains a release concern.
 
@@ -44,6 +44,16 @@ The last verified installed direction preview on the stable accumulated site is 
 - The owner selected Overview B and the revised native Extensions anatomy for upcoming direction previews; those new sources are not in this baseline. The coordinator has now selected the common public Card profile and sole shared-file writer. A styling decision does not establish runtime, lifecycle or whole-programme acceptance.
 - Requested breadcrumb/sidebar and disclosure-gap contracts have focused source/CI/installed evidence. Broader component conversion, native leave dialogs, native 200% zoom, screen-reader audio, final composed acceptance and release/dependency decisions remain separately held. Do not infer blanket owner acceptance for every inherited visual detail.
 - Baseline source `5c992c49` passed the full clean Core Composer check (3,902 tests / 64,318 assertions), both analysis scopes and pinned frontend checks (322 tests). Canonical ZIP verification linted 478 packaged PHP files. Source checks, input CI, local ZIP provenance, installed/browser proof and owner acceptance are distinct. The newly opened integration PR still needs exact-tuple independent review and its own required CI.
+
+## Local direction candidate overlay — not admitted
+
+A separate local `preview/beta44-shared-card` candidate starts from integration head `2570cdd87802ad920a45a347112970b37377f461`. It is not another accumulator and has not been pushed into the durable integration branch. The queued/admitted distinctions below refer to that durable branch; this overlay is a separately authorized, reversible direction-preview candidate.
+
+- Common Card profile/adapter and one native-anatomy Extensions representative use source input `440277794023c12d82d81933a881a0710683c6c6`, reconciled through the exact baseline-relative runtime patch SHA-256 `761242786516108d1640715a137be4a62fdf3ca5cdd7c59bb653a4a20c9c5be8`. Existing global component styles and all Settings/menu/notice wiring are retained. The new Card script is the only added runtime file. No obsolete prototype script is deleted from a baseline that never shipped it.
+- Managed Plugins uses [#677](https://github.com/RocketsAreNostalgic/ran-booster/pull/677), base `2570cdd87802ad920a45a347112970b37377f461`, head `336681c5d313b058462bbbc03d8c43b43c90c788`. Its native forms/table/compact rows and focused regression tests are retained; Themes and selection-restoration behavior are outside the slice.
+- Overview B uses source `b66b8c178691086b563df53ef2ffa77e29342b79`: 20px blue managed totals, four existing package destinations, truthful unknowns, one authoritative Bitbucket Cloud name, and 2px extra Activity-row padding on each side. Header, secure storage, notice and backend behavior remain untouched.
+
+The shared profile and Overview B direction are selected; new collection/adapter visual acceptance and full qualification remain pending. The shared adapter's HTMX host-innerHTML cleanup defect was corrected and passed focused real-HTMX WordPress 7.0/7.1.4 regression proof before this overlay. Canonical translation regeneration and focused combined checks are part of candidate preparation. Actual installation, Card adoption, single-surface CSS, actions and browser proof require the exact built candidate and its separate receipt. Static navigation and Settings #675 are not batched into this candidate.
 
 ## Queued, excluded and held
 

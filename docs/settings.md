@@ -10,6 +10,13 @@ persistent pending indicator beside Save; toggle confirmations do not clear it.
 The indicator clears after confirmed numeric persistence or reversion to the
 confirmed baseline. It does not time out or dismiss edits.
 
+The two General switches mount WordPress's public `ToggleControl` through its
+registered component and element scripts. The native named input remains the
+protected form's sole preference field; the component sends changes through the
+existing scoped saving controller. React owns only its dedicated control host.
+HTMX cleanup and history capture unmount it before replacing or caching markup.
+If the component cannot mount, the native switch remains available.
+
 Without JavaScript or HTMX, use **Save setting** beside each switch and **Save
 changes** for numeric settings. Check for updates and storage actions remain
 separate forms. Code-locked controls retain their configuration explanation;

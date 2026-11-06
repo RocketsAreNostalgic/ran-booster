@@ -623,3 +623,33 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+
+/* Keep the native collection inside the shared Card without clipping focus. */
+.ran-booster-admin .ran-booster-package-collection {
+	min-inline-size: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-collection__toolbar {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+	padding: var(--ran-booster-space-16);
+	border-block-end: 1px solid var(--ran-booster-border);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-list-controls,
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-toolbar.tablenav {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-package-collection .ran-booster-package-table {
+	margin: 0;
+	border: 0;
+	box-shadow: none;
+}

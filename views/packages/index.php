@@ -132,7 +132,14 @@ $policy_labels = array(
 	<?php } ?>
 </div>
 
+<?php if ( $is_plugin_list ) { ?>
+<div id="ran-booster-plugin-collection" class="ran-booster-card ran-booster-package-collection" data-ran-booster-card="plugins">
+<?php } ?>
+
 <?php if ( $package_list_total > 0 ) { ?>
+	<?php if ( $is_plugin_list ) { ?>
+	<div class="ran-booster-package-collection__toolbar">
+	<?php } ?>
 	<div class="ran-booster-package-list-controls">
 		<form class="ran-booster-package-list-filters" method="get" action="<?php echo esc_url( $package_admin_url ); ?>">
 			<input type="hidden" name="page" value="<?php echo esc_attr( $package_view->get_page_slug() ); ?>">
@@ -219,6 +226,9 @@ $policy_labels = array(
 		</div>
 		<br class="clear">
 	</div>
+	<?php if ( $is_plugin_list ) { ?>
+	</div>
+	<?php } ?>
 <?php } ?>
 
 <table class="wp-list-table widefat plugins ran-booster-package-table" data-package-type="<?php echo esc_attr( $package_view->get_type() ); ?>">
@@ -580,3 +590,6 @@ $policy_labels = array(
 		<?php } ?>
 	</tbody>
 </table>
+<?php if ( $is_plugin_list ) { ?>
+</div>
+<?php } ?>

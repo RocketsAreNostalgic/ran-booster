@@ -4679,7 +4679,7 @@ msgid "Connect Booster to Bitbucket Cloud repositories for managed deployments."
 msgstr ""
 
 #: RAN/Booster.php:400
-msgid "Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy."
+msgid "Add Bitbucket Cloud support through a RAN-maintained provider extension while Booster continues to own credentials, webhook verification, and deployment policy."
 msgstr ""
 
 #: RAN/Booster.php:402
@@ -7029,7 +7029,7 @@ msgid "Open %s settings"
 msgstr ""
 
 #: views/documentation.php:535
-msgid "Official setup guidance"
+msgid "Provider setup guidance"
 msgstr ""
 
 #: views/documentation.php:549
@@ -7532,9 +7532,6 @@ msgstr ""
 
 #. translators: %s: selected provider plugin name.
 #: views/overview-dashboard.php:99
-#: views/provider.php:241
-#: views/troubleshooting-installation.php:180
-#: views/troubleshooting-installation.php:186
 #, php-format
 msgid "Provided by %s"
 msgstr ""
@@ -9266,6 +9263,14 @@ msgid "GitHub provider management"
 msgstr ""
 
 #. translators: %s: selected provider plugin name.
+#: views/provider.php:241
+#: views/troubleshooting-installation.php:180
+#: views/troubleshooting-installation.php:186
+#, php-format
+msgid "Provider extension: %s"
+msgstr ""
+
+#. translators: %s: selected provider plugin name.
 #: views/provider.php:242
 msgid "Manage GitHub provider"
 msgstr ""
@@ -9400,7 +9405,7 @@ msgstr ""
 #. translators: %s: the implementation being reviewed for approval.
 #: views/provider.php:332
 #, php-format
-msgid "Reviewing GitHub support provided by %s"
+msgid "Reviewing GitHub provider: %s"
 msgstr ""
 
 #. translators: %s: the implementation being reviewed for approval.

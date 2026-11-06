@@ -275,10 +275,38 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<code>CredentialValidator</code>, <code>RepositoryBrowser</code>', $html );
 		self::assertStringContainsString( 'Classic personal access token', $html );
 		self::assertStringNotContainsString( 'RAN\\RepositoryProvider\\CredentialValidator', $html );
-		self::assertStringContainsString( 'Provided by Bitbucket Cloud', $html );
+		self::assertStringContainsString( 'Provider extension: Bitbucket Cloud', $html );
 		self::assertStringContainsString( 'Installed extension', $html );
+		self::assertStringNotContainsString( 'Provided by', $html );
 		self::assertStringContainsString( '>Inactive</span>', $html );
 		self::assertMatchesRegularExpression( '/>\s*Status unavailable\s*<\/span>/', $html );
+
+		$troubleshooting['components'][1]['Name']                                      = '<Custom integration>';
+		$troubleshooting['installation_details']['GitHub provider']['Name']            = '<Replacement>';
+		$troubleshooting['installation_details']['GitHub provider']['Selection state'] = 'available';
+		$troubleshooting['installation_details']['GitHub provider']['Operational availability'] = 'Available';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Provider extension: &lt;Replacement&gt;', $html );
+		self::assertStringContainsString( 'Provider extension: &lt;Custom integration&gt;', $html );
+		self::assertStringNotContainsString( '<Replacement>', $html );
+		self::assertStringNotContainsString( '<Custom integration>', $html );
+		self::assertStringNotContainsString( 'Rockets Are Nostalgic', $html );
+
+		$troubleshooting['installation_details']['GitHub provider']['Source'] = 'Bundled with Booster';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Included with Booster', $html );
+
+		$troubleshooting['installation_details']['GitHub provider']['Source'] = 'External replacement';
+		$troubleshooting['installation_details']['GitHub provider']['Name']   = 'Unavailable';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Provider source unknown', $html );
+		self::assertStringNotContainsString( 'Rockets Are Nostalgic', $html );
 	}
 
 	public function test_installation_is_default_and_renders_ordered_escaped_facts(): void {

@@ -243,6 +243,7 @@ function developmentLifecycle(fetch) {
 	function mount(version = 'local-development-v2') {
 		const button = {
 			hidden: true,
+			style: { display: 'none' },
 			disabled: false,
 			dataset: {},
 			closest: () => current,
@@ -301,6 +302,7 @@ test('development initialization is once per document and reveals the existing b
 	state.init();
 	state.init();
 	assert.equal(button.hidden, false);
+	assert.equal(button.style.display, '');
 	assert.equal(state.handlers.click.length, 1);
 	assert.equal(state.handlers['htmx:load'].length, 1);
 });
@@ -369,4 +371,25 @@ test('failed development acknowledgement remains retryable and is not remembered
 	state.click(restored.button);
 	await flush();
 	assert.equal(restored.notice.removed, true);
+});
+
+test('delayed success removes a mounted restore of the same event and restores its focus', async () => {
+	let resolve;
+	const state = developmentLifecycle(
+		() =>
+			new Promise((done) => {
+				resolve = done;
+			})
+	);
+	const first = state.mount();
+	state.init();
+	state.click(first.button);
+	const restored = state.mount();
+	state.fire('htmx:historyRestore');
+	state.document.activeElement = restored.button;
+	resolve({ ok: true, json: async () => ({ success: true }) });
+	await flush();
+	assert.equal(first.notice.removed, true);
+	assert.equal(restored.notice.removed, true);
+	assert.equal(state.document.activeElement, state.heading);
 });

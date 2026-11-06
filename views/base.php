@@ -108,7 +108,7 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 				$core_self_update_development_notice->render_local_fact(); }
 			?>
 			<p><a href="<?php echo esc_url( $admin_url . '?page=ran-booster&tab=documentation#ran-booster-file-protection' ); ?>"><?php esc_html_e( 'Learn about local development', 'ran-booster' ); ?></a></p>
-			<button type="button" class="notice-dismiss" hidden><span class="screen-reader-text"><?php esc_html_e( 'Dismiss this notice.', 'ran-booster' ); ?></span></button>
+			<button type="button" class="notice-dismiss" hidden style="display:none"><span class="screen-reader-text"><?php esc_html_e( 'Dismiss this notice.', 'ran-booster' ); ?></span></button>
 		</div>
 	<?php } ?>
 	<?php if ( ! in_array( $view, array( 'packages/index', 'packages/recovery' ), true ) ) { ?>

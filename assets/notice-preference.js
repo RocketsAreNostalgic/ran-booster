@@ -6,6 +6,18 @@
 	}
 	window.ranBoosterNoticePreferenceInitialized = true;
 	let acknowledgedDevelopmentState = '';
+	function removeDevelopmentNotice(notice) {
+		if (notice.contains(notice.ownerDocument.activeElement)) {
+			const heading = document.getElementById(
+				'ran-booster-onboarding-heading'
+			);
+			if (heading) {
+				heading.setAttribute('tabindex', '-1');
+				heading.focus();
+			}
+		}
+		notice.remove();
+	}
 	function initDevelopmentNotice() {
 		document
 			.querySelectorAll('[data-ran-booster-development-safety]')
@@ -15,11 +27,12 @@
 					notice.dataset.ranBoosterNoticeState ===
 						acknowledgedDevelopmentState
 				) {
-					notice.remove();
+					removeDevelopmentNotice(notice);
 					return;
 				}
 				const button = notice.querySelector('.notice-dismiss');
 				if (button) {
+					button.style.display = '';
 					button.hidden = false;
 				}
 			});
@@ -143,21 +156,11 @@
 						}
 						if (developmentState) {
 							acknowledgedDevelopmentState = developmentState;
-							if (
-								notice.contains(
-									notice.ownerDocument.activeElement
-								)
-							) {
-								const heading = document.getElementById(
-									'ran-booster-onboarding-heading'
-								);
-								if (heading) {
-									heading.setAttribute('tabindex', '-1');
-									heading.focus();
-								}
-							}
+							removeDevelopmentNotice(notice);
+							initDevelopmentNotice();
+						} else {
+							notice.remove();
 						}
-						notice.remove();
 					});
 				})
 				.catch(function (error) {

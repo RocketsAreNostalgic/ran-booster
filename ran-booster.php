@@ -223,7 +223,7 @@ $ran_booster_core_development_notice->register();
 			}
 			$ran_booster_container->bind(
 				CoreSelfUpdateStatus::class,
-				new CoreSelfUpdateStatus( $current_policy, $core_release_target, $core_check )
+				new CoreSelfUpdateStatus( $core_policy, $core_release_target, $core_check )
 			);
 
 			// Release targets join the package broker after every provider is

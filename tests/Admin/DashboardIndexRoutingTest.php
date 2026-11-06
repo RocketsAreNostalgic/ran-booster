@@ -122,17 +122,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function test_development_safety_notice_dismissal_is_scoped_to_the_current_administrator(): void {
 		$GLOBALS['ran_booster_dashboard_test_environment_type'] = 'local';
-		$GLOBALS['ran_booster_dashboard_test_user_meta'][7][ DevelopmentSafetyNoticeController::USER_META_KEY ] = '1';
+		$GLOBALS['ran_booster_repository_admin_user_meta'][7][ DevelopmentSafetyNoticeController::USER_META_KEY ] = DevelopmentSafetyNoticeController::NOTICE_STATE;
 		$predicate = new ReflectionMethod( Dashboard::class, 'should_show_development_safety_notice' );
 		$dashboard = $this->dashboard( $this->throwing_secrets() );
 
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/index', true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, false ) );
 
 		$GLOBALS['ran_booster_dashboard_test_user_id'] = 8;
 
-		self::assertTrue( $predicate->invoke( $dashboard, 'packages/index', true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', true ) );
+		self::assertTrue( $predicate->invoke( $dashboard, true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, false ) );
 	}
 
 	public function test_repository_branch_check_rejects_missing_and_stale_nonce_without_provider_work(): void {
@@ -583,23 +583,25 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->cleanup_calls );
 	}
 
-	/** @return list<array{string, bool, bool}> */
-	public static function development_safety_notice_provider(): array {
-		return array(
-			array( 'packages/index', true, true ),
-			array( 'packages/create', true, false ),
-			array( 'packages/edit', true, false ),
-			array( 'index', true, false ),
-			array( 'index', true, false ),
-			array( 'packages/index', false, false ),
+	public function test_local_guidance_requires_the_canonical_overview_projection(): void {
+		$predicate = new ReflectionMethod( Dashboard::class, 'is_local_development_overview' );
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
+		$overview  = array(
+			'tab'        => 'overview',
+			'onboarding' => array(),
 		);
+		self::assertTrue( $predicate->invoke( $dashboard, 'index', $overview, true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'index', array( 'tab' => 'documentation' ), true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'index', array( 'tab' => 'overview' ), true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'packages/index', $overview, true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'index', $overview, false ) );
 	}
 
-	#[DataProvider( 'development_safety_notice_provider' )]
-	public function test_development_safety_notice_uses_detected_environment_only_on_the_package_index( string $view, bool $development_environment_detected, bool $expected ): void {
+	public function test_old_acknowledgement_does_not_suppress_new_notice(): void {
+		$GLOBALS['ran_booster_repository_admin_user_meta'][7][ DevelopmentSafetyNoticeController::USER_META_KEY ] = '1';
 		$predicate = new ReflectionMethod( Dashboard::class, 'should_show_development_safety_notice' );
-
-		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $development_environment_detected ) );
+		self::assertTrue( $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), true ) );
+		self::assertFalse( $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), false ) );
 	}
 
 	public function test_overview_uses_only_the_same_notice_request_snapshot(): void {
@@ -1753,6 +1755,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET  = array();
 		$index = $dashboard->get_plugins()['data'];
 
+		$settings_reads[0][1] = $this->canonical_query_url( $settings_reads[0][1] );
 		self::assertSame(
 			array(
 				array(
@@ -1769,7 +1772,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'Latest release: 1.1.0.', $index['package_extension_rows']['plugin/example.php']['status'] );
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
-			$index['package_extension_actions']['plugin/example.php']['fixture:manage']['url']
+			$this->canonical_query_url( $index['package_extension_actions']['plugin/example.php']['fixture:manage']['url'] )
 		);
 	}
 
@@ -1930,8 +1933,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET   = array();
 		$index  = $dashboard->get_plugins()['data'];
 
-		$create_url = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create';
-		$edit_url   = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php';
+		$create_url          = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create';
+		$edit_url            = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php';
+		$source_calls[1][3]  = $this->canonical_query_url( $source_calls[1][3] );
+		$section_calls[1][4] = $this->canonical_query_url( $section_calls[1][4] );
+		$action_calls[0][3]  = $this->canonical_query_url( $action_calls[0][3] );
 		self::assertSame(
 			array(
 				array( 'create', 'plugin', null, $create_url ),
@@ -3321,7 +3327,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
-			$data['package_settings_urls']['plugin']['example']
+			$this->canonical_query_url( $data['package_settings_urls']['plugin']['example'] )
 		);
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme',
@@ -3553,7 +3559,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 42, $page['items'][0]['id'] );
 		self::assertSame( 'example', $page['items'][0]['package_slug'] );
 		self::assertSame( 'example/example.php', $page['items'][0]['subject_identity'] );
-		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php', $page['package_settings_urls']['plugin']['example'] );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php', $this->canonical_query_url( $page['package_settings_urls']['plugin']['example'] ) );
 		self::assertSame( 'GitHub · Plugin: Example Plugin (example/example.php)', $page['filter_options']['packages'][0]['label'] );
 		self::assertSame( 'webhook', $page['items'][0]['source'] );
 		self::assertSame( 'running', $page['items'][0]['state'] );
@@ -3890,6 +3896,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 43, $activity['detail']->get_id() );
 		self::assertSame( $attempt['correlation_id'], $activity['detail']->get_correlation_id() );
 		unset( $GLOBALS['ran_booster_test_status_header'] );
+	}
+
+	private function canonical_query_url( string $url ): string {
+		$parts = wp_parse_url( $url );
+		self::assertIsArray( $parts );
+		$query = array();
+		wp_parse_str( $parts['query'] ?? '', $query );
+		return ( $parts['scheme'] ?? '' ) . '://' . ( $parts['host'] ?? '' ) . ( $parts['path'] ?? '' ) . '?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 );
 	}
 
 	private function set_multisite( bool $multisite ): void {

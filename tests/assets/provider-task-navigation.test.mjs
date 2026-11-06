@@ -8,6 +8,15 @@ const source = fs.readFileSync(
 );
 
 function loadFunction(name, dependencies = {}) {
+	dependencies = {
+		window: {
+			location: new URL(
+				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh'
+			),
+			addEventListener() {},
+		},
+		...dependencies,
+	};
 	const signature = `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
@@ -158,6 +167,91 @@ class TestCustomEvent {
 		this.detail = options.detail;
 	}
 }
+
+test('history misses reload only when provider navigation is present', () => {
+	const state = fixture();
+	const htmx = { config: { refreshOnHistoryMiss: false } };
+	const init = loadFunction('initProviderTaskNavigation', {
+		document: state.document,
+		htmx,
+	});
+	init();
+	assert.equal(htmx.config.refreshOnHistoryMiss, true);
+
+	htmx.config.refreshOnHistoryMiss = false;
+	const detail = loadFunction('initProviderTaskNavigation', {
+		document: {
+			...state.document,
+			getElementById: (id) =>
+				id === 'ran-booster-provider-profile-region'
+					? { querySelector: () => ({}) }
+					: null,
+		},
+		htmx,
+	});
+	detail();
+	assert.equal(htmx.config.refreshOnHistoryMiss, true);
+
+	htmx.config.refreshOnHistoryMiss = false;
+	const absent = loadFunction('initProviderTaskNavigation', {
+		document: { getElementById: () => null },
+		htmx,
+	});
+	absent();
+	assert.equal(htmx.config.refreshOnHistoryMiss, false);
+});
+
+test('repeated provider traversal reloads an unmarked destination only when the rendered provider view differs', () => {
+	const state = fixture();
+	let reloads = 0;
+	const listeners = new Map();
+	const location = {
+		href: 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=status',
+		reload() {
+			reloads++;
+		},
+	};
+	const init = loadFunction('initProviderTaskNavigation', {
+		document: state.document,
+		htmx: { config: {} },
+		window: {
+			location,
+			addEventListener: (name, fn) => listeners.set(name, fn),
+		},
+		CustomEvent: TestCustomEvent,
+		initProviderRepositoryFilter() {},
+	});
+	init();
+	const pop = (entry) => listeners.get('popstate')({ state: entry });
+	location.href += '#same-panel';
+	pop(null);
+	assert.equal(reloads, 0);
+	location.href = location.href.replace('panel=status', 'panel=repositories');
+	pop({ htmx: true });
+	assert.equal(reloads, 0);
+	const detail = { target: state.panel, xhr: {} };
+	state.listeners.get('htmx:beforeRequest')({ detail });
+	state.listeners.get('htmx:afterSwap')({ detail });
+	pop({ idx: 0 });
+	assert.equal(reloads, 0);
+	location.href = location.href.replace('panel=repositories', 'panel=status');
+	pop({ idx: 0 });
+	assert.equal(reloads, 1);
+	location.href = location.href.replace('tab=gh', 'tab=overview');
+	pop(null);
+	assert.equal(reloads, 1);
+});
+
+test('provider navigation initializes without htmx or its config', () => {
+	const state = fixture();
+	for (const htmx of [undefined, {}]) {
+		const init = loadFunction('initProviderTaskNavigation', {
+			document: state.document,
+			htmx,
+		});
+		assert.doesNotThrow(init);
+	}
+});
 
 test('provider task requests expose progress and notify swapped controls', () => {
 	const state = fixture();

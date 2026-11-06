@@ -76,7 +76,15 @@ if ( array() === $environment ) {
 					continue;
 				}
 				?>
-				<div><dt><?php echo esc_html( $label ); ?></dt><dd><code<?php echo in_array( $key, array( 'configuration', 'path_source' ), true ) ? ' class="ran-booster-onboarding__storage-inline"' : ''; ?>><?php echo esc_html( $value ); ?></code></dd></div>
+				<div><dt><?php echo esc_html( $label ); ?></dt><dd><?php if ( in_array( $key, array( 'configured_location', 'storage_file' ), true ) ) { ?>
+					<?php
+					$copy_value = $value;
+					$copy_label = 'configured_location' === $key ? __( 'Copy storage directory', 'ran-booster' ) : __( 'Copy storage file', 'ran-booster' );
+					include __DIR__ . '/copy-displayed-value.php';
+					?>
+				<?php } else { ?>
+					<code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $value ); ?></code>
+				<?php } ?></dd></div>
 			<?php } ?>
 		</dl>
 		<?php } else { ?>
@@ -147,6 +155,9 @@ if ( array() === $components ) {
 $basic_labels          = array( 'Installed', 'Active', 'Version', 'Admission', 'Selection', 'Availability' );
 $github_problem_states = array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'storage_unavailable' );
 foreach ( $components as $component ) {
+	$component_name          = $component['Name'] ?? __( 'Unknown', 'ran-booster' );
+	$technical_fields        = array_diff_key( $component, array_flip( array_merge( $basic_labels, array( 'Name', 'Capabilities' ) ) ) );
+	$has_capabilities        = is_string( $component['Capabilities'] ?? null ) && '' !== $component['Capabilities'];
 	$is_github               = ( $component['Provider'] ?? '' ) === 'gh';
 	$selection_state         = $github_fields[ __( 'Selection state', 'ran-booster' ) ] ?? null;
 	$github_available        = $github_fields[ __( 'Operational availability', 'ran-booster' ) ] ?? null;
@@ -187,7 +198,7 @@ foreach ( $components as $component ) {
 	}
 	?>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 class="ran-booster-section__title"><?php echo esc_html( $component['Name'] ?? __( 'Unknown', 'ran-booster' ) ); ?>
+<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 class="ran-booster-section__title"><?php echo esc_html( $component_name ); ?>
 	<?php
 	if ( is_string( $version ) && '' !== $version ) {
 		?>
@@ -201,93 +212,93 @@ foreach ( $components as $component ) {
 	if ( $problem ) {
 		?>
 		<p><?php echo esc_html( $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. Review the provider settings before use.', 'ran-booster' ) ); ?></p><?php } ?>
+	<?php if ( array() !== $technical_fields || $has_capabilities ) { ?>
 <details<?php echo $is_github ? ' id="ran-booster-github-provider-diagnostics"' : ''; ?> class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">
-<summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
+<summary aria-label="<?php echo esc_attr( sprintf( /* translators: %s: provider or extension name. */ __( 'Technical details: %s', 'ran-booster' ), $component_name ) ); ?>"><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
 <div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
 <p><?php echo esc_html( isset( $component['Provider'] ) ? __( 'These are local configuration details. Use Diagnostics to check repository access.', 'ran-booster' ) : __( 'These are local configuration details.', 'ran-booster' ) ); ?></p>
 <dl class="ran-booster-troubleshooting__fields-list">
-	<?php
-	foreach ( $component as $label => $value ) {
-		if ( 'Name' === $label || 'Capabilities' === $label || in_array( $label, $basic_labels, true ) ) {
-			continue;
-		}
-		?>
+		<?php
+		foreach ( $technical_fields as $label => $value ) {
+			?>
 		<div><dt><?php echo esc_html( 'Implementation' === $label ? __( 'Implementation fingerprint', 'ran-booster' ) : $label ); ?></dt><dd><code><?php echo esc_html( $value ); ?></code></dd></div>
-	<?php } ?>
-	<?php if ( is_string( $component['Capabilities'] ?? null ) && '' !== $component['Capabilities'] ) { ?>
+		<?php } ?>
+		<?php if ( $has_capabilities ) { ?>
 		<div><dt><?php esc_html_e( 'Implemented capabilities', 'ran-booster' ); ?></dt><dd>
-		<?php
-		foreach ( explode( ', ', $component['Capabilities'] ) as $index => $capability ) {
-			echo 0 === $index ? '' : ', ';
-			echo '<code>' . esc_html( $capability ) . '</code>';
-		}
-		?>
-		</dd></div>
-	<?php } ?>
-	<?php if ( $is_github ) { ?>
-		<?php
-		if ( isset( $github_fields[ __( 'Implementation', 'ran-booster' ) ] ) ) {
-			?>
-			<div><dt><?php esc_html_e( 'Implementation ID', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $github_fields[ __( 'Implementation', 'ran-booster' ) ] ); ?></code></dd></div><?php } ?>
-		<?php foreach ( array( __( 'Compatibility revision', 'ran-booster' ), __( 'Webhook signing format', 'ran-booster' ), __( 'Provider API', 'ran-booster' ) ) as $field_label ) { ?>
 			<?php
-			if ( isset( $github_fields[ $field_label ] ) ) {
-				?>
-				<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $github_fields[ $field_label ] ); ?></code></dd></div><?php } ?>
-		<?php } ?>
-		<?php
-		$credential_formats = array();
-		for ( $index = 1; $index <= 32; ++$index ) {
-			/* translators: %d: locally declared credential format number. */
-			$format = $github_fields[ sprintf( __( 'API credential format %d', 'ran-booster' ), $index ) ] ?? null;
-			if ( 'github-classic-pat-v1' === $format ) {
-				$credential_formats[] = __( 'Classic personal access token', 'ran-booster' ); }
-			if ( 'github-fine-grained-pat-v1' === $format ) {
-				$credential_formats[] = __( 'Fine-grained personal access token', 'ran-booster' ); }
-		}
-		if ( array() !== $credential_formats ) {
-			?>
-			<div><dt><?php esc_html_e( 'Supported credential types', 'ran-booster' ); ?></dt><dd><?php echo esc_html( implode( ', ', $credential_formats ) ); ?></dd></div>
-		<?php } ?>
-	<?php } ?>
-</dl>
-	<?php
-	if ( $is_github ) {
-		$candidate_heading = false;
-		$candidate_shown   = 0;
-		$candidate_total   = $github_fields[ __( 'Enabled candidates', 'ran-booster' ) ] ?? null;
-		for ( $index = 1; $index <= 4; ++$index ) {
-			/* translators: %d: enabled replacement candidate number. */
-			$candidate = $installation[ sprintf( __( 'GitHub candidate %d', 'ran-booster' ), $index ) ] ?? null;
-			if ( ! is_array( $candidate ) ) {
-				continue; }
-			++$candidate_shown;
-			if ( ! $candidate_heading ) {
-				?>
-		<h5><?php esc_html_e( 'GitHub replacement plugins detected', 'ran-booster' ); ?></h5>
-				<?php
-				$candidate_heading = true; }
-			?>
-		<dl class="ran-booster-troubleshooting__fields-list">
-			<?php
-			foreach ( array( __( 'Name', 'ran-booster' ), __( 'Version', 'ran-booster' ), __( 'Implementation', 'ran-booster' ), __( 'Compatibility revision', 'ran-booster' ), __( 'Provider API', 'ran-booster' ), __( 'Webhook signing format', 'ran-booster' ) ) as $field_label ) {
-				if ( isset( $candidate[ $field_label ] ) ) {
-					?>
-			<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $candidate[ $field_label ] ); ?></code></dd></div>
-					<?php
-				}
+			foreach ( explode( ', ', $component['Capabilities'] ) as $index => $capability ) {
+				echo 0 === $index ? '' : ', ';
+				echo '<code>' . esc_html( $capability ) . '</code>';
 			}
 			?>
+		</dd></div>
+	<?php } ?>
+		<?php if ( $is_github ) { ?>
+			<?php
+			if ( isset( $github_fields[ __( 'Implementation', 'ran-booster' ) ] ) ) {
+				?>
+			<div><dt><?php esc_html_e( 'Implementation ID', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $github_fields[ __( 'Implementation', 'ran-booster' ) ] ); ?></code></dd></div><?php } ?>
+			<?php foreach ( array( __( 'Compatibility revision', 'ran-booster' ), __( 'Webhook signing format', 'ran-booster' ), __( 'Provider API', 'ran-booster' ) ) as $field_label ) { ?>
+				<?php
+				if ( isset( $github_fields[ $field_label ] ) ) {
+					?>
+				<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $github_fields[ $field_label ] ); ?></code></dd></div><?php } ?>
+		<?php } ?>
+			<?php
+			$credential_formats = array();
+			for ( $index = 1; $index <= 32; ++$index ) {
+				/* translators: %d: locally declared credential format number. */
+				$format = $github_fields[ sprintf( __( 'API credential format %d', 'ran-booster' ), $index ) ] ?? null;
+				if ( 'github-classic-pat-v1' === $format ) {
+					$credential_formats[] = __( 'Classic personal access token', 'ran-booster' ); }
+				if ( 'github-fine-grained-pat-v1' === $format ) {
+					$credential_formats[] = __( 'Fine-grained personal access token', 'ran-booster' ); }
+			}
+			if ( array() !== $credential_formats ) {
+				?>
+			<div><dt><?php esc_html_e( 'Supported credential types', 'ran-booster' ); ?></dt><dd><?php echo esc_html( implode( ', ', $credential_formats ) ); ?></dd></div>
+			<?php } ?>
+	<?php } ?>
+</dl>
+		<?php
+		if ( $is_github ) {
+			$candidate_heading = false;
+			$candidate_shown   = 0;
+			$candidate_total   = $github_fields[ __( 'Enabled candidates', 'ran-booster' ) ] ?? null;
+			for ( $index = 1; $index <= 4; ++$index ) {
+				/* translators: %d: enabled replacement candidate number. */
+				$candidate = $installation[ sprintf( __( 'GitHub candidate %d', 'ran-booster' ), $index ) ] ?? null;
+				if ( ! is_array( $candidate ) ) {
+					continue; }
+				++$candidate_shown;
+				if ( ! $candidate_heading ) {
+					?>
+		<h5><?php esc_html_e( 'GitHub replacement plugins detected', 'ran-booster' ); ?></h5>
+					<?php
+					$candidate_heading = true; }
+				?>
+		<dl class="ran-booster-troubleshooting__fields-list">
+				<?php
+				foreach ( array( __( 'Name', 'ran-booster' ), __( 'Version', 'ran-booster' ), __( 'Implementation', 'ran-booster' ), __( 'Compatibility revision', 'ran-booster' ), __( 'Provider API', 'ran-booster' ), __( 'Webhook signing format', 'ran-booster' ) ) as $field_label ) {
+					if ( isset( $candidate[ $field_label ] ) ) {
+						?>
+			<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $candidate[ $field_label ] ); ?></code></dd></div>
+						<?php
+					}
+				}
+				?>
 															</dl>
-			<?php
-		}
-		if ( is_string( $candidate_total ) && ctype_digit( $candidate_total ) && (int) $candidate_total > $candidate_shown ) {
-			?>
+				<?php
+			}
+			if ( is_string( $candidate_total ) && ctype_digit( $candidate_total ) && (int) $candidate_total > $candidate_shown ) {
+				?>
 			<p><?php /* translators: 1: displayed replacement plugins, 2: total replacement plugins. */ ?><?php echo esc_html( sprintf( __( 'Showing %1$d of %2$d replacement plugins.', 'ran-booster' ), $candidate_shown, (int) $candidate_total ) ); ?></p>
-			<?php
+				<?php
+			}
 		}
-	}
-	?>
-</div></details></div></section>
+		?>
+</div></details>
+	<?php } ?>
+</div></section>
 <?php } ?>
 </section>

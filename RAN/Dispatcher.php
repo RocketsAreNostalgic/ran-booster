@@ -24,6 +24,7 @@ use RAN\Storage\CredentialUsageReader;
 use RAN\WordPress\WordPressUpdaterLock;
 
 class Dispatcher {
+	private string $general_scope = 'all';
 
 	/**
 	 * @var Dashboard
@@ -468,6 +469,12 @@ class Dispatcher {
 		}
 		check_admin_referer( 'save-general-settings' === $action ? 'ran-booster-save-general-settings' : 'ran-booster-check-core-updates' );
 		$keys = 'save-general-settings' === $action ? array( 'action', 'token', 'preferences' ) : array( 'action' );
+		if ( 'save-general-settings' === $action && array_key_exists( 'scope', $request ) ) {
+			if ( ! is_string( $request['scope'] ) || ! in_array( $request['scope'], array( 'hide_github', 'self_update_discovery', 'numeric' ), true ) ) {
+				wp_die( esc_html__( 'Invalid Settings request. Reload Settings and try again.', 'ran-booster' ) );
+			}
+			$keys[] = 'scope';
+		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The purpose nonce protects the fixed Settings route.
 		if ( 'ran-booster-settings' !== ( $_GET['page'] ?? null ) || array() !== array_diff( array_keys( $request ), $keys ) || count( $request ) !== count( $keys ) ) {
 			wp_die( esc_html__( 'Invalid Settings request. Reload Settings and try again.', 'ran-booster' ) );
@@ -475,7 +482,8 @@ class Dispatcher {
 		if ( 'check-core-updates' === $action ) {
 			$this->dashboard->post_check_core_updates();
 		} else {
-			$saved = $this->dashboard->post_save_general_settings( wp_unslash( $request ) );
+			$this->general_scope = $request['scope'] ?? 'all';
+			$saved               = $this->dashboard->post_save_general_settings( wp_unslash( $request ) );
 			if ( $this->is_htmx_request() ) {
 				$this->respond_to_htmx_general_settings( $saved );
 			}
@@ -650,10 +658,11 @@ class Dispatcher {
 	}
 
 	protected function respond_to_htmx_general_settings( bool $saved ): never {
+		$scope = $this->general_scope;
 		if ( $saved ) {
-			header( 'HX-Trigger-After-Swap: ' . wp_json_encode( array( 'ran-booster:admin-mutation-success' => array( 'message' => __( 'Settings saved.', 'ran-booster' ) ) ) ) );
+			header( 'HX-Trigger-After-Swap: ' . wp_json_encode( array( 'ran-booster:admin-mutation-success' => array( 'message' => 'numeric' === $scope ? __( 'Numeric settings saved.', 'ran-booster' ) : ( 'all' === $scope ? __( 'Settings saved.', 'ran-booster' ) : __( 'Setting saved.', 'ran-booster' ) ) ) ) ) );
 		}
-		echo $this->dashboard->render_general_settings_region( $saved ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned escaped view fragment.
+		echo $this->dashboard->render_general_settings_region( $saved, $scope ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned escaped view fragment.
 		exit;
 	}
 

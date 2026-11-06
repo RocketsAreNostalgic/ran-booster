@@ -1,0 +1,14 @@
+/* WordPress derives this menu ID from the registered page slug. */
+/* stylelint-disable selector-id-pattern */
+.folded #adminmenu #toplevel_page_ran-booster .wp-menu-image.svg {
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+@media screen and (max-width: 960px) {
+	.auto-fold #adminmenu #toplevel_page_ran-booster .wp-menu-image.svg {
+		top: 50%;
+		transform: translateY(-50%);
+	}
+}
+/* stylelint-enable selector-id-pattern */

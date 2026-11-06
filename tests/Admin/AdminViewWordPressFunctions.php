@@ -47,15 +47,39 @@ if ( ! function_exists( '_x' ) ) {
 if ( ! function_exists( 'add_query_arg' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function add_query_arg( mixed $key, mixed $value = null, mixed $url = null ): string {
-		if ( is_array( $key ) ) {
-			$base = (string) $value;
-
-			return $base . ( str_contains( $base, '?' ) ? '&' : '?' ) . http_build_query( $key );
+		$args     = is_array( $key ) ? $key : array( (string) $key => $value );
+		$base     = (string) ( is_array( $key ) ? $value : $url );
+		$fragment = '';
+		if ( str_contains( $base, '#' ) ) {
+			[ $base, $fragment ] = explode( '#', $base, 2 );
+			$fragment            = '#' . $fragment;
 		}
-
-		$base = (string) $url;
-
-		return $base . ( str_contains( $base, '?' ) ? '&' : '?' ) . http_build_query( array( (string) $key => $value ) );
+		[ $path, $query ] = array_pad( explode( '?', $base, 2 ), 2, '' );
+		parse_str( $query, $existing );
+		array_walk_recursive(
+			$existing,
+			static function ( mixed &$entry ): void {
+				if ( is_string( $entry ) ) {
+					$entry = str_replace( array( '%20', '~' ), array( '+', '%7E' ), rawurlencode( $entry ) );
+				}
+			}
+		);
+		$values = array_merge( $existing, $args );
+		/** @param array<array-key, mixed> $items @return list<string> */
+		$build = static function ( array $items, string $prefix = '' ) use ( &$build ): array {
+			$pairs = array();
+			foreach ( $items as $name => $entry ) {
+				$key = '' === $prefix ? (string) $name : $prefix . '%5B' . $name . '%5D';
+				if ( is_array( $entry ) ) {
+					array_push( $pairs, ...$build( $entry, $key ) );
+				} elseif ( null !== $entry && ( '' !== $prefix || false !== $entry ) ) {
+					$pairs[] = $key . '=' . ( false === $entry ? '0' : $entry );
+				}
+			}
+			return $pairs;
+		};
+		$pairs = $build( $values );
+		return $path . ( $pairs ? '?' . implode( '&', $pairs ) : '' ) . $fragment;
 	}
 }
 
@@ -410,5 +434,11 @@ if ( ! function_exists( 'current_user_can' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- Global WordPress capability boundary used by included administration views.
 	function current_user_can( string $capability ): bool {
 		return $GLOBALS['ran_booster_test_capabilities'][ $capability ] ?? true;
+	}
+}
+
+if ( ! function_exists( 'number_format_i18n' ) ) {
+	function number_format_i18n( float $number, int $decimals = 0 ): string { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress fixture signature.
+		return number_format( $number, $decimals );
 	}
 }

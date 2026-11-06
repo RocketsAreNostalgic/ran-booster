@@ -92,7 +92,8 @@ class Dashboard {
 	private ?\RAN\Admin\GitHubVisibility $github_visibility            = null;
 	private ?\RAN\Troubleshooting\CoreSelfUpdateStatus $core_updates   = null;
 	/** @var array<string,string> */
-	private array $general_attempted = array();
+	private array $general_attempted      = array();
+	private ?string $general_failed_scope = null;
 	/** @var array<string,string> */
 	private array $general_errors                                     = array();
 	private ?string $general_feedback                                 = null;
@@ -575,14 +576,33 @@ class Dashboard {
 	}
 
 	/** Render only General Settings after an enhanced save; storage is untouched. */
-	public function render_general_settings_region( bool $general_save_succeeded ): string {
+	public function render_general_settings_region( bool $general_save_succeeded, string $scope = 'all' ): string {
 		$data                           = $this->general_settings_data();
 		$data['general_save_succeeded'] = $general_save_succeeded;
+		$data['general_scope']          = $scope;
+		$data['general_navigation']     = in_array( $scope, array( 'all', 'hide_github' ), true ) ? $this->tab_navigation( '' ) : array();
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed internal General Settings projection binds this view.
 		extract( $data );
 		ob_start();
 		require __DIR__ . '/../views/settings-general.php';
-		return (string) ob_get_clean();
+		$html = (string) ob_get_clean();
+		if ( ! in_array( $scope, array( 'all', 'self_update_discovery' ), true ) ) {
+			return $html;
+		}
+		try {
+			$file    = dirname( __DIR__ ) . '/ran-booster.php';
+			$version = (string) ( get_file_data( $file, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
+			$policy  = \RAN\WordPress\CoreSelfUpdatePolicy::detect( $file, $version, true );
+		} catch ( Throwable ) {
+			// Keep the existing notice when fresh policy state is unavailable.
+			return $html;
+		}
+		$notice = new CoreSelfUpdateDevelopmentNotice( $policy, 'ran-booster_page_ran-booster-settings' );
+		ob_start();
+		$notice->render_shell_inline();
+		$notice_html = (string) ob_get_clean();
+		$html       .= '<div id="ran-booster-core-development-notice-slot" hx-swap-oob="true">' . $notice_html . '</div>';
+		return $html;
 	}
 
 	/** @return array<string,mixed> */
@@ -592,12 +612,14 @@ class Dashboard {
 			$snapshot   = $preferences->view_snapshot();
 			$projection = $snapshot['fields'];
 			$token      = $snapshot['token'];
+			$tokens     = $snapshot['tokens'];
 			if ( $snapshot['malformed'] ) {
 				$this->general_feedback = __( 'The saved Settings document is malformed. Runtime safety defaults remain in effect; no values were repaired.', 'ran-booster' );
 			}
 		} catch ( Throwable ) {
 			$projection = array();
 			$token      = '';
+			$tokens     = array();
 		}
 		$visibility = array(
 			'hidden'   => false,
@@ -621,24 +643,28 @@ class Dashboard {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixed feedback flag conveys no private data and performs no mutation.
 		$saved = '1' === ( $_GET['general_saved'] ?? null );
 		return array(
-			'general_settings'   => $projection,
-			'general_token'      => $token,
-			'general_feedback'   => $this->general_feedback ?? ( $saved ? __( 'Settings saved.', 'ran-booster' ) : null ),
-			'general_errors'     => $this->general_errors,
-			'general_attempted'  => $this->general_attempted,
-			'github_visibility'  => $visibility,
-			'core_update_status' => $status,
-			'check_available'    => null !== $this->core_updates && $this->core_updates->can_check() && current_user_can( 'update_plugins' ),
-			'native_update_url'  => $url,
+			'general_settings'     => $projection,
+			'general_token'        => $token,
+			'general_tokens'       => $tokens,
+			'general_feedback'     => $this->general_feedback ?? ( $saved ? __( 'Settings saved.', 'ran-booster' ) : null ),
+			'general_errors'       => $this->general_errors,
+			'general_attempted'    => $this->general_attempted,
+			'general_failed_scope' => $this->general_failed_scope,
+			'github_visibility'    => $visibility,
+			'core_update_status'   => $status,
+			'check_available'      => null !== $this->core_updates && $this->core_updates->can_check() && current_user_can( 'update_plugins' ),
+			'native_update_url'    => $url,
 		);
 	}
 
 	/** @param array<string,mixed> $request */
 	public function post_save_general_settings( array $request ): bool {
-		$preferences = $this->general_preferences ?? new \RAN\Settings\GeneralPreferenceStore();
-		$values      = $request['preferences'] ?? null;
-		$token       = $request['token'] ?? null;
-		if ( ! is_array( $values ) || ! is_string( $token ) || null === $this->github_visibility ) {
+		$preferences                = $this->general_preferences ?? new \RAN\Settings\GeneralPreferenceStore();
+		$values                     = $request['preferences'] ?? null;
+		$token                      = $request['token'] ?? null;
+		$scope                      = $request['scope'] ?? 'all';
+		$this->general_failed_scope = is_string( $scope ) ? $scope : 'all';
+		if ( ! is_array( $values ) || ! is_string( $token ) || ! is_string( $scope ) || ! in_array( $scope, array( 'all', 'hide_github', 'self_update_discovery', 'numeric' ), true ) || null === $this->github_visibility ) {
 			$this->general_feedback = __( 'Settings could not be saved. Reload the page and try again.', 'ran-booster' );
 			return false;
 		}
@@ -652,10 +678,10 @@ class Dashboard {
 				}
 			}
 		}
-		$result = $preferences->save( $token, $values, $this->github_visibility->with_management_admission_lock( ... ), $this->github_visibility->github_hide_eligible( ... ) );
+		$result = $preferences->save( $token, $values, $this->github_visibility->with_management_admission_lock( ... ), $this->github_visibility->github_hide_eligible( ... ), $scope );
 		if ( in_array( $result, array( 'saved', 'unchanged' ), true ) ) {
 			// The live descriptor admission fence remains authoritative even if local offer removal fails.
-			if ( ! \RAN\WordPress\CoreSelfUpdatePolicy::detect( dirname( __DIR__ ) . '/ran-booster.php', (string) ( get_file_data( dirname( __DIR__ ) . '/ran-booster.php', array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' ), true )->allows_native_discovery() ) {
+			if ( in_array( $scope, array( 'all', 'self_update_discovery' ), true ) && ! \RAN\WordPress\CoreSelfUpdatePolicy::detect( dirname( __DIR__ ) . '/ran-booster.php', (string) ( get_file_data( dirname( __DIR__ ) . '/ran-booster.php', array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' ), true )->allows_native_discovery() ) {
 				try {
 					delete_site_transient( 'update_plugins' );
 				} catch ( Throwable ) {
@@ -663,7 +689,8 @@ class Dashboard {
 					return false;
 				}
 			}
-			$this->general_attempted = array();
+			$this->general_attempted    = array();
+			$this->general_failed_scope = null;
 			return true;
 		}
 		$this->general_feedback = 'stale' === $result
@@ -983,28 +1010,30 @@ class Dashboard {
 	/**
 	 * Normalize read-only package-list filters without granting mutation authority.
 	 *
+	 * @param array<string, mixed>|null $input Read-only query values.
 	 * @return array{search: string, provider: string, source: string, policy: string}
 	 */
-	private function requested_package_list_state(): array {
+	private function requested_package_list_state( ?array $input = null ): array {
+		$input ??= $_GET; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation state.
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$search = isset( $_GET['s'] ) && is_string( $_GET['s'] )
+		$search = isset( $input['s'] ) && is_string( $input['s'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			? sanitize_text_field( wp_unslash( $_GET['s'] ) )
+			? sanitize_text_field( wp_unslash( $input['s'] ) )
 			: '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$provider = isset( $_GET['provider'] ) && is_string( $_GET['provider'] )
+		$provider = isset( $input['provider'] ) && is_string( $input['provider'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			? sanitize_key( wp_unslash( $_GET['provider'] ) )
+			? sanitize_key( wp_unslash( $input['provider'] ) )
 			: '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$source = isset( $_GET['source'] ) && is_string( $_GET['source'] )
+		$source = isset( $input['source'] ) && is_string( $input['source'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			? sanitize_key( wp_unslash( $_GET['source'] ) )
+			? sanitize_key( wp_unslash( $input['source'] ) )
 			: '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-		$policy = isset( $_GET['policy'] ) && is_string( $_GET['policy'] )
+		$policy = isset( $input['policy'] ) && is_string( $input['policy'] )
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-			? sanitize_key( wp_unslash( $_GET['policy'] ) )
+			? sanitize_key( wp_unslash( $input['policy'] ) )
 			: '';
 
 		return array(
@@ -1019,9 +1048,12 @@ class Dashboard {
 		);
 	}
 
-	/** @return array<string, string> */
-	private function package_list_query_arguments(): array {
-		$state = $this->requested_package_list_state();
+	/**
+	 * @param array<string, mixed>|null $input Read-only query values.
+	 * @return array<string, string>
+	 */
+	private function package_list_query_arguments( ?array $input = null ): array {
+		$state = $this->requested_package_list_state( $input );
 
 		return array_filter(
 			array(
@@ -1032,6 +1064,20 @@ class Dashboard {
 			),
 			static fn ( string $value ): bool => '' !== $value
 		);
+	}
+
+	/** @return array<string, string> */
+	private function package_return_context( string $type ): array {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation context, never mutation authority.
+		if ( ! in_array( $type, array( 'plugin', 'theme' ), true ) || ( $_GET['return_type'] ?? null ) !== $type ) {
+			return array();
+		}
+		$input = array();
+		foreach ( array( 's', 'provider', 'source', 'policy' ) as $key ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded navigation context.
+			$input[ $key ] = $_GET[ 'return_' . $key ] ?? '';
+		}
+		return $this->package_list_query_arguments( $input );
 	}
 
 	private function requested_package_source_view(): string {
@@ -1158,7 +1204,9 @@ class Dashboard {
 			$this,
 			$action,
 			$request,
-			$this->package_list_query_arguments(),
+			( isset( $_GET['package'] ) || ( isset( $_GET['page'] ) && is_string( $_GET['page'] ) && str_contains( $_GET['page'], '-create' ) ) ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only route selection.
+				? $this->package_return_context( str_ends_with( $action, '-theme' ) ? 'theme' : 'plugin' )
+				: $this->package_list_query_arguments(),
 			function ( WP_Error|array $message, array $context ): void {
 				$this->add_message_with_context( $message, $context );
 			}
@@ -1509,9 +1557,18 @@ class Dashboard {
 
 		$data['development_environment_detected'] = $development_environment_detected;
 
-		$data['development_safety_notice'] = $this->should_show_development_safety_notice( $view, $development_environment_detected );
-		$data['messages']                  = $this->messages;
-		$data['name']                      = $this->booster->get_name();
+		$data['local_development_overview'] = $this->is_local_development_overview( $view, $data, DevelopmentEnvironmentDetector::is_local() );
+		$data['development_safety_notice']  = $this->should_show_development_safety_notice( $data['local_development_overview'] );
+		if ( isset( $data['package_view'] ) && $data['package_view'] instanceof PackagePagePresenter ) {
+			$type                        = $data['package_view']->get_type();
+			$data['package_return_list'] = 'packages/index' === $view ? $this->package_list_query_arguments() : $this->package_return_context( $type );
+			$data['package_return_args'] = array( 'return_type' => $type );
+			foreach ( $data['package_return_list'] as $key => $value ) {
+				$data['package_return_args'][ 'return_' . $key ] = $value;
+			}
+		}
+		$data['messages'] = $this->messages;
+		$data['name']     = $this->booster->get_name();
 
 		$data['core_self_update_development_notice'] = $this->core_self_update_development_notice;
 		if ( ! isset( $data['tabs'] ) ) {
@@ -1525,12 +1582,18 @@ class Dashboard {
 		return include __DIR__ . '/../views/base.php';
 	}
 
-	private function should_show_development_safety_notice( string $view, bool $development_environment_detected ): bool {
-		$relevant_view = 'packages/index' === $view;
-		$user_id       = get_current_user_id();
-		$dismissed     = $user_id > 0
-			&& '1' === get_user_meta( $user_id, DevelopmentSafetyNoticeController::USER_META_KEY, true );
+	/** @param array<string, mixed> $data Canonical view projection. */
+	private function is_local_development_overview( string $view, array $data, bool $is_local ): bool {
+		return 'index' === $view && 'overview' === ( $data['tab'] ?? null )
+			&& isset( $data['onboarding'] ) && $is_local;
+	}
 
-		return $relevant_view && ! $dismissed && $development_environment_detected;
+	private function should_show_development_safety_notice( bool $local_development_overview ): bool {
+		$user_id = get_current_user_id();
+		return $local_development_overview && ( $user_id < 1 || ! ( new \RAN\Admin\NoticePreference() )->is_suppressed(
+			$user_id,
+			DevelopmentSafetyNoticeController::USER_META_KEY,
+			DevelopmentSafetyNoticeController::NOTICE_STATE
+		) );
 	}
 }

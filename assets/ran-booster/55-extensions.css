@@ -24,6 +24,21 @@
 	margin: 0;
 }
 
+/* Keep native plugin-card spacing through the public Card content layers. */
+.ran-booster-admin--extensions
+	[data-ran-booster-card="extensions"]
+	:is(
+		.ran-booster-card__mount,
+		.ran-booster-card__surface,
+		.ran-booster-card__surface > :has(> .ran-booster-card__content),
+		.ran-booster-card__content
+	) {
+	display: inherit;
+	flex: 1;
+	flex-direction: inherit;
+	justify-content: inherit;
+}
+
 .ran-booster-extension-card__metadata {
 	display: flex;
 	align-items: center;

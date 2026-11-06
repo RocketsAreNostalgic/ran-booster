@@ -12,6 +12,16 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class AdminIndexViewTest extends TestCase {
 
+	public function test_nozzle_artwork_is_the_expected_release_asset(): void {
+		$root  = dirname( __DIR__, 2 );
+		$asset = $root . '/assets/booster-nozzle-10364e-cream-transparent.svg';
+		self::assertFileExists( $asset );
+		self::assertSame( 'c2552a033fb2b62e5151755a746de0be56942430fba8bc501443739155fddbac', hash_file( 'sha256', $asset ) );
+		$manifest = file( $root . '/release-files.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file -- Inspect the release manifest in this local contract test.
+		self::assertIsArray( $manifest );
+		self::assertContains( 'assets', $manifest );
+	}
+
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset(
@@ -29,7 +39,7 @@ final class AdminIndexViewTest extends TestCase {
 		$messages                  = array();
 		$name                      = 'RAN Booster';
 		$view                      = 'index';
-		$development_safety_notice = true;
+		$development_safety_notice = false;
 
 		$core_self_update_development_notice = new CoreSelfUpdateDevelopmentNotice(
 			CoreSelfUpdatePolicy::detect( dirname( __DIR__, 2 ) . '/ran-booster.php', '0.1.0-alpha.23' ),
@@ -88,16 +98,13 @@ final class AdminIndexViewTest extends TestCase {
 			$html
 		);
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $html ) );
-		self::assertStringContainsString(
-			'<a href="https://example.test/wp-admin/admin.php?page=ran-booster">',
-			$html
-		);
 		self::assertMatchesRegularExpression(
-			'/<h1 class="ran-admin-shell__title">\\s*<a href="https:\\/\\/example\\.test\\/wp-admin\\/admin\\.php\\?page=ran-booster">RAN Booster<\\/a>\\s*<\\/h1>/',
+			'~<a class="ran-admin-shell__identity" href="https://example\.test/wp-admin/admin\.php\?page=ran-booster">\s*<img class="ran-admin-shell__logo"[^>]*>\s*<div class="ran-admin-shell__copy">\s*<h1 class="ran-admin-shell__title">Booster</h1>\s*<p class="ran-admin-shell__strapline">Rockets Are Nostalgic</p>\s*</div>\s*</a>~',
 			$html
 		);
 		self::assertStringContainsString( 'class="ran-admin-shell__logo"', $html );
-		self::assertStringContainsString( 'assets/ran-booster-mark.svg" width="56" height="56" alt="" aria-hidden="true"', $html );
+		self::assertStringContainsString( 'assets/booster-nozzle-10364e-cream-transparent.svg" width="32" height="32" alt="" aria-hidden="true"', $html );
+		self::assertStringContainsString( '<header class="ran-admin-shell ran-admin-shell--inverse">', $html );
 		self::assertSame( 1, substr_count( $html, '<hr class="wp-header-end">' ) );
 		self::assertStringContainsString( '<nav class="ran-admin-shell__navigation" aria-label="RAN Booster sections">', $html );
 		self::assertStringNotContainsString( 'nav-tab-wrapper', $html );
@@ -105,32 +112,32 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins">Plugins</a>', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-themes">Themes</a>', $html );
 		self::assertStringNotContainsString( '>Transporter</a>', $html );
+		self::assertStringNotContainsString( '>Troubleshooting</a>', $html );
 		self::assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=documentation" aria-current="page">Documentation</a>', $html );
 		self::assertStringNotContainsString( 'aria-current="false"', $html );
 		self::assertStringContainsString( 'id="ran-booster-documentation-heading"', $html );
 		self::assertStringNotContainsString( 'Set up GitHub deployments', $html );
-		self::assertStringContainsString( 'Deploy themes and plugins straight from your Git repos.', $html );
+		self::assertStringContainsString( 'Rockets Are Nostalgic', $html );
 		self::assertStringContainsString( 'Install from a public repository first. Add private access and Push-to-Deploy only when you need them.', $html );
 		self::assertStringNotContainsString( 'Prepare your site', $html );
-		self::assertStringContainsString( 'class="notice notice-warning inline is-dismissible"', $html );
-		self::assertStringContainsString( 'data-ran-booster-development-safety', $html );
-		self::assertStringContainsString( '<strong>Development safety:</strong>', $html );
-		self::assertStringContainsString( 'set Updates to Disabled', $html );
-		$strapline_position   = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
+		self::assertStringNotContainsString( 'data-ran-booster-development-safety', $html );
+		$strapline_position   = strpos( $html, 'Rockets Are Nostalgic' );
 		$navigation_position  = strpos( $html, '<nav class="ran-admin-shell__navigation"' );
 		$core_notice_position = strpos( $html, 'data-ran-booster-core-development-notice' );
 		$wrap_position        = strpos( $html, '<div class="wrap ran-booster-admin">' );
 		$marker_position      = strpos( $html, '<hr class="wp-header-end">' );
-		$notice_position      = strpos( $html, '<strong>Development safety:</strong>' );
-		foreach ( array( $strapline_position, $navigation_position, $core_notice_position, $wrap_position, $marker_position, $notice_position ) as $position ) {
+		foreach ( array( $strapline_position, $navigation_position, $core_notice_position, $wrap_position, $marker_position ) as $position ) {
 			self::assertIsInt( $position );
 		}
 		self::assertTrue( $strapline_position < $navigation_position );
 		self::assertTrue( $navigation_position < $wrap_position );
 		self::assertTrue( $marker_position < $strapline_position );
+		self::assertTrue( $marker_position < strpos( $html, '<header class="ran-admin-shell' ) );
 		self::assertTrue( $wrap_position < $core_notice_position );
 		self::assertStringContainsString( '<div class="ran-admin-shell-notices"><hr class="wp-header-end"></div>', $html );
-		self::assertTrue( $core_notice_position < $notice_position );
+		self::assertSame( 1, substr_count( $html, 'id="ran-booster-core-development-notice-slot"' ) );
+		self::assertStringNotContainsString( 'hx-swap-oob', $html );
 		self::assertStringContainsString( 'Copyright © 2042', $html );
 		self::assertStringContainsString(
 			'<a href="https://example.test/header-author">Header Author</a>',
@@ -181,7 +188,7 @@ final class AdminIndexViewTest extends TestCase {
 			$admin_tab['active'] = 'overview' === $admin_tab['key'];
 		}
 		unset( $admin_tab );
-		$onboarding = array(
+		$onboarding                          = array(
 			'provider_links'      => array(),
 			'install_plugin_url'  => '/plugins',
 			'install_theme_url'   => '/themes',
@@ -189,10 +196,28 @@ final class AdminIndexViewTest extends TestCase {
 			'documentation_url'   => '/documentation',
 			'troubleshooting_url' => '/troubleshooting',
 		);
+		$core_self_update_development_notice = new CoreSelfUpdateDevelopmentNotice(
+			CoreSelfUpdatePolicy::detect( dirname( __DIR__, 2 ) . '/ran-booster.php', '0.1.0-alpha.23' ),
+			'toplevel_page_ran-booster'
+		);
+		$local_development_overview          = true;
+		$development_safety_notice           = true;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$overview = (string) ob_get_clean();
 
+		self::assertSame( 1, substr_count( $overview, 'data-ran-booster-development-safety' ) );
+		self::assertStringContainsString( 'data-ran-booster-notice-state="local-development-v2"', $overview );
+		self::assertStringContainsString( 'class="notice-dismiss" hidden', $overview );
+		self::assertStringContainsString( 'Booster’s own updates are disabled to protect this source checkout.', $overview );
+		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice>', $overview );
+		self::assertStringContainsString( 'tab=documentation#ran-booster-file-protection', $overview );
+		$development_safety_notice = false;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/base.php';
+		$acknowledged = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'data-ran-booster-development-safety', $acknowledged );
+		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice>', $acknowledged );
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $overview ) );
 		self::assertSame( 1, substr_count( $overview, 'aria-current="page"' ) );
 		self::assertStringContainsString( '>Overview</a>', $overview );

@@ -66,6 +66,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 				),
 			)
 		);
+		$this->assert_collection_structure( $html, $type, true );
 
 		self::assertStringContainsString(
 			'<h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title">Managed ' . ucfirst( $plural ) . '</h2>',
@@ -94,12 +95,42 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		);
 		self::assertStringContainsString( 'class="tablenav top ran-booster-package-toolbar"', $html );
 		self::assertStringContainsString( 'class="tablenav-pages one-page"', $html );
+		self::assertStringContainsString( '<table class="wp-list-table widefat plugins ran-booster-package-table" data-package-type="' . $type . '">', $html );
 		self::assertStringContainsString( '<span class="displaying-num">0 of 4 items</span>', $html );
 		self::assertStringContainsString( 'Install another ' . $type, $html );
 		self::assertStringNotContainsString( 'data-ran-booster-bulk-form', $html );
 		self::assertStringContainsString( 'No managed ' . $plural . ' match the current filters.', $html );
 		self::assertStringNotContainsString( 'ran-booster-package-empty-state', $html );
 		self::assertStringNotContainsString( 'Add your first ' . $type, $html );
+	}
+
+	#[DataProvider( 'package_types' )]
+	public function test_filtered_list_install_entry_carries_only_return_context( PackagePagePresenter $package_view, string $page_slug, string $type, string $plural ): void {
+		unset( $plural );
+		$html = $this->render(
+			$package_view,
+			array(
+				'search'   => 'release',
+				'provider' => 'gh',
+				'source'   => 'branch',
+				'policy'   => 'manual',
+			),
+			1,
+			array(
+				array(
+					'code'  => 'gh',
+					'label' => 'GitHub',
+				),
+			),
+			array(
+				'return_type'     => $type,
+				'return_s'        => 'release',
+				'return_provider' => 'gh',
+				'return_source'   => 'branch',
+				'return_policy'   => 'manual',
+			)
+		);
+		self::assertStringContainsString( 'page=' . $page_slug . '-create&amp;return_type=' . $type . '&amp;return_s=release&amp;return_provider=gh&amp;return_source=branch&amp;return_policy=manual', $html );
 	}
 
 	#[DataProvider( 'package_types' )]
@@ -120,6 +151,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 			0,
 			array()
 		);
+		$this->assert_collection_structure( $html, $type, false );
 
 		self::assertStringNotContainsString( 'ran-booster-package-list-controls', $html );
 		self::assertStringNotContainsString( 'class="page-title-action"', $html );
@@ -146,7 +178,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		string $type,
 		string $plural
 	): void {
-		unset( $type, $plural );
+		unset( $plural );
 		$GLOBALS['ran_booster_package_view_multisite']   = true;
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = true;
 		$html = $this->render(
@@ -160,6 +192,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 			1,
 			array()
 		);
+		$this->assert_collection_structure( $html, $type, true );
 
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $page_slug . '-create"', $html );
 		self::assertStringContainsString( 'action="https://example.test/wp-admin/network/admin.php"', $html );
@@ -167,16 +200,42 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=' . $page_slug, $html );
 	}
 
+	private function assert_xpath_count( int $expected, \DOMXPath $xpath, string $expression ): void {
+		$nodes = $xpath->query( $expression );
+		self::assertNotFalse( $nodes );
+		self::assertCount( $expected, $nodes );
+	}
+
+	private function assert_collection_structure( string $html, string $type, bool $has_controls ): void {
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		$document->loadHTML( $html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+		$xpath = new \DOMXPath( $document );
+		$card  = $xpath->query( '//*[@id="ran-booster-plugin-collection" and @data-ran-booster-card="plugins"]' );
+		self::assertNotFalse( $card );
+		self::assertCount( 'plugin' === $type ? 1 : 0, $card );
+		if ( 'plugin' !== $type ) {
+			return;
+		}
+		$this->assert_xpath_count( 1, $xpath, '//*[@id="ran-booster-plugin-collection"]//table[@data-package-type="plugin"]' );
+		$this->assert_xpath_count( $has_controls ? 2 : 0, $xpath, '//*[@id="ran-booster-plugin-collection"]//form[@method="get"]' );
+		$this->assert_xpath_count( 0, $xpath, '//form//form' );
+	}
+
 	/**
 	 * @param array{search:string,provider:string,source:string,policy:string} $package_list_state
 	 * @param list<array{code:string,label:string}>                           $package_provider_options
+	 * @param array<string,string>                                           $package_return_args
 	 */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The included production view reads these parameters as local template variables.
 	private function render(
 		PackagePagePresenter $package_view,
 		array $package_list_state,
 		int $package_list_total,
-		array $package_provider_options
+		array $package_provider_options,
+		array $package_return_args = array()
 	): string {
 		$packages                  = array();
 		$package_providers         = array();

@@ -27,7 +27,74 @@ updater. The separately versioned
 documents that transport and presentation contract; it does not expand any
 composition hook or authorization boundary described here.
 
+## Component package direction
+
+Administration component replacements use the specific `@wordpress/ui` package.
+An alternative requires express owner authorization for the named component and
+scope. Generic WordPress styling, `wp.components` / `@wordpress/components`,
+custom reskins and prior screenshot approval do not establish that exception.
+Record the actual public export, exact package version, built artifact and
+shared runtime evidence before claiming adoption. Native functional and
+no-JavaScript fallbacks remain required and are distinct from adoption.
+
+Existing source and installed previews retain their actual implementation
+identity; this direction does not authorize an automatic rollback or broaden
+protected action authority. Preserve current sites and recoveries. A concrete
+unsupported public API or runtime constraint needs an explicit owner exception
+or revised scope. Source, build, installed evidence and owner acceptance remain
+separate, and all merge/publication holds continue.
+
 ## Admin Shell continuity and page navigation
+
+Booster adopts build-time `ran/admin-shell` **2.0.0**, source
+`73abb3f8b35aab5eaaac74cb812a4fe2f3974482`. Change its exact Composer pin and
+lock together, run `composer admin-shell:sync`, then
+`composer admin-shell:check`. The PHP/CSS copies and provenance are generated;
+product styling belongs in `assets/ran-booster/00-foundations.css` after the
+shell stylesheet. The development dependency is not a plugin runtime package.
+
+The inverse identity renders Booster with Rockets Are Nostalgic below it and
+the decorative cream nozzle asset. The consumer supplies the 135-degree
+`#10364E` to `#1E4D6B` gradient and removes bottom padding from the identity row when section navigation
+follows it. A header without section navigation keeps the Shell spacing.
+Current destinations keep their indicator;
+hover and keyboard focus receive an underline, with the keyboard outline
+retained. Forced colours use system colours. No branding script or React
+mount is required, and native rendering remains available without JavaScript.
+
+The sticky region contains one H1, the identity and section navigation. Keep
+the shell outside the page `.wrap`, below the native notice destination.
+Help/Screen Options controls must stack above the shell on Booster screens;
+owned dialogs keep their existing higher layer. Use the shell's toolbar
+breakpoints and short-viewport fallback. Verify its default 192px focus/anchor
+allowance against long translations and zoom before changing the offset;
+do not add a cloned heading or a second navigation lifecycle.
+
+| Surface | Retained interaction |
+| --- | --- |
+| Shell sections | Destination links and `aria-current="page"`; Settings and other destinations outside this menu select no unrelated item. |
+| Provider tasks and Troubleshooting sections | Real URLs with current-page indication; existing enhanced replacement, focus, error and history owners remain. |
+| Package source while editing | Destination links, current text and unavailable choices; preserve capability and dirty-state checks. |
+| Package source while creating | Existing `aria-pressed` choice buttons; these are not an ARIA tab widget. |
+
+Provider navigation sets htmx's existing `refreshOnHistoryMiss` policy for its
+document. Ordinary task clicks remain enhanced; a Back/Forward cache miss uses
+a native page load instead of an unreported failed history fetch. WordPress
+clears the htmx history marker when it writes the canonical admin URL on
+a full load. On a later unmarked Back or Forward within that provider,
+reload if the destination query differs from the rendered view. Fragment-only
+changes keep their native behavior. Keep
+`hx-history="false"` and do not enable snapshots of credential-bearing pages.
+This policy does not add custom network recovery or change Settings save/leave
+protection; native failure, retry and cancelled-navigation proof remain separate.
+
+This native-shell slice does not complete the wider #625 component programme
+or #635 composed acceptance. WordPress floor/current, missing-enhancement,
+overlay, notice, keyboard and repeated-navigation acceptance remain required.
+Shell #36's wider maintained-consumer/template audit also remains open:
+the named Turnstile and EmailOctopus consumers have exact v1 pins, but the
+bounded public starter/template inspection does not establish exhaustive
+coverage. Keep that evidence gap explicit in adoption and release decisions.
 
 Booster's Admin Shell provides continuous product branding and navigation across
 its normal administration pages, including standalone WordPress submenu destinations
@@ -733,6 +800,16 @@ local unavailable message.
 
 Deactivating an add-on removes its contributions on the next request; every
 Core route and administration surface remains usable.
+
+The WP Pusher Migrator contributes `ran-booster-wp-pusher-migration` through the
+general sections filter, in Reference. Other extensions must not claim this ID.
+Core no longer reserves or pre-indexes it: after accepting contributions, Core
+supplies a short discovery entry at the same anchor only if no valid article
+owns it. An accepted unavailable-message article also suppresses that fallback.
+Existing first-valid duplicate precedence and sanitization remain unchanged.
+Deliver the Migrator guide before the Core ownership change; no compatibility
+adapter or new documentation API is involved. The Documentation URL and fragment
+remain unchanged when the extension is inactive, absent or incompatible.
 
 ### Documentation chapters
 

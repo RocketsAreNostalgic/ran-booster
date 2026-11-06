@@ -3,12 +3,55 @@
 Open **Booster → Settings** after Extensions. It remains available with skipped
 onboarding or unavailable credential storage. It is not a horizontal shell tab.
 
-General groups Appearance, Booster updates, History and Download limits. Save
-changes is explicit; Check now and each storage action are separate forms.
-Native forms work without JavaScript. JavaScript adds an unsaved-change notice.
-A failed General submission keeps safe editable attempted values with errors;
-a concurrent administrator or changed GitHub eligibility requires review before
-saving again. Saving does not prune history, validate credentials or install.
+General groups Appearance, Booster updates, History and Download limits. With
+JavaScript, each switch saves only its own preference automatically. History and
+Download limits retain explicit **Save changes**. One bottom action area keeps a
+persistent pending indicator beside Save; toggle confirmations do not clear it.
+The indicator clears after confirmed numeric persistence or reversion to the
+confirmed baseline. It does not time out or dismiss edits.
+
+The two General switches use the native checkbox controls and their existing
+labels, help and validation messages. Adoption of WordPress `ToggleControl` is
+deferred pending an owner decision on its appearance.
+
+Without JavaScript or HTMX, use **Save setting** beside each switch and **Save
+changes** for numeric settings. Check for updates and storage actions remain
+separate forms. Code-locked controls retain their configuration explanation;
+Save is unavailable when its entire group is locked.
+
+General requests run one at a time in the current document. Rapid switch changes
+retain the latest intended value, while an explicit numeric save waits with its
+submitted fields held. An unsuccessful or unconfirmed operation stops queued
+operations, restores editable numeric controls and requires an explicit retry.
+A lost response never proves rollback. Its retry retains the original fence;
+a stale result shows current saved values and needs deliberate review before a
+new attempt. A post-commit concurrent change likewise requires review rather
+than automatically overwriting that administrator's value. Confirmed current
+state does not identify which uncertain request committed.
+
+The existing nonautoloaded General option contains three fixed scope revisions.
+Every accepted save advances the affected revision, including an unchanged
+request. Legacy full-form submissions advance all three; confirmed management
+clearing a saved GitHub-hide request advances that scope. Scope tokens preserve
+raw value presence/type. The existing management and option locks, strict input
+validation, full-document SQL compare-and-set and unrelated option keys remain.
+Reads do not initialize revisions; malformed or exhausted revisions fail closed.
+Older running Booster code preserves unknown metadata but cannot advance these
+fences. Mixed-version concurrent writes, including old-runtime ABA, are not
+qualified; deploy after old requests have drained and retain rollback material.
+No deployment lock or automatic migration is introduced here.
+
+A failed submission keeps safe editable attempted values and current saved
+values beside its error. A committed preference with failed update-offer cache
+cleanup retains that durable warning; it is not described as rolled back.
+Confirmed saves use the public WordPress Snackbar near the bottom of the current
+viewport without moving the form. It follows WordPress's reduced-motion setting.
+Pending
+numeric edits and durable errors have separate presentation. Native leave
+protection and enhanced navigation confirmation protect unfinished or uncertain
+changes. Restored history is marked unconfirmed and requires review/retry with
+the retained fence; cached markup is not persistence evidence. Saving does not
+prune history, validate credentials or install.
 
 A defined code constant overrides the saved preference and locks its field,
 even when false or invalid. Removing the constant restores the dormant saved

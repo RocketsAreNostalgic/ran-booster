@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace RAN\Tests\Admin;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
+use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\PackagePagePresenter;
 
@@ -21,6 +23,22 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		unset( $GLOBALS['ran_booster_admin_test_translations'], $GLOBALS['ran_booster_package_view_translations'] );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_query_double_preserves_nested_wordpress_query_semantics(): void {
+		$url = add_query_arg(
+			array(
+				'return_s' => 'Rock%26x%3D1',
+				'more'     => array( 'deep' => 'a%2Bb' ),
+			),
+			'https://example.test/wp-admin/admin.php?nested%5Ba%5D=a%26b&nested%5Bdeep%5D%5Bv%5D=one+two~&source=existing#view'
+		);
+		self::assertSame(
+			'https://example.test/wp-admin/admin.php?nested%5Ba%5D=a%26b&nested%5Bdeep%5D%5Bv%5D=one+two%7E&source=existing&return_s=Rock%26x%3D1&more%5Bdeep%5D=a%2Bb#view',
+			$url
+		);
 	}
 
 	public function test_structured_contention_info_notice_keeps_its_protected_activity_link(): void {
@@ -89,7 +107,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		);
 		$name                      = 'RAN Booster';
 		$view                      = 'packages/index';
-		$development_safety_notice = true;
+		$development_safety_notice = false;
 		$packages                  = array();
 		$package_providers         = array();
 		$package_activity          = array(
@@ -115,31 +133,26 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$html = (string) ob_get_clean();
 
-		$masthead_position    = strpos( $html, 'Deploy themes and plugins straight from your Git repos.' );
+		$masthead_position    = strpos( $html, 'Rockets Are Nostalgic' );
 		$heading_position     = strpos( $html, $heading );
 		$description_position = strpos( $html, 'Review package health, deploy saved branches and hand published releases to WordPress.' );
 		$result_position      = strpos( $html, 'Scoped package result.' );
-		$safety_position      = strpos( $html, '<strong>Development safety:</strong>' );
 		$table_position       = strpos( $html, 'ran-booster-package-table' );
 
-		foreach ( array( $masthead_position, $heading_position, $description_position, $result_position, $safety_position, $table_position ) as $position ) {
+		foreach ( array( $masthead_position, $heading_position, $description_position, $result_position, $table_position ) as $position ) {
 			self::assertIsInt( $position );
 		}
 		self::assertTrue( $masthead_position < $heading_position );
 		self::assertTrue( $heading_position < $description_position );
 		self::assertTrue( $description_position < $result_position );
-		self::assertTrue( $result_position < $safety_position );
-		self::assertTrue( $safety_position < $table_position );
 		self::assertSame( 1, substr_count( $html, 'Scoped package result.' ) );
 		self::assertSame( 1, substr_count( $html, '<hr class="wp-header-end">' ) );
 		$marker_position = strpos( $html, '<hr class="wp-header-end">' );
 		self::assertIsInt( $marker_position );
 		self::assertTrue( $marker_position < $masthead_position );
-		self::assertSame( 1, substr_count( $html, '<strong>Development safety:</strong>' ) );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-package-intro"' ) );
-		self::assertSame( 1, substr_count( $html, 'notice notice-warning inline is-dismissible' ) );
-		self::assertSame( 2, substr_count( $html, 'is-dismissible' ) );
-		self::assertSame( 1, substr_count( $html, 'data-ran-booster-development-safety' ) );
+		self::assertSame( 1, substr_count( $html, 'is-dismissible' ) );
+		self::assertSame( 0, substr_count( $html, 'data-ran-booster-development-safety' ) );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-update-summary data-queued' ) );
 		self::assertStringContainsString( 'data-queued="2" data-skipped="1"', $html );
 		self::assertStringContainsString( 'data-ran-booster-update-summary-message', $html );
@@ -170,7 +183,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		);
 		$name                      = 'RAN Booster';
 		$view                      = 'packages/recovery';
-		$development_safety_notice = true;
+		$development_safety_notice = false;
 		$packages                  = array();
 		$package_providers         = array();
 		$package_activity          = array(
@@ -189,17 +202,14 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$html = (string) ob_get_clean();
 
-		$heading_position            = strpos( $html, 'Booster can’t open settings for Refused package' );
-		$refusal_position            = strpos( $html, 'Booster refused this package operation.' );
-		$development_safety_position = strpos( $html, '<strong>Development safety:</strong>' );
+		$heading_position = strpos( $html, 'Booster can’t open settings for Refused package' );
+		$refusal_position = strpos( $html, 'Booster refused this package operation.' );
 
-		foreach ( array( $heading_position, $refusal_position, $development_safety_position ) as $position ) {
+		foreach ( array( $heading_position, $refusal_position ) as $position ) {
 			self::assertIsInt( $position );
 		}
 		self::assertTrue( $heading_position < $refusal_position );
-		self::assertTrue( $refusal_position < $development_safety_position );
 		self::assertSame( 1, substr_count( $html, 'Booster refused this package operation.' ) );
-		self::assertSame( 1, substr_count( $html, '<strong>Development safety:</strong>' ) );
-		self::assertSame( 1, substr_count( $html, 'data-ran-booster-development-safety' ) );
+		self::assertSame( 0, substr_count( $html, 'data-ran-booster-development-safety' ) );
 	}
 }

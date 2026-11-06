@@ -39,4 +39,17 @@ final class DevelopmentEnvironmentDetector {
 
 		return null === $default_port || $port !== $default_port;
 	}
+	/** Strong signals suitable for a categorical local-development notice. */
+	public static function is_local(): bool {
+		if ( in_array( wp_get_environment_type(), array( 'local', 'development' ), true )
+			|| wp_is_development_mode( 'plugin' ) || wp_is_development_mode( 'theme' ) ) {
+			return true;
+		}
+		$site_url = wp_parse_url( home_url() );
+		if ( ! is_array( $site_url ) ) {
+			return false;
+		}
+		$host = strtolower( trim( (string) ( $site_url['host'] ?? '' ), '[]' ) );
+		return in_array( $host, array( 'localhost', '127.0.0.1', '::1' ), true ) || str_ends_with( $host, '.localhost' );
+	}
 }

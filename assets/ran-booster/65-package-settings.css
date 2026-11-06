@@ -925,7 +925,7 @@
 }
 
 .ran-booster-admin .ran-booster-settings input[type="number"] {
-	inline-size: 15em;
+	inline-size: 8em;
 	max-inline-size: 100%;
 }
 
@@ -937,13 +937,14 @@
 }
 
 .ran-booster-admin .ran-booster-settings__history-fields {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
-	gap: 0 var(--ran-booster-space-20);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0 var(--ran-booster-space-24);
 }
 
 .ran-booster-admin .ran-booster-settings__history-fields > div {
 	min-inline-size: 0;
+	max-inline-size: 100%;
 }
 
 .ran-booster-admin .ran-booster-settings__history-fields input[type="number"] {
@@ -1132,4 +1133,23 @@
 .ran-booster-admin .ran-booster-settings .button {
 	max-inline-size: 100%;
 	white-space: normal;
+}
+
+.ran-booster-admin .ran-booster-settings__save-actions,
+.ran-booster-admin .ran-booster-settings__toggle-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	min-block-size: 48px;
+	margin-block: 12px;
+}
+
+.ran-booster-admin [data-ran-booster-unsaved],
+.ran-booster-admin [data-ran-booster-toggle-status] {
+	min-block-size: 1.5em;
+}
+
+.ran-booster-admin [data-ran-booster-toggle-save][hidden] {
+	display: none;
 }

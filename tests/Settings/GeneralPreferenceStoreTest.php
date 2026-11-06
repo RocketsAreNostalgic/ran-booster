@@ -116,6 +116,11 @@ final class GeneralPreferenceStoreTest extends TestCase {
 				'history_rows'          => 300,
 				'history_days'          => 7,
 				'max_download_bytes'    => 1048576,
+				'_revisions'            => array(
+					'hide_github'           => 1,
+					'self_update_discovery' => 1,
+					'numeric'               => 1,
+				),
 			),
 			\RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )
 		);
@@ -188,7 +193,7 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		self::assertSame( 52428801, $parsed['max_download_bytes'], 'An existing exact byte limit must round trip through its finite MiB representation.' );
 		$this->seed( array( 'max_download_bytes' => 52428801 ) );
 		self::assertSame(
-			'unchanged',
+			'saved',
 			$store->save( $store->snapshot()['token'], $values, static fn ( callable $operation ): string => $operation(), static fn (): bool => true )
 		);
 		self::assertSame( 52428801, \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['max_download_bytes'] );
@@ -202,7 +207,7 @@ final class GeneralPreferenceStoreTest extends TestCase {
 	public function test_unchanged_and_failed_writes_are_reported_honestly(): void {
 		$store = new GeneralPreferenceStore();
 		$token = $store->snapshot()['token'];
-		self::assertSame( 'unchanged', $store->save( $token, $this->submission(), static fn ( callable $operation ): string => $operation(), static fn (): bool => true ) );
+		self::assertSame( 'saved', $store->save( $token, $this->submission(), static fn ( callable $operation ): string => $operation(), static fn (): bool => true ) );
 		$GLOBALS['wpdb']->fail_writes = true;
 		self::assertSame( 'failed', $store->save( $store->snapshot()['token'], array_merge( $this->submission(), array( 'history_rows' => '300' ) ), static fn ( callable $operation ): string => $operation(), static fn (): bool => true ) );
 	}
@@ -341,6 +346,213 @@ final class GeneralPreferenceStoreTest extends TestCase {
 		self::assertSame( 'disabled', CoreSelfUpdatePolicy::detect( '/missing/ran-booster.php', '1.2.3' )->diagnostics()['requested_mode'] );
 	}
 
+	public function test_scoped_tokens_isolate_changes_and_reject_unchanged_retries_and_aba(): void {
+		$store    = new GeneralPreferenceStore();
+		$lock     = static fn ( callable $operation ): string => $operation();
+		$eligible = static fn (): bool => true;
+		$initial  = $store->view_snapshot()['tokens'];
+		self::assertSame( 'saved', $store->save( $initial['hide_github'], array( 'hide_github' => '1' ), $lock, $eligible, 'hide_github' ) );
+		$after = $store->view_snapshot()['tokens'];
+		self::assertSame( $initial['numeric'], $after['numeric'] );
+		self::assertSame( 'saved', $store->save( $after['hide_github'], array( 'hide_github' => '0' ), $lock, $eligible, 'hide_github' ) );
+		self::assertSame( 'stale', $store->save( $initial['hide_github'], array( 'hide_github' => '1' ), $lock, $eligible, 'hide_github' ) );
+		$token = $store->view_snapshot()['tokens']['hide_github'];
+		self::assertSame( 'saved', $store->save( $token, array( 'hide_github' => '0' ), $lock, $eligible, 'hide_github' ) );
+		self::assertSame( 'stale', $store->save( $token, array( 'hide_github' => '0' ), $lock, $eligible, 'hide_github' ) );
+		self::assertSame(
+			'invalid',
+			$store->save(
+				$store->view_snapshot()['tokens']['hide_github'],
+				array(
+					'hide_github'  => '1',
+					'history_rows' => '300',
+				),
+				$lock,
+				$eligible,
+				'hide_github'
+			)
+		);
+		self::assertSame( 'stale', $store->save( $store->view_snapshot()['tokens']['hide_github'], array( 'hide_github' => '1' ), $lock, static fn (): bool => false, 'hide_github' ) );
+	}
+
+	public function test_numeric_scope_saves_only_numeric_values_and_keeps_toggle_token(): void {
+		$store    = new GeneralPreferenceStore();
+		$lock     = static fn ( callable $operation ): string => $operation();
+		$eligible = static fn (): bool => true;
+		$before   = $store->view_snapshot()['tokens'];
+		$values   = array(
+			'history_rows'     => '300',
+			'history_days'     => '7',
+			'max_download_mib' => '50',
+		);
+		self::assertSame( 'saved', $store->save( $before['numeric'], $values, $lock, $eligible, 'numeric' ) );
+		$after = $store->view_snapshot()['tokens'];
+		self::assertSame( $before['hide_github'], $after['hide_github'] );
+		self::assertSame( $before['self_update_discovery'], $after['self_update_discovery'] );
+		self::assertSame( 300, $store->projection()['history_rows']['value'] );
+	}
+
+	public function test_locked_toggle_scope_is_rejected(): void {
+		define( 'RAN_BOOSTER_SELF_UPDATE_MODE', 'disabled' );
+		$store = new GeneralPreferenceStore();
+		self::assertSame( 'invalid', $store->save( $store->view_snapshot()['tokens']['self_update_discovery'], array( 'self_update_discovery' => '1' ), static fn ( callable $operation ): string => $operation(), static fn (): bool => true, 'self_update_discovery' ) );
+	}
+
+	public function test_corrupt_revisions_fail_closed_and_management_clear_advances_hide(): void {
+		$store    = new GeneralPreferenceStore();
+		$lock     = static fn ( callable $operation ): string => $operation();
+		$eligible = static fn (): bool => true;
+		foreach ( array(
+			null,
+			array(),
+			array( 'hide_github' => 0 ),
+			array(
+				'hide_github'           => 0,
+				'self_update_discovery' => 0,
+				'numeric'               => 0,
+				'extra'                 => 0,
+			),
+			array(
+				'hide_github'           => -1,
+				'self_update_discovery' => 0,
+				'numeric'               => 0,
+			),
+			array(
+				'hide_github'           => PHP_INT_MAX,
+				'self_update_discovery' => 0,
+				'numeric'               => 0,
+			),
+			array(
+				'hide_github'           => 0,
+				'self_update_discovery' => 0,
+				'numeric'               => '0',
+			),
+		) as $bad ) {
+			$this->seed(
+				array(
+					'hide_github' => true,
+					'_revisions'  => $bad,
+				)
+			);
+			self::assertSame( 'failed', $store->save( $store->snapshot()['token'], $this->submission(), $lock, $eligible ) );
+			self::assertFalse( $store->clear_confirmed_github_hide_request() );
+		}
+		$this->seed(
+			array(
+				'_revisions' => array(
+					'hide_github'           => 0,
+					'self_update_discovery' => 0,
+					'numeric'               => PHP_INT_MAX,
+				),
+			)
+		);
+		$token = $store->view_snapshot()['tokens']['numeric'];
+		self::assertSame(
+			'failed',
+			$store->save(
+				$token,
+				array(
+					'history_rows'       => '2000',
+					'history_days'       => '30',
+					'max_download_bytes' => '52428800',
+				),
+				$lock,
+				$eligible,
+				'numeric'
+			)
+		);
+		$this->seed( array( 'hide_github' => true ) );
+		$before = $store->view_snapshot()['tokens'];
+		self::assertTrue( $store->clear_confirmed_github_hide_request() );
+		$after = $store->view_snapshot()['tokens'];
+		self::assertNotSame( $before['hide_github'], $after['hide_github'] );
+		self::assertSame( $before['numeric'], $after['numeric'] );
+		self::assertSame(
+			array(
+				'hide_github'           => 1,
+				'self_update_discovery' => 0,
+				'numeric'               => 0,
+			),
+			\RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['_revisions']
+		);
+	}
+
+	public function test_tokens_are_bound_to_the_fixed_scope_even_with_matching_absent_values(): void {
+		$tokens = ( new GeneralPreferenceStore() )->view_snapshot()['tokens'];
+		self::assertNotSame( $tokens['hide_github'], $tokens['self_update_discovery'] );
+	}
+
+	public function test_full_noop_initializes_and_advances_all_revisions(): void {
+		$store    = new GeneralPreferenceStore();
+		$lock     = static fn ( callable $operation ): string => $operation();
+		$eligible = static fn (): bool => true;
+		self::assertNull( $GLOBALS['ran_booster_general_preference_raw'] );
+		$store->view_snapshot();
+		self::assertNull( $GLOBALS['ran_booster_general_preference_raw'] );
+		foreach ( array( 1, 2 ) as $revision ) {
+			self::assertSame( 'saved', $store->save( $store->snapshot()['token'], $this->submission(), $lock, $eligible ) );
+			self::assertSame( array_fill_keys( array( 'hide_github', 'self_update_discovery', 'numeric' ), $revision ), \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['_revisions'] );
+		}
+	}
+
+	public function test_scope_token_tracks_raw_presence_and_type_but_not_document_order(): void {
+		$store = new GeneralPreferenceStore();
+		$this->seed(
+			array(
+				'history_rows' => 300,
+				'history_days' => 7,
+			)
+		);
+		$first = $store->view_snapshot()['tokens'];
+		$this->seed(
+			array(
+				'history_days' => 7,
+				'history_rows' => 300,
+			)
+		);
+		self::assertSame( $first, $store->view_snapshot()['tokens'] );
+		$this->seed( array() );
+		$absent = $store->view_snapshot()['tokens']['hide_github'];
+		$this->seed( array( 'hide_github' => false ) );
+		$explicit = $store->view_snapshot()['tokens']['hide_github'];
+		self::assertNotSame( $absent, $explicit );
+		$this->seed( array( 'hide_github' => 0 ) );
+		self::assertNotSame( $explicit, $store->view_snapshot()['tokens']['hide_github'] );
+	}
+
+	public function test_management_clear_fences_late_scoped_hide_and_old_writer_boundary(): void {
+		$store    = new GeneralPreferenceStore();
+		$lock     = static fn ( callable $operation ): string => $operation();
+		$eligible = static fn (): bool => true;
+		$this->seed( array( 'hide_github' => true ) );
+		$before   = $store->view_snapshot()['tokens']['hide_github'];
+		self::assertTrue( $store->clear_confirmed_github_hide_request() );
+		self::assertSame( 'stale', $store->save( $before, array( 'hide_github' => '1' ), $lock, $eligible, 'hide_github' ) );
+		$after = $store->view_snapshot()['tokens']['hide_github'];
+		// An old writer can preserve the unknown revision map while changing and restoring the value.
+		$document                = \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] );
+		$document['hide_github'] = true;
+		$this->seed( $document );
+		$document['hide_github'] = false;
+		$this->seed( $document );
+		self::assertSame( $after, $store->view_snapshot()['tokens']['hide_github'], 'Older writers do not advance the counter; ABA protection does not extend across them.' );
+	}
+
+	public function test_failed_write_or_commit_does_not_advance_metadata_in_rollback_fixture(): void {
+		$store                        = new GeneralPreferenceStore();
+		$lock                         = static fn ( callable $operation ): string => $operation();
+		$eligible                     = static fn (): bool => true;
+		$this->seed( array( 'history_rows' => 300 ) );
+		$original                     = $GLOBALS['ran_booster_general_preference_raw'];
+		$GLOBALS['wpdb']->fail_writes = true;
+		self::assertSame( 'failed', $store->save( $store->snapshot()['token'], $this->submission(), $lock, $eligible ) );
+		self::assertSame( $original, $GLOBALS['ran_booster_general_preference_raw'] );
+		$GLOBALS['wpdb']->fail_writes = false;
+		$GLOBALS['wpdb']->fail_commit = true;
+		self::assertSame( 'failed', $store->save( $store->snapshot()['token'], $this->submission(), $lock, $eligible ) );
+		self::assertSame( $original, $GLOBALS['ran_booster_general_preference_raw'] );
+	}
+
 	/** @param array<string,mixed> $value */
 	private function seed( array $value ): void {
 		$GLOBALS['ran_booster_general_preference_raw'] = \RAN\Settings\maybe_serialize( $value );
@@ -360,10 +572,12 @@ final class GeneralPreferenceStoreTest extends TestCase {
 
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Narrow database double kept with its sole consumer.
 final class GeneralPreferenceDatabase {
-	public string $options    = 'wp_options';
-	public string $last_error = '';
-	public bool $fail_writes  = false;
-	public int $fresh_reads   = 0;
+	public string $options                = 'wp_options';
+	public string $last_error             = '';
+	public bool $fail_writes              = false;
+	public bool $fail_commit              = false;
+	private ?string $transaction_original = null;
+	public int $fresh_reads               = 0;
 
 	public function prepare( string $query, mixed ...$arguments ): string {
 		return $query . "\n" . serialize( $arguments ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Controlled test transport.
@@ -379,6 +593,13 @@ final class GeneralPreferenceDatabase {
 	public function query( string $query ): int|false {
 		[$sql, $arguments] = explode( "\n", $query, 2 ) + array( 1 => serialize( array() ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Controlled test transport.
 		$arguments         = unserialize( $arguments ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Controlled test transport.
+		if ( 'START TRANSACTION' === $sql ) {
+			$this->transaction_original = $GLOBALS['ran_booster_general_preference_raw'];
+		}
+		if ( 'COMMIT' === $sql && $this->fail_commit ) {
+			$GLOBALS['ran_booster_general_preference_raw'] = $this->transaction_original;
+			return false;
+		}
 		if ( $this->fail_writes && ( str_contains( $sql, 'INSERT INTO' ) || str_contains( $sql, 'UPDATE' ) ) ) {
 			return false;
 		}

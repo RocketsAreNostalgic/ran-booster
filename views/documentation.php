@@ -56,7 +56,6 @@ $reserved_documentation_ids = array_fill_keys(
 		'ran-booster-quick-start',
 		'ran-booster-requirements',
 		'ran-booster-portability-guidance',
-		'ran-booster-wp-pusher-migration',
 		'ran-booster-file-protection',
 		'ran-booster-credential-storage',
 		'ran-booster-installing-and-managing-packages',
@@ -90,7 +89,6 @@ $add_documentation_item = static function ( string $id, string $summary ) use ( 
 $add_documentation_item( 'ran-booster-quick-start', __( 'Quick start', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-requirements', __( 'Requirements', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-portability-guidance', __( 'Move packages between sites', 'ran-booster' ) );
-$add_documentation_item( 'ran-booster-wp-pusher-migration', __( 'Migrate from WP Pusher', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-file-protection', __( 'Protect your files and know what actually moves', 'ran-booster' ) );
 $add_documentation_item( 'ran-booster-credential-storage', __( 'Credential storage, retention and removal', 'ran-booster' ) );
 $prepared_provider_documentation = array();
@@ -132,6 +130,17 @@ $prepared_global_sections = array_values(
 		}
 	)
 );
+// Keep saved migration links useful when no extension guide was accepted.
+$migration_summary = __( 'Migrate from WP Pusher', 'ran-booster' );
+if ( $add_documentation_item( 'ran-booster-wp-pusher-migration', $migration_summary ) ) {
+	$prepared_global_sections[] = array(
+		'id'      => 'ran-booster-wp-pusher-migration',
+		'summary' => $migration_summary,
+		'content' => '<p>' . esc_html__( 'The detailed migration guide is supplied by a compatible RAN Booster WP Pusher Migrator. If it is unavailable here, check the extension and consult its installation and compatibility guidance.', 'ran-booster' ) . '</p><p><a href="' . esc_url( 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme' ) . '">' . esc_html__( 'Read the Migrator guidance', 'ran-booster' ) . '</a> ' . esc_html__( 'Repository access may be required.', 'ran-booster' ) . '</p>',
+		'open'    => false,
+		'chapter' => null,
+	);
+}
 $add_documentation_item( 'ran-booster-about', __( 'About RAN Booster', 'ran-booster' ) );
 
 // Collect first so duplicate article precedence does not depend on display order.
@@ -139,7 +148,7 @@ $add_documentation_item( 'ran-booster-about', __( 'About RAN Booster', 'ran-boos
 $chapters = array(
 	'core' => array(
 		'title'    => __( 'Booster Core concepts', 'ran-booster' ),
-		'items'    => array_values( array_filter( $documentation_index, static fn ( array $item ): bool => in_array( $item['id'], array( 'ran-booster-quick-start', 'ran-booster-requirements', 'ran-booster-portability-guidance', 'ran-booster-wp-pusher-migration', 'ran-booster-file-protection', 'ran-booster-credential-storage', 'ran-booster-installing-and-managing-packages', 'ran-booster-push-to-deploy' ), true ) ) ),
+		'items'    => array_values( array_filter( $documentation_index, static fn ( array $item ): bool => in_array( $item['id'], array( 'ran-booster-quick-start', 'ran-booster-requirements', 'ran-booster-portability-guidance', 'ran-booster-file-protection', 'ran-booster-credential-storage', 'ran-booster-installing-and-managing-packages', 'ran-booster-push-to-deploy' ), true ) ) ),
 		'sections' => array(),
 	),
 );
@@ -326,42 +335,21 @@ unset( $chapter );
 			</div>
 		</details>
 
-		<details id="ran-booster-wp-pusher-migration" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
-			<summary><?php esc_html_e( 'Migrate from WP Pusher', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
-				<h3><?php esc_html_e( 'Move retained WP Pusher packages into Booster', 'ran-booster' ); ?></h3>
-				<p><?php esc_html_e( 'If this site used WP Pusher 3.0.13, the temporary RAN Booster WP Pusher Migrator can adopt supported installed plugins and themes into Booster without reinstalling them. Each adopted package starts with deployment Disabled.', 'ran-booster' ); ?></p>
-
-				<h3><?php esc_html_e( 'Before you start', 'ran-booster' ); ?></h3>
-				<ul>
-					<li><?php esc_html_e( 'Back up the site and deactivate WP Pusher. Booster and WP Pusher must not control package changes at the same time.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Install and activate the migrator from its verified release package.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'For private repositories, add the replacement repository credential to Booster first. WP Pusher credentials are not copied.', 'ran-booster' ); ?></li>
-				</ul>
-
-				<h3><?php esc_html_e( 'Migration workflow', 'ran-booster' ); ?></h3>
-				<ol>
-					<li><?php esc_html_e( 'Open Transporter and choose Migrate from WP Pusher.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Review one retained plugin or theme at a time.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Adopt the package into Booster as Disabled.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Confirm the package is managed by Booster before continuing.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'After every package is migrated, review the optional WP Pusher data cleanup and remove the temporary migrator.', 'ran-booster' ); ?></li>
-				</ol>
-				<p><?php esc_html_e( 'The migrator does not copy credentials, reinstall package files, enable deployments, remove remote webhooks, delete WP Pusher, or contact its license service. Remove deployment webhooks on the Git provider separately.', 'ran-booster' ); ?></p>
-				<p><a class="button" href="<?php echo esc_url( $portability_url ); ?>"><?php esc_html_e( 'Open migration tools', 'ran-booster' ); ?></a></p>
-			</div>
-		</details>
-
 		<details id="ran-booster-file-protection" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">
 			<summary><?php esc_html_e( 'Protect your files and know what actually moves', 'ran-booster' ); ?></summary>
 			<div class="ran-booster-documentation__content ran-booster-disclosure__body">
+				<h3><?php esc_html_e( 'Local development', 'ran-booster' ); ?></h3>
+				<p><?php esc_html_e( 'WordPress local or development configuration and localhost addresses provide development context. Debug mode or a nonstandard port alone does not establish that a site is local. These signals do not establish whether incoming webhooks can reach it.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Booster can still download and replace managed plugins and themes on a local site. A local site running an official Booster release may also receive updates for Booster itself. Protection of Booster’s own source checkout is a separate policy; review its effective update status in Settings or Troubleshooting. Dismissing local-development guidance changes neither that protection nor any package’s Updates setting.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Deployment modes protect files you are editing', 'ran-booster' ); ?></h3>
 				<ul>
-					<li><strong><?php esc_html_e( 'Disabled', 'ran-booster' ); ?></strong> <?php esc_html_e( 'blocks any replacement, whether triggered by an administrator or by a webhook. Use this for a package whose files on disk you are currently editing.', 'ran-booster' ); ?></li>
-					<li><strong><?php esc_html_e( 'Manual', 'ran-booster' ); ?></strong> <?php esc_html_e( 'blocks webhook-triggered replacement (Push-to-Deploy) but still lets an administrator replace the package’s files through Booster.', 'ran-booster' ); ?></li>
-					<li><strong><?php esc_html_e( 'Automatic', 'ran-booster' ); ?></strong> <?php esc_html_e( 'allows a matching, signed push from the Git provider to replace the package automatically. Only turn this on for a site that is ready to receive live deployments.', 'ran-booster' ); ?></li>
+					<li><strong><?php esc_html_e( 'Disabled', 'ran-booster' ); ?></strong> <?php esc_html_e( 'blocks Booster branch reinstalls and push deployments, and suppresses managed release update offers. Use this for a package whose files on disk you are currently editing.', 'ran-booster' ); ?></li>
+					<li><strong><?php esc_html_e( 'Manual', 'ran-booster' ); ?></strong> <?php esc_html_e( 'allows an administrator-triggered branch reinstall but blocks Push-to-Deploy. For release-managed packages, it preserves WordPress’s existing automatic-update decision; it does not guarantee that automatic updates are disabled.', 'ran-booster' ); ?></li>
+					<li><strong><?php esc_html_e( 'Automatic', 'ran-booster' ); ?></strong> <?php esc_html_e( 'allows authenticated matching branch pushes to deploy, or enables WordPress automatic updates for validated published releases, according to the package’s source.', 'ran-booster' ); ?></li>
 				</ul>
 				<p><?php esc_html_e( 'Booster never changes a package’s mode on its own. It may show a reminder when WordPress reports a local or development environment, plugin or theme development mode is active, WP_DEBUG is enabled, the site uses localhost or a loopback address, or its URL has a nonstandard port. These are safety hints only: Booster will not switch a package to Disabled or Manual for you. Choose each package’s mode explicitly.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'These settings govern Booster-managed replacement paths; they do not lock files against other tools. Manual and Automatic can replace local edits. Choose Disabled for each package you are editing.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Incoming branch-deployment webhooks are generally unavailable on local or private domains. A public tunnel can make a local site reachable when the actual configured callback meets the existing public HTTPS requirements. URL acceptance is not a reachability test or proof of authenticated delivery.', 'ran-booster' ); ?> <a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=documentation#ran-booster-push-to-deploy' ) ); ?>"><?php esc_html_e( 'Read the Push-to-Deploy guide.', 'ran-booster' ); ?></a></p>
 
 				<h3><?php esc_html_e( 'What a Transporter Blueprint includes', 'ran-booster' ); ?></h3>
 				<p><?php esc_html_e( 'A Transporter Blueprint records only the Booster-managed plugins and themes selected on the source site. It can optionally include file-stored repository credentials used by those selected packages inside a password-protected ZIP. The ZIP password is only used for that one request and is never saved anywhere. When a package is installed or adopted from a Transporter Blueprint, it starts with deployment Disabled.', 'ran-booster' ); ?></p>

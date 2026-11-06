@@ -186,17 +186,17 @@ $install_another_url        = add_query_arg(
 		'page'        => $package_view->get_create_page_slug(),
 		'provider'    => $stored_provider_code,
 		'open_picker' => '1',
-	),
+	) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 	$admin_url
 );
 $settings_url               = add_query_arg(
 	array(
 		'page'    => $package_view->get_page_slug(),
 		'package' => $identifier_value,
-	),
+	) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 	$admin_url
 );
-$back_url                   = add_query_arg( 'page', $package_view->get_page_slug(), $admin_url );
+$back_url                   = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + array_map( 'rawurlencode', $package_return_list ?? array() ), $admin_url );
 $show_branch_settings       = 'branch' === $package_source_view;
 $show_branch_operations     = $show_branch_settings && ! $release_managed;
 $repository_read_only       = $release_managed;
@@ -248,7 +248,6 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 };
 
 ?>
-<p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a></p>
 <h2 class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is the item being edited. */ __( 'Edit %s', 'ran-booster' ), $package->name ) ); ?></h2>
 
 <?php if ( $provider_unavailable ) { ?>
@@ -281,7 +280,7 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 				</div>
 			</section>
 		<?php } else { ?>
-			<form id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation>
+			<form id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation <?php echo $submitted_action === $package_view->get_action( 'edit' ) ? 'data-ran-booster-attempted' : ''; ?>>
 						<?php wp_nonce_field( $package_view->get_action( 'edit' ) ); ?>
 						<?php if ( $show_branch_operations ) { ?>
 							<input type="hidden" name="_ran_booster_reinstall_nonce" value="<?php echo esc_attr( wp_create_nonce( $package_view->get_action( 'update' ) ) ); ?>">

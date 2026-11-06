@@ -77,7 +77,7 @@ $bulk_select_all_id           = 'ran-booster-' . $package_view->get_type() . '-s
 $bulk_type_label              = strtolower( $package_view->get_plural_label() );
 $bulk_type_singular           = strtolower( $package_view->get_singular_label() );
 $is_plugin_list               = 'plugin' === $package_view->get_type();
-$install_another_url          = add_query_arg( 'page', $package_view->get_create_page_slug(), $package_admin_url );
+$install_another_url          = add_query_arg( array( 'page' => $package_view->get_create_page_slug() ) + array_map( 'rawurlencode', $package_return_args ?? array() ), $package_admin_url );
 $clear_filters_url            = add_query_arg( 'page', $package_view->get_page_slug(), $package_admin_url );
 $has_package_list_filters     = array() !== array_filter(
 	$package_list_state,
@@ -132,7 +132,14 @@ $policy_labels = array(
 	<?php } ?>
 </div>
 
+<?php if ( $is_plugin_list ) { ?>
+<div id="ran-booster-plugin-collection" class="ran-booster-card ran-booster-package-collection" data-ran-booster-card="plugins">
+<?php } ?>
+
 <?php if ( $package_list_total > 0 ) { ?>
+	<?php if ( $is_plugin_list ) { ?>
+	<div class="ran-booster-package-collection__toolbar">
+	<?php } ?>
 	<div class="ran-booster-package-list-controls">
 		<form class="ran-booster-package-list-filters" method="get" action="<?php echo esc_url( $package_admin_url ); ?>">
 			<input type="hidden" name="page" value="<?php echo esc_attr( $package_view->get_page_slug() ); ?>">
@@ -219,9 +226,12 @@ $policy_labels = array(
 		</div>
 		<br class="clear">
 	</div>
+	<?php if ( $is_plugin_list ) { ?>
+	</div>
+	<?php } ?>
 <?php } ?>
 
-<table class="wp-list-table widefat plugins ran-booster-package-table">
+<table class="wp-list-table widefat plugins ran-booster-package-table" data-package-type="<?php echo esc_attr( $package_view->get_type() ); ?>">
 	<thead>
 	<tr>
 		<th scope="col" class="manage-column column-cb check-column">
@@ -396,7 +406,7 @@ $policy_labels = array(
 				array(
 					'page'    => $package_view->get_page_slug(),
 					'package' => $package->get_identifier(),
-				),
+				) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 				$package_admin_url
 			);
 			$automation_state_label = match ( $deployment_policy ) {
@@ -580,3 +590,6 @@ $policy_labels = array(
 		<?php } ?>
 	</tbody>
 </table>
+<?php if ( $is_plugin_list ) { ?>
+</div>
+<?php } ?>

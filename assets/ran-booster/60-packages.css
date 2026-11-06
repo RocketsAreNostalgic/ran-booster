@@ -273,6 +273,34 @@
 	color: var(--ran-booster-text-muted);
 }
 
+.ran-booster-admin
+	.ran-booster-package-table[data-package-type="plugin"]
+	:is(
+		.ran-booster-package-row__management,
+		.ran-booster-package-row__status-line
+	) {
+	overflow-wrap: anywhere;
+}
+
+@media screen and (min-width: 783px) {
+	.ran-booster-admin
+		.ran-booster-package-table[data-package-type="plugin"]
+		:is(
+			.ran-booster-package-row__identity,
+			.ran-booster-package-row__summary,
+			.ran-booster-package-row__actions
+		) {
+		padding-block: var(--ran-booster-space-12);
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-table[data-package-type="plugin"]
+		.ran-booster-package-row
+		> .check-column {
+		padding-block-start: var(--ran-booster-space-14);
+	}
+}
+
 .ran-booster-admin .ran-booster-package-row__action-group {
 	display: flex;
 	flex-wrap: nowrap;
@@ -594,4 +622,34 @@
 	.ran-booster-admin .ran-booster-package-row__details-grid {
 		grid-template-columns: minmax(0, 1fr);
 	}
+}
+
+/* Keep the native collection inside the shared Card without clipping focus. */
+.ran-booster-admin .ran-booster-package-collection {
+	min-inline-size: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-collection__toolbar {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+	padding: var(--ran-booster-space-16);
+	border-block-end: 1px solid var(--ran-booster-border);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-list-controls,
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-toolbar.tablenav {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-package-collection .ran-booster-package-table {
+	margin: 0;
+	border: 0;
+	box-shadow: none;
 }

@@ -20,7 +20,7 @@ public provider contract and retain their own credential and webhook guidance.
 It does not use a licence service, vendor updater, cloud OAuth flow, or external
 repository picker service.
 
-The Core-owned Extensions page lists first-party beta extensions using only
+The Core-owned Extensions page lists RAN-maintained beta extensions using only
 local WordPress plugin state and release-bundled artwork. Free extensions are
 distributed through their own public repositories and releases. Core stores no
 sponsor or entitlement state.

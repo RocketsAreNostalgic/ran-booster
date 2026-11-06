@@ -7029,7 +7029,7 @@ msgid "Open %s settings"
 msgstr ""
 
 #: views/documentation.php:535
-msgid "Official setup guidance"
+msgid "Provider setup guidance"
 msgstr ""
 
 #: views/documentation.php:549

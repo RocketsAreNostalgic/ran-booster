@@ -788,7 +788,7 @@ unsupported-capability behavior in WordPress. The fixture is excluded from the
 runtime release archive and requires no provider-name branches in Booster,
 GitHub or Bitbucket code.
 
-The first-party GitHub implementation now lives in the independently maintained
+The RAN-maintained GitHub implementation now lives in the independently maintained
 Composer package `ran/booster-github-provider`. Booster pins and bundles an
 immutable released version, but the package still enters the host through this
 public provider boundary. Bundled versus external is therefore a distribution

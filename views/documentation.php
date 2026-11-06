@@ -532,7 +532,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 							</a></p>
 						<?php } ?>
 						<?php if ( ! empty( $credentials['links'] ) && is_array( $credentials['links'] ) ) { ?>
-							<h3><?php esc_html_e( 'Official setup guidance', 'ran-booster' ); ?></h3>
+							<h3><?php esc_html_e( 'Provider setup guidance', 'ran-booster' ); ?></h3>
 							<ul>
 								<?php foreach ( $credentials['links'] as $credential_link ) { ?>
 									<?php if ( isset( $credential_link['label'], $credential_link['url'] ) ) { ?>

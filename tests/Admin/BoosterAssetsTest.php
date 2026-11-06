@@ -22,9 +22,15 @@ require_once __DIR__ . '/BoosterAssetsWordPressFunctions.php';
 
 final class BoosterAssetsTest extends TestCase {
 
+	private bool $had_capability_checks;
+
+	private mixed $previous_capability_checks;
+
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
-		$_GET = array();
+		$_GET                             = array();
+		$this->had_capability_checks      = array_key_exists( 'ran_booster_test_capability_checks', $GLOBALS );
+		$this->previous_capability_checks = $GLOBALS['ran_booster_test_capability_checks'] ?? null;
 		$GLOBALS['ran_booster_asset_test_registered_styles']   = array();
 		$GLOBALS['ran_booster_asset_test_enqueued_styles']     = array();
 		$GLOBALS['ran_booster_asset_test_registered_scripts']  = array();
@@ -37,6 +43,11 @@ final class BoosterAssetsTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		$_GET = array();
+		if ( $this->had_capability_checks ) {
+			$GLOBALS['ran_booster_test_capability_checks'] = $this->previous_capability_checks;
+		} else {
+			unset( $GLOBALS['ran_booster_test_capability_checks'] );
+		}
 		unset(
 			$GLOBALS['ran_booster_asset_test_registered_styles'],
 			$GLOBALS['ran_booster_asset_test_enqueued_styles'],
@@ -147,13 +158,19 @@ final class BoosterAssetsTest extends TestCase {
 		$booster->load_scripts( null );
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_registered_styles'] );
 
-		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
+		$had_capabilities                         = array_key_exists( 'ran_booster_test_capabilities', $GLOBALS );
+		$previous_capabilities                    = $GLOBALS['ran_booster_test_capabilities'] ?? null;
+		$GLOBALS['ran_booster_test_capabilities'] = array( 'manage_options' => false );
 		try {
 			$booster->load_scripts( 'plugins.php' );
 			self::assertSame( array(), $GLOBALS['ran_booster_asset_test_registered_styles'] );
 			self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
 		} finally {
-			unset( $GLOBALS['ran_booster_test_capabilities']['manage_options'] );
+			if ( $had_capabilities ) {
+				$GLOBALS['ran_booster_test_capabilities'] = $previous_capabilities;
+			} else {
+				unset( $GLOBALS['ran_booster_test_capabilities'] );
+			}
 		}
 	}
 

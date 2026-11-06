@@ -1,7 +1,3 @@
-.ran-booster-admin .ran-booster-documentation {
-	max-inline-size: 1400px;
-}
-
 @media (prefers-reduced-motion: no-preference) {
 	:root {
 		scroll-behavior: smooth;

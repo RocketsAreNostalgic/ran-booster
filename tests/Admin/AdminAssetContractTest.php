@@ -125,8 +125,6 @@ final class AdminAssetContractTest extends TestCase {
 
 		self::assertStringContainsString( '.ran-booster-extension-card__badge {', $extensions );
 		self::assertStringContainsString( '.ran-booster-extension-details {', $extensions );
-		self::assertStringContainsString( '.ran-booster-admin--extensions {', $extensions );
-		self::assertStringContainsString( 'max-inline-size: 1400px;', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-top', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-icon', $extensions );
@@ -730,8 +728,8 @@ final class AdminAssetContractTest extends TestCase {
 		$base        = $this->view( 'base.php' );
 		$view        = $this->view( 'packages/index.php' );
 
-		self::assertStringContainsString( "'extensions'      => ' ran-booster-admin--extensions'", $base );
-		self::assertStringContainsString( "'packages/index',", $base );
+		self::assertStringContainsString( "'extensions'      => ' ran-booster-admin--extensions ran-booster-admin--wide-collection'", $base );
+		self::assertStringContainsString( "'packages/index'  => ' ran-booster-admin--packages ran-booster-admin--wide-collection'", $base );
 		self::assertStringContainsString( "'packages/create',", $base );
 		self::assertStringContainsString( "'packages/edit'   => ' ran-booster-admin--packages'", $base );
 		self::assertStringNotContainsString( "! str_starts_with( \$view, 'packages/' )", $base );
@@ -752,8 +750,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'class="displaying-num"', $view );
 		self::assertStringNotContainsString( 'ran-booster-package-row__facts', $view );
 		self::assertStringNotContainsString( 'style="width: 100%;"', $view );
-		self::assertStringContainsString( '.ran-booster-admin--packages {', $package_css );
-		self::assertStringContainsString( 'max-inline-size: 1400px;', $package_css );
+		self::assertStringContainsString( '--ran-booster-width-standard: 1050px;', $css );
+		self::assertStringContainsString( '--ran-booster-width-wide: 1400px;', $css );
+		self::assertStringContainsString( 'max-inline-size: var(--ran-booster-width-standard);', $css );
+		self::assertStringContainsString( '.ran-booster-admin--wide-collection {', $css );
+		self::assertStringContainsString( 'max-inline-size: var(--ran-booster-width-wide);', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-package-table {', $css );
 		self::assertStringContainsString( 'table-layout: fixed;', $css );
 		self::assertStringContainsString(

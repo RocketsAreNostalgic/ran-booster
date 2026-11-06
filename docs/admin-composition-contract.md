@@ -103,6 +103,45 @@ generated output or change the shared shell package merely to add a local page.
 The fixed Core Settings screen is described in [Settings](settings.md).
 Provider Settings tabs and a Settings contribution API remain deferred.
 
+### Standard and wide content frames
+
+Core owns two outer content frames in `00-foundations.css`: the default
+`--ran-booster-width-standard` maximum of 1050px and the
+`--ran-booster-width-wide` collection maximum of 1400px. `views/base.php`
+assigns `ran-booster-admin--wide-collection` only to Managed Plugins/Themes
+and Extensions. Existing package and Extensions feature classes remain available.
+Both frames retain WordPress's responsive `.wrap` gutters; the full-width Admin
+Shell sits outside that wrapper and keeps its own geometry.
+
+| Surface | Previous outer constraint | Frame |
+| --- | --- | --- |
+| Overview and onboarding | 1050px | Standard |
+| GitHub and Bitbucket | 1050px | Standard |
+| Documentation | 1400px section inside 1050px wrapper | Standard reference |
+| Settings | 1050px | Standard |
+| Troubleshooting | 1200px section inside 1050px wrapper | Standard |
+| Managed Plugins and Themes | 1400px | Wide collection |
+| Install Plugin and Theme | 1400px wrapper; 790px inner form | Standard |
+| Individual package settings | 1400px wrapper; main and 290px sidebar | Standard |
+| Extensions | 1400px | Wide collection |
+| Transporter | 1050px | Standard |
+
+Documentation's effective source limit is its 1050px outer wrapper, rather than
+the former nested 1400px declaration. Its index and 860px prose limit remain
+inner reading constraints. Package installation retains its 790px inner form;
+package settings retain their responsive main/sidebar grid. Transporter retains
+its prose limits and deliberate horizontal review-table scroller, including
+compatible add-on contributions. These inner constraints do not define more
+outer page layouts.
+
+The shared frame does not change Card padding, headings, table columns,
+Extensions grid/card interiors or More Details. Width work under
+[Core #682](https://github.com/RocketsAreNostalgic/ran-booster/issues/682)
+owns the outer rules and page classification; the component, Settings and
+generated Shell owners retain their existing boundaries. Installed direction
+review and composed responsive/accessibility acceptance remain separate from
+source checks.
+
 ## Add-on generation and service delivery
 
 An administration add-on must check the exact Add-on API generation before

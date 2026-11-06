@@ -13,6 +13,8 @@
  */
 
 :root {
+	--ran-booster-width-standard: 1050px;
+	--ran-booster-width-wide: 1400px;
 	--ran-booster-color-neutral-0: #fff;
 	--ran-booster-color-neutral-100: #f0f0f1;
 	--ran-booster-color-neutral-200: #dcdcde;
@@ -135,7 +137,11 @@
 }
 
 .ran-booster-admin {
-	max-inline-size: 1050px;
+	max-inline-size: var(--ran-booster-width-standard);
+}
+
+.ran-booster-admin--wide-collection {
+	max-inline-size: var(--ran-booster-width-wide);
 }
 
 #screen-meta-links {

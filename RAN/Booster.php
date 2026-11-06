@@ -397,7 +397,7 @@ class Booster {
 				'provider_implementation' => 'RAN\\Booster\\Bitbucket\\BitbucketProvider',
 				'name'                    => 'Bitbucket Cloud',
 				'description'             => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
-				'details'                 => __( 'Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
+				'details'                 => __( 'Add Bitbucket Cloud support through a RAN-maintained provider extension while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
 				'features'                => array(
 					__( 'Connect and configure Bitbucket Cloud repositories in Booster.', 'ran-booster' ),
 					__( 'Use package and credential guidance for your Git provider.', 'ran-booster' ),

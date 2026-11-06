@@ -781,6 +781,10 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'WP_DEBUG is enabled', $html );
 		self::assertStringContainsString( 'localhost or a loopback address', $html );
 		self::assertStringContainsString( 'URL has a nonstandard port', $html );
+		self::assertStringContainsString( 'Debug mode or a nonstandard port alone does not establish that a site is local.', $html );
+		self::assertStringContainsString( 'A local site running an official Booster release may also receive updates for Booster itself.', $html );
+		self::assertStringContainsString( 'preserves WordPress’s existing automatic-update decision', $html );
+		self::assertStringContainsString( 'URL acceptance is not a reachability test or proof of authenticated delivery.', $html );
 		self::assertStringContainsString( 'it starts with deployment Disabled', $html );
 		self::assertStringContainsString( 'Push-to-Deploy is always configured separately on each site', $html );
 		self::assertStringContainsString( 'Use the matching Git provider tab as the source of truth', $html );

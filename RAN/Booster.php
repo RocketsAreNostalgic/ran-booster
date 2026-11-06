@@ -906,14 +906,16 @@ class Booster {
 			}
 		}
 
-		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
-			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->build_package_form();
-
+		if ( 'toplevel_page_ran-booster' === $hook ) {
 			$this->load_notice_preference_script(
 				'ranBoosterDevelopmentSafetyNotice',
 				\RAN\Admin\DevelopmentSafetyNoticeController::AJAX_ACTION,
 				\RAN\Admin\DevelopmentSafetyNoticeController::NONCE_ACTION
 			);
+		}
+
+		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
+			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->build_package_form();
 			wp_localize_script(
 				'ran-booster-repository-picker',
 				'ranBoosterRepoPicker',

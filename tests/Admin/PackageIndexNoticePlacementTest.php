@@ -89,7 +89,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		);
 		$name                      = 'RAN Booster';
 		$view                      = 'packages/index';
-		$development_safety_notice = true;
+		$development_safety_notice = false;
 		$packages                  = array();
 		$package_providers         = array();
 		$package_activity          = array(
@@ -119,27 +119,22 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		$heading_position     = strpos( $html, $heading );
 		$description_position = strpos( $html, 'Review package health, deploy saved branches and hand published releases to WordPress.' );
 		$result_position      = strpos( $html, 'Scoped package result.' );
-		$safety_position      = strpos( $html, '<strong>Development safety:</strong>' );
 		$table_position       = strpos( $html, 'ran-booster-package-table' );
 
-		foreach ( array( $masthead_position, $heading_position, $description_position, $result_position, $safety_position, $table_position ) as $position ) {
+		foreach ( array( $masthead_position, $heading_position, $description_position, $result_position, $table_position ) as $position ) {
 			self::assertIsInt( $position );
 		}
 		self::assertTrue( $masthead_position < $heading_position );
 		self::assertTrue( $heading_position < $description_position );
 		self::assertTrue( $description_position < $result_position );
-		self::assertTrue( $result_position < $safety_position );
-		self::assertTrue( $safety_position < $table_position );
 		self::assertSame( 1, substr_count( $html, 'Scoped package result.' ) );
 		self::assertSame( 1, substr_count( $html, '<hr class="wp-header-end">' ) );
 		$marker_position = strpos( $html, '<hr class="wp-header-end">' );
 		self::assertIsInt( $marker_position );
 		self::assertTrue( $marker_position < $masthead_position );
-		self::assertSame( 1, substr_count( $html, '<strong>Development safety:</strong>' ) );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-package-intro"' ) );
-		self::assertSame( 1, substr_count( $html, 'notice notice-warning inline is-dismissible' ) );
-		self::assertSame( 2, substr_count( $html, 'is-dismissible' ) );
-		self::assertSame( 1, substr_count( $html, 'data-ran-booster-development-safety' ) );
+		self::assertSame( 1, substr_count( $html, 'is-dismissible' ) );
+		self::assertSame( 0, substr_count( $html, 'data-ran-booster-development-safety' ) );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-update-summary data-queued' ) );
 		self::assertStringContainsString( 'data-queued="2" data-skipped="1"', $html );
 		self::assertStringContainsString( 'data-ran-booster-update-summary-message', $html );
@@ -170,7 +165,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		);
 		$name                      = 'RAN Booster';
 		$view                      = 'packages/recovery';
-		$development_safety_notice = true;
+		$development_safety_notice = false;
 		$packages                  = array();
 		$package_providers         = array();
 		$package_activity          = array(
@@ -189,17 +184,14 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$html = (string) ob_get_clean();
 
-		$heading_position            = strpos( $html, 'Booster can’t open settings for Refused package' );
-		$refusal_position            = strpos( $html, 'Booster refused this package operation.' );
-		$development_safety_position = strpos( $html, '<strong>Development safety:</strong>' );
+		$heading_position = strpos( $html, 'Booster can’t open settings for Refused package' );
+		$refusal_position = strpos( $html, 'Booster refused this package operation.' );
 
-		foreach ( array( $heading_position, $refusal_position, $development_safety_position ) as $position ) {
+		foreach ( array( $heading_position, $refusal_position ) as $position ) {
 			self::assertIsInt( $position );
 		}
 		self::assertTrue( $heading_position < $refusal_position );
-		self::assertTrue( $refusal_position < $development_safety_position );
 		self::assertSame( 1, substr_count( $html, 'Booster refused this package operation.' ) );
-		self::assertSame( 1, substr_count( $html, '<strong>Development safety:</strong>' ) );
-		self::assertSame( 1, substr_count( $html, 'data-ran-booster-development-safety' ) );
+		self::assertSame( 0, substr_count( $html, 'data-ran-booster-development-safety' ) );
 	}
 }

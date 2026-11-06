@@ -55,8 +55,6 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 		<div id="the-list" class="plugin-group ran-booster-extensions__grid">
 		<?php foreach ( $extensions as $extension ) : ?>
 			<?php
-			$card_kind            = 'ran-booster-bitbucket' === $extension['id'] ? 'extensions' : '';
-			$card_class           = '' !== $card_kind ? ' ran-booster-card' : '';
 			$details_id           = 'ran-booster-extension-details-' . $extension['id'];
 			$details_url          = '#TB_inline?width=772&height=600&inlineId=' . $details_id;
 			$availability_label   = $extension['availability'];
@@ -70,7 +68,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 				$extension['name']
 			);
 			?>
-			<div class="plugin-card plugin-card-<?php echo esc_attr( $extension['id'] ); ?> ran-booster-extension-card<?php echo esc_attr( $card_class ); ?>" data-extension="<?php echo esc_attr( $extension['id'] ); ?>" data-ran-booster-card="<?php echo esc_attr( $card_kind ); ?>">
+			<div class="plugin-card plugin-card-<?php echo esc_attr( $extension['id'] ); ?> ran-booster-extension-card ran-booster-card" data-extension="<?php echo esc_attr( $extension['id'] ); ?>" data-ran-booster-card="extensions">
 				<div class="plugin-card-top">
 					<div class="name column-name">
 						<h3>

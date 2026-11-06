@@ -183,8 +183,9 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-page-shell ran-booster-extensions plugin-install-php"', $output );
 		self::assertSame( 2, substr_count( $output, 'class="plugin-card plugin-card-' ) );
 		self::assertSame( 2, substr_count( $output, 'class="plugin-card-top"' ) );
-		self::assertSame( 1, substr_count( $output, 'data-ran-booster-card="extensions"' ) );
+		self::assertSame( 2, substr_count( $output, 'data-ran-booster-card="extensions"' ) );
 		self::assertStringContainsString( 'data-extension="ran-booster-bitbucket" data-ran-booster-card="extensions"', $output );
+		self::assertStringContainsString( 'data-extension="ran-booster-wp-pusher-migrator" data-ran-booster-card="extensions"', $output );
 		self::assertSame( 2, substr_count( $output, 'class="name column-name"' ) );
 		self::assertSame( 2, substr_count( $output, 'class="desc column-description"' ) );
 		self::assertSame( 2, substr_count( $output, 'class="authors"' ) );

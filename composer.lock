@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "be198d4cd703a00af58e5ac892ca0c4b",
+    "content-hash": "28f79498ef32bedd80290416393fb4ea",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1721,16 +1721,16 @@
         },
         {
             "name": "ran/admin-shell",
-            "version": "dev-fix/whole-identity-home-link",
+            "version": "dev-fix/navigation-pointer-focus",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "61e3543eecf047cfd5e4cb51079162c79593ef81"
+                "reference": "5b8d58986503f2e00bcbc418214161db3ff6d3b2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/61e3543eecf047cfd5e4cb51079162c79593ef81",
-                "reference": "61e3543eecf047cfd5e4cb51079162c79593ef81",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/5b8d58986503f2e00bcbc418214161db3ff6d3b2",
+                "reference": "5b8d58986503f2e00bcbc418214161db3ff6d3b2",
                 "shasum": ""
             },
             "require": {
@@ -1786,10 +1786,10 @@
             ],
             "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/fix/whole-identity-home-link",
+                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/fix/navigation-pointer-focus",
                 "issues": "https://github.com/RocketsAreNostalgic/ran-admin-shell/issues"
             },
-            "time": "2026-11-05T07:48:21+00:00"
+            "time": "2026-11-06T12:18:38+00:00"
         },
         {
             "name": "ran/coding-standards",

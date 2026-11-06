@@ -1,10 +1,10 @@
 {
     "schema": 1,
     "package": "ran/admin-shell",
-    "version": "dev-fix/whole-identity-home-link",
-    "reference": "61e3543eecf047cfd5e4cb51079162c79593ef81",
+    "version": "dev-fix/navigation-pointer-focus",
+    "reference": "5b8d58986503f2e00bcbc418214161db3ff6d3b2",
     "files": {
-        "assets/ran-admin-shell.css": "sha256:1d83a2a60b491b160f3d463ee1ffe0ce361b246d716a9ebcf35a2617af2adc84",
+        "assets/ran-admin-shell.css": "sha256:36ecf34507b85194452eef3d0fa39fbcd5e01f5018852d7ddffaa27d5794e26b",
         "views/generated/ran-admin-shell.php": "sha256:6d1e8fe8e669ccd9e961a88211be831fa76a78709863d8ead943e45e28f7cc2d"
     }
 }

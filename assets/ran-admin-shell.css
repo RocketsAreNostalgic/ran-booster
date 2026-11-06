@@ -263,6 +263,7 @@ body.admin-bar .ran-admin-shell {
 	text-underline-offset: 0.2em;
 }
 
+.ran-admin-shell__navigation > a:focus,
 .ran-admin-shell a:focus-visible,
 .ran-admin-shell__actions > a.button:focus-visible {
 	box-shadow: none;

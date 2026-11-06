@@ -598,6 +598,39 @@ final class OnboardingViewTest extends TestCase {
 		}
 	}
 
+	public function test_both_headers_keep_one_protected_native_view_switch(): void {
+		foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
+			$extra    = array(
+				'view'         => $view,
+				'overview_url' => '/overview?keep=route',
+				'plugins_url'  => '/plugins',
+				'themes_url'   => '/themes',
+				'activity_url' => '/activity',
+			);
+			$html     = $this->render_view( null, null, $extra );
+			$document = new \DOMDocument();
+			$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+			$xpath = new \DOMXPath( $document );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@name="ran_booster[action]" and @value="overview-presentation"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form[@method="post" and @action="/overview?keep=route"][input[@name="_wpnonce" and @value="ran-booster-overview-presentation"]])' ) );
+			$target = 'onboarding' === $view ? 'dashboard' : 'onboarding';
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/input[@name="ran_booster[presentation]" and @value="' . $target . '"])' ) );
+			$label = 'onboarding' === $view ? 'Skip onboarding' : 'Return to onboarding';
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/button[@type="submit" and @class="button" and text()="' . $label . '"])' ) );
+			$heading     = 'onboarding' === $view ? 'Prepare your site' : 'Overview';
+			$description = 'onboarding' === $view ? 'Public repositories do not need credentials or webhooks.' : 'Review recent activity, managed packages and your site’s configuration.';
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/div/h2[@id="ran-booster-onboarding-heading" and @class="ran-booster-page-heading__title" and text()="' . $heading . '"]/following-sibling::p[@class="ran-booster-page-heading__description" ])' ) );
+			self::assertStringContainsString( $description, $html );
+			self::assertStringNotContainsString( 'ran-booster-onboarding__presentation-control', $html );
+			$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
+			try {
+				self::assertStringNotContainsString( 'overview-presentation', $this->render_view( null, null, $extra ) );
+			} finally {
+				unset( $GLOBALS['ran_booster_test_capabilities']['manage_options'] );
+			}
+		}
+	}
+
 	public function test_presentation_controls_and_activity_availability(): void {
 		$extra = array(
 			'view'         => 'dashboard',

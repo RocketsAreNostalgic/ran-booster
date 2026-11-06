@@ -8,9 +8,7 @@
 	container-type: inline-size;
 }
 
-.ran-booster-admin
-	.ran-booster-onboarding--setup
-	.ran-booster-onboarding__header {
+.ran-booster-admin .ran-booster-onboarding__header {
 	display: flex;
 	align-items: flex-start;
 	flex-wrap: wrap;
@@ -18,11 +16,30 @@
 	gap: var(--ran-booster-space-16);
 }
 
-.ran-booster-admin
-	.ran-booster-onboarding--setup
-	.ran-booster-onboarding__header
-	> form {
+.ran-booster-admin .ran-booster-onboarding__header > div {
+	min-inline-size: 0;
+	flex: 1;
+}
+
+.ran-booster-admin .ran-booster-onboarding__header > form {
+	max-inline-size: 100%;
+	flex-shrink: 0;
+	margin-block: 0;
 	margin-inline-start: auto;
+}
+
+.ran-booster-admin .ran-booster-onboarding__header .button {
+	white-space: normal;
+}
+
+@container (max-width: 699px) {
+	.ran-booster-admin .ran-booster-onboarding__header {
+		flex-direction: column;
+	}
+
+	.ran-booster-admin .ran-booster-onboarding__header > form {
+		margin-inline-start: 0;
+	}
 }
 
 .ran-booster-admin
@@ -233,11 +250,6 @@
 	border-inline-start: 2px solid var(--ran-booster-strong-divider);
 }
 
-.ran-booster-admin .ran-booster-onboarding__presentation-control {
-	margin-block-start: var(--ran-booster-space-24);
-	text-align: end;
-}
-
 .ran-booster-admin
 	.ran-booster-onboarding__header
 	.ran-booster-onboarding__actions {
@@ -284,10 +296,6 @@
 		border-block-start: 2px solid var(--ran-booster-strong-divider);
 		border-inline-start: 0;
 		padding-block-start: var(--ran-booster-space-8);
-	}
-
-	.ran-booster-admin .ran-booster-onboarding__presentation-control {
-		text-align: start;
 	}
 }
 

@@ -46,6 +46,101 @@
 	margin-block-start: var(--ran-booster-space-16);
 }
 
+/* One public Card direction preview; the native catalogue remains the fallback. */
+.ran-booster-admin .ran-booster-extension-card--wordpress {
+	border: 0;
+	background: transparent;
+}
+
+.ran-booster-extension-card--wordpress > .plugin-card-top,
+.ran-booster-extension-card--wordpress > .plugin-card-bottom {
+	display: none;
+}
+
+.ran-booster-extension-card__mount .components-card {
+	color: var(--ran-booster-text);
+}
+
+.ran-booster-admin .ran-booster-extension-card--wordpress .name,
+.ran-booster-admin .ran-booster-extension-card--wordpress .desc,
+.ran-booster-admin .ran-booster-extension-card--wordpress .action-links,
+.ran-booster-admin .ran-booster-extension-card--wordpress .column-rating,
+.ran-booster-admin
+	.ran-booster-extension-card--wordpress
+	.column-compatibility {
+	position: static;
+	float: none;
+	inline-size: auto;
+	margin: 0;
+	text-align: start;
+}
+
+.ran-booster-extension-card--wordpress .name h3 {
+	margin: 0;
+	font-size: 18px;
+	line-height: 1.4;
+}
+
+.ran-booster-extension-card--wordpress .name a {
+	display: flex;
+	flex-direction: row-reverse;
+	justify-content: flex-end;
+	align-items: center;
+	gap: var(--ran-booster-space-16);
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-extension-card--wordpress .plugin-icon {
+	position: static;
+	flex: 0 0 64px;
+	inline-size: 64px;
+	block-size: 64px;
+	margin: 0;
+}
+
+.ran-booster-extension-card--wordpress .desc p:first-child {
+	margin-block-start: 0;
+}
+
+.ran-booster-extension-card--wordpress .desc > p {
+	margin-inline: 0;
+}
+
+.ran-booster-extension-card--wordpress .desc .authors {
+	margin-block-end: var(--ran-booster-space-16);
+}
+
+.ran-booster-extension-card--wordpress .column-rating {
+	max-inline-size: none;
+	margin-block-end: var(--ran-booster-space-12);
+}
+
+.ran-booster-extension-card--wordpress .column-compatibility {
+	padding: 0;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-extension-card--wordpress .action-links {
+	inline-size: 100%;
+}
+
+.ran-booster-extension-card--wordpress .plugin-action-buttons,
+.ran-booster-extension-card--wordpress .plugin-action-buttons > li {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-12);
+	margin: 0;
+}
+
+.ran-booster-extension-card--wordpress .plugin-action-buttons {
+	float: none;
+}
+
+.ran-booster-extension-card--wordpress .plugin-action-buttons br {
+	display: none;
+}
+
 /* Keep the selected extension modal within the viewport, including its close button. */
 /* stylelint-disable selector-id-pattern, declaration-no-important -- ThickBox owns the ID and writes dimensions and margins inline. */
 #TB_window.ran-booster-extension-modal {

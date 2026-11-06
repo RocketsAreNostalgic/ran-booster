@@ -824,6 +824,15 @@ class Booster {
 				true
 			);
 			wp_enqueue_script( 'ran-booster-extension-details' );
+			wp_enqueue_style( 'wp-components' );
+			wp_register_script(
+				'ran-booster-extension-card',
+				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-extension-card.js',
+				array( 'wp-element', 'wp-components' ),
+				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extension-card.js' ),
+				true
+			);
+			wp_enqueue_script( 'ran-booster-extension-card' );
 			return;
 		}
 

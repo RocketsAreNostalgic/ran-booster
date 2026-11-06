@@ -131,11 +131,13 @@ for (const version of ['7.0', '7.1.4']) {
 		const available = scenario === 'ready' || scenario === 'delayed';
 		const label = `${version}-${scenario}`;
 		const context = await browser.newContext({
+			serviceWorkers: 'block',
 			viewport: { width: 1200, height: 850 },
 		});
 		const page = await context.newPage();
 		const errors = [];
 		const stylesheetResponses = [];
+		const unexpectedRequests = {};
 		let visualMetrics = null;
 		page.on('response', (response) => {
 			if (response.request().resourceType() === 'stylesheet') {
@@ -145,7 +147,11 @@ for (const version of ['7.0', '7.1.4']) {
 				});
 			}
 		});
-		page.on('pageerror', (error) => errors.push(error.message));
+		page.on('pageerror', (error) =>
+			errors.push(
+				error.message.replace(/https?:\/\/[^\s)]+/g, '[redacted URL]')
+			)
+		);
 		const pending = [];
 		const uiRequests = [];
 		const wpScripts = scripts(version);
@@ -161,8 +167,15 @@ for (const version of ['7.0', '7.1.4']) {
 				: '') +
 			`<script type="module">const a = await import('/ui/${uiManifest.foundation}'); const b = await import('/ui/${uiManifest.foundation}'); window.foundationIdentity = a === b;</script>` +
 			'<script src="/picker.js"></script>';
-		await page.route('http://picker.test/**', async (route) => {
+		await page.route('**/*', async (route) => {
 			const url = new URL(route.request().url());
+			if (url.origin !== 'http://picker.test') {
+				const category = route.request().resourceType();
+				unexpectedRequests[category] =
+					(unexpectedRequests[category] || 0) + 1;
+				await route.abort();
+				return;
+			}
 			if (url.pathname.startsWith('/ui/')) {
 				uiRequests.push(url.pathname + url.search);
 				const name = path.basename(url.pathname);
@@ -714,10 +727,12 @@ for (const version of ['7.0', '7.1.4']) {
 					0
 				);
 			}
+			assert.deepEqual(unexpectedRequests, {});
 			assert.deepEqual(errors, []);
 			evidence.push({
 				label,
 				passed: true,
+				unexpectedRequests,
 				visualMetrics,
 				stylesheetResponses,
 			});
@@ -728,6 +743,7 @@ for (const version of ['7.0', '7.1.4']) {
 				passed: false,
 				error: error.stack,
 				pageErrors: errors,
+				unexpectedRequests,
 				visualMetrics,
 				stylesheetResponses,
 			});

@@ -160,7 +160,37 @@
 }
 
 .ran-booster-admin .ran-booster-diagnostic-status {
+	box-sizing: border-box;
+	max-inline-size: 100%;
+	padding-block: 0;
+	padding-inline: var(--ran-booster-space-8);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: 18px;
 	vertical-align: top;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-diagnostic-status::before {
+	display: none;
+}
+
+.ran-booster-admin .ran-booster-diagnostic-status.ran-booster-badge--ok {
+	--ran-booster-status-utility-color: var(--ran-booster-color-green-500);
+}
+
+.ran-booster-admin .ran-booster-diagnostic-status.ran-booster-badge--warning {
+	--ran-booster-status-utility-color: #8a5b00;
+}
+
+@media (forced-colors: active) {
+	.ran-booster-admin .ran-booster-diagnostic-status {
+		border-color: CanvasText;
+		background: Canvas;
+		color: CanvasText;
+		forced-color-adjust: auto;
+	}
 }
 
 .ran-booster-admin .ran-booster-troubleshooting__results textarea {

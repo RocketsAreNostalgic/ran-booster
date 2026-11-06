@@ -360,6 +360,12 @@ final class AdminAssetContractTest extends TestCase {
 
 		self::assertIsString( $component_css );
 
+		// Keep the approved diagnostic contrast exception separate from shared tokens.
+		$diagnostic_warning = ".ran-booster-admin .ran-booster-diagnostic-status.ran-booster-badge--warning {\n"
+			. "\t--ran-booster-status-utility-color: #8a5b00;\n}\n";
+		self::assertSame( 1, substr_count( $component_css, $diagnostic_warning ) );
+		$component_css = str_replace( $diagnostic_warning, '', $component_css );
+
 		self::assertStringContainsString( ':root {', $css );
 		self::assertStringContainsString( '--ran-booster-layer-modal: 100000;', $css );
 		self::assertStringContainsString( '--ran-booster-shadow-surface:', $css );

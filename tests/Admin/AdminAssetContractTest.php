@@ -87,7 +87,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-activity__table', $css );
 
 		self::assertStringContainsString( '.ran-booster-dialog {', $css );
-		self::assertStringContainsString( "\n.ran-booster-repository-picker__dialog {", $css );
+		self::assertStringContainsString( "\n.ran-booster-repository-picker-modal {", $css );
 		self::assertStringContainsString( "\nbody.ran-booster-repository-picker-open {", $css );
 		self::assertStringContainsString( 'overflow: hidden;', $css );
 	}
@@ -346,8 +346,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-dialog__header', $modals );
 		self::assertStringNotContainsString( '.ran-booster-credential-modal {', $credential_styles );
 		self::assertStringNotContainsString( 'box-shadow: var(--ran-booster-shadow-modal);', $credential_styles );
-		self::assertStringContainsString( 'ran-booster-repository-picker ran-booster-dialog', $picker_script );
-		self::assertStringContainsString( 'ran-booster-repository-picker__dialog ran-booster-dialog__surface', $picker_script );
+		self::assertStringContainsString( 'dialog.Popup,', $picker_script );
+		self::assertStringNotContainsString( 'ran-booster-dialog__surface', $picker_script );
 		self::assertStringContainsString( "'%s to add a search credential for more reliable repository lookup.'", $picker_script );
 		self::assertStringContainsString( 'credentialsLink.replaceWith(', $picker_script );
 		self::assertStringNotContainsString( "'to add a search credential for more reliable repository lookup.'", $picker_script );
@@ -435,10 +435,11 @@ final class AdminAssetContractTest extends TestCase {
 		$credential_script = $this->asset( 'ran-booster-secure-inputs.js' );
 		$picker_script     = $this->asset( 'ran-booster-repository-picker.js' );
 
-		self::assertStringContainsString( 'document.body.appendChild(modal);', $picker_script );
-		self::assertGreaterThanOrEqual( 1, substr_count( $picker_script, "event.key === 'Escape'" ) );
-		self::assertStringContainsString( 'activeButton.focus();', $picker_script );
-		self::assertGreaterThanOrEqual( 2, substr_count( $picker_script, 'trapFocus(' ) );
+		self::assertStringContainsString( 'onOpenChange(open)', $picker_script );
+		self::assertStringContainsString( 'onOpenChangeComplete(open)', $picker_script );
+		self::assertStringContainsString( 'finalFocus()', $picker_script );
+		self::assertStringContainsString( 'root.unmount();', $picker_script );
+		self::assertStringNotContainsString( 'function trapFocus(', $picker_script );
 		self::assertMatchesRegularExpression(
 			"/document\\.body\\.classList\\.add\\(\\s*'ran-booster-repository-picker-open'\\s*\\);/",
 			$picker_script

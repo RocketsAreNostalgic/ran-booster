@@ -790,71 +790,91 @@ test('General feedback requires the matching response and falls back when Core r
 	}
 });
 
-test('focused Snackbar dismissal restores focus when General Save is unavailable', () => {
-	for (const scenario of ['disabled', 'removed', 'focus-fails', 'cleanup']) {
-		const focused = {};
-		const ownerDocument = { activeElement: focused };
-		const host = {
-			ownerDocument,
-			contains: (element) => element === focused,
-		};
-		let saveAttempts = 0;
-		let fallbackAttempts = 0;
-		let failedFallbackAttempts = 0;
-		const save = {
-			isConnected: scenario !== 'removed',
-			disabled: scenario === 'disabled',
-			focus() {
-				saveAttempts++;
-				if (scenario !== 'focus-fails') {
-					ownerDocument.activeElement = save;
-				}
+test('Snackbar dismissal focuses the first eligible control in the viewport', () => {
+	const focused = {};
+	const ownerDocument = { activeElement: focused };
+	const host = { ownerDocument, contains: (element) => element === focused };
+	const attempts = [];
+	const candidate = (name, options = {}) => ({
+		isConnected: options.connected !== false,
+		disabled: Boolean(options.disabled),
+		getClientRects: () => (options.hidden ? [] : [{}]),
+		getBoundingClientRect: () =>
+			options.offscreen
+				? { left: 0, top: -50, right: 50, bottom: -10 }
+				: { left: 10, top: 10, right: 50, bottom: 50 },
+		focus(settings) {
+			assert.deepEqual(settings, { preventScroll: true });
+			attempts.push(name);
+			if (!options.fail) {
+				ownerDocument.activeElement = this;
+			}
+		},
+	});
+	const save = candidate('save', { offscreen: true });
+	const hidden = candidate('hidden', { hidden: true });
+	const disabled = candidate('disabled', { disabled: true });
+	const disconnected = candidate('disconnected', { connected: false });
+	const removed = candidate('removed');
+	const failed = candidate('failed', { fail: true });
+	const visible = candidate('visible');
+	const admin = candidate('admin');
+	const document = {
+		querySelectorAll(selector) {
+			if (selector.includes('save-numeric-bottom')) {
+				return [save];
+			}
+			if (selector.includes('wpadminbar')) {
+				return [admin];
+			}
+			return [hidden, disabled, disconnected, removed, failed, visible];
+		},
+	};
+	const restore = loadFunction('restoreSnackbarFocus', {
+		document,
+		window: { innerWidth: 320, innerHeight: 600 },
+		snackbar: { host },
+	});
+	restore({ contains: (element) => element === removed });
+	assert.deepEqual(attempts, ['failed', 'visible']);
+	assert.equal(ownerDocument.activeElement, visible);
+	ownerDocument.activeElement = {};
+	restore();
+	assert.deepEqual(
+		attempts,
+		['failed', 'visible'],
+		'Focus outside the Snackbar is not moved.'
+	);
+});
+
+test('Snackbar dismissal leaves focus alone when no candidate is visible', () => {
+	const focused = {};
+	const host = {
+		ownerDocument: { activeElement: focused },
+		contains: (item) => item === focused,
+	};
+	const document = {
+		querySelectorAll: () => [
+			{
+				isConnected: true,
+				disabled: false,
+				getClientRects: () => [{}],
+				getBoundingClientRect: () => ({
+					left: 0,
+					right: 20,
+					top: 650,
+					bottom: 680,
+				}),
+				focus: () => assert.fail('Off-screen control was focused.'),
 			},
-		};
-		const fallback = {
-			getClientRects: () => [{}],
-			focus(options) {
-				assert.equal(
-					options,
-					undefined,
-					'Allow visible focus to scroll into view.'
-				);
-				fallbackAttempts++;
-				ownerDocument.activeElement = fallback;
-			},
-		};
-		const document = {
-			querySelector: () => save,
-			querySelectorAll: () => [
-				{
-					getClientRects: () => [],
-					focus: () => assert.fail('Hidden link focused.'),
-				},
-				{
-					getClientRects: () => [{}],
-					focus: () => failedFallbackAttempts++,
-				},
-				fallback,
-			],
-		};
-		const restore = loadFunction('restoreSnackbarFocus', {
-			document,
-			snackbar: { host },
-		});
-		restore(
-			scenario === 'cleanup'
-				? { contains: (element) => element === save }
-				: null
-		);
-		assert.equal(ownerDocument.activeElement, fallback, scenario);
-		assert.equal(fallbackAttempts, 1, scenario);
-		assert.equal(failedFallbackAttempts, 1, scenario);
-		assert.equal(
-			saveAttempts,
-			scenario === 'focus-fails' ? 1 : 0,
-			scenario
-		);
-	}
+		],
+	};
+	loadFunction('restoreSnackbarFocus', {
+		document,
+		window: { innerWidth: 320, innerHeight: 600 },
+		snackbar: { host },
+	})();
+	assert.equal(host.ownerDocument.activeElement, focused);
 });
 
 test('General response from a detached source cannot replace a newer target', () => {

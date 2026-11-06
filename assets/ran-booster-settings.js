@@ -213,6 +213,7 @@
 				event.preventDefault();
 				return;
 			}
+			const origin = state.form.ownerDocument.activeElement;
 			const record = {
 				state,
 				desired: state.toggle?.checked,
@@ -222,7 +223,10 @@
 				),
 				token: state.form.elements.namedItem('ran_booster[token]')
 					.value,
-				focus: null,
+				focus: state.form.parentElement.contains(origin)
+					? origin.id
+					: null,
+				active: origin,
 				applied: false,
 			};
 			state.flight = record;
@@ -244,24 +248,69 @@
 				event.preventDefault();
 				return;
 			}
-			const parsed = new window.DOMParser().parseFromString(
-				event.detail.xhr.responseText,
-				'text/html'
-			);
-			const responseForm = parsed
-				.getElementById(`ran-booster-general-${state.scope}`)
-				?.querySelector(selector);
-			if (
-				!responseForm ||
-				responseForm.dataset.ranBoosterSettingsScope !== state.scope ||
-				!responseForm.elements.namedItem('ran_booster[token]')?.value
-			) {
+			try {
+				const parsed = new window.DOMParser().parseFromString(
+					event.detail.xhr.responseText,
+					'text/html'
+				);
+				const responseForm = parsed
+					.getElementById(`ran-booster-general-${state.scope}`)
+					?.querySelector(selector);
+				const baseline = JSON.parse(
+					responseForm?.dataset.ranBoosterBaseline || 'null'
+				);
+				if (
+					!responseForm ||
+					responseForm.dataset.ranBoosterSettingsScope !==
+						state.scope ||
+					!responseForm.elements.namedItem('ran_booster[token]')
+						?.value ||
+					!responseForm.querySelector(
+						'[data-ran-booster-admin-mutation-error]'
+					) ||
+					!responseForm.querySelector(
+						state.toggle
+							? '[data-ran-booster-toggle-status]'
+							: '[data-ran-booster-unsaved]'
+					) ||
+					!responseForm.querySelector(
+						state.toggle
+							? '[data-ran-booster-toggle-save]'
+							: '#ran-booster-save-numeric-bottom'
+					) ||
+					!record.values.every(([name]) =>
+						responseForm.elements.namedItem(name)
+					) ||
+					!Array.isArray(baseline) ||
+					!baseline.every(
+						(pair) =>
+							Array.isArray(pair) &&
+							pair.length === 2 &&
+							typeof pair[0] === 'string' &&
+							typeof pair[1] === 'string' &&
+							Number.isFinite(Number(pair[1]))
+					) ||
+					(state.toggle &&
+						(!responseForm.querySelector('input[role="switch"]') ||
+							!['0', '1'].includes(
+								responseForm.dataset.ranBoosterConfirmed
+							)))
+				) {
+					event.preventDefault();
+					return;
+				}
+			} catch {
 				event.preventDefault();
 				return;
 			}
 			const active = state.form.ownerDocument.activeElement;
-			record.focus = record.region.contains(active) ? active.id : null;
-			record.active = active;
+			if (record.region.contains(active)) {
+				record.focus = active.id;
+				record.active = active;
+			} else if (active !== state.form.ownerDocument.body) {
+				record.focus = null;
+				record.active = active;
+			}
 			try {
 				const message = JSON.parse(
 					event.detail.xhr.getResponseHeader('HX-Trigger-After-Swap')

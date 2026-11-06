@@ -34,6 +34,7 @@ function harness({ enhanced = true } = {}) {
 	};
 	const document = {
 		activeElement: null,
+		body: {},
 		addEventListener: (name, fn) => on(listeners, name, fn),
 		querySelectorAll: () =>
 			[...regions.values()].map((region) => region.form),
@@ -46,6 +47,7 @@ function harness({ enhanced = true } = {}) {
 				for (const element of [
 					region.form.toggle,
 					region.form.numeric,
+					region.form.save,
 					region.form.error,
 				]) {
 					if (element?.id === id) {
@@ -61,12 +63,12 @@ function harness({ enhanced = true } = {}) {
 		...(enhanced ? { htmx: { process() {} } } : {}),
 		DOMParser: class {
 			parseFromString(body) {
+				const [scope, mode] = body.split(':');
 				return {
 					getElementById(id) {
 						if (
-							body === 'missing' ||
-							id !==
-								`ran-booster-general-${body.replace(':empty', '')}`
+							scope === 'missing' ||
+							id !== `ran-booster-general-${scope}`
 						) {
 							return null;
 						}
@@ -74,19 +76,39 @@ function harness({ enhanced = true } = {}) {
 							querySelector() {
 								return {
 									dataset: {
-										ranBoosterSettingsScope: body.replace(
-											':empty',
-											''
-										),
+										ranBoosterSettingsScope: scope,
+										ranBoosterConfirmed: '0',
+										ranBoosterBaseline:
+											mode === 'baseline'
+												? '[bad'
+												: baseline('2000'),
 									},
 									elements: {
 										namedItem() {
 											return {
-												value: body.endsWith(':empty')
-													? ''
-													: 'valid-token',
+												value:
+													mode === 'empty'
+														? ''
+														: 'valid-token',
 											};
 										},
+									},
+									querySelector(selector) {
+										if (
+											mode === 'error' &&
+											selector ===
+												'[data-ran-booster-admin-mutation-error]'
+										) {
+											return null;
+										}
+										if (
+											mode === 'save' &&
+											selector ===
+												'#ran-booster-save-numeric-bottom'
+										) {
+											return null;
+										}
+										return {};
 									},
 								};
 							},
@@ -231,6 +253,10 @@ function harness({ enhanced = true } = {}) {
 				this.form.ownerDocument.activeElement = this;
 			},
 		});
+		form.save =
+			scope === 'numeric'
+				? element('ran-booster-save-numeric-bottom')
+				: null;
 		form.error = {
 			...element(`error-${scope}`),
 			hidden: !failed,
@@ -733,7 +759,13 @@ test('out-of-band and duplicate swaps do not process the General response', () =
 });
 
 test('malformed response body or missing token vetoes swap and preserves numeric draft', () => {
-	for (const body of ['missing', 'numeric:empty']) {
+	for (const body of [
+		'missing',
+		'numeric:empty',
+		'numeric:error',
+		'numeric:save',
+		'numeric:baseline',
+	]) {
 		const h = harness();
 		h.numeric.value = '2500';
 		const xhr = start(h, h.numeric);
@@ -764,4 +796,29 @@ test('non-string success message does not confirm a saved marker', () => {
 		assert.equal(next.token, 'original');
 		assert.match(next.status.textContent, /unconfirmed/i);
 	}
+});
+
+test('focused numeric Save restores button or focuses error after busy blur', () => {
+	for (const saved of [true, false]) {
+		const h = harness();
+		h.document.activeElement = h.numeric.save;
+		const xhr = start(h, h.numeric);
+		h.document.activeElement = h.document.body;
+		h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+		const next = h.replace(h.make('numeric', { saved, failed: !saved }));
+		h.doc('htmx:afterSwap', { detail: { xhr } });
+		assert.equal(h.document.activeElement, saved ? next.save : next.error);
+	}
+});
+
+test('numeric Save does not reclaim focus when user moved outside during flight', () => {
+	const h = harness();
+	h.document.activeElement = h.numeric.save;
+	const xhr = start(h, h.numeric);
+	const outside = { id: 'outside' };
+	h.document.activeElement = outside;
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	h.replace(h.make('numeric', { failed: true }));
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	assert.equal(h.document.activeElement, outside);
 });

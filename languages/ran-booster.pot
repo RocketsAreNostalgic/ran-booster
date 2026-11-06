@@ -1352,7 +1352,7 @@ msgid "An add-on guide is temporarily unavailable. Check plugin compatibility an
 msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
-#: assets/ran-booster-enhanced-mutations.js:938
+#: assets/ran-booster-enhanced-mutations.js:944
 msgid "We could not complete that request. Please try again."
 msgstr ""
 
@@ -9973,14 +9973,14 @@ msgstr ""
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
 #: views/settings-general.php:136
-#: assets/ran-booster-settings.js:327
+#: assets/ran-booster-settings.js:351
 msgid "On"
 msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
 #: views/settings-general.php:136
-#: assets/ran-booster-settings.js:328
+#: assets/ran-booster-settings.js:352
 msgid "Off"
 msgstr ""
 
@@ -11459,7 +11459,7 @@ msgstr ""
 msgid "Leave Settings with unsaved or unconfirmed changes?"
 msgstr ""
 
-#: assets/ran-booster-settings.js:331
+#: assets/ran-booster-settings.js:355
 msgid "Settings changed before confirmation. Review the current saved values before retrying:"
 msgstr ""
 

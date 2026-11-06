@@ -68,7 +68,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 				$extension['name']
 			);
 			?>
-			<div class="plugin-card plugin-card-<?php echo esc_attr( $extension['id'] ); ?> ran-booster-extension-card" data-extension="<?php echo esc_attr( $extension['id'] ); ?>"<?php if ( 'ran-booster-bitbucket' === $extension['id'] ) : ?> data-ran-booster-card-preview="true"<?php endif; ?>>
+			<div class="plugin-card plugin-card-<?php echo esc_attr( $extension['id'] ); ?> ran-booster-extension-card" data-extension="<?php echo esc_attr( $extension['id'] ); ?>" data-ran-booster-card-preview="<?php echo 'ran-booster-bitbucket' === $extension['id'] ? 'true' : 'false'; ?>">
 				<div class="plugin-card-top">
 					<div class="name column-name">
 						<h3>

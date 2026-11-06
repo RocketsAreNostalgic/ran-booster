@@ -8,11 +8,19 @@ const source = fs.readFileSync(
 	'utf8'
 );
 
-function fixture({ css = true, runtime = true, fail = false } = {}) {
+function fixture({
+	css = 'loaded',
+	runtime = true,
+	cardComponent = true,
+	fail = false,
+	moveFail = false,
+} = {}) {
 	const listeners = new Map();
 	const microtasks = [];
 	let renders = 0;
 	let unmounts = 0;
+	let renderedTree;
+	let moveFailed = false;
 	class Node {
 		constructor(name) {
 			this.name = name;
@@ -25,6 +33,10 @@ function fixture({ css = true, runtime = true, fail = false } = {}) {
 			};
 		}
 		appendChild(node) {
+			if (moveFail && this.slot === 'bottom' && !moveFailed) {
+				moveFailed = true;
+				throw new Error('move failed');
+			}
 			node.remove();
 			this.children.push(node);
 			node.parent = this;
@@ -99,17 +111,27 @@ function fixture({ css = true, runtime = true, fail = false } = {}) {
 	['metadata', 'compatibility'].forEach((name) =>
 		bottom.appendChild(nodes[name])
 	);
-	card.lookup = {
-		'.plugin-card-top .name.column-name': nodes.name,
-		'.plugin-card-top .action-links': nodes.actions,
-		'.plugin-card-top .desc.column-description': nodes.description,
-		'.plugin-card-bottom .ran-booster-extension-card__metadata':
-			nodes.metadata,
-		'.plugin-card-bottom .column-compatibility': nodes.compatibility,
-	};
+	card.lookup = { '.plugin-card-top': top, '.plugin-card-bottom': bottom };
+	const form = new Node('form');
+	const link = new Node('link');
+	nodes.actions.appendChild(form);
+	nodes.name.appendChild(link);
 	document.readyState = 'complete';
-	document.getElementById = () =>
-		css ? { sheet: { cssRules: [{}] } } : null;
+	document.getElementById = () => {
+		if (css === 'missing') {
+			return null;
+		}
+		if (css === 'unreadable') {
+			return {
+				sheet: {
+					get cssRules() {
+						throw new Error('unreadable');
+					},
+				},
+			};
+		}
+		return { sheet: { cssRules: css === 'empty' ? [] : [{}] } };
+	};
 	document.createElement = (name) => new Node(name);
 	document.createComment = () => new Node('comment');
 	document.addEventListener = (type, listener) => {
@@ -127,6 +149,7 @@ function fixture({ css = true, runtime = true, fail = false } = {}) {
 		createRoot: (host) => ({
 			render(tree) {
 				renders++;
+				renderedTree = tree;
 				if (fail) {
 					throw new Error('render failed');
 				}
@@ -148,10 +171,7 @@ function fixture({ css = true, runtime = true, fail = false } = {}) {
 				wp: {
 					element,
 					components: {
-						Card: 'Card',
-						CardHeader: 'CardHeader',
-						CardBody: 'CardBody',
-						CardFooter: 'CardFooter',
+						Card: cardComponent ? 'Card' : null,
 					},
 				},
 			}
@@ -172,6 +192,9 @@ function fixture({ css = true, runtime = true, fail = false } = {}) {
 		top,
 		bottom,
 		nodes,
+		form,
+		link,
+		tree: () => renderedTree,
 		run,
 		emit,
 		microtasks,
@@ -179,60 +202,54 @@ function fixture({ css = true, runtime = true, fail = false } = {}) {
 	};
 }
 
-test('moves original nodes once, and restores them before cleanup', () => {
+test('moves intact subtrees once and restores them before cleanup and remount', () => {
 	const f = fixture();
 	f.run();
 	f.run();
 	f.emit('htmx:load');
 	assert.deepEqual(f.counts(), { renders: 1, unmounts: 0 });
-	assert.equal(f.nodes.name.parent.slot, 'name');
-	assert.equal(f.nodes.actions.parent.slot, 'actions');
-	assert.equal(
-		f.card.classes.has('ran-booster-extension-card--wordpress'),
-		true
-	);
+	assert.equal(f.tree().type, 'Card');
+	assert.equal(f.tree().props.isBorderless, true);
+	assert.equal(f.tree().props.isRounded, false);
+	assert.equal(f.top.parent.slot, 'top');
+	assert.equal(f.bottom.parent.slot, 'bottom');
+	assert.equal(f.nodes.actions.children[0], f.form);
+	assert.equal(f.nodes.name.children[0], f.link);
 	f.emit('htmx:beforeCleanupElement', f.document);
-	assert.deepEqual(f.top.children, [
-		f.nodes.name,
-		f.nodes.actions,
-		f.nodes.description,
-	]);
-	assert.deepEqual(f.bottom.children, [
-		f.nodes.metadata,
-		f.nodes.compatibility,
-	]);
-	assert.deepEqual(f.counts(), { renders: 1, unmounts: 1 });
-});
-
-test('history saves native nodes before reenhancing and can restore again', () => {
-	const f = fixture();
-	f.run();
-	f.emit('htmx:beforeHistorySave');
-	assert.equal(f.nodes.actions.parent, f.top);
-	assert.equal(
-		f.card.classes.has('ran-booster-extension-card--wordpress'),
-		false
-	);
-	f.microtasks.shift()();
-	f.emit('htmx:historyRestore');
-	assert.equal(f.nodes.actions.parent.slot, 'actions');
+	assert.deepEqual(f.card.children, [f.top, f.bottom]);
+	assert.equal(f.nodes.actions.children[0], f.form);
+	assert.equal(f.nodes.name.children[0], f.link);
+	f.emit('htmx:load');
+	assert.equal(f.top.parent.slot, 'top');
 	assert.deepEqual(f.counts(), { renders: 2, unmounts: 1 });
 });
 
-test('missing prerequisites and render failure leave the original card intact', () => {
+test('history saves native subtrees before reenhancing and restores again', () => {
+	const f = fixture();
+	f.run();
+	f.emit('htmx:beforeHistorySave');
+	assert.deepEqual(f.card.children, [f.top, f.bottom]);
+	f.microtasks.shift()();
+	f.emit('htmx:historyRestore');
+	assert.equal(f.top.parent.slot, 'top');
+	assert.equal(f.nodes.actions.children[0], f.form);
+	assert.deepEqual(f.counts(), { renders: 2, unmounts: 1 });
+});
+
+test('missing prerequisites and partial failures leave the original subtrees intact', () => {
 	for (const options of [
-		{ css: false },
+		{ css: 'missing' },
+		{ css: 'empty' },
+		{ css: 'unreadable' },
 		{ runtime: false },
+		{ cardComponent: false },
 		{ fail: true },
+		{ moveFail: true },
 	]) {
 		const f = fixture(options);
 		f.run();
-		assert.equal(f.nodes.name.parent, f.top);
-		assert.equal(f.nodes.compatibility.parent, f.bottom);
-		assert.equal(
-			f.card.classes.has('ran-booster-extension-card--wordpress'),
-			false
-		);
-		assert.equal(f.card.children.length, 2);
+		assert.deepEqual(f.card.children, [f.top, f.bottom]);
+		assert.equal(f.nodes.actions.children[0], f.form);
+		assert.equal(f.nodes.name.children[0], f.link);
 	}
 });

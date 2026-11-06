@@ -9,11 +9,8 @@
 	const selector = '[data-ran-booster-card-preview="true"]';
 	const roots = new Map();
 	const parts = {
-		name: '.plugin-card-top .name.column-name',
-		description: '.plugin-card-top .desc.column-description',
-		metadata: '.plugin-card-bottom .ran-booster-extension-card__metadata',
-		compatibility: '.plugin-card-bottom .column-compatibility',
-		actions: '.plugin-card-top .action-links',
+		top: '.plugin-card-top',
+		bottom: '.plugin-card-bottom',
 	};
 
 	function restore(card) {
@@ -24,7 +21,6 @@
 		entry.nodes.forEach(({ node, marker }) => {
 			marker.replaceWith(node);
 		});
-		card.classList.remove('ran-booster-extension-card--wordpress');
 		entry.root.unmount();
 		entry.host.remove();
 		roots.delete(card);
@@ -51,10 +47,7 @@
 			!element.createElement ||
 			!element.flushSync ||
 			!components ||
-			!components.Card ||
-			!components.CardHeader ||
-			!components.CardBody ||
-			!components.CardFooter
+			!components.Card
 		) {
 			return;
 		}
@@ -79,16 +72,9 @@
 				root.render(
 					h(
 						components.Card,
-						null,
-						h(components.CardHeader, null, slot('name')),
-						h(
-							components.CardBody,
-							null,
-							slot('description'),
-							slot('metadata'),
-							slot('compatibility')
-						),
-						h(components.CardFooter, null, slot('actions'))
+						{ isBorderless: true, isRounded: false },
+						slot('top'),
+						slot('bottom')
 					)
 				);
 			});
@@ -107,7 +93,6 @@
 				part.slot.appendChild(part.node);
 			});
 			roots.set(card, { root, host, nodes });
-			card.classList.add('ran-booster-extension-card--wordpress');
 		} catch {
 			nodes.forEach(({ node, marker }) => {
 				if (marker) {

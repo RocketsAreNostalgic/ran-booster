@@ -1,7 +1,3 @@
-.ran-booster-admin--packages {
-	max-inline-size: 1400px;
-}
-
 .ran-booster-admin .ran-booster-package-intro {
 	display: grid;
 	gap: var(--ran-booster-space-16);

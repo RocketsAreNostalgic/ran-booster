@@ -1,8 +1,4 @@
 /* Release-bundled Extensions catalogue using WordPress plugin-card markup. */
-.ran-booster-admin--extensions {
-	max-inline-size: 1400px;
-}
-
 .ran-booster-extensions__body {
 	padding-block-start: 0;
 }

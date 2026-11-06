@@ -451,7 +451,7 @@ test('picker lifecycle re-fetches restored context and persists empty filters', 
 	);
 	assert.match(
 		source,
-		/currentProviderState\(\)\[activeMode\]\.filter = search\.value/
+		/currentProviderState\(\)\[\s*activeMode\s*\]\.filter = value/
 	);
 	assert.match(source, /search\.value = providerState\[activeMode\]\.filter/);
 	assert.match(

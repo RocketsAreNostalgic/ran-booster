@@ -1150,7 +1150,6 @@
 	min-block-size: 1.5em;
 }
 
-.ran-booster-admin [data-ran-booster-toggle-save][hidden],
-.ran-booster-admin [data-ran-booster-native-toggle][hidden] {
+.ran-booster-admin [data-ran-booster-toggle-save][hidden] {
 	display: none;
 }

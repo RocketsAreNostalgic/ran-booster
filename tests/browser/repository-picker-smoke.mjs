@@ -115,6 +115,16 @@ for (const version of ['7.0', '7.1.4']) {
 		});
 		const page = await context.newPage();
 		const errors = [];
+		const stylesheetResponses = [];
+		let visualMetrics = null;
+		page.on('response', (response) => {
+			if (response.request().resourceType() === 'stylesheet') {
+				stylesheetResponses.push({
+					url: response.url(),
+					status: response.status(),
+				});
+			}
+		});
 		page.on('pageerror', (error) => errors.push(error.message));
 		const pending = [];
 		await page.route('http://picker.test/**', async (route) => {
@@ -181,6 +191,13 @@ for (const version of ['7.0', '7.1.4']) {
 		});
 		try {
 			await page.goto('http://picker.test/');
+			assert.ok(stylesheetResponses.length > 0);
+			assert.ok(
+				stylesheetResponses.every(
+					(response) => response.status === 200
+				),
+				JSON.stringify(stylesheetResponses)
+			);
 			for (const script of scripts(version, available)) {
 				await page.addScriptTag({ url: `/wp-includes/${script}` });
 			}
@@ -270,6 +287,63 @@ for (const version of ['7.0', '7.1.4']) {
 				await page.screenshot({
 					path: path.join(output, `${label}-open.png`),
 				});
+				visualMetrics = await page
+					.locator('.ran-booster-repository-picker__public-search')
+					.evaluate((form) => {
+						const searchButton = form.querySelector('button');
+						const ownerField = form.querySelector(
+							'.ran-booster-repository-picker__owner'
+						);
+						const select = form.querySelector('select');
+						const b = window.getComputedStyle(searchButton),
+							s = window.getComputedStyle(select);
+						const br = searchButton.getBoundingClientRect(),
+							or = ownerField.getBoundingClientRect();
+						return {
+							button: {
+								background: b.backgroundColor,
+								minHeight: b.minHeight,
+								height: br.height,
+								paddingInline: b.paddingInline,
+								centerDifference: Math.abs(
+									(br.top + br.bottom - or.top - or.bottom) /
+										2
+								),
+							},
+							select: {
+								appearance: s.appearance,
+								backgroundImage: s.backgroundImage,
+								backgroundPosition: s.backgroundPosition,
+								paddingInlineEnd: s.paddingInlineEnd,
+							},
+						};
+					});
+				assert.notEqual(
+					visualMetrics.button.background,
+					'rgba(0, 0, 0, 0)',
+					JSON.stringify(visualMetrics)
+				);
+				assert.ok(
+					visualMetrics.button.height >= 30 &&
+						parseFloat(visualMetrics.button.paddingInline) >= 8 &&
+						visualMetrics.button.centerDifference <= 2,
+					JSON.stringify(visualMetrics)
+				);
+				assert.equal(
+					visualMetrics.select.appearance,
+					'none',
+					JSON.stringify(visualMetrics)
+				);
+				assert.notEqual(
+					visualMetrics.select.backgroundImage,
+					'none',
+					JSON.stringify(visualMetrics)
+				);
+				assert.ok(
+					parseFloat(visualMetrics.select.paddingInlineEnd) >= 24 &&
+						visualMetrics.select.backgroundPosition !== '0% 0%',
+					JSON.stringify(visualMetrics)
+				);
 				await filter.fill('beta');
 				assert.equal(
 					await page
@@ -505,7 +579,12 @@ for (const version of ['7.0', '7.1.4']) {
 				);
 			}
 			assert.deepEqual(errors, []);
-			evidence.push({ label, passed: true });
+			evidence.push({
+				label,
+				passed: true,
+				visualMetrics,
+				stylesheetResponses,
+			});
 		} catch (error) {
 			failed = true;
 			evidence.push({
@@ -513,6 +592,8 @@ for (const version of ['7.0', '7.1.4']) {
 				passed: false,
 				error: error.stack,
 				pageErrors: errors,
+				visualMetrics,
+				stylesheetResponses,
 			});
 			await page
 				.screenshot({ path: path.join(output, `${label}-failure.png`) })

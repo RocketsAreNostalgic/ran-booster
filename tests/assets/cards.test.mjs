@@ -13,6 +13,7 @@ function fixture({
 	cardComponent = true,
 	fail = false,
 	moveFail = false,
+	stylesheets = [],
 } = {}) {
 	const listeners = new Map(),
 		microtasks = [];
@@ -107,6 +108,7 @@ function fixture({
 		isConnected: true,
 		activeElement: null,
 		readyState: 'complete',
+		styleSheets: stylesheets,
 		listeners,
 		addEventListener(type, fn) {
 			const list = listeners.get(type) || [];
@@ -172,8 +174,13 @@ function fixture({
 				},
 			}
 		: {};
+	window.location = {
+		href: 'https://example.test/wp-admin/admin.php',
+		origin: 'https://example.test',
+	};
 	const context = vm.createContext({
 		window,
+		URL,
 		document: doc,
 		queueMicrotask: (fn) => microtasks.push(fn),
 	});
@@ -304,4 +311,63 @@ test('missing prerequisites and partial failures keep native children', () => {
 		f.run();
 		assert.deepEqual(card.childNodes, [whitespace, form]);
 	}
+});
+
+for (const query of [
+	'load=common,wp-components,wp-commands',
+	'load%5Bchunk_0%5D=common&load%5Bchunk_1%5D=wp-components,wp-commands',
+]) {
+	test(`WordPress concatenated styles enable cards: ${query}`, () => {
+		const sheet = {
+			href: `https://example.test/wp-admin/load-styles.php?${query}`,
+			cssRules: [{}],
+			ownerNode: { disabled: false },
+		};
+		const f = fixture({ css: 'missing', stylesheets: [sheet] });
+		f.make();
+		f.run();
+		assert.equal(f.counts().renders, 1, query);
+	});
+}
+
+test('only enabled readable same-origin WordPress bundles with the exact handle qualify', () => {
+	const base =
+		'https://example.test/wp-admin/load-styles.php?load=wp-components';
+	const unreadable = {
+		href: base,
+		get cssRules() {
+			throw Error();
+		},
+	};
+	const cases = [
+		{
+			href: base.replace('wp-components', 'wp-components-extra'),
+			cssRules: [{}],
+		},
+		{ href: base.replace('/wp-admin/', '/other/'), cssRules: [{}] },
+		{ href: base.replace('example.test', 'other.test'), cssRules: [{}] },
+		{ href: base.replace('load=', 'load%5Bchunk_x%5D='), cssRules: [{}] },
+		{ href: base, disabled: true, cssRules: [{}] },
+		{ href: base, ownerNode: { disabled: true }, cssRules: [{}] },
+		{ href: base, cssRules: [] },
+		unreadable,
+	];
+	for (const sheet of cases) {
+		const f = fixture({ css: 'missing', stylesheets: [sheet] });
+		f.make();
+		f.run();
+		assert.equal(f.counts().renders, 0, sheet.href);
+	}
+	const f = fixture({
+		css: 'missing',
+		stylesheets: [
+			{
+				href: 'https://example.test/sub/wp-admin/load-styles.php?load=wp-components',
+				cssRules: [{}],
+			},
+		],
+	});
+	f.make();
+	f.run();
+	assert.equal(f.counts().renders, 1);
 });

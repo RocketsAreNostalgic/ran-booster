@@ -37,6 +37,44 @@
 		focusAfterMove(card, active);
 	}
 
+	function hasRules(sheet) {
+		try {
+			return Boolean(
+				sheet &&
+				!sheet.disabled &&
+				!sheet.ownerNode?.disabled &&
+				sheet.cssRules.length
+			);
+		} catch {
+			return false;
+		}
+	}
+
+	function hasComponentStyles() {
+		const link = document.getElementById('wp-components-css');
+		if (link && !link.disabled && hasRules(link.sheet)) {
+			return true;
+		}
+		return Array.from(document.styleSheets).some((sheet) => {
+			try {
+				const url = new URL(sheet.href, window.location.href);
+				return (
+					url.origin === window.location.origin &&
+					url.pathname.endsWith('/wp-admin/load-styles.php') &&
+					Array.from(url.searchParams).some(
+						([key, value]) =>
+							(key === 'load' ||
+								/^load\[chunk_\d+\]$/.test(key)) &&
+							value.split(',').includes('wp-components')
+					) &&
+					hasRules(sheet)
+				);
+			} catch {
+				return false;
+			}
+		});
+	}
+
 	function mount(card) {
 		if (
 			roots.has(card) ||
@@ -50,20 +88,10 @@
 		) {
 			return;
 		}
-		const css = document.getElementById('wp-components-css');
 		const element = window.wp?.element;
 		const Card = window.wp?.components?.Card;
-		let hasStyles = false;
-		try {
-			hasStyles =
-				Boolean(css?.sheet?.cssRules.length) &&
-				!css.disabled &&
-				!css.sheet.disabled;
-		} catch {
-			// Unreadable or failed styles retain the native card.
-		}
 		if (
-			!hasStyles ||
+			!hasComponentStyles() ||
 			!element?.createRoot ||
 			!element.createElement ||
 			!element.flushSync ||

@@ -66,6 +66,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 				),
 			)
 		);
+		$this->assert_collection_structure( $html, $type, true );
 
 		self::assertStringContainsString(
 			'<h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title">Managed ' . ucfirst( $plural ) . '</h2>',
@@ -150,6 +151,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 			0,
 			array()
 		);
+		$this->assert_collection_structure( $html, $type, false );
 
 		self::assertStringNotContainsString( 'ran-booster-package-list-controls', $html );
 		self::assertStringNotContainsString( 'class="page-title-action"', $html );
@@ -176,7 +178,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		string $type,
 		string $plural
 	): void {
-		unset( $type, $plural );
+		unset( $plural );
 		$GLOBALS['ran_booster_package_view_multisite']   = true;
 		$GLOBALS['ran_booster_dashboard_test_multisite'] = true;
 		$html = $this->render(
@@ -190,11 +192,36 @@ final class PackageIndexFilterControlsTest extends TestCase {
 			1,
 			array()
 		);
+		$this->assert_collection_structure( $html, $type, true );
 
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $page_slug . '-create"', $html );
 		self::assertStringContainsString( 'action="https://example.test/wp-admin/network/admin.php"', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/network/admin.php?page=' . $page_slug . '">Clear filters</a>', $html );
 		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=' . $page_slug, $html );
+	}
+
+	private function assert_xpath_count( int $expected, \DOMXPath $xpath, string $expression ): void {
+		$nodes = $xpath->query( $expression );
+		self::assertNotFalse( $nodes );
+		self::assertCount( $expected, $nodes );
+	}
+
+	private function assert_collection_structure( string $html, string $type, bool $has_controls ): void {
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		$document->loadHTML( $html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+		$xpath = new \DOMXPath( $document );
+		$card  = $xpath->query( '//*[@id="ran-booster-plugin-collection" and @data-ran-booster-card="plugins"]' );
+		self::assertNotFalse( $card );
+		self::assertCount( 'plugin' === $type ? 1 : 0, $card );
+		if ( 'plugin' !== $type ) {
+			return;
+		}
+		$this->assert_xpath_count( 1, $xpath, '//*[@id="ran-booster-plugin-collection"]//table[@data-package-type="plugin"]' );
+		$this->assert_xpath_count( $has_controls ? 2 : 0, $xpath, '//*[@id="ran-booster-plugin-collection"]//form[@method="get"]' );
+		$this->assert_xpath_count( 0, $xpath, '//form//form' );
 	}
 
 	/**

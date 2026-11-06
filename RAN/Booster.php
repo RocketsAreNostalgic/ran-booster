@@ -722,7 +722,22 @@ class Booster {
 	 * @return void
 	 */
 	public function load_scripts( $hook ) {
-		if ( ! is_string( $hook ) || ! in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) ) {
+		if ( ! is_string( $hook ) ) {
+			return;
+		}
+
+		if ( current_user_can( 'manage_options' ) ) {
+			$menu_style_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-menu.css';
+			wp_register_style(
+				'ran-booster-menu',
+				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-menu.css',
+				array(),
+				$this->asset_version( $menu_style_path )
+			);
+			wp_enqueue_style( 'ran-booster-menu' );
+		}
+
+		if ( ! in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) ) {
 			return;
 		}
 

@@ -43,8 +43,33 @@
 	transform: translateY(0);
 }
 
-/* Inline placement keeps the General controls usable on narrow screens. */
+/* Keep General confirmation in the viewport without moving the form. */
 .ran-booster-general-snackbar .components-snackbar-list {
-	position: static;
-	width: 100%;
+	position: fixed;
+	z-index: 100;
+	inset-block-end: max(80px, calc(env(safe-area-inset-bottom) + 24px));
+	inset-inline-end: max(
+		24px,
+		env(safe-area-inset-right),
+		env(safe-area-inset-left)
+	);
+	inline-size: min(360px, calc(100vw - 208px));
+	max-block-size: calc(100vh - 140px);
+	overflow-y: auto;
+	pointer-events: none;
+}
+
+.ran-booster-general-snackbar .components-snackbar {
+	pointer-events: auto;
+}
+
+@media (max-width: 782px) {
+	.ran-booster-general-snackbar .components-snackbar-list {
+		inset-inline-end: max(
+			16px,
+			env(safe-area-inset-right),
+			env(safe-area-inset-left)
+		);
+		inline-size: min(360px, calc(100vw - 32px));
+	}
 }

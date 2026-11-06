@@ -1252,6 +1252,49 @@
 	overflow-wrap: anywhere;
 }
 
+.ran-booster-admin
+	.ran-booster-onboarding__storage[data-ran-booster-card="overview"][data-ran-booster-ui-mounted] {
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+}
+
+.ran-booster-admin [data-ran-booster-card="overview"] .ran-booster-card__mount {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-inline-size: 0;
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="overview"]
+	.ran-booster-card__surface {
+	flex: 1;
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="overview"]
+	.ran-booster-card__content {
+	padding-block: var(--ran-booster-space-18) var(--ran-booster-space-20);
+	padding-inline: var(--ran-booster-space-24);
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-admin
+		[data-ran-booster-card="overview"]
+		.ran-booster-card__content {
+		padding: var(--ran-booster-space-18);
+	}
+}
+
+@media screen and (max-width: 480px) {
+	.ran-booster-admin
+		[data-ran-booster-card="overview"]
+		.ran-booster-card__content {
+		padding: var(--ran-booster-space-16);
+	}
+}
+
 .ran-booster-admin .ran-booster-overview-grid {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);

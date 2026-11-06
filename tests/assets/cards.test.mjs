@@ -8,12 +8,10 @@ const source = fs.readFileSync(
 	'utf8'
 );
 function fixture({
-	css = 'loaded',
 	runtime = true,
 	cardComponent = true,
 	fail = false,
 	moveFail = false,
-	stylesheets = [],
 } = {}) {
 	const listeners = new Map(),
 		microtasks = [];
@@ -29,6 +27,11 @@ function fixture({
 			this.childNodes = [];
 			this.parentElement = null;
 			this.ownerDocument = doc;
+			this.attributes = new Map();
+			this.hidden = false;
+			if (label !== null) {
+				this.setAttribute('data-ran-booster-card', label);
+			}
 		}
 		get firstChild() {
 			return this.childNodes[0];
@@ -61,24 +64,42 @@ function fixture({
 		}
 		appendChild(node) {
 			if (this.content && moveFail && ++moves === 2) {
-				throw new Error('partial move');
+				throw Error('partial move');
 			}
 			if (node.contains(doc.activeElement)) {
 				doc.activeElement = doc.body;
 			}
 			this.insertBefore(node, null);
 		}
+		replaceChildren(...nodes) {
+			for (const child of [...this.childNodes]) {
+				child.remove();
+			}
+			nodes.forEach((node) => this.appendChild(node));
+		}
+		setAttribute(name, value) {
+			this.attributes.set(name, String(value));
+		}
+		getAttribute(name) {
+			return this.attributes.get(name) ?? null;
+		}
+		removeAttribute(name) {
+			this.attributes.delete(name);
+		}
+		matches(selector) {
+			if (selector === '.ran-booster-admin') {
+				return !!this.admin;
+			}
+			if (selector.startsWith('.ran-booster-card')) {
+				return this.label !== null;
+			}
+			const attr = selector.match(/^\[([^\]]+)\]$/);
+			return !!attr && this.attributes.has(attr[1]);
+		}
 		closest(selector) {
-			if (selector === '.ran-booster-admin' && this.admin) {
-				return this;
-			}
-			if (
-				selector.startsWith('.ran-booster-card') &&
-				this.label !== null
-			) {
-				return this;
-			}
-			return this.parentElement?.closest?.(selector) || null;
+			return this.matches(selector)
+				? this
+				: this.parentElement?.closest?.(selector) || null;
 		}
 		querySelector(selector) {
 			return this.querySelectorAll(selector)[0] || null;
@@ -88,16 +109,9 @@ function fixture({
 				n,
 				...n.querySelectorAll('*'),
 			]);
-			if (selector === '*') {
-				return descendants;
-			}
-			if (selector === '[data-ran-booster-card-content]') {
-				return descendants.filter((n) => n.content);
-			}
-			return descendants.filter((n) => n.label !== null);
-		}
-		getAttribute() {
-			return this.label;
+			return selector === '*'
+				? descendants
+				: descendants.filter((n) => n.matches(selector));
 		}
 		focus(options) {
 			this.focusOptions = options;
@@ -108,27 +122,11 @@ function fixture({
 		isConnected: true,
 		activeElement: null,
 		readyState: 'complete',
-		styleSheets: stylesheets,
 		listeners,
 		addEventListener(type, fn) {
 			const list = listeners.get(type) || [];
 			list.push(fn);
 			listeners.set(type, list);
-		},
-		getElementById() {
-			if (css === 'missing') {
-				return null;
-			}
-			if (css === 'unreadable') {
-				return {
-					sheet: {
-						get cssRules() {
-							throw Error();
-						},
-					},
-				};
-			}
-			return { sheet: { cssRules: css === 'empty' ? [] : [{}] } };
 		},
 		createElement(name) {
 			return new Node(name);
@@ -152,41 +150,41 @@ function fixture({
 			render(value) {
 				renders++;
 				tree = value;
-				if (fail) {
-					throw Error();
+				if (fail || host.fail) {
+					throw Error('render failure');
 				}
-				const surface = new Node('surface');
-				const content = new Node('content');
-				content.content = true;
-				host.appendChild(surface);
-				surface.appendChild(content);
+				host.replaceChildren();
+				if (value.type === 'CardRoot') {
+					const surface = new Node('surface'),
+						content = new Node('content');
+					content.content = true;
+					content.setAttribute('data-ran-booster-card-content', '');
+					host.appendChild(surface);
+					surface.appendChild(content);
+				} else {
+					host.appendChild(new Node('badge-output'));
+				}
 			},
 			unmount() {
 				unmounts++;
+				host.replaceChildren();
 			},
 		}),
 	};
-	const window = runtime
-		? {
-				wp: {
-					element,
-					components: { Card: cardComponent ? 'Card' : null },
-				},
-			}
-		: {};
-	window.location = {
-		href: 'https://example.test/wp-admin/admin.php',
-		origin: 'https://example.test',
+	const window = {
+		wp: { element },
+		ranBoosterUI: runtime
+			? { CardRoot: cardComponent ? 'CardRoot' : null, Badge: 'Badge' }
+			: null,
 	};
 	const context = vm.createContext({
 		window,
-		URL,
 		document: doc,
 		queueMicrotask: (fn) => microtasks.push(fn),
 	});
 	function make(label = 'extensions', parent = doc.body, tag = 'div') {
-		const card = new Node(tag, label);
-		const whitespace = new Node('text'),
+		const card = new Node(tag, label),
+			whitespace = new Node('text'),
 			form = new Node('form'),
 			link = new Node('a');
 		form.appendChild(link);
@@ -195,16 +193,43 @@ function fixture({
 		parent.appendChild(card);
 		return { card, whitespace, form, link };
 	}
+	function badge(parent = doc.body) {
+		const host = new Node('span'),
+			fallback = new Node('span'),
+			mount = new Node('span');
+		host.setAttribute('data-ran-booster-ui-badge', '');
+		host.setAttribute('role', 'status');
+		fallback.setAttribute('data-ran-booster-ui-badge-fallback', '');
+		mount.setAttribute('data-ran-booster-ui-badge-mount', '');
+		host.appendChild(fallback);
+		host.appendChild(mount);
+		parent.appendChild(host);
+		return { host, fallback, mount };
+	}
+	const emit = (type, elt = doc.body) =>
+		(listeners.get(type) || []).forEach((fn) =>
+			fn({ detail: { elt }, target: elt })
+		);
+	const flush = () => {
+		while (microtasks.length) {
+			microtasks.shift()();
+		}
+	};
+	const publish = (host, label, intent) => {
+		host.setAttribute('data-ran-booster-ui-badge-label', label);
+		host.setAttribute('data-ran-booster-ui-badge-intent', intent);
+		emit('ran-booster:ui-badge-update', host);
+	};
 	return {
 		doc,
 		Node,
 		make,
+		badge,
+		window,
 		run: () => vm.runInContext(source, context),
-		emit: (type, elt = doc.body) =>
-			(listeners.get(type) || []).forEach((fn) =>
-				fn({ detail: { elt }, target: elt })
-			),
-		microtasks,
+		emit,
+		flush,
+		publish,
 		counts: () => ({ renders, unmounts }),
 		tree: () => tree,
 	};
@@ -217,12 +242,12 @@ test('three supported hosts move native child nodes once, keeping form, link and
 	);
 	cards[0].link.focus();
 	f.run();
+	f.flush();
 	f.run();
+	f.flush();
 	f.emit('htmx:load');
 	assert.equal(f.counts().renders, 3);
-	assert.equal(f.tree().type, 'Card');
-	assert.equal(f.tree().props.isBorderless, true);
-	assert.equal(f.tree().props.isRounded, false);
+	assert.equal(f.tree().type, 'CardRoot');
 	assert.equal(f.tree().props.className, 'ran-booster-card__surface');
 	for (const { card, whitespace, form, link } of cards) {
 		const content = card.querySelector('[data-ran-booster-card-content]');
@@ -243,6 +268,7 @@ test('unknown, nested, outside admin and invalid hosts retain native content', (
 	const external = f.make('extensions', outside);
 	const invalid = f.make('plugins', f.doc.body, 'form');
 	f.run();
+	f.flush();
 	for (const item of [unknown, outer, inner, external, invalid]) {
 		assert.equal(item.card.firstChild, item.whitespace);
 	}
@@ -253,6 +279,7 @@ test('descendant and ancestor cleanup restore live children and partial load rem
 	const f = fixture();
 	const { card, form, link } = f.make();
 	f.run();
+	f.flush();
 	const content = card.querySelector('[data-ran-booster-card-content]');
 	const fresh = new f.Node('fresh');
 	content.appendChild(fresh);
@@ -261,6 +288,7 @@ test('descendant and ancestor cleanup restore live children and partial load rem
 	assert.equal(card.childNodes.at(-1), fresh);
 	assert.equal(f.doc.activeElement, link);
 	f.emit('htmx:load', fresh);
+	f.flush();
 	assert.equal(fresh.parentElement.content, true);
 	f.emit('htmx:beforeCleanupElement', f.doc.body);
 	assert.equal(card.childNodes.at(-1), fresh);
@@ -271,6 +299,7 @@ test('host swap restores before cleanup only when the response will swap', () =>
 	const f = fixture();
 	const { card, form, link } = f.make();
 	f.run();
+	f.flush();
 	link.focus();
 	const beforeSwap = f.doc.listeners.get('htmx:beforeSwap')[0];
 	beforeSwap({ detail: { shouldSwap: false, target: card } });
@@ -286,21 +315,20 @@ test('history caches native children, remounts and prunes detached roots', () =>
 	const f = fixture();
 	const { card, form } = f.make();
 	f.run();
+	f.flush();
 	f.emit('htmx:beforeHistorySave');
 	assert.equal(form.parentElement, card);
-	f.microtasks.shift()();
+	f.flush();
 	assert.equal(form.parentElement.content, true);
 	card.remove();
 	f.emit('htmx:historyRestore');
+	f.flush();
 	assert.equal(form.parentElement, card);
 	assert.deepEqual(f.counts(), { renders: 2, unmounts: 2 });
 });
 
 test('missing prerequisites and partial failures keep native children', () => {
 	for (const options of [
-		{ css: 'missing' },
-		{ css: 'empty' },
-		{ css: 'unreadable' },
 		{ runtime: false },
 		{ cardComponent: false },
 		{ fail: true },
@@ -309,65 +337,121 @@ test('missing prerequisites and partial failures keep native children', () => {
 		const f = fixture(options);
 		const { card, whitespace, form } = f.make();
 		f.run();
+		f.flush();
 		assert.deepEqual(card.childNodes, [whitespace, form]);
 	}
 });
 
-for (const query of [
-	'load=common,wp-components,wp-commands',
-	'load%5Bchunk_0%5D=common&load%5Bchunk_1%5D=wp-components,wp-commands',
-]) {
-	test(`WordPress concatenated styles enable cards: ${query}`, () => {
-		const sheet = {
-			href: `https://example.test/wp-admin/load-styles.php?${query}`,
-			cssRules: [{}],
-			ownerNode: { disabled: false },
-		};
-		const f = fixture({ css: 'missing', stylesheets: [sheet] });
-		f.make();
-		f.run();
-		assert.equal(f.counts().renders, 1, query);
-	});
-}
-
-test('only enabled readable same-origin WordPress bundles with the exact handle qualify', () => {
-	const base =
-		'https://example.test/wp-admin/load-styles.php?load=wp-components';
-	const unreadable = {
-		href: base,
-		get cssRules() {
-			throw Error();
-		},
-	};
-	const cases = [
-		{
-			href: base.replace('wp-components', 'wp-components-extra'),
-			cssRules: [{}],
-		},
-		{ href: base.replace('/wp-admin/', '/other/'), cssRules: [{}] },
-		{ href: base.replace('example.test', 'other.test'), cssRules: [{}] },
-		{ href: base.replace('load=', 'load%5Bchunk_x%5D='), cssRules: [{}] },
-		{ href: base, disabled: true, cssRules: [{}] },
-		{ href: base, ownerNode: { disabled: true }, cssRules: [{}] },
-		{ href: base, cssRules: [] },
-		unreadable,
-	];
-	for (const sheet of cases) {
-		const f = fixture({ css: 'missing', stylesheets: [sheet] });
-		f.make();
-		f.run();
-		assert.equal(f.counts().renders, 0, sheet.href);
-	}
-	const f = fixture({
-		css: 'missing',
-		stylesheets: [
-			{
-				href: 'https://example.test/sub/wp-admin/load-styles.php?load=wp-components',
-				cssRules: [{}],
-			},
-		],
-	});
-	f.make();
+test('badge waits for producer projection and preserves fallback, mount and status identity', () => {
+	const f = fixture();
+	const { host, fallback, mount } = f.badge();
 	f.run();
+	f.flush();
+	assert.equal(f.counts().renders, 0);
+	assert.equal(fallback.hidden, false);
+	f.publish(host, 'Confirmed', 'stable');
+	assert.equal(f.tree().type, 'Badge');
+	assert.equal(f.tree().props.intent, 'stable');
+	assert.equal(f.tree().children[0], 'Confirmed');
+	assert.equal(host.getAttribute('role'), 'status');
+	assert.equal(host.childNodes[0], fallback);
+	assert.equal(host.childNodes[1], mount);
+	assert.equal(fallback.hidden, true);
+	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), '');
+	f.publish(host, 'Confirmed', 'stable');
 	assert.equal(f.counts().renders, 1);
+	f.publish(host, 'Pending', 'none');
+	assert.equal(f.counts().renders, 2);
+	assert.equal(f.tree().children[0], 'Pending');
+});
+
+test('badge discovers producer state in both startup orders', () => {
+	const first = fixture();
+	const a = first.badge();
+	a.host.setAttribute('data-ran-booster-ui-badge-label', 'Ready');
+	a.host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
+	first.run();
+	first.flush();
+	assert.equal(first.tree().type, 'Badge');
+	assert.equal(a.fallback.hidden, true);
+	const second = fixture();
+	const b = second.badge();
+	second.run();
+	second.publish(b.host, 'Ready', 'stable');
+	second.flush();
+	assert.equal(second.counts().renders, 1);
+	assert.equal(second.tree().children[0], 'Ready');
+});
+
+test('invalid projection, missing runtime and failed badge render reveal native fallback', () => {
+	const f = fixture();
+	const { host, fallback, mount } = f.badge();
+	f.run();
+	f.flush();
+	f.publish(host, 'Ready', 'stable');
+	f.publish(host, 'Ready', 'unsupported');
+	assert.equal(fallback.hidden, false);
+	assert.equal(mount.childNodes.length, 0);
+	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
+	f.publish(host, '', 'stable');
+	assert.equal(fallback.hidden, false);
+	assert.equal(mount.childNodes.length, 0);
+	f.window.ranBoosterUI = null;
+	f.publish(host, 'Ready', 'stable');
+	assert.equal(fallback.hidden, false);
+	assert.equal(mount.childNodes.length, 0);
+	f.window.ranBoosterUI = { Badge: 'Badge' };
+	mount.fail = true;
+	f.publish(host, 'Ready', 'stable');
+	assert.equal(fallback.hidden, false);
+	assert.equal(mount.childNodes.length, 0);
+	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
+});
+
+test('history saves native fallback and later producer supersedes cached badge projection', () => {
+	const f = fixture();
+	const { host, fallback, mount } = f.badge();
+	f.run();
+	f.publish(host, 'Old', 'stable');
+	f.flush();
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(fallback.hidden, false);
+	assert.equal(mount.childNodes.length, 0);
+	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
+	f.publish(host, 'Current', 'none');
+	f.flush();
+	assert.equal(f.tree().children[0], 'Current');
+	assert.equal(f.tree().props.intent, 'none');
+	assert.equal(f.counts().renders, 2);
+	assert.equal(fallback.hidden, true);
+});
+
+test('nested card and badge cleanup restores both roots even when card moves its children', () => {
+	const f = fixture();
+	const { card, form } = f.make();
+	const { host, fallback, mount } = f.badge(form);
+	f.run();
+	f.publish(host, 'Ready', 'stable');
+	f.flush();
+	assert.equal(f.counts().renders, 2);
+	f.emit('htmx:beforeCleanupElement', card);
+	assert.equal(form.parentElement, card);
+	assert.equal(fallback.hidden, false);
+	assert.equal(mount.childNodes.length, 0);
+	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
+	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
+	assert.equal(f.counts().unmounts, 2);
+	f.emit('htmx:beforeCleanupElement', card);
+	assert.equal(f.counts().unmounts, 2);
+});
+
+test('disconnected badges do not mount from events or deferred discovery', () => {
+	const f = fixture();
+	const { host, fallback } = f.badge();
+	f.run();
+	host.remove();
+	f.publish(host, 'Ready', 'stable');
+	f.flush();
+	assert.equal(f.counts().renders, 0);
+	assert.equal(fallback.hidden, false);
 });

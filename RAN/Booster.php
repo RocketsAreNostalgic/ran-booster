@@ -805,20 +805,26 @@ class Booster {
 			$style_dependencies = array( $style_handle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
-		if ( in_array( $hook, array( 'ran-booster_page_ran-booster-extensions', 'ran-booster_page_ran-booster-plugins' ), true )
+		if ( in_array( $hook, array( 'ran-booster_page_ran-booster-extensions', 'ran-booster_page_ran-booster-plugins', 'ran-booster_page_ran-booster-settings' ), true )
 			|| ( 'toplevel_page_ran-booster' === $hook && in_array( $requested_tab, array( null, '', 'overview' ), true ) )
 		) {
-			wp_enqueue_style( 'wp-components' );
+			wp_register_script(
+				'ran-booster-ui',
+				trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/ran-booster-ui.min.js',
+				array( 'wp-element', 'react-jsx-runtime' ),
+				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/lib/ran-booster-ui.min.js' ),
+				true
+			);
 			wp_enqueue_script(
 				'ran-booster-cards',
 				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
-				array( 'wp-element', 'wp-components' ),
+				array( 'ran-booster-ui' ),
 				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
 				true
 			);
 		}
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
-			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array(), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
+			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'ran-booster-cards' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
 		}
 
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {

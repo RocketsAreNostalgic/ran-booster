@@ -30,7 +30,6 @@
 	:is(
 		.ran-booster-card__mount,
 		.ran-booster-card__surface,
-		.ran-booster-card__surface > :has(> .ran-booster-card__content),
 		.ran-booster-card__content
 	) {
 	display: inherit;

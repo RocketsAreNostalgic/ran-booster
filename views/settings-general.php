@@ -156,7 +156,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 				if ( ! $hide_locked ) {
 					?>
 					<input type="hidden" name="ran_booster[preferences][hide_github]" value="0"><?php } ?>
-						<p class="ran-booster-settings__switch-row"><label class="ran-booster-settings__switch" for="ran-booster-hide-github"><input id="ran-booster-hide-github" type="checkbox" role="switch" aria-describedby="ran-booster-hide-github-help<?php echo null === $field_error( 'hide_github' ) ? '' : ' ran-booster-hide-github-error'; ?>" name="ran_booster[preferences][hide_github]" value="1"<?php checked( true, $hide_display_value ); ?><?php disabled( $hide_locked ); ?><?php echo null === $field_error( 'hide_github' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span><span><?php esc_html_e( 'Hide GitHub UI', 'ran-booster' ); ?></span></label></p>
+						<div data-ran-booster-core-toggle></div><p class="ran-booster-settings__switch-row" data-ran-booster-native-toggle><label class="ran-booster-settings__switch" for="ran-booster-hide-github"><input id="ran-booster-hide-github" type="checkbox" role="switch" aria-describedby="ran-booster-hide-github-help<?php echo null === $field_error( 'hide_github' ) ? '' : ' ran-booster-hide-github-error'; ?>" name="ran_booster[preferences][hide_github]" value="1"<?php checked( true, $hide_display_value ); ?><?php disabled( $hide_locked ); ?><?php echo null === $field_error( 'hide_github' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span><span><?php esc_html_e( 'Hide GitHub UI', 'ran-booster' ); ?></span></label></p>
 				<p id="ran-booster-hide-github-help" class="description"><?php echo esc_html( $source_labels[ $hide['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?>. <?php echo esc_html( $visibility_reasons[ $github_visibility['reason'] ] ?? ( $github_visibility['hidden'] ? __( 'GitHub navigation is currently hidden.', 'ran-booster' ) : __( 'GitHub navigation remains available.', 'ran-booster' ) ) ); ?></p>
 				<?php
 				if ( null !== $field_error( 'hide_github' ) ) {
@@ -192,7 +192,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 					?>
 					<input type="hidden" name="ran_booster[preferences][self_update_discovery]" value="0"><?php } ?>
 				<div class="ran-booster-settings__update-controls">
-					<p class="ran-booster-settings__switch-row"><label class="ran-booster-settings__switch" for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" role="switch" aria-describedby="ran-booster-self-update-discovery-help<?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' ran-booster-self-update-discovery-error'; ?>" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span><span><?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></span></label></p>
+					<div data-ran-booster-core-toggle></div><p class="ran-booster-settings__switch-row" data-ran-booster-native-toggle><label class="ran-booster-settings__switch" for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" role="switch" aria-describedby="ran-booster-self-update-discovery-help<?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' ran-booster-self-update-discovery-error'; ?>" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span><span><?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></span></label></p>
 					<button form="ran-booster-check-core-updates" type="submit" class="button"<?php echo $check_available ? '' : ( 'enabled' === $status_mode ? ' aria-describedby="ran-booster-check-updates-unavailable"' : ' aria-describedby="ran-booster-self-update-discovery-help"' ); ?><?php disabled( ! $check_available ); ?>><?php esc_html_e( 'Check for updates', 'ran-booster' ); ?></button>
 				</div>
 				<p id="ran-booster-self-update-discovery-help" class="description"><?php echo esc_html( 'enabled' === $status_mode ? __( 'Booster update checks are enabled.', 'ran-booster' ) : $update_reasons[ $status_reason ] ?? __( 'Booster update checks are currently unavailable.', 'ran-booster' ) ); ?></p>
@@ -229,10 +229,6 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 <?php } ?>
 <?php if ( 'all' === $general_scope || 'numeric' === $general_scope ) { ?>
 	<?php $open_scope( 'numeric' ); ?>
-<div class="ran-booster-settings__save-actions">
-	<button id="ran-booster-save-numeric" type="submit" class="button button-primary"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button>
-	<span data-ran-booster-unsaved role="status"><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span>
-</div>
 			<fieldset class="ran-booster-settings__group">
 				<legend><?php esc_html_e( 'History', 'ran-booster' ); ?></legend>
 				<div class="ran-booster-settings__history-fields">
@@ -271,7 +267,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 						<p class="description"><?php esc_html_e( 'Limits the compressed repository ZIP, not installed size or History retention. One MiB is 1,048,576 bytes; fractional values round to the nearest byte.', 'ran-booster' ); ?></p>
 					<p class="description"><?php /* translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit). Host and updater safeguards may be stricter.', 'ran-booster' ), $branch_ceiling_mib, number_format_i18n( $branch_ceiling ) ) ); ?></p>
 				<?php $render_configuration( array( 'max_download_bytes' => 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ) ); ?>
-			</fieldset><div class="ran-booster-settings__save-actions"><button id="ran-booster-save-numeric-bottom" type="submit" class="button button-primary"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button><span data-ran-booster-pending-label aria-hidden="true"><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span></div>
+			</fieldset><div class="ran-booster-settings__save-actions"><button id="ran-booster-save-numeric-bottom" type="submit" class="button button-primary"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button><span data-ran-booster-unsaved role="status"><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span></div>
 </form></div>
 <?php } ?>
 <?php

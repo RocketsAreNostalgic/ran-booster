@@ -10,6 +10,7 @@ use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTargetStatus;
 use RAN\Troubleshooting\CoreSelfUpdateStatus;
 use RAN\WordPress\CoreSelfUpdatePolicy;
+use RAN\WordPress\CoreSelfUpdateCheck;
 
 #[CoversClass( CoreSelfUpdateStatus::class )]
 final class CoreSelfUpdateStatusTest extends TestCase {
@@ -45,7 +46,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 			}
 		};
 
-		$status = ( new CoreSelfUpdateStatus( $policy, $target ) )->diagnostics();
+		$status = ( new CoreSelfUpdateStatus( static fn (): CoreSelfUpdatePolicy => $policy, $target ) )->diagnostics();
 
 		self::assertSame( 'disabled', $status['effective_mode'] );
 		self::assertSame( 'active', $status['updater_state'] );
@@ -82,7 +83,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 			}
 		};
 
-		$status = ( new CoreSelfUpdateStatus( $policy, $target ) )->diagnostics();
+		$status = ( new CoreSelfUpdateStatus( static fn (): CoreSelfUpdatePolicy => $policy, $target ) )->diagnostics();
 
 		self::assertSame( 'inactive', $status['updater_state'] );
 		self::assertSame( 'diagnostics_unavailable', $status['updater_code'] );
@@ -97,12 +98,74 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 		self::assertTrue( mkdir( $directory, 0700 ) );
 		$policy = CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.2.3' );
 
-		$status = ( new CoreSelfUpdateStatus( $policy, null ) )->diagnostics();
+		$status = ( new CoreSelfUpdateStatus( static fn (): CoreSelfUpdatePolicy => $policy, null ) )->diagnostics();
 
 		self::assertSame( 'disabled', $status['effective_mode'] );
 		self::assertSame( 'inactive', $status['updater_state'] );
 		self::assertSame( 'native_discovery_disabled', $status['updater_code'] );
 
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable focused fixture cleanup.
+		rmdir( $directory );
+	}
+
+	public function test_policy_is_refreshed_per_operation_with_one_snapshot_per_diagnostics(): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-self-update-status-' . bin2hex( random_bytes( 6 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Disposable focused fixture setup.
+		self::assertTrue( mkdir( $directory, 0700 ) );
+		$disabled = CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.2.3' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Standalone test without WordPress runtime.
+		$marker = json_encode(
+			array(
+				'schema'         => 'ran-booster-core-release',
+				'schema_version' => 1,
+				'version'        => '1.2.3',
+				'commit'         => str_repeat( 'a', 40 ),
+			),
+			JSON_THROW_ON_ERROR
+		);
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable release provenance fixture.
+		file_put_contents( $directory . '/ran-booster-release.json', $marker );
+		$enabled = CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.2.3' );
+		$policy  = $disabled;
+		$calls   = 0;
+		$target  = new class() implements RepositoryReleaseNativeTarget {
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- Required native-target signature.
+			public function matches_check_source( string $runtime_provider, string $repository_identity, string $channel ): bool {
+				return false;
+			}
+			public function register(): bool {
+				return true;
+			}
+			public function status(): RepositoryReleaseNativeTargetStatus {
+				return new RepositoryReleaseNativeTargetStatus( true );
+			}
+			public function refresh(): bool {
+				return true;
+			}
+		};
+		$check   = new CoreSelfUpdateCheck( $target, static fn (): bool => true, 'ran-booster/ran-booster.php', 'stable' );
+		$status  = new CoreSelfUpdateStatus(
+			static function () use ( &$policy, &$calls ): CoreSelfUpdatePolicy {
+				++$calls;
+				return $policy;
+			},
+			null,
+			$check
+		);
+		self::assertFalse( $status->can_check() );
+		self::assertSame( 'native_discovery_disabled', $status->diagnostics()['updater_code'] );
+		self::assertSame( 2, $calls );
+		$policy = $enabled;
+		self::assertTrue( $status->can_check() );
+		$diagnostics = $status->diagnostics();
+		self::assertSame( 'enabled', $diagnostics['effective_mode'] );
+		self::assertNull( $diagnostics['updater_code'] );
+		self::assertSame( 4, $calls );
+		$policy = $disabled;
+		self::assertFalse( $status->can_check() );
+		self::assertSame( 'disabled', $status->diagnostics()['effective_mode'] );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Disposable fixture cleanup.
+		unlink( $directory . '/ran-booster-release.json' );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Disposable focused fixture cleanup.
 		rmdir( $directory );
 	}
@@ -131,7 +194,7 @@ final class CoreSelfUpdateStatusTest extends TestCase {
 			}
 		};
 
-		$status = ( new CoreSelfUpdateStatus( $policy, $target ) )->diagnostics();
+		$status = ( new CoreSelfUpdateStatus( static fn (): CoreSelfUpdatePolicy => $policy, $target ) )->diagnostics();
 
 		self::assertSame( 'active', $status['updater_state'] );
 		self::assertNull( $status['updater_code'] );

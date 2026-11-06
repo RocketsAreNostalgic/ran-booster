@@ -47,6 +47,61 @@ final class SettingsPageTest extends TestCase {
 		unset( $_SERVER['REQUEST_METHOD'], $GLOBALS['ran_booster_test_capabilities'], $GLOBALS['ran_booster_test_nonce_valid'], $GLOBALS['ran_booster_test_nonce_checks'], $GLOBALS['ran_booster_test_capability_checks'] );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_general_response_refreshes_only_the_source_notice_from_fresh_policy(): void {
+		require_once dirname( __DIR__ ) . '/Support/BoosterNoticeScopeWordPressFunctions.php';
+		$GLOBALS['ran_booster_notice_scope_screen'] = null; // admin_init runs before WordPress sets the current screen.
+		$GLOBALS['ran_booster_test_capabilities']   = array( 'manage_options' => true );
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Controlled fresh-option boundary.
+		$GLOBALS['wpdb'] = new class() {
+			public string $options    = 'wp_options';
+			public string $last_error = '';
+			public bool $enabled      = false;
+			public int $reads         = 0;
+			public bool $fail_policy  = false;
+			public function prepare( string $sql, mixed ...$arguments ): string {
+				unset( $arguments );
+				return $sql;
+			}
+			public function get_var( string $sql ): string {
+				unset( $sql );
+				++$this->reads;
+				if ( $this->fail_policy && 2 === $this->reads ) {
+					$this->last_error = 'controlled';
+				}
+				return serialize( array( 'self_update_discovery' => $this->enabled ) ); // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Controlled option fixture.
+			}
+		};
+		$dashboard       = $this->settings_dashboard( new SettingsPageStorageProvisioner( null ) );
+		$off             = $dashboard->render_general_settings_region( true );
+		self::assertStringContainsString( 'id="ran-booster-general-region"', $off );
+		self::assertSame( 1, substr_count( $off, 'id="ran-booster-core-development-notice-slot" hx-swap-oob="true"' ) );
+		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice', $off );
+		$GLOBALS['wpdb']->enabled = true;
+		$on                       = $dashboard->render_general_settings_region( true );
+		self::assertSame( 1, substr_count( $on, 'data-ran-booster-core-development-notice' ) );
+		self::assertSame( 1, substr_count( $on, 'id="ran-booster-core-development-notice-slot" hx-swap-oob="true"' ) );
+		$GLOBALS['wpdb']->reads       = 0;
+		$GLOBALS['wpdb']->fail_policy = true;
+		$unknown                      = $dashboard->render_general_settings_region( true );
+		self::assertStringContainsString( 'id="ran-booster-general-region"', $unknown );
+		self::assertStringNotContainsString( 'hx-swap-oob', $unknown );
+		self::assertStringContainsString( 'data-ran-booster-general-saved', $unknown );
+		$GLOBALS['wpdb']->last_error  = '';
+		$GLOBALS['wpdb']->fail_policy = false;
+		$failure                      = $dashboard->render_general_settings_region( false );
+		self::assertStringNotContainsString( 'data-ran-booster-general-saved', $failure );
+		self::assertSame( 1, substr_count( $failure, 'data-ran-booster-core-development-notice' ) );
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'manage_options'         => false,
+			'manage_network_plugins' => false,
+		);
+		$unauthorized                             = $dashboard->render_general_settings_region( false );
+		self::assertStringContainsString( 'id="ran-booster-core-development-notice-slot" hx-swap-oob="true"', $unauthorized );
+		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice', $unauthorized );
+	}
+
 	public function test_check_now_uses_its_own_nonce_and_never_calls_general_save(): void {
 		$_POST['ran_booster'] = array( 'action' => 'check-core-updates' );
 		$dashboard            = $this->createMock( Dashboard::class );

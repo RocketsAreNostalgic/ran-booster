@@ -548,11 +548,11 @@ msgid_plural "%d packages"
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:76
+#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:77
 msgid "RAN Booster development detected:"
 msgstr ""
 
-#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:77
+#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:78
 msgid "Core updates are disabled to protect this source checkout."
 msgstr ""
 
@@ -1373,7 +1373,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:63
-#: RAN/Dashboard.php:1526
+#: RAN/Dashboard.php:1540
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1382,7 +1382,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:164
-#: RAN/Dashboard.php:841
+#: RAN/Dashboard.php:855
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -4863,97 +4863,97 @@ msgstr ""
 msgid "You cannot access Booster Settings."
 msgstr ""
 
-#: RAN/Dashboard.php:596
+#: RAN/Dashboard.php:610
 msgid "The saved Settings document is malformed. Runtime safety defaults remain in effect; no values were repaired."
 msgstr ""
 
-#: RAN/Dashboard.php:626
+#: RAN/Dashboard.php:640
 #: RAN/Dispatcher.php:654
 msgid "Settings saved."
 msgstr ""
 
-#: RAN/Dashboard.php:642
+#: RAN/Dashboard.php:656
 msgid "Settings could not be saved. Reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:651
+#: RAN/Dashboard.php:665
 msgid "Enter a valid value within the displayed limits."
 msgstr ""
 
-#: RAN/Dashboard.php:662
+#: RAN/Dashboard.php:676
 msgid "Settings saved; cached update offers could not be cleared. Discovery remains disabled."
 msgstr ""
 
-#: RAN/Dashboard.php:670
+#: RAN/Dashboard.php:684
 msgid "Settings changed or GitHub eligibility changed. Review the current values and save again."
 msgstr ""
 
-#: RAN/Dashboard.php:671
+#: RAN/Dashboard.php:685
 msgid "Settings were not saved. Check the fields or reload the page and try again."
 msgstr ""
 
-#: RAN/Dashboard.php:681
+#: RAN/Dashboard.php:695
 msgid "The Booster update check completed."
 msgstr ""
 
-#: RAN/Dashboard.php:682
+#: RAN/Dashboard.php:696
 msgid "The Booster update check did not complete successfully. Review the check status below."
 msgstr ""
 
-#: RAN/Dashboard.php:695
+#: RAN/Dashboard.php:709
 #: views/settings.php:27
 msgid "Storage status is unavailable. No setup or recovery action has been performed."
 msgstr ""
 
-#: RAN/Dashboard.php:721
+#: RAN/Dashboard.php:735
 msgid "Storage health has not been checked in this request."
 msgstr ""
 
-#: RAN/Dashboard.php:851
+#: RAN/Dashboard.php:865
 msgid "Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package."
 msgstr ""
 
-#: RAN/Dashboard.php:870
+#: RAN/Dashboard.php:884
 msgid "Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it."
 msgstr ""
 
-#: RAN/Dashboard.php:885
+#: RAN/Dashboard.php:899
 msgid "Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:886
+#: RAN/Dashboard.php:900
 msgid "Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:891
+#: RAN/Dashboard.php:905
 msgid "Booster cannot verify this installed package and its management record. No management changes have been made."
 msgstr ""
 
-#: RAN/Dashboard.php:916
+#: RAN/Dashboard.php:930
 msgid "Booster’s saved update revision is invalid. It cannot safely use this package’s management settings."
 msgstr ""
 
-#: RAN/Dashboard.php:917
+#: RAN/Dashboard.php:931
 msgid "Booster’s saved update source is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:918
+#: RAN/Dashboard.php:932
 msgid "Booster’s saved deployment policy is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:919
+#: RAN/Dashboard.php:933
 msgid "Booster’s saved repository credential reference is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:920
+#: RAN/Dashboard.php:934
 msgid "Booster’s saved repository privacy setting is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:921
+#: RAN/Dashboard.php:935
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:1193
+#: RAN/Dashboard.php:1207
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 
@@ -6308,13 +6308,13 @@ msgid "Install %s"
 msgstr ""
 
 #. translators: %s: current year.
-#: views/base.php:136
+#: views/base.php:140
 #, php-format
 msgid "Copyright © %s"
 msgstr ""
 
 #. translators: %s: installed Booster version.
-#: views/base.php:145
+#: views/base.php:149
 #, php-format
 msgid "Booster %s"
 msgstr ""

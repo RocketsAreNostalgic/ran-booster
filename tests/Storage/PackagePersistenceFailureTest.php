@@ -580,6 +580,11 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 				array(
 					'hide_github'  => false,
 					'history_days' => 11,
+					'_revisions'   => array(
+						'hide_github'           => 1,
+						'self_update_discovery' => 0,
+						'numeric'               => 0,
+					),
 				),
 				// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- The assertion decodes only this fixture-owned option document.
 				unserialize( (string) $wpdb->general_settings_value ),
@@ -695,6 +700,11 @@ final class PackagePersistenceFailureTest extends RANBoosterTestCase {
 			array(
 				'hide_github'  => false,
 				'history_days' => 11,
+				'_revisions'   => array(
+					'hide_github'           => 1,
+					'self_update_discovery' => 0,
+					'numeric'               => 0,
+				),
 			),
 			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_unserialize -- Decodes only this fixture-owned stored option.
 			unserialize( (string) $wpdb->general_settings_value )

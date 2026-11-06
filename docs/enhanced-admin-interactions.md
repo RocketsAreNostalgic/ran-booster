@@ -138,3 +138,14 @@ Cover at least:
 This API is not a generic router, command bus, modal system, notification
 service, credential broker, renderer registry, background transport, or whole
 view replacement mechanism.
+
+General Settings uses three fixed scoped form/target pairs for automatic switch
+saves and explicit numeric saves. The feedback adapter accepts only those targets
+and the retained legacy full-region target. A matching captured response needs
+its success header and newly replaced saved marker; superseded switch intent or
+a concurrently changed confirmed snapshot suppresses its success presentation.
+The settings controller owns their serialized queue, draft baselines and focus;
+these forms do not borrow the other producers' single interaction-state capture.
+Discovery refreshes only its existing source-guidance slot, while Hide GitHub UI
+refreshes server-rendered shell navigation. Unknown policy reads retain the
+existing notice. Detached responses are vetoed before header and OOB processing.

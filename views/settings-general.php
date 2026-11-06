@@ -11,6 +11,10 @@
  * @var bool $check_available
  * @var ?string $native_update_url
  * @var bool $general_save_succeeded Optional enhanced-save result.
+ * @var string $general_scope Optional fixed response scope.
+ * @var array<string,string> $general_tokens Scoped persistence fences.
+ * @var ?string $general_failed_scope Optional native failed operation scope.
+ * @var list<array{key:string,label:string,url:string,active:bool,provider:bool}> $general_navigation Optional confirmed navigation.
  */
 if ( ! defined( 'WPINC' ) ) {
 	die;
@@ -46,7 +50,7 @@ $configuration_value = static function ( bool|int $value ): string {
 	return is_bool( $value ) ? ( $value ? __( 'On', 'ran-booster' ) : __( 'Off', 'ran-booster' ) ) : (string) $value;
 };
 /** @param array<string,string> $constants */
-$render_configuration = static function ( array $constants ) use ( $field, $source_labels, $configuration_value ): void {
+$render_configuration   = static function ( array $constants ) use ( $field, $source_labels, $configuration_value ): void {
 	?>
 	<details class="ran-booster-disclosure ran-booster-settings__configuration">
 		<summary><?php esc_html_e( 'Configuration constants', 'ran-booster' ); ?></summary>
@@ -58,19 +62,19 @@ $render_configuration = static function ( array $constants ) use ( $field, $sour
 	</details>
 	<?php
 };
-$visibility_reasons   = array(
+$visibility_reasons     = array(
 	'no_other_provider'         => __( 'Another active non-GitHub provider is required before this can be hidden.', 'ran-booster' ),
 	'active_github_replacement' => __( 'GitHub remains visible while an active GitHub replacement is present.', 'ran-booster' ),
 	'github_management_present' => __( 'GitHub remains visible while this site manages GitHub packages.', 'ran-booster' ),
 	'github_selection_unknown'  => __( 'GitHub remains visible until its local management state is known.', 'ran-booster' ),
 	'provider_registry_unknown' => __( 'GitHub remains visible until provider availability is known.', 'ran-booster' ),
 );
-$hide                 = $field( 'hide_github' );
-$discovery            = $field( 'self_update_discovery' );
-$hide_locked          = true === $hide['locked'] || ! $github_visibility['eligible'];
-$hide_display_value   = $github_visibility['eligible'] && '1' === ( $general_attempted['hide_github'] ?? ( $hide['value'] ? '1' : '0' ) );
-$download_bytes       = (int) $field( 'max_download_bytes' )['value'];
-$mib_value            = static function ( int $bytes ): string {
+$hide                   = $field( 'hide_github' );
+$discovery              = $field( 'self_update_discovery' );
+$hide_locked            = true === $hide['locked'] || ! $github_visibility['eligible'];
+$hide_display_value     = $github_visibility['eligible'] && '1' === ( $general_attempted['hide_github'] ?? ( $hide['value'] ? '1' : '0' ) );
+$download_bytes         = (int) $field( 'max_download_bytes' )['value'];
+$mib_value              = static function ( int $bytes ): string {
 	$whole     = intdiv( $bytes, 1048576 );
 	$remainder = $bytes % 1048576;
 	if ( 0 === $remainder ) {
@@ -84,41 +88,68 @@ $mib_value            = static function ( int $bytes ): string {
 	}
 	return $whole . '.' . $fraction;
 };
-$download_mib_value   = is_string( $general_attempted['max_download_bytes'] ?? null )
+$download_mib_value     = is_string( $general_attempted['max_download_bytes'] ?? null )
 	? $general_attempted['max_download_bytes']
 	: $mib_value( $download_bytes );
-$branch_ceiling       = $download_bytes <= intdiv( PHP_INT_MAX, 4 ) ? $download_bytes * 4 : null;
-$branch_ceiling_mib   = null === $branch_ceiling ? null : $mib_value( $branch_ceiling );
-$status_mode          = is_string( $core_update_status['effective_mode'] ?? null ) ? $core_update_status['effective_mode'] : 'disabled';
-$status_reason        = is_string( $core_update_status['reason'] ?? null ) ? $core_update_status['reason'] : '';
-$update_reasons       = array(
+$branch_ceiling         = $download_bytes <= intdiv( PHP_INT_MAX, 4 ) ? $download_bytes * 4 : null;
+$branch_ceiling_mib     = null === $branch_ceiling ? null : $mib_value( $branch_ceiling );
+$status_mode            = is_string( $core_update_status['effective_mode'] ?? null ) ? $core_update_status['effective_mode'] : 'disabled';
+$status_reason          = is_string( $core_update_status['reason'] ?? null ) ? $core_update_status['reason'] : '';
+$update_reasons         = array(
 	'source_checkout'                   => __( 'This development copy cannot receive Booster updates.', 'ran-booster' ),
 	'release_marker_missing_or_invalid' => __( 'This installation cannot verify its release information.', 'ran-booster' ),
 	'configuration_disabled'            => __( 'Your site configuration has turned update checks off. This setting cannot be changed here.', 'ran-booster' ),
 	'configuration_invalid'             => __( 'Your site’s update configuration is invalid. Correct it before checking.', 'ran-booster' ),
-	'preference_disabled'               => __( 'Update checks are turned off. Enable the switch and save to turn them on.', 'ran-booster' ),
+	'preference_disabled'               => __( 'Update checks are turned off. Enable the switch to turn them on.', 'ran-booster' ),
 );
-$installed_version    = is_string( $core_update_status['installed_version'] ?? null ) ? $core_update_status['installed_version'] : null;
-$offered_version      = is_string( $core_update_status['offered_version'] ?? null ) ? $core_update_status['offered_version'] : null;
-$success_at           = $core_update_status['last_successful_check'] ?? null;
-$success_label        = is_int( $success_at ) ? wp_date( 'Y-m-d H:i:s T', $success_at ) : false;
-$success_label        = is_string( $success_label ) ? $success_label : __( 'Unknown', 'ran-booster' );
+$installed_version      = is_string( $core_update_status['installed_version'] ?? null ) ? $core_update_status['installed_version'] : null;
+$offered_version        = is_string( $core_update_status['offered_version'] ?? null ) ? $core_update_status['offered_version'] : null;
+$success_at             = $core_update_status['last_successful_check'] ?? null;
+$success_label          = is_int( $success_at ) ? wp_date( 'Y-m-d H:i:s T', $success_at ) : false;
+$success_label          = is_string( $success_label ) ? $success_label : __( 'Unknown', 'ran-booster' );
+$general_save_succeeded = $general_save_succeeded ?? null;
+$general_failed_scope   = $general_failed_scope ?? null;
+$general_scope          = $general_scope ?? 'all';
+$general_tokens         = $general_tokens ?? array();
+$numeric_baseline       = array();
+foreach ( array( 'history_rows', 'history_days', 'max_download_bytes' ) as $numeric_key ) {
+	if ( ! $field( $numeric_key )['locked'] ) {
+		$numeric_baseline[] = array( 'ran_booster[preferences][' . ( 'max_download_bytes' === $numeric_key ? 'max_download_mib' : $numeric_key ) . ']', 'max_download_bytes' === $numeric_key ? $mib_value( $download_bytes ) : (string) $field( $numeric_key )['value'] );
+	}
+}
+/** @param string $scope Fixed Core-owned preference group. */
+$open_scope = static function ( string $scope ) use ( $general_tokens, $general_feedback, $general_save_succeeded, $general_failed_scope, $general_scope, $github_visibility, $field, $mib_value, $download_bytes, $numeric_baseline ): void {
+	$failed = ( $general_scope === $scope && false === $general_save_succeeded ) || $general_failed_scope === $scope;
+	?>
+	<div id="ran-booster-general-<?php echo esc_attr( $scope ); ?>" data-ran-booster-general-scope="<?php echo esc_attr( $scope ); ?>"<?php echo ! empty( $general_save_succeeded ) ? ' data-ran-booster-general-saved' : ''; ?>>
+	<?php
+	if ( 'self_update_discovery' === $scope ) {
+		?>
+		<form id="ran-booster-check-core-updates" method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings' ) ); ?>"><?php wp_nonce_field( 'ran-booster-check-core-updates' ); ?><input type="hidden" name="ran_booster[action]" value="check-core-updates"></form><?php } ?>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-' . $scope ) ); ?>" class="ran-booster-settings__general-form" data-ran-booster-general-form data-ran-booster-settings-scope="<?php echo esc_attr( $scope ); ?>" data-ran-booster-confirmed="<?php echo esc_attr( 'numeric' === $scope ? '' : ( $field( $scope )['value'] && ( 'hide_github' !== $scope || $github_visibility['eligible'] ) ? '1' : '0' ) ); ?>" data-ran-booster-baseline="<?php echo esc_attr( (string) wp_json_encode( $numeric_baseline ) ); ?>" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-general-<?php echo esc_attr( $scope ); ?>-error" hx-post="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings' ) ); ?>" hx-target="#ran-booster-general-<?php echo esc_attr( $scope ); ?>" hx-swap="outerHTML show:none" hx-sync="this:drop">
+		<?php wp_nonce_field( 'ran-booster-save-general-settings' ); ?>
+		<input type="hidden" name="ran_booster[action]" value="save-general-settings">
+		<input type="hidden" name="ran_booster[scope]" value="<?php echo esc_attr( $scope ); ?>">
+		<input type="hidden" name="ran_booster[token]" value="<?php echo esc_attr( $general_tokens[ $scope ] ?? '' ); ?>">
+		<div id="ran-booster-general-<?php echo esc_attr( $scope ); ?>-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error<?php echo $failed ? ' role="alert" tabindex="-1"' : ''; ?><?php echo $failed && null !== $general_feedback ? '' : ' hidden'; ?>><p><?php echo esc_html( $failed ? ( $general_feedback ?? '' ) : '' ); ?></p>
+		<?php if ( $failed ) { ?>
+			<p><?php esc_html_e( 'Current saved value:', 'ran-booster' ); ?> <?php echo esc_html( 'numeric' === $scope ? sprintf( /* translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB. */ __( 'Maximum records: %1$s; Retention days: %2$s; Download limit: %3$s MiB.', 'ran-booster' ), (string) $field( 'history_rows' )['value'], (string) $field( 'history_days' )['value'], $mib_value( $download_bytes ) ) : ( $field( $scope )['value'] ? __( 'On', 'ran-booster' ) : __( 'Off', 'ran-booster' ) ) ); ?></p>
+		<?php } ?>
+		</div>
+	<?php
+};
 ?>
+<?php if ( 'all' === $general_scope ) { ?>
 	<section id="ran-booster-general-region" class="ran-booster-panel" aria-labelledby="ran-booster-general-heading"<?php echo ! empty( $general_save_succeeded ) ? ' data-ran-booster-general-saved' : ''; ?>>
 		<h3 id="ran-booster-general-heading"><?php esc_html_e( 'General', 'ran-booster' ); ?></h3>
-		<p data-ran-booster-unsaved hidden role="status"><?php esc_html_e( 'You have unsaved changes.', 'ran-booster' ); ?></p>
-		<?php
-		if ( null !== $general_feedback && '' !== $general_feedback ) {
-			?>
-			<div id="ran-booster-general-error" class="notice notice-info inline" data-ran-booster-admin-mutation-error<?php echo isset( $general_save_succeeded ) && ! $general_save_succeeded ? ' role="alert" tabindex="-1"' : ''; ?>><p><?php echo esc_html( $general_feedback ); ?></p></div>
-		<?php } else { ?>
-			<div id="ran-booster-general-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
+		<p><?php esc_html_e( 'Switches save automatically with JavaScript. History and Download limits use Save changes.', 'ran-booster' ); ?></p>
+		<?php if ( null !== $general_feedback && in_array( $general_failed_scope, array( null, 'all' ), true ) ) { ?>
+		<div id="ran-booster-general-error" class="notice notice-info inline" data-ran-booster-admin-mutation-error<?php echo false === $general_save_succeeded || 'all' === $general_failed_scope ? ' role="alert" tabindex="-1"' : ''; ?>><p><?php echo esc_html( $general_feedback ); ?></p></div>
 		<?php } ?>
-		<form id="ran-booster-check-core-updates" method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings' ) ); ?>"><?php wp_nonce_field( 'ran-booster-check-core-updates' ); ?><input type="hidden" name="ran_booster[action]" value="check-core-updates"></form>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-general-heading' ) ); ?>" class="ran-booster-settings__general-form" data-ran-booster-general-form data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-general-error" hx-post="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings' ) ); ?>" hx-target="#ran-booster-general-region" hx-swap="outerHTML show:none" hx-sync="this:drop">
-			<?php wp_nonce_field( 'ran-booster-save-general-settings' ); ?>
-			<input type="hidden" name="ran_booster[action]" value="save-general-settings">
-			<input type="hidden" name="ran_booster[token]" value="<?php echo esc_attr( $general_token ); ?>">
+		<noscript><p><?php esc_html_e( 'JavaScript is unavailable. Use Save setting beside each switch, and Save changes for numeric settings. Each save reloads Settings; save one group before editing another.', 'ran-booster' ); ?></p></noscript>
+<?php } ?>
+<?php if ( 'all' === $general_scope || 'hide_github' === $general_scope ) { ?>
+	<?php $open_scope( 'hide_github' ); ?>
 			<fieldset class="ran-booster-settings__group">
 				<legend><?php esc_html_e( 'Appearance', 'ran-booster' ); ?></legend>
 				<?php
@@ -133,6 +164,27 @@ $success_label        = is_string( $success_label ) ? $success_label : __( 'Unkn
 					<p id="ran-booster-hide-github-error" class="notice notice-error inline"><?php echo esc_html( $field_error( 'hide_github' ) ); ?></p><?php } ?>
 				<?php $render_configuration( array( 'hide_github' => 'RAN_BOOSTER_HIDE_GITHUB_UI' ) ); ?>
 			</fieldset>
+<div class="ran-booster-settings__toggle-actions">
+	<span data-ran-booster-toggle-status role="status"></span>
+	<button id="ran-booster-save-hide_github" type="submit" class="button" data-ran-booster-toggle-save<?php disabled( $hide_locked ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>
+</div>
+	<?php if ( isset( $general_navigation ) ) { ?>
+<template data-ran-booster-general-navigation>
+		<?php foreach ( $general_navigation as $general_tab ) { ?>
+			<?php if ( 'portability' === $general_tab['key'] ) { ?>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-plugins' ) ); ?>"><?php esc_html_e( 'Plugins', 'ran-booster' ); ?></a>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-themes' ) ); ?>"><?php esc_html_e( 'Themes', 'ran-booster' ); ?></a>
+	<?php } else { ?>
+		<a href="<?php echo esc_url( $general_tab['url'] ); ?>"><?php echo esc_html( $general_tab['label'] ); ?></a>
+	<?php } ?>
+	<?php } ?>
+</template>
+	<?php } ?>
+</form></div>
+<?php } ?>
+<?php if ( 'all' === $general_scope || 'self_update_discovery' === $general_scope ) { ?>
+
+	<?php $open_scope( 'self_update_discovery' ); ?>
 			<fieldset class="ran-booster-settings__group">
 				<legend><?php esc_html_e( 'Booster updates', 'ran-booster' ); ?></legend>
 				<?php
@@ -169,6 +221,18 @@ $success_label        = is_string( $success_label ) ? $success_label : __( 'Unkn
 					<p><a class="button button-primary" href="<?php echo esc_url( $native_update_url ); ?>"><?php esc_html_e( 'Update now', 'ran-booster' ); ?></a></p><?php } ?>
 				<?php $render_configuration( array( 'self_update_discovery' => 'RAN_BOOSTER_SELF_UPDATE_MODE' ) ); ?>
 			</fieldset>
+<div class="ran-booster-settings__toggle-actions">
+	<span data-ran-booster-toggle-status role="status"></span>
+	<button id="ran-booster-save-self_update_discovery" type="submit" class="button" data-ran-booster-toggle-save<?php disabled( $discovery['locked'] ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>
+</div>
+</form></div>
+<?php } ?>
+<?php if ( 'all' === $general_scope || 'numeric' === $general_scope ) { ?>
+	<?php $open_scope( 'numeric' ); ?>
+<div class="ran-booster-settings__save-actions">
+	<button id="ran-booster-save-numeric" type="submit" class="button button-primary"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button>
+	<span data-ran-booster-unsaved role="status"><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span>
+</div>
 			<fieldset class="ran-booster-settings__group">
 				<legend><?php esc_html_e( 'History', 'ran-booster' ); ?></legend>
 				<div class="ran-booster-settings__history-fields">
@@ -207,9 +271,10 @@ $success_label        = is_string( $success_label ) ? $success_label : __( 'Unkn
 						<p class="description"><?php esc_html_e( 'Limits the compressed repository ZIP, not installed size or History retention. One MiB is 1,048,576 bytes; fractional values round to the nearest byte.', 'ran-booster' ); ?></p>
 					<p class="description"><?php /* translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit). Host and updater safeguards may be stricter.', 'ran-booster' ), $branch_ceiling_mib, number_format_i18n( $branch_ceiling ) ) ); ?></p>
 				<?php $render_configuration( array( 'max_download_bytes' => 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ) ); ?>
-			</fieldset>
-
-				<hr class="ran-booster-settings__save-divider">
-			<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button></p>
-		</form>
-	</section>
+			</fieldset><div class="ran-booster-settings__save-actions"><button type="submit" class="button button-primary"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button><span data-ran-booster-pending-label aria-hidden="true"><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span></div>
+</form></div>
+<?php } ?>
+<?php
+if ( 'all' === $general_scope ) {
+	?>
+	</section><?php } ?>

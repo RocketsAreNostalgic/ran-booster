@@ -338,7 +338,12 @@
 					(control) =>
 						!(
 							form.dataset?.ranBoosterSettingsScope &&
-							control.matches?.('input[role="switch"], fieldset')
+							(control.matches?.(
+								'input[role="switch"], fieldset'
+							) ||
+								control.closest?.(
+									'[data-ran-booster-core-toggle]'
+								))
 						)
 				)
 				.map(function (control) {

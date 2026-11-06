@@ -1352,7 +1352,7 @@ msgid "An add-on guide is temporarily unavailable. Check plugin compatibility an
 msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
-#: assets/ran-booster-enhanced-mutations.js:944
+#: assets/ran-booster-enhanced-mutations.js:949
 msgid "We could not complete that request. Please try again."
 msgstr ""
 
@@ -9973,14 +9973,14 @@ msgstr ""
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
 #: views/settings-general.php:136
-#: assets/ran-booster-settings.js:391
+#: assets/ran-booster-settings.js:472
 msgid "On"
 msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
 #: views/settings-general.php:136
-#: assets/ran-booster-settings.js:392
+#: assets/ran-booster-settings.js:473
 msgid "Off"
 msgstr ""
 
@@ -10135,7 +10135,7 @@ msgstr ""
 
 #: views/settings-general.php:234
 #: views/settings-general.php:274
-#: assets/ran-booster-settings.js:41
+#: assets/ran-booster-settings.js:108
 msgid "No pending numeric changes."
 msgstr ""
 
@@ -11427,39 +11427,39 @@ msgstr ""
 msgid "%s — already configured"
 msgstr ""
 
-#: assets/ran-booster-settings.js:40
+#: assets/ran-booster-settings.js:107
 msgid "Unsaved numeric changes."
 msgstr ""
 
-#: assets/ran-booster-settings.js:44
+#: assets/ran-booster-settings.js:111
 msgid "Not saved."
 msgstr ""
 
-#: assets/ran-booster-settings.js:45
+#: assets/ran-booster-settings.js:112
 msgid "Saved."
 msgstr ""
 
-#: assets/ran-booster-settings.js:48
+#: assets/ran-booster-settings.js:115
 msgid "Save needs review."
 msgstr ""
 
-#: assets/ran-booster-settings.js:51
+#: assets/ran-booster-settings.js:118
 msgid "Save unconfirmed. Review and retry."
 msgstr ""
 
-#: assets/ran-booster-settings.js:54
+#: assets/ran-booster-settings.js:121
 msgid "Waiting to save…"
 msgstr ""
 
-#: assets/ran-booster-settings.js:57
+#: assets/ran-booster-settings.js:124
 msgid "Saving…"
 msgstr ""
 
-#: assets/ran-booster-settings.js:201
+#: assets/ran-booster-settings.js:279
 msgid "Leave Settings with unsaved or unconfirmed changes?"
 msgstr ""
 
-#: assets/ran-booster-settings.js:395
+#: assets/ran-booster-settings.js:476
 msgid "Settings changed before confirmation. Review the current saved values before retrying:"
 msgstr ""
 

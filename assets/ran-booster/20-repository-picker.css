@@ -58,10 +58,11 @@ body.ran-booster-repository-picker-open {
 	background: var(--ran-booster-surface-info);
 }
 
-.ran-booster-repository-picker__credential,
-.ran-booster-repository-picker__public-profile {
+.ran-booster-repository-picker .ran-booster-repository-picker__credential,
+.ran-booster-repository-picker .ran-booster-repository-picker__public-profile {
 	inline-size: 100%;
 	max-inline-size: none;
+	margin-inline: 0;
 }
 
 .ran-booster-repository-picker__public-search-fields {

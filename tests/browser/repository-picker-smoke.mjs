@@ -311,6 +311,10 @@ for (const version of ['7.0', '7.1.4']) {
 								),
 							},
 							select: {
+								width: select.getBoundingClientRect().width,
+								availableWidth:
+									select.parentElement.getBoundingClientRect()
+										.width,
 								appearance: s.appearance,
 								backgroundImage: s.backgroundImage,
 								backgroundPosition: s.backgroundPosition,
@@ -343,6 +347,13 @@ for (const version of ['7.0', '7.1.4']) {
 					parseFloat(visualMetrics.select.paddingInlineEnd) >= 24 &&
 						visualMetrics.select.backgroundPosition !== '0% 0%',
 					JSON.stringify(visualMetrics)
+				);
+				assert.ok(
+					Math.abs(
+						visualMetrics.select.width -
+							visualMetrics.select.availableWidth
+					) <= 2,
+					JSON.stringify(visualMetrics.select)
 				);
 				await filter.fill('beta');
 				assert.equal(

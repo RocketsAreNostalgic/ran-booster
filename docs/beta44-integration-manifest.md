@@ -1,5 +1,7 @@
 # Beta.44 integration accumulator
 
+**Controlling package direction:** Every component replacement requires the specific `@wordpress/ui` package unless the owner expressly authorizes an exception for that component and scope. The retained `wp.components` replacements in this historical composition are not compliant adoption and remain held for further replacement preview, admission and acceptance. Prior styling approval is not an exception. Preserve current sites and recoveries; no automatic rollback follows. CSS-only and infrastructure changes remain separately classified. See [component package direction](admin-composition-contract.md#component-package-direction).
+
 This manifest records the coordinator-owned `integration/beta.44` composition and its source provenance. Topic heads identify inputs; they do not assert merge ancestry or acceptance of the component PRs. The component PRs remain separate and unmerged. Admission to this accumulator does not authorize a merge, release, publication, issue closure, or clearance of an acceptance hold.
 
 Released base: [v1.0.0-beta.43](https://github.com/RocketsAreNostalgic/ran-booster/releases/tag/v1.0.0-beta.43), commit `2f68b86795052d9006cd983914f98257c38b74a4`. The earlier integration runtime baseline was `5c992c497168e764483e757e83b36ca15fc413e7`, tree `f302e3b0980e171e4f89d639b8228a855e32a158`; durable integration head before the later preview composition was `2570cdd87802ad920a45a347112970b37377f461`.

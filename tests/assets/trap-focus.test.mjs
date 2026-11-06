@@ -7,13 +7,6 @@ const sources = {
 		new URL('../../assets/ran-booster-secure-inputs.js', import.meta.url),
 		'utf8'
 	),
-	repositoryPicker: fs.readFileSync(
-		new URL(
-			'../../assets/ran-booster-repository-picker.js',
-			import.meta.url
-		),
-		'utf8'
-	),
 };
 
 function loadTrapFocus(source, sourceName) {

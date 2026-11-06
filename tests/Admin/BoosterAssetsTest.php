@@ -215,7 +215,7 @@ final class BoosterAssetsTest extends TestCase {
 
 		$this->booster()->load_scripts( $hook );
 
-		self::assertSame( array( 'ran-booster-admin-shell', 'ran-booster-styles' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
+		self::assertSame( array( 'ran-booster-admin-shell', 'ran-booster-styles', 'wp-components' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
 		self::assertSame(
 			array(
 				'ran-booster-htmx',
@@ -320,7 +320,7 @@ final class BoosterAssetsTest extends TestCase {
 		);
 		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-packages']['footer'] );
 		self::assertSame(
-			array( 'ran-booster-js', 'wp-i18n' ),
+			array( 'ran-booster-js', 'wp-i18n', 'wp-element', 'wp-components' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-repository-picker']['dependencies']
 		);
 		self::assertStringEndsWith(

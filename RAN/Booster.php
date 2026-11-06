@@ -860,7 +860,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-repository-picker',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-repository-picker.js',
-			array( 'ran-booster-js', 'wp-i18n' ),
+			array( 'ran-booster-js', 'wp-i18n', 'wp-element', 'wp-components' ),
 			$repository_picker_script_version,
 			true
 		);
@@ -964,6 +964,7 @@ class Booster {
 		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
 			wp_enqueue_script( 'ran-booster-packages' );
 			wp_enqueue_script( 'ran-booster-repository-picker' );
+			wp_enqueue_style( 'wp-components' );
 		}
 	}
 

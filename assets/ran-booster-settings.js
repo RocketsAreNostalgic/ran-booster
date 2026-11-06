@@ -123,12 +123,6 @@
 		if (state.flight) {
 			message = __('Saving…', 'ran-booster');
 		}
-		const label = state.form.querySelector(
-			'[data-ran-booster-pending-label]'
-		);
-		if (label) {
-			label.textContent = message;
-		}
 		if (status && status.textContent !== message) {
 			status.textContent = message;
 		}

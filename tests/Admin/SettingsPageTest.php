@@ -239,7 +239,10 @@ final class SettingsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-check-updates-help', $html );
 		self::assertSame( 1, substr_count( $html, 'No completed check recorded' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][hide_github]" and @value="0"])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="numeric"]//button[@type="submit" and @disabled])' ), 'All numeric controls are configuration-locked, so their empty form cannot be submitted.' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="numeric"]//button[@type="submit" and @disabled])' ), 'All numeric controls are configuration-locked, so their empty form cannot be submitted.' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="numeric"]//button[@id="ran-booster-save-numeric-bottom" and @type="submit"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="numeric"]//*[@data-ran-booster-unsaved and @role="status" and not(@aria-hidden)])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="numeric"]//fieldset[legend="Download limits"]/following-sibling::div//button[@id="ran-booster-save-numeric-bottom"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//button[@type="submit" and not(@disabled)])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][self_update_discovery]"])' ) );
 		$general_feedback       = 'Settings changed. Review the values.';

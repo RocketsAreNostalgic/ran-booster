@@ -1,7 +1,3 @@
-.ran-booster-admin .ran-booster-troubleshooting {
-	max-inline-size: 1200px;
-}
-
 .ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {
 	background: var(--ran-booster-surface-info);
 }

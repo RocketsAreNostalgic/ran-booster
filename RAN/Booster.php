@@ -805,6 +805,18 @@ class Booster {
 			$style_dependencies = array( $style_handle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
+		if ( in_array( $hook, array( 'ran-booster_page_ran-booster-extensions', 'ran-booster_page_ran-booster-plugins' ), true )
+			|| ( 'toplevel_page_ran-booster' === $hook && in_array( $requested_tab, array( null, '', 'overview' ), true ) )
+		) {
+			wp_enqueue_style( 'wp-components' );
+			wp_enqueue_script(
+				'ran-booster-cards',
+				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
+				array( 'wp-element', 'wp-components' ),
+				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
+				true
+			);
+		}
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
 			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array(), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
 		}
@@ -824,15 +836,6 @@ class Booster {
 				true
 			);
 			wp_enqueue_script( 'ran-booster-extension-details' );
-			wp_enqueue_style( 'wp-components' );
-			wp_register_script(
-				'ran-booster-extension-card',
-				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-extension-card.js',
-				array( 'wp-element', 'wp-components' ),
-				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extension-card.js' ),
-				true
-			);
-			wp_enqueue_script( 'ran-booster-extension-card' );
 			return;
 		}
 

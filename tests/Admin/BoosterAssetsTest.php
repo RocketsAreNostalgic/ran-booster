@@ -116,19 +116,47 @@ final class BoosterAssetsTest extends TestCase {
 	public function test_extensions_page_receives_the_common_and_native_modal_assets(): void {
 		$this->booster()->load_scripts( 'ran-booster_page_ran-booster-extensions' );
 
-		self::assertSame( array( 'ran-booster-admin-shell', 'ran-booster-styles', 'thickbox', 'wp-components' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
-		self::assertSame( array( 'thickbox', 'ran-booster-extension-details', 'ran-booster-extension-card' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
-		self::assertSame( array( 'ran-booster-extension-details', 'ran-booster-extension-card' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
+		self::assertSame( array( 'ran-booster-admin-shell', 'ran-booster-styles', 'wp-components', 'thickbox' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
+		self::assertSame( array( 'ran-booster-cards', 'thickbox', 'ran-booster-extension-details' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+		self::assertSame( array( 'ran-booster-cards', 'ran-booster-extension-details' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
 		self::assertSame(
 			array( 'jquery', 'thickbox' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['dependencies']
 		);
 		self::assertSame(
 			array( 'wp-element', 'wp-components' ),
-			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-card']['dependencies']
+			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['dependencies']
 		);
 		self::assertArrayHasKey( 'ran-booster-55-extensions', $GLOBALS['ran_booster_asset_test_registered_styles'] );
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_localized_scripts'] );
+	}
+
+	/** @return list<array{string, ?string, bool}> */
+	public static function card_surface_provider(): array {
+		return array(
+			array( 'toplevel_page_ran-booster', null, true ),
+			array( 'toplevel_page_ran-booster', 'overview', true ),
+			array( 'toplevel_page_ran-booster', 'gh', false ),
+			array( 'toplevel_page_ran-booster', 'documentation', false ),
+			array( 'ran-booster_page_ran-booster-extensions', null, true ),
+			array( 'ran-booster_page_ran-booster-plugins', null, true ),
+			array( 'ran-booster_page_ran-booster-themes', null, false ),
+			array( 'ran-booster_page_ran-booster-settings', null, false ),
+		);
+	}
+
+	#[DataProvider( 'card_surface_provider' )]
+	public function test_card_assets_are_limited_to_selected_surfaces( string $hook, ?string $tab, bool $expected ): void {
+		if ( null !== $tab ) {
+			$_GET['tab'] = $tab;
+		}
+		$this->booster()->load_scripts( $hook );
+		self::assertSame( $expected, isset( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards'] ) );
+		if ( $expected ) {
+			self::assertContains( 'wp-components', $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
+			self::assertSame( array( 'wp-element', 'wp-components' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['dependencies'] );
+			self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['footer'] );
+		}
 	}
 
 	#[DataProvider( 'unrelated_admin_hook_provider' )]
@@ -219,16 +247,19 @@ final class BoosterAssetsTest extends TestCase {
 
 		$this->booster()->load_scripts( $hook );
 
-		self::assertSame( array( 'ran-booster-admin-shell', 'ran-booster-styles' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
+		self::assertSame( 'ran-booster_page_ran-booster-plugins' === $hook ? array( 'ran-booster-admin-shell', 'ran-booster-styles', 'wp-components' ) : array( 'ran-booster-admin-shell', 'ran-booster-styles' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
 		self::assertSame(
-			array(
-				'ran-booster-htmx',
-				'ran-booster-notice-preference',
-				'ran-booster-js',
-				'ran-booster-secure-inputs',
-				'ran-booster-enhanced-mutations',
-				'ran-booster-packages',
-				'ran-booster-repository-picker',
+			array_merge(
+				array( 'ran-booster-htmx' ),
+				'ran-booster_page_ran-booster-plugins' === $hook ? array( 'ran-booster-cards' ) : array(),
+				array(
+					'ran-booster-notice-preference',
+					'ran-booster-js',
+					'ran-booster-secure-inputs',
+					'ran-booster-enhanced-mutations',
+					'ran-booster-packages',
+					'ran-booster-repository-picker',
+				)
 			),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
@@ -574,13 +605,13 @@ final class BoosterAssetsTest extends TestCase {
 		$this->booster()->load_scripts( 'toplevel_page_ran-booster' );
 
 		self::assertSame(
-			array( 'ran-booster-admin-shell', 'ran-booster-styles', 'ran-booster-onboarding' ),
+			( ! is_string( $tab ) || '' === $tab ) ? array( 'ran-booster-admin-shell', 'ran-booster-styles', 'wp-components', 'ran-booster-onboarding' ) : array( 'ran-booster-admin-shell', 'ran-booster-styles', 'ran-booster-onboarding' ),
 			$GLOBALS['ran_booster_asset_test_enqueued_styles']
 		);
 		self::assertArrayHasKey( 'ran-booster-onboarding', $GLOBALS['ran_booster_asset_test_registered_styles'] );
 		self::assertArrayNotHasKey( 'ran-booster-documentation', $GLOBALS['ran_booster_asset_test_registered_styles'] );
 		self::assertSame(
-			array( 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ),
+			( ! is_string( $tab ) || '' === $tab ) ? array( 'ran-booster-cards', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ) : array( 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(

@@ -5,7 +5,7 @@
  * responsible for placement, content, state and interaction hooks.
  */
 
-.ran-booster-admin .ran-booster-card {
+.ran-booster-admin .ran-booster-card:not([data-ran-booster-card="extensions"]) {
 	border: 1px solid var(--ran-booster-border);
 	border-radius: var(--ran-booster-radius-surface);
 	box-shadow: var(--ran-booster-shadow-surface);

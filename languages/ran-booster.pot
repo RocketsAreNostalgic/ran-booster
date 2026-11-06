@@ -9973,14 +9973,14 @@ msgstr ""
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
 #: views/settings-general.php:136
-#: assets/ran-booster-settings.js:351
+#: assets/ran-booster-settings.js:391
 msgid "On"
 msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
 #: views/settings-general.php:136
-#: assets/ran-booster-settings.js:352
+#: assets/ran-booster-settings.js:392
 msgid "Off"
 msgstr ""
 
@@ -11459,7 +11459,7 @@ msgstr ""
 msgid "Leave Settings with unsaved or unconfirmed changes?"
 msgstr ""
 
-#: assets/ran-booster-settings.js:355
+#: assets/ran-booster-settings.js:395
 msgid "Settings changed before confirmation. Review the current saved values before retrying:"
 msgstr ""
 

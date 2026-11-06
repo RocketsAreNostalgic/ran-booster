@@ -155,12 +155,18 @@
 			if (
 				!form.matches?.('[data-ran-booster-general-form]') ||
 				!detail?.xhr ||
-				detail.target?.id !== 'ran-booster-general-region'
+				![
+					'ran-booster-general-region',
+					'ran-booster-general-hide_github',
+					'ran-booster-general-self_update_discovery',
+					'ran-booster-general-numeric',
+				].includes(detail.target?.id)
 			) {
 				return;
 			}
 			const record = {
 				target: detail.target,
+				form,
 				xhr: detail.xhr,
 				payload: null,
 			};
@@ -170,7 +176,7 @@
 					return;
 				}
 				if (
-					document.getElementById('ran-booster-general-region') !==
+					document.getElementById(record.target.id) !==
 						record.target ||
 					!record.target.isConnected ||
 					!form.isConnected ||
@@ -179,6 +185,9 @@
 					response.preventDefault();
 					return;
 				}
+				record.suppress = form.hasAttribute?.(
+					'data-ran-booster-general-unconfirmed'
+				);
 				try {
 					const header = record.xhr.getResponseHeader(
 						'HX-Trigger-After-Swap'
@@ -324,15 +333,21 @@
 				return;
 			}
 
-			const controls = Array.from(form.elements || [submitter]).map(
-				function (control) {
+			const controls = Array.from(form.elements || [submitter])
+				.filter(
+					(control) =>
+						!(
+							form.dataset?.ranBoosterSettingsScope &&
+							control.matches?.('input[role="switch"], fieldset')
+						)
+				)
+				.map(function (control) {
 					return {
 						ariaDisabled: control.getAttribute?.('aria-disabled'),
 						disabled: control.disabled === true,
 						control,
 					};
-				}
-			);
+				});
 			busyStates.set(form, {
 				controls,
 				submitter,
@@ -734,7 +749,9 @@
 					}
 				}
 				captureGeneralRequest(event, form);
-				captureInteractionState(form);
+				if (!form.dataset?.ranBoosterSettingsScope) {
+					captureInteractionState(form);
+				}
 				setBusy(form);
 			}
 		});
@@ -782,7 +799,7 @@
 		document.addEventListener('htmx:afterSwap', function (event) {
 			const general = generalRequests.get(event.detail?.xhr);
 			const region = document.getElementById(
-				'ran-booster-general-region'
+				general?.target.id || 'ran-booster-general-region'
 			);
 			if (
 				general?.payload &&
@@ -791,6 +808,9 @@
 				region !== general.target &&
 				region.hasAttribute('data-ran-booster-general-saved')
 			) {
+				general.suppress ||= general.form.hasAttribute?.(
+					'data-ran-booster-general-unconfirmed'
+				);
 				generalArmed = general;
 				queueMicrotask(() => {
 					if (generalArmed === general) {
@@ -799,6 +819,9 @@
 				});
 			}
 			const form = requestForm(event) || pendingInteractionState?.form;
+			if (form?.dataset?.ranBoosterSettingsScope) {
+				return;
+			}
 			if (!form || isStaleSourceRequest(event, form)) {
 				return;
 			}
@@ -841,6 +864,9 @@
 
 		document.addEventListener('htmx:afterSettle', function (event) {
 			const form = requestForm(event) || pendingInteractionState?.form;
+			if (form?.dataset?.ranBoosterSettingsScope) {
+				return;
+			}
 			if (form && !isStaleSourceRequest(event, form)) {
 				const successMessage = pendingInteractionState?.successMessage;
 				restoreInteractionState(true);
@@ -856,7 +882,11 @@
 				if (typeof message === 'string' && message) {
 					if (generalArmed?.payload?.message === message) {
 						generalArmed.consumed = true;
+						const suppressed = generalArmed.suppress;
 						generalArmed = null;
+						if (suppressed) {
+							return;
+						}
 						if (presentGeneralSnackbar(message)) {
 							return;
 						}
@@ -902,6 +932,12 @@
 					}
 
 					resetBusy(form);
+					if (
+						form.dataset?.ranBoosterSettingsScope &&
+						window.ranBoosterSettingsInitialized
+					) {
+						return;
+					}
 					pendingInteractionState = null;
 					focusError(
 						form,

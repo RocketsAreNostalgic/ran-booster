@@ -1790,3 +1790,31 @@ test('the feedback runtime is vanilla and its motion is optional', () => {
 		/translateY\(\s*calc\(100% \+ var\(--ran-booster-space-20\)\)\s*\)/
 	);
 });
+
+test('General busy state keeps switches and their fieldsets usable while protecting submit controls', () => {
+	const state = fixture();
+	state.form.dataset.ranBoosterSettingsScope = 'self_update_discovery';
+	const checkbox = {
+		disabled: false,
+		matches: (selector) => selector.includes('input[role="switch"]'),
+	};
+	const fieldset = {
+		disabled: false,
+		matches: (selector) => selector.includes('fieldset'),
+	};
+	state.form.elements = [fieldset, checkbox, state.button];
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	assert.equal(
+		fieldset.disabled,
+		false,
+		'Disabling a fieldset would disable its switch descendants.'
+	);
+	assert.equal(checkbox.disabled, false);
+	assert.equal(state.button.disabled, true);
+	state.listeners.get('htmx:afterRequest')({ detail: { elt: state.form } });
+	assert.equal(state.button.disabled, false);
+});

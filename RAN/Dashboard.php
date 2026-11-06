@@ -92,7 +92,8 @@ class Dashboard {
 	private ?\RAN\Admin\GitHubVisibility $github_visibility            = null;
 	private ?\RAN\Troubleshooting\CoreSelfUpdateStatus $core_updates   = null;
 	/** @var array<string,string> */
-	private array $general_attempted = array();
+	private array $general_attempted      = array();
+	private ?string $general_failed_scope = null;
 	/** @var array<string,string> */
 	private array $general_errors                                     = array();
 	private ?string $general_feedback                                 = null;
@@ -575,14 +576,19 @@ class Dashboard {
 	}
 
 	/** Render only General Settings after an enhanced save; storage is untouched. */
-	public function render_general_settings_region( bool $general_save_succeeded ): string {
+	public function render_general_settings_region( bool $general_save_succeeded, string $scope = 'all' ): string {
 		$data                           = $this->general_settings_data();
 		$data['general_save_succeeded'] = $general_save_succeeded;
+		$data['general_scope']          = $scope;
+		$data['general_navigation']     = in_array( $scope, array( 'all', 'hide_github' ), true ) ? $this->tab_navigation( '' ) : array();
 		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed internal General Settings projection binds this view.
 		extract( $data );
 		ob_start();
 		require __DIR__ . '/../views/settings-general.php';
 		$html = (string) ob_get_clean();
+		if ( ! in_array( $scope, array( 'all', 'self_update_discovery' ), true ) ) {
+			return $html;
+		}
 		try {
 			$file    = dirname( __DIR__ ) . '/ran-booster.php';
 			$version = (string) ( get_file_data( $file, array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' );
@@ -606,12 +612,14 @@ class Dashboard {
 			$snapshot   = $preferences->view_snapshot();
 			$projection = $snapshot['fields'];
 			$token      = $snapshot['token'];
+			$tokens     = $snapshot['tokens'];
 			if ( $snapshot['malformed'] ) {
 				$this->general_feedback = __( 'The saved Settings document is malformed. Runtime safety defaults remain in effect; no values were repaired.', 'ran-booster' );
 			}
 		} catch ( Throwable ) {
 			$projection = array();
 			$token      = '';
+			$tokens     = array();
 		}
 		$visibility = array(
 			'hidden'   => false,
@@ -635,24 +643,28 @@ class Dashboard {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Fixed feedback flag conveys no private data and performs no mutation.
 		$saved = '1' === ( $_GET['general_saved'] ?? null );
 		return array(
-			'general_settings'   => $projection,
-			'general_token'      => $token,
-			'general_feedback'   => $this->general_feedback ?? ( $saved ? __( 'Settings saved.', 'ran-booster' ) : null ),
-			'general_errors'     => $this->general_errors,
-			'general_attempted'  => $this->general_attempted,
-			'github_visibility'  => $visibility,
-			'core_update_status' => $status,
-			'check_available'    => null !== $this->core_updates && $this->core_updates->can_check() && current_user_can( 'update_plugins' ),
-			'native_update_url'  => $url,
+			'general_settings'     => $projection,
+			'general_token'        => $token,
+			'general_tokens'       => $tokens,
+			'general_feedback'     => $this->general_feedback ?? ( $saved ? __( 'Settings saved.', 'ran-booster' ) : null ),
+			'general_errors'       => $this->general_errors,
+			'general_attempted'    => $this->general_attempted,
+			'general_failed_scope' => $this->general_failed_scope,
+			'github_visibility'    => $visibility,
+			'core_update_status'   => $status,
+			'check_available'      => null !== $this->core_updates && $this->core_updates->can_check() && current_user_can( 'update_plugins' ),
+			'native_update_url'    => $url,
 		);
 	}
 
 	/** @param array<string,mixed> $request */
 	public function post_save_general_settings( array $request ): bool {
-		$preferences = $this->general_preferences ?? new \RAN\Settings\GeneralPreferenceStore();
-		$values      = $request['preferences'] ?? null;
-		$token       = $request['token'] ?? null;
-		if ( ! is_array( $values ) || ! is_string( $token ) || null === $this->github_visibility ) {
+		$preferences                = $this->general_preferences ?? new \RAN\Settings\GeneralPreferenceStore();
+		$values                     = $request['preferences'] ?? null;
+		$token                      = $request['token'] ?? null;
+		$scope                      = $request['scope'] ?? 'all';
+		$this->general_failed_scope = is_string( $scope ) ? $scope : 'all';
+		if ( ! is_array( $values ) || ! is_string( $token ) || ! is_string( $scope ) || ! in_array( $scope, array( 'all', 'hide_github', 'self_update_discovery', 'numeric' ), true ) || null === $this->github_visibility ) {
 			$this->general_feedback = __( 'Settings could not be saved. Reload the page and try again.', 'ran-booster' );
 			return false;
 		}
@@ -666,10 +678,10 @@ class Dashboard {
 				}
 			}
 		}
-		$result = $preferences->save( $token, $values, $this->github_visibility->with_management_admission_lock( ... ), $this->github_visibility->github_hide_eligible( ... ) );
+		$result = $preferences->save( $token, $values, $this->github_visibility->with_management_admission_lock( ... ), $this->github_visibility->github_hide_eligible( ... ), $scope );
 		if ( in_array( $result, array( 'saved', 'unchanged' ), true ) ) {
 			// The live descriptor admission fence remains authoritative even if local offer removal fails.
-			if ( ! \RAN\WordPress\CoreSelfUpdatePolicy::detect( dirname( __DIR__ ) . '/ran-booster.php', (string) ( get_file_data( dirname( __DIR__ ) . '/ran-booster.php', array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' ), true )->allows_native_discovery() ) {
+			if ( in_array( $scope, array( 'all', 'self_update_discovery' ), true ) && ! \RAN\WordPress\CoreSelfUpdatePolicy::detect( dirname( __DIR__ ) . '/ran-booster.php', (string) ( get_file_data( dirname( __DIR__ ) . '/ran-booster.php', array( 'version' => 'Version' ), 'plugin' )['version'] ?? '' ), true )->allows_native_discovery() ) {
 				try {
 					delete_site_transient( 'update_plugins' );
 				} catch ( Throwable ) {
@@ -677,7 +689,8 @@ class Dashboard {
 					return false;
 				}
 			}
-			$this->general_attempted = array();
+			$this->general_attempted    = array();
+			$this->general_failed_scope = null;
 			return true;
 		}
 		$this->general_feedback = 'stale' === $result

@@ -113,6 +113,7 @@ test('provider switching enables Automatic without changing Manual selection', (
 
 test('provider switching hides the picker without browsing support', () => {
 	const update = loadFunction('updateRepositoryPickerAvailability', {
+		pickerComponentsAvailable: true,
 		__: (message) => message,
 	});
 	const { button, form } = pickerFixture();
@@ -126,6 +127,7 @@ test('provider switching hides the picker without browsing support', () => {
 
 test('provider switching restores the picker for browsing providers', () => {
 	const update = loadFunction('updateRepositoryPickerAvailability', {
+		pickerComponentsAvailable: true,
 		__: (message) => message,
 	});
 	const { button, form } = pickerFixture();
@@ -232,7 +234,10 @@ test('repository count and accessibility copy use the Core JavaScript catalogue'
 		source,
 		/\.setAttribute\(\s*'aria-label',\s*__\('Repository source', 'ran-booster'\)\s*\)/
 	);
-	assert.match(source, /__\('Close repository picker', 'ran-booster'\)/);
+	assert.match(
+		source,
+		/__\(\s*'Close repository picker',\s*'ran-booster'\s*\)/
+	);
 });
 
 test('credential editing contains no unreleased legacy-profile branch', () => {

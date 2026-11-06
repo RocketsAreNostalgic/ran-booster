@@ -2,19 +2,26 @@ body.ran-booster-repository-picker-open {
 	overflow: hidden;
 }
 
-.ran-booster-repository-picker__dialog {
-	display: flex;
-	inline-size: min(720px, 100%);
-	block-size: min(720px, calc(100vh - 40px));
-	max-block-size: min(720px, calc(100vh - 40px));
-	flex-direction: column;
+.ran-booster-repository-picker-modal {
+	inline-size: min(720px, calc(100vw - 32px));
+	block-size: min(720px, calc(100vh - 32px));
+	max-block-size: min(720px, calc(100vh - 32px));
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-surface);
+	background: var(--ran-booster-surface);
+	box-shadow: var(--ran-booster-shadow-modal);
+}
+
+.ran-booster-repository-picker-portal {
+	position: relative;
+	z-index: var(--ran-booster-layer-modal);
+	isolation: isolate;
+	--wp-ui-dialog-z-index: var(--ran-booster-layer-modal);
 }
 
 .ran-booster-repository-picker__body {
 	display: flex;
-	overflow-y: auto;
 	min-block-size: 0;
-	padding: var(--ran-booster-space-20);
 	flex: 1 1 auto;
 	flex-direction: column;
 }
@@ -46,10 +53,11 @@ body.ran-booster-repository-picker-open {
 	background: var(--ran-booster-surface-info);
 }
 
-.ran-booster-repository-picker__credential,
-.ran-booster-repository-picker__public-profile {
+.ran-booster-repository-picker .ran-booster-repository-picker__credential,
+.ran-booster-repository-picker .ran-booster-repository-picker__public-profile {
 	inline-size: 100%;
 	max-inline-size: none;
+	margin-inline: 0;
 }
 
 .ran-booster-repository-picker__public-search-fields {
@@ -166,5 +174,21 @@ body.ran-booster-repository-picker-open {
 	.ran-booster-repository-picker__list::before {
 		animation: none;
 		transition: none;
+	}
+}
+
+@media (max-width: 600px) {
+	.ran-booster-repository-picker__modes {
+		grid-template-columns: minmax(0, 1fr);
+	}
+
+	.ran-booster-repository-picker__repository {
+		flex-wrap: wrap;
+		gap: var(--ran-booster-space-6);
+	}
+
+	.ran-booster-repository-picker__repository-details {
+		flex: 1 1 100%;
+		overflow-wrap: anywhere;
 	}
 }

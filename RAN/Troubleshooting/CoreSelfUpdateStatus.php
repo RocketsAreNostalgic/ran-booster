@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Troubleshooting;
 
+use Closure;
 use RAN\WordPress\CoreSelfUpdatePolicy;
 use RAN\WordPress\CoreSelfUpdateCheck;
 use RAN\RepositoryProvider\RepositoryReleaseNativeTarget;
@@ -15,15 +16,20 @@ use Throwable;
  */
 final class CoreSelfUpdateStatus {
 
+	/** @var Closure():CoreSelfUpdatePolicy */
+	private readonly Closure $policy;
+
+	/** @param callable():CoreSelfUpdatePolicy $policy Fresh effective policy. */
 	public function __construct(
-		private readonly CoreSelfUpdatePolicy $policy,
+		callable $policy,
 		private readonly ?RepositoryReleaseNativeTarget $target,
 		private readonly ?CoreSelfUpdateCheck $check = null
 	) {
+		$this->policy = Closure::fromCallable( $policy );
 	}
 
 	public function can_check(): bool {
-		return null !== $this->check && $this->policy->allows_native_discovery();
+		return null !== $this->check && ( $this->policy )()->allows_native_discovery();
 	}
 
 	/** @return array{outcome:string,code:string} */
@@ -38,8 +44,9 @@ final class CoreSelfUpdateStatus {
 	 * @return array<string, int|string|null>
 	 */
 	public function diagnostics(): array {
-		$status              = $this->policy->diagnostics();
-		$updater_diagnostics = $this->target_diagnostics();
+		$policy              = ( $this->policy )();
+		$status              = $policy->diagnostics();
+		$updater_diagnostics = $this->target_diagnostics( $policy );
 		$check_diagnostics   = $this->check_diagnostics();
 
 		return array_merge(
@@ -81,9 +88,9 @@ final class CoreSelfUpdateStatus {
 	}
 
 	/** @return array{state?:string,code?:string,offered_version?:string,last_check?:?int,next_check?:?int} */
-	private function target_diagnostics(): array {
+	private function target_diagnostics( CoreSelfUpdatePolicy $policy ): array {
 		if ( null === $this->target ) {
-			return $this->policy->allows_native_discovery()
+			return $policy->allows_native_discovery()
 				? array()
 				: array(
 					'state' => 'inactive',

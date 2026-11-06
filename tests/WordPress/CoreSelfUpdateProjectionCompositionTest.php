@@ -70,7 +70,7 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 			),
 			$success->check()
 		);
-		[$success_payload, $success_report] = $this->projections( new CoreSelfUpdateStatus( $this->enabled_policy(), $target, $success ) );
+		[$success_payload, $success_report] = $this->projections( new CoreSelfUpdateStatus( fn (): CoreSelfUpdatePolicy => $this->enabled_policy(), $target, $success ) );
 		self::assertSame( 1000, $success_payload['core_self_update']['last_successful_check'] );
 		self::assertSame( 'success', $success_payload['core_self_update']['last_check_outcome'] );
 		self::assertSame( gmdate( 'c', 1000 ), json_decode( $success_report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_successful_check'] );
@@ -85,7 +85,7 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 			$failure->check()
 		);
 
-		$status  = new CoreSelfUpdateStatus( $this->enabled_policy(), $target, $failure );
+		$status  = new CoreSelfUpdateStatus( fn (): CoreSelfUpdatePolicy => $this->enabled_policy(), $target, $failure );
 		$details = $status->diagnostics();
 		self::assertSame( 1000, $details['last_successful_check'] );
 		self::assertSame( 'unknown', $details['last_check_outcome'] );
@@ -118,7 +118,7 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 			),
 			$skipped->check()
 		);
-		[$disabled_payload, $disabled_report] = $this->projections( new CoreSelfUpdateStatus( $this->enabled_policy(), $target, $skipped ) );
+		[$disabled_payload, $disabled_report] = $this->projections( new CoreSelfUpdateStatus( fn (): CoreSelfUpdatePolicy => $this->enabled_policy(), $target, $skipped ) );
 		$this->assert_missing_operator_observation( $disabled_payload, $disabled_report, 1700001900 );
 
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Seed the Core-check shim with its exact serialized option representation.
@@ -136,7 +136,7 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 			),
 			$active->check()
 		);
-		[$active_payload, $active_report] = $this->projections( new CoreSelfUpdateStatus( $this->enabled_policy(), $target, $active ) );
+		[$active_payload, $active_report] = $this->projections( new CoreSelfUpdateStatus( fn (): CoreSelfUpdatePolicy => $this->enabled_policy(), $target, $active ) );
 		$this->assert_missing_operator_observation( $active_payload, $active_report, 1700001900 );
 
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.serialize_serialize -- Seed the expired cooldown through the Core-check shim's persisted option representation.
@@ -161,7 +161,7 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 			$past->check()
 		);
 
-		$status             = new CoreSelfUpdateStatus( $this->enabled_policy(), $target, $past );
+		$status             = new CoreSelfUpdateStatus( fn (): CoreSelfUpdatePolicy => $this->enabled_policy(), $target, $past );
 		[$payload, $report] = $this->projections( $status );
 		self::assertSame( 'failed', $payload['core_self_update']['last_check_outcome'] );
 		self::assertSame( 'bounded_unreviewed_code', $payload['core_self_update']['last_check_code'] );

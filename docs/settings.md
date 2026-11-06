@@ -5,10 +5,17 @@ onboarding or unavailable credential storage. It is not a horizontal shell tab.
 
 General groups Appearance, Booster updates, History and Download limits. With
 JavaScript, each switch saves only its own preference automatically. History and
-Download limits retain explicit **Save changes**. Their two action areas keep a
+Download limits retain explicit **Save changes**. One bottom action area keeps a
 persistent pending indicator beside Save; toggle confirmations do not clear it.
 The indicator clears after confirmed numeric persistence or reversion to the
 confirmed baseline. It does not time out or dismiss edits.
+
+The two General switches mount WordPress's public `ToggleControl` through its
+registered component and element scripts. The native named input remains the
+protected form's sole preference field; the component sends changes through the
+existing scoped saving controller. React owns only its dedicated control host.
+HTMX cleanup and history capture unmount it before replacing or caching markup.
+If the component cannot mount, the native switch remains available.
 
 Without JavaScript or HTMX, use **Save setting** beside each switch and **Save
 changes** for numeric settings. Check for updates and storage actions remain
@@ -40,7 +47,9 @@ No deployment lock or automatic migration is introduced here.
 A failed submission keeps safe editable attempted values and current saved
 values beside its error. A committed preference with failed update-offer cache
 cleanup retains that durable warning; it is not described as rolled back.
-Transient switch success uses the existing confirmed-operation Snackbar. Pending
+Confirmed saves use the public WordPress Snackbar near the bottom of the current
+viewport without moving the form. It follows WordPress's reduced-motion setting.
+Pending
 numeric edits and durable errors have separate presentation. Native leave
 protection and enhanced navigation confirmation protect unfinished or uncertain
 changes. Restored history is marked unconfirmed and requires review/retry with

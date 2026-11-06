@@ -34,7 +34,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$operation_guard = strpos( $bootstrap, 'with_operation_guard(' );
 		$repository      = strpos( $bootstrap, "'RocketsAreNostalgic/ran-booster'," );
 		$adapter         = strpos( $bootstrap, 'new CoreSelfUpdateNativeTarget( $core_updater )' );
-		$status_bind     = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $current_policy, $core_release_target, $core_check )' );
+		$status_bind     = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $core_policy, $core_release_target, $core_check )' );
 
 		self::assertIsInt( $seal );
 		self::assertIsInt( $policy_guard );
@@ -62,7 +62,7 @@ final class ReleaseManagementCutoverBootstrapTest extends TestCase {
 		$bootstrap = $this->source( 'ran-booster.php' );
 
 		$fallback = strpos( $bootstrap, "if ( function_exists( 'add_filter' ) )" );
-		$status   = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $current_policy, $core_release_target, $core_check )' );
+		$status   = strpos( $bootstrap, 'new CoreSelfUpdateStatus( $core_policy, $core_release_target, $core_check )' );
 
 		self::assertIsInt( $fallback );
 		self::assertIsInt( $status );

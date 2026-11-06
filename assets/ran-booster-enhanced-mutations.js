@@ -54,32 +54,36 @@
 			) {
 				return;
 			}
-			const button = document.querySelector(
-				'#ran-booster-general-region [data-ran-booster-general-form] [type="submit"]:not([form])'
-			);
-			if (
-				button?.isConnected &&
-				!button.disabled &&
-				!removing?.contains?.(button)
-			) {
-				button.focus();
-			}
-			if (snackbar.host.ownerDocument.activeElement !== button) {
-				for (const fallback of document.querySelectorAll(
-					'#wpadminbar a[href]'
-				)) {
-					if (
-						fallback.getClientRects().length &&
-						!removing?.contains?.(fallback)
-					) {
-						fallback.focus();
-						if (
-							snackbar.host.ownerDocument.activeElement ===
-							fallback
-						) {
-							break;
-						}
-					}
+			const candidates = [
+				...document.querySelectorAll(
+					'#ran-booster-save-numeric-bottom'
+				),
+				...document.querySelectorAll(
+					'#ran-booster-general-region [data-ran-booster-core-toggle] input, #ran-booster-general-region input[type="number"], #ran-booster-general-region input[role="switch"]'
+				),
+				...document.querySelectorAll('#wpadminbar a[href]'),
+			];
+			for (const candidate of candidates) {
+				if (
+					!candidate.isConnected ||
+					candidate.disabled ||
+					removing?.contains?.(candidate) ||
+					!candidate.getClientRects().length
+				) {
+					continue;
+				}
+				const rect = candidate.getBoundingClientRect();
+				if (
+					rect.left < 0 ||
+					rect.top < 0 ||
+					rect.right > window.innerWidth ||
+					rect.bottom > window.innerHeight
+				) {
+					continue;
+				}
+				candidate.focus({ preventScroll: true });
+				if (snackbar.host.ownerDocument.activeElement === candidate) {
+					break;
 				}
 			}
 		}
@@ -338,7 +342,12 @@
 					(control) =>
 						!(
 							form.dataset?.ranBoosterSettingsScope &&
-							control.matches?.('input[role="switch"], fieldset')
+							(control.matches?.(
+								'input[role="switch"], fieldset'
+							) ||
+								control.closest?.(
+									'[data-ran-booster-core-toggle]'
+								))
 						)
 				)
 				.map(function (control) {

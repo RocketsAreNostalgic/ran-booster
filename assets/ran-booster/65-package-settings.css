@@ -1145,23 +1145,12 @@
 	margin-block: 12px;
 }
 
-.ran-booster-admin .ran-booster-settings__save-actions {
-	padding: 12px;
-	border: 1px solid currentcolor;
-	border-inline-start: 4px solid transparent;
-}
-
-.ran-booster-admin
-	.ran-booster-settings--pending
-	.ran-booster-settings__save-actions {
-	border-inline-start: 4px solid var(--ran-booster-status-warning);
-}
-
 .ran-booster-admin [data-ran-booster-unsaved],
 .ran-booster-admin [data-ran-booster-toggle-status] {
 	min-block-size: 1.5em;
 }
 
-.ran-booster-admin [data-ran-booster-toggle-save][hidden] {
+.ran-booster-admin [data-ran-booster-toggle-save][hidden],
+.ran-booster-admin [data-ran-booster-native-toggle][hidden] {
 	display: none;
 }

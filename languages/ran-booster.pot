@@ -1027,7 +1027,7 @@ msgid "Completed"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Booster.php:989
+#: RAN/Booster.php:996
 #: views/attempts/index.php:51
 #: views/overview-dashboard.php:29
 #: views/packages/index.php:64
@@ -2848,7 +2848,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:712
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:990
+#: RAN/Booster.php:997
 #: views/attempts/index.php:54
 #: views/onboarding.php:81
 #: views/onboarding.php:99
@@ -4793,74 +4793,74 @@ msgstr ""
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:986
+#: RAN/Booster.php:993
 #: views/attempts/index.php:46
 #: views/overview-dashboard.php:24
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:987
+#: RAN/Booster.php:994
 #: views/attempts/index.php:47
 #: views/overview-dashboard.php:25
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:988
+#: RAN/Booster.php:995
 #: views/attempts/index.php:49
 #: views/overview-dashboard.php:27
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:991
+#: RAN/Booster.php:998
 #: views/packages/index.php:339
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:992
+#: RAN/Booster.php:999
 #: views/packages/index.php:341
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:993
+#: RAN/Booster.php:1000
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:994
+#: RAN/Booster.php:1001
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:995
+#: RAN/Booster.php:1002
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:996
+#: RAN/Booster.php:1003
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:997
+#: RAN/Booster.php:1004
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:998
+#: RAN/Booster.php:1005
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:1094
+#: RAN/Booster.php:1101
 msgid "RAN Booster could not save this notice preference. Please try again."
 msgstr ""
 
-#: RAN/Booster.php:1131
+#: RAN/Booster.php:1138
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:1133
+#: RAN/Booster.php:1140
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:1135
+#: RAN/Booster.php:1142
 msgid "Contact a site administrator."
 msgstr ""
 

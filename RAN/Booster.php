@@ -840,10 +840,17 @@ class Booster {
 		if ( in_array( $hook, array( 'ran-booster_page_ran-booster-extensions', 'ran-booster_page_ran-booster-plugins' ), true )
 			|| ( 'toplevel_page_ran-booster' === $hook && in_array( $requested_tab, array( null, '', 'overview' ), true ) )
 		) {
+			wp_register_script(
+				'ran-booster-ui',
+				trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/ran-booster-ui.min.js',
+				array( 'wp-element', 'react-jsx-runtime' ),
+				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/lib/ran-booster-ui.min.js' ),
+				true
+			);
 			wp_enqueue_script(
 				'ran-booster-cards',
 				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
-				array( 'wp-element', 'wp-components' ),
+				array( 'ran-booster-ui' ),
 				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
 				true
 			);

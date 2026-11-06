@@ -129,13 +129,13 @@ final class BoosterAssetsTest extends TestCase {
 
 		self::assertSame( array( 'ran-booster-menu', 'ran-booster-admin-shell', 'ran-booster-styles', 'wp-components', 'thickbox' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
 		self::assertSame( array( 'ran-booster-cards', 'thickbox', 'ran-booster-extension-details' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
-		self::assertSame( array( 'ran-booster-cards', 'ran-booster-extension-details' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
+		self::assertSame( array( 'ran-booster-ui', 'ran-booster-cards', 'ran-booster-extension-details' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
 		self::assertSame(
 			array( 'jquery', 'thickbox' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['dependencies']
 		);
 		self::assertSame(
-			array( 'wp-element', 'wp-components' ),
+			array( 'ran-booster-ui' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['dependencies']
 		);
 		self::assertArrayHasKey( 'ran-booster-55-extensions', $GLOBALS['ran_booster_asset_test_registered_styles'] );
@@ -163,9 +163,12 @@ final class BoosterAssetsTest extends TestCase {
 		}
 		$this->booster()->load_scripts( $hook );
 		self::assertSame( $expected, isset( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards'] ) );
+		self::assertSame( $expected, isset( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-ui'] ) );
 		if ( $expected ) {
 			self::assertContains( 'wp-components', $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
-			self::assertSame( array( 'wp-element', 'wp-components' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['dependencies'] );
+			self::assertSame( array( 'ran-booster-ui' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['dependencies'] );
+			self::assertSame( array( 'wp-element', 'react-jsx-runtime' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-ui']['dependencies'] );
+			self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-ui']['footer'] );
 			self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['footer'] );
 		}
 	}

@@ -5,7 +5,7 @@
  * responsible for placement, content, state and interaction hooks.
  */
 
-.ran-booster-admin .ran-booster-card {
+.ran-booster-admin .ran-booster-card:not([data-ran-booster-card="extensions"]) {
 	border: 1px solid var(--ran-booster-border);
 	border-radius: var(--ran-booster-radius-surface);
 	box-shadow: var(--ran-booster-shadow-surface);
@@ -16,9 +16,21 @@
 	line-height: var(--ran-booster-line-height-base);
 }
 
-.ran-booster-admin .ran-booster-card__surface {
-	color: inherit;
-	font: inherit;
+.ran-booster-admin .ran-booster-card[data-ran-booster-ui-mounted] {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.ran-booster-admin .ran-booster-card__content {
+	box-sizing: content-box;
+	min-inline-size: 0;
+}
+
+.ran-booster-admin [data-ran-booster-ui-badge-fallback][hidden] {
+	display: none;
 }
 
 .ran-booster-admin .ran-booster-panel,

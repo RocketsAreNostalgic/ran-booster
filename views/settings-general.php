@@ -171,6 +171,11 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 	<?php if ( isset( $general_navigation ) ) { ?>
 <template data-ran-booster-general-navigation>
 		<?php foreach ( $general_navigation as $general_tab ) { ?>
+			<?php
+			if ( 'troubleshooting' === $general_tab['key'] ) {
+				continue;
+			}
+			?>
 			<?php if ( 'portability' === $general_tab['key'] ) { ?>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-plugins' ) ); ?>"><?php esc_html_e( 'Plugins', 'ran-booster' ); ?></a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-themes' ) ); ?>"><?php esc_html_e( 'Themes', 'ran-booster' ); ?></a>

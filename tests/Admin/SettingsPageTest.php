@@ -223,10 +223,40 @@ final class SettingsPageTest extends TestCase {
 				'url'    => 'https://example.test/wp-admin/admin.php?page=ran-booster-transporter',
 				'active' => false,
 			),
+			array(
+				'key'      => 'github',
+				'label'    => 'GitHub',
+				'url'      => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=github',
+				'active'   => false,
+				'provider' => true,
+			),
+			array(
+				'key'      => 'troubleshooting',
+				'label'    => 'Troubleshooting',
+				'url'      => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting',
+				'active'   => false,
+				'provider' => false,
+			),
 		);
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/base.php';
-		$shell_html = (string) ob_get_clean();
+		$shell_html         = (string) ob_get_clean();
+		$general_navigation = $tabs;
+		$general_scope      = 'hide_github';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
+		$partial_html = (string) ob_get_clean();
+		unset( $general_navigation, $general_scope );
+		self::assertSame( 1, preg_match( '/<nav class="ran-admin-shell__navigation".*?<\/nav>/s', $shell_html, $shell_navigation ) );
+		self::assertSame( 1, preg_match( '/<template data-ran-booster-general-navigation>.*?<\/template>/s', $partial_html, $partial_navigation ) );
+		foreach ( array( $shell_navigation[0], $partial_navigation[0] ) as $navigation ) {
+			foreach ( array( 'Overview', 'Plugins', 'Themes', 'GitHub' ) as $label ) {
+				self::assertStringContainsString( '>' . $label . '</a>', $navigation );
+			}
+			self::assertStringNotContainsString( 'Troubleshooting', $navigation );
+			self::assertStringContainsString( 'tab=github', $navigation );
+		}
+
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $shell_html ) );
 		self::assertStringContainsString( '>Booster</h1>', $shell_html );
 		self::assertStringContainsString( '>Rockets Are Nostalgic</p>', $shell_html );

@@ -221,7 +221,7 @@ $policy_labels = array(
 	</div>
 <?php } ?>
 
-<table class="wp-list-table widefat plugins ran-booster-package-table">
+<table class="wp-list-table widefat plugins ran-booster-package-table" data-package-type="<?php echo esc_attr( $package_view->get_type() ); ?>">
 	<thead>
 	<tr>
 		<th scope="col" class="manage-column column-cb check-column">

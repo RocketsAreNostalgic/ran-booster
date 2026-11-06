@@ -114,10 +114,14 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 ?><div class="wrap ran-booster-admin<?php echo esc_attr( $admin_page_modifier ); ?>">
 	<?php
 	\RAN\Admin\BoosterNoticeScope::render_shell_notices();
-	if ( isset( $core_self_update_development_notice ) ) {
-		$core_self_update_development_notice->render_shell_inline();
-	}
 	?>
+	<div id="ran-booster-core-development-notice-slot">
+		<?php
+		if ( isset( $core_self_update_development_notice ) ) {
+			$core_self_update_development_notice->render_shell_inline();
+		}
+		?>
+	</div>
 	<?php if ( ! in_array( $view, array( 'packages/index', 'packages/recovery' ), true ) ) { ?>
 		<?php require __DIR__ . '/notices.php'; ?>
 	<?php } ?>

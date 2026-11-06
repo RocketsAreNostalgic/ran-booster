@@ -26,7 +26,7 @@ final class CoreSelfUpdateDevelopmentNotice {
 	}
 
 	public function enqueue_style(): void {
-		if ( $this->should_render() ) {
+		if ( $this->should_render() || ( BoosterNoticeScope::is_booster_screen( $this->screen_id ) && $this->authorized() ) ) {
 			wp_add_inline_style( 'common', '[data-ran-booster-core-development-notice] { background-color: #e5f3ff; }' );
 		}
 	}
@@ -34,13 +34,14 @@ final class CoreSelfUpdateDevelopmentNotice {
 	public function should_render(): bool {
 		$diagnostics = $this->policy->diagnostics();
 
-		return (
-			current_user_can( 'manage_options' )
-			|| current_user_can( 'manage_network_plugins' )
-		)
+		return $this->authorized()
 			&& BoosterNoticeScope::allows( $this->screen_id )
 			&& 'disabled' === ( $diagnostics['effective_mode'] ?? null )
 			&& 'source_checkout' === ( $diagnostics['reason'] ?? null );
+	}
+
+	private function authorized(): bool {
+		return current_user_can( 'manage_options' ) || current_user_can( 'manage_network_plugins' );
 	}
 
 	/** Render on non-Booster admin screens through WordPress's notice region. */

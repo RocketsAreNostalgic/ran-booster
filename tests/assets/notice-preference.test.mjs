@@ -73,6 +73,11 @@ function setup(kind, fetch) {
 	});
 	function click(mode) {
 		const button = {
+			getAttribute() {
+				return null;
+			},
+			setAttribute() {},
+			removeAttribute() {},
 			dataset: mode ? { ranBoosterNoticePreferenceMode: mode } : {},
 			closest(selector) {
 				return selector.includes(kind) ? notice : null;
@@ -242,9 +247,29 @@ function developmentLifecycle(fetch) {
 	const context = { window, document, URLSearchParams, WeakSet, Error };
 	function mount(version = 'local-development-v2') {
 		const button = {
+			attributes: {},
+			getAttribute(name) {
+				return this.attributes[name] ?? null;
+			},
+			setAttribute(name, value) {
+				this.attributes[name] = value;
+			},
+			removeAttribute(name) {
+				delete this.attributes[name];
+			},
 			hidden: true,
 			style: { display: 'none' },
-			disabled: false,
+			ownerDocument: document,
+			_disabled: false,
+			get disabled() {
+				return this._disabled;
+			},
+			set disabled(value) {
+				this._disabled = value;
+				if (value && this.ownerDocument.activeElement === this) {
+					this.ownerDocument.activeElement = null;
+				}
+			},
 			dataset: {},
 			closest: () => current,
 		};
@@ -392,4 +417,29 @@ test('delayed success removes a mounted restore of the same event and restores i
 	assert.equal(first.notice.removed, true);
 	assert.equal(restored.notice.removed, true);
 	assert.equal(state.document.activeElement, state.heading);
+});
+
+test('pending development dismissal retains focus and blocks duplicate activation', async () => {
+	let resolve;
+	let calls = 0;
+	const state = developmentLifecycle(() => {
+		calls++;
+		return new Promise((done) => {
+			resolve = done;
+		});
+	});
+	const { notice, button } = state.mount();
+	state.init();
+	state.document.activeElement = button;
+	state.click(button);
+	state.click(button);
+	assert.equal(calls, 1);
+	assert.equal(button.disabled, false);
+	assert.equal(button.getAttribute('aria-disabled'), 'true');
+	assert.equal(state.document.activeElement, button);
+	resolve({ ok: true, json: async () => ({ success: true }) });
+	await flush();
+	assert.equal(notice.removed, true);
+	assert.equal(state.document.activeElement, state.heading);
+	assert.equal(button.getAttribute('aria-disabled'), null);
 });

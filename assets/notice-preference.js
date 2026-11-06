@@ -94,11 +94,20 @@
 					'[data-ran-booster-notice-preference-mode], .notice-dismiss'
 				)
 			);
+			const isDevelopment =
+				entry.config === 'ranBoosterDevelopmentSafetyNotice';
+			const ariaDisabled = isDevelopment
+				? button.getAttribute('aria-disabled')
+				: null;
 			const disabled = buttons.map(function (item) {
 				return item.disabled;
 			});
 			buttons.forEach(function (item) {
-				item.disabled = true;
+				if (isDevelopment && item === button) {
+					item.setAttribute('aria-disabled', 'true');
+				} else {
+					item.disabled = true;
+				}
 			});
 			const previousError = notice.querySelector(
 				'[data-ran-booster-notice-preference-error]'
@@ -106,10 +115,9 @@
 			if (previousError) {
 				previousError.textContent = '';
 			}
-			const developmentState =
-				entry.config === 'ranBoosterDevelopmentSafetyNotice'
-					? notice.dataset.ranBoosterNoticeState
-					: '';
+			const developmentState = isDevelopment
+				? notice.dataset.ranBoosterNoticeState
+				: '';
 			const body = new URLSearchParams({
 				action: config.action,
 				nonce: config.nonce,
@@ -180,6 +188,13 @@
 				.finally(function () {
 					pending.delete(notice);
 					notice.removeAttribute('aria-busy');
+					if (isDevelopment) {
+						if (ariaDisabled === null) {
+							button.removeAttribute('aria-disabled');
+						} else {
+							button.setAttribute('aria-disabled', ariaDisabled);
+						}
+					}
 					buttons.forEach(function (item, index) {
 						item.disabled = disabled[index];
 					});

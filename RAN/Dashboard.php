@@ -1523,9 +1523,10 @@ class Dashboard {
 
 		$data['development_environment_detected'] = $development_environment_detected;
 
-		$data['development_safety_notice'] = $this->should_show_development_safety_notice( $view, $development_environment_detected );
-		$data['messages']                  = $this->messages;
-		$data['name']                      = $this->booster->get_name();
+		$data['local_development_overview'] = $this->is_local_development_overview( $view, $data, DevelopmentEnvironmentDetector::is_local() );
+		$data['development_safety_notice']  = $this->should_show_development_safety_notice( $data['local_development_overview'] );
+		$data['messages']                   = $this->messages;
+		$data['name']                       = $this->booster->get_name();
 
 		$data['core_self_update_development_notice'] = $this->core_self_update_development_notice;
 		if ( ! isset( $data['tabs'] ) ) {
@@ -1539,12 +1540,18 @@ class Dashboard {
 		return include __DIR__ . '/../views/base.php';
 	}
 
-	private function should_show_development_safety_notice( string $view, bool $development_environment_detected ): bool {
-		$relevant_view = 'packages/index' === $view;
-		$user_id       = get_current_user_id();
-		$dismissed     = $user_id > 0
-			&& '1' === get_user_meta( $user_id, DevelopmentSafetyNoticeController::USER_META_KEY, true );
+	/** @param array<string, mixed> $data Canonical view projection. */
+	private function is_local_development_overview( string $view, array $data, bool $is_local ): bool {
+		return 'index' === $view && 'overview' === ( $data['tab'] ?? null )
+			&& isset( $data['onboarding'] ) && $is_local;
+	}
 
-		return $relevant_view && ! $dismissed && $development_environment_detected;
+	private function should_show_development_safety_notice( bool $local_development_overview ): bool {
+		$user_id = get_current_user_id();
+		return $local_development_overview && ( $user_id < 1 || ! ( new \RAN\Admin\NoticePreference() )->is_suppressed(
+			$user_id,
+			DevelopmentSafetyNoticeController::USER_META_KEY,
+			DevelopmentSafetyNoticeController::NOTICE_STATE
+		) );
 	}
 }

@@ -56,6 +56,7 @@ final class DevelopmentEnvironmentDetectorTest extends TestCase {
 		$GLOBALS['ran_booster_development_detector_modes']            = $development_modes;
 
 		self::assertSame( $expected, DevelopmentEnvironmentDetector::is_likely() );
+		self::assertSame( $expected && 'https://example.com:10443' !== $home_url, DevelopmentEnvironmentDetector::is_local() );
 	}
 
 	#[RunInSeparateProcess]
@@ -64,5 +65,6 @@ final class DevelopmentEnvironmentDetectorTest extends TestCase {
 		define( 'WP_DEBUG', true );
 
 		self::assertTrue( DevelopmentEnvironmentDetector::is_likely() );
+		self::assertFalse( DevelopmentEnvironmentDetector::is_local() );
 	}
 }

@@ -40,6 +40,14 @@ final class CoreSelfUpdateDevelopmentNotice {
 			&& 'source_checkout' === ( $diagnostics['reason'] ?? null );
 	}
 
+	/** Render the source-policy fact within the local-development guidance. */
+	public function render_local_fact(): void {
+		if ( ! $this->rendered && $this->should_render() ) {
+			$this->rendered = true;
+			echo '<p>' . esc_html__( 'Booster’s own updates are disabled to protect this source checkout.', 'ran-booster' ) . '</p>';
+		}
+	}
+
 	private function authorized(): bool {
 		return current_user_can( 'manage_options' ) || current_user_can( 'manage_network_plugins' );
 	}

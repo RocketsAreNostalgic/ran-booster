@@ -1,6 +1,32 @@
 (function () {
 	'use strict';
 
+	if (window.ranBoosterNoticePreferenceInitialized) {
+		return;
+	}
+	window.ranBoosterNoticePreferenceInitialized = true;
+	let acknowledgedDevelopmentState = '';
+	function initDevelopmentNotice() {
+		document
+			.querySelectorAll('[data-ran-booster-development-safety]')
+			.forEach(function (notice) {
+				if (
+					acknowledgedDevelopmentState &&
+					notice.dataset.ranBoosterNoticeState ===
+						acknowledgedDevelopmentState
+				) {
+					notice.remove();
+					return;
+				}
+				const button = notice.querySelector('.notice-dismiss');
+				if (button) {
+					button.hidden = false;
+				}
+			});
+	}
+	initDevelopmentNotice();
+	document.addEventListener('htmx:load', initDevelopmentNotice);
+	document.addEventListener('htmx:historyRestore', initDevelopmentNotice);
 	const notices = [
 		{
 			selector: '[data-ran-booster-credential-expiry-notice]',
@@ -67,6 +93,10 @@
 			if (previousError) {
 				previousError.textContent = '';
 			}
+			const developmentState =
+				entry.config === 'ranBoosterDevelopmentSafetyNotice'
+					? notice.dataset.ranBoosterNoticeState
+					: '';
 			const body = new URLSearchParams({
 				action: config.action,
 				nonce: config.nonce,
@@ -103,6 +133,29 @@
 									? message
 									: config.errorMessage;
 							throw error;
+						}
+						if (
+							developmentState &&
+							notice.dataset.ranBoosterNoticeState !==
+								developmentState
+						) {
+							return;
+						}
+						if (developmentState) {
+							acknowledgedDevelopmentState = developmentState;
+							if (
+								notice.contains(
+									notice.ownerDocument.activeElement
+								)
+							) {
+								const heading = document.getElementById(
+									'ran-booster-onboarding-heading'
+								);
+								if (heading) {
+									heading.setAttribute('tabindex', '-1');
+									heading.focus();
+								}
+							}
 						}
 						notice.remove();
 					});

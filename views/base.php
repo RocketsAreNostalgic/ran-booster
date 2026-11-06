@@ -94,11 +94,23 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 	?>
 	<div id="ran-booster-core-development-notice-slot">
 		<?php
-		if ( isset( $core_self_update_development_notice ) ) {
+		if ( empty( $local_development_overview ) && isset( $core_self_update_development_notice ) ) {
 			$core_self_update_development_notice->render_shell_inline();
 		}
 		?>
 	</div>
+	<?php if ( ! empty( $development_safety_notice ) ) { ?>
+		<div class="notice notice-info inline is-dismissible" data-ran-booster-development-safety data-ran-booster-notice-state="<?php echo esc_attr( \RAN\Admin\DevelopmentSafetyNoticeController::NOTICE_STATE ); ?>">
+			<p><strong><?php esc_html_e( 'Local development detected', 'ran-booster' ); ?></strong></p>
+			<p><?php esc_html_e( 'Booster can still download and replace managed plugins and themes on this site. Disable updates for packages you’re editing. Incoming webhooks for branch deployment are generally unavailable on local or private domains.', 'ran-booster' ); ?></p>
+			<?php
+			if ( isset( $core_self_update_development_notice ) ) {
+				$core_self_update_development_notice->render_local_fact(); }
+			?>
+			<p><a href="<?php echo esc_url( $admin_url . '?page=ran-booster&tab=documentation#ran-booster-file-protection' ); ?>"><?php esc_html_e( 'Learn about local development', 'ran-booster' ); ?></a></p>
+			<button type="button" class="notice-dismiss" hidden><span class="screen-reader-text"><?php esc_html_e( 'Dismiss this notice.', 'ran-booster' ); ?></span></button>
+		</div>
+	<?php } ?>
 	<?php if ( ! in_array( $view, array( 'packages/index', 'packages/recovery' ), true ) ) { ?>
 		<?php require __DIR__ . '/notices.php'; ?>
 	<?php } ?>

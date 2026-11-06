@@ -46,8 +46,13 @@ function setup(kind, fetch) {
 	};
 	const document = {
 		addEventListener(type, callback, capture) {
-			assert.equal(capture, true);
-			handler = callback;
+			if (type === 'click') {
+				assert.equal(capture, true);
+				handler = callback;
+			}
+		},
+		querySelectorAll() {
+			return [];
 		},
 		createElement() {
 			return { dataset: {}, setAttribute() {} };
@@ -196,3 +201,172 @@ for (const [name, fetch] of [
 		assert.equal(calls, 2);
 	});
 }
+
+function developmentLifecycle(fetch) {
+	const handlers = {};
+	let current;
+	const heading = {
+		attributes: {},
+		setAttribute(name, value) {
+			this.attributes[name] = value;
+		},
+		focus() {
+			this.ownerDocument.activeElement = this;
+		},
+	};
+	const document = {
+		activeElement: null,
+		addEventListener(type, callback) {
+			(handlers[type] ||= []).push(callback);
+		},
+		querySelectorAll() {
+			return current && !current.removed ? [current] : [];
+		},
+		getElementById() {
+			return heading;
+		},
+		createElement() {
+			return { dataset: {}, setAttribute() {} };
+		},
+	};
+	heading.ownerDocument = document;
+	const window = {
+		fetch,
+		ranBoosterDevelopmentSafetyNotice: {
+			ajaxUrl: '/ajax',
+			action: 'acknowledge',
+			nonce: 'nonce',
+			errorMessage: 'Retry',
+		},
+	};
+	const context = { window, document, URLSearchParams, WeakSet, Error };
+	function mount(version = 'local-development-v2') {
+		const button = {
+			hidden: true,
+			disabled: false,
+			dataset: {},
+			closest: () => current,
+		};
+		const notice = {
+			ownerDocument: document,
+			dataset: { ranBoosterNoticeState: version },
+			removed: false,
+			error: null,
+			setAttribute() {},
+			removeAttribute() {},
+			querySelectorAll() {
+				return [button];
+			},
+			querySelector(selector) {
+				return selector === '.notice-dismiss' ? button : this.error;
+			},
+			append(error) {
+				this.error = error;
+			},
+			contains(element) {
+				return element === button;
+			},
+			remove() {
+				this.removed = true;
+			},
+		};
+		button.closest = (selector) =>
+			selector.includes('development-safety') ? notice : null;
+		current = notice;
+		return { notice, button };
+	}
+	function fire(type) {
+		for (const handler of handlers[type] || []) {
+			handler({});
+		}
+	}
+	function click(button) {
+		for (const handler of handlers.click || []) {
+			handler({
+				target: { closest: () => button },
+				preventDefault() {},
+				stopImmediatePropagation() {},
+			});
+		}
+	}
+	function init() {
+		vm.runInNewContext(source, context);
+	}
+	return { mount, fire, click, init, document, heading, handlers };
+}
+
+test('development initialization is once per document and reveals the existing button', () => {
+	const state = developmentLifecycle(() => {});
+	const { button } = state.mount();
+	state.init();
+	state.init();
+	assert.equal(button.hidden, false);
+	assert.equal(state.handlers.click.length, 1);
+	assert.equal(state.handlers['htmx:load'].length, 1);
+});
+
+test('confirmed development acknowledgement restores focus and suppresses cached same event', async () => {
+	const state = developmentLifecycle(async () => ({
+		ok: true,
+		json: async () => ({ success: true }),
+	}));
+	const first = state.mount();
+	state.init();
+	state.document.activeElement = first.button;
+	state.click(first.button);
+	await flush();
+	assert.equal(first.notice.removed, true);
+	assert.equal(state.document.activeElement, state.heading);
+	assert.equal(state.heading.attributes.tabindex, '-1');
+	const restored = state.mount();
+	state.fire('htmx:historyRestore');
+	assert.equal(restored.notice.removed, true);
+	const newer = state.mount('local-development-v3');
+	state.fire('htmx:load');
+	assert.equal(newer.notice.removed, false);
+	assert.equal(newer.button.hidden, false);
+});
+
+test('delayed success affects its original event and does not steal focus', async () => {
+	let resolve;
+	const state = developmentLifecycle(
+		() =>
+			new Promise((done) => {
+				resolve = done;
+			})
+	);
+	const first = state.mount();
+	state.init();
+	state.click(first.button);
+	const newer = state.mount('local-development-v3');
+	const elsewhere = {};
+	state.document.activeElement = elsewhere;
+	resolve({ ok: true, json: async () => ({ success: true }) });
+	await flush();
+	assert.equal(first.notice.removed, true);
+	assert.equal(newer.notice.removed, false);
+	assert.equal(state.document.activeElement, elsewhere);
+	state.fire('htmx:historyRestore');
+	assert.equal(newer.notice.removed, false);
+});
+
+test('failed development acknowledgement remains retryable and is not remembered', async () => {
+	let calls = 0;
+	const state = developmentLifecycle(async () => ({
+		ok: ++calls > 1,
+		json: async () => ({ success: calls > 1 }),
+	}));
+	const first = state.mount();
+	state.init();
+	state.click(first.button);
+	await flush();
+	assert.equal(first.notice.removed, false);
+	assert.equal(first.notice.error.textContent, 'Retry');
+	assert.equal(first.button.disabled, false);
+	const restored = state.mount();
+	state.fire('htmx:historyRestore');
+	assert.equal(restored.notice.removed, false);
+	state.click(restored.button);
+	await flush();
+	assert.equal(restored.notice.removed, true);
+});

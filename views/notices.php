@@ -22,6 +22,3 @@ foreach ( $notice_messages as $message ) {
 	}
 }
 ?>
-<?php if ( ! empty( $development_safety_notice ) ) { ?>
-	<div class="notice notice-warning inline is-dismissible" data-ran-booster-development-safety><p><strong><?php esc_html_e( 'Development safety:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Booster can replace managed plugin and theme directories. Before editing a managed package on this site, set Updates to Disabled. Manual still allows an administrator-triggered replacement; Automatic also accepts configured repository webhooks.', 'ran-booster' ); ?></p></div>
-<?php } ?>

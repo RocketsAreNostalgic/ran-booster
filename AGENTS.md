@@ -3,6 +3,15 @@
 This directory is an independent nested Git repository. Run commands from this
 directory and preserve unrelated work.
 
+## Administration component package
+
+Use `@wordpress/ui` for every component replacement unless the owner expressly
+authorizes an exception for that component and scope. Appearance approval does
+not authorize another package. Record the actual public export, exact package
+version and runtime; preserve native functional fallbacks without presenting
+them as package adoption. Read the component-package section of
+`docs/admin-composition-contract.md` before replacing or selecting a component.
+
 ## RAN quality profile and shared standards
 
 Booster uses the RAN `wordpress-plugin` quality profile. Organisation-level PHP

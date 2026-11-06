@@ -27,6 +27,23 @@ updater. The separately versioned
 documents that transport and presentation contract; it does not expand any
 composition hook or authorization boundary described here.
 
+## Component package direction
+
+Administration component replacements use the specific `@wordpress/ui` package.
+An alternative requires express owner authorization for the named component and
+scope. Generic WordPress styling, `wp.components` / `@wordpress/components`,
+custom reskins and prior screenshot approval do not establish that exception.
+Record the actual public export, exact package version, built artifact and
+shared runtime evidence before claiming adoption. Native functional and
+no-JavaScript fallbacks remain required and are distinct from adoption.
+
+Existing source and installed previews retain their actual implementation
+identity; this direction does not authorize an automatic rollback or broaden
+protected action authority. Preserve current sites and recoveries. A concrete
+unsupported public API or runtime constraint needs an explicit owner exception
+or revised scope. Source, build, installed evidence and owner acceptance remain
+separate, and all merge/publication holds continue.
+
 ## Admin Shell continuity and page navigation
 
 Booster adopts build-time `ran/admin-shell` **2.0.0**, source

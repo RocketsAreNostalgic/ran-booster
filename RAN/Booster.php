@@ -807,7 +807,8 @@ class Booster {
 		wp_enqueue_style( 'ran-booster-styles' );
 		wp_enqueue_style( 'wp-components' );
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
-			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array(), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
+			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'wp-i18n' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
+			wp_set_script_translations( 'ran-booster-settings', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 		}
 
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {

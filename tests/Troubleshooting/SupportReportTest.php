@@ -518,7 +518,7 @@ final class SupportReportTest extends TestCase {
 			}
 		};
 		try {
-			$facts = new InstallationFacts( new ProviderRegistry(), new CoreSelfUpdateStatus( CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.0.0-beta.41' ), new CoreSelfUpdateNativeTarget( $updater ) ) );
+			$facts = new InstallationFacts( new ProviderRegistry(), new CoreSelfUpdateStatus( static fn (): CoreSelfUpdatePolicy => CoreSelfUpdatePolicy::detect( $directory . '/ran-booster.php', '1.0.0-beta.41' ), new CoreSelfUpdateNativeTarget( $updater ) ) );
 			$text  = ( new SupportReport( $facts ) )->generate( array() )['text'];
 			self::assertSame( 'verified_release', json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['reason'] );
 			self::assertSame( str_repeat( 'a', 40 ), json_decode( $text, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['marker_commit'] );

@@ -74,8 +74,18 @@ final class SettingsPageTest extends TestCase {
 			}
 		};
 		$dashboard       = $this->settings_dashboard( new SettingsPageStorageProvisioner( null ) );
-		$off             = $dashboard->render_general_settings_region( true );
+		( new \ReflectionProperty( Dashboard::class, 'admin_tabs' ) )->setValue( $dashboard, null );
+		$off = $dashboard->render_general_settings_region( true );
 		self::assertStringContainsString( 'id="ran-booster-general-region"', $off );
+		$toggle = $dashboard->render_general_settings_region( true, 'self_update_discovery' );
+		self::assertStringContainsString( 'id="ran-booster-general-self_update_discovery"', $toggle );
+		self::assertStringNotContainsString( 'id="ran-booster-history-rows"', $toggle );
+		self::assertStringNotContainsString( 'data-ran-booster-general-navigation', $toggle );
+		$numeric = $dashboard->render_general_settings_region( true, 'numeric' );
+		self::assertStringContainsString( 'id="ran-booster-general-numeric"', $numeric );
+		self::assertStringNotContainsString( 'role="switch"', $numeric );
+		self::assertStringNotContainsString( 'hx-swap-oob', $numeric );
+		self::assertStringContainsString( 'data-ran-booster-unsaved role="status"', $numeric );
 		self::assertSame( 1, substr_count( $off, 'id="ran-booster-core-development-notice-slot" hx-swap-oob="true"' ) );
 		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice', $off );
 		$GLOBALS['wpdb']->enabled = true;
@@ -255,6 +265,8 @@ final class SettingsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-check-updates-help', $html );
 		self::assertSame( 1, substr_count( $html, 'No completed check recorded' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][hide_github]" and @value="0"])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="numeric"]//button[@type="submit" and @disabled])' ), 'All numeric controls are configuration-locked, so their empty form cannot be submitted.' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//button[@type="submit" and not(@disabled)])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][self_update_discovery]"])' ) );
 		$general_feedback       = 'Settings changed. Review the values.';
 		$general_save_succeeded = false;

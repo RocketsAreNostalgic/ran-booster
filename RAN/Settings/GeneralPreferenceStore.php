@@ -9,6 +9,12 @@ final class GeneralPreferenceStore {
 
 	public const OPTION_NAME = 'ran_booster_general_settings';
 
+	private const SCOPES = array(
+		'hide_github'           => array( 'hide_github' ),
+		'self_update_discovery' => array( 'self_update_discovery' ),
+		'numeric'               => array( 'history_rows', 'history_days', 'max_download_bytes' ),
+	);
+
 	private const DEFAULTS = array(
 		'hide_github'           => false,
 		'self_update_discovery' => true,
@@ -27,7 +33,7 @@ final class GeneralPreferenceStore {
 		return $this->projection_for_state( $this->read_option() );
 	}
 
-	/** @return array{fields:array<string,array{value:bool|int,source:'default'|'saved'|'code',locked:bool,error:?string}>,token:string,malformed:bool} */
+	/** @return array{fields:array<string,array{value:bool|int,source:'default'|'saved'|'code',locked:bool,error:?string}>,token:string,tokens:array<string,string>,malformed:bool} */
 	public function view_snapshot(): array {
 		$state    = $this->read_option( true );
 		$snapshot = $this->snapshot_for_state( $state );
@@ -35,6 +41,7 @@ final class GeneralPreferenceStore {
 		return array(
 			'fields'    => $this->projection_for_state( $state ),
 			'token'     => $snapshot['token'],
+			'tokens'    => $this->scope_tokens( $state ),
 			'malformed' => $snapshot['malformed'],
 		);
 	}
@@ -62,8 +69,44 @@ final class GeneralPreferenceStore {
 		return array(
 			'exists'    => $state['exists'],
 			'token'     => $state['token'],
-			'malformed' => $state['exists'] && ! is_array( $state['value'] ),
+			'malformed' => $state['exists'] && ( ! is_array( $state['value'] ) || null === $this->revisions( $state['value'] ) ),
 		);
+	}
+
+	/** @param array{exists:bool,value:mixed,token:string} $state
+	 * @return array<string,string>
+	 */
+	private function scope_tokens( array $state ): array {
+		$document  = is_array( $state['value'] ) ? $state['value'] : array();
+		$revisions = $this->revisions( $document );
+		$tokens    = array();
+		foreach ( self::SCOPES as $scope => $keys ) {
+			$raw = array();
+			foreach ( $keys as $key ) {
+				$raw[] = array( array_key_exists( $key, $document ), $document[ $key ] ?? null );
+			}
+			$tokens[ $scope ] = hash( 'sha256', $this->serialized( array( $scope, $raw, $revisions[ $scope ] ?? null, $state['exists'] && ! is_array( $state['value'] ) ) ) );
+		}
+		return $tokens;
+	}
+
+	/** @param array<string,mixed> $document
+	 * @return array<string,int>|null
+	 */
+	private function revisions( array $document ): ?array {
+		if ( ! array_key_exists( '_revisions', $document ) ) {
+			return array_fill_keys( array_keys( self::SCOPES ), 0 );
+		}
+		$revisions = $document['_revisions'];
+		if ( ! is_array( $revisions ) || count( $revisions ) !== count( self::SCOPES ) || array_diff_key( $revisions, self::SCOPES ) || array_diff_key( self::SCOPES, $revisions ) ) {
+			return null;
+		}
+		foreach ( $revisions as $revision ) {
+			if ( ! is_int( $revision ) || $revision < 0 ) {
+				return null;
+			}
+		}
+		return $revisions;
 	}
 
 	public function history_rows(): ?int {
@@ -92,13 +135,16 @@ final class GeneralPreferenceStore {
 	 * @param callable():bool $github_hide_eligible
 	 * @return 'saved'|'unchanged'|'stale'|'invalid'|'failed'
 	 */
-	public function save( string $expected_token, array $submitted, callable $with_management_admission_lock, callable $github_hide_eligible ): string {
+	public function save( string $expected_token, array $submitted, callable $with_management_admission_lock, callable $github_hide_eligible, string $scope = 'all' ): string {
+		if ( 'all' !== $scope && ! isset( self::SCOPES[ $scope ] ) ) {
+			return 'invalid';
+		}
 		global $wpdb;
 		if ( ! $this->begin_transaction( $wpdb ) ) {
 			return 'failed';
 		}
 		try {
-			return $this->outcome( $with_management_admission_lock( fn (): string => $this->save_locked( $wpdb, $expected_token, $submitted, $github_hide_eligible ) ) );
+			return $this->outcome( $with_management_admission_lock( fn (): string => $this->save_locked( $wpdb, $expected_token, $submitted, $github_hide_eligible, $scope ) ) );
 		} catch ( \Throwable ) {
 			return $this->finish( $wpdb, false, 'failed' );
 		}
@@ -109,12 +155,20 @@ final class GeneralPreferenceStore {
 	 * @param callable():bool $github_hide_eligible
 	 * @return 'saved'|'unchanged'|'stale'|'invalid'|'failed'
 	 */
-	private function save_locked( mixed $wpdb, string $expected_token, array $submitted, callable $github_hide_eligible ): string {
+	private function save_locked( mixed $wpdb, string $expected_token, array $submitted, callable $github_hide_eligible, string $scope ): string {
 		$state = $this->read_locked_option( $wpdb );
-		if ( null === $state || ! hash_equals( $state['token'], $expected_token ) ) {
+		if ( null === $state ) {
+			return $this->finish( $wpdb, false, 'stale' );
+		}
+		$token = 'all' === $scope ? $state['token'] : $this->scope_tokens( $state )[ $scope ];
+		if ( ! hash_equals( $token, $expected_token ) ) {
 			return $this->finish( $wpdb, false, 'stale' );
 		}
 		if ( $state['exists'] && ! is_array( $state['value'] ) ) {
+			return $this->finish( $wpdb, false, 'failed' );
+		}
+		$revisions = $this->revisions( is_array( $state['value'] ) ? $state['value'] : array() );
+		if ( null === $revisions ) {
 			return $this->finish( $wpdb, false, 'failed' );
 		}
 		$projection     = $this->project( is_array( $state['value'] ) ? $state['value'] : array() );
@@ -125,6 +179,12 @@ final class GeneralPreferenceStore {
 			$editable = array_values( array_filter( $editable, static fn ( string $key ): bool => 'hide_github' !== $key ) );
 			if ( $hide_submitted ) {
 				return $this->finish( $wpdb, false, 'stale' );
+			}
+		}
+		if ( 'all' !== $scope ) {
+			$editable = array_values( array_intersect( $editable, self::SCOPES[ $scope ] ) );
+			if ( 'numeric' !== $scope && 1 !== count( $editable ) ) {
+				return $this->finish( $wpdb, false, 'invalid' );
 			}
 		}
 		$values = $this->parse_submission( $submitted, $editable );
@@ -139,9 +199,13 @@ final class GeneralPreferenceStore {
 				$replacement[ $key ] = $value;
 			}
 		}
-		if ( $replacement === $state['value'] || ( ! $state['exists'] && array() === $replacement ) ) {
-			return $this->finish( $wpdb, true, 'unchanged' );
+		foreach ( 'all' === $scope ? array_keys( self::SCOPES ) : array( $scope ) as $changed_scope ) {
+			if ( PHP_INT_MAX === $revisions[ $changed_scope ] ) {
+				return $this->finish( $wpdb, false, 'failed' );
+			}
+			++$revisions[ $changed_scope ];
 		}
+		$replacement['_revisions'] = $revisions;
 		if ( ! $this->write_locked_option( $wpdb, $state, $replacement ) ) {
 			return $this->finish( $wpdb, false, 'failed' );
 		}
@@ -167,8 +231,17 @@ final class GeneralPreferenceStore {
 		if ( true !== ( $state['value']['hide_github'] ?? null ) ) {
 			return true;
 		}
+		$revisions = $this->revisions( $state['value'] );
+		if ( null === $revisions ) {
+			return false;
+		}
+		if ( PHP_INT_MAX === $revisions['hide_github'] ) {
+			return false;
+		}
+		++$revisions['hide_github'];
 		$replacement                = $state['value'];
 		$replacement['hide_github'] = false;
+		$replacement['_revisions']  = $revisions;
 
 		return $this->write_locked_option( $wpdb, $state, $replacement );
 	}

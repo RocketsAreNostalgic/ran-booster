@@ -1134,3 +1134,34 @@
 	max-inline-size: 100%;
 	white-space: normal;
 }
+
+.ran-booster-admin .ran-booster-settings__save-actions,
+.ran-booster-admin .ran-booster-settings__toggle-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 12px;
+	min-block-size: 48px;
+	margin-block: 12px;
+}
+
+.ran-booster-admin .ran-booster-settings__save-actions {
+	padding: 12px;
+	border: 1px solid currentcolor;
+	border-inline-start: 4px solid transparent;
+}
+
+.ran-booster-admin
+	.ran-booster-settings--pending
+	.ran-booster-settings__save-actions {
+	border-inline-start: 4px solid var(--ran-booster-status-warning);
+}
+
+.ran-booster-admin [data-ran-booster-unsaved],
+.ran-booster-admin [data-ran-booster-toggle-status] {
+	min-block-size: 1.5em;
+}
+
+.ran-booster-admin [data-ran-booster-toggle-save][hidden] {
+	display: none;
+}

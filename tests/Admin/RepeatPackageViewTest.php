@@ -140,7 +140,27 @@ final class RepeatPackageViewTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 			$html = (string) ob_get_clean();
 			self::assertMatchesRegularExpression( '/href="[^"]*page=' . $package_view->get_page_slug() . '&amp;package=[^"]*&amp;return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh" class="button">Edit settings/', $html );
+			$document = new \DOMDocument();
+			$previous = libxml_use_internal_errors( true );
+			$document->loadHTML( $html );
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+			$xpath = new \DOMXPath( $document );
+			if ( 'plugin' === $package_view->get_type() ) {
+				$this->assert_xpath_count( 2, $xpath, '//*[@id="ran-booster-plugin-collection"]//form[@method="get"]' );
+				$this->assert_xpath_count( 1, $xpath, '//*[@id="ran-booster-plugin-collection"]//form[@id="ran-booster-plugin-bulk-form" and @method="POST"]' );
+				$this->assert_xpath_count( 1, $xpath, '//*[@id="ran-booster-plugin-collection"]//table[@data-package-type="plugin"]//input[@form="ran-booster-plugin-bulk-form" and @type="checkbox"]' );
+			} else {
+				$this->assert_xpath_count( 0, $xpath, '//*[@id="ran-booster-plugin-collection"]' );
+			}
+			$this->assert_xpath_count( 0, $xpath, '//form//form' );
 		}
+	}
+
+	private function assert_xpath_count( int $expected, \DOMXPath $xpath, string $expression ): void {
+		$nodes = $xpath->query( $expression );
+		self::assertNotFalse( $nodes );
+		self::assertCount( $expected, $nodes );
 	}
 
 	public function test_edit_links_keep_return_filter_separate_from_install_provider_and_hx_routes(): void {

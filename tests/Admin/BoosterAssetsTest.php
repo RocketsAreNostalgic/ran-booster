@@ -292,6 +292,39 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_localized_scripts'] );
 	}
 
+	/** @return list<array{class-string}> */
+	public static function global_notice_provider(): array {
+		return array_map(
+			static fn ( string $notice ): array => array( $notice ),
+			array(
+				CredentialExpiryNotice::class,
+				DeploymentAdminPresenter::class,
+				\RAN\Admin\SecretsRuntimeAvailabilityNotice::class,
+				\RAN\Admin\DatabaseCompatibilityNotice::class,
+				\RAN\Admin\CoreSelfUpdateDevelopmentNotice::class,
+			)
+		);
+	}
+
+	#[DataProvider( 'global_notice_provider' )]
+	public function test_visible_owned_off_page_notices_load_only_the_existing_notice_profile_and_foundation( string $notice ): void {
+		$booster = $this->booster(
+			CredentialExpiryNotice::class === $notice,
+			DeploymentAdminPresenter::class === $notice,
+			true,
+			array( $notice )
+		);
+		$booster->load_scripts( 'plugins.php' );
+
+		self::assertSame( array( 'ran-booster-menu', 'wp-theme', 'ran-booster-25-admin-primitives' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
+		self::assertSame( array( 'ran-booster-cards' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
+		self::assertSame( array( 'ran-booster-ui' ), array_keys( $GLOBALS['ran_booster_asset_test_enqueued_modules'] ) );
+		self::assertSame( array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['dependencies'] );
+		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['footer'] );
+		self::assertArrayNotHasKey( 'ran-booster-admin-shell', $GLOBALS['ran_booster_asset_test_registered_styles'] );
+		self::assertArrayNotHasKey( 'ran-booster-ui-overlay', $GLOBALS['ran_booster_asset_test_enqueued_modules'] );
+	}
+
 	public function test_menu_styles_require_a_valid_hook_and_menu_capability(): void {
 		$booster = $this->booster();
 		$booster->load_scripts( null );
@@ -807,10 +840,12 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertArrayHasKey( 'ranBoosterDevelopmentSafetyNotice', $GLOBALS['ran_booster_asset_test_localized_scripts']['ran-booster-notice-preference'] );
 	}
 
+	/** @param list<class-string> $visible_global_notices */
 	private function booster(
 		bool $expiry_notice_visible = false,
 		bool $background_failure_notice_visible = false,
-		bool $expiry_notice_dismissible = true
+		bool $expiry_notice_dismissible = true,
+		array $visible_global_notices = array()
 	): Booster {
 		$container = new CoreContainer();
 		$booster   = new class( $container ) extends Booster {
@@ -829,6 +864,10 @@ final class BoosterAssetsTest extends TestCase {
 				public function __construct( private bool $visible, private bool $dismissible ) {
 				}
 
+				public function should_render(): bool {
+					return $this->visible;
+				}
+
 				public function should_load_dismissal_script(): bool {
 					return $this->visible && $this->dismissible;
 				}
@@ -845,6 +884,19 @@ final class BoosterAssetsTest extends TestCase {
 				}
 			}
 		);
+		foreach ( array( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class, \RAN\Admin\DatabaseCompatibilityNotice::class, \RAN\Admin\CoreSelfUpdateDevelopmentNotice::class ) as $notice_class ) {
+			$container->bind(
+				$notice_class,
+				new class( in_array( $notice_class, $visible_global_notices, true ) ) {
+					public function __construct( private bool $visible ) {
+					}
+
+					public function should_render(): bool {
+						return $this->visible;
+					}
+				}
+			);
+		}
 		$container->bind(
 			'RAN\\Admin\\ProviderSettingsPresenter',
 			new class() {

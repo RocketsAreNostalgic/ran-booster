@@ -37,6 +37,12 @@ Record the actual public export, exact package version, built artifact and
 shared runtime evidence before claiming adoption. Native functional and
 no-JavaScript fallbacks remain required and are distinct from adoption.
 
+The owner-approved current combined foundation and adapter ceiling is 165,000
+raw bytes and 33,050 summed gzip bytes. The 7 November 2026 gzip increment is
+limited to the existing Navigation composition plus explicitly owned off-page
+Notices. It does not authorize another component family, change the raw ceiling,
+or replace the separate overlay, Switch-only or Link pilot limits.
+
 Existing source and installed previews retain their actual implementation
 identity; this direction does not authorize an automatic rollback or broaden
 protected action authority. Preserve current sites and recoveries. A concrete

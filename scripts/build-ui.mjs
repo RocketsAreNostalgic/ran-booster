@@ -139,7 +139,7 @@ const [foundationBytes, foundationGzip] = size(foundation),
 	[overlayBytes, overlayGzip] = size(overlay);
 ensure(
 	foundationBytes + adapter.length <= 165000 &&
-		foundationGzip + gzipSync(adapter).length <= 33000 &&
+		foundationGzip + gzipSync(adapter).length <= 33050 &&
 		overlayBytes <= 320000 &&
 		overlayGzip <= 90000,
 	`UI runtime exceeds reserved size: foundation+adapter ${foundationBytes + adapter.length}/${foundationGzip + gzipSync(adapter).length}, overlay ${overlayBytes}/${overlayGzip}`

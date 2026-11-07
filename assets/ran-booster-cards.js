@@ -180,7 +180,12 @@
 		if (
 			roots.has(card) ||
 			!card.isConnected ||
-			!card.closest('.ran-booster-admin') ||
+			(!card.closest('.ran-booster-admin') &&
+				!(
+					notice &&
+					card.getAttribute('data-ran-booster-ui-notice-scope') ===
+						'global'
+				)) ||
 			(!notice &&
 				![
 					'extensions',

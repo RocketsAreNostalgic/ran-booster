@@ -50,7 +50,7 @@ test('manifest identifies two canonical assets and separate page budgets', () =>
 		'foundation and adapter raw'
 	);
 	assert.ok(
-		gzipSync(foundation).length + gzipSync(adapter).length <= 33000,
+		gzipSync(foundation).length + gzipSync(adapter).length <= 33050,
 		'foundation and adapter gzip sum'
 	);
 	assert.ok(overlay.length <= 320000, 'overlay raw');
@@ -95,6 +95,10 @@ test('host React loads the foundation once and overlay extends the same object',
 			'NoticeDescription',
 			'NoticeRoot',
 			'Switch',
+			'createRepositoryNavigationBridge',
+			'createSectionNavigation',
+			'navigationContract',
+			'renderNavigationLinks',
 			'version',
 		]);
 		assert.equal(ui.version, '0.26.0');

@@ -752,6 +752,7 @@ class Booster {
 		}
 
 		if ( ! in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) ) {
+			$this->load_global_notice_assets( $hook );
 			return;
 		}
 
@@ -837,31 +838,7 @@ class Booster {
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
 		wp_enqueue_style( 'wp-components' );
-		$has_ui_overlay   = in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
-		$ui_manifest_path = trailingslashit( $this->booster_path ?? dirname( __DIR__ ) ) . 'assets/lib/ran-booster-ui-manifest.json';
-		$ui_manifest      = is_file( $ui_manifest_path ) && is_readable( $ui_manifest_path ) ? wp_json_file_decode( $ui_manifest_path, array( 'associative' => true ) ) : null;
-		if ( is_array( $ui_manifest ) && isset( $ui_manifest['foundation'], $ui_manifest['overlay'] )
-			&& is_string( $ui_manifest['foundation'] ) && is_string( $ui_manifest['overlay'] )
-			&& 1 === preg_match( '/\Aran-booster-ui-foundation-[A-Za-z0-9_-]+\.js\z/', $ui_manifest['foundation'] )
-			&& 1 === preg_match( '/\Aran-booster-ui-overlay-[A-Za-z0-9_-]+\.js\z/', $ui_manifest['overlay'] )
-		) {
-			wp_enqueue_script( 'wp-element' );
-			wp_enqueue_script( 'react-jsx-runtime' );
-			wp_enqueue_script( 'wp-i18n' );
-			wp_enqueue_script( 'wp-a11y' );
-			$ui_url = trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/';
-			wp_enqueue_script_module( 'ran-booster-ui', $ui_url . $ui_manifest['foundation'], array(), null );
-			if ( $has_ui_overlay ) {
-				wp_enqueue_script_module( 'ran-booster-ui-overlay', $ui_url . $ui_manifest['overlay'], array( 'ran-booster-ui' ), null );
-			}
-		}
-		wp_enqueue_script(
-			'ran-booster-cards',
-			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
-			array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y' ),
-			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
-			true
-		);
+		$this->load_ui_assets( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) );
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
 			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'wp-i18n', 'ran-booster-cards' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
 			wp_set_script_translations( 'ran-booster-settings', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
@@ -1025,6 +1002,58 @@ class Booster {
 			wp_enqueue_script( 'ran-booster-packages' );
 			wp_enqueue_script( 'ran-booster-repository-picker' );
 		}
+	}
+
+	/** Load only the existing Notice profile and runtime for an eligible owned host. */
+	private function load_global_notice_assets( string $hook ): void {
+		if ( ! ( $this->native_update_warning_scope( $hook ) && $this->can_check_native_update_warning() )
+			&& ! $this->service( \RAN\Admin\CredentialExpiryNotice::class )->should_render()
+			&& ! $this->service( \RAN\Admin\DeploymentAdminPresenter::class )->should_render()
+			&& ! $this->service( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class )->should_render()
+			&& ! $this->service( \RAN\Admin\DatabaseCompatibilityNotice::class )->should_render()
+			&& ! $this->service( \RAN\Admin\CoreSelfUpdateDevelopmentNotice::class )->should_render()
+		) {
+			return;
+		}
+
+		wp_enqueue_style( 'wp-theme' );
+		$path = 'assets/ran-booster/25-admin-primitives.css';
+		wp_register_style(
+			'ran-booster-25-admin-primitives',
+			trailingslashit( $this->booster_url ?? '' ) . $path,
+			array( 'wp-theme' ),
+			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $path )
+		);
+		wp_enqueue_style( 'ran-booster-25-admin-primitives' );
+		$this->load_ui_assets( false );
+	}
+
+	/** Reuse one public component foundation and the existing footer adapter. */
+	private function load_ui_assets( bool $has_ui_overlay ): void {
+		$ui_manifest_path = trailingslashit( $this->booster_path ?? dirname( __DIR__ ) ) . 'assets/lib/ran-booster-ui-manifest.json';
+		$ui_manifest      = is_file( $ui_manifest_path ) && is_readable( $ui_manifest_path ) ? wp_json_file_decode( $ui_manifest_path, array( 'associative' => true ) ) : null;
+		if ( is_array( $ui_manifest ) && isset( $ui_manifest['foundation'], $ui_manifest['overlay'] )
+			&& is_string( $ui_manifest['foundation'] ) && is_string( $ui_manifest['overlay'] )
+			&& 1 === preg_match( '/\Aran-booster-ui-foundation-[A-Za-z0-9_-]+\.js\z/', $ui_manifest['foundation'] )
+			&& 1 === preg_match( '/\Aran-booster-ui-overlay-[A-Za-z0-9_-]+\.js\z/', $ui_manifest['overlay'] )
+		) {
+			wp_enqueue_script( 'wp-element' );
+			wp_enqueue_script( 'react-jsx-runtime' );
+			wp_enqueue_script( 'wp-i18n' );
+			wp_enqueue_script( 'wp-a11y' );
+			$ui_url = trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/';
+			wp_enqueue_script_module( 'ran-booster-ui', $ui_url . $ui_manifest['foundation'], array(), null );
+			if ( $has_ui_overlay ) {
+				wp_enqueue_script_module( 'ran-booster-ui-overlay', $ui_url . $ui_manifest['overlay'], array( 'ran-booster-ui' ), null );
+			}
+		}
+		wp_enqueue_script(
+			'ran-booster-cards',
+			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
+			array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y' ),
+			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
+			true
+		);
 	}
 
 	/**

@@ -744,6 +744,64 @@ test('hidden alert retains its native content, paragraph ID and focus through mo
 	assert.equal(paragraph.textContent, 'current producer text');
 });
 
+test('only explicitly owned global Notice hosts mount outside Booster ancestry', () => {
+	for (const scope of [null, '', 'other', 'global']) {
+		const f = fixture();
+		f.doc.body.admin = false;
+		const n = f.notice();
+		if (scope !== null) {
+			n.host.setAttribute('data-ran-booster-ui-notice-scope', scope);
+		}
+		n.link.focus();
+		f.run();
+		f.flush();
+		assert.equal(
+			n.host.getAttribute('data-ran-booster-ui-mounted'),
+			scope === 'global' ? '' : null
+		);
+		assert(n.content.contains(n.paragraph));
+		assert.equal(f.doc.activeElement, n.link);
+		if (scope === 'global') {
+			assert.equal(f.tree().type, 'NoticeRoot');
+			f.emit('htmx:beforeCleanupElement', n.host);
+			assert.equal(n.host.firstChild, n.content);
+			assert.equal(f.doc.activeElement, n.link);
+		}
+	}
+});
+
+test('global Notice scope does not adopt unmarked third-party notices or Cards', () => {
+	const f = fixture();
+	f.doc.body.admin = false;
+	const n = f.notice();
+	n.host.removeAttribute('data-ran-booster-ui-notice');
+	n.host.setAttribute('data-ran-booster-ui-notice-scope', 'global');
+	const { card } = f.make();
+	card.setAttribute('data-ran-booster-ui-notice-scope', 'global');
+	f.run();
+	f.flush();
+	assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
+	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
+	assert.equal(n.host.firstChild, n.content);
+});
+
+test('owned global Notice keeps native content when runtime or rendering fails', () => {
+	for (const mode of ['runtime', 'render']) {
+		const f = fixture({
+			runtime: mode !== 'runtime',
+			fail: mode === 'render',
+		});
+		f.doc.body.admin = false;
+		const n = f.notice();
+		n.host.setAttribute('data-ran-booster-ui-notice-scope', 'global');
+		f.run();
+		f.flush();
+		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
+		assert.equal(n.host.firstChild, n.content);
+		assert.equal(n.paragraph.firstChild, n.link);
+	}
+});
+
 test('nested Card, Notice and Badge restore child-first for cleanup, history and host swap', () => {
 	for (const mode of ['cleanup', 'history', 'swap']) {
 		const f = fixture();

@@ -24,10 +24,14 @@
 	background: transparent;
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-notice]:not([data-ran-booster-ui-notice-intent]),
-.ran-booster-admin
-	[data-ran-booster-ui-notice][data-ran-booster-ui-notice-intent="error"] {
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):not([data-ran-booster-ui-notice-intent]),
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="error"] {
 	--ran-booster-notice-background: var(
 		--wpds-color-background-surface-error-weak
 	);
@@ -35,8 +39,10 @@
 	--ran-booster-notice-text: var(--wpds-color-foreground-content-error);
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-notice][data-ran-booster-ui-notice-intent="warning"] {
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="warning"] {
 	--ran-booster-notice-background: var(
 		--wpds-color-background-surface-warning-weak
 	);
@@ -44,8 +50,10 @@
 	--ran-booster-notice-text: var(--wpds-color-foreground-content-warning);
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-notice][data-ran-booster-ui-notice-intent="info"] {
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="info"] {
 	--ran-booster-notice-background: var(
 		--wpds-color-background-surface-info-weak
 	);
@@ -53,8 +61,10 @@
 	--ran-booster-notice-text: var(--wpds-color-foreground-content-info);
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-notice][data-ran-booster-ui-notice-intent="success"] {
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="success"] {
 	--ran-booster-notice-background: var(
 		--wpds-color-background-surface-success-weak
 	);
@@ -62,8 +72,10 @@
 	--ran-booster-notice-text: var(--wpds-color-foreground-content-success);
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-notice]:is(
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
 		:not([data-ran-booster-ui-notice-intent]),
 		[data-ran-booster-ui-notice-intent="error"],
 		[data-ran-booster-ui-notice-intent="warning"],
@@ -88,8 +100,10 @@
 	text-wrap: pretty;
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-notice]:is(
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
 		:not([data-ran-booster-ui-notice-intent]),
 		[data-ran-booster-ui-notice-intent="error"],
 		[data-ran-booster-ui-notice-intent="warning"],
@@ -110,20 +124,31 @@
 	overflow-wrap: anywhere;
 }
 
-.ran-booster-admin [data-ran-booster-ui-notice][data-ran-booster-ui-mounted] {
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-mounted] {
 	padding: 0;
 	border: 0;
 	box-shadow: none;
 	background: transparent;
 }
 
-.ran-booster-admin .ran-booster-ui-notice__description {
+:is(
+		.ran-booster-admin,
+		:where(
+			[data-ran-booster-ui-notice]
+		)[data-ran-booster-ui-notice-scope="global"]
+	)
+	.ran-booster-ui-notice__description {
 	min-inline-size: 0;
 	overflow-wrap: anywhere;
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-notice]:is(
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
 		:not([data-ran-booster-ui-notice-intent]),
 		[data-ran-booster-ui-notice-intent="error"],
 		[data-ran-booster-ui-notice-intent="warning"],
@@ -132,14 +157,23 @@
 	):not([data-ran-booster-ui-mounted])
 	> [data-ran-booster-ui-notice-content]
 	p,
-.ran-booster-admin .ran-booster-ui-notice__description p {
+:is(
+		.ran-booster-admin,
+		:where(
+			[data-ran-booster-ui-notice]
+		)[data-ran-booster-ui-notice-scope="global"]
+	)
+	.ran-booster-ui-notice__description
+	p {
 	margin: 0;
 	padding: 0;
 	font: inherit;
 }
 
-.ran-booster-admin
-	[data-ran-booster-ui-notice]:is(
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
 		:not([data-ran-booster-ui-notice-intent]),
 		[data-ran-booster-ui-notice-intent="error"],
 		[data-ran-booster-ui-notice-intent="warning"],
@@ -149,8 +183,19 @@
 	> [data-ran-booster-ui-notice-content]
 	p
 	+ p,
-.ran-booster-admin .ran-booster-ui-notice__description p + p {
-	margin-block-start: var(--ran-booster-space-8);
+:is(
+		.ran-booster-admin,
+		:where(
+			[data-ran-booster-ui-notice]
+		)[data-ran-booster-ui-notice-scope="global"]
+	)
+	.ran-booster-ui-notice__description
+	p
+	+ p {
+	margin-block-start: var(
+		--ran-booster-space-8,
+		var(--wpds-dimension-gap-sm)
+	);
 }
 
 .ran-booster-admin .ran-booster-card__content {

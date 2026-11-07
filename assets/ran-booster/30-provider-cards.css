@@ -1070,3 +1070,43 @@
 		margin-inline: calc(-1 * var(--ran-booster-space-18));
 	}
 }
+
+/* Provider overview sections already own their responsive header and body insets. */
+.ran-booster-admin
+	.ran-booster-provider--overview
+	> .ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted] {
+	border: 0;
+	background: transparent;
+}
+
+.ran-booster-admin
+	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content {
+	padding: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-provider-section__body
+	> :is(
+		.ran-booster-status-summary,
+		.ran-booster-public-lookup-profile__panel
+	),
+.ran-booster-admin
+	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-provider-task-panel {
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.ran-booster-admin
+	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-provider-section__body
+	> .ran-booster-status-summary,
+.ran-booster-admin
+	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-provider-task-panel {
+	padding: 0;
+}

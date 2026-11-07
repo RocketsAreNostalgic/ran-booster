@@ -906,3 +906,99 @@ test('Themes Card preserves native form, link and focus across swaps and history
 	assert.deepEqual(native.card.childNodes, [native.whitespace, native.form]);
 	assert.equal(native.form.firstChild, native.link);
 });
+
+test('Notice uses only supported producer intents and retains the absent-error default', () => {
+	for (const [attribute, expected] of [
+		[null, 'error'],
+		['error', 'error'],
+		['warning', 'warning'],
+		['info', 'info'],
+		['success', 'success'],
+	]) {
+		const f = fixture();
+		const n = f.notice();
+		if (attribute !== null) {
+			n.host.setAttribute('data-ran-booster-ui-notice-intent', attribute);
+		}
+		f.run();
+		f.flush();
+		assert.equal(f.tree().type, 'NoticeRoot');
+		assert.equal(f.tree().props.intent, expected);
+		assert.equal(n.host.getAttribute('role'), 'alert');
+		assert.equal(n.paragraph.firstChild, n.link);
+	}
+	for (const invalid of ['', 'neutral', 'danger']) {
+		const f = fixture();
+		const n = f.notice();
+		n.host.setAttribute('data-ran-booster-ui-notice-intent', invalid);
+		f.run();
+		f.flush();
+		assert.equal(f.counts().renders, 0);
+		assert.equal(n.host.firstChild, n.content);
+	}
+});
+
+test('Notice changes intent only on discovery and restores current native content on invalid metadata', () => {
+	const f = fixture();
+	const n = f.notice();
+	n.host.hidden = true;
+	n.link.focus();
+	f.run();
+	f.flush();
+	assert.equal(f.tree().props.intent, 'error');
+	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'error');
+	f.emit('htmx:load', n.host);
+	f.flush();
+	assert.equal(f.counts().renders, 1);
+	const fresh = new f.Node('p');
+	fresh.setAttribute('id', 'fresh');
+	n.content.appendChild(fresh);
+	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
+	assert.equal(f.counts().renders, 1);
+	f.emit('htmx:load', n.host);
+	f.flush();
+	assert.equal(f.tree().props.intent, 'warning');
+	assert.equal(f.counts().renders, 2);
+	assert.equal(f.counts().unmounts, 1);
+	assert.equal(n.content.childNodes.at(-1), fresh);
+	assert.equal(n.paragraph.firstChild, n.link);
+	assert.equal(f.doc.activeElement, n.link);
+	f.emit('htmx:load', n.host);
+	f.flush();
+	assert.equal(f.counts().renders, 2);
+	n.host.setAttribute('data-ran-booster-ui-notice-intent', '');
+	f.emit('htmx:load', n.host);
+	f.flush();
+	assert.equal(n.host.firstChild, n.content);
+	assert.equal(n.content.childNodes.at(-1), fresh);
+	assert.equal(n.host.hidden, true);
+	assert.equal(n.host.getAttribute('role'), 'alert');
+	assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
+	assert.equal(f.doc.activeElement, n.link);
+	assert.equal(f.counts().unmounts, 2);
+});
+
+test('Notice intent changes preserve the current form and nested Badge without unmounting an ancestor Card', () => {
+	const f = fixture();
+	const { card, form } = f.make('settings');
+	const n = f.notice(form);
+	const nativeForm = new f.Node('form');
+	const input = new f.Node('input');
+	nativeForm.appendChild(input);
+	n.content.appendChild(nativeForm);
+	const b = f.badge(n.content);
+	b.host.setAttribute('data-ran-booster-ui-badge-label', 'Saved');
+	b.host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
+	f.run();
+	f.flush();
+	assert.equal(f.counts().renders, 3);
+	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'info');
+	f.emit('htmx:load', n.paragraph);
+	f.flush();
+	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
+	assert.equal(nativeForm.firstChild, input);
+	assert.equal(b.fallback.hidden, true);
+	assert.ok(b.mount.firstChild);
+	assert.equal(f.counts().renders, 5);
+	assert.equal(f.counts().unmounts, 2);
+});

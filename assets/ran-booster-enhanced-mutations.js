@@ -42,6 +42,10 @@
 			}
 			const previous = snackbar;
 			snackbar = null;
+			if (previous.reposition) {
+				window.removeEventListener('resize', previous.reposition);
+				previous.observer?.disconnect();
+			}
 			previous.root.unmount();
 			previous.host.remove();
 		}
@@ -59,7 +63,7 @@
 					'#ran-booster-save-numeric-bottom'
 				),
 				...document.querySelectorAll(
-					'#ran-booster-general-region input[type="number"], #ran-booster-general-region input[role="switch"]'
+					'#ran-booster-general-region [data-ran-booster-ui-switch-mount] button[role="switch"], #ran-booster-general-region input[type="number"], #ran-booster-general-region input[role="switch"]'
 				),
 				...document.querySelectorAll('#wpadminbar a[href]'),
 			];
@@ -144,6 +148,25 @@
 					)
 				);
 				if (current.host.querySelector('.components-snackbar')) {
+					current.reposition = () => {
+						const rect = region.getBoundingClientRect();
+						current.host.style.setProperty(
+							'--ran-booster-snackbar-center',
+							`${rect.left + rect.width / 2}px`
+						);
+					};
+					current.reposition();
+					window.addEventListener('resize', current.reposition);
+					if (window.ResizeObserver) {
+						current.observer = new window.ResizeObserver(
+							current.reposition
+						);
+						current.observer.observe(region);
+						const content = document.getElementById('wpcontent');
+						if (content) {
+							current.observer.observe(content);
+						}
+					}
 					return true;
 				}
 				disposeSnackbar();
@@ -337,12 +360,22 @@
 				return;
 			}
 
+			const switchScope = [
+				'hide_github',
+				'self_update_discovery',
+			].includes(form.dataset?.ranBoosterSettingsScope);
 			const controls = Array.from(form.elements || [submitter])
 				.filter(
 					(control) =>
 						!(
 							form.dataset?.ranBoosterSettingsScope &&
-							control.matches?.('input[role="switch"], fieldset')
+							(control.matches?.(
+								'input[role="switch"], fieldset'
+							) ||
+								(switchScope &&
+									control.closest?.(
+										'[data-ran-booster-ui-switch="general-preference"][data-ran-booster-ui-mounted] > [data-ran-booster-ui-switch-mount]'
+									)))
 						)
 				)
 				.map(function (control) {
@@ -358,17 +391,21 @@
 				submitterAriaBusy: submitter.getAttribute('aria-busy'),
 			});
 			form.setAttribute('aria-busy', 'true');
-			form.classList.add('ran-booster-enhanced-mutation-is-busy');
+			if (!switchScope) {
+				form.classList.add('ran-booster-enhanced-mutation-is-busy');
+			}
 			controls.forEach(function (state) {
 				state.control.disabled = true;
 				state.control.setAttribute?.('aria-disabled', 'true');
 			});
 			submitter.setAttribute('aria-busy', 'true');
-			submitter.classList.add(
-				'ran-booster-enhanced-mutation__submitter--busy'
-			);
-			if (!form.hasAttribute?.('data-ran-booster-source-choice')) {
-				submitter.classList.add('ran-booster-update-is-active');
+			if (!switchScope) {
+				submitter.classList.add(
+					'ran-booster-enhanced-mutation__submitter--busy'
+				);
+				if (!form.hasAttribute?.('data-ran-booster-source-choice')) {
+					submitter.classList.add('ran-booster-update-is-active');
+				}
 			}
 		}
 
@@ -418,6 +455,9 @@
 			const credentialResult = isCredential
 				? region.querySelector?.('[data-ran-booster-credential-result]')
 				: null;
+			const generalNotice =
+				form.dataset?.ranBoosterSettingsScope &&
+				region.hasAttribute?.('data-ran-booster-ui-notice');
 			const message = (
 				fallbackMessage ||
 				credentialResult?.textContent ||
@@ -434,6 +474,25 @@
 					credentialResult.className =
 						'ran-booster-credential-health__error';
 					credentialResult.hidden = false;
+				} else if (generalNotice) {
+					const primary = region.querySelector(
+						'[data-ran-booster-ui-notice-primary]'
+					);
+					if (primary) {
+						primary.textContent = message;
+					}
+					region
+						.querySelectorAll('[data-ran-booster-ui-notice-detail]')
+						.forEach((detail) => {
+							detail.hidden = true;
+						});
+					region
+						.querySelectorAll(
+							'[data-ran-booster-ui-notice-request-field]'
+						)
+						.forEach((field) => {
+							field.textContent = '';
+						});
 				} else {
 					region.textContent = message;
 				}
@@ -450,7 +509,9 @@
 				region.setAttribute('tabindex', '-1');
 			}
 			region.focus?.({ preventScroll: true });
-			announce(region.textContent.trim(), 'error');
+			if (!generalNotice) {
+				announce(region.textContent.trim(), 'error');
+			}
 		}
 
 		function renderedFailureNotice(form) {

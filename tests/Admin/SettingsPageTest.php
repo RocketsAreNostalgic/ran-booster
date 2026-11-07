@@ -81,11 +81,21 @@ final class SettingsPageTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-general-self_update_discovery"', $toggle );
 		self::assertStringNotContainsString( 'id="ran-booster-history-rows"', $toggle );
 		self::assertStringNotContainsString( 'data-ran-booster-general-navigation', $toggle );
+		self::assertStringNotContainsString( 'ran-booster-settings__preferences', $toggle );
+		self::assertStringNotContainsString( 'ran-booster-settings__limits', $toggle );
+		self::assertStringContainsString( 'hx-target="#ran-booster-general-self_update_discovery"', $toggle );
 		$numeric = $dashboard->render_general_settings_region( true, 'numeric' );
 		self::assertStringContainsString( 'id="ran-booster-general-numeric"', $numeric );
 		self::assertStringNotContainsString( 'role="switch"', $numeric );
 		self::assertStringNotContainsString( 'hx-swap-oob', $numeric );
 		self::assertStringContainsString( 'data-ran-booster-unsaved role="status"', $numeric );
+		self::assertStringNotContainsString( 'ran-booster-settings__limits', $numeric );
+		self::assertStringContainsString( 'hx-target="#ran-booster-general-numeric"', $numeric );
+		$hide = $dashboard->render_general_settings_region( true, 'hide_github' );
+		self::assertStringContainsString( 'hx-target="#ran-booster-general-hide_github"', $hide );
+		self::assertStringNotContainsString( 'ran-booster-settings__preferences', $hide );
+		self::assertStringNotContainsString( 'ran-booster-settings__limits', $hide );
+		self::assertStringNotContainsString( 'id="ran-booster-general-numeric"', $hide );
 		self::assertSame( 1, substr_count( $off, 'id="ran-booster-core-development-notice-slot" hx-swap-oob="true"' ) );
 		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice', $off );
 		$GLOBALS['wpdb']->enabled = true;
@@ -249,6 +259,9 @@ final class SettingsPageTest extends TestCase {
 		unset( $general_navigation, $general_scope );
 		self::assertSame( 1, preg_match( '/<nav class="ran-admin-shell__navigation".*?<\/nav>/s', $shell_html, $shell_navigation ) );
 		self::assertSame( 1, preg_match( '/<template data-ran-booster-general-navigation>.*?<\/template>/s', $partial_html, $partial_navigation ) );
+		if ( ! isset( $shell_navigation[0], $partial_navigation[0] ) ) {
+			self::fail( 'Both navigation fragments must have a complete match.' );
+		}
 		foreach ( array( $shell_navigation[0], $partial_navigation[0] ) as $navigation ) {
 			foreach ( array( 'Overview', 'Plugins', 'Themes', 'GitHub' ) as $label ) {
 				self::assertStringContainsString( '>' . $label . '</a>', $navigation );
@@ -270,12 +283,67 @@ final class SettingsPageTest extends TestCase {
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previous_errors );
 		$xpath = new \DOMXPath( $dom );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//p[@data-ran-booster-autosave-description and @hidden and text()="Changes save automatically."])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[@data-ran-booster-card="settings" and contains(@class, "ran-booster-card")]/div[contains(@class, "ran-booster-card__content")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region" and @data-ran-booster-card])' ) );
+		self::assertSame( 3.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope]/div[@data-ran-booster-ui-notice and @data-ran-booster-admin-mutation-error]/div[@data-ran-booster-ui-notice-content][p[@data-ran-booster-ui-notice-primary] and p[@data-ran-booster-ui-notice-detail]])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-notice-mount])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]/div[not(@role) and not(@data-ran-booster-general-failed)]//p[@id="ran-booster-hide-github-error" and @data-ran-booster-ui-notice-field and @data-ran-booster-ui-notice-request-field and text()="Hide GitHub UI: Invalid selection."])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//*[@role="alert"])' ) );
+
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="General preferences" and p="Changes save automatically."]//*[@id="ran-booster-general-hide_github"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="General preferences"]//*[@id="ran-booster-general-self_update_discovery"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="History and download limits"]//*[@id="ran-booster-general-numeric"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="History and download limits"]//button[@id="ran-booster-save-numeric-bottom"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="General preferences"]//button[@type="submit" and not(@data-ran-booster-toggle-save) and not(@form)])' ) );
+
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Appearance"]//label[@for="ran-booster-hide-github"]//input[@type="checkbox" and @role="switch" and @checked and @aria-invalid="true" and @aria-describedby="ran-booster-hide-github-help ran-booster-hide-github-error"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-error"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//label[@for="ran-booster-self-update-discovery"]//input[@role="switch" and @disabled and not(@checked) and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@role="switch" and @aria-checked])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status and @data-ran-booster-ui-badge and @role="status" and not(@data-ran-booster-ui-badge-label) and not(@data-ran-booster-ui-badge-intent)]/span[@data-ran-booster-ui-badge-fallback])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status and @data-ran-booster-ui-badge]/span[@data-ran-booster-ui-badge-mount and not(node())])' ) );
+		foreach ( array( 'ran-booster-hide-github', 'ran-booster-self-update-discovery' ) as $switch_id ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//label[@id="' . $switch_id . '-label" and @for="' . $switch_id . '"]/following-sibling::div[contains(@class, "ran-booster-settings__switch-row")][1]/span[@data-ran-booster-ui-switch="general-preference"]/label[@data-ran-booster-ui-switch-fallback and not(@hidden)]/input[@id="' . $switch_id . '" and @aria-labelledby="' . $switch_id . '-label"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $switch_id . '"]/parent::label/parent::span[@data-ran-booster-ui-switch="general-preference"]/following-sibling::span[@data-ran-booster-toggle-status and @role="status"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $switch_id . '"]/parent::label/following-sibling::span[@data-ran-booster-ui-switch-mount and not(node())])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $switch_id . '"]/ancestor::form[1]//input[@type="checkbox" and @name])' ) );
+		}
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and contains(@class, "ran-booster-badge--ok") and text()="Enabled"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and contains(@class, "ran-booster-badge--neutral") and text()="Disabled"])' ) );
+		$general_attempted = array(
+			'hide_github'           => '0',
+			'self_update_discovery' => '1',
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
+		$attempted_html  = (string) ob_get_clean();
+		$attempted_dom   = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		$attempted_dom->loadHTML( $attempted_html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_errors );
+		$attempted_xpath = new \DOMXPath( $attempted_dom );
+		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//input[@id="ran-booster-hide-github" and not(@checked)])' ) );
+		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and text()="Enabled"])' ) );
+		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//input[@id="ran-booster-self-update-discovery" and @checked])' ) );
+		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and text()="Disabled"])' ) );
+		$github_visibility['eligible'] = false;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
+		$ineligible_html = (string) ob_get_clean();
+		$previous_errors = libxml_use_internal_errors( true );
+		$attempted_dom->loadHTML( $ineligible_html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_errors );
+		$attempted_xpath = new \DOMXPath( $attempted_dom );
+		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github" and @data-ran-booster-confirmed="0"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and contains(@class, "ran-booster-badge--neutral") and text()="Disabled"])' ) );
+		$github_visibility['eligible'] = true;
+		$general_attempted             = array();
+
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-core-toggle])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//input[@type="checkbox" and @name="ran_booster[preferences][hide_github]" and @id="ran-booster-hide-github"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//input[@type="checkbox" and @name="ran_booster[preferences][self_update_discovery]" and @id="ran-booster-self-update-discovery"])' ) );
@@ -304,13 +372,52 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="numeric"]//fieldset[legend="Download limits"]/following-sibling::div//button[@id="ran-booster-save-numeric-bottom"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//button[@type="submit" and not(@disabled)])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][self_update_discovery]"])' ) );
-		$general_feedback       = 'Settings changed. Review the values.';
-		$general_save_succeeded = false;
+		$general_errors                           = array();
+		$general_settings['hide_github']['error'] = 'invalid_code';
+		$general_scope                            = 'hide_github';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
+		$config_html     = (string) ob_get_clean();
+		$config_dom      = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		$config_dom->loadHTML( $config_html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_errors );
+		$config_xpath = new \DOMXPath( $config_dom );
+		self::assertSame( 1.0, $config_xpath->evaluate( 'count(//div[@data-ran-booster-ui-notice and not(@role) and not(@hidden) and not(@data-ran-booster-general-failed)]/div[@data-ran-booster-ui-notice-content]/p[@id="ran-booster-hide-github-error" and @data-ran-booster-ui-notice-field and not(@data-ran-booster-ui-notice-request-field)])' ) );
+		self::assertSame( 1.0, $config_xpath->evaluate( 'count(//div[@data-ran-booster-ui-notice]/div/p[@data-ran-booster-ui-notice-primary and not(text())])' ) );
+		self::assertSame( 1.0, $config_xpath->evaluate( 'count(//div[@data-ran-booster-ui-notice]/div/p[@data-ran-booster-ui-notice-detail and @hidden])' ) );
+		unset( $general_scope );
+		$general_settings['hide_github']['error'] = null;
+		$general_errors                           = array( 'hide_github' => 'Invalid selection.' );
+		$general_feedback                         = 'Settings changed. Review the values.';
+		$general_save_succeeded                   = false;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
 		$failed = (string) ob_get_clean();
-		self::assertStringContainsString( 'id="ran-booster-general-error" class="notice notice-info inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1"', $failed );
+		self::assertStringContainsString( 'id="ran-booster-general-error" class="notice notice-info inline" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice role="alert" tabindex="-1"', $failed );
 		self::assertStringContainsString( 'Settings changed. Review the values.', $failed );
+		$failed_dom      = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		$failed_dom->loadHTML( $failed );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_errors );
+		$failed_xpath = new \DOMXPath( $failed_dom );
+		self::assertSame( 1.0, $failed_xpath->evaluate( 'count(//*[@role="alert"])' ) );
+		self::assertSame( 1.0, $failed_xpath->evaluate( 'count(//*[@id="ran-booster-general-error" and @role="alert"])' ) );
+		self::assertSame( 1.0, $failed_xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-error" and @data-ran-booster-ui-notice-field])' ) );
+		$general_scope = 'hide_github';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
+		$scoped_failure  = (string) ob_get_clean();
+		$previous_errors = libxml_use_internal_errors( true );
+		$failed_dom->loadHTML( $scoped_failure );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_errors );
+		$failed_xpath = new \DOMXPath( $failed_dom );
+		self::assertSame( 1.0, $failed_xpath->evaluate( 'count(//*[@role="alert"])' ) );
+		self::assertSame( 1.0, $failed_xpath->evaluate( 'count(//*[@data-ran-booster-general-failed and @role="alert"]/div[p[@data-ran-booster-ui-notice-primary and text()="Settings changed. Review the values."] and p[@data-ran-booster-ui-notice-detail and not(@hidden)]])' ) );
+		unset( $general_scope );
 		unset( $general_save_succeeded );
 		$general_feedback = 'Settings saved.';
 		ob_start();

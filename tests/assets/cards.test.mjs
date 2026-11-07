@@ -1191,3 +1191,24 @@ test('Notice update without a runtime leaves native content and actions intact',
 	assert.equal(n.host.getAttribute('role'), 'alert');
 	assert.equal(f.doc.activeElement, n.link);
 });
+
+test('provider Card preserves native form and link through cleanup and history', () => {
+	const f = fixture();
+	const { card, form, link } = f.make('provider', f.doc.body, 'section');
+	link.focus();
+	f.run();
+	f.flush();
+	assert.equal(f.tree().type, 'CardRoot');
+	assert.equal(form.firstChild, link);
+	assert.equal(f.doc.activeElement, link);
+	f.emit('htmx:beforeCleanupElement', link);
+	assert.equal(form.parentElement, card);
+	assert.equal(form.firstChild, link);
+	f.emit('htmx:load', card);
+	f.flush();
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(form.parentElement, card);
+	assert.equal(form.firstChild, link);
+	f.flush();
+	assert.equal(form.firstChild, link);
+});

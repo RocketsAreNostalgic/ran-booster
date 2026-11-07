@@ -181,6 +181,7 @@
 					'extensions',
 					'overview',
 					'plugins',
+					'provider',
 					'settings',
 					'themes',
 					'package-edit',

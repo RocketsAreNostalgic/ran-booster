@@ -852,12 +852,16 @@ test('add and edit modal population clear stale generated secret state', () => {
 
 test('payload URL copy uses the exact displayed endpoint', async () => {
 	const copied = [];
+	let reset;
 	const input = control(
-		'https://example.test/wp-json/ran-booster/v1/webhooks/gh'
+		'https://example.test/wp-json/ran-booster/v1/webhooks/gh?full=' +
+			'long-value%2F'.repeat(40) +
+			'&literal=a+b#complete'
 	);
 	const copy = control();
-	copy.dataset = { copiedLabel: 'URL copied', copyLabel: 'Copy URL' };
-	copy.textContent = 'Copy URL';
+	copy.textContent = '';
+	copy.setAttribute('aria-label', 'Copy payload URL');
+	copy.setAttribute('title', 'Copy payload URL');
 	const status = control();
 	status.dataset = {
 		copiedMessage: 'Payload URL copied.',
@@ -881,7 +885,10 @@ test('payload URL copy uses the exact displayed endpoint', async () => {
 		},
 	};
 	globalThis.window = {
-		setTimeout: () => 1,
+		setTimeout(callback) {
+			reset = callback;
+			return 1;
+		},
 		clearTimeout: () => {},
 		navigator: {
 			clipboard: {
@@ -896,10 +903,19 @@ test('payload URL copy uses the exact displayed endpoint', async () => {
 		initWebhookUrlCopy();
 		await copy.listeners.get('click')();
 		assert.deepEqual(copied, [input.value]);
-		assert.equal(copy.textContent, 'Copy URL');
+		assert.equal(copy.textContent, '');
+		assert.equal(copy.getAttribute('aria-label'), 'Payload URL copied.');
+		assert.equal(copy.getAttribute('title'), 'Payload URL copied.');
+		assert.equal(input.focusCount, 0);
+		assert.equal(copy.focusCount, 0);
 		assert.equal(copy.classList.contains('is-copied'), true);
 		assert.equal(status.textContent, 'Payload URL copied.');
 		assert.equal(status.classList.contains('screen-reader-text'), true);
+		reset();
+		assert.equal(copy.classList.contains('is-copied'), false);
+		assert.equal(copy.getAttribute('aria-label'), 'Copy payload URL');
+		assert.equal(copy.getAttribute('title'), 'Copy payload URL');
+		assert.equal(status.textContent, '');
 	} finally {
 		cleanup();
 	}

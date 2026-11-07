@@ -3159,6 +3159,10 @@ final class TroubleshootingViewTest extends TestCase {
 				}
 				self::assertSame( $payload_url, $xpath->evaluate( 'string(//input[@data-webhook-url][@readonly]/@value)' ) );
 				self::assertSame( 1.0, $xpath->evaluate( 'count(//button[@data-webhook-url-copy][@type="button"])' ) );
+				self::assertSame( 'Copy payload URL', $xpath->evaluate( 'string(//button[@data-webhook-url-copy]/@aria-label)' ) );
+				self::assertSame( 'Copy payload URL', $xpath->evaluate( 'string(//button[@data-webhook-url-copy]/@title)' ) );
+				self::assertSame( '', $xpath->evaluate( 'normalize-space(//button[@data-webhook-url-copy])' ) );
+				self::assertSame( 2.0, $xpath->evaluate( 'count(//button[@data-webhook-url-copy]/svg[@aria-hidden="true"][@focusable="false"])' ) );
 				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-webhook-url-status][@role="status"][@aria-live="polite"][@aria-atomic="true"])' ) );
 				self::assertStringContainsString( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', $html );
 			}

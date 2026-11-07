@@ -196,7 +196,6 @@
 			.ran-booster-provider-next-step,
 			.ran-booster-provider-task-panel__heading,
 			.ran-booster-provider-repository-tools,
-			.ran-booster-webhook-url,
 			.ran-booster-repository-record__action-group,
 			.ran-booster-provider-management__header,
 			.ran-booster-public-lookup-profile__controls
@@ -283,16 +282,6 @@
 		> .ran-booster-webhook-setup__url {
 		flex: 0 1 auto;
 		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.ran-booster-admin .ran-booster-webhook-url {
-		align-items: stretch;
-		flex-direction: column;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-url input {
-		flex: 0 1 auto;
-		inline-size: 100%;
 	}
 
 	.ran-booster-admin .ran-booster-public-lookup-profile__layout {

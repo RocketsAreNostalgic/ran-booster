@@ -112,14 +112,23 @@
 }
 
 .ran-booster-admin .ran-booster-webhook-url {
-	display: flex;
-	flex-wrap: wrap;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	min-inline-size: 0;
 	gap: var(--ran-booster-space-6);
 }
 
 .ran-booster-admin .ran-booster-webhook-url input {
-	flex: 1 1 440px;
+	min-inline-size: 0;
+	inline-size: 100%;
 	max-inline-size: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ran-booster-admin .ran-booster-webhook-url [data-webhook-url-status] {
+	grid-column: 1 / -1;
 }
 
 .ran-booster-admin .ran-booster-webhook-setup code {

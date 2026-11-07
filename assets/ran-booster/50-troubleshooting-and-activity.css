@@ -442,16 +442,6 @@
 	display: none;
 }
 
-.ran-booster-admin [data-webhook-url-copy]::before {
-	margin-inline-end: 0.35em;
-	content: "✓";
-	visibility: hidden;
-}
-
-.ran-booster-admin [data-webhook-url-copy].is-copied::before {
-	visibility: visible;
-}
-
 /* The mounted Activity Card owns its frame and content inset. */
 .ran-booster-admin
 	.ran-booster-troubleshooting

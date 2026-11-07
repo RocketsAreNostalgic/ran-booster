@@ -2614,7 +2614,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:341
 #: RAN/Troubleshooting/TroubleshootingService.php:344
 #: views/debug-capture.php:58
-#: views/onboarding.php:82
+#: views/onboarding.php:85
 #: views/settings-storage.php:26
 #: views/troubleshooting-installation.php:20
 #: views/troubleshooting-installation.php:153
@@ -2845,8 +2845,8 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
 #: RAN/Booster.php:944
 #: views/attempts/index.php:54
-#: views/onboarding.php:81
-#: views/onboarding.php:99
+#: views/onboarding.php:84
+#: views/onboarding.php:102
 #: views/overview-dashboard.php:32
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
@@ -4645,7 +4645,7 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:264
-#: views/onboarding.php:166
+#: views/onboarding.php:169
 msgid "Transporter"
 msgstr ""
 
@@ -6537,7 +6537,7 @@ msgstr ""
 
 #: views/documentation.php:264
 #: views/documentation.php:418
-#: views/onboarding.php:174
+#: views/onboarding.php:177
 #: views/overview-dashboard.php:79
 #: views/provider.php:660
 msgid "Install a plugin"
@@ -6881,7 +6881,7 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:419
-#: views/onboarding.php:175
+#: views/onboarding.php:178
 #: views/overview-dashboard.php:83
 #: views/provider.php:661
 msgid "Install a theme"
@@ -7370,122 +7370,122 @@ msgstr ""
 msgid "Review recent activity, managed packages and your site’s configuration."
 msgstr ""
 
-#: views/onboarding.php:61
+#: views/onboarding.php:62
 msgid "Skip onboarding"
 msgstr ""
 
-#: views/onboarding.php:61
+#: views/onboarding.php:62
 msgid "Return to onboarding"
 msgstr ""
 
-#: views/onboarding.php:77
+#: views/onboarding.php:80
 #: views/settings-storage.php:21
 #: views/troubleshooting-installation.php:17
 msgid "Path configured"
 msgstr ""
 
-#: views/onboarding.php:78
+#: views/onboarding.php:81
 #: views/settings-storage.php:22
 #: views/troubleshooting-installation.php:16
 msgid "Storage healthy"
 msgstr ""
 
-#: views/onboarding.php:79
+#: views/onboarding.php:82
 #: views/settings-storage.php:23
 msgid "Storage needs attention"
 msgstr ""
 
-#: views/onboarding.php:80
+#: views/onboarding.php:83
 #: views/settings-storage.php:24
 msgid "Setup available"
 msgstr ""
 
-#: views/onboarding.php:83
+#: views/onboarding.php:86
 #: views/settings-storage.php:27
 msgid "Verification pending"
 msgstr ""
 
 #. translators: 1: displayed reminders, 2: total actionable reminders.
-#: views/onboarding.php:106
+#: views/onboarding.php:109
 #, php-format
 msgid "Showing %1$d of %2$d actionable expiry reminders."
 msgstr ""
 
-#: views/onboarding.php:109
+#: views/onboarding.php:112
 msgid "Credential expiry reminders are unavailable. Review credentials in provider settings."
 msgstr ""
 
-#: views/onboarding.php:115
+#: views/onboarding.php:118
 msgid "Provider is not admitted."
 msgstr ""
 
-#: views/onboarding.php:118
+#: views/onboarding.php:121
 msgid "The managed package inventory is incomplete or unavailable."
 msgstr ""
 
-#: views/onboarding.php:121
+#: views/onboarding.php:124
 msgid "Secure credential storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:121
-#: views/onboarding.php:123
+#: views/onboarding.php:124
+#: views/onboarding.php:126
 msgid "Review storage"
 msgstr ""
 
-#: views/onboarding.php:141
+#: views/onboarding.php:144
 msgid "1. Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:141
+#: views/onboarding.php:144
 #: views/settings-storage.php:63
 #: views/settings.php:27
 #: views/troubleshooting-installation.php:58
 msgid "Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:142
+#: views/onboarding.php:145
 #: views/settings-storage.php:64
 msgid "Status unknown"
 msgstr ""
 
-#: views/onboarding.php:144
+#: views/onboarding.php:147
 #: views/troubleshooting-installation.php:60
 msgid "Storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:145
+#: views/onboarding.php:148
 msgid "Review secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:153
+#: views/onboarding.php:156
 msgid "2. Choose a Git provider"
 msgstr ""
 
-#: views/onboarding.php:154
+#: views/onboarding.php:157
 msgid "Add credentials on the provider’s page if needed."
 msgstr ""
 
-#: views/onboarding.php:159
+#: views/onboarding.php:162
 msgid "Install another provider"
 msgstr ""
 
-#: views/onboarding.php:163
+#: views/onboarding.php:166
 msgid "3. Import or migrate (optional)"
 msgstr ""
 
-#: views/onboarding.php:164
+#: views/onboarding.php:167
 msgid "Import a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions."
 msgstr ""
 
-#: views/onboarding.php:167
+#: views/onboarding.php:170
 msgid "Browse extensions"
 msgstr ""
 
-#: views/onboarding.php:171
+#: views/onboarding.php:174
 msgid "4. Install and manage packages"
 msgstr ""
 
-#: views/onboarding.php:172
+#: views/onboarding.php:175
 msgid "Install a plugin or theme from a Git repository, or link one already installed on this site."
 msgstr ""
 

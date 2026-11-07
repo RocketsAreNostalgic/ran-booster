@@ -58,7 +58,10 @@ $provider_attention        = array_filter(
 				<?php wp_nonce_field( 'ran-booster-overview-presentation' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="overview-presentation">
 				<input type="hidden" name="ran_booster[presentation]" value="<?php echo 'onboarding' === $overview_view ? 'dashboard' : 'onboarding'; ?>">
-				<button type="submit" class="button"><?php echo esc_html( 'onboarding' === $overview_view ? __( 'Skip onboarding', 'ran-booster' ) : __( 'Return to onboarding', 'ran-booster' ) ); ?></button>
+				<span data-ran-booster-ui-button="overview-presentation">
+					<button type="submit" class="button" data-ran-booster-ui-button-fallback><?php echo esc_html( 'onboarding' === $overview_view ? __( 'Skip onboarding', 'ran-booster' ) : __( 'Return to onboarding', 'ran-booster' ) ); ?></button>
+					<span data-ran-booster-ui-button-mount></span>
+				</span>
 			</form>
 		<?php } ?>
 	</header>

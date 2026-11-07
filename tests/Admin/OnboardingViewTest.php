@@ -524,7 +524,10 @@ final class OnboardingViewTest extends TestCase {
 			$target = 'onboarding' === $view ? 'dashboard' : 'onboarding';
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/input[@name="ran_booster[presentation]" and @value="' . $target . '"])' ) );
 			$label = 'onboarding' === $view ? 'Skip onboarding' : 'Return to onboarding';
-			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/button[@type="submit" and @class="button" and text()="' . $label . '"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/span[@data-ran-booster-ui-button="overview-presentation"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/span/button[@type="submit" and @class="button" and @data-ran-booster-ui-button-fallback and text()="' . $label . '"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/span/span[@data-ran-booster-ui-button-mount and not(node())])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form//button)' ) );
 			$heading     = 'onboarding' === $view ? 'Prepare your site' : 'Overview';
 			$description = 'onboarding' === $view ? 'Public repositories do not need credentials or webhooks.' : 'Review recent activity, managed packages and your site’s configuration.';
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/div/h2[@id="ran-booster-onboarding-heading" and @class="ran-booster-page-heading__title" and text()="' . $heading . '"]/following-sibling::p[@class="ran-booster-page-heading__description" ])' ) );

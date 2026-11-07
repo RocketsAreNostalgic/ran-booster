@@ -31,6 +31,9 @@ final class BoosterAssetsTest extends TestCase {
 		$_GET                             = array();
 		$this->had_capability_checks      = array_key_exists( 'ran_booster_test_capability_checks', $GLOBALS );
 		$this->previous_capability_checks = $GLOBALS['ran_booster_test_capability_checks'] ?? null;
+
+		$GLOBALS['ran_booster_asset_test_theme_registered'] = true;
+
 		$GLOBALS['ran_booster_asset_test_registered_styles']   = array();
 		$GLOBALS['ran_booster_asset_test_enqueued_styles']     = array();
 		$GLOBALS['ran_booster_asset_test_registered_scripts']  = array();
@@ -50,6 +53,7 @@ final class BoosterAssetsTest extends TestCase {
 			unset( $GLOBALS['ran_booster_test_capability_checks'] );
 		}
 		unset(
+			$GLOBALS['ran_booster_asset_test_theme_registered'],
 			$GLOBALS['ran_booster_asset_test_registered_styles'],
 			$GLOBALS['ran_booster_asset_test_enqueued_styles'],
 			$GLOBALS['ran_booster_asset_test_registered_scripts'],
@@ -323,6 +327,36 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['footer'] );
 		self::assertArrayNotHasKey( 'ran-booster-admin-shell', $GLOBALS['ran_booster_asset_test_registered_styles'] );
 		self::assertArrayNotHasKey( 'ran-booster-ui-overlay', $GLOBALS['ran_booster_asset_test_enqueued_modules'] );
+	}
+
+	/** @return list<array{bool, string}> */
+	public static function notice_theme_availability_provider(): array {
+		return array(
+			array( true, 'toplevel_page_ran-booster' ),
+			array( false, 'toplevel_page_ran-booster' ),
+			array( true, 'plugins.php' ),
+			array( false, 'plugins.php' ),
+		);
+	}
+
+	#[DataProvider( 'notice_theme_availability_provider' )]
+	public function test_notice_compatibility_style_requires_absent_theme_for_admin_and_global_hosts( bool $theme_registered, string $hook ): void {
+		$GLOBALS['ran_booster_asset_test_theme_registered'] = $theme_registered;
+		$this->booster( true )->load_scripts( $hook );
+		$registered = $GLOBALS['ran_booster_asset_test_registered_styles'];
+		$enqueued   = $GLOBALS['ran_booster_asset_test_enqueued_styles'];
+
+		self::assertSame( ! $theme_registered, isset( $registered['ran-booster-notice-compat'] ) );
+		self::assertSame( ! $theme_registered, in_array( 'ran-booster-notice-compat', $enqueued, true ) );
+		if ( ! $theme_registered ) {
+			self::assertSame( array( 'ran-booster-25-admin-primitives' ), $registered['ran-booster-notice-compat']['dependencies'] );
+			self::assertStringEndsWith( '/assets/ran-booster-notice-compat.css', $registered['ran-booster-notice-compat']['source'] );
+		}
+		if ( 'plugins.php' === $hook ) {
+			self::assertSame( $theme_registered ? array( 'wp-theme' ) : array(), $registered['ran-booster-25-admin-primitives']['dependencies'] );
+			self::assertSame( $theme_registered, in_array( 'wp-theme', $enqueued, true ) );
+			self::assertArrayNotHasKey( 'ran-booster-admin-shell', $registered );
+		}
 	}
 
 	public function test_menu_styles_require_a_valid_hook_and_menu_capability(): void {

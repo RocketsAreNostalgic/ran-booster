@@ -14,6 +14,10 @@ function trailingslashit( string $value ): string {
 	return rtrim( $value, '/\\' ) . '/';
 }
 
+function wp_style_is( string $handle, string $status = 'enqueued' ): bool {
+	return 'wp-theme' === $handle && 'registered' === $status && ( $GLOBALS['ran_booster_asset_test_theme_registered'] ?? true );
+}
+
 /** @param list<string> $dependencies */
 function wp_register_style( string $handle, string $source, array $dependencies = array(), string|bool|null $version = false ): bool {
 	$GLOBALS['ran_booster_asset_test_registered_styles'][ $handle ] = array(

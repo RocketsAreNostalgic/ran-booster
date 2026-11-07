@@ -1016,12 +1016,14 @@ class Booster {
 			return;
 		}
 
-		wp_enqueue_style( 'wp-theme' );
+		if ( wp_style_is( 'wp-theme', 'registered' ) ) {
+			wp_enqueue_style( 'wp-theme' );
+		}
 		$path = 'assets/ran-booster/25-admin-primitives.css';
 		wp_register_style(
 			'ran-booster-25-admin-primitives',
 			trailingslashit( $this->booster_url ?? '' ) . $path,
-			array( 'wp-theme' ),
+			wp_style_is( 'wp-theme', 'registered' ) ? array( 'wp-theme' ) : array(),
 			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $path )
 		);
 		wp_enqueue_style( 'ran-booster-25-admin-primitives' );
@@ -1030,6 +1032,17 @@ class Booster {
 
 	/** Reuse one public component foundation and the existing footer adapter. */
 	private function load_ui_assets( bool $has_ui_overlay ): void {
+		if ( ! wp_style_is( 'wp-theme', 'registered' ) ) {
+			$path = 'assets/ran-booster-notice-compat.css';
+			wp_register_style(
+				'ran-booster-notice-compat',
+				trailingslashit( $this->booster_url ?? '' ) . $path,
+				array( 'ran-booster-25-admin-primitives' ),
+				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $path )
+			);
+			wp_enqueue_style( 'ran-booster-notice-compat' );
+		}
+
 		$ui_manifest_path = trailingslashit( $this->booster_path ?? dirname( __DIR__ ) ) . 'assets/lib/ran-booster-ui-manifest.json';
 		$ui_manifest      = is_file( $ui_manifest_path ) && is_readable( $ui_manifest_path ) ? wp_json_file_decode( $ui_manifest_path, array( 'associative' => true ) ) : null;
 		if ( is_array( $ui_manifest ) && isset( $ui_manifest['foundation'], $ui_manifest['overlay'] )

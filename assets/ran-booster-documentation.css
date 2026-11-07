@@ -1,9 +1,3 @@
-@media (prefers-reduced-motion: no-preference) {
-	:root {
-		scroll-behavior: smooth;
-	}
-}
-
 .ran-booster-admin .ran-booster-documentation__layout {
 	display: grid;
 	grid-template-areas: "main index";

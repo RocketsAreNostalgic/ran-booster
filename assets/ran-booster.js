@@ -517,6 +517,9 @@
 		}
 
 		activateHash(window.location.hash, true);
+		window.addEventListener('popstate', function () {
+			openDetailsForHash(root, window.location.hash);
+		});
 		window.addEventListener('hashchange', function () {
 			activateHash(window.location.hash, false);
 		});

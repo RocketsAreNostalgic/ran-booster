@@ -29,6 +29,30 @@
 				? state.toggle.checked !== state.confirmed
 				: fingerprint(state.form) !== state.initial)
 		);
+	const showError = (state, message) => {
+		const error = state.form.querySelector(
+			'[data-ran-booster-admin-mutation-error]'
+		);
+		const primary =
+			error.querySelector('[data-ran-booster-ui-notice-primary]') ||
+			(!error.hasAttribute('data-ran-booster-ui-notice') ? error : null);
+		if (primary) {
+			primary.textContent = message;
+		}
+		for (const detail of error.querySelectorAll(
+			'[data-ran-booster-ui-notice-detail]'
+		)) {
+			detail.hidden = true;
+		}
+		for (const field of error.querySelectorAll(
+			'[data-ran-booster-ui-notice-request-field]'
+		)) {
+			field.textContent = '';
+		}
+		error.hidden = false;
+		error.setAttribute('role', 'alert');
+		error.setAttribute('tabindex', '-1');
+	};
 	const update = (state) => {
 		const dirty = pending(state);
 		const status = state.form.querySelector(
@@ -36,28 +60,57 @@
 				? '[data-ran-booster-toggle-status]'
 				: '[data-ran-booster-unsaved]'
 		);
-		let message = dirty
-			? __('Unsaved numeric changes.', 'ran-booster')
-			: __('No pending numeric changes.', 'ran-booster');
+		let message;
 		if (state.toggle) {
+			message = state.confirmed
+				? __('Enabled', 'ran-booster')
+				: __('Disabled', 'ran-booster');
+			const fallback = status?.querySelector(
+				'[data-ran-booster-ui-badge-fallback]'
+			);
+			if (fallback) {
+				if (fallback.textContent !== message) {
+					fallback.textContent = message;
+				}
+				fallback.classList.toggle(
+					'ran-booster-badge--ok',
+					state.confirmed
+				);
+				fallback.classList.toggle(
+					'ran-booster-badge--neutral',
+					!state.confirmed
+				);
+				status.setAttribute('data-ran-booster-ui-badge-label', message);
+				status.setAttribute(
+					'data-ran-booster-ui-badge-intent',
+					state.confirmed ? 'stable' : 'none'
+				);
+				status.dispatchEvent(
+					new CustomEvent('ran-booster:ui-badge-update', {
+						bubbles: true,
+					})
+				);
+			}
+		} else {
 			message = dirty
-				? __('Not saved.', 'ran-booster')
-				: __('Saved.', 'ran-booster');
+				? __('Unsaved numeric changes.', 'ran-booster')
+				: __('No pending numeric changes.', 'ran-booster');
+			if (state.queued) {
+				message = __('Waiting to save…', 'ran-booster');
+			}
+			if (state.flight) {
+				message = __('Saving…', 'ran-booster');
+			}
 		}
-		if (state.failed) {
-			message = __('Save needs review.', 'ran-booster');
-		}
-		if (state.unknown) {
-			message = __('Save unconfirmed. Review and retry.', 'ran-booster');
-		}
-		if (state.queued) {
-			message = __('Waiting to save…', 'ran-booster');
-		}
-		if (state.flight) {
-			message = __('Saving…', 'ran-booster');
-		}
-		if (status && status.textContent !== message) {
+		if (!state.toggle && status && status.textContent !== message) {
 			status.textContent = message;
+		}
+		if (!state.toggle && status) {
+			if (state.failed || state.unknown) {
+				status.setAttribute('aria-live', 'off');
+			} else {
+				status.removeAttribute('aria-live');
+			}
 		}
 		state.form.classList.toggle('ran-booster-settings--pending', dirty);
 		const retry = state.form.querySelector(
@@ -69,26 +122,38 @@
 			);
 		}
 	};
-	const bind = () => {
+	const bind = (deferredScope = null) => {
+		const description = document.querySelector(
+			'[data-ran-booster-autosave-description]'
+		);
+		if (description) {
+			description.hidden = !window.htmx;
+		}
 		for (const form of document.querySelectorAll(selector)) {
 			const scope = form.dataset.ranBoosterSettingsScope;
 			if (states.get(scope)?.form === form) {
 				continue;
 			}
+			const error = form.querySelector(
+				'[data-ran-booster-admin-mutation-error]'
+			);
 			const state = {
 				form,
 				scope,
 				toggle: form.querySelector('input[role="switch"]'),
 				confirmed: form.dataset.ranBoosterConfirmed === '1',
+				intent: 0,
 				initial: form.dataset.ranBoosterBaseline,
-				failed: !form.querySelector(
-					'[data-ran-booster-admin-mutation-error]'
-				).hidden,
+				failed: error.hasAttribute('data-ran-booster-ui-notice')
+					? error.hasAttribute('data-ran-booster-general-failed')
+					: !error.hidden,
 				unknown: false,
 				flight: null,
 			};
 			states.set(scope, state);
-			update(state);
+			if (scope !== deferredScope) {
+				update(state);
+			}
 		}
 		for (const [scope, state] of states) {
 			if (!state.form.isConnected) {
@@ -130,6 +195,10 @@
 		state.flight = null;
 		state.unknown = true;
 		state.failed = true;
+		showError(
+			state,
+			__('Save unconfirmed. Review and retry.', 'ran-booster')
+		);
 		update(state);
 	};
 	bind();
@@ -143,6 +212,9 @@
 		const state = stateFor(event.target);
 		if (!state) {
 			return;
+		}
+		if (state.toggle) {
+			++state.intent;
 		}
 		update(state);
 		if (state.toggle && window.htmx && !state.unknown && !state.failed) {
@@ -211,6 +283,7 @@
 			const record = {
 				state,
 				desired: state.toggle?.checked,
+				intent: state.intent,
 				region: state.form.parentElement,
 				values: [...new FormData(state.form)].filter(([name]) =>
 					name.startsWith('ran_booster[preferences][')
@@ -250,6 +323,17 @@
 				const responseForm = parsed
 					.getElementById(`ran-booster-general-${state.scope}`)
 					?.querySelector(selector);
+				const badge =
+					state.toggle &&
+					responseForm?.querySelector(
+						'[data-ran-booster-toggle-status][data-ran-booster-ui-badge]'
+					);
+				const error = responseForm?.querySelector(
+					'[data-ran-booster-admin-mutation-error][data-ran-booster-ui-notice]'
+				);
+				const content = error?.querySelector(
+					'[data-ran-booster-ui-notice-content]'
+				);
 				const baseline = JSON.parse(
 					responseForm?.dataset.ranBoosterBaseline || 'null'
 				);
@@ -259,8 +343,10 @@
 						state.scope ||
 					!responseForm.elements.namedItem('ran_booster[token]')
 						?.value ||
-					!responseForm.querySelector(
-						'[data-ran-booster-admin-mutation-error]'
+					!error ||
+					!content ||
+					!content.querySelector(
+						'[data-ran-booster-ui-notice-primary]'
 					) ||
 					!responseForm.querySelector(
 						state.toggle
@@ -285,7 +371,16 @@
 							Number.isFinite(Number(pair[1]))
 					) ||
 					(state.toggle &&
-						(!responseForm.querySelector('input[role="switch"]') ||
+						(!badge ||
+							!badge.querySelector(
+								'[data-ran-booster-ui-badge-fallback]'
+							) ||
+							!badge.querySelector(
+								'[data-ran-booster-ui-badge-mount]'
+							) ||
+							!responseForm.querySelector(
+								'input[role="switch"]'
+							) ||
 							!['0', '1'].includes(
 								responseForm.dataset.ranBoosterConfirmed
 							)))
@@ -347,7 +442,7 @@
 		}
 		record.applied = true;
 		const desired = state.toggle?.checked;
-		bind();
+		bind(state.scope);
 		const next = states.get(state.scope);
 		let saved = Boolean(
 			record.confirmedResponse &&
@@ -371,12 +466,6 @@
 		if (conflict) {
 			saved = false;
 			state.form.setAttribute('data-ran-booster-general-unconfirmed', '');
-			const error = next.form.querySelector(
-				'[data-ran-booster-admin-mutation-error]'
-			);
-			error.hidden = false;
-			error.setAttribute('role', 'alert');
-			error.setAttribute('tabindex', '-1');
 			let current = JSON.parse(next.initial)
 				.map(([, value]) => value)
 				.join(' / ');
@@ -385,13 +474,15 @@
 					? __('On', 'ran-booster')
 					: __('Off', 'ran-booster');
 			}
-			error.textContent =
+			showError(
+				next,
 				__(
 					'Settings changed before confirmation. Review the current saved values before retrying:',
 					'ran-booster'
 				) +
-				' ' +
-				current;
+					' ' +
+					current
+			);
 			if (!next.toggle) {
 				for (const [name, value] of record.values) {
 					next.form.elements.namedItem(name).value = value;
@@ -399,13 +490,28 @@
 			}
 		}
 		record.saved = saved;
-		if (next.toggle) {
-			next.toggle.checked = desired;
-		}
 		next.failed = !saved;
 		next.unknown =
-			!record.confirmedResponse &&
-			region.hasAttribute('data-ran-booster-general-saved');
+			(!record.confirmedResponse &&
+				region.hasAttribute('data-ran-booster-general-saved')) ||
+			(!saved &&
+				!conflict &&
+				!next.form
+					.querySelector('[data-ran-booster-admin-mutation-error]')
+					.hasAttribute('data-ran-booster-general-failed'));
+		if (next.toggle) {
+			next.intent = state.intent;
+			if (next.unknown) {
+				next.confirmed = state.confirmed;
+				next.form.dataset.ranBoosterConfirmed = state.confirmed
+					? '1'
+					: '0';
+			}
+			next.toggle.checked =
+				saved || next.unknown || state.intent > record.intent
+					? desired
+					: next.confirmed;
+		}
 		if (next.unknown) {
 			next.form.elements.namedItem('ran_booster[token]').value =
 				record.token;
@@ -415,7 +521,11 @@
 				}
 			}
 		}
-		update(next);
+		if (next.unknown) {
+			uncertain(next);
+		} else {
+			update(next);
+		}
 		const navigation = region.querySelector(
 			'template[data-ran-booster-general-navigation]'
 		);

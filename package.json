@@ -3,17 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-        "format": "prettier --write 'assets/**/*.{js,css}' 'tests/assets/**/*.mjs' scripts/ui-runtime-entry.js scripts/build-ui.mjs",
-        "format:check": "prettier --check 'assets/**/*.{js,css}' 'tests/assets/**/*.mjs' scripts/ui-runtime-entry.js scripts/build-ui.mjs",
-        "lint:js": "eslint 'assets/**/*.js' 'tests/assets/**/*.mjs' scripts/ui-runtime-entry.js scripts/build-ui.mjs",
-        "lint:js:fix": "eslint 'assets/**/*.js' 'tests/assets/**/*.mjs' scripts/ui-runtime-entry.js scripts/build-ui.mjs --fix",
-        "lint:css": "stylelint 'assets/**/*.css'",
-        "lint:css:fix": "stylelint 'assets/**/*.css' --fix",
-        "test:assets": "node --test 'tests/assets/*.test.mjs'",
-        "ui:build": "node scripts/build-ui.mjs",
-        "ui:check": "node scripts/build-ui.mjs --check",
-        "check": "pnpm ui:check && pnpm format:check && pnpm lint:js && pnpm lint:css && pnpm test:assets",
-        "prepare": "husky"
+    "format": "prettier --write 'assets/**/*.{js,css}' 'tests/assets/**/*.mjs' scripts/ui-runtime-entry.js scripts/ui-overlay-entry.js scripts/build-ui.mjs",
+    "format:check": "prettier --check 'assets/**/*.{js,css}' 'tests/assets/**/*.mjs' scripts/ui-runtime-entry.js scripts/ui-overlay-entry.js scripts/build-ui.mjs",
+    "lint:js": "eslint 'assets/**/*.js' 'tests/assets/**/*.mjs' scripts/ui-runtime-entry.js scripts/ui-overlay-entry.js scripts/build-ui.mjs",
+    "lint:js:fix": "eslint 'assets/**/*.js' 'tests/assets/**/*.mjs' scripts/ui-runtime-entry.js scripts/ui-overlay-entry.js scripts/build-ui.mjs --fix",
+    "lint:css": "stylelint 'assets/**/*.css'",
+    "lint:css:fix": "stylelint 'assets/**/*.css' --fix",
+    "test:assets": "node --test 'tests/assets/*.test.mjs'",
+    "ui:build": "node scripts/build-ui.mjs",
+    "ui:check": "node scripts/build-ui.mjs --check",
+    "check": "pnpm ui:check && pnpm format:check && pnpm lint:js && pnpm lint:css && pnpm test:assets",
+    "prepare": "husky"
   },
   "engines": {
     "node": ">=24.21.0 <25",
@@ -26,6 +26,8 @@
   "devDependencies": {
     "@babel/core": "7.29.7",
     "@rocketsarenostalgic/quality-config": "github:RocketsAreNostalgic/ran-quality-config#7faebe578c509e9265769314fd41bb1485b868b0",
+    "@rollup/plugin-commonjs": "29.0.3",
+    "@rollup/plugin-node-resolve": "16.0.3",
     "@wordpress/eslint-plugin": "25.7.0",
     "@wordpress/prettier-config": "4.51.0",
     "@wordpress/stylelint-config": "26.1.0",
@@ -37,6 +39,7 @@
     "prettier": "3.9.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",
+    "rollup": "4.68.0",
     "stylelint": "17.14.1",
     "stylelint-scss": "7.2.0",
     "typescript": "6.0.3"

@@ -32,13 +32,17 @@ function harness({ enhanced = true } = {}) {
 		}
 		return event;
 	};
+	const autosaveDescription = { hidden: true };
 	const document = {
 		activeElement: null,
 		body: {},
 		addEventListener: (name, fn) => on(listeners, name, fn),
 		querySelectorAll: () =>
 			[...regions.values()].map((region) => region.form),
-		querySelector: () => null,
+		querySelector: (selector) =>
+			selector === '[data-ran-booster-autosave-description]'
+				? autosaveDescription
+				: null,
 		getElementById(id) {
 			for (const region of regions.values()) {
 				if (region.id === id) {
@@ -95,11 +99,68 @@ function harness({ enhanced = true } = {}) {
 									},
 									querySelector(selector) {
 										if (
-											mode === 'error' &&
 											selector ===
-												'[data-ran-booster-admin-mutation-error]'
+											'[data-ran-booster-toggle-status][data-ran-booster-ui-badge]'
 										) {
-											return null;
+											if (mode === 'badge-host') {
+												return null;
+											}
+											return {
+												querySelector: (child) =>
+													child.includes(mode)
+														? null
+														: {},
+											};
+										}
+										if (
+											selector ===
+											'[data-ran-booster-admin-mutation-error][data-ran-booster-ui-notice]'
+										) {
+											if (
+												mode === 'error' ||
+												mode === 'notice-host'
+											) {
+												return null;
+											}
+											return {
+												querySelector(child) {
+													if (
+														child.endsWith(
+															'notice-content]'
+														)
+													) {
+														if (
+															mode ===
+															'notice-content'
+														) {
+															return null;
+														}
+														return {
+															querySelector:
+																() =>
+																	[
+																		'notice-primary',
+																		'notice-sibling',
+																	].includes(
+																		mode
+																	)
+																		? null
+																		: {},
+														};
+													}
+													if (
+														child.endsWith(
+															'notice-primary]'
+														)
+													) {
+														return mode ===
+															'notice-primary'
+															? null
+															: {};
+													}
+													return null;
+												},
+											};
 										}
 										if (
 											mode === 'save' &&
@@ -131,6 +192,8 @@ function harness({ enhanced = true } = {}) {
 			confirmed = checked,
 			saved = false,
 			failed = false,
+			configNotice = false,
+			legacyNotice = false,
 			token = 'original',
 		} = {}
 	) {
@@ -257,12 +320,160 @@ function harness({ enhanced = true } = {}) {
 			scope === 'numeric'
 				? element('ran-booster-save-numeric-bottom')
 				: null;
+		const primary = {
+			textContent: failed ? 'Settings were not saved.' : '',
+		};
+		const detail = { hidden: false, textContent: 'Current saved value.' };
+		const requestField = {
+			id: `field-${scope}`,
+			textContent: 'Attempted value is invalid.',
+		};
+		const secondRequestField = {
+			id: `field-extra-${scope}`,
+			textContent: 'Another invalid value.',
+		};
+		const configurationField = {
+			id: `configuration-${scope}`,
+			textContent: 'Configuration diagnostic.',
+		};
+		const noticeMount = { sentinel: true };
+		const content = {
+			sentinel: true,
+			set textContent(item) {
+				throw new Error('Cannot replace notice content: ' + item);
+			},
+		};
 		form.error = {
 			...element(`error-${scope}`),
-			hidden: !failed,
-			setAttribute() {},
+			hidden: !(failed || configNotice),
+			primary,
+			detail,
+			requestField,
+			secondRequestField,
+			configurationField,
+			content,
+			mount: noticeMount,
+			attributes: new Map(),
+			get textContent() {
+				return [
+					primary.textContent,
+					detail.textContent,
+					requestField.textContent,
+					secondRequestField.textContent,
+					configurationField.textContent,
+				].join(' ');
+			},
+			set textContent(item) {
+				if (!legacyNotice) {
+					throw new Error(
+						'Cannot replace notice host children: ' + item
+					);
+				}
+				primary.textContent = item;
+			},
+			hasAttribute(name) {
+				if (name === 'data-ran-booster-ui-notice') {
+					return !legacyNotice;
+				}
+				if (name === 'data-ran-booster-general-failed') {
+					return failed;
+				}
+				return this.attributes.has(name);
+			},
+			setAttribute(name, item) {
+				this.attributes.set(name, item);
+			},
+			querySelector(selector) {
+				if (selector === '[data-ran-booster-ui-notice-primary]') {
+					return legacyNotice ? null : primary;
+				}
+				if (selector === '[data-ran-booster-ui-notice-content]') {
+					return legacyNotice ? null : content;
+				}
+				return null;
+			},
+			querySelectorAll(selector) {
+				if (legacyNotice) {
+					return [];
+				}
+				if (selector === '[data-ran-booster-ui-notice-detail]') {
+					return [detail];
+				}
+				if (selector === '[data-ran-booster-ui-notice-request-field]') {
+					return [requestField, secondRequestField];
+				}
+				return [];
+			},
 		};
-		form.status = { textContent: '' };
+		const fallback = {
+			value: '',
+			writes: [],
+			attributes: new Map(),
+			setAttribute(name, item) {
+				this.attributes.set(name, item);
+			},
+			removeAttribute(name) {
+				this.attributes.delete(name);
+			},
+			get textContent() {
+				return this.value;
+			},
+			set textContent(item) {
+				this.value = item;
+				this.writes.push(item);
+			},
+			classList: {
+				values: new Set(),
+				toggle(name, enabled) {
+					if (enabled) {
+						this.values.add(name);
+					} else {
+						this.values.delete(name);
+					}
+				},
+			},
+		};
+		const badgeMount = { sentinel: true };
+		form.status =
+			scope === 'numeric'
+				? fallback
+				: {
+						get textContent() {
+							return fallback.textContent;
+						},
+						set textContent(item) {
+							throw new Error(
+								'Cannot replace badge host children: ' + item
+							);
+						},
+						writes: fallback.writes,
+						classList: fallback.classList,
+						mount: badgeMount,
+						attributes: new Map(),
+						events: [],
+						querySelector(selector) {
+							return selector.includes('fallback')
+								? fallback
+								: badgeMount;
+						},
+						setAttribute(name, item) {
+							this.attributes.set(name, item);
+						},
+						dispatchEvent(event) {
+							this.events.push({
+								type: event.type,
+								bubbles: event.bubbles,
+								label: this.attributes.get(
+									'data-ran-booster-ui-badge-label'
+								),
+								intent: this.attributes.get(
+									'data-ran-booster-ui-badge-intent'
+								),
+								fallback: fallback.textContent,
+								mount: this.mount,
+							});
+						},
+					};
 		form.retry = scope === 'numeric' ? null : { hidden: false };
 		form.toggle =
 			scope === 'numeric'
@@ -297,6 +508,12 @@ function harness({ enhanced = true } = {}) {
 				];
 			}
 		},
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options.bubbles;
+			}
+		},
 		queueMicrotask: (fn) => microtasks.push(fn),
 	};
 	vm.runInNewContext(source, context);
@@ -304,6 +521,7 @@ function harness({ enhanced = true } = {}) {
 		document,
 		window,
 		numeric,
+		autosaveDescription,
 		toggle,
 		make,
 		mount,
@@ -365,6 +583,385 @@ function swap(h, old, options = {}) {
 	return next;
 }
 
+test('numeric network uncertainty uses one Notice and preserves stable children and draft', () => {
+	const h = harness();
+	const form = h.numeric;
+	const {
+		content,
+		mount,
+		requestField,
+		secondRequestField,
+		configurationField,
+		detail,
+	} = form.error;
+	form.value = '2700';
+	h.doc('input', { target: form.numeric });
+	const xhr = start(h, form);
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.equal(form.value, '2700');
+	assert.equal(form.token, 'original');
+	assert.equal(form.status.textContent, 'Unsaved numeric changes.');
+	assert.equal(form.status.attributes.get('aria-live'), 'off');
+	assert.equal(form.error.attributes.get('role'), 'alert');
+	assert.match(form.error.primary.textContent, /unconfirmed/i);
+	assert.equal(form.error.content, content);
+	assert.equal(form.error.mount, mount);
+	assert.equal(form.error.requestField, requestField);
+	assert.equal(requestField.id, 'field-numeric');
+	assert.equal(requestField.textContent, '');
+	assert.equal(secondRequestField.id, 'field-extra-numeric');
+	assert.equal(secondRequestField.textContent, '');
+	assert.equal(detail.hidden, true);
+	assert.equal(configurationField.textContent, 'Configuration diagnostic.');
+	form.requestSubmit();
+	assert.equal(form.submissions.at(-1).token, 'original');
+	assert.equal(form.error.content, content);
+	assert.equal(form.error.mount, mount);
+	const retry = start(h, form);
+	h.doc('htmx:beforeOnLoad', { detail: { xhr: retry } });
+	const confirmed = h.replace(
+		h.make('numeric', { value: '2700', saved: true, token: 'next' })
+	);
+	h.doc('htmx:afterSwap', { detail: { xhr: retry } });
+	h.doc('htmx:afterRequest', { detail: { xhr: retry } });
+	assert.equal(confirmed.status.textContent, 'No pending numeric changes.');
+	assert.equal(confirmed.status.attributes.has('aria-live'), false);
+});
+
+test('configuration-only Notice remains visible without blocking autosave', () => {
+	const h = harness();
+	const form = h.mount(h.make('discovery', { configNotice: true }));
+	h.doc('htmx:afterSwap', { target: { id: 'other' }, detail: { xhr: {} } });
+	assert.equal(form.error.hidden, false);
+	assert.equal(
+		form.error.hasAttribute('data-ran-booster-general-failed'),
+		false
+	);
+	form.toggle.checked = true;
+	h.doc('change', { target: form.toggle });
+	assert.equal(form.submissions.length, 1);
+	assert.equal(form.retry.hidden, true);
+	assert.equal(
+		form.error.configurationField.textContent,
+		'Configuration diagnostic.'
+	);
+});
+
+test('malformed Notice host, content or primary vetoes every scoped response', () => {
+	for (const scope of ['hide', 'numeric']) {
+		for (const missing of [
+			'notice-host',
+			'notice-content',
+			'notice-primary',
+			'notice-sibling',
+		]) {
+			const h = harness();
+			const form = scope === 'hide' ? h.toggle : h.numeric;
+			if (scope === 'numeric') {
+				form.value = '2700';
+			} else {
+				form.toggle.checked = true;
+			}
+			const xhr = start(h, form);
+			xhr.responseText = `${scope}:${missing}`;
+			let headerReads = 0;
+			xhr.getResponseHeader = () => {
+				++headerReads;
+				return JSON.stringify({
+					'ran-booster:admin-mutation-success': { message: 'Saved.' },
+				});
+			};
+			assert.equal(
+				h.doc('htmx:beforeOnLoad', { detail: { xhr } })
+					.defaultPrevented,
+				true
+			);
+			assert.equal(
+				headerReads,
+				0,
+				'Malformed markup is rejected before reading success headers.'
+			);
+			h.doc('htmx:afterRequest', { detail: { xhr } });
+			assert.equal(form.token, 'original');
+			assert.equal(form.error.attributes.get('role'), 'alert');
+			assert.match(form.error.primary.textContent, /unconfirmed/i);
+			if (scope === 'numeric') {
+				assert.equal(form.value, '2700');
+				assert.equal(form.status.attributes.get('aria-live'), 'off');
+			} else {
+				assert.equal(form.toggle.checked, true);
+				assert.equal(form.status.textContent, 'Disabled');
+			}
+		}
+	}
+});
+
+test('legacy cached error without Notice children can report uncertainty', () => {
+	const h = harness();
+	const legacy = h.mount(h.make('legacy', { legacyNotice: true }));
+	h.doc('htmx:afterSwap', { target: { id: 'other' }, detail: { xhr: {} } });
+	legacy.toggle.checked = true;
+	const xhr = start(h, legacy);
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.equal(legacy.status.textContent, 'Disabled');
+	assert.match(legacy.error.textContent, /unconfirmed/i);
+	assert.equal(legacy.error.attributes.get('role'), 'alert');
+	assert.equal(legacy.token, 'original');
+});
+
+test('numeric confirmation conflict changes primary without replacing field or mount', () => {
+	const h = harness();
+	h.numeric.value = '2400';
+	const xhr = start(h, h.numeric);
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	const next = h.replace(
+		h.make('numeric', { value: '2600', saved: true, token: 'newer' })
+	);
+	const {
+		content,
+		mount,
+		requestField,
+		secondRequestField,
+		configurationField,
+		detail,
+	} = next.error;
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.equal(next.value, '2400');
+	assert.equal(next.token, 'newer');
+	assert.match(next.error.primary.textContent, /2600/);
+	assert.equal(next.error.content, content);
+	assert.equal(next.error.mount, mount);
+	assert.equal(requestField.id, 'field-numeric');
+	assert.equal(requestField.textContent, '');
+	assert.equal(secondRequestField.id, 'field-extra-numeric');
+	assert.equal(secondRequestField.textContent, '');
+	assert.equal(detail.hidden, true);
+	assert.equal(configurationField.textContent, 'Configuration diagnostic.');
+	assert.equal(next.status.attributes.get('aria-live'), 'off');
+});
+
+test('automatic-save description is shown only when enhanced saving is available', () => {
+	assert.equal(harness().autosaveDescription.hidden, false);
+	const native = harness({ enhanced: false });
+	assert.equal(native.autosaveDescription.hidden, true);
+	assert.equal(native.toggle.retry.hidden, false);
+});
+
+test('older cached badge markup cannot abort history recovery or clear numeric drafts', () => {
+	const h = harness();
+	h.numeric.value = '2700';
+	h.doc('input', { target: h.numeric.numeric });
+	h.toggle.status.querySelector = () => null;
+	const publications = h.toggle.status.events.length;
+	assert.doesNotThrow(() => h.doc('htmx:historyRestore', {}));
+	assert.equal(h.numeric.value, '2700');
+	assert.equal(pending(h.numeric), true);
+	assert.equal(h.toggle.error.hidden, false);
+	assert.match(h.toggle.error.textContent, /unconfirmed/i);
+	assert.equal(h.toggle.status.events.length, publications);
+});
+
+test('badge remains confirmed during pending work and adopts the successful projection', () => {
+	const h = harness();
+	assert.equal(h.toggle.status.textContent, 'Disabled');
+	assert.equal(
+		h.toggle.status.classList.values.has('ran-booster-badge--neutral'),
+		true
+	);
+	h.toggle.toggle.checked = true;
+	h.doc('change', { target: h.toggle.toggle });
+	const xhr = start(h, h.toggle);
+	assert.equal(h.toggle.status.textContent, 'Disabled');
+	assert.ok(h.toggle.status.writes.every((item) => item === 'Disabled'));
+	assert.equal(h.toggle.status.mount.sentinel, true);
+	assert.equal(h.toggle.status.events.at(-1).label, 'Disabled');
+	assert.equal(h.toggle.status.events.at(-1).intent, 'none');
+	assert.equal(h.toggle.status.events.at(-1).fallback, 'Disabled');
+	assert.equal(h.toggle.status.events.at(-1).bubbles, true);
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	const next = h.replace(
+		h.make('hide', { checked: true, confirmed: true, saved: true })
+	);
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.equal(next.status.textContent, 'Enabled');
+	assert.equal(next.status.events.at(-1).intent, 'stable');
+	assert.equal(next.status.events.at(-1).mount, next.status.mount);
+	assert.equal(
+		next.status.classList.values.has('ran-booster-badge--ok'),
+		true
+	);
+});
+
+test('failure preserves newer opposite and B to A to B intent independently of confirmed badge', () => {
+	for (const sequence of [[false], [false, true]]) {
+		const h = harness();
+		h.toggle.toggle.checked = true;
+		h.doc('change', { target: h.toggle.toggle });
+		const xhr = start(h, h.toggle);
+		for (const desired of sequence) {
+			h.toggle.toggle.checked = desired;
+			h.doc('change', { target: h.toggle.toggle });
+		}
+		h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+		const confirmed = sequence.length === 1;
+		const next = h.replace(
+			h.make('hide', {
+				checked: confirmed,
+				confirmed,
+				failed: true,
+				token: 'current',
+			})
+		);
+		h.doc('htmx:afterSwap', { detail: { xhr } });
+		h.doc('htmx:afterRequest', { detail: { xhr } });
+		h.flush();
+		assert.equal(next.toggle.checked, sequence.at(-1));
+		assert.equal(
+			next.status.textContent,
+			confirmed ? 'Enabled' : 'Disabled'
+		);
+		assert.equal(next.error.hidden, false);
+		assert.equal(next.submissions.length, 0);
+		assert.equal(next.token, 'current');
+	}
+});
+
+test('lost explicit retry replaces a previous rejection with an unconfirmed alert', () => {
+	const h = harness();
+	h.toggle.toggle.checked = true;
+	h.doc('change', { target: h.toggle.toggle });
+	const rejected = start(h, h.toggle);
+	h.doc('htmx:beforeOnLoad', { detail: { xhr: rejected } });
+	const next = h.replace(
+		h.make('hide', {
+			checked: true,
+			confirmed: false,
+			failed: true,
+			token: 'current',
+		})
+	);
+	h.doc('htmx:afterSwap', { detail: { xhr: rejected } });
+	h.doc('htmx:afterRequest', { detail: { xhr: rejected } });
+	assert.equal(next.error.primary.textContent, 'Settings were not saved.');
+	assert.equal(next.error.hidden, false);
+	assert.equal(next.toggle.checked, false);
+	assert.equal(next.status.textContent, 'Disabled');
+
+	next.toggle.checked = true;
+	h.doc('change', { target: next.toggle });
+	next.requestSubmit();
+	assert.equal(next.submissions.at(-1).token, 'current');
+	const retry = start(h, next);
+	h.doc('htmx:afterRequest', { detail: { xhr: retry } });
+
+	assert.match(next.error.textContent, /save unconfirmed/i);
+	assert.equal(next.error.hidden, false);
+	assert.equal(next.error.attributes.get('role'), 'alert');
+	assert.equal(next.status.textContent, 'Disabled');
+	assert.equal(next.toggle.checked, true);
+	assert.equal(next.token, 'current');
+	assert.equal(next.retry.hidden, false);
+});
+
+test('postcommit cleanup failure shows confirmed new badge without a success', () => {
+	const h = harness();
+	h.toggle.toggle.checked = true;
+	h.doc('change', { target: h.toggle.toggle });
+	const xhr = start(h, h.toggle);
+	xhr.getResponseHeader = () => null;
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	const next = h.replace(
+		h.make('hide', {
+			checked: true,
+			confirmed: true,
+			failed: true,
+			token: 'committed',
+		})
+	);
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.equal(next.status.textContent, 'Enabled');
+	assert.equal(next.toggle.checked, true);
+	assert.equal(next.retry.hidden, false);
+	assert.equal(next.error.hidden, false);
+	assert.equal(next.token, 'committed');
+});
+
+test('response lacking both a success marker and error stays unconfirmed with original fence', () => {
+	const h = harness();
+	h.toggle.toggle.checked = true;
+	h.doc('change', { target: h.toggle.toggle });
+	const xhr = start(h, h.toggle);
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	const next = h.replace(
+		h.make('hide', { checked: true, confirmed: true, token: 'newer' })
+	);
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.equal(next.status.textContent, 'Disabled');
+	assert.equal(next.toggle.checked, true);
+	assert.equal(next.token, 'original');
+	assert.equal(next.retry.hidden, false);
+	assert.equal(next.error.hidden, false);
+	assert.equal(next.error.attributes.get('role'), 'alert');
+	assert.match(next.error.textContent, /unconfirmed/i);
+});
+
+test('malformed toggle responses retain badge, original token and retryable alert', () => {
+	for (const body of [
+		'missing',
+		'hide:empty',
+		'hide:error',
+		'hide:baseline',
+	]) {
+		const h = harness();
+		h.toggle.toggle.checked = true;
+		h.doc('change', { target: h.toggle.toggle });
+		const xhr = start(h, h.toggle);
+		xhr.responseText = body;
+		assert.equal(
+			h.doc('htmx:beforeOnLoad', { detail: { xhr } }).defaultPrevented,
+			true
+		);
+		h.doc('htmx:afterRequest', { detail: { xhr } });
+		assert.equal(h.toggle.status.textContent, 'Disabled');
+		assert.equal(h.toggle.toggle.checked, true);
+		assert.equal(h.toggle.token, 'original');
+		assert.equal(h.toggle.error.hidden, false);
+		assert.equal(h.toggle.error.attributes.get('role'), 'alert');
+		assert.equal(h.toggle.retry.hidden, false);
+		h.toggle.requestSubmit();
+		assert.equal(h.toggle.submissions.at(-1).token, 'original');
+	}
+});
+
+test('stopped queue retains waiting toggle intent and numeric draft', () => {
+	const h = harness();
+	const other = h.mount(h.make('discovery'));
+	h.doc('htmx:afterSwap', { target: { id: 'other' }, detail: { xhr: {} } });
+	const xhr = start(h, h.toggle);
+	other.toggle.checked = true;
+	h.doc('change', { target: other.toggle });
+	h.numeric.value = '2700';
+	h.doc('input', { target: h.numeric.numeric });
+	h.numeric.requestSubmit();
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	h.replace(h.make('hide', { failed: true }));
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	h.flush();
+	assert.equal(other.toggle.checked, true);
+	assert.equal(other.status.textContent, 'Disabled');
+	assert.equal(other.error.attributes.get('role'), 'alert');
+	assert.equal(other.retry.hidden, false);
+	assert.equal(other.submissions.length, 0);
+	assert.equal(h.numeric.value, '2700');
+	assert.equal(h.numeric.numeric.disabled, false);
+	assert.equal(h.numeric.submissions.length, 0);
+});
+
 test('numeric edits and reversion survive successful and failed independent toggle swaps', () => {
 	const h = harness();
 	h.numeric.value = '2500';
@@ -424,7 +1021,9 @@ test('unknown outcome retains original token and requires explicit retry', () =>
 	h.doc('htmx:afterRequest', { detail: { xhr } });
 	assert.equal(pending(t), true);
 	assert.equal(t.retry.hidden, false);
-	assert.match(t.status.textContent, /unconfirmed/i);
+	assert.equal(t.status.textContent, 'Disabled');
+	assert.match(t.error.textContent, /unconfirmed/i);
+	assert.equal(t.error.attributes.get('role'), 'alert');
 	t.toggle.checked = false;
 	h.doc('change', { target: t });
 	assert.equal(t.submissions.length, 1);
@@ -523,7 +1122,7 @@ test('only persisted pageshow invalidates the cached form', () => {
 	assert.equal(pending(h.toggle), true);
 });
 
-test('failed server response retains attempted value and requires explicit retry', () => {
+test('failed server response restores confirmed value and requires explicit retry', () => {
 	const h = harness();
 	h.toggle.toggle.checked = true;
 	h.doc('change', { target: h.toggle.toggle });
@@ -533,10 +1132,12 @@ test('failed server response retains attempted value and requires explicit retry
 		failed: true,
 		token: 'original',
 	});
-	assert.equal(next.toggle.checked, true);
-	assert.equal(pending(next), true);
+	assert.equal(next.toggle.checked, false);
+	assert.equal(pending(next), false);
+	assert.equal(next.status.textContent, 'Disabled');
+	assert.equal(next.error.hidden, false);
 	assert.equal(next.retry.hidden, false);
-	next.toggle.checked = false;
+	next.toggle.checked = true;
 	h.doc('change', { target: next.toggle });
 	assert.equal(next.submissions.length, 0);
 	next.requestSubmit();
@@ -588,7 +1189,8 @@ test('a failed or unconfirmed response stops the queue and unlocks numeric contr
 		h.flush();
 		assert.equal(h.numeric.numeric.disabled, false);
 		assert.equal(h.numeric.submissions.length, 0);
-		assert.match(h.numeric.status.textContent, /unconfirmed/i);
+		assert.match(h.numeric.error.primary.textContent, /unconfirmed/i);
+		assert.equal(h.numeric.status.attributes.get('aria-live'), 'off');
 		assert.equal(pending(h.numeric), true);
 	}
 });
@@ -641,7 +1243,9 @@ test('saved marker without a valid success header remains unconfirmed', () => {
 		h.doc('htmx:afterRequest', { detail: { xhr } });
 		assert.equal(pending(next), true);
 		assert.equal(next.retry.hidden, false);
-		assert.match(next.status.textContent, /unconfirmed/i);
+		assert.equal(next.status.textContent, 'Disabled');
+		assert.match(next.error.textContent, /unconfirmed/i);
+		assert.equal(next.error.attributes.get('role'), 'alert');
 	}
 });
 
@@ -661,11 +1265,11 @@ test('a later conflicting toggle snapshot does not replay the captured intent', 
 	h.doc('htmx:afterSwap', { detail: { xhr } });
 	h.doc('htmx:afterRequest', { detail: { xhr } });
 	h.flush();
-	assert.equal(next.toggle.checked, true);
+	assert.equal(next.toggle.checked, false);
 	assert.equal(next.submissions.length, 0);
 	assert.equal(next.retry.hidden, false);
-	assert.equal(pending(next), true);
-	assert.match(next.status.textContent, /needs review/i);
+	assert.equal(pending(next), false);
+	assert.equal(next.status.textContent, 'Disabled');
 	assert.match(next.error.textContent, /current saved values/i);
 	assert.equal(next.token, 'newer');
 	assert.equal(
@@ -688,8 +1292,9 @@ test('numeric confirmation conflict keeps submitted values and exposes the newer
 	assert.equal(next.value, '2400');
 	assert.equal(next.token, 'newer');
 	assert.equal(pending(next), true);
-	assert.match(next.status.textContent, /needs review/i);
-	assert.match(next.error.textContent, /2600/);
+	assert.equal(next.status.textContent, 'Unsaved numeric changes.');
+	assert.equal(next.status.attributes.get('aria-live'), 'off');
+	assert.match(next.error.primary.textContent, /2600/);
 	assert.equal(next.submissions.length, 0);
 });
 
@@ -713,7 +1318,8 @@ test('toggle change during flight is not replayed if the saved snapshot conflict
 	h.flush();
 	assert.equal(next.submissions.length, 0);
 	assert.equal(next.retry.hidden, false);
-	assert.match(next.status.textContent, /needs review/i);
+	assert.equal(next.status.textContent, 'Disabled');
+	assert.match(next.error.textContent, /current saved values/i);
 });
 
 test('unconfirmed numeric response preserves submitted draft and original token', () => {
@@ -730,7 +1336,8 @@ test('unconfirmed numeric response preserves submitted draft and original token'
 	assert.equal(next.value, '2500');
 	assert.equal(next.token, 'original');
 	assert.equal(pending(next), true);
-	assert.match(next.status.textContent, /unconfirmed/i);
+	assert.match(next.error.primary.textContent, /unconfirmed/i);
+	assert.equal(next.status.attributes.get('aria-live'), 'off');
 });
 
 test('out-of-band and duplicate swaps do not process the General response', () => {
@@ -739,7 +1346,7 @@ test('out-of-band and duplicate swaps do not process the General response', () =
 	const xhr = start(h, h.toggle);
 	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
 	h.doc('htmx:afterSwap', { target: { id: 'notices' }, detail: { xhr } });
-	assert.match(h.toggle.status.textContent, /saving/i);
+	assert.equal(h.toggle.status.textContent, 'Disabled');
 	const next = h.replace(
 		h.make('hide', { checked: true, confirmed: true, saved: true })
 	);
@@ -776,7 +1383,20 @@ test('malformed response body or missing token vetoes swap and preserves numeric
 		assert.equal(h.numeric.value, '2500');
 		assert.equal(h.numeric.token, 'original');
 		assert.equal(pending(h.numeric), true);
-		assert.match(h.numeric.status.textContent, /unconfirmed/i);
+		assert.match(h.numeric.error.primary.textContent, /unconfirmed/i);
+		assert.equal(h.numeric.status.attributes.get('aria-live'), 'off');
+	}
+});
+
+test('malformed badge response is vetoed before swap', () => {
+	for (const mode of ['badge-host', 'fallback', 'mount']) {
+		const h = harness();
+		const xhr = start(h, h.toggle);
+		xhr.responseText = `hide:${mode}`;
+		assert.equal(
+			h.doc('htmx:beforeOnLoad', { detail: { xhr } }).defaultPrevented,
+			true
+		);
 	}
 });
 
@@ -794,7 +1414,8 @@ test('non-string success message does not confirm a saved marker', () => {
 		h.doc('htmx:afterRequest', { detail: { xhr } });
 		assert.equal(pending(next), true);
 		assert.equal(next.token, 'original');
-		assert.match(next.status.textContent, /unconfirmed/i);
+		assert.equal(next.status.textContent, 'Disabled');
+		assert.match(next.error.textContent, /unconfirmed/i);
 	}
 });
 

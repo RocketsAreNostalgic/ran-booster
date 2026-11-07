@@ -358,17 +358,25 @@
 				submitterAriaBusy: submitter.getAttribute('aria-busy'),
 			});
 			form.setAttribute('aria-busy', 'true');
-			form.classList.add('ran-booster-enhanced-mutation-is-busy');
+			const switchScope = [
+				'hide_github',
+				'self_update_discovery',
+			].includes(form.dataset?.ranBoosterSettingsScope);
+			if (!switchScope) {
+				form.classList.add('ran-booster-enhanced-mutation-is-busy');
+			}
 			controls.forEach(function (state) {
 				state.control.disabled = true;
 				state.control.setAttribute?.('aria-disabled', 'true');
 			});
 			submitter.setAttribute('aria-busy', 'true');
-			submitter.classList.add(
-				'ran-booster-enhanced-mutation__submitter--busy'
-			);
-			if (!form.hasAttribute?.('data-ran-booster-source-choice')) {
-				submitter.classList.add('ran-booster-update-is-active');
+			if (!switchScope) {
+				submitter.classList.add(
+					'ran-booster-enhanced-mutation__submitter--busy'
+				);
+				if (!form.hasAttribute?.('data-ran-booster-source-choice')) {
+					submitter.classList.add('ran-booster-update-is-active');
+				}
 			}
 		}
 
@@ -435,7 +443,30 @@
 						'ran-booster-credential-health__error';
 					credentialResult.hidden = false;
 				} else {
-					region.textContent = message;
+					const primary = region.querySelector?.(
+						'[data-ran-booster-ui-notice-primary]'
+					);
+					if (primary) {
+						primary.textContent = message;
+						region
+							.querySelectorAll(
+								'[data-ran-booster-ui-notice-detail]'
+							)
+							.forEach((detail) => {
+								detail.hidden = true;
+							});
+						region
+							.querySelectorAll(
+								'[data-ran-booster-ui-notice-request-field]'
+							)
+							.forEach((field) => {
+								field.textContent = '';
+							});
+					} else if (
+						!region.hasAttribute?.('data-ran-booster-ui-notice')
+					) {
+						region.textContent = message;
+					}
 				}
 			}
 			region.hidden = false;
@@ -450,7 +481,9 @@
 				region.setAttribute('tabindex', '-1');
 			}
 			region.focus?.({ preventScroll: true });
-			announce(region.textContent.trim(), 'error');
+			if (!region.hasAttribute?.('data-ran-booster-ui-notice')) {
+				announce(region.textContent.trim(), 'error');
+			}
 		}
 
 		function renderedFailureNotice(form) {

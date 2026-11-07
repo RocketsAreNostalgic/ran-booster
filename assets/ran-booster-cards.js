@@ -6,6 +6,7 @@
 	}
 	window.ranBoosterCardsInitialized = true;
 	const selector = '.ran-booster-card[data-ran-booster-card]';
+	const noticeSelector = '[data-ran-booster-ui-notice]';
 	const badgeSelector = '[data-ran-booster-ui-badge]';
 	const mounted = 'data-ran-booster-ui-mounted';
 	const roots = new Map();
@@ -51,6 +52,17 @@
 		focusAfterMove(host, active);
 	}
 
+	function restoreAll(hosts) {
+		hosts
+			.sort((a, b) => {
+				if (a.contains(b)) {
+					return 1;
+				}
+				return b.contains(a) ? -1 : 0;
+			})
+			.forEach(restore);
+	}
+
 	function cleanup(target) {
 		const affected = Array.from(roots.keys()).filter(
 			(host) =>
@@ -58,30 +70,45 @@
 				target.contains(host) ||
 				host.contains(target)
 		);
-		affected.forEach(restore);
+		restoreAll(affected);
 	}
 
-	function mountCard(card) {
+	function mountSurface(card) {
+		const notice = card.getAttribute('data-ran-booster-ui-notice') !== null;
+		const ownSelector = notice ? noticeSelector : selector;
+		const nativeContent = notice
+			? card.querySelector('[data-ran-booster-ui-notice-content]')
+			: null;
 		if (
 			roots.has(card) ||
 			!card.isConnected ||
 			!card.closest('.ran-booster-admin') ||
-			!['extensions', 'overview', 'plugins'].includes(
-				card.getAttribute('data-ran-booster-card')
-			) ||
-			card.parentElement?.closest(selector) ||
-			card.querySelector(selector) ||
-			!['DIV', 'SECTION'].includes(card.tagName)
+			(!notice &&
+				!['extensions', 'overview', 'plugins', 'settings'].includes(
+					card.getAttribute('data-ran-booster-card')
+				)) ||
+			card.parentElement?.closest(ownSelector) ||
+			card.querySelector(ownSelector) ||
+			!['DIV', 'SECTION'].includes(card.tagName) ||
+			(notice &&
+				(card.tagName !== 'DIV' ||
+					nativeContent?.parentElement !== card))
 		) {
 			return;
 		}
 		const element = window.wp?.element;
-		const CardRoot = window.ranBoosterUI?.CardRoot;
+		const Surface = notice
+			? window.ranBoosterUI?.NoticeRoot
+			: window.ranBoosterUI?.CardRoot;
+		const Description = notice
+			? window.ranBoosterUI?.NoticeDescription
+			: 'div';
 		if (
 			!element?.createRoot ||
 			!element.createElement ||
 			!element.flushSync ||
-			!CardRoot
+			!Surface ||
+			!Description
 		) {
 			return;
 		}
@@ -95,24 +122,31 @@
 		let root;
 		try {
 			const h = element.createElement;
+			const contentSelector = notice
+				? '[data-ran-booster-ui-notice-slot]'
+				: '[data-ran-booster-card-content]';
+			const surfaceProps = notice
+				? { intent: 'error', className: 'ran-booster-ui-notice' }
+				: { className: 'ran-booster-card__surface' };
+			const contentProps = notice
+				? {
+						render: h('div'),
+						className: 'ran-booster-ui-notice__description',
+						'data-ran-booster-ui-notice-slot': '',
+					}
+				: {
+						className: 'ran-booster-card__content',
+						'data-ran-booster-card-content': '',
+					};
 			root = element.createRoot(host);
 			element.flushSync(() =>
 				root.render(
-					h(
-						CardRoot,
-						{ className: 'ran-booster-card__surface' },
-						h('div', {
-							className: 'ran-booster-card__content',
-							'data-ran-booster-card-content': '',
-						})
-					)
+					h(Surface, surfaceProps, h(Description, contentProps))
 				)
 			);
-			const content = host.querySelector(
-				'[data-ran-booster-card-content]'
-			);
+			const content = host.querySelector(contentSelector);
 			if (!content) {
-				throw new Error('Missing card content');
+				throw new Error('Missing component content');
 			}
 			original.forEach((node) => content.appendChild(node));
 			roots.set(card, { root, mount: host, content });
@@ -156,7 +190,7 @@
 		const Badge = window.ranBoosterUI?.Badge;
 		if (
 			!label ||
-			!['none', 'stable'].includes(intent) ||
+			!['none', 'stable', 'medium', 'high'].includes(intent) ||
 			!Badge ||
 			!element?.createRoot ||
 			!element.createElement ||
@@ -199,11 +233,13 @@
 					restore(host);
 				}
 			});
-			const closest = scope.closest?.(selector);
-			if (closest) {
-				mountCard(closest);
-			}
-			scope.querySelectorAll?.(selector).forEach(mountCard);
+			[selector, noticeSelector].forEach((surfaceSelector) => {
+				const closest = scope.closest?.(surfaceSelector);
+				if (closest) {
+					mountSurface(closest);
+				}
+				scope.querySelectorAll?.(surfaceSelector).forEach(mountSurface);
+			});
 			const badge = scope.closest?.(badgeSelector);
 			if (badge) {
 				mountBadge(badge);
@@ -227,7 +263,7 @@
 		cleanup(event.detail.elt)
 	);
 	document.addEventListener('htmx:beforeHistorySave', () => {
-		Array.from(roots.keys()).forEach(restore);
+		restoreAll(Array.from(roots.keys()));
 		initialize(document);
 	});
 	document.addEventListener('htmx:load', (event) =>

@@ -906,9 +906,29 @@
 	}
 }
 
-.ran-booster-admin .ran-booster-settings > .ran-booster-panel {
+.ran-booster-admin .ran-booster-settings > .ran-booster-panel,
+.ran-booster-admin .ran-booster-settings__general > .ran-booster-panel {
 	margin-block: var(--ran-booster-space-20);
 	padding: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__general
+	> [data-ran-booster-card="settings"][data-ran-booster-ui-mounted] {
+	padding: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-settings__general
+	> [data-ran-booster-card="settings"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content {
+	padding: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin [data-ran-booster-ui-notice][hidden],
+.ran-booster-admin [data-ran-booster-ui-notice-primary]:empty,
+.ran-booster-admin [data-ran-booster-ui-notice-request-field]:empty {
+	display: none;
 }
 
 .ran-booster-admin .ran-booster-settings__group {
@@ -959,6 +979,10 @@
 	gap: var(--ran-booster-space-8) var(--ran-booster-space-16);
 }
 
+.ran-booster-admin .ran-booster-settings__update-controls > div {
+	flex-basis: 100%;
+}
+
 .ran-booster-admin .ran-booster-settings__update-facts {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
@@ -974,8 +998,47 @@
 	margin: var(--ran-booster-space-5) 0 0;
 }
 
+.ran-booster-admin .ran-booster-settings__switch-label {
+	display: block;
+	font-weight: var(--ran-booster-font-weight-semibold);
+	cursor: pointer;
+}
+
 .ran-booster-admin .ran-booster-settings__switch-row {
-	margin-block: var(--ran-booster-space-12);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+	margin-block: var(--ran-booster-space-4);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge] {
+	display: block;
+	box-sizing: border-box;
+	inline-size: 12ch;
+	min-inline-size: min(12ch, 100%);
+	max-inline-size: 100%;
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch-row
+	:is([data-ran-booster-ui-badge-fallback], .ran-booster-ui-badge) {
+	display: inline-flex;
+	box-sizing: border-box;
+	inline-size: 100%;
+	justify-content: center;
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+
+.ran-booster-admin [data-ran-booster-ui-badge-mount] {
+	display: block;
+}
+
+.ran-booster-admin [data-ran-booster-ui-badge-fallback][hidden] {
+	display: none;
 }
 
 .ran-booster-admin .ran-booster-settings__switch {
@@ -1150,6 +1213,14 @@
 	min-block-size: 1.5em;
 }
 
-.ran-booster-admin [data-ran-booster-toggle-save][hidden] {
+.ran-booster-admin [data-ran-booster-toggle-save][hidden],
+.ran-booster-admin [data-ran-booster-autosave-description][hidden] {
+	display: none;
+}
+
+.ran-booster-admin
+	.ran-booster-settings__toggle-actions:has(
+		[data-ran-booster-toggle-save][hidden]
+	) {
 	display: none;
 }

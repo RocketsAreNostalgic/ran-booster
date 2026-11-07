@@ -1368,6 +1368,54 @@ test('source navigation HTTP failures retain the view and announce an error', ()
 	}
 });
 
+test('Notice transport fallback preserves the owned subtree and uses only its alert boundary', () => {
+	const state = fixture();
+	const primary = { textContent: 'The previous attempt was rejected.' };
+	const detail = { hidden: false, textContent: 'Previous saved value.' };
+	const field = {
+		id: 'field-error',
+		textContent: 'Previous validation error.',
+	};
+	const configuration = {
+		id: 'configuration-error',
+		textContent: 'Configuration remains locked.',
+	};
+	const content = { primary, detail, field, configuration };
+	const mount = { sentinel: true };
+	state.error.content = content;
+	state.error.mount = mount;
+	state.error.attributes.set('data-ran-booster-ui-notice', '');
+	Object.defineProperty(state.error, 'textContent', {
+		get: () => primary.textContent,
+		set() {
+			throw new Error('The Notice host cannot be replaced.');
+		},
+	});
+	state.error.querySelector = (selector) =>
+		selector === '[data-ran-booster-ui-notice-primary]' ? primary : null;
+	state.error.querySelectorAll = (selector) =>
+		selector === '[data-ran-booster-ui-notice-detail]' ? [detail] : [field];
+	state.form.dataset.ranBoosterSettingsScope = 'numeric';
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: {} },
+	});
+	assert.match(primary.textContent, /could not complete/);
+	assert.equal(state.error.content, content);
+	assert.equal(state.error.mount, mount);
+	assert.equal(field.id, 'field-error');
+	assert.equal(field.textContent, '');
+	assert.equal(configuration.textContent, 'Configuration remains locked.');
+	assert.equal(detail.hidden, true);
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.error.attributes.get('role'), 'alert');
+	assert.deepEqual(state.announcements, []);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+});
+
 test('enhanced mutation transport failures reset busy state and keep an error local', () => {
 	for (const eventName of [
 		'htmx:responseError',
@@ -1835,6 +1883,22 @@ test('General busy state keeps switches and their fieldsets usable while protect
 	);
 	assert.equal(checkbox.disabled, false);
 	assert.equal(state.button.disabled, true);
+	assert.equal(state.formAttributes.get('aria-busy'), 'true');
+	assert.equal(
+		state.form.classList.contains('ran-booster-enhanced-mutation-is-busy'),
+		false
+	);
+	assert.equal(
+		state.button.classList.contains(
+			'ran-booster-enhanced-mutation__submitter--busy'
+		),
+		false
+	);
+	assert.equal(
+		state.button.classList.contains('ran-booster-update-is-active'),
+		false
+	);
 	state.listeners.get('htmx:afterRequest')({ detail: { elt: state.form } });
 	assert.equal(state.button.disabled, false);
+	assert.equal(state.formAttributes.has('aria-busy'), false);
 });

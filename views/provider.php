@@ -550,8 +550,10 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 								<p><?php esc_html_e( 'Release workflow observations are incomplete because some package details are omitted.', 'ran-booster' ); ?></p>
 							<?php } ?>
 							<?php if ( $webhook_assistance_provider_capable && ! $webhook_assistance_site_ready ) { ?>
-								<div class="notice <?php echo esc_attr( $webhook_has_hard_failure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice>
-									<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?></p>
+								<div class="notice <?php echo esc_attr( $webhook_has_hard_failure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo $webhook_has_hard_failure ? 'error' : 'warning'; ?>">
+									<div data-ran-booster-ui-notice-content>
+										<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?></p>
+									</div>
 								</div>
 							<?php } ?>
 							<div class="ran-booster-provider-task-actions">

@@ -1943,6 +1943,104 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Manage repository', $without_evidence );
 	}
 
+	public function test_n5b_provider_readiness_notice_preserves_severity_content_and_guards(): void {
+		$provider                             = $this->provider_without_optional_settings();
+		$provider['webhook_scopes']           = $this->webhook_scopes();
+		$provider['capabilities']['webhooks'] = true;
+		$credential_profiles                  = array();
+		$webhook_profiles                     = array();
+		$provider_task                        = 'status';
+		$cases                                = array(
+			array( array( 'database_unavailable' ), 'https://example.test/hook', 'error', 'Booster database storage must be healthy before Push-to-Deploy can run.' ),
+			array( array( 'secrets_storage_unavailable' ), 'https://example.test/hook', 'error', 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.' ),
+			array( array( 'managed_packages_unavailable' ), 'https://example.test/hook', 'error', 'Booster could not read the managed package inventory needed for Push-to-Deploy.' ),
+			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'warning', 'This site uses a local URL, so Git providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy.' ),
+			array( array( 'callback_requires_public_https' ), 'http://example.test/hook', 'warning', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it.' ),
+			array( array( 'unknown-canary' ), 'https://example.test/hook', 'warning', '' ),
+			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'error', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it. Booster database storage must be healthy before Push-to-Deploy can run.' ),
+		);
+		foreach ( array( 'gh', 'bb', 'other' ) as $code ) {
+			$provider['code'] = $code;
+			foreach ( $cases as list( $codes, $endpoint, $intent, $reason ) ) {
+				$webhook_assistance_readiness = array(
+					'site' => array(
+						'status'       => 'blocked',
+						'reason_codes' => $codes,
+						'callback_url' => $endpoint,
+					),
+				);
+				$provider_view_data           = $this->provider_view_data( get_defined_vars() );
+				// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+				extract( $provider_view_data );
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/provider.php';
+				$html = (string) ob_get_clean();
+				self::assertMatchesRegularExpression( '~<div class="notice notice-' . $intent . ' inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . $intent . '">\s*<div data-ran-booster-ui-notice-content>\s*<p><strong>Webhook delivery is not ready\.</strong> ' . preg_quote( $reason, '~' ) . '</p>\s*</div>\s*</div>~', $html );
+				self::assertStringNotContainsString( 'unknown-canary', $html );
+			}
+		}
+		$webhook_assistance_readiness = array(
+			'site' => array(
+				'status'       => 'blocked',
+				'reason_codes' => array( 'database_unavailable' ),
+				'callback_url' => 'https://example.test/hook',
+			),
+		);
+		$provider_view_data           = $this->provider_view_data( get_defined_vars() );
+		// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+		extract( $provider_view_data );
+		$webhook_site_reasons = array( '<unsafe & reason>' );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '&lt;unsafe &amp; reason&gt;', $html );
+		foreach ( array( 'setup', 'repositories' ) as $task ) {
+			$provider_task = $task;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+		}
+		$provider_task = 'status';
+		foreach ( array(
+			array(
+				'site' => array(
+					'status'       => 'ready',
+					'reason_codes' => array(),
+				),
+			),
+			array(),
+		) as $readiness ) {
+			$webhook_assistance_readiness = $readiness;
+			$provider_view_data           = $this->provider_view_data( get_defined_vars() );
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+			extract( $provider_view_data );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+		}
+		$webhook_assistance_provider_capable = true;
+		$repository_integration_available    = false;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+		$repository_integration_available = true;
+		$provider_view                    = 'credentials';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+		$provider_view           = 'overview';
+		$provider_task           = 'repositories';
+		$requested_repository_id = 'missing';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+	}
+
 	public function test_provider_settings_explains_blocked_local_assisted_hook_setup(): void {
 		$provider                             = $this->provider_without_optional_settings();
 		$provider['code']                     = 'gh';

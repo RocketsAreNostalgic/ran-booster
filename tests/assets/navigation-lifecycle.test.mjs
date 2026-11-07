@@ -31,6 +31,21 @@ function fixture({
 			this.ownerDocument = doc;
 			this.scrollLeft = 0;
 			this.textContent = '';
+			this.listeners = new Map();
+			this.style = { removeProperty() {} };
+		}
+		addEventListener(type, listener) {
+			this.listeners.set(type, listener);
+		}
+		removeEventListener(type, listener) {
+			if (this.listeners.get(type) === listener) {
+				this.listeners.delete(type);
+			}
+		}
+		matches(selector) {
+			return (this.getAttribute('class') || '')
+				.split(' ')
+				.includes(selector.slice(1));
 		}
 		get childNodes() {
 			return this.children;
@@ -46,6 +61,10 @@ function fixture({
 		}
 		get classList() {
 			return {
+				add: (...names) =>
+					names.forEach((name) => this.classList.toggle(name, true)),
+				remove: (...names) =>
+					names.forEach((name) => this.classList.toggle(name, false)),
 				toggle: (name, selected) => {
 					const c = new Set(
 						(this.getAttribute('class') || '')

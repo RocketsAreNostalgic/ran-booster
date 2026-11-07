@@ -1,6 +1,6 @@
 // Create the two consumer navigation shapes with the supplied public Link.
 export function createNavigationLinks(h, Link, items, provider) {
-	return items.map((item, index) => {
+	const links = items.map((item, index) => {
 		const key = `${item.task || 'link'}:${index}`;
 		const linkClasses = provider
 			? (item.className || '')
@@ -16,8 +16,11 @@ export function createNavigationLinks(h, Link, items, provider) {
 				key,
 				variant: 'unstyled',
 				className: [
-					...linkClasses,
-					'ran-booster-navigation__link',
+					...new Set([
+						...linkClasses,
+						'ran-booster-navigation__link',
+						'ran-section-navigation__link',
+					]),
 				].join(' '),
 				href: item.href,
 				'aria-current': item.current ? 'page' : undefined,
@@ -33,4 +36,14 @@ export function createNavigationLinks(h, Link, items, provider) {
 		);
 		return provider ? h('li', { key }, link) : link;
 	});
+	if (links.length) {
+		links.push(
+			h(provider ? 'li' : 'span', {
+				key: 'active-indicator',
+				className: 'ran-section-navigation__indicator',
+				'aria-hidden': true,
+			})
+		);
+	}
+	return links;
 }

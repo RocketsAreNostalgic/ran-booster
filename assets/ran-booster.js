@@ -336,7 +336,7 @@
 			function (event) {
 				if (
 					typeof window.htmx?.process === 'function' &&
-					(event.ctrlKey || event.metaKey) &&
+					(event.ctrlKey || event.metaKey || event.shiftKey) &&
 					event.target?.closest?.(
 						'.ran-booster-provider-task-tabs[data-ran-booster-ui-navigation="thin"] a[href][hx-get][data-ran-booster-provider-task]'
 					)

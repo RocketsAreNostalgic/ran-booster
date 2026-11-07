@@ -663,7 +663,80 @@
 		}));
 	}
 
+	function updateNavigationIndicator(host, entry, animate = false) {
+		if (
+			!host.isConnected ||
+			roots.get(host) !== entry ||
+			!host.matches('.ran-section-navigation')
+		) {
+			return;
+		}
+		const current = navigationLinks(host, entry.provider).find(
+			(link) => link.getAttribute('aria-current') === 'page'
+		);
+		if (
+			!current ||
+			!host.querySelector('.ran-section-navigation__indicator')
+		) {
+			host.classList.remove('ran-section-navigation--ready');
+			return;
+		}
+		const track = host.getBoundingClientRect();
+		const link = current.getBoundingClientRect();
+		const size =
+			parseFloat(
+				window
+					.getComputedStyle(host)
+					.getPropertyValue('--ran-section-indicator-size')
+			) || 2;
+		host.classList.toggle('ran-section-navigation--moving', animate);
+		host.style.setProperty(
+			'--ran-section-indicator-x',
+			`${link.left - track.left + host.scrollLeft - host.clientLeft}px`
+		);
+		host.style.setProperty(
+			'--ran-section-indicator-top',
+			`${link.bottom - track.top + host.scrollTop - host.clientTop - size}px`
+		);
+		host.style.setProperty(
+			'--ran-section-indicator-width',
+			`${link.width}px`
+		);
+		host.classList.add('ran-section-navigation--ready');
+	}
+
+	function observeNavigation(host, entry) {
+		if (window.ResizeObserver) {
+			entry.navigationResize = new window.ResizeObserver(() =>
+				updateNavigationIndicator(host, entry)
+			);
+			entry.navigationResize.observe(host);
+			navigationLinks(host, entry.provider).forEach((link) =>
+				entry.navigationResize.observe(link)
+			);
+		}
+		entry.navigationFocus = (event) => {
+			if (navigationLinks(host, entry.provider).includes(event.target)) {
+				event.target.scrollIntoView({
+					block: 'nearest',
+					inline: 'nearest',
+				});
+			}
+		};
+		host.addEventListener('focusin', entry.navigationFocus);
+	}
+
 	function restoreNavigation(host, entry) {
+		entry.navigationResize?.disconnect();
+		host.removeEventListener('focusin', entry.navigationFocus);
+		host.classList.remove(
+			'ran-section-navigation--ready',
+			'ran-section-navigation--moving'
+		);
+		for (const property of ['x', 'top', 'width']) {
+			host.style.removeProperty(`--ran-section-indicator-${property}`);
+		}
+
 		const visible = navigationLinks(host, entry.provider);
 		const visibleIndex = visible.indexOf(host.ownerDocument.activeElement);
 		const index = entry.focusIndex ?? visibleIndex;
@@ -687,7 +760,7 @@
 		}
 	}
 
-	function renderNavigation(host, entry) {
+	function renderNavigation(host, entry, animate = false) {
 		const element = window.wp.element;
 		const UI = window.ranBoosterUI;
 		element.flushSync(() =>
@@ -714,6 +787,7 @@
 		) {
 			throw new Error('Navigation did not render its destinations');
 		}
+		updateNavigationIndicator(host, entry, animate);
 	}
 
 	function hasNavigationText(node) {
@@ -874,6 +948,7 @@
 			entry.root = element.createRoot(host);
 			roots.set(host, entry);
 			renderNavigation(host, entry);
+			observeNavigation(host, entry);
 			host.scrollLeft = scroll;
 			if (provider) {
 				navigationLinks(host, true).forEach((link) =>
@@ -918,7 +993,7 @@
 			}
 		});
 		try {
-			renderNavigation(host, entry);
+			renderNavigation(host, entry, true);
 			host.scrollLeft = scroll;
 			delete entry.focusIndex;
 			delete entry.scroll;

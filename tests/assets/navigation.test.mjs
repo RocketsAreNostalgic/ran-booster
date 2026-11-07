@@ -24,13 +24,17 @@ const items = [
 
 test('provider links forward only the fixed navigation props and keep native destinations', () => {
 	const links = createNavigationLinks(React.createElement, Link, items, true);
-	assert.equal(links.length, 2);
+	assert.equal(links.length, 3);
+	assert.equal(links[2].type, 'li');
+	assert.equal(links[2].props['aria-hidden'], true);
+	assert.equal(links[2].props.className, 'ran-section-navigation__indicator');
 	assert.equal(links[0].type, 'li');
 	const first = links[0].props.children;
 	assert.equal(first.type, Link);
 	assert.deepEqual(first.props, {
 		variant: 'unstyled',
-		className: 'provider-link current ran-booster-navigation__link',
+		className:
+			'provider-link current ran-booster-navigation__link ran-section-navigation__link',
 		href: '/status?one=1&two=2',
 		'aria-current': 'page',
 		title: 'Provider status',
@@ -114,7 +118,7 @@ test('direct links keep independent instance state and stable distinct keys', ()
 	);
 	assert.equal(
 		header[0].props.className,
-		'current ran-booster-navigation__link'
+		'current ran-booster-navigation__link ran-section-navigation__link'
 	);
 	assert.deepEqual(
 		createNavigationLinks(React.createElement, Link, [], false),

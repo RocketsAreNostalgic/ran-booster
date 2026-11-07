@@ -473,34 +473,9 @@
 }
 
 .ran-booster-admin .ran-booster-provider-task-tabs .filter-links {
-	display: flex;
-	flex-wrap: wrap;
-	column-gap: var(--ran-booster-space-4);
-}
-
-.ran-booster-admin .ran-booster-provider-task-tabs .filter-links li > a {
 	margin: 0;
-	padding: 8px;
-	border-block-end: 2px solid transparent;
-	font-weight: 600;
-	text-decoration: none;
-}
-
-.ran-booster-admin
-	.ran-booster-provider-task-tabs
-	.filter-links
-	li
-	> a:focus-visible {
-	outline: 2px solid var(--wp-admin-theme-color);
-	outline-offset: 2px;
-}
-
-.ran-booster-admin
-	.ran-booster-provider-task-tabs
-	.filter-links
-	li
-	> a[aria-current="page"] {
-	border-block-end-color: currentcolor;
+	padding: 0;
+	list-style: none;
 }
 
 .ran-booster-admin .ran-booster-provider-task-tab__source-indicator {

@@ -89,6 +89,8 @@ $ran_admin_shell = array(
 	'navigation'       => $ran_admin_shell_navigation,
 );
 
+$ran_admin_shell['navigation_variant'] = 'thick';
+
 if ( in_array( $view, array( 'packages/create', 'packages/edit' ), true ) && isset( $package_view, $package_return_list ) ) {
 	$parent_url                           = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + array_map( 'rawurlencode', $package_return_list ), $admin_url );
 	$ran_admin_shell['breadcrumbs_label'] = __( 'Breadcrumbs', 'ran-booster' );

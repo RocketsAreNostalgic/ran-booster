@@ -1121,7 +1121,10 @@ final class TroubleshootingViewTest extends TestCase {
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previous );
-		$xpath  = new \DOMXPath( $document );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//div[@data-ran-booster-card="troubleshooting"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@data-ran-booster-card="troubleshooting"]/form[contains(@class,"ran-booster-troubleshooting__form")]/details[summary][@open])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@data-ran-booster-card="troubleshooting"][@id="ran-booster-troubleshooting-results"]//table)' ) );
 		$fields = $xpath->query( '//details[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__specific ")]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $fields );
 		self::assertCount( 1, $fields );
@@ -1166,6 +1169,8 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
+		self::assertSame( 2, substr_count( $html, 'data-ran-booster-card="troubleshooting"' ) );
+		self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">', $html );
 		self::assertStringContainsString( '<textarea', $html );
 		self::assertStringContainsString( 'Sanitized JSON preview', $html );
 		self::assertStringContainsString( 'class="ran-booster-troubleshooting__report-field"', $html );

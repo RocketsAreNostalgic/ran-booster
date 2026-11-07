@@ -71,6 +71,7 @@ $status_classes       = array(
 	<h3 id="ran-booster-debug-capture-heading"><?php esc_html_e( 'Logging', 'ran-booster' ); ?></h3>
 	<div id="ran-booster-debug-capture-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $debug_capture_error ? 'hidden' : ''; ?>><p><?php echo null === $debug_capture_error ? '' : esc_html( $debug_capture_error ); ?></p></div>
 
+	<div class="ran-booster-card" data-ran-booster-card="troubleshooting">
 	<div class="ran-booster-debug-capture__panel ran-booster-panel">
 		<div class="ran-booster-debug-capture__header">
 			<div class="ran-booster-debug-capture__heading">
@@ -134,6 +135,9 @@ $status_classes       = array(
 		<?php } ?>
 	</div>
 
+	</div>
+
+	<div class="ran-booster-card" data-ran-booster-card="troubleshooting">
 	<details id="ran-booster-logging-details" data-ran-booster-logging-disclosure class="ran-booster-debug-capture__wordpress-help ran-booster-troubleshooting__disclosure ran-booster-disclosure">
 		<summary><?php esc_html_e( 'Logging details', 'ran-booster' ); ?></summary>
 		<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
@@ -169,4 +173,5 @@ $status_classes       = array(
 			<p><a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/"><?php esc_html_e( 'WordPress debugging documentation', 'ran-booster' ); ?></a></p>
 		</div>
 	</details>
+	</div>
 </section>

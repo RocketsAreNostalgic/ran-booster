@@ -8,6 +8,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 $report_generated = ! empty( $troubleshooting['report_generated'] );
 ?>
+<div class="ran-booster-card" data-ran-booster-card="troubleshooting">
 <h3 class="ran-booster-section__title"><?php esc_html_e( 'Support report', 'ran-booster' ); ?></h3>
 <p><?php esc_html_e( 'Generate a local, sanitized report. The report is not transmitted or logged; suitably authorised administrators also receive fresh basic diagnostics, which may contact admitted providers without selecting credentials or repositories.', 'ran-booster' ); ?></p>
 <form method="post" action="<?php echo esc_url( $troubleshooting_base . '&panel=support-report' ); ?>">
@@ -27,6 +28,8 @@ $report_generated = ! empty( $troubleshooting['report_generated'] );
 		<p class="description"><?php esc_html_e( 'Preview, Copy and Download use this same frozen JSON. To save it manually, select and copy the JSON into a text editor, then save it as a .json file.', 'ran-booster' ); ?></p>
 </div>
 <?php } ?>
+</div>
+<div class="ran-booster-card" data-ran-booster-card="troubleshooting">
 <details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">
 	<summary><?php esc_html_e( 'Evidence and recovery guidance', 'ran-booster' ); ?></summary>
 	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
@@ -35,3 +38,4 @@ $report_generated = ! empty( $troubleshooting['report_generated'] );
 		<p><?php esc_html_e( 'If Booster or WordPress administration cannot load, use WordPress recovery mode or your hosting support route. External server logs are not collected here.', 'ran-booster' ); ?></p>
 	</div>
 </details>
+</div>

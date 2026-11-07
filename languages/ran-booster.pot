@@ -174,8 +174,8 @@ msgstr ""
 #: views/extensions.php:201
 #: views/provider.php:493
 #: views/provider.php:514
-#: views/troubleshooting.php:199
-#: views/troubleshooting.php:227
+#: views/troubleshooting.php:201
+#: views/troubleshooting.php:229
 msgid "Status"
 msgstr ""
 
@@ -1004,7 +1004,7 @@ msgstr ""
 #: views/settings-general.php:152
 #: views/troubleshooting-installation.php:155
 #: views/troubleshooting-installation.php:190
-#: views/troubleshooting.php:227
+#: views/troubleshooting.php:229
 #: assets/ran-booster-portability.js:713
 msgid "Unknown"
 msgstr ""
@@ -5753,7 +5753,7 @@ msgstr ""
 #: views/packages/fields/provider.php:22
 #: views/packages/index.php:513
 #: views/portability-review.php:28
-#: views/troubleshooting.php:135
+#: views/troubleshooting.php:136
 #: assets/ran-booster-repository-picker.js:380
 msgid "Git provider"
 msgstr ""
@@ -6202,7 +6202,7 @@ msgstr ""
 
 #: views/attempts/index.php:139
 #: views/portability-review.php:30
-#: views/troubleshooting.php:173
+#: views/troubleshooting.php:174
 msgid "Repository"
 msgstr ""
 
@@ -6322,124 +6322,124 @@ msgstr ""
 msgid "Logging"
 msgstr ""
 
-#: views/debug-capture.php:77
+#: views/debug-capture.php:78
 msgid "Booster event capture"
 msgstr ""
 
 #. translators: %s: UTC capture end time.
-#: views/debug-capture.php:81
+#: views/debug-capture.php:82
 #, php-format
 msgid "until %s."
 msgstr ""
 
 #. translators: %s: UTC automatic deletion time.
-#: views/debug-capture.php:83
+#: views/debug-capture.php:84
 #, php-format
 msgid "retained until %s."
 msgstr ""
 
 #. translators: %s: WP_DEBUG_LOG constant.
-#: views/debug-capture.php:92
+#: views/debug-capture.php:93
 #, php-format
 msgid "This temporary capture records Booster events only. It does not require or enable %s and excludes PHP, WordPress, theme, and other-plugin messages."
 msgstr ""
 
-#: views/debug-capture.php:97
-#: views/debug-capture.php:100
+#: views/debug-capture.php:98
+#: views/debug-capture.php:101
 msgid "Captured Booster events"
 msgstr ""
 
-#: views/debug-capture.php:102
+#: views/debug-capture.php:103
 msgid "No Booster events have been captured yet."
 msgstr ""
 
-#: views/debug-capture.php:103
+#: views/debug-capture.php:104
 msgid "Copy captured events"
 msgstr ""
 
-#: views/debug-capture.php:105
+#: views/debug-capture.php:106
 msgid "Captured events copied to the clipboard."
 msgstr ""
 
-#: views/debug-capture.php:105
+#: views/debug-capture.php:106
 msgid "Clipboard access failed. The captured events are selected; use your browser copy command."
 msgstr ""
 
-#: views/debug-capture.php:109
+#: views/debug-capture.php:110
 msgid "The temporary capture file could not be read safely. Booster left it unchanged."
 msgstr ""
 
-#: views/debug-capture.php:111
+#: views/debug-capture.php:112
 msgid "Temporary logging capture is unavailable because Booster cannot safely use its capture file location."
 msgstr ""
 
-#: views/debug-capture.php:115
+#: views/debug-capture.php:116
 msgid "Logging capture actions"
 msgstr ""
 
-#: views/debug-capture.php:120
+#: views/debug-capture.php:121
 msgid "Refresh"
 msgstr ""
 
-#: views/debug-capture.php:121
+#: views/debug-capture.php:122
 msgid "Stop capture"
 msgstr ""
 
-#: views/debug-capture.php:123
+#: views/debug-capture.php:124
 msgid "Start new capture"
 msgstr ""
 
-#: views/debug-capture.php:123
+#: views/debug-capture.php:124
 msgid "Start 60-minute capture"
 msgstr ""
 
-#: views/debug-capture.php:130
+#: views/debug-capture.php:131
 msgid "Delete capture"
 msgstr ""
 
-#: views/debug-capture.php:138
+#: views/debug-capture.php:142
 msgid "Logging details"
 msgstr ""
 
 #. translators: %s: configured temporary Booster capture path.
-#: views/debug-capture.php:144
+#: views/debug-capture.php:148
 #, php-format
 msgid "Booster capture location: %s."
 msgstr ""
 
-#: views/debug-capture.php:148
+#: views/debug-capture.php:152
 msgid "Booster capture location is unavailable."
 msgstr ""
 
 #. translators: 1: WP_DEBUG constant, 2: WP_DEBUG_LOG constant, 3: capture file extension.
-#: views/debug-capture.php:152
+#: views/debug-capture.php:156
 #, php-format
 msgid "Booster events can also go to PHP’s error log when %1$s and %2$s are enabled. The temporary capture records Booster events only, not PHP errors. Its %3$s guard helps prevent direct access to the capture file."
 msgstr ""
 
-#: views/debug-capture.php:155
+#: views/debug-capture.php:159
 msgid "Starting a new capture replaces any retained capture."
 msgstr ""
 
-#: views/debug-capture.php:156
+#: views/debug-capture.php:160
 msgid "For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:"
 msgstr ""
 
-#: views/debug-capture.php:160
+#: views/debug-capture.php:164
 msgid "A custom log destination is configured. Review wp-config.php for its location."
 msgstr ""
 
 #. translators: %s: WordPress debug log path.
-#: views/debug-capture.php:164
+#: views/debug-capture.php:168
 #, php-format
 msgid "Log location when enabled: %s."
 msgstr ""
 
-#: views/debug-capture.php:168
+#: views/debug-capture.php:172
 msgid "Turn off debugging after reproducing the issue, and review the log privately before sharing it."
 msgstr ""
 
-#: views/debug-capture.php:169
+#: views/debug-capture.php:173
 msgid "WordPress debugging documentation"
 msgstr ""
 
@@ -7281,8 +7281,8 @@ msgid "with your version of Booster"
 msgstr ""
 
 #: views/extensions.php:175
-#: views/troubleshooting.php:201
-#: views/troubleshooting.php:244
+#: views/troubleshooting.php:203
+#: views/troubleshooting.php:246
 msgid "Details"
 msgstr ""
 
@@ -7991,7 +7991,7 @@ msgstr ""
 #: views/packages/fields/credential.php:21
 #: views/packages/fields/credential.php:24
 #: views/provider.php:411
-#: views/troubleshooting.php:239
+#: views/troubleshooting.php:241
 msgid "Repository access"
 msgstr ""
 
@@ -8729,7 +8729,7 @@ msgstr ""
 
 #: views/portability-review.php:205
 #: views/portability-review.php:314
-#: views/troubleshooting.php:149
+#: views/troubleshooting.php:150
 msgid "Saved credential"
 msgstr ""
 
@@ -10470,61 +10470,61 @@ msgstr ""
 msgid "Showing %1$d of %2$d replacement plugins."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:11
+#: views/troubleshooting-support-report.php:12
 #: views/troubleshooting.php:44
 msgid "Support report"
 msgstr ""
 
-#: views/troubleshooting-support-report.php:12
+#: views/troubleshooting-support-report.php:13
 msgid "Generate a local, sanitized report. The report is not transmitted or logged; suitably authorised administrators also receive fresh basic diagnostics, which may contact admitted providers without selecting credentials or repositories."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:16
+#: views/troubleshooting-support-report.php:17
 msgid "Generate support report"
 msgstr ""
 
-#: views/troubleshooting-support-report.php:20
+#: views/troubleshooting-support-report.php:21
 msgid "Sanitized JSON preview"
 msgstr ""
 
-#: views/troubleshooting-support-report.php:23
+#: views/troubleshooting-support-report.php:24
 msgid "Copy JSON report"
 msgstr ""
 
-#: views/troubleshooting-support-report.php:25
+#: views/troubleshooting-support-report.php:26
 msgid "Download JSON report"
 msgstr ""
 
-#: views/troubleshooting-support-report.php:26
+#: views/troubleshooting-support-report.php:27
 msgid "Support report copied to the clipboard."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:26
+#: views/troubleshooting-support-report.php:27
 msgid "Clipboard access failed. The report is selected; use your browser copy command."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:26
+#: views/troubleshooting-support-report.php:27
 #: assets/ran-booster-secure-inputs.js:137
 msgid "Download failed. Select the report and save it manually."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:27
+#: views/troubleshooting-support-report.php:28
 msgid "Preview, Copy and Download use this same frozen JSON. To save it manually, select and copy the JSON into a text editor, then save it as a .json file."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:31
+#: views/troubleshooting-support-report.php:34
 msgid "Evidence and recovery guidance"
 msgstr ""
 
-#: views/troubleshooting-support-report.php:33
+#: views/troubleshooting-support-report.php:36
 msgid "Available diagnostic runs from the last hour for your administrator account and this site are included automatically."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:34
+#: views/troubleshooting-support-report.php:37
 msgid "Logging captures Booster events only. When evidence is missing, explicitly start Logging, reproduce the problem, then generate another report. Events from before capture cannot be recovered."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:35
+#: views/troubleshooting-support-report.php:38
 msgid "If Booster or WordPress administration cannot load, use WordPress recovery mode or your hosting support route. External server logs are not collected here."
 msgstr ""
 
@@ -10580,106 +10580,106 @@ msgstr ""
 msgid "Troubleshooting views"
 msgstr ""
 
-#: views/troubleshooting.php:125
+#: views/troubleshooting.php:126
 msgid "Run diagnostics"
 msgstr ""
 
-#: views/troubleshooting.php:126
+#: views/troubleshooting.php:127
 msgid "Choose a Git provider and run checks. Results below describe only this diagnostic run."
 msgstr ""
 
-#: views/troubleshooting.php:143
+#: views/troubleshooting.php:144
 msgid "Start with a Git provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results."
 msgstr ""
 
-#: views/troubleshooting.php:146
+#: views/troubleshooting.php:147
 msgid "Check credential or repository access (optional)"
 msgstr ""
 
-#: views/troubleshooting.php:149
-#: views/troubleshooting.php:173
+#: views/troubleshooting.php:150
+#: views/troubleshooting.php:174
 msgid "(optional)"
 msgstr ""
 
-#: views/troubleshooting.php:151
+#: views/troubleshooting.php:152
 msgid "No saved credential (check public access)"
 msgstr ""
 
-#: views/troubleshooting.php:170
+#: views/troubleshooting.php:171
 msgid "Choose a saved credential only to check private-repository access. This is a credential reference, not the credential secret; Booster never displays the credential secret here."
 msgstr ""
 
-#: views/troubleshooting.php:175
+#: views/troubleshooting.php:176
 msgid "Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available."
 msgstr ""
 
-#: views/troubleshooting.php:177
+#: views/troubleshooting.php:178
 msgid "The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher."
 msgstr ""
 
-#: views/troubleshooting.php:181
+#: views/troubleshooting.php:182
 msgid "The full check makes temporary local marker files and up to five Git provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report."
 msgstr ""
 
-#: views/troubleshooting.php:182
+#: views/troubleshooting.php:183
 msgid "Run full diagnostics"
 msgstr ""
 
-#: views/troubleshooting.php:187
+#: views/troubleshooting.php:189
 msgid "These results remain available below, but could not be retained for a later support report."
 msgstr ""
 
-#: views/troubleshooting.php:190
+#: views/troubleshooting.php:192
 msgid "Diagnostic results"
 msgstr ""
 
-#: views/troubleshooting.php:192
+#: views/troubleshooting.php:194
 msgid "Diagnostics finished with partial results."
 msgstr ""
 
-#: views/troubleshooting.php:197
+#: views/troubleshooting.php:199
 msgid "RAN Booster diagnostic results"
 msgstr ""
 
-#: views/troubleshooting.php:200
-#: views/troubleshooting.php:228
+#: views/troubleshooting.php:202
+#: views/troubleshooting.php:230
 msgid "Check"
 msgstr ""
 
-#: views/troubleshooting.php:202
-#: views/troubleshooting.php:245
+#: views/troubleshooting.php:204
+#: views/troubleshooting.php:247
 msgid "Action"
 msgstr ""
 
-#: views/troubleshooting.php:232
+#: views/troubleshooting.php:234
 msgid "WordPress runtime"
 msgstr ""
 
-#: views/troubleshooting.php:233
+#: views/troubleshooting.php:235
 msgid "Database storage"
 msgstr ""
 
-#: views/troubleshooting.php:234
+#: views/troubleshooting.php:236
 msgid "Filesystem access"
 msgstr ""
 
-#: views/troubleshooting.php:235
+#: views/troubleshooting.php:237
 msgid "Package destinations"
 msgstr ""
 
-#: views/troubleshooting.php:236
+#: views/troubleshooting.php:238
 msgid "Deployment history"
 msgstr ""
 
-#: views/troubleshooting.php:237
+#: views/troubleshooting.php:239
 msgid "Deployment worker"
 msgstr ""
 
-#: views/troubleshooting.php:238
+#: views/troubleshooting.php:240
 msgid "Credential access"
 msgstr ""
 
-#: views/troubleshooting.php:241
+#: views/troubleshooting.php:243
 msgid "Git provider check"
 msgstr ""
 

@@ -2226,6 +2226,60 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'disabled="disabled"', $html );
 	}
 
+	public function test_webhook_security_notice_preserves_content_and_provider_guards(): void {
+		$provider                             = $this->provider_without_optional_settings();
+		$provider['webhook_scopes']           = $this->webhook_scopes();
+		$provider['capabilities']['webhooks'] = true;
+		$credential_profiles                  = array();
+		$webhook_profiles                     = array();
+		$provider_task                        = 'setup';
+		$provider_view_data                   = $this->provider_view_data( get_defined_vars() );
+		foreach ( array( 'gh', 'bb', 'other' ) as $provider_code ) {
+			$provider_view_data['provider']['code'] = $provider_code;
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+			extract( $provider_view_data );
+			$webhook_operations_url = 'https://example.test/guide?one=1&two="safe"';
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+			self::assertMatchesRegularExpression( '~<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div data-ran-booster-ui-notice-content>\s*<p><strong>Webhook signatures authorize deployment; they do not protect your host from traffic\.</strong> Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback\. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity\. <a href="https://example\.test/guide\?one=1&amp;two=&quot;safe&quot;">Read the webhook operations guide</a>\.</p>\s*</div>\s*</div>~', $html );
+		}
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Webhook signatures authorize deployment; they do not protect your host from traffic.'] = '<unsafe & warning>';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Read the webhook operations guide'] = '<unsafe & guide>';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.'] = '<unsafe & explanation>';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '<strong>&lt;unsafe &amp; warning&gt;</strong>', $html );
+		self::assertStringContainsString( '&lt;unsafe &amp; explanation&gt;', $html );
+		self::assertStringContainsString( '>&lt;unsafe &amp; guide&gt;</a>.', $html );
+		foreach ( array( 'status', 'repositories' ) as $task ) {
+			$provider_task = $task;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( '&lt;unsafe &amp; warning&gt;', $html );
+		}
+		$provider_task                        = 'setup';
+		$provider['capabilities']['webhooks'] = false;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( '&lt;unsafe &amp; warning&gt;', $html );
+		$provider['capabilities']['webhooks'] = true;
+		$repository_integration_available     = false;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( '&lt;unsafe &amp; warning&gt;', $html );
+		$repository_integration_available = true;
+		$provider_view                    = 'credentials';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( '&lt;unsafe &amp; warning&gt;', $html );
+	}
+
 	public function test_provider_task_navigation_selects_status_setup_and_empty_repositories(): void {
 		$provider                             = $this->provider_without_optional_settings();
 		$provider['code']                     = 'bb';

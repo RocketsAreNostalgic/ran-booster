@@ -60,6 +60,77 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringNotContainsString( '<script>', $html );
 	}
 
+	public function test_notice_envelopes_preserve_the_original_intent_and_rich_content(): void {
+		$display = new ReleaseWorkflowDisplay();
+		foreach ( array(
+			array( $display->repository_section( array( 'shared' => true ) ), 'info' ),
+			array( $display->repository_section( array( 'conflicted' => true ) ), 'warning' ),
+			array( $display->repository_section( array( 'ineligible_message' => 'Review <source>' ) ), 'warning' ),
+			array(
+				$display->repository_section(
+					array(
+						'show_automation'       => true,
+						'automation_notice'     => true,
+						'automation'            => array(
+							'notice_tone' => 'notice-info',
+							'message'     => 'Review preserved',
+						),
+						'provider_workflow_url' => 'https://example.test/workflow?a=1&b=2',
+					)
+				),
+				'info',
+			),
+			array(
+				$display->state_notice(
+					array(
+						'unavailable'        => true,
+						'unavailable_reason' => 'Unavailable <provider>',
+					)
+				),
+				'warning',
+			),
+			array(
+				$display->result_notice(
+					array(
+						'result_code'       => 'workflow_inspected',
+						'result_successful' => true,
+					)
+				),
+				'success',
+			),
+			array( $display->result_notice( array( 'result_code' => 'workflow_rate_limited' ) ), 'warning' ),
+			array( $display->result_notice( array( 'result_code' => 'workflow_release_automation_conflict' ) ), 'info' ),
+			array(
+				$display->result_notice(
+					array(
+						'result_code'   => 'workflow_preflight_unavailable',
+						'failure_stage' => 'request_validation',
+					)
+				),
+				'error',
+			),
+		) as list( $html, $intent ) ) {
+			$document = new \DOMDocument();
+			$previous = libxml_use_internal_errors( true );
+			$document->loadHTML( $html );
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+			$xpath = new \DOMXPath( $document );
+			$hosts = $xpath->query( '//div[contains(concat(" ", normalize-space(@class), " "), " notice ")]' );
+			self::assertNotFalse( $hosts );
+			self::assertCount( 1, $hosts );
+			$host = $hosts->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $host );
+			self::assertTrue( $host->hasAttribute( 'data-ran-booster-ui-notice' ) );
+			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-notice-intent' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./div[@data-ran-booster-ui-notice-content])', $host ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./*)', $host ) );
+			self::assertFalse( $host->hasAttribute( 'role' ) );
+			self::assertStringNotContainsString( '<source>', $html );
+			self::assertStringNotContainsString( '<provider>', $html );
+		}
+	}
+
 	public function test_workflow_owners_keep_the_separated_source_boundaries(): void {
 		$root = dirname( __DIR__, 3 ) . '/RAN/Admin/ReleaseManagement/';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Static local source boundary under test.
@@ -231,7 +302,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'Booster could not validate the package release before continuing. No draft was opened.', $html );
-		self::assertStringContainsString( '<div class="notice notice-error inline" data-ran-booster-release-workflow-result><p>', $html );
+		self::assertStringContainsString( '<div class="notice notice-error inline" data-ran-booster-release-workflow-result data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p>', $html );
 		self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html );
 		self::assertStringContainsString( 'Booster could not read release data using the package&#039;s saved repository access. The credential selected for workflow setup is used only after this release check.', $html );
 		self::assertStringContainsString( 'Diagnostic code: <code>provider_unavailable</code>', $html );

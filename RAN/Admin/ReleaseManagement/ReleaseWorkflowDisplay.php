@@ -30,16 +30,16 @@ final class ReleaseWorkflowDisplay {
 		$html .= '</header><div class="ran-booster-settings-section__body">';
 
 		if ( true === ( $projection['shared'] ?? false ) ) {
-			$html .= '<div class="notice notice-info inline"><p>'
+			$html .= '<div class="notice notice-info inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div data-ran-booster-ui-notice-content><p>'
 				. esc_html(
 					sprintf(
 					/* translators: %d is the number of managed packages using this repository. */
 						__( 'Releases require a repository used by only one managed package. This repository is shared by %d packages.', 'ran-booster' ),
 						(int) ( $projection['relationship_count'] ?? 0 )
 					)
-				) . ' <a href="' . esc_url( (string) ( $projection['return_url'] ?? '' ) ) . '">' . esc_html__( 'Status', 'ran-booster' ) . '</a></p></div>';
+				) . ' <a href="' . esc_url( (string) ( $projection['return_url'] ?? '' ) ) . '">' . esc_html__( 'Status', 'ran-booster' ) . '</a></p></div></div>';
 		} elseif ( true === ( $projection['conflicted'] ?? false ) ) {
-			$html .= '<div class="notice notice-warning inline"><p>' . esc_html__( 'Release workflow is unavailable until this repository uses one allowed package source.', 'ran-booster' );
+			$html .= '<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p>' . esc_html__( 'Release workflow is unavailable until this repository uses one allowed package source.', 'ran-booster' );
 			foreach ( (array) ( $projection['conflict_packages'] ?? array() ) as $package ) {
 				if ( is_array( $package ) && '' !== ( $package['settings_url'] ?? '' ) ) {
 					$name  = (string) ( $package['display_name'] ?? $package['identifier'] ?? '' );
@@ -52,10 +52,10 @@ final class ReleaseWorkflowDisplay {
 					) . '</a>';
 				}
 			}
-			$html .= '</p></div>';
+			$html .= '</p></div></div>';
 		} elseif ( '' !== ( $projection['ineligible_message'] ?? '' ) ) {
-			$html .= '<div class="notice notice-warning inline ran-booster-repository-release-section__notice"><p>'
-				. esc_html( (string) $projection['ineligible_message'] ) . '</p></div>';
+			$html .= '<div class="notice notice-warning inline ran-booster-repository-release-section__notice" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p>'
+				. esc_html( (string) $projection['ineligible_message'] ) . '</p></div></div>';
 		}
 
 		$html .= $this->repository_lifecycle( (array) ( $projection['lifecycle'] ?? array() ) );
@@ -68,14 +68,14 @@ final class ReleaseWorkflowDisplay {
 				if ( true === ( $projection['automation_unavailable'] ?? false ) ) {
 					$notice = $this->state_notice( $view );
 				} else {
-					$notice       = '<div class="notice ' . esc_attr( (string) ( $state['notice_tone'] ?? '' ) ) . ' inline"><p>'
+					$notice       = '<div class="notice ' . esc_attr( (string) ( $state['notice_tone'] ?? '' ) ) . ' inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( substr( (string) ( $state['notice_tone'] ?? '' ), 7 ) ) . '"><div data-ran-booster-ui-notice-content><p>'
 						. esc_html( (string) ( $state['message'] ?? '' ) ) . '</p>';
 					$workflow_url = is_string( $projection['provider_workflow_url'] ?? null ) ? $projection['provider_workflow_url'] : '';
 					if ( '' !== $workflow_url ) {
 						$notice .= '<p><a href="' . esc_url( $workflow_url ) . '" target="_blank" rel="noopener noreferrer">'
 							. esc_html__( 'Review existing workflow', 'ran-booster' ) . '</a></p>';
 					}
-					$notice .= '</div>';
+					$notice .= '</div></div>';
 				}
 			}
 			$result_notice = true === ( $projection['show_result_notice'] ?? false ) ? $this->result_notice( $view ) : '';
@@ -223,7 +223,7 @@ final class ReleaseWorkflowDisplay {
 		$unavailable = true === ( $view['unavailable'] ?? false );
 		$reason      = is_string( $view['unavailable_reason'] ?? null ) ? $view['unavailable_reason'] : '';
 		if ( $unavailable && '' !== $reason ) {
-			return '<div class="notice notice-warning inline"><p>' . esc_html( $reason ) . '</p></div>';
+			return '<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p>' . esc_html( $reason ) . '</p></div></div>';
 		}
 
 		return $this->result_notice( $view );
@@ -251,7 +251,7 @@ final class ReleaseWorkflowDisplay {
 		};
 		$html        = '<div class="notice ' . esc_attr( $notice_tone ) . ' inline"'
 			. ( $successful ? ' data-ran-booster-package-success' : '' )
-			. ' data-ran-booster-release-workflow-result><p>' . esc_html(
+			. ' data-ran-booster-release-workflow-result data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( substr( $notice_tone, 7 ) ) . '"><div data-ran-booster-ui-notice-content><p>' . esc_html(
 				is_string( $view['result_message'] ?? null ) && '' !== $view['result_message']
 				? $view['result_message']
 				: $this->workflow_message( $code )
@@ -269,7 +269,7 @@ final class ReleaseWorkflowDisplay {
 			$html .= '</div></details>';
 		}
 
-		return $html . '</div>';
+		return $html . '</div></div>';
 	}
 
 	/**

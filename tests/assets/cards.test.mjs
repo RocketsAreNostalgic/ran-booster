@@ -728,3 +728,24 @@ test('multiple cards restore nested Notice and Badge before their ancestors', ()
 		}
 	}
 });
+
+test('HTMX processing a newly appended row discovers its Badge exactly once without a load event', () => {
+	const f = fixture();
+	f.run();
+	f.flush();
+	const row = new f.Node('div');
+	f.doc.body.appendChild(row);
+	const { host, fallback, mount } = f.badge(row);
+	host.setAttribute('data-ran-booster-ui-badge-label', 'Complete');
+	host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
+	f.emit('htmx:afterProcessNode', row);
+	f.flush();
+	assert.equal(f.counts().renders, 1);
+	assert.equal(f.tree().type, 'Badge');
+	assert.equal(f.tree().children[0], 'Complete');
+	assert.equal(fallback.hidden, true);
+	assert.ok(mount.firstChild);
+	f.emit('htmx:afterProcessNode', row);
+	f.flush();
+	assert.equal(f.counts().renders, 1);
+});

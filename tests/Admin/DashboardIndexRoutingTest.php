@@ -1109,6 +1109,49 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'data-id="unknown-profile"', $unknown_html );
 	}
 
+	public function test_missing_repository_detail_notice_preserves_provider_routes_and_escaping(): void {
+		foreach ( array( 'gh', 'bb' ) as $provider_code ) {
+			$_GET                        = array(
+				'tab'        => $provider_code,
+				'panel'      => 'repositories',
+				'repository' => 'missing',
+			);
+			$data                        = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+			$data['repository_list_url'] = 'https://example.test/?provider=' . $provider_code . '&next="safe"';
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the Dashboard model to the production view.
+			extract( $data );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'href="https://example.test/?provider=' . $provider_code . '&amp;next=&quot;safe&quot;"', $html );
+			self::assertMatchesRegularExpression( '/<div class="notice notice-error inline" data-ran-booster-ui-notice>\s*<div data-ran-booster-ui-notice-content>\s*<p>That managed repository is no longer available\. Return to the repository list and choose a current repository\.<\/p>\s*<\/div>\s*<\/div>/', $html );
+			self::assertStringContainsString( 'Back to repositories', $html );
+		}
+	}
+
+	public function test_nested_missing_repository_fallback_retains_the_same_notice_and_link(): void {
+		foreach ( array( 'gh', 'bb' ) as $provider_code ) {
+			$_GET = array(
+				'tab'        => $provider_code,
+				'panel'      => 'repositories',
+				'repository' => 'missing',
+			);
+			$data = $this->dashboard( new SecretsFile( '/path/that/does/not/exist.php', array(), ShippedSecretPolicyCatalog::create() ) )->get_index()['data'];
+			// Exercise the nested fallback with a task value outside the normal route projection.
+			$data['provider_task']                    = 'fallback';
+			$data['repository_integration_available'] = true;
+			$data['repository_list_url']              = 'https://example.test/?provider=' . $provider_code . '&next="safe"';
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Bind the Dashboard model to the production view.
+			extract( $data );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'href="https://example.test/?provider=' . $provider_code . '&amp;next=&quot;safe&quot;"', $html );
+			self::assertMatchesRegularExpression( '/<div class="notice notice-error inline" data-ran-booster-ui-notice>\s*<div data-ran-booster-ui-notice-content>\s*<p>That managed repository is no longer available\. Return to the repository list and choose a current repository\.<\/p>\s*<\/div>\s*<\/div>/', $html );
+			self::assertStringContainsString( 'Back to repositories', $html );
+		}
+	}
+
 	public function test_provider_route_renders_anormalized_repository_selection(): void {
 		$_GET    = array(
 			'tab'        => 'bb',

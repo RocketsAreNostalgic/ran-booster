@@ -10,6 +10,43 @@ require_once __DIR__ . '/AdminViewWordPressFunctions.php';
 
 final class DebugCaptureViewTest extends TestCase {
 
+	public function test_badge_preserves_each_state_and_unsafe_fallback(): void {
+		$cases = array(
+			array( array( 'state' => 'inactive' ), 'Inactive', 'neutral', 'none' ),
+			array( array( 'state' => 'active' ), 'Capture active', 'pending', 'informational' ),
+			array( array( 'state' => 'retained' ), 'Capture retained', 'ok', 'stable' ),
+			array( array( 'state' => 'unavailable' ), 'Unavailable', 'error', 'high' ),
+			array( array( 'state' => 'malformed' ), 'File needs attention', 'error', 'high' ),
+			array( array(), 'Unavailable', 'error', 'high' ),
+			array( array( 'state' => 'invalid' ), 'Unavailable', 'error', 'high' ),
+		);
+
+		foreach ( $cases as list( $payload, $label, $class, $intent ) ) {
+			$html     = $this->render_view( $payload );
+			$document = new \DOMDocument();
+			$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+			$xpath = new \DOMXPath( $document );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-badge])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-badge and @data-ran-booster-ui-badge-label="' . $label . '" and @data-ran-booster-ui-badge-intent="' . $intent . '"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-badge]/*[@data-ran-booster-ui-badge-fallback and @class="ran-booster-badge ran-booster-badge--' . $class . '" and text()="' . $label . '"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-badge]/*[@data-ran-booster-ui-badge-mount and not(*) and not(text())])' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-badge]//*[@role or @aria-live] | //*[@data-ran-booster-ui-badge and (@role or @aria-live)])' ) );
+		}
+	}
+
+	public function test_badge_escapes_translated_label_in_attribute_and_fallback(): void {
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Inactive'] = 'Inactive "<capture>" & safe';
+		try {
+			$html = $this->render_view( array( 'state' => 'inactive' ) );
+		} finally {
+			unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Inactive'] );
+		}
+
+		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Inactive &quot;&lt;capture&gt;&quot; &amp; safe"', $html );
+		self::assertStringContainsString( '>Inactive &quot;&lt;capture&gt;&quot; &amp; safe</span>', $html );
+		self::assertStringNotContainsString( '<capture>', $html );
+	}
+
 	public function test_inactive_state_explains_scope_and_offers_abounded_capture(): void {
 		$html = $this->render_view(
 			array(

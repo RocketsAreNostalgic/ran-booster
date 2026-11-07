@@ -103,7 +103,7 @@ $origin_labels = array(
 	<?php
 	if ( is_string( $deployment_activity['filter_notice'] ?? null ) ) {
 		?>
-		<div class="notice notice-warning inline"><p><?php echo esc_html( $deployment_activity['filter_notice'] ); ?></p></div><?php } ?>
+		<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php echo esc_html( $deployment_activity['filter_notice'] ); ?></p></div></div><?php } ?>
 	<?php if ( $has_queued ) { ?>
 		<form method="post" data-ran-booster-activity-runner>
 			<?php wp_nonce_field( 'ran-booster-request-deployment-runner' ); ?>
@@ -112,7 +112,7 @@ $origin_labels = array(
 		</form>
 	<?php } ?>
 	<?php if ( $unavailable ) { ?>
-		<div class="notice notice-error inline"><p><?php esc_html_e( 'Activity is temporarily unavailable.', 'ran-booster' ); ?></p></div>
+		<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Activity is temporarily unavailable.', 'ran-booster' ); ?></p></div></div>
 	<?php } elseif ( array() === $items && $has_cursor ) { ?>
 		<p data-ran-booster-activity-exhausted><?php esc_html_e( 'No older activity is available.', 'ran-booster' ); ?></p>
 	<?php } elseif ( array() === $items && ( '' !== $selected_provider || '' !== $selected_package ) ) { ?>
@@ -239,7 +239,7 @@ $origin_labels = array(
 	<?php if ( null !== $next ) { ?>
 		<p data-ran-booster-activity-load-older-wrap><a class="button" data-ran-booster-activity-load-older href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'View older activity', 'ran-booster' ); ?></a></p>
 		<p data-ran-booster-activity-progress role="status" aria-live="polite" hidden><?php esc_html_e( 'Loading older activity…', 'ran-booster' ); ?></p>
-		<p data-ran-booster-activity-error role="alert" tabindex="-1" hidden><?php esc_html_e( 'Older activity could not be loaded. Try again.', 'ran-booster' ); ?></p>
+		<div class="notice notice-error inline" data-ran-booster-activity-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Older activity could not be loaded. Try again.', 'ran-booster' ); ?></p></div></div>
 		<p data-ran-booster-activity-announcement role="status" aria-live="polite" tabindex="-1" hidden></p>
 	<?php } ?>
 </section>

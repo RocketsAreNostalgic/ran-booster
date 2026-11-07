@@ -16,7 +16,8 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( '>Transporter: Booster migration tools</h2>', $html );
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
-		$xpath          = new \DOMXPath( $document );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-portability-export-message][@data-ran-booster-ui-notice][@data-ran-booster-ui-notice-intent="error"][@hidden]/div[@data-ran-booster-ui-notice-content]/p[@data-portability-export-message-text])' ) );
 		$heading_panels = $xpath->query( '//*[@id="ran-booster-portability-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
 		self::assertCount( 0, $heading_panels );

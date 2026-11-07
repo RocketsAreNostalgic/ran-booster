@@ -109,7 +109,7 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringNotContainsString( '>Transporter</a>', $html );
 		self::assertStringNotContainsString( '>Troubleshooting</a>', $html );
 		self::assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
-		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=documentation" aria-current="page">Documentation</a>', $html );
+		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=documentation" aria-current="page">Documentation', $html );
 		self::assertStringNotContainsString( 'aria-current="false"', $html );
 		self::assertStringContainsString( 'id="ran-booster-documentation-heading"', $html );
 		self::assertStringNotContainsString( 'Set up GitHub deployments', $html );
@@ -202,6 +202,7 @@ final class AdminIndexViewTest extends TestCase {
 		$overview = (string) ob_get_clean();
 
 		self::assertSame( 1, substr_count( $overview, 'data-ran-booster-development-safety' ) );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div data-ran-booster-ui-notice-content>', $overview );
 		self::assertStringContainsString( 'data-ran-booster-notice-state="local-development-v2"', $overview );
 		self::assertStringContainsString( 'class="notice-dismiss" hidden', $overview );
 		self::assertStringContainsString( 'Booster’s own updates are disabled to protect this source checkout.', $overview );
@@ -215,7 +216,7 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice>', $acknowledged );
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $overview ) );
 		self::assertSame( 1, substr_count( $overview, 'aria-current="page"' ) );
-		self::assertStringContainsString( '>Overview</a>', $overview );
+		self::assertMatchesRegularExpression( '/>Overview(?:<span[^>]*><\/span>)?<\/a>/', $overview );
 		self::assertStringContainsString( '<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title">Prepare your site</h2>', $overview );
 	}
 }

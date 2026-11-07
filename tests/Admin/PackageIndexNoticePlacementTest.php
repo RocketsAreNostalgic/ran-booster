@@ -189,19 +189,23 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-update-summary-message', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-package-success', $html );
 		self::assertStringNotContainsString( 'class="nav-tab-wrapper"', $html );
-		self::assertStringContainsString( 'class="ran-admin-shell__navigation"', $html );
+		self::assertMatchesRegularExpression( '/class="[^"]*\bran-admin-shell__navigation\b[^"]*"/', $html );
 		self::assertStringContainsString( 'class="ran-admin-shell__logo"', $html );
-		self::assertStringContainsString( '>Overview</a>', $html );
-		self::assertStringContainsString( '>Plugins</a>', $html );
-		self::assertStringContainsString( '>Themes</a>', $html );
+		self::assertMatchesRegularExpression( '/>Overview(?:<span[^>]*><\/span>)?<\/a>/', $html );
+		self::assertMatchesRegularExpression( '/>Plugins(?:<span[^>]*><\/span>)?<\/a>/', $html );
+		self::assertMatchesRegularExpression( '/>Themes(?:<span[^>]*><\/span>)?<\/a>/', $html );
 		self::assertStringNotContainsString( '>Transporter</a>', $html );
 		self::assertSame( 1, substr_count( $html, 'aria-current="page"' ) );
-		self::assertStringContainsString(
-			'plugin' === $package_view->get_type()
-				? 'href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins" aria-current="page">Plugins</a>'
-				: 'href="https://example.test/wp-admin/admin.php?page=ran-booster-themes" aria-current="page">Themes</a>',
-			$html
-		);
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath    = new \DOMXPath( $document );
+		$selected = $xpath->query( '//nav//a[@aria-current="page"]' );
+		self::assertNotFalse( $selected );
+		self::assertCount( 1, $selected );
+		$link = $selected->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $link );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=' . $package_view->get_page_slug(), $link->getAttribute( 'href' ) );
+		self::assertSame( 'plugin' === $package_view->get_type() ? 'Plugins' : 'Themes', $xpath->evaluate( 'string(.)', $link ) );
 	}
 
 	#[DataProvider( 'package_types' )]

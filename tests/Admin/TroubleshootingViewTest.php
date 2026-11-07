@@ -2215,6 +2215,38 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Repository webhook management is temporarily unavailable', $html );
 	}
 
+	public function test_credential_result_notice_keeps_the_permanent_status_label_outside_its_message(): void {
+		$credential_health_id    = 'fixture';
+		$credential_health_label = 'Retained status label';
+		foreach ( array( array( null, null ), array( 'Validation failed', null ), array( null, 'Validation complete' ) ) as list( $credential_validation_error, $credential_validation_message ) ) {
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider-credential-health.php';
+			$html     = (string) ob_get_clean();
+			$document = new \DOMDocument();
+			$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+			$xpath   = new \DOMXPath( $document );
+			$regions = $xpath->query( '//*[@data-ran-booster-admin-mutation-error]' );
+			self::assertNotFalse( $regions );
+			self::assertCount( 1, $regions );
+			$region = $regions->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $region );
+			self::assertFalse( $region->hasAttribute( 'data-ran-booster-ui-notice' ) );
+			self::assertSame( '-1', $region->getAttribute( 'tabindex' ) );
+			self::assertSame( 'Retained status label', $xpath->evaluate( 'string(./span)', $region ) );
+			$notices = $xpath->query( './div[@data-ran-booster-ui-notice]', $region );
+			self::assertNotFalse( $notices );
+			self::assertCount( 1, $notices );
+			$notice = $notices->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $notice );
+			self::assertSame( null !== $credential_validation_error ? 'error' : 'success', $notice->getAttribute( 'data-ran-booster-ui-notice-intent' ) );
+			self::assertSame( null === $credential_validation_error && null === $credential_validation_message, $notice->hasAttribute( 'hidden' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./div[@data-ran-booster-ui-notice-content]/p[@data-ran-booster-credential-result])', $notice ) );
+			$text = $xpath->evaluate( 'string(.)', $notice );
+			self::assertIsString( $text );
+			self::assertSame( $credential_validation_error ?? $credential_validation_message ?? '', trim( $text ) );
+		}
+	}
+
 	public function test_provider_settings_shows_only_pathless_recovery_guidance_when_storage_is_unavailable(): void {
 		$provider                             = $this->provider_without_optional_settings();
 		$provider['credential_kinds']         = array(

@@ -134,7 +134,7 @@ $repository_placeholder = array() === $locator_examples
 	<form method="post" action="" class="ran-booster-troubleshooting__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-troubleshooting-diagnostics-error" hx-post="" hx-target="#ran-booster-troubleshooting-diagnostics-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
 		<?php wp_nonce_field( 'ran-booster-run-troubleshooting' ); ?>
 		<input type="hidden" name="ran_booster[action]" value="run-troubleshooting">
-		<div id="ran-booster-troubleshooting-diagnostics-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
+		<div id="ran-booster-troubleshooting-diagnostics-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div></div>
 
 		<div class="ran-booster-troubleshooting__fields ran-booster-troubleshooting__provider-field">
 			<p>
@@ -180,7 +180,7 @@ $repository_placeholder = array() === $locator_examples
 						<input id="ran-booster-troubleshooting-repository" type="text" name="ran_booster[repository]" value="<?php echo esc_attr( $repository ); ?>" maxlength="512" placeholder="<?php echo esc_attr( $repository_placeholder ); ?>">
 					<span class="description"><?php esc_html_e( 'Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available.', 'ran-booster' ); ?></span>
 				</p>
-				<div class="notice notice-info inline ran-booster-troubleshooting__provider-notice"><p><?php esc_html_e( 'The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p></div>
+				<div class="notice notice-info inline ran-booster-troubleshooting__provider-notice" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p></div></div>
 			</div>
 		</details>
 
@@ -190,12 +190,12 @@ $repository_placeholder = array() === $locator_examples
 
 		<?php if ( ! empty( $troubleshooting['ran'] ) ) { ?>
 			<?php if ( isset( $troubleshooting['retention_available'] ) && ! $troubleshooting['retention_available'] ) { ?>
-			<div class="notice notice-warning inline"><p><?php esc_html_e( 'These results remain available below, but could not be retained for a later support report.', 'ran-booster' ); ?></p></div>
+			<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'These results remain available below, but could not be retained for a later support report.', 'ran-booster' ); ?></p></div></div>
 		<?php } ?>
 		<div id="ran-booster-troubleshooting-results" class="ran-booster-troubleshooting__results" aria-live="polite">
 			<h4 class="ran-booster-section__title"><?php esc_html_e( 'Diagnostic results', 'ran-booster' ); ?></h4>
 			<?php if ( ! empty( $troubleshooting['partial'] ) ) { ?>
-				<div class="notice notice-warning inline"><p><?php echo esc_html( $partial_messages[ $troubleshooting['partial_reason'] ?? '' ] ?? __( 'Diagnostics finished with partial results.', 'ran-booster' ) ); ?></p></div>
+				<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php echo esc_html( $partial_messages[ $troubleshooting['partial_reason'] ?? '' ] ?? __( 'Diagnostics finished with partial results.', 'ran-booster' ) ); ?></p></div></div>
 			<?php } ?>
 
 			<div class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap">

@@ -10,7 +10,7 @@ if ( isset( $add_on_tab, $add_on_context ) && $add_on_tab instanceof \RAN\Admin\
 		<?php $add_on_tab->render( $add_on_context ); ?>
 	<?php } catch ( \Throwable $failure ) { ?>
 		<?php \RAN\Logging\BoosterLogger::log_exception( 'add-on tab rendering failed', $failure, array( 'step' => 'admin_add_on_render' ) ); ?>
-		<div class="notice notice-error"><p><?php esc_html_e( 'This Booster add-on could not render its tab. Check the plugin compatibility and error log.', 'ran-booster' ); ?></p></div>
+		<div class="notice notice-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'This Booster add-on could not render its tab. Check the plugin compatibility and error log.', 'ran-booster' ); ?></p></div></div>
 	<?php } ?>
 <?php } else { ?>
 	<?php

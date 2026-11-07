@@ -15,7 +15,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 
 	<?php foreach ( array( $model['result'], $model['recovery_warning'] ) as $notice ) : ?>
 		<?php if ( is_array( $notice ) ) : ?>
-			<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice">
+			<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( (string) $notice['class'], 7 ) ); ?>"><div data-ran-booster-ui-notice-content>
 				<?php
 				if ( isset( $notice['heading'] ) ) :
 					?>
@@ -25,7 +25,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 				foreach ( $notice['details'] ?? array() as $detail ) :
 					?>
 					<p><?php echo esc_html( $detail ); ?></p><?php endforeach; ?>
-			</div>
+			</div></div>
 		<?php endif; ?>
 	<?php endforeach; ?>
 	<div class="ran-booster-repository-webhook-management__panel">

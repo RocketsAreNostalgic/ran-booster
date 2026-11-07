@@ -47,9 +47,9 @@ $package_settings_label = 'theme' === $package_type
 	</p>
 	<h3><?php esc_html_e( 'Deployment activity details', 'ran-booster' ); ?></h3>
 	<?php if ( $unavailable ) { ?>
-		<div class="notice notice-error inline"><p><?php esc_html_e( 'Deployment activity is temporarily unavailable.', 'ran-booster' ); ?></p></div>
+		<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Deployment activity is temporarily unavailable.', 'ran-booster' ); ?></p></div></div>
 	<?php } elseif ( ! $attempt instanceof DeploymentAttempt ) { ?>
-		<div class="notice notice-warning inline"><p><?php esc_html_e( 'That deployment record was not found.', 'ran-booster' ); ?></p></div>
+		<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That deployment record was not found.', 'ran-booster' ); ?></p></div></div>
 		<?php
 	} else {
 		$origin_labels = array(
@@ -62,7 +62,8 @@ $package_settings_label = 'theme' === $package_type
 		?>
 		<p><strong><?php echo esc_html( $outcome_label ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::for_code( (string) $item['outcome_code'] ) ); ?></p>
 		<?php if ( 'restoration_uncertain' === ( $item['outcome_code'] ?? null ) ) { ?>
-			<section class="notice notice-warning inline" aria-labelledby="ran-booster-historical-uncertainty-heading">
+			<section aria-labelledby="ran-booster-historical-uncertainty-heading">
+				<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content>
 				<h4 id="ran-booster-historical-uncertainty-heading"><?php esc_html_e( 'Before you retry', 'ran-booster' ); ?></h4>
 				<p><?php esc_html_e( 'WordPress reported that it changed this package, but Booster could not confirm the final result. The package may already contain the requested update.', 'ran-booster' ); ?></p>
 				<?php if ( $later_verified_attempt instanceof DeploymentAttempt ) { ?>
@@ -72,6 +73,7 @@ $package_settings_label = 'theme' === $package_type
 					<p><?php esc_html_e( 'Check that the package is present, has the expected version and activation state, and that the site is not in maintenance mode.', 'ran-booster' ); ?></p>
 				<?php } ?>
 				<p><?php esc_html_e( 'Checking the box only clears the retry block. It does not change the package or prove what happened before.', 'ran-booster' ); ?></p>
+			</div></div>
 			</section>
 		<?php } ?>
 		<dl class="ran-booster-activity__details">

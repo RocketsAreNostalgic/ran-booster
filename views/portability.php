@@ -84,7 +84,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 			<h5 id="ran-booster-portability-export-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h5>
 			<p><?php esc_html_e( 'Select only the saved credentials that should be copied. Credential permissions have not been assessed.', 'ran-booster' ); ?></p>
 			<?php if ( $portability_export_credentials_unavailable ) : ?>
-				<div class="notice notice-warning inline"><p><?php esc_html_e( 'Booster could not load repository credential choices. You can still create a package-only Blueprint.', 'ran-booster' ); ?></p></div>
+				<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load repository credential choices. You can still create a package-only Blueprint.', 'ran-booster' ); ?></p></div></div>
 			<?php elseif ( array() === $portability_export_credential_groups ) : ?>
 				<p class="description"><?php esc_html_e( 'No saved repository credentials are available on this site.', 'ran-booster' ); ?></p>
 			<?php else : ?>
@@ -213,7 +213,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 						</p>
 						<p><label for="ran-booster-portability-export-password-confirmation"><?php esc_html_e( 'Confirm password', 'ran-booster' ); ?></label><br><input id="ran-booster-portability-export-password-confirmation" name="password_confirmation" type="password" minlength="20" maxlength="256" autocomplete="new-password" aria-describedby="ran-booster-portability-password-validation" data-portability-password-confirmation></p>
 						<p><span id="ran-booster-portability-password-guidance" class="description ran-booster-portability__password-guidance"><?php esc_html_e( 'Generate a secure 32-character password or enter at least 20 characters of your own.', 'ran-booster' ); ?></span></p>
-						<div id="ran-booster-portability-password-validation" class="notice notice-warning inline ran-booster-portability__password-validation" data-portability-password-validation data-required-message="<?php esc_attr_e( 'Choose a Transporter Blueprint password before exporting credentials.', 'ran-booster' ); ?>" data-mismatch-message="<?php esc_attr_e( 'The Transporter Blueprint passwords do not match. Nothing was exported.', 'ran-booster' ); ?>" role="alert" hidden><p data-portability-password-validation-message></p></div>
+						<div id="ran-booster-portability-password-validation" class="notice notice-warning inline ran-booster-portability__password-validation" data-portability-password-validation data-required-message="<?php esc_attr_e( 'Choose a Transporter Blueprint password before exporting credentials.', 'ran-booster' ); ?>" data-mismatch-message="<?php esc_attr_e( 'The Transporter Blueprint passwords do not match. Nothing was exported.', 'ran-booster' ); ?>" role="alert" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p data-portability-password-validation-message></p></div></div>
 					</div>
 					<div class="ran-booster-portability__credential-guidance">
 						<p><strong><?php esc_html_e( 'Only transfer this Transporter Blueprint between sites you control.', 'ran-booster' ); ?></strong><br/><?php esc_html_e( 'Transporter Blueprints can contain file-backed repository credentials and must be handled as sensitive material.', 'ran-booster' ); ?></p>
@@ -259,7 +259,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		</section>
 		<p class="ran-booster-portability__export-summary" data-portability-export-summary data-package-singular="<?php esc_attr_e( '1 package', 'ran-booster' ); ?>" data-package-plural="<?php echo esc_attr( $portability_package_plural ); ?>" data-credential-singular="<?php esc_attr_e( '1 selected repository credential profile', 'ran-booster' ); ?>" data-credential-plural="<?php echo esc_attr( $portability_credential_plural ); ?>" data-protected-template="<?php echo esc_attr( $portability_protected_summary ); ?>" data-package-only-template="<?php echo esc_attr( $portability_package_only_summary ); ?>" aria-live="polite"><?php echo esc_html( sprintf( $portability_package_only_summary, $portability_initial_package_count ) ); ?></p>
 		<p><button type="submit" class="button button-primary" data-portability-export-submit<?php disabled( $portability_export_unavailable || array() === $portability_export_rows ); ?>><?php esc_html_e( 'Download Transporter Blueprint', 'ran-booster' ); ?></button></p>
-		<div class="notice notice-error inline" data-portability-export-message role="alert" hidden><p data-portability-export-message-text></p></div>
+		<div class="notice notice-error inline" data-portability-export-message role="alert" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p data-portability-export-message-text></p></div></div>
 		</form>
 	</section>
 
@@ -286,7 +286,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 				<span id="ran-booster-portability-review-progress" class="ran-booster-portability__review-progress htmx-indicator" role="status" aria-live="polite"><?php esc_html_e( 'Rechecking repository access…', 'ran-booster' ); ?></span>
 			</div>
 			<p><?php esc_html_e( 'Choose repository access, then review the changes below.', 'ran-booster' ); ?></p>
-			<div class="notice notice-error inline ran-booster-portability__review-error" data-portability-review-error role="alert" hidden><p><?php esc_html_e( 'The review could not be updated. Choose again or review the Transporter Blueprint before applying changes.', 'ran-booster' ); ?></p></div>
+			<div class="notice notice-error inline ran-booster-portability__review-error" data-portability-review-error role="alert" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The review could not be updated. Choose again or review the Transporter Blueprint before applying changes.', 'ran-booster' ); ?></p></div></div>
 			<div data-portability-review><?php require __DIR__ . '/portability-review.php'; ?></div>
 		</section>
 		<section class="ran-booster-portability__apply" aria-labelledby="ran-booster-portability-apply-heading">

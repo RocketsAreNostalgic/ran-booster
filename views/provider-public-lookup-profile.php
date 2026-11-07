@@ -32,7 +32,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 	</header>
 	<div class="ran-booster-provider-section__body">
 		<div class="ran-booster-public-lookup-profile__panel ran-booster-panel">
-			<div id="ran-booster-public-lookup-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $public_lookup_profile_error ? 'hidden' : ''; ?>><p><?php echo null === $public_lookup_profile_error ? '' : esc_html( $public_lookup_profile_error ); ?></p></div>
+			<div id="ran-booster-public-lookup-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $public_lookup_profile_error ? 'hidden' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo null === $public_lookup_profile_error ? '' : esc_html( $public_lookup_profile_error ); ?></p></div></div>
 			<div class="ran-booster-public-lookup-profile__layout">
 				<form method="post" action="" class="ran-booster-public-lookup-profile__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-public-lookup-profile-error" hx-post="" hx-target="#ran-booster-public-lookup-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
 					<?php wp_nonce_field( 'ran-booster-save-public-lookup-profile' ); ?>
@@ -60,7 +60,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 				</aside>
 			</div>
 			<?php if ( $public_lookup_profile['stale'] ) { ?>
-				<div class="notice notice-warning inline"><p><?php esc_html_e( 'The configured public lookup profile is missing. Choose Anonymous or another saved profile, then save the preference.', 'ran-booster' ); ?></p></div>
+				<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The configured public lookup profile is missing. Choose Anonymous or another saved profile, then save the preference.', 'ran-booster' ); ?></p></div></div>
 			<?php } ?>
 		</div>
 	</div>

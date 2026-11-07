@@ -245,7 +245,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 			<?php } else { ?>
 				<?php $native_recovery = $github_selection['recovery'] ?? null; ?>
 				<?php if ( 'decision_required' !== $selection_status['state'] ) { ?>
-					<div class="notice notice-warning inline">
+					<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content>
 						<h3>
 						<?php
 						echo esc_html(
@@ -311,7 +311,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 						<?php if ( ! $github_selection['available'] ) { ?>
 							<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available and Bitbucket is unaffected.', 'ran-booster' ); ?></p>
 						<?php } ?>
-					</div>
+					</div></div>
 				<?php } elseif ( ! $github_selection['available'] ) { ?>
 					<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available and Bitbucket is unaffected.', 'ran-booster' ); ?></p>
 				<?php } ?>
@@ -367,9 +367,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 	<?php } ?>
 
 	<?php if ( $storage_unavailable && ! $is_repository_detail ) { ?>
-		<div class="notice notice-error inline ran-booster-provider__notice" data-ran-booster-provider-storage-notice>
+		<div class="notice notice-error inline ran-booster-provider__notice" data-ran-booster-provider-storage-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content>
 			<p><strong><?php esc_html_e( 'Saved credentials are unavailable.', 'ran-booster' ); ?></strong> <a href="<?php echo esc_url( ( function_exists( 'is_network_admin' ) && is_network_admin() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster-settings#ran-booster-storage' ); ?>"><?php esc_html_e( 'Review Secure credential storage in Settings', 'ran-booster' ); ?></a></p>
-		</div>
+		</div></div>
 	<?php } ?>
 
 	<?php if ( $is_repository_detail ) { ?>
@@ -402,7 +402,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 			?>
 		<?php } else { ?>
 			<p><a href="<?php echo esc_url( $repository_list_url ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
-			<div class="notice notice-error inline"><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
+			<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div></div>
 		<?php } ?>
 	<?php } elseif ( 'overview' === $provider_view ) { ?>
 		<?php if ( ! empty( $provider['credential_kinds'] ) ) { ?>
@@ -503,9 +503,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 								<span class="screen-reader-text"><?php esc_html_e( 'Loading Git provider details…', 'ran-booster' ); ?></span>
 							</p>
 						</nav>
-						<div class="notice notice-error inline ran-booster-provider-task-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden>
+						<div class="notice notice-error inline ran-booster-provider-task-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content>
 							<p><?php esc_html_e( 'Booster could not load that Git provider view. The current view is unchanged; choose the task again to retry.', 'ran-booster' ); ?></p>
-						</div>
+						</div></div>
 
 						<?php if ( 'status' === $provider_task ) { ?>
 							<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="status" aria-labelledby="ran-booster-provider-status-heading">
@@ -646,7 +646,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									?>
 								<?php } else { ?>
 									<p><a href="<?php echo esc_url( $repository_list_url ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
-									<div class="notice notice-error inline"><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
+									<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div></div>
 								<?php } ?>
 							<?php } elseif ( array() !== $repository_table_rows ) { ?>
 								<div class="ran-booster-provider-repository-tools">
@@ -709,7 +709,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 	<?php } elseif ( 'secrets' === $provider_view ) { ?>
 		<?php if ( $has_webhook_settings ) { ?>
-			<div id="ran-booster-delete-webhook-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
+			<div id="ran-booster-delete-webhook-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div></div>
 			<form class="ran-booster-provider-list-controls" method="get" action="<?php echo esc_url( $provider_list_action_url ); ?>"><input type="hidden" name="page" value="ran-booster"><input type="hidden" name="tab" value="<?php echo esc_attr( $provider['code'] ); ?>"><input type="hidden" name="view" value="secrets"><input type="hidden" name="orderby" value="<?php echo esc_attr( $provider_list_state['orderby'] ); ?>"><input type="hidden" name="order" value="<?php echo esc_attr( $provider_list_state['order'] ); ?>"><input type="hidden" name="per_page" value="<?php echo esc_attr( (string) $provider_list_state['per_page'] ); ?>"><div><label class="screen-reader-text" for="ran-booster-secret-scope-filter"><?php esc_html_e( 'Filter by scope', 'ran-booster' ); ?></label><select id="ran-booster-secret-scope-filter" name="scope"><option value=""><?php esc_html_e( 'All scopes', 'ran-booster' ); ?></option>
 			<?php
 			foreach ( $provider['webhook_scopes'] as $scope ) {

@@ -69,7 +69,7 @@ $status_classes       = array(
 ?>
 <section id="ran-booster-debug-capture-region" class="ran-booster-debug-capture" aria-labelledby="ran-booster-debug-capture-heading">
 	<h3 id="ran-booster-debug-capture-heading"><?php esc_html_e( 'Logging', 'ran-booster' ); ?></h3>
-	<div id="ran-booster-debug-capture-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $debug_capture_error ? 'hidden' : ''; ?>><p><?php echo null === $debug_capture_error ? '' : esc_html( $debug_capture_error ); ?></p></div>
+	<div id="ran-booster-debug-capture-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $debug_capture_error ? 'hidden' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo null === $debug_capture_error ? '' : esc_html( $debug_capture_error ); ?></p></div></div>
 
 	<div class="ran-booster-debug-capture__panel ran-booster-panel">
 		<div class="ran-booster-debug-capture__header">
@@ -106,9 +106,9 @@ $status_classes       = array(
 				</div>
 			</div>
 			<?php if ( 'malformed' === $capture_state ) { ?>
-				<div class="notice notice-error inline"><p><?php esc_html_e( 'The temporary capture file could not be read safely. Booster left it unchanged.', 'ran-booster' ); ?></p></div>
+				<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The temporary capture file could not be read safely. Booster left it unchanged.', 'ran-booster' ); ?></p></div></div>
 			<?php } elseif ( 'unavailable' === $capture_state ) { ?>
-				<div class="notice notice-error inline"><p><?php esc_html_e( 'Temporary logging capture is unavailable because Booster cannot safely use its capture file location.', 'ran-booster' ); ?></p></div>
+				<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Temporary logging capture is unavailable because Booster cannot safely use its capture file location.', 'ran-booster' ); ?></p></div></div>
 			<?php } ?>
 		</div>
 		<?php if ( in_array( $capture_state, array( 'inactive', 'active', 'retained' ), true ) ) { ?>

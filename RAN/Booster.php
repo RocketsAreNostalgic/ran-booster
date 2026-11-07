@@ -805,8 +805,7 @@ class Booster {
 			$style_dependencies = array( $style_handle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
-		$has_ui_cards   = in_array( $hook, array( 'ran-booster_page_ran-booster-extensions', 'ran-booster_page_ran-booster-plugins', 'ran-booster_page_ran-booster-themes', 'ran-booster_page_ran-booster-settings' ), true )
-			|| ( 'toplevel_page_ran-booster' === $hook && in_array( $requested_tab, array( null, '', 'overview', 'troubleshooting' ), true ) );
+		$has_ui_cards   = in_array( $hook, self::ADMIN_PAGE_HOOKS, true );
 		$has_ui_overlay = in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
 		if ( $has_ui_cards || $has_ui_overlay ) {
 			$ui_manifest_path = trailingslashit( $this->booster_path ?? dirname( __DIR__ ) ) . 'assets/lib/ran-booster-ui-manifest.json';

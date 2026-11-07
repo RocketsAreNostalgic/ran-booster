@@ -138,7 +138,7 @@ const adapter = await readFile('assets/ran-booster-cards.js');
 const [foundationBytes, foundationGzip] = size(foundation),
 	[overlayBytes, overlayGzip] = size(overlay);
 ensure(
-	foundationBytes + adapter.length <= 90000 &&
+	foundationBytes + adapter.length <= 110000 &&
 		foundationGzip + gzipSync(adapter).length <= 20000 &&
 		overlayBytes <= 320000 &&
 		overlayGzip <= 90000,

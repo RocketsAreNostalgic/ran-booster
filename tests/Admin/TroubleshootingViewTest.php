@@ -1174,6 +1174,67 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'No activity has been recorded yet.', $html );
 	}
 
+	public function test_diagnostic_badge_projection_is_closed_and_preserves_fallbacks(): void {
+		$troubleshooting_panel = 'diagnostics';
+		$troubleshooting       = array(
+			'ran'       => true,
+			'providers' => array(),
+			'results'   => array(),
+		);
+		$cases                 = array(
+			array( 'pass', 'Traduit " & <test>', 'stable', 'ok', 'pass' ),
+			array( 'warning', 'Warning', 'medium', 'warning', 'warning' ),
+			array( 'fail', 'Failed', 'high', 'error', 'fail' ),
+			array( 'not_configured', 'Not configured', 'medium', 'warning', 'not_configured' ),
+			array( 'unexpected" onmouseover="secret', 'Unknown', 'none', 'neutral', 'unknown' ),
+			array( null, 'Unknown', 'none', 'neutral', 'unknown' ),
+		);
+		foreach ( $cases as $case ) {
+			$result = array(
+				'code'        => 'local.runtime.private-code',
+				'message'     => 'private-message',
+				'remediation' => 'private-remediation',
+			);
+			if ( null !== $case[0] ) {
+				$result['status'] = $case[0];
+			}
+			$troubleshooting['results'][] = $result;
+		}
+
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Passed'] = 'Traduit " & <test>';
+		try {
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html = (string) ob_get_clean();
+		} finally {
+			unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Passed'] );
+		}
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+		$xpath  = new \DOMXPath( $document );
+		$badges = $xpath->query( '//span[@data-ran-booster-ui-badge]' );
+		self::assertInstanceOf( \DOMNodeList::class, $badges );
+		self::assertCount( count( $cases ), $badges );
+		foreach ( $cases as $index => $case ) {
+			$badge = $badges->item( $index );
+			self::assertInstanceOf( \DOMElement::class, $badge );
+			self::assertSame( 3, $badge->attributes->length );
+			self::assertSame( $case[1], $badge->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+			self::assertSame( $case[2], $badge->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+			self::assertSame( 2.0, $xpath->evaluate( 'count(./span)', $badge ) );
+			$fallback = $xpath->query( './span[@data-ran-booster-ui-badge-fallback]', $badge )->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $fallback );
+			self::assertSame( $case[1], $xpath->evaluate( 'string(.)', $fallback ) );
+			self::assertSame( 'ran-booster-badge ran-booster-badge--' . $case[3] . ' ran-booster-diagnostic-status ran-booster-diagnostic-status--' . $case[4], $fallback->getAttribute( 'class' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(@class) and not(node())])', $badge ) );
+		}
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@aria-live])' ) );
+		self::assertStringNotContainsString( 'onmouseover', $html );
+	}
+
 	public function test_renders_protected_provider_form_accessible_results_and_whitelist_report(): void {
 		$troubleshooting_panel = 'diagnostics';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exercise a deterministic frozen JSON fixture with strict encoding errors.

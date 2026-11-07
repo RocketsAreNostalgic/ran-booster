@@ -7,6 +7,8 @@
 	window.ranBoosterCardsInitialized = true;
 	const selector = '.ran-booster-card[data-ran-booster-card]';
 	const noticeSelector = '[data-ran-booster-ui-notice]';
+	const disclosureSelector =
+		'[data-ran-booster-ui-disclosure="installation-component"]';
 	const badgeSelector = '[data-ran-booster-ui-badge]';
 	const buttonSelector = '[data-ran-booster-ui-button]';
 	const switchSelector = '[data-ran-booster-ui-switch="general-preference"]';
@@ -63,6 +65,26 @@
 		let active = host.contains(host.ownerDocument.activeElement)
 			? host.ownerDocument.activeElement
 			: null;
+		if (entry.disclosure) {
+			const trigger = entry.mount.querySelector('[role=button]');
+			if (trigger && active === trigger) {
+				active = entry.summary;
+			}
+			if (
+				!active &&
+				host.ownerDocument.activeElement === host.ownerDocument.body
+			) {
+				if (entry.body.contains(entry.lastFocus)) {
+					active = entry.lastFocus;
+				} else if (entry.lastFocusWasTrigger) {
+					active = entry.summary;
+				}
+			}
+			entry.details.appendChild(entry.body);
+			entry.mount.removeEventListener('focusin', entry.trackFocus);
+			entry.mount.removeEventListener('focusout', entry.clearFocus);
+			entry.mount.replaceWith(entry.details);
+		}
 		if (entry.button) {
 			const button = entry.mount.querySelector('button');
 			if (button) {
@@ -87,7 +109,9 @@
 			entry.mount.remove();
 		} else {
 			entry.mount.replaceChildren();
-			if (entry.button) {
+			if (entry.disclosure) {
+				entry.mount.remove();
+			} else if (entry.button) {
 				host.appendChild(entry.mount);
 			} else {
 				entry.fallback.hidden = false;
@@ -896,7 +920,203 @@
 		}
 	}
 
-	function initialize(scope) {
+	function mountDisclosure(host, restoreFocus = false) {
+		if (
+			roots.has(host) ||
+			!host.isConnected ||
+			!host.closest('.ran-booster-admin')
+		) {
+			return;
+		}
+		const details = host.querySelector(
+			':scope > details[data-ran-booster-ui-disclosure-fallback]'
+		);
+		const summary = details?.querySelector(':scope > summary');
+		const body = details?.querySelector(
+			':scope > div[data-ran-booster-ui-disclosure-content]'
+		);
+		const supportedChildren =
+			details &&
+			[...details.childNodes].every(
+				(node) =>
+					node === summary ||
+					node === body ||
+					(node.nodeType === 3 && !node.textContent.trim())
+			) &&
+			details.children.length === 2 &&
+			details.children[0] === summary &&
+			details.children[1] === body;
+		const ui = window.ranBoosterUI?.CollapsibleCard,
+			e = window.wp?.element;
+		const label = summary?.getAttribute('aria-label');
+		if (
+			!details ||
+			!summary ||
+			!body ||
+			!supportedChildren ||
+			!body.children.length ||
+			!label ||
+			(details.contains(host.ownerDocument.activeElement) &&
+				!(
+					restoreFocus && host.ownerDocument.activeElement === summary
+				)) ||
+			!ui?.Root ||
+			!ui?.Header ||
+			!ui?.Content ||
+			!e?.createRoot ||
+			!e?.flushSync ||
+			!window.React?.Component
+		) {
+			return;
+		}
+		const mount = document.createElement('div');
+		let root;
+		try {
+			const h = e.createElement;
+			const panelRef = window.React.createRef();
+			let recovering = false;
+			class Boundary extends window.React.Component {
+				constructor(props) {
+					super(props);
+					this.state = { failed: false };
+				}
+				static getDerivedStateFromError() {
+					recovering = true;
+					return { failed: true };
+				}
+				componentDidCatch() {
+					const failed = roots.get(host);
+					if (!failed || failed.mount !== mount) {
+						return;
+					}
+					queueMicrotask(() => {
+						if (
+							roots.get(host) === failed &&
+							failed.mount === mount
+						) {
+							restore(host);
+						}
+					});
+				}
+				render() {
+					return this.state.failed ? null : this.props.children;
+				}
+			}
+			function Disclosure() {
+				const [open, setOpen] = window.React.useState(details.open);
+				return h(
+					ui.Root,
+					{
+						open,
+						onOpenChange: (next) => {
+							details.open = next;
+							setOpen(next);
+						},
+					},
+					h(
+						ui.Header,
+						null,
+						h(
+							'span',
+							{ 'aria-hidden': 'true' },
+							summary.textContent
+						),
+						h('span', { className: 'screen-reader-text' }, label)
+					),
+					h(ui.Content, {
+						ref: panelRef,
+						keepMounted: true,
+						render: h('div', { 'data-disclosure-slot': '' }),
+					})
+				);
+			}
+			root = e.createRoot(mount);
+			e.flushSync(() => root.render(h(Boundary, null, h(Disclosure))));
+			const slots = mount.querySelectorAll('[data-disclosure-slot]');
+			const slot = slots[0];
+			const triggers = mount.querySelectorAll('[role="button"]');
+			const trigger = triggers[0];
+			const panel = panelRef.current;
+			const controls = trigger?.getAttribute('aria-controls');
+			if (
+				slots.length !== 1 ||
+				triggers.length !== 1 ||
+				trigger.tabIndex !== 0 ||
+				trigger.closest(
+					'[hidden], [inert], :disabled, [aria-hidden="true"], [aria-disabled="true"]'
+				) ||
+				trigger.getAttribute('aria-expanded') !==
+					String(details.open) ||
+				!mount.contains(panel) ||
+				!panel?.contains(slot) ||
+				panel.contains(trigger) ||
+				trigger.contains(panel)
+			) {
+				throw Error('Invalid disclosure trigger or panel');
+			}
+			const panelId = panel.id;
+			if (
+				panelId &&
+				(host.ownerDocument.getElementById(panelId) ||
+					mount.querySelectorAll('#' + window.CSS.escape(panelId))
+						.length !== 1)
+			) {
+				throw Error('Duplicate disclosure panel ID');
+			}
+			// Base UI omits aria-controls on a closed trigger.
+			if (
+				(details.open || controls !== null) &&
+				(!controls || /\s/.test(controls) || controls !== panelId)
+			) {
+				throw Error('Invalid disclosure panel association');
+			}
+			slot.appendChild(body);
+			details.replaceWith(mount);
+			const entry = {
+				root,
+				mount,
+				disclosure: true,
+				details,
+				summary,
+				body,
+				lastFocus: null,
+			};
+			entry.trackFocus = (event) => {
+				entry.lastFocus = event.target;
+				entry.lastFocusWasTrigger =
+					event.target === mount.querySelector('[role=button]');
+			};
+			entry.clearFocus = (event) => {
+				if (
+					!recovering &&
+					(!event.relatedTarget ||
+						!mount.contains(event.relatedTarget))
+				) {
+					entry.lastFocus = null;
+					entry.lastFocusWasTrigger = false;
+				}
+			};
+			mount.addEventListener('focusin', entry.trackFocus);
+			mount.addEventListener('focusout', entry.clearFocus);
+			roots.set(host, entry);
+			host.setAttribute(mounted, '');
+			if (restoreFocus) {
+				mount
+					.querySelector('[role=button]')
+					?.focus({ preventScroll: true });
+			}
+		} catch {
+			if (body.parentElement !== details) {
+				details.appendChild(body);
+			}
+			try {
+				root?.unmount();
+			} catch {}
+			mount.remove();
+		}
+	}
+
+	function initialize(scope, restoredDisclosure = null) {
 		queueMicrotask(() => {
 			if (window.ranBoosterUI) {
 				window.ranBoosterUI.setNavigationCurrent = setNavigationCurrent;
@@ -913,6 +1133,15 @@
 				}
 				scope.querySelectorAll?.(surfaceSelector).forEach(mountSurface);
 			});
+			const disclosure = scope.closest?.(disclosureSelector);
+			if (disclosure) {
+				mountDisclosure(disclosure, disclosure === restoredDisclosure);
+			}
+			scope
+				.querySelectorAll?.(disclosureSelector)
+				.forEach((host) =>
+					mountDisclosure(host, host === restoredDisclosure)
+				);
 			const badge = scope.closest?.(badgeSelector);
 			if (badge) {
 				mountBadge(badge);
@@ -1038,8 +1267,14 @@
 		cleanup(event.detail.elt)
 	);
 	document.addEventListener('htmx:beforeHistorySave', () => {
+		const restoredDisclosure =
+			Array.from(roots.entries()).find(
+				([host, entry]) =>
+					entry.disclosure &&
+					host.contains(host.ownerDocument.activeElement)
+			)?.[0] || null;
 		restoreAll(Array.from(roots.keys()));
-		initialize(document);
+		initialize(document, restoredDisclosure);
 	});
 	document.addEventListener('htmx:load', (event) =>
 		initialize(event.detail.elt || event.target)

@@ -9,8 +9,8 @@ const source = fs
 		'utf8'
 	)
 	.replace(
-		'function initialize(scope) {',
-		'window.navigationTest = { mountNavigation, setNavigationCurrent, cleanup, restoreAll, roots }; function initialize(scope) {'
+		'function initialize(scope, restoredDisclosure = null) {',
+		'window.navigationTest = { mountNavigation, setNavigationCurrent, cleanup, restoreAll, roots }; function initialize(scope, restoredDisclosure = null) {'
 	);
 
 function fixture({

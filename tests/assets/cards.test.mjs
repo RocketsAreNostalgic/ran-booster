@@ -12,6 +12,8 @@ function fixture({
 	cardComponent = true,
 	fail = false,
 	moveFail = false,
+	disclosureRuntime = false,
+	disclosureFail = false,
 } = {}) {
 	const listeners = new Map(),
 		microtasks = [];
@@ -24,6 +26,8 @@ function fixture({
 		constructor(name, label = null) {
 			this.name = name;
 			this.tagName = name.toUpperCase();
+			this.nodeType = name === 'text' ? 3 : 1;
+			this.tabIndex = 0;
 			this.label = label;
 			this.childNodes = [];
 			this.parentElement = null;
@@ -35,6 +39,12 @@ function fixture({
 			if (label !== null) {
 				this.setAttribute('data-ran-booster-card', label);
 			}
+		}
+		get children() {
+			return this.childNodes.filter((node) => node.nodeType !== 3);
+		}
+		get id() {
+			return this.getAttribute('id') || '';
 		}
 		get firstChild() {
 			return this.childNodes[0];
@@ -101,6 +111,24 @@ function fixture({
 			this.attributes.delete(name);
 		}
 		matches(selector) {
+			if (
+				selector ===
+				'[data-ran-booster-ui-disclosure="installation-component"]'
+			) {
+				return (
+					this.getAttribute('data-ran-booster-ui-disclosure') ===
+					'installation-component'
+				);
+			}
+			if (
+				selector === '[role="button"]' ||
+				selector === '[role=button]'
+			) {
+				return this.getAttribute('role') === 'button';
+			}
+			if (selector.startsWith('#')) {
+				return this.id === selector.slice(1);
+			}
 			if (selector === 'button') {
 				return this.tagName === 'BUTTON';
 			}
@@ -122,6 +150,19 @@ function fixture({
 			return this.querySelectorAll(selector)[0] || null;
 		}
 		querySelectorAll(selector) {
+			if (selector.startsWith(':scope > ')) {
+				const part = selector.slice(9);
+				return this.children.filter((n) => {
+					const match = part.match(
+						/^(details|summary|div)(?:\[([^\]]+)\])?$/
+					);
+					return (
+						match &&
+						n.tagName === match[1].toUpperCase() &&
+						(!match[2] || n.hasAttribute(match[2]))
+					);
+				});
+			}
 			const descendants = this.childNodes.flatMap((n) => [
 				n,
 				...n.querySelectorAll('*'),
@@ -130,6 +171,8 @@ function fixture({
 				? descendants
 				: descendants.filter((n) => n.matches(selector));
 		}
+		addEventListener() {}
+		removeEventListener() {}
 		focus(options) {
 			this.focusOptions = options;
 			doc.activeElement = this;
@@ -147,6 +190,13 @@ function fixture({
 		},
 		createElement(name) {
 			return new Node(name);
+		},
+		getElementById(id) {
+			return (
+				this.body
+					.querySelectorAll('*')
+					.find((node) => node.id === id) || null
+			);
 		},
 		querySelectorAll(selector) {
 			return this.body.querySelectorAll(selector);
@@ -171,7 +221,34 @@ function fixture({
 					throw Error('render failure');
 				}
 				host.replaceChildren();
-				if (value.type === 'CardRoot' || value.type === 'NoticeRoot') {
+				if (disclosureRuntime && typeof value.type === 'function') {
+					if (disclosureFail) {
+						throw Error('bad disclosure');
+					}
+					const component = value.children[0].type();
+					const content = component.children[1];
+					const trigger = new Node('button'),
+						panel = new Node('div'),
+						slot = new Node('div');
+					trigger.setAttribute('role', 'button');
+					trigger.setAttribute(
+						'aria-expanded',
+						String(component.props.open)
+					);
+					panel.setAttribute('id', 'test-panel');
+					if (component.props.open) {
+						trigger.setAttribute('aria-controls', 'test-panel');
+					}
+					slot.setAttribute('data-disclosure-slot', '');
+					content.props.ref.current = panel;
+					host.appendChild(trigger);
+					host.appendChild(panel);
+					panel.appendChild(slot);
+					tree = component;
+				} else if (
+					value.type === 'CardRoot' ||
+					value.type === 'NoticeRoot'
+				) {
 					const surface = new Node('surface'),
 						content = new Node('content');
 					content.content = true;
@@ -211,10 +288,24 @@ function fixture({
 				}
 			: null,
 	};
+	if (disclosureRuntime) {
+		window.React = {
+			Component: class {},
+			createRef: () => ({ current: null }),
+			useState: (value) => [value, () => {}],
+		};
+		window.CSS = { escape: (value) => value };
+		window.ranBoosterUI.CollapsibleCard = {
+			Root: 'Root',
+			Header: 'Header',
+			Content: 'Content',
+		};
+	}
 	const context = vm.createContext({
 		window,
 		document: doc,
 		queueMicrotask: (fn) => microtasks.push(fn),
+		setTimeout: () => {},
 	});
 	function make(label = 'extensions', parent = doc.body, tag = 'div') {
 		const card = new Node(tag, label),
@@ -848,4 +939,70 @@ test('HTMX processing a newly appended row discovers its Badge exactly once with
 	f.emit('htmx:afterProcessNode', row);
 	f.flush();
 	assert.equal(f.counts().renders, 1);
+});
+
+test('Disclosure keeps native details, body identity, open state and focus through history', () => {
+	const f = fixture({ disclosureRuntime: true });
+	const host = new f.Node('div'),
+		details = new f.Node('details'),
+		summary = new f.Node('summary'),
+		body = new f.Node('div'),
+		link = new f.Node('a');
+	host.setAttribute(
+		'data-ran-booster-ui-disclosure',
+		'installation-component'
+	);
+	host.setAttribute('id', 'technical-anchor');
+	details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+	summary.setAttribute('aria-label', 'Technical details: Example');
+	summary.textContent = 'Technical details';
+	body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+	body.appendChild(link);
+	details.appendChild(summary);
+	details.appendChild(body);
+	host.appendChild(details);
+	f.doc.body.appendChild(host);
+	details.open = false;
+	f.run();
+	f.flush();
+	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), '');
+	assert.equal(host.getAttribute('id'), 'technical-anchor');
+	assert.equal(host.querySelector('[data-disclosure-slot]').firstChild, body);
+	f.tree().props.onOpenChange(true);
+	assert.equal(details.open, true);
+	host.querySelector('[role="button"]').focus();
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(host.firstChild, details);
+	assert.equal(details.children[1], body);
+	assert.equal(body.firstChild, link);
+	assert.equal(f.doc.activeElement, summary);
+	f.flush();
+	assert.equal(host.querySelector('[data-disclosure-slot]').firstChild, body);
+});
+
+test('Disclosure render failure leaves the original native body untouched', () => {
+	const f = fixture({ disclosureRuntime: true, disclosureFail: true });
+	const host = new f.Node('div'),
+		details = new f.Node('details'),
+		summary = new f.Node('summary'),
+		body = new f.Node('div'),
+		link = new f.Node('a');
+	host.setAttribute(
+		'data-ran-booster-ui-disclosure',
+		'installation-component'
+	);
+	details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+	summary.setAttribute('aria-label', 'Technical details: Example');
+	body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+	body.appendChild(link);
+	details.appendChild(summary);
+	details.appendChild(body);
+	host.appendChild(details);
+	f.doc.body.appendChild(host);
+	f.run();
+	f.flush();
+	assert.equal(host.firstChild, details);
+	assert.equal(details.children[1], body);
+	assert.equal(body.firstChild, link);
+	assert.equal(host.hasAttribute('data-ran-booster-ui-mounted'), false);
 });

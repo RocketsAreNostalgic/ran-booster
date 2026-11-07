@@ -1830,6 +1830,48 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( '/absolute/path-secret-canary', $html );
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_provider_storage_notice_preserves_markup_routing_and_visibility(): void {
+		require_once __DIR__ . '/CredentialStorageNoticeWordPressFunctions.php';
+		$provider                    = $this->provider_without_optional_settings();
+		$credential_profiles         = array();
+		$webhook_profiles            = array();
+		$secrets_storage_unavailable = true;
+		$provider_view_data          = $this->provider_view_data( get_defined_vars() );
+		foreach ( array( false, true ) as $network ) {
+			$GLOBALS['ran_booster_expiry_test_network_admin'] = $network;
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+			extract( $provider_view_data );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$html = (string) ob_get_clean();
+			$base = $network ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
+			self::assertStringContainsString( '<div class="notice notice-error inline ran-booster-provider__notice" data-ran-booster-provider-storage-notice data-ran-booster-ui-notice>', $html );
+			self::assertMatchesRegularExpression( '~data-ran-booster-provider-storage-notice data-ran-booster-ui-notice>\s*<div data-ran-booster-ui-notice-content>\s*<p><strong>Saved credentials are unavailable\.</strong> <a href="' . preg_quote( $base, '~' ) . '\?page=ran-booster-settings#ran-booster-storage">Review Secure credential storage in Settings</a></p>\s*</div>\s*</div>~', $html );
+		}
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Saved credentials are unavailable.']           = '<unsafe & unavailable>';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Review Secure credential storage in Settings'] = '<unsafe & link>';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( '<strong>&lt;unsafe &amp; unavailable&gt;</strong>', $html );
+		self::assertStringContainsString( '>&lt;unsafe &amp; link&gt;</a>', $html );
+		$storage_unavailable = false;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'data-ran-booster-provider-storage-notice', $html );
+		$storage_unavailable     = true;
+		$provider_view           = 'overview';
+		$provider_task           = 'repositories';
+		$requested_repository_id = 'missing';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/provider.php';
+		$html = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'data-ran-booster-provider-storage-notice', $html );
+	}
+
 	public function test_provider_settings_shows_one_public_lookup_dropdown_without_aprofile_checkbox(): void {
 		$provider                     = $this->provider_without_optional_settings();
 		$provider['credential_kinds'] = array(

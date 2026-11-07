@@ -1950,3 +1950,83 @@ test('General busy state keeps switches and their fieldsets usable while protect
 	assert.equal(state.button.disabled, false);
 	assert.equal(state.formAttributes.has('aria-busy'), false);
 });
+
+test('General busy state leaves only the mounted switch subtree operable', () => {
+	for (const scope of ['hide_github', 'self_update_discovery', 'numeric']) {
+		const state = fixture();
+		state.form.dataset.ranBoosterSettingsScope = scope;
+		const control = (disabled, mounted) => ({
+			disabled,
+			matches: () => false,
+			closest: (selector) =>
+				selector.includes('[data-ran-booster-ui-mounted]') && mounted
+					? {}
+					: null,
+			getAttribute: () => null,
+			setAttribute() {},
+			removeAttribute() {},
+		});
+		const button = control(false, true);
+		const hiddenInput = control(false, true);
+		const locked = control(true, true);
+		const outside = control(false, false);
+		state.form.elements = [
+			button,
+			hiddenInput,
+			locked,
+			outside,
+			state.button,
+		];
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		state.listeners.get('htmx:beforeRequest')({
+			detail: { elt: state.form },
+		});
+		assert.equal(button.disabled, scope === 'numeric');
+		assert.equal(hiddenInput.disabled, scope === 'numeric');
+		assert.equal(locked.disabled, true);
+		assert.equal(outside.disabled, true);
+		state.listeners.get('htmx:afterRequest')({
+			detail: { elt: state.form },
+		});
+		assert.equal(locked.disabled, true);
+		assert.equal(outside.disabled, false);
+	}
+});
+
+test('Snackbar dismissal can focus the visible public switch', () => {
+	const focused = {};
+	const ownerDocument = { activeElement: focused };
+	const host = { ownerDocument, contains: (item) => item === focused };
+	const control = {
+		isConnected: true,
+		disabled: false,
+		getClientRects: () => [{}],
+		getBoundingClientRect: () => ({
+			left: 10,
+			top: 10,
+			right: 50,
+			bottom: 50,
+		}),
+		focus(options) {
+			assert.deepEqual(options, { preventScroll: true });
+			ownerDocument.activeElement = this;
+		},
+	};
+	const document = {
+		querySelectorAll: (selector) =>
+			selector.includes(
+				'[data-ran-booster-ui-switch-mount] button[role="switch"]'
+			)
+				? [control]
+				: [],
+	};
+	loadFunction('restoreSnackbarFocus', {
+		document,
+		window: { innerWidth: 320, innerHeight: 600 },
+		snackbar: { host },
+	})();
+	assert.equal(ownerDocument.activeElement, control);
+});

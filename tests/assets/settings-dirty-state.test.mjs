@@ -10,11 +10,12 @@ const source = fs.readFileSync(
 const preference = 'ran_booster[preferences][value]';
 const baseline = (value) => JSON.stringify([[preference, value]]);
 
-function harness({ enhanced = true } = {}) {
+function harness({ enhanced = true, initialActive = null } = {}) {
 	const listeners = new Map();
 	const windowListeners = new Map();
 	const regions = new Map();
 	const microtasks = [];
+	const tasks = [];
 	let confirmResult = false;
 	let confirms = 0;
 	const on = (map, name, fn) => map.set(name, [...(map.get(name) || []), fn]);
@@ -194,6 +195,7 @@ function harness({ enhanced = true } = {}) {
 			failed = false,
 			configNotice = false,
 			legacyNotice = false,
+			uiMounted = false,
 			token = 'original',
 		} = {}
 	) {
@@ -268,7 +270,12 @@ function harness({ enhanced = true } = {}) {
 				},
 			},
 			closest: () => form,
+			matches: (selector) =>
+				selector === ':active' && Boolean(form.active),
 			querySelector(selector) {
+				if (selector === ':active') {
+					return form.active ? { target: form.active } : null;
+				}
 				if (selector === 'input[role="switch"]') {
 					return this.toggle;
 				}
@@ -312,7 +319,11 @@ function harness({ enhanced = true } = {}) {
 			id,
 			form,
 			closest: () => form,
-			focus() {
+			get isConnected() {
+				return form.isConnected;
+			},
+			focus(options) {
+				this.focusOptions = options;
 				this.form.ownerDocument.activeElement = this;
 			},
 		});
@@ -475,10 +486,36 @@ function harness({ enhanced = true } = {}) {
 						},
 					};
 		form.retry = scope === 'numeric' ? null : { hidden: false };
+		const uiButton = element(`ui-${scope}`);
+		const switchHost = {
+			hasAttribute: (name) =>
+				name === 'data-ran-booster-ui-mounted' && uiMounted,
+			contains: (item) => item === uiButton || item === form.toggle,
+			querySelector: () => uiButton,
+		};
+		form.uiButton = uiButton;
 		form.toggle =
 			scope === 'numeric'
 				? null
-				: { ...element(`toggle-${scope}`), checked, disabled: false };
+				: {
+						...element(`toggle-${scope}`),
+						checked,
+						disabled: false,
+						events: [],
+						closest: (selector) =>
+							selector ===
+							'[data-ran-booster-ui-switch="general-preference"]'
+								? switchHost
+								: form,
+						dispatchEvent(event) {
+							this.events.push({
+								type: event.type,
+								bubbles: event.bubbles,
+								checked: this.checked,
+								disabled: this.disabled,
+							});
+						},
+					};
 		form.numeric =
 			scope === 'numeric'
 				? { ...element('numeric-control'), disabled: false }
@@ -496,7 +533,10 @@ function harness({ enhanced = true } = {}) {
 		return mount(region);
 	}
 	const numeric = mount(make('numeric'));
-	const toggle = mount(make('hide'));
+	const toggle = mount(make(initialActive ? initialActive.scope : 'hide'));
+	if (initialActive) {
+		toggle.active = initialActive.target;
+	}
 	const context = {
 		document,
 		window,
@@ -515,6 +555,7 @@ function harness({ enhanced = true } = {}) {
 			}
 		},
 		queueMicrotask: (fn) => microtasks.push(fn),
+		setTimeout: (fn) => tasks.push(fn),
 	};
 	vm.runInNewContext(source, context);
 	return {
@@ -545,6 +586,11 @@ function harness({ enhanced = true } = {}) {
 		flush: () => {
 			while (microtasks.length) {
 				microtasks.shift()();
+			}
+		},
+		flushTasks: () => {
+			while (tasks.length) {
+				tasks.shift()();
 			}
 		},
 		setConfirm: (value) => {
@@ -989,12 +1035,12 @@ test('serializes latest toggle desire while request is in flight', () => {
 	const h = harness();
 	const toggle = h.toggle;
 	toggle.toggle.checked = true;
-	h.doc('change', { target: toggle });
+	h.doc('change', { target: toggle.toggle });
 	assert.equal(toggle.submissions.length, 1);
 	const xhr = start(h, toggle);
 	assert.equal(toggle.toggle.disabled, false);
 	toggle.toggle.checked = false;
-	h.doc('change', { target: toggle });
+	h.doc('change', { target: toggle.toggle });
 	assert.equal(toggle.submissions.length, 1);
 	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
 	const next = h.replace(
@@ -1016,7 +1062,7 @@ test('unknown outcome retains original token and requires explicit retry', () =>
 	const h = harness();
 	const t = h.toggle;
 	t.toggle.checked = true;
-	h.doc('change', { target: t });
+	h.doc('change', { target: t.toggle });
 	const xhr = start(h, t);
 	h.doc('htmx:afterRequest', { detail: { xhr } });
 	assert.equal(pending(t), true);
@@ -1025,7 +1071,7 @@ test('unknown outcome retains original token and requires explicit retry', () =>
 	assert.match(t.error.textContent, /unconfirmed/i);
 	assert.equal(t.error.attributes.get('role'), 'alert');
 	t.toggle.checked = false;
-	h.doc('change', { target: t });
+	h.doc('change', { target: t.toggle });
 	assert.equal(t.submissions.length, 1);
 	t.requestSubmit();
 	assert.equal(t.submissions[1].token, 'original');
@@ -1080,6 +1126,95 @@ test('late detached request cannot reset replacement baseline', () => {
 	assert.equal(late.defaultPrevented, true);
 	h.doc('htmx:afterRequest', { detail: { xhr } });
 	assert.equal(pending(next), true);
+});
+
+test('only the canonical checkbox creates an intent and publishes its current state', () => {
+	const h = harness();
+	const native = h.toggle.toggle;
+	assert.deepEqual(native.events.at(-1), {
+		type: 'ran-booster:ui-switch-update',
+		bubbles: true,
+		checked: false,
+		disabled: false,
+	});
+	const internal = { closest: () => h.toggle };
+	h.doc('change', { target: internal });
+	assert.equal(h.toggle.submissions.length, 0);
+	native.checked = true;
+	h.doc('change', { target: native });
+	assert.equal(h.toggle.submissions.length, 1);
+	assert.equal(native.events.at(-1).checked, true);
+	native.disabled = true;
+	h.doc('change', { target: native });
+	assert.equal(native.events.at(-1).disabled, true);
+});
+
+test('switch focus maps to mounted UI or the native fallback after replacement', () => {
+	for (const uiMounted of [true, false]) {
+		const h = harness();
+		h.document.activeElement = h.toggle.uiButton;
+		const next = swap(h, h.toggle, { saved: true, uiMounted });
+		assert.equal(
+			h.document.activeElement,
+			uiMounted ? next.uiButton : next.toggle
+		);
+	}
+});
+
+test('HTMX-focused current native replacement sends failed switch response to Notice', () => {
+	const h = harness();
+	h.document.activeElement = h.toggle.uiButton;
+	h.toggle.toggle.checked = true;
+	h.doc('change', { target: h.toggle.toggle });
+	const xhr = start(h, h.toggle);
+	h.toggle.toggle.checked = false;
+	h.doc('change', { target: h.toggle.toggle });
+	h.toggle.toggle.checked = true;
+	h.doc('change', { target: h.toggle.toggle });
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	const next = h.replace(h.make('hide', { confirmed: false, failed: true }));
+	h.document.activeElement = next.toggle;
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	assert.equal(h.document.activeElement, next.error);
+	assert.equal(next.toggle.checked, true);
+	assert.equal(next.status.textContent, 'Disabled');
+	assert.equal(h.toggle.submissions.length, 1);
+});
+
+test('HTMX-focused current native replacement follows success into the mounted switch', () => {
+	const h = harness();
+	h.document.activeElement = h.toggle.uiButton;
+	const xhr = start(h, h.toggle);
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	const next = h.replace(h.make('hide', { saved: true, uiMounted: true }));
+	h.document.activeElement = next.toggle;
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	assert.equal(h.document.activeElement, next.uiButton);
+	assert.equal(next.uiButton.focusOptions.preventScroll, true);
+});
+
+test('a different control with the same id cannot claim replacement focus', () => {
+	const h = harness();
+	h.document.activeElement = h.toggle.uiButton;
+	const xhr = start(h, h.toggle);
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	const next = h.replace(h.make('hide', { failed: true }));
+	const outside = { id: next.toggle.id };
+	h.document.activeElement = outside;
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	assert.equal(h.document.activeElement, outside);
+});
+
+test('replacement never reclaims public switch focus after an outside move', () => {
+	const h = harness();
+	h.document.activeElement = h.toggle.uiButton;
+	const xhr = start(h, h.toggle);
+	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	const outside = { id: 'outside' };
+	h.document.activeElement = outside;
+	h.replace(h.make('hide', { saved: true, uiMounted: true }));
+	h.doc('htmx:afterSwap', { detail: { xhr } });
+	assert.equal(h.document.activeElement, outside);
 });
 
 test('focus follows the replaced control only when it was inside that region', () => {
@@ -1442,4 +1577,108 @@ test('numeric Save does not reclaim focus when user moved outside during flight'
 	h.replace(h.make('numeric', { failed: true }));
 	h.doc('htmx:afterSwap', { detail: { xhr } });
 	assert.equal(h.document.activeElement, outside);
+});
+
+test('startup keeps held General controls stable until activation completes', () => {
+	for (const scope of ['hide_github', 'self_update_discovery']) {
+		for (const target of [
+			'track',
+			'above-label',
+			'save-button',
+			'keyboard-space',
+		]) {
+			const h = harness({ initialActive: { scope, target } });
+			assert.equal(
+				h.autosaveDescription.hidden,
+				true,
+				`${scope} ${target}`
+			);
+			assert.equal(h.toggle.retry.hidden, false);
+			h.toggle.toggle.checked = true;
+			h.doc('change', { target: h.toggle.toggle });
+			assert.equal(h.toggle.submissions.length, 1);
+			h.doc('pointerup', {});
+			h.flushTasks();
+			assert.equal(
+				h.autosaveDescription.hidden,
+				true,
+				'A still-active gesture stays deferred.'
+			);
+			h.toggle.active = null;
+			h.doc('click', {});
+			assert.equal(
+				h.autosaveDescription.hidden,
+				true,
+				'Reconcile only after the click task.'
+			);
+			h.flushTasks();
+			assert.equal(h.autosaveDescription.hidden, false);
+			assert.equal(h.toggle.retry.hidden, true);
+			assert.equal(
+				h.toggle.submissions.length,
+				1,
+				'No change or save is replayed.'
+			);
+		}
+	}
+});
+
+test('startup release rechecks a newly held General gesture and current forms', () => {
+	const h = harness({
+		initialActive: { scope: 'hide_github', target: 'track' },
+	});
+	h.toggle.active = null;
+	h.doc('pointerup', {});
+	const other = h.mount(h.make('self_update_discovery'));
+	other.active = 'above-label';
+	h.flushTasks();
+	assert.equal(h.autosaveDescription.hidden, true);
+	other.active = null;
+	const replacement = h.replace(h.make('hide_github'));
+	h.doc('htmx:afterSwap', { target: { id: 'elsewhere' }, detail: {} });
+	h.doc('pointercancel', {});
+	h.flushTasks();
+	assert.equal(h.autosaveDescription.hidden, false);
+	assert.equal(replacement.retry.hidden, true);
+	assert.equal(other.retry.hidden, true);
+});
+
+test('startup hold preserves failure retry and no-HTMX fallback', () => {
+	const h = harness({
+		initialActive: { scope: 'hide_github', target: 'track' },
+	});
+	h.toggle.retry.hidden = true;
+	const xhr = start(h, h.toggle);
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.equal(
+		h.toggle.retry.hidden,
+		false,
+		'Unknown outcome reveals retry immediately.'
+	);
+	h.toggle.active = null;
+	h.doc('keyup', { key: ' ' });
+	h.flushTasks();
+	assert.equal(h.toggle.retry.hidden, false);
+	const native = harness({
+		enhanced: false,
+		initialActive: { scope: 'hide_github', target: 'track' },
+	});
+	native.toggle.active = null;
+	native.doc('pointercancel', {});
+	native.flushTasks();
+	assert.equal(native.autosaveDescription.hidden, true);
+	assert.equal(native.toggle.retry.hidden, false);
+});
+
+test('startup cancellation outside the form settles on the next task', () => {
+	const h = harness({
+		initialActive: { scope: 'self_update_discovery', target: 'track' },
+	});
+	h.toggle.active = null;
+	h.doc('pointercancel', { target: { id: 'outside' } });
+	assert.equal(h.autosaveDescription.hidden, true);
+	h.flushTasks();
+	assert.equal(h.autosaveDescription.hidden, false);
+	assert.equal(h.toggle.retry.hidden, true);
+	assert.equal(h.toggle.submissions.length, 0);
 });

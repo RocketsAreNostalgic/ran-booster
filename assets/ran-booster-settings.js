@@ -9,6 +9,15 @@
 	let nativeSubmitting;
 	let activeRequest;
 	const waiting = new Map();
+	const startupGestureActive = () =>
+		[...document.querySelectorAll(selector)].some(
+			(form) =>
+				['hide_github', 'self_update_discovery'].includes(
+					form.dataset.ranBoosterSettingsScope
+				) &&
+				(form.matches(':active') || form.querySelector(':active'))
+		);
+	let startupPending = Boolean(window.htmx && startupGestureActive());
 	const __ = window.wp?.i18n?.__ || ((message) => message);
 	const fingerprint = (form) =>
 		JSON.stringify(
@@ -20,6 +29,12 @@
 		states.get(
 			element?.closest?.(selector)?.dataset.ranBoosterSettingsScope
 		);
+	const focusId = (state, element) =>
+		state.toggle
+			?.closest('[data-ran-booster-ui-switch="general-preference"]')
+			?.contains?.(element)
+			? state.toggle.id
+			: element.id;
 	const pending = (state) =>
 		Boolean(
 			state.flight ||
@@ -117,16 +132,22 @@
 			'[data-ran-booster-toggle-save]'
 		);
 		if (retry) {
-			retry.hidden = Boolean(
+			const hide = Boolean(
 				window.htmx && !state.unknown && !state.failed
 			);
+			if (!hide || !startupPending) {
+				retry.hidden = hide;
+			}
 		}
+		state.toggle?.dispatchEvent(
+			new CustomEvent('ran-booster:ui-switch-update', { bubbles: true })
+		);
 	};
 	const bind = (deferredScope = null) => {
 		const description = document.querySelector(
 			'[data-ran-booster-autosave-description]'
 		);
-		if (description) {
+		if (description && !startupPending) {
 			description.hidden = !window.htmx;
 		}
 		for (const form of document.querySelectorAll(selector)) {
@@ -201,6 +222,36 @@
 		);
 		update(state);
 	};
+	const scheduleStartupPresentation = () => {
+		if (!startupPending) {
+			return;
+		}
+		setTimeout(() => {
+			if (!startupPending || startupGestureActive()) {
+				return;
+			}
+			startupPending = false;
+			const description = document.querySelector(
+				'[data-ran-booster-autosave-description]'
+			);
+			if (description) {
+				description.hidden = !window.htmx;
+			}
+			for (const state of states.values()) {
+				const retry = state.form.querySelector(
+					'[data-ran-booster-toggle-save]'
+				);
+				if (state.form.isConnected && retry) {
+					retry.hidden = Boolean(
+						window.htmx && !state.unknown && !state.failed
+					);
+				}
+			}
+		});
+	};
+	['click', 'pointerup', 'pointercancel', 'keyup'].forEach((event) =>
+		document.addEventListener(event, scheduleStartupPresentation, true)
+	);
 	bind();
 	document.addEventListener('input', (event) => {
 		const state = stateFor(event.target);
@@ -210,7 +261,7 @@
 	});
 	document.addEventListener('change', (event) => {
 		const state = stateFor(event.target);
-		if (!state) {
+		if (!state || (state.toggle && event.target !== state.toggle)) {
 			return;
 		}
 		if (state.toggle) {
@@ -291,7 +342,7 @@
 				token: state.form.elements.namedItem('ran_booster[token]')
 					.value,
 				focus: state.form.parentElement.contains(origin)
-					? origin.id
+					? focusId(state, origin)
 					: null,
 				active: origin,
 				applied: false,
@@ -394,7 +445,7 @@
 			}
 			const active = state.form.ownerDocument.activeElement;
 			if (record.region.contains(active)) {
-				record.focus = active.id;
+				record.focus = focusId(state, active);
 				record.active = active;
 			} else if (active !== state.form.ownerDocument.body) {
 				record.focus = null;
@@ -539,11 +590,25 @@
 		const restoreFocus =
 			record.focus &&
 			(active === record.active ||
-				active === next.form.ownerDocument.body);
+				active === next.form.ownerDocument.body ||
+				(record.focus === next.toggle?.id &&
+					active === next.toggle &&
+					next.toggle.isConnected &&
+					region.contains(active)));
 		if (saved && restoreFocus) {
-			document
-				.getElementById(record.focus)
-				?.focus({ preventScroll: true });
+			const host =
+				record.focus === next.toggle?.id &&
+				next.toggle.closest(
+					'[data-ran-booster-ui-switch="general-preference"]'
+				);
+			const control = host?.hasAttribute?.('data-ran-booster-ui-mounted')
+				? host.querySelector(
+						':scope > [data-ran-booster-ui-switch-mount] button[role="switch"]'
+					)
+				: null;
+			(control || document.getElementById(record.focus))?.focus({
+				preventScroll: true,
+			});
 		}
 		if (!saved && restoreFocus) {
 			region

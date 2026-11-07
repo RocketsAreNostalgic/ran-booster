@@ -63,7 +63,7 @@
 					'#ran-booster-save-numeric-bottom'
 				),
 				...document.querySelectorAll(
-					'#ran-booster-general-region input[type="number"], #ran-booster-general-region input[role="switch"]'
+					'#ran-booster-general-region [data-ran-booster-ui-switch-mount] button[role="switch"], #ran-booster-general-region input[type="number"], #ran-booster-general-region input[role="switch"]'
 				),
 				...document.querySelectorAll('#wpadminbar a[href]'),
 			];
@@ -360,12 +360,22 @@
 				return;
 			}
 
+			const switchScope = [
+				'hide_github',
+				'self_update_discovery',
+			].includes(form.dataset?.ranBoosterSettingsScope);
 			const controls = Array.from(form.elements || [submitter])
 				.filter(
 					(control) =>
 						!(
 							form.dataset?.ranBoosterSettingsScope &&
-							control.matches?.('input[role="switch"], fieldset')
+							(control.matches?.(
+								'input[role="switch"], fieldset'
+							) ||
+								(switchScope &&
+									control.closest?.(
+										'[data-ran-booster-ui-switch="general-preference"][data-ran-booster-ui-mounted] > [data-ran-booster-ui-switch-mount]'
+									)))
 						)
 				)
 				.map(function (control) {
@@ -381,10 +391,6 @@
 				submitterAriaBusy: submitter.getAttribute('aria-busy'),
 			});
 			form.setAttribute('aria-busy', 'true');
-			const switchScope = [
-				'hide_github',
-				'self_update_discovery',
-			].includes(form.dataset?.ranBoosterSettingsScope);
 			if (!switchScope) {
 				form.classList.add('ran-booster-enhanced-mutation-is-busy');
 			}

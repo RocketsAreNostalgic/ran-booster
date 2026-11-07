@@ -13,7 +13,6 @@
 
 .ran-booster-admin h2.ran-booster-package-heading {
 	display: inline-block;
-	margin-block-start: var(--ran-booster-space-16);
 	margin-inline-end: var(--ran-booster-space-8);
 }
 

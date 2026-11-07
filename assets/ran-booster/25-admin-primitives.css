@@ -72,7 +72,7 @@
 }
 
 .ran-booster-admin .ran-booster-page-shell__header {
-	padding-block: var(--ran-booster-space-22) var(--ran-booster-space-20);
+	padding-block: 0 var(--ran-booster-space-20);
 	padding-inline: var(--ran-booster-space-24);
 }
 

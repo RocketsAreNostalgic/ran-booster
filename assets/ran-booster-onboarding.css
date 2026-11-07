@@ -1392,12 +1392,10 @@
 
 .ran-booster-admin
 	[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted]
-	.ran-booster-portability__mode:not(
-		:hover,
-		:focus,
-		:disabled,
-		[aria-pressed="true"]
-	) {
+	.ran-booster-portability__mode:is(
+		[data-portability-mode="export"],
+		[data-portability-mode="import"]
+	):not(:hover, :focus, :disabled, [aria-pressed="true"]) {
 	border-color: transparent;
 	background: transparent;
 }

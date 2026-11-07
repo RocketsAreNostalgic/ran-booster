@@ -171,7 +171,10 @@ final class AdminAssetContractTest extends TestCase {
 
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-panel,', $primitives );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,', $primitives );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {', $primitives );
+		self::assertStringContainsString(
+			".ran-booster-admin\n\t.ran-booster-portability\n\t> .ran-booster-portability__flow:not(\n\t\t[data-ran-booster-card=\"transporter\"][data-ran-booster-ui-mounted]\n\t) {",
+			$primitives
+		);
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-action-row {', $primitives );
 		self::assertStringContainsString( 'ran-booster-debug-capture__panel ran-booster-panel', $debug );
 	}

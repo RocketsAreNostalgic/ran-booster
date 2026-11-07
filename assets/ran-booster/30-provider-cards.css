@@ -1039,3 +1039,34 @@
 .ran-booster-admin .ran-booster-credential-health__error {
 	color: var(--ran-booster-text-danger);
 }
+
+/* The mounted credentials surface owns its interior spacing. */
+.ran-booster-admin
+	[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content {
+	padding: var(--ran-booster-space-22) var(--ran-booster-space-24)
+		var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content
+	> .ran-booster-provider__footer {
+	margin: var(--ran-booster-space-24) calc(-1 * var(--ran-booster-space-24))
+		calc(-1 * var(--ran-booster-space-24));
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-admin
+		[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+		.ran-booster-card__content {
+		padding-inline: var(--ran-booster-space-18);
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+		.ran-booster-card__content
+		> .ran-booster-provider__footer {
+		margin-inline: calc(-1 * var(--ran-booster-space-18));
+	}
+}

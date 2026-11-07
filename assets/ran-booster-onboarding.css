@@ -1374,3 +1374,41 @@
 	overflow-wrap: anywhere;
 	white-space: normal;
 }
+
+/* Mounted Transporter Cards provide their own frame and content inset. */
+.ran-booster-admin
+	.ran-booster-portability
+	> [data-ran-booster-card="transporter"][data-ran-booster-ui-mounted] {
+	padding: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-portability
+	> [data-ran-booster-card="transporter"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content {
+	padding-block: var(--ran-booster-space-22);
+	padding-inline: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted]
+	.ran-booster-portability__mode:is(
+		[data-portability-mode="export"],
+		[data-portability-mode="import"]
+	):not(:hover, :focus, :disabled, [aria-pressed="true"]) {
+	border-color: transparent;
+	background: transparent;
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted]
+	:is(
+		.ran-booster-portability__upload,
+		.ran-booster-portability__review,
+		.ran-booster-portability__apply
+	) {
+	padding-inline: 0;
+	border-block-start: 1px solid var(--ran-booster-border);
+	border-radius: 0;
+	background: transparent;
+}

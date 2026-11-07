@@ -57,7 +57,11 @@
 
 .ran-booster-admin .ran-booster-panel,
 .ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,
-.ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {
+.ran-booster-admin
+	.ran-booster-portability
+	> .ran-booster-portability__flow:not(
+		[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted]
+	) {
 	overflow: hidden;
 	border: 1px solid var(--ran-booster-border);
 	border-radius: var(--ran-booster-radius-surface);

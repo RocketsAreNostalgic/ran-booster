@@ -1212,3 +1212,23 @@ test('provider Card preserves native form and link through cleanup and history',
 	f.flush();
 	assert.equal(form.firstChild, link);
 });
+
+test('Transporter Card preserves its hidden state, form, link and identity on history', () => {
+	const f = fixture();
+	const { card, form, link } = f.make('transporter', f.doc.body, 'section');
+	card.hidden = true;
+	card.setAttribute('id', 'transport-flow');
+	link.focus();
+	f.run();
+	f.flush();
+	assert.equal(f.tree().type, 'CardRoot');
+	assert.equal(card.hidden, true);
+	assert.equal(card.getAttribute('id'), 'transport-flow');
+	assert.equal(form.firstChild, link);
+	assert.equal(f.doc.activeElement, link);
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(form.parentElement, card);
+	assert.equal(form.firstChild, link);
+	f.flush();
+	assert.equal(form.firstChild, link);
+});

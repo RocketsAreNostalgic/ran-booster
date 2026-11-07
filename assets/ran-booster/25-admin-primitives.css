@@ -304,3 +304,13 @@
 		max-block-size: calc(100vh - 20px);
 	}
 }
+
+.ran-booster-admin
+	.ran-booster-portability
+	> .ran-booster-portability__flow[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted] {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}

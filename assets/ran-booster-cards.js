@@ -184,6 +184,7 @@
 					'provider',
 					'settings',
 					'themes',
+					'transporter',
 					'package-edit',
 					'activity',
 				].includes(card.getAttribute('data-ran-booster-card'))) ||

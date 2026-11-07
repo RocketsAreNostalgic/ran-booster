@@ -947,3 +947,31 @@ test('edit-only Card preserves controls associated with an external native form'
 	f.flush();
 	assert.equal(create.card.getAttribute('data-ran-booster-ui-mounted'), null);
 });
+
+test('Activity Card keeps native controls and current rows through history and fallback', () => {
+	const f = fixture();
+	const { card, form, link } = f.make('activity', f.doc.body, 'section');
+	const table = new f.Node('table');
+	const row = new f.Node('tr');
+	table.appendChild(row);
+	card.appendChild(table);
+	link.focus();
+	f.run();
+	f.flush();
+	assert.equal(f.tree().type, 'CardRoot');
+	assert.equal(form.firstChild, link);
+	assert.equal(table.firstChild, row);
+	assert.equal(f.doc.activeElement, link);
+	const appended = new f.Node('tr');
+	table.appendChild(appended);
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(table.parentElement, card);
+	assert.equal(table.childNodes.at(-1), appended);
+	assert.equal(f.doc.activeElement, link);
+	f.window.ranBoosterUI.CardRoot = null;
+	f.flush();
+	assert.equal(table.parentElement, card);
+	assert.equal(table.childNodes.at(-1), appended);
+	assert.equal(form.firstChild, link);
+	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
+});

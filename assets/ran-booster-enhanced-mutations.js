@@ -42,6 +42,10 @@
 			}
 			const previous = snackbar;
 			snackbar = null;
+			if (previous.reposition) {
+				window.removeEventListener('resize', previous.reposition);
+				previous.observer?.disconnect();
+			}
 			previous.root.unmount();
 			previous.host.remove();
 		}
@@ -144,6 +148,25 @@
 					)
 				);
 				if (current.host.querySelector('.components-snackbar')) {
+					current.reposition = () => {
+						const rect = region.getBoundingClientRect();
+						current.host.style.setProperty(
+							'--ran-booster-snackbar-center',
+							`${rect.left + rect.width / 2}px`
+						);
+					};
+					current.reposition();
+					window.addEventListener('resize', current.reposition);
+					if (window.ResizeObserver) {
+						current.observer = new window.ResizeObserver(
+							current.reposition
+						);
+						current.observer.observe(region);
+						const content = document.getElementById('wpcontent');
+						if (content) {
+							current.observer.observe(content);
+						}
+					}
 					return true;
 				}
 				disposeSnackbar();

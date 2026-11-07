@@ -683,6 +683,7 @@ test('re-evaluating feedback initialization preserves the request lifecycle', ()
 test('General feedback requires the matching response and falls back when Core rendering is unavailable', () => {
 	for (const mode of [
 		'ready',
+		'ready-dismiss',
 		'missing-component',
 		'missing-style',
 		'render-failure',
@@ -698,17 +699,46 @@ test('General feedback requires the matching response and falls back when Core r
 		state.form.isConnected = true;
 		let rendered = 0;
 		let unmounted = 0;
+		let center = 0;
+		let regionLeft = 200;
+		const content = {};
+		const observed = [];
+		let observerCallback;
+		let disconnected = 0;
+		let dismiss;
+		state.window.ResizeObserver = class {
+			constructor(callback) {
+				observerCallback = callback;
+			}
+			observe(target) {
+				observed.push(target);
+			}
+			disconnect() {
+				disconnected++;
+			}
+		};
+		state.window.removeEventListener = (name) =>
+			state.listeners.delete(`window:${name}`);
 		state.form.matches = (selector) =>
 			selector === '[data-ran-booster-general-form]' ||
 			selector === '[data-ran-booster-enhanced-mutation]';
 		state.form.addEventListener = (name, callback) =>
 			sourceListeners.set(name, callback);
 		state.form.removeEventListener = (name) => sourceListeners.delete(name);
-		state.document.getElementById = (id) =>
-			id === 'ran-booster-general-region' ? region : state.error;
+		state.document.getElementById = (id) => {
+			if (id === 'ran-booster-general-region') {
+				return region;
+			}
+			return id === 'wpcontent' ? content : state.error;
+		};
 		state.document.body = { append() {} };
 		state.document.createElement = () => ({
-			style: {},
+			style: {
+				setProperty(name, value) {
+					assert.equal(name, '--ran-booster-snackbar-center');
+					center = value;
+				},
+			},
 			ownerDocument: state.document,
 			isConnected: true,
 			remove() {},
@@ -720,7 +750,10 @@ test('General feedback requires the matching response and falls back when Core r
 			backgroundColor: mode === 'missing-style' ? 'transparent' : 'black',
 		});
 		state.window.wp.element = {
-			createElement: (component, props) => ({ component, props }),
+			createElement: (component, props) => {
+				dismiss = props.onRemove;
+				return { component, props };
+			},
 			createRoot: () => ({
 				render() {
 					if (mode === 'render-failure') {
@@ -761,6 +794,7 @@ test('General feedback requires the matching response and falls back when Core r
 		region = {
 			id: 'ran-booster-general-region',
 			hasAttribute: () => true,
+			getBoundingClientRect: () => ({ left: regionLeft, width: 800 }),
 			insertAdjacentElement() {},
 		};
 		state.listeners.get('htmx:afterSwap')({
@@ -769,11 +803,25 @@ test('General feedback requires the matching response and falls back when Core r
 		state.listeners.get('ran-booster:admin-mutation-success')({
 			detail: { message: 'Saved.' },
 		});
-		assert.equal(rendered, mode === 'ready' ? 1 : 0, mode);
-		assert.equal(state.toast.hidden, mode === 'ready', mode);
-		if (mode === 'ready') {
+		assert.equal(rendered, mode.startsWith('ready') ? 1 : 0, mode);
+		assert.equal(state.toast.hidden, mode.startsWith('ready'), mode);
+		if (mode.startsWith('ready')) {
+			assert.equal(center, '600px');
+			assert.deepEqual(observed, [region, content]);
+			regionLeft = 120;
+			state.listeners.get('window:resize')();
+			assert.equal(center, '520px');
+			regionLeft = 90;
+			observerCallback();
+			assert.equal(center, '490px');
+			if (mode === 'ready-dismiss') {
+				dismiss();
+			} else {
+				state.listeners.get('htmx:beforeHistorySave')();
+			}
 			state.listeners.get('htmx:beforeHistorySave')();
-			state.listeners.get('htmx:beforeHistorySave')();
+			assert.equal(disconnected, 1);
+			assert.equal(state.listeners.has('window:resize'), false);
 			assert.equal(
 				unmounted,
 				1,

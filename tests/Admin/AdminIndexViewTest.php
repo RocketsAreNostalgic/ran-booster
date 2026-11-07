@@ -106,7 +106,7 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringContainsString( 'assets/booster-nozzle-10364e-cream-transparent.svg" width="32" height="32" alt="" aria-hidden="true"', $html );
 		self::assertStringContainsString( '<header class="ran-admin-shell ran-admin-shell--inverse">', $html );
 		self::assertSame( 1, substr_count( $html, '<hr class="wp-header-end">' ) );
-		self::assertStringContainsString( '<nav class="ran-admin-shell__navigation" aria-label="RAN Booster sections">', $html );
+		self::assertStringContainsString( '<nav class="ran-admin-shell__navigation ran-section-navigation ran-section-navigation--thick" aria-label="RAN Booster sections">', $html );
 		self::assertStringNotContainsString( 'nav-tab-wrapper', $html );
 		self::assertStringNotContainsString( 'class="nav-tab', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-plugins">Plugins</a>', $html );
@@ -123,7 +123,7 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Prepare your site', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-development-safety', $html );
 		$strapline_position   = strpos( $html, 'Rockets Are Nostalgic' );
-		$navigation_position  = strpos( $html, '<nav class="ran-admin-shell__navigation"' );
+		$navigation_position  = strpos( $html, '<nav class="ran-admin-shell__navigation ran-section-navigation ran-section-navigation--thick"' );
 		$core_notice_position = strpos( $html, 'data-ran-booster-core-development-notice' );
 		$wrap_position        = strpos( $html, '<div class="wrap ran-booster-admin" data-ran-booster-shell-navigation>' );
 		$marker_position      = strpos( $html, '<hr class="wp-header-end">' );

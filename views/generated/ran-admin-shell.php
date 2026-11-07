@@ -47,8 +47,9 @@ foreach ( $ran_admin_shell_breadcrumbs as $ran_admin_shell_index => $ran_admin_s
 		break;
 	}
 }
-$ran_admin_shell_breadcrumbs_label = isset( $ran_admin_shell['breadcrumbs_label'] ) && is_scalar( $ran_admin_shell['breadcrumbs_label'] ) ? trim( (string) $ran_admin_shell['breadcrumbs_label'] ) : '';
-$ran_admin_shell_navigation_label  = isset( $ran_admin_shell['navigation_label'] ) && is_scalar( $ran_admin_shell['navigation_label'] ) ? trim( (string) $ran_admin_shell['navigation_label'] ) : '';
+$ran_admin_shell_breadcrumbs_label  = isset( $ran_admin_shell['breadcrumbs_label'] ) && is_scalar( $ran_admin_shell['breadcrumbs_label'] ) ? trim( (string) $ran_admin_shell['breadcrumbs_label'] ) : '';
+$ran_admin_shell_navigation_label   = isset( $ran_admin_shell['navigation_label'] ) && is_scalar( $ran_admin_shell['navigation_label'] ) ? trim( (string) $ran_admin_shell['navigation_label'] ) : '';
+$ran_admin_shell_navigation_variant = isset( $ran_admin_shell['navigation_variant'] ) && in_array( $ran_admin_shell['navigation_variant'], array( 'thick', 'thin' ), true ) ? $ran_admin_shell['navigation_variant'] : '';
 
 $ran_admin_shell_valid_image = static function ( $image ) {
 	return is_array( $image )
@@ -143,11 +144,11 @@ $ran_admin_shell_actions        = array_values(
 			</ol>
 		</nav>
 	<?php elseif ( $ran_admin_shell_navigation ) : ?>
-		<nav class="ran-admin-shell__navigation" aria-label="<?php echo esc_attr( '' !== $ran_admin_shell_navigation_label ? $ran_admin_shell_navigation_label : 'Plugin sections' ); ?>">
+		<nav class="ran-admin-shell__navigation<?php echo '' !== $ran_admin_shell_navigation_variant ? ' ran-section-navigation ran-section-navigation--' . esc_attr( $ran_admin_shell_navigation_variant ) : ''; ?>" aria-label="<?php echo esc_attr( '' !== $ran_admin_shell_navigation_label ? $ran_admin_shell_navigation_label : 'Plugin sections' ); ?>">
 			<?php $ran_admin_shell_current_rendered = false; ?>
 			<?php foreach ( $ran_admin_shell_navigation as $ran_admin_shell_item ) : ?>
 				<?php $ran_admin_shell_is_current = ! $ran_admin_shell_current_rendered && ! empty( $ran_admin_shell_item['current'] ); ?>
-				<a href="<?php echo esc_url( (string) $ran_admin_shell_item['url'] ); ?>"<?php echo $ran_admin_shell_is_current ? ' aria-current="page"' : ''; ?>><?php echo esc_html( trim( (string) $ran_admin_shell_item['label'] ) ); ?></a>
+				<a<?php echo '' !== $ran_admin_shell_navigation_variant ? ' class="ran-section-navigation__link"' : ''; ?> href="<?php echo esc_url( (string) $ran_admin_shell_item['url'] ); ?>"<?php echo $ran_admin_shell_is_current ? ' aria-current="page"' : ''; ?>><?php echo esc_html( trim( (string) $ran_admin_shell_item['label'] ) ); ?></a>
 				<?php $ran_admin_shell_current_rendered = $ran_admin_shell_current_rendered || $ran_admin_shell_is_current; ?>
 			<?php endforeach; ?>
 		</nav>

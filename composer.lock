@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "28f79498ef32bedd80290416393fb4ea",
+    "content-hash": "c147bc291be1b9ddcd653bc0debeb8e3",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1721,16 +1721,16 @@
         },
         {
             "name": "ran/admin-shell",
-            "version": "dev-fix/navigation-pointer-focus",
+            "version": "dev-work/40-static-navigation",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "5b8d58986503f2e00bcbc418214161db3ff6d3b2"
+                "reference": "b7a6d21119ae601405d1b80c7a913c8aa14e0741"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/5b8d58986503f2e00bcbc418214161db3ff6d3b2",
-                "reference": "5b8d58986503f2e00bcbc418214161db3ff6d3b2",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/b7a6d21119ae601405d1b80c7a913c8aa14e0741",
+                "reference": "b7a6d21119ae601405d1b80c7a913c8aa14e0741",
                 "shasum": ""
             },
             "require": {
@@ -3169,7 +3169,7 @@
         "ext-sodium": "*",
         "ext-zip": "*"
     },
-    "platform-dev": {},
+    "platform-dev": [],
     "platform-overrides": {
         "php": "8.2.0"
     },

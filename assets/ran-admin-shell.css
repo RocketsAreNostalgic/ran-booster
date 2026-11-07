@@ -251,6 +251,142 @@ body.admin-bar .ran-admin-shell {
 	border-block-end-color: var(--ran-admin-shell-nav-indicator);
 }
 
+/* One opt-in track for the Shell and exported section navigation. */
+.ran-section-navigation {
+	--ran-section-indicator-size: 3px;
+	--ran-section-focus-inset: 10px;
+	--ran-section-link-height: 48px;
+	--ran-section-link-weight: 400;
+	--ran-section-indicator-color: var(
+		--ran-admin-shell-nav-indicator,
+		var(--wp-admin-theme-color, #3858e9)
+	);
+	--ran-section-focus-color: var(
+		--ran-admin-shell-focus,
+		var(--wp-admin-theme-color, #3858e9)
+	);
+	position: relative;
+	display: flex;
+	flex-wrap: nowrap;
+	gap: 0;
+	box-sizing: border-box;
+	overflow-x: auto;
+	scroll-padding-inline: 8px;
+}
+
+.ran-section-navigation--thin {
+	--ran-section-indicator-size: 2px;
+	--ran-section-focus-inset: 4px;
+	--ran-section-link-height: 36px;
+	--ran-section-link-weight: 600;
+	gap: 4px;
+}
+
+.ran-section-navigation > li {
+	display: flex;
+	flex: 0 0 auto;
+	float: none;
+	max-inline-size: 100%;
+	margin: 0;
+}
+
+.ran-section-navigation .ran-section-navigation__link {
+	position: relative;
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	box-sizing: border-box;
+	max-inline-size: 100%;
+	min-block-size: var(--ran-section-link-height);
+	margin: 0;
+	padding: 8px;
+	border-block-end: var(--ran-section-indicator-size) solid transparent;
+	font-weight: var(--ran-section-link-weight);
+	line-height: 1.3;
+	text-decoration: none;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	scroll-margin-inline: 8px;
+}
+
+.ran-section-navigation .ran-section-navigation__link[aria-current="page"] {
+	border-block-end-color: var(--ran-section-indicator-color);
+}
+
+/* The frame is inside the link and remains visible during pointer activation. */
+.ran-section-navigation .ran-section-navigation__link:focus {
+	box-shadow: none;
+	outline: none;
+}
+
+.ran-section-navigation .ran-section-navigation__link:focus::before {
+	position: absolute;
+	inset-block: var(--ran-section-focus-inset);
+	inset-inline: 2px;
+	border: 2px solid var(--ran-section-focus-color);
+	border-radius: 2px;
+	content: "";
+	pointer-events: none;
+}
+
+.ran-section-navigation > .ran-section-navigation__indicator {
+	position: absolute;
+	top: var(--ran-section-indicator-top, 0);
+	left: 0;
+	display: block;
+	inline-size: var(--ran-section-indicator-width, 0);
+	block-size: var(--ran-section-indicator-size);
+	margin: 0;
+	padding: 0;
+	background: var(--ran-section-indicator-color);
+	opacity: 0;
+	transform: translateX(var(--ran-section-indicator-x, 0));
+	pointer-events: none;
+}
+
+.ran-section-navigation--ready > .ran-section-navigation__indicator {
+	opacity: 1;
+}
+
+.ran-section-navigation--ready
+	.ran-section-navigation__link[aria-current="page"] {
+	border-block-end-color: transparent;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+	.ran-section-navigation--moving > .ran-section-navigation__indicator {
+		transition:
+			transform 180ms ease-out,
+			inline-size 180ms ease-out,
+			top 180ms ease-out;
+	}
+
+	.ran-admin-shell__navigation > .ran-section-navigation__indicator {
+		view-transition-name: ran-section-header-indicator;
+	}
+
+	@view-transition {
+		navigation: auto;
+	}
+
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation: none;
+	}
+
+	::view-transition-group(ran-section-header-indicator) {
+		animation-duration: 180ms;
+		animation-timing-function: ease-out;
+	}
+}
+
+@media (forced-colors: active) {
+	.ran-section-navigation {
+		--ran-section-indicator-color: CanvasText;
+		--ran-section-focus-color: Highlight;
+	}
+}
+
 .ran-admin-shell__navigation > a:hover {
 	background: transparent;
 	color: inherit;

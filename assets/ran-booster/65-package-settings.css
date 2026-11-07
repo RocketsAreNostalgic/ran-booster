@@ -1302,7 +1302,7 @@
 	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties, plugin-wpds/no-token-fallback-values -- Match the public brand foreground fallback for enabled General status. */
 	--wpds-color-foreground-content-success: var(
 		--wpds-color-foreground-interactive-brand-strong,
-		#fff
+		var(--ran-booster-color-neutral-0)
 	);
 }
 

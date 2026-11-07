@@ -259,6 +259,31 @@ test('child anchors open and activate their containing indexed section', () => {
 	assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
 });
 
+test('history opens the child article before native scroll restoration and hashchange', () => {
+	const fixture = createFixture({ hash: '#second' });
+	fixture.window.location.hash = '#child';
+	fixture.windowListeners.get('popstate')();
+
+	assert.equal(fixture.first.open, true);
+	assert.equal(fixture.second.open, false);
+	assert.equal(fixture.window.location.hash, '#child');
+	fixture.windowListeners.get('hashchange')();
+	assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
+});
+
+test('history with an invalid fragment leaves the open article and current link intact', () => {
+	for (const hash of ['#missing', '#%E0%A4%A']) {
+		const fixture = createFixture({ hash: '#second' });
+		fixture.window.location.hash = hash;
+		fixture.windowListeners.get('popstate')();
+
+		assert.equal(fixture.second.open, true);
+		assert.equal(fixture.first.open, false);
+		assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+		assert.equal(fixture.window.location.hash, hash);
+	}
+});
+
 test('malformed and unknown hashes preserve the current active link safely', () => {
 	const fixture = createFixture();
 

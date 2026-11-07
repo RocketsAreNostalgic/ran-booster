@@ -30,6 +30,8 @@ function fixture({
 			this.ownerDocument = doc;
 			this.attributes = new Map();
 			this.hidden = false;
+			this.disabled = false;
+			this.textContent = '';
 			if (label !== null) {
 				this.setAttribute('data-ran-booster-card', label);
 			}
@@ -48,10 +50,18 @@ function fixture({
 		}
 		remove() {
 			if (this.parentElement) {
+				if (this.contains(doc.activeElement)) {
+					doc.activeElement = doc.body;
+				}
 				const a = this.parentElement.childNodes;
 				a.splice(a.indexOf(this), 1);
 				this.parentElement = null;
 			}
+		}
+		replaceWith(node) {
+			const parent = this.parentElement;
+			parent.insertBefore(node, this);
+			this.remove();
 		}
 		insertBefore(node, before) {
 			node.remove();
@@ -81,6 +91,9 @@ function fixture({
 		setAttribute(name, value) {
 			this.attributes.set(name, String(value));
 		}
+		hasAttribute(name) {
+			return this.attributes.has(name);
+		}
 		getAttribute(name) {
 			return this.attributes.get(name) ?? null;
 		}
@@ -88,6 +101,9 @@ function fixture({
 			this.attributes.delete(name);
 		}
 		matches(selector) {
+			if (selector === 'button') {
+				return this.tagName === 'BUTTON';
+			}
 			if (selector === '.ran-booster-admin') {
 				return !!this.admin;
 			}
@@ -167,6 +183,11 @@ function fixture({
 					);
 					host.appendChild(surface);
 					surface.appendChild(content);
+				} else if (value.type === 'Button') {
+					const button = new Node('button');
+					button.disabled = value.props.disabled;
+					button.textContent = value.children[0];
+					host.appendChild(button);
 				} else {
 					host.appendChild(new Node('badge-output'));
 				}
@@ -184,6 +205,7 @@ function fixture({
 			? {
 					CardRoot: cardComponent ? 'CardRoot' : null,
 					Badge: 'Badge',
+					Button: 'Button',
 					NoticeRoot: 'NoticeRoot',
 					NoticeDescription: 'NoticeDescription',
 				}
@@ -221,6 +243,35 @@ function fixture({
 		parent.appendChild(host);
 		return { host, content, paragraph, link };
 	}
+	function presentation() {
+		const form = new Node('form'),
+			nonce = new Node('input'),
+			host = new Node('span'),
+			button = new Node('button'),
+			mount = new Node('span');
+		host.setAttribute(
+			'data-ran-booster-ui-button',
+			'overview-presentation'
+		);
+		button.setAttribute('data-ran-booster-ui-button-fallback', '');
+		button.setAttribute('type', 'submit');
+		button.setAttribute('name', 'presentation');
+		button.setAttribute('value', 'compact');
+		button.setAttribute('id', 'presentation-button');
+		button.setAttribute('aria-label', 'Choose compact');
+		button.setAttribute('aria-describedby', 'hint');
+		button.setAttribute('form', 'target-form');
+		button.setAttribute('title', 'Compact view');
+		button.textContent = 'Compact';
+		mount.setAttribute('data-ran-booster-ui-button-mount', '');
+		form.appendChild(nonce);
+		form.appendChild(host);
+		host.appendChild(button);
+		host.appendChild(mount);
+		doc.body.appendChild(form);
+		return { form, nonce, host, button, mount };
+	}
+
 	function badge(parent = doc.body) {
 		const host = new Node('span'),
 			fallback = new Node('span'),
@@ -252,6 +303,7 @@ function fixture({
 		doc,
 		Node,
 		make,
+		presentation,
 		badge,
 		notice,
 		unmountOrder,
@@ -727,4 +779,98 @@ test('multiple cards restore nested Notice and Badge before their ancestors', ()
 			assert.equal(notice.content.childNodes.at(-1), fresh);
 		}
 	}
+});
+test('presentation Button replaces only the native submitter, copies its authority and restores its identity', () => {
+	const f = fixture();
+	const { form, nonce, host, button, mount } = f.presentation();
+	button.focus();
+	f.run();
+	f.flush();
+	const replacement = mount.querySelector('button');
+	assert.equal(f.tree().type, 'Button');
+	assert.equal(f.tree().props.type, 'submit');
+	assert.equal(f.tree().props.focusableWhenDisabled, false);
+	assert.equal(f.tree().props.tone, 'neutral');
+	assert.equal(f.tree().props.variant, 'outline');
+	assert.equal(f.tree().props.name, 'presentation');
+	assert.equal(f.tree().props.value, 'compact');
+	assert.equal(f.tree().props.id, 'presentation-button');
+	assert.equal(f.tree().props['aria-label'], 'Choose compact');
+	assert.equal(f.tree().props['aria-describedby'], 'hint');
+	assert.equal(f.tree().props.form, 'target-form');
+	assert.equal(f.tree().props.title, 'Compact view');
+	assert.equal(f.tree().children[0], 'Compact');
+	assert.equal(form.firstChild, nonce);
+	assert.equal(host.firstChild, mount);
+	assert.equal(button.isConnected, false);
+	assert.equal(f.doc.activeElement, replacement);
+	f.emit('htmx:load', host);
+	f.flush();
+	assert.equal(f.counts().renders, 1);
+	replacement.disabled = true;
+	f.emit('htmx:beforeCleanupElement', host);
+	assert.equal(host.firstChild, button);
+	assert.equal(host.childNodes[1], mount);
+	assert.equal(mount.firstChild, undefined);
+	assert.equal(button.disabled, true);
+	assert.equal(f.doc.activeElement, button);
+	assert.equal(form.firstChild, nonce);
+});
+
+test('presentation Button history restores native submitter and remounts without duplicate actions', () => {
+	const f = fixture();
+	const { host, button, mount } = f.presentation();
+	f.run();
+	f.flush();
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(host.firstChild, button);
+	assert.equal(mount.firstChild, undefined);
+	f.flush();
+	assert.equal(host.firstChild, mount);
+	assert.equal(host.querySelectorAll('button').length, 1);
+	assert.equal(f.counts().renders, 2);
+	assert.equal(button.isConnected, false);
+});
+
+test('presentation Button failure or missing component keeps the original usable', () => {
+	for (const mode of ['missing', 'render', 'kind', 'type']) {
+		const f = fixture();
+		const { host, button, mount } = f.presentation();
+		if (mode === 'missing') {
+			f.window.ranBoosterUI.Button = null;
+		}
+		if (mode === 'render') {
+			mount.fail = true;
+		}
+		if (mode === 'kind') {
+			host.setAttribute('data-ran-booster-ui-button', 'other');
+		}
+		if (mode === 'type') {
+			button.setAttribute('type', 'button');
+		}
+		f.run();
+		f.flush();
+		assert.equal(host.firstChild, button);
+		assert.equal(button.isConnected, true);
+		assert.equal(host.childNodes[1], mount);
+		assert.equal(mount.firstChild, undefined);
+		assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
+	}
+});
+
+test('presentation Button preserves disabled state and never steals external focus', () => {
+	const f = fixture();
+	const { host, button, mount } = f.presentation();
+	button.disabled = true;
+	const other = new f.Node('button');
+	f.doc.body.appendChild(other);
+	other.focus();
+	f.run();
+	f.flush();
+	assert.equal(f.tree().props.disabled, true);
+	assert.equal(f.doc.activeElement, other);
+	f.emit('htmx:beforeCleanupElement', host);
+	assert.equal(button.disabled, true);
+	assert.equal(f.doc.activeElement, other);
+	assert.equal(mount.firstChild, undefined);
 });

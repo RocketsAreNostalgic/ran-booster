@@ -818,11 +818,11 @@ class Booster {
 			) {
 				wp_enqueue_script( 'wp-element' );
 				wp_enqueue_script( 'react-jsx-runtime' );
+				wp_enqueue_script( 'wp-i18n' );
+				wp_enqueue_script( 'wp-a11y' );
 				$ui_url = trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/';
 				wp_enqueue_script_module( 'ran-booster-ui', $ui_url . $ui_manifest['foundation'], array(), null );
 				if ( $has_ui_overlay ) {
-					wp_enqueue_script( 'wp-i18n' );
-					wp_enqueue_script( 'wp-a11y' );
 					wp_enqueue_script_module( 'ran-booster-ui-overlay', $ui_url . $ui_manifest['overlay'], array( 'ran-booster-ui' ), null );
 				}
 			}
@@ -831,7 +831,7 @@ class Booster {
 			wp_enqueue_script(
 				'ran-booster-cards',
 				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
-				array( 'wp-element', 'react-jsx-runtime' ),
+				array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y' ),
 				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
 				true
 			);

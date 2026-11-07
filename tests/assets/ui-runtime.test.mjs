@@ -46,7 +46,7 @@ test('manifest identifies two canonical assets and separate page budgets', () =>
 	assert.match(entries.foundation, /^ran-booster-ui-foundation-[\w-]+\.js$/);
 	assert.match(entries.overlay, /^ran-booster-ui-overlay-[\w-]+\.js$/);
 	assert.ok(
-		foundation.length + adapter.length <= 80000,
+		foundation.length + adapter.length <= 90000,
 		'foundation and adapter raw'
 	);
 	assert.ok(
@@ -87,6 +87,7 @@ test('host React loads the foundation once and overlay extends the same object',
 			card = ui.CardRoot;
 		assert.deepEqual(Object.keys(ui).sort(), [
 			'Badge',
+			'Button',
 			'CardRoot',
 			'NoticeDescription',
 			'NoticeRoot',
@@ -109,6 +110,23 @@ test('host React loads the foundation once and overlay extends the same object',
 		]);
 		assert.ok(ui.Input);
 		const render = require('react-dom/server').renderToStaticMarkup;
+		const button = render(
+			React.createElement(
+				ui.Button,
+				{
+					type: 'submit',
+					name: 'mode',
+					value: 'compact',
+					disabled: true,
+					focusableWhenDisabled: false,
+				},
+				'Compact'
+			)
+		);
+		assert.match(button, /<button[^>]*type="submit"/);
+		assert.match(button, /name="mode"/);
+		assert.match(button, /value="compact"/);
+		assert.match(button, /disabled=""/);
 		assert.match(
 			render(React.createElement(ui.CardRoot, null, 'Card content')),
 			/Card content/
@@ -156,7 +174,7 @@ test('host React loads the foundation once and overlay extends the same object',
 	}
 });
 
-test('overlay fails before publishing controls when either WordPress host service is missing', () => {
+test('foundation fails before publishing controls when either WordPress host service is missing', () => {
 	const script = `
 		import React from 'react';
 		import * as ReactDOM from 'react-dom';
@@ -165,10 +183,9 @@ test('overlay fails before publishing controls when either WordPress host servic
 		globalThis.wp = { i18n: {__: x => x}, a11y: {speak() {}} };
 		if (process.argv[2] === 'i18n') delete globalThis.wp.i18n.__;
 		if (process.argv[2] === 'a11y') delete globalThis.wp.a11y.speak;
-		await import(process.argv[1]);
-		try { await import(process.argv[3]); process.exitCode = 2; }
+		try { await import(process.argv[1]); process.exitCode = 2; }
 		catch (error) {
-			if (!error.message.includes('Missing WordPress host service') || 'Dialog' in window.ranBoosterUI || 'Input' in window.ranBoosterUI) process.exitCode = 3;
+			if (!error.message.includes('Missing WordPress host service') || window.ranBoosterUI !== undefined) process.exitCode = 3;
 		}
 	`;
 	for (const missing of ['i18n', 'a11y']) {

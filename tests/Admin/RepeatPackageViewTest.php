@@ -432,16 +432,19 @@ final class RepeatPackageViewTest extends TestCase {
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previous );
 		$xpath   = new \DOMXPath( $document );
-		$notices = $xpath->query( '//*[@data-ran-booster-ui-notice]' );
+		$notices = $xpath->query( '//div[contains(concat(" ", normalize-space(@class), " "), " notice-error ")][.//strong[normalize-space(.) = "Git provider unavailable."]]' );
 		self::assertNotFalse( $notices );
 		self::assertCount( $provider_available ? 0 : 1, $notices );
 		if ( $provider_available ) {
 			return;
 		}
-		$content = $xpath->query( '//*[@data-ran-booster-ui-notice][contains(concat(" ", normalize-space(@class), " "), " notice-error ")]/div[@data-ran-booster-ui-notice-content]' );
+		$provider_notice = $notices->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $provider_notice );
+		self::assertTrue( $provider_notice->hasAttribute( 'data-ran-booster-ui-notice' ) );
+		$content = $xpath->query( './div[@data-ran-booster-ui-notice-content]', $provider_notice );
 		self::assertNotFalse( $content );
 		self::assertCount( 1, $content );
-		$notice_children = $xpath->query( '//*[@data-ran-booster-ui-notice]/*' );
+		$notice_children = $xpath->query( './*', $provider_notice );
 		self::assertNotFalse( $notice_children );
 		self::assertCount( 1, $notice_children );
 		$notice_content = $content->item( 0 );

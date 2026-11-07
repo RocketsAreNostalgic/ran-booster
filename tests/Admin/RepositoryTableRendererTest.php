@@ -10,6 +10,55 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\Component\RepositoryTableRenderer;
 
 final class RepositoryTableRendererTest extends TestCase {
+	public function test_historical_badges_preserve_exact_labels_and_only_map_known_tones(): void {
+		foreach ( array(
+			'neutral' => 'none',
+			'pending' => 'none',
+			'ok'      => 'stable',
+			'success' => 'stable',
+			'warning' => 'medium',
+			'error'   => 'high',
+			'info'    => 'informational',
+			'future'  => '',
+		) as $tone => $intent ) {
+			$html = $this->render(
+				array(
+					'repository' => 'owner/history',
+					'historical' => true,
+					'details'    => array(
+						array(
+							'label' => 'Recorded fact',
+							'value' => 'Exact <status> "quoted"',
+							'tone'  => $tone,
+						),
+					),
+				)
+			);
+			if ( '' === $intent ) {
+				self::assertStringNotContainsString( 'data-ran-booster-ui-badge', $html );
+				self::assertStringContainsString( '<span class="ran-booster-badge ran-booster-badge--future">Exact &lt;status&gt; &quot;quoted&quot;</span>', $html );
+				continue;
+			}
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Exact &lt;status&gt; &quot;quoted&quot;"', $html );
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-intent="' . $intent . '"', $html );
+			self::assertStringContainsString( '<span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--' . $tone . '">Exact &lt;status&gt; &quot;quoted&quot;</span><span data-ran-booster-ui-badge-mount></span>', $html );
+		}
+		self::assertStringNotContainsString(
+			'data-ran-booster-ui-badge',
+			$this->render(
+				array(
+					'historical' => true,
+					'details'    => array(
+						array(
+							'label' => 'Empty recorded fact',
+							'value' => '',
+							'tone'  => 'warning',
+						),
+					),
+				)
+			)
+		);
+	}
 
 	public function test_it_owns_the_complete_common_repository_markup(): void {
 		$html = $this->render(

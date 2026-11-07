@@ -126,7 +126,24 @@ final class RepositoryTableRenderer {
 			<div>
 				<strong><?php echo esc_html( $label ); ?></strong>
 				<?php if ( '' !== $tone ) { ?>
-					<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span>
+					<?php
+					$intent = array(
+						'neutral' => 'none',
+						'pending' => 'none',
+						'ok'      => 'stable',
+						'success' => 'stable',
+						'warning' => 'medium',
+						'error'   => 'high',
+						'info'    => 'informational',
+					)[ $tone ] ?? '';
+					if ( '' === $intent || '' === $value ) {
+						?>
+						<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span>
+						<?php
+					} else {
+						?>
+					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $value ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $intent ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+					<?php } ?>
 				<?php } elseif ( '' !== $datetime ) { ?>
 					<time datetime="<?php echo esc_attr( $datetime ); ?>"><?php echo esc_html( $value ); ?></time>
 				<?php } else { ?>

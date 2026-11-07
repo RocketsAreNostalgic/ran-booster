@@ -360,6 +360,7 @@
 .ran-booster-admin
 	:is(
 		.ran-booster-repository-detail,
+		.ran-booster-repository-list,
 		.ran-booster-repository-release-section,
 		.ran-booster-release-management
 	)
@@ -385,6 +386,7 @@
 .ran-booster-admin
 	:is(
 		.ran-booster-repository-detail,
+		.ran-booster-repository-list,
 		.ran-booster-repository-release-section,
 		.ran-booster-release-management
 	)
@@ -405,6 +407,7 @@
 .ran-booster-admin
 	:is(
 		.ran-booster-repository-detail,
+		.ran-booster-repository-list,
 		.ran-booster-repository-release-section,
 		.ran-booster-release-management
 	)
@@ -428,6 +431,10 @@
 	max-inline-size: 100%;
 	overflow-wrap: anywhere;
 	white-space: normal;
+}
+
+.ran-booster-admin .ran-booster-repository-list .ran-booster-ui-badge {
+	inline-size: fit-content;
 }
 
 .ran-booster-admin [data-ran-booster-ui-badge-fallback][hidden] {

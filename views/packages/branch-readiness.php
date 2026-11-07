@@ -258,6 +258,8 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 				<div
 					id="ran-booster-repository-branch-check-error"
 					class="notice <?php echo esc_attr( $repository_branch_check_notice_class ); ?> inline"
+					data-ran-booster-ui-notice
+					data-ran-booster-ui-notice-intent="<?php echo null !== $repository_branch_check_message ? 'warning' : 'error'; ?>"
 					role="alert"
 					tabindex="-1"
 					<?php if ( null !== $repository_branch_check_message ) { ?>
@@ -265,7 +267,10 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					<?php } else { ?>
 						hidden
 					<?php } ?>
-				><p><?php echo esc_html( $repository_branch_check_message ?? '' ); ?></p></div>
+				><div data-ran-booster-ui-notice-content>
+						<p data-ran-booster-ui-notice-primary><?php echo esc_html( $repository_branch_check_message ?? '' ); ?></p>
+					</div>
+				</div>
 				<?php if ( $is_package_edit ) { ?>
 					<button
 					type="submit"

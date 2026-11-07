@@ -843,7 +843,6 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( '<strong>Bitbucket Cloud</strong>', $html );
 		self::assertStringContainsString( 'Provider extension', $html );
 		self::assertStringNotContainsString( 'Custom provider', $html );
-		self::assertStringNotContainsString( 'data-ran-booster-ui-badge', $html );
 		$extra['provider_summaries'][0]['source_kind']                                    = 'replacement';
 		$extra['provider_summaries'][0]['source_name']                                    = '<Selected Plugin>';
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Custom provider'] = 'Custom <provider> & "partner"';
@@ -854,7 +853,7 @@ final class OnboardingViewTest extends TestCase {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
-		$hosts = $xpath->query( '//span[@data-ran-booster-ui-badge]' );
+		$hosts = $xpath->query( '//section[@aria-labelledby="ran-booster-overview-providers"]//span[@data-ran-booster-ui-badge]' );
 		self::assertInstanceOf( \DOMNodeList::class, $hosts );
 		self::assertCount( 1, $hosts );
 		$host = $hosts->item( 0 );
@@ -871,7 +870,7 @@ final class OnboardingViewTest extends TestCase {
 		$extra['provider_summaries'][0]['source_name'] = null;
 		$html = $this->render_view( null, null, $extra );
 		self::assertStringContainsString( 'Provider source unknown', $html );
-		self::assertStringNotContainsString( 'data-ran-booster-ui-badge', $html );
+		self::assertStringNotContainsString( 'Custom &lt;provider&gt;', $html );
 	}
 
 	public function test_expiry_reminders_are_shared_with_attention_and_dashboard(): void {

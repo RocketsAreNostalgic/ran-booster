@@ -195,7 +195,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'Branch · release', $html );
 		self::assertStringNotContainsString( 'Branch · release · Push-to-Deploy', $html );
 		self::assertStringContainsString( 'The saved Git provider is unavailable.', $html );
-		self::assertSame( 1, substr_count( $html, '<span class="ran-booster-badge ' ) );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-badge data-ran-booster-ui-badge-label=' ) );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-badge-fallback class="ran-booster-badge ' ) );
 		self::assertStringContainsString( 'Review package health, deploy saved branches', $html );
 		self::assertStringContainsString( 'Deployment activity', $html );
 	}
@@ -220,7 +221,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertMatchesRegularExpression( '/ran-booster-badge--error"[^>]*>Failed<\/span>/', $html );
-		self::assertSame( 2, substr_count( $html, '<span class="ran-booster-badge ' ) );
+		self::assertSame( 2, substr_count( $html, 'data-ran-booster-ui-badge data-ran-booster-ui-badge-label=' ) );
+		self::assertSame( 2, substr_count( $html, 'data-ran-booster-ui-badge-fallback class="ran-booster-badge ' ) );
 		self::assertStringContainsString( 'Last activity', $html );
 		self::assertStringContainsString( '>Failed</span>', $html );
 		self::assertStringNotContainsString( str_repeat( 'a', 40 ), $html );
@@ -243,7 +245,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'ran-booster-badge--error">Credential unavailable</span>', $html );
-		self::assertSame( 1, substr_count( $html, '<span class="ran-booster-badge ' ) );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-badge data-ran-booster-ui-badge-label=' ) );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-badge-fallback class="ran-booster-badge ' ) );
 		self::assertStringContainsString( 'The saved repository credential is unavailable.', $html );
 		self::assertStringContainsString( 'data-ran-booster-update-label>Reinstall</span>', $html );
 		self::assertStringContainsString( 'button-update-package"  disabled="disabled"', $html );
@@ -507,7 +510,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Deployment activity', $html );
 		self::assertStringContainsString( 'Release details', $html );
 		self::assertSame( 0, substr_count( $html, 'button-update-package' ) );
-		self::assertSame( 1, substr_count( $html, '<span class="ran-booster-badge ' ) );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-badge data-ran-booster-ui-badge-label=' ) );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-badge-fallback class="ran-booster-badge ' ) );
 	}
 
 	public function test_list_view_makes_active_and_needs_attention_attempts_explicit(): void {

@@ -76,6 +76,9 @@ function element(initialAttributes = {}) {
 		disabled: true,
 		hidden: false,
 		textContent: '',
+		hasAttribute(name) {
+			return attributes.has(name);
+		},
 		getAttribute(name) {
 			return attributes.get(name) ?? null;
 		},
@@ -96,14 +99,32 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 		'data-attempt-state': state,
 		'data-package-source': packageSource,
 	});
-	const badge = element();
+	function badgeHost() {
+		const host = element({ 'data-ran-booster-ui-badge': '' });
+		const fallback = element({ 'data-ran-booster-ui-badge-fallback': '' });
+		const mount = element({ 'data-ran-booster-ui-badge-mount': '' });
+		host.events = [];
+		host.querySelector = (selector) => {
+			if (selector === '[data-ran-booster-ui-badge-fallback]') {
+				return fallback;
+			} else if (selector === '[data-ran-booster-ui-badge-mount]') {
+				return mount;
+			}
+			return null;
+		};
+		host.dispatchEvent = (event) => host.events.push(event);
+		host.fallback = fallback;
+		host.mount = mount;
+		return host;
+	}
+	const badge = badgeHost();
 	const button = element({
 		'data-idle-label': 'Reinstall plugin',
 		'data-update-can-run': '1',
 	});
 	const label = element();
 	const message = element();
-	const activityState = element();
+	const activityState = badgeHost();
 	const children = new Map([
 		['[data-ran-booster-activity-badge]', badge],
 		['[data-ran-booster-update-button]', button],
@@ -204,6 +225,7 @@ function environment(rows, responses) {
 		CustomEvent: class {
 			constructor(type, options) {
 				this.detail = options.detail;
+				this.bubbles = options.bubbles;
 				this.type = type;
 			}
 		},
@@ -273,7 +295,7 @@ test('published-release rows are excluded from branch activity polling', () => {
 		loadFunction('initPackageUpdateProgress')();
 
 		assert.equal(fixture.timers.length, 0);
-		assert.equal(row.badge.textContent, '');
+		assert.equal(row.badge.fallback.textContent, '');
 	} finally {
 		delete globalThis.document;
 		delete globalThis.window;
@@ -298,7 +320,7 @@ test('running update becomes a visible success and restores its button', async (
 			true
 		);
 		assert.equal(row.label.textContent, '');
-		assert.equal(row.badge.textContent, 'Deployment: Running');
+		assert.equal(row.badge.fallback.textContent, 'Deployment: Running');
 		assert.equal(
 			fixture.summaryMessage.textContent,
 			'Booster reinstalls are in progress. Queued: 0. Reinstalling: 1. Skipped: 0.'
@@ -315,10 +337,10 @@ test('running update becomes a visible success and restores its button', async (
 		);
 		assert.equal(row.label.textContent, 'Reinstall plugin');
 		assert.equal(
-			row.badge.className,
+			row.badge.fallback.className,
 			'ran-booster-badge ran-booster-badge--ok'
 		);
-		assert.equal(row.badge.textContent, 'Deployment: Succeeded');
+		assert.equal(row.badge.fallback.textContent, 'Deployment: Succeeded');
 		assert.equal(row.message.textContent, 'Package reinstalled.');
 		assert.equal(
 			fixture.summaryMessage.textContent,
@@ -337,6 +359,127 @@ test('running update becomes a visible success and restores its button', async (
 		assert.deepEqual(fixture.events[0].detail, {
 			message: 'Package reinstalled.',
 		});
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('unknown poll state leaves badge and attempt unchanged', async () => {
+	const row = rowFixture(70);
+	const fixture = environment([row], ['unknown']);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		assert.equal(row.row.getAttribute('data-attempt-state'), 'queued');
+		assert.equal(row.badge.events.length, 0);
+		assert.equal(row.activityState.events.length, 0);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('updates preserve adapter-owned fallback visibility and mount across repeated states', async () => {
+	const row = rowFixture(71);
+	const fixture = environment([row], ['running', 'running', 'failed']);
+	row.badge.hidden = true;
+	row.badge.fallback.hidden = true;
+	row.badge.mount.textContent = 'mounted';
+	row.activityState.fallback.hidden = true;
+	row.activityState.mount.textContent = 'detail mounted';
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		await runTimer(fixture.timers);
+		assert.equal(row.badge.hidden, false);
+		assert.equal(row.badge.fallback.hidden, true);
+		assert.equal(row.badge.mount.textContent, 'mounted');
+		assert.equal(row.activityState.fallback.hidden, true);
+		assert.equal(row.activityState.mount.textContent, 'detail mounted');
+		assert.equal(
+			row.badge.getAttribute('data-ran-booster-ui-badge-intent'),
+			'informational'
+		);
+		assert.equal(
+			row.badge.getAttribute('data-ran-booster-ui-badge-label'),
+			'Deployment: Running'
+		);
+		assert.equal(row.badge.events.length, 2);
+		assert.ok(
+			row.badge.events.every(
+				(event) =>
+					event.type === 'ran-booster:ui-badge-update' &&
+					event.bubbles
+			)
+		);
+		await runTimer(fixture.timers);
+		assert.equal(row.activityState.fallback.textContent, 'Failed');
+		assert.equal(
+			row.activityState.fallback.className,
+			'ran-booster-badge ran-booster-badge--error ran-booster-deployment-state ran-booster-deployment-state--failed'
+		);
+		assert.equal(
+			row.activityState.getAttribute('data-ran-booster-ui-badge-intent'),
+			'high'
+		);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('restored native activity hooks continue to update', async () => {
+	const row = rowFixture(73);
+	row.badge.removeAttribute('data-ran-booster-ui-badge');
+	row.activityState.removeAttribute('data-ran-booster-ui-badge');
+	const fixture = environment([row], ['succeeded']);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		assert.equal(row.badge.textContent, 'Deployment: Succeeded');
+		assert.equal(
+			row.badge.className,
+			'ran-booster-badge ran-booster-badge--ok'
+		);
+		assert.equal(row.activityState.textContent, 'Succeeded');
+		assert.equal(
+			row.activityState.className,
+			'ran-booster-deployment-state ran-booster-deployment-state--succeeded'
+		);
+		assert.equal(row.button.disabled, false);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('higher-priority status without activity hook remains untouched', async () => {
+	const row = rowFixture(72);
+	const originalQuery = row.row.querySelector;
+	row.row.querySelector = (selector) =>
+		selector === '[data-ran-booster-activity-badge]'
+			? null
+			: originalQuery(selector);
+	row.badge.fallback.textContent = 'Git provider unavailable';
+	const fixture = environment([row], ['failed']);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		assert.equal(
+			row.badge.fallback.textContent,
+			'Git provider unavailable'
+		);
+		assert.equal(row.badge.events.length, 0);
+		assert.equal(row.activityState.fallback.textContent, 'Failed');
 	} finally {
 		delete globalThis.document;
 		delete globalThis.window;

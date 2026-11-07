@@ -71,6 +71,13 @@ $activity_badge_variants      = array(
 	'failed'          => 'error',
 	'needs_attention' => 'error',
 );
+$badge_intents                = array(
+	'neutral' => 'none',
+	'ok'      => 'stable',
+	'pending' => 'informational',
+	'warning' => 'medium',
+	'error'   => 'high',
+);
 $bulk_form_id                 = 'ran-booster-' . $package_view->get_type() . '-bulk-form';
 $bulk_action_id               = 'ran-booster-' . $package_view->get_type() . '-bulk-action';
 $bulk_select_all_id           = 'ran-booster-' . $package_view->get_type() . '-select-all';
@@ -482,9 +489,9 @@ $policy_labels = array(
 			</td>
 			<td class="ran-booster-package-row__summary">
 				<?php if ( is_array( $prominent_status ) ) { ?>
-					<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $prominent_status['tone'] ); ?>"<?php echo $prominent_status_activity ? ' data-ran-booster-activity-badge' : ''; ?>><?php echo esc_html( $prominent_status['label'] ); ?></span>
+					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $prominent_status['label'] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $badge_intents[ $prominent_status['tone'] ] ?? 'none' ); ?>"<?php echo $prominent_status_activity ? ' data-ran-booster-activity-badge' : ''; ?>><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $prominent_status['tone'] ); ?>"><?php echo esc_html( $prominent_status['label'] ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
 				<?php } elseif ( ! $release_managed ) { ?>
-					<span class="ran-booster-badge ran-booster-badge--neutral" data-ran-booster-activity-badge hidden></span>
+					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="" data-ran-booster-ui-badge-intent="none" data-ran-booster-activity-badge hidden><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--neutral"></span><span data-ran-booster-ui-badge-mount></span></span>
 				<?php } ?>
 				<p class="ran-booster-package-row__management"><?php echo esc_html( $management_line ); ?></p>
 				<p class="ran-booster-package-row__status-line"><?php echo esc_html( $status_line ); ?></p>
@@ -570,7 +577,7 @@ $policy_labels = array(
 										<?php esc_html_e( 'Temporarily unavailable', 'ran-booster' ); ?>
 									<?php } elseif ( is_array( $latest_activity ) ) { ?>
 										<?php $active_detail_url = $activity_detail_base_url . '&attempt=' . rawurlencode( (string) $latest_activity['id'] ) . '&reference=' . rawurlencode( (string) $latest_activity['correlation_id'] ); ?>
-										<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ); ?> ran-booster-deployment-state ran-booster-deployment-state--<?php echo esc_attr( (string) $latest_activity['state'] ); ?>" data-ran-booster-activity-state><?php echo esc_html( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ); ?></span>
+										<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $badge_intents[ $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ] ); ?>" data-ran-booster-activity-state><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ); ?> ran-booster-deployment-state ran-booster-deployment-state--<?php echo esc_attr( (string) $latest_activity['state'] ); ?>"><?php echo esc_html( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
 										<a href="<?php echo esc_url( $active_detail_url ); ?>"><?php esc_html_e( 'View details', 'ran-booster' ); ?></a>
 									<?php } else { ?>
 										<?php esc_html_e( 'No activity recorded', 'ran-booster' ); ?>

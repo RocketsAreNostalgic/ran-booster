@@ -379,3 +379,42 @@
 		padding: var(--ran-booster-space-18);
 	}
 }
+
+/* Mounted troubleshooting Cards own the surrounding frame. */
+.ran-booster-admin
+	.ran-booster-troubleshooting
+	[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted] {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting
+	[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content:not(
+		:has(> .ran-booster-disclosure),
+		:has(> .ran-booster-debug-capture__panel)
+	) {
+	padding: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting
+	[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content
+	> .ran-booster-troubleshooting__form {
+	padding: 0;
+	border: 0;
+	background: transparent;
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting
+	[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content
+	> :is(.ran-booster-debug-capture__panel, .ran-booster-disclosure) {
+	margin: 0;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}

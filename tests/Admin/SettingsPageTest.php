@@ -257,7 +257,7 @@ final class SettingsPageTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
 		$partial_html = (string) ob_get_clean();
 		unset( $general_navigation, $general_scope );
-		self::assertSame( 1, preg_match( '/<nav class="ran-admin-shell__navigation".*?<\/nav>/s', $shell_html, $shell_navigation ) );
+		self::assertSame( 1, preg_match( '/<nav class="ran-admin-shell__navigation ran-section-navigation ran-section-navigation--thick".*?<\/nav>/s', $shell_html, $shell_navigation ) );
 		self::assertSame( 1, preg_match( '/<template data-ran-booster-general-navigation>.*?<\/template>/s', $partial_html, $partial_navigation ) );
 		if ( ! isset( $shell_navigation[0], $partial_navigation[0] ) ) {
 			self::fail( 'Both navigation fragments must have a complete match.' );

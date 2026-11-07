@@ -1313,3 +1313,17 @@
 	align-items: center;
 	inline-size: 100%;
 }
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	.ran-booster-settings__switch[data-ran-booster-ui-switch-fallback] {
+	--ran-booster-status-ok: var(--wp-admin-theme-color);
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge-fallback].ran-booster-badge--ok {
+	--ran-booster-status-ok: var(--ran-booster-color-neutral-0);
+	--ran-booster-status-ok-background: var(--wp-admin-theme-color);
+	--ran-booster-status-ok-border: var(--wp-admin-theme-color);
+}

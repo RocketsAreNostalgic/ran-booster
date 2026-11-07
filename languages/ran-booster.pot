@@ -7787,7 +7787,7 @@ msgstr ""
 msgid "Webhook health"
 msgstr ""
 
-#: views/packages/branch-readiness.php:287
+#: views/packages/branch-readiness.php:292
 msgid "Save settings and check"
 msgstr ""
 

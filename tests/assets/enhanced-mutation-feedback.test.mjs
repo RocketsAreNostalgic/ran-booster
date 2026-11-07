@@ -1838,3 +1838,161 @@ test('General busy state keeps switches and their fieldsets usable while protect
 	state.listeners.get('htmx:afterRequest')({ detail: { elt: state.form } });
 	assert.equal(state.button.disabled, false);
 });
+
+test('marked branch failures preserve recovery and refresh their native notice before focus', () => {
+	const state = fixture();
+	const calls = [];
+	const primary = { textContent: 'Warning' };
+	const details = { hidden: false, action: { textContent: 'Recover' } };
+	const content = {
+		children: [primary, details],
+		append(child) {
+			this.children.push(child);
+		},
+	};
+	state.form.dataset.ranBoosterErrorTarget =
+		'#ran-booster-repository-branch-check-error';
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-relocate-rendered-error';
+	state.document.getElementById = () => state.error;
+	state.errorAttributes.set('data-ran-booster-ui-notice', '');
+	state.errorAttributes.set('data-ran-booster-ui-notice-intent', 'warning');
+	state.error.classList = classList();
+	state.error.classList.add('notice-warning');
+	state.error.getAttribute = (name) =>
+		state.errorAttributes.get(name) ?? null;
+	state.error.querySelector = (selector) =>
+		({
+			'[data-ran-booster-ui-notice-primary]': primary,
+			'[data-ran-booster-ui-notice-content]': content,
+		})[selector] ?? null;
+	state.window.CustomEvent = class {
+		constructor(type, options) {
+			this.type = type;
+			this.bubbles = options.bubbles;
+		}
+	};
+	state.error.dispatchEvent = (event) =>
+		calls.push({
+			event,
+			hidden: state.error.hidden,
+			text: primary.textContent,
+		});
+	state.error.focus = () => calls.push('focus');
+	const init = loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	});
+	init();
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: { status: 0 } },
+	});
+	assert.equal(
+		primary.textContent,
+		'We could not complete that request. Please try again.'
+	);
+	assert.equal(
+		state.errorAttributes.get('data-ran-booster-ui-notice-intent'),
+		'error'
+	);
+	assert.equal(state.error.classList.contains('notice-error'), true);
+	assert.equal(state.error.classList.contains('notice-warning'), false);
+	assert.deepEqual(content.children, [primary, details]);
+	assert.equal(details.hidden, false);
+	assert.equal(details.action.textContent, 'Recover');
+	assert.equal(calls[0].event.type, 'ran-booster:ui-notice-update');
+	assert.equal(calls[0].event.bubbles, true);
+	assert.equal(calls[0].hidden, false);
+	assert.equal(calls[0].text, primary.textContent);
+	assert.equal(calls[1], 'focus');
+	assert.deepEqual(state.announcements, []);
+	const moved = { tagName: 'DETAILS' };
+	let removed = false;
+	const incoming = {
+		hidden: false,
+		textContent: 'New warning',
+		getAttribute: () => 'warning',
+		querySelector(selector) {
+			if (selector === 'p') {
+				return { textContent: 'New warning' };
+			}
+			return selector === 'details' ? moved : null;
+		},
+		remove() {
+			removed = true;
+			state.setRenderedBranchCheckErrors([]);
+		},
+	};
+	state.setRenderedBranchCheckErrors([incoming]);
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.form, xhr: { status: 200 } },
+	});
+	assert.equal(removed, true);
+	assert.equal(primary.textContent, 'New warning');
+	assert.equal(
+		state.errorAttributes.get('data-ran-booster-ui-notice-intent'),
+		'warning'
+	);
+	assert.equal(state.error.classList.contains('notice-warning'), true);
+	assert.equal(state.error.classList.contains('notice-error'), false);
+	assert.deepEqual(content.children, [primary, details, moved]);
+	assert.deepEqual(state.error.appendedChildren, []);
+	assert.equal(calls.at(-1), 'focus');
+	assert.equal(calls.at(-2).event.bubbles, true);
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.form, xhr: { status: 200 } },
+	});
+	assert.deepEqual(content.children, [primary, details, moved]);
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.form, xhr: { status: 500 } },
+	});
+	assert.equal(
+		state.errorAttributes.get('data-ran-booster-ui-notice-intent'),
+		'warning'
+	);
+	const unclassified = {
+		hidden: false,
+		textContent: 'Unclassified',
+		getAttribute: () => null,
+		querySelector: () => null,
+		remove() {},
+	};
+	state.setRenderedBranchCheckErrors([unclassified]);
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.form, xhr: { status: 200 } },
+	});
+	assert.equal(primary.textContent, 'Unclassified');
+	assert.equal(
+		state.errorAttributes.get('data-ran-booster-ui-notice-intent'),
+		'warning'
+	);
+	assert.deepEqual(content.children, [primary, details, moved]);
+	const addClass = state.error.classList.add;
+	state.error.classList.add = (...names) => {
+		assert.ok(
+			names.every((name) => !/\s/.test(name)),
+			'class tokens cannot contain whitespace'
+		);
+		addClass(...names);
+	};
+	const invalid = {
+		...unclassified,
+		getAttribute: () => 'warning notice-success',
+	};
+	state.setRenderedBranchCheckErrors([invalid]);
+	const previousCalls = calls.length;
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.form, xhr: { status: 200 } },
+	});
+	assert.equal(
+		state.errorAttributes.get('data-ran-booster-ui-notice-intent'),
+		'warning'
+	);
+	assert.equal(state.error.classList.contains('notice-warning'), true);
+	assert.equal(
+		calls[previousCalls].event.type,
+		'ran-booster:ui-notice-update'
+	);
+	assert.equal(calls[previousCalls + 1], 'focus');
+	assert.deepEqual(state.announcements, []);
+});

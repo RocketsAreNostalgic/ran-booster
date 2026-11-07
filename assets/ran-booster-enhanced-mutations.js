@@ -412,6 +412,10 @@
 				return;
 			}
 
+			const isBranchNotice =
+				form.dataset.ranBoosterErrorTarget ===
+					'#ran-booster-repository-branch-check-error' &&
+				region.hasAttribute('data-ran-booster-ui-notice');
 			const isCredential = form.hasAttribute(
 				'data-ran-booster-credential-validation'
 			);
@@ -434,11 +438,28 @@
 					credentialResult.className =
 						'ran-booster-credential-health__error';
 					credentialResult.hidden = false;
+				} else if (isBranchNotice) {
+					region.querySelector(
+						'[data-ran-booster-ui-notice-primary]'
+					).textContent = message;
+					region.setAttribute(
+						'data-ran-booster-ui-notice-intent',
+						'error'
+					);
+					region.classList.remove('notice-warning');
+					region.classList.add('notice-error');
 				} else {
 					region.textContent = message;
 				}
 			}
 			region.hidden = false;
+			if (isBranchNotice) {
+				region.dispatchEvent(
+					new window.CustomEvent('ran-booster:ui-notice-update', {
+						bubbles: true,
+					})
+				);
+			}
 			if (isCredential) {
 				region.removeAttribute?.('role');
 				region.focus?.({ preventScroll: true });
@@ -450,7 +471,9 @@
 				region.setAttribute('tabindex', '-1');
 			}
 			region.focus?.({ preventScroll: true });
-			announce(region.textContent.trim(), 'error');
+			if (!isBranchNotice) {
+				announce(region.textContent.trim(), 'error');
+			}
 		}
 
 		function renderedFailureNotice(form) {
@@ -515,7 +538,30 @@
 				return false;
 			}
 
-			const paragraph = region.querySelector?.('p');
+			const isBranchNotice =
+				form.dataset.ranBoosterErrorTarget ===
+					'#ran-booster-repository-branch-check-error' &&
+				region.hasAttribute('data-ran-booster-ui-notice');
+			const content = isBranchNotice
+				? region.querySelector('[data-ran-booster-ui-notice-content]')
+				: region;
+			const intent = notice.getAttribute?.(
+				'data-ran-booster-ui-notice-intent'
+			);
+			if (
+				isBranchNotice &&
+				(intent === 'warning' || intent === 'error')
+			) {
+				region.setAttribute(
+					'data-ran-booster-ui-notice-intent',
+					intent
+				);
+				region.classList.remove('notice-error', 'notice-warning');
+				region.classList.add(`notice-${intent}`);
+			}
+			const paragraph = isBranchNotice
+				? region.querySelector('[data-ran-booster-ui-notice-primary]')
+				: region.querySelector?.('p');
 			if (paragraph) {
 				paragraph.textContent = message;
 			} else {
@@ -523,7 +569,7 @@
 			}
 			const details = notice.querySelector?.('details');
 			if (details) {
-				region.append?.(details);
+				content.append?.(details);
 			}
 			notice.remove?.();
 			focusError(form);

@@ -14,7 +14,7 @@ use RAN\Deployment\DeploymentPolicy;
 final class PackageBranchReadinessViewTest extends TestCase {
 
 	#[DataProvider( 'source_settings_mode_provider' )]
-	public function test_source_settings_only_render_branch_readiness_for_saved_packages( string $package_source_mode, bool $expects_readiness ): void {
+	public function test_source_settings_only_render_branch_readiness_for_saved_packages( string $package_source_mode, bool $expects_readiness, string $package_type ): void {
 		$package_mutation_available = true;
 		$package_source_choices     = array(
 			'branch' => array(
@@ -40,9 +40,10 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$package_advanced_open      = false;
 		$package_repository_ready   = true;
 		$package_source             = array();
-		$package_view               = new class() {
+		$package_view               = new class( $package_type ) {
+			public function __construct( private string $type ) {}
 			public function get_type(): string {
-				return 'plugin';
+				return $this->type;
 			}
 		};
 
@@ -68,11 +69,13 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		}
 	}
 
-	/** @return array<string, array{string, bool}> */
+	/** @return array<string, array{string, bool, string}> */
 	public static function source_settings_mode_provider(): array {
 		return array(
-			'new package'   => array( 'create', false ),
-			'saved package' => array( 'edit', true ),
+			'new plugin'   => array( 'create', false, 'plugin' ),
+			'saved plugin' => array( 'edit', true, 'plugin' ),
+			'new theme'    => array( 'create', false, 'theme' ),
+			'saved theme'  => array( 'edit', true, 'theme' ),
 		);
 	}
 
@@ -655,6 +658,73 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
 	}
 
+	#[DataProvider( 'branch_notice_states' )]
+	public function test_branch_notice_preserves_server_state_and_action( ?string $outcome, string $message, string $package_type ): void {
+		$provider_code                   = 'gh';
+		$settings_url                    = 'https://example.test/wp-admin/admin.php?page=ran-booster-' . $package_type . 's&package=example';
+		$provider_webhook_available      = true;
+		$branch_value                    = 'main';
+		$deployment_policy               = DeploymentPolicy::MANUAL->value;
+		$is_package_edit                 = true;
+		$package_branch_readiness        = null;
+		$repository_branch_check_outcome = $outcome;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
+		$html = (string) ob_get_clean();
+
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		try {
+			self::assertTrue( $document->loadHTML( '<!doctype html><html><body>' . $html . '</body></html>' ) );
+		} finally {
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+		}
+		$xpath  = new \DOMXPath( $document );
+		$notice = $document->getElementById( 'ran-booster-repository-branch-check-error' );
+		self::assertInstanceOf( \DOMElement::class, $notice );
+		self::assertTrue( $notice->hasAttribute( 'data-ran-booster-ui-notice' ) );
+		self::assertSame( '' !== $message ? 'warning' : 'error', $notice->getAttribute( 'data-ran-booster-ui-notice-intent' ) );
+		self::assertSame( '' === $message, $notice->hasAttribute( 'hidden' ) );
+		self::assertSame( '' !== $message, $notice->hasAttribute( 'data-ran-booster-repository-branch-check' ) );
+		self::assertSame( 'alert', $notice->getAttribute( 'role' ) );
+		self::assertSame( '-1', $notice->getAttribute( 'tabindex' ) );
+		self::assertSame( '' !== $message ? 'notice notice-warning inline' : 'notice notice-error inline', $notice->getAttribute( 'class' ) );
+		$primary = $xpath->query( './div[@data-ran-booster-ui-notice-content]/p[@data-ran-booster-ui-notice-primary]', $notice );
+		self::assertNotFalse( $primary );
+		self::assertCount( 1, $primary );
+		$paragraph = $primary->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $paragraph );
+		self::assertSame( '<p data-ran-booster-ui-notice-primary>' . $message . '</p>', $document->saveHTML( $paragraph ) );
+		$action = $xpath->query( '//button[@name="ran_booster[check_repository_branch_after_save]"]' );
+		self::assertNotFalse( $action );
+		self::assertCount( 1, $action );
+		$button = $action->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $button );
+		self::assertSame( 'ran-booster-package-edit-form', $button->getAttribute( 'form' ) );
+		self::assertSame( '#ran-booster-repository-branch-check-error', $button->getAttribute( 'data-ran-booster-error-target' ) );
+		self::assertSame( '1', $button->getAttribute( 'value' ) );
+		self::assertFalse( $button->hasAttribute( 'disabled' ) );
+	}
+
+	/** @return iterable<string, array{?string, string, string}> */
+	public static function branch_notice_states(): iterable {
+		$states = array(
+			'provider_unavailable'     => 'The saved Git provider is unavailable, so Booster could not check the repository and branch.',
+			'unable_to_check'          => 'Booster could not access the saved repository and branch. Check the branch name and repository access, then try again.',
+			'subdirectory_unavailable' => 'The saved branch is accessible, but Booster could not find the configured subdirectory. Check the path and try again.',
+			'subdirectory_unverified'  => 'The saved branch is accessible, but Booster could not check the configured subdirectory. Try again later.',
+			'verified'                 => '',
+			'unknown'                  => '',
+		);
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( $states as $outcome => $message ) {
+				yield $type . ' ' . $outcome => array( $outcome, $message, $type );
+			}
+			yield $type . ' null' => array( null, '', $type );
+		}
+	}
+
 	public function test_verified_repository_branch_check_uses_only_the_green_repository_row(): void {
 		$provider_code                   = 'gh';
 		$settings_url                    = 'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme';
@@ -709,7 +779,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-repository-branch-check' ) );
 		self::assertSame( 1, substr_count( $html, 'id="ran-booster-repository-branch-check-error"' ) );
 		self::assertMatchesRegularExpression(
-			'/id="ran-booster-repository-branch-check-error"\s+class="notice notice-warning inline"\s+role="alert"\s+tabindex="-1"\s+data-ran-booster-repository-branch-check\s*>\s*<p>Booster could not access the saved repository and branch\. Check the branch name and repository access, then try again\.<\\/p><\\/div>/',
+			'/id="ran-booster-repository-branch-check-error"\s+class="notice notice-warning inline"\s+data-ran-booster-ui-notice\s+data-ran-booster-ui-notice-intent="warning"\s+role="alert"\s+tabindex="-1"\s+data-ran-booster-repository-branch-check\s*>\s*<div data-ran-booster-ui-notice-content>\s*<p data-ran-booster-ui-notice-primary>Booster could not access the saved repository and branch\. Check the branch name and repository access, then try again\.<\/p>\s*<\/div>\s*<\/div>/',
 			$html
 		);
 		self::assertLessThan(

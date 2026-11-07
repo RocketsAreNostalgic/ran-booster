@@ -384,7 +384,7 @@
 			}
 
 			return document.querySelector(
-				'#wpbody-content .notice-error, #wpbody-content .error'
+				'.ran-booster-admin .notice-error:not([data-ran-booster-provider-storage-notice]):not([data-ran-booster-assistance-site-notice]), .ran-booster-admin .error:not([data-ran-booster-provider-storage-notice]):not([data-ran-booster-assistance-site-notice])'
 			);
 		}
 
@@ -500,8 +500,7 @@
 			form.classList.remove('ran-booster-enhanced-mutation-is-busy');
 		}
 
-		function focusError(form, fallbackMessage) {
-			const region = errorRegion(form);
+		function focusError(form, fallbackMessage, region = errorRegion(form)) {
 			if (!region) {
 				return;
 			}
@@ -509,20 +508,32 @@
 			const isCredential = form.hasAttribute(
 				'data-ran-booster-credential-validation'
 			);
+			const isBranchNotice =
+				form.dataset.ranBoosterErrorTarget ===
+					'#ran-booster-repository-branch-check-error' &&
+				region.hasAttribute?.('data-ran-booster-ui-notice');
 			const credentialResult = isCredential
 				? region.querySelector?.('[data-ran-booster-credential-result]')
 				: null;
 			const message = (
 				fallbackMessage ||
-				credentialResult?.textContent ||
-				region.textContent ||
-				''
+				(credentialResult
+					? credentialResult.textContent
+					: renderedFailureMessage(region))
 			).trim();
 			if (!message) {
 				region.hidden = true;
 				return;
 			}
 			if (fallbackMessage) {
+				if (isBranchNotice) {
+					region.setAttribute(
+						'data-ran-booster-ui-notice-intent',
+						'error'
+					);
+					region.classList.remove('notice-warning');
+					region.classList.add('notice-error');
+				}
 				if (credentialResult) {
 					credentialResult.textContent = message;
 					credentialResult.className =
@@ -533,6 +544,16 @@
 						'[data-ran-booster-ui-notice-primary]'
 					);
 					if (primary) {
+						if (isBranchNotice && primary.childElementCount) {
+							const retained = document.createElement('div');
+							retained.hidden = true;
+							retained.setAttribute(
+								'data-ran-booster-ui-notice-detail',
+								''
+							);
+							retained.append(...primary.childNodes);
+							primary.parentElement.append(retained);
+						}
 						primary.textContent = message;
 						region
 							.querySelectorAll(
@@ -540,6 +561,9 @@
 							)
 							.forEach((detail) => {
 								detail.hidden = true;
+								detail.setAttribute('hx-disable', '');
+								// HTMX cleans disabled subtrees without initializing them.
+								window.htmx?.process?.(detail);
 							});
 						region
 							.querySelectorAll(
@@ -556,38 +580,83 @@
 				}
 			}
 			region.hidden = false;
+			if (isBranchNotice) {
+				region.dispatchEvent(
+					new window.CustomEvent('ran-booster:ui-notice-update', {
+						bubbles: true,
+					})
+				);
+			}
 			if (isCredential) {
 				region.removeAttribute?.('role');
 				region.focus?.({ preventScroll: true });
 				announce(message, 'error');
 				return;
 			}
-			region.setAttribute('role', 'alert');
 			if (!region.hasAttribute('tabindex')) {
 				region.setAttribute('tabindex', '-1');
 			}
-			region.focus?.({ preventScroll: true });
-			if (!region.hasAttribute?.('data-ran-booster-ui-notice')) {
-				announce(region.textContent.trim(), 'error');
+			const live = region.closest?.(
+				'[role="alert"], [role="status"], [aria-live]'
+			);
+			if (!live || live.getAttribute('aria-live') === 'off') {
+				if (window.wp?.a11y?.speak) {
+					announce(message, 'error');
+				} else {
+					region.setAttribute('role', 'alert');
+					region.setAttribute('aria-live', 'assertive');
+				}
+			}
+			const focus = () => {
+				if (
+					region.isConnected !== false &&
+					renderedFailureMessage(region) === message
+				) {
+					region.focus?.({ preventScroll: true });
+				}
+			};
+			if (isBranchNotice) {
+				// Intent changes can queue a second initialization after restore.
+				queueMicrotask(() => queueMicrotask(focus));
+			} else {
+				focus();
 			}
 		}
 
-		function renderedFailureNotice(form) {
-			const region = errorRegion(form);
-			const selector = form?.hasAttribute?.(
+		function renderedFailureNotice(form, scope, allowGeneric) {
+			const branch = form?.hasAttribute?.(
 				'data-ran-booster-relocate-rendered-error'
-			)
-				? '#wpbody-content [data-ran-booster-repository-branch-check]'
-				: '#wpbody-content .notice-error, #wpbody-content .error';
-			return Array.from(document.querySelectorAll(selector)).find(
-				function (candidate) {
-					return (
-						candidate !== region &&
-						candidate.hidden !== true &&
-						(candidate.textContent || '').trim() !== ''
-					);
-				}
 			);
+			const selectors = branch
+				? ['[data-ran-booster-repository-branch-check]']
+				: [];
+			if (!branch || allowGeneric) {
+				selectors.push('.notice-error, .error');
+			}
+			return selectors
+				.flatMap((selector) => [
+					...(scope?.matches?.(selector) ? [scope] : []),
+					...Array.from(scope?.querySelectorAll?.(selector) || []),
+				])
+				.find(function (candidate) {
+					return (
+						(candidate.hasAttribute?.(
+							'data-ran-booster-repository-branch-check'
+						) ||
+							candidate.hasAttribute?.(
+								'data-ran-booster-admin-mutation-error'
+							) ||
+							candidate.closest?.('.ran-booster-admin')) &&
+						!candidate.hasAttribute?.(
+							'data-ran-booster-provider-storage-notice'
+						) &&
+						!candidate.hasAttribute?.(
+							'data-ran-booster-assistance-site-notice'
+						) &&
+						candidate.hidden !== true &&
+						renderedFailureMessage(candidate) !== ''
+					);
+				});
 		}
 
 		function renderedFailureMessage(notice) {
@@ -595,30 +664,25 @@
 				return '';
 			}
 
+			const primary =
+				notice.querySelector?.(
+					'[data-ran-booster-ui-notice-primary]'
+				) || notice.querySelector?.('p');
 			return (
-				notice?.querySelector?.('p')?.textContent ||
-				notice?.textContent ||
-				''
+				primary ? primary.textContent : notice.textContent || ''
 			).trim();
 		}
 
-		function focusRenderedFailure(form) {
-			const notice = renderedFailureNotice(form);
-			const message = renderedFailureMessage(notice);
-			if (!message) {
+		function focusRenderedFailure(form, scope, allowGeneric) {
+			const notice = renderedFailureNotice(form, scope, allowGeneric);
+			if (!notice) {
 				return false;
 			}
-
-			notice.setAttribute?.('role', 'alert');
-			if (!notice.hasAttribute?.('tabindex')) {
-				notice.setAttribute?.('tabindex', '-1');
-			}
-			notice.focus?.({ preventScroll: true });
-			announce(message, 'error');
+			focusError(form, undefined, notice);
 			return true;
 		}
 
-		function relocateRenderedFailure(form) {
+		function relocateRenderedFailure(form, scope, allowGeneric) {
 			if (
 				!form?.hasAttribute?.(
 					'data-ran-booster-relocate-rendered-error'
@@ -628,23 +692,81 @@
 			}
 
 			const region = errorRegion(form);
-			const notice = renderedFailureNotice(form);
+			const notice = renderedFailureNotice(form, scope, allowGeneric);
 			const message = renderedFailureMessage(notice);
 			if (!region || !message) {
 				return false;
 			}
+			if (notice === region) {
+				focusError(form);
+				return true;
+			}
+			const sourcePrimary =
+				notice.querySelector?.(
+					'[data-ran-booster-ui-notice-primary]'
+				) || notice.querySelector?.('p');
+			if (
+				!sourcePrimary ||
+				notice.contains?.(region) ||
+				typeof window.htmx?.swap !== 'function'
+			) {
+				return focusRenderedFailure(form, scope, allowGeneric);
+			}
 
-			const paragraph = region.querySelector?.('p');
+			const isBranchNotice =
+				form.dataset.ranBoosterErrorTarget ===
+					'#ran-booster-repository-branch-check-error' &&
+				region.hasAttribute?.('data-ran-booster-ui-notice');
+			const content = isBranchNotice
+				? region.querySelector('[data-ran-booster-ui-notice-content]')
+				: region;
+			const intent = notice.getAttribute?.(
+				'data-ran-booster-ui-notice-intent'
+			);
+			if (isBranchNotice) {
+				const severity = intent === 'warning' ? 'warning' : 'error';
+				region.setAttribute(
+					'data-ran-booster-ui-notice-intent',
+					severity
+				);
+				region.classList.remove('notice-error', 'notice-warning');
+				region.classList.add(`notice-${severity}`);
+			}
+			const swap = {
+				swapStyle: 'outerHTML',
+				swapDelay: 0,
+				settleDelay: 0,
+				transition: false,
+				ignoreTitle: true,
+			};
+			// Cleanup restores original component content and HTMX bindings first.
+			window.htmx.swap(notice, '', swap);
+			const sourceContent =
+				notice.querySelector?.(
+					'[data-ran-booster-ui-notice-content]'
+				) || notice;
+			const paragraph = isBranchNotice
+				? region.querySelector('[data-ran-booster-ui-notice-primary]')
+				: region.querySelector?.('p');
+			content
+				?.querySelectorAll?.('[data-ran-booster-ui-notice-detail]')
+				.forEach((detail) => window.htmx.swap(detail, '', swap));
 			if (paragraph) {
-				paragraph.textContent = message;
+				Array.from(paragraph.children).forEach((child) =>
+					window.htmx.swap(child, '', swap)
+				);
+				paragraph.replaceChildren(...sourcePrimary.childNodes);
+				sourcePrimary.remove();
 			} else {
 				region.textContent = message;
 			}
-			const details = notice.querySelector?.('details');
-			if (details) {
-				region.append?.(details);
+			if (content && sourceContent.childNodes.length) {
+				const detail = document.createElement('div');
+				detail.setAttribute('data-ran-booster-ui-notice-detail', '');
+				detail.append(...sourceContent.childNodes);
+				content.append(detail);
 			}
-			notice.remove?.();
+			window.htmx.process?.(content || region);
 			focusError(form);
 			return true;
 		}
@@ -878,27 +1000,46 @@
 				return;
 			}
 
-			if (relocateRenderedFailure(form)) {
+			const scope = event.detail?.elt || event.target;
+			const failed = isScopedFailureStatus(event.detail?.xhr?.status);
+			if (relocateRenderedFailure(form, scope, failed)) {
 				return;
 			}
 
-			if (form && isScopedFailureStatus(event.detail?.xhr?.status)) {
+			if (form && failed) {
 				if (
 					form.hasAttribute('data-ran-booster-credential-validation')
 				) {
 					focusError(form);
 					return;
 				}
-				if (!focusRenderedFailure(form)) {
+				const target = form.dataset.ranBoosterErrorTarget || '';
+				const explicit = /^#[A-Za-z][A-Za-z0-9_-]*$/.test(target)
+					? document.getElementById(target.slice(1))
+					: null;
+				if (
+					explicit &&
+					(scope === explicit || scope?.contains?.(explicit)) &&
+					renderedFailureMessage(explicit)
+				) {
 					focusError(form);
+				} else if (
+					!focusRenderedFailure(form, scope, true) &&
+					explicit
+				) {
+					focusError(
+						form,
+						wp.i18n.__(
+							'We could not complete that request. Please try again.',
+							'ran-booster'
+						)
+					);
 				}
 				return;
 			}
 
 			if (isPackageMutation(form) && errorRegion(form)) {
-				if (!focusRenderedFailure(form)) {
-					focusError(form);
-				}
+				focusRenderedFailure(form, scope, false);
 			}
 		});
 

@@ -132,6 +132,9 @@ function fixture() {
 		hasAttribute(name) {
 			return errorAttributes.has(name);
 		},
+		getAttribute(name) {
+			return errorAttributes.get(name) ?? null;
+		},
 		removeAttribute(name) {
 			errorAttributes.delete(name);
 		},
@@ -210,6 +213,11 @@ function fixture() {
 		},
 	};
 	const swapTarget = {
+		contains: (element) => element === error,
+		querySelectorAll: (selector) =>
+			selector.includes('repository-branch-check')
+				? renderedBranchCheckErrors
+				: renderedErrors,
 		closest() {
 			return null;
 		},
@@ -952,7 +960,7 @@ test('enhanced mutation feedback allows only declared 422 error swaps and keeps 
 	assert.equal(detail.shouldSwap, true);
 	assert.equal(detail.swapOverride, undefined);
 	assert.equal(state.error.hidden, false);
-	assert.equal(state.errorAttributes.get('role'), 'alert');
+	assert.equal(state.errorAttributes.has('role'), false);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
 	assert.deepEqual(state.announcements, [
 		{ message: 'The setting could not be saved.', type: 'assertive' },
@@ -1059,6 +1067,7 @@ test('a package failure focuses and announces its rendered notice without copyin
 		textContent:
 			'The GitHub release must contain exactly one uploaded ZIP asset. Why this happened and how to fix it.',
 		focusOptions: null,
+		closest: (selector) => (selector === '.ran-booster-admin' ? {} : null),
 		attributes: new Map(),
 		focus(options) {
 			this.focusOptions = options;
@@ -1089,7 +1098,7 @@ test('a package failure focuses and announces its rendered notice without copyin
 	assert.equal(state.error.hidden, true);
 	assert.equal(state.error.textContent, '');
 	assert.equal(state.error.focusOptions, null);
-	assert.equal(renderedNotice.attributes.get('role'), 'alert');
+	assert.equal(renderedNotice.attributes.has('role'), false);
 	assert.equal(renderedNotice.attributes.get('tabindex'), '-1');
 	assert.deepEqual(renderedNotice.focusOptions, { preventScroll: true });
 	assert.deepEqual(state.announcements, [
@@ -1131,58 +1140,44 @@ test('a branch check leaves an unrelated persistent error untouched', () => {
 	assert.equal(state.error.textContent, '');
 });
 
-test('an opted-in mutation moves its rendered failure disclosure into the global error banner', () => {
-	const state = fixture();
-	const init = loadFunction('initEnhancedMutationFeedback', {
-		document: state.document,
-		window: state.window,
-	});
-	state.error.textContent = '';
-	state.form.hasAttribute = (name) =>
-		name === 'data-ran-booster-relocate-rendered-error';
-	let removed = false;
-	const renderedNotice = {
-		hidden: false,
-		textContent:
-			'The repository provider rate limit has been reached. Try again later.',
-		remove() {
-			removed = true;
-		},
-		querySelector(selector) {
-			if (selector === 'p') {
-				return {
-					textContent:
-						'The repository provider rate limit has been reached. Try again later.',
-				};
-			}
-
-			return selector === 'details' ? failureDetails : null;
-		},
-	};
-	const failureDetails = { tagName: 'DETAILS' };
-	state.setRenderedBranchCheckErrors([renderedNotice]);
-
-	init();
-	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
-	state.listeners.get('htmx:afterSwap')({
-		detail: { elt: state.swapTarget, xhr: { status: 200 } },
-	});
-
-	assert.equal(removed, true);
-	assert.equal(state.error.hidden, false);
-	assert.equal(
-		state.error.textContent,
-		'The repository provider rate limit has been reached. Try again later.'
-	);
-	assert.deepEqual(state.error.appendedChildren, [failureDetails]);
-	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
-	assert.deepEqual(state.announcements, [
-		{
-			message:
-				'The repository provider rate limit has been reached. Try again later.',
-			type: 'assertive',
-		},
-	]);
+test('scoped failures prefer their own target and exclude recreated static notices', () => {
+	for (const populated of [true, false]) {
+		const state = fixture();
+		state.error.textContent = populated ? 'Operation failed.' : '';
+		const statics = [
+			'data-ran-booster-provider-storage-notice',
+			'data-ran-booster-assistance-site-notice',
+		].map((marker) => ({
+			hidden: false,
+			textContent: 'Static problem',
+			hasAttribute: (name) => name === marker,
+			focus() {
+				throw new Error('Static notice focused');
+			},
+		}));
+		state.setRenderedErrors(statics);
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		state.listeners.get('htmx:beforeRequest')({
+			detail: { elt: state.form },
+		});
+		state.listeners.get('htmx:afterSwap')({
+			detail: { elt: state.swapTarget, xhr: { status: 422 } },
+		});
+		assert.equal(
+			state.error.textContent,
+			populated
+				? 'Operation failed.'
+				: 'We could not complete that request. Please try again.'
+		);
+		assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+		assert.deepEqual(
+			statics.map((notice) => notice.textContent),
+			['Static problem', 'Static problem']
+		);
+	}
 });
 
 test('a package response never reveals an empty global error banner', () => {
@@ -1355,7 +1350,11 @@ test('source navigation HTTP failures retain the view and announce an error', ()
 test('Notice transport fallback preserves the owned subtree and uses only its alert boundary', () => {
 	const state = fixture();
 	const primary = { textContent: 'The previous attempt was rejected.' };
-	const detail = { hidden: false, textContent: 'Previous saved value.' };
+	const detail = {
+		hidden: false,
+		textContent: 'Previous saved value.',
+		setAttribute() {},
+	};
 	const field = {
 		id: 'field-error',
 		textContent: 'Previous validation error.',
@@ -1395,8 +1394,10 @@ test('Notice transport fallback preserves the owned subtree and uses only its al
 	assert.equal(configuration.textContent, 'Configuration remains locked.');
 	assert.equal(detail.hidden, true);
 	assert.equal(state.error.hidden, false);
-	assert.equal(state.error.attributes.get('role'), 'alert');
-	assert.deepEqual(state.announcements, []);
+	assert.equal(state.error.attributes.has('role'), false);
+	assert.deepEqual(state.announcements, [
+		{ message: primary.textContent, type: 'assertive' },
+	]);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
 });
 
@@ -3024,5 +3025,575 @@ test('a correlated Transporter row result retains cells and places feedback insi
 			assert.equal(children.at(-1), template);
 		}
 		assert.deepEqual(state.announcements, [{ message, type: 'polite' }]);
+	}
+});
+
+test('a fresh operation failure remains available beside recreated static notices', () => {
+	const state = fixture();
+	state.error.textContent = '';
+	const untouched = [
+		'data-ran-booster-provider-storage-notice',
+		'data-ran-booster-assistance-site-notice',
+	].map((marker) => ({
+		textContent: marker,
+		hidden: false,
+		hasAttribute: (name) => name === marker,
+		setAttribute() {
+			assert.fail('Static notices retain their owner.');
+		},
+		focus() {
+			assert.fail('An unrelated static notice cannot own this failure.');
+		},
+	}));
+	const attributes = new Map();
+	let focused = false;
+	const operation = {
+		textContent: 'The operation failed with its own recovery guidance.',
+		hidden: false,
+		closest: (selector) => (selector === '.ran-booster-admin' ? {} : null),
+		hasAttribute: (name) => attributes.has(name),
+		setAttribute: (name, value) => attributes.set(name, value),
+		querySelector: () => ({
+			textContent: 'The operation failed with its own recovery guidance.',
+		}),
+		focus() {
+			focused = true;
+		},
+	};
+	state.setRenderedErrors([...untouched, operation]);
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:afterSwap')({
+		detail: {
+			elt: state.swapTarget,
+			requestConfig: { elt: state.form },
+			xhr: { status: 422 },
+		},
+	});
+	assert.equal(focused, true);
+	assert.equal(attributes.has('role'), false);
+	assert.deepEqual(state.announcements, [
+		{ message: operation.textContent, type: 'assertive' },
+	]);
+	assert.deepEqual(
+		untouched.map((node) => node.textContent),
+		[
+			'data-ran-booster-provider-storage-notice',
+			'data-ran-booster-assistance-site-notice',
+		]
+	);
+});
+
+test('a swapped failure is selected from its returned subtree, including the root itself', async () => {
+	for (const scenario of [
+		'conflict',
+		'unrelated',
+		'self-warning',
+		'unknown',
+	]) {
+		const state = fixture();
+		const form = state.form;
+		const target = state.error;
+		const notices = [];
+		const message = 'Settings changed. Review the current settings.';
+		const prior = {
+			textContent: 'Older unrelated error.',
+			hidden: false,
+			focus() {
+				assert.fail('The older failure is outside the swap.');
+			},
+		};
+		const attrs = new Map();
+		let focused = 0;
+		let updates = 0;
+		const candidate = {
+			hidden: false,
+			textContent:
+				scenario === 'self-warning'
+					? 'Branch could not be checked.'
+					: message,
+			closest: (selector) =>
+				selector === '.ran-booster-admin' && scenario === 'conflict'
+					? {}
+					: null,
+			getAttribute: (name) => attrs.get(name) ?? null,
+			hasAttribute: (name) => attrs.has(name),
+			setAttribute: (name, value) => attrs.set(name, String(value)),
+			matches: (selector) =>
+				selector.includes('repository-branch-check')
+					? scenario === 'self-warning'
+					: scenario === 'conflict',
+			querySelector: (selector) =>
+				selector === 'p'
+					? { textContent: candidate.textContent }
+					: null,
+			querySelectorAll: () => [],
+			focus() {
+				focused++;
+			},
+			dispatchEvent() {
+				updates++;
+			},
+		};
+		let swap = {
+			matches: () => false,
+			querySelectorAll: (selector) =>
+				selector.includes('repository-branch-check') ? [] : notices,
+		};
+		form.hasAttribute = (name) =>
+			name === 'data-ran-booster-relocate-rendered-error';
+		form.dataset.ranBoosterErrorTarget =
+			'#ran-booster-repository-branch-check-error';
+		target.textContent = '';
+		state.document.getElementById = () =>
+			scenario === 'self-warning' ? candidate : target;
+		state.document.querySelectorAll = (selector) =>
+			selector.includes('.notice-error') ? [prior] : [];
+		state.window.CustomEvent = class {
+			constructor(type) {
+				this.type = type;
+			}
+		};
+		if (scenario === 'conflict') {
+			notices.push(candidate);
+		}
+		if (scenario === 'self-warning') {
+			attrs.set('data-ran-booster-repository-branch-check', '');
+			attrs.set('data-ran-booster-ui-notice', '');
+			attrs.set('role', 'alert');
+			candidate.closest = () => candidate;
+			swap = candidate;
+		}
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		const detail = {
+			elt: swap,
+			requestConfig: { elt: form },
+			xhr: {
+				status: ['conflict', 'unrelated'].includes(scenario)
+					? 409
+					: 200,
+			},
+		};
+		state.listeners.get('htmx:beforeRequest')({ detail: { elt: form } });
+		state.listeners.get('htmx:afterSwap')({ detail });
+		await Promise.resolve();
+		await Promise.resolve();
+		if (scenario === 'conflict') {
+			assert.equal(target.hidden, true);
+			assert.equal(candidate.textContent, message);
+			assert.equal(focused, 1);
+		} else if (scenario === 'unrelated') {
+			assert.match(target.textContent, /could not complete/);
+		} else if (scenario === 'self-warning') {
+			assert.equal(focused, 1);
+			assert.equal(updates, 1);
+			assert.deepEqual(state.announcements, []);
+		} else {
+			assert.equal(target.hidden, true);
+			assert.equal(focused, 0);
+		}
+	}
+});
+
+test('an empty authoritative Notice primary receives the failure, not retained detail text', async () => {
+	const state = fixture();
+	const primary = { textContent: '' };
+	const detail = {
+		hidden: false,
+		textContent: 'Old diagnostic and action.',
+		setAttribute() {},
+	};
+	const fields = [{ textContent: 'Previous validation field' }];
+	let updates = 0;
+	state.form.dataset.ranBoosterErrorTarget =
+		'#ran-booster-repository-branch-check-error';
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-relocate-rendered-error';
+	state.error.attributes.set('data-ran-booster-ui-notice', '');
+	state.error.attributes.set('role', 'alert');
+	state.error.closest = () => state.error;
+	state.error.classList = classList();
+	Object.defineProperty(state.error, 'textContent', {
+		get: () =>
+			`${primary.textContent} ${detail.hidden ? '' : detail.textContent}`,
+	});
+	state.error.querySelector = (selector) =>
+		selector === '[data-ran-booster-ui-notice-primary]' ? primary : null;
+	state.error.querySelectorAll = (selector) =>
+		selector === '[data-ran-booster-ui-notice-detail]' ? [detail] : fields;
+	state.error.dispatchEvent = () => {
+		updates++;
+	};
+	state.window.CustomEvent = class {
+		constructor(type) {
+			this.type = type;
+		}
+	};
+	state.document.getElementById = () => state.error;
+	const unrelated = {
+		textContent: 'Static unrelated failure',
+		hasAttribute: () => true,
+	};
+	state.document.querySelectorAll = () => [unrelated];
+	const swapped = { matches: () => false, querySelectorAll: () => [] };
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.listeners.get('htmx:afterSwap')({
+		detail: {
+			elt: swapped,
+			requestConfig: { elt: state.form },
+			xhr: { status: 422 },
+		},
+	});
+	await Promise.resolve();
+	await Promise.resolve();
+	assert.match(primary.textContent, /could not complete/);
+	assert.equal(detail.hidden, true);
+	assert.equal(fields[0].textContent, '');
+	assert.equal(updates, 1);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, []);
+	assert.equal(unrelated.textContent, 'Static unrelated failure');
+});
+
+test('relocated recovery nodes retain identity and are hidden on a later transport failure', async () => {
+	const state = fixture();
+	const rich = [
+		{ id: 'first-details', isConnected: true },
+		{ id: 'action', isConnected: true },
+		{ id: 'second-details', isConnected: true },
+	];
+	const inline = { id: 'inline-link', isConnected: true };
+	const oldAction = { id: 'old-action', isConnected: true };
+	let oldActionCleaned = false;
+	const text = { textContent: 'Branch failed. ' };
+	const primary = {
+		textContent: '',
+		childNodes: [oldAction],
+		children: [oldAction],
+		replaceChildren(...nodes) {
+			assert.equal(oldActionCleaned, true);
+			this.children = [inline];
+			this.childNodes = nodes;
+			this.textContent = nodes
+				.map((node) => node.textContent || '')
+				.join('');
+		},
+	};
+	const details = [];
+	const content = {
+		childNodes: [],
+		append(node) {
+			details.push(node);
+		},
+		querySelectorAll: () => details,
+	};
+	const sourcePrimary = {
+		textContent: 'Branch failed.',
+		childNodes: [text, inline],
+		remove() {
+			sourceContent.childNodes.shift();
+		},
+	};
+	const sourceContent = {
+		childNodes: [sourcePrimary, ...rich],
+		querySelector: (selector) => (selector === 'p' ? sourcePrimary : null),
+	};
+	const attrs = new Map([
+		['data-ran-booster-repository-branch-check', ''],
+		['data-ran-booster-ui-notice-intent', 'warning'],
+	]);
+	let removed = false;
+	let processed = false;
+	const disabledProcessed = [];
+	const notice = {
+		hidden: false,
+		isConnected: true,
+		textContent: 'Branch failed. Recovery actions.',
+		hasAttribute: (name) => attrs.has(name),
+		getAttribute: (name) => attrs.get(name) ?? null,
+		matches: (selector) => selector.includes('repository-branch-check'),
+		querySelector(selector) {
+			if (selector === '[data-ran-booster-ui-notice-content]') {
+				return sourceContent;
+			}
+			return selector === 'p' ? sourcePrimary : null;
+		},
+		querySelectorAll: () => [],
+		contains: () => false,
+	};
+	const swapped = {
+		matches: () => false,
+		querySelectorAll: (selector) =>
+			selector.includes('repository-branch-check') ? [notice] : [],
+	};
+	state.form.dataset.ranBoosterErrorTarget =
+		'#ran-booster-repository-branch-check-error';
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-relocate-rendered-error';
+	state.error.attributes.set('data-ran-booster-ui-notice', '');
+	state.error.attributes.set('role', 'alert');
+	state.error.closest = () => state.error;
+	state.error.classList = classList();
+	Object.defineProperty(state.error, 'textContent', {
+		get: () => primary.textContent,
+	});
+	state.error.querySelector = (selector) => {
+		if (selector === '[data-ran-booster-ui-notice-primary]') {
+			return primary;
+		}
+		if (selector === '[data-ran-booster-ui-notice-content]') {
+			return content;
+		}
+		return null;
+	};
+	state.error.querySelectorAll = (selector) =>
+		selector === '[data-ran-booster-ui-notice-detail]' ? details : [];
+	state.error.dispatchEvent = () => {};
+	state.window.CustomEvent = class {
+		constructor(type) {
+			this.type = type;
+		}
+	};
+	state.window.htmx = {
+		swap(node, value) {
+			assert.equal(value, '');
+			if (node === notice) {
+				assert.equal(node.isConnected, true);
+				assert.deepEqual(sourceContent.childNodes, [
+					sourcePrimary,
+					...rich,
+				]);
+				removed = true;
+				node.isConnected = false;
+			} else if (node === oldAction) {
+				assert.equal(node.isConnected, true);
+				oldActionCleaned = true;
+				node.isConnected = false;
+			}
+		},
+		process(node) {
+			if (node === content) {
+				processed = true;
+				return;
+			}
+			assert.equal(node.hidden, true);
+			assert.equal(node.attributes.get('hx-disable'), '');
+			disabledProcessed.push(node);
+			assert.ok(
+				node.children.every((child) => child.isConnected !== false)
+			);
+		},
+	};
+	state.document.getElementById = () => state.error;
+	state.document.createElement = () => ({
+		hidden: false,
+		children: [],
+		attributes: new Map(),
+		setAttribute(name, value) {
+			this.attributes.set(name, value);
+		},
+		append(...nodes) {
+			this.children.push(...nodes);
+		},
+	});
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.listeners.get('htmx:afterSwap')({
+		detail: {
+			elt: swapped,
+			requestConfig: { elt: state.form },
+			xhr: { status: 200 },
+		},
+	});
+	await Promise.resolve();
+	await Promise.resolve();
+	assert.equal(primary.textContent, 'Branch failed. ');
+	assert.equal(primary.childNodes[1], inline);
+	assert.equal(removed, true);
+	assert.equal(processed, true);
+	assert.deepEqual(details[0].children, rich);
+	assert.equal(details[0].hidden, false);
+	primary.childElementCount = 1;
+	primary.parentElement = content;
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: {} },
+	});
+	await Promise.resolve();
+	await Promise.resolve();
+	assert.match(primary.textContent, /could not complete/);
+	assert.equal(details[0].hidden, true);
+	assert.deepEqual(details[0].children, rich);
+	assert.equal(details[1].hidden, true);
+	assert.equal(details[1].children[1], inline);
+	assert.equal(inline.isConnected, true);
+	assert.deepEqual(disabledProcessed, details);
+});
+
+test('a failure uses a native alert when the speech helper is unavailable', () => {
+	const state = fixture();
+	state.window.wp.a11y = undefined;
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: {} },
+	});
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorAttributes.get('role'), 'alert');
+	assert.match(state.error.textContent, /could not complete/);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, []);
+});
+
+test('an aria-live off ancestor uses one manual failure announcement', () => {
+	const state = fixture();
+	state.error.closest = () => ({ getAttribute: () => 'off' });
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: {} },
+	});
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.errorAttributes.has('role'), false);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, [
+		{
+			message: 'We could not complete that request. Please try again.',
+			type: 'assertive',
+		},
+	]);
+});
+
+test('a muted target uses an assertive native live region when the helper is unavailable', () => {
+	const state = fixture();
+	state.window.wp.a11y = undefined;
+	state.errorAttributes.set('aria-live', 'off');
+	state.error.closest = () => state.error;
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: {} },
+	});
+	assert.equal(state.errorAttributes.get('role'), 'alert');
+	assert.equal(state.errorAttributes.get('aria-live'), 'assertive');
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, []);
+});
+
+test('a whole-admin failure leaves unrelated WordPress notices and their actions untouched', () => {
+	for (const scenario of ['core-wrapper', 'core-marker', 'no-core']) {
+		const state = fixture();
+		const wrapper = { className: 'ran-booster-admin' };
+		const action = {
+			href: 'https://example.test/details',
+			isConnected: true,
+		};
+		const globalAttributes = new Map([['class', 'notice notice-error']]);
+		let globalFocused = false;
+		let globalRemoved = false;
+		const globalNotice = {
+			hidden: false,
+			textContent: 'Third-party service unavailable.',
+			children: [action],
+			closest: () => null,
+			hasAttribute: (name) => globalAttributes.has(name),
+			setAttribute: (name, value) => globalAttributes.set(name, value),
+			querySelector: () => ({
+				textContent: 'Third-party service unavailable.',
+			}),
+			focus() {
+				globalFocused = true;
+			},
+			remove() {
+				globalRemoved = true;
+			},
+		};
+		let coreFocused = false;
+		const coreAttributes = new Map();
+		if (scenario === 'core-marker') {
+			coreAttributes.set('data-ran-booster-admin-mutation-error', '');
+		}
+		const coreNotice = {
+			hidden: false,
+			textContent: 'Settings changed. Review the current settings.',
+			hasAttribute: (name) => coreAttributes.has(name),
+			setAttribute: (name, value) => coreAttributes.set(name, value),
+			closest: (selector) =>
+				selector === '.ran-booster-admin' && scenario === 'core-wrapper'
+					? wrapper
+					: null,
+			querySelector: () => ({
+				textContent: 'Settings changed. Review the current settings.',
+			}),
+			focus() {
+				coreFocused = true;
+			},
+		};
+		const scope = {
+			matches: () => false,
+			querySelectorAll: (selector) =>
+				selector.includes('repository-branch-check')
+					? []
+					: [
+							globalNotice,
+							...(scenario === 'no-core' ? [] : [coreNotice]),
+						],
+		};
+		state.form.hasAttribute = (name) =>
+			name === 'data-ran-booster-relocate-rendered-error';
+		state.error.textContent = '';
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		state.listeners.get('htmx:beforeRequest')({
+			detail: { elt: state.form },
+		});
+		state.listeners.get('htmx:afterSwap')({
+			detail: {
+				elt: scope,
+				requestConfig: { elt: state.form },
+				xhr: { status: 409 },
+			},
+		});
+		assert.equal(globalFocused, false, scenario);
+		assert.equal(globalRemoved, false, scenario);
+		assert.equal(globalNotice.children[0], action, scenario);
+		assert.equal(action.isConnected, true, scenario);
+		assert.deepEqual(
+			[...globalAttributes],
+			[['class', 'notice notice-error']],
+			scenario
+		);
+		if (scenario === 'no-core') {
+			assert.equal(coreFocused, false);
+			assert.match(state.error.textContent, /could not complete/);
+			assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+		} else {
+			assert.equal(coreFocused, true, scenario);
+			assert.equal(
+				coreNotice.textContent,
+				'Settings changed. Review the current settings.',
+				scenario
+			);
+			assert.equal(state.error.hidden, true, scenario);
+		}
 	}
 });

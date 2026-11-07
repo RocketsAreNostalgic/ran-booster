@@ -50,8 +50,8 @@ final class DocumentationViewTest extends TestCase {
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath          = new \DOMXPath( $document );
 		$heading_panels = $xpath->query( '//*[@id="ran-booster-documentation-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
-		$quick_start    = $xpath->query( '//details[@id="ran-booster-quick-start"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")][@open]' );
-		$panels         = $xpath->query( '//details[@data-ran-booster-documentation-section][contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
+		$quick_start    = $xpath->query( '//div[@data-ran-booster-card="documentation"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")][count(*)=1]/details[@id="ran-booster-quick-start"][@open]' );
+		$panels         = $xpath->query( '//div[@data-ran-booster-card="documentation"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")][count(*)=1]/details[@data-ran-booster-documentation-section]' );
 		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
 		self::assertInstanceOf( \DOMNodeList::class, $quick_start );
 		self::assertInstanceOf( \DOMNodeList::class, $panels );
@@ -62,6 +62,8 @@ final class DocumentationViewTest extends TestCase {
 			self::assertInstanceOf( \DOMElement::class, $panel );
 			self::assertSame( 'ran-booster-documentation', $panel->getAttribute( 'name' ) );
 			self::assertStringContainsString( 'ran-booster-disclosure', $panel->getAttribute( 'class' ) );
+			self::assertStringNotContainsString( 'ran-booster-panel', $panel->getAttribute( 'class' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(*[1][self::summary])', $panel ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-disclosure__body ")])', $panel ) );
 		}
 		self::assertMatchesRegularExpression( '/<details\b[^>]*\bopen\b[^>]*>\s*<summary>Quick start<\/summary>/', $html );
@@ -243,7 +245,7 @@ final class DocumentationViewTest extends TestCase {
 		$xpath = new \DOMXPath( $document );
 		$host  = '//aside[@data-ran-booster-documentation-index]/div[@data-ran-booster-card="documentation"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")]';
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $host . ')' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-card="documentation"])' ) );
+		self::assertSame( 12.0, $xpath->evaluate( 'count(//*[@data-ran-booster-card="documentation"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $host . '/nav[@aria-labelledby="ran-booster-documentation-index-heading"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $host . '/nav/h2[@id="ran-booster-documentation-index-heading"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $host . '/nav/p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__search-hint ")])' ) );
@@ -283,7 +285,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertInstanceOf( \DOMElement::class, $requirements );
 		self::assertSame( 'details', $xpath->evaluate( 'local-name(.)', $requirements ) );
 		self::assertFalse( $requirements->hasAttribute( 'open' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(following-sibling::*[1][@id="ran-booster-requirements"])', $quick_start ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(../following-sibling::*[1]/details[@id="ran-booster-requirements"])', $quick_start ) );
 		self::assertSame( 3.0, $xpath->evaluate( 'count(div/ol/li)', $quick_start ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(div/p)', $quick_start ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(div/p/a[@href="#ran-booster-requirements"])', $quick_start ) );
@@ -548,6 +550,7 @@ final class DocumentationViewTest extends TestCase {
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapter ")][h3="Reference"]//details[@id="surviving-guide"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//aside//a[@href="#surviving-guide"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//details[@id="surviving-guide"]/ancestor::div[@data-ran-booster-card])' ) );
 	}
 
 	public function test_provider_articles_stay_with_provider_and_win_duplicate_ids(): void {
@@ -591,8 +594,9 @@ final class DocumentationViewTest extends TestCase {
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapter ")][h3="GitHub"]//details[@id="shared-guide"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-documentation-provider-gh"]/following-sibling::*[1][@id="shared-guide"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-documentation-provider-gh"]/../following-sibling::*[1][self::details][@id="shared-guide"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="shared-guide"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//details[@id="shared-guide" or @id="custom-guide"]/ancestor::div[@data-ran-booster-card])' ) );
 		self::assertStringNotContainsString( 'Duplicate loses', $html );
 	}
 

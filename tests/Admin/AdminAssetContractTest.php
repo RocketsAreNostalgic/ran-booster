@@ -404,6 +404,8 @@ final class AdminAssetContractTest extends TestCase {
 		$documentation = $this->asset( 'ran-booster-documentation.css' );
 		$view          = $this->view( 'documentation.php' );
 
+		$print = substr( $documentation, (int) strpos( $documentation, '@media print {' ) );
+		self::assertMatchesRegularExpression( '/\.ran-booster-card\[data-ran-booster-card="documentation"\],[\s\S]+\[data-ran-booster-card="documentation"\]\s+\.ran-booster-card__surface,[\s\S]+?\{\s+max-inline-size: none;\s+margin: 0;\s+border: 0;\s+box-shadow: none;\s+background: transparent;/', $print );
 		self::assertStringContainsString( '@media print {', $documentation );
 		self::assertStringContainsString( '#wpadminbar,', $documentation );
 		self::assertStringContainsString( 'body.wp-admin .notice,', $documentation );

@@ -123,6 +123,14 @@
 	scroll-margin-block-start: 70px;
 }
 
+.ran-booster-admin
+	[data-ran-booster-card="documentation"]
+	.ran-booster-documentation__section {
+	border: 0;
+	border-radius: 0;
+	background: transparent;
+}
+
 .ran-booster-admin .ran-booster-documentation__section summary {
 	color: var(--ran-booster-text);
 	line-height: var(--ran-booster-line-height-heading);
@@ -328,10 +336,9 @@
 		margin: 0;
 	}
 
+	.ran-booster-admin .ran-booster-card[data-ran-booster-card="documentation"],
 	.ran-booster-admin
-		.ran-booster-card.ran-booster-documentation__index-surface,
-	.ran-booster-admin
-		.ran-booster-documentation__index-surface
+		[data-ran-booster-card="documentation"]
 		.ran-booster-card__surface,
 	.ran-booster-admin .ran-booster-documentation__main,
 	.ran-booster-admin .ran-booster-documentation__section,

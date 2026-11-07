@@ -277,7 +277,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 				<p><label for="ran-booster-portability-import-password"><?php esc_html_e( 'ZIP password (optional)', 'ran-booster' ); ?></label><input id="ran-booster-portability-import-password" name="password" type="password" autocomplete="off"></p>
 				<button type="submit" class="button button-primary ran-booster-portability__progress-button" data-portability-preview-submit data-idle-label="<?php esc_attr_e( 'Review Transporter Blueprint', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Reviewing Transporter Blueprint…', 'ran-booster' ); ?>"><span data-portability-preview-label><?php esc_html_e( 'Review Transporter Blueprint', 'ran-booster' ); ?></span></button>
 			</div>
-			<p data-portability-preview-message hidden aria-live="polite"></p>
+			<div class="notice notice-info inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" hidden><div data-ran-booster-ui-notice-content><p data-portability-preview-message hidden aria-live="polite"></p></div></div>
 		</form>
 
 		<section class="ran-booster-portability__review" aria-labelledby="ran-booster-portability-review-heading">

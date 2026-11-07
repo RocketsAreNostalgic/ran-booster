@@ -499,13 +499,24 @@
 		}
 
 		function showMessage(text, type) {
+			const notice =
+				message.closest('[data-ran-booster-ui-notice]') || message;
 			message.setAttribute(
 				'aria-live',
 				type === 'success' && window.wp?.a11y?.speak ? 'off' : 'polite'
 			);
 			message.hidden = !text;
-			message.className = text ? 'notice inline notice-' + type : '';
+			notice.hidden = !text;
+			notice.className = text ? 'notice inline notice-' + type : '';
 			message.textContent = text || '';
+			if (notice !== message) {
+				notice.setAttribute('data-ran-booster-ui-notice-intent', type);
+				notice.dispatchEvent(
+					new window.CustomEvent('ran-booster:ui-notice-update', {
+						bubbles: true,
+					})
+				);
+			}
 		}
 
 		function resetReview(clearResults = true) {

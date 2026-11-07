@@ -362,6 +362,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	const previewLabel = previewProgress.label;
 	const previewSubmit = previewProgress.button;
 	const message = {
+		closest: () => null,
 		className: '',
 		hidden: true,
 		textContent: '',
@@ -705,6 +706,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		CustomEvent: class {
 			constructor(type, eventOptions) {
 				this.detail = eventOptions.detail;
+				this.bubbles = eventOptions.bubbles;
 				this.type = type;
 			}
 		},
@@ -2202,3 +2204,90 @@ for (const failedOlderResponse of [false, true]) {
 		}
 	});
 }
+
+test('preview failure updates only the retained paragraph inside its Notice', async () => {
+	const state = importFixture(async () => ({
+		json: async () => ({
+			success: false,
+			data: { message: 'Safe review error.' },
+		}),
+	}));
+	const updates = [];
+	const notice = {
+		hidden: true,
+		className: '',
+		setAttribute(name, value) {
+			this[name] = value;
+		},
+		dispatchEvent(event) {
+			updates.push({
+				type: event.type,
+				bubbles: event.bubbles,
+				intent: this['data-ran-booster-ui-notice-intent'],
+				text: state.message.textContent,
+				hidden: this.hidden,
+			});
+		},
+	};
+	Object.defineProperty(notice, 'textContent', {
+		set() {
+			throw new Error('Do not replace the mounted Notice root.');
+		},
+	});
+	state.message.closest = () => notice;
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		assert.deepEqual(
+			updates.map(({ intent, text, hidden }) => ({
+				intent,
+				text,
+				hidden,
+			})),
+			[
+				{ intent: 'info', text: 'Reviewing blueprint…', hidden: false },
+				{ intent: 'error', text: 'Safe review error.', hidden: false },
+			]
+		);
+		assert.equal(updates.at(-1).type, 'ran-booster:ui-notice-update');
+		assert.equal(updates.at(-1).bubbles, true);
+		assert.equal(state.message.className, '');
+		assert.equal(notice.className, 'notice inline notice-error');
+		assert.equal(state.message['aria-live'], 'polite');
+		assert.equal(state.apply.disabled, true);
+		assert.deepEqual(state.spoken, []);
+	} finally {
+		cleanup();
+	}
+});
+
+test('successful preview and draft clearing preserve the original announcement owner and hide both nodes', async () => {
+	const state = importFixture(async () => success('<table>reviewed</table>'));
+	const notice = {
+		hidden: true,
+		className: '',
+		setAttribute(name, value) {
+			this[name] = value;
+		},
+		dispatchEvent() {},
+	};
+	state.message.closest = () => notice;
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		assert.equal(notice['data-ran-booster-ui-notice-intent'], 'success');
+		assert.equal(notice.hidden, false);
+		assert.equal(state.message['aria-live'], 'off');
+		assert.deepEqual(state.spoken, ['Transporter Blueprint reviewed.']);
+		state.listeners.get('form:change')({ target: state.file });
+		assert.equal(notice.hidden, true);
+		assert.equal(state.message.hidden, true);
+		assert.equal(state.message.textContent, '');
+		assert.equal(state.apply.disabled, true);
+		assert.deepEqual(state.spoken, ['Transporter Blueprint reviewed.']);
+	} finally {
+		cleanup();
+	}
+});

@@ -170,6 +170,7 @@
 		}
 
 		function showMessage(text, type = 'error') {
+			message.setAttribute('data-ran-booster-ui-notice-intent', type);
 			message.className = 'notice notice-' + type + ' inline';
 			message.setAttribute('role', type === 'error' ? 'alert' : 'status');
 			message.setAttribute(
@@ -181,6 +182,11 @@
 			}
 			message.hidden = !text;
 			messageText.textContent = text || '';
+			message.dispatchEvent(
+				new window.CustomEvent('ran-booster:ui-notice-update', {
+					bubbles: true,
+				})
+			);
 		}
 
 		form.addEventListener('submit', async function (event) {

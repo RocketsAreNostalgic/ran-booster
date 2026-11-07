@@ -68,6 +68,16 @@ function fixture(fetch) {
 	const message = control();
 	message.hidden = true;
 	const messageText = { textContent: '' };
+	const noticeUpdates = [];
+	message.dispatchEvent = (event) => {
+		noticeUpdates.push({
+			type: event.type,
+			bubbles: event.bubbles,
+			intent: message.getAttribute('data-ran-booster-ui-notice-intent'),
+			text: messageText.textContent,
+			hidden: message.hidden,
+		});
+	};
 	const root = {
 		querySelector(selector) {
 			return (
@@ -124,6 +134,7 @@ function fixture(fetch) {
 		CustomEvent: class {
 			constructor(type, options) {
 				this.detail = options.detail;
+				this.bubbles = options.bubbles;
 				this.type = type;
 			}
 		},
@@ -140,7 +151,16 @@ function fixture(fetch) {
 		},
 	};
 
-	return { events, form, links, message, messageText, spoken, submit };
+	return {
+		events,
+		form,
+		links,
+		message,
+		messageText,
+		noticeUpdates,
+		spoken,
+		submit,
+	};
 }
 
 function submitEvent(defaultPrevented = false) {
@@ -480,3 +500,56 @@ for (const count of [
 		}
 	});
 }
+
+test('export Notice intent updates preserve the mounted content node and announcement owner', async () => {
+	let calls = 0;
+	const state = fixture(async () =>
+		++calls === 1
+			? {
+					blob: async () => new Blob(['zip']),
+					headers: new Headers({
+						'content-type': 'application/zip',
+						'X-RAN-Blueprint-Requirement-Warnings': '1',
+					}),
+					ok: true,
+				}
+			: {
+					headers: new Headers({
+						'content-type': 'application/json',
+					}),
+					ok: false,
+					json: async () => ({ data: { message: 'Export failed.' } }),
+				}
+	);
+	const originalText = state.messageText;
+	Object.defineProperty(state.message, 'textContent', {
+		set() {
+			throw new Error('The mounted Notice root must remain intact.');
+		},
+	});
+	try {
+		loadFunction('initPortabilityExportDownload')();
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.messageText, originalText);
+		assert.equal(state.noticeUpdates.at(-1).intent, 'warning');
+		assert.equal(state.noticeUpdates.at(-1).text, originalText.textContent);
+		assert.equal(state.noticeUpdates.at(-1).hidden, false);
+		assert.equal(state.message.getAttribute('aria-live'), 'off');
+		assert.equal(state.spoken.length, 1);
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.deepEqual(state.noticeUpdates.at(-1), {
+			type: 'ran-booster:ui-notice-update',
+			bubbles: true,
+			intent: 'error',
+			text: 'Export failed.',
+			hidden: false,
+		});
+		assert.equal(state.message.getAttribute('role'), 'alert');
+		assert.equal(state.message.getAttribute('aria-live'), 'assertive');
+		assert.equal(state.spoken.length, 1);
+		assert.equal(state.links.length, 1);
+		assert.equal(state.submit.disabled, false);
+	} finally {
+		cleanup();
+	}
+});

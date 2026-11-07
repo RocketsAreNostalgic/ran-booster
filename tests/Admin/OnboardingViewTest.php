@@ -503,8 +503,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ), strpos( $html, 'Recent Activity' ) );
 		self::assertLessThan( strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ), strpos( $html, 'Git providers' ) );
 		self::assertLessThan( strpos( $html, 'Git providers' ), strpos( $html, 'Managed packages' ) );
-		self::assertStringContainsString( '<strong>Plugins:</strong> 0', $html );
-		self::assertStringContainsString( '<strong>Themes:</strong> Unknown', $html );
+		self::assertSame( '0 managed', trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/p/span)' ) ) );
+		self::assertSame( 'Unknown', trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/p/span)' ) ) );
 		self::assertStringContainsString( 'ran-booster-badge--neutral', $html );
 		self::assertStringNotContainsString( 'id="ran-booster-overview-expiry"', $html );
 		self::assertSame( 5, substr_count( $html, '&lt;operation&gt;' ) );
@@ -518,7 +518,7 @@ final class OnboardingViewTest extends TestCase {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath   = new \DOMXPath( $document );
-		$actions = $xpath->query( '//div[contains(@class, "ran-booster-overview-package-actions__group")]/a' );
+		$actions = $xpath->query( '//div[@role="group" and (@aria-label="Plugins" or @aria-label="Themes")]//a' );
 		self::assertInstanceOf( \DOMNodeList::class, $actions );
 		$action_labels = array();
 		foreach ( $actions as $action ) {
@@ -526,9 +526,9 @@ final class OnboardingViewTest extends TestCase {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns textContent.
 			$action_labels[] = trim( $action->textContent );
 		}
-		self::assertSame( array( 'Install a plugin', 'Manage plugins', 'Install a theme', 'Manage themes' ), $action_labels );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Plugins"][a[1]="Install a plugin" and a[2]="Manage plugins"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Themes"][a[1]="Install a theme" and a[2]="Manage themes"])' ) );
+		self::assertSame( array( 'Manage plugins', 'Install a plugin', 'Manage themes', 'Install a theme' ), $action_labels );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Plugins"][div/a[1]="Manage plugins" and div/a[2]="Install a plugin"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Themes"][div/a[1]="Manage themes" and div/a[2]="Install a theme"])' ) );
 		self::assertStringNotContainsString( 'This changes the view for all site administrators.', $html );
 		self::assertStringContainsString( 'value="onboarding"', $html );
 		self::assertStringContainsString( 'ran-booster-overview-presentation', $html );
@@ -572,6 +572,15 @@ final class OnboardingViewTest extends TestCase {
 				),
 				array( '2', 'Unknown', 'Unknown' ),
 			),
+			array(
+				array(
+					'plugins'  => null,
+					'themes'   => 3,
+					'disabled' => null,
+					'complete' => false,
+				),
+				array( 'Unknown', '3', 'Unknown' ),
+			),
 		);
 		foreach ( $cases as list( $inventory, $expected ) ) {
 			$html     = $this->render_view(
@@ -588,13 +597,18 @@ final class OnboardingViewTest extends TestCase {
 			$document = new \DOMDocument();
 			$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 			$xpath = new \DOMXPath( $document );
-			self::assertSame( 'Plugins: ' . $expected[0], trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/p)' ) ) );
-			self::assertSame( 'Themes: ' . $expected[1], trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/p)' ) ) );
-			self::assertSame( 'Updates disabled: ' . $expected[2], trim( (string) $xpath->evaluate( 'string(//*[@aria-labelledby="ran-booster-overview-packages"]/p)' ) ) );
-			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create', $xpath->evaluate( 'string(//div[@aria-label="Plugins"]/a[1]/@href)' ) );
-			self::assertSame( '/plugins', $xpath->evaluate( 'string(//div[@aria-label="Plugins"]/a[2]/@href)' ) );
-			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-themes-create', $xpath->evaluate( 'string(//div[@aria-label="Themes"]/a[1]/@href)' ) );
-			self::assertSame( '/themes', $xpath->evaluate( 'string(//div[@aria-label="Themes"]/a[2]/@href)' ) );
+			foreach ( array( 'Plugins', 'Themes' ) as $index => $label ) {
+				$group = '//div[@role="group" and @aria-label="' . $label . '"]';
+				self::assertSame( 1.0, $xpath->evaluate( 'count(' . $group . ')' ) );
+				self::assertSame( $label, trim( (string) $xpath->evaluate( 'string(' . $group . '/p/strong)' ) ) );
+				$count = 'Unknown' === $expected[ $index ] ? 'Unknown' : $expected[ $index ] . ' managed';
+				self::assertSame( $count, trim( (string) $xpath->evaluate( 'string(' . $group . '/p/span)' ) ) );
+			}
+			self::assertSame( 'Updates disabled: ' . $expected[2], trim( (string) $xpath->evaluate( 'string(//*[@aria-labelledby="ran-booster-overview-packages"]/p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")])' ) ) );
+			self::assertSame( '/plugins', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/div/a[1]/@href)' ) );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/div/a[2]/@href)' ) );
+			self::assertSame( '/themes', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/div/a[1]/@href)' ) );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-themes-create', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/div/a[2]/@href)' ) );
 		}
 	}
 

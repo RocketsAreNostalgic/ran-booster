@@ -697,6 +697,7 @@ test('General feedback requires the matching response and falls back when Core r
 			contains: () => true,
 		};
 		state.form.isConnected = true;
+		const nativeFeedback = [];
 		let rendered = 0;
 		let unmounted = 0;
 		let center = 0;
@@ -796,6 +797,10 @@ test('General feedback requires the matching response and falls back when Core r
 			hasAttribute: () => true,
 			getBoundingClientRect: () => ({ left: regionLeft, width: 800 }),
 			insertAdjacentElement() {},
+			querySelectorAll: () => [],
+			append(child) {
+				nativeFeedback.push(child);
+			},
 		};
 		state.listeners.get('htmx:afterSwap')({
 			detail: { elt: state.form, xhr },
@@ -804,7 +809,16 @@ test('General feedback requires the matching response and falls back when Core r
 			detail: { message: 'Saved.' },
 		});
 		assert.equal(rendered, mode.startsWith('ready') ? 1 : 0, mode);
-		assert.equal(state.toast.hidden, mode.startsWith('ready'), mode);
+		assert.equal(state.toast.hidden, true, mode);
+		if (!mode.startsWith('ready')) {
+			assert.deepEqual(
+				state.announcements,
+				[{ message: 'Saved.', type: 'polite' }],
+				mode
+			);
+			assert.equal(nativeFeedback.length, 1, mode);
+			assert.equal(nativeFeedback[0].textContent, 'Saved.', mode);
+		}
 		if (mode.startsWith('ready')) {
 			assert.equal(center, '600px');
 			assert.deepEqual(observed, [region, content]);
@@ -1580,7 +1594,7 @@ test('enhanced mutation feedback exposes one transient success toast', () => {
 	);
 });
 
-test('a package mutation converts its swapped success notice into the shared toast', () => {
+test('a package mutation retains its success notice and cleans its result URL', () => {
 	const state = fixture();
 	state.window.location.href =
 		'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&ran_booster_result=edit&ran_booster_package=example%2Fexample.php&_ran_booster_notice_nonce=signed&package=example%2Fexample.php';
@@ -1624,13 +1638,9 @@ test('a package mutation converts its swapped success notice into the shared toa
 		detail: { requestConfig: { elt: state.form } },
 	});
 
-	assert.equal(removed, true);
-	assert.equal(
-		state.toastMessage.textContent,
-		'Plugin was successfully updated.'
-	);
-	assert.equal(state.toast.hidden, false);
-	assert.equal(state.animationFrames.length, 1);
+	assert.equal(removed, false);
+	assert.equal(state.toastMessage.textContent, '');
+	assert.equal(state.toast.hidden, true);
 	assert.deepEqual(state.replacedUrls, [
 		{
 			state: { htmx: true },
@@ -1677,7 +1687,7 @@ test('an ordinary visit does not rewrite a provider release workflow result URL'
 	assert.deepEqual(state.replacedUrls, []);
 });
 
-test('an enhanced read action converts an explicit success notice into the shared toast', () => {
+test('an enhanced read action retains an explicit success notice', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
@@ -1713,14 +1723,11 @@ test('an enhanced read action converts an explicit success notice into the share
 		detail: { requestConfig: { elt: state.sourceLink } },
 	});
 
-	assert.equal(
-		state.toastMessage.textContent,
-		'Release eligibility checked; no changes found.'
-	);
-	assert.equal(state.toast.hidden, false);
+	assert.equal(state.toastMessage.textContent, '');
+	assert.equal(state.toast.hidden, true);
 });
 
-test('a package mutation consumes only an explicitly marked add-on success notice', () => {
+test('a package mutation retains an explicitly marked add-on success notice', () => {
 	const state = fixture();
 	const init = loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
@@ -1763,9 +1770,9 @@ test('a package mutation consumes only an explicitly marked add-on success notic
 		detail: { requestConfig: { elt: state.form } },
 	});
 
-	assert.equal(removed, true);
-	assert.equal(state.toastMessage.textContent, 'Release metadata refreshed.');
-	assert.equal(state.toast.hidden, false);
+	assert.equal(removed, false);
+	assert.equal(state.toastMessage.textContent, '');
+	assert.equal(state.toast.hidden, true);
 });
 
 test('a package mutation leaves unrelated success notices in place', () => {
@@ -2029,4 +2036,538 @@ test('Snackbar dismissal can focus the visible public switch', () => {
 		snackbar: { host },
 	})();
 	assert.equal(ownerDocument.activeElement, control);
+});
+
+test('package save feedback requires the matching authoritative edit response', () => {
+	for (const scenario of [
+		'plugin',
+		'theme',
+		'no-request',
+		'no-load',
+		'no-marker',
+		'wrong-package',
+		'wrong-type',
+		'wrong-returned-action',
+		'wrong-returned-identifier',
+		'install',
+		'already-managed',
+		'partial-reinstall',
+		'recovery',
+		'failed-status',
+		'stale',
+		'independent-pending',
+		'missing-component',
+		'missing-style',
+		'render-failure',
+	]) {
+		const state = fixture();
+		const type = scenario === 'theme' ? 'theme' : 'plugin';
+		const identifier =
+			type === 'plugin' ? 'example/example.php' : 'example';
+		const handlers = new Map();
+		const xhr = {
+			status: scenario === 'failed-status' ? 500 : 200,
+			addEventListener() {},
+			getResponseHeader: () => null,
+		};
+		const button = state.button;
+		button.dataset = {};
+		button.isConnected = true;
+		button.matches = (selector) =>
+			[
+				'[data-ran-booster-enhanced-mutation]',
+				'[data-ran-booster-package-settings-save]',
+				'a, button',
+			].includes(selector);
+		button.hasAttribute = () => false;
+		button.addEventListener = (name, handler) =>
+			handlers.set(name, handler);
+		button.removeEventListener = () => {};
+		const action = [
+			'install',
+			'already-managed',
+			'partial-reinstall',
+		].includes(scenario)
+			? scenario
+			: `edit-${type}`;
+		button.form = {
+			elements: {
+				namedItem: (name) => ({
+					value: name === 'ran_booster[action]' ? action : identifier,
+				}),
+			},
+		};
+		const oldRegion = {
+			id: 'wpbody-content',
+			isConnected: true,
+			contains: () => true,
+		};
+		let current = oldRegion;
+		let removed = 0;
+		let rendered = 0;
+		const notice = {
+			isConnected: true,
+			textContent: 'Package settings saved.',
+			dataset: {
+				ranBoosterSavedPackage:
+					scenario === 'wrong-package' ? 'other' : identifier,
+				ranBoosterSavedType: scenario === 'wrong-type' ? 'other' : type,
+			},
+			remove() {
+				removed++;
+				this.isConnected = false;
+			},
+		};
+		const returnedAction =
+			scenario === 'wrong-returned-action'
+				? 'install-plugin'
+				: `edit-${type}`;
+		const returnedIdentifier =
+			scenario === 'wrong-returned-identifier' ? 'other' : identifier;
+		const newRegion = {
+			id: 'wpbody-content',
+			querySelector(selector) {
+				if (selector === '#ran-booster-package-edit-form') {
+					return scenario === 'recovery'
+						? null
+						: {
+								elements: {
+									namedItem: (name) => ({
+										value:
+											name === 'ran_booster[action]'
+												? returnedAction
+												: returnedIdentifier,
+									}),
+								},
+							};
+				}
+				return scenario === 'no-marker' ? null : notice;
+			},
+			getBoundingClientRect: () => ({ left: 0, width: 800 }),
+			insertAdjacentElement() {},
+		};
+		state.document.getElementById = (id) =>
+			id === 'wpbody-content' ? current : state.error;
+		state.document.body = { append() {} };
+		state.document.createElement = () => ({
+			style: { setProperty() {} },
+			ownerDocument: state.document,
+			remove() {},
+			contains: () => false,
+			querySelector: () => (rendered ? {} : null),
+		});
+		state.window.removeEventListener = () => {};
+		state.window.getComputedStyle = () => ({
+			paddingLeft: scenario === 'missing-style' ? '0' : '20px',
+			backgroundColor: 'black',
+		});
+		state.window.wp.components =
+			scenario === 'missing-component' ? {} : { SnackbarList() {} };
+		state.window.wp.element = {
+			createElement: (component, props) => ({ component, props }),
+			createRoot: () => ({
+				render() {
+					if (scenario === 'render-failure') {
+						throw Error('render');
+					}
+					rendered++;
+				},
+				unmount() {},
+			}),
+			flushSync: (callback) => callback(),
+		};
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		const detail = { elt: button, target: oldRegion, xhr };
+		if (scenario !== 'no-request') {
+			state.listeners.get('htmx:beforeRequest')({ detail });
+		}
+		if (scenario !== 'no-load' && handlers.has('htmx:beforeOnLoad')) {
+			handlers.get('htmx:beforeOnLoad')({
+				detail,
+				preventDefault() {
+					assert.fail('unexpected veto');
+				},
+			});
+		}
+		if (scenario === 'stale') {
+			state.form.isConnected = true;
+			state.form.addEventListener = () => {};
+			state.form.removeEventListener = () => {};
+			state.listeners.get('htmx:beforeRequest')({
+				detail: {
+					elt: state.form,
+					target: oldRegion,
+					xhr: { addEventListener() {} },
+				},
+			});
+		}
+		if (scenario === 'independent-pending') {
+			state.form.isConnected = true;
+			state.form.addEventListener = () => {};
+			state.form.removeEventListener = () => {};
+			state.listeners.get('htmx:beforeRequest')({
+				detail: {
+					elt: state.form,
+					target: { id: 'other-target' },
+					xhr: { addEventListener() {} },
+				},
+			});
+		}
+		current = newRegion;
+		state.listeners.get('htmx:afterSwap')({ detail });
+		state.listeners.get('htmx:afterSwap')({ detail });
+		state.listeners.get('htmx:afterSettle')({ detail });
+		state.listeners.get('htmx:afterSettle')({ detail });
+		const success = ['plugin', 'theme', 'independent-pending'].includes(
+			scenario
+		);
+		const fallback = [
+			'missing-component',
+			'missing-style',
+			'render-failure',
+		].includes(scenario);
+		assert.equal(removed, success ? 1 : 0, scenario);
+		assert.equal(rendered, success ? 1 : 0, scenario);
+		assert.deepEqual(
+			state.announcements,
+			fallback
+				? [{ message: 'Package settings saved.', type: 'polite' }]
+				: [],
+			scenario
+		);
+		assert.equal(state.toast.hidden, true, scenario);
+	}
+});
+
+test('retained completed results do not focus an unrelated static provider failure', () => {
+	const state = fixture();
+	const notice = { textContent: 'Plugin was successfully updated.' };
+	const original = state.document.querySelectorAll;
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-package-mutation';
+	state.document.querySelectorAll = (selector) =>
+		selector.includes('[data-ran-booster-package-success]')
+			? [notice]
+			: original(selector);
+	let focused = false;
+	state.setRenderedErrors([
+		{
+			textContent: 'Provider unavailable.',
+			hidden: false,
+			querySelector: () => null,
+			hasAttribute: () => false,
+			setAttribute() {},
+			focus() {
+				focused = true;
+			},
+		},
+	]);
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:afterSwap')({
+		detail: { requestConfig: { elt: state.form }, xhr: { status: 200 } },
+	});
+	assert.equal(focused, false);
+	assert.equal(state.error.focusOptions, null);
+	assert.equal(notice.textContent, 'Plugin was successfully updated.');
+});
+
+test('an older same-target read cannot overtake or disrupt the newer package save', () => {
+	for (const order of ['read-before-save', 'read-after-save']) {
+		const state = fixture();
+		const oldHandlers = new Map();
+		const saveHandlers = new Map();
+		const oldTarget = {
+			id: 'wpbody-content',
+			isConnected: true,
+			contains: () => true,
+		};
+		let current = oldTarget;
+		const oldXhr = {
+			status: 200,
+			addEventListener() {},
+			getResponseHeader: () => null,
+		};
+		const saveXhr = {
+			status: 200,
+			addEventListener() {},
+			getResponseHeader: () => null,
+		};
+		const old = state.sourceLink;
+		old.isConnected = true;
+		old.addEventListener = (name, handler) =>
+			oldHandlers.set(name, handler);
+		old.removeEventListener = () => {};
+		const save = state.button;
+		save.dataset = {};
+		save.isConnected = true;
+		save.matches = (selector) =>
+			[
+				'[data-ran-booster-enhanced-mutation]',
+				'[data-ran-booster-package-settings-save]',
+				'a, button',
+			].includes(selector);
+		save.hasAttribute = () => false;
+		save.form = {
+			elements: {
+				namedItem: (name) => ({
+					value:
+						name === 'ran_booster[action]'
+							? 'edit-plugin'
+							: 'example/example.php',
+				}),
+			},
+		};
+		save.addEventListener = (name, handler) =>
+			saveHandlers.set(name, handler);
+		save.removeEventListener = () => {};
+		state.document.getElementById = (id) =>
+			id === 'wpbody-content' ? current : state.error;
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		const oldDetail = { elt: old, target: oldTarget, xhr: oldXhr };
+		const saveDetail = { elt: save, target: oldTarget, xhr: saveXhr };
+		state.listeners.get('htmx:beforeRequest')({ detail: oldDetail });
+		let veto = false;
+		const readLoad = () =>
+			oldHandlers.get('htmx:beforeOnLoad')({
+				detail: oldDetail,
+				preventDefault() {
+					veto = true;
+				},
+			});
+		if (order === 'read-before-save') {
+			readLoad();
+		}
+		state.listeners.get('htmx:beforeRequest')({ detail: saveDetail });
+		if (order === 'read-after-save') {
+			readLoad();
+		}
+		assert.equal(veto, order === 'read-after-save');
+		state.listeners.get('htmx:sendError')({ detail: oldDetail });
+		state.listeners.get('htmx:afterRequest')({ detail: oldDetail });
+		assert.equal(save.disabled, true, order);
+		assert.equal(state.error.hidden, true, order);
+		assert.deepEqual(state.announcements, [], order);
+		saveHandlers.get('htmx:beforeOnLoad')({
+			detail: saveDetail,
+			preventDefault() {
+				assert.fail('current save vetoed');
+			},
+		});
+		const notice = {
+			isConnected: true,
+			textContent: 'Saved.',
+			dataset: {
+				ranBoosterSavedPackage: 'example/example.php',
+				ranBoosterSavedType: 'plugin',
+			},
+		};
+		current = {
+			id: 'wpbody-content',
+			querySelector: (selector) =>
+				selector === '#ran-booster-package-edit-form'
+					? save.form
+					: notice,
+		};
+		state.listeners.get('htmx:afterSwap')({ detail: oldDetail });
+		state.listeners.get('htmx:afterSwap')({ detail: saveDetail });
+		state.listeners.get('htmx:afterSettle')({ detail: oldDetail });
+		state.listeners.get('htmx:afterSettle')({ detail: saveDetail });
+		assert.deepEqual(
+			state.announcements,
+			[{ message: 'Saved.', type: 'polite' }],
+			order
+		);
+	}
+});
+
+test('a retained non-save result is announced once after its own settled response', () => {
+	for (const scenario of [
+		'plain',
+		'header',
+		'live',
+		'hidden',
+		'live-off',
+		'failed',
+	]) {
+		const hasHeader = scenario === 'header';
+		const state = fixture();
+		const handlers = new Map();
+		const target = {
+			id: 'wpbody-content',
+			isConnected: true,
+			contains: () => true,
+		};
+		let current = target;
+		const notice = {
+			textContent: 'Metadata refreshed.',
+			getClientRects: () => (scenario === 'hidden' ? [] : [{}]),
+			closest: () =>
+				['live', 'live-off'].includes(scenario)
+					? {
+							getAttribute: () =>
+								scenario === 'live-off' ? 'off' : 'polite',
+						}
+					: null,
+		};
+		const xhr = {
+			status: scenario === 'failed' ? 500 : 200,
+			addEventListener() {},
+			getResponseHeader: () =>
+				hasHeader
+					? JSON.stringify({
+							'ran-booster:admin-mutation-success': {
+								message: notice.textContent,
+							},
+						})
+					: null,
+		};
+		state.form.isConnected = true;
+		state.form.addEventListener = (name, handler) =>
+			handlers.set(name, handler);
+		state.form.removeEventListener = () => {};
+		state.document.getElementById = (id) =>
+			id === 'wpbody-content' ? current : state.error;
+		state.document.querySelectorAll = (selector) =>
+			selector.includes('data-ran-booster-package-success')
+				? [notice]
+				: [];
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		const detail = { elt: state.form, target, xhr };
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		handlers.get('htmx:beforeOnLoad')({
+			detail,
+			preventDefault() {
+				assert.fail('current response vetoed');
+			},
+		});
+		current = {
+			id: 'wpbody-content',
+			querySelectorAll: () => [notice],
+			append() {},
+		};
+		state.listeners.get('htmx:afterSwap')({ detail });
+		if (hasHeader) {
+			notice.getClientRects = () => [{}];
+			notice.closest = () => null;
+			state.listeners.get('ran-booster:admin-mutation-success')({
+				detail: { message: notice.textContent },
+			});
+		} else {
+			assert.deepEqual(
+				state.announcements.filter((item) => item.type === 'polite'),
+				[]
+			);
+		}
+		state.listeners.get('htmx:afterSettle')({ detail });
+		state.listeners.get('htmx:afterSettle')({ detail });
+		assert.deepEqual(
+			state.announcements.filter((item) => item.type === 'polite'),
+			['live', 'hidden', 'failed'].includes(scenario)
+				? []
+				: [{ message: notice.textContent, type: 'polite' }],
+			scenario
+		);
+	}
+});
+
+test('stale source and current save failures release their own controls for retry', () => {
+	const state = fixture();
+	const target = {
+		id: 'wpbody-content',
+		isConnected: true,
+		contains: () => true,
+	};
+	const makeXhr = () => ({ addEventListener() {} });
+	const old = state.sourceLink;
+	old.isConnected = true;
+	old.addEventListener = () => {};
+	old.removeEventListener = () => {};
+	const save = state.button;
+	save.dataset = {};
+	save.isConnected = true;
+	save.matches = (selector) =>
+		[
+			'[data-ran-booster-enhanced-mutation]',
+			'[data-ran-booster-package-settings-save]',
+			'a, button',
+		].includes(selector);
+	save.hasAttribute = () => false;
+	save.form = {
+		elements: {
+			namedItem: (name) => ({
+				value:
+					name === 'ran_booster[action]'
+						? 'edit-plugin'
+						: 'example/example.php',
+			}),
+		},
+	};
+	save.addEventListener = () => {};
+	save.removeEventListener = () => {};
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	const oldDetail = { elt: old, target, xhr: makeXhr() };
+	const saveDetail = { elt: save, target, xhr: makeXhr() };
+	state.listeners.get('htmx:beforeRequest')({ detail: oldDetail });
+	state.listeners.get('htmx:beforeRequest')({ detail: saveDetail });
+	state.listeners.get('htmx:sendError')({ detail: oldDetail });
+	assert.equal(state.sourceLinkAttributes.has('aria-busy'), false);
+	assert.equal(state.sourceLinkAttributes.has('aria-disabled'), false);
+	assert.equal(save.disabled, true);
+	assert.equal(state.error.hidden, true);
+	state.listeners.get('htmx:sendError')({ detail: saveDetail });
+	assert.equal(save.disabled, false);
+	let prevented = false;
+	state.listeners.get('htmx:beforeRequest')({
+		detail: { elt: old, target, xhr: makeXhr() },
+		preventDefault() {
+			prevented = true;
+		},
+	});
+	assert.equal(prevented, false);
+	assert.equal(state.sourceLinkAttributes.get('aria-busy'), 'true');
+});
+
+test('a completed request cannot release a newer request on the same element', () => {
+	const state = fixture();
+	const target = {
+		id: 'wpbody-content',
+		isConnected: true,
+		contains: () => true,
+	};
+	state.form.isConnected = true;
+	state.form.addEventListener = () => {};
+	state.form.removeEventListener = () => {};
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	const first = { elt: state.form, target, xhr: { addEventListener() {} } };
+	const second = { elt: state.form, target, xhr: { addEventListener() {} } };
+	state.listeners.get('htmx:beforeRequest')({ detail: first });
+	state.listeners.get('htmx:afterRequest')({ detail: first });
+	assert.equal(state.button.disabled, false);
+	state.listeners.get('htmx:beforeRequest')({ detail: second });
+	state.listeners.get('htmx:afterRequest')({ detail: first });
+	state.listeners.get('htmx:sendError')({ detail: first });
+	assert.equal(state.button.disabled, true);
+	assert.equal(state.formAttributes.get('aria-busy'), 'true');
+	assert.equal(state.error.hidden, true);
+	state.listeners.get('htmx:afterRequest')({ detail: second });
+	assert.equal(state.button.disabled, false);
+	assert.equal(state.formAttributes.has('aria-busy'), false);
 });

@@ -989,10 +989,10 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "'hx-sync': 'this:drop'", $packages );
 
 		self::assertStringContainsString( 'data-ran-booster-package-success', $notices );
-		self::assertStringContainsString( 'consumeEnhancedSuccess()', $feedback );
+		self::assertStringContainsString( 'cleanPackageResultUrl()', $feedback );
 		self::assertStringContainsString( 'history.replaceState', $feedback );
 		self::assertStringNotContainsString( "header( 'HX-Replace-Url:", $this->source( 'RAN/Dashboard.php' ) );
-		self::assertStringContainsString( 'captureInteractionState(form)', $feedback );
+		self::assertStringContainsString( 'captureInteractionState(form, event.detail.xhr)', $feedback );
 		self::assertStringContainsString( 'restoreInteractionState()', $feedback );
 		self::assertStringContainsString( 'window.scrollTo(0, state.scrollY)', $feedback );
 		self::assertStringNotContainsString( 'packageSourceScrollY', $packages );

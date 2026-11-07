@@ -26,14 +26,14 @@
 
 		const enhancedFormSelector = '[data-ran-booster-enhanced-mutation]';
 		const toastSelector = '[data-ran-booster-feedback-toast]';
+		const toastAnimations = new WeakMap();
+		const toastTimers = new WeakMap();
 		const submitters = new WeakMap();
 		const busyStates = new WeakMap();
 		let pendingInteractionState = null;
 		let sourceRequest = null;
-		const toastAnimations = new WeakMap();
-		const toastTimers = new WeakMap();
-		const generalRequests = new WeakMap();
-		let generalArmed = null;
+		const requests = new WeakMap();
+		let armedSuccess = null;
 		let snackbar = null;
 
 		function disposeSnackbar() {
@@ -59,6 +59,9 @@
 				return;
 			}
 			const candidates = [
+				...document.querySelectorAll(
+					'[data-ran-booster-package-settings-save]'
+				),
 				...document.querySelectorAll(
 					'#ran-booster-save-numeric-bottom'
 				),
@@ -92,12 +95,12 @@
 			}
 		}
 
-		function presentGeneralSnackbar(message) {
+		function presentGeneralSnackbar(
+			message,
+			region = document.getElementById('ran-booster-general-region')
+		) {
 			const element = window.wp?.element;
 			const List = window.wp?.components?.SnackbarList;
-			const region = document.getElementById(
-				'ran-booster-general-region'
-			);
 			if (
 				!element?.createRoot ||
 				!element.flushSync ||
@@ -125,7 +128,7 @@
 			host.className = 'ran-booster-general-snackbar';
 			region.insertAdjacentElement('afterend', host);
 			try {
-				snackbar = { host, root: element.createRoot(host) };
+				snackbar = { host, region, root: element.createRoot(host) };
 			} catch {
 				host.remove();
 				return false;
@@ -177,17 +180,33 @@
 			}
 		}
 
-		function captureGeneralRequest(event, form) {
+		function captureRequest(event, form) {
 			const detail = event.detail;
+			const general = form.matches?.('[data-ran-booster-general-form]');
+			const packageType = form.matches?.(
+				'[data-ran-booster-package-settings-save]'
+			)
+				? /^edit-(plugin|theme)$/.exec(
+						form.form?.elements.namedItem('ran_booster[action]')
+							?.value || ''
+					)?.[1]
+				: null;
+			const identifier = packageType
+				? form.form.elements.namedItem(`ran_booster[${packageType}]`)
+						?.value
+				: null;
 			if (
-				!form.matches?.('[data-ran-booster-general-form]') ||
 				!detail?.xhr ||
-				![
-					'ran-booster-general-region',
-					'ran-booster-general-hide_github',
-					'ran-booster-general-self_update_discovery',
-					'ran-booster-general-numeric',
-				].includes(detail.target?.id)
+				!detail.target?.id ||
+				(general &&
+					![
+						'ran-booster-general-region',
+						'ran-booster-general-hide_github',
+						'ran-booster-general-self_update_discovery',
+						'ran-booster-general-numeric',
+					].includes(detail.target.id)) ||
+				(packageType &&
+					(!identifier || detail.target.id !== 'wpbody-content'))
 			) {
 				return;
 			}
@@ -196,8 +215,12 @@
 				form,
 				xhr: detail.xhr,
 				payload: null,
+				general,
+				packageType,
+				identifier,
 			};
-			generalRequests.set(detail.xhr, record);
+			requests.set(detail.xhr, record);
+			requests.set(detail.target, record);
 			const onLoad = (response) => {
 				if (response.detail?.xhr !== record.xhr) {
 					return;
@@ -207,11 +230,13 @@
 						record.target ||
 					!record.target.isConnected ||
 					!form.isConnected ||
-					!record.target.contains(form)
+					(general && !record.target.contains(form)) ||
+					(!general && requests.get(record.target) !== record)
 				) {
 					response.preventDefault();
 					return;
 				}
+				record.ready = true;
 				record.suppress = form.hasAttribute?.(
 					'data-ran-booster-general-unconfirmed'
 				);
@@ -257,9 +282,11 @@
 		}
 
 		function isStaleSourceRequest(event, form) {
+			const record = requests.get(event.detail?.xhr);
 			return (
-				form?.hasAttribute?.('data-ran-booster-source-choice') &&
-				event.detail?.xhr !== sourceRequest
+				(form?.hasAttribute?.('data-ran-booster-source-choice') &&
+					event.detail?.xhr !== sourceRequest) ||
+				(record && requests.get(record.target) !== record)
 			);
 		}
 
@@ -276,7 +303,7 @@
 			);
 		}
 
-		function captureInteractionState(form) {
+		function captureInteractionState(form, xhr) {
 			pendingInteractionState = {
 				disclosureStates: Object.fromEntries(
 					Array.from(
@@ -287,8 +314,8 @@
 					).filter(([id]) => id)
 				),
 				form,
+				xhr,
 				scrollY: window.scrollY,
-				successMessage: '',
 			};
 		}
 
@@ -346,7 +373,7 @@
 			);
 		}
 
-		function setBusy(form) {
+		function setBusy(form, xhr) {
 			if (form.getAttribute('aria-busy') === 'true') {
 				return;
 			}
@@ -386,6 +413,7 @@
 					};
 				});
 			busyStates.set(form, {
+				xhr,
 				controls,
 				submitter,
 				submitterAriaBusy: submitter.getAttribute('aria-busy'),
@@ -409,8 +437,11 @@
 			}
 		}
 
-		function resetBusy(form) {
+		function resetBusy(form, xhr) {
 			const state = busyStates.get(form);
+			if (state?.xhr && state.xhr !== xhr) {
+				return;
+			}
 			if (state) {
 				state.controls.forEach(function (controlState) {
 					controlState.control.disabled = controlState.disabled;
@@ -721,13 +752,12 @@
 			);
 		}
 
-		function consumeEnhancedSuccess() {
+		function cleanPackageResultUrl() {
 			const notices = Array.from(
 				document.querySelectorAll(
 					'#wpbody-content [data-ran-booster-package-success]:not([data-ran-booster-update-summary])'
 				)
 			);
-			const messages = [];
 			if (notices.length > 0) {
 				const canonicalUrl = new URL(window.location.href);
 				'ran_booster_result ran_booster_package _ran_booster_notice_nonce'
@@ -736,16 +766,7 @@
 				const history = window.history;
 				history.replaceState(history.state, '', canonicalUrl);
 			}
-
-			notices.forEach(function (notice) {
-				const message = notice.textContent?.trim() || '';
-				if (message && !messages.includes(message)) {
-					messages.push(message);
-				}
-				notice.remove?.();
-			});
-
-			return messages.join(' ');
+			return notices.length > 0;
 		}
 
 		function consumeReleaseWorkflowResult() {
@@ -763,18 +784,6 @@
 				.forEach((key) => canonicalUrl.searchParams.delete(key));
 			const history = window.history;
 			history.replaceState(history.state, '', canonicalUrl);
-		}
-
-		function dispatchSuccess(message) {
-			if (!message || typeof window.CustomEvent !== 'function') {
-				return;
-			}
-
-			document.dispatchEvent(
-				new window.CustomEvent('ran-booster:admin-mutation-success', {
-					detail: { message },
-				})
-			);
 		}
 
 		document.addEventListener(
@@ -814,11 +823,11 @@
 						progress.hidden = false;
 					}
 				}
-				captureGeneralRequest(event, form);
+				captureRequest(event, form);
 				if (!form.dataset?.ranBoosterSettingsScope) {
-					captureInteractionState(form);
+					captureInteractionState(form, event.detail.xhr);
 				}
-				setBusy(form);
+				setBusy(form, event.detail.xhr);
 			}
 		});
 
@@ -829,7 +838,9 @@
 				if (
 					snackbar &&
 					(element === snackbar.host ||
-						element?.contains?.(snackbar.host))
+						element?.contains?.(snackbar.host) ||
+						element === snackbar.region ||
+						element?.contains?.(snackbar.region))
 				) {
 					restoreSnackbarFocus(element);
 					disposeSnackbar();
@@ -847,8 +858,8 @@
 		document.addEventListener('htmx:beforeTransition', function (event) {
 			if (requestForm(event)) {
 				// The browser's View Transition snapshot occupies the top layer,
-				// where no toast z-index can outrank it. Enhanced mutations use
-				// the Core-owned button and toast motion instead.
+				// where feedback cannot remain visible. Keep the existing
+				// Core-owned busy feedback without a view transition.
 				event.preventDefault();
 			}
 		});
@@ -863,7 +874,7 @@
 		});
 
 		document.addEventListener('htmx:afterSwap', function (event) {
-			const general = generalRequests.get(event.detail?.xhr);
+			const general = requests.get(event.detail?.xhr);
 			const region = document.getElementById(
 				general?.target.id || 'ran-booster-general-region'
 			);
@@ -872,15 +883,20 @@
 				!general.consumed &&
 				region &&
 				region !== general.target &&
-				region.hasAttribute('data-ran-booster-general-saved')
+				(general.general
+					? region.hasAttribute('data-ran-booster-general-saved')
+					: general.ready &&
+						general.xhr.status >= 200 &&
+						general.xhr.status < 300 &&
+						requests.get(general.target) === general)
 			) {
 				general.suppress ||= general.form.hasAttribute?.(
 					'data-ran-booster-general-unconfirmed'
 				);
-				generalArmed = general;
+				armedSuccess = general;
 				queueMicrotask(() => {
-					if (generalArmed === general) {
-						generalArmed = null;
+					if (armedSuccess === general) {
+						armedSuccess = null;
 					}
 				});
 			}
@@ -891,16 +907,77 @@
 			if (!form || isStaleSourceRequest(event, form)) {
 				return;
 			}
-
-			restoreInteractionState();
+			if (
+				!pendingInteractionState?.xhr ||
+				pendingInteractionState.xhr === event.detail?.xhr
+			) {
+				restoreInteractionState();
+			}
 			consumeReleaseWorkflowResult();
-			const successMessage = consumeEnhancedSuccess();
-			if (successMessage) {
-				pendingInteractionState ||= {
-					scrollY: null,
-					successMessage: '',
-				};
-				pendingInteractionState.successMessage = successMessage;
+			const save = requests.get(event.detail?.xhr);
+			if (
+				save?.packageType &&
+				save.ready &&
+				save.xhr.status >= 200 &&
+				save.xhr.status < 300 &&
+				!save.consumed &&
+				requests.get(save.target) === save
+			) {
+				const updated = document.getElementById(save.target.id);
+				const notice = updated?.querySelector(
+					'[data-ran-booster-package-saved]'
+				);
+				const edit = updated?.querySelector(
+					'#ran-booster-package-edit-form'
+				);
+				if (
+					updated !== save.target &&
+					edit?.elements.namedItem('ran_booster[action]')?.value ===
+						`edit-${save.packageType}` &&
+					edit.elements.namedItem(`ran_booster[${save.packageType}]`)
+						?.value === save.identifier &&
+					notice?.dataset.ranBoosterSavedPackage ===
+						save.identifier &&
+					notice.dataset.ranBoosterSavedType === save.packageType
+				) {
+					save.saveNotice = notice;
+					save.saveRegion = updated;
+					cleanPackageResultUrl();
+					return;
+				}
+			}
+
+			const success = cleanPackageResultUrl();
+			if (success && !isScopedFailureStatus(event.detail?.xhr?.status)) {
+				const updated = save && document.getElementById(save.target.id);
+				if (
+					save?.ready &&
+					!save.packageType &&
+					save.xhr.status >= 200 &&
+					save.xhr.status < 300 &&
+					updated &&
+					updated !== save.target
+				) {
+					save.resultRegion = updated;
+					save.resultMessage = Array.from(
+						updated.querySelectorAll(
+							'[data-ran-booster-package-success]:not([data-ran-booster-update-summary])'
+						)
+					)
+						.filter((notice) => {
+							const live = notice.closest(
+								'[role="status"], [role="alert"], [aria-live]'
+							);
+							return (
+								notice.getClientRects().length > 0 &&
+								(!live ||
+									live.getAttribute('aria-live') === 'off')
+							);
+						})
+						.map((notice) => notice.textContent.trim())
+						.filter(Boolean)
+						.join(' ');
+				}
 				return;
 			}
 
@@ -934,9 +1011,39 @@
 				return;
 			}
 			if (form && !isStaleSourceRequest(event, form)) {
-				const successMessage = pendingInteractionState?.successMessage;
-				restoreInteractionState(true);
-				dispatchSuccess(successMessage);
+				const state = pendingInteractionState;
+				const save = requests.get(event.detail?.xhr);
+				if (!state?.xhr || state.xhr === event.detail?.xhr) {
+					restoreInteractionState(true);
+				}
+				if (
+					save?.resultMessage &&
+					!save.consumed &&
+					requests.get(save.target) === save &&
+					document.getElementById(save.target.id) ===
+						save.resultRegion
+				) {
+					save.consumed = true;
+					announce(save.resultMessage, 'success');
+				}
+				if (
+					save?.packageType &&
+					requests.get(save.target) === save &&
+					!save.consumed &&
+					save.saveNotice?.isConnected &&
+					document.getElementById(save.target.id) === save.saveRegion
+				) {
+					save.consumed = true;
+					const message = save.saveNotice.textContent.trim();
+					if (
+						message &&
+						presentGeneralSnackbar(message, save.saveRegion)
+					) {
+						save.saveNotice.remove();
+					} else {
+						announce(message, 'success');
+					}
+				}
 			}
 		});
 
@@ -945,19 +1052,44 @@
 			function (event) {
 				const message =
 					event.detail?.message || event.detail?.value?.message;
-				if (typeof message === 'string' && message) {
-					if (generalArmed?.payload?.message === message) {
-						generalArmed.consumed = true;
-						const suppressed = generalArmed.suppress;
-						generalArmed = null;
-						if (suppressed) {
-							return;
-						}
-						if (presentGeneralSnackbar(message)) {
-							return;
-						}
+				if (
+					typeof message !== 'string' ||
+					!message ||
+					armedSuccess?.payload?.message !== message
+				) {
+					if (typeof message === 'string' && message) {
+						showToast(message);
 					}
-					showToast(message);
+					return;
+				}
+				const confirmed = armedSuccess;
+				confirmed.consumed = true;
+				armedSuccess = null;
+				if (confirmed.suppress) {
+					return;
+				}
+				const region = document.getElementById(confirmed.target.id);
+				if (!region || region === confirmed.target) {
+					return;
+				}
+				if (confirmed.general && presentGeneralSnackbar(message)) {
+					return;
+				}
+				const existing = Array.from(region.querySelectorAll('p')).find(
+					(node) =>
+						node.getClientRects().length > 0 &&
+						node.textContent.trim() === message
+				);
+				if (!existing) {
+					const feedback = document.createElement('p');
+					feedback.textContent = message;
+					region.append(feedback);
+				}
+				const live = existing?.closest(
+					'[role="status"], [role="alert"], [aria-live]'
+				);
+				if (!live || live.getAttribute('aria-live') === 'off') {
+					announce(message, 'success');
 				}
 			}
 		);
@@ -972,8 +1104,8 @@
 				}
 			}
 			const form = requestForm(event);
-			if (form && !isStaleSourceRequest(event, form)) {
-				resetBusy(form);
+			if (form) {
+				resetBusy(form, event.detail?.xhr);
 			}
 		});
 
@@ -986,6 +1118,9 @@
 		].forEach(function (eventName) {
 			document.addEventListener(eventName, function (event) {
 				const form = requestForm(event);
+				if (form) {
+					resetBusy(form, event.detail?.xhr);
+				}
 				if (form && !isStaleSourceRequest(event, form)) {
 					if (
 						eventName === 'htmx:responseError' &&
@@ -997,7 +1132,6 @@
 						return;
 					}
 
-					resetBusy(form);
 					if (
 						form.dataset?.ranBoosterSettingsScope &&
 						window.ranBoosterSettingsInitialized

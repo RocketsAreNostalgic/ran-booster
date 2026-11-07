@@ -2574,6 +2574,49 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( 'blocked', $result['data']['recovery_state'] );
 			self::assertCount( 1, $successes );
 			self::assertSame( ucfirst( $type ) . ' was successfully ' . $completed . '.', $successes[0]['message'] );
+			if ( 'edit' === $operation ) {
+				self::assertSame( $identifier, $successes[0]['saved_package'] );
+				self::assertSame( $type, $successes[0]['saved_type'] );
+			} else {
+				self::assertArrayNotHasKey( 'saved_package', $successes[0] );
+				self::assertArrayNotHasKey( 'saved_type', $successes[0] );
+			}
+		}
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_only_signed_edit_success_receives_save_metadata( string $type ): void {
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		foreach ( array( 'edit', 'install', 'update', 'unlink', 'unlink-and-delete', 'already-managed', 'partialreinstall', 'check' ) as $operation ) {
+			foreach ( array( true, false ) as $valid_nonce ) {
+				$_GET      = array(
+					'ran_booster_result'        => $operation,
+					'ran_booster_package'       => $identifier,
+					'_ran_booster_notice_nonce' => $valid_nonce ? wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) : 'forged',
+				);
+				$dashboard = $this->dashboard( $this->throwing_secrets() );
+				$notice    = ( new \RAN\Admin\PackageAdminController() )->add_success_notice( $dashboard, $type );
+				if ( $valid_nonce && 'edit' === $operation ) {
+					self::assertSame(
+						array(
+							'operation'  => 'edit',
+							'identifier' => $identifier,
+						),
+						$notice
+					);
+					self::assertSame( $identifier, $dashboard->messages[0]['saved_package'] );
+					self::assertSame( $type, $dashboard->messages[0]['saved_type'] );
+				} else {
+					foreach ( $dashboard->messages as $message ) {
+						self::assertArrayNotHasKey( 'saved_package', $message );
+						self::assertArrayNotHasKey( 'saved_type', $message );
+					}
+					if ( ! $valid_nonce || in_array( $operation, array( 'partialreinstall', 'check' ), true ) ) {
+						self::assertNull( $notice );
+						self::assertCount( 0, $dashboard->messages );
+					}
+				}
+			}
 		}
 	}
 

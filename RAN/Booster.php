@@ -805,8 +805,7 @@ class Booster {
 			$style_dependencies = array( $style_handle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
-		// The page hook was already checked against ADMIN_PAGE_HOOKS above.
-		$has_ui_overlay = in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
+		$has_ui_overlay   = in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
 		$ui_manifest_path = trailingslashit( $this->booster_path ?? dirname( __DIR__ ) ) . 'assets/lib/ran-booster-ui-manifest.json';
 		$ui_manifest      = is_file( $ui_manifest_path ) && is_readable( $ui_manifest_path ) ? wp_json_file_decode( $ui_manifest_path, array( 'associative' => true ) ) : null;
 		if ( is_array( $ui_manifest ) && isset( $ui_manifest['foundation'], $ui_manifest['overlay'] )

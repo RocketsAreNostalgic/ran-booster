@@ -46,7 +46,7 @@ test('manifest identifies two canonical assets and separate page budgets', () =>
 	assert.match(entries.foundation, /^ran-booster-ui-foundation-[\w-]+\.js$/);
 	assert.match(entries.overlay, /^ran-booster-ui-overlay-[\w-]+\.js$/);
 	assert.ok(
-		foundation.length + adapter.length <= 90000,
+		foundation.length + adapter.length <= 110000,
 		'foundation and adapter raw'
 	);
 	assert.ok(
@@ -89,11 +89,15 @@ test('host React loads the foundation once and overlay extends the same object',
 			'Badge',
 			'Button',
 			'CardRoot',
+			'Link',
+			'NavigationLinks',
 			'NoticeDescription',
 			'NoticeRoot',
 			'version',
 		]);
 		assert.equal(ui.version, '0.26.0');
+		assert.ok(ui.Link);
+		assert.equal(typeof ui.NavigationLinks, 'function');
 		await import(
 			pathToFileURL(fileURLToPath(new URL(entries.overlay, assets))).href
 		);

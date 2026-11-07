@@ -328,6 +328,11 @@
 		margin: 0;
 	}
 
+	.ran-booster-admin
+		.ran-booster-card.ran-booster-documentation__index-surface,
+	.ran-booster-admin
+		.ran-booster-documentation__index-surface
+		.ran-booster-card__surface,
 	.ran-booster-admin .ran-booster-documentation__main,
 	.ran-booster-admin .ran-booster-documentation__section,
 	.ran-booster-admin .ran-booster-documentation__content {

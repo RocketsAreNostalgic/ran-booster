@@ -25,10 +25,6 @@ const buttonCss = fs.readFileSync(
 	new URL('../../assets/ran-booster/10-buttons.css', import.meta.url),
 	'utf8'
 );
-const footerCss = fs.readFileSync(
-	new URL('../../assets/ran-booster/30-provider-cards.css', import.meta.url),
-	'utf8'
-);
 
 function loadFunction(name, dependencies = {}) {
 	const localizedDependencies = {
@@ -88,7 +84,6 @@ function fixture() {
 	const animationFrames = [];
 	const replacedUrls = [];
 	const scrollCalls = [];
-	const timeouts = [];
 	let packageDisclosures = [
 		{ id: 'ran-booster-advanced-source-settings', open: false },
 		{ id: 'ran-booster-package-danger-zone', open: false },
@@ -161,10 +156,14 @@ function fixture() {
 			};
 		},
 	};
+	function formElements(items) {
+		items.namedItem = () => null;
+		return items;
+	}
 	const form = {
 		classList: classList(),
 		dataset: { ranBoosterErrorTarget: '#ran-booster-local-error' },
-		elements: [button, secondary],
+		elements: formElements([button, secondary]),
 		getAttribute(name) {
 			return formAttributes.get(name) ?? null;
 		},
@@ -218,68 +217,6 @@ function fixture() {
 			return false;
 		},
 	};
-	const toast = {
-		animations: [],
-		classList: classList(),
-		dataset: { ranBoosterFeedbackTimeout: '6000' },
-		hidden: true,
-		style: {
-			properties: new Map(),
-			setProperty(name, value) {
-				this.properties.set(name, value);
-			},
-		},
-		animate(keyframes, options) {
-			const animation = {
-				cancelled: false,
-				currentTime: null,
-				paused: false,
-				played: false,
-				cancel() {
-					this.cancelled = true;
-				},
-				onfinish: null,
-				pause() {
-					this.paused = true;
-				},
-				play() {
-					this.played = true;
-				},
-			};
-			this.animations.push({
-				animation,
-				hidden: this.hidden,
-				isVisible: this.classList.contains('is-visible'),
-				keyframes,
-				message: toastMessage.textContent,
-				options,
-				visibility: this.style.visibility,
-				zIndex: this.style.zIndex,
-			});
-			return animation;
-		},
-		getBoundingClientRect() {
-			return { width: 360 };
-		},
-		closest(selector) {
-			return selector === '.ran-booster-admin' ? admin : null;
-		},
-		matches(selector) {
-			return selector === '[data-ran-booster-feedback-toast]';
-		},
-		textContent: '',
-		querySelector(selector) {
-			return selector === '[data-ran-booster-feedback-toast-message]'
-				? toastMessage
-				: null;
-		},
-	};
-	const admin = {
-		getBoundingClientRect() {
-			return { left: 160, width: 1100 };
-		},
-	};
-	const toastMessage = { textContent: '' };
 	const document = {
 		addEventListener(name, handler) {
 			listeners.set(name, handler);
@@ -296,9 +233,6 @@ function fixture() {
 		querySelector(selector) {
 			if (selector === '[data-ran-booster-source-progress]') {
 				return sourceProgress;
-			}
-			if (selector === '[data-ran-booster-feedback-toast]') {
-				return toast;
 			}
 
 			return null;
@@ -349,10 +283,6 @@ function fixture() {
 			animationFrames.push(callback);
 			return animationFrames.length;
 		},
-		setTimeout(callback, timeout) {
-			timeouts.push({ callback, timeout });
-			return timeouts.length;
-		},
 		wp: {
 			a11y: {
 				speak(message, type) {
@@ -388,9 +318,6 @@ function fixture() {
 		sourceLink,
 		sourceLinkAttributes,
 		sourceProgress,
-		timeouts,
-		toast,
-		toastMessage,
 		window,
 	};
 }
@@ -809,7 +736,7 @@ test('General feedback requires the matching response and falls back when Core r
 			detail: { message: 'Saved.' },
 		});
 		assert.equal(rendered, mode.startsWith('ready') ? 1 : 0, mode);
-		assert.equal(state.toast.hidden, true, mode);
+
 		if (!mode.startsWith('ready')) {
 			assert.deepEqual(
 				state.announcements,
@@ -840,11 +767,6 @@ test('General feedback requires the matching response and falls back when Core r
 				unmounted,
 				1,
 				'Discard once before history serializes markup.'
-			);
-			assert.equal(
-				state.toast.hidden,
-				true,
-				'Keep the unrelated presenter untouched.'
 			);
 		}
 		xhrListeners.get('loadend')();
@@ -1535,63 +1457,7 @@ test('enhanced mutation transport failures reset busy state and keep an error lo
 			],
 			eventName
 		);
-		assert.equal(state.toast.hidden, true, eventName);
 	}
-});
-
-test('enhanced mutation feedback exposes one transient success toast', () => {
-	const state = fixture();
-	const init = loadFunction('initEnhancedMutationFeedback', {
-		document: state.document,
-		window: state.window,
-	});
-
-	init();
-	state.listeners.get('ran-booster:admin-mutation-success')({
-		detail: { message: 'Settings saved.' },
-	});
-
-	assert.equal(state.toast.hidden, false);
-	assert.equal(state.toast.classList.contains('is-visible'), false);
-	assert.equal(state.toastMessage.textContent, 'Settings saved.');
-	assert.deepEqual(state.announcements, []);
-	assert.equal(state.toast.animations[0].options.duration, 160);
-	assert.equal(state.toast.animations[0].hidden, false);
-	assert.equal(state.toast.animations[0].isVisible, false);
-	assert.equal(state.toast.animations[0].visibility, 'hidden');
-	assert.equal(state.toast.animations[0].message, 'Settings saved.');
-	assert.equal(state.toast.animations[0].zIndex, '100');
-	assert.equal(
-		state.toast.animations[0].keyframes[0].transform,
-		'translateY(calc(100% + var(--ran-booster-space-20)))'
-	);
-	assert.equal(
-		state.toast.animations[0].keyframes[1].transform,
-		'translateY(0)'
-	);
-	assert.equal(state.toast.animations[0].animation.paused, true);
-	assert.equal(state.toast.animations[0].animation.currentTime, 0);
-	assert.equal(state.toast.style.visibility, 'hidden');
-
-	state.animationFrames.shift()();
-
-	assert.equal(state.toast.classList.contains('is-visible'), true);
-	assert.equal(state.toast.style.visibility, '');
-	assert.equal(state.toast.animations[0].animation.played, true);
-	assert.deepEqual(state.announcements, [
-		{ message: 'Settings saved.', type: 'polite' },
-	]);
-	assert.equal(state.timeouts[0].timeout, 6000);
-	state.timeouts[0].callback();
-
-	assert.equal(
-		state.toast.animations[1].keyframes[0].transform,
-		'translateY(0)'
-	);
-	assert.equal(
-		state.toast.animations[1].keyframes[1].transform,
-		'translateY(calc(100% + var(--ran-booster-space-20)))'
-	);
 });
 
 test('a package mutation retains its success notice and cleans its result URL', () => {
@@ -1639,8 +1505,7 @@ test('a package mutation retains its success notice and cleans its result URL', 
 	});
 
 	assert.equal(removed, false);
-	assert.equal(state.toastMessage.textContent, '');
-	assert.equal(state.toast.hidden, true);
+
 	assert.deepEqual(state.replacedUrls, [
 		{
 			state: { htmx: true },
@@ -1722,9 +1587,6 @@ test('an enhanced read action retains an explicit success notice', () => {
 	state.listeners.get('htmx:afterSettle')({
 		detail: { requestConfig: { elt: state.sourceLink } },
 	});
-
-	assert.equal(state.toastMessage.textContent, '');
-	assert.equal(state.toast.hidden, true);
 });
 
 test('a package mutation retains an explicitly marked add-on success notice', () => {
@@ -1771,8 +1633,6 @@ test('a package mutation retains an explicitly marked add-on success notice', ()
 	});
 
 	assert.equal(removed, false);
-	assert.equal(state.toastMessage.textContent, '');
-	assert.equal(state.toast.hidden, true);
 });
 
 test('a package mutation leaves unrelated success notices in place', () => {
@@ -1816,7 +1676,7 @@ test('a package mutation leaves unrelated success notices in place', () => {
 	});
 
 	assert.equal(removed, false);
-	assert.equal(state.toast.hidden, true);
+
 	assert.doesNotMatch(
 		requestedSelectors.join('\n'),
 		/\.notice\.notice-success/
@@ -1868,50 +1728,25 @@ test('a queued package summary remains persistent and never becomes a success to
 			xhr: { status: 200 },
 		},
 	});
-
-	assert.equal(state.toast.hidden, true);
-	assert.equal(state.toastMessage.textContent, '');
 });
 
-test('the feedback runtime is vanilla and its motion is optional', () => {
+test('the feedback runtime has no legacy toast presenter', () => {
 	assert.match(source, /onDomReady\(initEnhancedMutationFeedback\)/);
 	assert.doesNotMatch(legacySource, /initEnhancedMutationFeedback/);
 	assert.doesNotMatch(source, /\$\(|\$\.|\}\)\(jQuery\)/);
-	assert.match(source, /data-ran-booster-enhanced-mutation/);
-	assert.match(source, /data-ran-booster-feedback-toast/);
+	assert.doesNotMatch(
+		source,
+		/data-ran-booster-feedback-toast|showToast|toastTimers|toastAnimations|positionToast/
+	);
+	assert.doesNotMatch(source, /setTimeout|\.animate\?\./);
 	assert.doesNotMatch(source, /#wpbody-content \.notice\.notice-success/);
+	assert.match(source, /wp\.a11y\.speak/);
+	assert.doesNotMatch(packageSource, /packageSourceScrollY/);
 	assert.match(
 		buttonCss,
 		/ran-booster-enhanced-mutation__submitter--busy\.ran-booster-update-is-active::before[\s\S]*repeating-linear-gradient/
 	);
-	assert.doesNotMatch(css, /repeating-linear-gradient/);
-	assert.doesNotMatch(source, /htmx:oobAfterSwap/);
-	assert.doesNotMatch(source, /spinner is-active/);
-	assert.doesNotMatch(source, /positionToast/);
-	assert.doesNotMatch(packageSource, /packageSourceScrollY/);
-	assert.match(source, /wp\.a11y\.speak/);
-	assert.match(source, /getBoundingClientRect/);
-	assert.match(source, /\.animate\?\./);
-	assert.match(source, /prefers-reduced-motion: reduce/);
-	assert.match(source, /prefersReducedMotion\(\)/);
-	assert.match(buttonCss, /prefers-reduced-motion: reduce/);
-	assert.match(css, /position: fixed/);
-	assert.doesNotMatch(css, /position: absolute/);
-	assert.doesNotMatch(css, /feedback-toast-center-x/);
-	assert.match(css, /box-sizing: border-box/);
-	assert.match(css, /border-inline-start: 0/);
-	assert.match(css, /inset-block-end:\s*var\(--ran-booster-space-20\)/);
-	assert.match(css, /left: 50%/);
-	assert.match(
-		footerCss,
-		/\.ran-booster-admin \.ran-booster-footer\s*\{[^}]*position: relative/s
-	);
-	assert.match(css, /z-index: 100/);
-	assert.match(css, /translate:\s*-50% 0/);
-	assert.match(
-		css,
-		/translateY\(\s*calc\(100% \+ var\(--ran-booster-space-20\)\)\s*\)/
-	);
+	assert.match(css, /ran-booster-general-snackbar/);
 });
 
 test('General busy state keeps switches and their fieldsets usable while protecting submit controls', () => {
@@ -1925,7 +1760,9 @@ test('General busy state keeps switches and their fieldsets usable while protect
 		disabled: false,
 		matches: (selector) => selector.includes('fieldset'),
 	};
-	state.form.elements = [fieldset, checkbox, state.button];
+	state.form.elements = Object.assign([fieldset, checkbox, state.button], {
+		namedItem: () => null,
+	});
 	loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
 		window: state.window,
@@ -1977,13 +1814,10 @@ test('General busy state leaves only the mounted switch subtree operable', () =>
 		const hiddenInput = control(false, true);
 		const locked = control(true, true);
 		const outside = control(false, false);
-		state.form.elements = [
-			button,
-			hiddenInput,
-			locked,
-			outside,
-			state.button,
-		];
+		state.form.elements = Object.assign(
+			[button, hiddenInput, locked, outside, state.button],
+			{ namedItem: () => null }
+		);
 		loadFunction('initEnhancedMutationFeedback', {
 			document: state.document,
 			window: state.window,
@@ -2238,7 +2072,6 @@ test('package save feedback requires the matching authoritative edit response', 
 				: [],
 			scenario
 		);
-		assert.equal(state.toast.hidden, true, scenario);
 	}
 });
 
@@ -2570,4 +2403,626 @@ test('a completed request cannot release a newer request on the same element', (
 	state.listeners.get('htmx:afterRequest')({ detail: second });
 	assert.equal(state.button.disabled, false);
 	assert.equal(state.formAttributes.has('aria-busy'), false);
+});
+
+test('non-save success requires its current ready response and preserves native messages', async () => {
+	for (const scenario of [
+		'current',
+		'existing',
+		'live',
+		'live-off',
+		'hidden-existing',
+		'unknown',
+		'non-2xx',
+		'malformed',
+		'stale',
+		'independent',
+		'portal',
+		'general-outside',
+		'expired',
+	]) {
+		const state = fixture();
+		const regionById = new Map();
+		const handlers = new Map();
+		const appended = [];
+		const existing = {
+			hidden: false,
+			textContent: 'Confirmed safely.',
+			getClientRects: () => (scenario === 'hidden-existing' ? [] : [{}]),
+			closest: () =>
+				['live', 'live-off'].includes(scenario)
+					? {
+							getAttribute: () =>
+								scenario === 'live-off' ? 'off' : 'polite',
+						}
+					: null,
+		};
+		const old = {
+			id: 'target-a',
+			isConnected: true,
+			contains: () => !['general-outside', 'portal'].includes(scenario),
+		};
+		if (scenario === 'general-outside') {
+			old.id = 'ran-booster-general-region';
+		}
+		const next = {
+			id: old.id,
+			hasAttribute: () => true,
+			querySelectorAll: () =>
+				['existing', 'live', 'live-off', 'hidden-existing'].includes(
+					scenario
+				)
+					? [existing]
+					: [],
+			append: (node) => appended.push(node),
+		};
+		regionById.set(old.id, old);
+		state.document.getElementById = (id) =>
+			regionById.get(id) || state.error;
+		state.document.createElement = () => ({ textContent: '' });
+		state.form.isConnected = true;
+		state.form.matches = (selector) =>
+			selector === '[data-ran-booster-enhanced-mutation]' ||
+			(scenario === 'general-outside' &&
+				selector === '[data-ran-booster-general-form]');
+		state.form.addEventListener = (name, callback) =>
+			handlers.set(name, callback);
+		state.form.removeEventListener = () => {};
+		const xhr = {
+			status: scenario === 'non-2xx' ? 500 : 200,
+			addEventListener() {},
+			getResponseHeader: () =>
+				scenario === 'malformed'
+					? '{'
+					: JSON.stringify({
+							'ran-booster:admin-mutation-success': {
+								message: 'Confirmed safely.',
+							},
+						}),
+		};
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		const detail = { elt: state.form, target: old, xhr };
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message: 'Confirmed safely.' },
+		});
+		assert.deepEqual(
+			appended,
+			[],
+			'A naked event must not create feedback.'
+		);
+		assert.deepEqual(state.announcements, []);
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		if (['stale', 'independent'].includes(scenario)) {
+			const target =
+				scenario === 'stale'
+					? old
+					: { id: 'target-b', isConnected: true };
+			regionById.set(target.id, target);
+			const other = {
+				...state.sourceLink,
+				isConnected: true,
+				addEventListener() {},
+				removeEventListener() {},
+			};
+			state.listeners.get('htmx:beforeRequest')({
+				detail: { elt: other, target, xhr: { addEventListener() {} } },
+			});
+		}
+		let vetoed = false;
+		handlers.get('htmx:beforeOnLoad')({
+			detail,
+			preventDefault() {
+				vetoed = true;
+			},
+		});
+		assert.equal(
+			vetoed,
+			['stale', 'general-outside'].includes(scenario),
+			scenario
+		);
+		regionById.set(old.id, next);
+		state.listeners.get('htmx:afterSwap')({ detail });
+		if (scenario === 'expired') {
+			await Promise.resolve();
+		}
+		const message =
+			scenario === 'unknown' ? 'Different message.' : 'Confirmed safely.';
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message },
+		});
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message },
+		});
+		const produced = [
+			'current',
+			'independent',
+			'portal',
+			'hidden-existing',
+		].includes(scenario);
+		const retained = ['existing', 'live', 'live-off'].includes(scenario);
+		assert.equal(appended.length, produced ? 1 : 0, scenario);
+		if (produced) {
+			assert.equal(
+				appended[0].textContent,
+				'Confirmed safely.',
+				scenario
+			);
+		}
+		assert.deepEqual(
+			state.announcements.filter((item) => item.type === 'polite'),
+			produced || (retained && scenario !== 'live')
+				? [{ message: 'Confirmed safely.', type: 'polite' }]
+				: [],
+			scenario
+		);
+	}
+});
+
+test('only the three authorized provider saves use the shared Snackbar', () => {
+	for (const scenario of [
+		'access',
+		'access-button',
+		'webhook',
+		'public',
+		'missing-module',
+		'missing-style',
+		'render-failure',
+		'wrong-target',
+		'wrong-operation',
+		'wrong-header',
+		'bare-header',
+		'validation',
+		'delete',
+		'capture',
+		'diagnostics',
+	]) {
+		const state = fixture();
+		const handlers = new Map();
+		const actions = {
+			access: 'save-access-profile',
+			'access-button': 'save-access-profile',
+			webhook: 'save-webhook-profile',
+			public: 'save-public-lookup-profile',
+			'missing-module': 'save-access-profile',
+			'missing-style': 'save-access-profile',
+			'render-failure': 'save-access-profile',
+			'wrong-target': 'save-access-profile',
+			'wrong-operation': 'save-other-profile',
+			'wrong-header': 'save-access-profile',
+			'bare-header': 'save-access-profile',
+			validation: 'validate-access-profile',
+			delete: 'delete-access-profile',
+			capture: 'capture',
+			diagnostics: 'diagnostics',
+		};
+		const operation = actions[scenario];
+		let targetId = 'ran-booster-provider-profile-region';
+		if (scenario === 'public') {
+			targetId = 'ran-booster-public-lookup-profile-region';
+		}
+		if (scenario === 'wrong-target') {
+			targetId = 'other-region';
+		}
+		const target = {
+			id: targetId,
+			isConnected: true,
+			contains: () => true,
+		};
+		let region = target;
+		let rendered = 0;
+		const appended = [];
+		state.form.isConnected = true;
+		state.form.elements.namedItem = () => ({ value: operation });
+		state.form.addEventListener = (name, callback) =>
+			handlers.set(name, callback);
+		state.form.removeEventListener = () => {};
+		const requestElement =
+			scenario === 'access-button' ? state.button : state.form;
+		if (requestElement === state.button) {
+			requestElement.dataset = {};
+			requestElement.isConnected = true;
+			requestElement.form = state.form;
+			requestElement.matches = (selector) =>
+				['[data-ran-booster-enhanced-mutation]', 'a, button'].includes(
+					selector
+				);
+			requestElement.hasAttribute = () => false;
+			requestElement.addEventListener = (name, callback) =>
+				handlers.set(name, callback);
+			requestElement.removeEventListener = () => {};
+		}
+		state.document.getElementById = (id) =>
+			id === targetId ? region : state.error;
+		state.document.body = { append() {} };
+		state.document.createElement = () => ({
+			style: { setProperty() {} },
+			remove() {},
+			contains: () => false,
+			ownerDocument: state.document,
+			querySelector: () => (rendered ? {} : null),
+		});
+		state.window.getComputedStyle = () => ({
+			paddingLeft: scenario === 'missing-style' ? '0' : '20px',
+			backgroundColor: 'black',
+		});
+		state.window.removeEventListener = () => {};
+		state.window.wp.components =
+			scenario === 'missing-module' ? {} : { SnackbarList() {} };
+		state.window.wp.element = {
+			createElement: (component, props) => ({ component, props }),
+			createRoot: () => ({
+				render() {
+					if (scenario === 'render-failure') {
+						throw Error('render');
+					}
+					rendered++;
+				},
+				unmount() {},
+			}),
+			flushSync: (callback) => callback(),
+		};
+		const payload = { message: 'Profile saved.' };
+		if (scenario !== 'public') {
+			payload.operation = operation;
+			if (scenario === 'wrong-header') {
+				payload.operation = 'core:save-webhook-profile';
+			} else if (
+				scenario !== 'bare-header' &&
+				['save-access-profile', 'save-webhook-profile'].includes(
+					operation
+				)
+			) {
+				payload.operation = `core:${operation}`;
+			}
+		}
+		const xhr = {
+			status: 200,
+			addEventListener() {},
+			getResponseHeader: () =>
+				JSON.stringify({
+					'ran-booster:admin-mutation-success': payload,
+				}),
+		};
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		const detail = { elt: requestElement, target, xhr };
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		handlers.get('htmx:beforeOnLoad')({
+			detail,
+			preventDefault() {
+				assert.fail('current response vetoed');
+			},
+		});
+		region = {
+			id: targetId,
+			getBoundingClientRect: () => ({ left: 0, width: 800 }),
+			insertAdjacentElement() {},
+			querySelectorAll: () => [],
+			querySelector: () => null,
+			append: (node) => appended.push(node),
+		};
+		state.listeners.get('htmx:afterSwap')({ detail });
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message: payload.message },
+		});
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message: payload.message },
+		});
+		state.listeners.get('htmx:afterSettle')({ detail });
+		state.listeners.get('htmx:afterSettle')({ detail });
+		const expectedSnackbar = [
+			'access',
+			'access-button',
+			'webhook',
+			'public',
+		].includes(scenario);
+		assert.equal(rendered, expectedSnackbar ? 1 : 0, scenario);
+		if (expectedSnackbar) {
+			assert.deepEqual(appended, [], scenario);
+			assert.deepEqual(state.announcements, [], scenario);
+		} else if (
+			['wrong-target', 'wrong-header', 'bare-header'].includes(scenario)
+		) {
+			assert.deepEqual(appended, [], scenario);
+			assert.deepEqual(state.announcements, [], scenario);
+		} else {
+			assert.equal(appended.length, 1, scenario);
+			assert.equal(appended[0].textContent, payload.message, scenario);
+			assert.deepEqual(
+				state.announcements,
+				[{ message: payload.message, type: 'polite' }],
+				scenario
+			);
+		}
+	}
+});
+
+test('provider Snackbar dismissal prefers the current visible returned save control', () => {
+	for (const scenario of [
+		'inside',
+		'outside',
+		'access-heading',
+		'webhook-heading',
+		'missing-heading',
+		'offscreen-heading',
+	]) {
+		const state = fixture();
+		const handlers = new Map();
+		const isPublic = ['inside', 'outside'].includes(scenario);
+		let operation = 'save-access-profile';
+		if (isPublic) {
+			operation = 'save-public-lookup-profile';
+		}
+		if (scenario === 'webhook-heading') {
+			operation = 'save-webhook-profile';
+		}
+		const target = {
+			id: isPublic
+				? 'ran-booster-public-lookup-profile-region'
+				: 'ran-booster-provider-profile-region',
+			isConnected: true,
+			contains: () => true,
+		};
+		let region = target;
+		let rendered = false;
+		let dismiss;
+		const hostFocus = {};
+		const outside = {};
+		const makeControl = (visible, disabled = false) => ({
+			isConnected: true,
+			disabled,
+			getClientRects: () => (visible ? [{}] : []),
+			getBoundingClientRect: () => ({
+				left: 10,
+				top: 10,
+				right: 80,
+				bottom: 40,
+			}),
+			focus() {
+				state.document.activeElement = this;
+			},
+		});
+		const hidden = makeControl(false);
+		const disabled = makeControl(true, true);
+		const returned = makeControl(true);
+		const heading = makeControl(true);
+		if (scenario === 'offscreen-heading') {
+			heading.getBoundingClientRect = () => ({
+				left: 2100,
+				top: 10,
+				right: 2200,
+				bottom: 40,
+			});
+		}
+		const fallback = makeControl(true);
+		state.document.querySelectorAll = (selector) =>
+			selector === '#wpadminbar a[href]' ? [fallback] : [];
+		const staleForm = {
+			elements: { namedItem: () => ({ value: operation }) },
+			querySelectorAll: () => [hidden, disabled],
+		};
+		const form = {
+			elements: { namedItem: () => ({ value: operation }) },
+			querySelectorAll: () =>
+				isPublic ? [hidden, disabled, returned] : [hidden, disabled],
+		};
+		state.form.isConnected = true;
+		state.form.elements.namedItem = () => ({ value: operation });
+		state.form.addEventListener = (name, callback) =>
+			handlers.set(name, callback);
+		state.form.removeEventListener = () => {};
+		state.button.isConnected = false;
+		state.document.getElementById = (id) =>
+			id === target.id ? region : state.error;
+		state.document.body = { append() {} };
+		state.document.createElement = () => ({
+			style: { setProperty() {} },
+			remove() {},
+			ownerDocument: state.document,
+			contains: (item) => item === hostFocus,
+			querySelector: () => (rendered ? {} : null),
+		});
+		state.window.innerHeight = 800;
+		state.window.removeEventListener = () => {};
+		state.window.getComputedStyle = () => ({
+			paddingLeft: '20px',
+			backgroundColor: 'black',
+		});
+		state.window.wp.components = { SnackbarList() {} };
+		state.window.wp.element = {
+			createElement: (component, props) => {
+				dismiss = props.onRemove;
+				return { component, props };
+			},
+			createRoot: () => ({
+				render() {
+					rendered = true;
+				},
+				unmount() {},
+			}),
+			flushSync: (callback) => callback(),
+		};
+		const xhr = {
+			status: 200,
+			addEventListener() {},
+			getResponseHeader: () =>
+				JSON.stringify({
+					'ran-booster:admin-mutation-success': isPublic
+						? { message: 'Saved.' }
+						: { message: 'Saved.', operation: `core:${operation}` },
+				}),
+		};
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		state.listeners.get('submit')({
+			target: state.form,
+			submitter: state.button,
+		});
+		const detail = { elt: state.form, target, xhr };
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		handlers.get('htmx:beforeOnLoad')({
+			detail,
+			preventDefault() {
+				assert.fail('current response vetoed');
+			},
+		});
+		region = {
+			id: target.id,
+			querySelectorAll: (selector) =>
+				selector === 'form' ? [staleForm, form] : [],
+			querySelector: () =>
+				scenario === 'missing-heading' || isPublic ? null : heading,
+			getBoundingClientRect: () => ({ left: 0, width: 800 }),
+			insertAdjacentElement() {},
+		};
+		state.listeners.get('htmx:afterSwap')({ detail });
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message: 'Saved.' },
+		});
+		assert.equal(rendered, true);
+		state.document.activeElement =
+			scenario === 'outside' ? outside : hostFocus;
+		dismiss();
+		let expected = heading;
+		if (scenario === 'outside') {
+			expected = outside;
+		} else if (isPublic) {
+			expected = returned;
+		} else if (
+			['missing-heading', 'offscreen-heading'].includes(scenario)
+		) {
+			expected = fallback;
+		}
+		assert.equal(state.document.activeElement, expected, scenario);
+	}
+});
+
+test('a correlated Transporter row result retains cells and places feedback inside its last cell', () => {
+	for (const scenario of ['standard', 'existing', 'template', 'empty']) {
+		const alreadyVisible = scenario === 'existing';
+		const state = fixture();
+		const handlers = new Map();
+		const target = {
+			id: 'migration-row',
+			tagName: 'TR',
+			isConnected: true,
+			contains: () => true,
+		};
+		let current = target;
+		const message = 'Migration request completed.';
+		const link = { tagName: 'A' };
+		const form = { tagName: 'FORM' };
+		const existing = {
+			textContent: message,
+			getClientRects: () => [{}],
+			closest: () => null,
+		};
+		const firstCell = { tagName: 'TD', children: [link] };
+		const lastCell = {
+			tagName: 'TD',
+			children: alreadyVisible ? [form, existing] : [form],
+			append(node) {
+				this.children.push(node);
+			},
+		};
+		const template = { tagName: 'TEMPLATE' };
+		const cells = scenario === 'empty' ? [] : [firstCell, lastCell];
+		const children = [
+			...cells,
+			...(scenario === 'template' ? [template] : []),
+		];
+		const row = {
+			id: target.id,
+			tagName: 'TR',
+			children,
+			cells,
+			lastElementChild: children.at(-1) || null,
+			insertCell() {
+				const cell = {
+					tagName: 'TD',
+					children: [],
+					append(node) {
+						this.children.push(node);
+					},
+				};
+				cells.push(cell);
+				children.push(cell);
+				return cell;
+			},
+			querySelectorAll: () => (alreadyVisible ? [existing] : []),
+			append() {
+				assert.fail(
+					'A paragraph cannot be appended directly to a row.'
+				);
+			},
+		};
+		state.form.isConnected = true;
+		state.form.addEventListener = (name, callback) =>
+			handlers.set(name, callback);
+		state.form.removeEventListener = () => {};
+		state.document.getElementById = (id) =>
+			id === target.id ? current : state.error;
+		state.document.createElement = () => ({ textContent: '' });
+		const xhr = {
+			status: 200,
+			addEventListener() {},
+			getResponseHeader: () =>
+				JSON.stringify({
+					'ran-booster:admin-mutation-success': {
+						message,
+						operation: 'transporter:migration',
+					},
+				}),
+		};
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		const detail = { elt: state.form, target, xhr };
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		handlers.get('htmx:beforeOnLoad')({
+			detail,
+			preventDefault() {
+				assert.fail('current response vetoed');
+			},
+		});
+		current = row;
+		state.listeners.get('htmx:afterSwap')({ detail });
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message },
+		});
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message },
+		});
+		state.listeners.get('htmx:afterSettle')({ detail });
+		state.listeners.get('htmx:afterSettle')({ detail });
+		assert.equal(row.children, children);
+		assert.equal(row.cells, cells);
+		const resultCell = cells.at(-1);
+		if (scenario === 'empty') {
+			assert.equal(cells.length, 1);
+			assert.equal(resultCell.children.length, 1);
+		} else {
+			assert.equal(cells.length, 2);
+			assert.equal(firstCell.children[0], link);
+			assert.equal(resultCell, lastCell);
+			assert.equal(lastCell.children[0], form);
+			assert.equal(lastCell.children.length, 2);
+		}
+		assert.equal(resultCell.children.at(-1).textContent, message);
+		if (alreadyVisible) {
+			assert.equal(resultCell.children.at(-1), existing);
+		}
+		if (scenario === 'template') {
+			assert.equal(children.at(-1), template);
+		}
+		assert.deepEqual(state.announcements, [{ message, type: 'polite' }]);
+	}
 });

@@ -104,12 +104,25 @@ The enhanced feedback listeners belong to the document lifetime and initialize
 once, even if history navigation evaluates their script again. React subtrees
 have their own mount and unmount lifecycles independent of these listeners.
 
-General save confirmations use the Core Snackbar only for the matching saved
-response and live replacement region. If its renderer or presentation styles
-are unavailable, the existing feedback remains the fallback. Style readiness
-is a conservative presentation check, not a WordPress API guarantee.
+General, normal plugin/theme settings and the fixed provider profile saves use the official WordPress
+SnackbarList only for a matching confirmed response and live replacement region.
+Package saves require the nonce-validated edit result, matching package identity
+and current request; a click, HTTP success or generic success event is insufficient.
+If the component or its styles cannot render, the confirmed local result remains
+visible. Style readiness is a conservative presentation check, not a WordPress
+API guarantee.
+Provider access, webhook and public-lookup saves require their exact operation,
+target and matching authoritative response header. Other operations do not gain
+Snackbar presentation from their wording or a `save-` prefix.
 The transient subtree is removed before HTMX serializes history, so restored
 pages do not replay a cached confirmation.
+
+Other completed operations retain their server results or correlated persistent
+local status text. Transporter and package progress keep their own result and
+announcement paths. The old custom toast has no consumers or fallback path.
+Partial work, saved-before-reinstall results, warnings, errors and recovery
+details stay durable. Existing success events remain available to independent
+consumers; emitting one does not opt an operation into Snackbar presentation.
 
 Core's source-checkout guidance remains a native, non-dismissible informational
 notice with no actions. It is shown to authorized administrators when automatic

@@ -86,6 +86,7 @@ function fixture(fetch) {
 			: null;
 	const links = [];
 	const events = [];
+	const spoken = [];
 
 	globalThis.document = {
 		dispatchEvent(event) {
@@ -119,6 +120,7 @@ function fixture(fetch) {
 		}
 	};
 	globalThis.window = {
+		wp: { a11y: { speak: (text) => spoken.push(text) } },
 		CustomEvent: class {
 			constructor(type, options) {
 				this.detail = options.detail;
@@ -138,7 +140,7 @@ function fixture(fetch) {
 		},
 	};
 
-	return { events, form, links, message, messageText, submit };
+	return { events, form, links, message, messageText, spoken, submit };
 }
 
 function submitEvent(defaultPrevented = false) {
@@ -252,7 +254,47 @@ test('a successful export downloads the Blueprint without leaving the Portabilit
 			message:
 				'Transporter Blueprint download started. Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction.',
 		});
+		assert.equal(state.message.className, 'notice notice-warning inline');
+		assert.equal(
+			state.messageText.textContent,
+			state.events[0].detail.message
+		);
+		assert.deepEqual(state.spoken, [state.messageText.textContent]);
+		assert.equal(state.message.getAttribute('aria-live'), 'off');
 		assert.equal(state.submit.disabled, false);
+	} finally {
+		cleanup();
+	}
+});
+
+test('export without speech uses polite status and restores alert for errors', async () => {
+	let calls = 0;
+	const state = fixture(async () =>
+		++calls === 1
+			? {
+					blob: async () => new Blob(['zip']),
+					headers: new Headers({ 'content-type': 'application/zip' }),
+					ok: true,
+				}
+			: {
+					headers: new Headers({
+						'content-type': 'application/json',
+					}),
+					ok: false,
+					json: async () => ({ data: { message: 'Export failed.' } }),
+				}
+	);
+	delete window.wp;
+	try {
+		loadFunction('initPortabilityExportDownload')();
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.message.hidden, false);
+		assert.equal(state.message.getAttribute('role'), 'status');
+		assert.equal(state.message.getAttribute('aria-live'), 'polite');
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.messageText.textContent, 'Export failed.');
+		assert.equal(state.message.getAttribute('role'), 'alert');
+		assert.equal(state.message.getAttribute('aria-live'), 'assertive');
 	} finally {
 		cleanup();
 	}
@@ -417,13 +459,21 @@ for (const count of [
 			await state.form.listeners.get('submit')(submitEvent());
 			assert.equal(state.links.length, 1);
 			assert.equal(state.links[0].clicks, 1);
-			assert.equal(state.message.hidden, !expectedWarning);
-			assert.equal(state.messageText.textContent, expectedWarning);
+			assert.equal(state.message.hidden, false);
+			assert.equal(
+				state.message.className,
+				`notice notice-${expectedWarning ? 'warning' : 'success'} inline`
+			);
 			assert.equal(
 				state.events[0].detail.message,
 				'Transporter Blueprint download started.' +
 					(expectedWarning ? ' ' + expectedWarning : '')
 			);
+			assert.equal(
+				state.messageText.textContent,
+				state.events[0].detail.message
+			);
+			assert.deepEqual(state.spoken, [state.messageText.textContent]);
 			assert.equal(state.submit.disabled, false);
 		} finally {
 			cleanup();

@@ -240,7 +240,6 @@
 	.ran-admin-shell__navigation,
 	.ran-booster-admin > hr,
 	.ran-booster-documentation__search-hint,
-	[data-ran-booster-feedback-toast],
 	body.wp-admin .notice,
 	body.wp-admin .update-nag,
 	body.wp-admin [role="alert"] {

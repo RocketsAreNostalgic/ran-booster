@@ -405,7 +405,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'body.wp-admin .notice,', $documentation );
 		self::assertStringContainsString( '.ran-admin-shell__navigation,', $documentation );
 		self::assertStringNotContainsString( "\t.ran-booster-footer,\n", $documentation );
-		self::assertStringContainsString( '[data-ran-booster-feedback-toast],', $documentation );
+		self::assertStringNotContainsString( '[data-ran-booster-feedback-toast]', $documentation );
 		self::assertMatchesRegularExpression(
 			'/@media print \{[\s\S]+\.ran-booster-admin \.ran-booster-footer \{\s+display: block;\s+margin: 18pt 0 0;\s+padding: 8pt 0 0;\s+border-block-start: 1pt solid CanvasText;/',
 			$documentation

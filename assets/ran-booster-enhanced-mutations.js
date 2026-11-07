@@ -25,9 +25,6 @@
 		}
 
 		const enhancedFormSelector = '[data-ran-booster-enhanced-mutation]';
-		const toastSelector = '[data-ran-booster-feedback-toast]';
-		const toastAnimations = new WeakMap();
-		const toastTimers = new WeakMap();
 		const submitters = new WeakMap();
 		const busyStates = new WeakMap();
 		let pendingInteractionState = null;
@@ -59,6 +56,7 @@
 				return;
 			}
 			const candidates = [
+				...(snackbar.returnControl ? [snackbar.returnControl] : []),
 				...document.querySelectorAll(
 					'[data-ran-booster-package-settings-save]'
 				),
@@ -97,7 +95,8 @@
 
 		function presentGeneralSnackbar(
 			message,
-			region = document.getElementById('ran-booster-general-region')
+			region = document.getElementById('ran-booster-general-region'),
+			returnControl = null
 		) {
 			const element = window.wp?.element;
 			const List = window.wp?.components?.SnackbarList;
@@ -128,7 +127,12 @@
 			host.className = 'ran-booster-general-snackbar';
 			region.insertAdjacentElement('afterend', host);
 			try {
-				snackbar = { host, region, root: element.createRoot(host) };
+				snackbar = {
+					host,
+					region,
+					returnControl,
+					root: element.createRoot(host),
+				};
 			} catch {
 				host.remove();
 				return false;
@@ -183,13 +187,13 @@
 		function captureRequest(event, form) {
 			const detail = event.detail;
 			const general = form.matches?.('[data-ran-booster-general-form]');
+			const operation = (form.form || form).elements?.namedItem(
+				'ran_booster[action]'
+			)?.value;
 			const packageType = form.matches?.(
 				'[data-ran-booster-package-settings-save]'
 			)
-				? /^edit-(plugin|theme)$/.exec(
-						form.form?.elements.namedItem('ran_booster[action]')
-							?.value || ''
-					)?.[1]
+				? /^edit-(plugin|theme)$/.exec(operation || '')?.[1]
 				: null;
 			const identifier = packageType
 				? form.form.elements.namedItem(`ran_booster[${packageType}]`)
@@ -218,6 +222,7 @@
 				general,
 				packageType,
 				identifier,
+				operation,
 			};
 			requests.set(detail.xhr, record);
 			requests.set(detail.target, record);
@@ -249,6 +254,27 @@
 							'ran-booster:admin-mutation-success'
 						];
 				} catch {
+					record.payload = null;
+				}
+				record.providerSave =
+					(operation === 'save-public-lookup-profile' &&
+						record.target.id ===
+							'ran-booster-public-lookup-profile-region' &&
+						record.payload?.operation === undefined) ||
+					(['save-access-profile', 'save-webhook-profile'].includes(
+						operation
+					) &&
+						record.target.id ===
+							'ran-booster-provider-profile-region' &&
+						record.payload?.operation === `core:${operation}`);
+				if (
+					[
+						'save-access-profile',
+						'save-webhook-profile',
+						'save-public-lookup-profile',
+					].includes(operation) &&
+					!record.providerSave
+				) {
 					record.payload = null;
 				}
 			};
@@ -623,135 +649,6 @@
 			return true;
 		}
 
-		function hideToast(toast) {
-			toast.classList.remove('is-visible');
-			toast.hidden = true;
-			toastAnimations.delete(toast);
-			toastTimers.delete(toast);
-		}
-
-		function prefersReducedMotion() {
-			return (
-				window.matchMedia?.('(prefers-reduced-motion: reduce)')
-					?.matches === true
-			);
-		}
-
-		function dismissToast(toast) {
-			const timeout = toastTimers.get(toast);
-			if (timeout) {
-				window.clearTimeout(timeout);
-			}
-			const previousAnimation = toastAnimations.get(toast);
-			if (previousAnimation) {
-				previousAnimation.cancel();
-			}
-			if (prefersReducedMotion()) {
-				hideToast(toast);
-				return;
-			}
-
-			const animation = toast.animate?.(
-				[
-					{ opacity: 1, transform: 'translateY(0)' },
-					{
-						opacity: 0,
-						transform:
-							'translateY(calc(100% + var(--ran-booster-space-20)))',
-					},
-				],
-				{ duration: 160, easing: 'ease-in', fill: 'both' }
-			);
-			if (!animation) {
-				hideToast(toast);
-				return;
-			}
-
-			toastAnimations.set(toast, animation);
-			animation.onfinish = function () {
-				hideToast(toast);
-			};
-		}
-
-		function showToast(message = '') {
-			const toast = document.querySelector(toastSelector);
-			if (!toast) {
-				return;
-			}
-			const messageElement = toast.querySelector?.(
-				'[data-ran-booster-feedback-toast-message]'
-			);
-			if (message && messageElement) {
-				messageElement.textContent = message;
-			}
-
-			const timeout = Number.parseInt(
-				toast.dataset.ranBoosterFeedbackTimeout || '6000',
-				10
-			);
-			const previousTimeout = toastTimers.get(toast);
-			if (previousTimeout) {
-				window.clearTimeout(previousTimeout);
-			}
-			const previousAnimation = toastAnimations.get(toast);
-			if (previousAnimation) {
-				previousAnimation.cancel();
-			}
-
-			// Prepare the populated toast completely before it can paint. Its
-			// stacking order and footer-edge entrance frame are active before
-			// visibility is restored, so no underlying edge can flash.
-			toast.style.visibility = 'hidden';
-			toast.style.zIndex = '100';
-			toast.hidden = false;
-			toast.getBoundingClientRect?.();
-			const animation = prefersReducedMotion()
-				? null
-				: toast.animate?.(
-						[
-							{
-								opacity: 0,
-								transform:
-									'translateY(calc(100% + var(--ran-booster-space-20)))',
-							},
-							{ opacity: 1, transform: 'translateY(0)' },
-						],
-						{ duration: 160, easing: 'ease-out', fill: 'both' }
-					);
-			if (animation) {
-				animation.pause();
-				animation.currentTime = 0;
-				toastAnimations.set(toast, animation);
-			}
-
-			const revealToast = function () {
-				if (animation && toastAnimations.get(toast) !== animation) {
-					return;
-				}
-				toast.classList.add('is-visible');
-				toast.style.visibility = '';
-				animation?.play();
-				announce(
-					(messageElement?.textContent || toast.textContent).trim(),
-					'polite'
-				);
-			};
-			if (animation && window.requestAnimationFrame) {
-				window.requestAnimationFrame(revealToast);
-			} else {
-				revealToast();
-			}
-			toastTimers.set(
-				toast,
-				window.setTimeout(
-					function () {
-						dismissToast(toast);
-					},
-					Number.isFinite(timeout) && timeout > 0 ? timeout : 6000
-				)
-			);
-		}
-
 		function cleanPackageResultUrl() {
 			const notices = Array.from(
 				document.querySelectorAll(
@@ -1057,9 +954,6 @@
 					!message ||
 					armedSuccess?.payload?.message !== message
 				) {
-					if (typeof message === 'string' && message) {
-						showToast(message);
-					}
 					return;
 				}
 				const confirmed = armedSuccess;
@@ -1072,8 +966,41 @@
 				if (!region || region === confirmed.target) {
 					return;
 				}
-				if (confirmed.general && presentGeneralSnackbar(message)) {
-					return;
+				if (confirmed.general || confirmed.providerSave) {
+					const returned = confirmed.providerSave
+						? Array.from(region.querySelectorAll('form')).filter(
+								(form) =>
+									form.elements.namedItem(
+										'ran_booster[action]'
+									)?.value === confirmed.operation
+							)
+						: [];
+					const control =
+						returned
+							.flatMap((form) =>
+								Array.from(
+									form.querySelectorAll('[type="submit"]')
+								)
+							)
+							.find(
+								(button) =>
+									!button.disabled &&
+									button.getClientRects().length > 0
+							) ||
+						(confirmed.providerSave &&
+							region.querySelector(
+								'[data-ran-booster-provider-profile-focus]'
+							)) ||
+						submitters.get(confirmed.form);
+					if (
+						presentGeneralSnackbar(
+							message,
+							confirmed.general ? undefined : region,
+							control
+						)
+					) {
+						return;
+					}
 				}
 				const existing = Array.from(region.querySelectorAll('p')).find(
 					(node) =>
@@ -1083,7 +1010,12 @@
 				if (!existing) {
 					const feedback = document.createElement('p');
 					feedback.textContent = message;
-					region.append(feedback);
+					const result =
+						region.tagName === 'TR'
+							? region.cells[region.cells.length - 1] ||
+								region.insertCell()
+							: region;
+					result.append(feedback);
 				}
 				const live = existing?.closest(
 					'[role="status"], [role="alert"], [aria-live]'

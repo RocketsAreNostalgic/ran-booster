@@ -12,38 +12,7 @@
 	pointer-events: none;
 }
 
-.ran-booster-feedback-toast {
-	inset-block-end: var(--ran-booster-space-20);
-	border-inline-start: 0;
-	box-sizing: border-box;
-	box-shadow: var(--ran-booster-shadow-toast);
-	margin: 0;
-	opacity: 0;
-	padding: var(--ran-booster-space-8) var(--ran-booster-space-12);
-	position: fixed;
-	left: 50%;
-	transform: translateY(calc(100% + var(--ran-booster-space-20)));
-	translate: -50% 0;
-	inline-size: min(360px, calc(100vw - 40px));
-	will-change: opacity, transform;
-	z-index: 100;
-}
-
-.ran-booster-feedback-toast p {
-	margin: var(--ran-booster-space-8) 0;
-	padding: 0;
-	color: var(--ran-booster-text);
-	font-size: var(--ran-booster-font-size-sm);
-	line-height: 1.54;
-	text-align: center;
-}
-
-.ran-booster-feedback-toast.is-visible {
-	opacity: 1;
-	transform: translateY(0);
-}
-
-/* Keep General confirmation in the viewport without moving the form. */
+/* Keep confirmed saves in the viewport without moving their forms. */
 .ran-booster-general-snackbar .components-snackbar-list {
 	position: fixed;
 	z-index: 100;

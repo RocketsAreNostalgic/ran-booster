@@ -123,7 +123,19 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 		'data-update-can-run': '1',
 	});
 	const label = element();
-	const message = element();
+	const message = element({
+		'aria-live': 'polite',
+		'data-ran-booster-update-message': '',
+	});
+	const messageUpdates = [];
+	let messageText = '';
+	Object.defineProperty(message, 'textContent', {
+		get: () => messageText,
+		set(value) {
+			messageText = value;
+			messageUpdates.push(value);
+		},
+	});
 	const activityState = badgeHost();
 	const children = new Map([
 		['[data-ran-booster-activity-badge]', badge],
@@ -147,6 +159,7 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 		button,
 		label,
 		message,
+		messageUpdates,
 		reference,
 		row,
 	};
@@ -155,6 +168,7 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 function environment(rows, responses) {
 	const timers = [];
 	const events = [];
+	const speech = [];
 	const requests = [];
 	let request = 0;
 	const summary = element({
@@ -222,6 +236,7 @@ function environment(rows, responses) {
 		},
 	};
 	const window = {
+		wp: { a11y: { speak: (...args) => speech.push(args) } },
 		CustomEvent: class {
 			constructor(type, options) {
 				this.detail = options.detail;
@@ -271,6 +286,7 @@ function environment(rows, responses) {
 	return {
 		document,
 		events,
+		speech,
 		requests,
 		summary,
 		summaryMessage,
@@ -278,6 +294,65 @@ function environment(rows, responses) {
 		window,
 	};
 }
+
+test('only a correlated terminal success updates the native live region once', async () => {
+	const template = fs.readFileSync(
+		new URL('../../views/packages/index.php', import.meta.url),
+		'utf8'
+	);
+	assert.match(
+		template,
+		/<span class="screen-reader-text" aria-live="polite" data-ran-booster-update-message><\/span>/
+	);
+	const success = rowFixture(81);
+	const failure = rowFixture(82);
+	const response = (reference, successState, failureState) => ({
+		ok: true,
+		async json() {
+			return {
+				success: true,
+				data: {
+					items: {
+						81: { attempt_id: 81, reference, state: successState },
+						82: {
+							attempt_id: 82,
+							reference: failure.reference,
+							state: failureState,
+						},
+					},
+				},
+			};
+		},
+	});
+	const fixture = environment(
+		[success, failure],
+		[
+			() => response('0'.repeat(32), 'succeeded', 'running'),
+			() => response(success.reference, 'succeeded', 'running'),
+			() => response(success.reference, 'succeeded', 'failed'),
+		]
+	);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		assert.deepEqual(fixture.speech, []);
+		assert.deepEqual(success.messageUpdates, []);
+		assert.equal(success.message.getAttribute('aria-live'), 'polite');
+		await runTimer(fixture.timers);
+		assert.deepEqual(success.messageUpdates, ['Package reinstalled.']);
+		await runTimer(fixture.timers);
+		assert.deepEqual(fixture.speech, []);
+		assert.deepEqual(success.messageUpdates, ['Package reinstalled.']);
+		assert.equal(success.message.textContent, 'Package reinstalled.');
+		assert.equal(failure.message.textContent, 'Reinstall failed.');
+		assert.equal(fixture.events.length, 1);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
 
 async function runTimer(timers) {
 	const callback = timers.shift();

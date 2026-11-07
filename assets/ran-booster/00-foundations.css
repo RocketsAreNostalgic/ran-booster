@@ -133,7 +133,6 @@
 	--ran-booster-shadow-overlay: var(--ran-booster-color-black-a40);
 	--ran-booster-shadow-surface: 0 1px 1px var(--ran-booster-color-black-a04);
 	--ran-booster-shadow-modal: 0 3px 30px var(--ran-booster-shadow-overlay);
-	--ran-booster-shadow-toast: 0 3px 5px var(--ran-booster-shadow-overlay);
 	--ran-booster-shadow-delete-button:
 		inset 0 1px 0 var(--ran-booster-color-coral-100),
 		0 1px 0 var(--ran-booster-color-black-a15);

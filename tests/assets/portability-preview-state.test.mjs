@@ -361,7 +361,15 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	);
 	const previewLabel = previewProgress.label;
 	const previewSubmit = previewProgress.button;
-	const message = { className: '', hidden: true, textContent: '' };
+	const message = {
+		className: '',
+		hidden: true,
+		textContent: '',
+		setAttribute(name, value) {
+			this[name] = value;
+		},
+	};
+	const spoken = [];
 	const applyProgress = progressButton(
 		'Apply selected changes',
 		'Applying…',
@@ -375,6 +383,9 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		},
 	};
 	const results = {
+		setAttribute(name, value) {
+			this[name] = value;
+		},
 		clears: 0,
 		items: [],
 		appendChild(item) {
@@ -690,6 +701,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		}
 	};
 	globalThis.window = {
+		wp: { a11y: { speak: (text) => spoken.push(text) } },
 		CustomEvent: class {
 			constructor(type, eventOptions) {
 				this.detail = eventOptions.detail;
@@ -721,6 +733,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		listeners,
 		master: () => master,
 		message,
+		spoken,
 		password,
 		applyLabel: applyProgress.label,
 		previewLabel,
@@ -873,6 +886,56 @@ test('changing the artifact or password resets saved import choices', async () =
 	}
 });
 
+for (const change of ['file', 'password']) {
+	test(`changing ${change} invalidates a delayed review and credential refresh`, async () => {
+		let finish;
+		let aborted = false;
+		const state = importFixture(
+			() =>
+				new Promise((resolve) => {
+					finish = resolve;
+				}),
+			{
+				'<table>old</table>': [['0', 'install', true]],
+			}
+		);
+		try {
+			loadFunction('initPortabilityPreview')();
+			state.listeners.get('form:submit')({ preventDefault() {} });
+			if (change === 'file') {
+				state.file.files = [{ name: 'new.zip' }];
+				state.listeners.get('form:change')({ target: state.file });
+			} else {
+				state.listeners.get('form:input')({ target: state.password });
+			}
+			finish(success('<table>old</table>'));
+			await tick();
+			assert.equal(state.review.innerHTML, '<table>empty</table>');
+			assert.equal(state.apply.disabled, true);
+			assert.equal(state.previewSubmit.getAttribute('aria-busy'), null);
+			assert.deepEqual(state.spoken, []);
+			const detail = {
+				requestConfig: { elt: state.credentialActions.import },
+				xhr: {
+					abort() {
+						aborted = true;
+					},
+				},
+			};
+			state.listeners.get('root:htmx:beforeRequest')({ detail });
+			state.listeners.get('form:change')({ target: state.file });
+			state.listeners.get('root:htmx:beforeSwap')({ detail });
+			state.listeners.get('root:htmx:afterSwap')({ detail });
+			assert.equal(aborted, true);
+			assert.equal(detail.shouldSwap, false);
+			assert.equal(state.review.innerHTML, '<table>empty</table>');
+			assert.equal(state.apply.disabled, true);
+		} finally {
+			cleanup();
+		}
+	});
+}
+
 test('preview shows the shared busy state and restores it after success', async () => {
 	let finishFetch;
 	const state = importFixture(
@@ -918,6 +981,13 @@ test('preview shows the shared busy state and restores it after success', async 
 		assert.deepEqual(state.events[0].detail, {
 			message: 'Transporter Blueprint reviewed.',
 		});
+		assert.equal(
+			state.message.textContent,
+			'Transporter Blueprint reviewed.'
+		);
+		assert.equal(state.message.hidden, false);
+		assert.equal(state.message['aria-live'], 'off');
+		assert.deepEqual(state.spoken, ['Transporter Blueprint reviewed.']);
 	} finally {
 		cleanup();
 	}
@@ -1517,6 +1587,16 @@ test('apply sends only selected rows serially and preserves choices on review', 
 			false
 		);
 		assert.equal(state.applyLabel.textContent, 'Apply selected changes');
+		assert.equal(
+			state.results.items.at(-1).textContent,
+			'All selected Transporter Blueprint changes were applied.'
+		);
+		assert.equal(state.results['aria-live'], 'off');
+		assert.equal(
+			state.spoken.filter((text) => text.includes('changes were applied'))
+				.length,
+			1
+		);
 	} finally {
 		cleanup();
 	}
@@ -1685,11 +1765,179 @@ test('apply identifies the exact package where a serial chain is pending', async
 
 		finishApply();
 		await applying;
-		assert.equal(state.results.items.length, 2);
+		assert.equal(state.results.items.length, 3);
 		assert.equal(
 			state.results.items[1].children[0].textContent,
 			'Theme “Campaign Theme” (campaign-theme) — Adopted: deployment disabled'
 		);
+	} finally {
+		cleanup();
+	}
+});
+
+test('changing the draft during apply retains the first result and stops subsequent requests', async () => {
+	let finish;
+	const requests = [];
+	const state = importFixture(
+		(data) => {
+			requests.push(data.get('action'));
+			return data.get('action') === 'ran_booster_apply_blueprint'
+				? new Promise((resolve) => {
+						finish = resolve;
+					})
+				: success();
+		},
+		{
+			'<table>review</table>': [
+				['0', 'install', true],
+				['1', 'install', true],
+			],
+		}
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const applying = state.listeners.get('apply:click')();
+		await tick();
+		state.file.files = [{ name: 'new.zip' }];
+		state.listeners.get('form:change')({ target: state.file });
+		finish(
+			success('', {
+				status: 'installed',
+				message: 'Applied old package.',
+			})
+		);
+		await applying;
+		assert.deepEqual(requests, [
+			'ran_booster_preview_blueprint',
+			'ran_booster_apply_blueprint',
+		]);
+		assert.equal(state.results.items.length, 1);
+		assert.match(
+			state.results.items[0].children[0].textContent,
+			/Package 0.*Applied old package\./
+		);
+		assert.equal(state.review.innerHTML, '<table>empty</table>');
+		assert.equal(state.apply.disabled, true);
+		assert.equal(state.apply.getAttribute('aria-busy'), null);
+		assert.equal(
+			state.spoken.some((text) => text.includes('changes were applied')),
+			false
+		);
+	} finally {
+		cleanup();
+	}
+});
+
+test('a newer review suppresses completion from an older apply refresh', async () => {
+	let previews = 0;
+	let finishRefresh;
+	const state = importFixture(
+		async (data) => {
+			if (data.get('action') === 'ran_booster_apply_blueprint') {
+				return success('', { status: 'installed' });
+			}
+			return ++previews === 2
+				? new Promise((resolve) => {
+						finishRefresh = resolve;
+					})
+				: success();
+		},
+		{ '<table>review</table>': [['0', 'install', true]] }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const applying = state.listeners.get('apply:click')();
+		await tick();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		finishRefresh(success());
+		await applying;
+		assert.equal(
+			state.spoken.some((text) => text.includes('changes were applied')),
+			false
+		);
+		assert.equal(
+			state.message.textContent,
+			'Transporter Blueprint reviewed.'
+		);
+		assert.equal(state.results.items.length, 1);
+	} finally {
+		cleanup();
+	}
+});
+
+test('changing the file during the post-apply refresh suppresses old completion', async () => {
+	let previews = 0;
+	let finishRefresh;
+	const state = importFixture(
+		(data) => {
+			if (data.get('action') === 'ran_booster_apply_blueprint') {
+				return success('', {
+					status: 'installed',
+					message: 'Applied old package.',
+				});
+			}
+			return ++previews === 2
+				? new Promise((resolve) => {
+						finishRefresh = resolve;
+					})
+				: success();
+		},
+		{ '<table>review</table>': [['0', 'install', true]] }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const applying = state.listeners.get('apply:click')();
+		await tick();
+		state.file.files = [{ name: 'new.zip' }];
+		state.listeners.get('form:change')({ target: state.file });
+		finishRefresh(success());
+		await applying;
+		assert.equal(state.review.innerHTML, '<table>empty</table>');
+		assert.match(
+			state.results.items[0].children[0].textContent,
+			/Applied old package\./
+		);
+		assert.equal(state.results.items.length, 1);
+		assert.equal(
+			state.spoken.some((text) => text.includes('changes were applied')),
+			false
+		);
+		assert.equal(state.apply.disabled, true);
+	} finally {
+		cleanup();
+	}
+});
+
+test('partial apply keeps row feedback without claiming all changes succeeded', async () => {
+	const state = importFixture(
+		async (data) =>
+			data.get('action') === 'ran_booster_apply_blueprint'
+				? success('', { status: 'skipped', message: 'Needs recovery.' })
+				: success(),
+		{ '<table>review</table>': [['0', 'install', true]] }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		await state.listeners.get('apply:click')();
+		assert.match(
+			state.results.items[0].children[0].textContent,
+			/Needs recovery\./
+		);
+		assert.match(state.results.items[0].className, /notice-warning/);
+		assert.equal(
+			state.spoken.some((text) => text.includes('changes were applied')),
+			false
+		);
+		assert.equal(state.results.items.length, 1);
 	} finally {
 		cleanup();
 	}
@@ -1728,6 +1976,10 @@ test('apply restores a disabled idle state when the final review fails', async (
 		await state.listeners.get('apply:click')();
 
 		assert.equal(state.message.textContent, 'Safe final review failure.');
+		assert.equal(
+			state.results.items.at(-1).textContent,
+			'All selected Transporter Blueprint changes were applied.'
+		);
 		assert.equal(state.apply.disabled, true);
 		assert.equal(state.apply.getAttribute('aria-busy'), null);
 		assert.equal(

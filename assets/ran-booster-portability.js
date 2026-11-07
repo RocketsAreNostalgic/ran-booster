@@ -132,6 +132,7 @@
 
 	function initPortabilityExportDownload() {
 		function announceSuccess(text) {
+			window.wp?.a11y?.speak?.(text, 'polite');
 			if (typeof window.CustomEvent !== 'function') {
 				return;
 			}
@@ -168,7 +169,16 @@
 			return;
 		}
 
-		function showMessage(text) {
+		function showMessage(text, type = 'error') {
+			message.className = 'notice notice-' + type + ' inline';
+			message.setAttribute('role', type === 'error' ? 'alert' : 'status');
+			message.setAttribute(
+				'aria-live',
+				type === 'error' ? 'assertive' : 'polite'
+			);
+			if (type !== 'error' && window.wp?.a11y?.speak) {
+				message.setAttribute('aria-live', 'off');
+			}
 			message.hidden = !text;
 			messageText.textContent = text || '';
 		}
@@ -229,13 +239,13 @@
 								'ran-booster'
 							)
 						: '';
-				showMessage(warning);
-				announceSuccess(
+				const completion =
 					__(
 						'Transporter Blueprint download started.',
 						'ran-booster'
-					) + (warning ? ' ' + warning : '')
-				);
+					) + (warning ? ' ' + warning : '');
+				showMessage(completion, warning ? 'warning' : 'success');
+				announceSuccess(completion);
 			} catch (error) {
 				showMessage(
 					error instanceof Error
@@ -337,6 +347,7 @@
 
 	function initPortabilityPreview() {
 		function announceSuccess(text) {
+			window.wp?.a11y?.speak?.(text, 'polite');
 			if (typeof window.CustomEvent !== 'function') {
 				return;
 			}
@@ -482,12 +493,21 @@
 		}
 
 		function showMessage(text, type) {
+			message.setAttribute(
+				'aria-live',
+				type === 'success' && window.wp?.a11y?.speak ? 'off' : 'polite'
+			);
 			message.hidden = !text;
 			message.className = text ? 'notice inline notice-' + type : '';
 			message.textContent = text || '';
 		}
 
 		function resetReview(clearResults = true) {
+			++previewGeneration;
+			const supersededRefresh = credentialRefreshXhr;
+			credentialRefreshXhr = null;
+			supersededRefresh?.abort();
+			setPreviewBusy(false);
 			reviewConfirmed = false;
 			review.innerHTML = emptyReview;
 			review.removeAttribute('aria-busy');
@@ -496,7 +516,11 @@
 				apply.disabled = true;
 			}
 			showReviewError(false);
-			if (clearResults && results) {
+			if (
+				clearResults &&
+				results &&
+				apply?.getAttribute('aria-busy') !== 'true'
+			) {
 				results.replaceChildren();
 			}
 		}
@@ -777,14 +801,11 @@
 			rememberSelections();
 			const data = new FormData(form);
 			appendCredentialDecisions(data);
-			const supersededRefresh = credentialRefreshXhr;
-			credentialRefreshXhr = null;
-			supersededRefresh?.abort();
-			const generation = ++previewGeneration;
+			resetReview(clearResults);
+			const generation = previewGeneration;
 			if (showButtonBusy) {
 				setPreviewBusy(true);
 			}
-			resetReview(clearResults);
 			showMessage(__('Reviewing blueprint…', 'ran-booster'), 'info');
 
 			try {
@@ -835,11 +856,15 @@
 					}
 				}
 				showReviewError(false);
-				showMessage('', 'info');
 				if (announceCompletion) {
-					announceSuccess(
-						__('Transporter Blueprint reviewed.', 'ran-booster')
+					const completion = __(
+						'Transporter Blueprint reviewed.',
+						'ran-booster'
 					);
+					showMessage(completion, 'success');
+					announceSuccess(completion);
+				} else {
+					showMessage('', 'info');
 				}
 			} catch (error) {
 				if (generation !== previewGeneration) {
@@ -888,7 +913,7 @@
 			}
 			prepareCredentialRefresh();
 			reviewConfirmed = true;
-			if (results) {
+			if (results && apply?.getAttribute('aria-busy') !== 'true') {
 				results.replaceChildren();
 			}
 			showReviewError(false);
@@ -1071,14 +1096,19 @@
 					],
 				])
 			);
+			const generation = previewGeneration;
 			setApplyBusy(true);
 			try {
 				let appliedEverySelection = true;
 				if (results) {
+					results.setAttribute('aria-live', 'polite');
 					results.replaceChildren();
 				}
 
 				for (const row of rows) {
+					if (generation !== previewGeneration) {
+						break;
+					}
 					const rendered = renderResult(
 						{
 							status: 'pending',
@@ -1162,14 +1192,28 @@
 					}
 				}
 
+				if (generation !== previewGeneration) {
+					return;
+				}
 				await preview(false, false);
-				if (appliedEverySelection) {
-					announceSuccess(
-						__(
-							'All selected Transporter Blueprint changes were applied.',
-							'ran-booster'
-						)
+				if (
+					appliedEverySelection &&
+					generation + 1 === previewGeneration
+				) {
+					const completion = __(
+						'All selected Transporter Blueprint changes were applied.',
+						'ran-booster'
 					);
+					if (results) {
+						const item = document.createElement('p');
+						results.setAttribute(
+							'aria-live',
+							window.wp?.a11y?.speak ? 'off' : 'polite'
+						);
+						item.textContent = completion;
+						results.appendChild(item);
+					}
+					announceSuccess(completion);
 				}
 			} finally {
 				setApplyBusy(false);

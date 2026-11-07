@@ -91,12 +91,7 @@ final class AdminIndexViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '<div class="wrap ran-booster-admin" data-ran-booster-shell-navigation>', $html );
-		self::assertStringContainsString( 'id="ran-booster-admin-feedback-toast"', $html );
-		self::assertStringContainsString( 'data-ran-booster-feedback-timeout="6000"', $html );
-		self::assertMatchesRegularExpression(
-			'/<div class="ran-booster-footer">\s*<div id="ran-booster-admin-feedback-toast"/',
-			$html
-		);
+		self::assertStringNotContainsString( 'data-ran-booster-feedback-toast', $html );
 		self::assertSame( 1, preg_match_all( '/<h1\b/', $html ) );
 		self::assertMatchesRegularExpression(
 			'~<a class="ran-admin-shell__identity" href="https://example\.test/wp-admin/admin\.php\?page=ran-booster">\s*<img class="ran-admin-shell__logo"[^>]*>\s*<div class="ran-admin-shell__copy">\s*<h1 class="ran-admin-shell__title">Booster</h1>\s*<p class="ran-admin-shell__strapline">Rockets Are Nostalgic</p>\s*</div>\s*</a>~',

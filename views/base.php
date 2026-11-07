@@ -147,7 +147,6 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 	<hr>
 
 	<div class="ran-booster-footer">
-		<?php require __DIR__ . '/admin-feedback-toast.php'; ?>
 		<p>
 			<?php
 			/* translators: %s: current year. */

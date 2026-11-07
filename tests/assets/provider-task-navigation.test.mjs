@@ -201,6 +201,78 @@ test('history misses reload only when provider navigation is present', () => {
 	assert.equal(htmx.config.refreshOnHistoryMiss, false);
 });
 
+test('provider task modifiers preserve native defaults without bypassing same-node cancellation', () => {
+	for (const modifier of ['ctrlKey', 'metaKey', 'shiftKey']) {
+		const state = fixture();
+		const init = loadFunction('initProviderTaskNavigation', {
+			document: state.document,
+			window: {
+				location: new URL('https://example.test/'),
+				addEventListener() {},
+				htmx: { process() {} },
+			},
+		});
+		init();
+		const calls = [];
+		const event = {
+			[modifier]: true,
+			target: {
+				closest(selector) {
+					assert.equal(
+						selector,
+						'.ran-booster-provider-task-tabs[data-ran-booster-ui-navigation="thin"] a[href][hx-get][data-ran-booster-provider-task]'
+					);
+					return {};
+				},
+			},
+			defaultPrevented: false,
+			stopPropagation() {
+				calls.push('stop');
+			},
+			stopImmediatePropagation() {
+				calls.push('immediate');
+			},
+			preventDefault() {
+				this.defaultPrevented = true;
+			},
+		};
+		state.listeners.get('click')(event);
+		assert.deepEqual(calls, ['stop']);
+		assert.equal(event.defaultPrevented, false);
+		// A later listener on the same node may still cancel its native action.
+		event.preventDefault();
+		assert.equal(event.defaultPrevented, true);
+	}
+});
+
+test('ordinary, unrelated and no-HTMX provider clicks keep their existing path', () => {
+	for (const scenario of [
+		{ shifted: false, marked: true, htmx: true },
+		{ shifted: true, marked: false, htmx: true },
+		{ shifted: true, marked: true, htmx: false },
+	]) {
+		const state = fixture();
+		const init = loadFunction('initProviderTaskNavigation', {
+			document: state.document,
+			window: {
+				location: new URL('https://example.test/'),
+				addEventListener() {},
+				htmx: scenario.htmx ? { process() {} } : undefined,
+			},
+		});
+		init();
+		let stopped = false;
+		state.listeners.get('click')({
+			shiftKey: scenario.shifted,
+			target: { closest: () => (scenario.marked ? {} : null) },
+			stopPropagation() {
+				stopped = true;
+			},
+		});
+		assert.equal(stopped, false);
+	}
+});
+
 test('repeated provider traversal reloads an unmarked destination only when the rendered provider view differs', () => {
 	const state = fixture();
 	let reloads = 0;

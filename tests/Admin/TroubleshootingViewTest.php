@@ -311,7 +311,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 		$migrator = '//section[header/h4[starts-with(normalize-space(.), "Migrator")]]';
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/h4/code[text()="1.0"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[text()="Inactive"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[@data-ran-booster-ui-badge and @data-ran-booster-ui-badge-label="Inactive"]/span[@data-ran-booster-ui-badge-fallback and text()="Inactive"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/div/p[text()="Installed extension"])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[header/h4[normalize-space(.)="Facts"]]//dd/code[text()="0"])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//details[not(@open)])' ) );

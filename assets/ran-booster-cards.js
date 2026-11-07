@@ -96,6 +96,23 @@
 
 	function mountSurface(card) {
 		const notice = card.getAttribute('data-ran-booster-ui-notice') !== null;
+		const intent = notice
+			? (card.getAttribute('data-ran-booster-ui-notice-intent') ??
+				'error')
+			: null;
+		const validIntent =
+			!notice || ['error', 'warning', 'info', 'success'].includes(intent);
+		const current = roots.get(card);
+		if (notice && current && (!validIntent || current.intent !== intent)) {
+			restoreAll(
+				Array.from(roots.keys()).filter((host) => card.contains(host))
+			);
+			initialize(card);
+			return;
+		}
+		if (!validIntent) {
+			return;
+		}
 		const ownSelector = notice ? noticeSelector : selector;
 		const nativeContent = notice
 			? card.querySelector('[data-ran-booster-ui-notice-content]')
@@ -151,7 +168,7 @@
 				? '[data-ran-booster-ui-notice-slot]'
 				: '[data-ran-booster-card-content]';
 			const surfaceProps = notice
-				? { intent: 'error', className: 'ran-booster-ui-notice' }
+				? { intent, className: 'ran-booster-ui-notice' }
 				: { className: 'ran-booster-card__surface' };
 			const contentProps = notice
 				? {
@@ -174,7 +191,7 @@
 				throw new Error('Missing component content');
 			}
 			original.forEach((node) => content.appendChild(node));
-			roots.set(card, { root, mount: host, content });
+			roots.set(card, { root, mount: host, content, intent });
 			card.setAttribute(mounted, '');
 		} catch {
 			original.forEach((node) => card.insertBefore(node, host));

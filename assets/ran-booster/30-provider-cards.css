@@ -1102,3 +1102,7 @@
 	.ran-booster-provider-task-panel {
 	padding: 0;
 }
+
+.ran-booster-admin .ran-booster-release-workflow__body {
+	padding: var(--ran-booster-space-16) var(--ran-booster-space-18);
+}

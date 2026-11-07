@@ -15,8 +15,8 @@ The two General switches retain native checkbox controls as their form authority
 with a clickable label above each switch and an adjacent badge showing the
 confirmed preference. The shared adapter can enhance them with the public
 `@wordpress/ui` Switch when its runtime is available.
-Pending changes do not change that badge. The shared adapter uses `UIRoot` and
-`Badge` from `@wordpress/ui` for these badges, and `Notice` for Settings errors;
+Pending changes do not change that badge. The shared adapter renders the public
+`Badge`, `Notice.Root` and `Notice.Description` components from `@wordpress/ui`;
 the native fallback remains available if the adapter cannot mount. The two
 Settings groups use the shared card surface.
 Confirmed saves use the viewport

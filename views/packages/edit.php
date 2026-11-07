@@ -251,13 +251,15 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 <h2 class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is the item being edited. */ __( 'Edit %s', 'ran-booster' ), $package->name ) ); ?></h2>
 
 <?php if ( $provider_unavailable ) { ?>
-	<div class="notice notice-error inline">
+	<div class="notice notice-error inline" data-ran-booster-ui-notice>
+		<div data-ran-booster-ui-notice-content>
 		<p><strong><?php esc_html_e( 'Git provider unavailable.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This package remains linked but cannot be edited or deployed until its Git provider is registered again.', 'ran-booster' ); ?></p>
 		<p>
 			<?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> <code><?php echo esc_html( $stored_provider_code ); ?></code><br>
 			<?php esc_html_e( 'Repository:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) $package->repository ); ?></code><br>
 			<?php esc_html_e( 'Git provider repository ID:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) ( $package->get_provider_repository_id() ?? '' ) ); ?></code>
 		</p>
+		</div>
 	</div>
 <?php } ?>
 

@@ -134,6 +134,24 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'name="_ran_booster_reinstall_nonce"', $html );
 	}
 
+	public function test_unavailable_provider_notice_escapes_repository_identity(): void {
+		$package = $this->package();
+		$package->set_repository( new ManagedRepository( 'temporarily-offline', 'owner/<script>', 'id<unsafe>', 'release' ) );
+		$package_view              = PackagePagePresenter::plugin();
+		$package_provider_settings = array(
+			'default_provider' => 'temporarily-offline',
+			'providers'        => array( $this->provider_option( 'temporarily-offline', false ) ),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<code>owner/&lt;script&gt;</code>', $html );
+		self::assertStringContainsString( '<code>id&lt;unsafe&gt;</code>', $html );
+		self::assertStringNotContainsString( '<script>', $html );
+	}
+
 	public function test_list_view_labels_unavailable_provider_and_disables_only_deployment_action(): void {
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array( 'exact/exact.php' );
 		$packages                                   = array( $this->package() );

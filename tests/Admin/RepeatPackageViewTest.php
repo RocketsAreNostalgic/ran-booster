@@ -412,6 +412,52 @@ final class RepeatPackageViewTest extends TestCase {
 	}
 
 	#[DataProvider( 'edit_view_matrix' )]
+	public function test_provider_notice_wraps_original_content_only_when_unavailable(
+		PackagePagePresenter $package_view,
+		bool $provider_available,
+		bool $multisite
+	): void {
+		$GLOBALS['ran_booster_package_view_multisite']   = $multisite;
+		$GLOBALS['ran_booster_dashboard_test_multisite'] = $multisite;
+		$package                   = $this->package( $package_view );
+		$package_provider_settings = $this->provider_settings( $provider_available );
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		$document->loadHTML( $html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+		$xpath   = new \DOMXPath( $document );
+		$notices = $xpath->query( '//*[@data-ran-booster-ui-notice]' );
+		self::assertNotFalse( $notices );
+		self::assertCount( $provider_available ? 0 : 1, $notices );
+		if ( $provider_available ) {
+			return;
+		}
+		$content = $xpath->query( '//*[@data-ran-booster-ui-notice][contains(concat(" ", normalize-space(@class), " "), " notice-error ")]/div[@data-ran-booster-ui-notice-content]' );
+		self::assertNotFalse( $content );
+		self::assertCount( 1, $content );
+		$notice_children = $xpath->query( '//*[@data-ran-booster-ui-notice]/*' );
+		self::assertNotFalse( $notice_children );
+		self::assertCount( 1, $notice_children );
+		$paragraphs = $xpath->query( './p', $content->item( 0 ) );
+		self::assertNotFalse( $paragraphs );
+		self::assertCount( 2, $paragraphs );
+		self::assertStringContainsString( 'Git provider unavailable.', $content->item( 0 )->textContent );
+		self::assertStringContainsString( 'This package remains linked but cannot be edited or deployed until its Git provider is registered again.', $content->item( 0 )->textContent );
+		self::assertStringContainsString( 'owner/example', $content->item( 0 )->textContent );
+		self::assertStringContainsString( 'provider-id', $content->item( 0 )->textContent );
+		self::assertStringContainsString( 'id="ran-booster-package-edit-form"', $html );
+		self::assertStringContainsString( 'value="unlink-' . $package_view->get_type() . '"', $html );
+		self::assertStringContainsString( 'name="ran_booster[confirm_package_removal]" value="1" required', $html );
+		self::assertStringContainsString( 'name="_ran_booster_reinstall_nonce"', $html );
+	}
+
+	#[DataProvider( 'edit_view_matrix' )]
 	public function test_edit_view_offers_matching_install_another_route_even_when_provider_unavailable(
 		PackagePagePresenter $package_view,
 		bool $provider_available,

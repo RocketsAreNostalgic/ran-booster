@@ -805,7 +805,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<section class="ran-booster-activity" aria-labelledby="ran-booster-activity-heading" data-ran-booster-activity', $html );
+		self::assertStringContainsString( '<section class="ran-booster-activity ran-booster-card" data-ran-booster-card="activity" aria-labelledby="ran-booster-activity-heading" data-ran-booster-activity', $html );
 		self::assertStringContainsString( 'data-ran-booster-activity-filter="' . str_repeat( 'a', 64 ) . '"', $html );
 		self::assertStringContainsString( 'data-ran-booster-activity-list', $html );
 		self::assertStringContainsString( 'data-ran-booster-activity-row="9007199254740993"', $html );

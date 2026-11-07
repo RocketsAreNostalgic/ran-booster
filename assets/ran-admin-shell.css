@@ -253,7 +253,7 @@ body.admin-bar .ran-admin-shell {
 
 /* One opt-in track for the Shell and exported section navigation. */
 .ran-section-navigation {
-	--ran-section-indicator-size: 3px;
+	--ran-section-indicator-size: 2px;
 	--ran-section-focus-inset: 10px;
 	--ran-section-link-height: 48px;
 	--ran-section-link-weight: 400;

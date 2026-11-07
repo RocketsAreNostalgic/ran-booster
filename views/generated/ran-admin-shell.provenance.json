@@ -2,9 +2,9 @@
     "schema": 1,
     "package": "ran/admin-shell",
     "version": "dev-work/40-static-navigation",
-    "reference": "4af60d348749343e9134987b5a0faadd9f70972f",
+    "reference": "6be3371a6cce137efb466b9b9f5dc00780f2b2e6",
     "files": {
-        "assets/ran-admin-shell.css": "sha256:7adc3503f701a6fba25a535a64a8314b13d7d9c048428599dc1a087553cee259",
+        "assets/ran-admin-shell.css": "sha256:6f7173e27d48190a81b42b42a5e434b0126b020e0a2374a1a289cd1ff4ab7856",
         "views/generated/ran-admin-shell.php": "sha256:c66ced0f27aa42c4807e16e4ce1857c7aa1a89a159db7bc6155f7233e58d1d35"
     }
 }

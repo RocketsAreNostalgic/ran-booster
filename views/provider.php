@@ -571,11 +571,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title"><?php esc_html_e( 'Webhook receiver', 'ran-booster' ); ?></h4>
 									<p class="ran-booster-section__description"><?php esc_html_e( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', 'ran-booster' ); ?></p>
 								</div>
-								<?php if ( null !== $webhook_setup ) { ?>
-									<a class="button" href="<?php echo esc_url( $webhook_setup['documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $provider_instructions_label ); ?></a>
-								<?php } ?>
 							</div>
-							<p><a class="button" href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>
 								<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
 									<div data-ran-booster-ui-notice-content>
 										<p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p>
@@ -598,9 +594,15 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									<div class="ran-booster-provider-disclosure__body ran-booster-disclosure__body">
 										<p><?php echo esc_html( $manual_setup_description ); ?></p>
 										<ol><li><?php esc_html_e( 'Paste the payload URL and a matching signing secret.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Keep SSL verification enabled and select the push event.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Trigger a delivery and confirm the Git provider records a successful response.', 'ran-booster' ); ?></li></ol>
-										<p><a href="<?php echo esc_url( $webhook_setup['delivery_documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?></a></p>
+										<p><a href="<?php echo esc_url( $webhook_setup['documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $provider_instructions_label ); ?> <span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a></p>
+										<p><a href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>
+										<?php if ( $webhook_setup['documentation_url'] !== $webhook_setup['delivery_documentation_url'] ) { ?>
+											<p><a href="<?php echo esc_url( $webhook_setup['delivery_documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?> <span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a></p>
+										<?php } ?>
 									</div>
 								</details>
+							<?php } else { ?>
+								<p><a href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>
 							<?php } ?>
 							<?php } ?>
 				</section>

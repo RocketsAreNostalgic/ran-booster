@@ -3088,6 +3088,83 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 	}
 
+	public function test_receiver_links_stay_in_manual_guidance_without_losing_native_navigation(): void {
+		$providers = array(
+			'gh'      => array( 'GitHub', 'https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks#creating-a-repository-webhook', 'https://docs.github.com/en/webhooks/testing-and-troubleshooting-webhooks/viewing-webhook-deliveries' ),
+			'bb'      => array( 'Bitbucket', 'https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/', 'https://support.atlassian.com/bitbucket-cloud/docs/troubleshoot-webhooks/' ),
+			'fixture' => array( 'Fixture Forge', 'https://forge.example.test/setup', 'https://forge.example.test/deliveries' ),
+		);
+		foreach ( $providers as $code => list( $label, $documentation_url, $delivery_url ) ) {
+			foreach ( array( 'distinct', 'same', 'absent' ) as $state ) {
+				$provider                             = $this->provider_without_optional_settings();
+				$provider['code']                     = $code;
+				$provider['label']                    = $label;
+				$provider['capabilities']['webhooks'] = true;
+				$provider['webhook_scopes']           = $this->webhook_scopes();
+				$provider['webhook_setup']            = 'absent' === $state ? null : array(
+					'location'                   => 'Repository settings',
+					'event'                      => 'Push',
+					'documentation_url'          => $documentation_url,
+					'delivery_documentation_url' => 'same' === $state ? $documentation_url : $delivery_url,
+				);
+				$payload_url                          = 'https://example.test/wp-json/ran-booster/v1/webhooks/' . $code;
+				$provider_view_data                   = $this->provider_view_data(
+					array(
+						'provider'                     => $provider,
+						'credential_profiles'          => array(),
+						'webhook_profiles'             => array(),
+						'provider_task'                => 'setup',
+						'webhook_assistance_readiness' => array(
+							'site' => array(
+								'status'       => 'ready',
+								'reason_codes' => array(),
+								'callback_url' => $payload_url,
+							),
+						),
+					)
+				);
+				// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+				extract( $provider_view_data );
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/provider.php';
+				$html     = (string) ob_get_clean();
+				$document = new \DOMDocument();
+				$document->loadHTML( '<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+				$xpath = new \DOMXPath( $document );
+				$links = $xpath->query( '//a[normalize-space(.)="Manage repositories"]' );
+				self::assertNotFalse( $links );
+				self::assertCount( 1, $links );
+				$link = $links->item( 0 );
+				self::assertInstanceOf( \DOMElement::class, $link );
+				self::assertSame( '', $link->getAttribute( 'class' ) );
+				self::assertSame( $provider_view_data['task_urls']['repositories'], $link->getAttribute( 'href' ) );
+				self::assertSame( $provider_view_data['task_request_urls']['repositories'], $link->getAttribute( 'hx-get' ) );
+				self::assertSame( 'true', $link->getAttribute( 'hx-boost' ) );
+				self::assertSame( '#ran-booster-provider-task-panel', $xpath->evaluate( 'string(ancestor::*[@id="ran-booster-provider-tasks"]/@hx-target)', $link ) );
+				self::assertSame( '', $link->getAttribute( 'target' ) );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(.//span[@aria-hidden="true"])', $link ) );
+				self::assertSame( 'absent' === $state ? 0.0 : 1.0, $xpath->evaluate( 'count(ancestor::details)', $link ) );
+				self::assertSame( 'absent' === $state ? 0.0 : 1.0, $xpath->evaluate( 'count(//details[summary[normalize-space(.)="Detailed manual setup and troubleshooting"]][not(@open)])' ) );
+				self::assertSame( 'absent' === $state ? 0.0 : 1.0, $xpath->evaluate( 'count(//a[@href="' . $documentation_url . '"])' ) );
+				self::assertSame( 'distinct' === $state ? 1.0 : 0.0, $xpath->evaluate( 'count(//a[starts-with(normalize-space(.),"Delivery troubleshooting")])' ) );
+				$external = $xpath->query( '//details//a[@target="_blank"]' );
+				self::assertNotFalse( $external );
+				self::assertCount( 'absent' === $state ? 0 : ( 'same' === $state ? 1 : 2 ), $external );
+				foreach ( $external as $anchor ) {
+					self::assertInstanceOf( \DOMElement::class, $anchor );
+					self::assertSame( '', $anchor->getAttribute( 'class' ) );
+					self::assertSame( 'noopener noreferrer', $anchor->getAttribute( 'rel' ) );
+					self::assertSame( '↗', $xpath->evaluate( 'string(.//span[@aria-hidden="true"])', $anchor ) );
+					self::assertSame( ' (opens in a new tab)', $xpath->evaluate( 'string(.//span[@class="screen-reader-text"])', $anchor ) );
+				}
+				self::assertSame( $payload_url, $xpath->evaluate( 'string(//input[@data-webhook-url][@readonly]/@value)' ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//button[@data-webhook-url-copy][@type="button"])' ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-webhook-url-status][@role="status"][@aria-live="polite"][@aria-atomic="true"])' ) );
+				self::assertStringContainsString( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', $html );
+			}
+		}
+	}
+
 	public function test_receiver_route_does_not_offer_setup_without_normalizer(): void {
 		$provider              = $this->provider_without_optional_settings();
 		$credential_profiles   = array();

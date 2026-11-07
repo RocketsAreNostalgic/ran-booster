@@ -45,7 +45,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Use Transporter to create a Blueprint here or open one from another site.', 'ran-booster' ); ?></p>
 	</header>
 
-	<section class="ran-booster-panel ran-booster-portability__chooser" aria-labelledby="ran-booster-portability-mode-heading">
+	<section class="ran-booster-card ran-booster-portability__chooser" data-ran-booster-card="transporter" aria-labelledby="ran-booster-portability-mode-heading">
 		<h3 id="ran-booster-portability-mode-heading" tabindex="-1"><?php esc_html_e( 'What do you want to do on this site?', 'ran-booster' ); ?></h3>
 		<div class="ran-booster-portability__mode-options">
 			<button type="button" class="ran-booster-portability__mode" data-portability-mode="export" aria-controls="ran-booster-portability-export" aria-expanded="false" aria-pressed="false">
@@ -66,7 +66,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		</div>
 	</section>
 
-	<section class="ran-booster-panel ran-booster-portability__flow" id="ran-booster-portability-export" aria-labelledby="ran-booster-portability-export-heading" hidden>
+	<section class="ran-booster-card ran-booster-portability__flow" data-ran-booster-card="transporter" id="ran-booster-portability-export" aria-labelledby="ran-booster-portability-export-heading" hidden>
 		<header class="ran-booster-portability__flow-header">
 			<h3 id="ran-booster-portability-export-heading" tabindex="-1"><?php esc_html_e( 'Create a Transporter Blueprint', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', 'ran-booster' ); ?></p>
@@ -263,7 +263,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		</form>
 	</section>
 
-	<section class="ran-booster-panel ran-booster-portability__flow" id="ran-booster-portability-import" aria-labelledby="ran-booster-portability-import-heading" hidden>
+	<section class="ran-booster-card ran-booster-portability__flow" data-ran-booster-card="transporter" id="ran-booster-portability-import" aria-labelledby="ran-booster-portability-import-heading" hidden>
 		<header class="ran-booster-portability__flow-header">
 			<h3 id="ran-booster-portability-import-heading" tabindex="-1"><?php esc_html_e( 'Open a Transporter Blueprint', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'Choose a Transporter Blueprint and Booster will validate it and build a review before anything can change.', 'ran-booster' ); ?></p>

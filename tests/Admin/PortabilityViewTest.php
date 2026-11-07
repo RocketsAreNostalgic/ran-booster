@@ -654,7 +654,16 @@ final class PortabilityViewTest extends TestCase {
 		self::assertLessThan( $flow, $fixture );
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
-		$xpath          = new \DOMXPath( $document );
+		$xpath = new \DOMXPath( $document );
+		$cards = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability ")]/*[@data-ran-booster-card="transporter"]' );
+		self::assertInstanceOf( \DOMNodeList::class, $cards );
+		self::assertCount( 3, $cards );
+		self::assertCount( 1, $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability ")]/*[self::header]//h2' ) );
+		self::assertCount( 1, $xpath->query( '//*[@id="ran-booster-portability-export" and @hidden and @aria-labelledby="ran-booster-portability-export-heading"]' ) );
+		self::assertCount( 1, $xpath->query( '//*[@id="ran-booster-portability-import" and @hidden and @aria-labelledby="ran-booster-portability-import-heading"]' ) );
+		self::assertCount( 1, $xpath->query( '//*[@data-portability-mode="fixture" and @aria-controls="ran-booster-portability-fixture"]' ) );
+		self::assertGreaterThan( 0, $xpath->query( '//*[@id="ran-booster-portability-export"]//input' )->length );
+		self::assertGreaterThan( 0, $xpath->query( '//*[@id="ran-booster-portability-import"]//input' )->length );
 		$migration_flow = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability ")]/*[@id="ran-booster-portability-fixture" and @hidden and contains(concat(" ", normalize-space(@class), " "), " ran-booster-portability__flow ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $migration_flow );
 		self::assertCount( 1, $migration_flow );

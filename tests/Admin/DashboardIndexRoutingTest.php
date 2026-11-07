@@ -1082,6 +1082,22 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'Filtered canary', $html );
 		self::assertStringContainsString( 'paged=2', $html );
 		self::assertStringNotContainsString( 'profile-21', $html );
+		self::assertStringContainsString( 'data-ran-booster-card="provider"', $html );
+
+		// Only supported provider list views use the outer section as a Card host.
+		foreach ( array( array( 'gh', 'credentials', true ), array( 'bb', 'credentials', true ), array( 'gh', 'secrets', true ), array( 'bb', 'secrets', true ), array( 'gh', 'overview', false ), array( 'other', 'credentials', false ) ) as list( $code, $view, $expected ) ) {
+			$provider['code'] = $code;
+			$provider_view    = $view;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$rendered = (string) ob_get_clean();
+			self::assertSame( $expected ? 1 : 0, preg_match( '/<section class="ran-booster-page-shell ran-booster-provider[^>]*data-ran-booster-card="provider"/', $rendered ) );
+			if ( 'credentials' === $view ) {
+				self::assertStringContainsString( '<form class="ran-booster-provider-list-controls" method="get"', $rendered );
+				self::assertStringContainsString( '<th scope="col">', $rendered );
+				self::assertStringContainsString( 'Page 1 of 2', $rendered );
+			}
+		}
 
 		$_GET['replace_credential'] = 'profile-21';
 		$replacement_data           = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];

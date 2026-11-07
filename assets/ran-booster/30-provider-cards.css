@@ -1073,10 +1073,7 @@
 .ran-booster-admin
 	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 	.ran-booster-provider-section__body
-	> :is(
-		.ran-booster-status-summary,
-		.ran-booster-public-lookup-profile__panel
-	),
+	> .ran-booster-public-lookup-profile__panel,
 .ran-booster-admin
 	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 	.ran-booster-provider-task-panel {
@@ -1086,10 +1083,6 @@
 	background: transparent;
 }
 
-.ran-booster-admin
-	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
-	.ran-booster-provider-section__body
-	> .ran-booster-status-summary,
 .ran-booster-admin
 	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 	.ran-booster-provider-task-panel {

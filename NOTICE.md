@@ -25,8 +25,20 @@ Zero-Clause BSD license. Its license is retained beside the bundled runtime
 under `assets/lib/htmx/LICENSE`.
 
 The bundled UI runtime includes @wordpress/ui 0.26.0 and portions of
-@wordpress/element, @wordpress/icons and @wordpress/primitives, distributed
+@wordpress/icons and @wordpress/primitives, distributed
 under GPL-2.0-or-later. The Gutenberg license and notices are retained at
 `assets/lib/ran-booster-ui-licenses/GUTENBERG-LICENSE.md`. It also includes
 @base-ui/react 1.9.0 and @base-ui/utils 0.5.0 (MIT), and clsx 2.1.1 (MIT);
 their license notices are retained in that directory.
+
+The shared foundation and picker overlay also include portions of
+@wordpress/compose, @wordpress/deprecated, @wordpress/hooks,
+@wordpress/private-apis and @wordpress/theme under the Gutenberg
+GPL-2.0-or-later license above. The public @wordpress/ui entry is used;
+private-apis is a bundled transitive implementation dependency, not a Booster
+integration API. WordPress supplies its own i18n and accessibility services.
+
+The runtime also includes MIT-licensed @floating-ui/core, @floating-ui/dom,
+@floating-ui/react-dom and @floating-ui/utils; colorjs.io, memize, tabbable
+and use-sync-external-store. Their license texts are retained in
+`assets/lib/ran-booster-ui-licenses/`.

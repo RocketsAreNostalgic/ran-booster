@@ -15,6 +15,7 @@ function fixture({
 } = {}) {
 	const listeners = new Map(),
 		microtasks = [];
+	const unmountOrder = [];
 	let renders = 0,
 		unmounts = 0,
 		moves = 0,
@@ -154,11 +155,16 @@ function fixture({
 					throw Error('render failure');
 				}
 				host.replaceChildren();
-				if (value.type === 'CardRoot') {
+				if (value.type === 'CardRoot' || value.type === 'NoticeRoot') {
 					const surface = new Node('surface'),
 						content = new Node('content');
 					content.content = true;
-					content.setAttribute('data-ran-booster-card-content', '');
+					content.setAttribute(
+						value.type === 'CardRoot'
+							? 'data-ran-booster-card-content'
+							: 'data-ran-booster-ui-notice-slot',
+						''
+					);
 					host.appendChild(surface);
 					surface.appendChild(content);
 				} else {
@@ -167,6 +173,7 @@ function fixture({
 			},
 			unmount() {
 				unmounts++;
+				unmountOrder.push(host.parentElement?.getAttribute('id'));
 				host.replaceChildren();
 			},
 		}),
@@ -174,7 +181,12 @@ function fixture({
 	const window = {
 		wp: { element },
 		ranBoosterUI: runtime
-			? { CardRoot: cardComponent ? 'CardRoot' : null, Badge: 'Badge' }
+			? {
+					CardRoot: cardComponent ? 'CardRoot' : null,
+					Badge: 'Badge',
+					NoticeRoot: 'NoticeRoot',
+					NoticeDescription: 'NoticeDescription',
+				}
 			: null,
 	};
 	const context = vm.createContext({
@@ -192,6 +204,22 @@ function fixture({
 		card.appendChild(form);
 		parent.appendChild(card);
 		return { card, whitespace, form, link };
+	}
+	function notice(parent = doc.body, tag = 'div') {
+		const host = new Node(tag),
+			content = new Node('div'),
+			paragraph = new Node('p'),
+			link = new Node('a');
+		host.setAttribute('data-ran-booster-ui-notice', '');
+		host.setAttribute('id', 'notice');
+		host.setAttribute('role', 'alert');
+		content.setAttribute('data-ran-booster-ui-notice-content', '');
+		paragraph.setAttribute('id', 'notice-message');
+		paragraph.appendChild(link);
+		content.appendChild(paragraph);
+		host.appendChild(content);
+		parent.appendChild(host);
+		return { host, content, paragraph, link };
 	}
 	function badge(parent = doc.body) {
 		const host = new Node('span'),
@@ -225,6 +253,8 @@ function fixture({
 		Node,
 		make,
 		badge,
+		notice,
+		unmountOrder,
 		window,
 		run: () => vm.runInContext(source, context),
 		emit,
@@ -383,6 +413,68 @@ test('badge discovers producer state in both startup orders', () => {
 	assert.equal(second.tree().children[0], 'Ready');
 });
 
+test('confirmed Badge intents preserve the producer text and sole results live region', () => {
+	const f = fixture();
+	const results = new f.Node('div');
+	results.setAttribute('role', 'status');
+	f.doc.body.appendChild(results);
+	const { host, fallback } = f.badge(results);
+	host.removeAttribute('role');
+	f.run();
+	f.flush();
+	for (const intent of [
+		'none',
+		'stable',
+		'medium',
+		'high',
+		'informational',
+	]) {
+		f.publish(host, `Producer ${intent}`, intent);
+		assert.equal(f.tree().props.intent, intent);
+		assert.equal(f.tree().children[0], `Producer ${intent}`);
+		assert.equal(fallback.hidden, true);
+		assert.equal(host.getAttribute('role'), null);
+		assert.equal(results.getAttribute('role'), 'status');
+	}
+	assert.equal(f.counts().renders, 5);
+});
+
+test('informational linked badges retain their native link, focus and fallback through updates and history', () => {
+	const f = fixture();
+	const link = new f.Node('a');
+	link.setAttribute('href', 'https://example.test/dependency');
+	link.setAttribute('target', '_blank');
+	f.doc.body.appendChild(link);
+	const { host, fallback, mount } = f.badge(link);
+	host.removeAttribute('role');
+	link.focus();
+	f.run();
+	f.publish(host, 'Installed dependency', 'informational');
+	f.flush();
+	assert.equal(f.tree().props.intent, 'informational');
+	assert.equal(f.tree().children[0], 'Installed dependency');
+	assert.equal(fallback.hidden, true);
+	assert.equal(f.doc.activeElement, link);
+	assert.equal(host.parentElement, link);
+	assert.equal(link.getAttribute('href'), 'https://example.test/dependency');
+	assert.equal(link.getAttribute('target'), '_blank');
+	assert.equal(link.childNodes.length, 1);
+	f.publish(host, 'Updated dependency', 'informational');
+	assert.equal(f.tree().children[0], 'Updated dependency');
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(fallback.hidden, false);
+	assert.equal(mount.childNodes.length, 0);
+	assert.equal(f.doc.activeElement, link);
+	f.flush();
+	assert.equal(f.tree().children[0], 'Updated dependency');
+	assert.equal(fallback.hidden, true);
+	f.publish(host, 'Invalid producer intent', 'info');
+	assert.equal(fallback.hidden, false);
+	assert.equal(host.parentElement, link);
+	assert.equal(f.doc.activeElement, link);
+	assert.equal(host.getAttribute('role'), null);
+});
+
 test('invalid projection, missing runtime and failed badge render reveal native fallback', () => {
 	const f = fixture();
 	const { host, fallback, mount } = f.badge();
@@ -454,4 +546,185 @@ test('disconnected badges do not mount from events or deferred discovery', () =>
 	f.flush();
 	assert.equal(f.counts().renders, 0);
 	assert.equal(fallback.hidden, false);
+});
+
+test('Settings is a supported Card host', () => {
+	const f = fixture();
+	const { card, form } = f.make('settings');
+	f.run();
+	f.flush();
+	assert.equal(f.tree().type, 'CardRoot');
+	assert.equal(
+		form.parentElement.getAttribute('data-ran-booster-card-content'),
+		''
+	);
+	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
+});
+
+test('hidden alert retains its native content, paragraph ID and focus through mounting and current-content cleanup', () => {
+	const f = fixture();
+	const { host, content, paragraph, link } = f.notice();
+	host.hidden = true;
+	link.focus();
+	f.run();
+	f.flush();
+	assert.equal(f.tree().type, 'NoticeRoot');
+	assert.equal(f.tree().props.intent, 'error');
+	assert.equal(f.tree().children[0].type, 'NoticeDescription');
+	assert.equal(f.tree().children[0].props.render.type, 'div');
+	assert.equal(host.hidden, true);
+	assert.equal(host.getAttribute('id'), 'notice');
+	assert.equal(host.getAttribute('role'), 'alert');
+	assert.equal(
+		content.parentElement.getAttribute('data-ran-booster-ui-notice-slot'),
+		''
+	);
+	assert.equal(paragraph.getAttribute('id'), 'notice-message');
+	assert.equal(paragraph.firstChild, link);
+	assert.equal(f.doc.activeElement, link);
+	assert.equal(host.querySelectorAll('[role]').length, 0);
+	const fresh = new f.Node('p');
+	fresh.setAttribute('id', 'new-message');
+	content.appendChild(fresh);
+	paragraph.textContent = 'current producer text';
+	f.emit('htmx:beforeCleanupElement', host);
+	assert.equal(host.firstChild, content);
+	assert.equal(content.childNodes.at(-1), fresh);
+	assert.equal(paragraph.textContent, 'current producer text');
+	assert.equal(f.doc.activeElement, link);
+	assert.equal(host.hidden, true);
+	f.emit('htmx:load', content);
+	f.flush();
+	assert.equal(
+		content.parentElement.getAttribute('data-ran-booster-ui-notice-slot'),
+		''
+	);
+	assert.equal(content.childNodes.at(-1), fresh);
+	assert.equal(paragraph.textContent, 'current producer text');
+});
+
+test('nested Card, Notice and Badge restore child-first for cleanup, history and host swap', () => {
+	for (const mode of ['cleanup', 'history', 'swap']) {
+		const f = fixture();
+		const { card, form } = f.make('settings');
+		card.setAttribute('id', 'card');
+		const n = f.notice(form);
+		const b = f.badge(n.content);
+		b.host.setAttribute('id', 'badge');
+		f.run();
+		f.publish(b.host, 'Ready', 'stable');
+		f.flush();
+		assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
+		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), '');
+		if (mode === 'cleanup') {
+			f.emit('htmx:beforeCleanupElement', card);
+		}
+		if (mode === 'history') {
+			f.emit('htmx:beforeHistorySave');
+		}
+		if (mode === 'swap') {
+			f.doc.listeners.get('htmx:beforeSwap')[0]({
+				detail: { shouldSwap: true, target: card },
+			});
+		}
+		assert.deepEqual(f.unmountOrder, ['badge', 'notice', 'card']);
+		assert.equal(form.parentElement, card);
+		assert.equal(n.host.firstChild, n.content);
+		assert.equal(b.fallback.hidden, false);
+		assert.equal(b.mount.childNodes.length, 0);
+		assert.equal(n.host.getAttribute('role'), 'alert');
+		assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
+		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
+		if (mode === 'history') {
+			f.flush();
+			assert.equal(
+				n.content.parentElement.getAttribute(
+					'data-ran-booster-ui-notice-slot'
+				),
+				''
+			);
+		}
+	}
+});
+
+test('Notice keeps native fallback when public exports, rendering or host shape are invalid', () => {
+	for (const mode of ['root', 'description', 'render', 'tag', 'indirect']) {
+		const f = fixture();
+		const n = f.notice(f.doc.body, mode === 'tag' ? 'section' : 'div');
+		if (mode === 'root') {
+			f.window.ranBoosterUI.NoticeRoot = null;
+		}
+		if (mode === 'description') {
+			f.window.ranBoosterUI.NoticeDescription = null;
+		}
+		if (mode === 'render') {
+			f.window.wp.element.createRoot = () => ({
+				render() {
+					throw Error('render failed');
+				},
+				unmount() {},
+			});
+		}
+		if (mode === 'indirect') {
+			const wrapper = new f.Node('div');
+			n.host.replaceChildren(wrapper);
+			wrapper.appendChild(n.content);
+		}
+		f.run();
+		f.flush();
+		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
+		assert.equal(n.content.contains(n.paragraph), true);
+		assert.equal(n.host.getAttribute('role'), 'alert');
+		assert.equal(
+			n.host.querySelector('[data-ran-booster-ui-notice-slot]'),
+			null
+		);
+	}
+});
+
+test('multiple cards restore nested Notice and Badge before their ancestors', () => {
+	for (const mode of ['cleanup', 'history']) {
+		const f = fixture();
+		const a = f.make('settings');
+		const b = f.make('overview');
+		a.card.setAttribute('id', 'card-a');
+		b.card.setAttribute('id', 'card-b');
+		const notice = f.notice(a.form);
+		const badge = f.badge(notice.content);
+		badge.host.setAttribute('id', 'badge');
+		badge.host.setAttribute('data-ran-booster-ui-badge-label', 'Ready');
+		badge.host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
+		f.run();
+		f.flush();
+		const fresh = new f.Node('p');
+		fresh.textContent = 'Current state';
+		notice.content.appendChild(fresh);
+		notice.link.focus();
+		assert.equal(f.counts().renders, 4);
+		f.emit(
+			mode === 'history'
+				? 'htmx:beforeHistorySave'
+				: 'htmx:beforeCleanupElement',
+			f.doc.body
+		);
+		assert.ok(
+			f.unmountOrder.indexOf('badge') < f.unmountOrder.indexOf('notice')
+		);
+		assert.ok(
+			f.unmountOrder.indexOf('notice') < f.unmountOrder.indexOf('card-a')
+		);
+		assert.equal(f.unmountOrder.length, 4);
+		assert.equal(a.form.parentElement, a.card);
+		assert.equal(b.form.parentElement, b.card);
+		assert.equal(notice.host.firstChild, notice.content);
+		assert.equal(notice.content.childNodes.at(-1), fresh);
+		assert.equal(fresh.textContent, 'Current state');
+		assert.equal(f.doc.activeElement, notice.link);
+		assert.equal(f.counts().renders, 4);
+		if (mode === 'history') {
+			f.flush();
+			assert.equal(f.counts().renders, 8);
+			assert.equal(notice.content.childNodes.at(-1), fresh);
+		}
+	}
 });

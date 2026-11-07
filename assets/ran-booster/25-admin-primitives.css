@@ -24,6 +24,28 @@
 	background: transparent;
 }
 
+.ran-booster-admin [data-ran-booster-ui-notice][data-ran-booster-ui-mounted] {
+	padding: 0;
+	border: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.ran-booster-admin .ran-booster-ui-notice__description {
+	min-inline-size: 0;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-ui-notice__description p {
+	margin: 0;
+	padding: 0;
+	font: inherit;
+}
+
+.ran-booster-admin .ran-booster-ui-notice__description p + p {
+	margin-block-start: var(--ran-booster-space-8);
+}
+
 .ran-booster-admin .ran-booster-card__content {
 	box-sizing: content-box;
 	min-inline-size: 0;

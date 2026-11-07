@@ -58,7 +58,7 @@ $origin_labels = array(
 	'webhook' => __( 'Repository webhook', 'ran-booster' ),
 );
 ?>
-<section class="ran-booster-activity" aria-labelledby="ran-booster-activity-heading" data-ran-booster-activity data-ran-booster-activity-filter="<?php echo esc_attr( $activity_filter_key ); ?>" data-ran-booster-activity-provider="<?php echo esc_attr( $selected_provider ); ?>" data-ran-booster-activity-package="<?php echo esc_attr( $selected_package ); ?>" data-ran-booster-activity-has-cursor="<?php echo $has_cursor ? '1' : '0'; ?>" data-ran-booster-activity-unavailable="<?php echo $unavailable ? '1' : '0'; ?>">
+<section class="ran-booster-activity ran-booster-card" data-ran-booster-card="activity" aria-labelledby="ran-booster-activity-heading" data-ran-booster-activity data-ran-booster-activity-filter="<?php echo esc_attr( $activity_filter_key ); ?>" data-ran-booster-activity-provider="<?php echo esc_attr( $selected_provider ); ?>" data-ran-booster-activity-package="<?php echo esc_attr( $selected_package ); ?>" data-ran-booster-activity-has-cursor="<?php echo $has_cursor ? '1' : '0'; ?>" data-ran-booster-activity-unavailable="<?php echo $unavailable ? '1' : '0'; ?>">
 	<header class="ran-booster-activity__header">
 		<h3 id="ran-booster-activity-heading"><?php esc_html_e( 'Activity', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Review recorded checks and deployments. Activity is recorded independently of diagnostic logging.', 'ran-booster' ); ?></p>

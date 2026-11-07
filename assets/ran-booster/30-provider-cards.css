@@ -1103,6 +1103,14 @@
 	padding: 0;
 }
 
+.ran-booster-admin
+	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-provider-section__body
+	> .ran-booster-public-lookup-profile__panel {
+	border-inline: 1px solid var(--ran-booster-divider);
+	border-block-end: 1px solid var(--ran-booster-divider);
+}
+
 .ran-booster-admin .ran-booster-release-workflow__body {
 	padding: var(--ran-booster-space-16) var(--ran-booster-space-18);
 }

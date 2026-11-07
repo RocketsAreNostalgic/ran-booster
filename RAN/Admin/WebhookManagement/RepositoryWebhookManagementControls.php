@@ -182,7 +182,7 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** Render the existing webhook setup disclosure on its repository-owned page. */
-	public function render_repository_webhook_setup( string $provider_code, string $repository_id, string $return_url, bool $has_branch_consumer = true, string $repository = '' ): void {
+	public function render_repository_webhook_setup( string $provider_code, string $repository_id, string $return_url, bool $has_branch_consumer = true, string $repository = '', ?string $presented_webhooks_url = null ): void {
 		$claimed_metadata = $this->claimed_provider_metadata( $provider_code );
 		if ( ! $this->supports_provider( $provider_code ) && $claimed_metadata instanceof ProviderMetadata ) {
 			$this->render_repository_webhook_section(
@@ -225,6 +225,9 @@ final class RepositoryWebhookManagementControls {
 		}
 		if ( is_array( $model ) ) {
 			$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $model['repository'] );
+			if ( null !== $presented_webhooks_url && '' !== $presented_webhooks_url && $presented_webhooks_url === $model['webhooks_url'] ) {
+				$model['webhooks_url'] = null;
+			}
 			if ( is_array( $model['result'] ?? null ) ) {
 				$notices[] = $model['result'];
 			}

@@ -2215,6 +2215,83 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Repository webhook management is temporarily unavailable', $html );
 	}
 
+	public function test_provider_webhooks_context_only_claims_an_enabled_external_link(): void {
+		foreach ( array( 'gh', 'bb', 'fixture' ) as $provider_code ) {
+			foreach ( array( 'enabled', 'missing', 'disabled', 'internal', 'post', 'empty' ) as $state ) {
+				$provider                     = $this->provider_without_optional_settings();
+				$provider['code']             = $provider_code;
+				$credential_profiles          = array();
+				$webhook_profiles             = array();
+				$provider_task                = 'repositories';
+				$requested_repository_id      = 'repo-42';
+				$repository_view              = 'branch';
+				$managed_webhook_repositories = array(
+					'available'    => true,
+					'repositories' => array(
+						array(
+							'target'             => 'owner/example',
+							'repository_id'      => 'repo-42',
+							'package_references' => array( 'plugin/example.php' ),
+						),
+					),
+				);
+				$provider_view_data           = $this->provider_view_data( get_defined_vars() );
+				// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+				extract( $provider_view_data );
+				$url                                = 'https://forge.example.test/owner/example/settings/hooks';
+				$selected_repository_row['actions'] = 'missing' === $state ? array() : array(
+					'core:provider-webhooks' => array(
+						'key'      => 'core:provider-webhooks',
+						'label'    => 'Forge webhooks',
+						'type'     => 'post' === $state ? 'post' : 'link',
+						'url'      => 'empty' === $state ? '' : $url,
+						'disabled' => 'disabled' === $state,
+						'external' => 'internal' !== $state,
+					),
+				);
+				$expected_url                       = 'enabled' === $state ? $url : null;
+				$webhook_management                 = new class( $provider_code, $expected_url ) {
+					public function __construct( private string $provider_code, private ?string $expected_url ) {}
+					public function has_management_capability( string $provider_code ): bool {
+						TestCase::assertSame( $this->provider_code, $provider_code );
+						return true;
+					}
+					public function render_repository_webhook_setup( string $provider_code, string $repository_id, string $return_url, bool $has_branch_consumer, string $repository, ?string $presented_url = null ): void {
+						TestCase::assertSame( $this->provider_code, $provider_code );
+						TestCase::assertSame( 'repo-42', $repository_id );
+						TestCase::assertStringContainsString( 'repository_view=branch', $return_url );
+						TestCase::assertTrue( $has_branch_consumer );
+						TestCase::assertSame( 'owner/example', $repository );
+						TestCase::assertSame( $this->expected_url, $presented_url );
+						echo '<div data-test-webhook-controls>Retained native controls</div>';
+					}
+				};
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/provider.php';
+				$html = (string) ob_get_clean();
+				self::assertStringContainsString( 'Retained native controls', $html );
+				if ( 'enabled' === $state ) {
+					self::assertSame( 1, substr_count( $html, 'href="' . $url . '"' ) );
+					$document = new \DOMDocument();
+					$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+					$xpath = new \DOMXPath( $document );
+					$links = $xpath->query( '//a[@href="' . $url . '"]' );
+					self::assertNotFalse( $links );
+					self::assertCount( 1, $links );
+					$link = $links->item( 0 );
+					self::assertInstanceOf( \DOMElement::class, $link );
+					self::assertSame( '', $link->getAttribute( 'class' ) );
+					self::assertSame( '_blank', $link->getAttribute( 'target' ) );
+					self::assertSame( 'noopener noreferrer', $link->getAttribute( 'rel' ) );
+					self::assertSame( 1.0, $xpath->evaluate( 'count(.//span[@class="dashicons dashicons-external"][@aria-hidden="true"])', $link ) );
+					$text = $xpath->evaluate( 'string(.)', $link );
+					self::assertIsString( $text );
+					self::assertStringContainsString( '(opens in a new tab)', $text );
+				}
+			}
+		}
+	}
+
 	public function test_credential_result_notice_keeps_the_permanent_status_label_outside_its_message(): void {
 		$credential_health_id    = 'fixture';
 		$credential_health_label = 'Retained status label';

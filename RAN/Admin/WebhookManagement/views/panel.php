@@ -72,7 +72,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 					<?php endforeach; ?>
 					<?php if ( is_string( $model['webhooks_url'] ?? null ) && '' !== $model['webhooks_url'] ) : ?>
 						<?php /* translators: %s: repository provider name. */ ?>
-						<a class="button" href="<?php echo esc_url( $model['webhooks_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( __( 'Open %s webhooks', 'ran-booster' ), $model['provider_label'] ) ); ?></a>
+						<a href="<?php echo esc_url( $model['webhooks_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( __( 'Open %s webhooks', 'ran-booster' ), $model['provider_label'] ) ); ?> <span class="dashicons dashicons-external" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a>
 					<?php endif; ?>
 				</div>
 				<?php if ( is_string( $model['action_help'] ) ) : ?>

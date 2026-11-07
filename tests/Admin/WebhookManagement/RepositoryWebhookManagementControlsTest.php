@@ -212,7 +212,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	public function test_repository_page_reuses_the_fixed_normal_post_webhook_section(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
-		$facade->expects( self::once() )->method( 'readiness' )->with( 'fixture-provider' )->willReturn(
+		$facade->expects( self::exactly( 3 ) )->method( 'readiness' )->with( 'fixture-provider' )->willReturn(
 			new AssistanceReadiness(
 				array(),
 				'https://example.test/webhook',
@@ -230,7 +230,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				)
 			)
 		);
-		$facade->expects( self::once() )->method( 'target' )->with( 'fixture-provider', '1234' )->willReturn(
+		$facade->expects( self::exactly( 4 ) )->method( 'target' )->with( 'fixture-provider', '1234' )->willReturn(
 			new AssistanceTarget(
 				'fixture-provider',
 				'1234',
@@ -245,7 +245,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				'https://example.test/webhook'
 			)
 		);
-		$facade->expects( self::once() )->method( 'credential_choices' )->with( 'fixture-provider' )->willReturn(
+		$facade->expects( self::exactly( 4 ) )->method( 'credential_choices' )->with( 'fixture-provider' )->willReturn(
 			array(
 				array(
 					'id'    => 'credential-1',
@@ -281,7 +281,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( '<details', $html );
 		self::assertStringContainsString( 'name="action" value="ran_booster_repository_webhook_management_operation"', $html );
 		self::assertStringContainsString( 'name="repository_webhook_management_operation" value="setup"', $html );
-		self::assertStringContainsString( 'class="button" href="https://fixture-provider.example.test/owner%2Fexample/settings/hooks"', $html );
+		self::assertStringContainsString( '<a href="https://fixture-provider.example.test/owner%2Fexample/settings/hooks" target="_blank" rel="noopener noreferrer">', $html );
+		self::assertStringContainsString( '<span class="dashicons dashicons-external" aria-hidden="true"></span>', $html );
+		self::assertStringContainsString( '<span class="screen-reader-text"> (opens in a new tab)</span>', $html );
 		self::assertStringContainsString( 'Open Fixture Forge webhooks', $html );
 		self::assertStringContainsString( 'class="ran-booster-webhook-steps ran-booster-repository-webhook-lifecycle"', $html );
 		self::assertStringContainsString( '<strong>Site receiver</strong>', $html );
@@ -309,6 +311,30 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'class="ran-booster-repository-webhook-management__select-action"' ) );
 		self::assertStringNotContainsString( 'hx-post=', $html );
 		self::assertStringNotContainsString( 'hx-target=', $html );
+
+		$url      = 'https://fixture-provider.example.test/owner%2Fexample/settings/hooks';
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$links = $xpath->query( '//a[@href="' . $url . '"]' );
+		self::assertNotFalse( $links );
+		self::assertCount( 1, $links );
+		$link = $links->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $link );
+		$anchor = $document->saveHTML( $link );
+		self::assertIsString( $anchor );
+		foreach ( array( $url, 'https://other.example.test/hooks' ) as $presented_url ) {
+			ob_start();
+			$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', true, 'owner/example', $presented_url );
+			$actual   = (string) ob_get_clean();
+			$expected = $url === $presented_url ? str_replace( $anchor, '', $html ) : $html;
+			self::assertSame( preg_replace( '/>\s+</', '><', $expected ), preg_replace( '/>\s+</', '><', $actual ) );
+		}
+		ob_start();
+		self::assertTrue( $controls->render_repository_panel( 'fixture-provider', '1234', 'https://example.test/repository' ) );
+		$standalone = (string) ob_get_clean();
+		self::assertSame( 1, substr_count( $standalone, 'href="' . $url . '"' ) );
+		self::assertStringContainsString( $anchor, $standalone );
 	}
 
 	public function test_repository_checklist_remains_visible_when_webhook_operations_are_unavailable(): void {

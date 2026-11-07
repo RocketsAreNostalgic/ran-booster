@@ -77,6 +77,15 @@ if ( ! defined( 'WPINC' ) ) {
 	die;
 }
 
+$repository_webhooks_action = $selected_repository_row['actions']['core:provider-webhooks'] ?? array();
+$repository_webhooks_url    = is_array( $repository_webhooks_action )
+	&& 'link' === ( $repository_webhooks_action['type'] ?? null )
+	&& true === ( $repository_webhooks_action['external'] ?? false )
+	&& true !== ( $repository_webhooks_action['disabled'] ?? false )
+	&& is_string( $repository_webhooks_action['url'] ?? null )
+	&& '' !== $repository_webhooks_action['url']
+	? $repository_webhooks_action['url'] : null;
+
 $credential_validation_feedback = isset( $credential_validation_feedback ) && is_array( $credential_validation_feedback ) ? $credential_validation_feedback : null;
 $render_credential_cell         = static function ( array $profile, string $column ) use ( $package_type_labels, $provider, $provider_mutation_fields, $credential_validation_feedback ): void {
 	if ( 'name' === $column ) {
@@ -387,9 +396,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				$repository_view_urls,
 				$repository_view_request_urls,
 				null !== $webhook_management && $webhook_management->has_management_capability( $provider['code'] )
-					? static function () use ( $webhook_management, $provider, $requested_repository_id, $provider_return_url, $repository_view_urls, $has_branch_consumer, $selected_repository_row ): bool {
+					? static function () use ( $webhook_management, $provider, $requested_repository_id, $provider_return_url, $repository_view_urls, $has_branch_consumer, $selected_repository_row, $repository_webhooks_url ): bool {
 						$return_url = is_string( $repository_view_urls['branch'] ?? null ) ? $repository_view_urls['branch'] : $provider_return_url;
-						$webhook_management->render_repository_webhook_setup( $provider['code'], $requested_repository_id, $return_url, $has_branch_consumer, (string) ( $selected_repository_row['repository'] ?? '' ) );
+						$webhook_management->render_repository_webhook_setup( $provider['code'], $requested_repository_id, $return_url, $has_branch_consumer, (string) ( $selected_repository_row['repository'] ?? '' ), $repository_webhooks_url );
 
 						return true;
 					}
@@ -631,9 +640,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 										$repository_view_urls,
 										$repository_view_request_urls,
 										null !== $webhook_management && $webhook_management->supports_provider( $provider['code'] )
-										? static function () use ( $webhook_management, $provider, $requested_repository_id, $provider_return_url, $repository_view_urls, $has_branch_consumer, $selected_repository_row ): bool {
+										? static function () use ( $webhook_management, $provider, $requested_repository_id, $provider_return_url, $repository_view_urls, $has_branch_consumer, $selected_repository_row, $repository_webhooks_url ): bool {
 											$return_url = is_string( $repository_view_urls['branch'] ?? null ) ? $repository_view_urls['branch'] : $provider_return_url;
-											$webhook_management->render_repository_webhook_setup( $provider['code'], $requested_repository_id, $return_url, $has_branch_consumer, (string) ( $selected_repository_row['repository'] ?? '' ) );
+											$webhook_management->render_repository_webhook_setup( $provider['code'], $requested_repository_id, $return_url, $has_branch_consumer, (string) ( $selected_repository_row['repository'] ?? '' ), $repository_webhooks_url );
 
 											return true;
 										}

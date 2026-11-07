@@ -531,7 +531,11 @@ final class RepositoryDetailRenderer {
 			<?php } elseif ( true === ( $action['disabled'] ?? false ) ) { ?>
 				<button type="button" class="button" disabled aria-disabled="true"<?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
 			<?php } elseif ( 'link' === ( $action['type'] ?? null ) ) { ?>
-				<a class="button" href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></a>
+				<?php $webhooks_link = 'core:provider-webhooks' === ( $action['key'] ?? null ) && true === ( $action['external'] ?? false ); ?>
+				<a<?php echo $webhooks_link ? '' : ' class="button"'; ?> href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?>
+				<?php if ( $webhooks_link ) { ?>
+					<span class="dashicons dashicons-external" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span>
+				<?php } ?></a>
 			<?php } ?>
 		<?php } ?>
 		</div>

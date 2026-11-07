@@ -24,6 +24,92 @@
 	background: transparent;
 }
 
+.ran-booster-admin
+	[data-ran-booster-ui-notice]:not([data-ran-booster-ui-notice-intent]),
+.ran-booster-admin
+	[data-ran-booster-ui-notice][data-ran-booster-ui-notice-intent="error"] {
+	--ran-booster-notice-background: var(
+		--wpds-color-background-surface-error-weak
+	);
+	--ran-booster-notice-border: var(--wpds-color-stroke-surface-error);
+	--ran-booster-notice-text: var(--wpds-color-foreground-content-error);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-notice][data-ran-booster-ui-notice-intent="warning"] {
+	--ran-booster-notice-background: var(
+		--wpds-color-background-surface-warning-weak
+	);
+	--ran-booster-notice-border: var(--wpds-color-stroke-surface-warning);
+	--ran-booster-notice-text: var(--wpds-color-foreground-content-warning);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-notice][data-ran-booster-ui-notice-intent="info"] {
+	--ran-booster-notice-background: var(
+		--wpds-color-background-surface-info-weak
+	);
+	--ran-booster-notice-border: var(--wpds-color-stroke-surface-info);
+	--ran-booster-notice-text: var(--wpds-color-foreground-content-info);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-notice][data-ran-booster-ui-notice-intent="success"] {
+	--ran-booster-notice-background: var(
+		--wpds-color-background-surface-success-weak
+	);
+	--ran-booster-notice-border: var(--wpds-color-stroke-surface-success);
+	--ran-booster-notice-text: var(--wpds-color-foreground-content-success);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-notice]:is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted]) {
+	box-sizing: border-box;
+	padding: var(--wpds-dimension-padding-md);
+	padding-inline-start: calc(
+		var(--wpds-dimension-padding-md) + var(--wpds-dimension-size-sm) +
+			var(--wpds-dimension-gap-xs)
+	);
+	border: 1px solid var(--ran-booster-notice-border);
+	border-radius: var(--wpds-border-radius-lg);
+	box-shadow: none;
+	background-color: var(--ran-booster-notice-background);
+	color: var(--ran-booster-notice-text);
+	font-family: var(--wpds-typography-font-family-body);
+	font-size: var(--wpds-typography-font-size-md);
+	font-weight: var(--wpds-typography-font-weight-default);
+	line-height: var(--wpds-typography-line-height-sm);
+	text-wrap: pretty;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-notice]:is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted])
+	> [data-ran-booster-ui-notice-content] {
+	box-sizing: border-box;
+	min-block-size: var(--wpds-dimension-size-sm);
+	min-inline-size: 0;
+	padding-block: calc(
+		(
+				var(--wpds-dimension-size-sm) -
+					var(--wpds-typography-line-height-sm)
+			) /
+			2
+	);
+	overflow-wrap: anywhere;
+}
+
 .ran-booster-admin [data-ran-booster-ui-notice][data-ran-booster-ui-mounted] {
 	padding: 0;
 	border: 0;
@@ -36,12 +122,33 @@
 	overflow-wrap: anywhere;
 }
 
+.ran-booster-admin
+	[data-ran-booster-ui-notice]:is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted])
+	> [data-ran-booster-ui-notice-content]
+	p,
 .ran-booster-admin .ran-booster-ui-notice__description p {
 	margin: 0;
 	padding: 0;
 	font: inherit;
 }
 
+.ran-booster-admin
+	[data-ran-booster-ui-notice]:is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted])
+	> [data-ran-booster-ui-notice-content]
+	p
+	+ p,
 .ran-booster-admin .ran-booster-ui-notice__description p + p {
 	margin-block-start: var(--ran-booster-space-8);
 }

@@ -117,6 +117,10 @@ final class RepositoryDetailRendererTest extends TestCase {
 		);
 		$html = (string) ob_get_clean();
 
+		foreach ( array( 'packages', 'integration-summary', 'activity', 'details' ) as $section ) {
+			self::assertStringContainsString( 'data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-' . $section . '-heading"', $html );
+		}
+		self::assertSame( 4, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		self::assertFalse( $webhook_rendered );
 		self::assertFalse( $release_rendered );
 		self::assertStringContainsString( '2 packages · Conflicting sources', $html );
@@ -252,8 +256,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'no Branch package currently uses this repository webhook', $html );
-		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section"' ) );
-		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section"', $html );
+		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card"' ) );
+		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card"', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-repository-webhook-setup-heading">Webhook setup</h4>', $html );
 		self::assertStringNotContainsString( '<details', $html );
 		self::assertStringNotContainsString( '>Set up webhook</button>', $html );
@@ -333,6 +337,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Package inventory incomplete', $html );
+		self::assertStringContainsString( 'data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-incomplete-inventory-heading"', $html );
 		self::assertStringContainsString( 'Refresh repository inventory before using repository-wide workflow controls.', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true">Manage webhook</button>', $html );
 		self::assertStringNotContainsString( 'data-test-webhook', $html );
@@ -368,6 +373,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertFalse( $release_rendered );
+		self::assertStringContainsString( 'data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-incomplete-inventory-heading"', $html );
 		self::assertStringContainsString( 'disabled aria-disabled="true">Assess release setup</button>', $html );
 		self::assertStringNotContainsString( 'Assess release automation', $html );
 		self::assertStringNotContainsString( 'data-test-release', $html );
@@ -508,6 +514,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 	public function test_provider_actions_preserve_normalized_descriptions(): void {
 		$row = array(
 			'repository'        => 'owner/branch',
+			'repository_url'    => 'https://example.test/owner/branch',
 			'source_label'      => 'Branch',
 			'source_key'        => 'branch',
 			'package_summaries' => array(),
@@ -542,9 +549,11 @@ final class RepositoryDetailRendererTest extends TestCase {
 			),
 		);
 		ob_start();
-		( new RepositoryDetailRenderer() )->render( $row, 'Fixture', 'https://example.test/repositories', 'https://example.test/activity', true, '', 'branch', $this->view_urls(), $this->view_request_urls(), null, null );
+		( new RepositoryDetailRenderer() )->render( $row, 'Third Provider', 'https://example.test/repositories', 'https://example.test/activity', true, '', 'branch', $this->view_urls(), $this->view_request_urls(), null, null );
 		$html = (string) ob_get_clean();
 
+		self::assertStringContainsString( 'data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"', $html );
+		self::assertStringContainsString( 'Open on Third Provider', $html );
 		self::assertStringContainsString( 'aria-describedby="post-help"', $html );
 		self::assertStringContainsString( 'aria-describedby="disabled-help"', $html );
 		self::assertStringContainsString( 'aria-describedby="link-help"', $html );
@@ -675,6 +684,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 			self::assertStringContainsString( esc_html( $unsafe ), $html );
 			self::assertStringContainsString( '<form method="post" hx-post="https://example.test/action" hx-target="#result">', $html );
 			self::assertStringContainsString( '<input name="_wpnonce" value="fixture-nonce">', $html );
+			self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 			self::assertStringNotContainsString( '&lt;form', $html );
 		}
 	}
@@ -717,6 +727,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 					self::assertStringNotContainsString( 'discarded partial fragment', $html );
 					self::assertStringNotContainsString( 'private callback failure', $html );
 					self::assertStringContainsString( 'branch' === $view ? 'Repository webhook management is temporarily unavailable' : 'Release workflow status is unavailable', $html );
+					self::assertStringContainsString( 'data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-' . ( 'branch' === $view ? 'webhook' : 'release' ) . '-heading"', $html );
 				} finally {
 					while ( ob_get_level() > $level ) {
 						ob_end_clean();

@@ -1047,6 +1047,15 @@
 	}
 }
 
+/* Core detail sections already own their header and body insets. */
+.ran-booster-admin
+	.ran-booster-settings-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	> .ran-booster-card__mount
+	> .ran-booster-card__surface
+	> .ran-booster-card__content {
+	padding: 0;
+}
+
 /* Provider overview sections already own their responsive header and body insets. */
 .ran-booster-admin
 	.ran-booster-provider--overview

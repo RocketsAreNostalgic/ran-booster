@@ -171,6 +171,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->render_repository_webhook_setup( 'fitness-only', '1234', 'https://example.test/repository', true, 'owner/branch' );
 		$html = (string) ob_get_clean();
 
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		self::assertStringContainsString( 'Fitness only webhook configuration is incomplete.', $html );
 		self::assertStringContainsString( 'Branch packages can still be updated manually', $html );
 		self::assertStringContainsString( 'ran-booster-repository-webhook-setup is-inactive', $html );
@@ -259,13 +260,14 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		ob_start();
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
 		$html = (string) ob_get_clean();
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		self::assertStringContainsString( '&lt;script&gt;Repository access&lt;/script&gt;', $html );
 		self::assertStringNotContainsString( '<script>Repository access</script>', $html );
 
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
 		self::assertStringContainsString( 'Webhook setup', $html );
-		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section"', $html );
-		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section"' ) );
+		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider"', $html );
+		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider"' ) );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup"' ) );
 		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup"', $html );
 		self::assertStringContainsString( '<div class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading">Webhook setup</h4><p>Sets up this repository’s webhook. Automatic updates remain configured separately for each package.</p></div></div>', $html );
@@ -359,6 +361,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'A signing secret was available when Booster last checked.', $html );
 		self::assertStringContainsString( 'This site can receive webhook deliveries.', $html );
 		self::assertStringContainsString( 'Configured at the last recorded check on 2026-08-20T01:02:03Z.', $html );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		self::assertStringContainsString( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', $html );
 		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup is-inactive"', $html );
 		self::assertStringContainsString( 'aria-labelledby="ran-booster-repository-webhook-setup-heading" aria-disabled="true"', $html );

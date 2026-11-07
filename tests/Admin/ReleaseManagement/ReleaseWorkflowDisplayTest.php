@@ -29,6 +29,8 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		} finally {
 			restore_error_handler();
 		}
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
+		self::assertStringStartsWith( '<section class="ran-booster-settings-section ran-booster-repository-release-section ran-booster-card" data-ran-booster-card="provider"', $html );
 		self::assertStringContainsString( 'shared by 0 packages', $html );
 		self::assertStringContainsString( 'Published release lifecycle', $html );
 	}
@@ -51,6 +53,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		self::assertStringContainsString( '&lt;script&gt;settings&lt;/script&gt;', $html );
 		self::assertStringContainsString( '&lt;script&gt;package&lt;/script&gt;', $html );
 		self::assertStringContainsString( 'settings?a=1&amp;b=2', $html );

@@ -85,6 +85,21 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 	}
 
+	public function test_null_repository_projection_emits_no_card_or_output(): void {
+		$controls = $this->controls();
+		foreach ( array(
+			array(),
+			array(
+				'provider_code' => 'fixture',
+				'historical'    => true,
+			),
+		) as $row ) {
+			ob_start();
+			$controls->render_repository_release_sections( $row, 'https://example.test/return' );
+			self::assertSame( '', (string) ob_get_clean() );
+		}
+	}
+
 	public function test_registered_workflow_provider_without_metadata_leaves_repository_rows_untouched_without_warning_or_output(): void {
 		$provider = new RepositoryReleaseWorkflowProviderDouble();
 		$rows     = array(

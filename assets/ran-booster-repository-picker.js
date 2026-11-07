@@ -23,6 +23,15 @@
 		document
 			.querySelectorAll('.ran-booster-repository-picker')
 			.forEach(function (modal) {
+				modal
+					.querySelector(
+						'.ran-booster-repository-picker__public-limit-notice[data-ran-booster-ui-notice]'
+					)
+					?.dispatchEvent(
+						new window.CustomEvent('ran-booster:ui-notice-update', {
+							bubbles: true,
+						})
+					);
 				modal.remove();
 			});
 		document.body.classList.remove('ran-booster-repository-picker-open');
@@ -695,9 +704,9 @@
 				'<label for="ran-booster-repository-picker-public-profile"></label>' +
 				'<select id="ran-booster-repository-picker-public-profile" class="ran-booster-repository-picker__public-profile"></select>' +
 				'</div>' +
-				'<div class="notice notice-info inline ran-booster-repository-picker__public-limit-notice" hidden>' +
+				'<div class="notice notice-info inline ran-booster-repository-picker__public-limit-notice" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-ui-notice-scope="global" hidden><div data-ran-booster-ui-notice-content>' +
 				'<p><span></span> <a class="ran-booster-repository-picker__public-limit-link" href="#"></a></p>' +
-				'</div>' +
+				'</div></div>' +
 				'<label for="ran-booster-repository-picker-owner" class="ran-booster-repository-picker__owner-label"></label>' +
 				'<div class="ran-booster-repository-picker__public-search-fields">' +
 				'<input id="ran-booster-repository-picker-owner" class="regular-text ran-booster-repository-picker__owner" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">' +
@@ -944,6 +953,11 @@
 			if (showCredentialsNotice) {
 				publicLimitLink.href = credentialsUrl || '#';
 			}
+			publicLimitNotice.dispatchEvent(
+				new window.CustomEvent('ran-booster:ui-notice-update', {
+					bubbles: true,
+				})
+			);
 			publicProfileSelect.value = repositoryPickerPublicProfileValue(
 				lookup,
 				savedLookup,

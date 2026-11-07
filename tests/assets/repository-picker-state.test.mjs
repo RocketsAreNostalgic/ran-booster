@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
 
 const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-repository-picker.js', import.meta.url),
@@ -463,4 +464,64 @@ test('picker lifecycle re-fetches restored context and persists empty filters', 
 		/function showAccessibleRepositories\(\)[\s\S]*loadRepositories\('accessible'/
 	);
 	assert.doesNotMatch(source, /window\.localStorage|localStorage\./);
+});
+
+test('leaving the owned picker schedules Notice cleanup before removing its modal', () => {
+	const handlers = new Map();
+	const events = [];
+	const modal = {
+		isConnected: true,
+		querySelector(selector) {
+			assert.equal(
+				selector,
+				'.ran-booster-repository-picker__public-limit-notice[data-ran-booster-ui-notice]'
+			);
+			return {
+				dispatchEvent: (event) =>
+					events.push({
+						type: event.type,
+						bubbles: event.bubbles,
+						connected: this.isConnected,
+					}),
+			};
+		},
+		remove() {
+			this.isConnected = false;
+		},
+	};
+	const document = {
+		readyState: 'loading',
+		addEventListener: (name, handler) => handlers.set(name, handler),
+		querySelectorAll(selector) {
+			assert.equal(selector, '.ran-booster-repository-picker');
+			return [modal];
+		},
+		body: { classList: { remove() {} } },
+	};
+	const window = {
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options.bubbles;
+			}
+		},
+	};
+	vm.runInNewContext(source, {
+		document,
+		window,
+		wp: { i18n: { __: (text) => text, _n() {}, sprintf() {} } },
+	});
+	const leave = handlers.get('htmx:beforeSwap');
+	leave({ detail: { target: { id: 'another-target' } } });
+	assert.deepEqual(events, []);
+	assert.equal(modal.isConnected, true);
+	leave({ detail: { target: { id: 'wpbody-content' } } });
+	assert.deepEqual(events, [
+		{
+			type: 'ran-booster:ui-notice-update',
+			bubbles: true,
+			connected: true,
+		},
+	]);
+	assert.equal(modal.isConnected, false);
 });

@@ -8,6 +8,7 @@
 	const selector = '.ran-booster-card[data-ran-booster-card]';
 	const noticeSelector = '[data-ran-booster-ui-notice]';
 	const badgeSelector = '[data-ran-booster-ui-badge]';
+	const buttonSelector = '[data-ran-booster-ui-button]';
 	const mounted = 'data-ran-booster-ui-mounted';
 	const roots = new Map();
 
@@ -28,9 +29,19 @@
 		if (!entry) {
 			return;
 		}
-		const active = host.contains(host.ownerDocument.activeElement)
+		let active = host.contains(host.ownerDocument.activeElement)
 			? host.ownerDocument.activeElement
 			: null;
+		if (entry.button) {
+			const button = entry.mount.querySelector('button');
+			if (button) {
+				entry.button.disabled = button.disabled;
+				if (active === button) {
+					active = entry.button;
+				}
+			}
+			entry.mount.replaceWith(entry.button);
+		}
 		if (entry.content) {
 			while (entry.content.firstChild) {
 				host.insertBefore(entry.content.firstChild, entry.mount);
@@ -45,7 +56,11 @@
 			entry.mount.remove();
 		} else {
 			entry.mount.replaceChildren();
-			entry.fallback.hidden = false;
+			if (entry.button) {
+				host.appendChild(entry.mount);
+			} else {
+				entry.fallback.hidden = false;
+			}
 		}
 		host.removeAttribute(mounted);
 		roots.delete(host);
@@ -234,6 +249,90 @@
 		}
 	}
 
+	function mountButton(host) {
+		if (
+			roots.has(host) ||
+			!host.isConnected ||
+			host.tagName !== 'SPAN' ||
+			!host.closest('.ran-booster-admin') ||
+			host.getAttribute('data-ran-booster-ui-button') !==
+				'overview-presentation'
+		) {
+			return;
+		}
+		const button = host.querySelector(
+			'[data-ran-booster-ui-button-fallback]'
+		);
+		const mount = host.querySelector('[data-ran-booster-ui-button-mount]');
+		const element = window.wp?.element,
+			Button = window.ranBoosterUI?.Button;
+		if (
+			!button ||
+			button.tagName !== 'BUTTON' ||
+			button.getAttribute('type') !== 'submit' ||
+			button.parentElement !== host ||
+			!mount ||
+			mount.tagName !== 'SPAN' ||
+			mount.parentElement !== host ||
+			mount.firstChild ||
+			!Button ||
+			!element?.createRoot ||
+			!element.createElement ||
+			!element.flushSync
+		) {
+			return;
+		}
+		const props = {
+			type: 'submit',
+			tone: 'neutral',
+			variant: 'outline',
+			disabled: button.disabled,
+			focusableWhenDisabled: false,
+		};
+		[
+			'name',
+			'value',
+			'form',
+			'aria-label',
+			'aria-describedby',
+			'id',
+			'title',
+		].forEach((name) => {
+			if (button.hasAttribute(name)) {
+				props[name] = button.getAttribute(name);
+			}
+		});
+		const focused = host.ownerDocument.activeElement === button;
+		mount.remove();
+		let root;
+		try {
+			root = element.createRoot(mount);
+			element.flushSync(() =>
+				root.render(
+					element.createElement(Button, props, button.textContent)
+				)
+			);
+			const replacement = mount.querySelector('button');
+			if (!replacement) {
+				throw new Error('Missing UI button');
+			}
+			button.replaceWith(mount);
+			roots.set(host, { root, mount, button });
+			host.setAttribute(mounted, '');
+			if (focused) {
+				focusAfterMove(host, replacement);
+			}
+		} catch {
+			try {
+				root?.unmount();
+			} catch {
+				/* Keep the native action available. */
+			}
+			mount.replaceChildren();
+			host.appendChild(mount);
+		}
+	}
+
 	function initialize(scope) {
 		queueMicrotask(() => {
 			roots.forEach((entry, host) => {
@@ -253,6 +352,11 @@
 				mountBadge(badge);
 			}
 			scope.querySelectorAll?.(badgeSelector).forEach(mountBadge);
+			const button = scope.closest?.(buttonSelector);
+			if (button) {
+				mountButton(button);
+			}
+			scope.querySelectorAll?.(buttonSelector).forEach(mountButton);
 		});
 	}
 

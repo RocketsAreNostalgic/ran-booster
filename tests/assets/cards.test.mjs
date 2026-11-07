@@ -938,7 +938,7 @@ test('Notice uses only supported producer intents and retains the absent-error d
 	}
 });
 
-test('Notice changes intent only on discovery and restores current native content on invalid metadata', () => {
+test('Notice update events refresh intent and retain content on invalid metadata', () => {
 	const f = fixture();
 	const n = f.notice();
 	n.host.hidden = true;
@@ -947,7 +947,7 @@ test('Notice changes intent only on discovery and restores current native conten
 	f.flush();
 	assert.equal(f.tree().props.intent, 'error');
 	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'error');
-	f.emit('htmx:load', n.host);
+	f.emit('ran-booster:ui-notice-update', n.paragraph);
 	f.flush();
 	assert.equal(f.counts().renders, 1);
 	const fresh = new f.Node('p');
@@ -955,7 +955,7 @@ test('Notice changes intent only on discovery and restores current native conten
 	n.content.appendChild(fresh);
 	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
 	assert.equal(f.counts().renders, 1);
-	f.emit('htmx:load', n.host);
+	f.emit('ran-booster:ui-notice-update', n.paragraph);
 	f.flush();
 	assert.equal(f.tree().props.intent, 'warning');
 	assert.equal(f.counts().renders, 2);
@@ -963,11 +963,11 @@ test('Notice changes intent only on discovery and restores current native conten
 	assert.equal(n.content.childNodes.at(-1), fresh);
 	assert.equal(n.paragraph.firstChild, n.link);
 	assert.equal(f.doc.activeElement, n.link);
-	f.emit('htmx:load', n.host);
+	f.emit('ran-booster:ui-notice-update', n.paragraph);
 	f.flush();
 	assert.equal(f.counts().renders, 2);
 	n.host.setAttribute('data-ran-booster-ui-notice-intent', '');
-	f.emit('htmx:load', n.host);
+	f.emit('ran-booster:ui-notice-update', n.paragraph);
 	f.flush();
 	assert.equal(n.host.firstChild, n.content);
 	assert.equal(n.content.childNodes.at(-1), fresh);
@@ -993,7 +993,7 @@ test('Notice intent changes preserve the current form and nested Badge without u
 	f.flush();
 	assert.equal(f.counts().renders, 3);
 	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'info');
-	f.emit('htmx:load', n.paragraph);
+	f.emit('ran-booster:ui-notice-update', n.paragraph);
 	f.flush();
 	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
 	assert.equal(nativeForm.firstChild, input);
@@ -1026,11 +1026,68 @@ test('changed Notice rendering failure stays native without a second unsolicited
 		};
 		n.link.focus();
 		n.host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
-		f.emit('htmx:load', n.paragraph);
+		f.emit('ran-booster:ui-notice-update', n.paragraph);
 		f.flush();
 		assert.equal(attempts, 1);
 		assert.equal(n.host.firstChild, n.content);
 		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
 		assert.equal(f.doc.activeElement, n.link);
 	}
+});
+
+test('Notice update preserves an ancestor Card and sibling Badge', () => {
+	const f = fixture();
+	const { card, form } = f.make('settings');
+	const n = f.notice(form);
+	const b = f.badge(form);
+	b.host.setAttribute('data-ran-booster-ui-badge-label', 'Saved');
+	b.host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
+	f.run();
+	f.flush();
+	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
+	f.emit('ran-booster:ui-notice-update', n.link);
+	f.flush();
+	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
+	assert.equal(b.fallback.hidden, true);
+	assert.ok(b.mount.firstChild);
+	assert.equal(f.counts().renders, 4);
+	assert.equal(f.counts().unmounts, 1);
+});
+
+test('Notice producer changes warning to error through a descendant update event', () => {
+	const f = fixture();
+	const n = f.notice();
+	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
+	f.run();
+	f.flush();
+	const fresh = new f.Node('p');
+	n.content.appendChild(fresh);
+	n.link.focus();
+	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'error');
+	f.emit('ran-booster:ui-notice-update', n.paragraph);
+	f.flush();
+	assert.equal(f.tree().props.intent, 'error');
+	assert.equal(f.counts().renders, 2);
+	assert.equal(n.content.childNodes.at(-1), fresh);
+	assert.equal(n.paragraph.firstChild, n.link);
+	assert.equal(f.doc.activeElement, n.link);
+	f.emit('ran-booster:ui-notice-update', n.paragraph);
+	f.flush();
+	assert.equal(f.counts().renders, 2);
+});
+
+test('Notice update without a runtime leaves native content and actions intact', () => {
+	const f = fixture({ runtime: false });
+	const n = f.notice();
+	n.link.focus();
+	f.run();
+	f.flush();
+	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
+	f.emit('ran-booster:ui-notice-update', n.paragraph);
+	f.flush();
+	assert.equal(f.counts().renders, 0);
+	assert.equal(n.host.firstChild, n.content);
+	assert.equal(n.paragraph.firstChild, n.link);
+	assert.equal(n.host.getAttribute('role'), 'alert');
+	assert.equal(f.doc.activeElement, n.link);
 });

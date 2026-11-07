@@ -387,6 +387,12 @@
 			mountBadge(host);
 		}
 	});
+	document.addEventListener('ran-booster:ui-notice-update', (event) => {
+		const host = event.target.closest?.(noticeSelector);
+		if (host) {
+			initialize(host);
+		}
+	});
 	document.addEventListener('htmx:beforeSwap', (event) => {
 		if (event.detail.shouldSwap) {
 			cleanup(event.detail.target);

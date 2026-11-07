@@ -61,6 +61,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		}
 		if (errorNotice) {
 			errorNotice.hidden = false;
+			errorNotice.dispatchEvent(
+				new window.CustomEvent('ran-booster:ui-notice-update', {
+					bubbles: true,
+				})
+			);
 		}
 	};
 	const setListBusy = (busy) => {
@@ -292,7 +297,26 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		setListBusy(true);
 		disableNativeUpdate();
 		if (candidateList) {
-			candidateList.replaceChildren();
+			candidateList
+				.querySelector(
+					'.ran-booster-release-candidate__warning[data-ran-booster-ui-notice]'
+				)
+				?.dispatchEvent(
+					new window.CustomEvent('ran-booster:ui-notice-update', {
+						bubbles: true,
+					})
+				);
+			if (window.htmx?.swap) {
+				window.htmx.swap(candidateList, '', {
+					swapStyle: 'innerHTML',
+					swapDelay: 0,
+					settleDelay: 0,
+					transition: false,
+					ignoreTitle: true,
+				});
+			} else {
+				candidateList.replaceChildren();
+			}
 		}
 		if (candidates) {
 			candidates.hidden = true;
@@ -321,7 +345,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			) {
 				throw new Error('no_releases');
 			}
-			candidateList.replaceChildren();
 			if (response.code === 'no_releases') {
 				const empty = document.createElement('p');
 				empty.className = 'ran-booster-release-candidate';
@@ -503,14 +526,36 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					managedBrowser.dataset.ranBoosterManagedReleaseChannel ===
 					'prerelease'
 				) {
-					const warning = document.createElement('p');
+					const warning = document.createElement('div');
 					warning.className =
 						'notice notice-warning inline ran-booster-release-candidate__warning';
-					warning.textContent = wp.i18n.__(
+					warning.setAttribute('data-ran-booster-ui-notice', '');
+					warning.setAttribute(
+						'data-ran-booster-ui-notice-intent',
+						'warning'
+					);
+					warning.setAttribute(
+						'data-ran-booster-ui-notice-scope',
+						'global'
+					);
+					const content = document.createElement('div');
+					content.setAttribute(
+						'data-ran-booster-ui-notice-content',
+						''
+					);
+					const text = document.createElement('p');
+					text.textContent = wp.i18n.__(
 						'Preview track currently offers only versions older than installed. WordPress Updates will not downgrade this package.',
 						'ran-booster'
 					);
+					content.append(text);
+					warning.append(content);
 					candidateList.append(warning);
+					warning.dispatchEvent(
+						new window.CustomEvent('ran-booster:ui-notice-update', {
+							bubbles: true,
+						})
+					);
 				}
 				setStatus(
 					wp.i18n.__(

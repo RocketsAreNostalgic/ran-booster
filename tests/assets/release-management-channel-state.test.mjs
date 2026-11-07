@@ -839,3 +839,83 @@ test('a stale in-flight inspection cannot restore install authority after source
 	assert.equal(ready, 0);
 	assert.equal(harness.selected(), null);
 });
+
+test('managed release failures update the retained warning Notice after its original message', () => {
+	const errorMessage = { textContent: '' };
+	const updates = [];
+	const errorNotice = {
+		hidden: true,
+		dispatchEvent: (event) =>
+			updates.push({
+				type: event.type,
+				bubbles: event.bubbles,
+				text: errorMessage.textContent,
+				hidden: errorNotice.hidden,
+			}),
+	};
+	const window = {
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options.bubbles;
+			}
+		},
+	};
+	const showError = Function(
+		'errorMessage',
+		'errorNotice',
+		'window',
+		`${declaration('showError')} return showError;`
+	)(errorMessage, errorNotice, window);
+	showError('Could not load releases.');
+	assert.deepEqual(updates, [
+		{
+			type: 'ran-booster:ui-notice-update',
+			bubbles: true,
+			text: 'Could not load releases.',
+			hidden: false,
+		},
+	]);
+});
+
+for (const enhanced of [true, false]) {
+	test(`managed candidate refresh uses ${enhanced ? 'HTMX swap' : 'native removal with queued Notice cleanup'}`, async () => {
+		const order = [];
+		const candidateList = {
+			querySelector: () => ({
+				dispatchEvent: () => order.push('notice-update'),
+			}),
+			replaceChildren: () => order.push('native-clear'),
+		};
+		const window = { CustomEvent: class {} };
+		if (enhanced) {
+			window.htmx = {
+				swap: (target, html, spec) => {
+					assert.equal(target, candidateList);
+					assert.equal(html, '');
+					assert.equal(spec.swapStyle, 'innerHTML');
+					assert.equal(spec.swapDelay, 0);
+					assert.equal(spec.settleDelay, 0);
+					order.push('htmx-swap');
+				},
+			};
+		}
+		const list = Function(
+			'candidateList',
+			'window',
+			'wp',
+			'request',
+			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{}, setStatus=()=>{}, showError=()=>{}; const candidates=null; ${declaration('list')} return list;`
+		)(
+			candidateList,
+			window,
+			{ i18n: { __: (text) => text } },
+			async () => ({ successful: false })
+		);
+		await list();
+		assert.deepEqual(order, [
+			'notice-update',
+			enhanced ? 'htmx-swap' : 'native-clear',
+		]);
+	});
+}

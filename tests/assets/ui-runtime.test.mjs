@@ -46,11 +46,11 @@ test('manifest identifies two canonical assets and separate page budgets', () =>
 	assert.match(entries.foundation, /^ran-booster-ui-foundation-[\w-]+\.js$/);
 	assert.match(entries.overlay, /^ran-booster-ui-overlay-[\w-]+\.js$/);
 	assert.ok(
-		foundation.length + adapter.length <= 90000,
+		foundation.length + adapter.length <= 130000,
 		'foundation and adapter raw'
 	);
 	assert.ok(
-		gzipSync(foundation).length + gzipSync(adapter).length <= 20000,
+		gzipSync(foundation).length + gzipSync(adapter).length <= 26000,
 		'foundation and adapter gzip sum'
 	);
 	assert.ok(overlay.length <= 320000, 'overlay raw');
@@ -91,6 +91,7 @@ test('host React loads the foundation once and overlay extends the same object',
 			'CardRoot',
 			'NoticeDescription',
 			'NoticeRoot',
+			'Switch',
 			'version',
 		]);
 		assert.equal(ui.version, '0.26.0');
@@ -127,6 +128,16 @@ test('host React loads the foundation once and overlay extends the same object',
 		assert.match(button, /name="mode"/);
 		assert.match(button, /value="compact"/);
 		assert.match(button, /disabled=""/);
+		const switchHtml = render(
+			React.createElement(ui.Switch, {
+				nativeButton: true,
+				render: React.createElement('button'),
+				checked: true,
+				'aria-label': 'Example',
+			})
+		);
+		assert.match(switchHtml, /<button[^>]*role="switch"/);
+		assert.match(switchHtml, /aria-checked="true"/);
 		assert.match(
 			render(React.createElement(ui.CardRoot, null, 'Card content')),
 			/Card content/

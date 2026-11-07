@@ -9,8 +9,12 @@
 	const noticeSelector = '[data-ran-booster-ui-notice]';
 	const badgeSelector = '[data-ran-booster-ui-badge]';
 	const buttonSelector = '[data-ran-booster-ui-button]';
+	const switchSelector = '[data-ran-booster-ui-switch="general-preference"]';
 	const mounted = 'data-ran-booster-ui-mounted';
 	const roots = new Map();
+	let pointerActive = false;
+	let pointerEpoch = 0;
+	const activeKeys = new Map();
 
 	function focusAfterMove(host, active) {
 		if (
@@ -27,6 +31,25 @@
 	function restore(host) {
 		const entry = roots.get(host);
 		if (!entry) {
+			return;
+		}
+		if (entry.switchInput) {
+			const focused =
+				entry.mount.contains(host.ownerDocument.activeElement) ||
+				(entry.recoveryPending && entry.recoveryFocus);
+			try {
+				entry.root.unmount();
+			} catch {
+				/* Native checkbox remains authoritative. */
+			}
+			entry.mount.replaceChildren();
+			entry.fallback.hidden = false;
+			entry.label.htmlFor = entry.switchInput.id;
+			host.removeAttribute(mounted);
+			roots.delete(host);
+			if (focused) {
+				focusAfterMove(host, entry.switchInput);
+			}
 			return;
 		}
 		let active = host.contains(host.ownerDocument.activeElement)
@@ -135,6 +158,17 @@
 			(notice &&
 				(card.tagName !== 'DIV' ||
 					nativeContent?.parentElement !== card))
+		) {
+			return;
+		}
+		if (
+			!notice &&
+			card.getAttribute('data-ran-booster-card') === 'settings' &&
+			Array.from(card.querySelectorAll(switchSelector)).some((host) => {
+				const switchEntry = roots.get(host);
+				const parts = switchParts(host, switchEntry);
+				return parts && switchEngaged(parts, switchEntry);
+			})
 		) {
 			return;
 		}
@@ -270,6 +304,202 @@
 		}
 	}
 
+	function switchParts(host, current) {
+		if (
+			!host.isConnected ||
+			host.tagName !== 'SPAN' ||
+			!host.closest('.ran-booster-admin')
+		) {
+			return null;
+		}
+		const fallback = host.querySelector(
+			':scope > [data-ran-booster-ui-switch-fallback]'
+		);
+		const mount = host.querySelector(
+			':scope > [data-ran-booster-ui-switch-mount]'
+		);
+		const input = fallback?.querySelector('input[role="switch"]');
+		const scope = input?.form?.dataset.ranBoosterSettingsScope;
+		const label = input?.ownerDocument.getElementById(
+			input.getAttribute('aria-labelledby')
+		);
+		if (
+			host.children.length !== 2 ||
+			fallback?.tagName !== 'LABEL' ||
+			mount?.tagName !== 'SPAN' ||
+			fallback.children.length !== 2 ||
+			input?.parentElement !== fallback ||
+			!fallback.querySelector(
+				':scope > .ran-booster-settings__switch-control[aria-hidden="true"]'
+			) ||
+			input?.type !== 'checkbox' ||
+			!input.id ||
+			!['hide_github', 'self_update_discovery'].includes(scope) ||
+			input.name !== `ran_booster[preferences][${scope}]` ||
+			label?.tagName !== 'LABEL' ||
+			host.contains(label) ||
+			label.closest('form') !== input.form ||
+			(!current &&
+				input.ownerDocument.getElementById(`${input.id}-ui`)) ||
+			fallback.htmlFor !== input.id ||
+			label.htmlFor !== (current ? `${input.id}-ui` : input.id)
+		) {
+			return null;
+		}
+		return { fallback, mount, input, label };
+	}
+
+	function switchEngaged({ fallback, mount, input, label }, current) {
+		const active = input.ownerDocument.activeElement;
+		return (
+			label.matches(':active') ||
+			(!fallback.hidden &&
+				(fallback.contains(active) ||
+					fallback.matches(':active') ||
+					input.matches(':active'))) ||
+			(current?.switchInput === input &&
+				(mount.contains(active) || mount.matches(':active')))
+		);
+	}
+
+	function mountSwitch(host) {
+		const current = roots.get(host);
+		if (current?.recoveryPending) {
+			return;
+		}
+		const parts = switchParts(host, current);
+		const element = window.wp?.element;
+		const Switch = window.ranBoosterUI?.Switch;
+		if (
+			!parts ||
+			!Switch ||
+			!element?.createRoot ||
+			!element.createElement ||
+			!element.flushSync ||
+			!element.Component
+		) {
+			restore(host);
+			return;
+		}
+		const { fallback, mount, input, label } = parts;
+		if (
+			!current &&
+			(fallback.hidden ||
+				switchEngaged(parts) ||
+				mount.firstChild ||
+				pointerActive ||
+				activeKeys.size)
+		) {
+			return;
+		}
+		const focusedInput = input.ownerDocument.activeElement === input;
+		const focusedUI = mount.contains(input.ownerDocument.activeElement);
+		let entry = current;
+		try {
+			if (!entry) {
+				entry = {
+					root: element.createRoot(mount),
+					mount,
+					fallback,
+					switchInput: input,
+					label,
+				};
+				const owner = entry;
+				class SwitchBoundary extends element.Component {
+					constructor(props) {
+						super(props);
+						this.state = { failed: false };
+					}
+					static getDerivedStateFromError() {
+						return { failed: true };
+					}
+					getSnapshotBeforeUpdate() {
+						owner.focusOwned = mount.contains(
+							input.ownerDocument.activeElement
+						);
+						return null;
+					}
+					componentDidUpdate() {}
+					componentDidCatch() {
+						owner.recoveryPending = true;
+						owner.recoveryFocus = Boolean(owner.focusOwned);
+						queueMicrotask(() => {
+							if (
+								roots.get(host) === owner &&
+								owner.mount === mount
+							) {
+								restore(host);
+							}
+						});
+					}
+					render() {
+						return this.state.failed ? null : this.props.children;
+					}
+				}
+				entry.boundary = SwitchBoundary;
+				roots.set(host, entry);
+			}
+			const props = {
+				id: `${input.id}-ui`,
+				checked: input.checked,
+				disabled: input.disabled,
+				nativeButton: true,
+				render: element.createElement('button', { type: 'button' }),
+				onCheckedChange: (checked) => {
+					if (input.disabled) {
+						return;
+					}
+					input.checked = checked;
+					input.dispatchEvent(new Event('change', { bubbles: true }));
+				},
+			};
+			['aria-labelledby', 'aria-describedby', 'aria-invalid'].forEach(
+				(name) => {
+					if (input.hasAttribute(name)) {
+						props[name] = input.getAttribute(name);
+					}
+				}
+			);
+			element.flushSync(() =>
+				entry.root.render(
+					element.createElement(
+						entry.boundary,
+						null,
+						element.createElement(Switch, props)
+					)
+				)
+			);
+			const button = mount.querySelector('button[role="switch"]');
+			if (
+				!button ||
+				button.id !== props.id ||
+				button.type !== 'button' ||
+				button.hasAttribute('name') ||
+				button.hasAttribute('form') ||
+				mount.querySelector('input[name]')
+			) {
+				throw new Error('Missing UI switch');
+			}
+			fallback.hidden = true;
+			label.htmlFor = props.id;
+			host.setAttribute(mounted, '');
+			if (
+				focusedInput &&
+				(input.ownerDocument.activeElement === input ||
+					input.ownerDocument.activeElement ===
+						input.ownerDocument.body ||
+					!input.ownerDocument.activeElement)
+			) {
+				button.focus({ preventScroll: true });
+			}
+		} catch {
+			restore(host);
+			if (focusedUI) {
+				focusAfterMove(host, input);
+			}
+		}
+	}
+
 	function mountButton(host) {
 		if (
 			roots.has(host) ||
@@ -373,6 +603,11 @@
 				mountBadge(badge);
 			}
 			scope.querySelectorAll?.(badgeSelector).forEach(mountBadge);
+			const switchHost = scope.closest?.(switchSelector);
+			if (switchHost) {
+				mountSwitch(switchHost);
+			}
+			scope.querySelectorAll?.(switchSelector).forEach(mountSwitch);
 			const button = scope.closest?.(buttonSelector);
 			if (button) {
 				mountButton(button);
@@ -381,10 +616,69 @@
 		});
 	}
 
+	function retrySwitches() {
+		setTimeout(() => initialize(document), 0);
+	}
+	document.addEventListener(
+		'pointerdown',
+		() => {
+			pointerActive = true;
+			pointerEpoch++;
+		},
+		true
+	);
+	function releasePointer() {
+		const epoch = pointerEpoch;
+		setTimeout(() => {
+			if (epoch === pointerEpoch) {
+				pointerActive = false;
+			}
+			initialize(document);
+		}, 0);
+	}
+	document.addEventListener('pointerup', releasePointer, true);
+	document.addEventListener('pointercancel', releasePointer, true);
+	document.addEventListener(
+		'keydown',
+		(event) => {
+			if (event.key === 'Enter' || event.key === ' ') {
+				activeKeys.set(event.key, (activeKeys.get(event.key) || 0) + 1);
+			}
+		},
+		true
+	);
+	document.addEventListener(
+		'keyup',
+		(event) => {
+			if (event.key === 'Enter' || event.key === ' ') {
+				const epoch = activeKeys.get(event.key);
+				setTimeout(() => {
+					if (activeKeys.get(event.key) === epoch) {
+						activeKeys.delete(event.key);
+					}
+					initialize(document);
+				}, 0);
+			}
+		},
+		true
+	);
+	document.addEventListener('focusout', retrySwitches, true);
+
+	document.addEventListener('htmx:afterRequest', retrySwitches);
+	document.addEventListener('ran-booster:ui-ready', () =>
+		initialize(document)
+	);
+
 	document.addEventListener('ran-booster:ui-badge-update', (event) => {
 		const host = event.target.closest?.(badgeSelector);
 		if (host) {
 			mountBadge(host);
+		}
+	});
+	document.addEventListener('ran-booster:ui-switch-update', (event) => {
+		const host = event.target.closest?.(switchSelector);
+		if (host) {
+			mountSwitch(host);
 		}
 	});
 	document.addEventListener('ran-booster:ui-notice-update', (event) => {

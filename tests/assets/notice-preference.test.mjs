@@ -7,9 +7,11 @@ const source = fs.readFileSync(
 	new URL('../../assets/notice-preference.js', import.meta.url),
 	'utf8'
 );
-function setup(kind, fetch) {
+function setup(kind, fetch, mounted = false) {
 	let handler;
 	const errors = [];
+	const lifecycle = [];
+	const content = { append: (node) => errors.push(node) };
 	const buttons = [{ disabled: false }, { disabled: true }];
 	const notice = {
 		dataset: {
@@ -31,8 +33,18 @@ function setup(kind, fetch) {
 		remove() {
 			this.removed = true;
 		},
-		querySelector() {
+		querySelector(selector) {
+			if (selector === '[data-ran-booster-ui-notice-content]') {
+				return mounted ? content : null;
+			}
 			return errors[0];
+		},
+		dispatchEvent(event) {
+			lifecycle.push({
+				type: event.type,
+				bubbles: event.bubbles,
+				connected: !this.removed,
+			});
 		},
 		append(node) {
 			errors.push(node);
@@ -60,6 +72,12 @@ function setup(kind, fetch) {
 	};
 	const window = {
 		fetch,
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options.bubbles;
+			}
+		},
 		ranBoosterCredentialExpiryNotice: config,
 		ranBoosterBackgroundFailureNotice: config,
 		ranBoosterDevelopmentSafetyNotice: config,
@@ -94,7 +112,7 @@ function setup(kind, fetch) {
 		};
 		handler(event);
 	}
-	return { click, notice, errors, buttons };
+	return { click, notice, errors, buttons, content, lifecycle };
 }
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 for (const [kind, mode, expected] of [
@@ -237,6 +255,12 @@ function developmentLifecycle(fetch) {
 	heading.ownerDocument = document;
 	const window = {
 		fetch,
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options.bubbles;
+			}
+		},
 		ranBoosterDevelopmentSafetyNotice: {
 			ajaxUrl: '/ajax',
 			action: 'acknowledge',
@@ -295,6 +319,7 @@ function developmentLifecycle(fetch) {
 			remove() {
 				this.removed = true;
 			},
+			dispatchEvent() {},
 		};
 		button.closest = (selector) =>
 			selector.includes('development-safety') ? notice : null;
@@ -442,4 +467,52 @@ test('pending development dismissal retains focus and blocks duplicate activatio
 	assert.equal(notice.removed, true);
 	assert.equal(state.document.activeElement, state.heading);
 	assert.equal(button.getAttribute('aria-disabled'), null);
+});
+
+test('owned dismissal schedules Notice cleanup while the host remains connected', async () => {
+	const state = setup(
+		'credential-expiry',
+		async () => ({
+			ok: true,
+			json: async () => ({ success: true }),
+		}),
+		true
+	);
+	state.click();
+	await flush();
+	assert.deepEqual(state.lifecycle, [
+		{
+			type: 'ran-booster:ui-notice-update',
+			bubbles: true,
+			connected: true,
+		},
+	]);
+	assert.equal(state.notice.removed, true);
+});
+
+test('dismissal failures remain in the retained Notice content and reuse the same alert on retry', async () => {
+	const state = setup(
+		'credential-expiry',
+		async () => ({
+			ok: false,
+			json: async () => ({
+				success: false,
+				data: { message: 'Try again' },
+			}),
+		}),
+		true
+	);
+	state.notice.append = () => {
+		throw new Error('Do not append outside the mounted content.');
+	};
+	state.click();
+	await flush();
+	const original = state.errors[0];
+	assert.equal(original.textContent, 'Try again');
+	state.click();
+	await flush();
+	assert.equal(state.errors.length, 1);
+	assert.equal(state.errors[0], original);
+	assert.equal(state.notice.removed, false);
+	assert.deepEqual(state.lifecycle, []);
 });

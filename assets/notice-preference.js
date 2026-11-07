@@ -16,6 +16,11 @@
 				heading.focus();
 			}
 		}
+		notice.dispatchEvent(
+			new window.CustomEvent('ran-booster:ui-notice-update', {
+				bubbles: true,
+			})
+		);
 		notice.remove();
 	}
 	function initDevelopmentNotice() {
@@ -167,6 +172,14 @@
 							removeDevelopmentNotice(notice);
 							initDevelopmentNotice();
 						} else {
+							notice.dispatchEvent(
+								new window.CustomEvent(
+									'ran-booster:ui-notice-update',
+									{
+										bubbles: true,
+									}
+								)
+							);
 							notice.remove();
 						}
 					});
@@ -180,7 +193,11 @@
 						message.dataset.ranBoosterNoticePreferenceError =
 							'true';
 						message.setAttribute('role', 'alert');
-						notice.append(message);
+						(
+							notice.querySelector(
+								'[data-ran-booster-ui-notice-content]'
+							) || notice
+						).append(message);
 					}
 					message.textContent =
 						error.noticeMessage || config.errorMessage;

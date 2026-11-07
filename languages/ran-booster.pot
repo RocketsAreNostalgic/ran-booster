@@ -90,17 +90,17 @@ msgid "Review deployment activity: %s"
 msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:17
-#: RAN/Admin/PackageAdminController.php:430
+#: RAN/Admin/PackageAdminController.php:433
 msgid "A selected package uses an unavailable Git provider."
 msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:21
-#: RAN/Admin/PackageAdminController.php:428
+#: RAN/Admin/PackageAdminController.php:431
 msgid "A selected package does not have its required repository credential."
 msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:25
-#: RAN/Admin/PackageAdminController.php:433
+#: RAN/Admin/PackageAdminController.php:436
 msgid "A selected package Git provider does not support Automatic deployment."
 msgstr ""
 
@@ -113,7 +113,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:310
 #: views/troubleshooting-installation.php:180
 #: views/troubleshooting-installation.php:181
-#: views/troubleshooting-installation.php:280
+#: views/troubleshooting-installation.php:281
 msgid "Name"
 msgstr ""
 
@@ -150,7 +150,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:41
 #: views/provider.php:404
-#: views/provider.php:642
+#: views/provider.php:644
 msgid "Back to repositories"
 msgstr ""
 
@@ -489,7 +489,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:470
-#: RAN/Admin/PackageAdminController.php:529
+#: RAN/Admin/PackageAdminController.php:532
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:330
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
 #: views/documentation.php:348
@@ -501,7 +501,7 @@ msgid "Automatic"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:471
-#: RAN/Admin/PackageAdminController.php:530
+#: RAN/Admin/PackageAdminController.php:533
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:334
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
 #: views/documentation.php:347
@@ -513,8 +513,8 @@ msgid "Manual"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:472
-#: RAN/Admin/PackageAdminController.php:496
-#: RAN/Admin/PackageAdminController.php:528
+#: RAN/Admin/PackageAdminController.php:499
+#: RAN/Admin/PackageAdminController.php:531
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:338
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
 #: views/documentation.php:346
@@ -787,7 +787,7 @@ msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:296
 #: RAN/Admin/PackageAdminController.php:347
-#: RAN/Admin/PackageAdminController.php:367
+#: RAN/Admin/PackageAdminController.php:366
 #: RAN/Admin/PortabilityController.php:631
 #: RAN/Admin/PortabilityController.php:757
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:346
@@ -801,7 +801,7 @@ msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:296
 #: RAN/Admin/PackageAdminController.php:347
-#: RAN/Admin/PackageAdminController.php:367
+#: RAN/Admin/PackageAdminController.php:366
 #: RAN/Admin/PortabilityController.php:631
 #: RAN/Admin/PortabilityController.php:757
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:346
@@ -1360,7 +1360,7 @@ msgid "An add-on guide is temporarily unavailable. Check plugin compatibility an
 msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
-#: assets/ran-booster-enhanced-mutations.js:1010
+#: assets/ran-booster-enhanced-mutations.js:1144
 msgid "We could not complete that request. Please try again."
 msgstr ""
 
@@ -1433,79 +1433,79 @@ msgid "unlinked and deleted"
 msgstr ""
 
 #. translators: 1: package type, 2: completed operation.
-#: RAN/Admin/PackageAdminController.php:366
+#: RAN/Admin/PackageAdminController.php:365
 #, php-format
 msgid "%1$s was successfully %2$s."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:425
+#: RAN/Admin/PackageAdminController.php:428
 msgid "plugins"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:425
+#: RAN/Admin/PackageAdminController.php:428
 msgid "themes"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:429
+#: RAN/Admin/PackageAdminController.php:432
 msgid "Choose a bulk action and a supported number of managed packages."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:431
+#: RAN/Admin/PackageAdminController.php:434
 msgid "A selected managed package changed or is no longer available. Refresh and try again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:432
+#: RAN/Admin/PackageAdminController.php:435
 msgid "Booster could not safely complete this bulk action. No success was reported."
 msgstr ""
 
 #. translators: 1: queued count, 2: package type, 3: skipped count.
-#: RAN/Admin/PackageAdminController.php:453
+#: RAN/Admin/PackageAdminController.php:456
 #, php-format
 msgid "Queued %1$d %2$s for sequential branch reinstall. Skipped: %3$d."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:462
+#: RAN/Admin/PackageAdminController.php:465
 msgid "already queued, running, or needs attention"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:463
+#: RAN/Admin/PackageAdminController.php:466
 msgid "credential unavailable"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:464
+#: RAN/Admin/PackageAdminController.php:467
 msgid "deployment disabled"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:465
+#: RAN/Admin/PackageAdminController.php:468
 #: views/packages/index.php:330
 #: views/packages/index.php:373
 msgid "Git provider unavailable"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:466
+#: RAN/Admin/PackageAdminController.php:469
 msgid "published-release source"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:467
+#: RAN/Admin/PackageAdminController.php:470
 msgid "Booster self-update blocked"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:468
-#: RAN/Admin/PackageAdminController.php:509
+#: RAN/Admin/PackageAdminController.php:471
+#: RAN/Admin/PackageAdminController.php:512
 msgid "selection stale"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:472
+#: RAN/Admin/PackageAdminController.php:475
 msgid "The updates remain queued, but WordPress could not schedule the deployment runner. Open Troubleshooting to request it."
 msgstr ""
 
 #. translators: 1: changed count, 2: enabled or disabled label, 3: unchanged count, 4: skipped count.
-#: RAN/Admin/PackageAdminController.php:494
+#: RAN/Admin/PackageAdminController.php:497
 #, php-format
 msgid "Changed %1$d plugins to %2$s in WordPress. Already in that state: %3$d. Skipped: %4$d."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:496
+#: RAN/Admin/PackageAdminController.php:499
 #: views/packages/edit.php:208
 #: views/packages/index.php:475
 #: views/settings-general.php:183
@@ -1514,161 +1514,161 @@ msgstr ""
 msgid "Enabled"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:504
+#: RAN/Admin/PackageAdminController.php:507
 msgid "required by active plugins"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:505
+#: RAN/Admin/PackageAdminController.php:508
 msgid "activation failed"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:506
+#: RAN/Admin/PackageAdminController.php:509
 msgid "deactivation failed"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:507
+#: RAN/Admin/PackageAdminController.php:510
 msgid "permission denied"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:508
+#: RAN/Admin/PackageAdminController.php:511
 msgid "Booster cannot disable itself"
 msgstr ""
 
 #. translators: 1: changed count, 2: package type, 3: policy label, 4: unchanged count.
-#: RAN/Admin/PackageAdminController.php:537
+#: RAN/Admin/PackageAdminController.php:540
 #, php-format
 msgid "Changed %1$d %2$s to %3$s. Already in that state: %4$d."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:566
+#: RAN/Admin/PackageAdminController.php:569
 msgid "This package cannot be edited until its stored Git provider is registered again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:568
+#: RAN/Admin/PackageAdminController.php:571
 msgid "Booster could not verify the managed package Git provider. No changes were made."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:595
+#: RAN/Admin/PackageAdminController.php:598
 #: RAN/Admin/RepositoryPickerController.php:124
 msgid "The selected Git provider is not available."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:597
+#: RAN/Admin/PackageAdminController.php:600
 msgid "The selected Git provider does not yet support this package operation."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:599
+#: RAN/Admin/PackageAdminController.php:602
 msgid "Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:601
+#: RAN/Admin/PackageAdminController.php:604
 msgid "Check the Git provider, account, repository, and credential fields."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:604
+#: RAN/Admin/PackageAdminController.php:607
 msgid "The Git provider rejected the selected credential."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:605
+#: RAN/Admin/PackageAdminController.php:608
 msgid "The Git provider denied access. Check credential permissions or rate limits."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:606
+#: RAN/Admin/PackageAdminController.php:609
 msgid "The repository could not be found, or the selected credential cannot access it."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:607
+#: RAN/Admin/PackageAdminController.php:610
 #: RAN/Admin/RepositoryPickerController.php:181
 msgid "The Git provider rate limit has been reached. Try again later."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:608
 #: RAN/Admin/PackageAdminController.php:611
+#: RAN/Admin/PackageAdminController.php:614
 msgid "Booster could not verify the repository. Please try again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:755
+#: RAN/Admin/PackageAdminController.php:758
 msgid "RAN Booster could not complete this action. Reference: ran_booster_manual_action_failed."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:771
+#: RAN/Admin/PackageAdminController.php:774
 msgctxt "package type"
 msgid "Plugin"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:772
+#: RAN/Admin/PackageAdminController.php:775
 msgctxt "package type"
 msgid "Theme"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:774
+#: RAN/Admin/PackageAdminController.php:777
 msgid "Plugin was not removed because an active plugin depends on it."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:775
+#: RAN/Admin/PackageAdminController.php:778
 msgid "Plugin was disabled in Booster, but WordPress could not deactivate it. No files were deleted."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:778
+#: RAN/Admin/PackageAdminController.php:781
 #, php-format
 msgid "%s was disabled in Booster, but WordPress could not delete it."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:783
+#: RAN/Admin/PackageAdminController.php:786
 #, php-format
 msgid "%s was disabled in Booster, but its files are still present."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:788
+#: RAN/Admin/PackageAdminController.php:791
 #, php-format
 msgid "%s removal could not be verified. Review its files and Booster management before retrying."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:793
+#: RAN/Admin/PackageAdminController.php:796
 #, php-format
 msgid "%s was not removed because another Booster operation still owns it."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:798
+#: RAN/Admin/PackageAdminController.php:801
 #, php-format
 msgid "%s removal could not safely acquire or release the WordPress updater lock."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:801
+#: RAN/Admin/PackageAdminController.php:804
 msgid "Plugin was not removed because its directory contains another registered plugin."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:804
+#: RAN/Admin/PackageAdminController.php:807
 #, php-format
 msgid "%s settings changed before this request. Refresh the package settings and try again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:807
+#: RAN/Admin/PackageAdminController.php:810
 msgid "Theme was not removed because it is the active theme."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:808
+#: RAN/Admin/PackageAdminController.php:811
 msgid "Theme was not removed because an installed child theme depends on it."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:809
+#: RAN/Admin/PackageAdminController.php:812
 msgid "Theme was not removed because the active theme depends on it."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:812
+#: RAN/Admin/PackageAdminController.php:815
 #, php-format
 msgid "%s was not removed because WordPress could not verify a safe installed path."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:817
+#: RAN/Admin/PackageAdminController.php:820
 #, php-format
 msgid "%s removal could not be completed safely."
 msgstr ""
@@ -2862,7 +2862,7 @@ msgstr ""
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
 #: views/packages/index.php:344
-#: views/provider.php:711
+#: views/provider.php:713
 #: views/settings-storage.php:25
 #: views/troubleshooting-installation.php:18
 #: views/troubleshooting-installation.php:164
@@ -5817,13 +5817,13 @@ msgstr ""
 
 #. translators: %d: enabled replacement candidate number.
 #: RAN/Troubleshooting/TroubleshootingService.php:253
-#: views/troubleshooting-installation.php:268
+#: views/troubleshooting-installation.php:269
 #, php-format
 msgid "GitHub candidate %d"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:255
-#: views/troubleshooting-installation.php:265
+#: views/troubleshooting-installation.php:266
 msgid "Enabled candidates"
 msgstr ""
 
@@ -5915,32 +5915,32 @@ msgstr ""
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
 #: views/troubleshooting-installation.php:166
-#: views/troubleshooting-installation.php:280
+#: views/troubleshooting-installation.php:281
 msgid "Version"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:312
-#: views/troubleshooting-installation.php:236
-#: views/troubleshooting-installation.php:238
-#: views/troubleshooting-installation.php:280
+#: views/troubleshooting-installation.php:237
+#: views/troubleshooting-installation.php:239
+#: views/troubleshooting-installation.php:281
 msgid "Implementation"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:313
-#: views/troubleshooting-installation.php:239
-#: views/troubleshooting-installation.php:280
+#: views/troubleshooting-installation.php:240
+#: views/troubleshooting-installation.php:281
 msgid "Provider API"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:314
-#: views/troubleshooting-installation.php:239
-#: views/troubleshooting-installation.php:280
+#: views/troubleshooting-installation.php:240
+#: views/troubleshooting-installation.php:281
 msgid "Compatibility revision"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:315
-#: views/troubleshooting-installation.php:239
-#: views/troubleshooting-installation.php:280
+#: views/troubleshooting-installation.php:240
+#: views/troubleshooting-installation.php:281
 msgid "Webhook signing format"
 msgstr ""
 
@@ -5952,7 +5952,7 @@ msgstr ""
 
 #. translators: %d: locally declared credential format number.
 #: RAN/Troubleshooting/TroubleshootingService.php:324
-#: views/troubleshooting-installation.php:249
+#: views/troubleshooting-installation.php:250
 #, php-format
 msgid "API credential format %d"
 msgstr ""
@@ -6627,7 +6627,7 @@ msgstr ""
 #: views/documentation.php:406
 #: views/onboarding.php:187
 #: views/overview-dashboard.php:77
-#: views/provider.php:660
+#: views/provider.php:662
 msgid "Install a plugin"
 msgstr ""
 
@@ -6940,7 +6940,7 @@ msgstr ""
 #: views/documentation.php:407
 #: views/onboarding.php:188
 #: views/overview-dashboard.php:84
-#: views/provider.php:661
+#: views/provider.php:663
 msgid "Install a theme"
 msgstr ""
 
@@ -7047,17 +7047,17 @@ msgid "Git provider location"
 msgstr ""
 
 #: views/documentation.php:469
-#: views/provider.php:582
+#: views/provider.php:584
 msgid "Payload URL"
 msgstr ""
 
 #: views/documentation.php:471
-#: views/provider.php:585
+#: views/provider.php:587
 msgid "Content type"
 msgstr ""
 
 #: views/documentation.php:473
-#: views/provider.php:589
+#: views/provider.php:591
 msgid "Event"
 msgstr ""
 
@@ -7066,7 +7066,7 @@ msgid "Webhook setup instructions"
 msgstr ""
 
 #: views/documentation.php:479
-#: views/provider.php:597
+#: views/provider.php:599
 msgid "Delivery troubleshooting"
 msgstr ""
 
@@ -7551,7 +7551,7 @@ msgid "No recent activity."
 msgstr ""
 
 #: views/overview-dashboard.php:58
-#: views/provider.php:560
+#: views/provider.php:562
 msgid "View Activity"
 msgstr ""
 
@@ -7667,7 +7667,7 @@ msgid "Booster could not confirm the local webhook receiver. Manual deployments 
 msgstr ""
 
 #: views/packages/branch-readiness.php:99
-#: views/provider.php:559
+#: views/provider.php:561
 msgid "Review WordPress URLs"
 msgstr ""
 
@@ -8193,8 +8193,8 @@ msgid "Search managed %s"
 msgstr ""
 
 #: views/packages/index.php:188
-#: views/provider.php:691
-#: views/provider.php:711
+#: views/provider.php:693
+#: views/provider.php:713
 #: assets/ran-booster-repository-picker.js:804
 msgid "Search"
 msgstr ""
@@ -9536,12 +9536,12 @@ msgid "Saved credentials are unavailable."
 msgstr ""
 
 #: views/provider.php:385
-#: views/provider.php:623
+#: views/provider.php:625
 msgid "This site can receive Git provider webhook deliveries."
 msgstr ""
 
 #: views/provider.php:405
-#: views/provider.php:643
+#: views/provider.php:645
 msgid "That managed repository is no longer available. Return to the repository list and choose a current repository."
 msgstr ""
 
@@ -9570,8 +9570,8 @@ msgid "Repositories"
 msgstr ""
 
 #: views/provider.php:495
-#: views/provider.php:566
-#: views/provider.php:571
+#: views/provider.php:568
+#: views/provider.php:573
 msgid "Webhook receiver"
 msgstr ""
 
@@ -9653,142 +9653,142 @@ msgstr[1] ""
 msgid "Release workflow observations are incomplete because some package details are omitted."
 msgstr ""
 
-#: views/provider.php:554
+#: views/provider.php:555
 msgid "Webhook delivery is not ready."
 msgstr ""
 
-#: views/provider.php:558
+#: views/provider.php:560
 msgid "Review repositories"
 msgstr ""
 
-#: views/provider.php:567
+#: views/provider.php:569
 msgid "Webhook receiver guidance is unavailable for this provider."
 msgstr ""
 
-#: views/provider.php:572
+#: views/provider.php:574
 msgid "This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories."
 msgstr ""
 
-#: views/provider.php:578
+#: views/provider.php:580
 msgid "Manage repositories"
 msgstr ""
 
-#: views/provider.php:579
+#: views/provider.php:581
 msgid "Webhook signatures authorize deployment; they do not protect your host from traffic."
 msgstr ""
 
-#: views/provider.php:579
+#: views/provider.php:581
 msgid "Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity."
 msgstr ""
 
-#: views/provider.php:579
+#: views/provider.php:581
 msgid "Read the webhook operations guide"
 msgstr ""
 
-#: views/provider.php:583
+#: views/provider.php:585
 msgid "Copy URL"
 msgstr ""
 
-#: views/provider.php:583
+#: views/provider.php:585
 msgid "URL copied"
 msgstr ""
 
-#: views/provider.php:583
+#: views/provider.php:585
 msgid "Payload URL copied to the clipboard."
 msgstr ""
 
-#: views/provider.php:583
+#: views/provider.php:585
 msgid "Clipboard access failed. The payload URL is selected; use your browser copy command."
 msgstr ""
 
-#: views/provider.php:593
+#: views/provider.php:595
 msgid "Detailed manual setup and troubleshooting"
 msgstr ""
 
-#: views/provider.php:596
+#: views/provider.php:598
 msgid "Paste the payload URL and a matching signing secret."
 msgstr ""
 
-#: views/provider.php:596
+#: views/provider.php:598
 msgid "Keep SSL verification enabled and select the push event."
 msgstr ""
 
-#: views/provider.php:596
+#: views/provider.php:598
 msgid "Trigger a delivery and confirm the Git provider records a successful response."
 msgstr ""
 
-#: views/provider.php:608
+#: views/provider.php:610
 #: views/provider/modals.php:174
 msgid "Managed repositories"
 msgstr ""
 
-#: views/provider.php:647
+#: views/provider.php:649
 msgid "Search managed repositories"
 msgstr ""
 
-#: views/provider.php:648
+#: views/provider.php:650
 msgid "Search managed repositories…"
 msgstr ""
 
-#: views/provider.php:664
+#: views/provider.php:666
 msgid "Managed repository status is temporarily unavailable."
 msgstr ""
 
-#: views/provider.php:678
+#: views/provider.php:680
 msgid "Filter by credential type"
 msgstr ""
 
-#: views/provider.php:679
+#: views/provider.php:681
 msgid "All credential types"
 msgstr ""
 
-#: views/provider.php:684
-#: views/provider.php:707
+#: views/provider.php:686
+#: views/provider.php:709
 msgid "Filter by scope"
 msgstr ""
 
-#: views/provider.php:685
-#: views/provider.php:707
+#: views/provider.php:687
+#: views/provider.php:709
 msgid "All scopes"
 msgstr ""
 
-#: views/provider.php:691
+#: views/provider.php:693
 msgid "Search credentials"
 msgstr ""
 
-#: views/provider.php:691
+#: views/provider.php:693
 msgid "Search credentials…"
 msgstr ""
 
-#: views/provider.php:697
+#: views/provider.php:699
 msgid "No credentials match the current filters."
 msgstr ""
 
-#: views/provider.php:711
+#: views/provider.php:713
 msgid "Filter by status"
 msgstr ""
 
-#: views/provider.php:711
+#: views/provider.php:713
 msgid "All statuses"
 msgstr ""
 
-#: views/provider.php:711
+#: views/provider.php:713
 msgid "Ready locally"
 msgstr ""
 
-#: views/provider.php:711
+#: views/provider.php:713
 msgid "Search webhook secrets"
 msgstr ""
 
-#: views/provider.php:711
+#: views/provider.php:713
 msgid "Search secrets…"
 msgstr ""
 
-#: views/provider.php:716
+#: views/provider.php:718
 msgid "No webhook secrets match the current filters."
 msgstr ""
 
-#: views/provider.php:726
+#: views/provider.php:728
 msgid "Saved credentials use Booster encrypted local storage outside the plugin directory and WordPress database. Deployment constants appear as immutable profiles and always take precedence."
 msgstr ""
 
@@ -10532,7 +10532,7 @@ msgstr ""
 
 #. translators: %s: provider or extension name.
 #: views/troubleshooting-installation.php:130
-#: views/troubleshooting-installation.php:215
+#: views/troubleshooting-installation.php:216
 msgid "Technical details"
 msgstr ""
 
@@ -10587,49 +10587,49 @@ msgid "GitHub provider selection needs attention. Review the provider settings b
 msgstr ""
 
 #. translators: %s: provider or extension name.
-#: views/troubleshooting-installation.php:215
+#: views/troubleshooting-installation.php:216
 #, php-format
 msgid "Technical details: %s"
 msgstr ""
 
-#: views/troubleshooting-installation.php:217
+#: views/troubleshooting-installation.php:218
 msgid "These are local configuration details. Use Diagnostics to check repository access."
 msgstr ""
 
-#: views/troubleshooting-installation.php:217
+#: views/troubleshooting-installation.php:218
 msgid "These are local configuration details."
 msgstr ""
 
-#: views/troubleshooting-installation.php:222
+#: views/troubleshooting-installation.php:223
 msgid "Implementation fingerprint"
 msgstr ""
 
-#: views/troubleshooting-installation.php:225
+#: views/troubleshooting-installation.php:226
 msgid "Implemented capabilities"
 msgstr ""
 
-#: views/troubleshooting-installation.php:238
+#: views/troubleshooting-installation.php:239
 msgid "Implementation ID"
 msgstr ""
 
-#: views/troubleshooting-installation.php:251
+#: views/troubleshooting-installation.php:252
 msgid "Classic personal access token"
 msgstr ""
 
-#: views/troubleshooting-installation.php:253
+#: views/troubleshooting-installation.php:254
 msgid "Fine-grained personal access token"
 msgstr ""
 
-#: views/troubleshooting-installation.php:257
+#: views/troubleshooting-installation.php:258
 msgid "Supported credential types"
 msgstr ""
 
-#: views/troubleshooting-installation.php:274
+#: views/troubleshooting-installation.php:275
 msgid "GitHub replacement plugins detected"
 msgstr ""
 
 #. translators: 1: displayed replacement plugins, 2: total replacement plugins.
-#: views/troubleshooting-installation.php:293
+#: views/troubleshooting-installation.php:294
 #, php-format
 msgid "Showing %1$d of %2$d replacement plugins."
 msgstr ""

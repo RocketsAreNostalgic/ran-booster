@@ -388,9 +388,7 @@
 	function restoreNavigation(host, entry) {
 		const visible = navigationLinks(host, entry.provider);
 		const visibleIndex = visible.indexOf(host.ownerDocument.activeElement);
-		const index =
-			entry.focusIndex ??
-			(visibleIndex >= 0 ? visibleIndex : (entry.lastFocus ?? -1));
+		const index = entry.focusIndex ?? visibleIndex;
 		const scroll = entry.scroll ?? host.scrollLeft;
 		roots.delete(host);
 		try {
@@ -440,6 +438,12 @@
 		}
 	}
 
+	function hasNavigationText(node) {
+		return Array.from(node.childNodes).some(
+			(child) => child.nodeType === 3 && child.textContent.trim()
+		);
+	}
+
 	function mountNavigation(host, provider) {
 		const element = window.wp?.element;
 		const UI = window.ranBoosterUI;
@@ -462,10 +466,12 @@
 		const links = navigationLinks(host, provider);
 		if (
 			!links.length ||
+			hasNavigationText(host) ||
 			host.children.length !== links.length ||
 			links.some(
 				(link) =>
 					!link.getAttribute('href') ||
+					(!provider && link.hasAttribute('hx-get')) ||
 					link.childElementCount ||
 					![null, 'page'].includes(
 						link.getAttribute('aria-current')
@@ -480,6 +486,7 @@
 				links.some(
 					(link) =>
 						link.parentElement.tagName !== 'LI' ||
+						hasNavigationText(link.parentElement) ||
 						link.parentElement.children.length !== 1 ||
 						link.parentElement.attributes.length
 				))
@@ -502,6 +509,17 @@
 			];
 			if (
 				!window.htmx?.process ||
+				window.htmx.config?.disableInheritance ||
+				[
+					region,
+					nav,
+					host,
+					...links.map((link) => link.parentElement),
+				].some(
+					(node) =>
+						node?.hasAttribute('hx-disinherit') ||
+						node?.hasAttribute('data-hx-disinherit')
+				) ||
 				nav?.getAttribute('hx-boost') !== 'true' ||
 				nav.hasAttribute('data-hx-boost') ||
 				nav.parentElement !== region ||
@@ -559,6 +577,7 @@
 				return { failed: true };
 			}
 			componentDidCatch() {
+				entry.focusIndex ??= entry.lastFocus ?? -1;
 				queueMicrotask(() => {
 					if (roots.get(host) === entry) {
 						restore(host);
@@ -780,7 +799,18 @@
 		},
 		true
 	);
-	document.addEventListener('focusout', retryNavigation, true);
+	document.addEventListener(
+		'focusout',
+		(event) => {
+			roots.forEach((entry, host) => {
+				if (entry.navigation && !host.contains(event.relatedTarget)) {
+					entry.lastFocus = -1;
+				}
+			});
+			retryNavigation();
+		},
+		true
+	);
 	document.addEventListener('htmx:afterRequest', retryNavigation);
 	document.addEventListener('ran-booster:ui-ready', () =>
 		initialize(document)

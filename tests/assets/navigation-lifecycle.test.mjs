@@ -365,3 +365,49 @@ test('aliased overrides and non-page current semantics keep native links', () =>
 	f.window.navigationTest.mountNavigation(f.host, true);
 	assert.equal(f.renders, 0);
 });
+
+test('disabled or overridden HTMX inheritance retains native provider links', () => {
+	for (const target of ['region', 'host']) {
+		for (const attribute of ['hx-disinherit', 'data-hx-disinherit']) {
+			const f = fixture();
+			f[target].setAttribute(attribute, 'hx-target');
+			f.window.navigationTest.mountNavigation(f.host, true);
+			assert.equal(f.renders, 0);
+			assert.deepEqual(f.host.children, f.original);
+		}
+	}
+	const f = fixture();
+	f.window.htmx.config = { disableInheritance: true };
+	f.window.navigationTest.mountNavigation(f.host, true);
+	assert.equal(f.renders, 0);
+	assert.deepEqual(f.host.children, f.original);
+});
+
+test('history restoration does not reclaim focus that explicitly left navigation', () => {
+	const f = fixture();
+	f.window.navigationTest.mountNavigation(f.host, true);
+	const link = f.host.children[0].children[0];
+	link.focus();
+	f.fire('focusin', { target: link });
+	f.doc.activeElement = f.doc.body;
+	f.fire('focusout', { target: link, relatedTarget: null });
+	f.window.navigationTest.restoreAll([f.host]);
+	assert.equal(f.doc.activeElement, f.doc.body);
+	assert.deepEqual(f.host.children, f.original);
+});
+
+test('visible text beside provider links remains native', () => {
+	for (const target of ['host', 'item']) {
+		const f = fixture();
+		const node = target === 'host' ? f.host : f.original[0];
+		Object.defineProperty(node, 'childNodes', {
+			get: () => [
+				...node.children,
+				{ nodeType: 3, textContent: ' (read only)' },
+			],
+		});
+		f.window.navigationTest.mountNavigation(f.host, true);
+		assert.equal(f.renders, 0);
+		assert.deepEqual(f.host.children, f.original);
+	}
+});

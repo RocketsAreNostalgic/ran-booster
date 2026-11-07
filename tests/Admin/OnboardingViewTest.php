@@ -327,7 +327,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Custom wp-config.php path', $healthy );
 		self::assertStringContainsString( 'WordPress stores the encryption key separately.', $healthy );
 		self::assertMatchesRegularExpression(
-			'/<h3 id="ran-booster-storage">Secure credential storage<\/h3>.*>Storage healthy<\/span>\s*<\/div>\s*<p>Encrypted secrets storage is configured and authenticated\.<\/p>\s*<details class="ran-booster-onboarding__storage-details ran-booster-disclosure">/s',
+			'/<h3 id="ran-booster-storage">Secure credential storage<\/h3>.*>Storage healthy<\/span>.*?<\/div>\s*<p>Encrypted secrets storage is configured and authenticated\.<\/p>\s*<details class="ran-booster-onboarding__storage-details ran-booster-disclosure">/s',
 			$healthy
 		);
 		$details = strpos( $healthy, 'class="ran-booster-onboarding__storage-details ran-booster-disclosure"' );
@@ -959,6 +959,108 @@ final class OnboardingViewTest extends TestCase {
 		$html                       = $this->render_view( null, null, $extra );
 		self::assertStringNotContainsString( 'Source: manual', $html );
 		self::assertStringNotContainsString( 'Observed:', $html );
+	}
+
+	public function test_storage_badge_projects_each_status_on_both_surfaces(): void {
+		$cases = array(
+			'path_configured'         => array( 'Path configured', 'none', 'neutral' ),
+			'storage_healthy'         => array( 'Storage healthy', 'stable', 'ok' ),
+			'storage_needs_attention' => array( 'Storage needs attention', 'medium', 'warning' ),
+			'setup_available'         => array( 'Setup available', 'none', 'neutral' ),
+			'manual_required'         => array( 'Needs attention', 'medium', 'warning' ),
+			'unsupported'             => array( 'Unavailable', 'high', 'error' ),
+			'pending_verification'    => array( 'Verification pending', 'informational', 'pending' ),
+			'unrecognized'            => array( 'Status unknown', 'none', 'neutral' ),
+			''                        => array( 'Status unknown', 'none', 'neutral' ),
+		);
+		foreach ( $cases as $status => $expected ) {
+			foreach ( array( 'overview', 'settings' ) as $surface ) {
+				$html  = 'overview' === $surface
+					? $this->render_view( null, null, array( 'storage_summary' => array( 'status' => $status ) ) )
+					: $this->render_storage_status( $status, 'automatic' );
+				$xpath = $this->storage_xpath( $html );
+				$hosts = $xpath->query( '//span[@data-ran-booster-storage-status]' );
+				self::assertInstanceOf( \DOMNodeList::class, $hosts );
+				self::assertCount( 1, $hosts );
+				$host = $hosts->item( 0 );
+				self::assertInstanceOf( \DOMElement::class, $host );
+				self::assertSame( 4, $host->attributes->length );
+				self::assertTrue( $host->hasAttribute( 'data-ran-booster-ui-badge' ) );
+				self::assertSame( $status, $host->getAttribute( 'data-ran-booster-storage-status' ) );
+				self::assertSame( $expected[0], $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+				self::assertSame( $expected[1], $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-fallback and @class="ran-booster-badge ran-booster-badge--' . $expected[2] . '"])', $host ) );
+				self::assertSame( $expected[0], $xpath->evaluate( 'string(./span[@data-ran-booster-ui-badge-fallback])', $host ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live] | self::*[@role or @aria-live])', $host ) );
+				self::assertStringNotContainsString( 'canary', $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+			}
+		}
+		foreach ( array(
+			$this->render_view( null, null, array( 'storage_summary' => array() ) ),
+			$this->render_view(
+				null,
+				array(
+					'message'             => 'Missing status',
+					'can_provision'       => false,
+					'config_alternatives' => null,
+				)
+			),
+		) as $html ) {
+			$xpath = $this->storage_xpath( $html );
+			self::assertSame( 'Status unknown', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-ui-badge-label)' ) );
+			self::assertSame( 'none', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-ui-badge-intent)' ) );
+		}
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Status unknown'] = 'Unknown <storage> & "quoted"';
+		foreach ( array( $this->render_view(), $this->render_storage_status( '', 'automatic' ) ) as $html ) {
+			$xpath = $this->storage_xpath( $html );
+			self::assertSame( 'Unknown <storage> & "quoted"', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-ui-badge-label)' ) );
+			self::assertSame( 'Unknown <storage> & "quoted"', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/span[@data-ran-booster-ui-badge-fallback])' ) );
+		}
+	}
+
+	public function test_expiry_badges_preserve_labels_and_static_fallbacks(): void {
+		foreach ( array(
+			'expired' => 'high',
+			'urgent'  => 'high',
+			'warning' => 'medium',
+		) as $stage => $intent ) {
+			$item  = array(
+				'provider'             => 'gh',
+				'provider_label'       => 'GitHub',
+				'label'                => 'Credential',
+				'badge_label'          => 'Expires <soon> & "quoted"',
+				'stage'                => $stage,
+				'effective_expires_at' => 'private-date',
+				'source'               => 'private-source',
+				'observed_at'          => null,
+				'url'                  => '/credentials',
+			);
+			$html  = $this->render_view(
+				null,
+				null,
+				array(
+					'credential_expiry' => array(
+						'status' => 'captured',
+						'total'  => 1,
+						'items'  => array( $item ),
+					),
+				)
+			);
+			$xpath = $this->storage_xpath( $html );
+			$hosts = $xpath->query( '//a[@href="/credentials"]/following-sibling::span[@data-ran-booster-ui-badge]' );
+			self::assertInstanceOf( \DOMNodeList::class, $hosts );
+			self::assertCount( 1, $hosts );
+			$host = $hosts->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $host );
+			self::assertSame( 3, $host->attributes->length );
+			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+			self::assertSame( $item['badge_label'], $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+			self::assertSame( $item['badge_label'], $xpath->evaluate( 'string(./span[@data-ran-booster-ui-badge-fallback])', $host ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live] | self::*[@role or @aria-live])', $host ) );
+			self::assertStringNotContainsString( 'private-', $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+		}
 	}
 
 	private function storage_xpath( string $html ): \DOMXPath {

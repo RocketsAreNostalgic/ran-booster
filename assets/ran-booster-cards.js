@@ -54,13 +54,19 @@
 
 	function restoreAll(hosts) {
 		hosts
-			.sort((a, b) => {
-				if (a.contains(b)) {
-					return 1;
+			.map((host) => {
+				let depth = 0;
+				for (
+					let parent = host.parentElement;
+					parent;
+					parent = parent.parentElement
+				) {
+					depth++;
 				}
-				return b.contains(a) ? -1 : 0;
+				return { host, depth };
 			})
-			.forEach(restore);
+			.sort((a, b) => b.depth - a.depth)
+			.forEach(({ host }) => restore(host));
 	}
 
 	function cleanup(target) {
@@ -190,7 +196,9 @@
 		const Badge = window.ranBoosterUI?.Badge;
 		if (
 			!label ||
-			!['none', 'stable', 'medium', 'high'].includes(intent) ||
+			!['none', 'stable', 'medium', 'high', 'informational'].includes(
+				intent
+			) ||
 			!Badge ||
 			!element?.createRoot ||
 			!element.createElement ||

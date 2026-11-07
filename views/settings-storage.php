@@ -11,7 +11,7 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 $storage_constant             = defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' ) ? 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' : ( defined( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' ) ? 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' : null );
-$storage_status               = null === $secrets_storage ? '' : (string) $secrets_storage['status'];
+$storage_status               = null === $secrets_storage ? '' : (string) ( $secrets_storage['status'] ?? '' );
 $storage_reason_code          = null === $secrets_storage ? '' : (string) ( $secrets_storage['reason_code'] ?? '' );
 $storage_candidate_path       = null === $secrets_storage ? null : ( $secrets_storage['candidate_path'] ?? null );
 $storage_directory            = null === $secrets_storage
@@ -35,6 +35,15 @@ $storage_status_classes       = array(
 	'unsupported'             => 'error',
 	'pending_verification'    => 'pending',
 );
+$storage_status_intents       = array(
+	'path_configured'         => 'none',
+	'storage_healthy'         => 'stable',
+	'storage_needs_attention' => 'medium',
+	'setup_available'         => 'none',
+	'manual_required'         => 'medium',
+	'unsupported'             => 'high',
+	'pending_verification'    => 'informational',
+);
 $storage_path_source          = null === $secrets_storage ? null : ( $secrets_storage['path_source'] ?? null );
 $storage_path_source_labels   = array(
 	'automatic' => __( 'Booster default', 'ran-booster' ),
@@ -57,7 +66,8 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 		<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-storage" data-ran-booster-storage-reason="<?php echo esc_attr( $storage_reason_code ); ?>">
 			<div class="ran-booster-onboarding__storage-heading">
 				<h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
-				<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status_classes[ $storage_status ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $storage_status ); ?>"><?php echo esc_html( $storage_status_labels[ $storage_status ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>
+				<?php $storage_status_label = $storage_status_labels[ $storage_status ] ?? __( 'Status unknown', 'ran-booster' ); ?>
+				<span data-ran-booster-storage-status="<?php echo esc_attr( $storage_status ); ?>" data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $storage_status_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $storage_status_intents[ $storage_status ] ?? 'none' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status_classes[ $storage_status ] ?? 'neutral' ); ?>"><?php echo esc_html( $storage_status_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
 			</div>
 			<p><?php echo esc_html( $secrets_storage['message'] ); ?></p>
 			<?php if ( '' !== $storage_reason_code && in_array( $storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true ) ) { ?>

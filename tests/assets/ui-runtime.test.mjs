@@ -119,6 +119,15 @@ test('host React loads the foundation once and overlay extends the same object',
 			),
 			/Ready/
 		);
+		const informational = render(
+			React.createElement(
+				ui.Badge,
+				{ intent: 'informational' },
+				'Pending'
+			)
+		);
+		assert.match(informational, /is-informational-intent/);
+		assert.match(informational, /Pending/);
 		const content = React.createElement(
 			ui.NoticeDescription,
 			{ render: React.createElement('div') },

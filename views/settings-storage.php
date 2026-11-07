@@ -208,7 +208,7 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 			<?php } ?>
 
 			<?php if ( array() !== $storage_discarded_candidates ) { ?>
-				<div class="ran-booster-onboarding__storage-discarded" data-ran-booster-ui-disclosure="settings-storage">
+				<div class="ran-booster-onboarding__storage-discarded" data-ran-booster-ui-disclosure="settings-storage" data-ran-booster-ui-disclosure-density="compact">
 				<details class="ran-booster-onboarding__storage-discarded ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback>
 					<summary><?php esc_html_e( 'Why automatic setup is unavailable', 'ran-booster' ); ?></summary>
 					<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
@@ -233,7 +233,7 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 			<?php } ?>
 
 			<?php if ( $has_storage_details ) { ?>
-				<div class="ran-booster-onboarding__storage-details" data-ran-booster-ui-disclosure="settings-storage">
+				<div class="ran-booster-onboarding__storage-details" data-ran-booster-ui-disclosure="settings-storage" data-ran-booster-ui-disclosure-density="compact">
 				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-onboarding__storage-details ran-booster-disclosure"<?php echo $storage_details_open ? ' open' : ''; ?>>
 					<summary><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
 					<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>

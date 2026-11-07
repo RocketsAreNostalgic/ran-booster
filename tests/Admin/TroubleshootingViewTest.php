@@ -209,7 +209,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@data-ran-booster-card="installation-component" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ") and .//div[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics" and self::div and @data-ran-booster-ui-disclosure="installation-component"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/summary[@aria-label="Technical details: GitHub"]/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics" and self::div and @data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/summary[@aria-label="Technical details: GitHub"]/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]//code[text()="<component-implementation>"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics"]/details[@data-ran-booster-ui-disclosure-fallback]//div[dt="Implementation fingerprint"]/dd/code[text()="<component-implementation>"])' ) );
@@ -317,7 +317,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[@data-ran-booster-ui-badge and @data-ran-booster-ui-badge-label="Inactive"]/span[@data-ran-booster-ui-badge-fallback and text()="Inactive"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/div/p[text()="Installed extension"])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[header/h4[normalize-space(.)="Facts"]]//dd/code[text()="0"])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//div[@data-ran-booster-ui-disclosure="installation-component"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/div[@data-ran-booster-ui-disclosure-content])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//div[@data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/div[@data-ran-booster-ui-disclosure-content])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//details[not(@open)])' ) );
 		foreach ( array( '0', 'Unknown', 'Unavailable', 'RepositoryBrowser' ) as $value ) {
 			self::assertStringContainsString( '<code>' . $value . '</code>', $html );
@@ -347,7 +347,7 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" data-ran-booster-ui-disclosure="installation-component">', $html );
+		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">', $html );
 		self::assertStringContainsString( 'aria-label="Technical details: GitHub"', $html );
 		self::assertStringContainsString( '<dt>Provider</dt><dd><code>gh</code>', $html );
 		self::assertStringContainsString( '<dt>Provider API</dt><dd><code>15</code>', $html );
@@ -357,7 +357,7 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$candidate_only = (string) ob_get_clean();
-		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" data-ran-booster-ui-disclosure="installation-component">', $candidate_only );
+		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">', $candidate_only );
 		self::assertStringContainsString( '<dt>Name</dt><dd><code>Candidate</code>', $candidate_only );
 		self::assertStringContainsString( 'Showing 1 of 2 replacement plugins.', $candidate_only );
 	}

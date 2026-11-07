@@ -52,7 +52,7 @@ $configuration_value = static function ( bool|int $value ): string {
 /** @param array<string,string> $constants */
 $render_configuration   = static function ( array $constants ) use ( $field, $source_labels, $configuration_value ): void {
 	?>
-	<div class="ran-booster-settings__configuration" data-ran-booster-ui-disclosure="settings-configuration">
+	<div class="ran-booster-settings__configuration" data-ran-booster-ui-disclosure="settings-configuration" data-ran-booster-ui-disclosure-density="compact">
 	<details class="ran-booster-disclosure ran-booster-settings__configuration" data-ran-booster-ui-disclosure-fallback>
 		<summary><?php esc_html_e( 'Configuration constants', 'ran-booster' ); ?></summary>
 		<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>

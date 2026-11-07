@@ -764,15 +764,32 @@
 }
 
 .ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"] {
-	min-block-size: 40px;
 	padding: 8px 16px;
 	font-size: 15px;
 	font-weight: 600;
 	line-height: 20px;
 }
 
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure-density="compact"]
+	)
+	> div
+	> .ran-booster-ui-disclosure
+	> .ran-booster-ui-disclosure__header
+	> [role="button"] {
+	min-block-size: 40px;
+}
+
 @media (pointer: coarse) {
-	.ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"] {
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure]:not(
+			[data-ran-booster-ui-disclosure-density="compact"]
+		)
+		> div
+		> .ran-booster-ui-disclosure
+		> .ran-booster-ui-disclosure__header
+		> [role="button"] {
 		min-block-size: 44px;
 	}
 }

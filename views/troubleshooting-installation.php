@@ -211,7 +211,7 @@ foreach ( $components as $component ) {
 		?>
 		<p><?php echo esc_html( $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. Review the provider settings before use.', 'ran-booster' ) ); ?></p><?php } ?>
 	<?php if ( array() !== $technical_fields || $has_capabilities ) { ?>
-<div<?php echo $is_github ? ' id="ran-booster-github-provider-diagnostics"' : ''; ?> data-ran-booster-ui-disclosure="installation-component">
+<div<?php echo $is_github ? ' id="ran-booster-github-provider-diagnostics"' : ''; ?> data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">
 <details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback>
 <summary aria-label="<?php echo esc_attr( sprintf( /* translators: %s: provider or extension name. */ __( 'Technical details: %s', 'ran-booster' ), $component_name ) ); ?>"><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
 <div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>

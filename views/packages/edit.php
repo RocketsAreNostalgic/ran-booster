@@ -307,7 +307,7 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 
 			<?php require __DIR__ . '/source-settings.php'; ?>
 
-			<section class="ran-booster-settings-section ran-booster-package-operation-settings" aria-labelledby="ran-booster-package-operation-heading">
+			<section class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card" data-ran-booster-card="package-edit" aria-labelledby="ran-booster-package-operation-heading">
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-package-operation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Package operation', 'ran-booster' ); ?></h3>
 					<p class="ran-booster-section__description"><?php esc_html_e( 'Choose when Booster may update this package.', 'ran-booster' ); ?></p>

@@ -906,7 +906,8 @@
 	}
 }
 
-.ran-booster-admin .ran-booster-settings > .ran-booster-panel {
+.ran-booster-admin .ran-booster-settings > .ran-booster-panel,
+.ran-booster-admin .ran-booster-settings__general > .ran-booster-panel {
 	margin-block: var(--ran-booster-space-20);
 	padding: var(--ran-booster-space-24);
 }
@@ -973,8 +974,26 @@
 	margin: var(--ran-booster-space-5) 0 0;
 }
 
+.ran-booster-admin
+	#ran-booster-general-region
+	.ran-booster-settings__switch-label {
+	display: block;
+	font-weight: var(--ran-booster-font-weight-semibold);
+	cursor: pointer;
+}
+
 .ran-booster-admin .ran-booster-settings__switch-row {
 	margin-block: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin
+	#ran-booster-general-region
+	.ran-booster-settings__switch-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+	margin-block: var(--ran-booster-space-4);
 }
 
 .ran-booster-admin .ran-booster-settings__switch {
@@ -1132,4 +1151,158 @@
 .ran-booster-admin .ran-booster-settings .button {
 	max-inline-size: 100%;
 	white-space: normal;
+}
+
+.ran-booster-admin
+	:is(.ran-booster-settings, .ran-booster-settings__general)
+	> [data-ran-booster-card="settings"][data-ran-booster-ui-mounted] {
+	padding: 0;
+}
+
+.ran-booster-admin
+	:is(.ran-booster-settings, .ran-booster-settings__general)
+	> [data-ran-booster-card="settings"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content {
+	padding: var(--ran-booster-space-24);
+}
+
+#ran-booster-general-region .ran-booster-settings__update-controls > div {
+	flex-basis: 100%;
+}
+
+#ran-booster-general-region [data-ran-booster-ui-notice][hidden],
+#ran-booster-general-region [data-ran-booster-ui-notice-primary]:empty,
+#ran-booster-general-region [data-ran-booster-ui-notice-request-field]:empty,
+#ran-booster-general-region [data-ran-booster-toggle-save][hidden],
+#ran-booster-general-region [data-ran-booster-autosave-description][hidden] {
+	display: none;
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__toggle-actions:has(
+		[data-ran-booster-toggle-save][hidden]
+	) {
+	display: none;
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	:is([data-ran-booster-ui-badge-fallback], .ran-booster-ui-badge) {
+	display: inline-flex;
+	box-sizing: border-box;
+	inline-size: 100%;
+	justify-content: center;
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge-fallback][hidden] {
+	display: none;
+}
+
+.ran-booster-admin [data-ran-booster-ui-switch="general-preference"] {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 32px;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-switch="general-preference"]
+	> label[hidden] {
+	display: none;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-switch="general-preference"]
+	> [data-ran-booster-ui-switch-mount] {
+	display: inline-flex;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-switch="general-preference"]
+	> [data-ran-booster-ui-switch-mount]
+	button[role="switch"] {
+	/* stylelint-disable-next-line plugin-wpds/no-token-fallback-values -- Static Booster CSS is not processed by the WPDS token compiler; match the public Switch border fallback for its hit target. */
+	--ran-booster-switch-border-width: var(--wpds-border-width-xs, 1px);
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Use the owner-selected WordPress admin accent for this General Switch. */
+	--wpds-color-background-interactive-brand-strong: var(
+		--wp-admin-theme-color
+	);
+	position: relative;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-switch="general-preference"]
+	> [data-ran-booster-ui-switch-mount]
+	button[role="switch"]::before {
+	position: absolute;
+	inset-block: calc(-8px - var(--ran-booster-switch-border-width));
+	inset-inline: calc(-1 * var(--ran-booster-switch-border-width));
+	content: "";
+}
+
+@media (pointer: coarse) {
+	.ran-booster-admin [data-ran-booster-ui-switch="general-preference"] {
+		min-block-size: 44px;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-switch="general-preference"]
+		> [data-ran-booster-ui-switch-mount]
+		button[role="switch"]::before {
+		inset-block: calc(-14px - var(--ran-booster-switch-border-width));
+		inset-inline: calc(-6px - var(--ran-booster-switch-border-width));
+	}
+}
+
+/* Keep General status Badges proportional to the default public Switch. */
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge] {
+	display: flex;
+	align-items: center;
+	box-sizing: border-box;
+	inline-size: 9ch;
+	min-inline-size: min(9ch, 100%);
+	max-inline-size: 100%;
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	.ran-booster-ui-badge {
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Apply the owner-selected compact spacing to General status Badges. */
+	--wpds-dimension-padding-xs: 1px;
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Apply the owner-selected compact spacing to General status Badges. */
+	--wpds-dimension-padding-sm: 6px;
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Use the owner-selected WordPress admin accent for enabled General status. */
+	--wpds-color-background-surface-success: var(--wp-admin-theme-color);
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties, plugin-wpds/no-token-fallback-values -- Match the public brand foreground fallback for enabled General status. */
+	--wpds-color-foreground-content-success: var(
+		--wpds-color-foreground-interactive-brand-strong,
+		var(--ran-booster-color-neutral-0)
+	);
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge-mount] {
+	display: flex;
+	align-items: center;
+	inline-size: 100%;
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	.ran-booster-settings__switch[data-ran-booster-ui-switch-fallback] {
+	--ran-booster-status-ok: var(--wp-admin-theme-color);
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge-fallback].ran-booster-badge--ok {
+	--ran-booster-status-ok: var(--ran-booster-color-neutral-0);
+	--ran-booster-status-ok-background: var(--wp-admin-theme-color);
+	--ran-booster-status-ok-border: var(--wp-admin-theme-color);
 }

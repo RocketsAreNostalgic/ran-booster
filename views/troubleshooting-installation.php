@@ -55,7 +55,7 @@ if ( array() === $environment ) {
 </details><?php } ?>
 </div></section>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header ran-booster-onboarding__storage-heading"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h4><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status[1] ); ?>"><?php echo esc_html( $storage_status[0] ); ?></span></header>
+<header class="ran-booster-page-shell__header ran-booster-onboarding__storage-heading"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h4><span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $storage_status[0] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( 'ok' === $storage_status[1] ? 'stable' : ( 'warning' === $storage_status[1] ? 'medium' : ( 'error' === $storage_status[1] ? 'high' : 'none' ) ) ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status[1] ); ?>"><?php echo esc_html( $storage_status[0] ); ?></span><span data-ran-booster-ui-badge-mount></span></span></header>
 <div class="ran-booster-page-shell__body">
 <p><?php echo esc_html( $storage['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
 <details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
@@ -117,16 +117,14 @@ if ( array() === $environment ) {
 			}
 			?>
 			<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__core-updates ran-booster-troubleshooting__installation-card" aria-labelledby="ran-booster-core-updates-heading">
-				<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 id="ran-booster-core-updates-heading" class="ran-booster-section__title"><?php esc_html_e( 'Booster Core updates', 'ran-booster' ); ?></h4><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( 'enabled' === $self_update_mode ? 'ok' : 'neutral' ); ?>">
+				<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 id="ran-booster-core-updates-heading" class="ran-booster-section__title"><?php esc_html_e( 'Booster Core updates', 'ran-booster' ); ?></h4>
 				<?php
-				echo esc_html(
-					match ( $self_update_mode ) {
+				$self_update_label = match ( $self_update_mode ) {
 					'enabled' => __( 'Checks enabled', 'ran-booster' ),
 					'disabled' => __( 'Checks disabled', 'ran-booster' ),
-					default => __( 'Status unavailable', 'ran-booster' ) }
-				);
+					default => __( 'Status unavailable', 'ran-booster' ) };
 				?>
-				</span></header>
+				<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $self_update_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( 'enabled' === $self_update_mode ? 'stable' : 'none' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( 'enabled' === $self_update_mode ? 'ok' : 'neutral' ); ?>"><?php echo esc_html( $self_update_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span></header>
 				<div class="ran-booster-page-shell__body">
 					<p><?php echo esc_html( $self_update_message ); ?></p>
 					<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
@@ -202,7 +200,7 @@ foreach ( $components as $component ) {
 	<?php
 	if ( is_string( $version ) && '' !== $version ) {
 		?>
-	<code><?php echo esc_html( $version ); ?></code><?php } ?></h4><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $component_status ); ?></span></header>
+	<code><?php echo esc_html( $version ); ?></code><?php } ?></h4><span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $component_status ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( 'ok' === $tone ? 'stable' : ( 'warning' === $tone ? 'medium' : 'none' ) ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $component_status ); ?></span><span data-ran-booster-ui-badge-mount></span></span></header>
 <div class="ran-booster-page-shell__body">
 	<?php
 	if ( null !== $source || isset( $component['Provider'] ) ) {

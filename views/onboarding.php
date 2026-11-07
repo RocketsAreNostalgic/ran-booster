@@ -91,6 +91,15 @@ $provider_attention        = array_filter(
 		'unsupported'             => 'error',
 		'pending_verification'    => 'pending',
 	);
+	$overview_storage_intents      = array(
+		'path_configured'         => 'none',
+		'storage_healthy'         => 'stable',
+		'storage_needs_attention' => 'medium',
+		'setup_available'         => 'none',
+		'manual_required'         => 'medium',
+		'unsupported'             => 'high',
+		'pending_verification'    => 'informational',
+	);
 	$overview_storage_unknown      = '' === $overview_storage_status;
 	$overview_storage_problem      = in_array( $overview_storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true );
 	?>
@@ -99,7 +108,7 @@ $provider_attention        = array_filter(
 			<h3 id="ran-booster-overview-attention"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></h3>
 			<?php if ( 'captured' === $credential_expiry['status'] ) { ?>
 				<?php foreach ( $credential_expiry['items'] as $expiry_item ) { ?>
-					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> <span class="ran-booster-pill ran-booster-pill--<?php echo esc_attr( in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'error' : 'warning' ); ?>"><?php echo esc_html( $expiry_item['badge_label'] ); ?></span></p>
+					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> <span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $expiry_item['badge_label'] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'high' : 'medium' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-pill ran-booster-pill--<?php echo esc_attr( in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'error' : 'warning' ); ?>"><?php echo esc_html( $expiry_item['badge_label'] ); ?></span><span data-ran-booster-ui-badge-mount></span></span></p>
 				<?php } ?>
 				<?php if ( null !== $credential_expiry['total'] && $credential_expiry['total'] > count( $credential_expiry['items'] ) ) { ?>
 					<?php // translators: 1: displayed reminders, 2: total actionable reminders. ?>
@@ -139,7 +148,8 @@ $provider_attention        = array_filter(
 	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading">
 		<div class="ran-booster-onboarding__storage-heading">
 			<h3 id="ran-booster-onboarding-storage-heading"><?php echo esc_html( 'onboarding' === $overview_view ? __( '1. Secure credential storage', 'ran-booster' ) : __( 'Secure credential storage', 'ran-booster' ) ); ?></h3>
-			<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $overview_storage_classes[ $overview_storage_status ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $overview_storage_status ); ?>"><?php echo esc_html( $overview_storage_labels[ $overview_storage_status ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>
+			<?php $overview_storage_label = $overview_storage_labels[ $overview_storage_status ] ?? __( 'Status unknown', 'ran-booster' ); ?>
+			<span data-ran-booster-storage-status="<?php echo esc_attr( $overview_storage_status ); ?>" data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $overview_storage_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $overview_storage_intents[ $overview_storage_status ] ?? 'none' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $overview_storage_classes[ $overview_storage_status ] ?? 'neutral' ); ?>"><?php echo esc_html( $overview_storage_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
 		</div>
 		<p><?php echo esc_html( $overview_storage_summary['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
 		<p><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>

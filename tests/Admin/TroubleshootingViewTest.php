@@ -208,7 +208,7 @@ final class TroubleshootingViewTest extends TestCase {
 			libxml_use_internal_errors( $previous_errors );
 		}
 		$xpath = new \DOMXPath( $document );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[.//div[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@data-ran-booster-card="installation-component" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ") and .//div[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics" and self::div and @data-ran-booster-ui-disclosure="installation-component"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/summary[@aria-label="Technical details: GitHub"]/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]//code[text()="<component-implementation>"])' ) );
@@ -312,6 +312,7 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $card . '//details | ' . $card . '//div[@data-ran-booster-ui-disclosure] | ' . $card . '//div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-disclosure__body ")])' ) );
 		}
 		$migrator = '//section[header/h4[starts-with(normalize-space(.), "Migrator")]]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '[@data-ran-booster-card="installation-component" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/h4/code[text()="1.0"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[@data-ran-booster-ui-badge and @data-ran-booster-ui-badge-label="Inactive"]/span[@data-ran-booster-ui-badge-fallback and text()="Inactive"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/div/p[text()="Installed extension"])' ) );

@@ -184,6 +184,7 @@
 			(!notice &&
 				![
 					'extensions',
+					'installation-component',
 					'overview',
 					'plugins',
 					'provider',

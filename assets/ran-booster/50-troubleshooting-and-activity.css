@@ -4,14 +4,14 @@
 
 .ran-booster-admin
 	.ran-booster-troubleshooting__installation-card
-	> .ran-booster-page-shell__header {
+	.ran-booster-page-shell__header {
 	padding-block-start: var(--ran-booster-space-18);
 	padding-block-end: var(--ran-booster-space-6);
 }
 
 .ran-booster-admin
 	.ran-booster-troubleshooting__installation-card
-	> .ran-booster-page-shell__body
+	.ran-booster-page-shell__body
 	> p:first-child {
 	margin-block-start: 0;
 }
@@ -477,4 +477,19 @@
 		.ran-booster-card__content {
 		padding: var(--ran-booster-space-18);
 	}
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="installation-component"][data-ran-booster-ui-mounted] {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="installation-component"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content {
+	padding: 0;
 }

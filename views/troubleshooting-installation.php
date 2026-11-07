@@ -195,7 +195,7 @@ foreach ( $components as $component ) {
 		$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $component['Name'] );
 	}
 	?>
-<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
+<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card ran-booster-card" data-ran-booster-card="installation-component">
 <header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 class="ran-booster-section__title"><?php echo esc_html( $component_name ); ?>
 	<?php
 	if ( is_string( $version ) && '' !== $version ) {

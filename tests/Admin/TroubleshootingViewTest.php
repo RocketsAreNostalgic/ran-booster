@@ -311,7 +311,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 		$migrator = '//section[header/h4[starts-with(normalize-space(.), "Migrator")]]';
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/h4/code[text()="1.0"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[text()="Inactive"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[@data-ran-booster-ui-badge and @data-ran-booster-ui-badge-label="Inactive"]/span[@data-ran-booster-ui-badge-fallback and text()="Inactive"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/div/p[text()="Installed extension"])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[header/h4[normalize-space(.)="Facts"]]//dd/code[text()="0"])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//details[not(@open)])' ) );
@@ -476,6 +476,111 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>Not checked</span>', $html );
 		self::assertStringContainsString( 'Storage details are unavailable for this request.', $html );
 		self::assertStringNotContainsString( '<dt>Configuration constant</dt>', $html );
+		// Exercise each badge projection and its native fallback in the rendered DOM.
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Not checked'] = 'Quoted "label" & <state>';
+		$cases = array(
+			array(
+				'healthy',
+				'enabled',
+				'blocked',
+				array(
+					'Name'   => 'A',
+					'Active' => 'Yes',
+				),
+				array( 'Storage healthy', 'stable', 'ok' ),
+				array( 'Checks enabled', 'stable', 'ok' ),
+				array( 'Active', 'stable', 'ok' ),
+			),
+			array(
+				'configured',
+				'enabled',
+				'unavailable',
+				array(
+					'Name'   => 'B',
+					'Active' => 'No',
+				),
+				array( 'Path configured', 'none', 'neutral' ),
+				array( 'Checks enabled', 'stable', 'ok' ),
+				array( 'Inactive', 'none', 'neutral' ),
+			),
+			array(
+				'actionable',
+				'disabled',
+				null,
+				array(
+					'Name'      => 'C',
+					'Provider'  => 'bb',
+					'Admission' => 'Admitted',
+				),
+				array( 'Needs attention', 'medium', 'warning' ),
+				array( 'Checks disabled', 'none', 'neutral' ),
+				array( 'Active', 'stable', 'ok' ),
+			),
+			array(
+				'unavailable',
+				null,
+				null,
+				array(
+					'Name'     => 'D',
+					'Provider' => 'gh',
+				),
+				array( 'Unavailable', 'high', 'error' ),
+				array( 'Status unavailable', 'none', 'neutral' ),
+				array( 'Needs attention', 'medium', 'warning' ),
+			),
+			array(
+				null,
+				null,
+				null,
+				array(
+					'Name'    => 'E',
+					'Version' => '9.0',
+				),
+				array( 'Quoted "label" & <state>', 'none', 'neutral' ),
+				array( 'Status unavailable', 'none', 'neutral' ),
+				array( 'Unknown', 'none', 'neutral' ),
+			),
+			array( 'unexpected', null, null, array( 'Name' => 'F' ), array( 'Quoted "label" & <state>', 'none', 'neutral' ), array( 'Status unavailable', 'none', 'neutral' ), array( 'Unknown', 'none', 'neutral' ) ),
+		);
+		foreach ( $cases as $case ) {
+			$troubleshooting  = array(
+				'storage'              => null === $case[0] ? array() : array( 'state' => $case[0] ),
+				'components'           => array( $case[3] ),
+				'installation_details' => array( 'GitHub provider' => array( 'Selection state' => 'conflict' ) ),
+			);
+			$core_self_update = array(
+				'effective_mode' => $case[1],
+				'updater_state'  => $case[2],
+			);
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting-installation.php';
+			$badge_html      = (string) ob_get_clean();
+			$document        = new \DOMDocument();
+			$previous_errors = libxml_use_internal_errors( true );
+			try {
+				$document->loadHTML( $badge_html );
+			} finally {
+				libxml_clear_errors();
+				libxml_use_internal_errors( $previous_errors );
+			}
+			$xpath = new \DOMXPath( $document );
+			$hosts = $xpath->query( '//header/span[@data-ran-booster-ui-badge]' );
+			self::assertInstanceOf( \DOMNodeList::class, $hosts );
+			self::assertCount( 3, $hosts );
+			foreach ( array_slice( $case, 4 ) as $index => $expected ) {
+				$host = $hosts->item( $index );
+				self::assertInstanceOf( \DOMElement::class, $host );
+				self::assertSame( $expected[0], $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+				self::assertSame( $expected[1], $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+				self::assertFalse( $host->hasAttribute( 'role' ) );
+				self::assertFalse( $host->hasAttribute( 'aria-live' ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-fallback and @class="ran-booster-badge ran-booster-badge--' . $expected[2] . '"])', $host ) );
+				self::assertSame( $expected[0], $xpath->evaluate( 'string(./span[@data-ran-booster-ui-badge-fallback])', $host ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live])', $host ) );
+			}
+		}
+		unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Not checked'] );
 	}
 
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {

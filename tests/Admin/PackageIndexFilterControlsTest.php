@@ -213,14 +213,11 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previous );
 		$xpath = new \DOMXPath( $document );
-		$card  = $xpath->query( '//*[@id="ran-booster-plugin-collection" and @data-ran-booster-card="plugins"]' );
-		self::assertNotFalse( $card );
-		self::assertCount( 'plugin' === $type ? 1 : 0, $card );
-		if ( 'plugin' !== $type ) {
-			return;
-		}
-		$this->assert_xpath_count( 1, $xpath, '//*[@id="ran-booster-plugin-collection"]//table[@data-package-type="plugin"]' );
-		$this->assert_xpath_count( $has_controls ? 2 : 0, $xpath, '//*[@id="ran-booster-plugin-collection"]//form[@method="get"]' );
+		$host  = '//*[@id="ran-booster-' . $type . '-collection"]';
+		$this->assert_xpath_count( 1, $xpath, $host . '[@data-ran-booster-card="' . $type . 's" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ") and contains(concat(" ", normalize-space(@class), " "), " ran-booster-package-collection ")]' );
+		$this->assert_xpath_count( 1, $xpath, $host . '//table[@data-package-type="' . $type . '"]' );
+		$this->assert_xpath_count( $has_controls ? 1 : 0, $xpath, $host . '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-package-collection__toolbar ")]' );
+		$this->assert_xpath_count( $has_controls ? 2 : 0, $xpath, $host . '//form[@method="get"]' );
 		$this->assert_xpath_count( 0, $xpath, '//form//form' );
 	}
 

@@ -146,13 +146,12 @@ final class RepeatPackageViewTest extends TestCase {
 			libxml_clear_errors();
 			libxml_use_internal_errors( $previous );
 			$xpath = new \DOMXPath( $document );
-			if ( 'plugin' === $package_view->get_type() ) {
-				$this->assert_xpath_count( 2, $xpath, '//*[@id="ran-booster-plugin-collection"]//form[@method="get"]' );
-				$this->assert_xpath_count( 1, $xpath, '//*[@id="ran-booster-plugin-collection"]//form[@id="ran-booster-plugin-bulk-form" and @method="POST"]' );
-				$this->assert_xpath_count( 1, $xpath, '//*[@id="ran-booster-plugin-collection"]//table[@data-package-type="plugin"]//input[@form="ran-booster-plugin-bulk-form" and @type="checkbox"]' );
-			} else {
-				$this->assert_xpath_count( 0, $xpath, '//*[@id="ran-booster-plugin-collection"]' );
-			}
+			$type  = $package_view->get_type();
+			$host  = '//*[@id="ran-booster-' . $type . '-collection" and @data-ran-booster-card="' . $type . 's"]';
+			$this->assert_xpath_count( 1, $xpath, $host . '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-package-collection__toolbar ")]' );
+			$this->assert_xpath_count( 2, $xpath, $host . '//form[@method="get"]' );
+			$this->assert_xpath_count( 1, $xpath, $host . '//form[@id="ran-booster-' . $type . '-bulk-form" and @method="POST"]' );
+			$this->assert_xpath_count( 1, $xpath, $host . '//table[@data-package-type="' . $type . '"]//input[@form="ran-booster-' . $type . '-bulk-form" and @type="checkbox"]' );
 			$this->assert_xpath_count( 0, $xpath, '//form//form' );
 		}
 	}

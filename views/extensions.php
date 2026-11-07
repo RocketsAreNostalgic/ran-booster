@@ -5,7 +5,12 @@
 
 defined( 'ABSPATH' ) || exit;
 
-$extension_state_labels = array(
+$extension_state_intents = array(
+	'neutral' => 'none',
+	'ok'      => 'stable',
+	'error'   => 'high',
+);
+$extension_state_labels  = array(
 	'Not installed'       => __( 'Not installed', 'ran-booster' ),
 	'Incompatible'        => __( 'Incompatible', 'ran-booster' ),
 	'Active'              => __( 'Active', 'ran-booster' ),
@@ -130,9 +135,10 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 				</div>
 				<div class="plugin-card-bottom">
 					<div class="vers column-rating ran-booster-extension-card__metadata">
-						<span class="ran-booster-extension-card__badge"><?php echo esc_html( $availability_label ); ?></span>
-						<span class="ran-booster-extension-card__badge"><?php esc_html_e( 'Beta', 'ran-booster' ); ?></span>
-						<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $extension['state_kind'] ); ?>"><?php echo esc_html( $state_label ); ?></span>
+						<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $availability_label ); ?>" data-ran-booster-ui-badge-intent="none"><span class="ran-booster-extension-card__badge" data-ran-booster-ui-badge-fallback><?php echo esc_html( $availability_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+						<?php $beta_label = __( 'Beta', 'ran-booster' ); ?>
+						<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $beta_label ); ?>" data-ran-booster-ui-badge-intent="none"><span class="ran-booster-extension-card__badge" data-ran-booster-ui-badge-fallback><?php echo esc_html( $beta_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+						<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $state_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $extension_state_intents[ $extension['state_kind'] ] ); ?>"><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $extension['state_kind'] ); ?>" data-ran-booster-ui-badge-fallback><?php echo esc_html( $state_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
 					</div>
 					<div class="column-compatibility">
 					<?php if ( $extension['compatible'] ) : ?>

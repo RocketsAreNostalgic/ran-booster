@@ -574,6 +574,7 @@
 				this.state = { failed: false };
 			}
 			static getDerivedStateFromError() {
+				entry.scroll ??= host.scrollLeft;
 				entry.focusIndex ??= navigationLinks(host, provider).indexOf(
 					host.ownerDocument.activeElement
 				);

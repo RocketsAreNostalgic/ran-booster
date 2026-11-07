@@ -411,3 +411,19 @@ test('visible text beside provider links remains native', () => {
 		assert.deepEqual(f.host.children, f.original);
 	}
 });
+
+test('late render failure restores the pre-error horizontal scroll and focused native link', () => {
+	const f = fixture();
+	f.window.navigationTest.mountNavigation(f.host, true);
+	f.host.scrollLeft = 155;
+	f.host.children[1].children[0].focus();
+	const entry = f.window.navigationTest.roots.get(f.host);
+	entry.boundary.getDerivedStateFromError();
+	f.host.replaceChildren();
+	f.host.scrollLeft = 0;
+	entry.boundary.prototype.componentDidCatch();
+	f.flush();
+	assert.deepEqual(f.host.children, f.original);
+	assert.equal(f.host.scrollLeft, 155);
+	assert.equal(f.doc.activeElement, f.original[1].children[0]);
+});

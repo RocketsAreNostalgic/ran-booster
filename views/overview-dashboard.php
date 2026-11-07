@@ -114,8 +114,9 @@ $inventory = $onboarding['inventory'] ?? array(
 				<?php } ?>
 				<?php
 				if ( 'replacement' === ( $provider['source_kind'] ?? null ) ) {
+					$custom_provider_label = __( 'Custom provider', 'ran-booster' );
 					?>
-					<span class="ran-booster-badge ran-booster-badge--neutral"><?php esc_html_e( 'Custom provider', 'ran-booster' ); ?></span><?php } ?>
+					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $custom_provider_label ); ?>" data-ran-booster-ui-badge-intent="none"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--neutral"><?php echo esc_html( $custom_provider_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span><?php } ?>
 				</span>
 			</li>
 		<?php } ?></ul>

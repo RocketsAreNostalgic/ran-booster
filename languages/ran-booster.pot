@@ -171,7 +171,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:56
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:40
-#: views/extensions.php:201
+#: views/extensions.php:207
 #: views/provider.php:493
 #: views/provider.php:514
 #: views/troubleshooting.php:199
@@ -1735,8 +1735,8 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:464
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:478
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:489
-#: views/extensions.php:11
-#: views/extensions.php:85
+#: views/extensions.php:16
+#: views/extensions.php:90
 #: views/packages/source-choices.php:79
 #: views/troubleshooting-installation.php:166
 #: views/troubleshooting-installation.php:167
@@ -4659,7 +4659,7 @@ msgid "Transporter"
 msgstr ""
 
 #: RAN/Booster.php:265
-#: views/extensions.php:48
+#: views/extensions.php:53
 msgid "Extensions"
 msgstr ""
 
@@ -6371,7 +6371,7 @@ msgid "Keep the existing WP_DEBUG_LOG destination."
 msgstr ""
 
 #: views/debug-capture.php:55
-#: views/extensions.php:94
+#: views/extensions.php:99
 #: views/troubleshooting-installation.php:166
 msgid "Inactive"
 msgstr ""
@@ -6587,7 +6587,7 @@ msgid "Reference"
 msgstr ""
 
 #: views/documentation.php:239
-#: views/extensions.php:209
+#: views/extensions.php:215
 msgid "Documentation"
 msgstr ""
 
@@ -7191,181 +7191,181 @@ msgstr ""
 msgid "Booster delegates package replacement to WordPress Core. It does not build, test or make untrusted repository code safe."
 msgstr ""
 
-#: views/extensions.php:9
+#: views/extensions.php:14
 msgid "Not installed"
 msgstr ""
 
-#: views/extensions.php:10
+#: views/extensions.php:15
 msgid "Incompatible"
 msgstr ""
 
-#: views/extensions.php:12
+#: views/extensions.php:17
 msgid "Installed, inactive"
 msgstr ""
 
-#: views/extensions.php:20
+#: views/extensions.php:25
 msgid "Extension installed. Activate it when you are ready."
 msgstr ""
 
-#: views/extensions.php:21
+#: views/extensions.php:26
 msgid "Extension activated."
 msgstr ""
 
-#: views/extensions.php:22
+#: views/extensions.php:27
 msgid "This plugin requires a different PHP version. Review its requirements in Plugins."
 msgstr ""
 
-#: views/extensions.php:23
+#: views/extensions.php:28
 msgid "This plugin requires a different WordPress version. Review its requirements in Plugins."
 msgstr ""
 
-#: views/extensions.php:24
+#: views/extensions.php:29
 msgid "This plugin requires different WordPress and PHP versions. Review its requirements in Plugins."
 msgstr ""
 
-#: views/extensions.php:25
+#: views/extensions.php:30
 msgid "This plugin requires other plugins to be installed and active. Review its dependencies in Plugins."
 msgstr ""
 
-#: views/extensions.php:26
+#: views/extensions.php:31
 msgid "Activation could not be confirmed. Check the extension status and try again or manage it in Plugins."
 msgstr ""
 
-#: views/extensions.php:27
+#: views/extensions.php:32
 msgid "The extension or its destination already exists. Review Plugins and the plugin folder before trying again."
 msgstr ""
 
-#: views/extensions.php:28
+#: views/extensions.php:33
 msgid "This extension is not compatible with this version of Booster."
 msgstr ""
 
-#: views/extensions.php:29
+#: views/extensions.php:34
 msgid "The extension could not be installed. Please try again or review its release page."
 msgstr ""
 
-#: views/extensions.php:30
+#: views/extensions.php:35
 msgid "The installation result could not be confirmed. Check Plugins before trying again."
 msgstr ""
 
-#: views/extensions.php:49
+#: views/extensions.php:54
 msgid "Add focused capabilities to Booster."
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:67
+#: views/extensions.php:72
 #, php-format
 msgid "More details about %s"
 msgstr ""
 
-#: views/extensions.php:91
+#: views/extensions.php:96
 msgid "Activating…"
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:91
+#: views/extensions.php:96
 #, php-format
 msgctxt "extension action"
 msgid "Activate %s"
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:91
+#: views/extensions.php:96
 msgid "Activate"
 msgstr ""
 
-#: views/extensions.php:96
+#: views/extensions.php:101
 msgid "A network administrator must activate this plugin."
 msgstr ""
 
-#: views/extensions.php:96
+#: views/extensions.php:101
 msgid "You do not have permission to activate this plugin."
 msgstr ""
 
-#: views/extensions.php:103
+#: views/extensions.php:108
 msgid "Installing…"
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:103
+#: views/extensions.php:108
 #, php-format
 msgctxt "extension action"
 msgid "Install %s"
 msgstr ""
 
 #. translators: %s: Extension name.
-#: views/extensions.php:103
+#: views/extensions.php:108
 msgid "Install"
 msgstr ""
 
-#: views/extensions.php:106
+#: views/extensions.php:111
 msgid "You do not have permission to install plugins."
 msgstr ""
 
-#: views/extensions.php:112
+#: views/extensions.php:117
 msgid "More Details"
 msgstr ""
 
-#: views/extensions.php:114
+#: views/extensions.php:119
 msgid "Manage plugin"
 msgstr ""
 
-#: views/extensions.php:123
+#: views/extensions.php:128
 msgid "By"
 msgstr ""
 
-#: views/extensions.php:126
-#: views/extensions.php:213
+#: views/extensions.php:131
+#: views/extensions.php:219
 msgid "Support"
 msgstr ""
 
-#: views/extensions.php:134
-#: views/extensions.php:200
+#: views/extensions.php:139
+#: views/extensions.php:206
 msgid "Beta"
 msgstr ""
 
-#: views/extensions.php:143
+#: views/extensions.php:149
 msgid "Compatible"
 msgstr ""
 
-#: views/extensions.php:143
+#: views/extensions.php:149
 msgid "with your version of Booster"
 msgstr ""
 
-#: views/extensions.php:175
+#: views/extensions.php:181
 #: views/troubleshooting.php:201
 #: views/troubleshooting.php:244
 msgid "Details"
 msgstr ""
 
-#: views/extensions.php:179
+#: views/extensions.php:185
 msgid "About this extension"
 msgstr ""
 
-#: views/extensions.php:181
+#: views/extensions.php:187
 msgid "What it adds"
 msgstr ""
 
-#: views/extensions.php:187
+#: views/extensions.php:193
 msgid "Before you install"
 msgstr ""
 
-#: views/extensions.php:195
+#: views/extensions.php:201
 msgid "Extension details"
 msgstr ""
 
-#: views/extensions.php:197
+#: views/extensions.php:203
 msgid "Availability"
 msgstr ""
 
-#: views/extensions.php:199
+#: views/extensions.php:205
 msgid "Maturity"
 msgstr ""
 
-#: views/extensions.php:203
+#: views/extensions.php:209
 msgid "Compatibility"
 msgstr ""
 
-#: views/extensions.php:211
+#: views/extensions.php:217
 msgid "Release page"
 msgstr ""
 
@@ -7602,7 +7602,7 @@ msgstr ""
 msgid "Provider source unknown"
 msgstr ""
 
-#: views/overview-dashboard.php:118
+#: views/overview-dashboard.php:117
 msgid "Custom provider"
 msgstr ""
 

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d8eda18041d4b2792fd32feca5488692",
+    "content-hash": "7c0939a677c280181cccc87e0833e7e8",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1725,12 +1725,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "6be3371a6cce137efb466b9b9f5dc00780f2b2e6"
+                "reference": "1c117c1e70db11f9f18da8eb1c8ceefa21ec3378"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/6be3371a6cce137efb466b9b9f5dc00780f2b2e6",
-                "reference": "6be3371a6cce137efb466b9b9f5dc00780f2b2e6",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/1c117c1e70db11f9f18da8eb1c8ceefa21ec3378",
+                "reference": "1c117c1e70db11f9f18da8eb1c8ceefa21ec3378",
                 "shasum": ""
             },
             "require": {

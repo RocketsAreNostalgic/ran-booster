@@ -324,20 +324,10 @@ body.admin-bar .ran-admin-shell {
 	pointer-events: none;
 }
 
-/* The frame is inside the link and remains visible during pointer activation. */
-.ran-section-navigation .ran-section-navigation__link:focus {
-	box-shadow: none;
-	outline: none;
-}
-
-.ran-section-navigation .ran-section-navigation__link:focus::before {
-	position: absolute;
-	inset-block: var(--ran-section-focus-inset);
-	inset-inline: 2px;
-	border: 2px solid var(--ran-section-focus-color);
-	border-radius: 2px;
-	content: "";
-	pointer-events: none;
+.ran-admin-shell__breadcrumb a {
+	--ran-section-focus-inset: 10px;
+	--ran-section-focus-color: var(--ran-admin-shell-focus);
+	position: relative;
 }
 
 .ran-section-navigation > .ran-section-navigation__indicator {
@@ -397,7 +387,8 @@ body.admin-bar .ran-admin-shell {
 }
 
 @media (forced-colors: active) {
-	.ran-section-navigation {
+	.ran-section-navigation,
+	.ran-admin-shell__breadcrumb a {
 		--ran-section-indicator-color: CanvasText;
 		--ran-section-focus-color: Highlight;
 	}
@@ -411,8 +402,7 @@ body.admin-bar .ran-admin-shell {
 
 .ran-admin-shell__breadcrumb a:hover {
 	background: var(--ran-admin-shell-hover);
-	text-decoration: underline;
-	text-underline-offset: 0.2em;
+	text-decoration: none;
 }
 
 .ran-admin-shell__navigation > a:focus,
@@ -425,6 +415,24 @@ body.admin-bar .ran-admin-shell {
 
 .ran-admin-shell__actions > a.button:focus-visible {
 	border-color: var(--ran-admin-shell-focus);
+}
+
+/* The frame is inside the link and remains visible during pointer activation. */
+.ran-section-navigation .ran-section-navigation__link:focus,
+.ran-admin-shell .ran-admin-shell__breadcrumb a:focus {
+	box-shadow: none;
+	outline: none;
+}
+
+.ran-section-navigation .ran-section-navigation__link:focus::before,
+.ran-admin-shell .ran-admin-shell__breadcrumb a:focus::before {
+	position: absolute;
+	inset-block: var(--ran-section-focus-inset);
+	inset-inline: 2px;
+	border: 2px solid var(--ran-section-focus-color);
+	border-radius: 2px;
+	content: "";
+	pointer-events: none;
 }
 
 .ran-admin-shell__breadcrumbs {

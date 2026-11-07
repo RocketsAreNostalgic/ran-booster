@@ -548,7 +548,10 @@
 			const intent = notice.getAttribute?.(
 				'data-ran-booster-ui-notice-intent'
 			);
-			if (isBranchNotice && intent) {
+			if (
+				isBranchNotice &&
+				(intent === 'warning' || intent === 'error')
+			) {
 				region.setAttribute(
 					'data-ran-booster-ui-notice-intent',
 					intent

@@ -1967,5 +1967,32 @@ test('marked branch failures preserve recovery and refresh their native notice b
 		'warning'
 	);
 	assert.deepEqual(content.children, [primary, details, moved]);
+	const addClass = state.error.classList.add;
+	state.error.classList.add = (...names) => {
+		assert.ok(
+			names.every((name) => !/\s/.test(name)),
+			'class tokens cannot contain whitespace'
+		);
+		addClass(...names);
+	};
+	const invalid = {
+		...unclassified,
+		getAttribute: () => 'warning notice-success',
+	};
+	state.setRenderedBranchCheckErrors([invalid]);
+	const previousCalls = calls.length;
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.form, xhr: { status: 200 } },
+	});
+	assert.equal(
+		state.errorAttributes.get('data-ran-booster-ui-notice-intent'),
+		'warning'
+	);
+	assert.equal(state.error.classList.contains('notice-warning'), true);
+	assert.equal(
+		calls[previousCalls].event.type,
+		'ran-booster:ui-notice-update'
+	);
+	assert.equal(calls[previousCalls + 1], 'focus');
 	assert.deepEqual(state.announcements, []);
 });

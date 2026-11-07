@@ -134,6 +134,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Integration status', $html );
 		self::assertStringContainsString( 'hx-target="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
+		self::assertStringContainsString( '<ul class="filter-links ran-section-navigation ran-section-navigation--thin">', $html );
+		self::assertSame( 3, substr_count( $html, 'ran-booster-provider-task-tab ran-section-navigation__link' ) );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
 		self::assertSame( 2, substr_count( $html, 'Active for one or more packages in this repository.' ) );
 		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );

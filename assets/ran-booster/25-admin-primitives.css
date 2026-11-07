@@ -207,6 +207,68 @@
 	display: none;
 }
 
+/* Match the existing public neutral/outline Overview submitter before enhancement. */
+.ran-booster-admin
+	[data-ran-booster-ui-button="overview-presentation"]
+	> [data-ran-booster-ui-button-fallback] {
+	appearance: none;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--wpds-dimension-gap-sm);
+	position: relative;
+	min-block-size: var(--wpds-dimension-size-lg);
+	min-inline-size: calc(4ch + 2 * var(--wpds-dimension-padding-md));
+	max-inline-size: 100%;
+	margin: 0;
+	padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-md);
+	border: 1px solid var(--wpds-color-stroke-interactive-neutral);
+	border-radius: var(--wpds-border-radius-sm);
+	box-shadow: none;
+	background-color: var(--wpds-color-background-interactive-neutral-weak);
+	color: var(--wpds-color-foreground-interactive-neutral);
+	font-family: var(--wpds-typography-font-family-body);
+	font-size: var(--wpds-typography-font-size-md);
+	font-weight: var(--wpds-typography-font-weight-emphasis);
+	line-height: var(--wpds-typography-line-height-sm);
+	text-align: center;
+	text-decoration: none;
+	vertical-align: baseline;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	transform: none;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-button="overview-presentation"]
+	> [data-ran-booster-ui-button-fallback]:not(:disabled):is(
+		:hover,
+		:active,
+		:focus
+	) {
+	background-color: var(
+		--wpds-color-background-interactive-neutral-weak-active
+	);
+	border-color: var(--wpds-color-stroke-interactive-neutral-active);
+	color: var(--wpds-color-foreground-interactive-neutral-active);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-button="overview-presentation"]
+	> [data-ran-booster-ui-button-fallback]:focus:not(:active) {
+	outline: solid;
+	outline-width: var(--wpds-border-width-focus);
+	outline-color: var(--wpds-color-stroke-focus);
+	outline-offset: var(--wpds-border-width-focus);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-button="overview-presentation"]
+	> [data-ran-booster-ui-button-fallback]:active {
+	outline: none;
+}
+
 .ran-booster-admin .ran-booster-panel,
 .ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,
 .ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {

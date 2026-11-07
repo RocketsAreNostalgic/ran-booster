@@ -7880,35 +7880,29 @@ msgid "Danger zone"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/danger-zone.php:25
-#, php-format
-msgid "Stop Booster managing this %s, with or without deleting it from WordPress."
-msgstr ""
-
-#. translators: %s is plugin or theme.
-#: views/packages/danger-zone.php:36
+#: views/packages/danger-zone.php:35
 #, php-format
 msgid "I understand Booster will stop managing this %s."
 msgstr ""
 
-#: views/packages/danger-zone.php:38
+#: views/packages/danger-zone.php:37
 msgid "The installed files and WordPress activation state are unchanged."
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/danger-zone.php:40
+#: views/packages/danger-zone.php:39
 #, php-format
 msgid "Stop managing %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/danger-zone.php:52
+#: views/packages/danger-zone.php:51
 #, php-format
 msgid "I understand this will remove the %s from this WordPress site."
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/danger-zone.php:58
+#: views/packages/danger-zone.php:57
 #, php-format
 msgid "Stop managing and delete %s"
 msgstr ""

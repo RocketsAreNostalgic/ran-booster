@@ -259,7 +259,7 @@ msgid "Source"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:150
-#: views/packages/edit.php:369
+#: views/packages/edit.php:371
 #: views/packages/fields/deployment-policy.php:42
 #: views/packages/fields/deployment-policy.php:45
 #: views/packages/index.php:478
@@ -7811,12 +7811,12 @@ msgid "Choose the repository and access Booster should use for this package."
 msgstr ""
 
 #: views/packages/create.php:153
-#: views/packages/edit.php:312
+#: views/packages/edit.php:314
 msgid "Package operation"
 msgstr ""
 
 #: views/packages/create.php:154
-#: views/packages/edit.php:313
+#: views/packages/edit.php:315
 msgid "Choose when Booster may update this package."
 msgstr ""
 
@@ -7849,8 +7849,8 @@ msgstr ""
 
 #. translators: %s is plugin or theme.
 #: views/packages/create.php:178
-#: views/packages/edit.php:277
-#: views/packages/edit.php:341
+#: views/packages/edit.php:279
+#: views/packages/edit.php:343
 #: views/packages/index.php:107
 #, php-format
 msgid "Install another %s"
@@ -7950,78 +7950,78 @@ msgstr ""
 msgid "Edit %s"
 msgstr ""
 
-#: views/packages/edit.php:255
+#: views/packages/edit.php:256
 msgid "Git provider unavailable."
 msgstr ""
 
-#: views/packages/edit.php:255
+#: views/packages/edit.php:256
 msgid "This package remains linked but cannot be edited or deployed until its Git provider is registered again."
 msgstr ""
 
-#: views/packages/edit.php:257
+#: views/packages/edit.php:258
 #: views/portability-review.php:172
 #: views/portability.php:157
 msgid "Git provider:"
 msgstr ""
 
-#: views/packages/edit.php:258
+#: views/packages/edit.php:259
 msgid "Repository:"
 msgstr ""
 
-#: views/packages/edit.php:259
+#: views/packages/edit.php:260
 msgid "Git provider repository ID:"
 msgstr ""
 
-#: views/packages/edit.php:269
+#: views/packages/edit.php:271
 msgid "Update source unavailable"
 msgstr ""
 
-#: views/packages/edit.php:270
+#: views/packages/edit.php:272
 msgid "The package remains linked, but its update source controls require an add-on that is not currently available."
 msgstr ""
 
-#: views/packages/edit.php:274
+#: views/packages/edit.php:276
 msgid "Booster will not reinterpret this package as a branch deployment. Restore the update source add-on to manage updates or unlink the package."
 msgstr ""
 
-#: views/packages/edit.php:276
-#: views/packages/edit.php:339
+#: views/packages/edit.php:278
+#: views/packages/edit.php:341
 msgid "Package settings actions"
 msgstr ""
 
 #. translators: %s is Managed Plugins or Managed Themes.
-#: views/packages/edit.php:278
-#: views/packages/edit.php:342
+#: views/packages/edit.php:280
+#: views/packages/edit.php:344
 #: views/packages/recovery.php:31
 #, php-format
 msgid "Back to Managed %s"
 msgstr ""
 
-#: views/packages/edit.php:304
+#: views/packages/edit.php:306
 msgid "The saved repository and access used by this package."
 msgstr ""
 
-#: views/packages/edit.php:326
+#: views/packages/edit.php:328
 msgid "Package operations"
 msgstr ""
 
-#: views/packages/edit.php:355
+#: views/packages/edit.php:357
 msgid "Package summary"
 msgstr ""
 
-#: views/packages/edit.php:357
+#: views/packages/edit.php:359
 msgid "Current source"
 msgstr ""
 
-#: views/packages/edit.php:371
+#: views/packages/edit.php:373
 msgid "Source changes reset Automatic to Manual"
 msgstr ""
 
-#: views/packages/edit.php:374
+#: views/packages/edit.php:376
 msgid "WordPress state"
 msgstr ""
 
-#: views/packages/edit.php:376
+#: views/packages/edit.php:378
 msgid "Independent of package source"
 msgstr ""
 

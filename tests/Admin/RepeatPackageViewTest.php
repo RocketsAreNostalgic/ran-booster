@@ -139,6 +139,9 @@ final class RepeatPackageViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Git provider unavailable" data-ran-booster-ui-badge-intent="high"', $html );
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--error"', $html );
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-mount', $html );
 			self::assertMatchesRegularExpression( '/href="[^"]*page=' . $package_view->get_page_slug() . '&amp;package=[^"]*&amp;return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh" class="button">Edit settings/', $html );
 			$document = new \DOMDocument();
 			$previous = libxml_use_internal_errors( true );
@@ -1039,6 +1042,97 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertStringContainsString( 'A safely bounded &lt;explanation&gt;.', $html, $recovery_state );
 			}
 		}
+	}
+
+	public function test_package_badges_render_known_activity_and_bounded_extension_tones(): void {
+		$package_view = PackagePagePresenter::plugin();
+		$package      = $this->package( $package_view );
+		$package->set_deployment_policy( \RAN\Deployment\DeploymentPolicy::AUTOMATIC );
+		$render = static function ( ?\RAN\Deployment\DeploymentAttempt $attempt, array $badges = array() ) use ( $package, $package_view ): string {
+			$packages               = array( $package );
+			$package_providers      = array(
+				array(
+					'code'   => 'gh',
+					'label'  => 'GitHub',
+					'deploy' => true,
+				),
+			);
+			$package_activity       = array( 'items' => array( $package->get_identifier() => array( 'latest' => $attempt ) ) );
+			$package_extension_rows = array( $package->get_identifier() => array( 'badges' => $badges ) );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			return (string) ob_get_clean();
+		};
+
+		foreach ( array(
+			'queued'          => array( 'Queued', 'pending', 'informational' ),
+			'running'         => array( 'Running', 'pending', 'informational' ),
+			'succeeded'       => array( 'Succeeded', 'ok', 'stable' ),
+			'failed'          => array( 'Failed', 'error', 'high' ),
+			'needs_attention' => array( 'Needs attention', 'error', 'high' ),
+		) as $state => [ $label, $tone, $intent ] ) {
+			$terminal = in_array( $state, array( 'succeeded', 'failed', 'needs_attention' ), true );
+			$attempt  = \RAN\Deployment\DeploymentAttempt::from_database(
+				array(
+					'id'                      => 1,
+					'correlation_id'          => str_repeat( '0', 32 ),
+					'source'                  => 'manual',
+					'operation'               => 'update',
+					'package_type'            => 'plugin',
+					'package_slug'            => 'example',
+					'package_source'          => 'branch',
+					'package_source_revision' => 1,
+					'release_identity'        => null,
+					'provider'                => 'gh',
+					'provider_repository_id'  => 'provider-id',
+					'requested_ref'           => 'main',
+					'resolved_ref'            => null,
+					'delivery_id'             => null,
+					'delivery_digest'         => null,
+					'state'                   => $state,
+					'mutation_started_at'     => null,
+					'outcome_code'            => match ( $state ) {
+					'succeeded' => 'deployed', 'failed' => 'preflight_failed', 'needs_attention' => 'interrupted', default => null },
+					'request_json'            => '{"repository":"owner/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"automatic","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
+					'created_at'              => '2026-07-19 00:00:00',
+					'finished_at'             => $terminal ? '2026-07-19 00:00:00' : null,
+					'resolved_at'             => null,
+					'resolved_by'             => null,
+				)
+			);
+			if ( 'running' === $state ) {
+				$GLOBALS['ran_booster_package_view_translations']['ran-booster']['Running'] = 'Running & "review"';
+				$label = 'Running &amp; &quot;review&quot;';
+			}
+			$html = $render( $attempt );
+			unset( $GLOBALS['ran_booster_package_view_translations'] );
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="' . $label . '" data-ran-booster-ui-badge-intent="' . $intent . '" data-ran-booster-activity-state', $html );
+			self::assertStringContainsString( 'ran-booster-badge--' . $tone . ' ran-booster-deployment-state ran-booster-deployment-state--' . $state . '">' . $label . '</span>', $html );
+			if ( 'succeeded' !== $state ) {
+				self::assertStringContainsString( 'data-ran-booster-ui-badge-intent="' . $intent . '" data-ran-booster-activity-badge', $html );
+			}
+		}
+
+		foreach ( array(
+			'neutral' => 'none',
+			'ok'      => 'stable',
+			'pending' => 'informational',
+			'warning' => 'medium',
+			'error'   => 'high',
+		) as $tone => $intent ) {
+			$html = $render(
+				null,
+				array(
+					array(
+						'label' => 'Release & "review"',
+						'tone'  => $tone,
+					),
+				)
+			);
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Release &amp; &quot;review&quot;" data-ran-booster-ui-badge-intent="' . $intent . '"', $html );
+			self::assertStringContainsString( 'ran-booster-badge--' . $tone . '">Release &amp; &quot;review&quot;</span>', $html );
+		}
+		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="" data-ran-booster-ui-badge-intent="none" data-ran-booster-activity-badge hidden', $render( null ) );
 	}
 
 	/** @return array{default_provider: string, providers: list<array<string, mixed>>} */

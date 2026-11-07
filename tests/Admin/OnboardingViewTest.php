@@ -630,7 +630,10 @@ final class OnboardingViewTest extends TestCase {
 			$target = 'onboarding' === $view ? 'dashboard' : 'onboarding';
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/input[@name="ran_booster[presentation]" and @value="' . $target . '"])' ) );
 			$label = 'onboarding' === $view ? 'Skip onboarding' : 'Return to onboarding';
-			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/button[@type="submit" and @class="button" and text()="' . $label . '"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/span[@data-ran-booster-ui-button="overview-presentation"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/span/button[@type="submit" and @class="button" and @data-ran-booster-ui-button-fallback and text()="' . $label . '"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/span/span[@data-ran-booster-ui-button-mount and not(node())])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form//button)' ) );
 			$heading     = 'onboarding' === $view ? 'Prepare your site' : 'Overview';
 			$description = 'onboarding' === $view ? 'Public repositories do not need credentials or webhooks.' : 'Review recent activity, managed packages and your site’s configuration.';
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/div/h2[@id="ran-booster-onboarding-heading" and @class="ran-booster-page-heading__title" and text()="' . $heading . '"]/following-sibling::p[@class="ran-booster-page-heading__description" ])' ) );
@@ -854,14 +857,21 @@ final class OnboardingViewTest extends TestCase {
 		);
 		$html  = $this->render_view( null, null, $extra );
 		self::assertStringContainsString( 'Included with Booster', $html );
-		self::assertStringContainsString( '<strong>Bitbucket Cloud</strong>', $html );
+		self::assertSame( 1, substr_count( $html, '<strong>Bitbucket Cloud</strong>' ) );
 		self::assertStringContainsString( 'Provider extension', $html );
 		self::assertStringNotContainsString( 'Custom provider', $html );
+		$extra['provider_summaries'][1]['source_name'] = '<Custom integration>';
+		$html = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'Provider extension: &lt;Custom integration&gt;', $html );
+		self::assertStringNotContainsString( '<Custom integration>', $html );
+		self::assertStringNotContainsString( 'Rockets Are Nostalgic', $html );
+		$extra['provider_summaries'][1]['source_name'] = 'Bitbucket Cloud';
+
 		$extra['provider_summaries'][0]['source_kind']                                    = 'replacement';
 		$extra['provider_summaries'][0]['source_name']                                    = '<Selected Plugin>';
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Custom provider'] = 'Custom <provider> & "partner"';
 		$html = $this->render_view( null, null, $extra );
-		self::assertStringContainsString( 'Provided by &lt;Selected Plugin&gt;', $html );
+		self::assertStringContainsString( 'Provider extension: &lt;Selected Plugin&gt;', $html );
 		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Custom &lt;provider&gt; &amp; &quot;partner&quot;"', $html );
 		self::assertStringContainsString( 'Custom &lt;provider&gt; &amp; &quot;partner&quot;</span>', $html );
 		$document = new \DOMDocument();

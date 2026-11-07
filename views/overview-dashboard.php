@@ -108,7 +108,7 @@ $inventory = $onboarding['inventory'] ?? array(
 					<?php esc_html_e( 'Provider extension', 'ran-booster' ); ?>
 				<?php } elseif ( is_string( $provider['source_name'] ?? null ) && '' !== $provider['source_name'] ) { ?>
 					<?php /* translators: %s: selected provider plugin name. */ ?>
-					<?php echo esc_html( sprintf( __( 'Provided by %s', 'ran-booster' ), $provider['source_name'] ) ); ?>
+					<?php echo esc_html( sprintf( __( 'Provider extension: %s', 'ran-booster' ), $provider['source_name'] ) ); ?>
 				<?php } else { ?>
 					<?php esc_html_e( 'Provider source unknown', 'ran-booster' ); ?>
 				<?php } ?>

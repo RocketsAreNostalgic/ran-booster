@@ -2625,7 +2625,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:341
 #: RAN/Troubleshooting/TroubleshootingService.php:344
 #: views/debug-capture.php:58
-#: views/onboarding.php:82
+#: views/onboarding.php:85
 #: views/settings-storage.php:26
 #: views/troubleshooting-installation.php:20
 #: views/troubleshooting-installation.php:164
@@ -2856,8 +2856,8 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
 #: RAN/Booster.php:1010
 #: views/attempts/index.php:54
-#: views/onboarding.php:81
-#: views/onboarding.php:108
+#: views/onboarding.php:84
+#: views/onboarding.php:111
 #: views/overview-dashboard.php:32
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
@@ -4660,7 +4660,7 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:264
-#: views/onboarding.php:176
+#: views/onboarding.php:179
 msgid "Transporter"
 msgstr ""
 
@@ -4699,7 +4699,7 @@ msgid "Connect Booster to Bitbucket Cloud repositories for managed deployments."
 msgstr ""
 
 #: RAN/Booster.php:414
-msgid "Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy."
+msgid "Add Bitbucket Cloud support through a RAN-maintained provider extension while Booster continues to own credentials, webhook verification, and deployment policy."
 msgstr ""
 
 #: RAN/Booster.php:416
@@ -6625,7 +6625,7 @@ msgstr ""
 
 #: views/documentation.php:273
 #: views/documentation.php:406
-#: views/onboarding.php:184
+#: views/onboarding.php:187
 #: views/overview-dashboard.php:77
 #: views/provider.php:660
 msgid "Install a plugin"
@@ -6938,7 +6938,7 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:407
-#: views/onboarding.php:185
+#: views/onboarding.php:188
 #: views/overview-dashboard.php:84
 #: views/provider.php:661
 msgid "Install a theme"
@@ -7086,7 +7086,7 @@ msgid "Open %s settings"
 msgstr ""
 
 #: views/documentation.php:523
-msgid "Official setup guidance"
+msgid "Provider setup guidance"
 msgstr ""
 
 #: views/documentation.php:537
@@ -7419,122 +7419,122 @@ msgstr ""
 msgid "Review recent activity, managed packages and your site’s configuration."
 msgstr ""
 
-#: views/onboarding.php:61
+#: views/onboarding.php:62
 msgid "Skip onboarding"
 msgstr ""
 
-#: views/onboarding.php:61
+#: views/onboarding.php:62
 msgid "Return to onboarding"
 msgstr ""
 
-#: views/onboarding.php:77
+#: views/onboarding.php:80
 #: views/settings-storage.php:21
 #: views/troubleshooting-installation.php:17
 msgid "Path configured"
 msgstr ""
 
-#: views/onboarding.php:78
+#: views/onboarding.php:81
 #: views/settings-storage.php:22
 #: views/troubleshooting-installation.php:16
 msgid "Storage healthy"
 msgstr ""
 
-#: views/onboarding.php:79
+#: views/onboarding.php:82
 #: views/settings-storage.php:23
 msgid "Storage needs attention"
 msgstr ""
 
-#: views/onboarding.php:80
+#: views/onboarding.php:83
 #: views/settings-storage.php:24
 msgid "Setup available"
 msgstr ""
 
-#: views/onboarding.php:83
+#: views/onboarding.php:86
 #: views/settings-storage.php:27
 msgid "Verification pending"
 msgstr ""
 
 #. translators: 1: displayed reminders, 2: total actionable reminders.
-#: views/onboarding.php:115
+#: views/onboarding.php:118
 #, php-format
 msgid "Showing %1$d of %2$d actionable expiry reminders."
 msgstr ""
 
-#: views/onboarding.php:118
+#: views/onboarding.php:121
 msgid "Credential expiry reminders are unavailable. Review credentials in provider settings."
 msgstr ""
 
-#: views/onboarding.php:124
+#: views/onboarding.php:127
 msgid "Provider is not admitted."
 msgstr ""
 
-#: views/onboarding.php:127
+#: views/onboarding.php:130
 msgid "The managed package inventory is incomplete or unavailable."
 msgstr ""
 
-#: views/onboarding.php:130
+#: views/onboarding.php:133
 msgid "Secure credential storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:130
-#: views/onboarding.php:132
+#: views/onboarding.php:133
+#: views/onboarding.php:135
 msgid "Review storage"
 msgstr ""
 
-#: views/onboarding.php:150
+#: views/onboarding.php:153
 msgid "1. Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:150
+#: views/onboarding.php:153
 #: views/settings-storage.php:68
 #: views/settings.php:27
 #: views/troubleshooting-installation.php:58
 msgid "Secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:151
+#: views/onboarding.php:154
 #: views/settings-storage.php:69
 msgid "Status unknown"
 msgstr ""
 
-#: views/onboarding.php:154
+#: views/onboarding.php:157
 #: views/troubleshooting-installation.php:60
 msgid "Storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:155
+#: views/onboarding.php:158
 msgid "Review secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:163
+#: views/onboarding.php:166
 msgid "2. Choose a Git provider"
 msgstr ""
 
-#: views/onboarding.php:164
+#: views/onboarding.php:167
 msgid "Add credentials on the provider’s page if needed."
 msgstr ""
 
-#: views/onboarding.php:169
+#: views/onboarding.php:172
 msgid "Install another provider"
 msgstr ""
 
-#: views/onboarding.php:173
+#: views/onboarding.php:176
 msgid "3. Import or migrate (optional)"
 msgstr ""
 
-#: views/onboarding.php:174
+#: views/onboarding.php:177
 msgid "Import a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions."
 msgstr ""
 
-#: views/onboarding.php:177
+#: views/onboarding.php:180
 msgid "Browse extensions"
 msgstr ""
 
-#: views/onboarding.php:181
+#: views/onboarding.php:184
 msgid "4. Install and manage packages"
 msgstr ""
 
-#: views/onboarding.php:182
+#: views/onboarding.php:185
 msgid "Install a plugin or theme from a Git repository, or link one already installed on this site."
 msgstr ""
 
@@ -7600,7 +7600,7 @@ msgstr ""
 #: views/troubleshooting-installation.php:191
 #: views/troubleshooting-installation.php:197
 #, php-format
-msgid "Provided by %s"
+msgid "Provider extension: %s"
 msgstr ""
 
 #: views/overview-dashboard.php:113
@@ -9452,7 +9452,7 @@ msgstr ""
 #. translators: %s: the implementation being reviewed for approval.
 #: views/provider.php:332
 #, php-format
-msgid "Reviewing GitHub support provided by %s"
+msgid "Reviewing GitHub provider: %s"
 msgstr ""
 
 #. translators: %s: the implementation being reviewed for approval.

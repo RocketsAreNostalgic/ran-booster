@@ -762,7 +762,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertStringNotContainsString( $private_detail, $html );
 		}
 		if ( 'available' === $state ) {
-			self::assertStringContainsString( 'Provided by &lt;Replacement&gt;', $html );
+			self::assertStringContainsString( 'Provider extension: &lt;Replacement&gt;', $html );
 			self::assertStringContainsString( '<summary>Manage GitHub provider</summary>', $html );
 			self::assertStringNotContainsString( 'Affected GitHub packages:', $html );
 			self::assertStringNotContainsString( 'GitHub operations are paused.', $html );
@@ -799,7 +799,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 		if ( $switch_replacement ) {
 			self::assertStringContainsString( 'Missing provider: Previous provider A', $html );
-			self::assertStringContainsString( 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
+			self::assertStringContainsString( 'Reviewing GitHub provider: &lt;Replacement&gt;', $html );
 		}
 		self::assertStringContainsString( 'Affected GitHub packages: 2 Branch, 1 Published release.', $html );
 		self::assertStringContainsString( 'Saved GitHub access credentials: 2 compatible, 1 incompatible.', $html );
@@ -815,7 +815,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[reuse_existing]" value="1" required', $html );
 		self::assertStringContainsString( 'ran-booster-adopt-github-' . str_repeat( 'c', 64 ), $html );
 		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review GitHub provider</summary>', $html );
-		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
+		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub provider: &lt;Replacement&gt;', $html );
 	}
 
 	/** @return iterable<string,array{string}> */

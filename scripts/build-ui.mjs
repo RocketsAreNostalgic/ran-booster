@@ -134,11 +134,12 @@ const size = (chunk) => [
 	Buffer.byteLength(chunk.code),
 	gzipSync(chunk.code).length,
 ];
+const adapter = await readFile('assets/ran-booster-cards.js');
 const [foundationBytes, foundationGzip] = size(foundation),
 	[overlayBytes, overlayGzip] = size(overlay);
 ensure(
-	foundationBytes <= 70000 &&
-		foundationGzip <= 16000 &&
+	foundationBytes + adapter.length <= 90000 &&
+		foundationGzip + gzipSync(adapter).length <= 20000 &&
 		overlayBytes <= 320000 &&
 		overlayGzip <= 90000,
 	'UI runtime exceeds reserved size'

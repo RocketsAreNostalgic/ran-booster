@@ -188,13 +188,13 @@ foreach ( $components as $component ) {
 			} elseif ( __( 'Bundled with Booster', 'ran-booster' ) === ( $github_fields[ __( 'Source', 'ran-booster' ) ] ?? null ) ) {
 				$source = $selected_name;
 			} else {
-				$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provided by %s', 'ran-booster' ), $selected_name );
+				$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $selected_name );
 			}
 		}
 	} elseif ( ! isset( $component['Provider'] ) && 'Yes' === ( $component['Installed'] ?? null ) ) {
 		$source = __( 'Installed extension', 'ran-booster' );
 	} elseif ( isset( $component['Provider'] ) && 'Yes' === $active && isset( $component['Name'] ) ) {
-		$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provided by %s', 'ran-booster' ), $component['Name'] );
+		$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $component['Name'] );
 	}
 	?>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">

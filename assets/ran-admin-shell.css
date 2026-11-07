@@ -313,6 +313,17 @@ body.admin-bar .ran-admin-shell {
 	border-block-end-color: var(--ran-section-indicator-color);
 }
 
+/* Present before enhancement so native page transitions can match both ends. */
+.ran-section-navigation__link > .ran-section-navigation__indicator {
+	position: absolute;
+	inset-block-end: calc(-1 * var(--ran-section-indicator-size));
+	inset-inline-start: 0;
+	inline-size: 100%;
+	block-size: var(--ran-section-indicator-size);
+	background: var(--ran-section-indicator-color);
+	pointer-events: none;
+}
+
 /* The frame is inside the link and remains visible during pointer activation. */
 .ran-section-navigation .ran-section-navigation__link:focus {
 	box-shadow: none;
@@ -353,6 +364,11 @@ body.admin-bar .ran-admin-shell {
 	border-block-end-color: transparent;
 }
 
+.ran-admin-shell__navigation.ran-section-navigation
+	.ran-section-navigation__link[aria-current="page"] {
+	border-block-end-color: transparent;
+}
+
 @media (prefers-reduced-motion: no-preference) {
 	.ran-section-navigation--moving > .ran-section-navigation__indicator {
 		transition:
@@ -361,7 +377,7 @@ body.admin-bar .ran-admin-shell {
 			top 180ms ease-out;
 	}
 
-	.ran-admin-shell__navigation > .ran-section-navigation__indicator {
+	.ran-admin-shell__navigation .ran-section-navigation__indicator {
 		view-transition-name: ran-section-header-indicator;
 	}
 

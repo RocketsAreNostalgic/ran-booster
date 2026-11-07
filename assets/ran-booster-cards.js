@@ -796,6 +796,20 @@
 		);
 	}
 
+	function hasHeaderIndicator(link) {
+		const [decoration] = link.children;
+		return (
+			link.childElementCount === 1 &&
+			link.getAttribute('aria-current') === 'page' &&
+			decoration.tagName === 'SPAN' &&
+			decoration.getAttribute('class') ===
+				'ran-section-navigation__indicator' &&
+			decoration.getAttribute('aria-hidden') === 'true' &&
+			decoration.attributes.length === 2 &&
+			decoration.childNodes.length === 0
+		);
+	}
+
 	function mountNavigation(host, provider) {
 		const element = window.wp?.element;
 		const UI = window.ranBoosterUI;
@@ -824,7 +838,8 @@
 				(link) =>
 					!link.getAttribute('href') ||
 					(!provider && link.hasAttribute('hx-get')) ||
-					link.childElementCount ||
+					(link.childElementCount &&
+						(provider || !hasHeaderIndicator(link))) ||
 					![null, 'page'].includes(
 						link.getAttribute('aria-current')
 					) ||

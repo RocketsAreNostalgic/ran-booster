@@ -106,7 +106,7 @@
     },
     "require-dev": {
         "phpunit/phpunit": "^11.0",
-        "ran/admin-shell": "dev-work/40-static-navigation#b7a6d21119ae601405d1b80c7a913c8aa14e0741",
+        "ran/admin-shell": "dev-work/40-static-navigation#4af60d348749343e9134987b5a0faadd9f70972f",
         "ran/coding-standards": "^1.0.1",
         "phpcompatibility/php-compatibility": "10.0.0-alpha2",
         "phpcompatibility/phpcompatibility-paragonie": "2.0.0-alpha2",

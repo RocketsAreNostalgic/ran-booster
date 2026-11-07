@@ -32,11 +32,20 @@ export function createNavigationLinks(h, Link, items, provider) {
 				'data-ran-booster-provider-task': item.task,
 				'aria-controls': item.controls,
 			},
-			item.label
+			!provider && item.current
+				? [
+						item.label,
+						h('span', {
+							key: 'active-indicator',
+							className: 'ran-section-navigation__indicator',
+							'aria-hidden': true,
+						}),
+					]
+				: item.label
 		);
 		return provider ? h('li', { key }, link) : link;
 	});
-	if (links.length) {
+	if (provider && links.length) {
 		links.push(
 			h(provider ? 'li' : 'span', {
 				key: 'active-indicator',

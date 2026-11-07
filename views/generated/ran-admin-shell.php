@@ -148,7 +148,7 @@ $ran_admin_shell_actions        = array_values(
 			<?php $ran_admin_shell_current_rendered = false; ?>
 			<?php foreach ( $ran_admin_shell_navigation as $ran_admin_shell_item ) : ?>
 				<?php $ran_admin_shell_is_current = ! $ran_admin_shell_current_rendered && ! empty( $ran_admin_shell_item['current'] ); ?>
-				<a<?php echo '' !== $ran_admin_shell_navigation_variant ? ' class="ran-section-navigation__link"' : ''; ?> href="<?php echo esc_url( (string) $ran_admin_shell_item['url'] ); ?>"<?php echo $ran_admin_shell_is_current ? ' aria-current="page"' : ''; ?>><?php echo esc_html( trim( (string) $ran_admin_shell_item['label'] ) ); ?></a>
+				<a<?php echo '' !== $ran_admin_shell_navigation_variant ? ' class="ran-section-navigation__link"' : ''; ?> href="<?php echo esc_url( (string) $ran_admin_shell_item['url'] ); ?>"<?php echo $ran_admin_shell_is_current ? ' aria-current="page"' : ''; ?>><?php echo esc_html( trim( (string) $ran_admin_shell_item['label'] ) ); ?><?php echo '' !== $ran_admin_shell_navigation_variant && $ran_admin_shell_is_current ? '<span class="ran-section-navigation__indicator" aria-hidden="true"></span>' : ''; ?></a>
 				<?php $ran_admin_shell_current_rendered = $ran_admin_shell_current_rendered || $ran_admin_shell_is_current; ?>
 			<?php endforeach; ?>
 		</nav>

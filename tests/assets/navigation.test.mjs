@@ -175,3 +175,24 @@ test('public Link retains target, rel, download and label text with its new-tab 
 		}
 	}
 });
+
+test('header current underline exists inside the genuine public Link before and after projection', () => {
+	const links = createNavigationLinks(
+		React.createElement,
+		Link,
+		items,
+		false
+	);
+	assert.equal(links.length, items.length);
+	assert.equal(links[0].type, Link);
+	assert.equal(links[0].props.children[0], 'Status');
+	const underline = links[0].props.children[1];
+	assert.equal(underline.type, 'span');
+	assert.equal(
+		underline.props.className,
+		'ran-section-navigation__indicator'
+	);
+	assert.equal(underline.props['aria-hidden'], true);
+	assert.equal(underline.props.tabIndex, undefined);
+	assert.equal(links[1].props.children, 'Repositories');
+});

@@ -55,7 +55,7 @@ if ( array() === $environment ) {
 </details><?php } ?>
 </div></section>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header ran-booster-onboarding__storage-heading"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h4><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status[1] ); ?>"><?php echo esc_html( $storage_status[0] ); ?></span></header>
+<header class="ran-booster-page-shell__header ran-booster-onboarding__storage-heading"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h4><span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $storage_status[0] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( 'ok' === $storage_status[1] ? 'stable' : ( 'warning' === $storage_status[1] ? 'medium' : ( 'error' === $storage_status[1] ? 'high' : 'none' ) ) ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status[1] ); ?>"><?php echo esc_html( $storage_status[0] ); ?></span><span data-ran-booster-ui-badge-mount></span></span></header>
 <div class="ran-booster-page-shell__body">
 <p><?php echo esc_html( $storage['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
 <details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
@@ -117,16 +117,14 @@ if ( array() === $environment ) {
 			}
 			?>
 			<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__core-updates ran-booster-troubleshooting__installation-card" aria-labelledby="ran-booster-core-updates-heading">
-				<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 id="ran-booster-core-updates-heading" class="ran-booster-section__title"><?php esc_html_e( 'Booster Core updates', 'ran-booster' ); ?></h4><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( 'enabled' === $self_update_mode ? 'ok' : 'neutral' ); ?>">
+				<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 id="ran-booster-core-updates-heading" class="ran-booster-section__title"><?php esc_html_e( 'Booster Core updates', 'ran-booster' ); ?></h4>
 				<?php
-				echo esc_html(
-					match ( $self_update_mode ) {
+				$self_update_label = match ( $self_update_mode ) {
 					'enabled' => __( 'Checks enabled', 'ran-booster' ),
 					'disabled' => __( 'Checks disabled', 'ran-booster' ),
-					default => __( 'Status unavailable', 'ran-booster' ) }
-				);
+					default => __( 'Status unavailable', 'ran-booster' ) };
 				?>
-				</span></header>
+				<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $self_update_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( 'enabled' === $self_update_mode ? 'stable' : 'none' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( 'enabled' === $self_update_mode ? 'ok' : 'neutral' ); ?>"><?php echo esc_html( $self_update_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span></header>
 				<div class="ran-booster-page-shell__body">
 					<p><?php echo esc_html( $self_update_message ); ?></p>
 					<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
@@ -188,21 +186,21 @@ foreach ( $components as $component ) {
 			} elseif ( __( 'Bundled with Booster', 'ran-booster' ) === ( $github_fields[ __( 'Source', 'ran-booster' ) ] ?? null ) ) {
 				$source = $selected_name;
 			} else {
-				$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provided by %s', 'ran-booster' ), $selected_name );
+				$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $selected_name );
 			}
 		}
 	} elseif ( ! isset( $component['Provider'] ) && 'Yes' === ( $component['Installed'] ?? null ) ) {
 		$source = __( 'Installed extension', 'ran-booster' );
 	} elseif ( isset( $component['Provider'] ) && 'Yes' === $active && isset( $component['Name'] ) ) {
-		$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provided by %s', 'ran-booster' ), $component['Name'] );
+		$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $component['Name'] );
 	}
 	?>
-<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
+<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card ran-booster-card" data-ran-booster-card="installation-component">
 <header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 class="ran-booster-section__title"><?php echo esc_html( $component_name ); ?>
 	<?php
 	if ( is_string( $version ) && '' !== $version ) {
 		?>
-	<code><?php echo esc_html( $version ); ?></code><?php } ?></h4><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $component_status ); ?></span></header>
+	<code><?php echo esc_html( $version ); ?></code><?php } ?></h4><span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $component_status ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( 'ok' === $tone ? 'stable' : ( 'warning' === $tone ? 'medium' : 'none' ) ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $component_status ); ?></span><span data-ran-booster-ui-badge-mount></span></span></header>
 <div class="ran-booster-page-shell__body">
 	<?php
 	if ( null !== $source || isset( $component['Provider'] ) ) {
@@ -213,9 +211,10 @@ foreach ( $components as $component ) {
 		?>
 		<p><?php echo esc_html( $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. Review the provider settings before use.', 'ran-booster' ) ); ?></p><?php } ?>
 	<?php if ( array() !== $technical_fields || $has_capabilities ) { ?>
-<details<?php echo $is_github ? ' id="ran-booster-github-provider-diagnostics"' : ''; ?> class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">
+<div<?php echo $is_github ? ' id="ran-booster-github-provider-diagnostics"' : ''; ?> data-ran-booster-ui-disclosure="installation-component">
+<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback>
 <summary aria-label="<?php echo esc_attr( sprintf( /* translators: %s: provider or extension name. */ __( 'Technical details: %s', 'ran-booster' ), $component_name ) ); ?>"><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
-<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 <p><?php echo esc_html( isset( $component['Provider'] ) ? __( 'These are local configuration details. Use Diagnostics to check repository access.', 'ran-booster' ) : __( 'These are local configuration details.', 'ran-booster' ) ); ?></p>
 <dl class="ran-booster-troubleshooting__fields-list">
 		<?php
@@ -298,6 +297,7 @@ foreach ( $components as $component ) {
 		}
 		?>
 </div></details>
+</div>
 	<?php } ?>
 </div></section>
 <?php } ?>

@@ -762,7 +762,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertStringNotContainsString( $private_detail, $html );
 		}
 		if ( 'available' === $state ) {
-			self::assertStringContainsString( 'Provided by &lt;Replacement&gt;', $html );
+			self::assertStringContainsString( 'Provider extension: &lt;Replacement&gt;', $html );
 			self::assertStringContainsString( '<summary>Manage GitHub provider</summary>', $html );
 			self::assertStringNotContainsString( 'Affected GitHub packages:', $html );
 			self::assertStringNotContainsString( 'GitHub operations are paused.', $html );
@@ -799,7 +799,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 		if ( $switch_replacement ) {
 			self::assertStringContainsString( 'Missing provider: Previous provider A', $html );
-			self::assertStringContainsString( 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
+			self::assertStringContainsString( 'Reviewing GitHub provider: &lt;Replacement&gt;', $html );
 		}
 		self::assertStringContainsString( 'Affected GitHub packages: 2 Branch, 1 Published release.', $html );
 		self::assertStringContainsString( 'Saved GitHub access credentials: 2 compatible, 1 incompatible.', $html );
@@ -815,7 +815,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[reuse_existing]" value="1" required', $html );
 		self::assertStringContainsString( 'ran-booster-adopt-github-' . str_repeat( 'c', 64 ), $html );
 		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review GitHub provider</summary>', $html );
-		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
+		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub provider: &lt;Replacement&gt;', $html );
 	}
 
 	/** @return iterable<string,array{string}> */
@@ -1084,6 +1084,22 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'Filtered canary', $html );
 		self::assertStringContainsString( 'paged=2', $html );
 		self::assertStringNotContainsString( 'profile-21', $html );
+		self::assertStringContainsString( 'data-ran-booster-card="provider"', $html );
+
+		// Provider list views use the outer section as a Card host.
+		foreach ( array( array( 'gh', 'credentials', true ), array( 'bb', 'credentials', true ), array( 'gh', 'secrets', true ), array( 'bb', 'secrets', true ), array( 'gh', 'overview', false ), array( 'other', 'credentials', true ) ) as list( $code, $view, $expected ) ) {
+			$provider['code'] = $code;
+			$provider_view    = $view;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$rendered = (string) ob_get_clean();
+			self::assertSame( $expected ? 1 : 0, preg_match( '/<section class="ran-booster-page-shell ran-booster-provider[^>]*data-ran-booster-card="provider"/', $rendered ) );
+			if ( 'credentials' === $view ) {
+				self::assertStringContainsString( '<form class="ran-booster-provider-list-controls" method="get"', $rendered );
+				self::assertStringContainsString( '<th scope="col">', $rendered );
+				self::assertStringContainsString( 'Page 1 of 2', $rendered );
+			}
+		}
 
 		$_GET['replace_credential'] = 'profile-21';
 		$replacement_data           = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
@@ -2558,6 +2574,49 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( 'blocked', $result['data']['recovery_state'] );
 			self::assertCount( 1, $successes );
 			self::assertSame( ucfirst( $type ) . ' was successfully ' . $completed . '.', $successes[0]['message'] );
+			if ( 'edit' === $operation ) {
+				self::assertSame( $identifier, $successes[0]['saved_package'] );
+				self::assertSame( $type, $successes[0]['saved_type'] );
+			} else {
+				self::assertArrayNotHasKey( 'saved_package', $successes[0] );
+				self::assertArrayNotHasKey( 'saved_type', $successes[0] );
+			}
+		}
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_only_signed_edit_success_receives_save_metadata( string $type ): void {
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		foreach ( array( 'edit', 'install', 'update', 'unlink', 'unlink-and-delete', 'already-managed', 'partialreinstall', 'check' ) as $operation ) {
+			foreach ( array( true, false ) as $valid_nonce ) {
+				$_GET      = array(
+					'ran_booster_result'        => $operation,
+					'ran_booster_package'       => $identifier,
+					'_ran_booster_notice_nonce' => $valid_nonce ? wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) : 'forged',
+				);
+				$dashboard = $this->dashboard( $this->throwing_secrets() );
+				$notice    = ( new \RAN\Admin\PackageAdminController() )->add_success_notice( $dashboard, $type );
+				if ( $valid_nonce && 'edit' === $operation ) {
+					self::assertSame(
+						array(
+							'operation'  => 'edit',
+							'identifier' => $identifier,
+						),
+						$notice
+					);
+					self::assertSame( $identifier, $dashboard->messages[0]['saved_package'] );
+					self::assertSame( $type, $dashboard->messages[0]['saved_type'] );
+				} else {
+					foreach ( $dashboard->messages as $message ) {
+						self::assertArrayNotHasKey( 'saved_package', $message );
+						self::assertArrayNotHasKey( 'saved_type', $message );
+					}
+					if ( ! $valid_nonce || in_array( $operation, array( 'partialreinstall', 'check' ), true ) ) {
+						self::assertNull( $notice );
+						self::assertCount( 0, $dashboard->messages );
+					}
+				}
+			}
 		}
 	}
 

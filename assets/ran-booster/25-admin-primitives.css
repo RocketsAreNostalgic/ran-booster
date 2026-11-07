@@ -5,7 +5,7 @@
  * responsible for placement, content, state and interaction hooks.
  */
 
-.ran-booster-admin .ran-booster-card {
+.ran-booster-admin .ran-booster-card:not([data-ran-booster-card="extensions"]) {
 	border: 1px solid var(--ran-booster-border);
 	border-radius: var(--ran-booster-radius-surface);
 	box-shadow: var(--ran-booster-shadow-surface);
@@ -16,9 +16,43 @@
 	line-height: var(--ran-booster-line-height-base);
 }
 
-.ran-booster-admin .ran-booster-card__surface {
-	color: inherit;
+.ran-booster-admin .ran-booster-card[data-ran-booster-ui-mounted] {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.ran-booster-admin [data-ran-booster-ui-notice][data-ran-booster-ui-mounted] {
+	padding: 0;
+	border: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.ran-booster-admin .ran-booster-ui-notice__description {
+	min-inline-size: 0;
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-admin .ran-booster-ui-notice__description p {
+	margin: 0;
+	padding: 0;
 	font: inherit;
+}
+
+.ran-booster-admin .ran-booster-ui-notice__description p + p {
+	margin-block-start: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-card__content {
+	box-sizing: content-box;
+	min-inline-size: 0;
+}
+
+.ran-booster-admin [data-ran-booster-ui-badge-fallback][hidden] {
+	display: none;
 }
 
 .ran-booster-admin .ran-booster-panel,
@@ -269,4 +303,37 @@
 	.ran-booster-dialog__surface {
 		max-block-size: calc(100vh - 20px);
 	}
+}
+
+.ran-booster-admin
+	.ran-booster-portability
+	> .ran-booster-portability__flow[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted] {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"] {
+	min-block-size: 40px;
+	padding: 8px 16px;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 20px;
+}
+
+@media (pointer: coarse) {
+	.ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"] {
+		min-block-size: 44px;
+	}
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="settings-configuration"]
+	> details[data-ran-booster-ui-disclosure-fallback],
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="settings-storage"]
+	> details[data-ran-booster-ui-disclosure-fallback] {
+	margin: 0;
 }

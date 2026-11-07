@@ -299,6 +299,9 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-page-heading__description">Add focused capabilities', $output );
 		self::assertStringNotContainsString( '<h1', $output );
 		self::assertSame( 4, substr_count( $output, '>Free<' ) );
+		self::assert_badge( $output, 'Free', 'none', 2 );
+		self::assert_badge( $output, 'Beta', 'none', 2 );
+		self::assert_badge( $output, 'Not installed', 'none', 2 );
 		self::assertSame( 0, substr_count( $output, '>Sponsor<' ) );
 		self::assertStringNotContainsString( 'Subscriber', $output );
 		self::assertStringNotContainsString( 'Get access', $output );
@@ -391,13 +394,14 @@ final class ExtensionsPageTest extends TestCase {
 	public function test_renders_translated_catalogue_copy_and_not_installed_state_without_changing_product_data(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Connect Booster to Bitbucket Cloud repositories for managed deployments.'] = 'Connectez Booster aux dépôts Bitbucket Cloud pour des déploiements gérés.';
 
-		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.'] = 'Ajoutez Bitbucket Cloud comme fournisseur de dépôts intégré.';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Add Bitbucket Cloud support through a RAN-maintained provider extension while Booster continues to own credentials, webhook verification, and deployment policy.'] = 'Ajoutez Bitbucket Cloud comme fournisseur de dépôts intégré.';
 
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Connect and configure Bitbucket Cloud repositories in Booster.'] = 'Connectez et configurez les dépôts Bitbucket Cloud dans Booster.';
 
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['WordPress 7.0 or later and PHP 8.2 or later.'] = 'WordPress 7.0 ou version ultérieure et PHP 8.2 ou version ultérieure.';
 
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Free'] = 'Gratuit';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Beta'] = 'Bêta & "test"';
 
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Not installed'] = 'Non installé';
 
@@ -408,6 +412,8 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'Connectez et configurez les dépôts Bitbucket Cloud dans Booster.', $output );
 		self::assertStringContainsString( 'WordPress 7.0 ou version ultérieure et PHP 8.2 ou version ultérieure.', $output );
 		self::assertSame( 4, substr_count( $output, '>Gratuit<' ) );
+		self::assert_badge( $output, 'Bêta & "test"', 'none', 2 );
+		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Bêta &amp; &quot;test&quot;"', $output );
 		self::assertSame( 4, substr_count( $output, '>Non installé<' ) );
 		self::assertStringContainsString( 'Bitbucket Cloud', $output );
 		self::assertStringContainsString( 'WP Pusher Migrator', $output );
@@ -453,6 +459,8 @@ final class ExtensionsPageTest extends TestCase {
 
 		$output = $this->render();
 
+		self::assert_badge( $output, 'Actif', 'stable', 1 );
+		self::assert_badge( $output, 'Installé, inactif', 'none', 1 );
 		self::assertSame( 3, substr_count( $output, '>Actif<' ) );
 		self::assertSame( 2, substr_count( $output, '>Installé, inactif<' ) );
 		self::assertSame( 1, substr_count( $output, '>Activate</button>' ) );
@@ -535,6 +543,7 @@ final class ExtensionsPageTest extends TestCase {
 
 		$output = $this->render();
 
+		self::assert_badge( $output, 'Incompatible traduit', 'high', 1 );
 		self::assertSame( 2, substr_count( $output, '>Incompatible traduit<' ) );
 		self::assertStringContainsString( 'ran-booster-badge--error', $output );
 		self::assertStringContainsString( '>Inactive<', $output );
@@ -649,6 +658,40 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'Extensions are temporarily unavailable.', $output );
 		self::assertStringNotContainsString( 'private path', $output );
 		self::assertStringNotContainsString( 'plugin-card', $output );
+	}
+
+	private static function assert_badge( string $html, string $label, string $intent, int $count ): void {
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		self::assertTrue( $document->loadHTML( '<?xml encoding="UTF-8">' . $html ) );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+		$xpath = new \DOMXPath( $document );
+		$hosts = $xpath->query( '//span[@data-ran-booster-ui-badge]' );
+		self::assertInstanceOf( \DOMNodeList::class, $hosts );
+		$matched = 0;
+		foreach ( $hosts as $host ) {
+			self::assertInstanceOf( \DOMElement::class, $host );
+			if ( $label !== $host->getAttribute( 'data-ran-booster-ui-badge-label' ) ) {
+				continue;
+			}
+			++$matched;
+			self::assertSame( 3, $host->attributes->length );
+			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+			$fallback = $xpath->query( './span[@data-ran-booster-ui-badge-fallback]', $host );
+			$mount    = $xpath->query( './span[@data-ran-booster-ui-badge-mount]', $host );
+			self::assertInstanceOf( \DOMNodeList::class, $fallback );
+			self::assertInstanceOf( \DOMNodeList::class, $mount );
+			self::assertCount( 1, $fallback );
+			self::assertCount( 1, $mount );
+			$fallback_node = $fallback->item( 0 );
+			$mount_node    = $mount->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $fallback_node );
+			self::assertInstanceOf( \DOMElement::class, $mount_node );
+			self::assertSame( $label, $xpath->evaluate( 'string(.)', $fallback_node ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(node())', $mount_node ) );
+		}
+		self::assertSame( $count, $matched );
 	}
 
 	private function define_apis_compatible_with_existing_extension_catalogue(): void {

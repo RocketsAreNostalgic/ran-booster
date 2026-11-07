@@ -1,8 +1,4 @@
 /* Release-bundled Extensions catalogue using WordPress plugin-card markup. */
-.ran-booster-admin--extensions {
-	max-inline-size: 1400px;
-}
-
 .ran-booster-extensions__body {
 	padding-block-start: 0;
 }
@@ -30,7 +26,6 @@
 	:is(
 		.ran-booster-card__mount,
 		.ran-booster-card__surface,
-		.ran-booster-card__surface > :has(> .ran-booster-card__content),
 		.ran-booster-card__content
 	) {
 	display: inherit;

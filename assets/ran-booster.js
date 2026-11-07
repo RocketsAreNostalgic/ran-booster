@@ -331,6 +331,22 @@
 			});
 		}
 
+		document.addEventListener(
+			'click',
+			function (event) {
+				if (
+					typeof window.htmx?.process === 'function' &&
+					(event.ctrlKey || event.metaKey) &&
+					event.target?.closest?.(
+						'.ran-booster-provider-task-tabs[data-ran-booster-ui-navigation="thin"] a[href][hx-get][data-ran-booster-provider-task]'
+					)
+				) {
+					event.stopPropagation();
+				}
+			},
+			true
+		);
+
 		function currentTaskRegion() {
 			return (
 				document.getElementById('ran-booster-provider-tasks') ||
@@ -433,24 +449,29 @@
 				'#ran-booster-provider-task-panel'
 			);
 			const currentTask = panel?.dataset.ranBoosterProviderTask || '';
-			let currentTab = null;
-
-			region
-				.querySelectorAll('.ran-booster-provider-task-tab')
-				.forEach(function (tab) {
-					if (!tab.dataset.ranBoosterProviderTask) {
-						return;
-					}
-					const isCurrent =
-						tab.dataset.ranBoosterProviderTask === currentTask;
-					tab.classList.toggle('current', isCurrent);
-					if (isCurrent) {
-						tab.setAttribute('aria-current', 'page');
-						currentTab = tab;
-					} else {
-						tab.removeAttribute('aria-current');
-					}
-				});
+			let currentTab = window.ranBoosterUI?.setNavigationCurrent?.(
+				region,
+				currentTask
+			);
+			if (currentTab === undefined) {
+				currentTab = null;
+				region
+					.querySelectorAll('.ran-booster-provider-task-tab')
+					.forEach(function (tab) {
+						if (!tab.dataset.ranBoosterProviderTask) {
+							return;
+						}
+						const isCurrent =
+							tab.dataset.ranBoosterProviderTask === currentTask;
+						tab.classList.toggle('current', isCurrent);
+						if (isCurrent) {
+							tab.setAttribute('aria-current', 'page');
+							currentTab = tab;
+						} else {
+							tab.removeAttribute('aria-current');
+						}
+					});
+			}
 			const currentRepositoryTab = region.querySelector(
 				'.ran-booster-repository-detail__tabs [aria-current="page"]'
 			);
@@ -517,6 +538,9 @@
 		}
 
 		activateHash(window.location.hash, true);
+		window.addEventListener('popstate', function () {
+			openDetailsForHash(root, window.location.hash);
+		});
 		window.addEventListener('hashchange', function () {
 			activateHash(window.location.hash, false);
 		});
@@ -525,7 +549,7 @@
 				activateHash(link.getAttribute('href') || '', false);
 			});
 		});
-		initDocumentationSectionObserver(root, links, sections);
+		initDocumentationSectionTracking(root, links, sections);
 		initDocumentationPrintDetails(root);
 	}
 
@@ -699,55 +723,92 @@
 		});
 	}
 
-	function initDocumentationSectionObserver(root, links, sections) {
-		if (typeof window.IntersectionObserver !== 'function') {
-			return;
-		}
-
-		const intersecting = new Map();
-		const observer = new window.IntersectionObserver(
-			function (entries) {
-				entries.forEach(function (entry) {
-					intersecting.set(entry.target, entry);
-				});
-				const activeEntries = sections
+	function initDocumentationSectionTracking(root, links, sections) {
+		let queued = false;
+		function schedule(event) {
+			if (
+				root.isConnected &&
+				event?.type === 'hashchange' &&
+				!getDocumentationSectionForHash(root, window.location.hash)
+			) {
+				return;
+			}
+			if (queued) {
+				return;
+			}
+			queued = true;
+			window.requestAnimationFrame(function () {
+				queued = false;
+				if (!root.isConnected) {
+					window.removeEventListener('scroll', schedule);
+					window.removeEventListener('resize', schedule);
+					window.removeEventListener('hashchange', schedule);
+					return;
+				}
+				const target = root.querySelector(':target');
+				const shell = document.querySelector('.ran-admin-shell');
+				const shellBottom = shell
+					? shell.getBoundingClientRect().bottom
+					: 0;
+				const paddingValue = window.getComputedStyle(
+					document.scrollingElement
+				).scrollPaddingTop;
+				const parsedPadding = parseFloat(paddingValue) || 0;
+				const padding = paddingValue.trim().endsWith('%')
+					? (parsedPadding * document.scrollingElement.clientHeight) /
+						100
+					: parsedPadding;
+				const margin = target
+					? parseFloat(
+							window.getComputedStyle(target)
+								.scrollMarginBlockStart
+						) || 0
+					: 0;
+				const visibleTop = Math.min(
+					window.innerHeight,
+					Math.max(0, shellBottom, padding)
+				);
+				const line = Math.min(
+					window.innerHeight,
+					Math.max(visibleTop, padding + margin)
+				);
+				const visible = sections
 					.map(function (section, index) {
 						return {
-							entry: intersecting.get(section),
-							index,
 							section,
+							index,
+							rect: section.getBoundingClientRect(),
 						};
 					})
-					.filter(function (candidate) {
-						return candidate.entry?.isIntersecting;
-					})
-					.sort(function (first, second) {
-						const firstDistance = Math.abs(
-							first.entry.boundingClientRect.top - 70
-						);
-						const secondDistance = Math.abs(
-							second.entry.boundingClientRect.top - 70
-						);
+					.filter(function (item) {
 						return (
-							firstDistance - secondDistance ||
-							first.index - second.index
+							item.rect.bottom > visibleTop &&
+							item.rect.top < window.innerHeight
 						);
 					});
-
-				if (activeEntries.length) {
-					setDocumentationActiveLink(
-						root,
-						links,
-						activeEntries[0].section
+				visible.sort(function (first, second) {
+					const firstSpans =
+						first.rect.top <= line && first.rect.bottom > line;
+					const secondSpans =
+						second.rect.top <= line && second.rect.bottom > line;
+					return (
+						Number(secondSpans) - Number(firstSpans) ||
+						Math.abs(first.rect.top - line) -
+							Math.abs(second.rect.top - line) ||
+						first.index - second.index
 					);
+				});
+				if (visible.length) {
+					setDocumentationActiveLink(root, links, visible[0].section);
 				}
-			},
-			{ rootMargin: '-70px 0px -65% 0px', threshold: 0 }
-		);
-
-		sections.forEach(function (section) {
-			observer.observe(section);
-		});
+			});
+		}
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', schedule);
+		window.addEventListener('hashchange', schedule);
+		root.addEventListener('toggle', schedule, true);
+		root.addEventListener('htmx:beforeCleanupElement', schedule);
+		schedule();
 	}
 
 	function initDocumentationPrintDetails(root) {

@@ -641,11 +641,16 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$is_package_edit            = true;
 		$package_branch_readiness   = null;
 
+		$GLOBALS['ran_booster_package_view_translations']['ran-booster']['Needs attention'] = 'Attention & "review"';
+
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'ran-booster-badge--error', $html );
+		unset( $GLOBALS['ran_booster_package_view_translations'] );
+		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Attention &amp; &quot;review&quot;" data-ran-booster-ui-badge-intent="high"', $html );
+		self::assertStringContainsString( 'data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--error"', $html );
+		self::assertStringContainsString( '>Attention &amp; &quot;review&quot;</span><span data-ran-booster-ui-badge-mount', $html );
 		self::assertSame( 1, substr_count( $html, '<h4 id="ran-booster-branch-readiness-heading">Branch readiness</h4>' ) );
 		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
 	}

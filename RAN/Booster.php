@@ -411,7 +411,7 @@ class Booster {
 				'provider_implementation' => 'RAN\\Booster\\Bitbucket\\BitbucketProvider',
 				'name'                    => 'Bitbucket Cloud',
 				'description'             => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
-				'details'                 => __( 'Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
+				'details'                 => __( 'Add Bitbucket Cloud support through a RAN-maintained provider extension while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
 				'features'                => array(
 					__( 'Connect and configure Bitbucket Cloud repositories in Booster.', 'ran-booster' ),
 					__( 'Use package and credential guidance for your Git provider.', 'ran-booster' ),
@@ -837,19 +837,33 @@ class Booster {
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
 		wp_enqueue_style( 'wp-components' );
-		if ( in_array( $hook, array( 'ran-booster_page_ran-booster-extensions', 'ran-booster_page_ran-booster-plugins' ), true )
-			|| ( 'toplevel_page_ran-booster' === $hook && in_array( $requested_tab, array( null, '', 'overview' ), true ) )
+		$has_ui_overlay   = in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
+		$ui_manifest_path = trailingslashit( $this->booster_path ?? dirname( __DIR__ ) ) . 'assets/lib/ran-booster-ui-manifest.json';
+		$ui_manifest      = is_file( $ui_manifest_path ) && is_readable( $ui_manifest_path ) ? wp_json_file_decode( $ui_manifest_path, array( 'associative' => true ) ) : null;
+		if ( is_array( $ui_manifest ) && isset( $ui_manifest['foundation'], $ui_manifest['overlay'] )
+			&& is_string( $ui_manifest['foundation'] ) && is_string( $ui_manifest['overlay'] )
+			&& 1 === preg_match( '/\Aran-booster-ui-foundation-[A-Za-z0-9_-]+\.js\z/', $ui_manifest['foundation'] )
+			&& 1 === preg_match( '/\Aran-booster-ui-overlay-[A-Za-z0-9_-]+\.js\z/', $ui_manifest['overlay'] )
 		) {
-			wp_enqueue_script(
-				'ran-booster-cards',
-				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
-				array( 'wp-element', 'wp-components' ),
-				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
-				true
-			);
+			wp_enqueue_script( 'wp-element' );
+			wp_enqueue_script( 'react-jsx-runtime' );
+			wp_enqueue_script( 'wp-i18n' );
+			wp_enqueue_script( 'wp-a11y' );
+			$ui_url = trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/';
+			wp_enqueue_script_module( 'ran-booster-ui', $ui_url . $ui_manifest['foundation'], array(), null );
+			if ( $has_ui_overlay ) {
+				wp_enqueue_script_module( 'ran-booster-ui-overlay', $ui_url . $ui_manifest['overlay'], array( 'ran-booster-ui' ), null );
+			}
 		}
+		wp_enqueue_script(
+			'ran-booster-cards',
+			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
+			array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y' ),
+			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
+			true
+		);
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
-			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'wp-i18n' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
+			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'wp-i18n', 'ran-booster-cards' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
 			wp_set_script_translations( 'ran-booster-settings', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 		}
 

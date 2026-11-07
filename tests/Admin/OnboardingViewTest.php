@@ -52,7 +52,10 @@ final class OnboardingViewTest extends TestCase {
 		self::assertCount( 4, $cards );
 		foreach ( array( '1. Secure credential storage', '2. Choose a Git provider', '3. Import or migrate (optional)', '4. Install and manage packages' ) as $index => $label ) {
 			$card = $cards->item( $index );
-			self::assertInstanceOf( \DOMNode::class, $card );
+			self::assertInstanceOf( \DOMElement::class, $card );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(self::section)', $card ) );
+			self::assertSame( 'overview', $card->getAttribute( 'data-ran-booster-card' ) );
+			self::assertTrue( $card->hasAttribute( 'class' ) && in_array( 'ran-booster-card', explode( ' ', $card->getAttribute( 'class' ) ), true ) );
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode exposes this native property.
 			self::assertStringContainsString( $label, $card->textContent );
 		}
@@ -157,8 +160,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Booster checks a private location', $html );
 		$xpath = $this->storage_xpath( $html );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]//form[input[@name="ran_booster[action]" and @value="create-secure-storage"] and not(ancestor::details)])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/details[contains(@class,"storage-manual")]//ol/li)' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]//details[contains(@class,"storage-manual")]/ancestor::details)' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage"]/details[@data-ran-booster-ui-disclosure-fallback and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]]//ol/li)' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]//div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage"]/details[@data-ran-booster-ui-disclosure-fallback and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]]/ancestor::details)' ) );
 		self::assertStringContainsString( 'Set up manually instead', $html );
 		self::assertStringContainsString( 'absolute private directory outside the public web root on durable local storage', $html );
 		self::assertStringContainsString( 'owned by PHP, readable and writable by PHP, and mode 0700', $html );
@@ -326,8 +329,9 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( '>Storage healthy</span>', $healthy );
 		self::assertStringContainsString( 'Custom wp-config.php path', $healthy );
 		self::assertStringContainsString( 'WordPress stores the encryption key separately.', $healthy );
+		self::assertSame( 1.0, $this->storage_xpath( $healthy )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-booster-onboarding__storage-details" and @data-ran-booster-ui-disclosure="settings-storage"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open) and summary="Storage details"]/div[@data-ran-booster-ui-disclosure-content])' ) );
 		self::assertMatchesRegularExpression(
-			'/<h3 id="ran-booster-storage">Secure credential storage<\/h3>.*>Storage healthy<\/span>\s*<\/div>\s*<p>Encrypted secrets storage is configured and authenticated\.<\/p>\s*<details class="ran-booster-onboarding__storage-details ran-booster-disclosure">/s',
+			'/<h3 id="ran-booster-storage">Secure credential storage<\/h3>.*>Storage healthy<\/span>.*?<\/div>\s*<p>Encrypted secrets storage is configured and authenticated\.<\/p>\s*<div class="ran-booster-onboarding__storage-details" data-ran-booster-ui-disclosure="settings-storage">\s*<details data-ran-booster-ui-disclosure-fallback class="ran-booster-onboarding__storage-details ran-booster-disclosure">/s',
 			$healthy
 		);
 		$details = strpos( $healthy, 'class="ran-booster-onboarding__storage-details ran-booster-disclosure"' );
@@ -343,6 +347,7 @@ final class OnboardingViewTest extends TestCase {
 
 		$broken = $this->render_storage_status( 'storage_needs_attention', 'manual' );
 		self::assertStringContainsString( '>Storage needs attention</span>', $broken );
+		self::assertSame( 2.0, $this->storage_xpath( $broken )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@data-ran-booster-ui-disclosure="settings-storage"]/details[@data-ran-booster-ui-disclosure-fallback and @open]/div[@data-ran-booster-ui-disclosure-content])' ) );
 		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details ran-booster-disclosure" open', $broken );
 		self::assertStringNotContainsString( 'WordPress stores the encryption key separately.', $broken );
 		self::assertStringContainsString( 'Use a different storage location', $broken );
@@ -384,7 +389,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( '<dt>Storage directory</dt>', $html );
 		self::assertStringNotContainsString( '<dt>Storage file</dt>', $html );
 		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-manual ran-booster-disclosure" open', $html );
-		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/details[contains(@class,"storage-manual")])' ) );
+		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage"]/details[@data-ran-booster-ui-disclosure-fallback and @open and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]])' ) );
 		self::assertStringContainsString( 'Manual setup instructions', $html );
 	}
 
@@ -416,7 +421,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Booster could not determine a safe private storage location.', $html );
 		self::assertStringContainsString( 'location_unavailable', $html );
 		self::assertStringContainsString( 'Set a storage location manually', $html );
-		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/details[summary[normalize-space(.)="Why automatic setup is unavailable"] and not(@open)])' ) );
+		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-booster-onboarding__storage-discarded" and @data-ran-booster-ui-disclosure="settings-storage"]/details[@data-ran-booster-ui-disclosure-fallback and div[@data-ran-booster-ui-disclosure-content] and summary[normalize-space(.)="Why automatic setup is unavailable"] and not(@open)])' ) );
 		self::assertStringNotContainsString( 'ran-booster-onboarding__storage-details', $html );
 		self::assertStringContainsString( '/var/www/&lt;account&gt;/.ran-booster/0123456789abcdef', $html );
 		self::assertStringContainsString( 'php_accessible_group_writable_ancestor', $html );
@@ -503,8 +508,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ), strpos( $html, 'Recent Activity' ) );
 		self::assertLessThan( strpos( $html, 'id="ran-booster-onboarding-storage-heading"' ), strpos( $html, 'Git providers' ) );
 		self::assertLessThan( strpos( $html, 'Git providers' ), strpos( $html, 'Managed packages' ) );
-		self::assertStringContainsString( '<strong>Plugins:</strong> 0', $html );
-		self::assertStringContainsString( '<strong>Themes:</strong> Unknown', $html );
+		self::assertSame( '0 managed', trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/p/span)' ) ) );
+		self::assertSame( 'Unknown', trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/p/span)' ) ) );
 		self::assertStringContainsString( 'ran-booster-badge--neutral', $html );
 		self::assertStringNotContainsString( 'id="ran-booster-overview-expiry"', $html );
 		self::assertSame( 5, substr_count( $html, '&lt;operation&gt;' ) );
@@ -518,7 +523,7 @@ final class OnboardingViewTest extends TestCase {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath   = new \DOMXPath( $document );
-		$actions = $xpath->query( '//div[contains(@class, "ran-booster-overview-package-actions__group")]/a' );
+		$actions = $xpath->query( '//div[@role="group" and (@aria-label="Plugins" or @aria-label="Themes")]//a' );
 		self::assertInstanceOf( \DOMNodeList::class, $actions );
 		$action_labels = array();
 		foreach ( $actions as $action ) {
@@ -526,9 +531,9 @@ final class OnboardingViewTest extends TestCase {
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM owns textContent.
 			$action_labels[] = trim( $action->textContent );
 		}
-		self::assertSame( array( 'Install a plugin', 'Manage plugins', 'Install a theme', 'Manage themes' ), $action_labels );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Plugins"][a[1]="Install a plugin" and a[2]="Manage plugins"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Themes"][a[1]="Install a theme" and a[2]="Manage themes"])' ) );
+		self::assertSame( array( 'Manage plugins', 'Install a plugin', 'Manage themes', 'Install a theme' ), $action_labels );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Plugins"][div/a[1]="Manage plugins" and div/a[2]="Install a plugin"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@role="group" and @aria-label="Themes"][div/a[1]="Manage themes" and div/a[2]="Install a theme"])' ) );
 		self::assertStringNotContainsString( 'This changes the view for all site administrators.', $html );
 		self::assertStringContainsString( 'value="onboarding"', $html );
 		self::assertStringContainsString( 'ran-booster-overview-presentation', $html );
@@ -572,6 +577,15 @@ final class OnboardingViewTest extends TestCase {
 				),
 				array( '2', 'Unknown', 'Unknown' ),
 			),
+			array(
+				array(
+					'plugins'  => null,
+					'themes'   => 3,
+					'disabled' => null,
+					'complete' => false,
+				),
+				array( 'Unknown', '3', 'Unknown' ),
+			),
 		);
 		foreach ( $cases as list( $inventory, $expected ) ) {
 			$html     = $this->render_view(
@@ -588,13 +602,18 @@ final class OnboardingViewTest extends TestCase {
 			$document = new \DOMDocument();
 			$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 			$xpath = new \DOMXPath( $document );
-			self::assertSame( 'Plugins: ' . $expected[0], trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/p)' ) ) );
-			self::assertSame( 'Themes: ' . $expected[1], trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/p)' ) ) );
-			self::assertSame( 'Updates disabled: ' . $expected[2], trim( (string) $xpath->evaluate( 'string(//*[@aria-labelledby="ran-booster-overview-packages"]/p)' ) ) );
-			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create', $xpath->evaluate( 'string(//div[@aria-label="Plugins"]/a[1]/@href)' ) );
-			self::assertSame( '/plugins', $xpath->evaluate( 'string(//div[@aria-label="Plugins"]/a[2]/@href)' ) );
-			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-themes-create', $xpath->evaluate( 'string(//div[@aria-label="Themes"]/a[1]/@href)' ) );
-			self::assertSame( '/themes', $xpath->evaluate( 'string(//div[@aria-label="Themes"]/a[2]/@href)' ) );
+			foreach ( array( 'Plugins', 'Themes' ) as $index => $label ) {
+				$group = '//div[@role="group" and @aria-label="' . $label . '"]';
+				self::assertSame( 1.0, $xpath->evaluate( 'count(' . $group . ')' ) );
+				self::assertSame( $label, trim( (string) $xpath->evaluate( 'string(' . $group . '/p/strong)' ) ) );
+				$count = 'Unknown' === $expected[ $index ] ? 'Unknown' : $expected[ $index ] . ' managed';
+				self::assertSame( $count, trim( (string) $xpath->evaluate( 'string(' . $group . '/p/span)' ) ) );
+			}
+			self::assertSame( 'Updates disabled: ' . $expected[2], trim( (string) $xpath->evaluate( 'string(//*[@aria-labelledby="ran-booster-overview-packages"]/p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")])' ) ) );
+			self::assertSame( '/plugins', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/div/a[1]/@href)' ) );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/div/a[2]/@href)' ) );
+			self::assertSame( '/themes', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/div/a[1]/@href)' ) );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-themes-create', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/div/a[2]/@href)' ) );
 		}
 	}
 
@@ -616,7 +635,10 @@ final class OnboardingViewTest extends TestCase {
 			$target = 'onboarding' === $view ? 'dashboard' : 'onboarding';
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/input[@name="ran_booster[presentation]" and @value="' . $target . '"])' ) );
 			$label = 'onboarding' === $view ? 'Skip onboarding' : 'Return to onboarding';
-			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/button[@type="submit" and @class="button" and text()="' . $label . '"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/span[@data-ran-booster-ui-button="overview-presentation"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/span/button[@type="submit" and @class="button" and @data-ran-booster-ui-button-fallback and text()="' . $label . '"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form/span/span[@data-ran-booster-ui-button-mount and not(node())])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/form//button)' ) );
 			$heading     = 'onboarding' === $view ? 'Prepare your site' : 'Overview';
 			$description = 'onboarding' === $view ? 'Public repositories do not need credentials or webhooks.' : 'Review recent activity, managed packages and your site’s configuration.';
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//header/div/h2[@id="ran-booster-onboarding-heading" and @class="ran-booster-page-heading__title" and text()="' . $heading . '"]/following-sibling::p[@class="ran-booster-page-heading__description" ])' ) );
@@ -733,7 +755,14 @@ final class OnboardingViewTest extends TestCase {
 			self::assertStringContainsString( 'inventory is incomplete or unavailable', $html );
 			self::assertStringContainsString( '&lt;storage failure&gt;', $html );
 			self::assertStringContainsString( 'Review storage', $html );
+			$xpath = $this->storage_xpath( $html );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-overview-attention" and @data-ran-booster-card="overview" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")]/h3[@id="ran-booster-overview-attention"])' ) );
 		}
+	}
+
+	public function test_attention_card_is_absent_when_no_attention_is_needed(): void {
+		$xpath = $this->storage_xpath( $this->render_view( null, null, array( 'storage_summary' => array( 'status' => 'storage_healthy' ) ) ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-overview-attention"])' ) );
 	}
 
 	public function test_missing_storage_status_is_unavailable_even_with_complete_inventory(): void {
@@ -840,19 +869,44 @@ final class OnboardingViewTest extends TestCase {
 		);
 		$html  = $this->render_view( null, null, $extra );
 		self::assertStringContainsString( 'Included with Booster', $html );
-		self::assertStringContainsString( 'Provided by Bitbucket Cloud', $html );
+		self::assertSame( 1, substr_count( $html, '<strong>Bitbucket Cloud</strong>' ) );
+		self::assertStringContainsString( 'Provider extension', $html );
 		self::assertStringNotContainsString( 'Custom provider', $html );
-		$extra['provider_summaries'][0]['source_kind'] = 'replacement';
-		$extra['provider_summaries'][0]['source_name'] = '<Selected Plugin>';
+		$extra['provider_summaries'][1]['source_name'] = '<Custom integration>';
 		$html = $this->render_view( null, null, $extra );
-		self::assertStringContainsString( 'Provided by &lt;Selected Plugin&gt;', $html );
-		self::assertStringContainsString( 'Custom provider', $html );
+		self::assertStringContainsString( 'Provider extension: &lt;Custom integration&gt;', $html );
+		self::assertStringNotContainsString( '<Custom integration>', $html );
+		self::assertStringNotContainsString( 'Rockets Are Nostalgic', $html );
+		$extra['provider_summaries'][1]['source_name'] = 'Bitbucket Cloud';
+
+		$extra['provider_summaries'][0]['source_kind']                                    = 'replacement';
+		$extra['provider_summaries'][0]['source_name']                                    = '<Selected Plugin>';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Custom provider'] = 'Custom <provider> & "partner"';
+		$html = $this->render_view( null, null, $extra );
+		self::assertStringContainsString( 'Provider extension: &lt;Selected Plugin&gt;', $html );
+		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Custom &lt;provider&gt; &amp; &quot;partner&quot;"', $html );
+		self::assertStringContainsString( 'Custom &lt;provider&gt; &amp; &quot;partner&quot;</span>', $html );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$hosts = $xpath->query( '//section[@aria-labelledby="ran-booster-overview-providers"]//span[@data-ran-booster-ui-badge]' );
+		self::assertInstanceOf( \DOMNodeList::class, $hosts );
+		self::assertCount( 1, $hosts );
+		$host = $hosts->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $host );
+		self::assertSame( 'Custom <provider> & "partner"', $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+		self::assertSame( 'none', $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+		self::assertFalse( $host->hasAttribute( 'class' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-fallback and @class="ran-booster-badge ran-booster-badge--neutral"])', $host ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(./*)', $host ) );
+		self::assertSame( 'Custom <provider> & "partner"', $xpath->evaluate( 'string(.)', $host ) );
 		self::assertStringNotContainsString( '<Selected Plugin>', $html );
 		$extra['provider_summaries'][0]['source_kind'] = null;
 		$extra['provider_summaries'][0]['source_name'] = null;
 		$html = $this->render_view( null, null, $extra );
 		self::assertStringContainsString( 'Provider source unknown', $html );
-		self::assertStringNotContainsString( 'Custom provider', $html );
+		self::assertStringNotContainsString( 'Custom &lt;provider&gt;', $html );
 	}
 
 	public function test_expiry_reminders_are_shared_with_attention_and_dashboard(): void {
@@ -943,6 +997,108 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Observed:', $html );
 	}
 
+	public function test_storage_badge_projects_each_status_on_both_surfaces(): void {
+		$cases = array(
+			'path_configured'         => array( 'Path configured', 'none', 'neutral' ),
+			'storage_healthy'         => array( 'Storage healthy', 'stable', 'ok' ),
+			'storage_needs_attention' => array( 'Storage needs attention', 'medium', 'warning' ),
+			'setup_available'         => array( 'Setup available', 'none', 'neutral' ),
+			'manual_required'         => array( 'Needs attention', 'medium', 'warning' ),
+			'unsupported'             => array( 'Unavailable', 'high', 'error' ),
+			'pending_verification'    => array( 'Verification pending', 'informational', 'pending' ),
+			'unrecognized'            => array( 'Status unknown', 'none', 'neutral' ),
+			''                        => array( 'Status unknown', 'none', 'neutral' ),
+		);
+		foreach ( $cases as $status => $expected ) {
+			foreach ( array( 'overview', 'settings' ) as $surface ) {
+				$html  = 'overview' === $surface
+					? $this->render_view( null, null, array( 'storage_summary' => array( 'status' => $status ) ) )
+					: $this->render_storage_status( $status, 'automatic' );
+				$xpath = $this->storage_xpath( $html );
+				$hosts = $xpath->query( '//span[@data-ran-booster-storage-status]' );
+				self::assertInstanceOf( \DOMNodeList::class, $hosts );
+				self::assertCount( 1, $hosts );
+				$host = $hosts->item( 0 );
+				self::assertInstanceOf( \DOMElement::class, $host );
+				self::assertSame( 4, $host->attributes->length );
+				self::assertTrue( $host->hasAttribute( 'data-ran-booster-ui-badge' ) );
+				self::assertSame( $status, $host->getAttribute( 'data-ran-booster-storage-status' ) );
+				self::assertSame( $expected[0], $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+				self::assertSame( $expected[1], $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-fallback and @class="ran-booster-badge ran-booster-badge--' . $expected[2] . '"])', $host ) );
+				self::assertSame( $expected[0], $xpath->evaluate( 'string(./span[@data-ran-booster-ui-badge-fallback])', $host ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live] | self::*[@role or @aria-live])', $host ) );
+				self::assertStringNotContainsString( 'canary', $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+			}
+		}
+		foreach ( array(
+			$this->render_view( null, null, array( 'storage_summary' => array() ) ),
+			$this->render_view(
+				null,
+				array(
+					'message'             => 'Missing status',
+					'can_provision'       => false,
+					'config_alternatives' => null,
+				)
+			),
+		) as $html ) {
+			$xpath = $this->storage_xpath( $html );
+			self::assertSame( 'Status unknown', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-ui-badge-label)' ) );
+			self::assertSame( 'none', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-ui-badge-intent)' ) );
+		}
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Status unknown'] = 'Unknown <storage> & "quoted"';
+		foreach ( array( $this->render_view(), $this->render_storage_status( '', 'automatic' ) ) as $html ) {
+			$xpath = $this->storage_xpath( $html );
+			self::assertSame( 'Unknown <storage> & "quoted"', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-ui-badge-label)' ) );
+			self::assertSame( 'Unknown <storage> & "quoted"', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/span[@data-ran-booster-ui-badge-fallback])' ) );
+		}
+	}
+
+	public function test_expiry_badges_preserve_labels_and_static_fallbacks(): void {
+		foreach ( array(
+			'expired' => 'high',
+			'urgent'  => 'high',
+			'warning' => 'medium',
+		) as $stage => $intent ) {
+			$item  = array(
+				'provider'             => 'gh',
+				'provider_label'       => 'GitHub',
+				'label'                => 'Credential',
+				'badge_label'          => 'Expires <soon> & "quoted"',
+				'stage'                => $stage,
+				'effective_expires_at' => 'private-date',
+				'source'               => 'private-source',
+				'observed_at'          => null,
+				'url'                  => '/credentials',
+			);
+			$html  = $this->render_view(
+				null,
+				null,
+				array(
+					'credential_expiry' => array(
+						'status' => 'captured',
+						'total'  => 1,
+						'items'  => array( $item ),
+					),
+				)
+			);
+			$xpath = $this->storage_xpath( $html );
+			$hosts = $xpath->query( '//a[@href="/credentials"]/following-sibling::span[@data-ran-booster-ui-badge]' );
+			self::assertInstanceOf( \DOMNodeList::class, $hosts );
+			self::assertCount( 1, $hosts );
+			$host = $hosts->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $host );
+			self::assertSame( 3, $host->attributes->length );
+			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+			self::assertSame( $item['badge_label'], $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+			self::assertSame( $item['badge_label'], $xpath->evaluate( 'string(./span[@data-ran-booster-ui-badge-fallback])', $host ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live] | self::*[@role or @aria-live])', $host ) );
+			self::assertStringNotContainsString( 'private-', $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+		}
+	}
+
 	private function storage_xpath( string $html ): \DOMXPath {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NONET | LIBXML_NOERROR | LIBXML_NOWARNING );
@@ -1011,6 +1167,7 @@ final class OnboardingViewTest extends TestCase {
 		$prompt = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-onboarding ")]/*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-onboarding__storage ") and contains(concat(" ", normalize-space(@class), " "), " fixture-migration ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $prompt );
 		self::assertCount( 1, $prompt );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[contains(concat(" ", normalize-space(@class), " "), " fixture-migration ")]/ancestor-or-self::*[@data-ran-booster-card])' ) );
 
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] = array(
 			static function (): void {

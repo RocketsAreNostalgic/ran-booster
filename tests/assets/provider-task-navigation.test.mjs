@@ -285,6 +285,51 @@ test('provider task requests expose progress and notify swapped controls', () =>
 	assert.equal(state.dispatched[0].detail.root, state.region);
 });
 
+test('committed navigation delegates to the shared Link owner before focus without a second writer', () => {
+	for (const handled of [true, false]) {
+		const state = fixture();
+		const focused = [];
+		const live = { focus: () => focused.push('focus') };
+		let nativeWrites = 0;
+		state.region.querySelectorAll = () => {
+			nativeWrites++;
+			return [];
+		};
+		const calls = [];
+		const init = loadFunction('initProviderTaskNavigation', {
+			CustomEvent: TestCustomEvent,
+			document: state.document,
+			initProviderRepositoryFilter() {},
+			window: {
+				location: new URL('https://example.test/?panel=repositories'),
+				addEventListener() {},
+				ranBoosterUI: {
+					setNavigationCurrent(region, task) {
+						calls.push([region, task]);
+						focused.push('commit');
+						return handled ? live : null;
+					},
+				},
+			},
+		});
+		init();
+		const oldRequest = { target: state.panel, xhr: {} };
+		const detail = { target: state.panel, xhr: {} };
+		state.listeners.get('htmx:beforeRequest')({ detail: oldRequest });
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		state.listeners.get('htmx:afterSwap')({ detail: oldRequest });
+		assert.equal(calls.length, 0);
+		state.listeners.get('htmx:afterSwap')({ detail });
+		assert.deepEqual(calls, [[state.region, 'repositories']]);
+		assert.equal(nativeWrites, 0);
+		assert.deepEqual(focused, handled ? ['commit', 'focus'] : ['commit']);
+		assert.equal(
+			state.dispatched[0].type,
+			'ran-booster:provider-tasks-ready'
+		);
+	}
+});
+
 test('repository task swaps restore focus when HTMX reports the swapped region as elt', () => {
 	const state = fixture();
 	const init = loadFunction('initProviderTaskNavigation', {

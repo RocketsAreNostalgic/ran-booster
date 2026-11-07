@@ -33,13 +33,27 @@ function createLink(href) {
 	};
 }
 
-function createFixture({ hash = '#first', observer = true } = {}) {
+function createFixture({
+	hash = '#first',
+	observer = true,
+	margin = 192,
+	childMargin = 0,
+	padding = 32,
+	shellBottom = 0,
+} = {}) {
 	const sections = [];
 	function createSection(id) {
 		let isOpen = false;
 		let name = 'ran-booster-documentation';
 		const section = {
 			id,
+			rect: {
+				top: id === 'first' ? 166 : 224,
+				bottom: id === 'first' ? 200 : 400,
+			},
+			getBoundingClientRect() {
+				return this.rect;
+			},
 			get open() {
 				return isOpen;
 			},
@@ -76,6 +90,7 @@ function createFixture({ hash = '#first', observer = true } = {}) {
 	const first = createSection('first');
 	const second = createSection('second');
 	const child = {};
+	const shell = { getBoundingClientRect: () => ({ bottom: shellBottom }) };
 	const links = [createLink('#first'), createLink('#second')];
 	const targets = new Map([
 		['first', first],
@@ -89,6 +104,15 @@ function createFixture({ hash = '#first', observer = true } = {}) {
 			return section === first || section === second;
 		},
 		dataset: {},
+		isConnected: true,
+		addEventListener(name, callback) {
+			windowListeners.set('root:' + name, callback);
+		},
+		querySelector(selector) {
+			return selector === ':target'
+				? targets.get(window.location.hash.slice(1)) || null
+				: null;
+		},
 		ownerDocument: null,
 		querySelectorAll(selector) {
 			if (selector === '.ran-booster-documentation__index a[href^="#"]') {
@@ -121,12 +145,16 @@ function createFixture({ hash = '#first', observer = true } = {}) {
 			return targets.get(id) || null;
 		},
 		querySelector(selector) {
-			return selector === '.ran-booster-documentation' ? root : null;
+			if (selector === '.ran-booster-documentation') {
+				return root;
+			}
+			return selector === '.ran-admin-shell' ? shell : null;
 		},
 		querySelectorAll() {
 			return [];
 		},
 		readyState: 'complete',
+		scrollingElement: { clientHeight: 500 },
 	};
 	root.ownerDocument = document;
 
@@ -138,21 +166,66 @@ function createFixture({ hash = '#first', observer = true } = {}) {
 		observers.push(this);
 	}
 
+	const listenerSets = new Map();
+	const frames = [];
 	const window = {
+		innerHeight: 500,
+		requestAnimationFrame(callback) {
+			frames.push(callback);
+		},
+		getComputedStyle(element) {
+			return element === document.scrollingElement
+				? { scrollPaddingTop: String(padding) }
+				: {
+						scrollMarginBlockStart: String(
+							element === child ? childMargin : margin
+						),
+					};
+		},
 		addEventListener(name, callback) {
-			windowListeners.set(name, callback);
+			if (!listenerSets.has(name)) {
+				listenerSets.set(name, new Set());
+				windowListeners.set(name, (event) =>
+					listenerSets.get(name).forEach((fn) => fn(event))
+				);
+			}
+			listenerSets.get(name).add(callback);
+		},
+		removeEventListener(name, callback) {
+			listenerSets.get(name)?.delete(callback);
 		},
 		location: { hash },
 		IntersectionObserver: observer ? IntersectionObserver : undefined,
 	};
-	Function(
-		'document',
-		'window',
-		'IntersectionObserver',
-		source
-	)(document, window, observer ? IntersectionObserver : undefined);
+	function initialize() {
+		Function(
+			'document',
+			'window',
+			'IntersectionObserver',
+			source
+		)(document, window, observer ? IntersectionObserver : undefined);
+	}
+	initialize();
 
-	return { first, links, observers, second, window, windowListeners };
+	return {
+		first,
+		root,
+		listenerSets,
+		initialize,
+		links,
+		observers,
+		second,
+		window,
+		windowListeners,
+		pending() {
+			return frames.length;
+		},
+		flush() {
+			while (frames.length) {
+				frames.shift()();
+			}
+		},
+	};
 }
 
 test('initial and changed hashes open their top-level sections and update the index', () => {
@@ -186,6 +259,31 @@ test('child anchors open and activate their containing indexed section', () => {
 	assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
 });
 
+test('history opens the child article before native scroll restoration and hashchange', () => {
+	const fixture = createFixture({ hash: '#second' });
+	fixture.window.location.hash = '#child';
+	fixture.windowListeners.get('popstate')();
+
+	assert.equal(fixture.first.open, true);
+	assert.equal(fixture.second.open, false);
+	assert.equal(fixture.window.location.hash, '#child');
+	fixture.windowListeners.get('hashchange')();
+	assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
+});
+
+test('history with an invalid fragment leaves the open article and current link intact', () => {
+	for (const hash of ['#missing', '#%E0%A4%A']) {
+		const fixture = createFixture({ hash: '#second' });
+		fixture.window.location.hash = hash;
+		fixture.windowListeners.get('popstate')();
+
+		assert.equal(fixture.second.open, true);
+		assert.equal(fixture.first.open, false);
+		assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+		assert.equal(fixture.window.location.hash, hash);
+	}
+});
+
 test('malformed and unknown hashes preserve the current active link safely', () => {
 	const fixture = createFixture();
 
@@ -198,31 +296,19 @@ test('malformed and unknown hashes preserve the current active link safely', () 
 	assert.equal(fixture.links[1].hasAttribute('aria-current'), false);
 });
 
-test('the observer picks the section nearest the activation line without rewriting the URL', () => {
-	const fixture = createFixture({ hash: '#first' });
-	const observer = fixture.observers[0];
-
-	assert.deepEqual(observer.observed, [fixture.first, fixture.second]);
-	assert.deepEqual(observer.options, {
-		rootMargin: '-70px 0px -65% 0px',
-		threshold: 0,
-	});
-	observer.callback([
-		{
-			boundingClientRect: { top: 20 },
-			isIntersecting: true,
-			target: fixture.first,
-		},
-		{
-			boundingClientRect: { top: 80 },
-			isIntersecting: true,
-			target: fixture.second,
-		},
-	]);
-
-	assert.equal(fixture.links[0].hasAttribute('aria-current'), false);
-	assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
-	assert.equal(fixture.window.location.hash, '#first');
+test('invalid hash changes preserve the settled section until the reader scrolls', () => {
+	for (const hash of ['#missing', '#%E0%A4%A']) {
+		const fixture = createFixture({ hash: '#second' });
+		fixture.flush();
+		fixture.window.location.hash = hash;
+		fixture.windowListeners.get('hashchange')({ type: 'hashchange' });
+		fixture.flush();
+		assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+		fixture.windowListeners.get('scroll')({ type: 'scroll' });
+		fixture.flush();
+		assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
+		assert.equal(fixture.window.location.hash, hash);
+	}
 });
 
 test('without IntersectionObserver, deep links and click activation still work', () => {
@@ -263,4 +349,108 @@ test('printing opens every documentation disclosure and restores its exact prior
 	);
 	fixture.first.open = true;
 	assert.equal(fixture.second.open, false);
+});
+
+test('scroll tracking updates from fresh geometry without changing the hash', () => {
+	const fixture = createFixture({ hash: '#second' });
+	fixture.flush();
+	assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+	fixture.first.rect = { top: 201, bottom: 234 };
+	fixture.second.rect = { top: 259, bottom: 400 };
+	fixture.windowListeners.get('scroll')?.();
+	fixture.flush();
+	assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
+	assert.equal(fixture.window.location.hash, '#second');
+	fixture.first.rect = { top: 166, bottom: 200 };
+	fixture.second.rect = { top: 224, bottom: 400 };
+	fixture.windowListeners.get('scroll')?.();
+	fixture.flush();
+	assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+});
+
+test('child target margin and root padding determine the reading line', () => {
+	const fixture = createFixture({
+		hash: '#child',
+		childMargin: 100,
+		padding: 20,
+	});
+	fixture.first.rect = { top: 30, bottom: 80 };
+	fixture.second.rect = { top: 110, bottom: 200 };
+	fixture.flush();
+	assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+	assert.equal(fixture.window.location.hash, '#child');
+});
+
+test('a visible shell guides a no-hash page and resize refreshes geometry', () => {
+	const fixture = createFixture({ hash: '', shellBottom: 144, padding: 0 });
+	fixture.first.rect = { top: 30, bottom: 70 };
+	fixture.second.rect = { top: 130, bottom: 180 };
+	fixture.flush();
+	assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+	fixture.first.rect = { top: 140, bottom: 180 };
+	fixture.second.rect = { top: 200, bottom: 240 };
+	fixture.windowListeners.get('resize')?.();
+	fixture.flush();
+	assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
+});
+
+test('an open article spanning the reading line stays current', () => {
+	const fixture = createFixture({ hash: '#second' });
+	fixture.first.rect = { top: 10, bottom: 250 };
+	fixture.second.rect = { top: 230, bottom: 260 };
+	fixture.flush();
+	assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
+});
+
+test('scroll events coalesce into one frame and ignore content behind the shell', () => {
+	const fixture = createFixture({ hash: '', shellBottom: 144, padding: 0 });
+	fixture.first.rect = { top: 140, bottom: 143 };
+	fixture.second.rect = { top: 200, bottom: 250 };
+	fixture.windowListeners.get('scroll')?.();
+	fixture.windowListeners.get('scroll')?.();
+	assert.equal(fixture.pending(), 1);
+	fixture.flush();
+	assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+	assert.equal(fixture.window.location.hash, '');
+});
+
+test('percentage scroll padding resolves against the scrolling viewport', () => {
+	const fixture = createFixture({ hash: '', shellBottom: 0, padding: '20%' });
+	fixture.first.rect = { top: 10, bottom: 50 };
+	fixture.second.rect = { top: 90, bottom: 120 };
+	fixture.flush();
+	assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+});
+
+test('detached documentation releases only its tracking listeners', () => {
+	const fixture = createFixture({ hash: '#second' });
+	fixture.flush();
+	assert.equal(fixture.listenerSets.get('hashchange').size, 2);
+	fixture.windowListeners.get('root:htmx:beforeCleanupElement')?.();
+	fixture.root.isConnected = false;
+	fixture.first.rect = { top: 224, bottom: 300 };
+	fixture.second.rect = { top: 350, bottom: 400 };
+	fixture.flush();
+	assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+	assert.equal(fixture.listenerSets.get('scroll').size, 0);
+	assert.equal(fixture.listenerSets.get('resize').size, 0);
+	assert.equal(fixture.listenerSets.get('hashchange').size, 1);
+});
+
+test('reinitializing the same connected documentation does not duplicate tracking', () => {
+	const fixture = createFixture();
+	fixture.initialize();
+	assert.equal(fixture.listenerSets.get('scroll').size, 1);
+	assert.equal(fixture.listenerSets.get('resize').size, 1);
+	assert.equal(fixture.listenerSets.get('hashchange').size, 2);
+});
+
+test('a scroll after native removal cleans the tracking listeners', () => {
+	const fixture = createFixture();
+	fixture.flush();
+	fixture.root.isConnected = false;
+	fixture.windowListeners.get('scroll')();
+	fixture.flush();
+	assert.equal(fixture.listenerSets.get('scroll').size, 0);
+	assert.equal(fixture.listenerSets.get('hashchange').size, 1);
 });

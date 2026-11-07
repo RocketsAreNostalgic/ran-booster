@@ -1,21 +1,17 @@
-.ran-booster-admin .ran-booster-troubleshooting {
-	max-inline-size: 1200px;
-}
-
 .ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {
 	background: var(--ran-booster-surface-info);
 }
 
 .ran-booster-admin
 	.ran-booster-troubleshooting__installation-card
-	> .ran-booster-page-shell__header {
+	.ran-booster-page-shell__header {
 	padding-block-start: var(--ran-booster-space-18);
 	padding-block-end: var(--ran-booster-space-6);
 }
 
 .ran-booster-admin
 	.ran-booster-troubleshooting__installation-card
-	> .ran-booster-page-shell__body
+	.ran-booster-page-shell__body
 	> p:first-child {
 	margin-block-start: 0;
 }
@@ -454,4 +450,46 @@
 
 .ran-booster-admin [data-webhook-url-copy].is-copied::before {
 	visibility: visible;
+}
+
+/* The mounted Activity Card owns its frame and content inset. */
+.ran-booster-admin
+	.ran-booster-troubleshooting
+	> .ran-booster-page-shell__body:has(
+		> [data-ran-booster-card="activity"][data-ran-booster-ui-mounted]
+	) {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="activity"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content {
+	padding: var(--ran-booster-space-24);
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-admin
+		[data-ran-booster-card="activity"][data-ran-booster-ui-mounted]
+		.ran-booster-card__content {
+		padding: var(--ran-booster-space-18);
+	}
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="installation-component"][data-ran-booster-ui-mounted] {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="installation-component"][data-ran-booster-ui-mounted]
+	.ran-booster-card__content {
+	padding: 0;
 }

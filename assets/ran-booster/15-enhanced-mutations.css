@@ -47,29 +47,48 @@
 .ran-booster-general-snackbar .components-snackbar-list {
 	position: fixed;
 	z-index: 100;
+	right: auto;
 	inset-block-end: max(80px, calc(env(safe-area-inset-bottom) + 24px));
-	inset-inline-end: max(
-		24px,
-		env(safe-area-inset-right),
-		env(safe-area-inset-left)
+	--ran-booster-snackbar-gutter: max(
+		16px,
+		env(safe-area-inset-left),
+		env(safe-area-inset-right)
 	);
-	inline-size: min(360px, calc(100vw - 208px));
+	inline-size: min(
+		360px,
+		calc(100vw - 2 * var(--ran-booster-snackbar-gutter))
+	);
+	left: clamp(
+		var(--ran-booster-snackbar-gutter),
+		calc(
+			var(--ran-booster-snackbar-center, 50vw) -
+				min(180px, 50vw - var(--ran-booster-snackbar-gutter))
+		),
+		calc(
+			100vw - var(--ran-booster-snackbar-gutter) -
+				min(360px, 100vw - 2 * var(--ran-booster-snackbar-gutter))
+		)
+	);
 	max-block-size: calc(100vh - 140px);
 	overflow-y: auto;
 	pointer-events: none;
+}
+
+.ran-booster-general-snackbar .components-snackbar-list__notice-container {
+	display: flex;
+	justify-content: center;
 }
 
 .ran-booster-general-snackbar .components-snackbar {
 	pointer-events: auto;
 }
 
-@media (max-width: 782px) {
+@media (min-width: 783px) {
 	.ran-booster-general-snackbar .components-snackbar-list {
-		inset-inline-end: max(
-			16px,
-			env(safe-area-inset-right),
-			env(safe-area-inset-left)
+		--ran-booster-snackbar-gutter: max(
+			24px,
+			env(safe-area-inset-left),
+			env(safe-area-inset-right)
 		);
-		inline-size: min(360px, calc(100vw - 32px));
 	}
 }

@@ -877,29 +877,84 @@
 				return false;
 			}
 
+			let intent = 'high';
+			if (variants[state] === 'pending') {
+				intent = 'informational';
+			} else if (variants[state] === 'ok') {
+				intent = 'stable';
+			}
+
 			row.setAttribute('data-attempt-state', state);
 			const badge = row.querySelector(
 				'[data-ran-booster-activity-badge]'
 			);
 			if (badge) {
 				badge.hidden = false;
-				badge.className =
-					'ran-booster-badge ran-booster-badge--' + variants[state];
-				badge.textContent = sprintf(
+				const label = sprintf(
 					/* translators: %s: deployment state label. */
 					__('Deployment: %s', 'ran-booster'),
 					stateLabels[state]
 				);
+				const fallback = badge.hasAttribute('data-ran-booster-ui-badge')
+					? badge.querySelector(
+							'[data-ran-booster-ui-badge-fallback]'
+						)
+					: badge;
+				fallback.className =
+					'ran-booster-badge ran-booster-badge--' + variants[state];
+				fallback.textContent = label;
+				if (fallback !== badge) {
+					badge.setAttribute(
+						'data-ran-booster-ui-badge-label',
+						label
+					);
+					badge.setAttribute(
+						'data-ran-booster-ui-badge-intent',
+						intent
+					);
+					badge.dispatchEvent(
+						new window.CustomEvent('ran-booster:ui-badge-update', {
+							bubbles: true,
+						})
+					);
+				}
 			}
 
 			const activityState = row.nextElementSibling?.querySelector(
 				'[data-ran-booster-activity-state]'
 			);
 			if (activityState) {
-				activityState.className =
+				const fallback = activityState.hasAttribute(
+					'data-ran-booster-ui-badge'
+				)
+					? activityState.querySelector(
+							'[data-ran-booster-ui-badge-fallback]'
+						)
+					: activityState;
+				fallback.className =
+					(fallback === activityState
+						? ''
+						: 'ran-booster-badge ran-booster-badge--' +
+							variants[state] +
+							' ') +
 					'ran-booster-deployment-state ran-booster-deployment-state--' +
 					state;
-				activityState.textContent = stateLabels[state];
+				fallback.textContent = stateLabels[state];
+				if (fallback !== activityState) {
+					activityState.setAttribute(
+						'data-ran-booster-ui-badge-label',
+						stateLabels[state]
+					);
+					activityState.setAttribute(
+						'data-ran-booster-ui-badge-intent',
+						intent
+					);
+					activityState.dispatchEvent(
+						new window.CustomEvent('ran-booster:ui-badge-update', {
+							bubbles: true,
+						})
+					);
+				}
 			}
 
 			const button = row.querySelector(

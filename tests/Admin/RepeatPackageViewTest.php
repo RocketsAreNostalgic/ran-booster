@@ -139,6 +139,9 @@ final class RepeatPackageViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Git provider unavailable" data-ran-booster-ui-badge-intent="high"', $html );
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--error"', $html );
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-mount', $html );
 			self::assertMatchesRegularExpression( '/href="[^"]*page=' . $package_view->get_page_slug() . '&amp;package=[^"]*&amp;return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh" class="button">Edit settings/', $html );
 			$document = new \DOMDocument();
 			$previous = libxml_use_internal_errors( true );
@@ -146,13 +149,12 @@ final class RepeatPackageViewTest extends TestCase {
 			libxml_clear_errors();
 			libxml_use_internal_errors( $previous );
 			$xpath = new \DOMXPath( $document );
-			if ( 'plugin' === $package_view->get_type() ) {
-				$this->assert_xpath_count( 2, $xpath, '//*[@id="ran-booster-plugin-collection"]//form[@method="get"]' );
-				$this->assert_xpath_count( 1, $xpath, '//*[@id="ran-booster-plugin-collection"]//form[@id="ran-booster-plugin-bulk-form" and @method="POST"]' );
-				$this->assert_xpath_count( 1, $xpath, '//*[@id="ran-booster-plugin-collection"]//table[@data-package-type="plugin"]//input[@form="ran-booster-plugin-bulk-form" and @type="checkbox"]' );
-			} else {
-				$this->assert_xpath_count( 0, $xpath, '//*[@id="ran-booster-plugin-collection"]' );
-			}
+			$type  = $package_view->get_type();
+			$host  = '//*[@id="ran-booster-' . $type . '-collection" and @data-ran-booster-card="' . $type . 's"]';
+			$this->assert_xpath_count( 1, $xpath, $host . '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-package-collection__toolbar ")]' );
+			$this->assert_xpath_count( 2, $xpath, $host . '//form[@method="get"]' );
+			$this->assert_xpath_count( 1, $xpath, $host . '//form[@id="ran-booster-' . $type . '-bulk-form" and @method="POST"]' );
+			$this->assert_xpath_count( 1, $xpath, $host . '//table[@data-package-type="' . $type . '"]//input[@form="ran-booster-' . $type . '-bulk-form" and @type="checkbox"]' );
 			$this->assert_xpath_count( 0, $xpath, '//form//form' );
 		}
 	}
@@ -241,6 +243,7 @@ final class RepeatPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
 		$html = (string) ob_get_clean();
 		$form = $this->form_by_id( $html, 'ran-booster-package-create-form' );
+		self::assertStringNotContainsString( 'data-ran-booster-card="package-edit"', $html );
 
 		self::assertStringContainsString( 'data-ran-booster-native-submit', $form );
 		self::assertStringContainsString( 'data-ran-booster-package-create="1"', $html );
@@ -426,6 +429,12 @@ final class RepeatPackageViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card" data-ran-booster-card="package-edit" aria-labelledby="ran-booster-package-operation-heading"', $html );
+		self::assertMatchesRegularExpression( '/<select[^>]*name="ran_booster\[deployment_policy\]"[^>]*form="ran-booster-package-edit-form"/', $html );
+		self::assertMatchesRegularExpression( '/<button[^>]*form="ran-booster-package-edit-form"[^>]*data-ran-booster-package-settings-save/', $html );
+		self::assertStringContainsString( 'hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"', $html );
+		self::assertStringContainsString( 'name="_wpnonce"', $this->form_by_id( $html, 'ran-booster-package-edit-form' ) );
+		self::assertStringContainsString( 'name="_ran_booster_reinstall_nonce"', $this->form_by_id( $html, 'ran-booster-package-edit-form' ) );
 
 		$base_url             = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
 		$expected_install_url = $base_url
@@ -471,7 +480,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertIsInt( $readiness_position );
 			$automation_position = strpos( $html, 'name="ran_booster[deployment_policy]"' );
 			self::assertIsInt( $automation_position );
-			$operation_position = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings"' );
+			$operation_position = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card"' );
 			self::assertIsInt( $operation_position );
 			$actions_position = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $operation_position );
 			self::assertIsInt( $actions_position );
@@ -570,6 +579,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$actions              = $this->action_group_by_class( $html, 'ran-booster-settings-actions' );
 
 			self::assertStringNotContainsString( 'data-ran-booster-package-settings-save', $html, $package_view->get_type() );
+			self::assertStringNotContainsString( 'data-ran-booster-card="package-edit"', $html, $package_view->get_type() );
 			self::assertStringContainsString( $install_another_link, $actions, $package_view->get_type() );
 			self::assertStringContainsString( $back_link, $actions, $package_view->get_type() );
 			self::assertLessThan( strpos( $actions, $back_link ), strpos( $actions, $install_another_link ), $package_view->get_type() );
@@ -850,6 +860,7 @@ final class RepeatPackageViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'data-ran-booster-card="package-edit"', $html, $package_view->get_type() );
 
 			if ( $branch_settings_inactive ) {
 				self::assertStringNotContainsString(
@@ -1039,6 +1050,97 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertStringContainsString( 'A safely bounded &lt;explanation&gt;.', $html, $recovery_state );
 			}
 		}
+	}
+
+	public function test_package_badges_render_known_activity_and_bounded_extension_tones(): void {
+		$package_view = PackagePagePresenter::plugin();
+		$package      = $this->package( $package_view );
+		$package->set_deployment_policy( \RAN\Deployment\DeploymentPolicy::AUTOMATIC );
+		$render = static function ( ?\RAN\Deployment\DeploymentAttempt $attempt, array $badges = array() ) use ( $package, $package_view ): string {
+			$packages               = array( $package );
+			$package_providers      = array(
+				array(
+					'code'   => 'gh',
+					'label'  => 'GitHub',
+					'deploy' => true,
+				),
+			);
+			$package_activity       = array( 'items' => array( $package->get_identifier() => array( 'latest' => $attempt ) ) );
+			$package_extension_rows = array( $package->get_identifier() => array( 'badges' => $badges ) );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			return (string) ob_get_clean();
+		};
+
+		foreach ( array(
+			'queued'          => array( 'Queued', 'pending', 'informational' ),
+			'running'         => array( 'Running', 'pending', 'informational' ),
+			'succeeded'       => array( 'Succeeded', 'ok', 'stable' ),
+			'failed'          => array( 'Failed', 'error', 'high' ),
+			'needs_attention' => array( 'Needs attention', 'error', 'high' ),
+		) as $state => [ $label, $tone, $intent ] ) {
+			$terminal = in_array( $state, array( 'succeeded', 'failed', 'needs_attention' ), true );
+			$attempt  = \RAN\Deployment\DeploymentAttempt::from_database(
+				array(
+					'id'                      => 1,
+					'correlation_id'          => str_repeat( '0', 32 ),
+					'source'                  => 'manual',
+					'operation'               => 'update',
+					'package_type'            => 'plugin',
+					'package_slug'            => 'example',
+					'package_source'          => 'branch',
+					'package_source_revision' => 1,
+					'release_identity'        => null,
+					'provider'                => 'gh',
+					'provider_repository_id'  => 'provider-id',
+					'requested_ref'           => 'main',
+					'resolved_ref'            => null,
+					'delivery_id'             => null,
+					'delivery_digest'         => null,
+					'state'                   => $state,
+					'mutation_started_at'     => null,
+					'outcome_code'            => match ( $state ) {
+					'succeeded' => 'deployed', 'failed' => 'preflight_failed', 'needs_attention' => 'interrupted', default => null },
+					'request_json'            => '{"repository":"owner/example","credential_id":null,"private":false,"configured_branch":"main","package_slug":"example","subdirectory":null,"deployment_policy":"automatic","initiating_user_id":1,"maximum_artifact_bytes":52428800}',
+					'created_at'              => '2026-07-19 00:00:00',
+					'finished_at'             => $terminal ? '2026-07-19 00:00:00' : null,
+					'resolved_at'             => null,
+					'resolved_by'             => null,
+				)
+			);
+			if ( 'running' === $state ) {
+				$GLOBALS['ran_booster_package_view_translations']['ran-booster']['Running'] = 'Running & "review"';
+				$label = 'Running &amp; &quot;review&quot;';
+			}
+			$html = $render( $attempt );
+			unset( $GLOBALS['ran_booster_package_view_translations'] );
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="' . $label . '" data-ran-booster-ui-badge-intent="' . $intent . '" data-ran-booster-activity-state', $html );
+			self::assertStringContainsString( 'ran-booster-badge--' . $tone . ' ran-booster-deployment-state ran-booster-deployment-state--' . $state . '">' . $label . '</span>', $html );
+			if ( 'succeeded' !== $state ) {
+				self::assertStringContainsString( 'data-ran-booster-ui-badge-intent="' . $intent . '" data-ran-booster-activity-badge', $html );
+			}
+		}
+
+		foreach ( array(
+			'neutral' => 'none',
+			'ok'      => 'stable',
+			'pending' => 'informational',
+			'warning' => 'medium',
+			'error'   => 'high',
+		) as $tone => $intent ) {
+			$html = $render(
+				null,
+				array(
+					array(
+						'label' => 'Release & "review"',
+						'tone'  => $tone,
+					),
+				)
+			);
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Release &amp; &quot;review&quot;" data-ran-booster-ui-badge-intent="' . $intent . '"', $html );
+			self::assertStringContainsString( 'ran-booster-badge--' . $tone . '">Release &amp; &quot;review&quot;</span>', $html );
+		}
+		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="" data-ran-booster-ui-badge-intent="none" data-ran-booster-activity-badge hidden', $render( null ) );
 	}
 
 	/** @return array{default_provider: string, providers: list<array<string, mixed>>} */

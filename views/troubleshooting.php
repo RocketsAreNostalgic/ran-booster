@@ -46,19 +46,25 @@ $secondary_navigation  = array(
 	),
 );
 
-$status_labels      = array(
+$status_labels        = array(
 	'pass'           => __( 'Passed', 'ran-booster' ),
 	'warning'        => __( 'Warning', 'ran-booster' ),
 	'fail'           => __( 'Failed', 'ran-booster' ),
 	'not_configured' => __( 'Not configured', 'ran-booster' ),
 );
-$status_badge_tones = array(
+$status_badge_tones   = array(
 	'pass'           => 'ok',
 	'warning'        => 'warning',
 	'fail'           => 'error',
 	'not_configured' => 'warning',
 );
-$partial_messages   = array(
+$status_badge_intents = array(
+	'pass'           => 'stable',
+	'warning'        => 'medium',
+	'fail'           => 'high',
+	'not_configured' => 'medium',
+);
+$partial_messages     = array(
 	'local_incomplete'         => __( 'Local checks could not finish, so Git provider checks were not started.', 'ran-booster' ),
 	'deadline_exhausted'       => __( 'The ten-second diagnostic deadline was reached. Completed checks are shown below.', 'ran-booster' ),
 	'remote_calls_exhausted'   => __( 'The five-request Git provider budget was reached. Completed checks are shown below.', 'ran-booster' ),
@@ -66,17 +72,17 @@ $partial_messages   = array(
 	'provider_results_invalid' => __( 'The Git provider returned an unsafe or invalid diagnostic result, which Booster omitted.', 'ran-booster' ),
 	'result_limit_exhausted'   => __( 'The eight-result limit was reached. Earlier results are shown below.', 'ran-booster' ),
 );
-$selected_provider  = $troubleshooting['selected_provider'] ?? '';
-$results            = is_array( $troubleshooting['results'] ?? null ) ? $troubleshooting['results'] : array();
-$credentials        = is_array( $troubleshooting['credentials'] ?? null ) ? $troubleshooting['credentials'] : array();
-$credential_id      = is_string( $troubleshooting['credential_id'] ?? null ) ? $troubleshooting['credential_id'] : '';
-$repository         = is_string( $troubleshooting['repository'] ?? null ) ? $troubleshooting['repository'] : '';
-$show_specific_form = '' !== $credential_id || '' !== $repository;
-$core_self_update   = is_array( $troubleshooting['core_self_update'] ?? null )
+$selected_provider    = $troubleshooting['selected_provider'] ?? '';
+$results              = is_array( $troubleshooting['results'] ?? null ) ? $troubleshooting['results'] : array();
+$credentials          = is_array( $troubleshooting['credentials'] ?? null ) ? $troubleshooting['credentials'] : array();
+$credential_id        = is_string( $troubleshooting['credential_id'] ?? null ) ? $troubleshooting['credential_id'] : '';
+$repository           = is_string( $troubleshooting['repository'] ?? null ) ? $troubleshooting['repository'] : '';
+$show_specific_form   = '' !== $credential_id || '' !== $repository;
+$core_self_update     = is_array( $troubleshooting['core_self_update'] ?? null )
 	? $troubleshooting['core_self_update']
 	: array();
-$locator_hints      = is_array( $troubleshooting['provider_locator_hints'] ?? null ) ? $troubleshooting['provider_locator_hints'] : array();
-$locator_examples   = array();
+$locator_hints        = is_array( $troubleshooting['provider_locator_hints'] ?? null ) ? $troubleshooting['provider_locator_hints'] : array();
+$locator_examples     = array();
 foreach ( $troubleshooting['providers'] ?? array() as $provider_code => $provider_label ) {
 	$hint = $locator_hints[ $provider_code ] ?? '';
 	if ( is_string( $hint ) && is_string( $provider_label ) && '' !== $hint ) {
@@ -222,9 +228,15 @@ $repository_placeholder = array() === $locator_examples
 						?>
 						<tbody class="ran-booster-troubleshooting__<?php echo esc_attr( $result_group ); ?>-results">
 						<?php foreach ( $group_results as $result ) { ?>
-							<?php $status_tone = $status_badge_tones[ $result['status'] ] ?? 'neutral'; ?>
+							<?php
+							$diagnostic_status = $result['status'] ?? '';
+							$diagnostic_status = isset( $status_labels[ $diagnostic_status ] ) ? $diagnostic_status : 'unknown';
+							$status_label      = $status_labels[ $diagnostic_status ] ?? __( 'Unknown', 'ran-booster' );
+							$status_tone       = $status_badge_tones[ $diagnostic_status ] ?? 'neutral';
+							$status_intent     = $status_badge_intents[ $diagnostic_status ] ?? 'none';
+							?>
 						<tr>
-							<td data-label="<?php esc_attr_e( 'Status', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_tone ); ?> ran-booster-diagnostic-status ran-booster-diagnostic-status--<?php echo esc_attr( $result['status'] ); ?>"><?php echo esc_html( $status_labels[ $result['status'] ] ?? __( 'Unknown', 'ran-booster' ) ); ?></span></td>
+							<td data-label="<?php esc_attr_e( 'Status', 'ran-booster' ); ?>"><span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $status_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $status_intent ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_tone ); ?> ran-booster-diagnostic-status ran-booster-diagnostic-status--<?php echo esc_attr( $diagnostic_status ); ?>"><?php echo esc_html( $status_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span></td>
 							<th scope="row" data-label="<?php esc_attr_e( 'Check', 'ran-booster' ); ?>">
 							<?php
 								$check_family = explode( '.', $result['code'] )[1] ?? '';

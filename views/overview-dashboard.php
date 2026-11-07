@@ -108,14 +108,15 @@ $inventory = $onboarding['inventory'] ?? array(
 					<?php esc_html_e( 'Provider extension', 'ran-booster' ); ?>
 				<?php } elseif ( is_string( $provider['source_name'] ?? null ) && '' !== $provider['source_name'] ) { ?>
 					<?php /* translators: %s: selected provider plugin name. */ ?>
-					<?php echo esc_html( sprintf( __( 'Provided by %s', 'ran-booster' ), $provider['source_name'] ) ); ?>
+					<?php echo esc_html( sprintf( __( 'Provider extension: %s', 'ran-booster' ), $provider['source_name'] ) ); ?>
 				<?php } else { ?>
 					<?php esc_html_e( 'Provider source unknown', 'ran-booster' ); ?>
 				<?php } ?>
 				<?php
 				if ( 'replacement' === ( $provider['source_kind'] ?? null ) ) {
+					$custom_provider_label = __( 'Custom provider', 'ran-booster' );
 					?>
-					<span class="ran-booster-badge ran-booster-badge--neutral"><?php esc_html_e( 'Custom provider', 'ran-booster' ); ?></span><?php } ?>
+					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $custom_provider_label ); ?>" data-ran-booster-ui-badge-intent="none"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--neutral"><?php echo esc_html( $custom_provider_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span><?php } ?>
 				</span>
 			</li>
 		<?php } ?></ul>

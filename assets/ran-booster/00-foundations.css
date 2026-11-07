@@ -13,6 +13,8 @@
  */
 
 :root {
+	--ran-booster-width-standard: 1050px;
+	--ran-booster-width-wide: 1400px;
 	--ran-booster-shell-gradient-start: #10364e;
 	--ran-booster-shell-gradient-end: #1e4d6b;
 	--ran-booster-color-neutral-0: #fff;
@@ -138,7 +140,11 @@
 }
 
 .ran-booster-admin {
-	max-inline-size: 1050px;
+	max-inline-size: var(--ran-booster-width-standard);
+}
+
+.ran-booster-admin--wide-collection {
+	max-inline-size: var(--ran-booster-width-wide);
 }
 
 .ran-admin-shell {
@@ -153,9 +159,8 @@
 	padding-block-end: 0;
 }
 
-.ran-admin-shell__navigation > a:hover,
-.ran-admin-shell__navigation > a:focus-visible {
-	border-block-end-color: currentcolor;
+.ran-admin-shell__navigation > a {
+	border-block-end-width: 3px;
 }
 
 body:has(.ran-admin-shell) #screen-meta-links {

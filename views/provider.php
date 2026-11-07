@@ -201,7 +201,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 <?php if ( 'overview' !== $provider_view ) { ?>
 <a class="ran-booster-provider-management__back" href="<?php echo esc_url( $overview_url ); ?>">&larr; <?php echo esc_html( $provider_back_label ); ?></a>
 <?php } ?>
-<section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ( 'overview' === $provider_view ? ' ran-booster-provider--overview' : '' ); ?>" aria-labelledby="ran-booster-provider-heading">
+<section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ( 'overview' === $provider_view ? ' ran-booster-provider--overview' : '' ); ?><?php echo in_array( $provider_view, array( 'credentials', 'secrets' ), true ) ? ' ran-booster-card' : ''; ?>"<?php echo in_array( $provider_view, array( 'credentials', 'secrets' ), true ) ? ' data-ran-booster-card="provider"' : ''; ?> aria-labelledby="ran-booster-provider-heading">
 	<?php if ( 'overview' === $provider_view && ! $is_repository_detail ) { ?>
 		<header class="ran-booster-page-shell__header ran-booster-provider__header">
 			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( $provider['label'] ); ?></h2>
@@ -238,7 +238,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		?>
 		<section aria-label="<?php esc_attr_e( 'GitHub provider management', 'ran-booster' ); ?>">
 			<?php if ( $healthy_replacement && is_array( $current_implementation ) ) { ?>
-				<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provided by %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
+				<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
 				<details class="ran-booster-disclosure"><summary><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></summary>
 				<div class="ran-booster-disclosure__body">
 				<p><?php esc_html_e( 'To change the GitHub provider integration, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
@@ -329,7 +329,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 						: ( is_array( $review_target ) ? $review_target['display_name'] : $adoption_review['target']['implementation_id'] );
 					?>
 					<h4><?php esc_html_e( 'Selected provider', 'ran-booster' ); ?></h4>
-					<p><?php echo esc_html( sprintf( /* translators: %s: the implementation being reviewed for approval. */ __( 'Reviewing GitHub support provided by %s', 'ran-booster' ), $review_name ) ); ?></p>
+					<p><?php echo esc_html( sprintf( /* translators: %s: the implementation being reviewed for approval. */ __( 'Reviewing GitHub provider: %s', 'ran-booster' ), $review_name ) ); ?></p>
 					<p><?php esc_html_e( 'Plugin names and compatibility claims do not verify publisher identity. Approve only a plugin you trust.', 'ran-booster' ); ?></p>
 					<p><?php echo esc_html( is_array( $github_selection['package_counts'] ) ? sprintf( /* translators: 1: managed Branch packages, 2: managed release packages. */ __( 'Affected GitHub packages: %1$d Branch, %2$d Published release.', 'ran-booster' ), $github_selection['package_counts']['branch'], $github_selection['package_counts']['release_asset'] ) : __( 'Affected package inventory could not be checked.', 'ran-booster' ) ); ?></p>
 					<h4><?php esc_html_e( 'Saved credentials this provider may use', 'ran-booster' ); ?></h4>
@@ -406,7 +406,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 	<?php } elseif ( 'overview' === $provider_view ) { ?>
 		<?php if ( ! empty( $provider['credential_kinds'] ) ) { ?>
-		<section class="ran-booster-provider-section" aria-labelledby="ran-booster-access-tokens-heading">
+		<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-access-tokens-heading">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
 					<p class="ran-booster-section__description"><?php echo esc_html( __( 'Saved credentials can be used for repository access.', 'ran-booster' ) ); ?></p>
@@ -439,7 +439,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 
 		<?php if ( $has_webhook_settings ) { ?>
-			<section class="ran-booster-provider-section" aria-labelledby="ran-booster-webhook-secrets-heading">
+			<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-webhook-secrets-heading">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-webhook-secrets-heading" class="ran-booster-section__title"><?php esc_html_e( 'Signing secrets', 'ran-booster' ); ?></h3>
 					<p class="ran-booster-section__description"><?php esc_html_e( 'Signing secrets verify repository webhook deliveries.', 'ran-booster' ); ?></p>
@@ -468,7 +468,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 
 		<?php if ( $repository_integration_available ) { ?>
-			<section class="ran-booster-provider-section" aria-labelledby="ran-booster-repository-integrations-heading">
+			<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integrations-heading">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-repository-integrations-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository integrations', 'ran-booster' ); ?></h3>
 				<p class="ran-booster-section__description">
@@ -486,7 +486,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 						hx-history="false"
 						hx-sync="this:replace"
 					>
-						<nav class="ran-booster-provider-task-tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true">
+						<nav class="ran-booster-provider-task-tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true" data-ran-booster-ui-navigation="thin">
 							<ul class="filter-links">
 							<?php
 							foreach ( array(
@@ -550,8 +550,10 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 								<p><?php esc_html_e( 'Release workflow observations are incomplete because some package details are omitted.', 'ran-booster' ); ?></p>
 							<?php } ?>
 							<?php if ( $webhook_assistance_provider_capable && ! $webhook_assistance_site_ready ) { ?>
-								<div class="notice <?php echo esc_attr( $webhook_has_hard_failure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice>
-									<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?></p>
+								<div class="notice <?php echo esc_attr( $webhook_has_hard_failure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo $webhook_has_hard_failure ? 'error' : 'warning'; ?>">
+									<div data-ran-booster-ui-notice-content>
+										<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?></p>
+									</div>
 								</div>
 							<?php } ?>
 							<div class="ran-booster-provider-task-actions">

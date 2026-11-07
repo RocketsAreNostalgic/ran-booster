@@ -62,3 +62,42 @@ Build-time Shell resources follow [Shell #39](https://github.com/RocketsAreNosta
 The later native Extensions reference-style correction `7a8d82381b6b4d86b64cd7732a1f8d5c65590120` is not in the installed `ce8` candidate and awaits its own installation receipt before admission. The repository picker, diagnostic badge, wording #673, static navigation pilot, width #682 and the new two-group Settings layout remain excluded from this reconciliation. The two-group direction will separate autosaving General preferences from explicitly saved History and download limits; its own preview and qualification remain pending. Static Core `95856f8aa8afcdf181eaec583db2f3b7f9cef425` and its separately reported unpublished Shell source are queued, not installed. Rejected #672 alternatives remain excluded.
 
 Full composed acceptance, native 200% zoom, screen-reader audio, dependency and release decisions remain held. Recheck source PR tuples and their dispositions when advancing. The existing integration PR requires independent review against its exact updated base and head and its required checks; merging any specific PR requires separate owner authority. No publication is authorized by this manifest.
+
+
+## Coordinator reconciliation for the Git checkout cutover
+
+The preceding preview records are historical. The coordinator has selected the
+installed source `9db1422cb89ffc26b6df21d67e1b1fd6cdf2b4c9`, tree
+`1749990f488fb4684373c7f56efd461f41d6c231`, as the implementation for this local
+reconciliation. Its complete 42-commit lineage and the four accumulator-only
+commits are retained as the two parent histories; the latter are not discarded
+or replayed. The sidebar-only Troubleshooting correction and its regression are
+already present in the selected implementation. The accumulator's component
+package instructions and this historical integration record are retained.
+These three documentation files are the only differences from the selected
+9db source tree; the reconciliation therefore has its own new commit and tree.
+
+The selected Core archive has SHA-256
+`3c0bfb97831433d1f2cc8203da2598efd31990cb32843b1215f5cbe2fc243f1b`.
+Its closed installation window verified 541 files, 613 entry modes and 18
+inactive Migrator files, with no changes in the compared bounded state. The
+subsequent direction check lasted 58.848 seconds. The coordinator recorded
+visual direction approval for now in Workbench `8388b6f`; this is not broader
+operational, accessibility, source CI or release acceptance. The current
+implementation includes the public WordPress UI Card, Switch and Disclosure
+composition; older pending/excluded statements above describe their historical
+checkpoint, not this selected source. Density, Documentation, later Notice,
+Unit 2, Status CSS and navigation follow-ons remain queued under the freeze.
+
+The owner separately approved the bounded local history reconciliation and a
+reversible relocation of this same coordinator-owned checkout into the 10013
+Core path. The relocation receipt, actual Git identity, unchanged installed
+runtime bytes and bounded preservation readback are recorded separately; this
+source document does not pre-claim that operation's completion. Existing vendor
+and release metadata remain byte-identical to the selected installation, with
+no rebuild or dependency installation. Archive replacement is retired for that
+Git target. All other plugins, configuration, credentials, database settings,
+drafts and recovery copies remain outside the operation. No public push, PR or
+main merge, package/release publication, issue closure or acceptance-hold
+clearance is authorized. Source review, CI, archive provenance, installed proof
+and owner acceptance remain separate.

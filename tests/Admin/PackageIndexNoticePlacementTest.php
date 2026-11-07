@@ -59,6 +59,37 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		self::assertStringContainsString( 'Review activity', $html );
 	}
 
+	public function test_saved_package_marker_preserves_the_visible_notice_and_escapes_identity(): void {
+		$messages = array(
+			array(
+				'type'          => 'success',
+				'message'       => 'Plugin was successfully saved.',
+				'saved_package' => 'example/"plugin.php',
+				'saved_type'    => 'plugin',
+			),
+			array(
+				'type'    => 'success',
+				'message' => 'Plugin was successfully updated.',
+			),
+			array(
+				'type'          => 'error',
+				'message'       => 'Save failed.',
+				'saved_package' => 'example/plugin.php',
+				'saved_type'    => 'plugin',
+			),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/notices.php';
+		$html = (string) ob_get_clean();
+
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-package-saved' ) );
+		self::assertSame( 2, substr_count( $html, 'data-ran-booster-package-success' ) );
+		self::assertStringContainsString( 'data-ran-booster-saved-package="example/&quot;plugin.php" data-ran-booster-saved-type="plugin"', $html );
+		self::assertStringContainsString( '<p>Plugin was successfully saved.</p>', $html );
+		self::assertStringContainsString( '<p>Plugin was successfully updated.</p>', $html );
+		self::assertStringContainsString( '<p>Save failed.</p>', $html );
+	}
+
 	public function test_package_index_can_reorder_the_complete_managed_package_heading_without_changing_package_identity(): void {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Managed %s'] = '%s administrés';
 		$package_view              = PackagePagePresenter::plugin();

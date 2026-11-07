@@ -358,17 +358,20 @@ final class PackageAdminController {
 			'unlink' => __( 'unlinked', 'ran-booster' ),
 			default => __( 'unlinked and deleted', 'ran-booster' ),
 		};
-		$dashboard->add_message(
-			array(
-				'type'    => 'success',
-				'message' => sprintf(
-					/* translators: 1: package type, 2: completed operation. */
-					__( '%1$s was successfully %2$s.', 'ran-booster' ),
-					'plugin' === $type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
-					$completed
-				),
-			)
+		$message = array(
+			'type'    => 'success',
+			'message' => sprintf(
+				/* translators: 1: package type, 2: completed operation. */
+				__( '%1$s was successfully %2$s.', 'ran-booster' ),
+				'plugin' === $type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
+				$completed
+			),
 		);
+		if ( 'edit' === $operation ) {
+			$message['saved_package'] = $identifier;
+			$message['saved_type']    = $type;
+		}
+		$dashboard->add_message( $message );
 
 		return compact( 'operation', 'identifier' );
 	}

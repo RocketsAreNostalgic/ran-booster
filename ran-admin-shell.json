@@ -2,5 +2,6 @@
 	"schema": 1,
 	"php": "views/generated/ran-admin-shell.php",
 	"css": "assets/ran-admin-shell.css",
+	"section_navigation": "assets/ran-section-navigation.js",
 	"provenance": "views/generated/ran-admin-shell.provenance.json"
 }

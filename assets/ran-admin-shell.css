@@ -352,6 +352,7 @@ body.admin-bar .ran-admin-shell {
 .ran-section-navigation--ready
 	.ran-section-navigation__link[aria-current="page"] {
 	border-block-end-color: transparent;
+	transition: none;
 }
 
 .ran-admin-shell__navigation.ran-section-navigation

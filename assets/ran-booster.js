@@ -375,6 +375,7 @@
 		}
 
 		let activeRequest = null;
+		let repositoryNavigation;
 
 		function setBusy(isBusy) {
 			const region = currentTaskRegion();
@@ -424,9 +425,27 @@
 		document.addEventListener('htmx:beforeRequest', function (event) {
 			if (handlesTaskRegion(event)) {
 				activeRequest = event.detail.xhr;
+				repositoryNavigation = undefined;
 				setBusy(true);
 			}
 		});
+
+		document.addEventListener(
+			'htmx:beforeSwap',
+			function (event) {
+				if (
+					handlesTaskRegion(event) &&
+					event.detail.shouldSwap &&
+					event.detail.xhr === activeRequest
+				) {
+					repositoryNavigation =
+						window.ranBoosterUI?.repositoryNavigation?.snapshot(
+							event.detail.target
+						);
+				}
+			},
+			true
+		);
 
 		document.addEventListener('htmx:afterSwap', function (event) {
 			if (!handlesTaskRegion(event)) {
@@ -443,6 +462,11 @@
 				return;
 			}
 
+			window.ranBoosterUI?.repositoryNavigation?.transfer(
+				region,
+				repositoryNavigation
+			);
+			repositoryNavigation = undefined;
 			renderedUrl = new URL(window.location.href);
 			initProviderRepositoryFilter(region);
 			const panel = region.querySelector(

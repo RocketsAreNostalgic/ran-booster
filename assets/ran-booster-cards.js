@@ -626,115 +626,15 @@
 		}
 	}
 
-	const navigationAttributes = [
-		'class',
-		'href',
-		'title',
-		'rel',
-		'target',
-		'download',
-		'aria-current',
-		'aria-controls',
-		'hx-get',
-		'data-ran-booster-provider-task',
-	];
-
 	function navigationLinks(host, provider) {
-		return Array.from(
-			host.querySelectorAll(provider ? ':scope > li > a' : ':scope > a')
-		);
-	}
-
-	function navigationItems(links) {
-		return links.map((link) => ({
-			label: link.textContent,
-			href: link.getAttribute('href'),
-			current: link.getAttribute('aria-current') === 'page',
-			className: link.getAttribute('class') || '',
-			title: link.getAttribute('title') ?? undefined,
-			target: link.getAttribute('target') ?? undefined,
-			rel: link.getAttribute('rel') ?? undefined,
-			download: link.getAttribute('download') ?? undefined,
-			task:
-				link.getAttribute('data-ran-booster-provider-task') ??
-				undefined,
-			requestUrl: link.getAttribute('hx-get') ?? undefined,
-			controls: link.getAttribute('aria-controls') ?? undefined,
-		}));
-	}
-
-	function updateNavigationIndicator(host, entry, animate = false) {
-		if (
-			!host.isConnected ||
-			roots.get(host) !== entry ||
-			!host.matches('.ran-section-navigation')
-		) {
-			return;
-		}
-		const current = navigationLinks(host, entry.provider).find(
-			(link) => link.getAttribute('aria-current') === 'page'
-		);
-		if (
-			!current ||
-			!host.querySelector('.ran-section-navigation__indicator')
-		) {
-			host.classList.remove('ran-section-navigation--ready');
-			return;
-		}
-		const track = host.getBoundingClientRect();
-		const link = current.getBoundingClientRect();
-		const size =
-			parseFloat(
-				window
-					.getComputedStyle(host)
-					.getPropertyValue('--ran-section-indicator-size')
-			) || 2;
-		host.classList.toggle('ran-section-navigation--moving', animate);
-		host.style.setProperty(
-			'--ran-section-indicator-x',
-			`${link.left - track.left + host.scrollLeft - host.clientLeft}px`
-		);
-		host.style.setProperty(
-			'--ran-section-indicator-top',
-			`${link.bottom - track.top + host.scrollTop - host.clientTop - size}px`
-		);
-		host.style.setProperty(
-			'--ran-section-indicator-width',
-			`${link.width}px`
-		);
-		host.classList.add('ran-section-navigation--ready');
-	}
-
-	function observeNavigation(host, entry) {
-		if (window.ResizeObserver) {
-			entry.navigationResize = new window.ResizeObserver(() =>
-				updateNavigationIndicator(host, entry)
-			);
-			entry.navigationResize.observe(host);
-			navigationLinks(host, entry.provider).forEach((link) =>
-				entry.navigationResize.observe(link)
-			);
-		}
-		entry.navigationFocus = (event) => {
-			if (navigationLinks(host, entry.provider).includes(event.target)) {
-				event.target.scrollIntoView({
-					block: 'nearest',
-					inline: 'nearest',
-				});
-			}
-		};
-		host.addEventListener('focusin', entry.navigationFocus);
+		return window.ranBoosterUI.navigationContract.links(host, provider);
 	}
 
 	function restoreNavigation(host, entry) {
-		entry.navigationResize?.disconnect();
-		host.removeEventListener('focusin', entry.navigationFocus);
-		host.classList.remove(
-			'ran-section-navigation--ready',
-			'ran-section-navigation--moving'
-		);
-		for (const property of ['x', 'top', 'width']) {
-			host.style.removeProperty(`--ran-section-indicator-${property}`);
+		entry.sectionNavigation?.destroy();
+		if (entry.nativeNavigation) {
+			roots.delete(host);
+			return;
 		}
 
 		const visible = navigationLinks(host, entry.provider);
@@ -761,53 +661,15 @@
 	}
 
 	function renderNavigation(host, entry, animate = false) {
-		const element = window.wp.element;
-		const UI = window.ranBoosterUI;
-		element.flushSync(() =>
-			entry.root.render(
-				element.createElement(
-					entry.boundary,
-					null,
-					element.createElement(UI.NavigationLinks, {
-						items: navigationItems(entry.links),
-						provider: entry.provider,
-					})
-				)
-			)
+		window.ranBoosterUI.renderNavigationLinks(
+			host,
+			entry,
+			window.wp.element,
+			window.ranBoosterUI.NavigationLinks
 		);
-		const visible = navigationLinks(host, entry.provider);
-		if (
-			visible.length !== entry.links.length ||
-			visible.some(
-				(link, index) =>
-					link.tagName !== 'A' ||
-					link.getAttribute('href') !==
-						entry.links[index].getAttribute('href')
-			)
-		) {
-			throw new Error('Navigation did not render its destinations');
+		if (roots.get(host) === entry) {
+			entry.sectionNavigation?.update({ animate, afterPaint: animate });
 		}
-		updateNavigationIndicator(host, entry, animate);
-	}
-
-	function hasNavigationText(node) {
-		return Array.from(node.childNodes).some(
-			(child) => child.nodeType === 3 && child.textContent.trim()
-		);
-	}
-
-	function hasHeaderIndicator(link) {
-		const [decoration] = link.children;
-		return (
-			link.childElementCount === 1 &&
-			link.getAttribute('aria-current') === 'page' &&
-			decoration.tagName === 'SPAN' &&
-			decoration.getAttribute('class') ===
-				'ran-section-navigation__indicator' &&
-			decoration.getAttribute('aria-hidden') === 'true' &&
-			decoration.attributes.length === 2 &&
-			decoration.childNodes.length === 0
-		);
 	}
 
 	function mountNavigation(host, provider) {
@@ -822,6 +684,9 @@
 			host.contains(host.ownerDocument.activeElement) ||
 			host.closest('[aria-busy="true"]') ||
 			!UI?.NavigationLinks ||
+			!UI?.renderNavigationLinks ||
+			!UI?.createSectionNavigation ||
+			!UI?.navigationContract ||
 			!element?.createRoot ||
 			!element?.createElement ||
 			!element?.flushSync ||
@@ -830,102 +695,8 @@
 			return;
 		}
 		const links = navigationLinks(host, provider);
-		if (
-			!links.length ||
-			hasNavigationText(host) ||
-			host.children.length !== links.length ||
-			links.some(
-				(link) =>
-					!link.getAttribute('href') ||
-					(!provider && link.hasAttribute('hx-get')) ||
-					(link.childElementCount &&
-						(provider || !hasHeaderIndicator(link))) ||
-					![null, 'page'].includes(
-						link.getAttribute('aria-current')
-					) ||
-					/^_blank$/i.test(link.getAttribute('target') || '') ||
-					Array.from(link.attributes).some(
-						(attribute) =>
-							!navigationAttributes.includes(attribute.name)
-					)
-			) ||
-			(provider &&
-				links.some(
-					(link) =>
-						link.parentElement.tagName !== 'LI' ||
-						hasNavigationText(link.parentElement) ||
-						link.parentElement.children.length !== 1 ||
-						link.parentElement.attributes.length
-				))
-		) {
+		if (!UI.navigationContract.allows(host, provider, links, window.htmx)) {
 			return;
-		}
-		if (provider) {
-			const region = host.closest('#ran-booster-provider-tasks');
-			const nav = host.parentElement;
-			const panel = region?.querySelector(
-				'#ran-booster-provider-task-panel'
-			);
-			const overrides = [
-				'hx-target',
-				'hx-select',
-				'hx-swap',
-				'hx-push-url',
-				'hx-history',
-				'hx-sync',
-			];
-			if (
-				!window.htmx?.process ||
-				window.htmx.config?.disableInheritance ||
-				[
-					region,
-					nav,
-					host,
-					...links.map((link) => link.parentElement),
-				].some(
-					(node) =>
-						node?.hasAttribute('hx-disinherit') ||
-						node?.hasAttribute('data-hx-disinherit')
-				) ||
-				nav?.getAttribute('hx-boost') !== 'true' ||
-				nav.hasAttribute('data-hx-boost') ||
-				nav.parentElement !== region ||
-				overrides.some(
-					(attribute) =>
-						region?.hasAttribute(`data-${attribute}`) ||
-						[
-							nav,
-							host,
-							...links.map((link) => link.parentElement),
-						].some(
-							(node) =>
-								node.hasAttribute(attribute) ||
-								node.hasAttribute(`data-${attribute}`)
-						)
-				) ||
-				!region ||
-				region.getAttribute('hx-target') !==
-					'#ran-booster-provider-task-panel' ||
-				region.getAttribute('hx-select') !==
-					'#ran-booster-provider-task-panel' ||
-				region.getAttribute('hx-swap') !==
-					'outerHTML transition:false show:none' ||
-				region.getAttribute('hx-push-url') !== 'true' ||
-				region.getAttribute('hx-history') !== 'false' ||
-				region.getAttribute('hx-sync') !== 'this:replace' ||
-				!panel ||
-				host.contains(panel) ||
-				host.ownerDocument.getElementById(
-					'ran-booster-provider-task-panel'
-				) !== panel ||
-				links.some(
-					(link) =>
-						!link.getAttribute('hx-get') ||
-						!link.getAttribute('data-ran-booster-provider-task')
-				)
-			) {
-				return;
-			}
 		}
 		const entry = {
 			navigation: true,
@@ -963,7 +734,7 @@
 			entry.root = element.createRoot(host);
 			roots.set(host, entry);
 			renderNavigation(host, entry);
-			observeNavigation(host, entry);
+			entry.sectionNavigation = UI.createSectionNavigation(host);
 			host.scrollLeft = scroll;
 			if (provider) {
 				navigationLinks(host, true).forEach((link) =>
@@ -1242,8 +1013,11 @@
 
 	function initialize(scope, restoredDisclosure = null) {
 		queueMicrotask(() => {
-			if (window.ranBoosterUI) {
-				window.ranBoosterUI.setNavigationCurrent = setNavigationCurrent;
+			const UI = window.ranBoosterUI;
+			if (UI) {
+				UI.setNavigationCurrent = setNavigationCurrent;
+				UI.repositoryNavigation ??=
+					UI.createRepositoryNavigationBridge?.(roots);
 			}
 			roots.forEach((entry, host) => {
 				if (!host.isConnected) {
@@ -1281,6 +1055,12 @@
 				mountButton(button);
 			}
 			scope.querySelectorAll?.(buttonSelector).forEach(mountButton);
+			const repositoryNavigation = UI?.repositoryNavigation;
+			if (repositoryNavigation) {
+				scope
+					.querySelectorAll?.(repositoryNavigation.selector)
+					.forEach(repositoryNavigation.mount);
+			}
 			const owners = Array.from(
 				scope.querySelectorAll?.(navigationOwner) || []
 			);

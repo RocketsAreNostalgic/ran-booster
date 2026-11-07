@@ -1,3 +1,7 @@
+import {
+	navigationContract,
+	renderNavigationLinks,
+} from '../../scripts/ui-navigation.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
@@ -234,7 +238,12 @@ function fixture({
 	};
 	const window = {
 		wp: { element },
-		ranBoosterUI: { NavigationLinks: 'NavigationLinks' },
+		ranBoosterUI: {
+			NavigationLinks: 'NavigationLinks',
+			navigationContract,
+			renderNavigationLinks,
+			createSectionNavigation: () => ({ update() {}, destroy() {} }),
+		},
 		htmx: {
 			process() {
 				processed++;
@@ -445,4 +454,11 @@ test('late render failure restores the pre-error horizontal scroll and focused n
 	assert.deepEqual(f.host.children, f.original);
 	assert.equal(f.host.scrollLeft, 155);
 	assert.equal(f.doc.activeElement, f.original[1].children[0]);
+});
+
+test('absent optional Shell behavior retains the native navigation', () => {
+	const f = fixture();
+	delete f.window.ranBoosterUI.createSectionNavigation;
+	f.window.navigationTest.mountNavigation(f.host, true);
+	assert.equal(f.window.navigationTest.roots.has(f.host), false);
 });

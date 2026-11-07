@@ -8,10 +8,20 @@ import {
 	Switch,
 } from '@wordpress/ui';
 import { createElement } from 'react';
-import { createNavigationLinks } from './ui-navigation.js';
+import {
+	createNavigationLinks,
+	renderNavigationLinks,
+	navigationContract,
+	createRepositoryNavigationBridge,
+} from './ui-navigation.js';
+import { createSectionNavigation } from '../assets/ran-section-navigation.js';
 
 window.ranBoosterUI = {
 	version: '0.26.0',
+	createSectionNavigation,
+	renderNavigationLinks,
+	navigationContract,
+	createRepositoryNavigationBridge,
 	CardRoot: Card.Root,
 	CollapsibleCard: {
 		Root: CollapsibleCard.Root,

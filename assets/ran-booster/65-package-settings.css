@@ -1249,8 +1249,10 @@
 	button[role="switch"] {
 	/* stylelint-disable-next-line plugin-wpds/no-token-fallback-values -- Static Booster CSS is not processed by the WPDS token compiler; match the public Switch border fallback for its hit target. */
 	--ran-booster-switch-border-width: var(--wpds-border-width-xs, 1px);
-	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Preserve the owner-approved 44x22 Switch using its public size token, scoped to this fixed host. */
-	--wpds-dimension-size-2xs: 22px;
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Use the owner-selected WordPress admin accent for this General Switch. */
+	--wpds-color-background-interactive-brand-strong: var(
+		--wp-admin-theme-color
+	);
 	position: relative;
 }
 
@@ -1259,7 +1261,7 @@
 	> [data-ran-booster-ui-switch-mount]
 	button[role="switch"]::before {
 	position: absolute;
-	inset-block: calc(-5px - var(--ran-booster-switch-border-width));
+	inset-block: calc(-8px - var(--ran-booster-switch-border-width));
 	inset-inline: calc(-1 * var(--ran-booster-switch-border-width));
 	content: "";
 }
@@ -1273,6 +1275,41 @@
 		[data-ran-booster-ui-switch="general-preference"]
 		> [data-ran-booster-ui-switch-mount]
 		button[role="switch"]::before {
-		inset-block: calc(-11px - var(--ran-booster-switch-border-width));
+		inset-block: calc(-14px - var(--ran-booster-switch-border-width));
+		inset-inline: calc(-6px - var(--ran-booster-switch-border-width));
 	}
+}
+
+/* Keep General status Badges proportional to the default public Switch. */
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge] {
+	display: flex;
+	align-items: center;
+	inline-size: 9ch;
+	min-inline-size: min(9ch, 100%);
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	.ran-booster-ui-badge {
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Apply the owner-selected compact spacing to General status Badges. */
+	--wpds-dimension-padding-xs: 1px;
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Apply the owner-selected compact spacing to General status Badges. */
+	--wpds-dimension-padding-sm: 6px;
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Use the owner-selected WordPress admin accent for enabled General status. */
+	--wpds-color-background-surface-success: var(--wp-admin-theme-color);
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties, plugin-wpds/no-token-fallback-values -- Match the public brand foreground fallback for enabled General status. */
+	--wpds-color-foreground-content-success: var(
+		--wpds-color-foreground-interactive-brand-strong,
+		#fff
+	);
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge-mount] {
+	display: flex;
+	align-items: center;
+	inline-size: 100%;
 }

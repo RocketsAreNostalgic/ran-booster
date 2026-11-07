@@ -225,8 +225,8 @@
 }
 
 .ran-booster-admin
-	details.ran-booster-onboarding__storage-manual
-	+ details.ran-booster-onboarding__storage-discarded {
+	[data-ran-booster-ui-disclosure="settings-storage"].ran-booster-onboarding__storage-manual
+	+ [data-ran-booster-ui-disclosure="settings-storage"].ran-booster-onboarding__storage-discarded {
 	margin-block-start: var(--ran-booster-space-16);
 }
 

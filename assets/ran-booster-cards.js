@@ -7,8 +7,13 @@
 	window.ranBoosterCardsInitialized = true;
 	const selector = '.ran-booster-card[data-ran-booster-card]';
 	const noticeSelector = '[data-ran-booster-ui-notice]';
-	const disclosureSelector =
-		'[data-ran-booster-ui-disclosure="installation-component"]';
+	const disclosureSelector = [
+		'installation-component',
+		'settings-configuration',
+		'settings-storage',
+	]
+		.map((kind) => `[data-ran-booster-ui-disclosure="${kind}"]`)
+		.join(',');
 	const badgeSelector = '[data-ran-booster-ui-badge]';
 	const buttonSelector = '[data-ran-booster-ui-button]';
 	const switchSelector = '[data-ran-booster-ui-switch="general-preference"]';
@@ -967,7 +972,12 @@
 			details.children[1] === body;
 		const ui = window.ranBoosterUI?.CollapsibleCard,
 			e = window.wp?.element;
-		const label = summary?.getAttribute('aria-label');
+		const label =
+			summary?.getAttribute('aria-label') ||
+			(host.getAttribute('data-ran-booster-ui-disclosure') !==
+			'installation-component'
+				? summary?.textContent.trim()
+				: '');
 		if (
 			!details ||
 			!summary ||
@@ -1026,6 +1036,7 @@
 				return h(
 					ui.Root,
 					{
+						className: 'ran-booster-ui-disclosure',
 						open,
 						onOpenChange: (next) => {
 							details.open = next;
@@ -1034,7 +1045,7 @@
 					},
 					h(
 						ui.Header,
-						null,
+						{ className: 'ran-booster-ui-disclosure__header' },
 						h(
 							'span',
 							{ 'aria-hidden': 'true' },
@@ -1045,7 +1056,10 @@
 					h(ui.Content, {
 						ref: panelRef,
 						keepMounted: true,
-						render: h('div', { 'data-disclosure-slot': '' }),
+						render: h('div', {
+							'data-disclosure-slot': '',
+							style: { padding: 0 },
+						}),
 					})
 				);
 			}

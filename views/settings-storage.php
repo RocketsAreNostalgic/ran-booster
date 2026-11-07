@@ -120,9 +120,10 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 				<?php } ?>
 
 				<?php if ( $shows_storage_override ) { ?>
-					<details class="ran-booster-onboarding__storage-manual ran-booster-disclosure" open>
+					<div class="ran-booster-onboarding__storage-manual" data-ran-booster-ui-disclosure="settings-storage">
+					<details class="ran-booster-onboarding__storage-manual ran-booster-disclosure" open data-ran-booster-ui-disclosure-fallback>
 						<summary><?php echo esc_html( 'storage_needs_attention' === $storage_status ? __( 'Use a different storage location', 'ran-booster' ) : __( 'Set a storage location manually', 'ran-booster' ) ); ?></summary>
-						<div class="ran-booster-disclosure__body">
+						<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 							<p><?php esc_html_e( 'Choose a durable absolute directory outside the public web root. Create it as a real directory owned by the PHP process user with mode 0700. Booster manages ran-booster-store.json and its lock inside it; if the file already exists, it must be owned by PHP with mode 0600.', 'ran-booster' ); ?></p>
 							<p><?php esc_html_e( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:', 'ran-booster' ); ?></p>
 							<?php
@@ -151,12 +152,14 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 							<p><?php esc_html_e( 'If credentials already exist, move the secrets file together with its matching database key; do not copy or reset only one half.', 'ran-booster' ); ?></p>
 					</div>
 				</details>
+				</div>
 			<?php } ?>
 
 			<?php if ( null !== $secrets_storage['config_alternatives'] ) { ?>
-				<details class="ran-booster-onboarding__storage-manual ran-booster-disclosure" <?php echo esc_attr( 'manual_required' === $storage_status ? 'open' : '' ); ?>>
+				<div class="ran-booster-onboarding__storage-manual" data-ran-booster-ui-disclosure="settings-storage">
+				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-onboarding__storage-manual ran-booster-disclosure" <?php echo esc_attr( 'manual_required' === $storage_status ? 'open' : '' ); ?>>
 					<summary><?php echo esc_html( $secrets_storage['can_provision'] ? __( 'Set up manually instead', 'ran-booster' ) : __( 'Manual setup instructions', 'ran-booster' ) ); ?></summary>
-					<div class="ran-booster-disclosure__body">
+					<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 						<p><?php echo esc_html( $secrets_storage['manual_preflight'] ); ?></p>
 						<p><?php esc_html_e( 'Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages ran-booster-store.json within it.', 'ran-booster' ); ?></p>
 						<ol>
@@ -201,12 +204,14 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 						</ol>
 					</div>
 				</details>
+				</div>
 			<?php } ?>
 
 			<?php if ( array() !== $storage_discarded_candidates ) { ?>
-				<details class="ran-booster-onboarding__storage-discarded ran-booster-disclosure">
+				<div class="ran-booster-onboarding__storage-discarded" data-ran-booster-ui-disclosure="settings-storage">
+				<details class="ran-booster-onboarding__storage-discarded ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback>
 					<summary><?php esc_html_e( 'Why automatic setup is unavailable', 'ran-booster' ); ?></summary>
-					<div class="ran-booster-disclosure__body">
+					<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 					<h4><?php esc_html_e( 'Automatic locations considered and discarded', 'ran-booster' ); ?></h4>
 					<p class="description"><?php esc_html_e( 'This check is read-only; Booster did not create files in these locations.', 'ran-booster' ); ?></p>
 					<ul>
@@ -224,12 +229,14 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 					</ul>
 					</div>
 				</details>
+				</div>
 			<?php } ?>
 
 			<?php if ( $has_storage_details ) { ?>
-				<details class="ran-booster-onboarding__storage-details ran-booster-disclosure"<?php echo $storage_details_open ? ' open' : ''; ?>>
+				<div class="ran-booster-onboarding__storage-details" data-ran-booster-ui-disclosure="settings-storage">
+				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-onboarding__storage-details ran-booster-disclosure"<?php echo $storage_details_open ? ' open' : ''; ?>>
 					<summary><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
-					<div class="ran-booster-disclosure__body">
+					<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 						<dl class="ran-booster-onboarding__storage-facts">
 							<div><dt><?php esc_html_e( 'Configuration constant', 'ran-booster' ); ?></dt><dd>
 							<?php
@@ -284,6 +291,7 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 
 					</div>
 				</details>
+				</div>
 			<?php } ?>
 			<p class="ran-booster-onboarding__storage-documentation">
 				<a href="<?php echo esc_url( $credential_storage_documentation_url ); ?>"><?php esc_html_e( 'Learn how Booster manages credentials and keys', 'ran-booster' ); ?></a>

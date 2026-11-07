@@ -353,12 +353,12 @@ final class SettingsPageTest extends TestCase {
 			'History'         => array( 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS' ),
 			'Download limits' => array( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ),
 		) as $legend => $constants ) {
-			self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="' . $legend . '"]/details[summary="Configuration constants"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="' . $legend . '"]/div[@class="ran-booster-settings__configuration" and @data-ran-booster-ui-disclosure="settings-configuration"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open) and summary="Configuration constants" and div[@data-ran-booster-ui-disclosure-content]])' ) );
 			foreach ( $constants as $constant ) {
-				self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="' . $legend . '"]/details//code[text()="' . $constant . '"])' ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="' . $legend . '"]/div[@class="ran-booster-settings__configuration" and @data-ran-booster-ui-disclosure="settings-configuration"]/details//code[text()="' . $constant . '"])' ) );
 			}
 		}
-		self::assertSame( 4.0, $xpath->evaluate( 'count(//details[summary="Configuration constants"])' ) );
+		self::assertSame( 4.0, $xpath->evaluate( 'count(//div[@class="ran-booster-settings__configuration" and @data-ran-booster-ui-disclosure="settings-configuration"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open) and summary="Configuration constants" and div[@data-ran-booster-ui-disclosure-content]])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//button[@form="ran-booster-check-core-updates" and @disabled and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@id="ran-booster-check-core-updates"]//input[@name="ran_booster[action]" and @value="check-core-updates"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-check-updates-unavailable"])' ) );

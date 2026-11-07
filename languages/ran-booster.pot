@@ -524,8 +524,8 @@ msgstr ""
 #: views/packages/index.php:170
 #: views/packages/index.php:415
 #: views/packages/index.php:475
-#: views/settings-general.php:183
-#: views/settings-general.php:220
+#: views/settings-general.php:185
+#: views/settings-general.php:222
 #: assets/ran-booster-settings.js:82
 msgid "Disabled"
 msgstr ""
@@ -1008,8 +1008,8 @@ msgstr ""
 #: views/overview-dashboard.php:81
 #: views/overview-dashboard.php:91
 #: views/portability-review.php:101
-#: views/settings-general.php:110
-#: views/settings-general.php:225
+#: views/settings-general.php:112
+#: views/settings-general.php:227
 #: views/troubleshooting-installation.php:156
 #: views/troubleshooting-installation.php:164
 #: views/troubleshooting.php:234
@@ -1508,8 +1508,8 @@ msgstr ""
 #: RAN/Admin/PackageAdminController.php:499
 #: views/packages/edit.php:208
 #: views/packages/index.php:475
-#: views/settings-general.php:183
-#: views/settings-general.php:220
+#: views/settings-general.php:185
+#: views/settings-general.php:222
 #: assets/ran-booster-settings.js:81
 msgid "Enabled"
 msgstr ""
@@ -2310,7 +2310,7 @@ msgid "Stored · Validity checked on use"
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1646
-#: views/settings-storage.php:241
+#: views/settings-storage.php:248
 #: views/troubleshooting.php:53
 msgid "Not configured"
 msgstr ""
@@ -4639,7 +4639,7 @@ msgstr ""
 #: views/base.php:47
 #: views/overview-dashboard.php:73
 #: views/overview-dashboard.php:74
-#: views/settings-general.php:199
+#: views/settings-general.php:201
 msgid "Plugins"
 msgstr ""
 
@@ -4655,7 +4655,7 @@ msgstr ""
 #: views/base.php:52
 #: views/overview-dashboard.php:80
 #: views/overview-dashboard.php:81
-#: views/settings-general.php:200
+#: views/settings-general.php:202
 msgid "Themes"
 msgstr ""
 
@@ -5828,7 +5828,7 @@ msgid "Enabled candidates"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:258
-#: views/settings-general.php:225
+#: views/settings-general.php:227
 msgid "Installed version"
 msgstr ""
 
@@ -6881,7 +6881,7 @@ msgid "Each administrator can dismiss their own credential expiry reminders. A f
 msgstr ""
 
 #: views/documentation.php:379
-#: views/settings-storage.php:124
+#: views/settings-storage.php:125
 msgid "Use a different storage location"
 msgstr ""
 
@@ -10013,215 +10013,215 @@ msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
-#: views/settings-general.php:154
+#: views/settings-general.php:156
 #: assets/ran-booster-settings.js:525
 msgid "On"
 msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
-#: views/settings-general.php:154
+#: views/settings-general.php:156
 #: assets/ran-booster-settings.js:526
 msgid "Off"
 msgstr ""
 
-#: views/settings-general.php:56
+#: views/settings-general.php:57
 msgid "Configuration constants"
 msgstr ""
 
-#: views/settings-general.php:59
-#: views/settings-general.php:184
+#: views/settings-general.php:60
+#: views/settings-general.php:186
 msgid "Unknown source"
 msgstr ""
 
-#: views/settings-general.php:66
+#: views/settings-general.php:68
 msgid "Another active non-GitHub provider is required before this can be hidden."
 msgstr ""
 
-#: views/settings-general.php:67
+#: views/settings-general.php:69
 msgid "GitHub remains visible while an active GitHub replacement is present."
 msgstr ""
 
-#: views/settings-general.php:68
+#: views/settings-general.php:70
 msgid "GitHub remains visible while this site manages GitHub packages."
 msgstr ""
 
-#: views/settings-general.php:69
+#: views/settings-general.php:71
 msgid "GitHub remains visible until its local management state is known."
 msgstr ""
 
-#: views/settings-general.php:70
+#: views/settings-general.php:72
 msgid "GitHub remains visible until provider availability is known."
 msgstr ""
 
-#: views/settings-general.php:100
+#: views/settings-general.php:102
 msgid "This development copy cannot receive Booster updates."
 msgstr ""
 
-#: views/settings-general.php:101
+#: views/settings-general.php:103
 msgid "This installation cannot verify its release information."
 msgstr ""
 
-#: views/settings-general.php:102
+#: views/settings-general.php:104
 msgid "Your site configuration has turned update checks off. This setting cannot be changed here."
 msgstr ""
 
-#: views/settings-general.php:103
+#: views/settings-general.php:105
 msgid "Your site’s update configuration is invalid. Correct it before checking."
 msgstr ""
 
-#: views/settings-general.php:104
+#: views/settings-general.php:106
 msgid "Update checks are turned off. Enable the switch to turn them on."
 msgstr ""
 
-#: views/settings-general.php:126
-#: views/settings-general.php:182
+#: views/settings-general.php:128
+#: views/settings-general.php:184
 msgid "Hide GitHub UI"
 msgstr ""
 
-#: views/settings-general.php:127
-#: views/settings-general.php:219
+#: views/settings-general.php:129
+#: views/settings-general.php:221
 msgid "Check for Booster updates"
 msgstr ""
 
-#: views/settings-general.php:129
-#: views/settings-general.php:261
+#: views/settings-general.php:131
+#: views/settings-general.php:263
 msgid "Maximum records"
 msgstr ""
 
-#: views/settings-general.php:130
-#: views/settings-general.php:264
+#: views/settings-general.php:132
+#: views/settings-general.php:266
 msgid "Retention days"
 msgstr ""
 
-#: views/settings-general.php:131
-#: views/settings-general.php:279
+#: views/settings-general.php:133
+#: views/settings-general.php:281
 msgid "Maximum repository ZIP download (MiB)"
 msgstr ""
 
-#: views/settings-general.php:154
+#: views/settings-general.php:156
 msgid "Current saved value:"
 msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
-#: views/settings-general.php:154
+#: views/settings-general.php:156
 #, php-format
 msgid "Maximum records: %1$s; Retention days: %2$s; Download limit: %3$s MiB."
 msgstr ""
 
-#: views/settings-general.php:167
+#: views/settings-general.php:169
 msgid "General preferences"
 msgstr ""
 
-#: views/settings-general.php:168
+#: views/settings-general.php:170
 msgid "Changes save automatically."
 msgstr ""
 
-#: views/settings-general.php:172
+#: views/settings-general.php:174
 msgid "JavaScript is unavailable. Use Save setting beside each switch, and Save changes for numeric settings. Each save reloads Settings; save one group before editing another."
 msgstr ""
 
-#: views/settings-general.php:177
+#: views/settings-general.php:179
 msgid "Appearance"
 msgstr ""
 
-#: views/settings-general.php:184
+#: views/settings-general.php:186
 msgid "GitHub navigation is currently hidden."
 msgstr ""
 
-#: views/settings-general.php:184
+#: views/settings-general.php:186
 msgid "GitHub navigation remains available."
 msgstr ""
 
-#: views/settings-general.php:188
-#: views/settings-general.php:246
+#: views/settings-general.php:190
+#: views/settings-general.php:248
 msgid "Save setting"
 msgstr ""
 
-#: views/settings-general.php:213
+#: views/settings-general.php:215
 msgid "Booster updates"
 msgstr ""
 
-#: views/settings-general.php:221
+#: views/settings-general.php:223
 msgid "Check for updates"
 msgstr ""
 
-#: views/settings-general.php:223
+#: views/settings-general.php:225
 msgid "Booster update checks are enabled."
 msgstr ""
 
-#: views/settings-general.php:223
+#: views/settings-general.php:225
 msgid "Booster update checks are currently unavailable."
 msgstr ""
 
-#: views/settings-general.php:226
+#: views/settings-general.php:228
 msgid "Available version"
 msgstr ""
 
-#: views/settings-general.php:226
+#: views/settings-general.php:228
 msgid "No verified newer offer"
 msgstr ""
 
-#: views/settings-general.php:228
+#: views/settings-general.php:230
 msgid "Last successful Booster check"
 msgstr ""
 
-#: views/settings-general.php:230
+#: views/settings-general.php:232
 msgid "Latest check result"
 msgstr ""
 
-#: views/settings-general.php:230
+#: views/settings-general.php:232
 msgid "No completed check recorded"
 msgstr ""
 
-#: views/settings-general.php:232
+#: views/settings-general.php:234
 msgid "Check diagnostic code"
 msgstr ""
 
-#: views/settings-general.php:237
+#: views/settings-general.php:239
 msgid "Checking is unavailable for this site or your account."
 msgstr ""
 
-#: views/settings-general.php:242
+#: views/settings-general.php:244
 msgid "Update now"
 msgstr ""
 
-#: views/settings-general.php:253
+#: views/settings-general.php:255
 msgid "History and download limits"
 msgstr ""
 
-#: views/settings-general.php:258
+#: views/settings-general.php:260
 msgid "History"
 msgstr ""
 
-#: views/settings-general.php:267
+#: views/settings-general.php:269
 msgid "Lowering these values does not delete protected running or recovery records immediately. Retention is irreversible once records are pruned."
 msgstr ""
 
-#: views/settings-general.php:278
+#: views/settings-general.php:280
 msgid "Download limits"
 msgstr ""
 
-#: views/settings-general.php:280
+#: views/settings-general.php:282
 msgid "Limits the compressed repository ZIP, not installed size or History retention. One MiB is 1,048,576 bytes; fractional values round to the nearest byte."
 msgstr ""
 
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings-general.php:281
+#: views/settings-general.php:283
 msgid "The derived branch expansion ceiling cannot be calculated on this host."
 msgstr ""
 
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings-general.php:281
+#: views/settings-general.php:283
 #, php-format
 msgid "Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit). Host and updater safeguards may be stricter."
 msgstr ""
 
-#: views/settings-general.php:283
+#: views/settings-general.php:285
 msgid "Save changes"
 msgstr ""
 
-#: views/settings-general.php:283
+#: views/settings-general.php:285
 #: assets/ran-booster-settings.js:112
 msgid "No pending numeric changes."
 msgstr ""
@@ -10285,178 +10285,178 @@ msgstr ""
 msgid "Automatic adoption remains disabled. Booster will not bypass private-path checks or rewrite an operator-managed storage definition."
 msgstr ""
 
-#: views/settings-storage.php:124
+#: views/settings-storage.php:125
 msgid "Set a storage location manually"
 msgstr ""
 
-#: views/settings-storage.php:126
+#: views/settings-storage.php:127
 msgid "Choose a durable absolute directory outside the public web root. Create it as a real directory owned by the PHP process user with mode 0700. Booster manages ran-booster-store.json and its lock inside it; if the file already exists, it must be owned by PHP with mode 0600."
 msgstr ""
 
-#: views/settings-storage.php:127
+#: views/settings-storage.php:128
 msgid "Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:"
 msgstr ""
 
-#: views/settings-storage.php:130
+#: views/settings-storage.php:131
 msgid "Example wp-config.php line"
 msgstr ""
 
-#: views/settings-storage.php:131
+#: views/settings-storage.php:132
 msgid "Copy example wp-config.php line"
 msgstr ""
 
-#: views/settings-storage.php:134
+#: views/settings-storage.php:135
 msgid "Or update the same constant with WP-CLI:"
 msgstr ""
 
-#: views/settings-storage.php:137
+#: views/settings-storage.php:138
 msgid "Example WP-CLI command"
 msgstr ""
 
-#: views/settings-storage.php:138
+#: views/settings-storage.php:139
 msgid "Copy example WP-CLI command"
 msgstr ""
 
-#: views/settings-storage.php:141
+#: views/settings-storage.php:142
 msgid "For environment-managed hosting, replace the existing definition with this wp-config.php bridge. An environment variable by itself is not read by Booster:"
 msgstr ""
 
-#: views/settings-storage.php:147
+#: views/settings-storage.php:148
 msgid "Environment-managed wp-config.php bridge"
 msgstr ""
 
-#: views/settings-storage.php:148
+#: views/settings-storage.php:149
 msgid "Copy environment-managed wp-config.php bridge"
 msgstr ""
 
-#: views/settings-storage.php:151
+#: views/settings-storage.php:152
 msgid "If credentials already exist, move the secrets file together with its matching database key; do not copy or reset only one half."
 msgstr ""
 
-#: views/settings-storage.php:158
+#: views/settings-storage.php:161
 msgid "Set up manually instead"
 msgstr ""
 
-#: views/settings-storage.php:158
+#: views/settings-storage.php:161
 msgid "Manual setup instructions"
 msgstr ""
 
-#: views/settings-storage.php:161
+#: views/settings-storage.php:164
 msgid "Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages ran-booster-store.json within it."
 msgstr ""
 
-#: views/settings-storage.php:164
+#: views/settings-storage.php:167
 msgid "Create the owner-only private directories:"
 msgstr ""
 
 #. translators: %d: directory command number.
-#: views/settings-storage.php:169
+#: views/settings-storage.php:172
 #, php-format
 msgid "Directory command %d"
 msgstr ""
 
 #. translators: %d: directory command number.
-#: views/settings-storage.php:171
+#: views/settings-storage.php:174
 #, php-format
 msgid "Copy directory command %d"
 msgstr ""
 
-#: views/settings-storage.php:177
+#: views/settings-storage.php:180
 msgid "Then choose one configuration method, not both:"
 msgstr ""
 
-#: views/settings-storage.php:180
+#: views/settings-storage.php:183
 msgid "Add this line to wp-config.php:"
 msgstr ""
 
-#: views/settings-storage.php:183
+#: views/settings-storage.php:186
 msgid "wp-config.php line"
 msgstr ""
 
-#: views/settings-storage.php:184
+#: views/settings-storage.php:187
 msgid "Copy wp-config.php line"
 msgstr ""
 
-#: views/settings-storage.php:190
+#: views/settings-storage.php:193
 msgid "Or run this WP-CLI command:"
 msgstr ""
 
-#: views/settings-storage.php:193
+#: views/settings-storage.php:196
 msgid "WP-CLI command"
 msgstr ""
 
-#: views/settings-storage.php:194
+#: views/settings-storage.php:197
 msgid "Copy WP-CLI command"
 msgstr ""
 
-#: views/settings-storage.php:208
+#: views/settings-storage.php:213
 msgid "Why automatic setup is unavailable"
 msgstr ""
 
-#: views/settings-storage.php:210
+#: views/settings-storage.php:215
 msgid "Automatic locations considered and discarded"
 msgstr ""
 
-#: views/settings-storage.php:211
+#: views/settings-storage.php:216
 msgid "This check is read-only; Booster did not create files in these locations."
 msgstr ""
 
-#: views/settings-storage.php:217
+#: views/settings-storage.php:222
 msgid "Reason:"
 msgstr ""
 
-#: views/settings-storage.php:219
+#: views/settings-storage.php:224
 msgid "Blocking component:"
 msgstr ""
 
-#: views/settings-storage.php:231
+#: views/settings-storage.php:238
 #: views/troubleshooting-installation.php:61
 msgid "Storage details"
 msgstr ""
 
-#: views/settings-storage.php:234
+#: views/settings-storage.php:241
 #: views/troubleshooting-installation.php:24
 msgid "Configuration constant"
 msgstr ""
 
-#: views/settings-storage.php:247
+#: views/settings-storage.php:254
 #: views/troubleshooting-installation.php:25
 msgid "Path selection"
 msgstr ""
 
-#: views/settings-storage.php:253
+#: views/settings-storage.php:260
 #: views/troubleshooting-installation.php:26
 msgid "Storage directory"
 msgstr ""
 
-#: views/settings-storage.php:257
+#: views/settings-storage.php:264
 #: views/troubleshooting-installation.php:82
 msgid "Copy storage directory"
 msgstr ""
 
-#: views/settings-storage.php:264
+#: views/settings-storage.php:271
 #: views/troubleshooting-installation.php:27
 msgid "Storage file"
 msgstr ""
 
-#: views/settings-storage.php:268
+#: views/settings-storage.php:275
 #: views/troubleshooting-installation.php:82
 msgid "Copy storage file"
 msgstr ""
 
-#: views/settings-storage.php:278
+#: views/settings-storage.php:285
 msgid "The encrypted file and its separate database key are created when you save the first credential."
 msgstr ""
 
-#: views/settings-storage.php:280
+#: views/settings-storage.php:287
 msgid "Credentials are encrypted in this file. WordPress stores the encryption key separately."
 msgstr ""
 
-#: views/settings-storage.php:289
+#: views/settings-storage.php:297
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
-#: views/settings-storage.php:290
+#: views/settings-storage.php:298
 msgid "Manual storage override"
 msgstr ""
 

@@ -52,14 +52,16 @@ $configuration_value = static function ( bool|int $value ): string {
 /** @param array<string,string> $constants */
 $render_configuration   = static function ( array $constants ) use ( $field, $source_labels, $configuration_value ): void {
 	?>
-	<details class="ran-booster-disclosure ran-booster-settings__configuration">
+	<div class="ran-booster-settings__configuration" data-ran-booster-ui-disclosure="settings-configuration">
+	<details class="ran-booster-disclosure ran-booster-settings__configuration" data-ran-booster-ui-disclosure-fallback>
 		<summary><?php esc_html_e( 'Configuration constants', 'ran-booster' ); ?></summary>
-		<div class="ran-booster-disclosure__body">
+		<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 			<?php foreach ( $constants as $setting_key => $configuration_constant ) { ?>
 				<p><code><?php echo esc_html( $configuration_constant ); ?></code>: <?php echo esc_html( $source_labels[ $field( $setting_key )['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?> — <code><?php echo esc_html( $configuration_value( $field( $setting_key )['value'] ) ); ?></code></p>
 			<?php } ?>
 		</div>
 	</details>
+	</div>
 	<?php
 };
 $visibility_reasons     = array(

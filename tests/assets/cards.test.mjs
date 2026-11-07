@@ -111,14 +111,12 @@ function fixture({
 			this.attributes.delete(name);
 		}
 		matches(selector) {
-			if (
-				selector ===
-				'[data-ran-booster-ui-disclosure="installation-component"]'
-			) {
-				return (
-					this.getAttribute('data-ran-booster-ui-disclosure') ===
-					'installation-component'
-				);
+			if (selector.includes('[data-ran-booster-ui-disclosure="')) {
+				return [
+					'installation-component',
+					'settings-configuration',
+					'settings-storage',
+				].includes(this.getAttribute('data-ran-booster-ui-disclosure'));
 			}
 			if (
 				selector === '[role="button"]' ||
@@ -1231,4 +1229,60 @@ test('Transporter Card preserves its hidden state, form, link and identity on hi
 	assert.equal(form.firstChild, link);
 	f.flush();
 	assert.equal(form.firstChild, link);
+});
+
+test('Settings disclosures use visible summary as label while Installation requires context', () => {
+	for (const kind of [
+		'settings-configuration',
+		'settings-storage',
+		'installation-component',
+		'unknown',
+	]) {
+		const f = fixture({ disclosureRuntime: true });
+		const host = new f.Node('div'),
+			details = new f.Node('details'),
+			summary = new f.Node('summary'),
+			body = new f.Node('div'),
+			link = new f.Node('a');
+		host.setAttribute('data-ran-booster-ui-disclosure', kind);
+		details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+		body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+		summary.textContent = 'Configuration details';
+		body.appendChild(link);
+		details.appendChild(summary);
+		details.appendChild(body);
+		host.appendChild(details);
+		f.doc.body.appendChild(host);
+		f.run();
+		f.flush();
+		if (kind.startsWith('settings-')) {
+			assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), '');
+			assert.equal(f.tree().props.className, 'ran-booster-ui-disclosure');
+			assert.equal(
+				f.tree().children[0].props.className,
+				'ran-booster-ui-disclosure__header'
+			);
+			assert.equal(
+				f.tree().children[0].children[1].children[0],
+				'Configuration details'
+			);
+			assert.equal(
+				f.tree().children[1].props.render.props.style.padding,
+				0
+			);
+			assert.equal(
+				host.querySelector('[data-disclosure-slot]').firstChild,
+				body
+			);
+			f.emit('htmx:beforeHistorySave');
+			assert.equal(host.firstChild, details);
+			assert.equal(body.firstChild, link);
+		} else {
+			assert.equal(host.firstChild, details);
+			assert.equal(
+				host.hasAttribute('data-ran-booster-ui-mounted'),
+				false
+			);
+		}
+	}
 });

@@ -314,3 +314,26 @@
 	box-shadow: none;
 	background: transparent;
 }
+
+.ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"] {
+	min-block-size: 40px;
+	padding: 8px 16px;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 20px;
+}
+
+@media (pointer: coarse) {
+	.ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"] {
+		min-block-size: 44px;
+	}
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="settings-configuration"]
+	> details[data-ran-booster-ui-disclosure-fallback],
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="settings-storage"]
+	> details[data-ran-booster-ui-disclosure-fallback] {
+	margin: 0;
+}

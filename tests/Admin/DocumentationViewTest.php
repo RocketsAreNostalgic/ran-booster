@@ -238,8 +238,18 @@ final class DocumentationViewTest extends TestCase {
 
 		$html = $this->render_view( $this->provider_documentation() );
 
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$host  = '//aside[@data-ran-booster-documentation-index]/div[@data-ran-booster-card="documentation"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $host . ')' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-card="documentation"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $host . '/nav[@aria-labelledby="ran-booster-documentation-index-heading"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $host . '/nav/h2[@id="ran-booster-documentation-index-heading"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $host . '/nav/p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__search-hint ")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//details//*[@data-ran-booster-card])' ) );
 		self::assertSame( 1, $callable_calls );
-		self::assertStringContainsString( '<aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>', $html );
+		self::assertStringContainsString( '<aside class="ran-booster-documentation__index" data-ran-booster-documentation-index>', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading">On this page</h2>', $html );
 		self::assertStringContainsString( '<p class="ran-booster-tile ran-booster-documentation__search-hint"><span class="ran-booster-tile__label">Search this page with</span> <kbd>⌘F</kbd> <span>or</span> <kbd>Ctrl+F</kbd></p>', $html );
 		self::assertSame( 1, preg_match_all( '/href="#addon-guide"/', $html ) );

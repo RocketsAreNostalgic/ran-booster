@@ -231,7 +231,8 @@ unset( $chapter );
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Install from a public repository first. Add private access and Push-to-Deploy only when you need them.', 'ran-booster' ); ?></p>
 	</header>
 <div class="ran-booster-documentation__layout" data-ran-booster-documentation-layout>
-<aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>
+<aside class="ran-booster-documentation__index" data-ran-booster-documentation-index>
+<div class="ran-booster-card ran-booster-documentation__index-surface" data-ran-booster-card="documentation">
 	<nav aria-labelledby="ran-booster-documentation-index-heading">
 		<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading"><?php esc_html_e( 'On this page', 'ran-booster' ); ?></h2>
 		<div class="ran-booster-documentation__chapters">
@@ -248,6 +249,7 @@ unset( $chapter );
 		</div>
 		<p class="ran-booster-tile ran-booster-documentation__search-hint"><span class="ran-booster-tile__label"><?php esc_html_e( 'Search this page with', 'ran-booster' ); ?></span> <kbd>⌘F</kbd> <span><?php esc_html_e( 'or', 'ran-booster' ); ?></span> <kbd>Ctrl+F</kbd></p>
 	</nav>
+</div>
 </aside>
 <section class="ran-booster-documentation__main" aria-labelledby="ran-booster-documentation-heading">
 	<div class="ran-booster-page-shell__body">

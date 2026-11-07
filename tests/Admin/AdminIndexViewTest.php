@@ -90,7 +90,7 @@ final class AdminIndexViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/base.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<div class="wrap ran-booster-admin">', $html );
+		self::assertStringContainsString( '<div class="wrap ran-booster-admin" data-ran-booster-shell-navigation>', $html );
 		self::assertStringContainsString( 'id="ran-booster-admin-feedback-toast"', $html );
 		self::assertStringContainsString( 'data-ran-booster-feedback-timeout="6000"', $html );
 		self::assertMatchesRegularExpression(
@@ -125,7 +125,7 @@ final class AdminIndexViewTest extends TestCase {
 		$strapline_position   = strpos( $html, 'Rockets Are Nostalgic' );
 		$navigation_position  = strpos( $html, '<nav class="ran-admin-shell__navigation"' );
 		$core_notice_position = strpos( $html, 'data-ran-booster-core-development-notice' );
-		$wrap_position        = strpos( $html, '<div class="wrap ran-booster-admin">' );
+		$wrap_position        = strpos( $html, '<div class="wrap ran-booster-admin" data-ran-booster-shell-navigation>' );
 		$marker_position      = strpos( $html, '<hr class="wp-header-end">' );
 		foreach ( array( $strapline_position, $navigation_position, $core_notice_position, $wrap_position, $marker_position ) as $position ) {
 			self::assertIsInt( $position );

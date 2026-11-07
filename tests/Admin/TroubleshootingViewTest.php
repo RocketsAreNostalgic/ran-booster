@@ -2547,6 +2547,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$status_html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'id="ran-booster-provider-tasks"', $status_html );
+		self::assertStringContainsString( 'data-ran-booster-ui-navigation="thin"', $status_html );
 		self::assertStringContainsString( 'hx-target="#ran-booster-provider-task-panel"', $status_html );
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-task-panel"', $status_html );
 		self::assertStringContainsString( 'hx-swap="outerHTML transition:false show:none"', $status_html );

@@ -486,7 +486,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 						hx-history="false"
 						hx-sync="this:replace"
 					>
-						<nav class="ran-booster-provider-task-tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true">
+						<nav class="ran-booster-provider-task-tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true" data-ran-booster-ui-navigation="thin">
 							<ul class="filter-links">
 							<?php
 							foreach ( array(

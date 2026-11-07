@@ -159,9 +159,8 @@
 	padding-block-end: 0;
 }
 
-.ran-admin-shell__navigation > a:hover,
-.ran-admin-shell__navigation > a:focus-visible {
-	border-block-end-color: currentcolor;
+.ran-admin-shell__navigation > a {
+	border-block-end-width: 3px;
 }
 
 body:has(.ran-admin-shell) #screen-meta-links {

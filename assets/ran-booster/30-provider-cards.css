@@ -481,6 +481,7 @@
 .ran-booster-admin .ran-booster-provider-task-tabs .filter-links li > a {
 	margin: 0;
 	padding: 8px;
+	border-block-end: 2px solid transparent;
 	font-weight: 600;
 	text-decoration: none;
 }
@@ -498,8 +499,8 @@
 	.ran-booster-provider-task-tabs
 	.filter-links
 	li
-	> a:not(.current) {
-	border-block-end-color: transparent;
+	> a[aria-current="page"] {
+	border-block-end-color: currentcolor;
 }
 
 .ran-booster-admin .ran-booster-provider-task-tab__source-indicator {

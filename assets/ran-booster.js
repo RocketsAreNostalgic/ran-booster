@@ -331,6 +331,22 @@
 			});
 		}
 
+		document.addEventListener(
+			'click',
+			function (event) {
+				if (
+					typeof window.htmx?.process === 'function' &&
+					(event.ctrlKey || event.metaKey) &&
+					event.target?.closest?.(
+						'.ran-booster-provider-task-tabs[data-ran-booster-ui-navigation="thin"] a[href][hx-get][data-ran-booster-provider-task]'
+					)
+				) {
+					event.stopPropagation();
+				}
+			},
+			true
+		);
+
 		function currentTaskRegion() {
 			return (
 				document.getElementById('ran-booster-provider-tasks') ||
@@ -433,24 +449,29 @@
 				'#ran-booster-provider-task-panel'
 			);
 			const currentTask = panel?.dataset.ranBoosterProviderTask || '';
-			let currentTab = null;
-
-			region
-				.querySelectorAll('.ran-booster-provider-task-tab')
-				.forEach(function (tab) {
-					if (!tab.dataset.ranBoosterProviderTask) {
-						return;
-					}
-					const isCurrent =
-						tab.dataset.ranBoosterProviderTask === currentTask;
-					tab.classList.toggle('current', isCurrent);
-					if (isCurrent) {
-						tab.setAttribute('aria-current', 'page');
-						currentTab = tab;
-					} else {
-						tab.removeAttribute('aria-current');
-					}
-				});
+			let currentTab = window.ranBoosterUI?.setNavigationCurrent?.(
+				region,
+				currentTask
+			);
+			if (currentTab === undefined) {
+				currentTab = null;
+				region
+					.querySelectorAll('.ran-booster-provider-task-tab')
+					.forEach(function (tab) {
+						if (!tab.dataset.ranBoosterProviderTask) {
+							return;
+						}
+						const isCurrent =
+							tab.dataset.ranBoosterProviderTask === currentTask;
+						tab.classList.toggle('current', isCurrent);
+						if (isCurrent) {
+							tab.setAttribute('aria-current', 'page');
+							currentTab = tab;
+						} else {
+							tab.removeAttribute('aria-current');
+						}
+					});
+			}
 			const currentRepositoryTab = region.querySelector(
 				'.ran-booster-repository-detail__tabs [aria-current="page"]'
 			);

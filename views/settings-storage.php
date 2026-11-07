@@ -63,7 +63,7 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 
 ?>
 	<?php if ( null !== $secrets_storage ) { ?>
-		<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-storage" data-ran-booster-storage-reason="<?php echo esc_attr( $storage_reason_code ); ?>">
+		<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="settings" aria-labelledby="ran-booster-storage" data-ran-booster-storage-reason="<?php echo esc_attr( $storage_reason_code ); ?>">
 			<div class="ran-booster-onboarding__storage-heading">
 				<h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
 				<?php $storage_status_label = $storage_status_labels[ $storage_status ] ?? __( 'Status unknown', 'ran-booster' ); ?>

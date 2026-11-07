@@ -913,13 +913,13 @@
 }
 
 .ran-booster-admin
-	.ran-booster-settings__general
+	:is(.ran-booster-settings, .ran-booster-settings__general)
 	> [data-ran-booster-card="settings"][data-ran-booster-ui-mounted] {
 	padding: 0;
 }
 
 .ran-booster-admin
-	.ran-booster-settings__general
+	:is(.ran-booster-settings, .ran-booster-settings__general)
 	> [data-ran-booster-card="settings"][data-ran-booster-ui-mounted]
 	.ran-booster-card__content {
 	padding: var(--ran-booster-space-24);

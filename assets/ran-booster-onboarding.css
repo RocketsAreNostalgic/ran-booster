@@ -60,6 +60,12 @@
 	.ran-booster-onboarding
 	.ran-booster-onboarding__storage
 	> :is(h3, .ran-booster-onboarding__storage-heading)
+	+ *,
+.ran-booster-admin
+	.ran-booster-onboarding
+	.ran-booster-onboarding__storage[aria-labelledby="ran-booster-onboarding-storage-heading"]
+	.ran-booster-card__content
+	> .ran-booster-onboarding__storage-heading
 	+ * {
 	margin-block-start: var(--ran-booster-space-12);
 }
@@ -117,7 +123,15 @@
 	line-height: inherit;
 }
 
-.ran-booster-admin .ran-booster-onboarding__storage > p {
+.ran-booster-admin .ran-booster-onboarding__storage > p,
+.ran-booster-admin
+	.ran-booster-onboarding__storage[aria-labelledby="ran-booster-storage"]
+	.ran-booster-card__content
+	> p,
+.ran-booster-admin
+	.ran-booster-onboarding__storage[aria-labelledby="ran-booster-onboarding-storage-heading"]
+	.ran-booster-card__content
+	> p {
 	margin-block: var(--ran-booster-space-8) 0;
 	margin-inline: 0;
 }

@@ -371,27 +371,39 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertSame( 'outerHTML', $this->header( 'HX-Reswap' ) );
 		self::assertStringContainsString( 'Could not verify &lt;the hook&gt;.', $html );
 		self::assertStringNotContainsString( '<the hook>', $html );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="error"', $html );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice-scope="global" role="alert" tabindex="-1"', $html );
+		self::assertStringContainsString( '<div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary>Could not verify &lt;the hook&gt;.</p></div></div>', $html );
 	}
 
 	public function test_normal_request_retains_signed_post_redirect_get_notice(): void {
-		$facade = $this->facade();
-		$this->capture_termination(
-			fn () => $facade->respond(
-				AdminInteractionOutcome::success( $this->request(), 'GitHub webhook configured.' )
-			)
+		$request = $this->request();
+		$cases   = array(
+			array( AdminInteractionOutcome::success( $request, 'GitHub webhook configured.' ), 'success', 'status', 'GitHub webhook configured.' ),
+			array( AdminInteractionOutcome::accepted( $request, 'Request accepted.' ), 'info', 'status', 'Request accepted.' ),
+			array( AdminInteractionOutcome::validation_failure( $request, 'Could not verify <the hook>.' ), 'error', 'alert', 'Could not verify &lt;the hook&gt;.' ),
+			array( AdminInteractionOutcome::unexpected_failure( $request ), 'error', 'alert', 'We could not complete that request. Please try again.' ),
 		);
+		foreach ( $cases as [ $outcome, $intent, $role, $message ] ) {
+			$this->redirects                                 = array();
+			$GLOBALS['ran_booster_interaction_test_actions'] = array();
+			$facade = $this->facade();
+			$this->capture_termination( fn () => $facade->respond( $outcome ) );
 
-		self::assertCount( 1, $this->redirects );
-		$this->load_query_from_url( $this->redirects[0] );
-		$facade->prepare_pending_feedback();
-		$notices = $GLOBALS['ran_booster_interaction_test_actions']['admin_notices'] ?? array();
-		self::assertCount( 1, $notices );
+			self::assertCount( 1, $this->redirects );
+			$this->load_query_from_url( $this->redirects[0] );
+			$facade->prepare_pending_feedback();
+			$notices = $GLOBALS['ran_booster_interaction_test_actions']['admin_notices'] ?? array();
+			self::assertCount( 1, $notices );
 
-		ob_start();
-		$notices[0]['callback']();
-		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'notice notice-success', $html );
-		self::assertStringContainsString( 'GitHub webhook configured.', $html );
+			ob_start();
+			$notices[0]['callback']();
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'notice notice-' . $intent, $html );
+			self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="' . $intent . '"', $html );
+			self::assertStringContainsString( 'data-ran-booster-ui-notice-scope="global" role="' . $role . '"', $html );
+			self::assertStringContainsString( '<div data-ran-booster-ui-notice-content><p>' . $message . '</p></div></div>', $html );
+		}
 	}
 
 	public function test_register_owns_only_the_pending_feedback_hook(): void {

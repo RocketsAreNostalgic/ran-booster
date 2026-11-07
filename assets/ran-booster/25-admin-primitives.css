@@ -198,6 +198,13 @@
 	);
 }
 
+[data-ran-booster-background-failure-row]
+	.update-message[data-ran-booster-ui-notice][data-ran-booster-ui-notice-scope="global"][data-ran-booster-ui-mounted]
+	[data-ran-booster-ui-notice-content]
+	p::before {
+	content: none;
+}
+
 .ran-booster-admin .ran-booster-card__content {
 	box-sizing: content-box;
 	min-inline-size: 0;

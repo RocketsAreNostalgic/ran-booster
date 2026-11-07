@@ -61,15 +61,17 @@ final readonly class ManagedPluginFailureRows {
 		?>
 		<tr class="plugin-update-tr<?php echo esc_attr( $active ); ?>" data-plugin="<?php echo esc_attr( $plugin_file ); ?>" data-ran-booster-background-failure-row>
 			<td colspan="<?php echo esc_attr( (string) $columns ); ?>" class="plugin-update colspanchange">
-				<div class="update-message notice inline notice-error notice-alt">
-					<p>
-						<strong><?php esc_html_e( 'RAN Booster automatic deployment failed.', 'ran-booster' ); ?></strong>
-						<?php echo esc_html( DeploymentOutcomeMessage::for_code( (string) $failure['outcome_code'] ) ); ?>
-						<a href="<?php echo esc_url( $this->activity_url( $failure ) ); ?>"><?php esc_html_e( 'Review deployment', 'ran-booster' ); ?></a>
-						<?php if ( is_string( $failure['credential_id'] ) && '' !== $failure['credential_id'] ) { ?>
-							<a href="<?php echo esc_url( $this->credential_url( $failure ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>
-						<?php } ?>
-					</p>
+				<div class="update-message notice inline notice-error notice-alt" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global">
+					<div data-ran-booster-ui-notice-content>
+						<p>
+							<strong><?php esc_html_e( 'RAN Booster automatic deployment failed.', 'ran-booster' ); ?></strong>
+							<?php echo esc_html( DeploymentOutcomeMessage::for_code( (string) $failure['outcome_code'] ) ); ?>
+							<a href="<?php echo esc_url( $this->activity_url( $failure ) ); ?>"><?php esc_html_e( 'Review deployment', 'ran-booster' ); ?></a>
+							<?php if ( is_string( $failure['credential_id'] ) && '' !== $failure['credential_id'] ) { ?>
+								<a href="<?php echo esc_url( $this->credential_url( $failure ) ); ?>"><?php esc_html_e( 'Replace credential', 'ran-booster' ); ?></a>
+							<?php } ?>
+						</p>
+					</div>
 				</div>
 			</td>
 		</tr>

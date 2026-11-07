@@ -121,7 +121,7 @@ final class SignedAdminInteractionFlow {
 			( $this->emit_header )( 'HX-Retarget', '#' . $request->error_region_id );
 			( $this->emit_header )( 'HX-Reselect', 'unset' );
 			( $this->emit_header )( 'HX-Reswap', 'outerHTML' );
-			echo '<div id="' . esc_attr( $request->error_region_id ) . '" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1"><p>' . esc_html( $message ) . '</p></div>';
+			echo '<div id="' . esc_attr( $request->error_region_id ) . '" class="notice notice-error inline" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global" role="alert" tabindex="-1"><div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary>' . esc_html( $message ) . '</p></div></div>';
 			( $this->terminate )();
 		}
 
@@ -220,7 +220,7 @@ final class SignedAdminInteractionFlow {
 				\RAN\Admin\BoosterNoticeScope::render(
 					static function () use ( $class, $role, $outcome ): void {
 						$inline = \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : '';
-						echo '<div class="' . esc_attr( $class . $inline ) . '" role="' . esc_attr( $role ) . '"><p>' . esc_html( $outcome['message'] ) . '</p></div>';
+						echo '<div class="' . esc_attr( $class . $inline ) . '" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( substr( $class, 14 ) ) . '" data-ran-booster-ui-notice-scope="global" role="' . esc_attr( $role ) . '"><div data-ran-booster-ui-notice-content><p>' . esc_html( $outcome['message'] ) . '</p></div></div>';
 					}
 				);
 			}

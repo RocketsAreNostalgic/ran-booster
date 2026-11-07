@@ -1084,8 +1084,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'profile-21', $html );
 		self::assertStringContainsString( 'data-ran-booster-card="provider"', $html );
 
-		// Only supported provider list views use the outer section as a Card host.
-		foreach ( array( array( 'gh', 'credentials', true ), array( 'bb', 'credentials', true ), array( 'gh', 'secrets', true ), array( 'bb', 'secrets', true ), array( 'gh', 'overview', false ), array( 'other', 'credentials', false ) ) as list( $code, $view, $expected ) ) {
+		// Provider list views use the outer section as a Card host.
+		foreach ( array( array( 'gh', 'credentials', true ), array( 'bb', 'credentials', true ), array( 'gh', 'secrets', true ), array( 'bb', 'secrets', true ), array( 'gh', 'overview', false ), array( 'other', 'credentials', true ) ) as list( $code, $view, $expected ) ) {
 			$provider['code'] = $code;
 			$provider_view    = $view;
 			ob_start();

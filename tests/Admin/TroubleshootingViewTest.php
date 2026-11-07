@@ -1404,7 +1404,7 @@ final class TroubleshootingViewTest extends TestCase {
 		foreach ( array(
 			'gh'    => true,
 			'bb'    => true,
-			'other' => false,
+			'other' => true,
 		) as $code => $expected ) {
 			$provider['code'] = $code;
 			ob_start();
@@ -1955,7 +1955,7 @@ final class TroubleshootingViewTest extends TestCase {
 		foreach ( array(
 			'gh'    => true,
 			'bb'    => true,
-			'other' => false,
+			'other' => true,
 		) as $code => $expected ) {
 			$provider['code'] = $code;
 			ob_start();

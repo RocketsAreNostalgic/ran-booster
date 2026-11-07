@@ -134,6 +134,24 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'name="_ran_booster_reinstall_nonce"', $html );
 	}
 
+	public function test_unavailable_provider_notice_escapes_repository_identity(): void {
+		$package = $this->package();
+		$package->set_repository( new ManagedRepository( 'temporarily-offline', 'owner/<script>', 'id<unsafe>', 'release' ) );
+		$package_view              = PackagePagePresenter::plugin();
+		$package_provider_settings = array(
+			'default_provider' => 'temporarily-offline',
+			'providers'        => array( $this->provider_option( 'temporarily-offline', false ) ),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<code>owner/&lt;script&gt;</code>', $html );
+		self::assertStringContainsString( '<code>id&lt;unsafe&gt;</code>', $html );
+		self::assertStringNotContainsString( '<script>', $html );
+	}
+
 	public function test_list_view_labels_unavailable_provider_and_disables_only_deployment_action(): void {
 		$GLOBALS['ran_booster_bulk_active_plugins'] = array( 'exact/exact.php' );
 		$packages                                   = array( $this->package() );
@@ -599,6 +617,33 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[repository]"', $html );
 		self::assertStringContainsString( '>Pick Plugin repository</button>', $html );
 		self::assertStringNotContainsString( 'hidden disabled="disabled"', $html );
+	}
+
+	public function test_development_warning_envelope_and_link_conditions(): void {
+		foreach ( array(
+			array( 'manual', true, true, 'branch', false, true ),
+			array( 'automatic', true, true, 'branch', false, true ),
+			array( 'disabled', true, true, 'branch', true, true ),
+			array( 'manual', true, false, 'branch', false, false ),
+			array( 'automatic', true, true, 'release_asset', false, false ),
+			array( 'manual', false, true, 'branch', false, false ),
+		) as list( $deployment_policy, $development_environment_detected, $provider_webhook_available, $package_automation_source, $hidden, $links ) ) {
+			$provider_code = 'gh';
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
+			$html = (string) ob_get_clean();
+			if ( ! $development_environment_detected ) {
+				self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
+				continue;
+			}
+			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-local-development-warning' . ( $hidden ? ' hidden' : '' ) . '>\s*<div data-ran-booster-ui-notice-content>\s*<p>.*?Manual and Automatic can overwrite local changes when an update or reinstall runs\..*?<\/p>\s*<\/div>\s*<\/div>/s', $html );
+			if ( $links ) {
+				self::assertStringContainsString( 'Push-to-Deploy setting</a> | <a', $html );
+				self::assertStringContainsString( '>Docs</a>', $html );
+			} else {
+				self::assertStringNotContainsString( 'Push-to-Deploy setting</a>', $html );
+			}
+		}
 	}
 
 	public function test_deployment_policy_disables_automatic_without_webhook_support(): void {

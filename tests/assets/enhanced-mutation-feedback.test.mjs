@@ -3597,3 +3597,63 @@ test('a whole-admin failure leaves unrelated WordPress notices and their actions
 		}
 	}
 });
+
+test('credential transport errors update only the child Notice and retain their focus and announcement owner', () => {
+	const state = fixture();
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-credential-validation';
+	const result = { textContent: 'old success', hidden: false, className: '' };
+	const attributes = new Map();
+	const classes = new Set(['notice', 'notice-success', 'inline']);
+	const updates = [];
+	const notice = {
+		hidden: true,
+		setAttribute: (name, value) => attributes.set(name, value),
+		classList: {
+			remove: (name) => classes.delete(name),
+			add: (name) => classes.add(name),
+		},
+		dispatchEvent: (event) =>
+			updates.push({
+				type: event.type,
+				bubbles: event.bubbles,
+				intent: attributes.get('data-ran-booster-ui-notice-intent'),
+				text: result.textContent,
+				hidden: notice.hidden,
+			}),
+	};
+	result.closest = (selector) =>
+		selector === '[data-ran-booster-ui-notice]' ? notice : null;
+	state.window.CustomEvent = class {
+		constructor(type, options) {
+			this.type = type;
+			this.bubbles = options.bubbles;
+		}
+	};
+	state.error.textContent = 'Expiry unknown';
+	state.error.querySelector = (selector) =>
+		selector === '[data-ran-booster-credential-result]' ? result : null;
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: { status: 0 } },
+	});
+	assert.equal(state.error.textContent, 'Expiry unknown');
+	assert.equal(classes.has('notice-success'), false);
+	assert.equal(classes.has('notice-error'), true);
+	assert.deepEqual(updates, [
+		{
+			type: 'ran-booster:ui-notice-update',
+			bubbles: true,
+			intent: 'error',
+			text: 'We could not complete that request. Please try again.',
+			hidden: false,
+		},
+	]);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, [
+		{ message: result.textContent, type: 'assertive' },
+	]);
+});

@@ -588,6 +588,23 @@
 				);
 			}
 			if (isCredential) {
+				const notice = credentialResult?.closest?.(
+					'[data-ran-booster-ui-notice]'
+				);
+				if (notice) {
+					notice.setAttribute(
+						'data-ran-booster-ui-notice-intent',
+						'error'
+					);
+					notice.classList.remove('notice-success');
+					notice.classList.add('notice-error');
+					notice.hidden = false;
+					notice.dispatchEvent(
+						new window.CustomEvent('ran-booster:ui-notice-update', {
+							bubbles: true,
+						})
+					);
+				}
 				region.removeAttribute?.('role');
 				region.focus?.({ preventScroll: true });
 				announce(message, 'error');

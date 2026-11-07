@@ -581,9 +581,29 @@
 			'template[data-ran-booster-general-navigation]'
 		);
 		if (navigation) {
-			document
-				.querySelector('.ran-admin-shell__navigation')
-				?.replaceChildren(navigation.content.cloneNode(true));
+			const host = document.querySelector('.ran-admin-shell__navigation');
+			if (host) {
+				const active = host.ownerDocument.activeElement;
+				const focused = host.contains(active);
+				const href = focused ? active.getAttribute('href') : null;
+				host.dispatchEvent(
+					new CustomEvent('htmx:beforeCleanupElement', {
+						bubbles: true,
+						detail: { elt: host },
+					})
+				);
+				host.replaceChildren(navigation.content.cloneNode(true));
+				if (focused) {
+					(
+						Array.from(host.querySelectorAll('a[href]')).find(
+							(link) => link.getAttribute('href') === href
+						) ||
+						host.querySelector('a[aria-current="page"]') ||
+						host.querySelector('a[href]')
+					)?.focus({ preventScroll: true });
+				}
+				document.dispatchEvent(new Event('ran-booster:ui-ready'));
+			}
 			navigation.remove();
 		}
 		const active = next.form.ownerDocument.activeElement;

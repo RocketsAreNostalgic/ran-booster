@@ -58,6 +58,8 @@ final class DebugCaptureViewTest extends TestCase {
 			)
 		);
 
+		self::assertSame( 2, substr_count( $html, 'data-ran-booster-card="troubleshooting"' ) );
+		self::assertStringContainsString( '<details id="ran-booster-logging-details" data-ran-booster-logging-disclosure', $html );
 		self::assertStringContainsString( '>Capture active</span>', $html );
 		self::assertStringContainsString( 'until 23 July &lt;18:30&gt;.', $html );
 		self::assertStringContainsString( 'for="ran-booster-debug-capture-content"', $html );

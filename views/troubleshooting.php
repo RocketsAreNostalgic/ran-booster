@@ -122,6 +122,7 @@ $repository_placeholder = array() === $locator_examples
 		}
 		?>
 	<?php } else { ?>
+		<div class="ran-booster-card" data-ran-booster-card="troubleshooting">
 		<h3 class="ran-booster-section__title" id="ran-booster-run-diagnostics-heading"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></h3>
 		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a Git provider and run checks. Results below describe only this diagnostic run.', 'ran-booster' ); ?></p>
 
@@ -181,12 +182,13 @@ $repository_placeholder = array() === $locator_examples
 		<p class="description"><?php esc_html_e( 'The full check makes temporary local marker files and up to five Git provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report.', 'ran-booster' ); ?></p>
 		<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Run full diagnostics', 'ran-booster' ); ?></button></p>
 	</form>
+		</div>
 
 		<?php if ( ! empty( $troubleshooting['ran'] ) ) { ?>
 			<?php if ( isset( $troubleshooting['retention_available'] ) && ! $troubleshooting['retention_available'] ) { ?>
 			<div class="notice notice-warning inline"><p><?php esc_html_e( 'These results remain available below, but could not be retained for a later support report.', 'ran-booster' ); ?></p></div>
 		<?php } ?>
-		<div id="ran-booster-troubleshooting-results" class="ran-booster-troubleshooting__results" aria-live="polite">
+		<div id="ran-booster-troubleshooting-results" class="ran-booster-troubleshooting__results ran-booster-card" data-ran-booster-card="troubleshooting" aria-live="polite">
 			<h4 class="ran-booster-section__title"><?php esc_html_e( 'Diagnostic results', 'ran-booster' ); ?></h4>
 			<?php if ( ! empty( $troubleshooting['partial'] ) ) { ?>
 				<div class="notice notice-warning inline"><p><?php echo esc_html( $partial_messages[ $troubleshooting['partial_reason'] ?? '' ] ?? __( 'Diagnostics finished with partial results.', 'ran-booster' ) ); ?></p></div>

@@ -29,11 +29,7 @@
 }
 
 .ran-booster-admin .ran-booster-documentation__index {
-	position: sticky;
 	grid-area: index;
-	inset-block-start: 54px;
-	max-block-size: calc(100vh - 70px);
-	overflow: auto;
 }
 
 .ran-booster-admin .ran-booster-documentation__index nav {
@@ -120,7 +116,6 @@
 
 .ran-booster-admin .ran-booster-documentation__section {
 	margin: 0;
-	scroll-margin-block-start: 70px;
 }
 
 .ran-booster-admin .ran-booster-documentation__section summary {

@@ -1225,7 +1225,9 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertSame( $case[1], $badge->getAttribute( 'data-ran-booster-ui-badge-label' ) );
 			self::assertSame( $case[2], $badge->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
 			self::assertSame( 2.0, $xpath->evaluate( 'count(./span)', $badge ) );
-			$fallback = $xpath->query( './span[@data-ran-booster-ui-badge-fallback]', $badge )->item( 0 );
+			$fallbacks = $xpath->query( './span[@data-ran-booster-ui-badge-fallback]', $badge );
+			self::assertInstanceOf( \DOMNodeList::class, $fallbacks );
+			$fallback = $fallbacks->item( 0 );
 			self::assertInstanceOf( \DOMElement::class, $fallback );
 			self::assertSame( $case[1], $xpath->evaluate( 'string(.)', $fallback ) );
 			self::assertSame( 'ran-booster-badge ran-booster-badge--' . $case[3] . ' ran-booster-diagnostic-status ran-booster-diagnostic-status--' . $case[4], $fallback->getAttribute( 'class' ) );

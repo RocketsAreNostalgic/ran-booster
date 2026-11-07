@@ -52,7 +52,10 @@ final class OnboardingViewTest extends TestCase {
 		self::assertCount( 4, $cards );
 		foreach ( array( '1. Secure credential storage', '2. Choose a Git provider', '3. Import or migrate (optional)', '4. Install and manage packages' ) as $index => $label ) {
 			$card = $cards->item( $index );
-			self::assertInstanceOf( \DOMNode::class, $card );
+			self::assertInstanceOf( \DOMElement::class, $card );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(self::section)', $card ) );
+			self::assertSame( 'overview', $card->getAttribute( 'data-ran-booster-card' ) );
+			self::assertTrue( $card->hasAttribute( 'class' ) && in_array( 'ran-booster-card', explode( ' ', $card->getAttribute( 'class' ) ), true ) );
 			// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOMNode exposes this native property.
 			self::assertStringContainsString( $label, $card->textContent );
 		}
@@ -750,7 +753,14 @@ final class OnboardingViewTest extends TestCase {
 			self::assertStringContainsString( 'inventory is incomplete or unavailable', $html );
 			self::assertStringContainsString( '&lt;storage failure&gt;', $html );
 			self::assertStringContainsString( 'Review storage', $html );
+			$xpath = $this->storage_xpath( $html );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-overview-attention" and @data-ran-booster-card="overview" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")]/h3[@id="ran-booster-overview-attention"])' ) );
 		}
+	}
+
+	public function test_attention_card_is_absent_when_no_attention_is_needed(): void {
+		$xpath = $this->storage_xpath( $this->render_view( null, null, array( 'storage_summary' => array( 'status' => 'storage_healthy' ) ) ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-overview-attention"])' ) );
 	}
 
 	public function test_missing_storage_status_is_unavailable_even_with_complete_inventory(): void {
@@ -1155,6 +1165,7 @@ final class OnboardingViewTest extends TestCase {
 		$prompt = $xpath->query( '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-onboarding ")]/*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-onboarding__storage ") and contains(concat(" ", normalize-space(@class), " "), " fixture-migration ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $prompt );
 		self::assertCount( 1, $prompt );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[contains(concat(" ", normalize-space(@class), " "), " fixture-migration ")]/ancestor-or-self::*[@data-ran-booster-card])' ) );
 
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_overview_render_migration_prompt'] = array(
 			static function (): void {

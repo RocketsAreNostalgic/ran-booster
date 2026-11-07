@@ -975,3 +975,34 @@ test('Activity Card keeps native controls and current rows through history and f
 	assert.equal(form.firstChild, link);
 	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
 });
+
+test('sweep Card kinds retain native nodes and unknown kinds remain native', () => {
+	for (const kind of [
+		'documentation',
+		'provider',
+		'troubleshooting',
+		'transporter',
+	]) {
+		const f = fixture();
+		const { card, form, link } = f.make(kind, f.doc.body, 'section');
+		link.focus();
+		f.run();
+		f.flush();
+		assert.equal(f.tree().type, 'CardRoot');
+		assert.equal(form.firstChild, link);
+		assert.equal(f.doc.activeElement, link);
+		f.emit('htmx:beforeHistorySave');
+		assert.equal(form.parentElement, card);
+		assert.equal(form.firstChild, link);
+		f.window.ranBoosterUI.CardRoot = null;
+		f.flush();
+		assert.equal(form.parentElement, card);
+		assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
+	}
+	const f = fixture();
+	const unknown = f.make('unsupported');
+	f.run();
+	f.flush();
+	assert.equal(f.counts().renders, 0);
+	assert.equal(unknown.form.parentElement, unknown.card);
+});

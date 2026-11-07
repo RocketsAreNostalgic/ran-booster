@@ -383,12 +383,22 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 			listeners.set(`apply:${type}`, listener);
 		},
 	};
+	const noticeUpdates = [];
 	const results = {
 		setAttribute(name, value) {
 			this[name] = value;
 		},
 		clears: 0,
 		items: [],
+		querySelector(selector) {
+			return selector === '[data-ran-booster-ui-notice]'
+				? this.items.find(
+						(item) =>
+							item.getAttribute('data-ran-booster-ui-notice') !==
+							null
+					) || null
+				: null;
+		},
 		appendChild(item) {
 			this.items.push(item);
 		},
@@ -662,7 +672,20 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 			events.push(event);
 		},
 		createElement() {
+			const attributes = new Map();
 			return {
+				setAttribute: (name, value) => attributes.set(name, value),
+				getAttribute: (name) => attributes.get(name) ?? null,
+				dispatchEvent(event) {
+					noticeUpdates.push({
+						item: this,
+						type: event.type,
+						bubbles: event.bubbles,
+						intent: attributes.get(
+							'data-ran-booster-ui-notice-intent'
+						),
+					});
+				},
 				children: [],
 				appendChild(child) {
 					this.children.push(child);
@@ -734,6 +757,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		htmxProcesses,
 		listeners,
 		master: () => master,
+		noticeUpdates,
 		message,
 		spoken,
 		password,
@@ -1404,7 +1428,7 @@ test('credential decisions have no default and the same exact choice reaches Pre
 			'import'
 		);
 		assert.equal(
-			state.results.items[0].children[1].textContent,
+			state.results.items[0].children[0].children[1].textContent,
 			'Transferred credential is available on this site.'
 		);
 	} finally {
@@ -1495,7 +1519,7 @@ test('managed credential recovery enables Apply without claiming a package chang
 			true
 		);
 		assert.equal(
-			state.results.items[0].children[1].textContent,
+			state.results.items[0].children[0].children[1].textContent,
 			'Transferred credential is available on this site.'
 		);
 	} finally {
@@ -1564,7 +1588,7 @@ test('apply sends only selected rows serially and preserves choices on review', 
 		finishApply();
 		await tick();
 		assert.equal(
-			state.results.items[0].children[0].textContent,
+			state.results.items[0].children[0].children[0].textContent,
 			'Plugin “Package 1” (package-1/package.php) — Applied.'
 		);
 		assert.equal(state.apply.getAttribute('aria-busy'), 'true');
@@ -1757,11 +1781,11 @@ test('apply identifies the exact package where a serial chain is pending', async
 		await tick();
 		assert.equal(state.results.items.length, 2);
 		assert.equal(
-			state.results.items[0].children[0].textContent,
+			state.results.items[0].children[0].children[0].textContent,
 			'Plugin “Forms Plugin” (forms/forms.php) — Installed with deployment disabled.'
 		);
 		assert.equal(
-			state.results.items[1].children[0].textContent,
+			state.results.items[1].children[0].children[0].textContent,
 			'Theme “Campaign Theme” (campaign-theme) — Applying…'
 		);
 
@@ -1769,7 +1793,7 @@ test('apply identifies the exact package where a serial chain is pending', async
 		await applying;
 		assert.equal(state.results.items.length, 3);
 		assert.equal(
-			state.results.items[1].children[0].textContent,
+			state.results.items[1].children[0].children[0].textContent,
 			'Theme “Campaign Theme” (campaign-theme) — Adopted: deployment disabled'
 		);
 	} finally {
@@ -1817,7 +1841,7 @@ test('changing the draft during apply retains the first result and stops subsequ
 		]);
 		assert.equal(state.results.items.length, 1);
 		assert.match(
-			state.results.items[0].children[0].textContent,
+			state.results.items[0].children[0].children[0].textContent,
 			/Package 0.*Applied old package\./
 		);
 		assert.equal(state.review.innerHTML, '<table>empty</table>');
@@ -1903,7 +1927,7 @@ test('changing the file during the post-apply refresh suppresses old completion'
 		await applying;
 		assert.equal(state.review.innerHTML, '<table>empty</table>');
 		assert.match(
-			state.results.items[0].children[0].textContent,
+			state.results.items[0].children[0].children[0].textContent,
 			/Applied old package\./
 		);
 		assert.equal(state.results.items.length, 1);
@@ -1931,7 +1955,7 @@ test('partial apply keeps row feedback without claiming all changes succeeded', 
 		await tick();
 		await state.listeners.get('apply:click')();
 		assert.match(
-			state.results.items[0].children[0].textContent,
+			state.results.items[0].children[0].children[0].textContent,
 			/Needs recovery\./
 		);
 		assert.match(state.results.items[0].className, /notice-warning/);
@@ -2287,6 +2311,63 @@ test('successful preview and draft clearing preserve the original announcement o
 		assert.equal(state.message.textContent, '');
 		assert.equal(state.apply.disabled, true);
 		assert.deepEqual(state.spoken, ['Transporter Blueprint reviewed.']);
+	} finally {
+		cleanup();
+	}
+});
+
+test('apply result keeps its message, credential and added recovery nodes across intent changes', async () => {
+	let finishApply;
+	const state = importFixture(
+		(data) =>
+			data.get('action') === 'ran_booster_apply_blueprint'
+				? new Promise((resolve) => {
+						finishApply = resolve;
+					})
+				: success('<table>review</table>'),
+		{ '<table>review</table>': [['0', 'install', true]] }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const applying = state.listeners.get('apply:click')();
+		const item = state.results.items[0],
+			content = item.children[0],
+			text = content.children[0];
+		const recovery = { textContent: 'Existing recovery link' };
+		content.appendChild(recovery);
+		assert.equal(
+			item.getAttribute('data-ran-booster-ui-notice-intent'),
+			'info'
+		);
+		finishApply(
+			success('', {
+				status: 'installed',
+				message: 'Applied.',
+				credential_state: 'transferred_available',
+			})
+		);
+		await applying;
+		assert.equal(state.results.items[0], item);
+		assert.equal(item.children[0], content);
+		assert.equal(content.children[0], text);
+		assert.equal(content.children[1], recovery);
+		assert.equal(
+			content.children[2].textContent,
+			'Transferred credential is available on this site.'
+		);
+		assert.equal(
+			item.getAttribute('data-ran-booster-ui-notice-intent'),
+			'success'
+		);
+		assert.equal(state.results['aria-live'], 'off');
+		assert.deepEqual(state.spoken, [
+			'Transporter Blueprint reviewed.',
+			'All selected Transporter Blueprint changes were applied.',
+		]);
+		state.listeners.get('form:change')({ target: state.file });
+		assert.equal(state.results.items.length, 0);
 	} finally {
 		cleanup();
 	}

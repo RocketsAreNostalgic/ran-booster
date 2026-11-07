@@ -519,6 +519,27 @@
 			}
 		}
 
+		function clearApplyResults() {
+			if (window.htmx?.swap) {
+				window.htmx.swap(results, '', {
+					swapStyle: 'innerHTML',
+					swapDelay: 0,
+					settleDelay: 0,
+					transition: false,
+					ignoreTitle: true,
+				});
+			} else {
+				results
+					.querySelector('[data-ran-booster-ui-notice]')
+					?.dispatchEvent(
+						new window.CustomEvent('ran-booster:ui-notice-update', {
+							bubbles: true,
+						})
+					);
+				results.replaceChildren();
+			}
+		}
+
 		function resetReview(clearResults = true) {
 			++previewGeneration;
 			const supersededRefresh = credentialRefreshXhr;
@@ -538,7 +559,7 @@
 				results &&
 				apply?.getAttribute('aria-busy') !== 'true'
 			) {
-				results.replaceChildren();
+				clearApplyResults();
 			}
 		}
 
@@ -743,6 +764,9 @@
 			}
 			const item = rendered?.item || document.createElement('div');
 			const text = rendered?.text || document.createElement('p');
+			const content = rendered
+				? text.parentNode
+				: document.createElement('div');
 			const credentialText =
 				rendered?.credentialText || document.createElement('p');
 			const type =
@@ -771,6 +795,8 @@
 				'notice inline notice-' +
 				resultType +
 				' ran-booster-portability__apply-result';
+			item.setAttribute('data-ran-booster-ui-notice', '');
+			item.setAttribute('data-ran-booster-ui-notice-intent', resultType);
 			const credentialMessages = {
 				transferred_available: __(
 					'Transferred credential is available on this site.',
@@ -790,17 +816,25 @@
 			credentialText.hidden = !credentialText.textContent;
 			text.textContent = label + ' — ' + resultMessage;
 			if (!rendered) {
-				item.appendChild(text);
+				content.setAttribute('data-ran-booster-ui-notice-content', '');
+				content.appendChild(text);
 				if (credentialText.textContent) {
-					item.appendChild(credentialText);
+					content.appendChild(credentialText);
 				}
+				item.appendChild(content);
 				results.appendChild(item);
 			} else if (
 				credentialText.textContent &&
 				!credentialText.parentNode
 			) {
-				item.appendChild(credentialText);
+				content.appendChild(credentialText);
 			}
+
+			item.dispatchEvent(
+				new window.CustomEvent('ran-booster:ui-notice-update', {
+					bubbles: true,
+				})
+			);
 
 			return { item, text, credentialText };
 		}
@@ -931,7 +965,7 @@
 			prepareCredentialRefresh();
 			reviewConfirmed = true;
 			if (results && apply?.getAttribute('aria-busy') !== 'true') {
-				results.replaceChildren();
+				clearApplyResults();
 			}
 			showReviewError(false);
 			showMessage('', 'info');
@@ -1119,7 +1153,7 @@
 				let appliedEverySelection = true;
 				if (results) {
 					results.setAttribute('aria-live', 'polite');
-					results.replaceChildren();
+					clearApplyResults();
 				}
 
 				for (const row of rows) {

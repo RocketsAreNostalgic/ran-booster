@@ -108,6 +108,7 @@
 				Array.from(roots.keys()).filter((host) => card.contains(host))
 			);
 			initialize(card);
+			return;
 		}
 		if (!validIntent) {
 			return;

@@ -1002,3 +1002,35 @@ test('Notice intent changes preserve the current form and nested Badge without u
 	assert.equal(f.counts().renders, 5);
 	assert.equal(f.counts().unmounts, 2);
 });
+
+test('changed Notice rendering failure stays native without a second unsolicited attempt', () => {
+	for (const failures of [1, Infinity]) {
+		const f = fixture();
+		const n = f.notice();
+		f.run();
+		f.flush();
+		const createRoot = f.window.wp.element.createRoot;
+		let attempts = 0;
+		f.window.wp.element.createRoot = (host) => {
+			const root = createRoot(host);
+			return {
+				...root,
+				render(value) {
+					attempts++;
+					if (attempts <= failures) {
+						throw Error('injected changed Notice failure');
+					}
+					root.render(value);
+				},
+			};
+		};
+		n.link.focus();
+		n.host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
+		f.emit('htmx:load', n.paragraph);
+		f.flush();
+		assert.equal(attempts, 1);
+		assert.equal(n.host.firstChild, n.content);
+		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
+		assert.equal(f.doc.activeElement, n.link);
+	}
+});

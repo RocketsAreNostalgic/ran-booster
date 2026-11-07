@@ -1996,3 +1996,179 @@ test('marked branch failures preserve recovery and refresh their native notice b
 	assert.equal(calls[previousCalls + 1], 'focus');
 	assert.deepEqual(state.announcements, []);
 });
+
+function storageFailureFixture({
+	storagePresent = true,
+	target = '#ran-booster-local-error',
+	targetText = '',
+	operationText = '',
+	packageMutation = false,
+} = {}) {
+	const state = fixture();
+	const storageAttributes = new Map([
+		['data-ran-booster-provider-storage-notice', ''],
+	]);
+	const storageLink = {
+		href: '/wp-admin/admin.php?page=ran-booster-settings',
+	};
+	const storage = {
+		hidden: false,
+		textContent: 'Secure storage needs attention.',
+		link: storageLink,
+		attributes: storageAttributes,
+		hasAttribute: (name) => storageAttributes.has(name),
+		setAttribute: (name, value) =>
+			storageAttributes.set(name, String(value)),
+		focusOptions: null,
+		focus(options) {
+			this.focusOptions = options;
+		},
+		querySelector: () => null,
+	};
+	const operationAttributes = new Map();
+	const operation = {
+		hidden: false,
+		textContent: operationText,
+		attributes: operationAttributes,
+		hasAttribute: (name) => operationAttributes.has(name),
+		setAttribute: (name, value) =>
+			operationAttributes.set(name, String(value)),
+		focusOptions: null,
+		focus(options) {
+			this.focusOptions = options;
+		},
+		querySelector: () => null,
+	};
+	state.error.textContent = targetText;
+	state.form.dataset.ranBoosterErrorTarget = target;
+	state.form.hasAttribute = (name) =>
+		packageMutation && name === 'data-ran-booster-package-mutation';
+	const originalQuery = state.document.querySelector;
+	state.document.querySelector = (selector) => {
+		if (
+			selector ===
+			'#wpbody-content [data-ran-booster-provider-storage-notice]:not([hidden])'
+		) {
+			return storagePresent ? storage : null;
+		}
+		if (
+			selector === '#wpbody-content .notice-error, #wpbody-content .error'
+		) {
+			return storagePresent ? storage : operation;
+		}
+		return originalQuery(selector);
+	};
+	state.setRenderedErrors([...(storagePresent ? [storage] : []), operation]);
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	return { ...state, storage, storageLink, operation };
+}
+
+test('storage-present failed swaps select operation feedback before the explicit target', () => {
+	for (const [targetText, operationText, expected] of [
+		['', '', 'We could not complete that request. Please try again.'],
+		['Saved target error.', '', 'Saved target error.'],
+		['', 'Later operation error.', 'Later operation error.'],
+		[
+			'Saved target error.',
+			'Later operation error.',
+			'Later operation error.',
+		],
+	]) {
+		const state = storageFailureFixture({ targetText, operationText });
+		state.listeners.get('htmx:beforeRequest')({
+			detail: { elt: state.form },
+		});
+		state.listeners.get('htmx:afterSwap')({
+			detail: { elt: state.swapTarget, xhr: { status: 500 } },
+		});
+		const focused = operationText ? state.operation : state.error;
+		assert.deepEqual(focused.focusOptions, { preventScroll: true });
+		assert.deepEqual(state.announcements, [
+			{ message: expected, type: 'assertive' },
+		]);
+		assert.equal(
+			state.error.textContent,
+			operationText ? targetText : expected
+		);
+		assert.equal(state.storage.focusOptions, null);
+		assert.equal(state.storage.attributes.has('role'), false);
+		assert.equal(state.storage.attributes.has('tabindex'), false);
+		assert.equal(
+			state.storage.textContent,
+			'Secure storage needs attention.'
+		);
+		assert.equal(state.storage.link, state.storageLink);
+		assert.equal(
+			state.storageLink.href,
+			'/wp-admin/admin.php?page=ran-booster-settings'
+		);
+	}
+});
+
+test('storage guard does not change normal swaps or transport failure feedback', () => {
+	const normal = storageFailureFixture();
+	normal.listeners.get('htmx:beforeRequest')({
+		detail: { elt: normal.form },
+	});
+	normal.listeners.get('htmx:afterSwap')({
+		detail: { elt: normal.swapTarget, xhr: { status: 200 } },
+	});
+	assert.equal(normal.storage.focusOptions, null);
+	assert.equal(normal.error.focusOptions, null);
+	assert.deepEqual(normal.announcements, []);
+	const failed = storageFailureFixture();
+	failed.listeners.get('htmx:sendError')({
+		detail: { elt: failed.form, xhr: { status: 0 } },
+	});
+	assert.equal(
+		failed.error.textContent,
+		'We could not complete that request. Please try again.'
+	);
+	assert.deepEqual(failed.error.focusOptions, { preventScroll: true });
+	assert.equal(failed.storage.focusOptions, null);
+});
+
+test('storage guard requires an existing explicit target, including for a package mutation', () => {
+	for (const [target, packageMutation] of [
+		['', false],
+		['invalid target', false],
+		['#missing', false],
+		['', true],
+	]) {
+		const state = storageFailureFixture({ target, packageMutation });
+		state.listeners.get('htmx:beforeRequest')({
+			detail: { elt: state.form },
+		});
+		state.listeners.get('htmx:afterSwap')({
+			detail: { elt: state.swapTarget, xhr: { status: 500 } },
+		});
+		assert.deepEqual(
+			state.storage.focusOptions,
+			{ preventScroll: true },
+			`${target} package=${packageMutation}`
+		);
+		assert.deepEqual(state.announcements, [
+			{ message: 'Secure storage needs attention.', type: 'assertive' },
+		]);
+	}
+});
+
+test('without storage the existing rendered-notice precedence is retained', () => {
+	const state = storageFailureFixture({
+		storagePresent: false,
+		targetText: 'Existing target.',
+		operationText: 'Rendered operation.',
+	});
+	state.listeners.get('htmx:beforeRequest')({ detail: { elt: state.form } });
+	state.listeners.get('htmx:afterSwap')({
+		detail: { elt: state.swapTarget, xhr: { status: 500 } },
+	});
+	assert.deepEqual(state.operation.focusOptions, { preventScroll: true });
+	assert.equal(state.error.textContent, 'Existing target.');
+	assert.deepEqual(state.announcements, [
+		{ message: 'Rendered operation.', type: 'assertive' },
+	]);
+});

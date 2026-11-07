@@ -476,7 +476,7 @@
 			}
 		}
 
-		function renderedFailureNotice(form) {
+		function renderedFailureNotice(form, excludeStorage = false) {
 			const region = errorRegion(form);
 			const selector = form?.hasAttribute?.(
 				'data-ran-booster-relocate-rendered-error'
@@ -487,6 +487,10 @@
 				function (candidate) {
 					return (
 						candidate !== region &&
+						(!excludeStorage ||
+							!candidate.hasAttribute(
+								'data-ran-booster-provider-storage-notice'
+							)) &&
 						candidate.hidden !== true &&
 						(candidate.textContent || '').trim() !== ''
 					);
@@ -506,8 +510,8 @@
 			).trim();
 		}
 
-		function focusRenderedFailure(form) {
-			const notice = renderedFailureNotice(form);
+		function focusRenderedFailure(form, excludeStorage = false) {
+			const notice = renderedFailureNotice(form, excludeStorage);
 			const message = renderedFailureMessage(notice);
 			if (!message) {
 				return false;
@@ -899,8 +903,25 @@
 					focusError(form);
 					return;
 				}
-				if (!focusRenderedFailure(form)) {
-					focusError(form);
+				const target = form.dataset.ranBoosterErrorTarget || '';
+				const sink = /^#[A-Za-z][A-Za-z0-9_-]*$/.test(target)
+					? document.getElementById(target.slice(1))
+					: null;
+				const storagePresent =
+					sink &&
+					document.querySelector(
+						'#wpbody-content [data-ran-booster-provider-storage-notice]:not([hidden])'
+					);
+				if (!focusRenderedFailure(form, !!storagePresent)) {
+					focusError(
+						form,
+						storagePresent && !(sink.textContent || '').trim()
+							? wp.i18n.__(
+									'We could not complete that request. Please try again.',
+									'ran-booster'
+								)
+							: undefined
+					);
 				}
 				return;
 			}

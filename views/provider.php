@@ -578,7 +578,11 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 								<?php } ?>
 							</div>
 							<p><a class="button" href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>
-								<div class="notice notice-warning inline"><p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p></div>
+								<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
+									<div data-ran-booster-ui-notice-content>
+										<p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p>
+									</div>
+								</div>
 							<dl class="ran-booster-webhook-endpoint">
 								<div>
 									<dt id="ran-booster-webhook-url-label"><?php esc_html_e( 'Payload URL', 'ran-booster' ); ?></dt>

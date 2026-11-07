@@ -201,7 +201,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 <?php if ( 'overview' !== $provider_view ) { ?>
 <a class="ran-booster-provider-management__back" href="<?php echo esc_url( $overview_url ); ?>">&larr; <?php echo esc_html( $provider_back_label ); ?></a>
 <?php } ?>
-<section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ( 'overview' === $provider_view ? ' ran-booster-provider--overview' : '' ); ?>" aria-labelledby="ran-booster-provider-heading">
+<section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ( 'overview' === $provider_view ? ' ran-booster-provider--overview' : '' ); ?><?php echo in_array( $provider_view, array( 'credentials', 'secrets' ), true ) ? ' ran-booster-card' : ''; ?>"<?php echo in_array( $provider_view, array( 'credentials', 'secrets' ), true ) ? ' data-ran-booster-card="provider"' : ''; ?> aria-labelledby="ran-booster-provider-heading">
 	<?php if ( 'overview' === $provider_view && ! $is_repository_detail ) { ?>
 		<header class="ran-booster-page-shell__header ran-booster-provider__header">
 			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( $provider['label'] ); ?></h2>
@@ -406,7 +406,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 	<?php } elseif ( 'overview' === $provider_view ) { ?>
 		<?php if ( ! empty( $provider['credential_kinds'] ) ) { ?>
-		<section class="ran-booster-provider-section" aria-labelledby="ran-booster-access-tokens-heading">
+		<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-access-tokens-heading">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
 					<p class="ran-booster-section__description"><?php echo esc_html( __( 'Saved credentials can be used for repository access.', 'ran-booster' ) ); ?></p>
@@ -439,7 +439,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 
 		<?php if ( $has_webhook_settings ) { ?>
-			<section class="ran-booster-provider-section" aria-labelledby="ran-booster-webhook-secrets-heading">
+			<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-webhook-secrets-heading">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-webhook-secrets-heading" class="ran-booster-section__title"><?php esc_html_e( 'Signing secrets', 'ran-booster' ); ?></h3>
 					<p class="ran-booster-section__description"><?php esc_html_e( 'Signing secrets verify repository webhook deliveries.', 'ran-booster' ); ?></p>
@@ -468,7 +468,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 
 		<?php if ( $repository_integration_available ) { ?>
-			<section class="ran-booster-provider-section" aria-labelledby="ran-booster-repository-integrations-heading">
+			<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integrations-heading">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-repository-integrations-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository integrations', 'ran-booster' ); ?></h3>
 				<p class="ran-booster-section__description">

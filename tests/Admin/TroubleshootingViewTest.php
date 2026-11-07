@@ -1401,6 +1401,16 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'ran-booster-page-shell ran-booster-provider', $html );
+		foreach ( array( 'gh', 'bb', 'other' ) as $code ) {
+			$provider['code'] = $code;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$rendered = (string) ob_get_clean();
+			foreach ( array( 'ran-booster-access-tokens-heading', 'ran-booster-webhook-secrets-heading', 'ran-booster-repository-integrations-heading' ) as $heading ) {
+				self::assertSame( 1, preg_match( '/<section[^>]*data-ran-booster-card="provider"[^>]*aria-labelledby="' . $heading . '"/', $rendered ) );
+			}
+			self::assertStringContainsString( 'id="ran-booster-provider-task-panel"', $rendered );
+		}
 		self::assertStringContainsString( 'Repository access', $html );
 		self::assertStringContainsString( 'Saved credentials can be used for repository access.', $html );
 		self::assertStringContainsString( '>Add credential</button>', $html );
@@ -1938,6 +1948,14 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-public-lookup-profile-region"', $html );
 		self::assertStringContainsString( '>Anonymous</option>', $html );
 		self::assertStringContainsString( 'hidden', $html );
+		foreach ( array( 'gh', 'bb', 'other' ) as $code ) {
+			$provider['code'] = $code;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider-public-lookup-profile.php';
+			$rendered = (string) ob_get_clean();
+			self::assertSame( 1, substr_count( $rendered, 'data-ran-booster-card="provider"' ) );
+			self::assertStringContainsString( 'hx-target="#ran-booster-public-lookup-profile-region"', $rendered );
+		}
 	}
 
 	public function test_validation_feedback_is_scoped_to_the_credential_health_cell(): void {

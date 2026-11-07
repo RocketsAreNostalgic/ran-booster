@@ -105,9 +105,13 @@
 			!card.isConnected ||
 			!card.closest('.ran-booster-admin') ||
 			(!notice &&
-				!['extensions', 'overview', 'plugins', 'settings'].includes(
-					card.getAttribute('data-ran-booster-card')
-				)) ||
+				![
+					'extensions',
+					'overview',
+					'plugins',
+					'settings',
+					'themes',
+				].includes(card.getAttribute('data-ran-booster-card'))) ||
 			card.parentElement?.closest(ownSelector) ||
 			card.querySelector(ownSelector) ||
 			!['DIV', 'SECTION'].includes(card.tagName) ||

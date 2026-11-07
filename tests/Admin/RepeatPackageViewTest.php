@@ -243,6 +243,7 @@ final class RepeatPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
 		$html = (string) ob_get_clean();
 		$form = $this->form_by_id( $html, 'ran-booster-package-create-form' );
+		self::assertStringNotContainsString( 'data-ran-booster-card="package-edit"', $html );
 
 		self::assertStringContainsString( 'data-ran-booster-native-submit', $form );
 		self::assertStringContainsString( 'data-ran-booster-package-create="1"', $html );
@@ -428,6 +429,12 @@ final class RepeatPackageViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card" data-ran-booster-card="package-edit" aria-labelledby="ran-booster-package-operation-heading"', $html );
+		self::assertMatchesRegularExpression( '/<select[^>]*name="ran_booster\[deployment_policy\]"[^>]*form="ran-booster-package-edit-form"/', $html );
+		self::assertMatchesRegularExpression( '/<button[^>]*form="ran-booster-package-edit-form"[^>]*data-ran-booster-package-settings-save/', $html );
+		self::assertStringContainsString( 'hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"', $html );
+		self::assertStringContainsString( 'name="_wpnonce"', $this->form_by_id( $html, 'ran-booster-package-edit-form' ) );
+		self::assertStringContainsString( 'name="_ran_booster_reinstall_nonce"', $this->form_by_id( $html, 'ran-booster-package-edit-form' ) );
 
 		$base_url             = $multisite ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
 		$expected_install_url = $base_url
@@ -473,7 +480,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertIsInt( $readiness_position );
 			$automation_position = strpos( $html, 'name="ran_booster[deployment_policy]"' );
 			self::assertIsInt( $automation_position );
-			$operation_position = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings"' );
+			$operation_position = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card"' );
 			self::assertIsInt( $operation_position );
 			$actions_position = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $operation_position );
 			self::assertIsInt( $actions_position );
@@ -572,6 +579,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$actions              = $this->action_group_by_class( $html, 'ran-booster-settings-actions' );
 
 			self::assertStringNotContainsString( 'data-ran-booster-package-settings-save', $html, $package_view->get_type() );
+			self::assertStringNotContainsString( 'data-ran-booster-card="package-edit"', $html, $package_view->get_type() );
 			self::assertStringContainsString( $install_another_link, $actions, $package_view->get_type() );
 			self::assertStringContainsString( $back_link, $actions, $package_view->get_type() );
 			self::assertLessThan( strpos( $actions, $back_link ), strpos( $actions, $install_another_link ), $package_view->get_type() );
@@ -852,6 +860,7 @@ final class RepeatPackageViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'data-ran-booster-card="package-edit"', $html, $package_view->get_type() );
 
 			if ( $branch_settings_inactive ) {
 				self::assertStringNotContainsString(

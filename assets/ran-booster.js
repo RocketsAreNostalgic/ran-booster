@@ -680,7 +680,14 @@
 
 	function initDocumentationSectionTracking(root, links, sections) {
 		let queued = false;
-		function schedule() {
+		function schedule(event) {
+			if (
+				root.isConnected &&
+				event?.type === 'hashchange' &&
+				!getDocumentationSectionForHash(root, window.location.hash)
+			) {
+				return;
+			}
 			if (queued) {
 				return;
 			}

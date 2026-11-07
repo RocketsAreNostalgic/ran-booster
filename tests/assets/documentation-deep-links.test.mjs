@@ -185,8 +185,8 @@ function createFixture({
 		addEventListener(name, callback) {
 			if (!listenerSets.has(name)) {
 				listenerSets.set(name, new Set());
-				windowListeners.set(name, () =>
-					listenerSets.get(name).forEach((fn) => fn())
+				windowListeners.set(name, (event) =>
+					listenerSets.get(name).forEach((fn) => fn(event))
 				);
 			}
 			listenerSets.get(name).add(callback);
@@ -269,6 +269,21 @@ test('malformed and unknown hashes preserve the current active link safely', () 
 
 	assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
 	assert.equal(fixture.links[1].hasAttribute('aria-current'), false);
+});
+
+test('invalid hash changes preserve the settled section until the reader scrolls', () => {
+	for (const hash of ['#missing', '#%E0%A4%A']) {
+		const fixture = createFixture({ hash: '#second' });
+		fixture.flush();
+		fixture.window.location.hash = hash;
+		fixture.windowListeners.get('hashchange')({ type: 'hashchange' });
+		fixture.flush();
+		assert.equal(fixture.links[1].getAttribute('aria-current'), 'location');
+		fixture.windowListeners.get('scroll')({ type: 'scroll' });
+		fixture.flush();
+		assert.equal(fixture.links[0].getAttribute('aria-current'), 'location');
+		assert.equal(fixture.window.location.hash, hash);
+	}
 });
 
 test('without IntersectionObserver, deep links and click activation still work', () => {

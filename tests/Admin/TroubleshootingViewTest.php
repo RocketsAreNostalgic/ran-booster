@@ -2215,11 +2215,16 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Repository webhook management is temporarily unavailable', $html );
 	}
 
-	public function test_provider_webhooks_context_only_claims_an_enabled_external_link(): void {
+	public function test_provider_webhooks_only_deduplicates_a_surviving_matching_panel_link(): void {
 		foreach ( array( 'gh', 'bb', 'fixture' ) as $provider_code ) {
-			foreach ( array( 'enabled', 'missing', 'disabled', 'internal', 'post', 'empty' ) as $state ) {
+			foreach ( array( 'same', 'different', 'no_link', 'empty', 'throws', 'absent', 'no_outer', 'disabled', 'post', 'internal' ) as $mode ) {
 				$provider                     = $this->provider_without_optional_settings();
 				$provider['code']             = $provider_code;
+				$provider['label']            = array(
+					'gh'      => 'GitHub',
+					'bb'      => 'Bitbucket',
+					'fixture' => 'Fixture Forge',
+				)[ $provider_code ];
 				$credential_profiles          = array();
 				$webhook_profiles             = array();
 				$provider_task                = 'repositories';
@@ -2239,54 +2244,65 @@ final class TroubleshootingViewTest extends TestCase {
 				// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 				extract( $provider_view_data );
 				$url                                = 'https://forge.example.test/owner/example/settings/hooks';
-				$selected_repository_row['actions'] = 'missing' === $state ? array() : array(
+				$selected_repository_row['actions'] = 'no_outer' === $mode ? array() : array(
 					'core:provider-webhooks' => array(
 						'key'      => 'core:provider-webhooks',
-						'label'    => 'Forge webhooks',
-						'type'     => 'post' === $state ? 'post' : 'link',
-						'url'      => 'empty' === $state ? '' : $url,
-						'disabled' => 'disabled' === $state,
-						'external' => 'internal' !== $state,
+						'label'    => 'Legacy action',
+						'type'     => 'post' === $mode ? 'post' : 'link',
+						'url'      => 'internal' === $mode ? 'https://example.test/admin.php' : $url,
+						'disabled' => 'disabled' === $mode,
+						'external' => 'internal' !== $mode,
+						'hidden'   => array( '_wpnonce' => 'fixture-nonce' ),
 					),
 				);
-				$expected_url                       = 'enabled' === $state ? $url : null;
-				$webhook_management                 = new class( $provider_code, $expected_url ) {
-					public function __construct( private string $provider_code, private ?string $expected_url ) {}
+				$webhook_management                 = new class( $provider_code, $mode, $url ) {
+					public function __construct( private string $provider_code, private string $mode, private string $url ) {}
 					public function has_management_capability( string $provider_code ): bool {
 						TestCase::assertSame( $this->provider_code, $provider_code );
-						return true;
+						return 'absent' !== $this->mode;
 					}
-					public function render_repository_webhook_setup( string $provider_code, string $repository_id, string $return_url, bool $has_branch_consumer, string $repository, ?string $presented_url = null ): void {
+					public function render_repository_webhook_setup( string $provider_code, string $repository_id, string $return_url, bool $has_branch_consumer, string $repository ): ?string {
 						TestCase::assertSame( $this->provider_code, $provider_code );
 						TestCase::assertSame( 'repo-42', $repository_id );
 						TestCase::assertStringContainsString( 'repository_view=branch', $return_url );
 						TestCase::assertTrue( $has_branch_consumer );
 						TestCase::assertSame( 'owner/example', $repository );
-						TestCase::assertSame( $this->expected_url, $presented_url );
-						echo '<div data-test-webhook-controls>Retained native controls</div>';
+						if ( 'throws' === $this->mode ) {
+							echo 'Discarded partial output';
+							throw new \RuntimeException( 'Fixture panel failure' );
+						}
+						if ( 'empty' === $this->mode ) {
+							echo '  ';
+							return $this->url;
+						}
+						echo '<div data-test-webhook-controls>Retained native controls';
+						$url = 'different' === $this->mode ? 'https://other.example.test/hooks' : $this->url;
+						if ( 'no_link' !== $this->mode ) {
+							echo '<a href="' . esc_url( $url ) . '">Panel destination</a>';
+						}
+						echo '</div>';
+						return 'no_link' === $this->mode ? null : $url;
 					}
 				};
 				ob_start();
 				require dirname( __DIR__, 2 ) . '/views/provider.php';
 				$html = (string) ob_get_clean();
-				self::assertStringContainsString( 'Retained native controls', $html );
-				if ( 'enabled' === $state ) {
-					self::assertSame( 1, substr_count( $html, 'href="' . $url . '"' ) );
-					$document = new \DOMDocument();
-					$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
-					$xpath = new \DOMXPath( $document );
-					$links = $xpath->query( '//a[@href="' . $url . '"]' );
-					self::assertNotFalse( $links );
-					self::assertCount( 1, $links );
-					$link = $links->item( 0 );
-					self::assertInstanceOf( \DOMElement::class, $link );
-					self::assertSame( '', $link->getAttribute( 'class' ) );
-					self::assertSame( '_blank', $link->getAttribute( 'target' ) );
-					self::assertSame( 'noopener noreferrer', $link->getAttribute( 'rel' ) );
-					self::assertSame( 1.0, $xpath->evaluate( 'count(.//span[@class="dashicons dashicons-external"][@aria-hidden="true"])', $link ) );
-					$text = $xpath->evaluate( 'string(.)', $link );
-					self::assertIsString( $text );
-					self::assertStringContainsString( '(opens in a new tab)', $text );
+				self::assertSame( 1, substr_count( $html, 'href="' . $url . '"' ) );
+				self::assertStringNotContainsString( 'Discarded partial output', $html );
+				$document = new \DOMDocument();
+				$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+				$xpath = new \DOMXPath( $document );
+				self::assertSame( in_array( $mode, array( 'no_link', 'empty', 'throws', 'absent' ), true ) ? 0.0 : 1.0, $xpath->evaluate( 'count(//div[@data-test-webhook-controls]/a)' ) );
+				if ( in_array( $mode, array( 'no_link', 'empty', 'throws', 'absent', 'different' ), true ) ) {
+					self::assertStringContainsString( 'Manage repo webhooks on ' . ( 'gh' === $provider_code ? 'Github' : $provider['label'] ), $html );
+					self::assertStringContainsString( '<span aria-hidden="true">↗</span>', $html );
+					self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
+				}
+				if ( 'disabled' === $mode ) {
+					self::assertStringContainsString( 'disabled aria-disabled="true">Legacy action</button>', $html );
+				} elseif ( 'post' === $mode ) {
+					self::assertStringContainsString( 'name="_wpnonce" value="fixture-nonce"', $html );
+					self::assertStringContainsString( 'type="submit" class="button">Legacy action</button>', $html );
 				}
 			}
 		}

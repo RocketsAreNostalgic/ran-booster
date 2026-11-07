@@ -11,7 +11,7 @@ final class RepositoryDetailRenderer {
 	 * @param array<string, mixed> $row
 	 * @param array<string, string> $view_urls
 	 * @param array<string, string> $view_request_urls
-	 * @param callable():bool|null $render_webhook_panel
+	 * @param callable():(bool|string)|null $render_webhook_panel
 	 * @param callable():void|null $render_release_panel
 	 */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundBeforeLastUsed -- Preserve the existing public renderer argument slots and caller evaluation; receiver_message is not rendered by this component.
@@ -28,14 +28,15 @@ final class RepositoryDetailRenderer {
 		?callable $render_webhook_panel,
 		?callable $render_release_panel
 	): void {
-		$repository          = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
-		$source              = is_string( $row['source_label'] ?? null ) ? $row['source_label'] : '';
-		$source_key          = is_string( $row['source_key'] ?? null ) ? $row['source_key'] : '';
-		$has_branch_consumer = in_array( $source_key, array( 'branch', 'mixed' ), true ) || true === ( $row['has_branch_consumer'] ?? false );
-		$packages            = $this->packages( $row );
-		$omitted             = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
-		$active_view         = in_array( $active_view, array( 'status', 'branch', 'releases' ), true ) ? $active_view : 'status';
-		$webhook_panel       = 'branch' === $active_view ? $this->capture_webhook_panel( $render_webhook_panel ) : '';
+		$repository            = is_string( $row['repository'] ?? null ) ? $row['repository'] : '';
+		$source                = is_string( $row['source_label'] ?? null ) ? $row['source_label'] : '';
+		$source_key            = is_string( $row['source_key'] ?? null ) ? $row['source_key'] : '';
+		$has_branch_consumer   = in_array( $source_key, array( 'branch', 'mixed' ), true ) || true === ( $row['has_branch_consumer'] ?? false );
+		$packages              = $this->packages( $row );
+		$omitted               = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
+		$active_view           = in_array( $active_view, array( 'status', 'branch', 'releases' ), true ) ? $active_view : 'status';
+		$rendered_webhooks_url = null;
+		$webhook_panel         = 'branch' === $active_view ? $this->capture_webhook_panel( $render_webhook_panel, $rendered_webhooks_url ) : '';
 		?>
 		<div class="ran-booster-repository-detail">
 			<p class="ran-booster-repository-detail__back"><a href="<?php echo esc_url( $list_url ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
@@ -83,7 +84,7 @@ final class RepositoryDetailRenderer {
 						<?php } else { ?>
 							<?php $this->render_unavailable_webhook_guidance( $source_key, $receiver_ready, null !== $render_webhook_panel ); ?>
 						<?php } ?>
-						<?php $this->render_provider_actions( $row ); ?>
+						<?php $this->render_provider_actions( $row, $provider_label, $rendered_webhooks_url ); ?>
 					<?php } elseif ( 0 < $omitted ) { ?>
 						<?php $this->render_incomplete_workflow_controls( 'releases', $omitted ); ?>
 					<?php } elseif ( null !== $render_release_panel ) { ?>
@@ -404,8 +405,8 @@ final class RepositoryDetailRenderer {
 		return array_values( array_filter( is_array( $row['package_summaries'] ?? null ) ? $row['package_summaries'] : array(), static fn ( mixed $package ): bool => is_array( $package ) ) );
 	}
 
-	/** @param callable():bool|null $render_webhook_panel */
-	private function capture_webhook_panel( ?callable $render_webhook_panel ): string {
+	/** @param callable():(bool|string)|null $render_webhook_panel */
+	private function capture_webhook_panel( ?callable $render_webhook_panel, ?string &$rendered_webhooks_url ): string {
 		if ( null === $render_webhook_panel ) {
 			return '';
 		}
@@ -422,7 +423,11 @@ final class RepositoryDetailRenderer {
 			return '';
 		}
 
-		return $rendered && '' !== trim( $panel ) ? $panel : '';
+		if ( ! $rendered || '' === trim( $panel ) ) {
+			return '';
+		}
+		$rendered_webhooks_url = is_string( $rendered ) ? $rendered : null;
+		return $panel;
 	}
 
 	/** @param array<string, mixed> $detail */
@@ -507,11 +512,14 @@ final class RepositoryDetailRenderer {
 	}
 
 	/** @param array<string, mixed> $row */
-	private function render_provider_actions( array $row ): void {
+	private function render_provider_actions( array $row, string $provider_label, ?string $rendered_webhooks_url ): void {
 		$actions = array_values(
 			array_filter(
 				is_array( $row['actions'] ?? null ) ? $row['actions'] : array(),
 				fn ( mixed $action ): bool => is_array( $action ) && ! $this->is_release_automation_key( $action['key'] ?? null ) && ! $this->is_package_or_management_action( $action['key'] ?? null )
+					&& ! ( null !== $rendered_webhooks_url && '' !== $rendered_webhooks_url && 'core:provider-webhooks' === ( $action['key'] ?? null )
+						&& 'link' === ( $action['type'] ?? null ) && true === ( $action['external'] ?? false ) && true !== ( $action['disabled'] ?? false )
+						&& ( $action['url'] ?? null ) === $rendered_webhooks_url )
 			)
 		);
 		if ( array() === $actions ) {
@@ -532,9 +540,10 @@ final class RepositoryDetailRenderer {
 				<button type="button" class="button" disabled aria-disabled="true"<?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
 			<?php } elseif ( 'link' === ( $action['type'] ?? null ) ) { ?>
 				<?php $webhooks_link = 'core:provider-webhooks' === ( $action['key'] ?? null ) && true === ( $action['external'] ?? false ); ?>
-				<a<?php echo $webhooks_link ? '' : ' class="button"'; ?> href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?>
+				<?php /* translators: %s: repository provider name. */ ?>
+				<a<?php echo $webhooks_link ? '' : ' class="button"'; ?> href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( $webhooks_link ? sprintf( __( 'Manage repo webhooks on %s', 'ran-booster' ), 'GitHub' === $provider_label ? 'Github' : $provider_label ) : (string) ( $action['label'] ?? '' ) ); ?>
 				<?php if ( $webhooks_link ) { ?>
-					<span class="dashicons dashicons-external" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span>
+					<span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span>
 				<?php } ?></a>
 			<?php } ?>
 		<?php } ?>

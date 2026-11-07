@@ -70,16 +70,16 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 						<?php $operation_disabled = $disabled || true === ( $operation['disabled'] ?? false ); ?>
 						<button class="<?php echo esc_attr( $operation['primary'] ? 'button button-primary' : 'button' ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"<?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
 					<?php endforeach; ?>
-					<?php if ( is_string( $model['webhooks_url'] ?? null ) && '' !== $model['webhooks_url'] ) : ?>
-						<?php /* translators: %s: repository provider name. */ ?>
-						<a href="<?php echo esc_url( $model['webhooks_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( __( 'Open %s webhooks', 'ran-booster' ), $model['provider_label'] ) ); ?> <span class="dashicons dashicons-external" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a>
-					<?php endif; ?>
 				</div>
 				<?php if ( is_string( $model['action_help'] ) ) : ?>
 					<p class="description ran-booster-repository-webhook-management__action-help"><?php echo esc_html( $model['action_help'] ); ?></p>
 				<?php endif; ?>
 				<?php if ( null === ( $model['management_credential_id'] ?? null ) ) : ?>
 					<p class="description ran-booster-repository-webhook-management__action-help"><?php esc_html_e( 'Test webhook is disabled until Booster has an exact recorded hook for this repository.', 'ran-booster' ); ?></p>
+				<?php endif; ?>
+				<?php if ( is_string( $model['webhooks_url'] ?? null ) && '' !== $model['webhooks_url'] ) : ?>
+					<?php /* translators: %s: repository provider name. */ ?>
+					<p><a href="<?php echo esc_url( $model['webhooks_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( __( 'Manage repo webhooks on %s', 'ran-booster' ), 'GitHub' === $model['provider_label'] ? 'Github' : $model['provider_label'] ) ); ?> <span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a></p>
 				<?php endif; ?>
 			</form>
 

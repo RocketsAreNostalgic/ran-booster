@@ -212,7 +212,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	public function test_repository_page_reuses_the_fixed_normal_post_webhook_section(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
-		$facade->expects( self::exactly( 3 ) )->method( 'readiness' )->with( 'fixture-provider' )->willReturn(
+		$facade->expects( self::once() )->method( 'readiness' )->with( 'fixture-provider' )->willReturn(
 			new AssistanceReadiness(
 				array(),
 				'https://example.test/webhook',
@@ -230,7 +230,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				)
 			)
 		);
-		$facade->expects( self::exactly( 4 ) )->method( 'target' )->with( 'fixture-provider', '1234' )->willReturn(
+		$facade->expects( self::exactly( 2 ) )->method( 'target' )->with( 'fixture-provider', '1234' )->willReturn(
 			new AssistanceTarget(
 				'fixture-provider',
 				'1234',
@@ -245,7 +245,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				'https://example.test/webhook'
 			)
 		);
-		$facade->expects( self::exactly( 4 ) )->method( 'credential_choices' )->with( 'fixture-provider' )->willReturn(
+		$facade->expects( self::exactly( 2 ) )->method( 'credential_choices' )->with( 'fixture-provider' )->willReturn(
 			array(
 				array(
 					'id'    => 'credential-1',
@@ -258,8 +258,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->register();
 
 		ob_start();
-		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
-		$html = (string) ob_get_clean();
+		$rendered_url = $controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository' );
+		$html         = (string) ob_get_clean();
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		self::assertStringContainsString( '&lt;script&gt;Repository access&lt;/script&gt;', $html );
 		self::assertStringNotContainsString( '<script>Repository access</script>', $html );
@@ -282,9 +282,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'name="action" value="ran_booster_repository_webhook_management_operation"', $html );
 		self::assertStringContainsString( 'name="repository_webhook_management_operation" value="setup"', $html );
 		self::assertStringContainsString( '<a href="https://fixture-provider.example.test/owner%2Fexample/settings/hooks" target="_blank" rel="noopener noreferrer">', $html );
-		self::assertStringContainsString( '<span class="dashicons dashicons-external" aria-hidden="true"></span>', $html );
+		self::assertStringContainsString( '<span aria-hidden="true">↗</span>', $html );
 		self::assertStringContainsString( '<span class="screen-reader-text"> (opens in a new tab)</span>', $html );
-		self::assertStringContainsString( 'Open Fixture Forge webhooks', $html );
+		self::assertStringContainsString( 'Manage repo webhooks on Fixture Forge', $html );
 		self::assertStringContainsString( 'class="ran-booster-webhook-steps ran-booster-repository-webhook-lifecycle"', $html );
 		self::assertStringContainsString( '<strong>Site receiver</strong>', $html );
 		self::assertStringContainsString( '<strong>Signing secret</strong>', $html );
@@ -321,20 +321,30 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertCount( 1, $links );
 		$link = $links->item( 0 );
 		self::assertInstanceOf( \DOMElement::class, $link );
-		$anchor = $document->saveHTML( $link );
-		self::assertIsString( $anchor );
-		foreach ( array( $url, 'https://other.example.test/hooks' ) as $presented_url ) {
-			ob_start();
-			$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', true, 'owner/example', $presented_url );
-			$actual   = (string) ob_get_clean();
-			$expected = $url === $presented_url ? str_replace( $anchor, '', $html ) : $html;
-			self::assertSame( preg_replace( '/>\s+</', '><', $expected ), preg_replace( '/>\s+</', '><', $actual ) );
-		}
+		self::assertSame( $url, $rendered_url );
+		self::assertSame( 'Test webhook is disabled until Booster has an exact recorded hook for this repository.', $xpath->evaluate( 'normalize-space(../preceding-sibling::*[1])', $link ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(ancestor::div[contains(@class,"__actions")])', $link ) );
+		self::assertSame( 5.0, $xpath->evaluate( 'count(//button[@name="repository_webhook_management_operation"])' ) );
+
 		ob_start();
 		self::assertTrue( $controls->render_repository_panel( 'fixture-provider', '1234', 'https://example.test/repository' ) );
 		$standalone = (string) ob_get_clean();
 		self::assertSame( 1, substr_count( $standalone, 'href="' . $url . '"' ) );
-		self::assertStringContainsString( $anchor, $standalone );
+		self::assertStringContainsString( 'Manage repo webhooks on Fixture Forge <span aria-hidden="true">↗</span>', $standalone );
+		$model                             = $this->webhook_panel_model( false, false, array() );
+		$model['management_credential_id'] = 'credential-1';
+		$model['provider_label']           = 'GitHub';
+		$model['webhooks_url']             = $url;
+		$form_attributes                   = '';
+		ob_start();
+		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
+		$no_help = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'Test webhook is disabled until', $no_help );
+		self::assertStringContainsString( 'Manage repo webhooks on Github <span aria-hidden="true">↗</span>', $no_help );
+		$document->loadHTML( $no_help, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form/p/a[@target="_blank"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form/p[a]/preceding-sibling::*[1][self::div][contains(@class,"__actions")])' ) );
 	}
 
 	public function test_repository_checklist_remains_visible_when_webhook_operations_are_unavailable(): void {

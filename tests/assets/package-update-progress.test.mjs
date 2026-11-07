@@ -176,6 +176,14 @@ function environment(rows, responses) {
 		'data-skipped': '0',
 	});
 	const summaryMessage = element();
+	const noticeUpdates = [];
+	summary.dispatchEvent = (event) =>
+		noticeUpdates.push({
+			type: event.type,
+			bubbles: event.bubbles,
+			intent: summary.getAttribute('data-ran-booster-ui-notice-intent'),
+			text: summaryMessage.textContent,
+		});
 	summary.querySelector = (selector) =>
 		selector === '[data-ran-booster-update-summary-message]'
 			? summaryMessage
@@ -288,6 +296,7 @@ function environment(rows, responses) {
 		events,
 		speech,
 		requests,
+		noticeUpdates,
 		summary,
 		summaryMessage,
 		timers,
@@ -864,3 +873,45 @@ test('chunk responses cannot complete a row with a different correlation referen
 		delete globalThis.window;
 	}
 });
+
+for (const [terminal, skipped, intent] of [
+	['succeeded', 0, 'success'],
+	['succeeded', 1, 'warning'],
+	['failed', 0, 'warning'],
+	['needs_attention', 0, 'warning'],
+]) {
+	test(`progress Notice publishes ${intent} for ${terminal} with ${skipped} skipped`, async () => {
+		const row = rowFixture(91);
+		const fixture = environment([row], [terminal]);
+		fixture.summary.setAttribute('data-skipped', String(skipped));
+		Object.defineProperty(fixture.summary, 'textContent', {
+			set() {
+				throw new Error('Retain the mounted Notice content.');
+			},
+		});
+		globalThis.document = fixture.document;
+		globalThis.window = fixture.window;
+		try {
+			loadFunction('initPackageUpdateProgress')();
+			assert.equal(fixture.noticeUpdates.at(-1).intent, 'warning');
+			await runTimer(fixture.timers);
+			assert.deepEqual(fixture.noticeUpdates.at(-1), {
+				type: 'ran-booster:ui-notice-update',
+				bubbles: true,
+				intent,
+				text: `Booster reinstalls have finished. Skipped: ${skipped}.`,
+			});
+			assert.equal(
+				fixture.summary.classList.contains('notice-' + intent),
+				true
+			);
+			assert.equal(
+				fixture.events.length,
+				terminal === 'succeeded' ? 1 : 0
+			);
+		} finally {
+			delete globalThis.document;
+			delete globalThis.window;
+		}
+	});
+}

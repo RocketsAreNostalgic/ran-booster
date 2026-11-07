@@ -810,21 +810,22 @@
 				'notice-success',
 				'notice-warning'
 			);
-			if (tracked.size) {
-				summary.classList.add('notice-warning');
-				summaryMessage.textContent = summaryText(
-					settings.labels.summaryActive,
-					{ queued, running, skipped }
-				);
-				return;
-			}
-
-			summary.classList.add(
-				observedFailure || skipped ? 'notice-warning' : 'notice-success'
-			);
+			const intent =
+				tracked.size || observedFailure || skipped
+					? 'warning'
+					: 'success';
+			summary.classList.add('notice-' + intent);
+			summary.setAttribute('data-ran-booster-ui-notice-intent', intent);
 			summaryMessage.textContent = summaryText(
-				settings.labels.summaryFinished,
-				{ skipped }
+				tracked.size
+					? settings.labels.summaryActive
+					: settings.labels.summaryFinished,
+				tracked.size ? { queued, running, skipped } : { skipped }
+			);
+			summary.dispatchEvent(
+				new window.CustomEvent('ran-booster:ui-notice-update', {
+					bubbles: true,
+				})
 			);
 		}
 

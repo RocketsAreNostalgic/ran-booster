@@ -906,3 +906,44 @@ test('Themes Card preserves native form, link and focus across swaps and history
 	assert.deepEqual(native.card.childNodes, [native.whitespace, native.form]);
 	assert.equal(native.form.firstChild, native.link);
 });
+
+test('edit-only Card preserves controls associated with an external native form', () => {
+	const f = fixture();
+	const form = new f.Node('form');
+	form.setAttribute('id', 'package-edit-form');
+	f.doc.body.appendChild(form);
+	const { card } = f.make('package-edit', f.doc.body, 'section');
+	const control = new f.Node('input');
+	control.setAttribute('form', 'package-edit-form');
+	control.setAttribute('name', 'deployment_policy');
+	card.appendChild(control);
+	const disabled = new f.Node('input');
+	disabled.setAttribute('form', 'package-edit-form');
+	disabled.setAttribute('disabled', '');
+	card.appendChild(disabled);
+	control.focus();
+	f.run();
+	f.flush();
+	assert.equal(
+		card.querySelector('[data-ran-booster-card-content]').contains(control),
+		true
+	);
+	assert.equal(f.doc.activeElement, control);
+	assert.equal(control.getAttribute('form'), 'package-edit-form');
+	assert.equal(disabled.getAttribute('disabled'), '');
+	assert.equal(form.parentElement, f.doc.body);
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(control.parentElement, card);
+	assert.equal(disabled.parentElement, card);
+	assert.equal(f.doc.activeElement, control);
+	f.window.ranBoosterUI.CardRoot = null;
+	f.flush();
+	assert.equal(control.parentElement, card);
+	assert.equal(control.getAttribute('form'), 'package-edit-form');
+	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
+	const create = f.make('package-create');
+	f.window.ranBoosterUI.CardRoot = 'CardRoot';
+	f.emit('htmx:load', create.card);
+	f.flush();
+	assert.equal(create.card.getAttribute('data-ran-booster-ui-mounted'), null);
+});

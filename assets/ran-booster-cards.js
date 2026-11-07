@@ -111,6 +111,7 @@
 					'plugins',
 					'settings',
 					'themes',
+					'package-edit',
 				].includes(card.getAttribute('data-ran-booster-card'))) ||
 			card.parentElement?.closest(ownSelector) ||
 			card.querySelector(ownSelector) ||

@@ -574,10 +574,12 @@
 				this.state = { failed: false };
 			}
 			static getDerivedStateFromError() {
+				entry.focusIndex ??= navigationLinks(host, provider).indexOf(
+					host.ownerDocument.activeElement
+				);
 				return { failed: true };
 			}
 			componentDidCatch() {
-				entry.focusIndex ??= entry.lastFocus ?? -1;
 				queueMicrotask(() => {
 					if (roots.get(host) === entry) {
 						restore(host);
@@ -732,14 +734,9 @@
 	}
 	document.addEventListener(
 		'pointerdown',
-		(event) => {
+		() => {
 			pointerActive = true;
 			pointerEpoch++;
-			roots.forEach((entry, host) => {
-				if (entry.navigation && !host.contains(event.target)) {
-					entry.lastFocus = -1;
-				}
-			});
 		},
 		true
 	);
@@ -757,30 +754,9 @@
 	document.addEventListener(
 		'keydown',
 		(event) => {
-			if (event.key === 'Tab') {
-				roots.forEach((entry) => {
-					if (entry.navigation) {
-						entry.lastFocus = -1;
-					}
-				});
-			}
 			if (event.key === 'Enter' || event.key === ' ') {
 				activeKeys.set(event.key, (activeKeys.get(event.key) || 0) + 1);
 			}
-		},
-		true
-	);
-	document.addEventListener(
-		'focusin',
-		(event) => {
-			roots.forEach((entry, host) => {
-				if (entry.navigation) {
-					entry.lastFocus = navigationLinks(
-						host,
-						entry.provider
-					).indexOf(event.target);
-				}
-			});
 		},
 		true
 	);
@@ -799,18 +775,8 @@
 		},
 		true
 	);
-	document.addEventListener(
-		'focusout',
-		(event) => {
-			roots.forEach((entry, host) => {
-				if (entry.navigation && !host.contains(event.relatedTarget)) {
-					entry.lastFocus = -1;
-				}
-			});
-			retryNavigation();
-		},
-		true
-	);
+	document.addEventListener('focusout', retryNavigation, true);
+
 	document.addEventListener('htmx:afterRequest', retryNavigation);
 	document.addEventListener('ran-booster:ui-ready', () =>
 		initialize(document)

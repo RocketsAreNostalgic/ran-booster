@@ -413,7 +413,7 @@ test('badge discovers producer state in both startup orders', () => {
 	assert.equal(second.tree().children[0], 'Ready');
 });
 
-test('four confirmed Badge intents preserve the producer text and sole results live region', () => {
+test('confirmed Badge intents preserve the producer text and sole results live region', () => {
 	const f = fixture();
 	const results = new f.Node('div');
 	results.setAttribute('role', 'status');
@@ -422,7 +422,13 @@ test('four confirmed Badge intents preserve the producer text and sole results l
 	host.removeAttribute('role');
 	f.run();
 	f.flush();
-	for (const intent of ['none', 'stable', 'medium', 'high']) {
+	for (const intent of [
+		'none',
+		'stable',
+		'medium',
+		'high',
+		'informational',
+	]) {
 		f.publish(host, `Producer ${intent}`, intent);
 		assert.equal(f.tree().props.intent, intent);
 		assert.equal(f.tree().children[0], `Producer ${intent}`);
@@ -430,7 +436,43 @@ test('four confirmed Badge intents preserve the producer text and sole results l
 		assert.equal(host.getAttribute('role'), null);
 		assert.equal(results.getAttribute('role'), 'status');
 	}
-	assert.equal(f.counts().renders, 4);
+	assert.equal(f.counts().renders, 5);
+});
+
+test('informational linked badges retain their native link, focus and fallback through updates and history', () => {
+	const f = fixture();
+	const link = new f.Node('a');
+	link.setAttribute('href', 'https://example.test/dependency');
+	link.setAttribute('target', '_blank');
+	f.doc.body.appendChild(link);
+	const { host, fallback, mount } = f.badge(link);
+	host.removeAttribute('role');
+	link.focus();
+	f.run();
+	f.publish(host, 'Installed dependency', 'informational');
+	f.flush();
+	assert.equal(f.tree().props.intent, 'informational');
+	assert.equal(f.tree().children[0], 'Installed dependency');
+	assert.equal(fallback.hidden, true);
+	assert.equal(f.doc.activeElement, link);
+	assert.equal(host.parentElement, link);
+	assert.equal(link.getAttribute('href'), 'https://example.test/dependency');
+	assert.equal(link.getAttribute('target'), '_blank');
+	assert.equal(link.childNodes.length, 1);
+	f.publish(host, 'Updated dependency', 'informational');
+	assert.equal(f.tree().children[0], 'Updated dependency');
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(fallback.hidden, false);
+	assert.equal(mount.childNodes.length, 0);
+	assert.equal(f.doc.activeElement, link);
+	f.flush();
+	assert.equal(f.tree().children[0], 'Updated dependency');
+	assert.equal(fallback.hidden, true);
+	f.publish(host, 'Invalid producer intent', 'info');
+	assert.equal(fallback.hidden, false);
+	assert.equal(host.parentElement, link);
+	assert.equal(f.doc.activeElement, link);
+	assert.equal(host.getAttribute('role'), null);
 });
 
 test('invalid projection, missing runtime and failed badge render reveal native fallback', () => {

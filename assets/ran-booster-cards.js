@@ -196,7 +196,9 @@
 		const Badge = window.ranBoosterUI?.Badge;
 		if (
 			!label ||
-			!['none', 'stable', 'medium', 'high'].includes(intent) ||
+			!['none', 'stable', 'medium', 'high', 'informational'].includes(
+				intent
+			) ||
 			!Badge ||
 			!element?.createRoot ||
 			!element.createElement ||

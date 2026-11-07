@@ -639,3 +639,50 @@ test('Notice keeps native fallback when public exports, rendering or host shape 
 		);
 	}
 });
+
+test('multiple cards restore nested Notice and Badge before their ancestors', () => {
+	for (const mode of ['cleanup', 'history']) {
+		const f = fixture();
+		const a = f.make('settings');
+		const b = f.make('overview');
+		a.card.setAttribute('id', 'card-a');
+		b.card.setAttribute('id', 'card-b');
+		const notice = f.notice(a.form);
+		const badge = f.badge(notice.content);
+		badge.host.setAttribute('id', 'badge');
+		badge.host.setAttribute('data-ran-booster-ui-badge-label', 'Ready');
+		badge.host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
+		f.run();
+		f.flush();
+		const fresh = new f.Node('p');
+		fresh.textContent = 'Current state';
+		notice.content.appendChild(fresh);
+		notice.link.focus();
+		assert.equal(f.counts().renders, 4);
+		f.emit(
+			mode === 'history'
+				? 'htmx:beforeHistorySave'
+				: 'htmx:beforeCleanupElement',
+			f.doc.body
+		);
+		assert.ok(
+			f.unmountOrder.indexOf('badge') < f.unmountOrder.indexOf('notice')
+		);
+		assert.ok(
+			f.unmountOrder.indexOf('notice') < f.unmountOrder.indexOf('card-a')
+		);
+		assert.equal(f.unmountOrder.length, 4);
+		assert.equal(a.form.parentElement, a.card);
+		assert.equal(b.form.parentElement, b.card);
+		assert.equal(notice.host.firstChild, notice.content);
+		assert.equal(notice.content.childNodes.at(-1), fresh);
+		assert.equal(fresh.textContent, 'Current state');
+		assert.equal(f.doc.activeElement, notice.link);
+		assert.equal(f.counts().renders, 4);
+		if (mode === 'history') {
+			f.flush();
+			assert.equal(f.counts().renders, 8);
+			assert.equal(notice.content.childNodes.at(-1), fresh);
+		}
+	}
+});

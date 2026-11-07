@@ -655,17 +655,27 @@ final class TroubleshootingViewTest extends TestCase {
 
 	public function test_activity_outcomes_separate_status_from_wrapping_message(): void {
 		foreach ( array(
-			'incomplete' => array( 'Unconfirmed', 'neutral', 'Completion not recorded' ),
-			'succeeded'  => array( 'Succeeded', 'ok', 'A long <result> with an explanatory message.' ),
-			'failed'     => array( 'Failed', 'error', 'A long <result> with an explanatory message.' ),
-			'rejected'   => array( 'Rejected', 'neutral', 'A long <result> with an explanatory message.' ),
-			'skipped'    => array( 'Skipped', 'neutral', 'A long <result> with an explanatory message.' ),
-			'other'      => array( 'Unknown', 'neutral', 'A long <result> with an explanatory message.' ),
-		) as $state => [ $expected_label, $tone, $message ] ) {
+			array( 'queued', 'Queued', 'pending', 'informational', 'activity' ),
+			array( 'running', 'Running', 'pending', 'informational', 'activity' ),
+			array( 'incomplete', 'Unconfirmed', 'neutral', 'none', 'activity' ),
+			array( 'succeeded', 'Succeeded', 'ok', 'stable', 'activity' ),
+			array( 'updated', 'Updated', 'ok', 'stable', 'activity' ),
+			array( 'failed', 'Failed', 'error', 'high', 'activity' ),
+			array( 'rejected', 'Rejected', 'neutral', 'none', 'activity' ),
+			array( 'skipped', 'Skipped', 'neutral', 'none', 'activity' ),
+			array( 'needs_attention', 'Needs attention', 'error', 'high', 'activity' ),
+			array( 'other', 'Unknown', 'neutral', 'none', 'activity' ),
+			array( 'other', 'other', 'neutral', 'none', 'deployment' ),
+		) as [ $state, $expected_label, $tone, $intent, $source ] ) {
+			$message = 'incomplete' === $state ? 'Completion not recorded' : 'A long <result> with an explanatory message.';
+			if ( 'Queued' === $expected_label ) {
+				$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Queued'] = 'Quoted "label" & <state>';
+				$expected_label = 'Quoted "label" & <state>';
+			}
 			$deployment_activity  = array(
 				'items' => array(
 					array(
-						'record_source'      => 'activity',
+						'record_source'      => $source,
 						'activity_record_id' => '42',
 						'state'              => $state,
 						'provider_label'     => 'A long source identifier',
@@ -684,16 +694,55 @@ final class TroubleshootingViewTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 			$html = (string) ob_get_clean();
 			self::assertStringContainsString( 'data-ran-booster-activity-row="42"', $html );
-			self::assertStringContainsString( 'data-label="Source">A long source identifier</span>', $html );
+			unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Queued'] );
+			self::assertStringContainsString( 'data-label="Source">' . ( 'activity' === $source ? 'A long source identifier' : 'Branch deployment' ) . '</span>', $html );
 			if ( 'succeeded' === $state ) {
 				self::assertStringContainsString( 'Plugin: example/example.php', $html );
 			}
-			self::assertStringContainsString( 'ran-booster-badge--' . $tone . ' ran-booster-deployment-state ran-booster-deployment-state--' . $state . '">' . $expected_label . '</span>', $html );
-			self::assertStringContainsString( '<span class="ran-booster-attempt-row__message">' . esc_html( $message ) . '</span>', $html );
-			self::assertStringContainsString( '<dt>Reported by</dt><dd>Reported by Git provider</dd>', $html );
-			self::assertStringContainsString( '<dt>Reason</dt><dd>test.reason</dd>', $html );
-			self::assertStringContainsString( '<dt>Remediation</dt><dd>Try again.</dd>', $html );
-			self::assertStringNotContainsString( '<result>', $html );
+			self::assertStringContainsString( 'ran-booster-badge--' . $tone . ' ran-booster-deployment-state ran-booster-deployment-state--' . $state . '">' . esc_html( $expected_label ) . '</span>', $html );
+			if ( 'deployment' === $source ) {
+				self::assertStringNotContainsString( 'ran-booster-attempt-row__message', $html );
+			} else {
+				self::assertStringContainsString( '<span class="ran-booster-attempt-row__message">' . esc_html( $message ) . '</span>', $html );
+				self::assertStringContainsString( '<dt>Reported by</dt><dd>Reported by Git provider</dd>', $html );
+				self::assertStringContainsString( '<dt>Reason</dt><dd>test.reason</dd>', $html );
+				self::assertStringContainsString( '<dt>Remediation</dt><dd>Try again.</dd>', $html );
+				self::assertStringNotContainsString( '<result>', $html );
+			}
+
+			$document        = new \DOMDocument();
+			$previous_errors = libxml_use_internal_errors( true );
+			try {
+				$document->loadHTML( $html );
+			} finally {
+				libxml_clear_errors();
+				libxml_use_internal_errors( $previous_errors );
+			}
+			$xpath = new \DOMXPath( $document );
+			$hosts = $xpath->query( '//span[@class="ran-booster-attempt-row__outcome"]/span[@data-ran-booster-ui-badge]' );
+			self::assertInstanceOf( \DOMNodeList::class, $hosts );
+			self::assertCount( 1, $hosts );
+			$host = $hosts->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $host );
+			self::assertSame( $expected_label, $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+			self::assertSame( 3, $host->attributes->length );
+			self::assertSame( 2.0, $xpath->evaluate( 'count(./*)', $host ) );
+			$fallback = $xpath->query( './span[@data-ran-booster-ui-badge-fallback]', $host );
+			$mount    = $xpath->query( './span[@data-ran-booster-ui-badge-mount]', $host );
+			self::assertInstanceOf( \DOMNodeList::class, $fallback );
+			self::assertInstanceOf( \DOMNodeList::class, $mount );
+			self::assertCount( 1, $fallback );
+			self::assertCount( 1, $mount );
+			$fallback_element = $fallback->item( 0 );
+			$mount_element    = $mount->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $fallback_element );
+			self::assertInstanceOf( \DOMElement::class, $mount_element );
+			self::assertSame( $expected_label, $xpath->evaluate( 'string(.)', $fallback_element ) );
+			self::assertSame( '', $xpath->evaluate( 'string(.)', $mount_element ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./node())', $mount_element ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live])', $host ) );
+			self::assertSame( 'activity' === $source ? 1.0 : 0.0, $xpath->evaluate( 'count(./following-sibling::span[@class="ran-booster-attempt-row__message"])', $host ) );
 		}
 	}
 

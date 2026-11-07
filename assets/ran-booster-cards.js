@@ -385,6 +385,9 @@
 	document.addEventListener('htmx:load', (event) =>
 		initialize(event.detail.elt || event.target)
 	);
+	document.addEventListener('htmx:afterProcessNode', (event) =>
+		initialize(event.detail.elt || event.target)
+	);
 	document.addEventListener('htmx:historyRestore', () =>
 		initialize(document)
 	);

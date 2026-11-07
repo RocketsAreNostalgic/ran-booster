@@ -42,6 +42,14 @@ $state_tones   = array(
 	'failed'          => 'error',
 	'needs_attention' => 'error',
 );
+$state_intents = array(
+	'queued'          => 'informational',
+	'running'         => 'informational',
+	'succeeded'       => 'stable',
+	'updated'         => 'stable',
+	'failed'          => 'high',
+	'needs_attention' => 'high',
+);
 $state_labels  = array(
 	'queued'          => __( 'Queued', 'ran-booster' ),
 	'running'         => __( 'Running', 'ran-booster' ),
@@ -165,7 +173,7 @@ $origin_labels = array(
 							<?php echo esc_html( $subject_label ); ?><?php } ?></span>
 						<span class="ran-booster-attempt-row__source" role="cell" data-label="<?php esc_attr_e( 'Source', 'ran-booster' ); ?>"><?php echo esc_html( $recorded_check ? $provider_label : __( 'Branch deployment', 'ran-booster' ) ); ?></span>
 						<span role="cell" data-label="<?php esc_attr_e( 'Activity', 'ran-booster' ); ?>"><?php echo esc_html( $activity_label ); ?></span>
-						<span role="cell" data-label="<?php esc_attr_e( 'Outcome', 'ran-booster' ); ?>"><span class="ran-booster-attempt-row__outcome"><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $state_tones[ $state ] ?? 'neutral' ); ?> ran-booster-deployment-state ran-booster-deployment-state--<?php echo esc_attr( $state ); ?>"><?php echo esc_html( $state_labels[ $state ] ?? ( $recorded_check ? __( 'Unknown', 'ran-booster' ) : $state ) ); ?></span><?php if ( $recorded_check ) { ?>
+						<span role="cell" data-label="<?php esc_attr_e( 'Outcome', 'ran-booster' ); ?>"><span class="ran-booster-attempt-row__outcome"><?php $outcome_label = $state_labels[ $state ] ?? ( $recorded_check ? __( 'Unknown', 'ran-booster' ) : $state ); ?><span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $outcome_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $state_intents[ $state ] ?? 'none' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $state_tones[ $state ] ?? 'neutral' ); ?> ran-booster-deployment-state ran-booster-deployment-state--<?php echo esc_attr( $state ); ?>"><?php echo esc_html( $outcome_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span><?php if ( $recorded_check ) { ?>
 							<span class="ran-booster-attempt-row__message"><?php echo esc_html( $summary ); ?></span>
 						<?php } ?></span></span>
 					</div>

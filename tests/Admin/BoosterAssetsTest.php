@@ -6,6 +6,14 @@ namespace RAN\Tests\Admin;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\Admin\AdminAddOnRegistry;
+use RAN\Admin\AdminAddOnTab;
+use RAN\Admin\AdminTabRegistry;
+use RAN\RepositoryProvider\Admin\ProviderAdminMetadata;
+use RAN\RepositoryProvider\GitHubProviderSelection;
+use RAN\RepositoryProvider\ProviderCode;
+use RAN\RepositoryProvider\ProviderMetadata;
+use RAN\RepositoryProvider\RepositoryProvider;
 use RAN\Admin\DeploymentAdminController;
 use RAN\Admin\DeploymentAdminPresenter;
 use RAN\Admin\CredentialExpiryNotice;
@@ -139,11 +147,19 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'toplevel_page_ran-booster', null, true ),
 			array( 'toplevel_page_ran-booster', 'overview', true ),
 			array( 'toplevel_page_ran-booster', 'troubleshooting', true ),
-			array( 'toplevel_page_ran-booster', 'gh', false ),
+			array( 'toplevel_page_ran-booster', 'gh', true ),
+			array( 'toplevel_page_ran-booster', 'bb', true ),
+			array( 'toplevel_page_ran-booster', 'portability', true ),
+			array( 'toplevel_page_ran-booster', 'unknown', true ),
 			array( 'toplevel_page_ran-booster', 'documentation', false ),
+			array( 'toplevel_page_ran-booster', ' DOCUMENTATION ', false ),
+			array( 'toplevel_page_ran-booster', 'documentation!', true ),
 			array( 'ran-booster_page_ran-booster-extensions', null, true ),
 			array( 'ran-booster_page_ran-booster-plugins', null, true ),
-			array( 'ran-booster_page_ran-booster-themes', null, false ),
+			array( 'ran-booster_page_ran-booster-themes', null, true ),
+			array( 'ran-booster_page_ran-booster-plugins-create', null, true ),
+			array( 'ran-booster_page_ran-booster-themes-create', null, true ),
+			array( 'ran-booster_page_ran-booster-transporter', null, true ),
 			array( 'ran-booster_page_ran-booster-settings', null, true ),
 		);
 	}
@@ -168,14 +184,20 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'toplevel_page_ran-booster', null, true, false ),
 			array( 'toplevel_page_ran-booster', 'overview', true, false ),
 			array( 'toplevel_page_ran-booster', 'troubleshooting', true, false ),
-			array( 'toplevel_page_ran-booster', 'gh', false, false ),
+			array( 'toplevel_page_ran-booster', 'gh', true, false ),
+			array( 'toplevel_page_ran-booster', 'bb', true, false ),
+			array( 'toplevel_page_ran-booster', 'portability', true, false ),
+			array( 'toplevel_page_ran-booster', 'unknown', true, false ),
 			array( 'toplevel_page_ran-booster', 'documentation', false, false ),
+			array( 'toplevel_page_ran-booster', ' DOCUMENTATION ', false, false ),
+			array( 'toplevel_page_ran-booster', 'documentation!', true, false ),
 			array( 'ran-booster_page_ran-booster-extensions', null, true, false ),
 			array( 'ran-booster_page_ran-booster-settings', null, true, false ),
 			array( 'ran-booster_page_ran-booster-plugins', null, true, true ),
-			array( 'ran-booster_page_ran-booster-plugins-create', null, false, true ),
-			array( 'ran-booster_page_ran-booster-themes', null, false, true ),
-			array( 'ran-booster_page_ran-booster-themes-create', null, false, true ),
+			array( 'ran-booster_page_ran-booster-plugins-create', null, true, true ),
+			array( 'ran-booster_page_ran-booster-themes', null, true, true ),
+			array( 'ran-booster_page_ran-booster-themes-create', null, true, true ),
+			array( 'ran-booster_page_ran-booster-transporter', null, true, false ),
 			array( 'plugins.php', null, false, false ),
 		);
 	}
@@ -259,6 +281,15 @@ final class BoosterAssetsTest extends TestCase {
 			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the isolated local fixture directory.
 			rmdir( $root );
 		}
+	}
+
+	public function test_registered_add_on_overrides_provider_tab_asset_loading(): void {
+		$add_ons = new AdminAddOnRegistry();
+		$add_ons->register( new AdminAddOnTab( 'example-addon', 'bb', 'Example', static function (): void {} ) );
+		$_GET['tab'] = ' BB ';
+		$this->booster( add_ons: $add_ons )->load_scripts( 'toplevel_page_ran-booster' );
+		self::assertArrayNotHasKey( 'ran-booster-cards', $GLOBALS['ran_booster_asset_test_registered_scripts'] );
+		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_enqueued_modules'] );
 	}
 
 	#[DataProvider( 'unrelated_admin_hook_provider' )]
@@ -353,7 +384,7 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame(
 			array_merge(
 				array( 'ran-booster-htmx', 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y' ),
-				'ran-booster_page_ran-booster-plugins' === $hook ? array( 'ran-booster-cards' ) : array(),
+				array( 'ran-booster-cards' ),
 				array(
 					'ran-booster-notice-preference',
 					'ran-booster-js',
@@ -583,7 +614,7 @@ final class BoosterAssetsTest extends TestCase {
 		$this->booster()->load_scripts( 'toplevel_page_ran-booster' );
 
 		self::assertSame(
-			array( 'ran-booster-htmx', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'ran-booster-portability' ),
+			array( 'ran-booster-htmx', 'wp-element', 'react-jsx-runtime', 'ran-booster-cards', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'ran-booster-portability' ),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
@@ -614,7 +645,7 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_enqueued_styles']
 		);
 		self::assertSame(
-			array( 'ran-booster-htmx', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'ran-booster-portability' ),
+			array( 'ran-booster-htmx', 'wp-element', 'react-jsx-runtime', 'ran-booster-cards', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'ran-booster-portability' ),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
@@ -671,22 +702,24 @@ final class BoosterAssetsTest extends TestCase {
 			$GLOBALS['ran_booster_asset_test_enqueued_styles']
 		);
 		self::assertSame(
-			array( 'ran-booster-htmx', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ),
+			array_merge( 'bb' === $tab ? array( 'ran-booster-htmx' ) : array(), array( 'wp-element', 'react-jsx-runtime', 'ran-booster-cards', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ) ),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
-			array( 'ran-booster-htmx', 'wp-i18n' ),
+			'bb' === $tab ? array( 'ran-booster-htmx', 'wp-i18n' ) : array( 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-js']['dependencies']
 		);
 		self::assertSame(
 			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['dependencies']
 		);
-		self::assertStringEndsWith(
-			'/assets/lib/htmx/htmx.min.js',
-			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-htmx']['source']
-		);
-		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-htmx']['footer'] );
+		if ( 'bb' === $tab ) {
+			self::assertStringEndsWith( '/assets/lib/htmx/htmx.min.js', $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-htmx']['source'] );
+			self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-htmx']['footer'] );
+		} else {
+			self::assertArrayNotHasKey( 'ran-booster-htmx', $GLOBALS['ran_booster_asset_test_registered_scripts'] );
+		}
+
 		self::assertSame( array(), $GLOBALS['ran_booster_asset_test_localized_scripts'] );
 	}
 
@@ -714,7 +747,7 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertArrayHasKey( 'ran-booster-onboarding', $GLOBALS['ran_booster_asset_test_registered_styles'] );
 		self::assertArrayNotHasKey( 'ran-booster-documentation', $GLOBALS['ran_booster_asset_test_registered_styles'] );
 		self::assertSame(
-			( ! is_string( $tab ) || '' === $tab ) ? array( 'wp-element', 'react-jsx-runtime', 'ran-booster-cards', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ) : array( 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ),
+			array( 'wp-element', 'react-jsx-runtime', 'ran-booster-cards', 'ran-booster-js', 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations' ),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
 		self::assertSame(
@@ -761,7 +794,8 @@ final class BoosterAssetsTest extends TestCase {
 	private function booster(
 		bool $expiry_notice_visible = false,
 		bool $background_failure_notice_visible = false,
-		bool $expiry_notice_dismissible = true
+		bool $expiry_notice_dismissible = true,
+		?AdminAddOnRegistry $add_ons = null
 	): Booster {
 		$container = new CoreContainer();
 		$booster   = new class( $container ) extends Booster {
@@ -769,11 +803,19 @@ final class BoosterAssetsTest extends TestCase {
 			public bool $expiry_notice_visible             = false;
 			public bool $expiry_notice_dismissible         = true;
 			public bool $background_failure_notice_visible = false;
+		};
+		$provider  = new class() implements RepositoryProvider {
+			use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
 
-			protected function is_provider_admin_tab( ?string $tab ): bool {
-				return in_array( $tab, array( 'gh', 'bb' ), true );
+			public function get_metadata(): ProviderMetadata {
+				return new ProviderMetadata( ProviderCode::parse( 'bb' ), 'Bitbucket', 'https://example.test/', 'Owner', new ProviderAdminMetadata( array(), array() ) );
 			}
 		};
+		$providers = new ProviderRegistry( array( $provider ) );
+		$selection = ( new \ReflectionClass( GitHubProviderSelection::class ) )->newInstanceWithoutConstructor();
+		$container->bind( ProviderRegistry::class, $providers );
+		$container->bind( AdminTabRegistry::class, new AdminTabRegistry( $providers, $selection ) );
+		$container->bind( AdminAddOnRegistry::class, $add_ons ?? new AdminAddOnRegistry() );
 		$container->bind(
 			CredentialExpiryNotice::class,
 			static fn (): object => new class( $booster->expiry_notice_visible, $booster->expiry_notice_dismissible ) {

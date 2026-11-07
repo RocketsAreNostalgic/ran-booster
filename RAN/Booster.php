@@ -2,6 +2,8 @@
 
 namespace RAN; // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedNamespaceFound -- Core owns the established three-character RAN namespace; WPCS requires four characters.
 
+use RAN\Admin\AdminAddOnRegistry;
+use RAN\Admin\AdminTabRegistry;
 use RAN\Deployment\DeploymentWorker;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Internal\CoreContainer;
@@ -743,6 +745,7 @@ class Booster {
 		$repository_picker_script_version = $this->asset_version( $repository_picker_script_path );
 		$script_dependencies              = array();
 		$requested_tab                    = null;
+		$requested_ui_tab                 = null;
 		$is_transporter_page              = 'ran-booster_page_ran-booster-transporter' === $hook;
 		$should_enqueue_portability       = false;
 		$should_enqueue_htmx              = $is_transporter_page || 'ran-booster_page_ran-booster-settings' === $hook || in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
@@ -754,7 +757,8 @@ class Booster {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
 			} elseif ( isset( $_GET['tab'] ) && is_string( $_GET['tab'] ) ) {
 					// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only bounded list/navigation state does not authorize a mutation.
-					$requested_tab = sanitize_key( wp_unslash( $_GET['tab'] ) );
+					$requested_ui_tab = wp_unslash( $_GET['tab'] );
+					$requested_tab    = sanitize_key( $requested_ui_tab );
 			}
 
 			if ( $this->is_provider_admin_tab( $requested_tab ) || in_array( $requested_tab, array( 'portability', 'troubleshooting' ), true ) ) {
@@ -805,8 +809,14 @@ class Booster {
 			$style_dependencies = array( $style_handle );
 		}
 		wp_enqueue_style( 'ran-booster-styles' );
-		$has_ui_cards   = in_array( $hook, array( 'ran-booster_page_ran-booster-extensions', 'ran-booster_page_ran-booster-plugins', 'ran-booster_page_ran-booster-settings' ), true )
-			|| ( 'toplevel_page_ran-booster' === $hook && in_array( $requested_tab, array( null, '', 'overview', 'troubleshooting' ), true ) );
+		$ui_tab = null;
+		if ( 'toplevel_page_ran-booster' === $hook
+			&& null === $this->service( AdminAddOnRegistry::class )->get( is_string( $requested_ui_tab ) ? strtolower( trim( $requested_ui_tab ) ) : '' ) ) {
+			$ui_tab = $this->service( AdminTabRegistry::class )->resolve( $requested_ui_tab );
+		}
+		$has_ui_cards   = in_array( $hook, self::PACKAGE_PAGE_HOOKS, true )
+			|| in_array( $hook, array( 'ran-booster_page_ran-booster-transporter', 'ran-booster_page_ran-booster-extensions', 'ran-booster_page_ran-booster-settings' ), true )
+			|| ( null !== $ui_tab && ( $ui_tab->is_provider() || in_array( $ui_tab->get_key(), array( 'overview', 'portability', 'troubleshooting' ), true ) ) );
 		$has_ui_overlay = in_array( $hook, self::PACKAGE_PAGE_HOOKS, true );
 		if ( $has_ui_cards || $has_ui_overlay ) {
 			$ui_manifest_path = trailingslashit( $this->booster_path ?? dirname( __DIR__ ) ) . 'assets/lib/ran-booster-ui-manifest.json';

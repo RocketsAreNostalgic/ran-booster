@@ -32,6 +32,7 @@ class Node {
 		this.children = [];
 		this.dataset = {};
 		this.listeners = {};
+		this.dispatchedEvents = [];
 		this.attributes = new Map();
 		this.classes = new Set();
 		this.classList = {
@@ -79,7 +80,30 @@ class Node {
 			this.listeners[type]?.map((listener) => listener()) || []
 		);
 	}
+	dispatchEvent(event) {
+		this.dispatchedEvents.push(event);
+		for (const listener of this.listeners[event.type] || []) {
+			listener(event);
+		}
+		return true;
+	}
 	querySelector(selector) {
+		if (
+			selector ===
+			'.ran-booster-release-candidate__warning[data-ran-booster-ui-notice]'
+		) {
+			return (
+				descendants(this).find(
+					(node) =>
+						node.className
+							?.split(/\s+/)
+							.includes(
+								'ran-booster-release-candidate__warning'
+							) &&
+						node.attributes.has('data-ran-booster-ui-notice')
+				) || null
+			);
+		}
 		if (!/^input\[data-release-id="[^"]*"\]$/.test(selector)) {
 			throw new SyntaxError('Invalid CSS selector');
 		}
@@ -205,6 +229,13 @@ const createHarness = (
 			}),
 		},
 		window: {
+			CustomEvent: class {
+				constructor(type, options) {
+					this.type = type;
+					this.bubbles = options.bubbles;
+					this.detail = options.detail;
+				}
+			},
 			fetch: async (url, options) => {
 				requestedUrls.push(url);
 				requests.push(options.body.values);

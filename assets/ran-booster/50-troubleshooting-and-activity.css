@@ -418,3 +418,17 @@
 	box-shadow: none;
 	background: transparent;
 }
+
+.ran-booster-admin
+	.ran-booster-troubleshooting
+	> .ran-booster-page-shell__body:has(
+		> [data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted],
+		> .ran-booster-debug-capture
+			> [data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
+	) {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}

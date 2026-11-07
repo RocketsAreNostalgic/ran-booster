@@ -39,7 +39,7 @@
     "prettier": "3.9.5",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "rollup": "4.68.0",
+    "rollup": "4.67.5",
     "stylelint": "17.14.1",
     "stylelint-scss": "7.2.0",
     "typescript": "6.0.3"

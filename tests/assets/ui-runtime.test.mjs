@@ -32,7 +32,7 @@ test('UI build dependencies are pinned to installed versions', () => {
 	for (const [name, expected] of [
 		['@wordpress/ui', '0.26.0'],
 		['esbuild', '0.25.12'],
-		['rollup', '4.68.0'],
+		['rollup', '4.67.5'],
 		['@rollup/plugin-node-resolve', '16.0.3'],
 		['@rollup/plugin-commonjs', '29.0.3'],
 	]) {

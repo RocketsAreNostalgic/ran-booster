@@ -402,7 +402,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 			?>
 		<?php } else { ?>
 			<p><a href="<?php echo esc_url( $repository_list_url ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
-			<div class="notice notice-error inline"><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
+			<div class="notice notice-error inline" data-ran-booster-ui-notice>
+				<div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
+			</div>
 		<?php } ?>
 	<?php } elseif ( 'overview' === $provider_view ) { ?>
 		<?php if ( ! empty( $provider['credential_kinds'] ) ) { ?>
@@ -640,7 +642,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									?>
 								<?php } else { ?>
 									<p><a href="<?php echo esc_url( $repository_list_url ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
-									<div class="notice notice-error inline"><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
+									<div class="notice notice-error inline" data-ran-booster-ui-notice>
+										<div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div>
+									</div>
 								<?php } ?>
 							<?php } elseif ( array() !== $repository_table_rows ) { ?>
 								<div class="ran-booster-provider-repository-tools">

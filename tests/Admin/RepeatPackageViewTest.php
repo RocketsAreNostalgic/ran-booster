@@ -604,6 +604,40 @@ final class RepeatPackageViewTest extends TestCase {
 		);
 	}
 
+	public function test_source_warnings_keep_their_static_warning_envelopes(): void {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			$package                   = $this->package( $package_view );
+			$package_provider_settings = $this->provider_settings( true );
+			$package_source            = array( 'unavailable' => true );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+			$html = (string) ob_get_clean();
+			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div data-ran-booster-ui-notice-content>\s*<p>Booster will not reinterpret this package as a branch deployment\..*?<\/p>\s*<\/div>\s*<\/div>/s', $html );
+		}
+	}
+
+	/** @return list<array{PackagePagePresenter, bool}> */
+	public static function source_warning_view_matrix(): array {
+		return array(
+			array( PackagePagePresenter::plugin(), false ),
+			array( PackagePagePresenter::theme(), false ),
+			array( PackagePagePresenter::plugin(), true ),
+			array( PackagePagePresenter::theme(), true ),
+		);
+	}
+
+	#[DataProvider( 'source_warning_view_matrix' )]
+	public function test_unsaved_source_warning_starts_hidden_in_create_and_edit( PackagePagePresenter $package_view, bool $editing ): void {
+		$package                   = $this->package( $package_view );
+		$package_provider_settings = $this->provider_settings( true );
+		$explicit_provider         = false;
+		$open_repository_picker    = false;
+		ob_start();
+		require dirname( __DIR__, 2 ) . ( $editing ? '/views/packages/edit.php' : '/views/packages/create.php' );
+		$html = (string) ob_get_clean();
+		self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline" role="alert" hidden data-ran-booster-source-unsaved-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div data-ran-booster-ui-notice-content>\s*<p>Save or revert your package settings before changing source\.<\/p>\s*<\/div>\s*<\/div>/s', $html );
+	}
+
 	public function test_unavailable_package_source_keeps_navigation_actions_without_save(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
 			$package                   = $this->package( $package_view );

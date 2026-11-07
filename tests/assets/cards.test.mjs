@@ -874,3 +874,35 @@ test('presentation Button preserves disabled state and never steals external foc
 	assert.equal(f.doc.activeElement, other);
 	assert.equal(mount.firstChild, undefined);
 });
+
+test('Themes Card preserves native form, link and focus across swaps and history', () => {
+	const f = fixture();
+	const { card, whitespace, form, link } = f.make('themes');
+	link.focus();
+	f.run();
+	f.flush();
+	assert.equal(f.tree().type, 'CardRoot');
+	assert.equal(form.firstChild, link);
+	assert.equal(f.doc.activeElement, link);
+	assert.deepEqual(form.parentElement.childNodes, [whitespace, form]);
+	f.doc.listeners.get('htmx:beforeSwap')[0]({
+		detail: { shouldSwap: true, target: card },
+	});
+	assert.deepEqual(card.childNodes, [whitespace, form]);
+	assert.equal(form.firstChild, link);
+	assert.equal(f.doc.activeElement, link);
+	f.emit('htmx:load', card);
+	f.flush();
+	f.emit('htmx:beforeHistorySave');
+	assert.deepEqual(card.childNodes, [whitespace, form]);
+	f.flush();
+	assert.equal(form.firstChild, link);
+	assert.equal(f.doc.activeElement, link);
+	assert.equal(f.counts().renders, 3);
+	const fallback = fixture({ runtime: false });
+	const native = fallback.make('themes');
+	fallback.run();
+	fallback.flush();
+	assert.deepEqual(native.card.childNodes, [native.whitespace, native.form]);
+	assert.equal(native.form.firstChild, native.link);
+});

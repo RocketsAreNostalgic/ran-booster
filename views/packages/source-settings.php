@@ -30,8 +30,10 @@ ob_start();
 	require __DIR__ . '/source-choices.php';
 	$package_field_form = $is_package_edit ? 'ran-booster-package-edit-form' : '';
 	?>
-	<div class="notice notice-warning inline" role="alert" hidden data-ran-booster-source-unsaved-notice>
+	<div class="notice notice-warning inline" role="alert" hidden data-ran-booster-source-unsaved-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
+		<div data-ran-booster-ui-notice-content>
 		<p><?php esc_html_e( 'Save or revert your package settings before changing source.', 'ran-booster' ); ?></p>
+		</div>
 	</div>
 	<div
 		id="ran-booster-source-pane-branch"

@@ -24,7 +24,8 @@ $hide_development_safety_notice   = \RAN\Deployment\DeploymentPolicy::DISABLED->
 $render_development_safety_notice = static function () use ( $show_development_safety_notice, $hide_development_safety_notice, $release_automation, $provider_webhook_available, $push_to_deploy_provider_url, $push_to_deploy_documentation_url ): void {
 	if ( $show_development_safety_notice ) {
 		?>
-	<div class="notice notice-warning inline" data-ran-booster-local-development-warning<?php echo $hide_development_safety_notice ? ' hidden' : ''; ?>>
+	<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-local-development-warning<?php echo $hide_development_safety_notice ? ' hidden' : ''; ?>>
+		<div data-ran-booster-ui-notice-content>
 		<p>
 			<strong><?php esc_html_e( 'NOTICE: Editing this package’s files on this site? Choose Disabled.', 'ran-booster' ); ?></strong><br/>
 			<?php esc_html_e( 'Manual and Automatic can overwrite local changes when an update or reinstall runs.', 'ran-booster' ); ?>
@@ -32,6 +33,7 @@ $render_development_safety_notice = static function () use ( $show_development_s
 				<br/><a href="<?php echo esc_url( $push_to_deploy_provider_url ); ?>"><?php esc_html_e( 'Push-to-Deploy setting', 'ran-booster' ); ?></a> | <a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Docs', 'ran-booster' ); ?></a>
 			<?php } ?>
 		</p>
+		</div>
 	</div>
 		<?php
 	}

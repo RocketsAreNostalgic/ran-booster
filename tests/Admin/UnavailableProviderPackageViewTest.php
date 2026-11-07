@@ -615,6 +615,33 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'hidden disabled="disabled"', $html );
 	}
 
+	public function test_development_warning_envelope_and_link_conditions(): void {
+		foreach ( array(
+			array( 'manual', true, true, 'branch', false, true ),
+			array( 'automatic', true, true, 'branch', false, true ),
+			array( 'disabled', true, true, 'branch', true, true ),
+			array( 'manual', true, false, 'branch', false, false ),
+			array( 'automatic', true, true, 'release_asset', false, false ),
+			array( 'manual', false, true, 'branch', false, false ),
+		) as list( $deployment_policy, $development_environment_detected, $provider_webhook_available, $package_automation_source, $hidden, $links ) ) {
+			$provider_code = 'gh';
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
+			$html = (string) ob_get_clean();
+			if ( ! $development_environment_detected ) {
+				self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
+				continue;
+			}
+			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-local-development-warning' . ( $hidden ? ' hidden' : '' ) . '>\s*<div data-ran-booster-ui-notice-content>\s*<p>.*?Manual and Automatic can overwrite local changes when an update or reinstall runs\..*?<\/p>\s*<\/div>\s*<\/div>/s', $html );
+			if ( $links ) {
+				self::assertStringContainsString( 'Push-to-Deploy setting</a> | <a', $html );
+				self::assertStringContainsString( '>Docs</a>', $html );
+			} else {
+				self::assertStringNotContainsString( 'Push-to-Deploy setting</a>', $html );
+			}
+		}
+	}
+
 	public function test_deployment_policy_disables_automatic_without_webhook_support(): void {
 		$deployment_policy                = DeploymentPolicy::AUTOMATIC->value;
 		$provider_webhook_available       = false;

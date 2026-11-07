@@ -131,7 +131,7 @@ final class ExtensionUpdates {
 					}
 					\RAN\Admin\BoosterNoticeScope::render(
 						static function (): void {
-							echo '<div class="' . esc_attr( 'notice notice-warning' . ( \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : '' ) ) . '"><p>' . esc_html__( 'Native extension updates are unavailable in this Booster build. Update Booster, or download the selected ZIP from More Details for manual replacement.', 'ran-booster' ) . '</p></div>';
+							echo '<div class="' . esc_attr( 'notice notice-warning' . ( \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : '' ) ) . '" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content><p>' . esc_html__( 'Native extension updates are unavailable in this Booster build. Update Booster, or download the selected ZIP from More Details for manual replacement.', 'ran-booster' ) . '</p></div></div>';
 						}
 					);
 				}

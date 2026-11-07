@@ -80,12 +80,12 @@ final class CoreSelfUpdateDevelopmentNotice {
 		}
 		$this->rendered = true;
 		?>
-		<div class="notice notice-info<?php echo $inline ? ' inline' : ''; ?>" data-ran-booster-core-development-notice>
+		<div class="notice notice-info<?php echo $inline ? ' inline' : ''; ?>" data-ran-booster-core-development-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster development detected:', 'ran-booster' ); ?></strong>
 				<?php esc_html_e( 'Core updates are disabled to protect this source checkout.', 'ran-booster' ); ?>
 			</p>
-		</div>
+		</div></div>
 		<?php
 	}
 }

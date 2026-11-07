@@ -154,7 +154,7 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'toplevel_page_ran-booster', 'documentation', false ),
 			array( 'ran-booster_page_ran-booster-extensions', null, true ),
 			array( 'ran-booster_page_ran-booster-plugins', null, true ),
-			array( 'ran-booster_page_ran-booster-themes', null, false ),
+			array( 'ran-booster_page_ran-booster-themes', null, true ),
 			array( 'ran-booster_page_ran-booster-settings', null, true ),
 		);
 	}
@@ -186,7 +186,7 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'ran-booster_page_ran-booster-settings', null, true, false ),
 			array( 'ran-booster_page_ran-booster-plugins', null, true, true ),
 			array( 'ran-booster_page_ran-booster-plugins-create', null, false, true ),
-			array( 'ran-booster_page_ran-booster-themes', null, false, true ),
+			array( 'ran-booster_page_ran-booster-themes', null, true, true ),
 			array( 'ran-booster_page_ran-booster-themes-create', null, false, true ),
 			array( 'plugins.php', null, false, false ),
 		);
@@ -394,7 +394,7 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame(
 			array_merge(
 				array( 'ran-booster-htmx', 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y' ),
-				'ran-booster_page_ran-booster-plugins' === $hook ? array( 'ran-booster-cards' ) : array(),
+				in_array( $hook, array( 'ran-booster_page_ran-booster-plugins', 'ran-booster_page_ran-booster-themes' ), true ) ? array( 'ran-booster-cards' ) : array(),
 				array(
 					'ran-booster-js',
 					'ran-booster-secure-inputs',

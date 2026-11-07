@@ -48,14 +48,20 @@ $provider_attention        = array_filter(
 				<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Public repositories do not need credentials or webhooks.', 'ran-booster' ); ?></p>
 			</div>
 		<?php } else { ?>
-			<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Overview', 'ran-booster' ); ?></h2>
+			<div>
+				<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Overview', 'ran-booster' ); ?></h2>
+				<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Review recent activity, managed packages and your site’s configuration.', 'ran-booster' ); ?></p>
+			</div>
 		<?php } ?>
-		<?php if ( 'onboarding' === $overview_view && current_user_can( 'manage_options' ) ) { ?>
+		<?php if ( current_user_can( 'manage_options' ) ) { ?>
 			<form method="post" action="<?php echo esc_url( $overview_url ); ?>">
 				<?php wp_nonce_field( 'ran-booster-overview-presentation' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="overview-presentation">
-				<input type="hidden" name="ran_booster[presentation]" value="dashboard">
-				<button type="submit" class="button"><?php esc_html_e( 'Skip onboarding', 'ran-booster' ); ?></button>
+				<input type="hidden" name="ran_booster[presentation]" value="<?php echo 'onboarding' === $overview_view ? 'dashboard' : 'onboarding'; ?>">
+				<span data-ran-booster-ui-button="overview-presentation">
+					<button type="submit" class="button" data-ran-booster-ui-button-fallback><?php echo esc_html( 'onboarding' === $overview_view ? __( 'Skip onboarding', 'ran-booster' ) : __( 'Return to onboarding', 'ran-booster' ) ); ?></button>
+					<span data-ran-booster-ui-button-mount></span>
+				</span>
 			</form>
 		<?php } ?>
 	</header>
@@ -192,12 +198,4 @@ $provider_attention        = array_filter(
 	}
 	?>
 
-	<?php if ( 'dashboard' === $overview_view && current_user_can( 'manage_options' ) ) { ?>
-		<form class="ran-booster-onboarding__presentation-control" method="post" action="<?php echo esc_url( $overview_url ); ?>">
-			<?php wp_nonce_field( 'ran-booster-overview-presentation' ); ?>
-			<input type="hidden" name="ran_booster[action]" value="overview-presentation">
-			<input type="hidden" name="ran_booster[presentation]" value="onboarding">
-			<button type="submit" class="button"><?php esc_html_e( 'Return to onboarding', 'ran-booster' ); ?></button>
-		</form>
-	<?php } ?>
 </section>

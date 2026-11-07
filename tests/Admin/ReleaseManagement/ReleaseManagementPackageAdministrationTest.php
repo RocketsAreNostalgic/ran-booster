@@ -209,6 +209,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-release-gate-notice' ) );
+		self::assertStringContainsString( 'data-ran-booster-release-gate-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p>', $html );
 		self::assertStringContainsString( '<ul class="ul-disc">', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=nested%2Fnested.php', $html );
 		self::assertStringContainsString( 'page=ran-booster-themes&amp;package=companion-theme', $html );

@@ -115,7 +115,7 @@ final class ReleaseManagementDisplay {
 		<section class="ran-booster-release-management" aria-labelledby="ran-booster-release-management-heading">
 			<header class="ran-booster-package-source-pane__header">
 				<?php if ( '' !== $gate_notice ) { ?>
-					<div class="notice notice-warning inline" data-ran-booster-release-gate-notice><p><?php echo esc_html( $gate_notice ); ?></p>
+					<div class="notice notice-warning inline" data-ran-booster-release-gate-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php echo esc_html( $gate_notice ); ?></p>
 					<?php
 
 					if ( $repository_conflict_code && array() !== $repository_conflict ) {
@@ -129,7 +129,7 @@ final class ReleaseManagementDisplay {
 							<?php
 							if ( empty( $other['view_all'] ) ) {
 								?>
-							(<?php echo esc_html( (string) ( $other['type'] ?? '' ) ); ?>)<?php } ?></li><?php } ?></ul><?php } ?></div>
+							(<?php echo esc_html( (string) ( $other['type'] ?? '' ) ); ?>)<?php } ?></li><?php } ?></ul><?php } ?></div></div>
 				<?php } ?>
 				<?php if ( '' !== $operation_notice_html ) { ?>
 					<div class="ran-booster-release-notices" data-ran-booster-release-notices>
@@ -139,9 +139,9 @@ final class ReleaseManagementDisplay {
 				<?php } ?>
 				<?php if ( 'branch' === $source ) { ?>
 					<?php if ( $automatic_policy ) { ?>
-						<div class="notice notice-warning inline">
+						<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content>
 							<p><?php esc_html_e( 'Switching resets Automatic to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
-						</div>
+						</div></div>
 					<?php } ?>
 					<div class="ran-booster-source-transition">
 						<p><?php esc_html_e( 'Branch currently active.', 'ran-booster' ); ?></p>
@@ -162,9 +162,9 @@ final class ReleaseManagementDisplay {
 			</header>
 			<div class="ran-booster-readiness-panel">
 				<?php if ( $eligibility_recheck ) { ?>
-					<div class="notice notice-success inline" data-ran-booster-package-success data-ran-booster-eligibility-recheck>
+					<div class="notice notice-success inline" data-ran-booster-package-success data-ran-booster-eligibility-recheck data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="success"><div data-ran-booster-ui-notice-content>
 						<p><strong><?php esc_html_e( 'Eligibility recheck complete.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'The current eligibility evidence is shown below.', 'ran-booster' ); ?></p>
-					</div>
+					</div></div>
 				<?php } ?>
 				<div class="ran-booster-readiness-panel__top">
 					<div>
@@ -193,12 +193,12 @@ final class ReleaseManagementDisplay {
 							<p class="ran-booster-release-code"><code><?php echo esc_html( 'Update URI: ' . $expected_update_uri ); ?></code></p>
 						</div>
 					<?php } elseif ( $status_available && 'release_asset' === $source && '' !== $status->failure_code() && ! $repository_blocked ) { ?>
-						<div class="notice notice-warning inline">
+						<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content>
 						<p><?php echo esc_html( $this->diagnostic_message( $status->failure_code() ) ); ?></p>
 						<?php $this->render_failure_help( $status->failure_code() ); ?>
-					</div>
+					</div></div>
 					<?php } elseif ( $status_available && 'release_asset' === $source && ! $browser_enabled && ! $repository_blocked ) { ?>
-						<div class="notice notice-warning inline"><p><?php esc_html_e( 'Published release browsing is unavailable until the current package status and controls are available.', 'ran-booster' ); ?></p></div>
+						<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Published release browsing is unavailable until the current package status and controls are available.', 'ran-booster' ); ?></p></div></div>
 					<?php } elseif ( $status_available && $track_disabled && 'release_asset' === $source && ! $repository_blocked ) { ?>
 						<?php $this->render_controls_unavailable(); ?>
 					<?php } ?>
@@ -292,9 +292,9 @@ final class ReleaseManagementDisplay {
 				</div>
 				<button type="button" class="button" data-ran-booster-managed-release-retry<?php disabled( ! $enabled ); ?> aria-disabled="<?php echo $enabled ? 'false' : 'true'; ?>"><?php esc_html_e( 'Refresh releases', 'ran-booster' ); ?></button>
 			</div>
-			<div class="notice notice-warning inline ran-booster-managed-release-browser__notice" data-ran-booster-managed-release-error hidden>
+			<div class="notice notice-warning inline ran-booster-managed-release-browser__notice" data-ran-booster-managed-release-error hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content>
 				<p data-ran-booster-managed-release-error-message></p>
-			</div>
+			</div></div>
 			<fieldset class="ran-booster-release-candidates" data-ran-booster-managed-release-candidates hidden>
 				<legend class="screen-reader-text"><?php esc_html_e( 'Available published releases', 'ran-booster' ); ?></legend>
 				<div data-ran-booster-managed-release-candidate-list></div>
@@ -400,13 +400,13 @@ final class ReleaseManagementDisplay {
 				<?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured trusted admin operation notice. ?>
 				<?php echo $operation_notice_html; ?>
 				<?php if ( ! $enabled ) { ?>
-					<div class="notice notice-warning inline"><p><?php esc_html_e( 'Branch cannot be selected because source transition controls are temporarily unavailable. No package settings were changed.', 'ran-booster' ); ?></p></div>
+					<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Branch cannot be selected because source transition controls are temporarily unavailable. No package settings were changed.', 'ran-booster' ); ?></p></div></div>
 				<?php } ?>
 			</div>
 			<?php if ( $automatic_policy ) { ?>
-				<div class="notice notice-warning inline">
+				<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content>
 					<p><?php esc_html_e( 'Returning resets Automatic to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
-				</div>
+				</div></div>
 			<?php } ?>
 			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="ran-booster-release-return-form ran-booster-source-transition" data-ran-booster-source-transition<?php echo $enabled ? ' data-ran-booster-package-mutation' : ''; ?>>
 				<?php if ( $enabled ) { ?>
@@ -837,7 +837,7 @@ final class ReleaseManagementDisplay {
 
 	private function render_controls_unavailable(): void {
 		?>
-		<div class="notice notice-warning inline"><p><?php esc_html_e( 'Published release controls are temporarily unavailable. No package settings were changed.', 'ran-booster' ); ?></p></div>
+		<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Published release controls are temporarily unavailable. No package settings were changed.', 'ran-booster' ); ?></p></div></div>
 		<?php
 	}
 
@@ -862,7 +862,7 @@ final class ReleaseManagementDisplay {
 				? 'notice-warning'
 				: 'notice-error' );
 		?>
-		<div class="notice <?php echo esc_attr( $tone ); ?><?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?>>
+		<div class="notice <?php echo esc_attr( $tone ); ?><?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( $tone, 7 ) ); ?>" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content>
 			<?php if ( $review ) { ?>
 				<p><strong><?php echo esc_html( 'installed_but_unmanaged' === $code ? __( 'Package present, Booster management not established', 'ran-booster' ) : __( 'Installation outcome needs review', 'ran-booster' ) ); ?></strong></p>
 			<?php } ?>
@@ -873,7 +873,7 @@ final class ReleaseManagementDisplay {
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>
 				<?php $this->render_failure_help( $code, $message ); ?>
 			<?php } ?>
-		</div>
+		</div></div>
 		<?php
 	}
 

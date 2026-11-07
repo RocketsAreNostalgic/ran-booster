@@ -35,6 +35,7 @@ final class SecretsRuntimeAvailabilityNoticeTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-secrets-runtime-notice' ) );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content>', $html );
 		self::assertStringContainsString( 'PHP Sodium extension is missing', $html );
 		self::assertStringContainsString( 'Public repositories and package-only Transporter Blueprints remain available', $html );
 		self::assertStringNotContainsString( 'is-dismissible', $html );

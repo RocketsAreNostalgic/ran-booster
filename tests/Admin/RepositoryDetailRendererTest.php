@@ -125,6 +125,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertFalse( $release_rendered );
 		self::assertStringContainsString( '2 packages · Conflicting sources', $html );
 		self::assertStringContainsString( 'Conflicting sources.', $html );
+		self::assertStringContainsString( 'data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p>', $html );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><strong>Conflicting sources.</strong>', $html );
 		self::assertStringContainsString( 'Review the package settings before using release workflow.', $html );
 		self::assertStringContainsString( 'Branch · main · packages/plugin', $html );
 		self::assertStringContainsString( '>Releases', $html );

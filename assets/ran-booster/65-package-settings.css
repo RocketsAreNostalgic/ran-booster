@@ -1224,3 +1224,55 @@
 	) {
 	display: none;
 }
+
+.ran-booster-admin [data-ran-booster-ui-switch="general-preference"] {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: 32px;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-switch="general-preference"]
+	> label[hidden] {
+	display: none;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-switch="general-preference"]
+	> [data-ran-booster-ui-switch-mount] {
+	display: inline-flex;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-switch="general-preference"]
+	> [data-ran-booster-ui-switch-mount]
+	button[role="switch"] {
+	/* stylelint-disable-next-line plugin-wpds/no-token-fallback-values -- Static Booster CSS is not processed by the WPDS token compiler; match the public Switch border fallback for its hit target. */
+	--ran-booster-switch-border-width: var(--wpds-border-width-xs, 1px);
+	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Preserve the owner-approved 44x22 Switch using its public size token, scoped to this fixed host. */
+	--wpds-dimension-size-2xs: 22px;
+	position: relative;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-switch="general-preference"]
+	> [data-ran-booster-ui-switch-mount]
+	button[role="switch"]::before {
+	position: absolute;
+	inset-block: calc(-5px - var(--ran-booster-switch-border-width));
+	inset-inline: calc(-1 * var(--ran-booster-switch-border-width));
+	content: "";
+}
+
+@media (pointer: coarse) {
+	.ran-booster-admin [data-ran-booster-ui-switch="general-preference"] {
+		min-block-size: 44px;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-switch="general-preference"]
+		> [data-ran-booster-ui-switch-mount]
+		button[role="switch"]::before {
+		inset-block: calc(-11px - var(--ran-booster-switch-border-width));
+	}
+}

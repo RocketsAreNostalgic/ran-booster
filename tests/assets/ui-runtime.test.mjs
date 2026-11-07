@@ -46,11 +46,11 @@ test('manifest identifies two canonical assets and separate page budgets', () =>
 	assert.match(entries.foundation, /^ran-booster-ui-foundation-[\w-]+\.js$/);
 	assert.match(entries.overlay, /^ran-booster-ui-overlay-[\w-]+\.js$/);
 	assert.ok(
-		foundation.length + adapter.length <= 110000,
+		foundation.length + adapter.length <= 130000,
 		'foundation and adapter raw'
 	);
 	assert.ok(
-		gzipSync(foundation).length + gzipSync(adapter).length <= 20000,
+		gzipSync(foundation).length + gzipSync(adapter).length <= 26000,
 		'foundation and adapter gzip sum'
 	);
 	assert.ok(overlay.length <= 320000, 'overlay raw');
@@ -93,10 +93,12 @@ test('host React loads the foundation once and overlay extends the same object',
 			'NavigationLinks',
 			'NoticeDescription',
 			'NoticeRoot',
+			'Switch',
 			'version',
 		]);
 		assert.equal(ui.version, '0.26.0');
 		assert.ok(ui.Link);
+		assert.ok(ui.Switch);
 		assert.equal(typeof ui.NavigationLinks, 'function');
 		await import(
 			pathToFileURL(fileURLToPath(new URL(entries.overlay, assets))).href
@@ -114,6 +116,11 @@ test('host React loads the foundation once and overlay extends the same object',
 		]);
 		assert.ok(ui.Input);
 		const render = require('react-dom/server').renderToStaticMarkup;
+		const switchMarkup = render(
+			React.createElement(ui.Switch, { checked: true })
+		);
+		assert.match(switchMarkup, /role="switch"/);
+		assert.match(switchMarkup, /aria-checked="true"/);
 		const button = render(
 			React.createElement(
 				ui.Button,

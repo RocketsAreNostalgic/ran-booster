@@ -65,6 +65,13 @@ $status_classes       = array(
 	'unavailable' => 'error',
 	'malformed'   => 'error',
 );
+$status_intents       = array(
+	'inactive'    => 'none',
+	'active'      => 'informational',
+	'retained'    => 'stable',
+	'unavailable' => 'high',
+	'malformed'   => 'high',
+);
 
 ?>
 <section id="ran-booster-debug-capture-region" class="ran-booster-debug-capture" aria-labelledby="ran-booster-debug-capture-heading">
@@ -75,7 +82,7 @@ $status_classes       = array(
 		<div class="ran-booster-debug-capture__header">
 			<div class="ran-booster-debug-capture__heading">
 				<h4 class="ran-booster-section__title"><?php esc_html_e( 'Booster event capture', 'ran-booster' ); ?></h4>
-				<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_classes[ $capture_state ] ); ?>"><?php echo esc_html( $status_labels[ $capture_state ] ); ?></span>
+				<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $status_labels[ $capture_state ] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $status_intents[ $capture_state ] ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_classes[ $capture_state ] ); ?>"><?php echo esc_html( $status_labels[ $capture_state ] ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
 				<span class="ran-booster-debug-capture__deadline description">
 					<?php if ( 'active' === $capture_state && '' !== $capture_until ) { ?>
 						<?php echo esc_html( sprintf( /* translators: %s: UTC capture end time. */ __( 'until %s.', 'ran-booster' ), $capture_until ) ); ?>

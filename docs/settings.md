@@ -3,16 +3,25 @@
 Open **Booster → Settings** after Extensions. It remains available with skipped
 onboarding or unavailable credential storage. It is not a horizontal shell tab.
 
-General groups Appearance, Booster updates, History and Download limits. With
-JavaScript, each switch saves only its own preference automatically. History and
-Download limits retain explicit **Save changes**. One bottom action area keeps a
+Settings groups Appearance and Booster updates under General preferences, and
+keeps History and Download limits together. With JavaScript, each switch saves
+only its own preference automatically. History and Download limits retain
+explicit **Save changes**. One bottom action area keeps a
 persistent pending indicator beside Save; toggle confirmations do not clear it.
 The indicator clears after confirmed numeric persistence or reversion to the
 confirmed baseline. It does not time out or dismiss edits.
 
-The two General switches use the native checkbox controls and their existing
-labels, help and validation messages. Adoption of WordPress `ToggleControl` is
-deferred pending an owner decision on its appearance.
+The two General switches retain native checkbox controls as their form authority,
+with a clickable label above each switch and an adjacent badge showing the
+confirmed preference. The shared adapter can enhance them with the public
+`@wordpress/ui` Switch when its runtime is available.
+Pending changes do not change that badge. The shared adapter uses `UIRoot` and
+`Badge` from `@wordpress/ui` for these badges, and `Notice` for Settings errors;
+the native fallback remains available if the adapter cannot mount. The two
+Settings groups use the shared card surface.
+Confirmed saves use the viewport
+Snackbar; failed or unconfirmed saves retain an accessible inline error. Help and
+validation messages remain associated with their controls.
 
 Without JavaScript or HTMX, use **Save setting** beside each switch and **Save
 changes** for numeric settings. Check for updates and storage actions remain

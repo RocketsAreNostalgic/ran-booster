@@ -683,6 +683,7 @@ test('re-evaluating feedback initialization preserves the request lifecycle', ()
 test('General feedback requires the matching response and falls back when Core rendering is unavailable', () => {
 	for (const mode of [
 		'ready',
+		'ready-dismiss',
 		'missing-component',
 		'missing-style',
 		'render-failure',
@@ -698,17 +699,46 @@ test('General feedback requires the matching response and falls back when Core r
 		state.form.isConnected = true;
 		let rendered = 0;
 		let unmounted = 0;
+		let center = 0;
+		let regionLeft = 200;
+		const content = {};
+		const observed = [];
+		let observerCallback;
+		let disconnected = 0;
+		let dismiss;
+		state.window.ResizeObserver = class {
+			constructor(callback) {
+				observerCallback = callback;
+			}
+			observe(target) {
+				observed.push(target);
+			}
+			disconnect() {
+				disconnected++;
+			}
+		};
+		state.window.removeEventListener = (name) =>
+			state.listeners.delete(`window:${name}`);
 		state.form.matches = (selector) =>
 			selector === '[data-ran-booster-general-form]' ||
 			selector === '[data-ran-booster-enhanced-mutation]';
 		state.form.addEventListener = (name, callback) =>
 			sourceListeners.set(name, callback);
 		state.form.removeEventListener = (name) => sourceListeners.delete(name);
-		state.document.getElementById = (id) =>
-			id === 'ran-booster-general-region' ? region : state.error;
+		state.document.getElementById = (id) => {
+			if (id === 'ran-booster-general-region') {
+				return region;
+			}
+			return id === 'wpcontent' ? content : state.error;
+		};
 		state.document.body = { append() {} };
 		state.document.createElement = () => ({
-			style: {},
+			style: {
+				setProperty(name, value) {
+					assert.equal(name, '--ran-booster-snackbar-center');
+					center = value;
+				},
+			},
 			ownerDocument: state.document,
 			isConnected: true,
 			remove() {},
@@ -720,7 +750,10 @@ test('General feedback requires the matching response and falls back when Core r
 			backgroundColor: mode === 'missing-style' ? 'transparent' : 'black',
 		});
 		state.window.wp.element = {
-			createElement: (component, props) => ({ component, props }),
+			createElement: (component, props) => {
+				dismiss = props.onRemove;
+				return { component, props };
+			},
 			createRoot: () => ({
 				render() {
 					if (mode === 'render-failure') {
@@ -761,6 +794,7 @@ test('General feedback requires the matching response and falls back when Core r
 		region = {
 			id: 'ran-booster-general-region',
 			hasAttribute: () => true,
+			getBoundingClientRect: () => ({ left: regionLeft, width: 800 }),
 			insertAdjacentElement() {},
 		};
 		state.listeners.get('htmx:afterSwap')({
@@ -769,11 +803,25 @@ test('General feedback requires the matching response and falls back when Core r
 		state.listeners.get('ran-booster:admin-mutation-success')({
 			detail: { message: 'Saved.' },
 		});
-		assert.equal(rendered, mode === 'ready' ? 1 : 0, mode);
-		assert.equal(state.toast.hidden, mode === 'ready', mode);
-		if (mode === 'ready') {
+		assert.equal(rendered, mode.startsWith('ready') ? 1 : 0, mode);
+		assert.equal(state.toast.hidden, mode.startsWith('ready'), mode);
+		if (mode.startsWith('ready')) {
+			assert.equal(center, '600px');
+			assert.deepEqual(observed, [region, content]);
+			regionLeft = 120;
+			state.listeners.get('window:resize')();
+			assert.equal(center, '520px');
+			regionLeft = 90;
+			observerCallback();
+			assert.equal(center, '490px');
+			if (mode === 'ready-dismiss') {
+				dismiss();
+			} else {
+				state.listeners.get('htmx:beforeHistorySave')();
+			}
 			state.listeners.get('htmx:beforeHistorySave')();
-			state.listeners.get('htmx:beforeHistorySave')();
+			assert.equal(disconnected, 1);
+			assert.equal(state.listeners.has('window:resize'), false);
 			assert.equal(
 				unmounted,
 				1,
@@ -1368,6 +1416,54 @@ test('source navigation HTTP failures retain the view and announce an error', ()
 	}
 });
 
+test('Notice transport fallback preserves the owned subtree and uses only its alert boundary', () => {
+	const state = fixture();
+	const primary = { textContent: 'The previous attempt was rejected.' };
+	const detail = { hidden: false, textContent: 'Previous saved value.' };
+	const field = {
+		id: 'field-error',
+		textContent: 'Previous validation error.',
+	};
+	const configuration = {
+		id: 'configuration-error',
+		textContent: 'Configuration remains locked.',
+	};
+	const content = { primary, detail, field, configuration };
+	const mount = { sentinel: true };
+	state.error.content = content;
+	state.error.mount = mount;
+	state.error.attributes.set('data-ran-booster-ui-notice', '');
+	Object.defineProperty(state.error, 'textContent', {
+		get: () => primary.textContent,
+		set() {
+			throw new Error('The Notice host cannot be replaced.');
+		},
+	});
+	state.error.querySelector = (selector) =>
+		selector === '[data-ran-booster-ui-notice-primary]' ? primary : null;
+	state.error.querySelectorAll = (selector) =>
+		selector === '[data-ran-booster-ui-notice-detail]' ? [detail] : [field];
+	state.form.dataset.ranBoosterSettingsScope = 'numeric';
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: {} },
+	});
+	assert.match(primary.textContent, /could not complete/);
+	assert.equal(state.error.content, content);
+	assert.equal(state.error.mount, mount);
+	assert.equal(field.id, 'field-error');
+	assert.equal(field.textContent, '');
+	assert.equal(configuration.textContent, 'Configuration remains locked.');
+	assert.equal(detail.hidden, true);
+	assert.equal(state.error.hidden, false);
+	assert.equal(state.error.attributes.get('role'), 'alert');
+	assert.deepEqual(state.announcements, []);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+});
+
 test('enhanced mutation transport failures reset busy state and keep an error local', () => {
 	for (const eventName of [
 		'htmx:responseError',
@@ -1835,6 +1931,102 @@ test('General busy state keeps switches and their fieldsets usable while protect
 	);
 	assert.equal(checkbox.disabled, false);
 	assert.equal(state.button.disabled, true);
+	assert.equal(state.formAttributes.get('aria-busy'), 'true');
+	assert.equal(
+		state.form.classList.contains('ran-booster-enhanced-mutation-is-busy'),
+		false
+	);
+	assert.equal(
+		state.button.classList.contains(
+			'ran-booster-enhanced-mutation__submitter--busy'
+		),
+		false
+	);
+	assert.equal(
+		state.button.classList.contains('ran-booster-update-is-active'),
+		false
+	);
 	state.listeners.get('htmx:afterRequest')({ detail: { elt: state.form } });
 	assert.equal(state.button.disabled, false);
+	assert.equal(state.formAttributes.has('aria-busy'), false);
+});
+
+test('General busy state leaves only the mounted switch subtree operable', () => {
+	for (const scope of ['hide_github', 'self_update_discovery', 'numeric']) {
+		const state = fixture();
+		state.form.dataset.ranBoosterSettingsScope = scope;
+		const control = (disabled, mounted) => ({
+			disabled,
+			matches: () => false,
+			closest: (selector) =>
+				selector.includes('[data-ran-booster-ui-mounted]') && mounted
+					? {}
+					: null,
+			getAttribute: () => null,
+			setAttribute() {},
+			removeAttribute() {},
+		});
+		const button = control(false, true);
+		const hiddenInput = control(false, true);
+		const locked = control(true, true);
+		const outside = control(false, false);
+		state.form.elements = [
+			button,
+			hiddenInput,
+			locked,
+			outside,
+			state.button,
+		];
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		state.listeners.get('htmx:beforeRequest')({
+			detail: { elt: state.form },
+		});
+		assert.equal(button.disabled, scope === 'numeric');
+		assert.equal(hiddenInput.disabled, scope === 'numeric');
+		assert.equal(locked.disabled, true);
+		assert.equal(outside.disabled, true);
+		state.listeners.get('htmx:afterRequest')({
+			detail: { elt: state.form },
+		});
+		assert.equal(locked.disabled, true);
+		assert.equal(outside.disabled, false);
+	}
+});
+
+test('Snackbar dismissal can focus the visible public switch', () => {
+	const focused = {};
+	const ownerDocument = { activeElement: focused };
+	const host = { ownerDocument, contains: (item) => item === focused };
+	const control = {
+		isConnected: true,
+		disabled: false,
+		getClientRects: () => [{}],
+		getBoundingClientRect: () => ({
+			left: 10,
+			top: 10,
+			right: 50,
+			bottom: 50,
+		}),
+		focus(options) {
+			assert.deepEqual(options, { preventScroll: true });
+			ownerDocument.activeElement = this;
+		},
+	};
+	const document = {
+		querySelectorAll: (selector) =>
+			selector.includes(
+				'[data-ran-booster-ui-switch-mount] button[role="switch"]'
+			)
+				? [control]
+				: [],
+	};
+	loadFunction('restoreSnackbarFocus', {
+		document,
+		window: { innerWidth: 320, innerHeight: 600 },
+		snackbar: { host },
+	})();
+	assert.equal(ownerDocument.activeElement, control);
 });

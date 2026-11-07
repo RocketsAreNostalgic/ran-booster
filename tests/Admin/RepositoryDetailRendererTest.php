@@ -10,6 +10,33 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\Component\RepositoryDetailRenderer;
 
 final class RepositoryDetailRendererTest extends TestCase {
+	public function test_detail_badges_preserve_exact_labels_and_map_only_known_tones(): void {
+		$renderer = new RepositoryDetailRenderer();
+		$render   = new \ReflectionMethod( $renderer, 'render_detail_value' );
+		foreach ( array(
+			'neutral' => 'none',
+			'pending' => 'none',
+			'ok'      => 'stable',
+			'success' => 'stable',
+			'warning' => 'medium',
+			'error'   => 'high',
+			'info'    => 'informational',
+			'future'  => '',
+		) as $tone => $intent ) {
+			ob_start();
+			$render->invoke(
+				$renderer,
+				array(
+					'value' => 'Exact <status> "quoted"',
+					'tone'  => $tone,
+				)
+			);
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Exact &lt;status&gt; &quot;quoted&quot;"', $html );
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-intent="' . $intent . '"', $html );
+			self::assertStringContainsString( '<span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--' . $tone . '">Exact &lt;status&gt; &quot;quoted&quot;</span><span data-ran-booster-ui-badge-mount></span>', $html );
+		}
+	}
 
 	public function test_status_renders_mixed_packages_and_integration_history_without_mutation_authority(): void {
 		$row = array(

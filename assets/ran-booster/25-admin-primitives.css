@@ -210,6 +210,226 @@
 	min-inline-size: 0;
 }
 
+/* Keep eligible native Badge fallbacks aligned with the existing public Badge. */
+.ran-booster-admin
+	[data-ran-booster-ui-badge][data-ran-booster-ui-badge-intent="none"] {
+	--ran-booster-ui-badge-background: var(
+		--wpds-color-background-surface-neutral-strong
+	);
+	--ran-booster-ui-badge-foreground: var(
+		--wpds-color-foreground-content-neutral
+	);
+	--ran-booster-ui-badge-border-width: var(--wpds-border-width-xs);
+	--ran-booster-ui-badge-border-color: var(
+		--wpds-color-stroke-surface-neutral
+	);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-badge][data-ran-booster-ui-badge-intent="stable"] {
+	--ran-booster-ui-badge-background: var(
+		--wpds-color-background-surface-success
+	);
+	--ran-booster-ui-badge-foreground: var(
+		--wpds-color-foreground-content-success
+	);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-badge][data-ran-booster-ui-badge-intent="medium"] {
+	--ran-booster-ui-badge-background: var(
+		--wpds-color-background-surface-warning
+	);
+	--ran-booster-ui-badge-foreground: var(
+		--wpds-color-foreground-content-warning
+	);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-badge][data-ran-booster-ui-badge-intent="high"] {
+	--ran-booster-ui-badge-background: var(
+		--wpds-color-background-surface-error
+	);
+	--ran-booster-ui-badge-foreground: var(
+		--wpds-color-foreground-content-error
+	);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-badge][data-ran-booster-ui-badge-intent="informational"] {
+	--ran-booster-ui-badge-background: var(
+		--wpds-color-background-surface-info
+	);
+	--ran-booster-ui-badge-foreground: var(
+		--wpds-color-foreground-content-info
+	);
+}
+
+.ran-booster-admin
+	span[data-ran-booster-ui-badge]:where(
+		[data-ran-booster-ui-badge-label]:not(
+				[data-ran-booster-ui-badge-label=""]
+			):has(> [data-ran-booster-ui-badge-mount]):not(
+				[data-ran-booster-ui-mounted]
+			):not([data-ran-booster-ui-badge] [data-ran-booster-ui-badge]):is(
+				[data-ran-booster-ui-badge-intent="none"],
+				[data-ran-booster-ui-badge-intent="stable"],
+				[data-ran-booster-ui-badge-intent="medium"],
+				[data-ran-booster-ui-badge-intent="high"],
+				[data-ran-booster-ui-badge-intent="informational"]
+			)
+	)
+	> [data-ran-booster-ui-badge-fallback]:where(:not([hidden])) {
+	display: var(--ran-booster-ui-badge-display, inline);
+	flex: var(--ran-booster-ui-badge-flex, 0 1 auto);
+	margin: 0;
+	padding-block: calc(
+		var(
+				--ran-booster-ui-badge-padding-block,
+				var(--wpds-dimension-padding-xs)
+			) -
+			var(--ran-booster-ui-badge-border-width, 0px)
+	);
+	padding-inline: calc(
+		var(
+				--ran-booster-ui-badge-padding-inline,
+				var(--wpds-dimension-padding-sm)
+			) -
+			var(--ran-booster-ui-badge-border-width, 0px)
+	);
+	border: var(--ran-booster-ui-badge-border-width, 0px) solid
+		var(--ran-booster-ui-badge-border-color, currentcolor);
+	border-radius: var(--wpds-border-radius-lg);
+	background: var(--ran-booster-ui-badge-background);
+	color: var(--ran-booster-ui-badge-foreground);
+	font-family: var(--wpds-typography-font-family-body);
+	font-size: var(--wpds-typography-font-size-sm);
+	font-weight: var(--wpds-typography-font-weight-default);
+	line-height: var(--wpds-typography-line-height-xs);
+	text-wrap: pretty;
+	white-space: inherit;
+}
+
+.ran-booster-admin
+	span[data-ran-booster-ui-badge]:where(
+		[data-ran-booster-ui-badge-label]:not(
+				[data-ran-booster-ui-badge-label=""]
+			):has(> [data-ran-booster-ui-badge-mount]):not(
+				[data-ran-booster-ui-mounted]
+			):not([data-ran-booster-ui-badge] [data-ran-booster-ui-badge]):is(
+				[data-ran-booster-ui-badge-intent="none"],
+				[data-ran-booster-ui-badge-intent="stable"],
+				[data-ran-booster-ui-badge-intent="medium"],
+				[data-ran-booster-ui-badge-intent="high"],
+				[data-ran-booster-ui-badge-intent="informational"]
+			)
+	)
+	> [data-ran-booster-ui-badge-fallback]:where(:not([hidden]))::before {
+	content: none;
+}
+
+/* Preserve the existing General status Badge profile without changing public tokens. */
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge]
+	> [data-ran-booster-ui-badge-fallback] {
+	--ran-booster-ui-badge-display: inline-flex;
+	--ran-booster-ui-badge-flex: 0 0 auto;
+	--ran-booster-ui-badge-padding-block: 1px;
+	--ran-booster-ui-badge-padding-inline: 6px;
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	span[data-ran-booster-ui-badge][data-ran-booster-ui-badge-intent="stable"]:where(
+		[data-ran-booster-ui-badge-label]:not(
+				[data-ran-booster-ui-badge-label=""]
+			):has(> [data-ran-booster-ui-badge-mount]):not(
+				[data-ran-booster-ui-mounted]
+			):not([data-ran-booster-ui-badge] [data-ran-booster-ui-badge])
+	)
+	> [data-ran-booster-ui-badge-fallback].ran-booster-badge--ok:not([hidden]) {
+	--ran-booster-ui-badge-background: var(--ran-booster-status-ok-background);
+	--ran-booster-ui-badge-foreground: var(
+		--wpds-color-foreground-interactive-brand-strong
+	);
+	color: var(--ran-booster-ui-badge-foreground, var(--ran-booster-status-ok));
+}
+
+/* Keep repository and release status labels in one wrapping Badge surface. */
+.ran-booster-admin
+	:is(
+		.ran-booster-repository-detail,
+		.ran-booster-repository-release-section,
+		.ran-booster-release-management
+	)
+	span[data-ran-booster-ui-badge]:where(
+		[data-ran-booster-ui-badge-label]:not(
+				[data-ran-booster-ui-badge-label=""]
+			):not([hidden]):has(> [data-ran-booster-ui-badge-mount]):has(
+				> [data-ran-booster-ui-badge-fallback]
+			):not([data-ran-booster-ui-badge] [data-ran-booster-ui-badge]):is(
+				[data-ran-booster-ui-badge-intent="none"],
+				[data-ran-booster-ui-badge-intent="stable"],
+				[data-ran-booster-ui-badge-intent="medium"],
+				[data-ran-booster-ui-badge-intent="high"],
+				[data-ran-booster-ui-badge-intent="informational"]
+			)
+	) {
+	display: inline-block;
+	min-inline-size: 0;
+	max-inline-size: 100%;
+	vertical-align: middle;
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-repository-detail,
+		.ran-booster-repository-release-section,
+		.ran-booster-release-management
+	)
+	span[data-ran-booster-ui-badge]:where(
+		[data-ran-booster-ui-badge-label]:not(
+				[data-ran-booster-ui-badge-label=""]
+			):not([hidden]):has(> [data-ran-booster-ui-badge-mount]):has(
+				> [data-ran-booster-ui-badge-fallback]
+			):not([data-ran-booster-ui-badge] [data-ran-booster-ui-badge]):is(
+				[data-ran-booster-ui-badge-intent="none"],
+				[data-ran-booster-ui-badge-intent="stable"],
+				[data-ran-booster-ui-badge-intent="medium"],
+				[data-ran-booster-ui-badge-intent="high"],
+				[data-ran-booster-ui-badge-intent="informational"]
+			)
+	)
+	> [data-ran-booster-ui-badge-fallback]:not([hidden]),
+.ran-booster-admin
+	:is(
+		.ran-booster-repository-detail,
+		.ran-booster-repository-release-section,
+		.ran-booster-release-management
+	)
+	span[data-ran-booster-ui-badge]:where(
+		[data-ran-booster-ui-badge-label]:not(
+				[data-ran-booster-ui-badge-label=""]
+			):not([hidden]):has(> [data-ran-booster-ui-badge-mount]):has(
+				> [data-ran-booster-ui-badge-fallback]
+			):not([data-ran-booster-ui-badge] [data-ran-booster-ui-badge]):is(
+				[data-ran-booster-ui-badge-intent="none"],
+				[data-ran-booster-ui-badge-intent="stable"],
+				[data-ran-booster-ui-badge-intent="medium"],
+				[data-ran-booster-ui-badge-intent="high"],
+				[data-ran-booster-ui-badge-intent="informational"]
+			)
+	)
+	> [data-ran-booster-ui-badge-mount]
+	> .ran-booster-ui-badge {
+	box-sizing: border-box;
+	display: block;
+	max-inline-size: 100%;
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+
 .ran-booster-admin [data-ran-booster-ui-badge-fallback][hidden] {
 	display: none;
 }

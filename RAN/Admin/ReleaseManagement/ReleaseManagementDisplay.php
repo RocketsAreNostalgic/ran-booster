@@ -171,7 +171,7 @@ final class ReleaseManagementDisplay {
 						<h4><?php echo esc_html( $repository_blocked ? $repository_status_heading : ( $status_available && $eligibility->eligible() ? __( 'Ready for releases', 'ran-booster' ) : __( 'Not ready for releases', 'ran-booster' ) ) ); ?></h4>
 					</div>
 					<?php if ( ! $status_available || ! $eligibility->eligible() || $repository_blocked ) { ?>
-						<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Unavailable', 'ran-booster' ); ?></span>
+						<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php esc_attr_e( 'Unavailable', 'ran-booster' ); ?>" data-ran-booster-ui-badge-intent="high"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Unavailable', 'ran-booster' ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
 					<?php } ?>
 				</div>
 				<ul class="ran-booster-readiness-list">

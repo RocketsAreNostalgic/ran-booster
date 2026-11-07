@@ -436,8 +436,17 @@ final class RepositoryDetailRenderer {
 		$tone     = is_string( $detail['tone'] ?? null ) ? $detail['tone'] : '';
 		$datetime = is_string( $detail['datetime'] ?? null ) ? $detail['datetime'] : '';
 		if ( '' !== $tone ) {
+			$intent = array(
+				'neutral' => 'none',
+				'pending' => 'none',
+				'ok'      => 'stable',
+				'success' => 'stable',
+				'warning' => 'medium',
+				'error'   => 'high',
+				'info'    => 'informational',
+			)[ $tone ] ?? '';
 			?>
-			<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span>
+			<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $value ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $intent ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
 			<?php
 			return;
 		}

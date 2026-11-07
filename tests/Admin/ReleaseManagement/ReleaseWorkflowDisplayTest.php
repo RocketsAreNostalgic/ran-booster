@@ -12,6 +12,32 @@ use RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay;
 use ReflectionMethod;
 
 final class ReleaseWorkflowDisplayTest extends TestCase {
+	public function test_workflow_badge_maps_explicit_tones_without_changing_the_status(): void {
+		foreach ( array(
+			'neutral' => 'none',
+			'pending' => 'none',
+			'ok'      => 'stable',
+			'success' => 'stable',
+			'warning' => 'medium',
+			'error'   => 'high',
+			'info'    => 'informational',
+			'future'  => '',
+		) as $tone => $intent ) {
+			$html = ( new ReleaseWorkflowDisplay() )->repository_section(
+				array(
+					'show_automation' => true,
+					'automation'      => array(
+						'tone'  => 'ran-booster-badge--' . $tone,
+						'label' => 'Exact <workflow> "quoted"',
+					),
+				)
+			);
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Exact &lt;workflow&gt; &quot;quoted&quot;"', $html );
+			self::assertStringContainsString( 'data-ran-booster-ui-badge-intent="' . $intent . '"', $html );
+			self::assertStringContainsString( '<span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--' . $tone . '">Exact &lt;workflow&gt; &quot;quoted&quot;</span><span data-ran-booster-ui-badge-mount></span>', $html );
+		}
+	}
+
 	public function test_partial_shared_projection_renders_without_offset_warnings(): void {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Convert missing projection offsets into regression failures.
 		set_error_handler(

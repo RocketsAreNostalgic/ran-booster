@@ -63,6 +63,15 @@ final class ReleaseWorkflowDisplay {
 		if ( true === ( $projection['show_automation'] ?? false ) ) {
 			$state  = (array) ( $projection['automation'] ?? array() );
 			$view   = (array) ( $projection['workflow_view'] ?? array() );
+			$intent = array(
+				'ran-booster-badge--neutral' => 'none',
+				'ran-booster-badge--pending' => 'none',
+				'ran-booster-badge--ok'      => 'stable',
+				'ran-booster-badge--success' => 'stable',
+				'ran-booster-badge--warning' => 'medium',
+				'ran-booster-badge--error'   => 'high',
+				'ran-booster-badge--info'    => 'informational',
+			)[ (string) ( $state['tone'] ?? '' ) ] ?? '';
 			$notice = '';
 			if ( true === ( $projection['automation_notice'] ?? false ) ) {
 				if ( true === ( $projection['automation_unavailable'] ?? false ) ) {
@@ -82,7 +91,7 @@ final class ReleaseWorkflowDisplay {
 			$html         .= '<section class="ran-booster-readiness-panel ran-booster-repository-release-automation" aria-labelledby="ran-booster-repository-release-automation-heading">'
 				. '<header class="ran-booster-readiness-panel__top ran-booster-repository-release-automation__header"><div><div class="ran-booster-release-automation-heading">'
 				. '<h4 id="ran-booster-repository-release-automation-heading">' . esc_html__( 'Release workflow', 'ran-booster' ) . '</h4>'
-				. '<span class="ran-booster-badge ' . esc_attr( (string) ( $state['tone'] ?? '' ) ) . '">' . esc_html( (string) ( $state['label'] ?? '' ) ) . '</span></div>'
+				. '<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="' . esc_attr( (string) ( $state['label'] ?? '' ) ) . '" data-ran-booster-ui-badge-intent="' . esc_attr( $intent ) . '"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ' . esc_attr( (string) ( $state['tone'] ?? '' ) ) . '">' . esc_html( (string) ( $state['label'] ?? '' ) ) . '</span><span data-ran-booster-ui-badge-mount></span></span></div>'
 				. '<p class="description">' . esc_html( (string) ( $state['provenance'] ?? '' ) ) . '</p></div></header>';
 			if ( '' !== $notice || '' !== $result_notice ) {
 				$html .= '<div class="ran-booster-repository-release-automation__notices">' . $notice . $result_notice . '</div>';

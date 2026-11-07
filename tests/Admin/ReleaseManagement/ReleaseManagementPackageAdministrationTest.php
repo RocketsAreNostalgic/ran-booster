@@ -21,6 +21,16 @@ use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseManagementFixture;
 use RAN\Tests\Admin\ReleaseManagement\Support\ReleaseTrackingFacadeDouble;
 
 final class ReleaseManagementPackageAdministrationTest extends TestCase {
+	public function test_unavailable_readiness_keeps_native_text_and_explicit_badge_intent(): void {
+		$package = new PackageProjection();
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, null, $package->settings_url() );
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Unavailable" data-ran-booster-ui-badge-intent="high"', $html );
+		self::assertStringContainsString( '<span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--error">Unavailable</span><span data-ran-booster-ui-badge-mount></span>', $html );
+		self::assertStringContainsString( 'Published release status is temporarily unavailable. Try again.', $html );
+	}
+
 	#[Before]
 	public function reset_word_press(): void {
 		ReleaseManagementFixture::reset_word_press();

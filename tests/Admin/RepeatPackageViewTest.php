@@ -184,7 +184,8 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertStringContainsString( 'provider=bb&amp;open_picker=1&amp;return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh', $html );
 			self::assertMatchesRegularExpression( '/hx-post="[^" ]*return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh"/', $html );
-			self::assertStringContainsString( 'page=' . $package_view->get_page_slug() . '&amp;s=release&amp;provider=gh', $html );
+			// The list return context now belongs to the Shell breadcrumb parent, not to a button in this view.
+			self::assertStringNotContainsString( 'page=' . $package_view->get_page_slug() . '&amp;s=release&amp;provider=gh', $html );
 		}
 	}
 
@@ -496,9 +497,7 @@ final class RepeatPackageViewTest extends TestCase {
 		$expected_install_url = $base_url
 			. '?page=' . $package_view->get_create_page_slug()
 			. '&amp;provider=gh&amp;open_picker=1';
-		$expected_back_url    = $base_url . '?page=' . $package_view->get_page_slug();
 		$install_another_link = '<a class="button" href="' . $expected_install_url . '">Install another ' . $package_view->get_type() . '</a>';
-		$back_link            = '<a class="button" href="' . $expected_back_url . '">Back to Managed ' . $package_view->get_plural_label() . '</a>';
 
 		self::assertStringNotContainsString( 'ran-booster-package-settings__install-another', $html );
 		self::assertStringNotContainsString( '>Cancel</a>', $html );
@@ -507,15 +506,13 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( '<p class="ran-booster-package-summary__value">Branch · main</p>', $html );
 		$save_actions = $this->action_group_by_class( $html, 'ran-booster-package-settings__save-actions' );
 		self::assertStringContainsString( $install_another_link, $save_actions );
-		self::assertStringContainsString( $back_link, $save_actions );
+		// The Shell breadcrumb is the route back to the Managed list; the action bar no longer repeats it.
+		self::assertStringNotContainsString( 'Back to Managed', $save_actions );
 		$save_position            = strpos( $save_actions, 'data-ran-booster-package-settings-save' );
 		$install_another_position = strpos( $save_actions, $install_another_link );
-		$back_position            = strpos( $save_actions, $back_link );
 		self::assertIsInt( $save_position );
 		self::assertIsInt( $install_another_position );
-		self::assertIsInt( $back_position );
 		self::assertLessThan( $install_another_position, $save_position );
-		self::assertLessThan( $back_position, $install_another_position );
 		if ( ! $provider_available ) {
 			self::assertStringContainsString( '<strong>Git provider unavailable.</strong>', $html );
 			self::assertMatchesRegularExpression(
@@ -643,14 +640,12 @@ final class RepeatPackageViewTest extends TestCase {
 
 			$base_url             = 'https://example.test/wp-admin/admin.php';
 			$install_another_link = '<a class="button" href="' . $base_url . '?page=' . $package_view->get_create_page_slug() . '&amp;provider=gh&amp;open_picker=1">Install another ' . $package_view->get_type() . '</a>';
-			$back_link            = '<a class="button" href="' . $base_url . '?page=' . $package_view->get_page_slug() . '">Back to Managed ' . $package_view->get_plural_label() . '</a>';
 			$actions              = $this->action_group_by_class( $html, 'ran-booster-settings-actions' );
 
 			self::assertStringNotContainsString( 'data-ran-booster-package-settings-save', $html, $package_view->get_type() );
 			self::assertStringNotContainsString( 'data-ran-booster-card="package-edit"', $html, $package_view->get_type() );
 			self::assertStringContainsString( $install_another_link, $actions, $package_view->get_type() );
-			self::assertStringContainsString( $back_link, $actions, $package_view->get_type() );
-			self::assertLessThan( strpos( $actions, $back_link ), strpos( $actions, $install_another_link ), $package_view->get_type() );
+			self::assertStringNotContainsString( 'Back to Managed', $actions, $package_view->get_type() );
 		}
 	}
 
@@ -1105,7 +1100,8 @@ final class RepeatPackageViewTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/packages/recovery.php';
 			$html = (string) ob_get_clean();
 
-			self::assertStringContainsString( 'Back to Managed ' . $package_view->get_plural_label(), $html, $recovery_state );
+			self::assertStringNotContainsString( 'Back to Managed ' . $package_view->get_plural_label(), $html, $recovery_state );
+			self::assertStringNotContainsString( 'ran-booster-package-settings__back', $html, $recovery_state );
 			self::assertStringContainsString( esc_html( $recovery_name ), $html, $recovery_state );
 			self::assertStringNotContainsString( '<form', $html, $recovery_state );
 			self::assertStringNotContainsString( '<select', $html, $recovery_state );

@@ -28,7 +28,6 @@ $troubleshooting_url  = add_query_arg(
 	$package_view->get_admin_url()
 );
 ?>
-<p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $package_list_url ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a></p>
 <div class="ran-booster-package-recovery" data-ran-booster-package-failure-state="<?php echo esc_attr( $recovery_state ); ?>" data-ran-booster-package-identifier="<?php echo esc_attr( $recovery_identifier ); ?>">
 	<h2 class="ran-booster-package-settings__heading ran-booster-page-heading__title">
 	<?php

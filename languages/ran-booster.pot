@@ -253,7 +253,7 @@ msgid "Source"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:150
-#: views/packages/edit.php:373
+#: views/packages/edit.php:370
 #: views/packages/fields/deployment-policy.php:44
 #: views/packages/fields/deployment-policy.php:47
 #: views/packages/index.php:479
@@ -487,7 +487,7 @@ msgstr[1] ""
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:330
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
 #: views/documentation.php:348
-#: views/packages/edit.php:246
+#: views/packages/edit.php:245
 #: views/packages/index.php:109
 #: views/packages/index.php:168
 #: views/packages/index.php:414
@@ -499,7 +499,7 @@ msgstr ""
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:334
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
 #: views/documentation.php:347
-#: views/packages/edit.php:247
+#: views/packages/edit.php:246
 #: views/packages/index.php:108
 #: views/packages/index.php:169
 #: views/packages/index.php:416
@@ -512,8 +512,8 @@ msgstr ""
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:338
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
 #: views/documentation.php:346
-#: views/packages/edit.php:208
-#: views/packages/edit.php:245
+#: views/packages/edit.php:207
+#: views/packages/edit.php:244
 #: views/packages/index.php:107
 #: views/packages/index.php:170
 #: views/packages/index.php:415
@@ -1520,7 +1520,7 @@ msgid "Changed %1$d plugins to %2$s in WordPress. Already in that state: %3$d. S
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:499
-#: views/packages/edit.php:208
+#: views/packages/edit.php:207
 #: views/packages/index.php:475
 #: views/settings-general.php:184
 #: views/settings-general.php:221
@@ -1745,7 +1745,7 @@ msgid "%1$s · %2$s"
 msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:408
-#: views/packages/edit.php:240
+#: views/packages/edit.php:239
 #: views/packages/index.php:423
 #: assets/ran-booster-release-management.js:780
 msgid "repository default"
@@ -3155,7 +3155,7 @@ msgstr ""
 #: views/documentation.php:293
 #: views/documentation.php:455
 #: views/packages/index.php:137
-#: views/packages/recovery.php:70
+#: views/packages/recovery.php:69
 msgid "Open Troubleshooting"
 msgstr ""
 
@@ -6317,8 +6317,8 @@ msgid "RAN Booster sections"
 msgstr ""
 
 #: views/base.php:100
-#: views/base.php:116
-#: views/base.php:126
+#: views/base.php:120
+#: views/base.php:130
 msgid "Breadcrumbs"
 msgstr ""
 
@@ -6329,47 +6329,47 @@ msgstr ""
 msgid "Install %s"
 msgstr ""
 
-#: views/base.php:122
+#: views/base.php:126
 msgid "Manage Credentials"
 msgstr ""
 
-#: views/base.php:122
+#: views/base.php:126
 msgid "Manage Webhook Secrets"
 msgstr ""
 
-#: views/base.php:133
+#: views/base.php:137
 #: views/provider.php:488
 msgid "Repositories"
 msgstr ""
 
-#: views/base.php:136
+#: views/base.php:140
 msgid "Repository unavailable"
 msgstr ""
 
-#: views/base.php:156
+#: views/base.php:160
 msgid "Local development detected"
 msgstr ""
 
-#: views/base.php:157
+#: views/base.php:161
 msgid "Booster can still download and replace managed plugins and themes on this site. Disable updates for packages you’re editing. Incoming webhooks for branch deployment are generally unavailable on local or private domains."
 msgstr ""
 
-#: views/base.php:162
+#: views/base.php:166
 msgid "Learn about local development"
 msgstr ""
 
-#: views/base.php:163
+#: views/base.php:167
 msgid "Dismiss this notice."
 msgstr ""
 
 #. translators: %s: current year.
-#: views/base.php:180
+#: views/base.php:184
 #, php-format
 msgid "Copyright © %s"
 msgstr ""
 
 #. translators: %s: installed Booster version.
-#: views/base.php:189
+#: views/base.php:193
 #, php-format
 msgid "Booster %s"
 msgstr ""
@@ -7832,12 +7832,12 @@ msgid "Choose the repository and access Booster should use for this package."
 msgstr ""
 
 #: views/packages/create.php:153
-#: views/packages/edit.php:316
+#: views/packages/edit.php:314
 msgid "Package operation"
 msgstr ""
 
 #: views/packages/create.php:154
-#: views/packages/edit.php:317
+#: views/packages/edit.php:315
 msgid "Choose when Booster may update this package."
 msgstr ""
 
@@ -7870,8 +7870,8 @@ msgstr ""
 
 #. translators: %s is plugin or theme.
 #: views/packages/create.php:178
-#: views/packages/edit.php:281
-#: views/packages/edit.php:345
+#: views/packages/edit.php:280
+#: views/packages/edit.php:343
 #: views/packages/index.php:114
 #, php-format
 msgid "Install another %s"
@@ -7922,121 +7922,113 @@ msgstr ""
 msgid "Stop managing and delete %s"
 msgstr ""
 
-#: views/packages/edit.php:220
+#: views/packages/edit.php:219
 msgid "Activate plugin"
 msgstr ""
 
-#: views/packages/edit.php:230
+#: views/packages/edit.php:229
 msgid "Enable theme"
 msgstr ""
 
-#: views/packages/edit.php:230
+#: views/packages/edit.php:229
 msgid "Activate theme"
 msgstr ""
 
-#: views/packages/edit.php:234
+#: views/packages/edit.php:233
 msgid "Save plugin settings"
 msgstr ""
 
-#: views/packages/edit.php:235
+#: views/packages/edit.php:234
 msgid "Save theme settings"
 msgstr ""
 
 #. translators: %s is the repository branch name.
-#: views/packages/edit.php:239
+#: views/packages/edit.php:238
 #: views/packages/index.php:422
 #: assets/ran-booster-release-management.js:778
 #, php-format,js-format
 msgid "Branch · %s"
 msgstr ""
 
-#: views/packages/edit.php:242
+#: views/packages/edit.php:241
 msgid "Unavailable update source"
 msgstr ""
 
-#: views/packages/edit.php:243
+#: views/packages/edit.php:242
 msgid "The update source Git provider is unavailable"
 msgstr ""
 
 #. translators: %s is the item being edited.
-#: views/packages/edit.php:251
+#: views/packages/edit.php:250
 #: assets/ran-booster-secure-inputs.js:1165
 #, php-format,js-format
 msgid "Edit %s"
 msgstr ""
 
-#: views/packages/edit.php:256
+#: views/packages/edit.php:255
 msgid "Git provider unavailable."
 msgstr ""
 
-#: views/packages/edit.php:256
+#: views/packages/edit.php:255
 msgid "This package remains linked but cannot be edited or deployed until its Git provider is registered again."
 msgstr ""
 
-#: views/packages/edit.php:258
+#: views/packages/edit.php:257
 #: views/portability-review.php:172
 #: views/portability.php:157
 msgid "Git provider:"
 msgstr ""
 
-#: views/packages/edit.php:259
+#: views/packages/edit.php:258
 msgid "Repository:"
 msgstr ""
 
-#: views/packages/edit.php:260
+#: views/packages/edit.php:259
 msgid "Git provider repository ID:"
 msgstr ""
 
-#: views/packages/edit.php:271
+#: views/packages/edit.php:270
 msgid "Update source unavailable"
 msgstr ""
 
-#: views/packages/edit.php:272
+#: views/packages/edit.php:271
 msgid "The package remains linked, but its update source controls require an add-on that is not currently available."
 msgstr ""
 
-#: views/packages/edit.php:277
+#: views/packages/edit.php:276
 msgid "Booster will not reinterpret this package as a branch deployment. Restore the update source add-on to manage updates or unlink the package."
 msgstr ""
 
-#: views/packages/edit.php:280
-#: views/packages/edit.php:343
+#: views/packages/edit.php:279
+#: views/packages/edit.php:341
 msgid "Package settings actions"
 msgstr ""
 
-#. translators: %s is Managed Plugins or Managed Themes.
-#: views/packages/edit.php:282
-#: views/packages/edit.php:346
-#: views/packages/recovery.php:31
-#, php-format
-msgid "Back to Managed %s"
-msgstr ""
-
-#: views/packages/edit.php:308
+#: views/packages/edit.php:306
 msgid "The saved repository and access used by this package."
 msgstr ""
 
-#: views/packages/edit.php:330
+#: views/packages/edit.php:328
 msgid "Package operations"
 msgstr ""
 
-#: views/packages/edit.php:359
+#: views/packages/edit.php:356
 msgid "Package summary"
 msgstr ""
 
-#: views/packages/edit.php:361
+#: views/packages/edit.php:358
 msgid "Current source"
 msgstr ""
 
-#: views/packages/edit.php:375
+#: views/packages/edit.php:372
 msgid "Source changes reset Automatic to Manual"
 msgstr ""
 
-#: views/packages/edit.php:378
+#: views/packages/edit.php:375
 msgid "WordPress state"
 msgstr ""
 
-#: views/packages/edit.php:380
+#: views/packages/edit.php:377
 msgid "Independent of package source"
 msgstr ""
 
@@ -8461,47 +8453,47 @@ msgid "Not recorded"
 msgstr ""
 
 #. translators: %s is an installed plugin or theme name.
-#: views/packages/recovery.php:36
+#: views/packages/recovery.php:35
 #, php-format
 msgid "Management settings are available for %s"
 msgstr ""
 
 #. translators: %s is an installed plugin or theme name.
-#: views/packages/recovery.php:38
+#: views/packages/recovery.php:37
 #, php-format
 msgid "Booster can’t open settings for %s"
 msgstr ""
 
-#: views/packages/recovery.php:40
+#: views/packages/recovery.php:39
 msgid "Package management settings unavailable"
 msgstr ""
 
-#: views/packages/recovery.php:51
+#: views/packages/recovery.php:50
 msgid "Open package settings"
 msgstr ""
 
-#: views/packages/recovery.php:53
+#: views/packages/recovery.php:52
 msgid "The problem is in Booster’s saved management settings. This does not establish that the installed package or its data is damaged. Booster cannot use these invalid settings to manage updates."
 msgstr ""
 
-#: views/packages/recovery.php:54
+#: views/packages/recovery.php:53
 msgid "You can stop Booster managing this package and then link it again using verified repository settings. Stopping management keeps its installed files, WordPress activation state, package data, shared credentials and deployment history."
 msgstr ""
 
 #. translators: %s is the installed package name.
-#: views/packages/recovery.php:62
+#: views/packages/recovery.php:61
 #, php-format
 msgid "Stop managing %s and retain its installed files."
 msgstr ""
 
 #. translators: %s is the installed package name.
-#: views/packages/recovery.php:63
+#: views/packages/recovery.php:62
 #, php-format
 msgctxt "installed package name"
 msgid "Stop managing %s"
 msgstr ""
 
-#: views/packages/recovery.php:69
+#: views/packages/recovery.php:68
 msgid "No management changes have been made. Booster will not disconnect a package whose management identity or operation state cannot be verified."
 msgstr ""
 

@@ -95,13 +95,17 @@ $ran_admin_shell = array(
 
 $ran_admin_shell['navigation_variant'] = 'thick';
 
-if ( in_array( $view, array( 'packages/create', 'packages/edit' ), true ) && isset( $package_view, $package_return_list ) ) {
+if ( in_array( $view, array( 'packages/create', 'packages/edit', 'packages/recovery' ), true ) && isset( $package_view, $package_return_list ) ) {
 	$parent_url                           = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + array_map( 'rawurlencode', $package_return_list ), $admin_url );
 	$ran_admin_shell['breadcrumbs_label'] = __( 'Breadcrumbs', 'ran-booster' );
-	$package_heading                      = 'packages/create' === $view
+	if ( 'packages/create' === $view ) {
 		/* translators: %s is plugin or theme. */
-		? sprintf( __( 'Install %s', 'ran-booster' ), $package_view->get_singular_label() )
-		: ( isset( $package ) && $package instanceof \RAN\Package ? trim( $package->get_display_name() ) : '' );
+		$package_heading = sprintf( __( 'Install %s', 'ran-booster' ), $package_view->get_singular_label() );
+	} elseif ( 'packages/recovery' === $view ) {
+		$package_heading = is_string( $recovery_name ?? null ) ? trim( $recovery_name ) : '';
+	} else {
+		$package_heading = isset( $package ) && $package instanceof \RAN\Package ? trim( $package->get_display_name() ) : '';
+	}
 	if ( '' === $package_heading ) {
 		$package_heading = $package_view->get_singular_label();
 	}

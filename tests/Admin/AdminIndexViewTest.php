@@ -430,4 +430,41 @@ final class AdminIndexViewTest extends TestCase {
 			self::assertStringNotContainsString( 'ran-admin-shell__breadcrumbs', $list_html );
 		}
 	}
+
+	public function test_package_recovery_uses_the_managed_list_as_breadcrumb_parent(): void {
+		$view     = 'packages/recovery';
+		$messages = array();
+		foreach ( array( \RAN\Admin\PackagePagePresenter::plugin(), \RAN\Admin\PackagePagePresenter::theme() ) as $package_view ) {
+			$package_return_list   = array(
+				's'        => 'release',
+				'provider' => 'gh',
+				'paged'    => '2',
+			);
+			$recovery_identifier   = 'example/example.php';
+			$recovery_name         = 'Example <package>';
+			$recovery_state        = 'blocked';
+			$recovery_reason       = 'A safely bounded explanation.';
+			$recovery_blocker      = null;
+			$recovery_confirmation = null;
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed fixture locals mirror the real Dashboard package presentation.
+			extract( compact( 'package_view', 'package_return_list', 'recovery_identifier', 'recovery_name', 'recovery_state', 'recovery_reason', 'recovery_blocker', 'recovery_confirmation' ) );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/base.php';
+			$html = (string) ob_get_clean();
+			$dom  = new \DOMDocument();
+			@$dom->loadHTML( $html ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Legacy DOM parser does not recognize HTML5 view elements.
+			$xpath = new \DOMXPath( $dom );
+			$crumb = '//ol[@class="ran-admin-shell__breadcrumbs"]';
+			$type  = $package_view->get_type();
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $crumb . '//a)' ), $type );
+			self::assertSame( $package_view->get_plural_label(), $xpath->evaluate( 'string(' . $crumb . '//a)' ), $type );
+			self::assertStringContainsString( 'page=' . $package_view->get_page_slug(), $xpath->evaluate( 'string(' . $crumb . '//a/@href)' ), $type );
+			foreach ( array( 's=release', 'provider=gh', 'paged=2' ) as $context ) {
+				self::assertStringContainsString( $context, $xpath->evaluate( 'string(' . $crumb . '//a/@href)' ), $type );
+			}
+			self::assertSame( $recovery_name, $xpath->evaluate( 'string(' . $crumb . '//span[@aria-current="page"])' ), $type );
+			self::assertStringNotContainsString( 'Back to Managed', $html, $type );
+			self::assertStringNotContainsString( 'ran-booster-package-settings__back', $html, $type );
+		}
+	}
 }

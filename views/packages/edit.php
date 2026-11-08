@@ -196,7 +196,6 @@ $settings_url               = add_query_arg(
 	) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 	$admin_url
 );
-$back_url                   = add_query_arg( array( 'page' => $package_view->get_page_slug() ) + array_map( 'rawurlencode', $package_return_list ?? array() ), $admin_url );
 $show_branch_settings       = 'branch' === $package_source_view;
 $show_branch_operations     = $show_branch_settings && ! $release_managed;
 $repository_read_only       = $release_managed;
@@ -279,7 +278,6 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 					</div>
 					<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
 						<a class="button" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
-						<a class="button" href="<?php echo esc_url( $back_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a>
 					</div>
 				</div>
 			</section>
@@ -343,7 +341,6 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 			<div class="ran-booster-settings-actions ran-booster-package-settings__save-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
 				<button type="submit" class="button button-primary" form="ran-booster-package-edit-form" data-ran-booster-package-settings-save data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-package-mutation hx-post="<?php echo esc_url( wp_make_link_relative( $settings_url ) ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop" hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( $package_settings_save_label ); ?></button>
 				<a class="button" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
-				<a class="button" href="<?php echo esc_url( $back_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a>
 			</div>
 		<?php } ?>
 

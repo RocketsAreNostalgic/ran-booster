@@ -310,6 +310,7 @@ final class BoosterAssetsTest extends TestCase {
 		);
 	}
 
+	/** @param class-string $notice */
 	#[DataProvider( 'global_notice_provider' )]
 	public function test_visible_owned_off_page_notices_load_only_the_existing_notice_profile_and_foundation( string $notice ): void {
 		$booster = $this->booster(

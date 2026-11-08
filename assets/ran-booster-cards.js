@@ -11,6 +11,7 @@
 		'installation-component',
 		'settings-configuration',
 		'settings-storage',
+		'documentation',
 	]
 		.map((kind) => `[data-ran-booster-ui-disclosure="${kind}"]`)
 		.join(',');
@@ -86,6 +87,9 @@
 				}
 			}
 			entry.details.appendChild(entry.body);
+			if (entry.documentation) {
+				entry.details.hidden = false;
+			}
 			entry.mount.removeEventListener('focusin', entry.trackFocus);
 			entry.mount.removeEventListener('focusout', entry.clearFocus);
 			entry.mount.replaceWith(entry.details);
@@ -820,6 +824,12 @@
 		) {
 			return;
 		}
+		const documentation =
+			host.getAttribute('data-ran-booster-ui-disclosure') ===
+			'documentation';
+		const documentationRoot = documentation
+			? host.closest('.ran-booster-documentation')
+			: null;
 		const details = host.querySelector(
 			':scope > details[data-ran-booster-ui-disclosure-fallback]'
 		);
@@ -847,6 +857,7 @@
 				? summary?.textContent.trim()
 				: '');
 		if (
+			(documentation && !documentationRoot) ||
 			!details ||
 			!summary ||
 			!body ||
@@ -899,8 +910,10 @@
 					return this.state.failed ? null : this.props.children;
 				}
 			}
+			let updateOpen;
 			function Disclosure() {
 				const [open, setOpen] = window.React.useState(details.open);
+				updateOpen = setOpen;
 				return h(
 					ui.Root,
 					{
@@ -908,7 +921,18 @@
 						open,
 						onOpenChange: (next) => {
 							details.open = next;
-							setOpen(next);
+							if (documentation) {
+								documentationRoot.dispatchEvent(
+									new window.CustomEvent(
+										'ran-booster:documentation-state',
+										{
+											bubbles: true,
+										}
+									)
+								);
+							} else {
+								setOpen(next);
+							}
 						},
 					},
 					h(
@@ -922,6 +946,9 @@
 						h('span', { className: 'screen-reader-text' }, label)
 					),
 					h(ui.Content, {
+						className: documentation
+							? 'ran-booster-documentation__ui-panel'
+							: undefined,
 						ref: panelRef,
 						keepMounted: true,
 						render: h('div', {
@@ -972,11 +999,18 @@
 				throw Error('Invalid disclosure panel association');
 			}
 			slot.appendChild(body);
-			details.replaceWith(mount);
+			if (documentation) {
+				details.hidden = true;
+				host.appendChild(mount);
+			} else {
+				details.replaceWith(mount);
+			}
 			const entry = {
 				root,
 				mount,
 				disclosure: true,
+				documentation,
+				synchronize: () => updateOpen(details.open),
 				details,
 				summary,
 				body,
@@ -1007,6 +1041,9 @@
 					?.focus({ preventScroll: true });
 			}
 		} catch {
+			if (documentation) {
+				details.hidden = false;
+			}
 			if (body.parentElement !== details) {
 				details.appendChild(body);
 			}
@@ -1162,6 +1199,23 @@
 			mountBadge(host);
 		}
 	});
+	document.addEventListener('ran-booster:documentation-state', (event) => {
+		const scope = event.target;
+		if (!scope.matches?.('.ran-booster-documentation')) {
+			return;
+		}
+		window.wp?.element?.flushSync?.(() => {
+			roots.forEach((entry, host) => {
+				if (entry.documentation && scope.contains(host)) {
+					entry.synchronize();
+				}
+			});
+		});
+		if (scope.dataset.ranBoosterDocumentationDeepLinksBound !== 'true') {
+			initialize(scope);
+		}
+	});
+
 	document.addEventListener('ran-booster:ui-notice-update', (event) => {
 		const host = event.target.closest?.(noticeSelector);
 		if (host) {

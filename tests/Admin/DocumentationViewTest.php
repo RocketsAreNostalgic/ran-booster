@@ -35,6 +35,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringNotContainsString( '>Conseils</p>', $html );
 		self::assertStringContainsString( 'class="ran-booster-documentation__index-link"', $html );
 		self::assertStringContainsString( 'id="ran-booster-documentation-heading"', $html );
+		self::assertStringContainsString( 'data-ran-booster-ui-documentation', $html );
 	}
 
 	public function test_renders_eleven_native_disclosure_sections_with_only_quick_start_open(): void {

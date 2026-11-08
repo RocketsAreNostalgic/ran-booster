@@ -412,3 +412,36 @@
 		white-space: pre-wrap;
 	}
 }
+
+/* Native Docs reveal content immediately for anchors, browser find and print. */
+.ran-booster-admin .ran-booster-documentation__ui-panel {
+	transition: none;
+}
+
+@media print {
+	.ran-booster-admin
+		.ran-booster-documentation
+		.ran-booster-ui-disclosure {
+		border: 0;
+		box-shadow: none;
+		background: transparent;
+	}
+
+	.ran-booster-admin
+		.ran-booster-documentation
+		.ran-booster-ui-disclosure__header
+		> [role="button"] {
+		padding: 12pt 0 5pt;
+		border-block-end: 1pt solid CanvasText;
+		color: CanvasText;
+		cursor: default;
+		break-after: avoid-page;
+	}
+
+	.ran-booster-admin
+		.ran-booster-documentation
+		.ran-booster-ui-disclosure__header
+		svg {
+		display: none;
+	}
+}

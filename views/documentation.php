@@ -234,7 +234,7 @@ foreach ( $chapters as &$chapter ) {
 unset( $chapter );
 
 ?>
-<section class="ran-booster-page-shell ran-booster-documentation" aria-labelledby="ran-booster-documentation-heading">
+<section class="ran-booster-page-shell ran-booster-documentation" data-ran-booster-ui-documentation aria-labelledby="ran-booster-documentation-heading">
 	<header class="ran-booster-page-shell__header ran-booster-documentation__header">
 		<h2 id="ran-booster-documentation-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Documentation', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Install from a public repository first. Add private access and Push-to-Deploy only when you need them.', 'ran-booster' ); ?></p>

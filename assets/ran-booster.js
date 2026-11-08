@@ -539,6 +539,39 @@
 		if (root.dataset.ranBoosterDocumentationDeepLinksBound === 'true') {
 			return;
 		}
+		if (root.hasAttribute?.('data-ran-booster-ui-documentation')) {
+			root.querySelectorAll(
+				'details[data-ran-booster-documentation-section][id]'
+			).forEach(function (details) {
+				const summary = details.querySelector(':scope > summary');
+				const body = details.querySelector(
+					':scope > .ran-booster-documentation__content'
+				);
+				if (!summary || !body) {
+					return;
+				}
+				const wrapper = root.ownerDocument.createElement('div');
+				wrapper.className = 'ran-booster-documentation__section';
+				wrapper.id = details.id;
+				wrapper.setAttribute(
+					'data-ran-booster-ui-disclosure',
+					'documentation'
+				);
+				wrapper.setAttribute(
+					'data-ran-booster-ui-disclosure-density',
+					'compact'
+				);
+				details.setAttribute(
+					'data-ran-booster-ui-disclosure-fallback',
+					''
+				);
+				body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+				details.removeAttribute('id');
+				details.parentNode.insertBefore(wrapper, details);
+				wrapper.appendChild(details);
+			});
+			documentationState(root);
+		}
 		const sections = Array.from(
 			root.querySelectorAll('.ran-booster-documentation__section[id]')
 		);
@@ -683,13 +716,36 @@
 		input.addEventListener('input', update);
 	}
 
+	function documentationState(root) {
+		if (root.hasAttribute?.('data-ran-booster-ui-documentation')) {
+			root.dispatchEvent(
+				new window.CustomEvent('ran-booster:documentation-state', {
+					bubbles: true,
+				})
+			);
+		}
+	}
+
+	function documentationDetails(section) {
+		return section.tagName === 'DETAILS'
+			? section
+			: section.querySelector(
+					':scope > details[data-ran-booster-ui-disclosure-fallback]'
+				);
+	}
+
 	function openDetailsForHash(root, hash) {
 		const section = getDocumentationSectionForHash(root, hash);
 		if (!section) {
 			return null;
 		}
 
-		section.open = true;
+		const details = documentationDetails(section);
+		if (!details) {
+			return null;
+		}
+		details.open = true;
+		documentationState(root);
 
 		return section;
 	}
@@ -721,7 +777,10 @@
 			return null;
 		}
 
-		const section = target.closest('.ran-booster-documentation__section');
+		const section =
+			target.closest(
+				'[data-ran-booster-ui-disclosure="documentation"]'
+			) || target.closest('.ran-booster-documentation__section');
 		if (
 			!section ||
 			(typeof root.contains === 'function' && !root.contains(section))
@@ -830,7 +889,14 @@
 		window.addEventListener('scroll', schedule, { passive: true });
 		window.addEventListener('resize', schedule);
 		window.addEventListener('hashchange', schedule);
-		root.addEventListener('toggle', schedule, true);
+		root.addEventListener(
+			'toggle',
+			function (event) {
+				documentationState(root);
+				schedule(event);
+			},
+			true
+		);
 		root.addEventListener('htmx:beforeCleanupElement', schedule);
 		schedule();
 	}
@@ -862,6 +928,7 @@
 				detail.removeAttribute('name');
 				detail.open = true;
 			});
+			documentationState(root);
 		});
 		window.addEventListener('afterprint', function () {
 			if (!openStates) {
@@ -877,6 +944,7 @@
 				}
 			});
 			openStates = null;
+			documentationState(root);
 		});
 	}
 })();

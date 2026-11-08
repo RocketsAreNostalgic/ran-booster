@@ -18,6 +18,7 @@ function fixture({
 	const listeners = new Map(),
 		microtasks = [];
 	const unmountOrder = [];
+	const stateUpdates = [];
 	let renders = 0,
 		unmounts = 0,
 		moves = 0,
@@ -33,6 +34,7 @@ function fixture({
 			this.parentElement = null;
 			this.ownerDocument = doc;
 			this.attributes = new Map();
+			this.dataset = {};
 			this.hidden = false;
 			this.disabled = false;
 			this.textContent = '';
@@ -116,6 +118,7 @@ function fixture({
 					'installation-component',
 					'settings-configuration',
 					'settings-storage',
+					'documentation',
 				].includes(this.getAttribute('data-ran-booster-ui-disclosure'));
 			}
 			if (
@@ -129,6 +132,9 @@ function fixture({
 			}
 			if (selector === 'button') {
 				return this.tagName === 'BUTTON';
+			}
+			if (selector === '.ran-booster-documentation') {
+				return !!this.documentation;
 			}
 			if (selector === '.ran-booster-admin') {
 				return !!this.admin;
@@ -168,6 +174,9 @@ function fixture({
 			return selector === '*'
 				? descendants
 				: descendants.filter((n) => n.matches(selector));
+		}
+		dispatchEvent(event) {
+			emit(event.type, this);
 		}
 		addEventListener() {}
 		removeEventListener() {}
@@ -233,9 +242,9 @@ function fixture({
 						'aria-expanded',
 						String(component.props.open)
 					);
-					panel.setAttribute('id', 'test-panel');
+					panel.setAttribute('id', 'test-panel-' + renders);
 					if (component.props.open) {
-						trigger.setAttribute('aria-controls', 'test-panel');
+						trigger.setAttribute('aria-controls', panel.id);
 					}
 					slot.setAttribute('data-disclosure-slot', '');
 					content.props.ref.current = panel;
@@ -290,9 +299,15 @@ function fixture({
 		window.React = {
 			Component: class {},
 			createRef: () => ({ current: null }),
-			useState: (value) => [value, () => {}],
+			useState: (value) => [value, (next) => stateUpdates.push(next)],
 		};
 		window.CSS = { escape: (value) => value };
+		window.CustomEvent = class {
+			constructor(type, options) {
+				this.type = type;
+				Object.assign(this, options);
+			}
+		};
 		window.ranBoosterUI.CollapsibleCard = {
 			Root: 'Root',
 			Header: 'Header',
@@ -396,6 +411,7 @@ function fixture({
 		badge,
 		notice,
 		unmountOrder,
+		stateUpdates,
 		window,
 		run: () => vm.runInContext(source, context),
 		emit,
@@ -1397,4 +1413,84 @@ test('Troubleshooting retains its native content when the Card runtime is unavai
 		assert.equal(form.firstChild, link);
 		assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), false);
 	}
+});
+
+function documentationFixture(options = {}) {
+	const f = fixture({ disclosureRuntime: true, ...options });
+	const root = new f.Node('section');
+	root.documentation = true;
+	f.doc.body.appendChild(root);
+	function section(id) {
+		const host = new f.Node('div');
+		host.setAttribute('id', id);
+		host.setAttribute('data-ran-booster-ui-disclosure', 'documentation');
+		const details = new f.Node('details');
+		details.setAttribute('name', 'ran-booster-documentation');
+		details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+		const summary = new f.Node('summary');
+		summary.textContent = id;
+		const body = new f.Node('div');
+		body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+		const heading = new f.Node('h3');
+		heading.setAttribute('id', id + '-heading');
+		body.appendChild(heading);
+		details.appendChild(summary);
+		details.appendChild(body);
+		host.appendChild(details);
+		root.appendChild(host);
+		details.open = false;
+		return { host, details, summary, body, heading };
+	}
+	return { ...f, root, section };
+}
+
+test('Docs keep connected native state and synchronize the prepared group before returning', () => {
+	const f = documentationFixture();
+	const a = f.section('first');
+	const b = f.section('second');
+	f.run();
+	f.flush();
+	for (const item of [a, b]) {
+		assert(item.details.isConnected && item.details.hidden);
+		assert.equal(
+			item.details.getAttribute('name'),
+			'ran-booster-documentation'
+		);
+		assert.equal(item.body.firstChild, item.heading);
+		assert.equal(
+			item.host.querySelector('[data-disclosure-slot]').firstChild,
+			item.body
+		);
+	}
+	a.details.open = true;
+	b.details.open = false;
+	f.emit('ran-booster:documentation-state', f.root);
+	assert.deepEqual(f.stateUpdates, [true, false]);
+	f.flush();
+	assert.equal(f.counts().renders, 2);
+	f.tree().props.onOpenChange(true);
+	assert.equal(b.details.open, true);
+	assert.equal(f.stateUpdates.at(-1), true);
+	f.emit('htmx:beforeHistorySave');
+	for (const item of [a, b]) {
+		assert.equal(item.host.firstChild, item.details);
+		assert.equal(item.details.hidden, false);
+		assert.equal(item.details.children[1], item.body);
+		assert.equal(item.heading.isConnected, true);
+	}
+	f.flush();
+	assert.equal(a.details.hidden, true);
+	assert.equal(b.details.hidden, true);
+});
+
+test('Docs leave the connected native body usable when public rendering fails', () => {
+	const f = documentationFixture({ disclosureFail: true });
+	const item = f.section('guide');
+	f.run();
+	f.flush();
+	assert.equal(item.details.hidden, false);
+	assert.equal(item.host.firstChild, item.details);
+	assert.equal(item.details.children[1], item.body);
+	assert.equal(item.body.firstChild, item.heading);
+	assert.equal(item.host.hasAttribute('data-ran-booster-ui-mounted'), false);
 });

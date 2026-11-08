@@ -40,13 +40,17 @@ function createFixture({
 	childMargin = 0,
 	padding = 32,
 	shellBottom = 0,
+	optIn = false,
 } = {}) {
 	const sections = [];
+	const wrappers = [];
+	const stateEvents = [];
 	function createSection(id) {
 		let isOpen = false;
 		let name = 'ran-booster-documentation';
 		const section = {
 			id,
+			tagName: 'DETAILS',
 			rect: {
 				top: id === 'first' ? 166 : 224,
 				bottom: id === 'first' ? 200 : 400,
@@ -74,6 +78,9 @@ function createFixture({
 				return attribute === 'name' ? name : null;
 			},
 			removeAttribute(attribute) {
+				if (attribute === 'id') {
+					this.id = '';
+				}
 				if (attribute === 'name') {
 					name = null;
 				}
@@ -100,8 +107,18 @@ function createFixture({
 	const observers = [];
 	const windowListeners = new Map();
 	const root = {
+		hasAttribute(name) {
+			return optIn && name === 'data-ran-booster-ui-documentation';
+		},
+		dispatchEvent(event) {
+			stateEvents.push([event.type, first.open, second.open]);
+		},
 		contains(section) {
-			return section === first || section === second;
+			return (
+				section === first ||
+				section === second ||
+				wrappers.includes(section)
+			);
 		},
 		dataset: {},
 		isConnected: true,
@@ -118,8 +135,16 @@ function createFixture({
 			if (selector === '.ran-booster-documentation__index a[href^="#"]') {
 				return links;
 			}
+			if (
+				selector ===
+				'details[data-ran-booster-documentation-section][id]'
+			) {
+				return optIn
+					? [first, second].filter((section) => section.id)
+					: [];
+			}
 			if (selector === '.ran-booster-documentation__section[id]') {
-				return [first, second];
+				return optIn ? wrappers : [first, second];
 			}
 			if (selector === 'details') {
 				return [first, second];
@@ -157,6 +182,50 @@ function createFixture({
 		scrollingElement: { clientHeight: 500 },
 	};
 	root.ownerDocument = document;
+	if (optIn) {
+		[first, second].forEach((section) => {
+			const summary = { setAttribute() {} },
+				body = { setAttribute() {} };
+			section.querySelector = (selector) =>
+				selector === ':scope > summary' ? summary : body;
+			section.parentNode = {
+				insertBefore(wrapper) {
+					targets.set(wrapper.id, wrapper);
+				},
+			};
+		});
+		document.createElement = () => ({
+			tagName: 'DIV',
+			attributes: new Map(),
+			setAttribute(name, value) {
+				this.attributes.set(name, value);
+			},
+			appendChild(details) {
+				this.details = details;
+				details.wrapper = this;
+				wrappers.push(this);
+			},
+			querySelector() {
+				return this.details;
+			},
+			closest(selector) {
+				return selector.includes('documentation') ? this : null;
+			},
+			getBoundingClientRect() {
+				return this.details.getBoundingClientRect();
+			},
+		});
+		[first, second].forEach((section) => {
+			section.closest = (selector) =>
+				selector.includes('data-ran-booster-ui-disclosure')
+					? section.wrapper
+					: section;
+		});
+		child.closest = (selector) =>
+			selector.includes('data-ran-booster-ui-disclosure')
+				? first.wrapper
+				: first;
+	}
 
 	function IntersectionObserver(callback, options) {
 		this.callback = callback;
@@ -170,6 +239,12 @@ function createFixture({
 	const frames = [];
 	const window = {
 		innerHeight: 500,
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options.bubbles;
+			}
+		},
 		requestAnimationFrame(callback) {
 			frames.push(callback);
 		},
@@ -210,6 +285,8 @@ function createFixture({
 	return {
 		first,
 		root,
+		wrappers,
+		stateEvents,
 		listenerSets,
 		initialize,
 		links,
@@ -453,4 +530,52 @@ test('a scroll after native removal cleans the tracking listeners', () => {
 	fixture.flush();
 	assert.equal(fixture.listenerSets.get('scroll').size, 0);
 	assert.equal(fixture.listenerSets.get('hashchange').size, 1);
+});
+
+test('prepared documentation synchronizes native state immediately for navigation and print', () => {
+	const f = createFixture({ optIn: true, hash: '#first' });
+	assert.equal(f.wrappers.length, 2);
+	assert.equal(f.wrappers[0].id, 'first');
+	assert.equal(f.first.id, '');
+	assert.equal(
+		f.wrappers[0].attributes.get('data-ran-booster-ui-disclosure'),
+		'documentation'
+	);
+	assert.equal(
+		f.wrappers[0].attributes.get('data-ran-booster-ui-disclosure-density'),
+		'compact'
+	);
+	assert.deepEqual(f.stateEvents.at(-1), [
+		'ran-booster:documentation-state',
+		true,
+		false,
+	]);
+	f.links[1].click();
+	assert.deepEqual(f.stateEvents.at(-1), [
+		'ran-booster:documentation-state',
+		false,
+		true,
+	]);
+	f.window.location.hash = '#child';
+	f.windowListeners.get('popstate')();
+	assert.deepEqual(f.stateEvents.at(-1), [
+		'ran-booster:documentation-state',
+		true,
+		false,
+	]);
+	f.windowListeners.get('beforeprint')();
+	assert.deepEqual(f.stateEvents.at(-1), [
+		'ran-booster:documentation-state',
+		true,
+		true,
+	]);
+	f.windowListeners.get('afterprint')();
+	assert.deepEqual(f.stateEvents.at(-1), [
+		'ran-booster:documentation-state',
+		true,
+		false,
+	]);
+	assert.equal(f.first.getAttribute('name'), 'ran-booster-documentation');
+	f.windowListeners.get('root:toggle')({ type: 'toggle' });
+	assert.equal(f.stateEvents.at(-1)[0], 'ran-booster:documentation-state');
 });

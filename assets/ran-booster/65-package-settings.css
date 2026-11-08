@@ -1432,6 +1432,13 @@ body.js:not(.ran-booster-settings-ready)
 	inline-size: 100%;
 }
 
+/* An empty mount must not share the host's width with the native fallback. */
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-ui-badge-mount]:empty {
+	display: none;
+}
+
 /* The native status Badge fallback mirrors the public Badge until it mounts. */
 #ran-booster-general-region
 	.ran-booster-settings__switch-row

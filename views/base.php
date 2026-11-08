@@ -112,15 +112,6 @@ if ( in_array( $view, array( 'packages/create', 'packages/edit' ), true ) && iss
 		),
 		array( 'label' => $package_heading ),
 	);
-} elseif ( 'index' === $view && 'troubleshooting' === ( $tab ?? '' ) ) {
-	$ran_admin_shell['breadcrumbs_label'] = __( 'Breadcrumbs', 'ran-booster' );
-	$ran_admin_shell['breadcrumbs']       = array(
-		array(
-			'label' => __( 'Overview', 'ran-booster' ),
-			'url'   => $ran_admin_shell['home_url'],
-		),
-		array( 'label' => __( 'Troubleshooting', 'ran-booster' ) ),
-	);
 } elseif ( 'index' === $view && 'provider.php' === ( $tab_view ?? '' ) && in_array( $provider_view ?? '', array( 'credentials', 'secrets' ), true ) && isset( $provider, $overview_url ) ) {
 	$ran_admin_shell['breadcrumbs_label'] = __( 'Breadcrumbs', 'ran-booster' );
 	$ran_admin_shell['breadcrumbs']       = array(

@@ -222,30 +222,33 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringContainsString( '<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title">Prepare your site</h2>', $overview );
 	}
 
-	public function test_troubleshooting_uses_shell_breadcrumbs_and_preserves_its_peer_navigation(): void {
+	public function test_troubleshooting_keeps_top_level_destinations_and_its_peer_navigation(): void {
 		$view            = 'index';
 		$tab             = 'troubleshooting';
 		$tab_view        = 'troubleshooting.php';
 		$messages        = array();
 		$troubleshooting = array( 'providers' => array() );
-		$tabs            = array(
-			array(
-				'key'    => 'overview',
-				'label'  => 'Overview',
-				'url'    => '/overview',
-				'active' => false,
-			),
-			array(
-				'key'    => 'troubleshooting',
-				'label'  => 'Troubleshooting',
-				'url'    => '/troubleshooting',
-				'active' => true,
-			),
-		);
-		$panels          = array( 'installation', 'diagnostics', 'activity', 'debug-capture', 'support-report', 'unknown' );
+
+		$panels = array( 'installation', 'diagnostics', 'activity', 'debug-capture', 'support-report', 'unknown' );
 		foreach ( array( false, true ) as $network ) {
 			$GLOBALS['ran_booster_package_view_multisite'] = $network;
 			$admin_base                                    = $network ? 'https://example.test/wp-admin/network/admin.php' : 'https://example.test/wp-admin/admin.php';
+
+			$tabs = array();
+			foreach ( array(
+				'overview'        => 'Overview',
+				'gh'              => 'GitHub',
+				'portability'     => 'Transporter',
+				'documentation'   => 'Documentation',
+				'troubleshooting' => 'Troubleshooting',
+			) as $key => $label ) {
+				$tabs[] = array(
+					'key'    => $key,
+					'label'  => $label,
+					'url'    => $admin_base . '?page=ran-booster&tab=' . $key,
+					'active' => 'troubleshooting' === $key,
+				);
+			}
 			foreach ( $panels as $panel ) {
 				$troubleshooting_panel = $panel;
 				ob_start();
@@ -253,16 +256,20 @@ final class AdminIndexViewTest extends TestCase {
 				$html = (string) ob_get_clean();
 				$dom  = new \DOMDocument();
 				@$dom->loadHTML( $html ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- The HTML5 view contains elements unsupported by the legacy DOM parser.
-				$xpath  = new \DOMXPath( $dom );
-				$crumbs = $xpath->query( '//nav[contains(@class,"ran-admin-shell__navigation--breadcrumbs")]' );
-				self::assertInstanceOf( \DOMNodeList::class, $crumbs );
-				self::assertCount( 1, $crumbs );
-				self::assertSame( 'Breadcrumbs', $xpath->evaluate( 'string(//nav[contains(@class,"ran-admin-shell__navigation--breadcrumbs")]/@aria-label)' ) );
-				self::assertSame( 'Overview', $xpath->evaluate( 'string(//ol[@class="ran-admin-shell__breadcrumbs"]//a)' ) );
-				self::assertSame( $admin_base . '?page=ran-booster', $xpath->evaluate( 'string(//ol[@class="ran-admin-shell__breadcrumbs"]//a/@href)' ) );
-				self::assertSame( 'Troubleshooting', $xpath->evaluate( 'string(//ol[@class="ran-admin-shell__breadcrumbs"]//span[@aria-current="page"])' ) );
-				self::assertSame( 1.0, $xpath->evaluate( 'count(//ol[@class="ran-admin-shell__breadcrumbs"]//a)' ) );
-				self::assertSame( 0.0, $xpath->evaluate( 'count(//header/nav[contains(@class,"ran-section-navigation")])' ) );
+				$xpath = new \DOMXPath( $dom );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//ol[@class="ran-admin-shell__breadcrumbs"])' ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//header/nav[@aria-label="RAN Booster sections"])' ) );
+				self::assertSame( 5.0, $xpath->evaluate( 'count(//header/nav[@aria-label="RAN Booster sections"]/a)' ) );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//header/nav[@aria-label="RAN Booster sections"]/a[@aria-current])' ) );
+				foreach ( array(
+					'Overview'      => '?page=ran-booster&tab=overview',
+					'GitHub'        => '?page=ran-booster&tab=gh',
+					'Plugins'       => '?page=ran-booster-plugins',
+					'Themes'        => '?page=ran-booster-themes',
+					'Documentation' => '?page=ran-booster&tab=documentation',
+				) as $label => $query ) {
+					self::assertSame( $admin_base . $query, $xpath->evaluate( 'string(//header/nav[@aria-label="RAN Booster sections"]/a[text()="' . $label . '"]/@href)' ) );
+				}
 				self::assertSame( 5.0, $xpath->evaluate( 'count(//nav[@aria-label="Troubleshooting views"]/a)' ) );
 				self::assertSame( 1.0, $xpath->evaluate( 'count(//nav[@aria-label="Troubleshooting views"]/a[@aria-current="page"])' ) );
 				$current = 'unknown' === $panel ? 'installation' : $panel;

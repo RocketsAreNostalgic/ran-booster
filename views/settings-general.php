@@ -220,23 +220,29 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 				<div class="ran-booster-settings__update-controls">
 					<div><label id="ran-booster-self-update-discovery-label" class="ran-booster-settings__switch-label" for="ran-booster-self-update-discovery"><?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></label>
 					<div class="ran-booster-settings__switch-row"><span data-ran-booster-ui-switch="general-preference"><label class="ran-booster-settings__switch" data-ran-booster-ui-switch-fallback for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" role="switch" aria-labelledby="ran-booster-self-update-discovery-label" aria-describedby="ran-booster-self-update-discovery-help<?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' ran-booster-self-update-discovery-error'; ?>" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span></label><span data-ran-booster-ui-switch-mount></span></span><span data-ran-booster-toggle-status data-ran-booster-ui-badge role="status"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge <?php echo $discovery['value'] ? 'ran-booster-badge--ok' : 'ran-booster-badge--neutral'; ?>"><?php echo esc_html( $discovery['value'] ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ) ); ?></span><span data-ran-booster-ui-badge-mount></span></span></div></div>
-					<button form="ran-booster-check-core-updates" type="submit" class="button"<?php echo $check_available ? '' : ( 'enabled' === $status_mode ? ' aria-describedby="ran-booster-check-updates-unavailable"' : ' aria-describedby="ran-booster-self-update-discovery-help"' ); ?><?php disabled( ! $check_available ); ?>><?php esc_html_e( 'Check for updates', 'ran-booster' ); ?></button>
 				</div>
 				<p id="ran-booster-self-update-discovery-help" class="description"><?php echo esc_html( 'enabled' === $status_mode ? __( 'Booster update checks are enabled.', 'ran-booster' ) : $update_reasons[ $status_reason ] ?? __( 'Booster update checks are currently unavailable.', 'ran-booster' ) ); ?></p>
-				<dl class="ran-booster-settings__update-facts">
-					<div><dt><?php esc_html_e( 'Installed version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $installed_version ?? __( 'Unknown', 'ran-booster' ) ); ?></code></dd></div>
-					<div><dt><?php esc_html_e( 'Available version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $offered_version ?? __( 'No verified newer offer', 'ran-booster' ) ); ?></code></dd></div>
-					<?php if ( is_int( $success_at ) ) { ?>
-						<div><dt><?php esc_html_e( 'Last successful Booster check', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $success_label ); ?></code></dd></div>
-					<?php } ?>
-					<div><dt><?php esc_html_e( 'Latest check result', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $core_update_status['last_check_outcome'] ?? __( 'No completed check recorded', 'ran-booster' ) ); ?></code></dd></div>
-					<?php if ( is_string( $core_update_status['last_check_code'] ?? null ) ) { ?>
-						<div><dt><?php esc_html_e( 'Check diagnostic code', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $core_update_status['last_check_code'] ); ?></code></dd></div>
-					<?php } ?>
-				</dl>
+				<div class="ran-booster-settings__update-summary">
+					<dl class="ran-booster-settings__update-facts">
+						<div><dt><?php esc_html_e( 'Installed version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $installed_version ?? __( 'Unknown', 'ran-booster' ) ); ?></code></dd></div>
+						<div><dt><?php esc_html_e( 'Available version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $offered_version ?? __( 'No verified newer offer', 'ran-booster' ) ); ?></code></dd></div>
+						<div><dt><?php esc_html_e( 'Latest check result', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $core_update_status['last_check_outcome'] ?? __( 'No completed check recorded', 'ran-booster' ) ); ?></code></dd></div>
+					</dl>
+					<button form="ran-booster-check-core-updates" type="submit" class="button"<?php echo $check_available ? '' : ( 'enabled' === $status_mode ? ' aria-describedby="ran-booster-check-updates-unavailable"' : ' aria-describedby="ran-booster-self-update-discovery-help"' ); ?><?php disabled( ! $check_available ); ?>><?php esc_html_e( 'Check for updates', 'ran-booster' ); ?></button>
+				</div>
 
 				<?php if ( ! $check_available && 'enabled' === $status_mode ) { ?>
 					<p id="ran-booster-check-updates-unavailable" class="description"><?php esc_html_e( 'Checking is unavailable for this site or your account.', 'ran-booster' ); ?></p>
+				<?php } ?>
+				<?php if ( is_int( $success_at ) || is_string( $core_update_status['last_check_code'] ?? null ) ) { ?>
+					<dl class="ran-booster-settings__update-facts ran-booster-settings__update-facts--detail">
+						<?php if ( is_int( $success_at ) ) { ?>
+							<div><dt><?php esc_html_e( 'Last successful Booster check', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $success_label ); ?></code></dd></div>
+						<?php } ?>
+						<?php if ( is_string( $core_update_status['last_check_code'] ?? null ) ) { ?>
+							<div><dt><?php esc_html_e( 'Check diagnostic code', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $core_update_status['last_check_code'] ); ?></code></dd></div>
+						<?php } ?>
+					</dl>
 				<?php } ?>
 				<?php
 				if ( null !== $native_update_url && '' !== $native_update_url ) {

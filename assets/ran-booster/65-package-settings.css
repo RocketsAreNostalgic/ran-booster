@@ -998,6 +998,70 @@
 	margin: var(--ran-booster-space-5) 0 0;
 }
 
+.ran-booster-admin .ran-booster-settings__update-summary {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: end;
+	gap: var(--ran-booster-space-12) var(--ran-booster-space-20);
+	margin-block: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__update-summary
+	> .ran-booster-settings__update-facts {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	margin: 0;
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-admin .ran-booster-settings__update-summary {
+		grid-template-columns: minmax(0, 1fr);
+		align-items: start;
+	}
+
+	.ran-booster-admin
+		.ran-booster-settings__update-summary
+		> .ran-booster-settings__update-facts {
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+	}
+
+	.ran-booster-admin .ran-booster-settings__update-summary > .button {
+		justify-self: start;
+	}
+}
+
+/*
+ * Switch groups reserve a leading gutter for the Switch. The gutter is spacing
+ * only; the badge, description, disclosure and update summary share the
+ * content edge that follows it.
+ */
+
+.ran-booster-admin
+	.ran-booster-settings__group:has(.ran-booster-settings__switch-row) {
+	--ran-booster-switch-gutter: 32px;
+	--ran-booster-switch-content-edge: calc(
+		var(--ran-booster-switch-gutter) + var(--ran-booster-space-8)
+	);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__switch-row
+	> [data-ran-booster-ui-switch="general-preference"] {
+	flex: 0 0 var(--ran-booster-switch-gutter);
+	inline-size: var(--ran-booster-switch-gutter);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__group:has(.ran-booster-settings__switch-row)
+	> :is(
+		.description,
+		.ran-booster-settings__configuration,
+		.ran-booster-settings__update-summary,
+		.ran-booster-settings__update-facts--detail
+	) {
+	margin-inline-start: var(--ran-booster-switch-content-edge);
+}
+
 .ran-booster-admin .ran-booster-settings__switch-label {
 	display: block;
 	font-weight: var(--ran-booster-font-weight-semibold);

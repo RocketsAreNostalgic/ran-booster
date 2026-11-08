@@ -362,7 +362,8 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//button[@form="ran-booster-check-core-updates" and @disabled and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@id="ran-booster-check-core-updates"]//input[@name="ran_booster[action]" and @value="check-core-updates"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-check-updates-unavailable"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(@class, "ran-booster-settings__update-controls")][.//input[@id="ran-booster-self-update-discovery"] and ./button[text()="Check for updates"]])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(@class, "ran-booster-settings__update-summary")][./dl[contains(@class, "ran-booster-settings__update-facts")]/div/dt[text()="Latest check result"] and ./dl/following-sibling::button[1][text()="Check for updates"]])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//div[contains(@class, "ran-booster-settings__update-controls")]/button)' ) );
 		self::assertStringNotContainsString( 'ran-booster-check-updates-help', $html );
 		self::assertSame( 1, substr_count( $html, 'No completed check recorded' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@type="hidden" and @name="ran_booster[preferences][hide_github]" and @value="0"])' ) );

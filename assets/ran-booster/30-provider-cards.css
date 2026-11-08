@@ -1039,7 +1039,11 @@
 	color: var(--ran-booster-text-danger);
 }
 
-/* The mounted credentials surface owns its interior spacing. */
+/* Credential lists keep the same native and public Card interior spacing. */
+.ran-booster-admin
+	.ran-booster-provider[data-ran-booster-card="provider"]:not(
+		[data-ran-booster-ui-mounted]
+	),
 .ran-booster-admin
 	[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 	.ran-booster-card__content {
@@ -1047,6 +1051,11 @@
 		var(--ran-booster-space-24);
 }
 
+.ran-booster-admin
+	.ran-booster-provider[data-ran-booster-card="provider"]:not(
+		[data-ran-booster-ui-mounted]
+	)
+	> .ran-booster-provider__footer,
 .ran-booster-admin
 	[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 	.ran-booster-card__content
@@ -1057,11 +1066,20 @@
 
 @media screen and (max-width: 782px) {
 	.ran-booster-admin
+		.ran-booster-provider[data-ran-booster-card="provider"]:not(
+			[data-ran-booster-ui-mounted]
+		),
+	.ran-booster-admin
 		[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 		.ran-booster-card__content {
 		padding-inline: var(--ran-booster-space-18);
 	}
 
+	.ran-booster-admin
+		.ran-booster-provider[data-ran-booster-card="provider"]:not(
+			[data-ran-booster-ui-mounted]
+		)
+		> .ran-booster-provider__footer,
 	.ran-booster-admin
 		[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 		.ran-booster-card__content

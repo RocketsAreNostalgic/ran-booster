@@ -9683,7 +9683,7 @@ msgid "Read the webhook operations guide"
 msgstr ""
 
 #: views/provider.php:583
-msgid "Copy URL"
+msgid "Copy payload URL"
 msgstr ""
 
 #: views/provider.php:583

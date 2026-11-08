@@ -539,7 +539,7 @@ msgstr ""
 #: views/documentation.php:479
 #: views/documentation.php:529
 #: views/provider.php:593
-#: views/provider.php:596
+#: views/provider.php:595
 msgid " (opens in a new tab)"
 msgstr ""
 
@@ -2863,7 +2863,7 @@ msgstr ""
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
 #: views/packages/index.php:344
-#: views/provider.php:710
+#: views/provider.php:709
 #: views/settings-storage.php:25
 #: views/troubleshooting-installation.php:18
 #: views/troubleshooting-installation.php:173
@@ -6642,7 +6642,7 @@ msgstr ""
 #: views/documentation.php:406
 #: views/onboarding.php:187
 #: views/overview-dashboard.php:77
-#: views/provider.php:659
+#: views/provider.php:658
 msgid "Install a plugin"
 msgstr ""
 
@@ -6955,7 +6955,7 @@ msgstr ""
 #: views/documentation.php:407
 #: views/onboarding.php:188
 #: views/overview-dashboard.php:84
-#: views/provider.php:660
+#: views/provider.php:659
 msgid "Install a theme"
 msgstr ""
 
@@ -7081,7 +7081,7 @@ msgid "Webhook setup instructions"
 msgstr ""
 
 #: views/documentation.php:479
-#: views/provider.php:596
+#: views/provider.php:595
 msgid "Delivery troubleshooting"
 msgstr ""
 
@@ -8194,8 +8194,8 @@ msgid "Search managed %s"
 msgstr ""
 
 #: views/packages/index.php:188
-#: views/provider.php:690
-#: views/provider.php:710
+#: views/provider.php:689
+#: views/provider.php:709
 #: assets/ran-booster-repository-picker.js:1012
 msgid "Search"
 msgstr ""
@@ -9537,12 +9537,12 @@ msgid "Saved credentials are unavailable."
 msgstr ""
 
 #: views/provider.php:382
-#: views/provider.php:625
+#: views/provider.php:624
 msgid "This site can receive Git provider webhook deliveries."
 msgstr ""
 
 #: views/provider.php:399
-#: views/provider.php:642
+#: views/provider.php:641
 msgid "That managed repository is no longer available. Return to the repository list and choose a current repository."
 msgstr ""
 
@@ -9710,79 +9710,78 @@ msgstr ""
 msgid "Trigger a delivery and confirm the Git provider records a successful response."
 msgstr ""
 
-#: views/provider.php:594
-#: views/provider.php:601
+#: views/provider.php:600
 msgid "Manage repositories"
 msgstr ""
 
-#: views/provider.php:610
+#: views/provider.php:609
 #: views/provider/modals.php:174
 msgid "Managed repositories"
 msgstr ""
 
-#: views/provider.php:646
+#: views/provider.php:645
 msgid "Search managed repositories"
 msgstr ""
 
-#: views/provider.php:647
+#: views/provider.php:646
 msgid "Search managed repositories…"
 msgstr ""
 
-#: views/provider.php:663
+#: views/provider.php:662
 msgid "Managed repository status is temporarily unavailable."
 msgstr ""
 
-#: views/provider.php:677
+#: views/provider.php:676
 msgid "Filter by credential type"
 msgstr ""
 
-#: views/provider.php:678
+#: views/provider.php:677
 msgid "All credential types"
 msgstr ""
 
-#: views/provider.php:683
-#: views/provider.php:706
+#: views/provider.php:682
+#: views/provider.php:705
 msgid "Filter by scope"
 msgstr ""
 
-#: views/provider.php:684
-#: views/provider.php:706
+#: views/provider.php:683
+#: views/provider.php:705
 msgid "All scopes"
 msgstr ""
 
-#: views/provider.php:690
+#: views/provider.php:689
 msgid "Search credentials"
 msgstr ""
 
-#: views/provider.php:690
+#: views/provider.php:689
 msgid "Search credentials…"
 msgstr ""
 
-#: views/provider.php:696
+#: views/provider.php:695
 msgid "No credentials match the current filters."
 msgstr ""
 
-#: views/provider.php:710
+#: views/provider.php:709
 msgid "Filter by status"
 msgstr ""
 
-#: views/provider.php:710
+#: views/provider.php:709
 msgid "All statuses"
 msgstr ""
 
-#: views/provider.php:710
+#: views/provider.php:709
 msgid "Ready locally"
 msgstr ""
 
-#: views/provider.php:710
+#: views/provider.php:709
 msgid "Search webhook secrets"
 msgstr ""
 
-#: views/provider.php:710
+#: views/provider.php:709
 msgid "Search secrets…"
 msgstr ""
 
-#: views/provider.php:715
+#: views/provider.php:714
 msgid "No webhook secrets match the current filters."
 msgstr ""
 

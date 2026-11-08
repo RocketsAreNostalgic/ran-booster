@@ -2974,14 +2974,15 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$setup_html = (string) ob_get_clean();
 
-		self::assertSame( 2, substr_count( $setup_html, 'hx-boost="true"' ) );
+		// Only the task navigation is boosted; the manual setup disclosure carries no internal link.
+		self::assertSame( 1, substr_count( $setup_html, 'hx-boost="true"' ) );
 		self::assertMatchesRegularExpression(
 			'/panel=setup"[^>]+data-ran-booster-provider-task="setup"[^>]+aria-current="page">Webhook receiver<\/a>/',
 			$setup_html
 		);
 		self::assertStringContainsString( '<h4 id="ran-booster-webhook-instructions-heading" class="ran-booster-section__title">Webhook receiver</h4>', $setup_html );
 		self::assertStringContainsString( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $setup_html );
-		self::assertStringContainsString( 'Manage repositories', $setup_html );
+		self::assertStringNotContainsString( 'Manage repositories', $setup_html );
 		self::assertStringContainsString( 'panel=repositories', $setup_html );
 		self::assertStringContainsString( 'Payload URL', $setup_html );
 		self::assertStringContainsString( 'application/json', $setup_html );
@@ -3172,7 +3173,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 	}
 
-	public function test_receiver_links_stay_in_manual_guidance_without_losing_native_navigation(): void {
+	public function test_receiver_manual_guidance_keeps_external_links_without_an_internal_repositories_link(): void {
 		$providers = array(
 			'gh'      => array( 'GitHub', 'https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks#creating-a-repository-webhook', 'https://docs.github.com/en/webhooks/testing-and-troubleshooting-webhooks/viewing-webhook-deliveries' ),
 			'bb'      => array( 'Bitbucket', 'https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/', 'https://support.atlassian.com/bitbucket-cloud/docs/troubleshoot-webhooks/' ),
@@ -3215,19 +3216,22 @@ final class TroubleshootingViewTest extends TestCase {
 				$document = new \DOMDocument();
 				$document->loadHTML( '<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 				$xpath = new \DOMXPath( $document );
+				// The manual setup disclosure no longer carries a Manage repositories link; without provider guidance the standalone link remains.
 				$links = $xpath->query( '//a[normalize-space(.)="Manage repositories"]' );
 				self::assertNotFalse( $links );
-				self::assertCount( 1, $links );
-				$link = $links->item( 0 );
-				self::assertInstanceOf( \DOMElement::class, $link );
-				self::assertSame( '', $link->getAttribute( 'class' ) );
-				self::assertSame( $provider_view_data['task_urls']['repositories'], $link->getAttribute( 'href' ) );
-				self::assertSame( $provider_view_data['task_request_urls']['repositories'], $link->getAttribute( 'hx-get' ) );
-				self::assertSame( 'true', $link->getAttribute( 'hx-boost' ) );
-				self::assertSame( '#ran-booster-provider-task-panel', $xpath->evaluate( 'string(ancestor::*[@id="ran-booster-provider-tasks"]/@hx-target)', $link ) );
-				self::assertSame( '', $link->getAttribute( 'target' ) );
-				self::assertSame( 0.0, $xpath->evaluate( 'count(.//span[@aria-hidden="true"])', $link ) );
-				self::assertSame( 'absent' === $state ? 0.0 : 1.0, $xpath->evaluate( 'count(ancestor::details)', $link ) );
+				self::assertCount( 'absent' === $state ? 1 : 0, $links );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//details//a[normalize-space(.)="Manage repositories"])' ) );
+				if ( 'absent' === $state ) {
+					$link = $links->item( 0 );
+					self::assertInstanceOf( \DOMElement::class, $link );
+					self::assertSame( '', $link->getAttribute( 'class' ) );
+					self::assertSame( $provider_view_data['task_urls']['repositories'], $link->getAttribute( 'href' ) );
+					self::assertSame( $provider_view_data['task_request_urls']['repositories'], $link->getAttribute( 'hx-get' ) );
+					self::assertSame( 'true', $link->getAttribute( 'hx-boost' ) );
+					self::assertSame( '#ran-booster-provider-task-panel', $xpath->evaluate( 'string(ancestor::*[@id="ran-booster-provider-tasks"]/@hx-target)', $link ) );
+					self::assertSame( '', $link->getAttribute( 'target' ) );
+					self::assertSame( 0.0, $xpath->evaluate( 'count(.//span[@aria-hidden="true"])', $link ) );
+				}
 				self::assertSame( 'absent' === $state ? 0.0 : 1.0, $xpath->evaluate( 'count(//details[summary[normalize-space(.)="Detailed manual setup and troubleshooting"]][not(@open)])' ) );
 				self::assertSame( 'absent' === $state ? 0.0 : 1.0, $xpath->evaluate( 'count(//a[@href="' . $documentation_url . '"])' ) );
 				self::assertSame( 'distinct' === $state ? 1.0 : 0.0, $xpath->evaluate( 'count(//a[starts-with(normalize-space(.),"Delivery troubleshooting")])' ) );

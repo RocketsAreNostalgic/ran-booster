@@ -14,7 +14,6 @@
  * @var string $install_theme_url
  * @var string $manual_setup_description
  * @var string $overview_url
- * @var string $provider_back_label
  * @var string $provider_instructions_label
  * @var string $provider_list_action_url
  * @var string $provider_return_url

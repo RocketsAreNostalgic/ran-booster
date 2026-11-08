@@ -1875,7 +1875,6 @@ final readonly class ProviderSettingsPresenter {
 	/** @return array<string,string> */
 	private function profile_copy( string $label ): array {
 		return array(
-			'provider_back_label'               => sprintf( /* translators: %s is the repository provider name. */ __( 'Back to %s overview', 'ran-booster' ), $label ),
 			'credential_management_description' => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage saved credentials used for %s repository access.', 'ran-booster' ), $label ),
 			'secret_management_description'     => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage local signing material used to verify %s webhook deliveries.', 'ran-booster' ), $label ),
 		);

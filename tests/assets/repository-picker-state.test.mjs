@@ -452,7 +452,7 @@ test('picker lifecycle re-fetches restored context and persists empty filters', 
 	);
 	assert.match(
 		source,
-		/currentProviderState\(\)\[activeMode\]\.filter = search\.value/
+		/currentProviderState\(\)\[\s*activeMode\s*\]\.filter = value/
 	);
 	assert.match(source, /search\.value = providerState\[activeMode\]\.filter/);
 	assert.match(
@@ -466,56 +466,48 @@ test('picker lifecycle re-fetches restored context and persists empty filters', 
 	assert.doesNotMatch(source, /window\.localStorage|localStorage\./);
 });
 
-test('leaving the owned picker schedules Notice cleanup before removing its modal', () => {
-	const handlers = new Map();
+test('picker teardown schedules Notice cleanup before the public root unmounts', () => {
 	const events = [];
-	const modal = {
-		isConnected: true,
-		querySelector(selector) {
-			assert.equal(
-				selector,
-				'.ran-booster-repository-picker__public-limit-notice[data-ran-booster-ui-notice]'
-			);
-			return {
-				dispatchEvent: (event) =>
+	let connected = true;
+	const start = source.indexOf(
+		'\t\tcleanupPicker = function () {\n\t\t\tcleanupPicker = function () {};'
+	);
+	const end = source.indexOf('\n\t\tpickerButtons.forEach', start);
+	assert.ok(start >= 0 && end > start);
+	vm.runInNewContext(
+		'let cleanupPicker; let requestSequence = 0; let isOpen = true;' +
+			source.slice(start, end) +
+			'cleanupPicker();',
+		{
+			listeners: { abort() {} },
+			publicLimitNotice: {
+				dispatchEvent(event) {
 					events.push({
 						type: event.type,
 						bubbles: event.bubbles,
-						connected: this.isConnected,
-					}),
-			};
-		},
-		remove() {
-			this.isConnected = false;
-		},
-	};
-	const document = {
-		readyState: 'loading',
-		addEventListener: (name, handler) => handlers.set(name, handler),
-		querySelectorAll(selector) {
-			assert.equal(selector, '.ran-booster-repository-picker');
-			return [modal];
-		},
-		body: { classList: { remove() {} } },
-	};
-	const window = {
-		CustomEvent: class {
-			constructor(type, options) {
-				this.type = type;
-				this.bubbles = options.bubbles;
-			}
-		},
-	};
-	vm.runInNewContext(source, {
-		document,
-		window,
-		wp: { i18n: { __: (text) => text, _n() {}, sprintf() {} } },
-	});
-	const leave = handlers.get('htmx:beforeSwap');
-	leave({ detail: { target: { id: 'another-target' } } });
-	assert.deepEqual(events, []);
-	assert.equal(modal.isConnected, true);
-	leave({ detail: { target: { id: 'wpbody-content' } } });
+						connected,
+					});
+				},
+			},
+			window: {
+				CustomEvent: class {
+					constructor(type, options) {
+						this.type = type;
+						this.bubbles = options.bubbles;
+					}
+				},
+			},
+			flushSync: (callback) => callback(),
+			root: {
+				unmount() {
+					connected = false;
+				},
+			},
+			host: { remove() {} },
+			portalContainer: { remove() {} },
+			document: { body: { classList: { remove() {} } } },
+		}
+	);
 	assert.deepEqual(events, [
 		{
 			type: 'ran-booster:ui-notice-update',
@@ -523,5 +515,5 @@ test('leaving the owned picker schedules Notice cleanup before removing its moda
 			connected: true,
 		},
 	]);
-	assert.equal(modal.isConnected, false);
+	assert.equal(connected, false);
 });

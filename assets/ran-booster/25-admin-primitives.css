@@ -441,6 +441,26 @@
 	display: none;
 }
 
+/* Keep a wrapped heading-row status Badge inside one continuous shape. */
+.ran-booster-admin
+	.ran-booster-onboarding__storage-heading
+	> span[data-ran-booster-ui-badge] {
+	min-inline-size: 0;
+	max-inline-size: 100%;
+}
+
+.ran-booster-admin
+	.ran-booster-onboarding__storage-heading
+	> span[data-ran-booster-ui-badge]
+	> [data-ran-booster-ui-badge-mount]
+	> .ran-booster-ui-badge {
+	box-sizing: border-box;
+	display: inline-block;
+	max-inline-size: 100%;
+	overflow-wrap: anywhere;
+	vertical-align: middle;
+}
+
 /* Match the existing public neutral/outline Overview submitter before enhancement. */
 .ran-booster-admin
 	[data-ran-booster-ui-button="overview-presentation"]

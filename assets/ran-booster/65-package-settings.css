@@ -1315,7 +1315,6 @@
 	margin-block: 12px;
 }
 
-.ran-booster-admin [data-ran-booster-unsaved],
 .ran-booster-admin [data-ran-booster-toggle-status] {
 	min-block-size: 1.5em;
 }

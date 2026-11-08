@@ -453,7 +453,11 @@
 	.ran-booster-onboarding__storage-heading
 	> span[data-ran-booster-ui-badge]
 	> [data-ran-booster-ui-badge-mount]
-	> .ran-booster-ui-badge {
+	> .ran-booster-ui-badge,
+.ran-booster-admin
+	.ran-booster-onboarding__storage-heading
+	> span[data-ran-booster-ui-badge]
+	> [data-ran-booster-ui-badge-fallback]:not([hidden]) {
 	box-sizing: border-box;
 	display: inline-block;
 	max-inline-size: 100%;

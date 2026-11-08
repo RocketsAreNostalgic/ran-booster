@@ -33,6 +33,7 @@
 .ran-booster-admin .ran-booster-documentation__chapters,
 .ran-booster-admin .ran-booster-documentation__chapter {
 	display: grid;
+	grid-template-columns: minmax(0, 1fr);
 	gap: var(--ran-booster-space-12);
 }
 
@@ -111,6 +112,49 @@
 .ran-booster-admin .ran-booster-documentation__section summary {
 	color: var(--ran-booster-text);
 	line-height: var(--ran-booster-line-height-heading);
+}
+
+/* Keep native pre-enhancement geometry equal to the compact public header. */
+@media screen {
+	.ran-booster-admin
+		.ran-booster-documentation__section.ran-booster-disclosure
+		> summary {
+		padding-block: var(--ran-booster-space-8);
+		padding-inline-end: calc(3 * var(--ran-booster-space-16));
+		font-size: 15px;
+		line-height: 20px;
+		list-style-position: outside;
+	}
+
+	.ran-booster-admin
+		.ran-booster-documentation__section.ran-booster-disclosure[open]
+		> summary {
+		border-block-end: 0;
+		box-shadow: 0 1px 0 var(--ran-booster-divider);
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="documentation"]
+		.ran-booster-ui-disclosure[data-open]
+		> .ran-booster-ui-disclosure__header {
+		box-shadow: 0 1px 0 var(--ran-booster-divider);
+	}
+
+	.ran-booster-admin .ran-booster-documentation__content pre {
+		max-inline-size: 100%;
+		padding: var(--ran-booster-space-12);
+		overflow-x: auto;
+		border-radius: var(--ran-booster-radius-control);
+		background: var(--ran-booster-surface-subtle);
+		white-space: pre;
+	}
+
+	.ran-booster-admin .ran-booster-documentation__content pre > code {
+		padding: 0;
+		background: transparent;
+		white-space: pre;
+		overflow-wrap: normal;
+	}
 }
 
 .ran-booster-admin .ran-booster-documentation__content {
@@ -419,9 +463,7 @@
 }
 
 @media print {
-	.ran-booster-admin
-		.ran-booster-documentation
-		.ran-booster-ui-disclosure {
+	.ran-booster-admin .ran-booster-documentation .ran-booster-ui-disclosure {
 		border: 0;
 		box-shadow: none;
 		background: transparent;

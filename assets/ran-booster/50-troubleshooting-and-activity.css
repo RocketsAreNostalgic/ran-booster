@@ -474,7 +474,9 @@
 
 /* The selected Troubleshooting Card owns its content inset. */
 .ran-booster-admin
-	[data-ran-booster-card="troubleshooting"]:not([data-ran-booster-ui-mounted]),
+	[data-ran-booster-card="troubleshooting"]:not(
+		[data-ran-booster-ui-mounted]
+	),
 .ran-booster-admin
 	[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
 	.ran-booster-card__content {
@@ -483,7 +485,9 @@
 
 @media screen and (max-width: 782px) {
 	.ran-booster-admin
-		[data-ran-booster-card="troubleshooting"]:not([data-ran-booster-ui-mounted]),
+		[data-ran-booster-card="troubleshooting"]:not(
+			[data-ran-booster-ui-mounted]
+		),
 	.ran-booster-admin
 		[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
 		.ran-booster-card__content {

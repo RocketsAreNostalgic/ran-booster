@@ -822,3 +822,96 @@
 	> details[data-ran-booster-ui-disclosure-fallback] {
 	margin: 0;
 }
+
+/*
+ * The native disclosure fallback mirrors the public Disclosure header
+ * geometry, so the control does not change size or style when it mounts.
+ */
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback] {
+	border: var(--wpds-border-width-xs) solid
+		var(--wpds-color-stroke-surface-neutral);
+	border-radius: var(--wpds-border-radius-lg);
+	background: var(--wpds-color-background-surface-neutral-strong);
+	color: var(--wpds-color-foreground-content-neutral);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	display: flex;
+	box-sizing: border-box;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 16px;
+	gap: var(--wpds-dimension-gap-sm);
+	border-block-end: 0;
+	color: inherit;
+	font-size: 15px;
+	font-weight: 600;
+	line-height: 20px;
+	list-style: none;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary::-webkit-details-marker {
+	display: none;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary::after {
+	flex: none;
+	inline-size: 24px;
+	block-size: 24px;
+	margin-block: -2px;
+	background: currentcolor;
+	content: "";
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17.5 11.6 12 16l-5.5-4.4.9-1.2L12 14l4.5-3.6 1 1.2z'/%3E%3C/svg%3E")
+		center / 24px 24px no-repeat;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback][open]
+	> summary::after {
+	transform: rotate(180deg);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"],
+		[data-ran-booster-ui-disclosure-density="compact"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	min-block-size: 40px;
+}
+
+@media (pointer: coarse) {
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure]:not(
+			[data-ran-booster-ui-disclosure="documentation"],
+			[data-ran-booster-ui-disclosure-density="compact"]
+		)
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary {
+		min-block-size: 44px;
+	}
+}

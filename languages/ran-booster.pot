@@ -4630,7 +4630,6 @@ msgid "RAN Booster could not complete its database setup, so WordPress left the 
 msgstr ""
 
 #: RAN/Booster.php:259
-#: views/base.php:119
 #: views/onboarding.php:52
 msgid "Overview"
 msgstr ""
@@ -4678,7 +4677,6 @@ msgid "Extensions"
 msgstr ""
 
 #: RAN/Booster.php:267
-#: views/base.php:122
 #: views/troubleshooting.php:99
 msgid "Troubleshooting"
 msgstr ""
@@ -6332,7 +6330,6 @@ msgstr ""
 
 #: views/base.php:100
 #: views/base.php:116
-#: views/base.php:125
 msgid "Breadcrumbs"
 msgstr ""
 
@@ -6343,38 +6340,38 @@ msgstr ""
 msgid "Install %s"
 msgstr ""
 
-#: views/base.php:131
+#: views/base.php:122
 msgid "Manage Credentials"
 msgstr ""
 
-#: views/base.php:131
+#: views/base.php:122
 msgid "Manage Webhook Secrets"
 msgstr ""
 
-#: views/base.php:151
+#: views/base.php:142
 msgid "Local development detected"
 msgstr ""
 
-#: views/base.php:152
+#: views/base.php:143
 msgid "Booster can still download and replace managed plugins and themes on this site. Disable updates for packages you’re editing. Incoming webhooks for branch deployment are generally unavailable on local or private domains."
 msgstr ""
 
-#: views/base.php:157
+#: views/base.php:148
 msgid "Learn about local development"
 msgstr ""
 
-#: views/base.php:158
+#: views/base.php:149
 msgid "Dismiss this notice."
 msgstr ""
 
 #. translators: %s: current year.
-#: views/base.php:175
+#: views/base.php:166
 #, php-format
 msgid "Copyright © %s"
 msgstr ""
 
 #. translators: %s: installed Booster version.
-#: views/base.php:184
+#: views/base.php:175
 #, php-format
 msgid "Booster %s"
 msgstr ""

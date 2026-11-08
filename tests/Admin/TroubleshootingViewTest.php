@@ -449,6 +449,44 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Rockets Are Nostalgic', $html );
 	}
 
+	public function test_installation_reference_disclosures_keep_compact_native_fallbacks(): void {
+		$troubleshooting_panel = 'installation';
+		$troubleshooting       = array(
+			'environment'          => array(
+				'WordPress' => '7.1',
+				'Database'  => '<database>',
+			),
+			'storage'              => array(),
+			'components'           => array( array( 'Name' => 'Migrator' ) ),
+			'installation_details' => array( 'Booster Core updates' => array( 'Updater code' => '<update>' ) ),
+		);
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details: %s'] = 'Détails techniques : %s';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Booster Core updates']  = 'Mises à jour Core';
+		try {
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html = (string) ob_get_clean();
+		} finally {
+			unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details: %s'], $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Booster Core updates'] );
+		}
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		foreach ( array( 'Environment details', 'Storage details' ) as $label ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/summary[@aria-label="' . $label . '"]/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ), $label );
+		}
+		self::assertStringContainsString( 'aria-label="Détails techniques : Mises à jour Core"', $html );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-core-updates-heading"]//div[@data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/div[@data-ran-booster-ui-disclosure-content])' ) );
+		self::assertStringContainsString( '&lt;database&gt;', $html );
+		self::assertStringContainsString( 'Storage details are unavailable for this request.', $html );
+		self::assertStringNotContainsString( 'aria-label="Technical details: Migrator"', $html );
+		$troubleshooting['environment'] = array( 'WordPress' => '7.1' );
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$summary_only = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'Environment details', $summary_only );
+	}
+
 	public function test_installation_is_default_and_renders_ordered_escaped_facts(): void {
 		$troubleshooting = array(
 			'environment' => array(
@@ -481,15 +519,15 @@ final class TroubleshootingViewTest extends TestCase {
 			}
 			self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage"', $html );
 			self::assertStringContainsString( '<code class="ran-booster-onboarding__storage-inline">&lt;constant&gt;</code>', $html );
-			self::assertStringContainsString( '<summary>Storage details</summary>', $html );
+			self::assertStringContainsString( '<summary aria-label="Storage details">Storage details</summary>', $html );
 			self::assertStringContainsString( '>Open secure credential storage settings</a>', $html );
 			self::assertStringNotContainsString( '<form', $html );
 			self::assertStringContainsString( '<dt>Storage directory</dt>', $html );
 			self::assertStringContainsString( '<dt>Storage file</dt>', $html );
 			self::assertStringContainsString( '<code class="ran-booster-onboarding__storage-inline">Custom wp-config.php path</code>', $html );
-			self::assertStringContainsString( '<summary>Environment details</summary>', $html );
-			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary>Environment details</summary>', $html );
-			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open><summary>Environment details</summary>', $html );
+			self::assertStringContainsString( '<summary aria-label="Environment details">Environment details</summary>', $html );
+			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary aria-label="Environment details">Environment details</summary>', $html );
+			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback open><summary aria-label="Environment details">Environment details</summary>', $html );
 			$labels    = array( '>Environment</h4>', '>Secure credential storage</h4>', '>Booster Core updates</h4>', '>Providers and extensions</h3>' );
 			$positions = array_map( static fn ( $label ) => strpos( $html, $label ), $labels );
 			foreach ( $positions as $position ) {
@@ -736,7 +774,7 @@ final class TroubleshootingViewTest extends TestCase {
 			'Core updates are off for this source installation. Booster will not check for or replace itself.',
 			$html
 		);
-		self::assertStringContainsString( '<summary>Technical details</summary>', $html );
+		self::assertStringContainsString( '<summary aria-label="Technical details: Booster Core updates">Technical details</summary>', $html );
 		self::assertStringContainsString( '<code>native_discovery_disabled</code>', $html );
 		self::assertStringNotContainsString( 'cannot reach its configured GitHub release feed', $html );
 		$troubleshooting['core_self_update']['requested_mode'] = 'disabled';

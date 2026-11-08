@@ -45,21 +45,23 @@ if ( array() === $environment ) {
 	<?php } ?>
 </p><?php } ?>
 <?php if ( array() !== $environment_details ) { ?>
-<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary><?php esc_html_e( 'Environment details', 'ran-booster' ); ?></summary>
-	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+<div data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">
+<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary aria-label="<?php esc_attr_e( 'Environment details', 'ran-booster' ); ?>"><?php esc_html_e( 'Environment details', 'ran-booster' ); ?></summary>
+	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 		<dl class="ran-booster-troubleshooting__fields-list">
 		<?php foreach ( $environment_details as $label => $value ) { ?>
 			<div><dt><?php echo esc_html( $label ); ?></dt><dd><code><?php echo esc_html( $value ); ?></code></dd></div><?php } ?>
 		</dl>
 	</div>
-</details><?php } ?>
+</details></div><?php } ?>
 </div></section>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
 <header class="ran-booster-page-shell__header ran-booster-onboarding__storage-heading"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h4><span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $storage_status[0] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( 'ok' === $storage_status[1] ? 'stable' : ( 'warning' === $storage_status[1] ? 'medium' : ( 'error' === $storage_status[1] ? 'high' : 'none' ) ) ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status[1] ); ?>"><?php echo esc_html( $storage_status[0] ); ?></span><span data-ran-booster-ui-badge-mount></span></span></header>
 <div class="ran-booster-page-shell__body">
 <p><?php echo esc_html( $storage['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
-<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
-	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+<div data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">
+<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary aria-label="<?php esc_attr_e( 'Storage details', 'ran-booster' ); ?>"><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
+	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 		<?php if ( ! empty( $storage['details'] ) && is_array( $storage['details'] ) ) { ?>
 		<dl class="ran-booster-onboarding__storage-facts">
 			<?php
@@ -91,7 +93,7 @@ if ( array() === $environment ) {
 			<p><?php esc_html_e( 'Storage details are unavailable for this request.', 'ran-booster' ); ?></p>
 		<?php } ?>
 	</div>
-</details>
+</details></div>
 <p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ) ); ?>"><?php esc_html_e( 'Open secure credential storage settings', 'ran-booster' ); ?></a></p>
 </div></section>
 			<?php
@@ -127,8 +129,9 @@ if ( array() === $environment ) {
 				<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $self_update_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( 'enabled' === $self_update_mode ? 'stable' : 'none' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( 'enabled' === $self_update_mode ? 'ok' : 'neutral' ); ?>"><?php echo esc_html( $self_update_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span></header>
 				<div class="ran-booster-page-shell__body">
 					<p><?php echo esc_html( $self_update_message ); ?></p>
-					<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"><summary><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
-						<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+					<div data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">
+					<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary aria-label="<?php echo esc_attr( sprintf( /* translators: %s: section name. */ __( 'Technical details: %s', 'ran-booster' ), __( 'Booster Core updates', 'ran-booster' ) ) ); ?>"><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
+						<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 						<dl class="ran-booster-troubleshooting__fields-list">
 						<?php
 						foreach ( $installation[ __( 'Booster Core updates', 'ran-booster' ) ] ?? array() as $field_label => $field_value ) {
@@ -136,6 +139,7 @@ if ( array() === $environment ) {
 							<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd></div><?php } ?></dl>
 						</div>
 					</details>
+					</div>
 				</div>
 			</section>
 </section>

@@ -490,3 +490,10 @@
 		padding: var(--ran-booster-space-18);
 	}
 }
+
+.ran-booster-admin
+	[aria-labelledby="ran-booster-components-heading"]
+	> .ran-booster-troubleshooting__installation-card
+	+ .ran-booster-troubleshooting__installation-card {
+	border-block-start: 1px solid var(--ran-booster-border);
+}

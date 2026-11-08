@@ -87,7 +87,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-activity__table', $css );
 
 		self::assertStringContainsString( '.ran-booster-dialog {', $css );
-		self::assertStringContainsString( "\n.ran-booster-repository-picker__dialog {", $css );
+		self::assertStringContainsString( "\n.ran-booster-repository-picker-modal {", $css );
+		self::assertStringContainsString( "\n.ran-booster-repository-picker-portal {", $css );
 		self::assertStringContainsString( "\nbody.ran-booster-repository-picker-open {", $css );
 		self::assertStringContainsString( 'overflow: hidden;', $css );
 	}
@@ -344,8 +345,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-dialog__header', $modals );
 		self::assertStringNotContainsString( '.ran-booster-credential-modal {', $credential_styles );
 		self::assertStringNotContainsString( 'box-shadow: var(--ran-booster-shadow-modal);', $credential_styles );
-		self::assertStringContainsString( 'ran-booster-repository-picker ran-booster-dialog', $picker_script );
-		self::assertStringContainsString( 'ran-booster-repository-picker__dialog ran-booster-dialog__surface', $picker_script );
+		self::assertStringContainsString( "'ran-booster-repository-picker-modal'", $picker_script );
+		self::assertStringContainsString( "'ran-booster-repository-picker-portal'", $picker_script );
+		self::assertStringContainsString( 'dialog.Popup', $picker_script );
 		self::assertStringContainsString( "'%s to add a search credential for more reliable repository lookup.'", $picker_script );
 		self::assertStringContainsString( 'credentialsLink.replaceWith(', $picker_script );
 		self::assertStringNotContainsString( "'to add a search credential for more reliable repository lookup.'", $picker_script );
@@ -431,10 +433,13 @@ final class AdminAssetContractTest extends TestCase {
 		$credential_script = $this->asset( 'ran-booster-secure-inputs.js' );
 		$picker_script     = $this->asset( 'ran-booster-repository-picker.js' );
 
-		self::assertStringContainsString( 'document.body.appendChild(modal);', $picker_script );
-		self::assertGreaterThanOrEqual( 1, substr_count( $picker_script, "event.key === 'Escape'" ) );
-		self::assertStringContainsString( 'activeButton.focus();', $picker_script );
-		self::assertGreaterThanOrEqual( 2, substr_count( $picker_script, 'trapFocus(' ) );
+		// The public Dialog portals the picker and owns Escape and focus containment.
+		self::assertStringContainsString( 'portal: createElement(dialog.Portal', $picker_script );
+		self::assertStringContainsString( 'container: portalContainer', $picker_script );
+		self::assertMatchesRegularExpression( '/onOpenChange\\(open\\) \\{\\s*if \\(!open\\) \\{\\s*closePicker\\(\\);/', $picker_script );
+		self::assertStringContainsString( 'initialFocus()', $picker_script );
+		self::assertStringContainsString( 'finalFocus()', $picker_script );
+		self::assertStringNotContainsString( 'trapFocus(', $picker_script );
 		self::assertMatchesRegularExpression(
 			"/document\\.body\\.classList\\.add\\(\\s*'ran-booster-repository-picker-open'\\s*\\);/",
 			$picker_script
@@ -629,7 +634,11 @@ final class AdminAssetContractTest extends TestCase {
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-webhook-url input \\{\\s+flex: 0 1 auto;\\s+inline-size: 100%;\\s+\\}[\\s\\S]+\\.ran-booster-credential-table td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;\\s+justify-content: flex-start;[\\s\\S]+white-space: normal;/',
+			'/\\.ran-booster-webhook-url input \\{\\s+min-inline-size: 0;\\s+inline-size: 100%;\\s+max-inline-size: 100%;/',
+			$css
+		);
+		self::assertMatchesRegularExpression(
+			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-credential-table td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;\\s+justify-content: flex-start;[\\s\\S]+white-space: normal;/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
@@ -694,7 +703,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-pending {', $css );
 		self::assertStringContainsString( 'ran-booster-webhook-endpoint', $view );
 		self::assertStringContainsString( 'data-webhook-url-tools', $view );
-		self::assertStringContainsString( 'ran-booster-provider__footer', $view );
+		self::assertStringNotContainsString( 'ran-booster-provider__footer', $view );
 		self::assertStringNotContainsString( 'core:webhook-management', $view );
 		self::assertStringNotContainsString( 'Assisted Hooks', $view );
 		self::assertStringNotContainsString( "'gh'", $view );

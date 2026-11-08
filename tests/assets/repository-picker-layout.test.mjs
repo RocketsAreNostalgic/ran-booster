@@ -46,11 +46,11 @@ function loadFunction(name) {
 test('repository results fill a stable bounded viewport before scrolling', () => {
 	assert.match(
 		css,
-		/\.ran-booster-repository-picker__dialog\s*\{[^}]*block-size:\s*min\(720px,\s*calc\(100vh - 40px\)\);/s
+		/\.ran-booster-repository-picker-modal\s*\{[^}]*block-size:\s*min\(720px,\s*calc\(100vh - 32px\)\);/s
 	);
 	assert.match(
 		css,
-		/\.ran-booster-repository-picker__body\s*\{[^}]*overflow-y:\s*auto;[^}]*min-block-size:\s*0;[^}]*flex:\s*1 1 auto;/s
+		/\.ran-booster-repository-picker__body\s*\{[^}]*display:\s*flex;[^}]*min-block-size:\s*0;[^}]*flex:\s*1 1 auto;[^}]*flex-direction:\s*column;/s
 	);
 	assert.match(
 		css,
@@ -95,7 +95,7 @@ test('repository picker keeps its striped loading indicator in the layout', () =
 	);
 	assert.doesNotMatch(
 		css,
-		/\.ran-booster-repository-picker__dialog(?:::before|\.is-checking)/
+		/\.ran-booster-repository-picker-modal(?:::before|\.is-checking)/
 	);
 	assert.doesNotMatch(
 		source,

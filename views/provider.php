@@ -199,33 +199,31 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 <div id="ran-booster-provider-profile-region" data-ran-booster-admin-mutation-region="provider-profiles">
 <?php settings_errors(); ?>
 <?php if ( 'overview' !== $provider_view ) { ?>
-<a class="ran-booster-provider-management__back" href="<?php echo esc_url( $overview_url ); ?>">&larr; <?php echo esc_html( $provider_back_label ); ?></a>
+	<header class="ran-booster-action-row ran-booster-provider-management__header">
+		<div>
+			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></h2>
+			<p class="ran-booster-page-heading__description">
+				<?php
+				echo esc_html(
+					'credentials' === $provider_view
+						? $credential_management_description
+						: $secret_management_description
+				);
+				?>
+			</p>
+		</div>
+		<?php if ( 'credentials' === $provider_view && $has_credential_settings ) { ?>
+			<button type="button" class="button button-primary ran-booster-open-credential-modal" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></button>
+		<?php } elseif ( 'secrets' === $provider_view && $has_webhook_settings ) { ?>
+			<button type="button" class="button button-primary ran-booster-open-credential-modal" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
+		<?php } ?>
+	</header>
 <?php } ?>
 <section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ( 'overview' === $provider_view ? ' ran-booster-provider--overview' : '' ); ?><?php echo in_array( $provider_view, array( 'credentials', 'secrets' ), true ) ? ' ran-booster-card' : ''; ?>"<?php echo in_array( $provider_view, array( 'credentials', 'secrets' ), true ) ? ' data-ran-booster-card="provider"' : ''; ?> aria-labelledby="ran-booster-provider-heading">
 	<?php if ( 'overview' === $provider_view && ! $is_repository_detail ) { ?>
 		<header class="ran-booster-page-shell__header ran-booster-provider__header">
 			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( $provider['label'] ); ?></h2>
 			<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Manage repository access, integrations and the packages connected to this site.', 'ran-booster' ); ?></p>
-		</header>
-	<?php } elseif ( 'overview' !== $provider_view ) { ?>
-		<header class="ran-booster-action-row ran-booster-provider-management__header">
-			<div>
-				<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( 'credentials' === $provider_view ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></h2>
-				<p class="ran-booster-page-heading__description">
-					<?php
-					echo esc_html(
-						'credentials' === $provider_view
-							? $credential_management_description
-							: $secret_management_description
-					);
-					?>
-				</p>
-			</div>
-			<?php if ( 'credentials' === $provider_view && $has_credential_settings ) { ?>
-				<button type="button" class="button button-primary ran-booster-open-credential-modal" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></button>
-			<?php } elseif ( 'secrets' === $provider_view && $has_webhook_settings ) { ?>
-				<button type="button" class="button button-primary ran-booster-open-credential-modal" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
-			<?php } ?>
 		</header>
 	<?php } ?>
 
@@ -726,9 +724,6 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 	<?php } ?>
 
-	<?php if ( ! $is_repository_detail && ( $has_credential_settings || $provider_has_webhook_settings ) ) { ?>
-		<footer class="ran-booster-provider__footer"><p class="description ran-booster-secrets-location"><?php esc_html_e( 'Saved credentials use Booster encrypted local storage outside the plugin directory and WordPress database. Deployment constants appear as immutable profiles and always take precedence.', 'ran-booster' ); ?></p></footer>
-	<?php } ?>
 </section>
 
 <?php require __DIR__ . '/provider/modals.php'; ?>

@@ -2737,7 +2737,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '>2 packages</td>', $html );
-		self::assertStringContainsString( 'Back to Fixture overview', $html );
+		self::assertStringNotContainsString( 'Back to Fixture overview', $html );
 		$this->assert_flat_profile_layout( $html );
 		self::assertStringContainsString( 'id="ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1">Credentials</h2>', $html );
@@ -3323,7 +3323,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Back to Bitbucket overview', $html );
+		self::assertStringNotContainsString( 'Back to Bitbucket overview', $html );
 		$this->assert_flat_profile_layout( $html );
 		self::assertStringContainsString( 'id="ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1">Webhook secrets</h2>', $html );
@@ -3391,11 +3391,15 @@ final class TroubleshootingViewTest extends TestCase {
 		$xpath   = new \DOMXPath( $document );
 		$region  = '//*[@id="ran-booster-provider-profile-region"]';
 		$section = $region . '/section[@aria-labelledby="ran-booster-provider-heading"]';
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::a[@class="ran-booster-provider-management__back"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $region . '//a[@class="ran-booster-provider-management__back"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '[contains(@class,"ran-booster-panel")])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/header[contains(@class,"ran-booster-action-row")]/div/h2[@tabindex="-1"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header[contains(@class,"ran-booster-action-row")]/div/h2[@id="ran-booster-provider-heading"][@tabindex="-1"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//h2[@id="ran-booster-provider-heading"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header/button[@data-modal])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/form[@class="ran-booster-provider-list-controls"]/following-sibling::table[contains(@class,"striped")])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/footer)' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '/footer)' ) );
+		self::assertStringNotContainsString( 'Saved credentials use Booster encrypted local storage', $html );
+		self::assertStringNotContainsString( 'ran-booster-secrets-location', $html );
 	}
 
 	/** @return array<string, mixed> */

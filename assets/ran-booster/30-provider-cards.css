@@ -578,14 +578,9 @@
 	min-inline-size: 0;
 }
 
-.ran-booster-admin .ran-booster-repository-detail__back,
 .ran-booster-admin .ran-booster-repository-detail h2,
 .ran-booster-admin .ran-booster-repository-detail h3 {
 	margin: 0;
-}
-
-.ran-booster-admin .ran-booster-repository-detail__back {
-	margin-block-end: var(--ran-booster-space-18);
 }
 
 .ran-booster-admin .ran-booster-repository-detail__header,

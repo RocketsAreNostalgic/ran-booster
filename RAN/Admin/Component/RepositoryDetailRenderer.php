@@ -39,7 +39,6 @@ final class RepositoryDetailRenderer {
 		$webhook_panel         = 'branch' === $active_view ? $this->capture_webhook_panel( $render_webhook_panel, $rendered_webhooks_url ) : '';
 		?>
 		<div class="ran-booster-repository-detail">
-			<p class="ran-booster-repository-detail__back"><a href="<?php echo esc_url( $list_url ); ?>">&larr; <?php esc_html_e( 'Back to repositories', 'ran-booster' ); ?></a></p>
 			<header class="ran-booster-repository-detail__header">
 				<div>
 					<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title"><?php echo esc_html( $repository ); ?></h2>

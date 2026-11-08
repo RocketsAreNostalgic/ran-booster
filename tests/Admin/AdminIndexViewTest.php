@@ -346,4 +346,88 @@ final class AdminIndexViewTest extends TestCase {
 
 		}
 	}
+
+	public function test_repository_details_use_the_provider_repository_list_as_breadcrumb_parent(): void {
+		$view                               = 'index';
+		$tab_view                           = 'provider.php';
+		$messages                           = array();
+		$provider_management_table_renderer = new \RAN\Admin\Component\ProviderManagementTableRenderer();
+		$repository_detail_renderer         = new \RAN\Admin\Component\RepositoryDetailRenderer();
+		$webhook_management                 = null;
+		$presenter                          = ( new \ReflectionClass( \RAN\Admin\ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
+		foreach ( array(
+			'gh'      => 'GitHub',
+			'fixture' => 'Forge & <Fixture>',
+		) as $tab => $provider_label ) {
+			$provider = array(
+				'code'             => $tab,
+				'label'            => $provider_label,
+				'credential_kinds' => array(),
+				'webhook_scopes'   => array(),
+				'capabilities'     => array(
+					'package'     => true,
+					'browse'      => false,
+					'credentials' => false,
+					'webhooks'    => false,
+				),
+			);
+			foreach ( array(
+				'found'       => array( 'owner/repository', true ),
+				'unavailable' => array( 'Repository unavailable', false ),
+			) as $case => list( $current_label, $has_row ) ) {
+				$data = array(
+					'provider'                => $provider,
+					'provider_view'           => 'overview',
+					'provider_task'           => 'repositories',
+					'requested_repository_id' => 'repo-42',
+					'provider_list_state'     => array(
+						'search'   => '',
+						'kind'     => '',
+						'scope'    => '',
+						'status'   => '',
+						'orderby'  => 'name',
+						'order'    => 'asc',
+						'paged'    => 1,
+						'per_page' => 20,
+					),
+				);
+				$data = array_merge( $data, $presenter->build_profile_list_projection( $data ), ( new \RAN\Admin\ProviderRepositoryRowsNormalizer() )->project_page( $data ) );
+				if ( $has_row ) {
+					$data['selected_repository_row'] = array(
+						'repository'    => 'owner/repository',
+						'repository_id' => 'repo-42',
+						'source_label'  => 'Branch',
+						'source_key'    => 'branch',
+					);
+				}
+				// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed fixture locals mirror the real Dashboard provider presentation.
+				extract( $data );
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/base.php';
+				$html = (string) ob_get_clean();
+				$dom  = new \DOMDocument();
+				@$dom->loadHTML( $html ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Legacy DOM parser does not recognize HTML5 view elements.
+				$xpath = new \DOMXPath( $dom );
+				$crumb = '//ol[@class="ran-admin-shell__breadcrumbs"]';
+				self::assertSame( 2.0, $xpath->evaluate( 'count(' . $crumb . '//a)' ), $case );
+				self::assertSame( $provider_label, $xpath->evaluate( 'string((' . $crumb . '//a)[1])' ), $case );
+				self::assertSame( $data['overview_url'], $xpath->evaluate( 'string((' . $crumb . '//a)[1]/@href)' ), $case );
+				self::assertSame( 'Repositories', $xpath->evaluate( 'string((' . $crumb . '//a)[2])' ), $case );
+				self::assertSame( $data['repository_list_url'], $xpath->evaluate( 'string((' . $crumb . '//a)[2]/@href)' ), $case );
+				self::assertSame( $current_label, $xpath->evaluate( 'string(' . $crumb . '//span[@aria-current="page"])' ), $case );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(' . $crumb . '//a[@aria-current])' ), $case );
+				self::assertStringNotContainsString( 'Back to repositories', $html, $case );
+				self::assertStringNotContainsString( 'ran-booster-repository-detail__back', $html, $case );
+			}
+
+			$data['requested_repository_id'] = '';
+			$data                            = array_merge( $data, ( new \RAN\Admin\ProviderRepositoryRowsNormalizer() )->project_page( $data ) );
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed fixture locals mirror the real Dashboard provider presentation.
+			extract( $data );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/base.php';
+			$list_html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'ran-admin-shell__breadcrumbs', $list_html );
+		}
+	}
 }

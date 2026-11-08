@@ -121,6 +121,20 @@ if ( in_array( $view, array( 'packages/create', 'packages/edit' ), true ) && iss
 		),
 		array( 'label' => 'credentials' === $provider_view ? __( 'Manage Credentials', 'ran-booster' ) : __( 'Manage Webhook Secrets', 'ran-booster' ) ),
 	);
+} elseif ( 'index' === $view && 'provider.php' === ( $tab_view ?? '' ) && 'overview' === ( $provider_view ?? '' ) && '' !== ( $requested_repository_id ?? '' ) && isset( $provider, $overview_url, $repository_list_url ) ) {
+	$repository_crumb                     = is_array( $selected_repository_row ?? null ) && is_string( $selected_repository_row['repository'] ?? null ) ? trim( $selected_repository_row['repository'] ) : '';
+	$ran_admin_shell['breadcrumbs_label'] = __( 'Breadcrumbs', 'ran-booster' );
+	$ran_admin_shell['breadcrumbs']       = array(
+		array(
+			'label' => $provider['label'],
+			'url'   => $overview_url,
+		),
+		array(
+			'label' => __( 'Repositories', 'ran-booster' ),
+			'url'   => $repository_list_url,
+		),
+		array( 'label' => '' !== $repository_crumb ? $repository_crumb : __( 'Repository unavailable', 'ran-booster' ) ),
+	);
 }
 
 echo '<div class="ran-admin-shell-notices"><hr class="wp-header-end"></div>';

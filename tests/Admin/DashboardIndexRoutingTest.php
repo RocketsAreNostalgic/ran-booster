@@ -1171,7 +1171,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertStringContainsString( 'Integration status', $html );
 		self::assertStringContainsString( 'data-ran-booster-repository-view="branch"', $html );
-		self::assertStringContainsString( 'Back to repositories', $html );
+		self::assertStringNotContainsString( 'Back to repositories', $html );
 		self::assertStringContainsString( 'Packages using this repository', $html );
 		self::assertStringContainsString( 'ran-booster-repository-detail__layout', $html );
 		self::assertStringContainsString( 'ran-booster-repository-detail__sidebar', $html );

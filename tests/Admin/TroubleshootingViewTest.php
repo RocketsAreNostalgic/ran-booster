@@ -1905,7 +1905,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$repository_html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Back to repositories', $repository_html );
+		self::assertStringNotContainsString( 'Back to repositories', $repository_html );
 		self::assertStringContainsString( 'Packages using this repository', $repository_html );
 		self::assertStringContainsString( 'Management history', $repository_html );
 		self::assertStringContainsString( 'This is local history, not live Git provider state.', $repository_html );
@@ -3143,7 +3143,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$repository_html = (string) ob_get_clean();
 		self::assertStringContainsString( 'Review retained workflow', $repository_html );
 		self::assertStringContainsString( 'https://example.test/release-settings', $repository_html );
-		self::assertStringContainsString( 'Back to repositories', $repository_html );
+		self::assertStringNotContainsString( 'Back to repositories', $repository_html );
 	}
 
 	public function test_provider_status_distinguishes_empty_and_unavailable_inventory(): void {

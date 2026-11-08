@@ -1320,8 +1320,19 @@
 	min-block-size: 1.5em;
 }
 
-.ran-booster-admin [data-ran-booster-toggle-save][hidden],
-.ran-booster-admin [data-ran-booster-autosave-description][hidden] {
+.ran-booster-admin [data-ran-booster-toggle-save][hidden] {
+	display: none;
+}
+
+/*
+ * JavaScript-enabled pages hold the Save setting actions hidden until the
+ * Settings script takes over, so they are not painted and then removed.
+ * Without JavaScript, or if the script keeps them (no HTMX), they stay visible.
+ */
+
+body.js:not(.ran-booster-settings-ready)
+	.ran-booster-admin
+	.ran-booster-settings__toggle-actions {
 	display: none;
 }
 

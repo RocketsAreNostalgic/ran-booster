@@ -144,12 +144,6 @@
 		);
 	};
 	const bind = (deferredScope = null) => {
-		const description = document.querySelector(
-			'[data-ran-booster-autosave-description]'
-		);
-		if (description && !startupPending) {
-			description.hidden = !window.htmx;
-		}
 		for (const form of document.querySelectorAll(selector)) {
 			const scope = form.dataset.ranBoosterSettingsScope;
 			if (states.get(scope)?.form === form) {
@@ -231,12 +225,6 @@
 				return;
 			}
 			startupPending = false;
-			const description = document.querySelector(
-				'[data-ran-booster-autosave-description]'
-			);
-			if (description) {
-				description.hidden = !window.htmx;
-			}
 			for (const state of states.values()) {
 				const retry = state.form.querySelector(
 					'[data-ran-booster-toggle-save]'
@@ -252,6 +240,9 @@
 	['click', 'pointerup', 'pointercancel', 'keyup'].forEach((event) =>
 		document.addEventListener(event, scheduleStartupPresentation, true)
 	);
+	// Release the first-paint hold on the Save setting actions; bind() now owns
+	// whether each one is shown.
+	document.body.classList.add('ran-booster-settings-ready');
 	bind();
 	document.addEventListener('input', (event) => {
 		const state = stateFor(event.target);

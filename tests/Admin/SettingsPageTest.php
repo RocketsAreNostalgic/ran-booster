@@ -283,7 +283,8 @@ final class SettingsPageTest extends TestCase {
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previous_errors );
 		$xpath = new \DOMXPath( $dom );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//p[@data-ran-booster-autosave-description and @hidden and text()="Changes save automatically."])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-autosave-description])' ) );
+		self::assertStringNotContainsString( 'Changes save automatically.', $html );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[@data-ran-booster-card="settings" and contains(@class, "ran-booster-card")]/div[contains(@class, "ran-booster-card__content")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region" and @data-ran-booster-card])' ) );
@@ -292,7 +293,7 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]/div[not(@role) and not(@data-ran-booster-general-failed)]//p[@id="ran-booster-hide-github-error" and @data-ran-booster-ui-notice-field and @data-ran-booster-ui-notice-request-field and text()="Hide GitHub UI: Invalid selection."])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//*[@role="alert"])' ) );
 
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="General preferences" and p="Changes save automatically."]//*[@id="ran-booster-general-hide_github"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="General preferences"]//*[@id="ran-booster-general-hide_github"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="General preferences"]//*[@id="ran-booster-general-self_update_discovery"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="History and download limits"]//*[@id="ran-booster-general-numeric"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="History and download limits"]//button[@id="ran-booster-save-numeric-bottom"])' ) );

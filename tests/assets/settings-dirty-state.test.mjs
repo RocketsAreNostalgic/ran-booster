@@ -33,17 +33,14 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 		}
 		return event;
 	};
-	const autosaveDescription = { hidden: true };
+	const bodyClasses = new Set();
 	const document = {
 		activeElement: null,
-		body: {},
+		body: { classList: { add: (name) => bodyClasses.add(name) } },
 		addEventListener: (name, fn) => on(listeners, name, fn),
 		querySelectorAll: () =>
 			[...regions.values()].map((region) => region.form),
-		querySelector: (selector) =>
-			selector === '[data-ran-booster-autosave-description]'
-				? autosaveDescription
-				: null,
+		querySelector: () => null,
 		getElementById(id) {
 			for (const region of regions.values()) {
 				if (region.id === id) {
@@ -561,8 +558,8 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 	return {
 		document,
 		window,
+		bodyClasses,
 		numeric,
-		autosaveDescription,
 		toggle,
 		make,
 		mount,
@@ -787,10 +784,16 @@ test('numeric confirmation conflict changes primary without replacing field or m
 	assert.equal(next.status.attributes.get('aria-live'), 'off');
 });
 
-test('automatic-save description is shown only when enhanced saving is available', () => {
-	assert.equal(harness().autosaveDescription.hidden, false);
+test('Save setting is hidden only when enhanced saving is available', () => {
+	assert.equal(harness().toggle.retry.hidden, true);
 	const native = harness({ enhanced: false });
-	assert.equal(native.autosaveDescription.hidden, true);
+	assert.equal(native.toggle.retry.hidden, false);
+});
+
+test('the script releases the first-paint hold and leaves Save visible without HTMX', () => {
+	assert.equal(harness().bodyClasses.has('ran-booster-settings-ready'), true);
+	const native = harness({ enhanced: false });
+	assert.equal(native.bodyClasses.has('ran-booster-settings-ready'), true);
 	assert.equal(native.toggle.retry.hidden, false);
 });
 
@@ -1588,31 +1591,25 @@ test('startup keeps held General controls stable until activation completes', ()
 			'keyboard-space',
 		]) {
 			const h = harness({ initialActive: { scope, target } });
-			assert.equal(
-				h.autosaveDescription.hidden,
-				true,
-				`${scope} ${target}`
-			);
-			assert.equal(h.toggle.retry.hidden, false);
+			assert.equal(h.toggle.retry.hidden, false, `${scope} ${target}`);
 			h.toggle.toggle.checked = true;
 			h.doc('change', { target: h.toggle.toggle });
 			assert.equal(h.toggle.submissions.length, 1);
 			h.doc('pointerup', {});
 			h.flushTasks();
 			assert.equal(
-				h.autosaveDescription.hidden,
-				true,
+				h.toggle.retry.hidden,
+				false,
 				'A still-active gesture stays deferred.'
 			);
 			h.toggle.active = null;
 			h.doc('click', {});
 			assert.equal(
-				h.autosaveDescription.hidden,
-				true,
+				h.toggle.retry.hidden,
+				false,
 				'Reconcile only after the click task.'
 			);
 			h.flushTasks();
-			assert.equal(h.autosaveDescription.hidden, false);
 			assert.equal(h.toggle.retry.hidden, true);
 			assert.equal(
 				h.toggle.submissions.length,
@@ -1632,13 +1629,12 @@ test('startup release rechecks a newly held General gesture and current forms', 
 	const other = h.mount(h.make('self_update_discovery'));
 	other.active = 'above-label';
 	h.flushTasks();
-	assert.equal(h.autosaveDescription.hidden, true);
+	assert.equal(h.toggle.retry.hidden, false);
 	other.active = null;
 	const replacement = h.replace(h.make('hide_github'));
 	h.doc('htmx:afterSwap', { target: { id: 'elsewhere' }, detail: {} });
 	h.doc('pointercancel', {});
 	h.flushTasks();
-	assert.equal(h.autosaveDescription.hidden, false);
 	assert.equal(replacement.retry.hidden, true);
 	assert.equal(other.retry.hidden, true);
 });
@@ -1666,7 +1662,6 @@ test('startup hold preserves failure retry and no-HTMX fallback', () => {
 	native.toggle.active = null;
 	native.doc('pointercancel', {});
 	native.flushTasks();
-	assert.equal(native.autosaveDescription.hidden, true);
 	assert.equal(native.toggle.retry.hidden, false);
 });
 
@@ -1676,9 +1671,8 @@ test('startup cancellation outside the form settles on the next task', () => {
 	});
 	h.toggle.active = null;
 	h.doc('pointercancel', { target: { id: 'outside' } });
-	assert.equal(h.autosaveDescription.hidden, true);
+	assert.equal(h.toggle.retry.hidden, false);
 	h.flushTasks();
-	assert.equal(h.autosaveDescription.hidden, false);
 	assert.equal(h.toggle.retry.hidden, true);
 	assert.equal(h.toggle.submissions.length, 0);
 });

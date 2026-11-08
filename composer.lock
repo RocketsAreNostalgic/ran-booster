@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "78c0c441924be38155aafb6a410f7f20",
+    "content-hash": "3ec8e27978d737f05a5f1b68bf316a2d",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1721,16 +1721,16 @@
         },
         {
             "name": "ran/admin-shell",
-            "version": "dev-work/40-static-navigation",
+            "version": "v2.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "10b771f8b24436a69567b68fbef5cca37df41080"
+                "reference": "c5f57782b24301474133b7b25e11bd50477da683"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/10b771f8b24436a69567b68fbef5cca37df41080",
-                "reference": "10b771f8b24436a69567b68fbef5cca37df41080",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/c5f57782b24301474133b7b25e11bd50477da683",
+                "reference": "c5f57782b24301474133b7b25e11bd50477da683",
                 "shasum": ""
             },
             "require": {
@@ -1786,10 +1786,10 @@
             ],
             "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/fix/navigation-pointer-focus",
+                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/v2.1.1",
                 "issues": "https://github.com/RocketsAreNostalgic/ran-admin-shell/issues"
             },
-            "time": "2026-11-06T12:18:38+00:00"
+            "time": "2026-11-08T16:56:23+00:00"
         },
         {
             "name": "ran/coding-standards",
@@ -3156,7 +3156,6 @@
         "phpcompatibility/php-compatibility": 15,
         "phpcompatibility/phpcompatibility-paragonie": 15,
         "phpcompatibility/phpcompatibility-wp": 15,
-        "ran/admin-shell": 20,
         "ran/booster-github-provider": 10,
         "ran/updater-support": 10,
         "ran/wp-branch-updater": 10,
@@ -3173,5 +3172,5 @@
     "platform-overrides": {
         "php": "8.2.0"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }

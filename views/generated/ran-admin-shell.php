@@ -90,6 +90,13 @@ $ran_admin_shell_actions        = array_values(
 		}
 	)
 );
+// Cross-document transitions are a document opt-in, not a stylesheet side effect.
+if ( '' !== $ran_admin_shell_navigation_variant && $ran_admin_shell_navigation && ! $ran_admin_shell_breadcrumbs ) {
+	echo '<style>@media(prefers-reduced-motion:no-preference){'
+		. '@view-transition{navigation:auto}'
+		. '::view-transition-old(root),::view-transition-new(root){animation:none}'
+		. '}</style>';
+}
 ?>
 <header class="ran-admin-shell<?php echo '' === $ran_admin_shell_strapline ? ' ran-admin-shell--name-only' : ''; ?><?php echo isset( $ran_admin_shell['color_scheme'] ) && 'inverse' === $ran_admin_shell['color_scheme'] ? ' ran-admin-shell--inverse' : ''; ?>">
 	<?php if ( $ran_admin_shell_has_background ) : ?>

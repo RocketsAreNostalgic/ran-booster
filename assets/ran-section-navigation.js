@@ -9,16 +9,26 @@ export function createSectionNavigation(host) {
 		return null;
 	}
 	const view = host.ownerDocument.defaultView;
-	let indicator = host.querySelector('.ran-section-navigation__indicator');
-	const owned = !indicator;
-	if (owned) {
-		indicator = host.ownerDocument.createElement(
-			host.matches('ul, ol') ? 'li' : 'span'
+	let indicator;
+	let owned = false;
+	const reconcileIndicator = () => {
+		const direct = host.querySelector(
+			':scope > .ran-section-navigation__indicator'
 		);
-		indicator.className = 'ran-section-navigation__indicator';
-		indicator.setAttribute('aria-hidden', 'true');
-		host.appendChild(indicator);
-	}
+		if (direct === indicator && direct) {
+			return;
+		}
+		indicator = direct;
+		owned = !indicator;
+		if (owned) {
+			indicator = host.ownerDocument.createElement(
+				host.matches('ul, ol') ? 'li' : 'span'
+			);
+			indicator.className = 'ran-section-navigation__indicator';
+			indicator.setAttribute('aria-hidden', 'true');
+			host.appendChild(indicator);
+		}
+	};
 	const links = () =>
 		Array.from(host.querySelectorAll(':scope > a, :scope > li > a'));
 	let frame;
@@ -39,7 +49,7 @@ export function createSectionNavigation(host) {
 		);
 		if (
 			!current ||
-			!host.querySelector('.ran-section-navigation__indicator')
+			!host.querySelector(':scope > .ran-section-navigation__indicator')
 		) {
 			host.classList.remove('ran-section-navigation--ready');
 			return;
@@ -70,6 +80,15 @@ export function createSectionNavigation(host) {
 		if (disposed) {
 			return;
 		}
+		reconcileIndicator();
+		const nextLinks = links();
+		observedLinks
+			.filter((link) => !nextLinks.includes(link))
+			.forEach((link) => observer?.unobserve(link));
+		nextLinks
+			.filter((link) => !observedLinks.includes(link))
+			.forEach((link) => observer?.observe(link));
+		observedLinks = nextLinks;
 		if (afterPaint) {
 			// Retain the previous endpoint through a consumer's layout move.
 			frame = view.requestAnimationFrame(() => {
@@ -90,6 +109,7 @@ export function createSectionNavigation(host) {
 			});
 		}
 	};
+	let observedLinks = [];
 	const observer = view.ResizeObserver
 		? new view.ResizeObserver(() => {
 				if (frame === undefined) {
@@ -98,7 +118,6 @@ export function createSectionNavigation(host) {
 			})
 		: null;
 	observer?.observe(host);
-	links().forEach((link) => observer?.observe(link));
 	host.addEventListener('focusin', focus);
 	update();
 	return {
@@ -124,6 +143,7 @@ export function createSectionNavigation(host) {
 			disposed = true;
 			cancel();
 			observer?.disconnect();
+			observedLinks = [];
 			host.removeEventListener('focusin', focus);
 			host.classList.remove(
 				'ran-section-navigation--ready',

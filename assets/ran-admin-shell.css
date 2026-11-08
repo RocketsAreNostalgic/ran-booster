@@ -360,8 +360,19 @@ body.admin-bar .ran-admin-shell {
 }
 
 .ran-admin-shell__navigation.ran-section-navigation
-	.ran-section-navigation__link[aria-current="page"] {
+	.ran-section-navigation__link[aria-current="page"]:has(
+		> .ran-section-navigation__indicator
+	) {
 	border-block-end-color: transparent;
+}
+
+/* Keep the native current underline correct through enhancement and cleanup. */
+.ran-section-navigation__link:not([aria-current="page"])
+	> .ran-section-navigation__indicator,
+.ran-section-navigation--ready
+	.ran-section-navigation__link
+	> .ran-section-navigation__indicator {
+	display: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -374,15 +385,6 @@ body.admin-bar .ran-admin-shell {
 
 	.ran-admin-shell__navigation .ran-section-navigation__indicator {
 		view-transition-name: ran-section-header-indicator;
-	}
-
-	@view-transition {
-		navigation: auto;
-	}
-
-	::view-transition-old(root),
-	::view-transition-new(root) {
-		animation: none;
 	}
 
 	::view-transition-group(ran-section-header-indicator) {

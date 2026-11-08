@@ -37,11 +37,14 @@ Record the actual public export, exact package version, built artifact and
 shared runtime evidence before claiming adoption. Native functional and
 no-JavaScript fallbacks remain required and are distinct from adoption.
 
-The owner-approved current combined foundation and adapter ceiling is 165,000
-raw bytes and 33,050 summed gzip bytes. The 7 November 2026 gzip increment is
-limited to the existing Navigation composition plus explicitly owned off-page
-Notices. It does not authorize another component family, change the raw ceiling,
-or replace the separate overlay, Switch-only or Link pilot limits.
+The owner-approved current combined foundation and adapter ceiling is 166,090
+raw bytes and 33,383 summed gzip bytes. The 8 November 2026 approval covers the
+current Documentation composition and released Admin Shell 2.1.1 uptake,
+including the matching build and runtime-test guards. This is 170 raw bytes and
+56 summed gzip bytes above the temporary Documentation preview allowance.
+It does not authorize another component family or replace the separate overlay,
+Switch-only or Link pilot limits. Release, publication and consumer acceptance
+remain separate decisions.
 
 Existing source and installed previews retain their actual implementation
 identity; this direction does not authorize an automatic rollback or broaden
@@ -52,8 +55,8 @@ separate, and all merge/publication holds continue.
 
 ## Admin Shell continuity and page navigation
 
-Booster adopts build-time `ran/admin-shell` **2.0.0**, source
-`73abb3f8b35aab5eaaac74cb812a4fe2f3974482`. Change its exact Composer pin and
+Booster adopts build-time `ran/admin-shell` **2.1.1**, source
+`c5f57782b24301474133b7b25e11bd50477da683`. Change its exact Composer pin and
 lock together, run `composer admin-shell:sync`, then
 `composer admin-shell:check`. The PHP/CSS copies and provenance are generated;
 product styling belongs in `assets/ran-booster/00-foundations.css` after the

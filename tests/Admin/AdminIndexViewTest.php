@@ -271,4 +271,72 @@ final class AdminIndexViewTest extends TestCase {
 			}
 		}
 	}
+
+	public function test_provider_collections_use_the_actual_provider_overview_as_breadcrumb_parent(): void {
+		$view                               = 'index';
+		$tab_view                           = 'provider.php';
+		$messages                           = array();
+		$provider_management_table_renderer = new \RAN\Admin\Component\ProviderManagementTableRenderer();
+		$presenter                          = ( new \ReflectionClass( \RAN\Admin\ProviderSettingsPresenter::class ) )->newInstanceWithoutConstructor();
+		foreach ( array(
+			'gh'      => 'GitHub',
+			'bb'      => 'Bitbucket',
+			'fixture' => 'Forge & <Fixture>',
+		) as $tab => $provider_label ) {
+			$tabs     = array();
+			$provider = array(
+				'code'             => $tab,
+				'label'            => $provider_label,
+				'credential_kinds' => array(),
+				'webhook_scopes'   => array(),
+				'capabilities'     => array(
+					'package'     => true,
+					'browse'      => false,
+					'credentials' => false,
+					'webhooks'    => false,
+				),
+			);
+			foreach ( array(
+				'credentials' => 'Manage Credentials',
+				'secrets'     => 'Manage Webhook Secrets',
+			) as $provider_view => $current_label ) {
+				$data = array(
+					'provider'            => $provider,
+					'provider_view'       => $provider_view,
+					'provider_list_state' => array(
+						'search'   => '',
+						'kind'     => '',
+						'scope'    => '',
+						'status'   => '',
+						'orderby'  => 'name',
+						'order'    => 'asc',
+						'paged'    => 1,
+						'per_page' => 20,
+					),
+				);
+				$data = array_merge( $data, $presenter->build_profile_list_projection( $data ), ( new \RAN\Admin\ProviderRepositoryRowsNormalizer() )->project_page( $data ) );
+				// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed fixture locals mirror the real Dashboard provider presentation.
+				extract( $data );
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/base.php';
+				$html = (string) ob_get_clean();
+				$dom  = new \DOMDocument();
+				@$dom->loadHTML( $html ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Legacy DOM parser does not recognize HTML5 view elements.
+				$xpath = new \DOMXPath( $dom );
+				self::assertSame( $provider_label, $xpath->evaluate( 'string(//ol[@class="ran-admin-shell__breadcrumbs"]//a)' ) );
+				self::assertSame( $data['overview_url'], $xpath->evaluate( 'string(//ol[@class="ran-admin-shell__breadcrumbs"]//a/@href)' ) );
+				self::assertSame( $current_label, $xpath->evaluate( 'string(//ol[@class="ran-admin-shell__breadcrumbs"]//span[@aria-current="page"])' ) );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//ol[@class="ran-admin-shell__breadcrumbs"]//a)' ) );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//ol[@class="ran-admin-shell__breadcrumbs"]//a[@aria-current])' ) );
+				self::assertSame( 'credentials' === $provider_view ? 'Credentials' : 'Webhook secrets', $xpath->evaluate( 'string(//*[@id="ran-booster-provider-heading"])' ) );
+			}
+			$tab_view = 'documentation.php';
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/base.php';
+			$documentation_html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'ran-admin-shell__breadcrumbs', $documentation_html );
+			$tab_view = 'provider.php';
+
+		}
+	}
 }

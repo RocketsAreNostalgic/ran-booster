@@ -4,6 +4,10 @@
  * View locals supplied by Dashboard::render().
  *
  * @var string $view
+ * @var string $tab_view
+ * @var string $provider_view
+ * @var array{label:string} $provider
+ * @var string $overview_url
  */
 
 // If this file is called directly, abort.
@@ -116,6 +120,15 @@ if ( in_array( $view, array( 'packages/create', 'packages/edit' ), true ) && iss
 			'url'   => $ran_admin_shell['home_url'],
 		),
 		array( 'label' => __( 'Troubleshooting', 'ran-booster' ) ),
+	);
+} elseif ( 'index' === $view && 'provider.php' === ( $tab_view ?? '' ) && in_array( $provider_view ?? '', array( 'credentials', 'secrets' ), true ) && isset( $provider, $overview_url ) ) {
+	$ran_admin_shell['breadcrumbs_label'] = __( 'Breadcrumbs', 'ran-booster' );
+	$ran_admin_shell['breadcrumbs']       = array(
+		array(
+			'label' => $provider['label'],
+			'url'   => $overview_url,
+		),
+		array( 'label' => 'credentials' === $provider_view ? __( 'Manage Credentials', 'ran-booster' ) : __( 'Manage Webhook Secrets', 'ran-booster' ) ),
 	);
 }
 

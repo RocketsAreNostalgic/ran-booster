@@ -223,12 +223,17 @@ body.admin-bar .ran-admin-shell {
 	padding-inline: var(--wpds-dimension-padding-2xl, 24px);
 }
 
+.ran-admin-shell__navigation > a,
+.ran-admin-shell__breadcrumb a,
+.ran-admin-shell__breadcrumb [aria-current="page"] {
+	min-block-size: 48px;
+}
+
 .ran-admin-shell__breadcrumb a,
 .ran-admin-shell__breadcrumb [aria-current="page"] {
 	align-items: center;
 	color: inherit;
 	display: inline-flex;
-	min-block-size: 44px;
 	padding: 8px 10px;
 	text-decoration: none;
 	white-space: nowrap;
@@ -242,7 +247,6 @@ body.admin-bar .ran-admin-shell {
 	font-size: var(--wpds-typography-font-size-md, 13px);
 	font-weight: 400;
 	line-height: 1.2;
-	min-block-size: 48px;
 	text-decoration: none;
 	white-space: nowrap;
 }

@@ -198,6 +198,7 @@
 					'transporter',
 					'package-edit',
 					'activity',
+					'troubleshooting',
 				].includes(card.getAttribute('data-ran-booster-card'))) ||
 			card.parentElement?.closest(ownSelector) ||
 			card.querySelector(ownSelector) ||

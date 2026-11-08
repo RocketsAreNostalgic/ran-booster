@@ -100,13 +100,14 @@ $repository_placeholder = array() === $locator_examples
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Run protected checks, temporarily capture Booster events, or review recent update activity.', 'ran-booster' ); ?></p>
 	</header>
 
-	<div class="ran-booster-page-shell__body ran-booster-panel">
+	<div class="ran-booster-page-shell__body">
 		<nav class="ran-booster-secondary-nav nav-tab-wrapper wp-clearfix" aria-label="<?php echo esc_attr( __( 'Troubleshooting views', 'ran-booster' ) ); ?>">
 		<?php foreach ( $secondary_navigation as $secondary_item ) { ?>
 			<a class="nav-tab<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' nav-tab-active' : ''; ?>" href="<?php echo esc_url( $secondary_item['url'] ); ?>"<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $secondary_item['label'] ); ?></a>
 		<?php } ?>
 		</nav>
 
+		<div class="ran-booster-card" data-ran-booster-card="troubleshooting">
 	<?php if ( 'installation' === $troubleshooting_panel ) { ?>
 		<?php require __DIR__ . '/troubleshooting-installation.php'; ?>
 	<?php } elseif ( 'support-report' === $troubleshooting_panel ) { ?>
@@ -267,5 +268,6 @@ $repository_placeholder = array() === $locator_examples
 	<?php } ?>
 
 	<?php } ?>
+		</div>
 	</div>
 </section>

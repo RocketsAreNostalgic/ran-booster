@@ -442,44 +442,51 @@
 	display: none;
 }
 
-/* The mounted Activity Card owns its frame and content inset. */
+/* The common Card frames the native semantic groups within each panel. */
 .ran-booster-admin
-	.ran-booster-troubleshooting
-	> .ran-booster-page-shell__body:has(
-		> [data-ran-booster-card="activity"][data-ran-booster-ui-mounted]
+	[data-ran-booster-card="troubleshooting"]
+	:is(
+		.ran-booster-troubleshooting__installation-card,
+		.ran-booster-debug-capture__panel,
+		.ran-booster-troubleshooting__form
 	) {
 	overflow: visible;
 	border: 0;
 	border-radius: 0;
 	box-shadow: none;
 	background: transparent;
+	padding: 0;
 }
 
 .ran-booster-admin
-	[data-ran-booster-card="activity"][data-ran-booster-ui-mounted]
+	[data-ran-booster-card="troubleshooting"]
+	.ran-booster-troubleshooting__installation-card
+	> .ran-booster-page-shell__header {
+	padding-inline: 0;
+}
+
+.ran-booster-admin
+	[data-ran-booster-card="troubleshooting"]
+	.ran-booster-troubleshooting__installation-card
+	> .ran-booster-page-shell__body {
+	padding: 0;
+}
+
+/* The selected Troubleshooting Card owns its content inset. */
+.ran-booster-admin
+	[data-ran-booster-card="troubleshooting"]:not([data-ran-booster-ui-mounted]),
+.ran-booster-admin
+	[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
 	.ran-booster-card__content {
 	padding: var(--ran-booster-space-24);
 }
 
 @media screen and (max-width: 782px) {
 	.ran-booster-admin
-		[data-ran-booster-card="activity"][data-ran-booster-ui-mounted]
+		[data-ran-booster-card="troubleshooting"]:not([data-ran-booster-ui-mounted]),
+	.ran-booster-admin
+		[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
 		.ran-booster-card__content {
 		padding: var(--ran-booster-space-18);
 	}
-}
-
-.ran-booster-admin
-	[data-ran-booster-card="installation-component"][data-ran-booster-ui-mounted] {
-	overflow: visible;
-	border: 0;
-	border-radius: 0;
-	box-shadow: none;
-	background: transparent;
-}
-
-.ran-booster-admin
-	[data-ran-booster-card="installation-component"][data-ran-booster-ui-mounted]
-	.ran-booster-card__content {
-	padding: 0;
 }

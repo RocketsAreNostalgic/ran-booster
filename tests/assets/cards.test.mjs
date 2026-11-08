@@ -1344,3 +1344,57 @@ test('Settings disclosures use visible summary as label while Installation requi
 		}
 	}
 });
+
+test('Troubleshooting Card leaves navigation outside and remounts once after an inner region replacement', () => {
+	const f = fixture();
+	const { card, form, link } = f.make(
+		'troubleshooting',
+		f.doc.body,
+		'section'
+	);
+	const navigation = new f.Node('nav');
+	f.doc.body.insertBefore(navigation, card);
+	link.focus();
+	f.run();
+	f.flush();
+	assert.equal(f.tree().type, 'CardRoot');
+	assert.equal(f.doc.activeElement, link);
+	assert.equal(navigation.parentElement, f.doc.body);
+	assert.equal(card.contains(navigation), false);
+	assert.equal(form.firstChild, link);
+	f.emit('htmx:beforeCleanupElement', form);
+	assert.equal(form.parentElement, card);
+	const replacement = new f.Node('form');
+	const replacementLink = new f.Node('a');
+	replacement.appendChild(replacementLink);
+	form.replaceWith(replacement);
+	replacementLink.focus();
+	f.emit('htmx:afterProcessNode', replacement);
+	f.emit('htmx:load', replacement);
+	f.flush();
+	assert.equal(f.counts().renders, 2);
+	assert.equal(f.counts().unmounts, 1);
+	assert.equal(
+		card.querySelectorAll('[data-ran-booster-card-content]').length,
+		1
+	);
+	assert.equal(replacement.firstChild, replacementLink);
+	assert.equal(f.doc.activeElement, replacementLink);
+	assert.equal(navigation.parentElement, f.doc.body);
+	f.emit('htmx:beforeHistorySave');
+	f.flush();
+	assert.equal(replacement.firstChild, replacementLink);
+	assert.equal(f.doc.activeElement, replacementLink);
+});
+
+test('Troubleshooting retains its native content when the Card runtime is unavailable or fails', () => {
+	for (const options of [{ runtime: false }, { fail: true }]) {
+		const f = fixture(options);
+		const { card, form, link } = f.make('troubleshooting');
+		f.run();
+		f.flush();
+		assert.equal(form.parentElement, card);
+		assert.equal(form.firstChild, link);
+		assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), false);
+	}
+});

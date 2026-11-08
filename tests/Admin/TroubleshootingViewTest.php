@@ -208,7 +208,7 @@ final class TroubleshootingViewTest extends TestCase {
 			libxml_use_internal_errors( $previous_errors );
 		}
 		$xpath = new \DOMXPath( $document );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@data-ran-booster-card="installation-component" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ") and .//div[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__installation-card ") and ancestor::*[@data-ran-booster-card="troubleshooting"] and .//div[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics" and self::div and @data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/summary[@aria-label="Technical details: GitHub"]/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]//code[text()="<component-implementation>"])' ) );
@@ -312,7 +312,7 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $card . '//details | ' . $card . '//div[@data-ran-booster-ui-disclosure] | ' . $card . '//div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-disclosure__body ")])' ) );
 		}
 		$migrator = '//section[header/h4[starts-with(normalize-space(.), "Migrator")]]';
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '[@data-ran-booster-card="installation-component" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__installation-card ") and ancestor::*[@data-ran-booster-card="troubleshooting"]])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/h4/code[text()="1.0"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[@data-ran-booster-ui-badge and @data-ran-booster-ui-badge-label="Inactive"]/span[@data-ran-booster-ui-badge-fallback and text()="Inactive"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/div/p[text()="Installed extension"])' ) );
@@ -615,6 +615,50 @@ final class TroubleshootingViewTest extends TestCase {
 		unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Not checked'] );
 	}
 
+	public function test_troubleshooting_navigation_precedes_the_panel_for_every_view(): void {
+		foreach ( array(
+			array( 'installation', 'list' ),
+			array( 'diagnostics', 'list' ),
+			array( 'activity', 'list' ),
+			array( 'activity', 'detail' ),
+			array( 'debug-capture', 'list' ),
+			array( 'support-report', 'list' ),
+		) as $case ) {
+			list( $troubleshooting_panel, $mode ) = $case;
+			$troubleshooting                      = array(
+				'providers'  => array(),
+				'components' => array(
+					array(
+						'Name'     => 'GitHub',
+						'Provider' => 'gh',
+					),
+				),
+			);
+			$deployment_activity                  = array( 'mode' => $mode );
+			$debug_capture                        = array( 'state' => 'inactive' );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+			$html     = (string) ob_get_clean();
+			$document = new \DOMDocument();
+			$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+			$xpath  = new \DOMXPath( $document );
+			$region = '//*[@id="ran-booster-troubleshooting-diagnostics-region"]';
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//nav[@aria-label="Troubleshooting views"])' ), $troubleshooting_panel . ':' . $mode );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $region . '//nav[@aria-label="Troubleshooting views"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ") or @data-ran-booster-card])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//nav[@aria-label="Troubleshooting views"]/following-sibling::div[@data-ran-booster-card="troubleshooting"])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//*[@data-ran-booster-card="troubleshooting"])' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $region . '//*[@data-ran-booster-card="troubleshooting"]//*[@data-ran-booster-card])' ), $troubleshooting_panel . ':' . $mode );
+			self::assertSame( 5.0, $xpath->evaluate( 'count(' . $region . '//nav/a)' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//nav/a[@aria-current="page" and contains(@href, "panel=' . $troubleshooting_panel . '")])' ) );
+			foreach ( array( 'installation', 'diagnostics', 'activity', 'debug-capture', 'support-report' ) as $index => $key ) {
+				self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//nav/a[' . ( $index + 1 ) . '][contains(@href, "panel=' . $key . '")])' ) );
+			}
+			if ( 'diagnostics' === $troubleshooting_panel ) {
+				self::assertSame( 1.0, $xpath->evaluate( 'count(' . $region . '//form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"])' ) );
+			}
+		}
+	}
+
 	public function test_logging_follows_deployment_activity_in_accessible_secondary_navigation(): void {
 		$troubleshooting_panel = 'debug-capture';
 		$troubleshooting       = array();
@@ -645,7 +689,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
 		self::assertInstanceOf( \DOMNodeList::class, $panel_nav );
 		self::assertCount( 0, $heading_panels );
-		self::assertCount( 1, $panel_nav );
+		self::assertCount( 0, $panel_nav );
 		self::assertStringContainsString( 'panel=debug-capture" aria-current="page"', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading">Logging</h3>', $html );
 		self::assertStringContainsString( 'Start 60-minute capture', $html );

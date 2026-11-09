@@ -218,6 +218,50 @@ generated Shell owners retain their existing boundaries. Installed direction
 review and composed responsive/accessibility acceptance remain separate from
 source checks.
 
+### Page frame geometry
+
+The outer widths above say how wide a page may be. This section says where
+things sit inside it, so titles, tabs and cards stop drifting between pages.
+Values come from measuring every Booster menu page at a 1280px viewport on
+beta.44. Rows marked **Decision** need an owner choice and are not yet applied.
+
+| Role                                                 | Standard                                                        | Owner in CSS                                                   | Status                                                                         |
+| ---------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Admin Shell bottom to page title                     | 24px (`.wrap` offset); real notices add their own height        | WordPress `.wrap`                                              | Matches on all pages                                                           |
+| Left edge of title, description, tabs and first card | The wrap's left edge; no inline inset on a top-level page shell | `.ran-booster-admin > .ran-booster-page-shell` header and body | Applied in `be3ef723`                                                          |
+| Page header bottom padding to first block            | 20px, owned by the header; the first block adds no top margin   | `.ran-booster-page-shell__header`                              | Applied in `c158dca8`                                                          |
+| Space between consecutive Cards                      | 20px                                                            | Card margin and stack gap                                      | Matches where measured                                                         |
+| Top margin of a first heading in any container       | 0; the container inset owns the space                           | `:is(h2, h3, h4):first-child`                                  | Applied in `c158dca8`                                                          |
+| Card inline inset                                    | 24px                                                            | Card content layer                                             | Matches, except legacy nested panels                                           |
+| Nested panel inside a Card                           | Takes the Card's inline inset and adds none                     | Panel rules scoped to the Card                                 | Capture panel fixed in `93a643c3`                                              |
+| Card block-start inset (to first heading)            | **Decision D1**                                                 | Card content layer                                             | 18px Overview/GitHub, 24px Settings/Troubleshooting, 16-17px Extensions/create |
+| Heading to description inside a Card                 | **Decision D2**                                                 | `.ran-booster-section__description`                            | 4px GitHub, 8px Settings, 12px Overview, 16px Extensions                       |
+| Page title to description                            | 6px                                                             | `.ran-booster-page-heading__description`                       | 10px on package pages                                                          |
+| Shell navigation text to content edge                | **Decision D3**                                                 | Generated Shell; coordinate with its owner                     | Nav text 60px, content 58px                                                    |
+
+Recommended answers, for the owner to accept or change:
+
+- **D1:** 24px, matching the inline inset, so a Card has one inset on every side.
+  Overview and GitHub Cards gain 6px; Extensions and the create forms gain 7-8px.
+- **D2:** 8px.
+- **D3:** leave to the Shell owner. Booster cannot edit generated Shell assets.
+
+Rules that follow from the table:
+
+1. A container's own inset owns the space inside it. A child never adds a
+   second inset, and a nested legacy panel inside a Card drops its own side
+   padding.
+2. The page header owns the gap to the first block. Page content never adds a
+   top margin to compensate.
+3. A top-level page shell has no inline padding. The 24px inset exists only when
+   a page shell is nested inside a Card or panel.
+4. A new page uses the existing shell, header and Card classes. It does not
+   introduce a local width, inset or heading margin.
+
+`tests/browser/page-frame.mjs` measures these values on a rendered page. It is
+a private runner helper like the other browser checks, and it is how the
+status column above stays honest.
+
 ## Add-on generation and service delivery
 
 An administration add-on must check the exact Add-on API generation before

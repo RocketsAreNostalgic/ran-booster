@@ -53,3 +53,18 @@ page only; include narrow layouts and long translated labels in fixture checks.
 When the operation and badge share a row, the operation must retain six times
 its computed font size, capped by the available row width, for readable text.
 The badge can instead wrap below it.
+
+## Page frame
+
+`page-frame.mjs` measures the shared page frame defined in "Page frame
+geometry" in `docs/admin-composition-contract.md`.
+
+```js
+const frame =
+	await import('file:///absolute/path/to/checkout/tests/browser/page-frame.mjs');
+await frame.assertPageFrame(tab);
+```
+
+`assertPageFrame` checks the values that already hold on every menu page.
+`measurePageFrame` also returns the open decision values (card heading inset)
+for review.

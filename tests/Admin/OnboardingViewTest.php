@@ -608,6 +608,13 @@ final class OnboardingViewTest extends TestCase {
 				$count = 'Unknown' === $expected[ $index ] ? 'Unknown' : $expected[ $index ] . ' managed';
 				self::assertSame( $count, trim( (string) $xpath->evaluate( 'string(' . $group . '/p/span)' ) ) );
 			}
+			$card = '//section[@aria-labelledby="ran-booster-overview-packages"]';
+			// Grouped by type: Plugins then Themes inside one groups container, each owning its two links, the aggregate policy line after them.
+			self::assertSame( 'Plugins', trim( (string) $xpath->evaluate( 'string(' . $card . '/div[contains(@class, "ran-booster-overview-package-actions")]/div[@role="group"][1]/@aria-label)' ) ) );
+			self::assertSame( 'Themes', trim( (string) $xpath->evaluate( 'string(' . $card . '/div[contains(@class, "ran-booster-overview-package-actions")]/div[@role="group"][2]/@aria-label)' ) ) );
+			self::assertSame( 4.0, $xpath->evaluate( 'count(' . $card . '//div[@role="group"]/div/a)' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $card . '//*[contains(@class, "ran-booster-overview-package-install") or contains(@class, "ran-booster-overview-package-note")])' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $card . '/div/following-sibling::p[contains(@class, "ran-booster-overview-package-policy")])' ) );
 			self::assertSame( 'Updates disabled: ' . $expected[2], trim( (string) $xpath->evaluate( 'string(//*[@aria-labelledby="ran-booster-overview-packages"]/p[contains(concat(" ", normalize-space(@class), " "), " ran-booster-overview-package-policy ")])' ) ) );
 			self::assertSame( '/plugins', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/div/a[1]/@href)' ) );
 			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create', $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/div/a[2]/@href)' ) );

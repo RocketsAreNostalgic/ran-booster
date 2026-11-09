@@ -74,20 +74,17 @@ $inventory = $onboarding['inventory'] ?? array(
 			<p><strong><?php esc_html_e( 'Plugins', 'ran-booster' ); ?></strong> <span class="ran-booster-overview-package-count"><?php echo esc_html( null === $inventory['plugins'] ? __( 'Unknown', 'ran-booster' ) : sprintf( /* translators: %s: managed package count. */ __( '%s managed', 'ran-booster' ), (string) $inventory['plugins'] ) ); ?></span></p>
 			<div class="ran-booster-overview-package-links">
 				<a href="<?php echo esc_url( $onboarding['plugins_url'] ); ?>"><?php esc_html_e( 'Manage plugins', 'ran-booster' ); ?></a>
-				<a class="ran-booster-overview-package-install" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
+				<a href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
 			</div>
 		</div>
 		<div class="ran-booster-overview-package-actions__group" role="group" aria-label="<?php esc_attr_e( 'Themes', 'ran-booster' ); ?>">
 			<p><strong><?php esc_html_e( 'Themes', 'ran-booster' ); ?></strong> <span class="ran-booster-overview-package-count"><?php echo esc_html( null === $inventory['themes'] ? __( 'Unknown', 'ran-booster' ) : sprintf( /* translators: %s: managed package count. */ __( '%s managed', 'ran-booster' ), (string) $inventory['themes'] ) ); ?></span></p>
 			<div class="ran-booster-overview-package-links">
 				<a href="<?php echo esc_url( $onboarding['themes_url'] ); ?>"><?php esc_html_e( 'Manage themes', 'ran-booster' ); ?></a>
-				<a class="ran-booster-overview-package-install" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
+				<a href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
 			</div>
 		</div>
 	</div>
-	<?php if ( 0 === $inventory['plugins'] || 0 === $inventory['themes'] ) { ?>
-		<p class="ran-booster-overview-package-note"><?php esc_html_e( 'Install from a repository, or review existing packages with Manage.', 'ran-booster' ); ?></p>
-	<?php } ?>
 	<p class="ran-booster-overview-package-policy"><?php esc_html_e( 'Updates disabled:', 'ran-booster' ); ?> <?php echo esc_html( null === $inventory['disabled'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['disabled'] ); ?></p>
 </section>
 <section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-providers">

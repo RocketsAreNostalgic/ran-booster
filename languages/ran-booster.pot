@@ -253,7 +253,7 @@ msgid "Source"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:150
-#: views/packages/edit.php:370
+#: views/packages/edit.php:372
 #: views/packages/fields/deployment-policy.php:44
 #: views/packages/fields/deployment-policy.php:47
 #: views/packages/index.php:479
@@ -1019,7 +1019,7 @@ msgstr ""
 #: views/overview-dashboard.php:53
 #: views/overview-dashboard.php:74
 #: views/overview-dashboard.php:81
-#: views/overview-dashboard.php:91
+#: views/overview-dashboard.php:88
 #: views/portability-review.php:102
 #: views/settings-general.php:112
 #: views/settings-general.php:226
@@ -1043,7 +1043,7 @@ msgid "Completed"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Booster.php:980
+#: RAN/Booster.php:987
 #: views/attempts/index.php:59
 #: views/overview-dashboard.php:29
 #: views/packages/index.php:64
@@ -1713,7 +1713,7 @@ msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:279
 #: RAN/Admin/PackagePagePresenter.php:291
-#: views/overview-dashboard.php:106
+#: views/overview-dashboard.php:103
 #: views/troubleshooting-installation.php:188
 msgid "Included with Booster"
 msgstr ""
@@ -2855,7 +2855,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:713
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:981
+#: RAN/Booster.php:988
 #: views/attempts/index.php:62
 #: views/onboarding.php:84
 #: views/onboarding.php:111
@@ -4794,74 +4794,74 @@ msgstr ""
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:977
+#: RAN/Booster.php:984
 #: views/attempts/index.php:54
 #: views/overview-dashboard.php:24
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:978
+#: RAN/Booster.php:985
 #: views/attempts/index.php:55
 #: views/overview-dashboard.php:25
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:979
+#: RAN/Booster.php:986
 #: views/attempts/index.php:57
 #: views/overview-dashboard.php:27
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:982
+#: RAN/Booster.php:989
 #: views/packages/index.php:340
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:983
+#: RAN/Booster.php:990
 #: views/packages/index.php:342
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:984
+#: RAN/Booster.php:991
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:985
+#: RAN/Booster.php:992
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:986
+#: RAN/Booster.php:993
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:987
+#: RAN/Booster.php:994
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:988
+#: RAN/Booster.php:995
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:989
+#: RAN/Booster.php:996
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:1150
+#: RAN/Booster.php:1157
 msgid "RAN Booster could not save this notice preference. Please try again."
 msgstr ""
 
-#: RAN/Booster.php:1187
+#: RAN/Booster.php:1194
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:1189
+#: RAN/Booster.php:1196
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:1191
+#: RAN/Booster.php:1198
 msgid "Contact a site administrator."
 msgstr ""
 
@@ -6536,7 +6536,7 @@ msgid "WordPress debugging documentation"
 msgstr ""
 
 #: views/documentation.php:48
-#: views/overview-dashboard.php:94
+#: views/overview-dashboard.php:91
 msgid "Git providers"
 msgstr ""
 
@@ -7589,28 +7589,24 @@ msgstr ""
 msgid "Manage themes"
 msgstr ""
 
-#: views/overview-dashboard.php:89
-msgid "Install from a repository, or review existing packages with Manage."
-msgstr ""
-
-#: views/overview-dashboard.php:91
+#: views/overview-dashboard.php:88
 msgid "Updates disabled:"
 msgstr ""
 
-#: views/overview-dashboard.php:96
+#: views/overview-dashboard.php:93
 msgid "No provider settings are currently available."
 msgstr ""
 
-#: views/overview-dashboard.php:103
+#: views/overview-dashboard.php:100
 msgid "Manage provider"
 msgstr ""
 
-#: views/overview-dashboard.php:108
+#: views/overview-dashboard.php:105
 msgid "Provider extension"
 msgstr ""
 
 #. translators: %s: selected provider plugin name.
-#: views/overview-dashboard.php:111
+#: views/overview-dashboard.php:108
 #: views/provider.php:238
 #: views/troubleshooting-installation.php:198
 #: views/troubleshooting-installation.php:204
@@ -7618,12 +7614,12 @@ msgstr ""
 msgid "Provider extension: %s"
 msgstr ""
 
-#: views/overview-dashboard.php:113
+#: views/overview-dashboard.php:110
 #: views/troubleshooting-installation.php:217
 msgid "Provider source unknown"
 msgstr ""
 
-#: views/overview-dashboard.php:117
+#: views/overview-dashboard.php:114
 msgid "Custom provider"
 msgstr ""
 
@@ -7871,7 +7867,7 @@ msgstr ""
 #. translators: %s is plugin or theme.
 #: views/packages/create.php:178
 #: views/packages/edit.php:280
-#: views/packages/edit.php:343
+#: views/packages/edit.php:344
 #: views/packages/index.php:114
 #, php-format
 msgid "Install another %s"
@@ -8000,7 +7996,7 @@ msgid "Booster will not reinterpret this package as a branch deployment. Restore
 msgstr ""
 
 #: views/packages/edit.php:279
-#: views/packages/edit.php:341
+#: views/packages/edit.php:342
 msgid "Package settings actions"
 msgstr ""
 
@@ -8012,23 +8008,23 @@ msgstr ""
 msgid "Package operations"
 msgstr ""
 
-#: views/packages/edit.php:356
+#: views/packages/edit.php:358
 msgid "Package summary"
 msgstr ""
 
-#: views/packages/edit.php:358
+#: views/packages/edit.php:360
 msgid "Current source"
 msgstr ""
 
-#: views/packages/edit.php:372
+#: views/packages/edit.php:374
 msgid "Source changes reset Automatic to Manual"
 msgstr ""
 
-#: views/packages/edit.php:375
+#: views/packages/edit.php:377
 msgid "WordPress state"
 msgstr ""
 
-#: views/packages/edit.php:377
+#: views/packages/edit.php:379
 msgid "Independent of package source"
 msgstr ""
 
@@ -10006,14 +10002,14 @@ msgstr ""
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
 #: views/settings-general.php:156
-#: assets/ran-booster-settings.js:516
+#: assets/ran-booster-settings.js:489
 msgid "On"
 msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
 #: views/settings-general.php:156
-#: assets/ran-booster-settings.js:517
+#: assets/ran-booster-settings.js:490
 msgid "Off"
 msgstr ""
 
@@ -10210,7 +10206,7 @@ msgid "Save changes"
 msgstr ""
 
 #: views/settings-general.php:290
-#: assets/ran-booster-settings.js:112
+#: assets/ran-booster-settings.js:91
 msgid "No pending numeric changes."
 msgstr ""
 
@@ -11532,27 +11528,27 @@ msgstr ""
 msgid "%s — already configured"
 msgstr ""
 
-#: assets/ran-booster-settings.js:111
+#: assets/ran-booster-settings.js:90
 msgid "Unsaved numeric changes."
 msgstr ""
 
-#: assets/ran-booster-settings.js:114
+#: assets/ran-booster-settings.js:93
 msgid "Waiting to save…"
 msgstr ""
 
-#: assets/ran-booster-settings.js:117
+#: assets/ran-booster-settings.js:96
 msgid "Saving…"
 msgstr ""
 
-#: assets/ran-booster-settings.js:215
+#: assets/ran-booster-settings.js:194
 msgid "Save unconfirmed. Review and retry."
 msgstr ""
 
-#: assets/ran-booster-settings.js:309
+#: assets/ran-booster-settings.js:288
 msgid "Leave Settings with unsaved or unconfirmed changes?"
 msgstr ""
 
-#: assets/ran-booster-settings.js:521
+#: assets/ran-booster-settings.js:494
 msgid "Settings changed before confirmation. Review the current saved values before retrying:"
 msgstr ""
 

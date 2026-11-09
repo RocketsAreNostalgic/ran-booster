@@ -17,6 +17,13 @@
 	padding-inline: var(--ran-booster-space-24);
 }
 
+/* Give the stacked text links in the action column a 24px pointer target. */
+.ran-booster-admin .ran-booster-extensions__grid .plugin-action-buttons a {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: var(--ran-booster-space-24);
+}
+
 .ran-booster-admin .ran-booster-extensions__grid > .plugin-card {
 	float: none;
 	clear: none;

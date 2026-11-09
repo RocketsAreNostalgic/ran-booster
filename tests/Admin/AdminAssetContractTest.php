@@ -136,6 +136,17 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-bottom', $extensions );
 	}
 
+	public function test_extension_action_text_links_keep_a_minimum_pointer_target(): void {
+		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
+
+		self::assertSame(
+			1,
+			preg_match( '/\.ran-booster-admin \.ran-booster-extensions__grid \.plugin-action-buttons a \{([^}]*)\}/', $extensions, $link_rule )
+		);
+		self::assertArrayHasKey( 1, $link_rule );
+		self::assertStringContainsString( 'min-block-size: var(--ran-booster-space-24);', $link_rule[1] );
+	}
+
 	public function test_status_pills_are_badges_and_the_legacy_tile_utilities_are_gone(): void {
 		$debug      = $this->view( 'debug-capture.php' );
 		$packages   = $this->view( 'packages/index.php' );

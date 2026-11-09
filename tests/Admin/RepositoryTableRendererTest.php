@@ -180,7 +180,14 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-repository-record__details', $html );
 		self::assertStringContainsString( 'Assisted hook status', $html );
 		self::assertStringContainsString( 'No assisted hook recorded', $html );
-		self::assertStringContainsString( 'Open GitHub repository', $html );
+		if ( 1 !== preg_match( '/<a href="https:\/\/github\.com\/owner\/repository" target="_blank" rel="noopener noreferrer">(.*?)<\/a>/s', $html, $m ) ) {
+			self::fail( 'The external repository link is missing.' );
+		}
+		// An external destination is a text link marked with a decorative arrow, not a Button.
+		self::assertStringContainsString( 'Open GitHub repository', $m[1] );
+		self::assertStringContainsString( '<span class="screen-reader-text">: owner/repository</span>', $m[1] );
+		self::assertStringContainsString( '<span aria-hidden="true">↗</span><span class="screen-reader-text"> (opens in a new tab)</span>', $m[1] );
+		self::assertStringNotContainsString( 'ran-wp-ui-button', $html );
 		self::assertStringNotContainsString( '<form ', $html );
 		self::assertStringNotContainsString( 'Review record', $html );
 		self::assertStringNotContainsString( 'panel=activity', html_entity_decode( $html ) );

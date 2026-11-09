@@ -608,7 +608,10 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"', $html );
-		self::assertStringContainsString( 'Open on Third Provider', $html );
+		if ( 1 !== preg_match( '/<a href="[^"]*" target="_blank" rel="noopener noreferrer">Open on Third Provider\s+(.*?)<\/a>/s', $html, $m ) ) {
+			self::fail( 'The external repository header link is missing.' );
+		}
+		self::assertSame( '<span aria-hidden="true">↗</span><span class="screen-reader-text"> (opens in a new tab)</span>', $m[1] );
 		self::assertStringContainsString( 'aria-describedby="post-help"', $html );
 		self::assertStringContainsString( 'aria-describedby="disabled-help"', $html );
 		self::assertStringContainsString( 'aria-describedby="link-help"', $html );

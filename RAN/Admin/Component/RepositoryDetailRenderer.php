@@ -45,7 +45,8 @@ final class RepositoryDetailRenderer {
 					<p class="ran-booster-page-heading__description"><?php echo esc_html( $this->summary( $packages, $source, $omitted ) ); ?></p>
 				</div>
 				<?php if ( is_string( $row['repository_url'] ?? null ) && '' !== $row['repository_url'] ) { ?>
-					<a class="<?php echo esc_attr( ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s is the repository provider name. */ __( 'Open on %s', 'ran-booster' ), $provider_label ) ); ?></a>
+					<a href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s: repository provider name. */ __( 'Open on %s', 'ran-booster' ), $provider_label ) ); ?>
+					<span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a>
 				<?php } ?>
 			</header>
 			<div class="notice notice-error inline ran-booster-provider-task-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load that repository view. The current view is unchanged; choose the view again to retry.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>

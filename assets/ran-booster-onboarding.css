@@ -593,10 +593,11 @@
 	min-inline-size: 0;
 }
 
-.ran-booster-admin
-	.ran-booster-portability__export-review
-	.ran-booster-portability__packages-title {
+/* A grouping wrapper only: its sections draw their own dividers, so it adds none. */
+.ran-booster-admin .ran-booster-portability__export-review {
 	margin-block-start: 0;
+	padding-block: 0;
+	border-block-start: 0;
 }
 
 .ran-booster-admin .ran-booster-portability__credential-option > .description {
@@ -959,7 +960,9 @@
 }
 
 .ran-booster-admin
-	.ran-booster-portability__review
+	.ran-booster-portability__review:not(
+		.ran-booster-portability__export-review
+	)
 	.ran-booster-portability__packages-title {
 	margin-block-start: var(--ran-booster-space-20);
 }

@@ -169,6 +169,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-portability__action-area \{[^}]*display: flex;[^}]*justify-content: space-between;/', $onboarding );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {', $troubleshooting );
 		self::assertStringContainsString( 'background: var(--ran-booster-surface-info);', $troubleshooting );
+		// The Create flow's grouping wrapper must not draw a second divider above its first section.
+		$onboarding = $this->asset( 'ran-booster-onboarding.css' );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__export-review\s*\{[^}]*border-block-start:\s*0;/', $onboarding );
 	}
 
 	public function test_admin_primitives_own_shared_panel_and_action_row_contracts(): void {

@@ -1818,7 +1818,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-repository-integrations-heading" class="ran-booster-section__title">Repository integrations</h3>', $html );
 		self::assertStringContainsString( 'Review managed repositories and available integrations.', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-summary--pending' ) );
-		self::assertSame( 2, substr_count( $html, 'ran-booster-status-dot is-pending' ) );
+		self::assertStringContainsString( '<strong>Webhook signing</strong> <span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">No secret saved</span>', $html );
+		self::assertStringContainsString( '<strong>No credential saved</strong> <span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">Not set up</span>', $html );
+		self::assertStringNotContainsString( 'ran-booster-status-dot', $html );
 		self::assertStringNotContainsString( 'ran-booster-status-summary--attention', $html );
 		self::assertStringContainsString( 'panel=status', $html );
 		self::assertStringContainsString( 'panel=repositories', $html );

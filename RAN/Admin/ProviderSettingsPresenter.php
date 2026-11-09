@@ -1770,7 +1770,7 @@ final readonly class ProviderSettingsPresenter {
 		return array() !== array_filter( $rows, static fn ( array $row ): bool => 'attention' === ( $row['status_key'] ?? null ) );
 	}
 
-	/** @return array{credential:array{tone:string,heading:string,description:string},webhook:array{tone:string,heading:string,description:string}} */
+	/** @return array{credential:array{tone:string,status:string,heading:string,description:string},webhook:array{tone:string,status:string,heading:string,description:string}} */
 	private function profile_summaries( bool $storage_unavailable, bool $credential_attention, bool $webhook_attention, int $credential_count, int $webhook_count, int $automatic_count ): array {
 		$credential_problem = $storage_unavailable || $credential_attention;
 		$webhook_problem    = $storage_unavailable || $webhook_attention || ( 0 === $webhook_count && 0 < $automatic_count );
@@ -1778,12 +1778,14 @@ final readonly class ProviderSettingsPresenter {
 		return array(
 			'credential' => array(
 				'tone'        => $credential_problem ? 'attention' : ( 0 < $credential_count ? 'ready' : 'pending' ),
+				'status'      => $credential_problem ? __( 'Needs attention', 'ran-booster' ) : ( 0 < $credential_count ? __( 'Ready', 'ran-booster' ) : __( 'Not set up', 'ran-booster' ) ),
 				'heading'     => $credential_problem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credential_count ? __( 'No credential saved', 'ran-booster' ) : sprintf( /* translators: %d is the number of saved credentials. */ _n( '%d credential saved', '%d credentials saved', $credential_count, 'ran-booster' ), $credential_count ) ),
 				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credential_attention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credential_count ? __( 'Add a credential when repository access requires one.', 'ran-booster' ) : __( 'Open credential management to review saved credentials and their usage.', 'ran-booster' ) ) ),
 			),
 			'webhook'    => array(
 				'tone'        => $webhook_problem ? 'attention' : ( 0 < $webhook_count ? 'ready' : 'pending' ),
-				'heading'     => $webhook_problem ? __( 'Webhook signing · Needs attention', 'ran-booster' ) : ( 0 === $webhook_count ? __( 'Webhook signing · No secret saved', 'ran-booster' ) : __( 'Webhook signing · Ready locally', 'ran-booster' ) ),
+				'status'      => $webhook_problem ? __( 'Needs attention', 'ran-booster' ) : ( 0 === $webhook_count ? __( 'No secret saved', 'ran-booster' ) : __( 'Ready locally', 'ran-booster' ) ),
+				'heading'     => __( 'Webhook signing', 'ran-booster' ),
 				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhook_attention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhook_count ? ( 0 < $automatic_count ? __( 'Automatic branch deployments require local signing material before Git provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a Git provider webhook.', 'ran-booster' ) ) : sprintf( /* translators: %d is the number of local secrets that can verify signed deliveries. */ _n( '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhook_count, 'ran-booster' ), $webhook_count ) ) ),
 			),
 		);

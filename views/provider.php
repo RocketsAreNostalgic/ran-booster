@@ -56,8 +56,8 @@
  * @var array{item_count_label:string,page_label:string,current:int,pages:int,per_page:int,action_url:string,hidden_fields:array<string,scalar>,previous_url:string,next_url:string} $webhook_pagination
  * @var array{rows: list<array<string, mixed>>, total: int, pages: int, current: int} $credential_list
  * @var array{rows: list<array<string, mixed>>, total: int, pages: int, current: int} $webhook_list
- * @var array{tone: string, heading: string, description: string} $credential_summary
- * @var array{tone: string, heading: string, description: string} $webhook_summary
+ * @var array{tone: string, status: string, heading: string, description: string} $credential_summary
+ * @var array{tone: string, status: string, heading: string, description: string} $webhook_summary
  * @var array<string, int|bool> $repository_integration_summary
  * @var array<string, mixed>|null $selected_repository_row
  * @var array<string, mixed>|null $webhook_setup
@@ -428,7 +428,8 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 							<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $credentials_url ); ?>"><?php esc_html_e( 'Manage credentials', 'ran-booster' ); ?></a>
 							<?php
 						}
-					}
+					},
+					$credential_summary['status']
 				);
 			?>
 			</div>
@@ -461,7 +462,8 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $secrets_url ); ?>"><?php esc_html_e( 'Manage signing secrets', 'ran-booster' ); ?></a>
 									<?php
 							}
-						}
+						},
+						$webhook_summary['status']
 					);
 			?>
 				</div>

@@ -397,19 +397,23 @@
 }
 
 .ran-booster-admin .ran-booster-status-summary__status {
-	display: flex;
-	align-items: flex-start;
-	gap: var(--ran-booster-space-10);
 	min-inline-size: 0;
 }
 
-.ran-booster-admin .ran-booster-status-summary__status strong {
-	display: block;
+.ran-booster-admin .ran-booster-status-summary__heading {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8);
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-status-summary__heading strong {
 	color: var(--ran-booster-text);
 	font-size: var(--ran-booster-font-size-md);
 }
 
-.ran-booster-admin .ran-booster-status-summary__status p {
+.ran-booster-admin .ran-booster-status-summary__description {
 	max-inline-size: 760px;
 	margin-block: var(--ran-booster-space-4) 0;
 	margin-inline: 0;
@@ -421,31 +425,6 @@
 	flex: 0 0 auto;
 	flex-wrap: wrap;
 	gap: var(--ran-booster-space-8);
-}
-
-.ran-booster-admin .ran-booster-status-dot {
-	flex: 0 0 auto;
-	inline-size: 9px;
-	block-size: 9px;
-	margin-block-start: 6px;
-	border-radius: 50%;
-	background: var(--ran-booster-text-subtle);
-}
-
-.ran-booster-admin .ran-booster-status-dot.is-neutral {
-	background: var(--ran-booster-status-neutral);
-}
-
-.ran-booster-admin .ran-booster-status-dot.is-pending {
-	background: var(--ran-booster-status-warning);
-}
-
-.ran-booster-admin .ran-booster-status-dot.is-ready {
-	background: var(--ran-booster-status-ok);
-}
-
-.ran-booster-admin .ran-booster-status-dot.is-attention {
-	background: var(--ran-booster-status-warning);
 }
 
 .ran-booster-admin

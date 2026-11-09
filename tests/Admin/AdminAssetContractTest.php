@@ -987,8 +987,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '$status_summary_renderer->render(', $view );
 		self::assertSame( 2, substr_count( $view, '$status_summary_renderer->render(' ) );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-summary {', $css );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-neutral {', $css );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-dot.is-pending {', $css );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-status-summary__heading {', $css );
+		self::assertStringNotContainsString( 'ran-booster-status-dot', $css );
 		self::assertStringContainsString( 'ran-booster-webhook-endpoint', $view );
 		self::assertStringContainsString( 'data-webhook-url-tools', $view );
 		self::assertStringNotContainsString( 'ran-booster-provider__footer', $view );

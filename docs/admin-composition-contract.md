@@ -327,6 +327,22 @@ The diagnostics table keeps one `tbody` per result group with the strong
 divider between groups, and each group restarts the row stripe. In stacked
 cells every child sits in the value column.
 
+The Managed Plugins and Managed Themes table keeps its native `wp-list-table
+widefat plugins` structure: two rows per package, the row-header checkbox
+spanning both, `tbody#the-list` and every script hook. It takes the frame
+only: `.ran-booster-data-table-wrap` (with `.ran-booster-package-table-wrap`)
+around the table, inset 16px inside the Card below the toolbar like the
+toolbar's own inset. It does not take the `.ran-booster-data-table` class, so
+its own stacking at 782px and below is unchanged. Headers are 13px/600 on the
+Card surface with the shared header border; the inline padding stays 16px so
+headers line up with the cells. The stripe alternates per package, summary and
+details rows together, and one divider separates packages. A package active in
+WordPress keeps its stripe and shows a 3px inline-start accent bar in the
+interactive brand stroke, on the checkbox cell from 783px and on the stacked
+rows below that; the former full-row tint and the hover tint are retired. The
+first-run "Add your first" empty state is not a collection yet and keeps the
+bare Card; the filtered-empty row stays in the frame.
+
 `tests/browser/page-frame.mjs` measures these values on a rendered page. It is
 a private runner helper like the other browser checks, and it is how the
 status column above stays honest.

@@ -789,7 +789,9 @@
 	gap: var(--ran-booster-space-8);
 }
 
-.ran-booster-admin .ran-booster-portability__password-actions .button {
+.ran-booster-admin
+	.ran-booster-portability__password-actions
+	.ran-wp-ui-button {
 	flex: 0 0 auto;
 	white-space: nowrap;
 }

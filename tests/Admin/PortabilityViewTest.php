@@ -83,7 +83,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'data-show-label="Show password"', $html );
 		self::assertStringContainsString( 'data-hide-label="Hide password"', $html );
 		self::assertStringContainsString( 'aria-label="Show password" aria-pressed="false" title="Show password"', $html );
-		self::assertStringContainsString( 'type="button" class="button" data-portability-password-generate', $html );
+		self::assertStringContainsString( 'type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" data-portability-password-generate', $html );
 		self::assertStringContainsString( 'data-portability-password-copy', $html );
 		self::assertStringContainsString( 'data-copy-label="Copy password"', $html );
 		self::assertStringContainsString( 'data-copied-label="Password copied"', $html );

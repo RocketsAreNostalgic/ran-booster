@@ -1411,6 +1411,7 @@ final class AdminAssetContractTest extends TestCase {
 			'views/packages/index.php',
 			'views/packages/recovery.php',
 			'views/packages/reinstall.php',
+			'views/portability.php',
 			'views/provider-public-lookup-profile.php',
 			'views/provider.php',
 			'views/provider/modals.php',

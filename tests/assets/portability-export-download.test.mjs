@@ -6,6 +6,10 @@ const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-portability.js', import.meta.url),
 	'utf8'
 );
+const announceSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-announce.js', import.meta.url),
+	'utf8'
+);
 
 function loadFunction(name, translations = {}) {
 	const signature = `\tfunction ${name}()`;
@@ -97,6 +101,7 @@ function fixture(fetch) {
 	const links = [];
 	const events = [];
 	const spoken = [];
+	const politeness = [];
 
 	globalThis.document = {
 		dispatchEvent(event) {
@@ -130,7 +135,14 @@ function fixture(fetch) {
 		}
 	};
 	globalThis.window = {
-		wp: { a11y: { speak: (text) => spoken.push(text) } },
+		wp: {
+			a11y: {
+				speak(text, level) {
+					spoken.push(text);
+					politeness.push(level);
+				},
+			},
+		},
 		CustomEvent: class {
 			constructor(type, options) {
 				this.detail = options.detail;
@@ -151,6 +163,8 @@ function fixture(fetch) {
 		},
 	};
 
+	Function('window', announceSource)(globalThis.window);
+
 	return {
 		events,
 		form,
@@ -158,6 +172,7 @@ function fixture(fetch) {
 		message,
 		messageText,
 		noticeUpdates,
+		politeness,
 		spoken,
 		submit,
 	};
@@ -280,14 +295,16 @@ test('a successful export downloads the Blueprint without leaving the Portabilit
 			state.events[0].detail.message
 		);
 		assert.deepEqual(state.spoken, [state.messageText.textContent]);
-		assert.equal(state.message.getAttribute('aria-live'), 'off');
+		assert.deepEqual(state.politeness, ['polite']);
+		assert.equal(state.message.getAttribute('role'), null);
+		assert.equal(state.message.getAttribute('aria-live'), null);
 		assert.equal(state.submit.disabled, false);
 	} finally {
 		cleanup();
 	}
 });
 
-test('export without speech uses polite status and restores alert for errors', async () => {
+test('export status and errors use one spoken path without live-region attributes', async () => {
 	let calls = 0;
 	const state = fixture(async () =>
 		++calls === 1
@@ -304,17 +321,23 @@ test('export without speech uses polite status and restores alert for errors', a
 					json: async () => ({ data: { message: 'Export failed.' } }),
 				}
 	);
-	delete window.wp;
 	try {
 		loadFunction('initPortabilityExportDownload')();
 		await state.form.listeners.get('submit')(submitEvent());
 		assert.equal(state.message.hidden, false);
-		assert.equal(state.message.getAttribute('role'), 'status');
-		assert.equal(state.message.getAttribute('aria-live'), 'polite');
+		assert.deepEqual(state.spoken, [
+			'Transporter Blueprint download started.',
+		]);
+		assert.deepEqual(state.politeness, ['polite']);
 		await state.form.listeners.get('submit')(submitEvent());
 		assert.equal(state.messageText.textContent, 'Export failed.');
-		assert.equal(state.message.getAttribute('role'), 'alert');
-		assert.equal(state.message.getAttribute('aria-live'), 'assertive');
+		assert.deepEqual(state.spoken, [
+			'Transporter Blueprint download started.',
+			'Export failed.',
+		]);
+		assert.deepEqual(state.politeness, ['polite', 'assertive']);
+		assert.equal(state.message.getAttribute('role'), null);
+		assert.equal(state.message.getAttribute('aria-live'), null);
 	} finally {
 		cleanup();
 	}
@@ -534,7 +557,7 @@ test('export Notice intent updates preserve the mounted content node and announc
 		assert.equal(state.noticeUpdates.at(-1).intent, 'warning');
 		assert.equal(state.noticeUpdates.at(-1).text, originalText.textContent);
 		assert.equal(state.noticeUpdates.at(-1).hidden, false);
-		assert.equal(state.message.getAttribute('aria-live'), 'off');
+		assert.equal(state.message.getAttribute('aria-live'), null);
 		assert.equal(state.spoken.length, 1);
 		await state.form.listeners.get('submit')(submitEvent());
 		assert.deepEqual(state.noticeUpdates.at(-1), {
@@ -544,9 +567,10 @@ test('export Notice intent updates preserve the mounted content node and announc
 			text: 'Export failed.',
 			hidden: false,
 		});
-		assert.equal(state.message.getAttribute('role'), 'alert');
-		assert.equal(state.message.getAttribute('aria-live'), 'assertive');
-		assert.equal(state.spoken.length, 1);
+		assert.equal(state.message.getAttribute('role'), null);
+		assert.equal(state.message.getAttribute('aria-live'), null);
+		assert.deepEqual(state.politeness, ['polite', 'assertive']);
+		assert.equal(state.spoken.at(-1), 'Export failed.');
 		assert.equal(state.links.length, 1);
 		assert.equal(state.submit.disabled, false);
 	} finally {

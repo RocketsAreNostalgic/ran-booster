@@ -72,7 +72,9 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'name="password" type="password" minlength="20" maxlength="256"', $html );
 		self::assertStringContainsString( 'name="password_confirmation" type="password" minlength="20" maxlength="256"', $html );
 		self::assertStringContainsString( 'data-portability-export-form', $html );
-		self::assertStringContainsString( 'data-portability-export-message role="alert" hidden', $html );
+		self::assertStringContainsString( 'data-portability-export-message hidden', $html );
+		self::assertStringContainsString( '<p data-portability-preview-message hidden></p>', $html );
+		self::assertStringContainsString( '<div data-portability-apply-results></div>', $html );
 		self::assertStringContainsString( 'data-portability-export-message-text', $html );
 		self::assertStringContainsString( 'data-portability-password', $html );
 		self::assertStringContainsString( 'data-portability-password-confirmation', $html );

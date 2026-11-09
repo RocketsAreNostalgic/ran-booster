@@ -517,3 +517,60 @@ test('picker teardown schedules Notice cleanup before the public root unmounts',
 	]);
 	assert.equal(connected, false);
 });
+
+test('picker status speaks politely only while open and only on change', () => {
+	const announceSource = fs.readFileSync(
+		new URL('../../assets/ran-booster-announce.js', import.meta.url),
+		'utf8'
+	);
+	const start = source.indexOf('\t\t// The status line is announced');
+	const end = source.indexOf('\t\tfunction resetPublicResults', start);
+	assert.ok(start >= 0 && end > start);
+	assert.doesNotMatch(source, /picker__status"[^>]*(role|aria-live)=/);
+	const spoken = [];
+	const classes = new Set();
+	const status = {
+		textContent: '',
+		classList: {
+			add: (name) => classes.add(name),
+			remove: (name) => classes.delete(name),
+		},
+	};
+	const window = {
+		wp: {
+			a11y: {
+				speak: (message, politeness) =>
+					spoken.push({ message, politeness }),
+			},
+		},
+	};
+	vm.runInNewContext(announceSource, { window });
+	const context = {
+		window,
+		status,
+		list: { replaceChildren() {} },
+		search: {},
+		setRepositoryPickerLoading() {},
+		__: (text) => text,
+		isOpen: false,
+	};
+	vm.runInNewContext(
+		'let loadedRepositories, loadedPublicLookupProfileId, partialResultMessage;' +
+			source.slice(start, end) +
+			'this.setStatus = setStatus; this.showError = showError;',
+		context
+	);
+	context.setStatus('Loading repositories…');
+	assert.deepEqual(spoken, []);
+	vm.runInNewContext('isOpen = true', context);
+	context.setStatus('Loading repositories…');
+	context.setStatus('3 repositories found.');
+	context.setStatus('3 repositories found.');
+	context.showError('');
+	assert.equal(status.textContent, 'Repositories could not be loaded.');
+	assert.ok(classes.has('ran-booster-repository-picker__status--error'));
+	assert.deepEqual(spoken, [
+		{ message: '3 repositories found.', politeness: 'polite' },
+		{ message: 'Repositories could not be loaded.', politeness: 'polite' },
+	]);
+});

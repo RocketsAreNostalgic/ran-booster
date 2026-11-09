@@ -8,6 +8,10 @@ const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-portability.js', import.meta.url),
 	'utf8'
 );
+const announceSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-announce.js', import.meta.url),
+	'utf8'
+);
 
 function sprintf(format, ...values) {
 	let next = 0;
@@ -371,6 +375,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		},
 	};
 	const spoken = [];
+	const announcements = [];
 	const applyProgress = progressButton(
 		'Apply selected changes',
 		'Applying…',
@@ -729,7 +734,14 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		}
 	};
 	globalThis.window = {
-		wp: { a11y: { speak: (text) => spoken.push(text) } },
+		wp: {
+			a11y: {
+				speak(text, politeness) {
+					spoken.push(text);
+					announcements.push({ text, politeness });
+				},
+			},
+		},
 		CustomEvent: class {
 			constructor(type, eventOptions) {
 				this.detail = eventOptions.detail;
@@ -740,6 +752,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		fetch: (url, requestOptions) => fetchResponse(requestOptions.body),
 		ranBoosterPortability: { ajaxUrl: '/admin-ajax.php' },
 	};
+	Function('window', announceSource)(globalThis.window);
 	if (options.htmx) {
 		globalThis.window.htmx = {
 			process(scope) {
@@ -763,6 +776,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		master: () => master,
 		noticeUpdates,
 		message,
+		announcements,
 		spoken,
 		password,
 		applyLabel: applyProgress.label,
@@ -943,7 +957,10 @@ for (const change of ['file', 'password']) {
 			assert.equal(state.review.innerHTML, '<table>empty</table>');
 			assert.equal(state.apply.disabled, true);
 			assert.equal(state.previewSubmit.getAttribute('aria-busy'), null);
-			assert.deepEqual(state.spoken, []);
+			// Only the progress line was spoken; the stale review stays silent.
+			assert.deepEqual(state.announcements, [
+				{ text: 'Reviewing blueprint…', politeness: 'polite' },
+			]);
 			const detail = {
 				requestConfig: { elt: state.credentialActions.import },
 				xhr: {
@@ -1016,8 +1033,11 @@ test('preview shows the shared busy state and restores it after success', async 
 			'Transporter Blueprint reviewed.'
 		);
 		assert.equal(state.message.hidden, false);
-		assert.equal(state.message['aria-live'], 'off');
-		assert.deepEqual(state.spoken, ['Transporter Blueprint reviewed.']);
+		assert.equal(state.message['aria-live'], undefined);
+		assert.deepEqual(state.announcements, [
+			{ text: 'Reviewing blueprint…', politeness: 'polite' },
+			{ text: 'Transporter Blueprint reviewed.', politeness: 'polite' },
+		]);
 	} finally {
 		cleanup();
 	}
@@ -1621,7 +1641,7 @@ test('apply sends only selected rows serially and preserves choices on review', 
 			state.results.items.at(-1).textContent,
 			'All selected Transporter Blueprint changes were applied.'
 		);
-		assert.equal(state.results['aria-live'], 'off');
+		assert.equal(state.results['aria-live'], undefined);
 		assert.equal(
 			state.spoken.filter((text) => text.includes('changes were applied'))
 				.length,
@@ -2282,9 +2302,13 @@ test('preview failure updates only the retained paragraph inside its Notice', as
 		assert.equal(updates.at(-1).bubbles, true);
 		assert.equal(state.message.className, '');
 		assert.equal(notice.className, 'notice inline notice-error');
-		assert.equal(state.message['aria-live'], 'polite');
+		assert.equal(state.message['aria-live'], undefined);
 		assert.equal(state.apply.disabled, true);
-		assert.deepEqual(state.spoken, []);
+		// A review failure keeps the polite announcement its live paragraph had.
+		assert.deepEqual(state.announcements, [
+			{ text: 'Reviewing blueprint…', politeness: 'polite' },
+			{ text: 'Safe review error.', politeness: 'polite' },
+		]);
 	} finally {
 		cleanup();
 	}
@@ -2307,14 +2331,18 @@ test('successful preview and draft clearing preserve the original announcement o
 		await tick();
 		assert.equal(notice['data-ran-booster-ui-notice-intent'], 'success');
 		assert.equal(notice.hidden, false);
-		assert.equal(state.message['aria-live'], 'off');
-		assert.deepEqual(state.spoken, ['Transporter Blueprint reviewed.']);
+		assert.equal(state.message['aria-live'], undefined);
+		const spoken = [
+			'Reviewing blueprint…',
+			'Transporter Blueprint reviewed.',
+		];
+		assert.deepEqual(state.spoken, spoken);
 		state.listeners.get('form:change')({ target: state.file });
 		assert.equal(notice.hidden, true);
 		assert.equal(state.message.hidden, true);
 		assert.equal(state.message.textContent, '');
 		assert.equal(state.apply.disabled, true);
-		assert.deepEqual(state.spoken, ['Transporter Blueprint reviewed.']);
+		assert.deepEqual(state.spoken, spoken);
 	} finally {
 		cleanup();
 	}
@@ -2365,11 +2393,25 @@ test('apply result keeps its message, credential and added recovery nodes across
 			item.getAttribute('data-ran-booster-ui-notice-intent'),
 			'success'
 		);
-		assert.equal(state.results['aria-live'], 'off');
-		assert.deepEqual(state.spoken, [
-			'Transporter Blueprint reviewed.',
-			'All selected Transporter Blueprint changes were applied.',
-		]);
+		assert.equal(state.results['aria-live'], undefined);
+		// Each row result and the completion are spoken politely, once, in
+		// the order the former polite results region announced them.
+		assert.deepEqual(
+			state.announcements.map((entry) => entry.text),
+			[
+				'Reviewing blueprint…',
+				'Transporter Blueprint reviewed.',
+				'Plugin “Package 0” (package-0/package.php) — Applying…',
+				'Plugin “Package 0” (package-0/package.php) — Applied. Transferred credential is available on this site.',
+				'Reviewing blueprint…',
+				'All selected Transporter Blueprint changes were applied.',
+			]
+		);
+		assert.ok(
+			state.announcements.every(
+				({ politeness }) => politeness === 'polite'
+			)
+		);
 		state.listeners.get('form:change')({ target: state.file });
 		assert.equal(state.results.items.length, 0);
 	} finally {

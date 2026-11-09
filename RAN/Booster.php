@@ -846,7 +846,7 @@ class Booster {
 		wp_enqueue_style( 'wp-components' );
 		$this->load_ui_assets( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) );
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
-			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'wp-i18n', 'ran-booster-cards' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
+			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'wp-i18n', 'ran-booster-cards', 'ran-booster-announce' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
 			wp_set_script_translations( 'ran-booster-settings', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 		}
 
@@ -868,6 +868,9 @@ class Booster {
 			return;
 		}
 
+		// The one announcement path for Booster status and error messages.
+		$announce_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-announce.js';
+		wp_register_script( 'ran-booster-announce', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-announce.js', array( 'wp-a11y' ), $this->asset_version( $announce_path ), true );
 		wp_register_script( 'ran-booster-js', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster.js', array_merge( $script_dependencies, array( 'wp-i18n' ) ), $script_version, true );
 
 		wp_set_script_translations( 'ran-booster-js', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
@@ -883,7 +886,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-enhanced-mutations',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-enhanced-mutations.js',
-			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n', 'wp-element', 'wp-components' ),
+			array( 'ran-booster-js', 'ran-booster-announce', 'wp-i18n', 'wp-element', 'wp-components' ),
 			$enhanced_mutation_script_version,
 			true
 		);
@@ -901,7 +904,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-repository-picker',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-repository-picker.js',
-			array( 'ran-booster-js', 'wp-i18n' ),
+			array( 'ran-booster-js', 'ran-booster-announce', 'wp-i18n' ),
 			$repository_picker_script_version,
 			true
 		);

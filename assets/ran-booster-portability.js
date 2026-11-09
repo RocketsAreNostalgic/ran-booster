@@ -132,7 +132,7 @@
 
 	function initPortabilityExportDownload() {
 		function announceSuccess(text) {
-			window.wp?.a11y?.speak?.(text, 'polite');
+			window.ranBoosterAnnounce(text);
 			if (typeof window.CustomEvent !== 'function') {
 				return;
 			}
@@ -172,14 +172,6 @@
 		function showMessage(text, type = 'error') {
 			message.setAttribute('data-ran-booster-ui-notice-intent', type);
 			message.className = 'notice notice-' + type + ' inline';
-			message.setAttribute('role', type === 'error' ? 'alert' : 'status');
-			message.setAttribute(
-				'aria-live',
-				type === 'error' ? 'assertive' : 'polite'
-			);
-			if (type !== 'error' && window.wp?.a11y?.speak) {
-				message.setAttribute('aria-live', 'off');
-			}
 			message.hidden = !text;
 			messageText.textContent = text || '';
 			message.dispatchEvent(
@@ -187,6 +179,9 @@
 					bubbles: true,
 				})
 			);
+			if (type === 'error') {
+				window.ranBoosterAnnounce(text, 'assertive');
+			}
 		}
 
 		form.addEventListener('submit', async function (event) {
@@ -353,7 +348,7 @@
 
 	function initPortabilityPreview() {
 		function announceSuccess(text) {
-			window.wp?.a11y?.speak?.(text, 'polite');
+			window.ranBoosterAnnounce(text);
 			if (typeof window.CustomEvent !== 'function') {
 				return;
 			}
@@ -501,10 +496,6 @@
 		function showMessage(text, type) {
 			const notice =
 				message.closest('[data-ran-booster-ui-notice]') || message;
-			message.setAttribute(
-				'aria-live',
-				type === 'success' && window.wp?.a11y?.speak ? 'off' : 'polite'
-			);
 			message.hidden = !text;
 			notice.hidden = !text;
 			notice.className = text ? 'notice inline notice-' + type : '';
@@ -516,6 +507,11 @@
 						bubbles: true,
 					})
 				);
+			}
+			// Success is announced with its completion event; progress and
+			// failures keep their established polite announcement.
+			if (type !== 'success') {
+				window.ranBoosterAnnounce(text);
 			}
 		}
 
@@ -814,6 +810,9 @@
 					'ran-booster'
 				),
 			};
+			const previousCredential = rendered
+				? credentialText.textContent
+				: '';
 			credentialText.textContent =
 				credentialMessages[result.credential_state] || '';
 			credentialText.hidden = !credentialText.textContent;
@@ -832,6 +831,16 @@
 			) {
 				content.appendChild(credentialText);
 			}
+			window.ranBoosterAnnounce(
+				[
+					text.textContent,
+					credentialText.textContent !== previousCredential
+						? credentialText.textContent
+						: '',
+				]
+					.filter(Boolean)
+					.join(' ')
+			);
 
 			item.dispatchEvent(
 				new window.CustomEvent('ran-booster:ui-notice-update', {
@@ -1155,7 +1164,6 @@
 			try {
 				let appliedEverySelection = true;
 				if (results) {
-					results.setAttribute('aria-live', 'polite');
 					clearApplyResults();
 				}
 
@@ -1260,10 +1268,6 @@
 					);
 					if (results) {
 						const item = document.createElement('p');
-						results.setAttribute(
-							'aria-live',
-							window.wp?.a11y?.speak ? 'off' : 'polite'
-						);
 						item.textContent = completion;
 						results.appendChild(item);
 					}

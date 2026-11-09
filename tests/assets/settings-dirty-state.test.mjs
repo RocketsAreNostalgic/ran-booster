@@ -7,6 +7,10 @@ const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-settings.js', import.meta.url),
 	'utf8'
 );
+const announceSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-announce.js', import.meta.url),
+	'utf8'
+);
 const preference = 'ran_booster[preferences][value]';
 const baseline = (value) => JSON.stringify([[preference, value]]);
 
@@ -62,6 +66,14 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 	};
 	const window = {
 		document,
+		announcements: [],
+		wp: {
+			a11y: {
+				speak(message, politeness) {
+					window.announcements.push({ message, politeness });
+				},
+			},
+		},
 		ranBoosterBadge: {
 			update(badge, label, intent) {
 				badge.textContent = label;
@@ -364,6 +376,20 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 			content,
 			mount: noticeMount,
 			attributes: new Map(),
+			closest(selector) {
+				if (
+					selector !== '[role="alert"], [role="status"], [aria-live]'
+				) {
+					return form;
+				}
+				return this.attributes.has('role') ||
+					this.attributes.has('aria-live')
+					? this
+					: null;
+			},
+			getAttribute(name) {
+				return this.attributes.get(name) ?? null;
+			},
 			get textContent() {
 				return [
 					primary.textContent,
@@ -520,6 +546,7 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 		queueMicrotask: (fn) => microtasks.push(fn),
 		setTimeout: (fn) => tasks.push(fn),
 	};
+	vm.runInNewContext(announceSource, { window });
 	vm.runInNewContext(source, context);
 	return {
 		document,
@@ -565,6 +592,25 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 		initializeAgain: () => vm.runInNewContext(source, context),
 	};
 }
+// Errors are spoken once through the shared helper; the host gains no live
+// role, and status changes after a failure stay silent.
+const assertSpokenError = (h, error) => {
+	assert.equal(error.attributes.has('role'), false);
+	assert.equal(error.attributes.has('aria-live'), false);
+	assert.deepEqual(
+		h.window.announcements
+			.filter(({ politeness }) => politeness === 'assertive')
+			.at(-1),
+		{
+			message: (error.primary?.textContent ?? error.textContent).trim(),
+			politeness: 'assertive',
+		}
+	);
+};
+const assertQuietStatus = (h, status) => {
+	assert.equal(status.attributes.has('aria-live'), false);
+	assert.equal(h.window.announcements.at(-1)?.politeness, 'assertive');
+};
 const pending = (form) =>
 	form.classList.values.has('ran-booster-settings--pending');
 function start(h, form) {
@@ -610,8 +656,8 @@ test('numeric network uncertainty uses one Notice and preserves stable children 
 	assert.equal(form.value, '2700');
 	assert.equal(form.token, 'original');
 	assert.equal(form.status.textContent, 'Unsaved numeric changes.');
-	assert.equal(form.status.attributes.get('aria-live'), 'off');
-	assert.equal(form.error.attributes.get('role'), 'alert');
+	assertQuietStatus(h, form.status);
+	assertSpokenError(h, form.error);
 	assert.match(form.error.primary.textContent, /unconfirmed/i);
 	assert.equal(form.error.content, content);
 	assert.equal(form.error.mount, mount);
@@ -635,6 +681,44 @@ test('numeric network uncertainty uses one Notice and preserves stable children 
 	h.doc('htmx:afterRequest', { detail: { xhr: retry } });
 	assert.equal(confirmed.status.textContent, 'No pending numeric changes.');
 	assert.equal(confirmed.status.attributes.has('aria-live'), false);
+});
+
+test('numeric status and failure each speak once through the shared helper', () => {
+	const h = harness();
+	const form = h.numeric;
+	h.window.announcements.length = 0;
+	form.value = '2700';
+	h.doc('input', { target: form.numeric });
+	assert.deepEqual(h.window.announcements, [
+		{ message: 'Unsaved numeric changes.', politeness: 'polite' },
+	]);
+	const xhr = start(h, form);
+	h.window.announcements.length = 0;
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.deepEqual(h.window.announcements, [
+		{
+			message: 'Save unconfirmed. Review and retry.',
+			politeness: 'assertive',
+		},
+	]);
+	assert.equal(form.status.attributes.has('aria-live'), false);
+	assert.equal(form.status.attributes.has('role'), false);
+	assert.equal(form.error.attributes.has('role'), false);
+	assert.equal(form.error.attributes.get('tabindex'), '-1');
+});
+
+test('a server-rendered alert host announces itself without a second speak', () => {
+	const h = harness();
+	const form = h.numeric;
+	form.error.attributes.set('role', 'alert');
+	form.value = '2700';
+	h.doc('input', { target: form.numeric });
+	const xhr = start(h, form);
+	h.window.announcements.length = 0;
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.match(form.error.primary.textContent, /unconfirmed/i);
+	assert.equal(form.error.attributes.get('role'), 'alert');
+	assert.deepEqual(h.window.announcements, []);
 });
 
 test('configuration-only Notice remains visible without blocking autosave', () => {
@@ -692,11 +776,11 @@ test('malformed Notice host, content or primary vetoes every scoped response', (
 			);
 			h.doc('htmx:afterRequest', { detail: { xhr } });
 			assert.equal(form.token, 'original');
-			assert.equal(form.error.attributes.get('role'), 'alert');
+			assertSpokenError(h, form.error);
 			assert.match(form.error.primary.textContent, /unconfirmed/i);
 			if (scope === 'numeric') {
 				assert.equal(form.value, '2700');
-				assert.equal(form.status.attributes.get('aria-live'), 'off');
+				assertQuietStatus(h, form.status);
 			} else {
 				assert.equal(form.toggle.checked, true);
 				assert.equal(form.status.textContent, 'Disabled');
@@ -714,7 +798,7 @@ test('legacy cached error without Notice children can report uncertainty', () =>
 	h.doc('htmx:afterRequest', { detail: { xhr } });
 	assert.equal(legacy.status.textContent, 'Disabled');
 	assert.match(legacy.error.textContent, /unconfirmed/i);
-	assert.equal(legacy.error.attributes.get('role'), 'alert');
+	assertSpokenError(h, legacy.error);
 	assert.equal(legacy.token, 'original');
 });
 
@@ -747,7 +831,7 @@ test('numeric confirmation conflict changes primary without replacing field or m
 	assert.equal(secondRequestField.textContent, '');
 	assert.equal(detail.hidden, true);
 	assert.equal(configurationField.textContent, 'Configuration diagnostic.');
-	assert.equal(next.status.attributes.get('aria-live'), 'off');
+	assertQuietStatus(h, next.status);
 });
 
 test('Save setting is hidden only when enhanced saving is available', () => {
@@ -851,7 +935,7 @@ test('lost explicit retry replaces a previous rejection with an unconfirmed aler
 
 	assert.match(next.error.textContent, /save unconfirmed/i);
 	assert.equal(next.error.hidden, false);
-	assert.equal(next.error.attributes.get('role'), 'alert');
+	assertSpokenError(h, next.error);
 	assert.equal(next.status.textContent, 'Disabled');
 	assert.equal(next.toggle.checked, true);
 	assert.equal(next.token, 'current');
@@ -898,7 +982,7 @@ test('response lacking both a success marker and error stays unconfirmed with or
 	assert.equal(next.token, 'original');
 	assert.equal(next.retry.hidden, false);
 	assert.equal(next.error.hidden, false);
-	assert.equal(next.error.attributes.get('role'), 'alert');
+	assertSpokenError(h, next.error);
 	assert.match(next.error.textContent, /unconfirmed/i);
 });
 
@@ -923,7 +1007,7 @@ test('malformed toggle responses retain badge, original token and retryable aler
 		assert.equal(h.toggle.toggle.checked, true);
 		assert.equal(h.toggle.token, 'original');
 		assert.equal(h.toggle.error.hidden, false);
-		assert.equal(h.toggle.error.attributes.get('role'), 'alert');
+		assertSpokenError(h, h.toggle.error);
 		assert.equal(h.toggle.retry.hidden, false);
 		h.toggle.requestSubmit();
 		assert.equal(h.toggle.submissions.at(-1).token, 'original');
@@ -947,7 +1031,7 @@ test('stopped queue retains waiting toggle intent and numeric draft', () => {
 	h.flush();
 	assert.equal(other.toggle.checked, true);
 	assert.equal(other.status.textContent, 'Disabled');
-	assert.equal(other.error.attributes.get('role'), 'alert');
+	assertSpokenError(h, other.error);
 	assert.equal(other.retry.hidden, false);
 	assert.equal(other.submissions.length, 0);
 	assert.equal(h.numeric.value, '2700');
@@ -1016,7 +1100,7 @@ test('unknown outcome retains original token and requires explicit retry', () =>
 	assert.equal(t.retry.hidden, false);
 	assert.equal(t.status.textContent, 'Disabled');
 	assert.match(t.error.textContent, /unconfirmed/i);
-	assert.equal(t.error.attributes.get('role'), 'alert');
+	assertSpokenError(h, t.error);
 	t.toggle.checked = false;
 	h.doc('change', { target: t.toggle });
 	assert.equal(t.submissions.length, 1);
@@ -1272,7 +1356,7 @@ test('a failed or unconfirmed response stops the queue and unlocks numeric contr
 		assert.equal(h.numeric.numeric.disabled, false);
 		assert.equal(h.numeric.submissions.length, 0);
 		assert.match(h.numeric.error.primary.textContent, /unconfirmed/i);
-		assert.equal(h.numeric.status.attributes.get('aria-live'), 'off');
+		assertQuietStatus(h, h.numeric.status);
 		assert.equal(pending(h.numeric), true);
 	}
 });
@@ -1327,7 +1411,7 @@ test('saved marker without a valid success header remains unconfirmed', () => {
 		assert.equal(next.retry.hidden, false);
 		assert.equal(next.status.textContent, 'Disabled');
 		assert.match(next.error.textContent, /unconfirmed/i);
-		assert.equal(next.error.attributes.get('role'), 'alert');
+		assertSpokenError(h, next.error);
 	}
 });
 
@@ -1375,7 +1459,7 @@ test('numeric confirmation conflict keeps submitted values and exposes the newer
 	assert.equal(next.token, 'newer');
 	assert.equal(pending(next), true);
 	assert.equal(next.status.textContent, 'Unsaved numeric changes.');
-	assert.equal(next.status.attributes.get('aria-live'), 'off');
+	assertQuietStatus(h, next.status);
 	assert.match(next.error.primary.textContent, /2600/);
 	assert.equal(next.submissions.length, 0);
 });
@@ -1419,7 +1503,7 @@ test('unconfirmed numeric response preserves submitted draft and original token'
 	assert.equal(next.token, 'original');
 	assert.equal(pending(next), true);
 	assert.match(next.error.primary.textContent, /unconfirmed/i);
-	assert.equal(next.status.attributes.get('aria-live'), 'off');
+	assertQuietStatus(h, next.status);
 });
 
 test('out-of-band and duplicate swaps do not process the General response', () => {
@@ -1466,7 +1550,7 @@ test('malformed response body or missing token vetoes swap and preserves numeric
 		assert.equal(h.numeric.token, 'original');
 		assert.equal(pending(h.numeric), true);
 		assert.match(h.numeric.error.primary.textContent, /unconfirmed/i);
-		assert.equal(h.numeric.status.attributes.get('aria-live'), 'off');
+		assertQuietStatus(h, h.numeric.status);
 	}
 });
 

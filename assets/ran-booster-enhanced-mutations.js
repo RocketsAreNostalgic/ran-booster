@@ -398,17 +398,6 @@
 			);
 		}
 
-		function announce(message, type) {
-			if (!message || !window.wp?.a11y?.speak) {
-				return;
-			}
-
-			window.wp.a11y.speak(
-				message,
-				type === 'error' ? 'assertive' : 'polite'
-			);
-		}
-
 		function setBusy(form, xhr) {
 			if (form.getAttribute('aria-busy') === 'true') {
 				return;
@@ -617,23 +606,13 @@
 				}
 				region.removeAttribute?.('role');
 				region.focus?.({ preventScroll: true });
-				announce(message, 'error');
+				window.ranBoosterAnnounce(message, 'assertive');
 				return;
 			}
 			if (!region.hasAttribute('tabindex')) {
 				region.setAttribute('tabindex', '-1');
 			}
-			const live = region.closest?.(
-				'[role="alert"], [role="status"], [aria-live]'
-			);
-			if (!live || live.getAttribute('aria-live') === 'off') {
-				if (window.wp?.a11y?.speak) {
-					announce(message, 'error');
-				} else {
-					region.setAttribute('role', 'alert');
-					region.setAttribute('aria-live', 'assertive');
-				}
-			}
+			window.ranBoosterAnnounce(message, 'assertive', region);
 			const focus = () => {
 				if (
 					region.isConnected !== false &&
@@ -1089,7 +1068,7 @@
 						save.resultRegion
 				) {
 					save.consumed = true;
-					announce(save.resultMessage, 'success');
+					window.ranBoosterAnnounce(save.resultMessage);
 				}
 				if (
 					save?.packageType &&
@@ -1106,7 +1085,7 @@
 					) {
 						save.saveNotice.remove();
 					} else {
-						announce(message, 'success');
+						window.ranBoosterAnnounce(message);
 					}
 				}
 			}
@@ -1185,12 +1164,7 @@
 							: region;
 					result.append(feedback);
 				}
-				const live = existing?.closest(
-					'[role="status"], [role="alert"], [aria-live]'
-				);
-				if (!live || live.getAttribute('aria-live') === 'off') {
-					announce(message, 'success');
-				}
+				window.ranBoosterAnnounce(message, 'polite', existing);
 			}
 		);
 

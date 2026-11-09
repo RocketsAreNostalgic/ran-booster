@@ -65,8 +65,8 @@
 			field.textContent = '';
 		}
 		error.hidden = false;
-		error.setAttribute('role', 'alert');
 		error.setAttribute('tabindex', '-1');
+		window.ranBoosterAnnounce(message, 'assertive', error);
 	};
 	const update = (state) => {
 		const dirty = pending(state);
@@ -98,12 +98,9 @@
 		}
 		if (!state.toggle && status && status.textContent !== message) {
 			status.textContent = message;
-		}
-		if (!state.toggle && status) {
-			if (state.failed || state.unknown) {
-				status.setAttribute('aria-live', 'off');
-			} else {
-				status.removeAttribute('aria-live');
+			// A failed or unconfirmed save already announced its error.
+			if (!state.failed && !state.unknown) {
+				window.ranBoosterAnnounce(message);
 			}
 		}
 		state.form.classList.toggle('ran-booster-settings--pending', dirty);

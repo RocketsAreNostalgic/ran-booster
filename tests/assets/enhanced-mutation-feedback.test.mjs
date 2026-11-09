@@ -6,6 +6,10 @@ const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-enhanced-mutations.js', import.meta.url),
 	'utf8'
 );
+const announceSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-announce.js', import.meta.url),
+	'utf8'
+);
 const legacySource = fs.readFileSync(
 	new URL('../../assets/ran-booster.js', import.meta.url),
 	'utf8'
@@ -299,6 +303,7 @@ function fixture() {
 			},
 		},
 	};
+	Function('window', announceSource)(window);
 
 	return {
 		announcements,
@@ -1741,7 +1746,8 @@ test('the feedback runtime has no legacy toast presenter', () => {
 	);
 	assert.doesNotMatch(source, /setTimeout|\.animate\?\./);
 	assert.doesNotMatch(source, /#wpbody-content \.notice\.notice-success/);
-	assert.match(source, /wp\.a11y\.speak/);
+	assert.match(source, /window\.ranBoosterAnnounce\(/);
+	assert.doesNotMatch(source, /wp\.a11y|setAttribute\('(role|aria-live)'/);
 	assert.doesNotMatch(packageSource, /packageSourceScrollY/);
 	assert.match(
 		buttonCss,
@@ -3441,9 +3447,8 @@ test('relocated recovery nodes retain identity and are hidden on a later transpo
 	assert.deepEqual(disabledProcessed, details);
 });
 
-test('a failure uses a native alert when the speech helper is unavailable', () => {
+test('a failure is spoken once through the shared helper without a live role', () => {
 	const state = fixture();
-	state.window.wp.a11y = undefined;
 	loadFunction('initEnhancedMutationFeedback', {
 		document: state.document,
 		window: state.window,
@@ -3452,8 +3457,31 @@ test('a failure uses a native alert when the speech helper is unavailable', () =
 		detail: { elt: state.form, xhr: {} },
 	});
 	assert.equal(state.error.hidden, false);
-	assert.equal(state.errorAttributes.get('role'), 'alert');
+	assert.equal(state.errorAttributes.has('role'), false);
+	assert.equal(state.errorAttributes.has('aria-live'), false);
+	assert.equal(state.errorAttributes.get('tabindex'), '-1');
 	assert.match(state.error.textContent, /could not complete/);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, [
+		{
+			message: 'We could not complete that request. Please try again.',
+			type: 'assertive',
+		},
+	]);
+});
+
+test('a rendered alert host announces itself and is not spoken twice', () => {
+	const state = fixture();
+	state.errorAttributes.set('role', 'alert');
+	state.error.closest = () => state.error;
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:sendError')({
+		detail: { elt: state.form, xhr: {} },
+	});
+	assert.equal(state.errorAttributes.get('role'), 'alert');
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
 	assert.deepEqual(state.announcements, []);
 });
@@ -3479,9 +3507,8 @@ test('an aria-live off ancestor uses one manual failure announcement', () => {
 	]);
 });
 
-test('a muted target uses an assertive native live region when the helper is unavailable', () => {
+test('a muted target is spoken once and keeps its muted live attribute', () => {
 	const state = fixture();
-	state.window.wp.a11y = undefined;
 	state.errorAttributes.set('aria-live', 'off');
 	state.error.closest = () => state.error;
 	loadFunction('initEnhancedMutationFeedback', {
@@ -3491,10 +3518,15 @@ test('a muted target uses an assertive native live region when the helper is una
 	state.listeners.get('htmx:sendError')({
 		detail: { elt: state.form, xhr: {} },
 	});
-	assert.equal(state.errorAttributes.get('role'), 'alert');
-	assert.equal(state.errorAttributes.get('aria-live'), 'assertive');
+	assert.equal(state.errorAttributes.has('role'), false);
+	assert.equal(state.errorAttributes.get('aria-live'), 'off');
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
-	assert.deepEqual(state.announcements, []);
+	assert.deepEqual(state.announcements, [
+		{
+			message: 'We could not complete that request. Please try again.',
+			type: 'assertive',
+		},
+	]);
 });
 
 test('a whole-admin failure leaves unrelated WordPress notices and their actions untouched', () => {

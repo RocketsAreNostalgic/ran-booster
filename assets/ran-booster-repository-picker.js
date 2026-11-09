@@ -926,7 +926,7 @@
 				'</form>' +
 				'<div class="ran-booster-repository-picker__filter">' +
 				'</div>' +
-				'<p class="ran-booster-repository-picker__status" role="status" aria-live="polite"></p>' +
+				'<p class="ran-booster-repository-picker__status"></p>' +
 				'<div class="ran-booster-repository-picker__list"></div>' +
 				'</div>';
 			const modeOptions = overlay.querySelectorAll(
@@ -1559,8 +1559,18 @@
 			renderPicker();
 		}
 
-		function setStatus(message) {
+		// The status line is announced only while the dialog is open and only
+		// when its text changes, as its former polite live region was.
+		function writeStatus(message) {
+			const changed = status.textContent !== message;
 			status.textContent = message;
+			if (changed && isOpen) {
+				window.ranBoosterAnnounce(message);
+			}
+		}
+
+		function setStatus(message) {
+			writeStatus(message);
 			status.classList.remove(
 				'ran-booster-repository-picker__status--error'
 			);
@@ -1573,9 +1583,10 @@
 			partialResultMessage = '';
 			search.disabled = true;
 			list.replaceChildren();
-			status.textContent =
+			writeStatus(
 				message ||
-				__('Repositories could not be loaded.', 'ran-booster');
+					__('Repositories could not be loaded.', 'ran-booster')
+			);
 			status.classList.add(
 				'ran-booster-repository-picker__status--error'
 			);

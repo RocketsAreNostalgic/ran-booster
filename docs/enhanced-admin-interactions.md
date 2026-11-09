@@ -100,6 +100,13 @@ must still work without JavaScript. Busy state must prevent duplicate submits,
 errors must be announced, focus must move to meaningful refreshed content, and
 the normal POST/redirect/GET path must remain truthful.
 
+Scripts announce status and error messages only through
+`window.ranBoosterAnnounce( message, politeness )` (`ran-booster-announce`),
+which calls WordPress core `wp.a11y.speak`: `assertive` for errors, `polite`
+otherwise. Scripts never add `role="alert"`, `role="status"` or `aria-live` to
+the hosts they update. Pass the host as the third argument when it may sit
+inside server-rendered live markup, so that markup is not announced twice.
+
 The enhanced feedback listeners belong to the document lifetime and initialize
 once, even if history navigation evaluates their script again. React subtrees
 have their own mount and unmount lifecycles independent of these listeners.

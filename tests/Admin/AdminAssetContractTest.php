@@ -331,6 +331,21 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertSame( 0, preg_match( '/density="prominent"\]\s+\.ran-booster-ui-disclosure__header/', $css ) );
 	}
 
+	/**
+	 * The Card's trailing-block reset zeroes the last child's bottom margin at
+	 * any depth, so space below a nested disclosure must come from container
+	 * padding (#765).
+	 */
+	public function test_nested_disclosure_gaps_survive_the_card_trailing_block_reset(): void {
+		$activity   = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+		$responsive = $this->asset( 'ran-booster/80-responsive.css' );
+
+		// The Activity row, not its details host, owns the inset below the disclosure.
+		self::assertMatchesRegularExpression( '/\.ran-booster-admin \.ran-booster-attempt-row \{[^}]*\n\tpadding-block: 0 var\(--ran-booster-space-12\);/', $activity );
+		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-attempt-row__details \{[^}]*margin-block/', $activity );
+		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-attempt-row \{\s*padding: 0;/', $responsive );
+	}
+
 	public function test_framed_fact_grids_share_one_summary_grid_profile(): void {
 		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		foreach ( array(

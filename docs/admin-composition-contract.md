@@ -261,6 +261,13 @@ Accepted answers (D1, D2 and D4 applied; D3 left to the Shell owner):
 Card inline inset is 24px and the block-start inset is 24px. Block-end is 32px: a frame reads balanced when its bottom is slightly heavier than its sides, and the heading's line box already adds optical space above it. This diverges deliberately from Jetpack's 16px, which relies on a divider under its Card headers; if Booster adds that divider later, revisit the block insets together. Two measured exceptions remain: Overview cards in a row stretch to the tallest, and Extensions keeps the WordPress plugin-card footer band, whose bottom padding stays at the native 20px. Extensions heading inset and the grid gap follow the Card tokens. At 782px and 375px only the inline inset shrinks; the top and bottom insets stay the same. Heading size and
 weight (Jetpack 20px/500) belong to the separate typescale work in #726.
 
+The trailing-block reset matches the last visible child at any depth, not only
+blocks on the Card's bottom edge, so a margin on the last child of a nested
+group always computes to 0. Space after such a block must come from its
+container's padding or from the next sibling's top margin. Each Activity row
+keeps 12px (`--ran-booster-space-12`) of bottom padding below its details
+disclosure (#765).
+
 Rules that follow from the table:
 
 1. A container's own inset owns the space inside it. A child never adds a

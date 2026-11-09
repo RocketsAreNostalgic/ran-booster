@@ -435,7 +435,7 @@
 	}
 
 	.ran-booster-admin .ran-booster-attempt-row {
-		padding: 0;
+		padding-inline: 0;
 	}
 
 	.ran-booster-admin .ran-booster-attempt-row__summary {

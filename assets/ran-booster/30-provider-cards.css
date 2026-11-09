@@ -1033,7 +1033,7 @@
 	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 	.ran-booster-provider-section__body
 	> .ran-booster-public-lookup-profile__panel {
-	border: 1px solid var(--ran-booster-divider);
+	border: 1px solid var(--wpds-color-stroke-surface-neutral);
 	border-radius: var(--ran-booster-radius-inset);
 }
 

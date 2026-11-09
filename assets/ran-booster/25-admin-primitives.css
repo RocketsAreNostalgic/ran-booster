@@ -606,6 +606,39 @@
 	border-radius: var(--ran-booster-radius-inset);
 }
 
+/*
+ * Framed surfaces draw the same stroke as the public Card. The doubled wrapper
+ * class lifts this above each component's own legacy border colour.
+ */
+
+.ran-booster-admin.ran-booster-admin
+	:is(
+		.ran-booster-settings-section,
+		.ran-booster-settings-actions.ran-booster-package-settings__save-actions,
+		.ran-booster-status-summary,
+		.ran-booster-webhook-step,
+		.ran-booster-readiness-panel,
+		.ran-booster-provider-empty-state,
+		.ran-booster-provider-empty-actions,
+		.ran-booster-provider-next-step,
+		.ran-booster-provider-assistance-note,
+		.ran-booster-provider-task-panel,
+		.ran-booster-repository-detail__receiver,
+		.ran-booster-repository-list,
+		.ran-booster-data-table-wrap,
+		.ran-booster-activity__details,
+		.ran-booster-troubleshooting__form,
+		.ran-booster-portability__credential-guidance,
+		.ran-booster-portability__table-scroll,
+		.ran-booster-repository-picker__list,
+		.ran-booster-source-transition,
+		.ran-booster-release-code,
+		.ran-booster-public-lookup-profile__panel,
+		.ran-booster-package-danger-zone__actions > form
+	) {
+	border-color: var(--wpds-color-stroke-surface-neutral);
+}
+
 /* surface-radius:end */
 
 /*
@@ -620,9 +653,9 @@
 	gap: 1px;
 	margin: 0;
 	overflow: hidden;
-	border: 1px solid var(--ran-booster-divider);
+	border: 1px solid var(--wpds-color-stroke-surface-neutral);
 	border-radius: var(--ran-booster-radius-inset);
-	background: var(--ran-booster-divider);
+	background: var(--wpds-color-stroke-surface-neutral);
 }
 
 .ran-booster-admin .ran-booster-summary-grid--standalone {

@@ -293,7 +293,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 				<p><label for="ran-booster-history-days"><?php esc_html_e( 'Retention days', 'ran-booster' ); ?></label><br><input id="ran-booster-history-days" type="number" min="1" max="365" step="1" name="ran_booster[preferences][history_days]" value="<?php echo esc_attr( $value( 'history_days' ) ); ?>"<?php disabled( $field( 'history_days' )['locked'] ); ?><?php echo null === $field_error( 'history_days' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-history-days-error"'; ?>></p>
 					</div>
 				</div>
-				<p class="description"><?php esc_html_e( 'Lowering these values does not delete protected running or recovery records immediately. Retention is irreversible once records are pruned.', 'ran-booster' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Lowering these values does not immediately delete protected records. Pruned records cannot be recovered.', 'ran-booster' ); ?></p>
 				<?php
 				$render_configuration(
 					array(
@@ -306,8 +306,8 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 			<fieldset class="ran-booster-settings__group">
 				<legend><?php esc_html_e( 'Download limits', 'ran-booster' ); ?></legend>
 					<p><label for="ran-booster-max-download-mib"><?php esc_html_e( 'Maximum repository ZIP download (MiB)', 'ran-booster' ); ?></label><br><input id="ran-booster-max-download-mib" type="number" min="1" max="511.99999904632568359375" step="any" inputmode="decimal" name="ran_booster[preferences][max_download_mib]" value="<?php echo esc_attr( $download_mib_value ); ?>"<?php disabled( $field( 'max_download_bytes' )['locked'] ); ?><?php echo null === $field_error( 'max_download_bytes' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-max-download-mib-error"'; ?>></p>
-						<p class="description"><?php esc_html_e( 'Limits the compressed repository ZIP, not installed size or History retention. One MiB is 1,048,576 bytes; fractional values round to the nearest byte.', 'ran-booster' ); ?></p>
-					<p class="description"><?php /* translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit). Host and updater safeguards may be stricter.', 'ran-booster' ), $branch_ceiling_mib, number_format_i18n( $branch_ceiling ) ) ); ?></p>
+						<p class="description"><?php esc_html_e( 'Limits the compressed repository ZIP.', 'ran-booster' ); ?></p>
+					<p class="description"><?php /* translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit).', 'ran-booster' ), $branch_ceiling_mib, number_format_i18n( $branch_ceiling ) ) ); ?></p>
 				<?php $render_configuration( array( 'max_download_bytes' => 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ) ); ?>
 			</fieldset><div class="ran-booster-settings__save-actions"><button id="ran-booster-save-numeric-bottom" type="submit" class="button button-primary"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button><span class="screen-reader-text" data-ran-booster-unsaved><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span></div>
 </form></div>

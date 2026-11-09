@@ -114,7 +114,7 @@
 	--ran-booster-line-height-relaxed: 1.6;
 	--ran-booster-card-inset-block-start: var(--ran-booster-space-24);
 	--ran-booster-card-inset-block-end: calc(
-		var(--ran-booster-space-24) + var(--ran-booster-space-4)
+		var(--ran-booster-space-24) + var(--ran-booster-space-8)
 	);
 	--ran-booster-card-heading-gap: var(--ran-booster-space-8);
 	--ran-booster-card-gap: var(--ran-booster-space-24);

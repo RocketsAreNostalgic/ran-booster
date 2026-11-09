@@ -568,11 +568,7 @@
  * full-border rule that is not listed here or explicitly allowed.
  */
 
-.ran-booster-admin
-	:is(
-		.ran-booster-settings-section,
-		.ran-booster-settings-actions.ran-booster-package-settings__save-actions
-	) {
+.ran-booster-admin :is(.ran-booster-settings-section) {
 	border-radius: var(--ran-booster-radius-card);
 }
 
@@ -614,7 +610,6 @@
 .ran-booster-admin.ran-booster-admin
 	:is(
 		.ran-booster-settings-section,
-		.ran-booster-settings-actions.ran-booster-package-settings__save-actions,
 		.ran-booster-status-summary,
 		.ran-booster-webhook-step,
 		.ran-booster-readiness-panel,

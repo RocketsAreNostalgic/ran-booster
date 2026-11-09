@@ -508,11 +508,16 @@
 	overflow-wrap: anywhere;
 }
 
+.ran-booster-admin .ran-booster-package-settings__save-card {
+	margin-block: 0 var(--ran-booster-card-gap);
+}
+
 .ran-booster-admin .ran-booster-package-settings__save-actions {
-	margin-block: 0 var(--ran-booster-space-18);
-	padding: var(--ran-booster-space-18) var(--ran-booster-space-20);
-	border: 1px solid var(--ran-booster-border);
-	background: var(--ran-booster-surface);
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	justify-content: flex-end;
+	gap: var(--ran-booster-space-8);
 }
 
 .ran-booster-admin
@@ -822,7 +827,11 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.ran-booster-admin .ran-booster-settings-actions {
+	.ran-booster-admin
+		:is(
+			.ran-booster-settings-actions,
+			.ran-booster-package-settings__save-actions
+		) {
 		align-items: stretch;
 		flex-direction: column;
 	}
@@ -846,7 +855,12 @@
 		inline-size: auto;
 	}
 
-	.ran-booster-admin .ran-booster-settings-actions .button {
+	.ran-booster-admin
+		:is(
+			.ran-booster-settings-actions,
+			.ran-booster-package-settings__save-actions
+		)
+		.button {
 		inline-size: 100%;
 		text-align: center;
 	}

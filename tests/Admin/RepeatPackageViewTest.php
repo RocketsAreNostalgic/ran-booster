@@ -543,7 +543,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertIsInt( $notice_position );
 			$operation_end = strpos( $html, '</section>', $operation_position );
 			self::assertIsInt( $operation_end );
-			$save_actions_position = strpos( $html, 'class="ran-booster-settings-actions ran-booster-package-settings__save-actions"', $operation_end );
+			$save_actions_position = strpos( $html, 'class="ran-wp-ui-card__content ran-booster-package-settings__save-actions"', $operation_end );
 			self::assertIsInt( $save_actions_position );
 			self::assertLessThan( $automation_position, $advanced_position );
 			self::assertTrue( $advanced_position < $readiness_position );

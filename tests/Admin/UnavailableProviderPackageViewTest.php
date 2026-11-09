@@ -125,7 +125,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'href="https://github.com/owner/exact-repository"', $html );
 		self::assertStringContainsString( 'id="ran-booster-package-edit-form"', $html );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
-		self::assertStringContainsString( 'ran-booster-settings-actions', $html );
+		self::assertStringContainsString( 'ran-booster-package-settings__save-actions', $html );
 		self::assertStringContainsString( 'ran-booster-package-danger-zone', $html );
 		self::assertStringContainsString( 'value="unlink-plugin"', $html );
 		self::assertStringContainsString( 'value="unlink-delete-plugin"', $html );

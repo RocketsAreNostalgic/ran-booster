@@ -975,7 +975,7 @@
 	border-block-start: 1px solid var(--ran-booster-divider);
 }
 
-/* The first group in a Settings Card sits the heading gap below its heading. */
+/* The first group in a Settings Card sits the heading gap below its heading, with no divider between the heading and the first group. */
 .ran-booster-admin
 	.ran-booster-card__content
 	> [data-ran-booster-general-scope]:nth-child(
@@ -983,6 +983,8 @@
 	)
 	.ran-booster-settings__group:first-of-type {
 	margin-block-start: var(--ran-booster-card-heading-gap);
+	padding-block-start: 0;
+	border-block-start: 0;
 }
 
 .ran-booster-admin .ran-booster-settings__group legend {

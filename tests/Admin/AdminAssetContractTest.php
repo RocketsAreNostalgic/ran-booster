@@ -502,6 +502,7 @@ final class AdminAssetContractTest extends TestCase {
 			array( 'ran-booster-onboarding.css', '\n\n\.ran-booster-admin \.ran-booster-portability__flow \{', 'margin-block-start: var(--ran-booster-card-gap);' ),
 			array( 'ran-booster/25-admin-primitives.css', '\n\t\+ noscript\n\t> p:first-child \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster/65-package-settings.css', '\n\t\.ran-booster-settings__group:first-of-type \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
+			array( 'ran-booster/65-package-settings.css', '\n\t\.ran-booster-settings__group:first-of-type \{', 'border-block-start: 0;' ),
 			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-card \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-card\n\t> \.ran-booster-page-shell__header \{', 'padding-block-start: 0;' ),
 			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-debug-capture__panel \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),

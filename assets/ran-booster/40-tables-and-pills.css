@@ -197,7 +197,7 @@
 
 .ran-booster-admin
 	.ran-booster-repository-record__details-layout
-	:is(.ran-booster-pill, .ran-booster-badge) {
+	.ran-booster-badge {
 	inline-size: fit-content;
 	white-space: normal;
 }

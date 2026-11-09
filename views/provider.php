@@ -140,9 +140,9 @@ $render_credential_cell         = static function ( array $profile, string $colu
 			<?php foreach ( $usage['packages'] as $package_usage ) { ?>
 				<li class="ran-booster-delete-credential-package-list__item">
 					<?php if ( null !== $package_usage['edit_url'] ) { ?>
-						<a class="ran-booster-pill ran-booster-pill--label ran-booster-pill--info ran-booster-delete-credential-package-pill" href="<?php echo esc_url( $package_usage['edit_url'] ); ?>"><?php echo esc_html( $package_type_labels[ $package_usage['type'] ] . ': ' . $package_usage['identifier'] ); ?></a>
+						<a class="ran-booster-delete-credential-package-link" href="<?php echo esc_url( $package_usage['edit_url'] ); ?>"><?php echo esc_html( $package_type_labels[ $package_usage['type'] ] . ': ' . $package_usage['identifier'] ); ?></a>
 					<?php } else { ?>
-						<span class="ran-booster-pill ran-booster-pill--label ran-booster-delete-credential-package-pill ran-booster-delete-credential-package-pill--unavailable"><?php echo esc_html( $package_type_labels[ $package_usage['type'] ] . ': ' . $package_usage['identifier'] ); ?> <?php esc_html_e( '(not installed)', 'ran-booster' ); ?></span>
+						<span class="ran-booster-delete-credential-package-link ran-booster-delete-credential-package-link--unavailable"><?php echo esc_html( $package_type_labels[ $package_usage['type'] ] . ': ' . $package_usage['identifier'] ); ?> <?php esc_html_e( '(not installed)', 'ran-booster' ); ?></span>
 					<?php } ?>
 				</li>
 			<?php } ?>

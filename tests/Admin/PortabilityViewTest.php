@@ -323,10 +323,10 @@ final class PortabilityViewTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'ran-booster-pill ran-booster-pill--ok', $html );
-		self::assertStringContainsString( 'ran-booster-pill ran-booster-pill--info', $html );
-		self::assertStringContainsString( 'ran-booster-pill ran-booster-pill--warning', $html );
-		self::assertStringContainsString( 'ran-booster-pill ran-booster-pill--error', $html );
+		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--ok', $html );
+		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--info', $html );
+		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--warning', $html );
+		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--error', $html );
 		self::assertStringContainsString( 'data-portability-select-all', $html );
 		self::assertSame( 2, substr_count( $html, 'data-portability-select value=' ) );
 		self::assertStringContainsString( 'data-portability-select value="0" checked', $html );

@@ -294,9 +294,7 @@
 	min-inline-size: 0;
 }
 
-.ran-booster-admin
-	.ran-booster-attempt-table
-	:is(.ran-booster-pill, .ran-booster-badge) {
+.ran-booster-admin .ran-booster-attempt-table .ran-booster-badge {
 	max-inline-size: 100%;
 	white-space: normal;
 	line-height: 1.35;

@@ -50,7 +50,7 @@ if ( ! empty( $overview_dashboard_activity ) ) {
 					?>
 					<li class="ran-booster-overview-activity__row">
 						<div><strong><?php echo esc_html( $record['operation'] ); ?></strong><span aria-hidden="true"> · </span><span class="ran-booster-overview-activity__time"><?php echo esc_html( $record['sort_at'] ); ?></span></div>
-						<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $state_tones[ $state ] ?? 'neutral' ); ?>"><?php echo esc_html( $state_labels[ $state ] ?? __( 'Unknown', 'ran-booster' ) ); ?></span>
+						<?php echo \RAN\Admin\Component\StatusBadge::markup( $state_labels[ $state ] ?? __( 'Unknown', 'ran-booster' ), $state_tones[ $state ] ?? 'neutral' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 					</li>
 				<?php } ?>
 			</ul>

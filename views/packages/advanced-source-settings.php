@@ -44,7 +44,7 @@ if ( '' === $package_advanced_summary_projection_heading
 			<?php if ( null !== $package_advanced_summary_projection && null !== $package_advanced_summary_projection_heading ) { ?>
 				<span class="ran-booster-advanced-source-summary__heading"><?php echo esc_html( $package_advanced_summary_projection_heading ); ?></span>
 				<?php foreach ( $package_advanced_summary_projection_badges as $package_advanced_summary_projection_badge ) { ?>
-					<span class="ran-booster-advanced-source-summary__badge">
+					<span class="ran-booster-badge ran-booster-badge--neutral" data-ran-booster-static-badge>
 						<?php echo esc_html( $package_advanced_summary_projection_badge['label'] ); ?>
 					</span>
 				<?php } ?>

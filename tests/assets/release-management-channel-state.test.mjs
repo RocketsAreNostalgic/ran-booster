@@ -115,7 +115,10 @@ test('branch release track selection updates only its local disclosure summary',
 			return selector === '[data-ran-booster-release-channel]';
 		},
 		closest(selector) {
-			if (selector === '#ran-booster-release-track-settings') {
+			if (
+				selector ===
+				'#ran-booster-release-track-settings, [data-ran-booster-ui-disclosure="package-release-track"]'
+			) {
 				return trackDisclosure;
 			}
 			return selector === 'label' ? label : null;

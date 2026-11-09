@@ -75,7 +75,7 @@ $status_classes       = array(
 		<div class="ran-booster-debug-capture__header">
 			<div class="ran-booster-debug-capture__heading">
 				<h4 class="ran-booster-section__title"><?php esc_html_e( 'Booster event capture', 'ran-booster' ); ?></h4>
-				<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_classes[ $capture_state ] ); ?>"><?php echo esc_html( $status_labels[ $capture_state ] ); ?></span>
+				<?php echo \RAN\Admin\Component\StatusBadge::markup( $status_labels[ $capture_state ], $status_classes[ $capture_state ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<span class="ran-booster-debug-capture__deadline description">
 					<?php if ( 'active' === $capture_state && '' !== $capture_until ) { ?>
 						<?php echo esc_html( sprintf( /* translators: %s: UTC capture end time. */ __( 'until %s.', 'ran-booster' ), $capture_until ) ); ?>

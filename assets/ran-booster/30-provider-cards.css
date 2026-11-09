@@ -685,7 +685,7 @@
 .ran-booster-admin
 	.ran-booster-repository-detail__sidebar
 	.ran-booster-repository-detail__facts
-	:is(.ran-booster-pill, .ran-booster-badge) {
+	.ran-booster-badge {
 	box-sizing: border-box;
 	max-inline-size: 100%;
 	white-space: normal;

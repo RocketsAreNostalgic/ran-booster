@@ -5,8 +5,7 @@
  * WordPress-native notices remain the standard alert component.
  */
 
-.ran-booster-admin
-	:is(.ran-booster-pill, .ran-booster-badge, .ran-booster-tile) {
+.ran-booster-admin :is(.ran-booster-badge, .ran-booster-tile) {
 	--ran-booster-status-utility-border: var(--ran-booster-border);
 	--ran-booster-status-utility-background: var(
 		--ran-booster-status-neutral-background
@@ -14,19 +13,13 @@
 	--ran-booster-status-utility-color: var(--ran-booster-status-neutral);
 }
 
-.ran-booster-admin
-	:is(
-		.ran-booster-pill--info,
-		.ran-booster-badge--info,
-		.ran-booster-tile--info
-	) {
+.ran-booster-admin :is(.ran-booster-badge--info, .ran-booster-tile--info) {
 	--ran-booster-status-utility-border: var(--ran-booster-accent);
 	--ran-booster-status-utility-background: var(--ran-booster-surface-info);
 	--ran-booster-status-utility-color: var(--ran-booster-text-info-strong);
 }
 
-.ran-booster-admin
-	:is(.ran-booster-pill--ok, .ran-booster-badge--ok, .ran-booster-tile--ok) {
+.ran-booster-admin :is(.ran-booster-badge--ok, .ran-booster-tile--ok) {
 	--ran-booster-status-utility-border: var(--ran-booster-status-ok-border);
 	--ran-booster-status-utility-background: var(
 		--ran-booster-status-ok-background
@@ -35,11 +28,7 @@
 }
 
 .ran-booster-admin
-	:is(
-		.ran-booster-pill--warning,
-		.ran-booster-badge--warning,
-		.ran-booster-tile--warning
-	) {
+	:is(.ran-booster-badge--warning, .ran-booster-tile--warning) {
 	--ran-booster-status-utility-border: var(
 		--ran-booster-status-warning-border
 	);
@@ -49,12 +38,7 @@
 	--ran-booster-status-utility-color: var(--ran-booster-status-warning);
 }
 
-.ran-booster-admin
-	:is(
-		.ran-booster-pill--error,
-		.ran-booster-badge--error,
-		.ran-booster-tile--error
-	) {
+.ran-booster-admin :is(.ran-booster-badge--error, .ran-booster-tile--error) {
 	--ran-booster-status-utility-border: var(--ran-booster-status-error-border);
 	--ran-booster-status-utility-background: var(
 		--ran-booster-status-error-background
@@ -63,11 +47,7 @@
 }
 
 .ran-booster-admin
-	:is(
-		.ran-booster-pill--pending,
-		.ran-booster-badge--pending,
-		.ran-booster-tile--pending
-	) {
+	:is(.ran-booster-badge--pending, .ran-booster-tile--pending) {
 	--ran-booster-status-utility-border: var(
 		--ran-booster-status-pending-border
 	);
@@ -77,7 +57,7 @@
 	--ran-booster-status-utility-color: var(--ran-booster-status-pending);
 }
 
-.ran-booster-admin :is(.ran-booster-pill, .ran-booster-badge) {
+.ran-booster-admin :is(.ran-booster-badge) {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--ran-booster-space-4);
@@ -93,22 +73,13 @@
 	white-space: nowrap;
 }
 
-.ran-booster-admin :is(.ran-booster-pill, .ran-booster-badge)::before {
+.ran-booster-admin :is(.ran-booster-badge)::before {
 	content: "";
 	inline-size: 6px;
 	block-size: 6px;
 	flex: 0 0 auto;
 	border-radius: var(--ran-booster-radius-circle);
 	background: currentcolor;
-}
-
-.ran-booster-admin .ran-booster-pill--label {
-	min-block-size: 28px;
-	white-space: normal;
-}
-
-.ran-booster-admin .ran-booster-pill--label::before {
-	display: none;
 }
 
 .ran-booster-admin .ran-booster-tile {

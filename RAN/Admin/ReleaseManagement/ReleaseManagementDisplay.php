@@ -252,7 +252,7 @@ final class ReleaseManagementDisplay {
 			<summary>
 				<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Release Track', 'ran-booster' ); ?></h3>
 				<small class="ran-booster-advanced-source-summary" data-ran-booster-ui-disclosure-meta>
-					<span class="ran-booster-advanced-source-summary__badge" data-ran-booster-release-track-summary><?php echo esc_html( $release_track_summary ); ?></span>
+					<span class="ran-booster-badge ran-booster-badge--neutral" data-ran-booster-static-badge data-ran-booster-release-track-summary><?php echo esc_html( $release_track_summary ); ?></span>
 				</small>
 			</summary>
 			<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">

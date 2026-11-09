@@ -1378,27 +1378,11 @@
 	overflow-wrap: anywhere;
 }
 
-.ran-booster-admin .ran-booster-overview-activity__row > .ran-booster-badge {
-	box-sizing: border-box;
+.ran-booster-admin
+	.ran-booster-overview-activity__row
+	> [data-ran-booster-ui-badge] {
 	max-inline-size: 100%;
 	flex: none;
-	padding-block: 0;
-	padding-inline: var(--ran-booster-space-8);
-	line-height: var(--ran-booster-line-height-base);
-	white-space: normal;
-	overflow-wrap: anywhere;
-}
-
-.ran-booster-admin
-	.ran-booster-overview-activity__row
-	> .ran-booster-badge--ok {
-	color: var(--ran-booster-color-green-500);
-}
-
-.ran-booster-admin
-	.ran-booster-overview-activity__row
-	> .ran-booster-badge::before {
-	display: none;
 }
 
 .ran-booster-admin .ran-booster-overview-activity__time {

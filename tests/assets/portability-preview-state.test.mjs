@@ -307,7 +307,7 @@ function renderPackageCredentialReview(
 		'php',
 		[
 			'-r',
-			'require $argv[1]; $portability_review_rows = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR); require $argv[2];',
+			'require $argv[1]; require dirname($argv[2], 2) . "/RAN/Admin/Component/StatusBadge.php"; $portability_review_rows = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR); require $argv[2];',
 			fileURLToPath(
 				new URL(
 					'../Admin/AdminViewWordPressFunctions.php',

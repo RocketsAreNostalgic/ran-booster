@@ -631,7 +631,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			return;
 		}
 		const disclosure = event.target.closest(
-			'#ran-booster-release-track-settings'
+			'#ran-booster-release-track-settings, [data-ran-booster-ui-disclosure="package-release-track"]'
 		);
 		const summary = disclosure?.querySelector(
 			'[data-ran-booster-release-track-summary]'

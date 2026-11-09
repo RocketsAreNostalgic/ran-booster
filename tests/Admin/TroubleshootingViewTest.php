@@ -2771,11 +2771,11 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Connected packages', $html );
 		self::assertStringContainsString( 'ran-booster-delete-credential-package-list', $html );
 		self::assertMatchesRegularExpression(
-			'/<template id="ran-booster-delete-credential-usage-0">[\s\S]+<a class="ran-booster-pill ran-booster-pill--label ran-booster-pill--info ran-booster-delete-credential-package-pill" href="admin\.php\?page=ran-booster-plugins&amp;package=example%2Fexample\.php">Plugin: example\/example\.php<\/a>/',
+			'/<template id="ran-booster-delete-credential-usage-0">[\s\S]+<a class="ran-booster-delete-credential-package-link" href="admin\.php\?page=ran-booster-plugins&amp;package=example%2Fexample\.php">Plugin: example\/example\.php<\/a>/',
 			$html
 		);
 		self::assertMatchesRegularExpression(
-			'/<template id="ran-booster-delete-credential-usage-0">[\s\S]+ran-booster-delete-credential-package-pill--unavailable[\s\S]+Theme: missing-theme[\s\S]+\(not installed\)/',
+			'/<template id="ran-booster-delete-credential-usage-0">[\s\S]+ran-booster-delete-credential-package-link--unavailable[\s\S]+Theme: missing-theme[\s\S]+\(not installed\)/',
 			$html
 		);
 		self::assertStringNotContainsString( 'Before deleting a credential', $html );

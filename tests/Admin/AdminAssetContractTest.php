@@ -143,13 +143,13 @@ final class AdminAssetContractTest extends TestCase {
 		$component  = $this->asset( 'ran-booster/40-tables-and-pills.css' );
 		$activity   = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 
-		self::assertStringContainsString( '.ran-booster-admin :is(.ran-booster-pill, .ran-booster-badge) {', $utilities );
+		self::assertStringContainsString( '.ran-booster-admin :is(.ran-booster-badge) {', $utilities );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-tile {', $utilities );
 		self::assertStringContainsString( '.ran-booster-badge--pending', $utilities );
 		self::assertStringNotContainsString( 'notice notice-warning inline ran-booster-debug-capture__scope', $debug );
 		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activity_badge_variants[ $latest_activity[\'state\'] ] ?? \'neutral\' ); ?>', $packages );
 		self::assertStringContainsString( 'Stored · Validity checked on use', $projection );
-		self::assertStringContainsString( 'ran-booster-pill--label ran-booster-pill--info ran-booster-delete-credential-package-pill', $provider );
+		self::assertStringContainsString( 'ran-booster-delete-credential-package-link', $provider );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-badge {', $component );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-deployment-state {', $activity );
 	}
@@ -230,6 +230,44 @@ final class AdminAssetContractTest extends TestCase {
 		}
 
 		self::assertSame( array(), $offenders, 'These full-border rules have no radius. Add them to the shared surface-radius block or allow them with a reason.' );
+	}
+
+	/**
+	 * Status pills are public Badges rendered through StatusBadge. The retired
+	 * ran-booster-pill family and bare badge spans must not return.
+	 */
+	public function test_status_pills_use_the_public_badge_and_no_retired_pill_classes_remain(): void {
+		$root     = dirname( __DIR__, 2 );
+		$offences = array();
+		$patterns = array(
+			'/views/*.php',
+			'/views/*/*.php',
+			'/assets/ran-booster/*.css',
+			'/assets/*.css',
+			'/RAN/Admin/*.php',
+			'/RAN/Admin/*/*.php',
+		);
+		foreach ( $patterns as $pattern ) {
+			$matched = glob( $root . $pattern );
+			foreach ( false === $matched ? array() : $matched as $file ) {
+				$source = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+				if ( str_contains( $source, 'ran-booster-pill' ) || str_contains( $source, 'advanced-source-summary__badge' ) ) {
+					$offences[] = basename( $file ) . ': retired pill class';
+				}
+				// RepositoryTableRenderer keeps a bare badge for historical records with an unknown tone.
+				// Disclosure header status badges are static and marked data-ran-booster-static-badge.
+				if ( ! str_ends_with( $file, '.php' ) || str_ends_with( $file, 'RepositoryTableRenderer.php' ) ) {
+					continue;
+				}
+				foreach ( explode( "\n", $source ) as $line ) {
+					if ( str_contains( $line, '<span class="ran-booster-badge' ) && ! str_contains( $line, 'data-ran-booster-ui-badge' ) && ! str_contains( $line, 'data-ran-booster-static-badge' ) ) {
+						$offences[] = basename( $file ) . ': bare badge span, use StatusBadge::markup()';
+					}
+				}
+			}
+		}
+
+		self::assertSame( array(), $offences );
 	}
 
 	public function test_framed_fact_grids_share_one_summary_grid_profile(): void {
@@ -652,7 +690,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'data-credential-delete-modal', $modals );
 		self::assertStringContainsString( 'Yes, delete credential', $modals );
 		self::assertStringContainsString( 'data-delete-credential-packages', $modals );
-		self::assertStringContainsString( 'ran-booster-delete-credential-package-pill', $view );
+		self::assertStringContainsString( 'ran-booster-delete-credential-package-link', $view );
 		self::assertStringContainsString( 'ran_booster[expires_on]', $modals );
 		self::assertStringContainsString( "profile['expiry_status']['badge_label']", $projection );
 		self::assertStringContainsString( 'class="button button-delete ran-booster-open-delete-credential-modal"', $view );

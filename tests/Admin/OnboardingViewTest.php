@@ -825,7 +825,7 @@ final class OnboardingViewTest extends TestCase {
 			self::assertStringNotContainsString( '<GitHub>', $html );
 			if ( 'dashboard' === $view ) {
 				self::assertStringContainsString( 'Provider source unknown', $html );
-				self::assertStringNotContainsString( 'ran-booster-pill--ok">Admitted</span>', $html );
+				self::assertStringNotContainsString( 'ran-booster-badge--ok">Admitted</span>', $html );
 				self::assertStringNotContainsString( 'Repository access has not been checked here.', $html );
 			}
 			$extra['provider_summaries'][0]['admitted'] = true;

@@ -572,7 +572,7 @@ msgid "Recorded actions"
 msgstr ""
 
 #. translators: %d is the number of managed packages using a repository.
-#: RAN/Admin/Component/RepositoryTableRenderer.php:194
+#: RAN/Admin/Component/RepositoryTableRenderer.php:193
 #, php-format
 msgctxt "Managed packages using a repository"
 msgid "%d package"

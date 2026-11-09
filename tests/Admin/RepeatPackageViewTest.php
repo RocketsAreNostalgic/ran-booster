@@ -285,6 +285,14 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertTrue( $advanced_position < $operation_position );
 		self::assertTrue( $operation_position < $automation_position );
 		self::assertTrue( $automation_position < $link_position );
+		$actions_position = strpos( $html, 'aria-label="Installation actions"' );
+		self::assertIsInt( $actions_position );
+		self::assertTrue( $link_position < $actions_position, 'The link choice sits directly above the action group.' );
+		self::assertMatchesRegularExpression( '/<fieldset class="ran-booster-package-link-choice"/', $html );
+		self::assertMatchesRegularExpression( '/name="ran_booster\[dry-run\]" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help"/', $html );
+		self::assertStringContainsString( 'id="ran-booster-link-installed-help"', $html );
+		self::assertStringContainsString( 'id="ran-booster-link-installed-folder-help"', $html );
+		self::assertMatchesRegularExpression( '/class="button button-primary" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help"/', $html );
 		self::assertSame(
 			array( 'Repository configuration', 'Advanced settings', 'Update source', 'Package operation' ),
 			$this->h3_headings( $html ),
@@ -391,7 +399,7 @@ final class RepeatPackageViewTest extends TestCase {
 			. '&amp;package=' . $managed_package_identifier;
 
 		self::assertStringContainsString(
-			'<a class="button button-primary" href="' . $manage_url . '">Manage ' . $package_view->get_type() . '</a>',
+			'<a class="button button-primary" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" href="' . $manage_url . '">Manage ' . $package_view->get_type() . '</a>',
 			$form
 		);
 		self::assertMatchesRegularExpression(

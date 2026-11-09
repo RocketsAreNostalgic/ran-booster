@@ -160,24 +160,24 @@ $managed_package_url        = '' === $managed_package_identifier
 						</div>
 					</fieldset>
 					<div data-ran-booster-branch-install-actions>
-						<fieldset <?php disabled( ! $package_mutation_available ); ?>>
+						<fieldset class="ran-booster-package-link-choice" <?php disabled( ! $package_mutation_available ); ?>>
 							<div class="ran-booster-settings-fields">
 								<div class="ran-booster-settings-field ran-booster-settings-field--wide">
 									<label>
-										<input type="checkbox" name="ran_booster[dry-run]" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( '' !== $recovery_identifier || isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
+										<input type="checkbox" name="ran_booster[dry-run]" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( '' !== $recovery_identifier || isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
 										<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Link installed %s', 'ran-booster' ), $package_view->get_type() ) ); ?>
 									</label>
-									<p class="description"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Let Booster manage an already installed %s instead of deploying it now.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>
-									<p class="description"><?php esc_html_e( 'The installed folder name must match the repository package name.', 'ran-booster' ); ?></p>
+									<p class="description" id="ran-booster-link-installed-help"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Let Booster manage an already installed %s instead of deploying it now.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>
+									<p class="description" id="ran-booster-link-installed-folder-help"><?php esc_html_e( 'The installed folder name must match the repository package name.', 'ran-booster' ); ?></p>
 								</div>
 							</div>
 						</fieldset>
 						<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Installation actions', 'ran-booster' ); ?>">
 							<?php if ( '' !== $managed_package_url ) { ?>
-								<a class="button button-primary" href="<?php echo esc_url( $managed_package_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
+								<a class="button button-primary" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" href="<?php echo esc_url( $managed_package_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 								<button type="submit" class="button" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
 							<?php } else { ?>
-								<button type="submit" class="button button-primary" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
+								<button type="submit" class="button button-primary" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
 								<button type="submit" class="button" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php esc_html_e( 'Install and add another', 'ran-booster' ); ?></button>
 							<?php } ?>
 						</div>

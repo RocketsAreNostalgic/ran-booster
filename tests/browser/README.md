@@ -65,6 +65,5 @@ const frame =
 await frame.assertPageFrame(tab);
 ```
 
-`assertPageFrame` checks the values that already hold on every menu page.
-`measurePageFrame` also returns the open decision values (card heading inset)
-for review.
+`assertPageFrame` checks the shell gap, left edges, Card gaps and heading insets.
+`measurePageFrame` returns the raw measurements for review.

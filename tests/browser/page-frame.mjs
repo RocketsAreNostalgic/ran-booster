@@ -71,7 +71,7 @@ export async function measurePageFrame(tab) {
 	});
 }
 
-// Page-level checks that are already true on every menu page.
+// Page-level checks that hold on every menu page.
 export async function assertPageFrame(tab) {
 	const frame = await measurePageFrame(tab);
 	if (!frame) {
@@ -88,9 +88,16 @@ export async function assertPageFrame(tab) {
 			);
 		}
 	}
-	if (frame.cardGaps.some((gap) => gap !== 20)) {
+	if (frame.cardGaps.some((gap) => gap !== 24)) {
 		problems.push(
-			`Card gaps are ${frame.cardGaps.join(', ')}px, not 20px.`
+			`Card gaps are ${frame.cardGaps.join(', ')}px, not 24px.`
+		);
+	}
+	if (
+		frame.cardHeadingInsets.some((inset) => inset !== null && inset !== 17)
+	) {
+		problems.push(
+			`Card heading insets are ${frame.cardHeadingInsets.join(', ')}px, not 17px.`
 		);
 	}
 	if (problems.length) {

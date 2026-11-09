@@ -46,7 +46,7 @@
 }
 
 .ran-booster-admin .ran-booster-settings-section {
-	margin-block-end: var(--ran-booster-space-18);
+	margin-block-end: var(--ran-booster-card-gap);
 	border: 1px solid var(--ran-booster-border);
 	background: var(--ran-booster-surface);
 }
@@ -62,7 +62,7 @@
 }
 
 .ran-booster-admin .ran-booster-advanced-source-settings {
-	margin-block-start: var(--ran-booster-space-18);
+	margin-block-start: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-settings-disclosure__label {
@@ -318,9 +318,12 @@
 	gap: var(--ran-booster-space-16) var(--ran-booster-space-18);
 }
 
-.ran-booster-admin .ran-booster-settings-fields--primary-controls,
-.ran-booster-admin .ran-booster-package-operation-settings {
+.ran-booster-admin .ran-booster-settings-fields--primary-controls {
 	margin-block-start: var(--ran-booster-space-18);
+}
+
+.ran-booster-admin .ran-booster-package-operation-settings {
+	margin-block-start: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin [data-ran-booster-branch-fields][hidden],
@@ -885,8 +888,9 @@
 
 .ran-booster-admin .ran-booster-settings > .ran-booster-panel,
 .ran-booster-admin .ran-booster-settings__general > .ran-booster-panel {
-	margin-block: 0 var(--ran-booster-space-20);
-	padding: var(--ran-booster-space-24);
+	margin-block: 0 var(--ran-booster-card-gap);
+	padding: var(--ran-booster-card-inset-block-start)
+		var(--ran-booster-space-24) var(--ran-booster-space-24);
 }
 
 .ran-booster-admin
@@ -899,7 +903,8 @@
 	:is(.ran-booster-settings, .ran-booster-settings__general)
 	> [data-ran-booster-card="settings"][data-ran-booster-ui-mounted]
 	.ran-booster-card__content {
-	padding: var(--ran-booster-space-24);
+	padding: var(--ran-booster-card-inset-block-start)
+		var(--ran-booster-space-24) var(--ran-booster-space-24);
 }
 
 .ran-booster-admin [data-ran-booster-ui-notice][hidden],

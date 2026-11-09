@@ -680,7 +680,7 @@
 }
 
 .ran-booster-admin .ran-booster-section__description {
-	margin-block: var(--ran-booster-space-4) 0;
+	margin-block: var(--ran-booster-card-heading-gap) 0;
 	margin-inline: 0;
 	color: var(--ran-booster-text-muted);
 }

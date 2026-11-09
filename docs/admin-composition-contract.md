@@ -223,19 +223,19 @@ source checks.
 The outer widths above say how wide a page may be. This section says where
 things sit inside it, so titles, tabs and cards stop drifting between pages.
 Values come from measuring every Booster menu page at a 1280px viewport on
-beta.44. Rows marked **Decision** need an owner choice and are not yet applied.
+beta.44. Rows marked **Decision** need an owner choice and are not yet applied. D1, D2 and D4 are accepted and applied.
 
 | Role                                                 | Standard                                                        | Owner in CSS                                                   | Status                                                                         |
 | ---------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | Admin Shell bottom to page title                     | 24px (`.wrap` offset); real notices add their own height        | WordPress `.wrap`                                              | Matches on all pages                                                           |
 | Left edge of title, description, tabs and first card | The wrap's left edge; no inline inset on a top-level page shell | `.ran-booster-admin > .ran-booster-page-shell` header and body | Applied in `be3ef723`                                                          |
 | Page header bottom padding to first block            | 20px, owned by the header; the first block adds no top margin   | `.ran-booster-page-shell__header`                              | Applied in `c158dca8`                                                          |
-| Space between consecutive Cards | **Decision D4**: 24px (Jetpack) or keep 20px | Card margin and stack gap | 20px on every page measured |
+| Space between consecutive Cards | 24px (`--ran-booster-card-gap`), as in Jetpack | Card margin and stack gap | Applied; was 20px |
 | Top margin of a first heading in any container       | 0; the container inset owns the space                           | `:is(h2, h3, h4):first-child`                                  | Applied in `c158dca8`                                                          |
 | Card inline inset                                    | 24px                                                            | Card content layer                                             | Matches, except legacy nested panels                                           |
 | Nested panel inside a Card                           | Takes the Card's inline inset and adds none                     | Panel rules scoped to the Card                                 | Capture panel fixed in `93a643c3`                                              |
-| Card block-start inset (to first heading) | **Decision D1**: 16px (Jetpack) | Card content layer | 18px Overview/GitHub, 24px Settings/Troubleshooting, 16-17px Extensions/create |
-| Heading to description inside a Card                 | **Decision D2**                                                 | `.ran-booster-section__description`                            | 4px GitHub, 8px Settings, 12px Overview, 16px Extensions                       |
+| Card block-start inset (to first heading) | 16px (`--ran-booster-card-inset-block-start`); the 1px border makes the heading sit 17px from the edge | Card content layer | Applied; was 18-25px by page |
+| Heading to description inside a Card | 8px (`--ran-booster-card-heading-gap`) | `.ran-booster-section__description` | Applied; was 4, 8, 12 or 16px |
 | Page title to description                            | 6px                                                             | `.ran-booster-page-heading__description`                       | 10px on package pages                                                          |
 | Shell navigation text to content edge                | **Decision D3**                                                 | Generated Shell; coordinate with its owner                     | Nav text 60px, content 58px                                                    |
 
@@ -246,7 +246,7 @@ padding. Cards are 24px apart and a section heading sits 24px above its first
 card. Jetpack does not pair a heading and description inside a Card header, so D2
 has no direct equivalent.
 
-Recommended answers, for the owner to accept or change:
+Accepted answers (D1, D2 and D4 applied; D3 left to the Shell owner):
 
 - **D1:** 16px, Jetpack's header padding. The 1px Card border makes the
   heading sit 17px from the Card's outer edge. Overview and GitHub Cards (19px

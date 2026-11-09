@@ -105,7 +105,7 @@
 .ran-booster-admin .ran-booster-bulk-actions__status {
 	min-block-size: 1.5em;
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-package-table {
@@ -171,7 +171,7 @@
 
 .ran-booster-admin .ran-booster-package-row__title {
 	margin: 0;
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 	line-height: var(--ran-booster-line-height-heading);
 }
 
@@ -183,13 +183,13 @@
 
 .ran-booster-admin .ran-booster-package-row__name {
 	color: var(--ran-booster-text);
-	font-weight: 700;
+	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
 .ran-booster-admin .ran-booster-package-row__repo {
 	margin-block-start: var(--ran-booster-space-2);
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 400;
 }
 
@@ -205,7 +205,7 @@
 	gap: var(--ran-booster-space-6);
 	margin: 0;
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 600;
 }
 
@@ -329,9 +329,9 @@
 }
 
 /*
- * Package-row disclosures sit under a 14px package name, so their header
- * follows the 13px management label rather than the generic compact header.
- * Covers the native fallback summary and the mounted header.
+ * Package-row disclosures sit under a 13px/600 package name. The generic
+ * compact header is already 13px/500, so only its block padding is tightened
+ * here, for the native fallback summary and the mounted header alike.
  */
 
 .ran-booster-admin
@@ -347,9 +347,6 @@
 	.ran-booster-ui-disclosure__header
 	> [role="button"] {
 	padding-block: var(--ran-booster-space-6);
-	font-size: var(--ran-booster-font-size-sm);
-	font-weight: 600;
-	line-height: 20px;
 }
 
 .ran-booster-admin .ran-booster-package-row__details-grid {
@@ -379,7 +376,7 @@
 .ran-booster-admin .ran-booster-package-row__details-grid dt {
 	margin-block-end: var(--ran-booster-space-3);
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 600;
 }
 
@@ -387,7 +384,7 @@
 	margin: 0;
 	overflow-wrap: anywhere;
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-package-row__activity-summary {

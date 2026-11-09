@@ -148,7 +148,7 @@
 }
 
 .ran-booster-admin .ran-booster-code {
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	background-color: var(--ran-booster-surface-subtle);
 }
 

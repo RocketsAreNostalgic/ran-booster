@@ -104,14 +104,19 @@
 			--ran-booster-table-cell-padding-block
 		)
 		var(--ran-booster-table-cell-padding-inline);
-	--ran-booster-font-size-xs: 12px;
-	--ran-booster-font-size-sm: 13px;
-	--ran-booster-font-size-base: 14px;
-	--ran-booster-font-size-subsection: 16px;
-	--ran-booster-font-size-card-title: 20px;
-	--ran-booster-font-size-page-title: 23px;
-	--ran-booster-font-weight-heading: 500;
-	--ran-booster-font-weight-semibold: 600;
+
+	/* WordPress design-system type scale, shared with Jetpack Boost: 20 / 15 / 13 / 12. */
+	--ran-booster-font-size-xl: var(--wpds-typography-font-size-xl);
+	--ran-booster-font-size-lg: var(--wpds-typography-font-size-lg);
+	--ran-booster-font-size-md: var(--wpds-typography-font-size-md);
+	--ran-booster-font-size-sm: var(--wpds-typography-font-size-sm);
+	--ran-booster-font-weight-heading: var(
+		--wpds-typography-font-weight-emphasis
+	);
+	--ran-booster-font-weight-medium: 500;
+	--ran-booster-font-weight-semibold: var(
+		--wpds-typography-font-weight-emphasis
+	);
 	--ran-booster-line-height-tight: 1.3;
 	--ran-booster-line-height-heading: 1.4;
 	--ran-booster-line-height-base: 1.5;

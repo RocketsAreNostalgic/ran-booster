@@ -135,8 +135,8 @@ Extensions contribute inside that layout rather than replace the product chrome.
 Breadcrumbs are optional when deeper navigation needs them; they are unnecessary
 when the submenu, heading and local navigation already establish location.
 
-Page identity uses `ran-booster-page-heading__title` (23px, semibold,
-1.3 line height) and `ran-booster-page-heading__description` (base 14px,
+Page identity uses `ran-booster-page-heading__title` (20px, semibold,
+1.3 line height) and `ran-booster-page-heading__description` (13px,
 1.5 line height, muted, 6px after the title). Managed Plugins/Themes and
 Install/Edit variants use the same roles as dashboard pages. Keep heading
 alignment relative to its content grid, existing page actions beside the title
@@ -279,24 +279,31 @@ status column above stays honest.
 
 ### Type scale
 
-Text sizes come from tokens in `assets/ran-booster/00-foundations.css`. The
-scale follows Jetpack's admin pages, with the page title and sub-section sizes
-chosen for this plugin. `test_headings_take_their_size_from_the_shared_type_scale`
-fails on any other raw size.
+Booster uses the WordPress design-system type scale, the same one Jetpack Boost
+renders: three text sizes plus a caption. The sizes are the `--wpds-typography`
+tokens, so they follow the design system. Booster's own tokens in
+`assets/ran-booster/00-foundations.css` are named after them.
+`test_headings_take_their_size_from_the_shared_type_scale` fails on any raw size
+outside the listed icon and numeral exceptions.
 
-| Role        | Token                                  | Size / weight |
-| ----------- | -------------------------------------- | ------------- |
-| Page title  | `--ran-booster-font-size-page-title`   | 23px / 600    |
-| Card title  | `--ran-booster-font-size-card-title`   | 20px / 500    |
-| Sub-section | `--ran-booster-font-size-subsection`   | 16px / 600    |
-| Body        | `--ran-booster-font-size-base`         | 14px          |
-| Help text   | `--ran-booster-font-size-sm`           | 13px          |
-| Caption     | `--ran-booster-font-size-xs`           | 12px          |
+| Role                                              | Token                          | Size / weight |
+| ------------------------------------------------- | ------------------------------ | ------------- |
+| Page title, count numerals                        | `--ran-booster-font-size-xl`   | 20px / 600    |
+| Card title, prominent disclosure header, `h2`/`h3` | `--ran-booster-font-size-lg`   | 15px / 600    |
+| Sub-heading (`h4`-`h6`), table header             | `--ran-booster-font-size-md`   | 13px / 600    |
+| Compact disclosure header, labels                 | `--ran-booster-font-size-md`   | 13px / 500    |
+| Body and help text                                | `--ran-booster-font-size-md`   | 13px / 400    |
+| Caption                                           | `--ran-booster-font-size-sm`   | 12px / 400    |
 
-Card title weight is `--ran-booster-font-weight-heading` (500), chosen by the
-owner on the GitHub page against 18px and 600 to match Jetpack. Icon glyph
-sizes, the package-count numeral and the storage readout are the only raw
-exceptions.
+Weights are `--ran-booster-font-weight-semibold` (and `-heading`, the same value),
+`-medium` (500) and the default 400. Bare `h2` to `h6` elements inside
+`.ran-booster-admin` take their size from this scale, so unclassed headings no
+longer fall back to WordPress's 1.3em. Package names are 13px/600 and their
+Deployment activity disclosure header is 13px/500, so identity stays the scan
+anchor of its row; `test_package_row_disclosure_header_never_outranks_the_package_name`
+asserts that relationship through the tokens. Icon glyph sizes and the dialog
+close icon are the only raw-size exceptions, plus the notice compatibility
+sheet, which loads only where the design-system tokens are absent.
 
 ## Add-on generation and service delivery
 

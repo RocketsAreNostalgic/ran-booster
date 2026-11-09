@@ -55,7 +55,7 @@
 .ran-booster-admin .ran-booster-webhook-secrets__header h4 {
 	margin-block: 0 var(--ran-booster-space-4);
 	margin-inline: 0;
-	font-size: 14px;
+	font-size: var(--ran-booster-font-size-md);
 	line-height: 1.5;
 }
 
@@ -147,7 +147,7 @@
 	float: inline-end;
 	margin-inline-start: var(--ran-booster-space-16);
 	color: var(--ran-booster-text-subtle);
-	font-size: 12px;
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 400;
 }
 
@@ -189,7 +189,7 @@
 .ran-booster-admin .ran-booster-webhook-instructions h4 {
 	margin-block: 0 var(--ran-booster-space-8);
 	margin-inline: 0;
-	font-size: 13px;
+	font-size: var(--ran-booster-font-size-md);
 	line-height: 1.5;
 }
 
@@ -206,7 +206,7 @@
 .ran-booster-admin .ran-booster-public-lookup-profile h4 {
 	margin-block: 0 var(--ran-booster-space-10);
 	margin-inline: 0;
-	font-size: 14px;
+	font-size: var(--ran-booster-font-size-md);
 	line-height: 1.5;
 }
 
@@ -276,7 +276,7 @@
 }
 
 .ran-booster-admin .ran-booster-credential-details {
-	font-size: 12px;
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-credential-details summary {
@@ -405,7 +405,7 @@
 .ran-booster-admin .ran-booster-status-summary__status strong {
 	display: block;
 	color: var(--ran-booster-text);
-	font-size: 14px;
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-status-summary__status p {
@@ -563,7 +563,7 @@
 
 .ran-booster-admin .ran-booster-repository-detail__receiver h3 {
 	margin-block-end: var(--ran-booster-space-4);
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-repository-detail__receiver p {

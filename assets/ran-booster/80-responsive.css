@@ -169,7 +169,7 @@
 		content: attr(data-label);
 		display: block;
 		color: var(--ran-booster-text-muted);
-		font-size: var(--ran-booster-font-size-xs);
+		font-size: var(--ran-booster-font-size-sm);
 		font-weight: var(--ran-booster-font-weight-semibold);
 	}
 
@@ -411,7 +411,7 @@
 		content: attr(data-label);
 		display: block;
 		color: var(--ran-booster-text-subtle);
-		font-size: 12px;
+		font-size: var(--ran-booster-font-size-sm);
 		font-weight: 600;
 		line-height: 1.5;
 	}

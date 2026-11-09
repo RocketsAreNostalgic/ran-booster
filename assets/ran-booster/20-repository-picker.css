@@ -167,7 +167,7 @@ body.ran-booster-repository-picker-open {
 .ran-booster-repository-picker__repository-details {
 	flex: 0 0 auto;
 	color: var(--ran-booster-text-subtle);
-	font-size: 12px;
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -94,14 +94,14 @@
 
 .ran-booster-extension-details__header h2 {
 	margin: 0 0 6px;
-	font-size: var(--ran-booster-font-size-page-title);
+	font-size: var(--ran-booster-font-size-xl);
 	line-height: 1.3;
 }
 
 .ran-booster-extension-details__header p {
 	margin: 0;
 	color: var(--ran-booster-text-muted);
-	font-size: 14px;
+	font-size: var(--ran-booster-font-size-md);
 	line-height: 1.6;
 }
 
@@ -121,7 +121,7 @@
 	border: 1px solid var(--ran-booster-divider);
 	border-block-end-color: var(--ran-booster-surface);
 	background: var(--ran-booster-surface);
-	font-size: 14px;
+	font-size: var(--ran-booster-font-size-md);
 	line-height: 1.3;
 }
 
@@ -134,13 +134,13 @@
 
 .ran-booster-extension-details__main {
 	padding: 16px 26px 28px;
-	font-size: 14px;
+	font-size: var(--ran-booster-font-size-md);
 	line-height: 1.7;
 }
 
 .ran-booster-extension-details__main h3 {
 	margin-block: 20px 8px;
-	font-size: var(--ran-booster-font-size-card-title);
+	font-size: var(--ran-booster-font-size-lg);
 }
 
 .ran-booster-extension-details__main p {
@@ -162,7 +162,7 @@
 .ran-booster-extension-details__sidebar h3,
 .ran-booster-extension-details__sidebar dt {
 	color: var(--ran-booster-text-subtle);
-	font-size: 12px;
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 600;
 	text-transform: uppercase;
 }
@@ -210,7 +210,7 @@
 	}
 
 	.ran-booster-extension-details__header h2 {
-		font-size: var(--ran-booster-font-size-card-title);
+		font-size: var(--ran-booster-font-size-lg);
 	}
 
 	.ran-booster-extension-details__content {

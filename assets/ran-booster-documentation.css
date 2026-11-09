@@ -42,13 +42,13 @@
 	margin: 0 0 var(--ran-booster-space-8);
 	padding-block-end: var(--ran-booster-space-8);
 	border-block-end: 1px solid var(--ran-booster-divider);
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: var(--ran-booster-line-height-heading);
 }
 
 .ran-booster-admin .ran-booster-documentation__index-chapter h3 {
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-documentation__index-list {
@@ -121,7 +121,7 @@
 		> summary {
 		padding-block: var(--ran-booster-space-8);
 		padding-inline-end: calc(3 * var(--ran-booster-space-16));
-		font-size: var(--ran-booster-font-size-subsection);
+		font-size: var(--ran-booster-font-size-md);
 		line-height: 20px;
 		list-style-position: outside;
 	}
@@ -174,7 +174,7 @@
 	padding-inline: var(--ran-booster-space-6);
 	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-surface-subtle);
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 	overflow-wrap: anywhere;
 }
 

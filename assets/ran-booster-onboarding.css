@@ -98,7 +98,7 @@
 .ran-booster-admin .ran-booster-onboarding__column h3 {
 	margin-block: 0 var(--ran-booster-space-8);
 	margin-inline: 0;
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 	line-height: var(--ran-booster-line-height-base);
 }
 
@@ -126,14 +126,15 @@
 .ran-booster-admin .ran-booster-onboarding__storage-heading h3,
 .ran-booster-admin .ran-booster-onboarding__provider-heading {
 	margin: 0;
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 	line-height: var(--ran-booster-line-height-base);
 }
 
-/* Match the WordPress h3 size used by the other Overview cards. */
+/* Match the card title size used by the other Overview cards. */
 .ran-booster-admin #ran-booster-onboarding-storage-heading,
 .ran-booster-admin #ran-booster-storage {
-	font-size: 1.3em;
+	font-size: var(--ran-booster-font-size-lg);
+	font-weight: var(--ran-booster-font-weight-heading);
 	line-height: inherit;
 }
 
@@ -163,7 +164,7 @@
 .ran-booster-admin .ran-booster-onboarding__storage-facts dt {
 	margin-block-end: var(--ran-booster-space-8);
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
@@ -200,7 +201,7 @@
 
 .ran-booster-admin .ran-booster-onboarding__storage .description {
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-facts-note {
@@ -421,7 +422,7 @@
 
 .ran-booster-admin .ran-booster-debug-capture__events-header h4 {
 	margin-block-end: var(--ran-booster-space-3);
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-debug-capture__events textarea {
@@ -554,14 +555,14 @@
 }
 
 .ran-booster-admin .ran-booster-portability__mode-title {
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
 .ran-booster-admin .ran-booster-portability__mode-description,
 .ran-booster-admin .ran-booster-portability__status-detail {
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-portability__flow-header {
@@ -586,7 +587,7 @@
 .ran-booster-admin .ran-booster-portability__credential-option legend {
 	margin-block: 0 var(--ran-booster-space-6);
 	margin-inline: 0;
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
@@ -662,7 +663,7 @@
 .ran-booster-admin .ran-booster-portability__credential-reason {
 	margin-block: var(--ran-booster-space-6) 0;
 	margin-inline: calc(16px + var(--ran-booster-space-10)) 0;
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin
@@ -948,7 +949,7 @@
 .ran-booster-admin .ran-booster-portability__review-table td > code {
 	padding: 0;
 	background: transparent;
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	overflow-wrap: anywhere;
 	word-break: normal;
 }
@@ -975,7 +976,7 @@
 	.ran-booster-portability__review
 	.ran-booster-portability__review-title {
 	margin-block-end: 0;
-	font-size: var(--ran-booster-font-size-card-title);
+	font-size: var(--ran-booster-font-size-lg);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: var(--ran-booster-line-height-tight);
 }
@@ -991,7 +992,7 @@
 	.ran-booster-portability__subsection-title {
 	margin-block: 0 var(--ran-booster-space-6);
 	margin-inline: 0;
-	font-size: var(--ran-booster-font-size-subsection);
+	font-size: var(--ran-booster-font-size-md);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: var(--ran-booster-line-height-heading);
 }
@@ -1018,7 +1019,7 @@
 }
 
 .ran-booster-admin .ran-booster-portability__credential-review > p.description {
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-portability__credential-review > p strong {
@@ -1044,7 +1045,7 @@
 	.ran-booster-portability__credential-name {
 	margin: 0;
 	margin-inline-end: var(--ran-booster-space-4);
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: var(--ran-booster-line-height-heading);
 }
@@ -1194,7 +1195,7 @@
 	flex: 0 0 auto;
 	margin: 0;
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 	opacity: 0;
 	visibility: hidden;
 	transition: none;
@@ -1395,7 +1396,7 @@
 
 .ran-booster-admin .ran-booster-overview-activity__time {
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-overview-package-actions {
@@ -1425,7 +1426,7 @@
 	.ran-booster-overview-package-count {
 	order: -1;
 	color: var(--ran-booster-brand);
-	font-size: var(--ran-booster-font-size-card-title);
+	font-size: var(--ran-booster-font-size-xl);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: var(--ran-booster-line-height-tight);
 	overflow-wrap: anywhere;
@@ -1450,7 +1451,7 @@
 .ran-booster-admin .ran-booster-overview-package-policy {
 	padding-block-start: var(--ran-booster-space-16);
 	border-block-start: 1px solid var(--ran-booster-border);
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-overview-provider-list {
@@ -1479,7 +1480,7 @@
 .ran-booster-admin .ran-booster-overview-provider-origin {
 	display: block;
 	margin-block-start: var(--ran-booster-space-4);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin

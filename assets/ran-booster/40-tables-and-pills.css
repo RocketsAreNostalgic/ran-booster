@@ -130,7 +130,7 @@
 	display: block;
 	margin-block-start: var(--ran-booster-space-4);
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-repository-record__overview > strong {

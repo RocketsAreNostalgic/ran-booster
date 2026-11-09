@@ -78,7 +78,7 @@
 	max-inline-size: min(100%, 32rem);
 	margin-inline-start: var(--ran-booster-space-12);
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 400;
 	text-align: end;
 }
@@ -277,7 +277,7 @@
 	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-status-ok-background);
 	color: var(--ran-booster-status-ok);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 700;
 }
 
@@ -292,7 +292,7 @@
 
 .ran-booster-source-choice strong {
 	color: var(--ran-booster-text);
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-source-choice small {
@@ -304,7 +304,7 @@
 .ran-booster-source-choice__meta {
 	margin-block-start: var(--ran-booster-space-8);
 	color: var(--ran-booster-link-strong);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 700;
 }
 
@@ -359,7 +359,7 @@
 .ran-booster-admin .ran-booster-settings-field .description {
 	margin-block: var(--ran-booster-space-5) 0;
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin
@@ -382,7 +382,7 @@
 	.ran-booster-settings-field
 	.description {
 	margin-inline-start: var(--ran-booster-space-24);
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 /* The two help sentences read as one statement, so they sit without a gap. */
@@ -589,7 +589,7 @@
 .ran-booster-admin .ran-booster-package-summary__meta {
 	margin: var(--ran-booster-space-4) 0 0;
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	overflow-wrap: anywhere;
 }
 
@@ -621,7 +621,7 @@
 .ran-booster-admin .ran-booster-readiness-panel__top h4 {
 	margin: 0;
 	color: var(--ran-booster-text);
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-readiness-panel__top p {
@@ -979,7 +979,7 @@
 
 .ran-booster-admin .ran-booster-settings__group legend {
 	padding-inline: 0 var(--ran-booster-space-8);
-	font-size: var(--ran-booster-font-size-subsection);
+	font-size: var(--ran-booster-font-size-md);
 	font-weight: 600;
 }
 

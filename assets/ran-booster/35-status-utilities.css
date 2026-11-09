@@ -62,7 +62,7 @@
 	border: 1px solid var(--ran-booster-status-utility-border);
 	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-status-utility-background);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	line-height: var(--ran-booster-line-height-base);
 }
 

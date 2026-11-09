@@ -164,7 +164,7 @@ final class AdminAssetContractTest extends TestCase {
 		// Unavailable credentials are neutral: no warning strip, and no grey fill on the card.
 		self::assertStringNotContainsString( '.ran-booster-portability__credential-decision-state--unavailable', $onboarding );
 		self::assertDoesNotMatchRegularExpression( '/credential-card--unavailable\s*\{[^}]*background:/', $onboarding );
-		self::assertMatchesRegularExpression( '/\.ran-booster-portability__credential-reason\s*\{[^}]*font-size:\s*var\(--ran-booster-font-size-sm\)/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__credential-reason\s*\{[^}]*font-size:\s*var\(--ran-booster-font-size-md\)/', $onboarding );
 		// Controls on the grey panel use the stronger neutral so their borders reach 3:1.
 		self::assertMatchesRegularExpression( '/\.ran-booster-portability__mode\s*\{[^}]*border:\s*1px solid var\(--ran-booster-color-neutral-450\)/', $onboarding );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {', $troubleshooting );
@@ -192,13 +192,13 @@ final class AdminAssetContractTest extends TestCase {
 			'ran-booster-dialog__close'          => 'Icon button glyph size.',
 			'ran-booster-portability__mode-icon' => 'Icon glyph size.',
 			'ran-booster-overview-package-count' => 'Stat numeral, not a heading.',
-			'ran-booster-storage'                => 'Storage path readout sized relative to its container.',
 		);
 
 		$offenders   = array();
 		$stylesheets = glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE );
 		foreach ( false === $stylesheets ? array() : $stylesheets as $file ) {
-			if ( str_ends_with( $file, '00-foundations.css' ) ) {
+			// The foundations define the scale, and the notice compat sheet only loads where the design-system tokens are absent.
+			if ( str_ends_with( $file, '00-foundations.css' ) || str_ends_with( $file, 'ran-booster-notice-compat.css' ) ) {
 				continue;
 			}
 			$css = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
@@ -207,7 +207,7 @@ final class AdminAssetContractTest extends TestCase {
 				continue;
 			}
 			foreach ( $rules as $rule ) {
-				if ( 1 !== preg_match( '/font-size:\s*(?!(?:12|13|14)px\b)[0-9.]+(?:px|em|rem)\b/', $rule[2] ) ) {
+				if ( 1 !== preg_match( '/font-size:\s*[0-9.]+(?:px|em|rem)\b/', $rule[2] ) ) {
 					continue;
 				}
 				$covered = false;
@@ -223,7 +223,7 @@ final class AdminAssetContractTest extends TestCase {
 			}
 		}
 
-		self::assertSame( array(), $offenders, 'Text sizes above 14px or below 12px must use the --ran-booster-font-size-* type scale tokens.' );
+		self::assertSame( array(), $offenders, 'Every text size must use the --ran-booster-font-size-* tokens (the WordPress design-system 20 / 15 / 13 / 12 scale); only icon glyphs and the listed readouts may use a raw size.' );
 	}
 
 	public function test_every_framed_surface_takes_its_radius_from_the_shared_block(): void {
@@ -1255,40 +1255,61 @@ final class AdminAssetContractTest extends TestCase {
 
 	/**
 	 * Package identity must stay the scan anchor of its row (#759): the details
-	 * disclosure header may never be larger than the package name. This asserts
-	 * the relationship through the foundation tokens, so a token change cannot
-	 * silently invert the hierarchy.
+	 * disclosure header may never be larger than the package name, and must be
+	 * lighter. This reads the relationship through the foundation tokens, so a
+	 * token change cannot silently invert the hierarchy.
 	 */
-	public function test_package_row_disclosure_header_never_outsizes_the_package_name(): void {
+	public function test_package_row_disclosure_header_never_outranks_the_package_name(): void {
 		$foundations = $this->asset( 'ran-booster/00-foundations.css' );
 		$packages    = $this->asset( 'ran-booster/60-packages.css' );
+		$primitives  = $this->asset( 'ran-booster/25-admin-primitives.css' );
 
-		$size = static function ( string $token ) use ( $foundations ): int {
-			if ( 1 !== preg_match( '/' . preg_quote( $token, '/' ) . ':\s*(\d+)px;/', $foundations, $m ) ) {
+		$scale = array(
+			'xl' => 20,
+			'lg' => 15,
+			'md' => 13,
+			'sm' => 12,
+		);
+
+		$size = static function ( string $token ) use ( $foundations, $scale ): int {
+			if ( 1 !== preg_match( '/' . preg_quote( $token, '/' ) . ':\s*var\(\s*--wpds-typography-font-size-(xl|lg|md|sm)\s*\)/', $foundations, $m ) ) {
 				self::fail( $token );
 			}
 
-			return (int) $m[1];
+			return $scale[ $m[1] ];
 		};
 
-		$token_in = static function ( string $selector_fragment ) use ( $packages ): string {
-			$pattern = '/' . $selector_fragment . '[^{]*\{[^}]*font-size:\s*var\((--ran-booster-font-size-[a-z-]+)\)/s';
-			if ( 1 !== preg_match( $pattern, $packages, $m ) ) {
-				self::fail( $selector_fragment );
+		$weight = static function ( string $token ) use ( $foundations ): int {
+			if ( 1 !== preg_match( '/' . preg_quote( $token, '/' ) . ':\s*(?:(\d+)|var\(\s*--wpds-typography-font-weight-emphasis\s*\))/', $foundations, $m ) ) {
+				self::fail( $token );
+			}
+
+			return isset( $m[1] ) && '' !== $m[1] ? (int) $m[1] : 600;
+		};
+
+		$declared = static function ( string $css, string $selector_fragment, string $property, string $value_pattern ): string {
+			$pattern = '/' . $selector_fragment . '[^{]*\{[^}]*' . $property . ':\s*(' . $value_pattern . ')/s';
+			if ( 1 !== preg_match( $pattern, $css, $m ) ) {
+				self::fail( $selector_fragment . ' ' . $property );
 			}
 
 			return $m[1];
 		};
 
-		$name_token   = $token_in( '\.ran-booster-package-row__title\s' );
-		$header_token = $token_in( 'package-row__details\s+\[data-ran-booster-ui-disclosure="package-details"\]\s+>\s+details' );
+		$name_size_token = $declared( $packages, '\.ran-booster-package-row__title\s', 'font-size', 'var\(--ran-booster-font-size-[a-z]+\)' );
+		$name_weight     = $declared( $packages, '\.ran-booster-package-row__name', 'font-weight', 'var\(--ran-booster-font-weight-[a-z]+\)' );
+		$head_size_token = $declared( $primitives, '\.ran-booster-admin \.ran-booster-ui-disclosure__header > \[role="button"\]', 'font-size', 'var\(--ran-booster-font-size-[a-z]+\)' );
+		$head_weight     = $declared( $primitives, '\.ran-booster-admin \.ran-booster-ui-disclosure__header > \[role="button"\]', 'font-weight', 'var\(--ran-booster-font-weight-[a-z]+\)' );
 
-		self::assertGreaterThanOrEqual( $size( $header_token ), $size( $name_token ) );
+		$extract = static fn ( string $value ): string => (string) preg_replace( '/^var\((--[a-z-]+)\)$/', '$1', $value );
 
-		// Both the native fallback summary and the mounted header carry the override.
+		self::assertGreaterThanOrEqual( $size( $extract( $head_size_token ) ), $size( $extract( $name_size_token ) ) );
+		self::assertGreaterThan( $weight( $extract( $head_weight ) ), $weight( $extract( $name_weight ) ) );
+
+		// Package-row disclosures only tighten padding; they never re-size the header.
 		self::assertSame(
 			1,
-			preg_match( '/summary,\s*\.ran-booster-admin\s+\.ran-booster-package-table\s+\.ran-booster-package-row__details\s+\[data-ran-booster-ui-disclosure="package-details"\]\s+\.ran-booster-ui-disclosure__header\s+>\s+\[role="button"\]\s*\{/', $packages )
+			preg_match( '/summary,\s*\.ran-booster-admin\s+\.ran-booster-package-table\s+\.ran-booster-package-row__details\s+\[data-ran-booster-ui-disclosure="package-details"\]\s+\.ran-booster-ui-disclosure__header\s+>\s+\[role="button"\]\s*\{\s*padding-block:[^;]+;\s*\}/', $packages )
 		);
 	}
 

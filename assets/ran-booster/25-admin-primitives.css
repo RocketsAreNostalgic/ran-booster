@@ -807,6 +807,18 @@
 }
 
 /*
+ * One page frame: a top-level page's header and body share the wrap's left
+ * edge, so titles, tabs and cards align on every Booster page. The inline
+ * inset only applies when a page shell is nested inside a Card or panel.
+ */
+
+.ran-booster-admin
+	> .ran-booster-page-shell
+	> :is(.ran-booster-page-shell__header, .ran-booster-page-shell__body) {
+	padding-inline: 0;
+}
+
+/*
  * Repository pickers are portalled directly to document.body so they can
  * cover the WordPress admin chrome. Dialog primitives therefore own their
  * namespaced scope rather than relying on the Booster page wrapper.

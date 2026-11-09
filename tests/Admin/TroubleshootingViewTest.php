@@ -527,7 +527,8 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertStringNotContainsString( '<form', $html );
 			self::assertStringContainsString( '<dt>Storage directory</dt>', $html );
 			self::assertStringContainsString( '<dt>Storage file</dt>', $html );
-			self::assertStringContainsString( '<code class="ran-booster-onboarding__storage-inline">Custom wp-config.php path</code>', $html );
+			self::assertStringContainsString( '<code class="ran-booster-onboarding__storage-inline">Configured path</code>', $html );
+			self::assertStringNotContainsString( 'Custom wp-config.php path', $html );
 			self::assertStringContainsString( '<summary aria-label="Environment details">Environment details</summary>', $html );
 			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary aria-label="Environment details">Environment details</summary>', $html );
 			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback open><summary aria-label="Environment details">Environment details</summary>', $html );

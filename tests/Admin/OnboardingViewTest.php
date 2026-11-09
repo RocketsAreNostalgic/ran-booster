@@ -327,7 +327,8 @@ final class OnboardingViewTest extends TestCase {
 			'Encrypted secrets storage is configured and authenticated.'
 		);
 		self::assertStringContainsString( '>Storage healthy</span>', $healthy );
-		self::assertStringContainsString( 'Custom wp-config.php path', $healthy );
+		self::assertStringContainsString( '<dd><code class="ran-booster-onboarding__storage-inline">Configured path</code></dd>', $healthy );
+		self::assertStringNotContainsString( 'Custom wp-config.php path', $healthy );
 		self::assertMatchesRegularExpression( '/<dt>Configuration constant<\/dt><dd>\s*<code class="ran-booster-onboarding__storage-inline">Not configured<\/code>\s*<\/dd>/', $healthy );
 		self::assertStringContainsString( 'WordPress stores the encryption key separately.', $healthy );
 		self::assertSame( 1.0, $this->storage_xpath( $healthy )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/div[@class="ran-booster-onboarding__storage-details" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open) and summary="Storage details"]/div[@data-ran-booster-ui-disclosure-content])' ) );
@@ -359,8 +360,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'aria-label="Copy environment-managed wp-config.php bridge"', $broken );
 		self::assertStringContainsString( "\tdefine( &#039;RAN_BOOSTER_ENCRYPTED_SECRETS_DIR&#039;, \$ran_booster_secrets_dir );\n}", $broken );
 		self::assertStringContainsString( 'if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; &#039;&#039; !== trim( $ran_booster_secrets_dir ) )', $broken );
-		self::assertStringContainsString( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition', $broken );
-		self::assertStringNotContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE'", $broken );
+		self::assertStringContainsString( 'Define this directory constant in wp-config.php before WordPress loads plugins.', $broken );
+		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $broken );
 		self::assertStringContainsString( 'getenv', $broken );
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="storage_needs_attention"', $broken );
 		self::assertStringContainsString( '<strong>Diagnostic code:</strong> <code>storage_needs_attention</code>', $broken );
@@ -454,9 +455,41 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( '/var/www/site/public_html/ran-booster</code>', $html );
 		self::assertStringContainsString( '<dt>Storage file</dt>', $html );
 		self::assertStringContainsString( '/var/www/site/public_html/ran-booster/ran-booster-store.json</code>', $html );
-		self::assertStringContainsString( 'Custom wp-config.php path', $html );
+		self::assertStringContainsString( 'Configured path', $html );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $html );
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="configured_path_unsafe"', $html );
+	}
+
+	public function test_storage_path_selection_shows_unknown_provenance_without_a_claim(): void {
+		$html = $this->render_storage_status( 'path_configured', 'unknown' );
+
+		self::assertStringContainsString( '<dt>Path selection</dt>', $html );
+		self::assertStringContainsString( '<dd><code class="ran-booster-onboarding__storage-inline">Unknown</code></dd>', $html );
+		self::assertStringNotContainsString( 'Booster default', $html );
+		self::assertStringNotContainsString( 'Configured path', $html );
+	}
+
+	public function test_storage_file_constant_is_named_only_when_it_is_defined(): void {
+		define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', '/private/canary/legacy-store.json' );
+		$html = $this->render_view(
+			null,
+			array(
+				'status'              => 'manual_required',
+				'reason_code'         => 'configured_path_invalid',
+				'message'             => 'The encrypted secrets path constant is not a valid absolute path.',
+				'candidate_path'      => null,
+				'path_source'         => null,
+				'can_provision'       => false,
+				'action_url'          => '/admin',
+				'manual_preflight'    => null,
+				'directory_commands'  => array(),
+				'config_alternatives' => null,
+			)
+		);
+
+		self::assertStringContainsString( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant', $html );
+		self::assertStringNotContainsString( '<p>Define this directory constant', $html );
+		self::assertStringNotContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE'", $html );
 	}
 
 	public function test_dashboard_reports_unknown_counts_and_escapes_bounded_activity(): void {

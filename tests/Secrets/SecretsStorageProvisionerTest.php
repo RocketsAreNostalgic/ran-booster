@@ -577,6 +577,21 @@ final class SecretsStorageProvisionerTest extends TestCase {
 		);
 	}
 
+	public function test_uninspectable_path_selection_is_unknown_without_changing_status(): void {
+		$manual = $this->root . '/manual';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create the disposable native directory topology used by the filesystem/security fixture.
+		self::assertTrue( mkdir( $manual, 0700 ) );
+		$provisioner                  = $this->provisioner();
+		$provisioner->configured      = $manual . '/ran-booster-store.json';
+		$provisioner->resolver_throws = true;
+
+		$result = $provisioner->status();
+
+		self::assertSame( SecretsStorageProvisioningResult::PATH_CONFIGURED, $result->status() );
+		self::assertSame( SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN, $result->path_source() );
+		self::assertTrue( $provisioner->resolver_called );
+	}
+
 	public function test_manual_override_inside_word_press_is_rejected_with_privileged_correction_path(): void {
 		$provisioner             = $this->provisioner();
 		$provisioner->configured = $this->wordpress_root . '/ran-booster-store.json';
@@ -1154,6 +1169,7 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	public bool $local_platform                      = true;
 	public bool $resolver_called                     = false;
 	public bool $resolver_fails                      = false;
+	public bool $resolver_throws                     = false;
 	public bool $probe_called                        = false;
 	public bool $writer_called                       = false;
 	public bool $probe_fails                         = false;
@@ -1190,6 +1206,9 @@ final class TestSecretsStorageProvisioner extends SecretsStorageProvisioner {
 	protected function resolve_candidate( ?array &$discarded = null ): ?string {
 		$this->resolver_called = true;
 		$discarded             = $this->discarded_candidates;
+		if ( $this->resolver_throws ) {
+			throw new \RuntimeException( 'Fixture resolver failure.' );
+		}
 
 		return $this->resolver_fails ? null : $this->candidate;
 	}

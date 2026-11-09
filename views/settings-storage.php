@@ -47,7 +47,8 @@ $storage_status_intents       = array(
 $storage_path_source          = null === $secrets_storage ? null : ( $secrets_storage['path_source'] ?? null );
 $storage_path_source_labels   = array(
 	'automatic' => __( 'Booster default', 'ran-booster' ),
-	'manual'    => __( 'Custom wp-config.php path', 'ran-booster' ),
+	'manual'    => __( 'Configured path', 'ran-booster' ),
+	'unknown'   => __( 'Unknown', 'ran-booster' ),
 );
 $storage_recovery             = null === $secrets_storage || ! is_array( $secrets_storage['recovery'] ?? null )
 	? null
@@ -125,7 +126,11 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 						<summary><?php echo esc_html( 'storage_needs_attention' === $storage_status ? __( 'Use a different storage location', 'ran-booster' ) : __( 'Set a storage location manually', 'ran-booster' ) ); ?></summary>
 						<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 							<p><?php esc_html_e( 'Choose a durable absolute directory outside the public web root. Create it as a real directory owned by the PHP process user with mode 0700. Booster manages ran-booster-store.json and its lock inside it; if the file already exists, it must be owned by PHP with mode 0600.', 'ran-booster' ); ?></p>
-							<p><?php esc_html_e( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:', 'ran-booster' ); ?></p>
+							<?php if ( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE' === $storage_constant ) { ?>
+								<p><?php esc_html_e( 'Remove any existing RAN_BOOSTER_ENCRYPTED_SECRETS_FILE definition, then define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:', 'ran-booster' ); ?></p>
+							<?php } else { ?>
+								<p><?php esc_html_e( 'Define this directory constant in wp-config.php before WordPress loads plugins. Use __DIR__ to anchor a relative layout to wp-config.php:', 'ran-booster' ); ?></p>
+							<?php } ?>
 							<?php
 							$snippet_value      = 'define( \'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR\', dirname( __DIR__ ) . \'/private/ran-booster\' );';
 							$snippet_label      = __( 'Example wp-config.php line', 'ran-booster' );

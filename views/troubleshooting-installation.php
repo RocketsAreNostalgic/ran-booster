@@ -67,7 +67,8 @@ if ( array() === $environment ) {
 			<?php
 			$source_labels = array(
 				'automatic' => __( 'Booster default', 'ran-booster' ),
-				'manual'    => __( 'Custom wp-config.php path', 'ran-booster' ),
+				'manual'    => __( 'Configured path', 'ran-booster' ),
+				'unknown'   => __( 'Unknown', 'ran-booster' ),
 			);
 			foreach ( $storage_labels as $key => $label ) {
 				$value = $storage['details'][ $key ] ?? null;

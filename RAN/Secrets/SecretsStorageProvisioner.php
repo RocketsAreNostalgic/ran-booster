@@ -590,7 +590,7 @@ class SecretsStorageProvisioner {
 				return SecretsStorageProvisioningResult::PATH_SOURCE_AUTOMATIC;
 			}
 		} catch ( Throwable ) {
-			return SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL;
+			return SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN;
 		}
 
 		return SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL;
@@ -717,7 +717,7 @@ class SecretsStorageProvisioner {
 			? SecretsStorageProvisioningResult::manual_required( $code, $message )
 			: SecretsStorageProvisioningResult::storage_needs_attention(
 				$current,
-				SecretsStorageProvisioningResult::PATH_SOURCE_MANUAL,
+				SecretsStorageProvisioningResult::PATH_SOURCE_UNKNOWN,
 				$code,
 				$message
 			);

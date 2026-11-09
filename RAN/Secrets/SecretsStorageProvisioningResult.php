@@ -22,6 +22,7 @@ final readonly class SecretsStorageProvisioningResult {
 
 	public const PATH_SOURCE_AUTOMATIC = 'automatic';
 	public const PATH_SOURCE_MANUAL    = 'manual';
+	public const PATH_SOURCE_UNKNOWN   = 'unknown';
 
 	/** @param list<array{directory:string,code:string,reason:string,component:string|null}> $discarded_candidates */
 	private function __construct(

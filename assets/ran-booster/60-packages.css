@@ -127,6 +127,16 @@
 	text-align: end;
 }
 
+.ran-booster-admin .ran-booster-package-table > thead > tr > th {
+	padding-block: var(--ran-booster-space-8);
+	padding-inline: var(--ran-booster-space-16);
+	border-block-end: 1px solid var(--ran-booster-border);
+	background: transparent;
+	color: var(--ran-booster-text);
+	font-weight: 600;
+	text-align: start;
+}
+
 .ran-booster-admin
 	.ran-booster-package-table
 	:is(
@@ -250,6 +260,13 @@
 		> .check-column {
 		padding-block-start: var(--ran-booster-space-14);
 	}
+
+	.ran-booster-admin
+		.ran-booster-package-table
+		.ran-booster-package-row--primary
+		> .check-column {
+		border-block-end: 1px solid var(--ran-booster-divider);
+	}
 }
 
 .ran-booster-admin .ran-booster-package-row__action-group {
@@ -282,7 +299,7 @@
 .ran-booster-admin .ran-booster-package-row__details {
 	padding-block: 0 var(--ran-booster-space-14);
 	padding-inline: var(--ran-booster-space-16);
-	border-block-end: 1px solid var(--ran-booster-border);
+	border-block-end: 1px solid var(--ran-booster-divider);
 	background: var(--ran-booster-surface);
 }
 
@@ -342,13 +359,34 @@
 	margin-block-end: var(--ran-booster-space-8);
 }
 
+/*
+ * Each package is a summary row and its details row, so the stripe alternates
+ * per package and the last package drops the divider above the frame edge.
+ * The rows take the stripe too, so no seam shows between fractional cells.
+ */
+
 .ran-booster-admin
 	.ran-booster-package-table
-	.ran-booster-package-row--primary:hover
+	.ran-booster-package-row--primary:nth-child(
+		odd of .ran-booster-package-row--primary
+	),
+.ran-booster-admin
+	.ran-booster-package-table
+	.ran-booster-package-row--primary:nth-child(
+		odd of .ran-booster-package-row--primary
+	)
 	> *,
 .ran-booster-admin
 	.ran-booster-package-table
-	.ran-booster-package-row--primary:hover
+	.ran-booster-package-row--primary:nth-child(
+		odd of .ran-booster-package-row--primary
+	)
+	+ .ran-booster-package-row--details,
+.ran-booster-admin
+	.ran-booster-package-table
+	.ran-booster-package-row--primary:nth-child(
+		odd of .ran-booster-package-row--primary
+	)
 	+ .ran-booster-package-row--details
 	> * {
 	background: var(--ran-booster-surface-subtle);
@@ -356,32 +394,22 @@
 
 .ran-booster-admin
 	.ran-booster-package-table
-	.ran-booster-package-row--wordpress-active
+	.ran-booster-package-row--primary:nth-last-child(2)
 	> .check-column,
 .ran-booster-admin
 	.ran-booster-package-table
-	.ran-booster-package-row--wordpress-active
-	> * {
-	background-color: rgba(var(--wp-admin-theme-color--rgb), 0.08);
+	.ran-booster-package-row--details:last-child
+	> .ran-booster-package-row__details {
+	border-block-end: 0;
 }
 
+/* WordPress-active packages keep an accent bar instead of a full-row tint. */
 .ran-booster-admin
 	.ran-booster-package-table
 	.ran-booster-package-row--primary.ran-booster-package-row--wordpress-active
 	> .check-column {
-	border-inline-start: 4px solid var(--wp-admin-theme-color);
-}
-
-.ran-booster-admin
-	.ran-booster-package-table
-	.ran-booster-package-row--primary.ran-booster-package-row--wordpress-active:hover
-	> *,
-.ran-booster-admin
-	.ran-booster-package-table
-	.ran-booster-package-row--primary.ran-booster-package-row--wordpress-active:hover
-	+ .ran-booster-package-row--details
-	> * {
-	background-color: rgba(var(--wp-admin-theme-color--rgb), 0.12);
+	padding-inline-start: var(--ran-booster-space-5);
+	border-inline-start: 3px solid var(--wpds-color-stroke-interactive-brand);
 }
 
 @media screen and (min-width: 783px) and (max-width: 1200px) {
@@ -508,7 +536,8 @@
 		.ran-booster-package-table
 		.ran-booster-package-row--wordpress-active {
 		box-sizing: border-box;
-		border-inline-start: 4px solid var(--wp-admin-theme-color);
+		border-inline-start: 3px solid
+			var(--wpds-color-stroke-interactive-brand);
 	}
 
 	.ran-booster-admin
@@ -523,6 +552,7 @@
 		.ran-booster-package-table
 		.ran-booster-package-row--primary.ran-booster-package-row--wordpress-active
 		> .check-column {
+		padding-inline-start: var(--ran-booster-space-8);
 		border-inline-start: 0;
 	}
 
@@ -603,4 +633,30 @@
 	margin: 0;
 	border: 0;
 	box-shadow: none;
+}
+
+/* The framed table sits inside the Card with the toolbar's inset. */
+.ran-booster-admin .ran-booster-package-collection .ran-booster-card__content {
+	padding-block-end: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-table-wrap {
+	margin-block-start: var(--ran-booster-space-16);
+	margin-inline: var(--ran-booster-space-16);
+}
+
+/* The first-run empty state is not a collection yet, so it keeps the bare Card. */
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-card__content:has(.ran-booster-package-empty-state) {
+	padding-block-end: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-table-wrap:has(.ran-booster-package-empty-state) {
+	margin: 0;
+	border-width: 0;
 }

@@ -1273,10 +1273,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-package-row__state ran-booster-package-row__update-state', $view );
 		self::assertStringContainsString( 'StatusBadge::print_intent( $automation_state_label, $automation_state_intent );', $view );
 		self::assertStringNotContainsString( 'ran-booster-package-row__state-value', $view . $package_css );
-		self::assertStringContainsString( 'rgba(var(--wp-admin-theme-color--rgb), 0.08);', $package_css );
-		self::assertStringContainsString( ".ran-booster-package-row--wordpress-active\n\t> .check-column,", $package_css );
-		self::assertStringContainsString( 'border-inline-start: 4px solid var(--wp-admin-theme-color);', $package_css );
-		self::assertStringContainsString( 'rgba(var(--wp-admin-theme-color--rgb), 0.12);', $package_css );
+		self::assertStringNotContainsString( 'rgba(var(--wp-admin-theme-color--rgb)', $package_css );
+		self::assertStringContainsString( 'border-inline-start: 3px solid var(--wpds-color-stroke-interactive-brand);', $package_css );
 		self::assertStringContainsString( 'justify-content: flex-end;', $css );
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-package-row__action-group \\{[\\s\\S]+?flex-wrap: nowrap;/',
@@ -1475,6 +1473,61 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-repository-record__identity', $css );
 		self::assertStringContainsString( '.ran-booster-repository-record__overview', $css );
 		self::assertStringContainsString( '.ran-booster-repository-record__actions', $css );
+	}
+
+	/**
+	 * The managed package table keeps its native list-table structure and only
+	 * gains the shared collection frame: one wrapper around the whole table,
+	 * stripes per package rather than per row, and an accent bar instead of a
+	 * full-row tint for packages that are active in WordPress.
+	 */
+	public function test_package_table_sits_in_the_shared_collection_frame_and_keeps_its_structure(): void {
+		$view       = $this->view( 'packages/index.php' );
+		$packages   = $this->asset( 'ran-booster/60-packages.css' );
+		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
+
+		if ( 1 !== preg_match( '#<div class="ran-booster-data-table-wrap ran-booster-package-table-wrap">\n(<table class="wp-list-table widefat plugins ran-booster-package-table"[\s\S]*?</table>)\n</div>\n</div></div></div>#', $view, $m ) ) {
+			self::fail( 'The package table must sit directly inside one shared data-table wrapper that closes with the table.' );
+		}
+		$table = $m[1];
+
+		self::assertSame( 1, substr_count( $view, 'ran-booster-data-table-wrap' ) );
+		self::assertStringContainsString( '<caption class="screen-reader-text">', $table );
+		self::assertStringContainsString( '<tbody id="the-list">', $table );
+		self::assertStringContainsString( '<th scope="row" rowspan="2" class="check-column">', $table );
+		self::assertStringContainsString( '<td colspan="3" class="ran-booster-package-row__details">', $table );
+		self::assertStringContainsString( 'data-ran-booster-select-all', $table );
+		self::assertStringContainsString( 'data-ran-booster-package-checkbox', $table );
+		self::assertStringNotContainsString( 'ran-booster-data-table ', $table );
+		self::assertStringNotContainsString( 'ran-booster-data-table--rows', $table );
+
+		if ( 1 !== preg_match( '#/\* surface-radius:start \*/([\s\S]*?)/\* surface-radius:end \*/#', $primitives, $radius ) ) {
+			self::fail( 'The shared surface-radius block is missing.' );
+		}
+		self::assertStringContainsString( '.ran-booster-data-table-wrap,', $radius[1] );
+
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-package-table > thead > tr > th {', $packages );
+		self::assertMatchesRegularExpression( '/\.ran-booster-package-row--primary:nth-child\(\s+odd of \.ran-booster-package-row--primary\s+\)\s+\+ \.ran-booster-package-row--details\s+> \* \{\s+background: var\(--ran-booster-surface-subtle\);/', $packages );
+		self::assertStringNotContainsString( '.ran-booster-package-row--primary:hover', $packages );
+
+		$stylesheets = glob( dirname( __DIR__, 2 ) . '/assets/ran-booster/*.css' );
+		if ( false === $stylesheets ) {
+			self::fail( 'The Booster stylesheets could not be listed.' );
+		}
+		$tinted = array();
+		foreach ( $stylesheets as $file ) {
+			$css = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
+			if ( ! preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {
+				continue;
+			}
+			foreach ( $rules as $rule ) {
+				if ( str_contains( $rule[1], 'ran-booster-package-row--wordpress-active' ) && 1 === preg_match( '/(?:^|[;\s])background(?:-color)?\s*:/', $rule[2] ) ) {
+					$tinted[] = basename( $file ) . ': ' . trim( (string) preg_replace( '/\s+/', ' ', $rule[1] ) );
+				}
+			}
+		}
+		self::assertSame( array(), $tinted, 'Active packages keep the package stripe; mark them with the accent bar, not a row tint.' );
 	}
 
 	public function test_package_table_has_a_caption_and_page_size_selects_submit_without_inline_handlers(): void {

@@ -970,7 +970,9 @@ final class RepeatPackageViewTest extends TestCase {
 				$package_view->get_type()
 			);
 			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html, $package_view->get_type() );
-			self::assertMatchesRegularExpression( '/id="ran-booster-source-pane-branch"[^>]*role="group"[^>]*aria-labelledby="ran-booster-source-tab-branch"/', $html, $package_view->get_type() );
+			self::assertMatchesRegularExpression( '/id="ran-booster-source-pane-branch"[^>]*role="group"[^>]*aria-labelledby="ran-booster-source-tab-branch-heading"/', $html, $package_view->get_type() );
+			self::assertSame( 1, substr_count( $html, 'id="ran-booster-source-tab-branch-heading"' ), $package_view->get_type() );
+			self::assertMatchesRegularExpression( '/<strong id="ran-booster-source-tab-branch-heading" data-ran-booster-source-heading>Branch<\/strong>/', $html, $package_view->get_type() );
 			$branch_pane_position   = strpos( $html, 'id="ran-booster-source-pane-branch"' );
 			$return_position        = strpos( $html, 'class="ran-booster-release-return"' );
 			$branch_fields_position = strpos( $html, '<fieldset class="ran-booster-branch-settings' );

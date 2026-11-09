@@ -67,7 +67,7 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 					<span class="ran-booster-source-choice__radio" aria-hidden="true"></span>
 				<?php } ?>
 				<span class="ran-booster-source-choice__content">
-					<strong data-ran-booster-source-heading><?php echo esc_html( $source_heading ); ?></strong>
+					<strong id="<?php echo esc_attr( $tab_id . '-heading' ); ?>" data-ran-booster-source-heading><?php echo esc_html( $source_heading ); ?></strong>
 					<?php if ( 'create' === $source_choice_mode ) { ?>
 						<small data-ran-booster-source-description><?php echo esc_html( $source_choice['description'] ); ?></small>
 						<?php if ( '' !== $source_choice['meta'] ) { ?>

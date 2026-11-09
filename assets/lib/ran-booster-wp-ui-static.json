@@ -92,6 +92,34 @@
 			"properties": [],
 			"sourceSha256": "e096c6d4f7283c7eb224b553b94a28ce548545dd05e367bb218d4d0e03830fca"
 		},
+		"notice": {
+			"block": "ran-wp-ui-notice",
+			"elements": [
+				"action-button",
+				"action-link",
+				"actions",
+				"close-icon",
+				"description",
+				"icon",
+				"title"
+			],
+			"states": [
+				"is-error",
+				"is-info",
+				"is-success",
+				"is-warning"
+			],
+			"modifiers": [],
+			"properties": [
+				"--icon-height",
+				"--text-vertical-padding",
+				"--wp-ui-notice-background-color",
+				"--wp-ui-notice-border-color",
+				"--wp-ui-notice-decorative-icon-color",
+				"--wp-ui-notice-text-color"
+			],
+			"sourceSha256": "1f46d1390d0cde0acffa6bfa0ee79ccdecb9a0009cb9aae85170c2bfbc632914"
+		},
 		"outset-ring": {
 			"block": "ran-wp-ui-outset-ring",
 			"elements": [],

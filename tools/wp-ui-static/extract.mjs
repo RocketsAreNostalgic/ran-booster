@@ -58,6 +58,12 @@ export const components = [
 		root: 'a',
 	},
 	{
+		name: 'notice',
+		file: 'notice/root.mjs',
+		match: /__notice\{/,
+		root: 'notice',
+	},
+	{
 		name: 'outset-ring',
 		file: 'link/link.mjs',
 		match: /__outset-ring--focus-except-active:focus\b/,

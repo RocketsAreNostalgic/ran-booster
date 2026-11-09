@@ -39,7 +39,8 @@ prefix; `wp-ui` is the namespace an upstream release would use.
 
 ## Supported components
 
-`Card`, `Badge`, `Link` and the `Text` styles `Badge` builds on, plus the focus
+`Card`, `Badge`, `Notice`, `Link` and the `Text` styles `Badge` and `Notice`
+build on, plus the focus
 ring `Link` depends on (`{prefix}-outset-ring--focus-except-active`, applied on
 its own with no base class, together with `{prefix}-box-sizing`), and the
 library's bare-`a` reset (`{prefix}-reset-a`) that `Link` relies on: its
@@ -47,7 +48,7 @@ library's bare-`a` reset (`{prefix}-reset-a`) that `Link` relies on: its
 reset reads. These work because
 their CSS does not depend on state that React sets at runtime. Components whose
 styles key on Base UI attributes (Button, Dialog, Menu, Tabs, Switch) are not
-supported.
+supported, and neither are the parts of `Notice` that render them (see below).
 
 ## Limits to know about
 
@@ -87,6 +88,50 @@ header and content parts as children:
 `--wp-ui-card-header-content-gap`; the manifest records these properties so a
 consumer that tunes them notices a rename. A consumer with its own inset profile
 can also use a plain child element in place of `__content`.
+
+## Notice
+
+`Notice.Root` renders its `root` part, the intent state and the box-sizing reset
+on one element, its children, and then the intent icon. `Notice.Description` is
+`Text` `body-md` and `Notice.Title` is `Text` `heading-md`:
+
+```html
+<div class="wp-ui-notice wp-ui-box-sizing is-error">
+	<span class="wp-ui-text is-heading-md wp-ui-notice__title">…</span>
+	<div class="wp-ui-text is-body-md wp-ui-notice__description">…</div>
+	<div class="wp-ui-notice__actions">…</div>
+	<svg class="wp-ui-notice__icon" aria-hidden="true" focusable="false" …>…</svg>
+</div>
+```
+
+Intents are `is-info`, `is-warning`, `is-success` and `is-error`; neutral has no
+state class and no icon. The icon is markup, not CSS: copy the 24px SVG the
+library uses for the intent (`info`, `caution`, `published`, `error` from
+`@wordpress/icons`) and keep it `aria-hidden`. When a script changes the intent
+in place it must swap the state class and the icon together. The grid places
+each part by column, so source order does not move them.
+
+The style keeps native CSS nesting, `:has()`, `container-type: inline-size`
+with an `@container (max-width: 320px)` query, and `mix-blend-mode` with a
+`forced-colors` reset; each needs a browser that supports it, as the library
+does. Like the Card, the root sets `display: grid` inside the layer, so a
+consumer that toggles `hidden` on the root needs an unlayered
+`[hidden] { display: none }` for it. A host whose own unlayered rules style the
+same element (WordPress core's `.notice`, for example) outranks the layer and
+must reset those properties itself.
+
+Deliberately not extracted:
+
+- `Notice.List` announcing. It is a live region driven by script, not CSS; a
+  static notice announces through whatever the host uses (for example
+  `wp.a11y.speak`), and carries no `data-wp-ui-notice-politeness`.
+- `Notice.ActionButton` and `Notice.CloseIconButton`. They render the library
+  `Button` and `IconButton`, which are not supported. Their placement classes
+  (`__action-button`, `__close-icon`) come along in the shared style string and
+  can position a host's own button. `__action-link` is the `Link` component,
+  which is supported.
+- The global-css-defense heading reset that reads the title's
+  `--_gcd-heading-color`; a host heading takes its colour from `color` instead.
 
 This directory imports nothing from the host plugin so it can move to its own
 repository unchanged.

@@ -120,3 +120,77 @@ test('a Card page frame composes the same classes as the mounted Card.Root', () 
 	// user-agent [hidden] rule, so a hidden frame must hide on its host.
 	assert.match(css, /\.ran-wp-ui-card\{[^}]*display:flex/);
 });
+
+test('a static Notice composes the same classes as the mounted Notice.Root', () => {
+	const notice = manifest.components.notice;
+	assert.deepEqual(notice.elements, [
+		'action-button',
+		'action-link',
+		'actions',
+		'close-icon',
+		'description',
+		'icon',
+		'title',
+	]);
+	assert.deepEqual(notice.states, [
+		'is-error',
+		'is-info',
+		'is-success',
+		'is-warning',
+	]);
+	// Notice.Root renders the root part, its intent and the box-sizing reset
+	// on one element, and draws the intent icon after its children.
+	const root = fs.readFileSync(
+		`${uiRoot}/build-module/notice/root.mjs`,
+		'utf8'
+	);
+	assert.match(
+		root,
+		/clsx\(style_module_default\.notice, style_module_default\[`is-\$\{intent\}`\], resets_module_default\["box-sizing"\]\)/
+	);
+	assert.match(
+		root,
+		/neutral: null,\s*info,\s*warning: caution,\s*success: published,\s*error\s*\}/
+	);
+	// Description and Title are Text variants, which the static sheet carries.
+	for (const [part, variant] of [
+		['description', 'body-md'],
+		['title', 'heading-md'],
+	]) {
+		const source = fs.readFileSync(
+			`${uiRoot}/build-module/notice/${part}.mjs`,
+			'utf8'
+		);
+		assert.match(source, new RegExp(`variant: "${variant}"`));
+		assert.ok(css.includes(`.ran-wp-ui-text.is-${variant}{`), variant);
+	}
+});
+
+test('the Notice keeps its modern CSS and leaves announcing to the host', () => {
+	const start = css.indexOf('.ran-wp-ui-notice{');
+	assert.ok(start > 0);
+	const notice = css.slice(
+		css.lastIndexOf('\n', start),
+		css.indexOf('\n', start)
+	);
+	assert.match(notice, /\.ran-wp-ui-notice\{[^}]*display:grid/);
+	assert.match(notice, /container-type:inline-size/);
+	assert.match(
+		notice,
+		/@container \(max-width: 320px\)\{\.ran-wp-ui-notice:has\(\.ran-wp-ui-notice__title\)/
+	);
+	assert.match(
+		notice,
+		/\.ran-wp-ui-notice__action-link\{flex-shrink:0;&:not\(:first-child\)\{/
+	);
+	assert.match(
+		notice,
+		/mix-blend-mode:luminosity;@media \(forced-colors:active\)\{mix-blend-mode:normal\}/
+	);
+	for (const intent of ['info', 'warning', 'success', 'error']) {
+		assert.ok(notice.includes(`.ran-wp-ui-notice.is-${intent}{`), intent);
+	}
+	// Notice.List's live region is a runtime behaviour, not CSS: a static
+	// notice carries no politeness data or list semantics.
+	assert.doesNotMatch(css, /politeness|spoken-message|notice-list/);
+});

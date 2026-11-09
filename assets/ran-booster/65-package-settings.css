@@ -1067,7 +1067,9 @@
 		grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
 	}
 
-	.ran-booster-admin .ran-booster-settings__update-summary > .button {
+	.ran-booster-admin
+		.ran-booster-settings__update-summary
+		> .ran-wp-ui-button {
 		justify-self: start;
 	}
 }

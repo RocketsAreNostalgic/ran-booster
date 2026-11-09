@@ -79,7 +79,7 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 				<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secrets_storage['action_url'] ); ?>">
 					<?php wp_nonce_field( 'ran-booster-create-secure-storage' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="create-secure-storage">
-					<button type="submit" class="button button-primary"><?php esc_html_e( 'Create secure storage', 'ran-booster' ); ?></button>
+					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Create secure storage', 'ran-booster' ); ?></button>
 				</form>
 			<?php } ?>
 
@@ -96,7 +96,7 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 								<?php wp_nonce_field( 'ran-booster-adopt-secure-storage' ); ?>
 								<input type="hidden" name="ran_booster[action]" value="adopt-secure-storage">
 								<input type="hidden" name="ran_booster[recovery_token]" value="<?php echo esc_attr( $storage_recovery['token'] ); ?>">
-								<button type="submit" class="button button-primary"><?php esc_html_e( 'Adopt existing storage', 'ran-booster' ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Adopt existing storage', 'ran-booster' ); ?></button>
 							</form>
 						<?php } elseif ( $storage_can_reset ) { ?>
 							<p><strong><?php esc_html_e( 'Permanent reset:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Restore the matching ran-booster-store.json and database key from the same backup first if they are available. Resetting abandons every repository credential and webhook secret that cannot be recovered from that matching pair.', 'ran-booster' ); ?></p>
@@ -111,7 +111,7 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 									?>
 								</label>
 								<input id="ran-booster-reset-confirmation" type="text" name="ran_booster[reset_confirmation]" required autocomplete="off" pattern="<?php echo esc_attr( $storage_recovery['reset_confirmation'] ); ?>">
-								<button type="submit" class="button"><?php esc_html_e( 'Reset credential storage', 'ran-booster' ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Reset credential storage', 'ran-booster' ); ?></button>
 							</form>
 						<?php } else { ?>
 							<p class="description"><?php esc_html_e( 'Automatic adoption remains disabled. Booster will not bypass private-path checks or rewrite an operator-managed storage definition.', 'ran-booster' ); ?></p>

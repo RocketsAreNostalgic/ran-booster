@@ -167,25 +167,25 @@ $provider_attention        = array_filter(
 		<p><?php esc_html_e( 'Add credentials on the provider’s page if needed.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
 			<?php foreach ( $provider_summaries as $provider ) { ?>
-				<a class="button" href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>
+				<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>
 			<?php } ?>
-			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Install another provider', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Install another provider', 'ran-booster' ); ?></a>
 		</p>
 	</div></div></section>
 	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-next-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3 id="ran-booster-onboarding-next-heading"><?php esc_html_e( '3. Import or migrate (optional)', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Import a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
-			<a class="button" href="<?php echo esc_url( $onboarding['portability_url'] ); ?>"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></a>
-			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Browse extensions', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $onboarding['portability_url'] ); ?>"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Browse extensions', 'ran-booster' ); ?></a>
 		</p>
 	</div></div></section>
 	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3><?php esc_html_e( '4. Install and manage packages', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Install a plugin or theme from a Git repository, or link one already installed on this site.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
-			<a class="button button-primary" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
-			<a class="button" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
 		</p>
 	</div></div></section>
 

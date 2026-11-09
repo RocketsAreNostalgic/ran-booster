@@ -198,7 +198,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 				<?php $render_configuration( array( 'hide_github' => 'RAN_BOOSTER_HIDE_GITHUB_UI' ) ); ?>
 			</fieldset>
 <div class="ran-booster-settings__toggle-actions">
-	<button id="ran-booster-save-hide_github" type="submit" class="button" data-ran-booster-toggle-save<?php disabled( $hide_locked ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>
+	<button id="ran-booster-save-hide_github" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-toggle-save<?php disabled( $hide_locked ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>
 </div>
 	<?php if ( isset( $general_navigation ) ) { ?>
 <template data-ran-booster-general-navigation>
@@ -250,7 +250,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 						<div><dt><?php esc_html_e( 'Available version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $offered_version ?? __( 'No verified newer offer', 'ran-booster' ) ); ?></code></dd></div>
 						<div><dt><?php esc_html_e( 'Latest check result', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $core_update_status['last_check_outcome'] ?? __( 'No completed check recorded', 'ran-booster' ) ); ?></code></dd></div>
 					</dl>
-					<button form="ran-booster-check-core-updates" type="submit" class="button"<?php echo $check_available ? '' : ( 'enabled' === $status_mode ? ' aria-describedby="ran-booster-check-updates-unavailable"' : ' aria-describedby="ran-booster-self-update-discovery-help"' ); ?><?php disabled( ! $check_available ); ?>><?php esc_html_e( 'Check for updates', 'ran-booster' ); ?></button>
+					<button form="ran-booster-check-core-updates" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"<?php echo $check_available ? '' : ( 'enabled' === $status_mode ? ' aria-describedby="ran-booster-check-updates-unavailable"' : ' aria-describedby="ran-booster-self-update-discovery-help"' ); ?><?php disabled( ! $check_available ); ?>><?php esc_html_e( 'Check for updates', 'ran-booster' ); ?></button>
 				</div>
 
 				<?php if ( ! $check_available && 'enabled' === $status_mode ) { ?>
@@ -269,11 +269,11 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 				<?php
 				if ( null !== $native_update_url && '' !== $native_update_url ) {
 					?>
-					<p><a class="button button-primary" href="<?php echo esc_url( $native_update_url ); ?>"><?php esc_html_e( 'Update now', 'ran-booster' ); ?></a></p><?php } ?>
+					<p><a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" href="<?php echo esc_url( $native_update_url ); ?>"><?php esc_html_e( 'Update now', 'ran-booster' ); ?></a></p><?php } ?>
 				<?php $render_configuration( array( 'self_update_discovery' => 'RAN_BOOSTER_SELF_UPDATE_MODE' ) ); ?>
 			</fieldset>
 <div class="ran-booster-settings__toggle-actions">
-	<button id="ran-booster-save-self_update_discovery" type="submit" class="button" data-ran-booster-toggle-save<?php disabled( $discovery['locked'] ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>
+	<button id="ran-booster-save-self_update_discovery" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-toggle-save<?php disabled( $discovery['locked'] ); ?>><?php esc_html_e( 'Save setting', 'ran-booster' ); ?></button>
 </div>
 </form></div>
 <?php } ?>
@@ -310,7 +310,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 						<p class="description"><?php esc_html_e( 'Limits the compressed repository ZIP.', 'ran-booster' ); ?></p>
 					<p class="description"><?php /* translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit).', 'ran-booster' ), $branch_ceiling_mib, number_format_i18n( $branch_ceiling ) ) ); ?></p>
 				<?php $render_configuration( array( 'max_download_bytes' => 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ) ); ?>
-			</fieldset><div class="ran-booster-settings__save-actions"><button id="ran-booster-save-numeric-bottom" type="submit" class="button button-primary"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button><span class="screen-reader-text" data-ran-booster-unsaved><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span></div>
+			</fieldset><div class="ran-booster-settings__save-actions"><button id="ran-booster-save-numeric-bottom" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button><span class="screen-reader-text" data-ran-booster-unsaved><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span></div>
 </form></div>
 <?php } ?>
 <?php

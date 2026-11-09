@@ -1416,11 +1416,15 @@ final class AdminAssetContractTest extends TestCase {
 			'views/attempts/detail.php',
 			'views/attempts/index.php',
 			'views/debug-capture.php',
+			'views/documentation.php',
 			'views/extensions.php',
+			'views/onboarding.php',
 			'views/portability.php',
 			'views/provider-public-lookup-profile.php',
 			'views/provider.php',
 			'views/provider/modals.php',
+			'views/settings-general.php',
+			'views/settings-storage.php',
 			'views/troubleshooting-support-report.php',
 			'views/troubleshooting.php',
 		);
@@ -1439,6 +1443,7 @@ final class AdminAssetContractTest extends TestCase {
 	private const NATIVE_BUTTON_ALLOWLIST = array(
 		'ran-booster-copy-value__button'       => 'Icon-only copy control attached to a read-only field; stays bespoke like the in-input password tools.',
 		'ran-booster-portability__icon-button' => 'Icon-only copy control inside the password and secret tools; stays bespoke.',
+		'data-ran-booster-ui-button-fallback'  => 'No-JS fallback for the Skip onboarding button, which is still mounted as the public Button.',
 		'ran-booster-release-track-option'     => 'Segmented release track control (current track, switch, radio label); deferred until segmented controls convert.',
 	);
 
@@ -1452,12 +1457,11 @@ final class AdminAssetContractTest extends TestCase {
 	private function core_button_classes( string $source ): array {
 		$found = array();
 		$token = '(?<![\w<\/-])button(?:-primary|-secondary|-delete|-link-delete|-disabled)?(?![\w-])';
-		preg_match_all( '/class=(["\'])(?:(?!\1).)*?' . $token . '(?:(?!\1).)*/', $source, $attributes );
+		// A class attribute match runs to the end of its tag, so the allowlist can name any attribute.
+		preg_match_all( '/class=(["\'])(?:(?!\1).)*?' . $token . '(?:(?!\1).)*\1[^>]*/', $source, $attributes );
 		preg_match_all( '/(?:className\s*=|classList\.\w+\(|\?|(?<!type):|\.)\s*[\'"][^\'"]*' . $token . '|[\'"][^\'"]*(?<![\w-])button-(?:primary|secondary|delete|link-delete|disabled)(?![\w-])[^\'"]*/', $source, $strings );
-		foreach ( array_merge( $attributes[0], $strings[0] ) as $match ) {
-			if ( 1 === preg_match( '/type\s*[=:]/', $match ) ) {
-				continue;
-			}
+		$strings = array_filter( $strings[0], static fn ( string $candidate ): bool => 1 !== preg_match( '/type\s*[=:]/', $candidate ) );
+		foreach ( array_merge( $attributes[0], $strings ) as $match ) {
 			foreach ( array_keys( self::NATIVE_BUTTON_ALLOWLIST ) as $allowed ) {
 				if ( str_contains( $match, $allowed ) ) {
 					continue 2;

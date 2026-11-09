@@ -297,7 +297,7 @@
 		padding: var(--ran-booster-space-16);
 	}
 
-	.ran-booster-admin .ran-booster-onboarding__actions .button {
+	.ran-booster-admin .ran-booster-onboarding__actions .ran-wp-ui-button {
 		inline-size: 100%;
 		text-align: center;
 	}

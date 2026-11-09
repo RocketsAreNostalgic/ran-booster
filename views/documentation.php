@@ -281,7 +281,7 @@ unset( $chapter );
 							<ul class="ran-booster-documentation__inline-links">
 								<?php foreach ( $provider_documentation as $provider_guide ) { ?>
 									<?php if ( isset( $provider_guide['code'], $provider_guide['label'], $tab_urls[ $provider_guide['code'] ] ) ) { ?>
-										<li><a class="button" href="<?php echo esc_url( $tab_urls[ $provider_guide['code'] ] ); ?>"><?php echo esc_html( $provider_guide['label'] ); ?></a></li>
+										<li><a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $tab_urls[ $provider_guide['code'] ] ); ?>"><?php echo esc_html( $provider_guide['label'] ); ?></a></li>
 									<?php } ?>
 								<?php } ?>
 							</ul>
@@ -321,7 +321,7 @@ unset( $chapter );
 				<p><?php esc_html_e( 'Complete database copies inside the supported MySQL or MariaDB and InnoDB envelope are best effort. A Transporter Blueprint is the supported reconstruction route when the copied Booster tables cannot be trusted, but the target database must still satisfy Booster’s requirements. Booster does not convert custom tables between database engines.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Deployment attempts and delivery-replay history, webhook secrets and hooks registered with the Git provider, constants, locks and worker state, and source deployment policy remain target-local. Every installed or adopted package starts with deployment Disabled, so an administrator must deliberately choose a new target policy.', 'ran-booster' ); ?></p>
 				<p><strong><?php esc_html_e( 'Transporter workflow:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Select packages for a Transporter Blueprint on this site, open it on the other site, review what would change for each package, then apply only the selected changes. Excluded and unchecked packages remain untouched. Reviewing a Transporter Blueprint never installs anything, changes package settings, or stores the uploaded file — nothing happens until you apply it.', 'ran-booster' ); ?></p>
-				<p><a class="button" href="<?php echo esc_url( $portability_url ); ?>"><?php esc_html_e( 'Open Transporter', 'ran-booster' ); ?></a></p>
+				<p><a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $portability_url ); ?>"><?php esc_html_e( 'Open Transporter', 'ran-booster' ); ?></a></p>
 
 				<h3><?php esc_html_e( 'Step-by-step: moving a package to another site', 'ran-booster' ); ?></h3>
 				<ol>
@@ -512,7 +512,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 						<h3><?php esc_html_e( 'Minimum credential permissions', 'ran-booster' ); ?></h3>
 						<p><?php echo esc_html( $credentials['summary'] ?? '' ); ?></p>
 						<?php if ( '' !== $settings_url ) { ?>
-							<p><a class="button" href="<?php echo esc_url( $settings_url ); ?>">
+							<p><a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $settings_url ); ?>">
 								<?php
 								/* translators: %s: Repository provider name. */
 								echo esc_html( sprintf( _x( 'Open %s settings', 'Repository provider settings link', 'ran-booster' ), $provider_label ) );

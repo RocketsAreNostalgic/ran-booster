@@ -605,7 +605,7 @@
 
 .ran-booster-admin .ran-booster-portability__credential-list {
 	display: grid;
-	gap: var(--ran-booster-space-12);
+	gap: 0;
 	margin: 0;
 	padding: 0;
 	list-style: none;
@@ -619,48 +619,38 @@
 }
 
 .ran-booster-admin .ran-booster-portability__credential-availability-group {
-	margin-block-start: var(--ran-booster-space-16);
-}
-
-.ran-booster-admin
-	.ran-booster-portability__credential-availability-group
-	+ .ran-booster-portability__credential-availability-group {
 	margin-block-start: var(--ran-booster-space-12);
 }
 
-.ran-booster-admin
-	.ran-booster-portability__credential-group
-	+ .ran-booster-portability__credential-group {
-	margin-block-start: var(--ran-booster-space-12);
-}
-
-.ran-booster-admin .ran-booster-portability__credential-card {
+.ran-booster-admin .ran-booster-portability__credential-row {
 	min-inline-size: 0;
 	margin: 0;
-	padding: var(--ran-booster-space-16);
-	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-surface);
-	background: var(--ran-booster-surface);
+	padding-block: var(--ran-booster-space-16);
+	padding-inline: 0;
+	border: 0;
+	border-block-start: 1px solid var(--ran-booster-divider);
 }
 
-.ran-booster-admin .ran-booster-portability__credential-card--unavailable {
+.ran-booster-admin .ran-booster-portability__credential-row--unavailable {
 	color: var(--ran-booster-text-muted);
-	background: var(--ran-booster-surface-subtle);
 }
 
 .ran-booster-admin
-	.ran-booster-portability__credential-card--unavailable
+	.ran-booster-portability__credential-row--unavailable
 	.ran-booster-portability__credential-selection {
 	cursor: not-allowed;
 }
 
+.ran-booster-admin .ran-booster-portability__credential-reason {
+	margin-block: var(--ran-booster-space-4) 0;
+	margin-inline: 0;
+	font-size: var(--ran-booster-font-size-sm);
+}
+
 .ran-booster-admin
-	.ran-booster-portability__credential-option
-	.ran-booster-portability__credential-card:has(
-		> .ran-booster-portability__credential-selection > input:checked
-	) {
-	border-color: var(--ran-booster-color-blue-300);
-	background: var(--ran-booster-surface-info);
+	.ran-booster-portability__credential-selection
+	~ .ran-booster-portability__credential-reason {
+	margin-inline-start: calc(16px + var(--ran-booster-space-10));
 }
 
 .ran-booster-admin .ran-booster-portability__credential-selection {
@@ -1121,22 +1111,25 @@
 	margin-inline: calc(16px + var(--ran-booster-space-10)) 0;
 }
 
-.ran-booster-admin .ran-booster-portability__credential-decision-state {
+/* The one action area ends each flow: the summary sits beside its button. */
+.ran-booster-admin .ran-booster-portability__action-area {
 	display: flex;
-	align-items: baseline;
-	gap: var(--ran-booster-space-8);
-	margin-block-start: var(--ran-booster-space-16);
-	padding-block: var(--ran-booster-space-10);
-	padding-inline: var(--ran-booster-space-12);
-	border: 0;
-	border-inline-start: 3px solid var(--ran-booster-status-ok);
-	background: var(--ran-booster-surface-subtle);
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-12) var(--ran-booster-space-16);
+	margin-block-start: var(--ran-booster-space-24);
+	padding-block-start: var(--ran-booster-space-24);
+	border-block-start: 1px solid var(--wpds-color-stroke-surface-neutral);
 }
 
-.ran-booster-admin
-	.ran-booster-portability__credential-decision-state--unavailable {
-	border-inline-start-color: var(--ran-booster-status-warning-border);
-	background: var(--ran-booster-status-warning-background);
+.ran-booster-admin .ran-booster-portability__action-area > p {
+	flex: 1 1 280px;
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-portability__action-area > .button {
+	flex: 0 0 auto;
 }
 
 .ran-booster-admin .ran-booster-portability__credential-footer {
@@ -1219,11 +1212,6 @@
 	}
 
 	.ran-booster-admin .ran-booster-portability__review-heading {
-		align-items: flex-start;
-		flex-direction: column;
-	}
-
-	.ran-booster-admin .ran-booster-portability__credential-decision-state {
 		align-items: flex-start;
 		flex-direction: column;
 	}

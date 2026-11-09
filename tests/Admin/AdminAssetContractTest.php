@@ -161,8 +161,12 @@ final class AdminAssetContractTest extends TestCase {
 		$onboarding      = $this->asset( 'ran-booster-onboarding.css' );
 		$troubleshooting = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 
-		self::assertStringContainsString( '.ran-booster-portability__credential-decision-state--unavailable {', $onboarding );
-		self::assertStringContainsString( 'background: var(--ran-booster-status-warning-background);', $onboarding );
+		// Transporter credential state is a Badge plus 13px help text, never a warning-coloured strip or nested card.
+		self::assertStringNotContainsString( 'credential-decision-state', $onboarding );
+		self::assertStringNotContainsString( 'credential-card', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__credential-row \{[^}]*border: 0;[^}]*border-block-start: 1px solid var\(--ran-booster-divider\);/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__credential-reason \{[^}]*font-size: var\(--ran-booster-font-size-sm\);/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__action-area \{[^}]*display: flex;[^}]*justify-content: space-between;/', $onboarding );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {', $troubleshooting );
 		self::assertStringContainsString( 'background: var(--ran-booster-surface-info);', $troubleshooting );
 	}

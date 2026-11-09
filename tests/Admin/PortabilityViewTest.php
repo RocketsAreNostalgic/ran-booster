@@ -27,17 +27,17 @@ final class PortabilityViewTest extends TestCase {
 		self::assertInstanceOf( \DOMNodeList::class, $export_copy );
 		self::assertInstanceOf( \DOMNodeList::class, $export_disclosure );
 		self::assertInstanceOf( \DOMNodeList::class, $deletion_notice );
-		self::assertCount( 2, $export_copy );
+		self::assertCount( 1, $export_copy );
 		self::assertCount( 0, $export_disclosure );
 		self::assertCount( 0, $deletion_notice );
 		$description = $export_copy->item( 0 );
-		$deletion    = $export_copy->item( 1 );
 		self::assertInstanceOf( \DOMElement::class, $description );
-		self::assertInstanceOf( \DOMElement::class, $deletion );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes this platform-owned property in camelCase.
-		self::assertSame( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', trim( $description->textContent ) );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes this platform-owned property in camelCase.
-		self::assertSame( 'Deleting Booster removes its saved local credentials and records.', trim( $deletion->textContent ) );
+		self::assertSame( 'Choose the repository credentials and managed packages to include in this Transporter Blueprint.', trim( $description->textContent ) );
+		// The deletion consequence stays, as help beside the password guidance rather than as a third intro paragraph.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-portability-export-credential-details"]//p[contains(concat(" ", normalize-space(@class), " "), " description ")][contains(., "Deleting Booster removes its saved local credentials and records.")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-portability-export"]/header//p[contains(., "Deleting Booster")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-portability-export"]//h4)' ) );
 		self::assertStringContainsString( 'Create a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'Open a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'What do you want to do on this site?', $html );
@@ -48,7 +48,12 @@ final class PortabilityViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/id="ran-booster-portability-export"[^>]+hidden>/', $html );
 		self::assertMatchesRegularExpression( '/id="ran-booster-portability-import"[^>]+hidden>/', $html );
 		self::assertStringContainsString( '>Repository credentials<', $html );
-		self::assertStringContainsString( 'id="ran-booster-portability-export-review-heading" class="ran-booster-portability__review-title">Blueprint contents</h4>', $html );
+		self::assertStringNotContainsString( 'Blueprint contents', $html );
+		self::assertStringNotContainsString( 'ran-booster-portability-export-review-heading', $html );
+		self::assertStringNotContainsString( 'Review the managed plugins and themes that will be recorded', $html );
+		// One action area ends the flow: summary first, then the button described by it.
+		self::assertMatchesRegularExpression( '/<div class="ran-booster-portability__action-area">\s*<p id="ran-booster-portability-export-summary" class="ran-booster-portability__export-summary"[^>]*data-portability-export-summary[\s\S]+?<\/p>\s*<button type="submit" class="button button-primary" data-portability-export-submit[^>]* aria-describedby="ran-booster-portability-export-summary">Download Transporter Blueprint<\/button>\s*<\/div>\s*<div class="notice notice-error inline" data-portability-export-message/', $html );
+		self::assertMatchesRegularExpression( '/<div class="ran-booster-portability__action-area">\s*<p id="ran-booster-portability-apply-summary"[^>]*data-portability-apply-summary[\s\S]+?<\/p>\s*<button type="button" class="button button-primary ran-booster-portability__progress-button" data-portability-apply aria-describedby="ran-booster-portability-apply-summary"/', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-export-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h5>', $html );
 		self::assertStringContainsString( 'data-portability-export-select-all', $html );
 		self::assertStringContainsString( 'name="packages[plugin][]" value="example/example.php" type="checkbox" checked', $html );
@@ -209,10 +214,11 @@ final class PortabilityViewTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'eligible-profile' ) );
 		self::assertLessThan( strpos( $html, 'id="ran-booster-portability-export-packages-heading"' ), strpos( $html, 'id="ran-booster-portability-export-credentials-heading"' ) );
 		self::assertStringContainsString( '<legend class="screen-reader-text">GitHub credential choices</legend>', $html );
-		self::assertStringContainsString( 'ran-booster-portability__credential-row ran-booster-portability__credential-card', $html );
+		self::assertStringContainsString( 'class="ran-booster-portability__credential-row" data-portability-export-credential-row', $html );
+		self::assertStringNotContainsString( 'ran-booster-portability__credential-card', $html );
 		self::assertStringNotContainsString( '>Available for transfer</h6>', $html );
 		self::assertStringNotContainsString( '>Unavailable for transfer</h6>', $html );
-		self::assertStringContainsString( 'ran-booster-portability__credential-card--unavailable', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-row ran-booster-portability__credential-row--unavailable', $html );
 		self::assertLessThan( strpos( $html, 'Unused repository token' ), strpos( $html, 'Deployment &lt;PAT&gt;' ) );
 		self::assertLessThan( strpos( $html, 'id="ran-booster-portability-export-credential-details"' ), strpos( $html, 'Unused repository token' ) );
 		self::assertStringContainsString( 'ran-booster-portability__credential-name">Deployment &lt;PAT&gt;</strong>', $html );
@@ -221,8 +227,11 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Used by 1 package</summary>', $html );
 		self::assertStringContainsString( 'Example &lt;Plugin&gt;', $html );
 		self::assertStringContainsString( 'The Git provider permissions for this credential have not been assessed.', $html );
-		self::assertStringContainsString( '<strong>Unavailable for transfer</strong>', $html );
-		self::assertStringContainsString( 'ran-booster-portability__credential-decision-state--unavailable', $html );
+		// Unavailable credentials carry a static neutral Badge on the row and the reason as help text, not a warning strip.
+		self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">Unavailable for transfer</span>', $html );
+		self::assertSame( 3, substr_count( $html, '>Unavailable for transfer</span>' ) );
+		self::assertStringNotContainsString( 'credential-decision-state', $html );
+		self::assertMatchesRegularExpression( '/<p class="description ran-booster-portability__credential-reason" id="ran-booster-portability-export-credential-0-\d+-reason">Booster will automatically remove this saved credential on 2026-08-31/', $html );
 		self::assertStringContainsString( 'Booster will automatically remove this saved credential on 2026-08-31', $html );
 		self::assertStringContainsString( 'This credential is supplied by site configuration', $html );
 		self::assertStringContainsString( 'Unused repository token', $html );
@@ -473,7 +482,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'Saved &lt;Profile&gt;', $html );
 		self::assertStringContainsString( 'Manage repository credentials', $html );
 		self::assertSame( 3, substr_count( $html, 'name="credential_decisions[0][action]"' ) );
-		self::assertSame( 1, preg_match( '/<fieldset class="ran-booster-portability__credential-row ran-booster-portability__credential-card"[\s\S]+?<\/fieldset>/', $html, $card ) );
+		self::assertSame( 1, preg_match( '/<fieldset class="ran-booster-portability__credential-row"[\s\S]+?<\/fieldset>/', $html, $card ) );
 		self::assertTrue( array_key_exists( 0, $card ) );
 		self::assertSame( 1, substr_count( $card[0], 'value="import"' ) );
 		self::assertSame( 1, substr_count( $card[0], 'value="target"' ) );
@@ -527,8 +536,9 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Choose how this site should access repositories needed by the proposed package changes.', $html );
 		self::assertStringNotContainsString( '<strong>Before you continue:</strong>', $html );
 		self::assertStringContainsString( '<summary>Used by 1 package; all unchanged</summary>', $html );
-		self::assertStringContainsString( '<strong>No action needed</strong>', $html );
-		self::assertStringContainsString( 'These packages remain unchanged; no credential is imported.', $html );
+		self::assertStringContainsString( 'data-ran-booster-badge-intent="none">No action needed</span>', $html );
+		self::assertStringNotContainsString( 'credential-decision-state', $html );
+		self::assertStringContainsString( '<p class="description ran-booster-portability__credential-reason">These packages remain unchanged; no credential is imported.</p>', $html );
 		self::assertStringContainsString( 'Manage repository credentials', $html );
 		self::assertStringNotContainsString( 'name="credential_decisions[0][action]"', $html );
 		self::assertStringNotContainsString( 'data-portability-credential-refresh', $html );

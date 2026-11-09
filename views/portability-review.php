@@ -166,13 +166,16 @@ $has_credential_decisions         = array() !== array_filter(
 		$description_id = 'ran-booster-portability-credential-description-' . $ordinal;
 		$target_id      = 'ran-booster-portability-credential-target-' . $ordinal;
 		?>
-		<fieldset class="ran-booster-portability__credential-row ran-booster-portability__credential-card" data-portability-credential-group data-portability-credential-ordinal="<?php echo esc_attr( (string) $ordinal ); ?>">
+		<fieldset class="ran-booster-portability__credential-row" data-portability-credential-group data-portability-credential-ordinal="<?php echo esc_attr( (string) $ordinal ); ?>">
 			<legend class="screen-reader-text"><?php echo esc_html( (string) ( $credential['provider_label'] ?? '' ) ); ?> — <?php echo esc_html( (string) ( $credential['label'] ?? '' ) ); ?></legend>
 			<div class="ran-booster-portability__credential-heading">
 				<h6 class="ran-booster-portability__credential-name"><?php echo esc_html( (string) ( $credential['label'] ?? '' ) ); ?></h6>
 				<span class="ran-booster-tile ran-booster-portability__credential-provider"><span class="screen-reader-text"><?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( (string) ( $credential['provider_label'] ?? '' ) ); ?></span></span>
 				<?php if ( '' !== (string) ( $credential['kind'] ?? '' ) ) : ?>
 					<span class="ran-booster-tile ran-booster-portability__credential-kind"><span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( (string) ( $credential['kind_label'] ?? $credential['kind'] ) ); ?></span></span>
+				<?php endif; ?>
+				<?php if ( ! $decision_required ) : ?>
+					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( __( 'No action needed', 'ran-booster' ), 'none' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<?php endif; ?>
 			</div>
 			<span id="<?php echo esc_attr( $description_id ); ?>" class="screen-reader-text"><?php echo esc_html( $package_summary ); ?>.</span>
@@ -227,10 +230,7 @@ $has_credential_decisions         = array() !== array_filter(
 					</div>
 				</div>
 			<?php else : ?>
-				<div class="ran-booster-portability__credential-decision-state">
-					<strong><?php esc_html_e( 'No action needed', 'ran-booster' ); ?></strong>
-					<span class="description"><?php esc_html_e( 'These packages remain unchanged; no credential is imported.', 'ran-booster' ); ?></span>
-				</div>
+				<p class="description ran-booster-portability__credential-reason"><?php esc_html_e( 'These packages remain unchanged; no credential is imported.', 'ran-booster' ); ?></p>
 			<?php endif; ?>
 
 			<?php if ( ! empty( $credential['settings_url'] ) ) : ?>

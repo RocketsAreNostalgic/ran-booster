@@ -713,7 +713,7 @@ final readonly class ProviderSettingsPresenter {
 				$credentials[] = array(
 					'id'         => is_array( $profile ) ? $id : '',
 					'label'      => is_array( $profile ) && is_string( $profile['label'] ?? null ) ? $profile['label'] : '',
-					'kind_label' => null !== $kind ? $kind->label : ( is_array( $profile ) ? (string) ( $profile['kind'] ?? '' ) : '' ),
+					'kind_label' => null !== $kind ? $kind->short_label : ( is_array( $profile ) ? (string) ( $profile['kind'] ?? '' ) : '' ),
 					'available'  => '' === $reason && ! empty( $profile['configured'] ),
 					'reason'     => $reason,
 					'destroy_on' => is_array( $profile ) && is_string( $profile['destroy_on'] ?? null ) ? $profile['destroy_on'] : null,
@@ -775,7 +775,7 @@ final readonly class ProviderSettingsPresenter {
 						'id'         => $profile['id'],
 						'label'      => $profile['label'],
 						'kind'       => $profile['kind'],
-						'kind_label' => null !== $kind ? $kind->label : $profile['kind'],
+						'kind_label' => null !== $kind ? $kind->short_label : $profile['kind'],
 						'detail'     => implode( ' · ', $details ),
 						'source'     => $profile['source'],
 						'configured' => $profile['configured'],
@@ -803,7 +803,7 @@ final readonly class ProviderSettingsPresenter {
 				'webhooks'                               => $provider instanceof WebhookNormalizer,
 				'default_credential_id'                  => $this->default_credential_id( $credentials ),
 
-				'credential_kind_labels'                 => null === $admin ? array() : array_column( array_map( $this->credential_kind( ... ), $admin->credential_kinds ), 'label', 'code' ),
+				'credential_kind_labels'                 => null === $admin ? array() : array_column( array_map( $this->credential_kind( ... ), $admin->credential_kinds ), 'short_label', 'code' ),
 				'credential_profiles'                    => $credentials,
 				'public_lookup'                          => $this->package_public_lookup( $provider, $code, $credentials ),
 			);
@@ -1530,7 +1530,8 @@ final readonly class ProviderSettingsPresenter {
 			: __( 'Owner', 'ran-booster' );
 		$base_url       = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) );
 		$provider_url   = static fn ( array $args = array() ): string => add_query_arg( $args, $base_url );
-		$kind_labels    = array_column( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array(), 'label', 'code' );
+		$kind_labels    = array_column( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array(), 'short_label', 'code' );
+		$kind_full      = array_column( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array(), 'label', 'code' );
 		$scope_labels   = array_column( is_array( $provider['webhook_scopes'] ?? null ) ? $provider['webhook_scopes'] : array(), 'label', 'code' );
 		$field_labels   = array();
 		foreach ( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array() as $kind ) {
@@ -1662,7 +1663,7 @@ final readonly class ProviderSettingsPresenter {
 				'usage_label'         => $usage_label,
 				'health_label'        => $health_label,
 				'status_key'          => $status_key,
-				'search_value'        => strtolower( implode( ' ', array_merge( array( $label, $kind_labels[ $kind ] ?? $kind, $scope_label, $health_label ), array_values( array_filter( $configuration, 'is_string' ) ) ) ) ),
+				'search_value'        => strtolower( implode( ' ', array_merge( array( $label, $kind_labels[ $kind ] ?? $kind, $kind_full[ $kind ] ?? $kind, $scope_label, $health_label ), array_values( array_filter( $configuration, 'is_string' ) ) ) ) ),
 			);
 		}
 

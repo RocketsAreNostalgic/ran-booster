@@ -264,9 +264,9 @@ foreach ( $components as $component ) {
 				/* translators: %d: locally declared credential format number. */
 				$format = $github_fields[ sprintf( __( 'API credential format %d', 'ran-booster' ), $index ) ] ?? null;
 				if ( 'github-classic-pat-v1' === $format ) {
-					$credential_formats[] = __( 'Classic personal access token', 'ran-booster' ); }
+					$credential_formats[] = __( 'Classic PAT', 'ran-booster' ); }
 				if ( 'github-fine-grained-pat-v1' === $format ) {
-					$credential_formats[] = __( 'Fine-grained personal access token', 'ran-booster' ); }
+					$credential_formats[] = __( 'Fine-grained PAT', 'ran-booster' ); }
 			}
 			if ( array() !== $credential_formats ) {
 				?>

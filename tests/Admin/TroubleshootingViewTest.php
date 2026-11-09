@@ -1140,8 +1140,8 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 		$markup = $table[1];
 
-		self::assertStringContainsString( '<div class="ran-booster-data-table-wrap ran-booster-attempt-table" role="region" aria-labelledby="ran-booster-activity-caption" tabindex="0">', $html );
-		self::assertStringContainsString( '<caption id="ran-booster-activity-caption" class="screen-reader-text">Recorded checks and deployments</caption>', $markup );
+		self::assertStringContainsString( '<div class="ran-booster-data-table-wrap ran-booster-attempt-table">', $html );
+		self::assertStringContainsString( '<caption class="screen-reader-text">Recorded checks and deployments</caption>', $markup );
 		self::assertSame( 1, substr_count( $markup, '<thead>' ) );
 		self::assertSame( 5, substr_count( $markup, '<th scope="col"' ) );
 		self::assertSame( 2, substr_count( $markup, '<tbody class="ran-booster-attempt-row" data-ran-booster-activity-row="' ) );
@@ -1149,7 +1149,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 2, substr_count( $markup, '<td colspan="5" class="ran-booster-attempt-row__details-cell">' ) );
 		self::assertSame( 2, substr_count( $markup, '<td class="ran-booster-attempt-row__time" data-label="Time">' ) );
 		self::assertSame( 10, preg_match_all( '/<td[^>]* data-label="/', $markup ) );
-		self::assertSame( 0, preg_match( '/role="(?:table|grid|row|rowgroup|cell|gridcell|columnheader|rowheader)"/', $html ) );
+		self::assertSame( 0, preg_match( '/role="(?:table|grid|row|rowgroup|cell|gridcell|columnheader|rowheader|region)"/', $html ) );
+		self::assertStringNotContainsString( 'tabindex="0"', $html );
 		self::assertStringNotContainsString( '<li', $markup );
 		self::assertStringNotContainsString( '<ul', $html );
 
@@ -1266,6 +1267,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<form method="post" data-ran-booster-activity-runner>', $html );
 		self::assertStringContainsString( 'name="_wpnonce"', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="request-deployment-runner"', $html );
+		self::assertStringContainsString( '<button type="submit" name="submit" class="' . \RAN\Admin\Component\ButtonClasses::secondary() . '">Request deployment runner</button>', $html );
+		self::assertDoesNotMatchRegularExpression( '/class="(?:[^"]*\s)?button(?:\s[^"]*)?"/', $html );
 	}
 
 	public function test_deployment_activity_renders_known_package_version_failure_in_index_and_detail(): void {

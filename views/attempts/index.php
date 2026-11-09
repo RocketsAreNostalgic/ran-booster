@@ -108,7 +108,7 @@ $origin_labels = array(
 		<form method="post" data-ran-booster-activity-runner>
 			<?php wp_nonce_field( 'ran-booster-request-deployment-runner' ); ?>
 			<input type="hidden" name="ran_booster[action]" value="request-deployment-runner">
-			<?php submit_button( __( 'Request deployment runner', 'ran-booster' ), 'secondary', 'submit', false ); ?>
+			<button type="submit" name="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Request deployment runner', 'ran-booster' ); ?></button>
 		</form>
 	<?php } ?>
 	<?php if ( $unavailable ) { ?>
@@ -120,9 +120,9 @@ $origin_labels = array(
 	<?php } elseif ( array() === $items ) { ?>
 		<p><?php esc_html_e( 'No activity has been recorded yet.', 'ran-booster' ); ?></p>
 	<?php } else { ?>
-		<div class="ran-booster-data-table-wrap ran-booster-attempt-table" role="region" aria-labelledby="ran-booster-activity-caption" tabindex="0">
+		<div class="ran-booster-data-table-wrap ran-booster-attempt-table">
 			<table class="ran-booster-data-table ran-booster-attempt-list" data-ran-booster-activity-list>
-				<caption id="ran-booster-activity-caption" class="screen-reader-text"><?php esc_html_e( 'Recorded checks and deployments', 'ran-booster' ); ?></caption>
+				<caption class="screen-reader-text"><?php esc_html_e( 'Recorded checks and deployments', 'ran-booster' ); ?></caption>
 				<thead>
 				<tr>
 					<th scope="col" class="ran-booster-attempt-table__time"><?php esc_html_e( 'Time', 'ran-booster' ); ?></th>

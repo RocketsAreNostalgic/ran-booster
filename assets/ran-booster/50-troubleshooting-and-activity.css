@@ -238,11 +238,6 @@
 	background: var(--ran-booster-surface);
 }
 
-.ran-booster-admin .ran-booster-attempt-table:focus-visible {
-	outline: 2px solid var(--ran-booster-color-blue-300);
-	outline-offset: 2px;
-}
-
 .ran-booster-admin .ran-booster-attempt-list > thead > tr > th {
 	border-block-end: 1px solid var(--ran-booster-border);
 	background: transparent;

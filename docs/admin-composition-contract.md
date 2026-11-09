@@ -295,8 +295,8 @@ Troubleshooting Activity is a native table, not ARIA roles on a list. It
 follows the Managed Plugins pattern of a summary row followed by a full-width
 details row, with one `tbody` per record so the load-older append moves a
 whole record. The table has a screen-reader `caption`, `th scope="col"`
-headers and `data-label` cells that stack at 782px and below; its scroll
-wrapper is a focusable region named by the caption. The Activity heading sits
+headers and `data-label` cells that stack at 782px and below. Nothing in it
+can scroll, so its wrapper is not a focusable region. The Activity heading sits
 8px (`--ran-booster-card-heading-gap`) above its description.
 
 `tests/browser/page-frame.mjs` measures these values on a rendered page. It is

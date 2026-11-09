@@ -5,11 +5,11 @@
 .ran-booster-admin
 	.ran-booster-package-settings__heading
 	+ .ran-booster-package-settings {
-	margin-block-start: var(--ran-booster-space-20);
+	margin-block-start: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-package-settings__intro {
-	margin-block-end: var(--ran-booster-space-20);
+	margin-block-end: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-package-recovery {

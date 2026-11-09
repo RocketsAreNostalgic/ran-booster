@@ -461,7 +461,7 @@
 }
 
 .ran-booster-admin .ran-booster-portability__flow {
-	margin-block-start: var(--ran-booster-space-20);
+	margin-block-start: var(--ran-booster-card-gap);
 }
 
 .no-js

@@ -518,7 +518,7 @@
 }
 
 .ran-booster-admin .ran-booster-page-shell__header {
-	padding-block: 0 var(--ran-booster-space-20);
+	padding-block: 0 var(--ran-booster-card-gap);
 	padding-inline: var(--ran-booster-space-24);
 }
 
@@ -664,7 +664,7 @@
 	)
 	> .ran-booster-page-shell__header {
 	padding: 0;
-	margin-block-end: var(--ran-booster-space-20);
+	margin-block-end: var(--ran-booster-card-gap);
 }
 
 /*

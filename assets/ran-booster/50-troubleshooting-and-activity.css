@@ -57,7 +57,7 @@
 }
 
 .ran-booster-admin .ran-booster-secondary-nav {
-	margin-block: var(--ran-booster-space-18) var(--ran-booster-space-20);
+	margin-block: var(--ran-booster-space-18) var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-secondary-nav .nav-tab {

@@ -148,7 +148,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 		<input type="hidden" name="ran_booster[action]" value="save-general-settings">
 		<input type="hidden" name="ran_booster[scope]" value="<?php echo esc_attr( $scope ); ?>">
 		<input type="hidden" name="ran_booster[token]" value="<?php echo esc_attr( $general_tokens[ $scope ] ?? '' ); ?>">
-		<div id="ran-booster-general-<?php echo esc_attr( $scope ); ?>-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice<?php echo $failed ? ' data-ran-booster-general-failed' : ''; ?><?php echo $failed && ! $global_failure ? ' role="alert" tabindex="-1"' : ''; ?><?php echo $has_error ? '' : ' hidden'; ?>><div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo esc_html( $failed ? ( $general_feedback ?? '' ) : '' ); ?></p>
+		<div id="ran-booster-general-<?php echo esc_attr( $scope ); ?>-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice<?php echo $failed ? ' data-ran-booster-general-failed' : ''; ?><?php echo $failed && ! $global_failure ? ' role="alert" tabindex="-1"' : ''; ?><?php echo $has_error ? '' : ' hidden'; ?>><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo esc_html( $failed ? ( $general_feedback ?? '' ) : '' ); ?></p>
 			<p data-ran-booster-ui-notice-detail<?php echo $failed ? '' : ' hidden'; ?>>
 			<?php
 			if ( $failed ) {
@@ -159,7 +159,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 					<p id="<?php echo esc_attr( $presentation[0] ); ?>" data-ran-booster-ui-notice-field<?php echo array_key_exists( $field_key, $general_errors ) ? ' data-ran-booster-ui-notice-request-field' : ''; ?>><?php echo esc_html( $presentation[1] . ': ' . $field_error( $field_key ) ); ?></p>
 				<?php } ?>
 			<?php } ?>
-		</div></div>
+		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 	<?php
 };
 ?>

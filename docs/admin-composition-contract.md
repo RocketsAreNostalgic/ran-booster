@@ -286,6 +286,40 @@ Rules that follow from the table:
 a private runner helper like the other browser checks, and it is how the
 status column above stays honest.
 
+### Static notices (pilot)
+
+A notice can be static server-rendered markup drawn with the public Notice's
+own CSS from `ran-booster-wp-ui-static.css` instead of a mounted React
+`Notice.Root`. The Settings scope error hosts (`#ran-booster-general-{scope}-error`)
+are the only ones converted so far; every other `data-ran-booster-ui-notice` host
+is still mounted by `ran-booster-cards.js`.
+
+```html
+<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice …>
+	<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>…</div>
+	<svg class="ran-wp-ui-notice__icon" aria-hidden="true" focusable="false" …>…</svg>
+</div>
+```
+
+- Core's `notice notice-{intent}` classes (and `inline`, `is-dismissible`) stay,
+  because core relocates and dismisses notices by them. Core's unlayered `.notice`
+  frame outranks the `wp-ui` layer, so `25-admin-primitives.css` hands padding,
+  border, radius, shadow and background back to the layer with `revert-layer`.
+- The Notice grid outranks the user agent's `[hidden]` rule; an unlayered
+  `.ran-wp-ui-notice[hidden] { display: none }` restores it.
+- The content host stays a `div` and becomes the Notice description, so producer
+  scripts find `[data-ran-booster-ui-notice-content]` and its paragraphs unchanged.
+- `RAN\Admin\Component\NoticeIcon` prints the intent icon after the content, as
+  `Notice.Root` does. A script that changes the intent in place must swap the
+  `is-*` class, core's `notice-*` class and the icon together.
+- `ran-booster-cards.js` never mounts a `.ran-wp-ui-notice`, so there is no
+  flash and no focus move, and the page looks the same without JavaScript.
+- A static notice has no `Notice.List` live region. Announcements go through
+  `wp.a11y.speak`.
+- The fallback rules in `25-admin-primitives.css` and
+  `ran-booster-notice-compat.css` exclude `.ran-wp-ui-notice`; the compatibility
+  sheet stays until Booster requires the WordPress 7.1 `wp-theme` styles.
+
 ### Type scale
 
 Booster uses the WordPress design-system type scale, the same one Jetpack Boost

@@ -84,7 +84,7 @@
 		[data-ran-booster-ui-notice-intent="warning"],
 		[data-ran-booster-ui-notice-intent="info"],
 		[data-ran-booster-ui-notice-intent="success"]
-	):not([data-ran-booster-ui-mounted]) {
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice) {
 	box-sizing: border-box;
 	padding: var(--wpds-dimension-padding-md);
 	padding-inline-start: calc(
@@ -112,7 +112,7 @@
 		[data-ran-booster-ui-notice-intent="warning"],
 		[data-ran-booster-ui-notice-intent="info"],
 		[data-ran-booster-ui-notice-intent="success"]
-	):not([data-ran-booster-ui-mounted])
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
 	> [data-ran-booster-ui-notice-content] {
 	box-sizing: border-box;
 	min-block-size: var(--wpds-dimension-size-sm);
@@ -143,7 +143,7 @@
 			[data-ran-booster-ui-notice]
 		)[data-ran-booster-ui-notice-scope="global"]
 	)
-	.ran-booster-ui-notice__description {
+	:is(.ran-booster-ui-notice__description, .ran-wp-ui-notice__description) {
 	min-inline-size: 0;
 	overflow-wrap: anywhere;
 }
@@ -157,7 +157,7 @@
 		[data-ran-booster-ui-notice-intent="warning"],
 		[data-ran-booster-ui-notice-intent="info"],
 		[data-ran-booster-ui-notice-intent="success"]
-	):not([data-ran-booster-ui-mounted])
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
 	> [data-ran-booster-ui-notice-content]
 	p,
 :is(
@@ -166,7 +166,7 @@
 			[data-ran-booster-ui-notice]
 		)[data-ran-booster-ui-notice-scope="global"]
 	)
-	.ran-booster-ui-notice__description
+	:is(.ran-booster-ui-notice__description, .ran-wp-ui-notice__description)
 	p {
 	margin: 0;
 	padding: 0;
@@ -182,7 +182,7 @@
 		[data-ran-booster-ui-notice-intent="warning"],
 		[data-ran-booster-ui-notice-intent="info"],
 		[data-ran-booster-ui-notice-intent="success"]
-	):not([data-ran-booster-ui-mounted])
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
 	> [data-ran-booster-ui-notice-content]
 	p
 	+ p,
@@ -192,13 +192,34 @@
 			[data-ran-booster-ui-notice]
 		)[data-ran-booster-ui-notice-scope="global"]
 	)
-	.ran-booster-ui-notice__description
+	:is(.ran-booster-ui-notice__description, .ran-wp-ui-notice__description)
 	p
 	+ p {
 	margin-block-start: var(
 		--ran-booster-space-8,
 		var(--wpds-dimension-gap-sm)
 	);
+}
+
+/*
+ * A static notice is drawn with the public Notice's own CSS
+ * (ran-booster-wp-ui-static.css) and is never mounted. It keeps core's
+ * .notice classes, which core relocates and dismisses by, but core's
+ * unlayered .notice frame outranks the wp-ui layer: revert-layer hands each
+ * frame property back to the Notice. The Notice grid also outranks the user
+ * agent's [hidden] rule, so hiding is restated here.
+ */
+
+.ran-booster-admin .notice.ran-wp-ui-notice {
+	padding: revert-layer;
+	border: revert-layer;
+	border-radius: revert-layer;
+	box-shadow: revert-layer;
+	background: revert-layer;
+}
+
+.ran-booster-admin .ran-wp-ui-notice[hidden] {
+	display: none;
 }
 
 [data-ran-booster-background-failure-row]

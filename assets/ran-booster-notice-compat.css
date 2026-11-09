@@ -48,7 +48,7 @@
 		[data-ran-booster-ui-notice-intent="warning"],
 		[data-ran-booster-ui-notice-intent="info"],
 		[data-ran-booster-ui-notice-intent="success"]
-	):not([data-ran-booster-ui-mounted]) {
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice) {
 	padding: 12px;
 	padding-inline-start: calc(12px + 24px + 4px);
 	border-radius: 8px;
@@ -69,7 +69,7 @@
 		[data-ran-booster-ui-notice-intent="warning"],
 		[data-ran-booster-ui-notice-intent="info"],
 		[data-ran-booster-ui-notice-intent="success"]
-	):not([data-ran-booster-ui-mounted])
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
 	> [data-ran-booster-ui-notice-content] {
 	min-block-size: 24px;
 	padding-block: calc((24px - 20px) / 2);
@@ -84,7 +84,7 @@
 		[data-ran-booster-ui-notice-intent="warning"],
 		[data-ran-booster-ui-notice-intent="info"],
 		[data-ran-booster-ui-notice-intent="success"]
-	):not([data-ran-booster-ui-mounted])
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
 	> [data-ran-booster-ui-notice-content]
 	p
 	+ p,
@@ -94,7 +94,7 @@
 			[data-ran-booster-ui-notice]
 		)[data-ran-booster-ui-notice-scope="global"]
 	)
-	.ran-booster-ui-notice__description
+	:is(.ran-booster-ui-notice__description, .ran-wp-ui-notice__description)
 	p
 	+ p {
 	margin-block-start: var(--ran-booster-space-8, 8px);

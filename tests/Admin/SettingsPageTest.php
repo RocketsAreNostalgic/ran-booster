@@ -290,6 +290,10 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region" and @data-ran-booster-card])' ) );
 		self::assertSame( 3.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope]/div[@data-ran-booster-ui-notice and @data-ran-booster-admin-mutation-error]/div[@data-ran-booster-ui-notice-content][p[@data-ran-booster-ui-notice-primary] and p[@data-ran-booster-ui-notice-detail]])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-notice-mount])' ) );
+		// Each scope error host is a static public Notice: core's notice classes stay, the content host is the
+		// Notice description, and the decorative error icon follows it. Nothing announces through Notice.List.
+		self::assertSame( 3.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope]/div[@data-ran-booster-admin-mutation-error and @class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error"][count(*)=2]/*[1][self::div and @class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" and @data-ran-booster-ui-notice-content]/following-sibling::*[1][local-name()="svg" and @class="ran-wp-ui-notice__icon" and @aria-hidden="true" and @focusable="false"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-wp-ui-notice-politeness or @data-wp-ui-notice-list])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]/div[not(@role) and not(@data-ran-booster-general-failed)]//p[@id="ran-booster-hide-github-error" and @data-ran-booster-ui-notice-field and @data-ran-booster-ui-notice-request-field and text()="Hide GitHub UI: Invalid selection."])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//*[@role="alert"])' ) );
 

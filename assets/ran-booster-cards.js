@@ -24,6 +24,9 @@
 			}
 		},
 	};
+	// A static Notice (ran-wp-ui-notice) is drawn with the public Notice's CSS
+	// and is never mounted; its intent icon is server-rendered markup.
+	const staticNotice = '.ran-wp-ui-notice';
 	const noticeSelector = '[data-ran-booster-ui-notice]';
 	const disclosureSelector = '[data-ran-booster-ui-disclosure]';
 	const buttonSelector = '[data-ran-booster-ui-button]';
@@ -172,6 +175,9 @@
 	}
 
 	function mountNotice(notice) {
+		if (notice.matches(staticNotice)) {
+			return;
+		}
 		const intent =
 			notice.getAttribute('data-ran-booster-ui-notice-intent') ?? 'error';
 		const validIntent = ['error', 'warning', 'info', 'success'].includes(

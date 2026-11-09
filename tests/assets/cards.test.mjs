@@ -135,6 +135,9 @@ function fixture({
 			if (selector === '.ran-booster-admin') {
 				return !!this.admin;
 			}
+			if (selector === '.ran-wp-ui-notice') {
+				return !!this.staticNotice;
+			}
 			if (selector.startsWith('.ran-booster-card')) {
 				return this.label !== null;
 			}
@@ -528,6 +531,27 @@ test('hidden alert retains its native content, paragraph ID and focus through mo
 	);
 	assert.equal(content.childNodes.at(-1), fresh);
 	assert.equal(paragraph.textContent, 'current producer text');
+});
+
+test('a static Notice is never mounted and keeps its content, focus and intent', () => {
+	const f = fixture();
+	const { host, content, paragraph, link } = f.notice();
+	host.staticNotice = true;
+	host.setAttribute('tabindex', '-1');
+	link.focus();
+	f.run();
+	f.flush();
+	f.emit('htmx:load', host);
+	host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
+	host.dispatchEvent({ type: 'ran-booster:ui-notice-update' });
+	f.flush();
+	assert.deepEqual(f.counts(), { renders: 0, unmounts: 0 });
+	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
+	assert.equal(host.firstChild, content);
+	assert.equal(content.firstChild, paragraph);
+	assert.equal(paragraph.firstChild, link);
+	assert.equal(host.getAttribute('tabindex'), '-1');
+	assert.equal(f.doc.activeElement, link);
 });
 
 test('only explicitly owned global Notice hosts mount outside Booster ancestry', () => {

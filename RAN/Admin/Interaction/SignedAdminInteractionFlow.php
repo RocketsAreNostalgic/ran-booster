@@ -6,6 +6,7 @@ namespace RAN\Admin\Interaction;
 
 use Closure;
 use InvalidArgumentException;
+use RAN\Admin\Component\NoticeIcon;
 use Throwable;
 
 /**
@@ -121,7 +122,7 @@ final class SignedAdminInteractionFlow {
 			( $this->emit_header )( 'HX-Retarget', '#' . $request->error_region_id );
 			( $this->emit_header )( 'HX-Reselect', 'unset' );
 			( $this->emit_header )( 'HX-Reswap', 'outerHTML' );
-			echo '<div id="' . esc_attr( $request->error_region_id ) . '" class="notice notice-error inline" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global" role="alert" tabindex="-1"><div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary>' . esc_html( $message ) . '</p></div></div>';
+			echo '<div id="' . esc_attr( $request->error_region_id ) . '" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global" role="alert" tabindex="-1"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary>' . esc_html( $message ) . '</p></div>' . NoticeIcon::markup( 'error' ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- NoticeIcon::markup() escapes its path data; every other value is escaped here.
 			( $this->terminate )();
 		}
 
@@ -219,8 +220,10 @@ final class SignedAdminInteractionFlow {
 				$role = $this->has_success_feedback( $outcome['kind'] ) ? 'status' : 'alert';
 				\RAN\Admin\BoosterNoticeScope::render(
 					static function () use ( $class, $role, $outcome ): void {
-						$inline = \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : '';
-						echo '<div class="' . esc_attr( $class . $inline ) . '" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( substr( $class, 14 ) ) . '" data-ran-booster-ui-notice-scope="global" role="' . esc_attr( $role ) . '"><div data-ran-booster-ui-notice-content><p>' . esc_html( $outcome['message'] ) . '</p></div></div>';
+						// Booster screens always load the static Notice CSS; elsewhere the notice keeps the mounted markup.
+						$booster = \RAN\Admin\BoosterNoticeScope::is_booster_screen();
+						$intent  = substr( $class, 14 );
+						echo '<div class="' . esc_attr( $class . ( $booster ? ' inline ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent : '' ) ) . '" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( $intent ) . '" data-ran-booster-ui-notice-scope="global" role="' . esc_attr( $role ) . '"><div' . ( $booster ? ' class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"' : '' ) . ' data-ran-booster-ui-notice-content><p>' . esc_html( $outcome['message'] ) . '</p></div>' . ( $booster ? NoticeIcon::markup( $intent ) : '' ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- NoticeIcon::markup() escapes its path data; every other value is escaped here.
 					}
 				);
 			}

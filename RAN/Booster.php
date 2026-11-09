@@ -308,7 +308,7 @@ class Booster {
 			?>
 			<div class="wrap ran-booster-admin">
 				<h1><?php esc_html_e( 'RAN Booster Extensions', 'ran-booster' ); ?></h1>
-				<div class="notice notice-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Extensions are temporarily unavailable. Reload the page or check the Booster installation.', 'ran-booster' ); ?></p></div></div>
+				<div class="notice notice-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Extensions are temporarily unavailable. Reload the page or check the Booster installation.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 			</div>
 			<?php
 		}
@@ -1026,11 +1026,19 @@ class Booster {
 		if ( wp_style_is( 'wp-theme', 'registered' ) ) {
 			wp_enqueue_style( 'wp-theme' );
 		}
+		// The global notices are static Notices drawn with the public Notice's own CSS.
+		$static_path = 'assets/lib/ran-booster-wp-ui-static.css';
+		wp_register_style(
+			'ran-booster-wp-ui-static',
+			trailingslashit( $this->booster_url ?? '' ) . $static_path,
+			array(),
+			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $static_path )
+		);
 		$path = 'assets/ran-booster/25-admin-primitives.css';
 		wp_register_style(
 			'ran-booster-25-admin-primitives',
 			trailingslashit( $this->booster_url ?? '' ) . $path,
-			wp_style_is( 'wp-theme', 'registered' ) ? array( 'wp-theme' ) : array(),
+			wp_style_is( 'wp-theme', 'registered' ) ? array( 'wp-theme', 'ran-booster-wp-ui-static' ) : array( 'ran-booster-wp-ui-static' ),
 			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $path )
 		);
 		wp_enqueue_style( 'ran-booster-25-admin-primitives' );
@@ -1199,14 +1207,14 @@ class Booster {
 		$warning    = $this->native_update_warning_state();
 		$can_manage = current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
 		?>
-		<div class="notice notice-warning<?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content><p>
+		<div class="notice notice-warning<?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
 			<?php esc_html_e( 'A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed.', 'ran-booster' ); ?>
 			<?php if ( $can_manage ) : ?>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>"><?php esc_html_e( 'Review GitHub management.', 'ran-booster' ); ?></a>
 			<?php else : ?>
 				<?php esc_html_e( 'Contact a site administrator.', 'ran-booster' ); ?>
 			<?php endif; ?>
-		</p></div></div>
+		</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 		<?php
 	}
 

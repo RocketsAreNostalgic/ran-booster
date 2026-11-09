@@ -131,7 +131,9 @@ final class ExtensionUpdates {
 					}
 					\RAN\Admin\BoosterNoticeScope::render(
 						static function (): void {
-							echo '<div class="' . esc_attr( 'notice notice-warning' . ( \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : '' ) ) . '" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content><p>' . esc_html__( 'Native extension updates are unavailable in this Booster build. Update Booster, or download the selected ZIP from More Details for manual replacement.', 'ran-booster' ) . '</p></div></div>';
+							// The Extensions screen always loads the static Notice CSS; Plugins keeps the mounted markup.
+							$booster = \RAN\Admin\BoosterNoticeScope::is_booster_screen();
+							echo '<div class="' . esc_attr( 'notice notice-warning' . ( $booster ? ' inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning' : '' ) ) . '" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div' . ( $booster ? ' class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"' : '' ) . ' data-ran-booster-ui-notice-content><p>' . esc_html__( 'Native extension updates are unavailable in this Booster build. Update Booster, or download the selected ZIP from More Details for manual replacement.', 'ran-booster' ) . '</p></div>' . ( $booster ? \RAN\Admin\Component\NoticeIcon::markup( 'warning' ) : '' ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- NoticeIcon::markup() escapes its path data; every other value is escaped here.
 						}
 					);
 				}

@@ -373,7 +373,8 @@ final class CoreAdminInteractionFacadeTest extends TestCase {
 		self::assertStringNotContainsString( '<the hook>', $html );
 		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="error"', $html );
 		self::assertStringContainsString( 'data-ran-booster-ui-notice-scope="global" role="alert" tabindex="-1"', $html );
-		self::assertStringContainsString( '<div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary>Could not verify &lt;the hook&gt;.</p></div></div>', $html );
+		self::assertStringContainsString( 'class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error', $html );
+		self::assertMatchesRegularExpression( '~<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary>Could not verify &lt;the hook&gt;\.</p></div><svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg></div>~', $html );
 	}
 
 	public function test_normal_request_retains_signed_post_redirect_get_notice(): void {

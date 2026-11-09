@@ -209,10 +209,13 @@
  * frame property back to the Notice. Inside a Card, the wp-ui box-sizing
  * utility makes the root inherit the Card content's content-box, so the
  * Notice's own border-box is restated. The Notice grid also outranks the
- * user agent's [hidden] rule, so hiding is restated here.
+ * user agent's [hidden] rule, so hiding is restated here. A global notice
+ * can render outside .ran-booster-admin, on core screens or where core
+ * relocates it, so each rule also matches the global scope.
  */
 
-.ran-booster-admin .notice.ran-wp-ui-notice {
+.ran-booster-admin .notice.ran-wp-ui-notice,
+.notice.ran-wp-ui-notice[data-ran-booster-ui-notice-scope="global"] {
 	box-sizing: border-box;
 	padding: revert-layer;
 	border: revert-layer;
@@ -221,7 +224,8 @@
 	background: revert-layer;
 }
 
-.ran-booster-admin .ran-wp-ui-notice[hidden] {
+.ran-booster-admin .ran-wp-ui-notice[hidden],
+.ran-wp-ui-notice[data-ran-booster-ui-notice-scope="global"][hidden] {
 	display: none;
 }
 
@@ -232,7 +236,9 @@
  * absolute position over the end of the text.
  */
 
-.ran-booster-admin .notice.ran-wp-ui-notice > .notice-dismiss {
+.ran-booster-admin .notice.ran-wp-ui-notice > .notice-dismiss,
+.notice.ran-wp-ui-notice[data-ran-booster-ui-notice-scope="global"]
+	> .notice-dismiss {
 	position: static;
 	grid-column: 3;
 	grid-row: 1;

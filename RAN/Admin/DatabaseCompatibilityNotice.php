@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\Admin\Component\NoticeIcon;
 use RAN\Storage\Database;
 use RAN\Storage\DatabaseCompatibilityFailure;
 use RAN\Storage\DatabaseLifecycleFailure;
@@ -33,13 +34,13 @@ final class DatabaseCompatibilityNotice {
 		}
 		$this->rendered = true;
 		?>
-		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-database-compatibility-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content>
+		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-database-compatibility-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster database operations are paused:', 'ran-booster' ); ?></strong>
 				<?php echo esc_html( $this->message() ?? '' ); ?>
 				<?php esc_html_e( 'Existing Booster data was left unchanged. Review Troubleshooting before re-enabling deployments.', 'ran-booster' ); ?>
 			</p>
-		</div></div>
+		</div><?php NoticeIcon::print_intent( 'error' ); ?></div>
 		<?php
 	}
 

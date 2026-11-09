@@ -178,9 +178,15 @@ final class ExtensionUpdatesTest extends TestCase {
 				self::assertSame( '', $output );
 				self::assertStringContainsString( 'notice notice-warning inline', $deferred );
 				self::assertSame( 1, substr_count( $deferred, 'Native extension updates are unavailable' ) );
+				// Booster screens load the static Notice CSS, so the notice is a static Notice there.
+				self::assertStringContainsString( 'class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $deferred );
+				self::assertMatchesRegularExpression( '~<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>[^<]+</p></div><svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg></div>~', $deferred );
 			} elseif ( 'plugins' === $screen_id ) {
 				self::assertStringContainsString( 'notice notice-warning', $output );
 				self::assertStringNotContainsString( 'notice notice-warning inline', $output );
+				// The Plugins screen may not load the static Notice CSS; the notice keeps the mounted markup.
+				self::assertStringNotContainsString( 'ran-wp-ui-notice', $output );
+				self::assertStringContainsString( '<div data-ran-booster-ui-notice-content><p>', $output );
 				self::assertSame( '', $deferred );
 			} else {
 				self::assertSame( '', $output );

@@ -68,10 +68,12 @@ test('static notices hand their frame to the layer and are never a fallback', ()
 		'assets/ran-booster/25-admin-primitives.css',
 		'utf8'
 	);
+	// Inside .ran-booster-admin, and for a global notice wherever it renders.
 	const frame = primitives.match(
-		/\.ran-booster-admin \.notice\.ran-wp-ui-notice \{([^}]*)\}/
+		/\.ran-booster-admin \.notice\.ran-wp-ui-notice,\n\.notice\.ran-wp-ui-notice\[data-ran-booster-ui-notice-scope="global"\] \{([^}]*)\}/
 	);
 	assert.ok(frame, 'core .notice reset');
+	assert.match(frame[1], /\n\tbox-sizing: border-box;/);
 	for (const property of [
 		'padding',
 		'border',
@@ -83,8 +85,21 @@ test('static notices hand their frame to the layer and are never a fallback', ()
 	}
 	assert.match(
 		primitives,
-		/\.ran-booster-admin \.ran-wp-ui-notice\[hidden\] \{\n\tdisplay: none;\n\}/
+		/\.ran-booster-admin \.ran-wp-ui-notice\[hidden\],\n\.ran-wp-ui-notice\[data-ran-booster-ui-notice-scope="global"\]\[hidden\] \{\n\tdisplay: none;\n\}/
 	);
+	// Core's dismiss button sits in the Notice's close-icon grid slot.
+	const dismiss = primitives.match(
+		/\.ran-booster-admin \.notice\.ran-wp-ui-notice > \.notice-dismiss,\n\.notice\.ran-wp-ui-notice\[data-ran-booster-ui-notice-scope="global"\]\n\t> \.notice-dismiss \{([^}]*)\}/
+	);
+	assert.ok(dismiss, 'dismiss button placement');
+	for (const declaration of [
+		'position: static;',
+		'grid-column: 3;',
+		'grid-row: 1;',
+		'margin-inline-start: var(--wpds-dimension-gap-xs);',
+	]) {
+		assert.ok(dismiss[1].includes(`\n\t${declaration}`), declaration);
+	}
 	for (const sheet of [
 		'assets/ran-booster/25-admin-primitives.css',
 		'assets/ran-booster-notice-compat.css',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\Admin\Component\NoticeIcon;
 use RAN\Secrets\SecretsRuntimeAvailability;
 
 /**
@@ -31,13 +32,13 @@ final class SecretsRuntimeAvailabilityNotice {
 		}
 		$this->rendered = true;
 		?>
-		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-secrets-runtime-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content>
+		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-secrets-runtime-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster encrypted credentials are unavailable:', 'ran-booster' ); ?></strong>
 				<?php echo esc_html( $this->availability->message() ); ?>
 				<?php esc_html_e( 'Public repositories and package-only Transporter Blueprints remain available; credential-backed operations and webhooks are paused.', 'ran-booster' ); ?>
 			</p>
-		</div></div>
+		</div><?php NoticeIcon::print_intent( 'error' ); ?></div>
 		<?php
 	}
 }

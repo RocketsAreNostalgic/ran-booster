@@ -863,7 +863,7 @@ final class ReleaseManagementDisplay {
 				? 'notice-warning'
 				: 'notice-error' );
 		?>
-		<div class="notice <?php echo esc_attr( $tone ); ?><?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( $tone, 7 ) ); ?>" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content>
+		<div class="notice <?php echo esc_attr( $tone ); ?><?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( substr( $tone, 7 ) ); ?>"<?php echo $successful ? ' data-ran-booster-package-success' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( $tone, 7 ) ); ?>" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<?php if ( $review ) { ?>
 				<p><strong><?php echo esc_html( 'installed_but_unmanaged' === $code ? __( 'Package present, Booster management not established', 'ran-booster' ) : __( 'Installation outcome needs review', 'ran-booster' ) ); ?></strong></p>
 			<?php } ?>
@@ -874,7 +874,7 @@ final class ReleaseManagementDisplay {
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>
 				<?php $this->render_failure_help( $code, $message ); ?>
 			<?php } ?>
-		</div></div>
+		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( substr( $tone, 7 ) ); ?></div>
 		<?php
 	}
 

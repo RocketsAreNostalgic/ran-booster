@@ -83,7 +83,7 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		$plugins_notice->render_shell_inline();
 		$plugins_html = (string) ob_get_clean();
 		self::assertSame( 1, substr_count( $plugins_html, 'data-ran-booster-core-development-notice' ) );
-		self::assertStringContainsString( 'class="notice notice-info"', $plugins_html );
+		self::assertStringContainsString( 'class="notice notice-info ran-wp-ui-notice ran-wp-ui-box-sizing is-info"', $plugins_html );
 
 		$booster_notice = new CoreSelfUpdateDevelopmentNotice( $policy, 'toplevel_page_ran-booster' );
 		ob_start();
@@ -91,7 +91,7 @@ final class CoreSelfUpdateDevelopmentNoticeTest extends TestCase {
 		$booster_notice->render_shell_inline();
 		$booster_html = (string) ob_get_clean();
 		self::assertSame( 1, substr_count( $booster_html, 'data-ran-booster-core-development-notice' ) );
-		self::assertStringContainsString( 'class="notice notice-info inline"', $booster_html );
+		self::assertStringContainsString( 'class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info"', $booster_html );
 	}
 
 	public function test_unverified_non_source_unauthorized_and_unrelated_screens_render_nothing(): void {

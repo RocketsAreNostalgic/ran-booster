@@ -354,7 +354,9 @@ final class BoosterAssetsTest extends TestCase {
 			self::assertStringEndsWith( '/assets/ran-booster-notice-compat.css', $registered['ran-booster-notice-compat']['source'] );
 		}
 		if ( 'plugins.php' === $hook ) {
-			self::assertSame( $theme_registered ? array( 'wp-theme' ) : array(), $registered['ran-booster-25-admin-primitives']['dependencies'] );
+			self::assertSame( $theme_registered ? array( 'wp-theme', 'ran-booster-wp-ui-static' ) : array( 'ran-booster-wp-ui-static' ), $registered['ran-booster-25-admin-primitives']['dependencies'] );
+			self::assertStringEndsWith( '/assets/lib/ran-booster-wp-ui-static.css', $registered['ran-booster-wp-ui-static']['source'] );
+			self::assertSame( array(), $registered['ran-booster-wp-ui-static']['dependencies'] );
 			self::assertSame( $theme_registered, in_array( 'wp-theme', $enqueued, true ) );
 			self::assertArrayNotHasKey( 'ran-booster-admin-shell', $registered );
 		}

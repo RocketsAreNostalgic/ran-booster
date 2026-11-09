@@ -273,7 +273,7 @@
 		align-items: flex-start;
 	}
 
-	.ran-booster-admin .ran-booster-provider .button {
+	.ran-booster-admin .ran-booster-provider :is(.button, .ran-wp-ui-button) {
 		inline-size: auto;
 		align-self: flex-start;
 		text-align: center;
@@ -481,7 +481,9 @@
 		flex-direction: column;
 	}
 
-	.ran-booster-admin .ran-booster-credential-section__header .button {
+	.ran-booster-admin
+		.ran-booster-credential-section__header
+		.ran-wp-ui-button {
 		align-self: flex-start;
 	}
 

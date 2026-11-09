@@ -242,7 +242,9 @@
 	max-inline-size: 480px;
 }
 
-.ran-booster-admin .ran-booster-public-lookup-profile__controls .button {
+.ran-booster-admin
+	.ran-booster-public-lookup-profile__controls
+	.ran-wp-ui-button {
 	flex: 0 0 auto;
 	white-space: nowrap;
 }

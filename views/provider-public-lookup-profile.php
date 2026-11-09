@@ -51,7 +51,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 								<option value="<?php echo esc_attr( $public_lookup_profile['configured_id'] ); ?>" selected><?php echo esc_html( 'Missing profile (' . $public_lookup_profile['configured_id'] . ')' ); ?></option>
 							<?php } ?>
 						</select>
-						<button type="submit" class="button"><?php esc_html_e( 'Save', 'ran-booster' ); ?></button>
+						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Save', 'ran-booster' ); ?></button>
 					</div>
 				</form>
 				<div class="ran-booster-public-lookup-profile__guidance">

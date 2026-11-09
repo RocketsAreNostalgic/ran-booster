@@ -124,7 +124,7 @@ $render_credential_cell         = static function ( array $profile, string $colu
 		<?php
 		foreach ( $provider_mutation_fields as $name => $value ) {
 			?>
-			<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>"><?php } ?><input type="hidden" name="ran_booster[action]" value="validate-access-profile"><input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>"><input type="hidden" name="ran_booster[id]" value="<?php echo esc_attr( $profile['id'] ); ?>"><button type="submit" class="button"><?php esc_html_e( 'Validate', 'ran-booster' ); ?></button></form>
+			<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( $value ); ?>"><?php } ?><input type="hidden" name="ran_booster[action]" value="validate-access-profile"><input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>"><input type="hidden" name="ran_booster[id]" value="<?php echo esc_attr( $profile['id'] ); ?>"><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Validate', 'ran-booster' ); ?></button></form>
 		<?php
 	}
 	if ( ! $profile['editable'] ) {
@@ -134,7 +134,7 @@ $render_credential_cell         = static function ( array $profile, string $colu
 		return;
 	}
 	?>
-	<button type="button" class="button ran-booster-open-credential-modal" data-modal="access" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-kind="<?php echo esc_attr( $profile['kind'] ); ?>" data-configuration="<?php echo esc_attr( $profile['configuration_json'] ); ?>" data-expires-on="<?php echo esc_attr( $profile['expiry']['manual_expires_on'] ?? '' ); ?>" data-provider-expires-on="<?php echo esc_attr( $profile['provider_expires_on'] ); ?>" data-self-destruct="<?php echo ! empty( $profile['self_destruct'] ) ? '1' : '0'; ?>" data-destroy-on="<?php echo esc_attr( $profile['destroy_on'] ?? '' ); ?>"><?php esc_html_e( 'Edit', 'ran-booster' ); ?></button><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'solid' ) . ' ran-booster-open-delete-credential-modal' ); ?>" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-usage-total="<?php echo esc_attr( $usage['available'] ? (string) $usage['total'] : '' ); ?>" data-usage-listed="<?php echo esc_attr( (string) $profile['usage_listed'] ); ?>" data-usage-template="<?php echo esc_attr( $usage_template_id ); ?>" data-public-lookup-default="<?php echo ! empty( $profile['public_lookup_default'] ) ? '1' : '0'; ?>" aria-haspopup="dialog" aria-controls="ran-booster-delete-access-modal" <?php disabled( ! $usage['available'] ); ?>><?php esc_html_e( 'Delete', 'ran-booster' ); ?></button>
+	<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-kind="<?php echo esc_attr( $profile['kind'] ); ?>" data-configuration="<?php echo esc_attr( $profile['configuration_json'] ); ?>" data-expires-on="<?php echo esc_attr( $profile['expiry']['manual_expires_on'] ?? '' ); ?>" data-provider-expires-on="<?php echo esc_attr( $profile['provider_expires_on'] ); ?>" data-self-destruct="<?php echo ! empty( $profile['self_destruct'] ) ? '1' : '0'; ?>" data-destroy-on="<?php echo esc_attr( $profile['destroy_on'] ?? '' ); ?>"><?php esc_html_e( 'Edit', 'ran-booster' ); ?></button><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'solid' ) . ' ran-booster-open-delete-credential-modal' ); ?>" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-usage-total="<?php echo esc_attr( $usage['available'] ? (string) $usage['total'] : '' ); ?>" data-usage-listed="<?php echo esc_attr( (string) $profile['usage_listed'] ); ?>" data-usage-template="<?php echo esc_attr( $usage_template_id ); ?>" data-public-lookup-default="<?php echo ! empty( $profile['public_lookup_default'] ) ? '1' : '0'; ?>" aria-haspopup="dialog" aria-controls="ran-booster-delete-access-modal" <?php disabled( ! $usage['available'] ); ?>><?php esc_html_e( 'Delete', 'ran-booster' ); ?></button>
 	<template id="<?php echo esc_attr( $usage_template_id ); ?>">
 		<ul class="ran-booster-delete-credential-package-list">
 			<?php foreach ( $usage['packages'] as $package_usage ) { ?>
@@ -184,7 +184,7 @@ $render_webhook_cell  = static function ( array $profile, string $column ) use (
 	}
 
 	?>
-	<button type="button" class="button ran-booster-open-credential-modal" data-modal="webhook" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-scope="<?php echo esc_attr( $profile['scope'] ); ?>" data-target="<?php echo esc_attr( $profile['target'] ); ?>"><?php esc_html_e( 'Edit', 'ran-booster' ); ?></button><form method="post" action="" class="ran-booster-inline-form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-delete-webhook-profile-error" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $delete_webhook_interaction_values ); ?>">
+	<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="webhook" data-id="<?php echo esc_attr( $profile['id'] ); ?>" data-label="<?php echo esc_attr( $profile['label'] ); ?>" data-scope="<?php echo esc_attr( $profile['scope'] ); ?>" data-target="<?php echo esc_attr( $profile['target'] ); ?>"><?php esc_html_e( 'Edit', 'ran-booster' ); ?></button><form method="post" action="" class="ran-booster-inline-form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-delete-webhook-profile-error" hx-post="" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-vals="<?php echo esc_attr( $delete_webhook_interaction_values ); ?>">
 	<?php
 	foreach ( $provider_mutation_fields as $name => $value ) {
 		?>
@@ -213,9 +213,9 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 			</p>
 		</div>
 		<?php if ( 'credentials' === $provider_view && $has_credential_settings ) { ?>
-			<button type="button" class="button button-primary ran-booster-open-credential-modal" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></button>
+			<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></button>
 		<?php } elseif ( 'secrets' === $provider_view && $has_webhook_settings ) { ?>
-			<button type="button" class="button button-primary ran-booster-open-credential-modal" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
+			<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
 		<?php } ?>
 	</header>
 <?php } ?>
@@ -298,7 +298,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 								<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
 								<p><label><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the interrupted installation or update process has stopped.', 'ran-booster' ); ?></label></p>
 								<p><label><input type="checkbox" name="ran_booster[confirmed_removal]" value="1" required> <?php esc_html_e( 'I have removed the entire target and approve disconnecting its management record.', 'ran-booster' ); ?></label></p>
-								<button type="submit" class="button"><?php esc_html_e( 'Verify removal and disconnect', 'ran-booster' ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Verify removal and disconnect', 'ran-booster' ); ?></button>
 							</form>
 						<?php } ?>
 					<?php } ?>
@@ -354,7 +354,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 							<?php } elseif ( $adoption_review['has_material'] ) { ?>
 								<p><label><input type="checkbox" name="ran_booster[acknowledge_incompatible]" value="1" required> <?php esc_html_e( 'I understand that none of the existing GitHub access credentials can be reused. Compatible access credentials must be configured afterward.', 'ran-booster' ); ?></label></p>
 							<?php } ?>
-							<button type="submit" class="button button-primary"><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Return to bundled GitHub', 'ran-booster' ) : __( 'Approve GitHub provider', 'ran-booster' ) ); ?></button>
+							<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Return to bundled GitHub', 'ran-booster' ) : __( 'Approve GitHub provider', 'ran-booster' ) ); ?></button>
 						</form>
 					<?php } ?>
 					</div>
@@ -421,11 +421,11 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 					static function () use ( $credential_row_count, $credentials_url, $has_credential_settings, $storage_unavailable ): void {
 						if ( 0 === $credential_row_count && $has_credential_settings ) {
 							?>
-							<button type="button" class="button ran-booster-open-credential-modal" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></button>
+							<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="access"><?php esc_html_e( 'Add credential', 'ran-booster' ); ?></button>
 							<?php
 						} elseif ( ! $storage_unavailable ) {
 							?>
-							<a class="button" href="<?php echo esc_url( $credentials_url ); ?>"><?php esc_html_e( 'Manage credentials', 'ran-booster' ); ?></a>
+							<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $credentials_url ); ?>"><?php esc_html_e( 'Manage credentials', 'ran-booster' ); ?></a>
 							<?php
 						}
 					}
@@ -454,11 +454,11 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 						static function () use ( $secrets_url, $storage_unavailable, $webhook_row_count ): void {
 							if ( 0 === $webhook_row_count ) {
 								?>
-								<button type="button" class="button ran-booster-open-credential-modal" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
+								<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-open-credential-modal' ); ?>" data-modal="webhook"><?php esc_html_e( 'Add webhook secret', 'ran-booster' ); ?></button>
 									<?php
 							} elseif ( ! $storage_unavailable ) {
 								?>
-								<a class="button" href="<?php echo esc_url( $secrets_url ); ?>"><?php esc_html_e( 'Manage signing secrets', 'ran-booster' ); ?></a>
+								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $secrets_url ); ?>"><?php esc_html_e( 'Manage signing secrets', 'ran-booster' ); ?></a>
 									<?php
 							}
 						}
@@ -558,9 +558,9 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 								</div>
 							<?php } ?>
 							<div class="ran-booster-provider-task-actions">
-								<a class="button" href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Review repositories', 'ran-booster' ); ?></a>
-								<a class="button" href="<?php echo esc_url( $wordpress_urls_url ); ?>"><?php esc_html_e( 'Review WordPress URLs', 'ran-booster' ); ?></a>
-								<a class="button" href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View Activity', 'ran-booster' ); ?></a>
+								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Review repositories', 'ran-booster' ); ?></a>
+								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $wordpress_urls_url ); ?>"><?php esc_html_e( 'Review WordPress URLs', 'ran-booster' ); ?></a>
+								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View Activity', 'ran-booster' ); ?></a>
 							</div>
 					</section>
 				<?php } elseif ( 'setup' === $provider_task ) { ?>
@@ -664,8 +664,8 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 							<?php } elseif ( $repository_inventory_available ) { ?>
 								<div class="ran-booster-provider-empty-actions">
 									<p><?php echo esc_html( $empty_repository_description ); ?></p>
-									<a class="button button-primary" href="<?php echo esc_url( $install_plugin_url ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
-									<a class="button" href="<?php echo esc_url( $install_theme_url ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
+									<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" href="<?php echo esc_url( $install_plugin_url ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
+									<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $install_theme_url ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
 								</div>
 							<?php } else { ?>
 								<p class="description"><?php esc_html_e( 'Managed repository status is temporarily unavailable.', 'ran-booster' ); ?></p>
@@ -695,7 +695,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 						?>
 						<option value="<?php echo esc_attr( $scope_key ); ?>" <?php selected( $scope_key, $provider_list_state['scope'] ); ?>><?php echo esc_html( $scope_label ); ?></option><?php } ?></select>
 				</div>
-				<div><label class="screen-reader-text" for="ran-booster-credential-search"><?php esc_html_e( 'Search credentials', 'ran-booster' ); ?></label><input id="ran-booster-credential-search" type="search" name="s" value="<?php echo esc_attr( $provider_list_state['search'] ); ?>" placeholder="<?php esc_attr_e( 'Search credentials…', 'ran-booster' ); ?>"><button class="button" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button></div>
+				<div><label class="screen-reader-text" for="ran-booster-credential-search"><?php esc_html_e( 'Search credentials', 'ran-booster' ); ?></label><input id="ran-booster-credential-search" type="search" name="s" value="<?php echo esc_attr( $provider_list_state['search'] ); ?>" placeholder="<?php esc_attr_e( 'Search credentials…', 'ran-booster' ); ?>"><button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button></div>
 			</form>
 			<?php
 				$provider_management_table_renderer->render(
@@ -715,7 +715,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 			<?php
 			foreach ( $provider['webhook_scopes'] as $scope ) {
 				?>
-				<option value="<?php echo esc_attr( $scope['code'] ); ?>" <?php selected( $scope['code'], $provider_list_state['scope'] ); ?>><?php echo esc_html( $scope['label'] ); ?></option><?php } ?></select><label class="screen-reader-text" for="ran-booster-secret-status-filter"><?php esc_html_e( 'Filter by status', 'ran-booster' ); ?></label><select id="ran-booster-secret-status-filter" name="status"><option value=""><?php esc_html_e( 'All statuses', 'ran-booster' ); ?></option><option value="ready" <?php selected( 'ready', $provider_list_state['status'] ); ?>><?php esc_html_e( 'Ready locally', 'ran-booster' ); ?></option><option value="attention" <?php selected( 'attention', $provider_list_state['status'] ); ?>><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></option></select></div><div><label class="screen-reader-text" for="ran-booster-secret-search"><?php esc_html_e( 'Search webhook secrets', 'ran-booster' ); ?></label><input id="ran-booster-secret-search" type="search" name="s" value="<?php echo esc_attr( $provider_list_state['search'] ); ?>" placeholder="<?php esc_attr_e( 'Search secrets…', 'ran-booster' ); ?>"><button class="button" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button></div></form>
+				<option value="<?php echo esc_attr( $scope['code'] ); ?>" <?php selected( $scope['code'], $provider_list_state['scope'] ); ?>><?php echo esc_html( $scope['label'] ); ?></option><?php } ?></select><label class="screen-reader-text" for="ran-booster-secret-status-filter"><?php esc_html_e( 'Filter by status', 'ran-booster' ); ?></label><select id="ran-booster-secret-status-filter" name="status"><option value=""><?php esc_html_e( 'All statuses', 'ran-booster' ); ?></option><option value="ready" <?php selected( 'ready', $provider_list_state['status'] ); ?>><?php esc_html_e( 'Ready locally', 'ran-booster' ); ?></option><option value="attention" <?php selected( 'attention', $provider_list_state['status'] ); ?>><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></option></select></div><div><label class="screen-reader-text" for="ran-booster-secret-search"><?php esc_html_e( 'Search webhook secrets', 'ran-booster' ); ?></label><input id="ran-booster-secret-search" type="search" name="s" value="<?php echo esc_attr( $provider_list_state['search'] ); ?>" placeholder="<?php esc_attr_e( 'Search secrets…', 'ran-booster' ); ?>"><button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button></div></form>
 			<?php
 			$provider_management_table_renderer->render(
 				\RAN\Admin\Component\ProviderManagementTableRenderer::WEBHOOK,

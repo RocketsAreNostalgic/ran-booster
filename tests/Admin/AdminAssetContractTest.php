@@ -934,7 +934,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-package-row__content', $css );
 		self::assertStringNotContainsString( 'ran-booster-package-row__secondary', $css );
 		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-provider \\.button \\{\\s+inline-size: auto;\\s+align-self: flex-start;\\s+text-align: center;\\s+\\}/',
+			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-provider :is\\(\\.button, \\.ran-wp-ui-button\\) \\{\\s+inline-size: auto;\\s+align-self: flex-start;\\s+text-align: center;\\s+\\}/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
@@ -1411,12 +1411,26 @@ final class AdminAssetContractTest extends TestCase {
 			'views/packages/index.php',
 			'views/packages/recovery.php',
 			'views/packages/reinstall.php',
+			'views/provider-public-lookup-profile.php',
+			'views/provider.php',
+			'views/provider/modals.php',
 		);
 
 		foreach ( $converted as $file ) {
 			self::assertSame( array(), $this->core_button_classes( $this->source( $file ) ), $file );
 		}
 	}
+
+	/**
+	 * Elements that keep a WordPress core button class on purpose, keyed by a
+	 * class that identifies them, with the reason.
+	 *
+	 * @var array<string, string>
+	 */
+	private const NATIVE_BUTTON_ALLOWLIST = array(
+		'ran-booster-copy-value__button'       => 'Icon-only copy control attached to a read-only field; stays bespoke like the in-input password tools.',
+		'ran-booster-portability__icon-button' => 'Icon-only copy control inside the password and secret tools; stays bespoke.',
+	);
 
 	/**
 	 * Returns each class attribute or class string that carries a WordPress core
@@ -1428,12 +1442,18 @@ final class AdminAssetContractTest extends TestCase {
 	private function core_button_classes( string $source ): array {
 		$found = array();
 		$token = '(?<![\w-])button(?:-primary|-secondary|-delete|-link-delete|-disabled)?(?![\w-])';
-		preg_match_all( '/class=(["\'])(?:(?!\1).)*?' . $token . '/', $source, $attributes );
+		preg_match_all( '/class=(["\'])(?:(?!\1).)*?' . $token . '(?:(?!\1).)*/', $source, $attributes );
 		preg_match_all( '/(?:className\s*=|classList\.\w+\(|\?|(?<!type):|\.)\s*[\'"][^\'"]*' . $token . '|[\'"][^\'"]*(?<![\w-])button-(?:primary|secondary|delete|link-delete|disabled)(?![\w-])/', $source, $strings );
 		foreach ( array_merge( $attributes[0], $strings[0] ) as $match ) {
-			if ( 1 !== preg_match( '/type\s*[=:]/', $match ) ) {
-				$found[] = $match;
+			if ( 1 === preg_match( '/type\s*[=:]/', $match ) ) {
+				continue;
 			}
+			foreach ( array_keys( self::NATIVE_BUTTON_ALLOWLIST ) as $allowed ) {
+				if ( str_contains( $match, $allowed ) ) {
+					continue 2;
+				}
+			}
+			$found[] = $match;
 		}
 
 		return $found;

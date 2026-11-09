@@ -94,7 +94,7 @@ if ( $has_credential_settings ) {
 					<span id="ran-booster-access-secret-help" class="screen-reader-text ran-booster-secret-help" data-access-secret-help data-add-message="<?php esc_attr_e( 'Required when adding.', 'ran-booster' ); ?>" data-edit-message="<?php esc_attr_e( 'A credential secret is already saved. Leave this field unchanged to keep it, or enter a replacement.', 'ran-booster' ); ?>"><?php esc_html_e( 'Required when adding.', 'ran-booster' ); ?></span>
 				</p>
 				<div id="ran-booster-access-profile-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
-				<div class="ran-booster-credential-modal__actions"><button type="submit" class="button button-primary"><?php esc_html_e( 'Save credential', 'ran-booster' ); ?></button><button type="button" class="button ran-booster-close-credential-modal"><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></button></div>
+				<div class="ran-booster-credential-modal__actions"><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Save credential', 'ran-booster' ); ?></button><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-close-credential-modal' ); ?>"><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></button></div>
 			</form>
 		</div>
 	</div>
@@ -121,7 +121,7 @@ if ( $has_credential_settings ) {
 				<div id="ran-booster-delete-access-profile-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 				<div class="ran-booster-credential-modal__actions">
 					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'solid' ) ); ?>" data-delete-credential-confirm><?php esc_html_e( 'Yes, delete credential', 'ran-booster' ); ?></button>
-					<button type="button" class="button ran-booster-close-credential-modal" data-delete-credential-cancel><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></button>
+					<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-close-credential-modal' ); ?>" data-delete-credential-cancel><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></button>
 				</div>
 			</form>
 		</div>
@@ -193,7 +193,7 @@ if ( $has_webhook_settings ) {
 							<button type="button" class="ran-booster-portability__password-visibility" data-webhook-secret-visibility data-show-label="<?php esc_attr_e( 'Show secret', 'ran-booster' ); ?>" data-hide-label="<?php esc_attr_e( 'Hide secret', 'ran-booster' ); ?>" aria-controls="ran-booster-webhook-secret" aria-label="<?php esc_attr_e( 'Show secret', 'ran-booster' ); ?>" aria-pressed="false" title="<?php esc_attr_e( 'Show secret', 'ran-booster' ); ?>" hidden disabled><span class="dashicons dashicons-visibility" data-webhook-secret-visibility-icon aria-hidden="true"></span></button>
 						</span>
 						<span class="ran-booster-portability__password-actions">
-							<button type="button" class="button" data-webhook-secret-generate><?php esc_html_e( 'Generate secret', 'ran-booster' ); ?></button>
+							<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-webhook-secret-generate><?php esc_html_e( 'Generate secret', 'ran-booster' ); ?></button>
 							<button type="button" class="button ran-booster-portability__icon-button" data-webhook-secret-copy data-copy-label="<?php esc_attr_e( 'Copy secret', 'ran-booster' ); ?>" data-copied-label="<?php esc_attr_e( 'Secret copied', 'ran-booster' ); ?>" aria-label="<?php esc_attr_e( 'Copy secret', 'ran-booster' ); ?>" title="<?php esc_attr_e( 'Copy secret', 'ran-booster' ); ?>" disabled>
 								<svg class="ran-booster-portability__button-icon" data-webhook-secret-copy-icon viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 									<path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
@@ -210,7 +210,7 @@ if ( $has_webhook_settings ) {
 					<span class="ran-booster-portability__password-status" data-webhook-secret-status data-generated-message="<?php esc_attr_e( 'A secure 64-character webhook secret was generated.', 'ran-booster' ); ?>" data-copied-message="<?php esc_attr_e( 'Webhook secret copied to the clipboard.', 'ran-booster' ); ?>" data-generation-failed-message="<?php esc_attr_e( 'Booster could not generate a webhook secret securely in this browser. Enter one manually.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The webhook secret is selected; use your browser’s copy command.', 'ran-booster' ); ?>" role="status" aria-live="polite" aria-atomic="true"></span>
 				</p>
 				<div id="ran-booster-webhook-profile-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
-				<div class="ran-booster-credential-modal__actions"><button type="submit" class="button button-primary"><?php esc_html_e( 'Save webhook secret', 'ran-booster' ); ?></button><button type="button" class="button ran-booster-close-credential-modal"><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></button></div>
+				<div class="ran-booster-credential-modal__actions"><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Save webhook secret', 'ran-booster' ); ?></button><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-close-credential-modal' ); ?>"><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></button></div>
 			</form>
 		</div>
 	</div>

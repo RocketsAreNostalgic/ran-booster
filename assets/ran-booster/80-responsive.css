@@ -406,8 +406,7 @@
 		.ran-booster-data-table
 		> tbody
 		> tr
-		> [data-label]::before,
-	.ran-booster-admin .ran-booster-attempt-row__summary [data-label]::before {
+		> [data-label]::before {
 		content: attr(data-label);
 		display: block;
 		color: var(--ran-booster-text-subtle);
@@ -430,31 +429,16 @@
 		grid-template-columns: 1fr;
 	}
 
-	.ran-booster-admin .ran-booster-attempt-table__head {
-		display: none;
+	.ran-booster-admin .ran-booster-attempt-list > tbody + tbody {
+		border-block-start: 0;
 	}
 
-	.ran-booster-admin .ran-booster-attempt-row {
-		padding-inline: 0;
+	.ran-booster-admin .ran-booster-attempt-list > tbody > tr {
+		border-block-end: 0;
 	}
 
-	.ran-booster-admin .ran-booster-attempt-row__summary {
-		display: block;
-		margin: 0;
-		padding: 0;
-	}
-
-	.ran-booster-admin .ran-booster-attempt-row__summary > [role="cell"] {
-		display: grid;
-		grid-template-columns: minmax(96px, 28%) minmax(0, 1fr);
+	.ran-booster-admin .ran-booster-attempt-row__summary > [data-label] {
 		align-items: start;
-		gap: var(--ran-booster-space-12);
-		padding: var(--ran-booster-table-cell-padding);
-	}
-
-	.ran-booster-admin .ran-booster-attempt-row__details {
-		margin-inline-end: var(--ran-booster-table-cell-padding-inline);
-		margin-inline-start: var(--ran-booster-table-cell-padding-inline);
 	}
 
 	.ran-booster-admin .ran-booster-repository-field .regular-text {

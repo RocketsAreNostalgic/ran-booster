@@ -466,10 +466,10 @@ final class AdminAssetContractTest extends TestCase {
 		$responsive = $this->asset( 'ran-booster/80-responsive.css' );
 		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
 
-		// The Activity row, not its details host, owns the inset below the disclosure.
-		self::assertMatchesRegularExpression( '/\.ran-booster-admin \.ran-booster-attempt-row \{[^}]*\n\tpadding-block: 0 var\(--ran-booster-space-12\);/', $activity );
+		// The Activity details cell, not its details host, owns the inset below the disclosure.
+		self::assertMatchesRegularExpression( '/\.ran-booster-attempt-row__details-cell \{[^}]*\n\tpadding-block: 0 var\(--ran-booster-space-12\);/', $activity );
 		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-attempt-row__details \{[^}]*margin-block/', $activity );
-		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-attempt-row \{\s*padding: 0;/', $responsive );
+		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-attempt-row__details-cell \{\s*padding: 0;/', $responsive );
 
 		// The support report disclosure keeps the logging disclosure's gap after its action.
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="troubleshooting-evidence"\]\s*\)\s*\{\s*margin-block-start: var\(--ran-booster-space-16\);/', $primitives );
@@ -979,7 +979,7 @@ final class AdminAssetContractTest extends TestCase {
 			$responsive
 		);
 		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-data-table\\s+> tbody\\s+> tr\\s+> \\[data-label\\]::before,/',
+			'/\\.ran-booster-data-table\\s+> tbody\\s+> tr\\s+> \\[data-label\\]::before \\{/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
@@ -1374,7 +1374,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'DeploymentOutcomeMessage::for_code', $detail );
 		self::assertStringContainsString( "<summary><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>", $view );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-attempt-row__details', $css );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-attempt-row:nth-child(odd)', $css );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-attempt-list > tbody:nth-of-type(odd) > tr > *', $css );
 		self::assertStringContainsString( '--ran-booster-table-cell-padding:', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-data-table-wrap', $css );
 		self::assertStringContainsString( '.ran-booster-repository-record__summary', $css );

@@ -264,9 +264,9 @@ weight (Jetpack 20px/500) belong to the separate typescale work in #726.
 The trailing-block reset matches the last visible child at any depth, not only
 blocks on the Card's bottom edge, so a margin on the last child of a nested
 group always computes to 0. Space after such a block must come from its
-container's padding or from the next sibling's top margin. Each Activity row
-keeps 12px (`--ran-booster-space-12`) of bottom padding below its details
-disclosure (#765). The Support report evidence disclosure takes the Logging
+container's padding or from the next sibling's top margin. Each Activity
+record's details cell keeps 12px (`--ran-booster-space-12`) of bottom padding
+below its disclosure (#765). The Support report evidence disclosure takes the Logging
 disclosure's 16px (`--ran-booster-space-16`) top margin after its action
 (#746).
 
@@ -290,6 +290,14 @@ Rules that follow from the table:
    the content layer holds the inset profile above. A hidden Card puts `hidden`
    on the host, because the frame's layered `display: flex` outranks the user
    agent's `[hidden]` rule.
+
+Troubleshooting Activity is a native table, not ARIA roles on a list. It
+follows the Managed Plugins pattern of a summary row followed by a full-width
+details row, with one `tbody` per record so the load-older append moves a
+whole record. The table has a screen-reader `caption`, `th scope="col"`
+headers and `data-label` cells that stack at 782px and below; its scroll
+wrapper is a focusable region named by the caption. The Activity heading sits
+8px (`--ran-booster-card-heading-gap`) above its description.
 
 `tests/browser/page-frame.mjs` measures these values on a rendered page. It is
 a private runner helper like the other browser checks, and it is how the

@@ -885,7 +885,7 @@ final class TroubleshootingViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertStringContainsString( 'data-ran-booster-activity-row="42"', $html );
 			unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Queued'] );
-			self::assertStringContainsString( 'data-label="Source">' . ( 'activity' === $source ? 'A long source identifier' : 'Branch deployment' ) . '</span>', $html );
+			self::assertStringContainsString( 'data-label="Source">' . ( 'activity' === $source ? 'A long source identifier' : 'Branch deployment' ) . '</td>', $html );
 			if ( 'succeeded' === $state ) {
 				self::assertStringContainsString( 'Plugin: example/example.php', $html );
 			}
@@ -1069,11 +1069,11 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-activity-progress', $html );
 		self::assertStringContainsString( 'data-ran-booster-activity-announcement', $html );
 		self::assertStringContainsString( 'data-ran-booster-activity-error role="alert" tabindex="-1"', $html );
-		self::assertStringContainsString( '<span role="columnheader">Subject</span>', $html );
-		self::assertStringContainsString( '<span role="columnheader">Source</span>', $html );
-		self::assertStringContainsString( '<span role="columnheader">Activity</span>', $html );
-		self::assertStringContainsString( '<span role="columnheader">Outcome</span>', $html );
-		self::assertStringNotContainsString( '<span role="columnheader">Details</span>', $html );
+		self::assertStringContainsString( '<th scope="col" class="ran-booster-attempt-table__subject">Subject</th>', $html );
+		self::assertStringContainsString( '<th scope="col" class="ran-booster-attempt-table__source">Source</th>', $html );
+		self::assertStringContainsString( '<th scope="col" class="ran-booster-attempt-table__activity">Activity</th>', $html );
+		self::assertStringContainsString( '<th scope="col" class="ran-booster-attempt-table__outcome">Outcome</th>', $html );
+		self::assertStringNotContainsString( '>Details</th>', $html );
 		self::assertStringContainsString( 'data-label="Subject"', $html );
 		self::assertStringContainsString( '<select id="ran-booster-activity-provider" name="activity_provider">', $html );
 		self::assertStringContainsString( '<option value="">All Git providers</option>', $html );
@@ -1085,7 +1085,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>Clear filters</a>', $html );
 		self::assertStringContainsString( 'activity_provider=gh&amp;activity_package=%5B%22gh%22%2C%22plugin%22%2C%22example%2Fexample.php%22%5D&amp;before=v1%7Ccursor', $html );
 		self::assertStringContainsString( 'data-label="Source"', $html );
-		self::assertStringContainsString( 'data-label="Source">Branch deployment</span>', $html );
+		self::assertStringContainsString( 'data-label="Source">Branch deployment</td>', $html );
 		self::assertStringContainsString( 'ran-booster-deployment-state--failed" data-ran-booster-badge data-ran-booster-badge-intent="high">Failed</span>', $html );
 		self::assertStringContainsString( 'data-label="Activity"', $html );
 		self::assertStringContainsString( 'data-label="Outcome"', $html );
@@ -1096,6 +1096,73 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Wait for its quota to reset', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=plugin%2Fexample.php', $html );
 		self::assertStringContainsString( 'Open plugin settings', $html );
+	}
+
+	/**
+	 * Activity is a native table: one row group per record holds its summary
+	 * row and a full-width details row, so no ARIA table roles are needed and
+	 * the load-older append can move whole records.
+	 */
+	public function test_activity_renders_a_semantic_table_without_table_roles(): void {
+		$deployment_activity  = array(
+			'items' => array(
+				array(
+					'record_source'      => 'activity',
+					'activity_record_id' => '7',
+					'state'              => 'skipped',
+					'provider_label'     => 'GitHub',
+					'package_type'       => 'provider',
+					'subject_identity'   => 'github',
+					'provenance'         => 'core',
+					'operation'          => 'diagnostics.run',
+					'message'            => 'Diagnostics found missing configuration.',
+				),
+				array(
+					'record_source'      => 'deployment',
+					'activity_record_id' => '6',
+					'id'                 => 6,
+					'state'              => 'failed',
+					'outcome_code'       => 'provider_unavailable',
+					'package_slug'       => 'example',
+					'package_type'       => 'plugin',
+					'operation'          => 'install',
+				),
+			),
+		);
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$html = (string) ob_get_clean();
+
+		if ( 1 !== preg_match( '/<table class="ran-booster-data-table ran-booster-attempt-list" data-ran-booster-activity-list>(.*?)<\/table>/s', $html, $table ) ) {
+			self::fail( 'Activity must render its records in a native table.' );
+		}
+		$markup = $table[1];
+
+		self::assertStringContainsString( '<div class="ran-booster-data-table-wrap ran-booster-attempt-table" role="region" aria-labelledby="ran-booster-activity-caption" tabindex="0">', $html );
+		self::assertStringContainsString( '<caption id="ran-booster-activity-caption" class="screen-reader-text">Recorded checks and deployments</caption>', $markup );
+		self::assertSame( 1, substr_count( $markup, '<thead>' ) );
+		self::assertSame( 5, substr_count( $markup, '<th scope="col"' ) );
+		self::assertSame( 2, substr_count( $markup, '<tbody class="ran-booster-attempt-row" data-ran-booster-activity-row="' ) );
+		self::assertSame( 2, substr_count( $markup, '<tr class="ran-booster-attempt-row__summary">' ) );
+		self::assertSame( 2, substr_count( $markup, '<td colspan="5" class="ran-booster-attempt-row__details-cell">' ) );
+		self::assertSame( 2, substr_count( $markup, '<td class="ran-booster-attempt-row__time" data-label="Time">' ) );
+		self::assertSame( 10, preg_match_all( '/<td[^>]* data-label="/', $markup ) );
+		self::assertSame( 0, preg_match( '/role="(?:table|grid|row|rowgroup|cell|gridcell|columnheader|rowheader)"/', $html ) );
+		self::assertStringNotContainsString( '<li', $markup );
+		self::assertStringNotContainsString( '<ul', $html );
+
+		// Each record's disclosure stays in its own row group, after the summary row.
+		if ( 1 !== preg_match( '/data-ran-booster-activity-row="7">(.*?)<\/tbody>/s', $markup, $record ) ) {
+			self::fail( 'The first record must render as its own row group.' );
+		}
+		$summary_at = strpos( $record[1], 'ran-booster-attempt-row__summary' );
+		$details_at = strpos( $record[1], 'data-ran-booster-ui-disclosure="activity-details"' );
+		self::assertIsInt( $summary_at );
+		self::assertIsInt( $details_at );
+		self::assertLessThan( $details_at, $summary_at );
+		self::assertStringContainsString( '<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure">', $record[1] );
 	}
 
 	public function test_activity_subjects_keep_provider_and_repository_records_distinct(): void {
@@ -1128,7 +1195,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>GitHub</span>', $html );
+		self::assertStringContainsString( '>GitHub</td>', $html );
 		self::assertStringContainsString( 'GitHub · Repository: rockets/booster', $html );
 		self::assertStringNotContainsString( 'GitHub · Repository: gh', $html );
 	}

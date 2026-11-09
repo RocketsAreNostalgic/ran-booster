@@ -21,8 +21,9 @@ stylesheet plus a manifest.
       `.{prefix}-badge.is-high-intent`
 - No version appears in a class name. The source version is recorded in the
   stylesheet header and in the manifest, so markup survives a library upgrade.
-- The manifest lists each block, element and state, and a SHA-256 of the source
-  style string, so drift is detectable.
+- The manifest lists each block, element and state, the public custom
+  properties the style declares (for example `--wp-ui-card-padding`), and a
+  SHA-256 of the source style string, so drift is detectable.
 - `--check` fails when the committed output differs from a fresh extraction.
 
 ## Usage
@@ -61,6 +62,31 @@ supported.
 - Markup is the consumer's job. Mirror the structure the React component
   renders, for example a Badge is `{prefix}-text is-body-sm {prefix}-badge
 is-{intent}-intent`.
+- The Card frame sets `display: flex` inside the `wp-ui` layer, which outranks
+  the user agent's `[hidden]` rule. Put `hidden` on a wrapper around the frame,
+  or add an unlayered `[hidden] { display: none }` for it.
+
+## Card page frames
+
+`Card.Root` renders its `root` part together with the box-sizing reset, so a
+static page frame carries both classes on one element, with the library's
+header and content parts as children:
+
+```html
+<section aria-labelledby="example-heading">
+	<div class="wp-ui-card wp-ui-box-sizing">
+		<div class="wp-ui-card__header">…</div>
+		<div class="wp-ui-card__content">…</div>
+	</div>
+</section>
+```
+
+`Card.Title` is the `Text` component's `heading-lg` variant
+(`wp-ui-text is-heading-lg`). The library's inset comes from
+`--wp-ui-card-padding` and the header-to-content gap from
+`--wp-ui-card-header-content-gap`; the manifest records these properties so a
+consumer that tunes them notices a rename. A consumer with its own inset profile
+can also use a plain child element in place of `__content`.
 
 This directory imports nothing from the host plugin so it can move to its own
 repository unchanged.

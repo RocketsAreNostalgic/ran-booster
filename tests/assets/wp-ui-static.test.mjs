@@ -86,3 +86,37 @@ test('link and focus ring are extracted with their stable names', () => {
 		css.includes('.ran-wp-ui-outset-ring--focus-except-active:focus')
 	);
 });
+
+test('every recorded custom property is declared in the stylesheet', () => {
+	for (const entry of Object.values(manifest.components)) {
+		for (const property of entry.properties) {
+			assert.match(property, /^--[a-z][a-z0-9-]*$/);
+			assert.ok(css.includes(`${property}:`), property);
+		}
+	}
+});
+
+test('a Card page frame composes the same classes as the mounted Card.Root', () => {
+	const card = manifest.components.card;
+	assert.deepEqual(card.elements, ['content', 'fullbleed', 'header']);
+	assert.deepEqual(card.properties, [
+		'--wp-ui-card-header-content-gap',
+		'--wp-ui-card-header-content-margin',
+		'--wp-ui-card-padding',
+	]);
+	// Card.Root renders the root part together with the box-sizing reset, so
+	// a static frame needs both classes on one element.
+	const root = fs.readFileSync(
+		`${uiRoot}/build-module/card/root.mjs`,
+		'utf8'
+	);
+	assert.match(
+		root,
+		/clsx\(style_module_default\.root, resets_module_default\["box-sizing"\]\)/
+	);
+	assert.ok(css.includes('.ran-wp-ui-card{'));
+	assert.ok(css.includes('.ran-wp-ui-box-sizing{box-sizing:border-box;'));
+	// The frame sets display:flex inside the wp-ui layer, which outranks the
+	// user-agent [hidden] rule, so a hidden frame must hide on its host.
+	assert.match(css, /\.ran-wp-ui-card\{[^}]*display:flex/);
+});

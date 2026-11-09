@@ -80,6 +80,25 @@ const registered = (source) =>
 const hashed = /\._?[0-9a-f]{16}__([a-z0-9-]+)/g;
 
 /**
+ * Lists the public custom properties a style declares, such as the Card's
+ * `--wp-ui-card-padding`. Consumers tune a component through these, so a
+ * rename upstream shows up as manifest drift. Private `--_*` properties are
+ * implementation details and are left out.
+ *
+ * @param {string} css Extracted style string.
+ * @return {string[]} Sorted property names.
+ */
+const customProperties = (css) =>
+	[
+		...new Set(
+			Array.from(
+				css.matchAll(/[{;](--[a-z][a-z0-9-]*):/g),
+				(found) => found[1]
+			)
+		),
+	].sort();
+
+/**
  * Renames one library class to its stable name, recording how it was used.
  *
  * @param {{name: string, root?: string, rule?: RegExp, utility?: boolean, modifiers?: boolean, strip?: RegExp, variants?: RegExp}} component Component definition.
@@ -155,16 +174,17 @@ export async function extract({ uiRoot, prefix }) {
 			!component.rule || lifted,
 			`Expected a ${component.name} rule in ${component.file}`
 		);
-		chunks.push(
-			(lifted ? lifted[0] : styles[0]).replace(hashed, (_, part) =>
-				rename(component, prefix, part, found)
-			)
+		const chunk = (lifted ? lifted[0] : styles[0]).replace(
+			hashed,
+			(_, part) => rename(component, prefix, part, found)
 		);
+		chunks.push(chunk);
 		manifest.components[component.name] = {
 			block: `${prefix}-${component.name}`,
 			elements: [...found.elements].sort(),
 			states: [...found.states].sort(),
 			modifiers: [...found.modifiers].sort(),
+			properties: customProperties(chunk),
 			sourceSha256: createHash('sha256').update(styles[0]).digest('hex'),
 		};
 	}

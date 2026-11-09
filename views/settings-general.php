@@ -181,7 +181,20 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 					?>
 					<input type="hidden" name="ran_booster[preferences][hide_github]" value="0"><?php } ?>
 						<label id="ran-booster-hide-github-label" class="ran-booster-settings__switch-label" for="ran-booster-hide-github"><?php esc_html_e( 'Hide GitHub UI', 'ran-booster' ); ?></label>
-						<div class="ran-booster-settings__switch-row"><span data-ran-booster-ui-switch="general-preference"><label class="ran-booster-settings__switch" data-ran-booster-ui-switch-fallback for="ran-booster-hide-github"><input id="ran-booster-hide-github" type="checkbox" role="switch" aria-labelledby="ran-booster-hide-github-label" aria-describedby="ran-booster-hide-github-help<?php echo null === $field_error( 'hide_github' ) ? '' : ' ran-booster-hide-github-error'; ?>" name="ran_booster[preferences][hide_github]" value="1"<?php checked( true, $hide_display_value ); ?><?php disabled( $hide_locked ); ?><?php echo null === $field_error( 'hide_github' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span></label><span data-ran-booster-ui-switch-mount></span></span><?php echo \RAN\Admin\Component\StatusBadge::for_intent( $hide_confirmed ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ), $hide_confirmed ? 'stable' : 'none', array( 'data-ran-booster-toggle-status' => '', 'role' => 'status' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></div>
+						<div class="ran-booster-settings__switch-row"><span data-ran-booster-ui-switch="general-preference"><label class="ran-booster-settings__switch" data-ran-booster-ui-switch-fallback for="ran-booster-hide-github"><input id="ran-booster-hide-github" type="checkbox" role="switch" aria-labelledby="ran-booster-hide-github-label" aria-describedby="ran-booster-hide-github-help<?php echo null === $field_error( 'hide_github' ) ? '' : ' ran-booster-hide-github-error'; ?>" name="ran_booster[preferences][hide_github]" value="1"<?php checked( true, $hide_display_value ); ?><?php disabled( $hide_locked ); ?><?php echo null === $field_error( 'hide_github' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span></label><span data-ran-booster-ui-switch-mount></span></span>
+						<?php
+						// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
+						echo \RAN\Admin\Component\StatusBadge::for_intent(
+							$hide_confirmed ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ),
+							$hide_confirmed ? 'stable' : 'none',
+							array(
+								'data-ran-booster-toggle-status' => '',
+								'role' => 'status',
+							)
+						);
+						// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+						?>
+																																																																																																			</div>
 				<p id="ran-booster-hide-github-help" class="description"><?php echo esc_html( $source_labels[ $hide['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?>. <?php echo esc_html( $visibility_reasons[ $github_visibility['reason'] ] ?? ( $github_visibility['hidden'] ? __( 'GitHub navigation is currently hidden.', 'ran-booster' ) : __( 'GitHub navigation remains available.', 'ran-booster' ) ) ); ?></p>
 				<?php $render_configuration( array( 'hide_github' => 'RAN_BOOSTER_HIDE_GITHUB_UI' ) ); ?>
 			</fieldset>
@@ -218,7 +231,20 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 					<input type="hidden" name="ran_booster[preferences][self_update_discovery]" value="0"><?php } ?>
 				<div class="ran-booster-settings__update-controls">
 					<div><label id="ran-booster-self-update-discovery-label" class="ran-booster-settings__switch-label" for="ran-booster-self-update-discovery"><?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></label>
-					<div class="ran-booster-settings__switch-row"><span data-ran-booster-ui-switch="general-preference"><label class="ran-booster-settings__switch" data-ran-booster-ui-switch-fallback for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" role="switch" aria-labelledby="ran-booster-self-update-discovery-label" aria-describedby="ran-booster-self-update-discovery-help<?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' ran-booster-self-update-discovery-error'; ?>" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span></label><span data-ran-booster-ui-switch-mount></span></span><?php echo \RAN\Admin\Component\StatusBadge::for_intent( $discovery['value'] ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ), $discovery['value'] ? 'stable' : 'none', array( 'data-ran-booster-toggle-status' => '', 'role' => 'status' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></div></div>
+					<div class="ran-booster-settings__switch-row"><span data-ran-booster-ui-switch="general-preference"><label class="ran-booster-settings__switch" data-ran-booster-ui-switch-fallback for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" role="switch" aria-labelledby="ran-booster-self-update-discovery-label" aria-describedby="ran-booster-self-update-discovery-help<?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' ran-booster-self-update-discovery-error'; ?>" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span></label><span data-ran-booster-ui-switch-mount></span></span>
+					<?php
+					// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
+					echo \RAN\Admin\Component\StatusBadge::for_intent(
+						$discovery['value'] ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ),
+						$discovery['value'] ? 'stable' : 'none',
+						array(
+							'data-ran-booster-toggle-status' => '',
+							'role' => 'status',
+						)
+					);
+					// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+					?>
+					</div></div>
 				</div>
 				<p id="ran-booster-self-update-discovery-help" class="description"><?php echo esc_html( 'enabled' === $status_mode ? __( 'Booster update checks are enabled.', 'ran-booster' ) : $update_reasons[ $status_reason ] ?? __( 'Booster update checks are currently unavailable.', 'ran-booster' ) ); ?></p>
 				<div class="ran-booster-settings__update-summary">

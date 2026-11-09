@@ -63,7 +63,8 @@ final class StatusBadge {
 		$extra   = '';
 		foreach ( $attributes as $name => $value ) {
 			if ( 'class' === $name ) {
-				foreach ( preg_split( '/\s+/', $value ) ?: array() as $class ) {
+				$tokens = preg_split( '/\s+/', $value );
+				foreach ( false === $tokens ? array() : $tokens as $class ) {
 					if ( 1 === preg_match( '/^[A-Za-z0-9_-]+$/', $class ) ) {
 						$classes .= ' ' . $class;
 					}

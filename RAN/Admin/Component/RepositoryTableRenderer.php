@@ -142,7 +142,7 @@ final class RepositoryTableRenderer {
 						<?php
 					} else {
 						?>
-					<?php echo StatusBadge::for_intent( (string) $value, (string) $intent ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
+						<?php echo StatusBadge::for_intent( (string) $value, (string) $intent ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 					<?php } ?>
 				<?php } elseif ( '' !== $datetime ) { ?>
 					<time datetime="<?php echo esc_attr( $datetime ); ?>"><?php echo esc_html( $value ); ?></time>

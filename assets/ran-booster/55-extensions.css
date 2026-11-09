@@ -8,8 +8,13 @@
 .ran-booster-admin #the-list.ran-booster-extensions__grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
-	gap: var(--ran-booster-space-16);
+	gap: var(--ran-booster-card-gap);
 	margin-block-start: 0;
+}
+
+.ran-booster-admin .ran-booster-extensions__grid .plugin-card-top {
+	padding-block-start: var(--ran-booster-card-inset-block-start);
+	padding-inline: var(--ran-booster-space-24);
 }
 
 .ran-booster-admin .ran-booster-extensions__grid > .plugin-card {

@@ -502,7 +502,9 @@
 	.ran-booster-admin
 		[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
 		.ran-booster-card__content {
-		padding: var(--ran-booster-space-18);
+		padding-block: var(--ran-booster-card-inset-block-start)
+			var(--ran-booster-card-inset-block-end);
+		padding-inline: var(--ran-booster-space-18);
 	}
 }
 

@@ -7,6 +7,21 @@ const source = fs.readFileSync(
 	new URL('../../assets/notice-preference.js', import.meta.url),
 	'utf8'
 );
+const announceSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-announce.js', import.meta.url),
+	'utf8'
+);
+// Load the real shared helper over a recording wp.a11y.speak.
+function withAnnounce(window, announcements = []) {
+	window.wp = {
+		a11y: {
+			speak: (message, politeness) =>
+				announcements.push({ message, politeness }),
+		},
+	};
+	vm.runInNewContext(announceSource, { window });
+	return announcements;
+}
 function setup(kind, fetch, mounted = false) {
 	let handler;
 	const errors = [];
@@ -67,7 +82,12 @@ function setup(kind, fetch, mounted = false) {
 			return [];
 		},
 		createElement() {
-			return { dataset: {}, setAttribute() {} };
+			return {
+				dataset: {},
+				setAttribute(name, value) {
+					this[name] = value;
+				},
+			};
 		},
 	};
 	const window = {
@@ -82,6 +102,7 @@ function setup(kind, fetch, mounted = false) {
 		ranBoosterBackgroundFailureNotice: config,
 		ranBoosterDevelopmentSafetyNotice: config,
 	};
+	const announcements = withAnnounce(window);
 	vm.runInNewContext(source, {
 		window,
 		document,
@@ -112,7 +133,15 @@ function setup(kind, fetch, mounted = false) {
 		};
 		handler(event);
 	}
-	return { click, notice, errors, buttons, content, lifecycle };
+	return {
+		click,
+		notice,
+		errors,
+		buttons,
+		content,
+		lifecycle,
+		announcements,
+	};
 }
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 for (const [kind, mode, expected] of [
@@ -249,7 +278,12 @@ function developmentLifecycle(fetch) {
 			return heading;
 		},
 		createElement() {
-			return { dataset: {}, setAttribute() {} };
+			return {
+				dataset: {},
+				setAttribute(name, value) {
+					this[name] = value;
+				},
+			};
 		},
 	};
 	heading.ownerDocument = document;
@@ -268,6 +302,7 @@ function developmentLifecycle(fetch) {
 			errorMessage: 'Retry',
 		},
 	};
+	withAnnounce(window);
 	const context = { window, document, URLSearchParams, WeakSet, Error };
 	function mount(version = 'local-development-v2') {
 		const button = {
@@ -490,7 +525,7 @@ test('owned dismissal schedules Notice cleanup while the host remains connected'
 	assert.equal(state.notice.removed, true);
 });
 
-test('dismissal failures remain in the retained Notice content and reuse the same alert on retry', async () => {
+test('dismissal failures remain in the retained Notice content and reuse the same message on retry', async () => {
 	const state = setup(
 		'credential-expiry',
 		async () => ({
@@ -509,10 +544,16 @@ test('dismissal failures remain in the retained Notice content and reuse the sam
 	await flush();
 	const original = state.errors[0];
 	assert.equal(original.textContent, 'Try again');
+	assert.equal(original.role, undefined);
 	state.click();
 	await flush();
 	assert.equal(state.errors.length, 1);
 	assert.equal(state.errors[0], original);
+	// Each failure is spoken once, assertively, through the shared helper.
+	assert.deepEqual(state.announcements, [
+		{ message: 'Try again', politeness: 'assertive' },
+		{ message: 'Try again', politeness: 'assertive' },
+	]);
 	assert.equal(state.notice.removed, false);
 	assert.deepEqual(state.lifecycle, []);
 });

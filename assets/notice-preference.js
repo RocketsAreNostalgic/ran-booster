@@ -192,7 +192,6 @@
 						message = document.createElement('p');
 						message.dataset.ranBoosterNoticePreferenceError =
 							'true';
-						message.setAttribute('role', 'alert');
 						(
 							notice.querySelector(
 								'[data-ran-booster-ui-notice-content]'
@@ -201,6 +200,7 @@
 					}
 					message.textContent =
 						error.noticeMessage || config.errorMessage;
+					window.ranBoosterAnnounce(message.textContent, 'assertive');
 				})
 				.finally(function () {
 					pending.delete(notice);

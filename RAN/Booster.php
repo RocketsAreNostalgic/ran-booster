@@ -868,9 +868,7 @@ class Booster {
 			return;
 		}
 
-		// The one announcement path for Booster status and error messages.
-		$announce_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-announce.js';
-		wp_register_script( 'ran-booster-announce', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-announce.js', array( 'wp-a11y' ), $this->asset_version( $announce_path ), true );
+		$this->register_announce_script();
 		wp_register_script( 'ran-booster-js', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster.js', array_merge( $script_dependencies, array( 'wp-i18n' ) ), $script_version, true );
 
 		wp_set_script_translations( 'ran-booster-js', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
@@ -1146,9 +1144,18 @@ class Booster {
 		);
 	}
 
+	/** Register the one announcement path for Booster status and error messages. */
+	private function register_announce_script(): void {
+		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-announce.js';
+		wp_register_script( 'ran-booster-announce', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-announce.js', array( 'wp-a11y' ), $this->asset_version( $path ), true );
+	}
+
 	private function load_notice_preference_script( string $object_name, string $action, string $nonce_action ): void {
+		// The dismissal script only loads beside a visible Booster notice, so
+		// its announcement helper loads only there too.
+		$this->register_announce_script();
 		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/notice-preference.js';
-		wp_register_script( 'ran-booster-notice-preference', trailingslashit( $this->booster_url ?? '' ) . 'assets/notice-preference.js', array(), $this->asset_version( $path ), true );
+		wp_register_script( 'ran-booster-notice-preference', trailingslashit( $this->booster_url ?? '' ) . 'assets/notice-preference.js', array( 'ran-booster-announce' ), $this->asset_version( $path ), true );
 		wp_localize_script(
 			'ran-booster-notice-preference',
 			$object_name,

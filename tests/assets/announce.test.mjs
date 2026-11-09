@@ -80,6 +80,7 @@ test('the consolidated scripts announce only through the helper', () => {
 		'ran-booster-portability.js',
 		'ran-booster-settings.js',
 		'ran-booster-repository-picker.js',
+		'notice-preference.js',
 	]) {
 		const script = fs.readFileSync(new URL(file, assets), 'utf8');
 		assert.match(script, /window\.ranBoosterAnnounce\(/, file);

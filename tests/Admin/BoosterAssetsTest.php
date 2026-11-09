@@ -390,6 +390,8 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'ran-booster-notice-preference' ),
 			$GLOBALS['ran_booster_asset_test_enqueued_scripts']
 		);
+		self::assertSame( array( 'ran-booster-announce' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-notice-preference']['dependencies'] );
+		self::assertSame( array( 'wp-a11y' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-announce']['dependencies'] );
 		self::assertSame(
 			array(
 				'ajaxUrl'      => 'https://example.test/wp-admin/admin-ajax.php',

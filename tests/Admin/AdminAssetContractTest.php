@@ -1252,14 +1252,18 @@ final class AdminAssetContractTest extends TestCase {
 		$packages    = $this->asset( 'ran-booster/60-packages.css' );
 
 		$size = static function ( string $token ) use ( $foundations ): int {
-			self::assertSame( 1, preg_match( '/' . preg_quote( $token, '/' ) . ':\s*(\d+)px;/', $foundations, $m ), $token );
+			if ( 1 !== preg_match( '/' . preg_quote( $token, '/' ) . ':\s*(\d+)px;/', $foundations, $m ) ) {
+				self::fail( $token );
+			}
 
 			return (int) $m[1];
 		};
 
 		$token_in = static function ( string $selector_fragment ) use ( $packages ): string {
 			$pattern = '/' . $selector_fragment . '[^{]*\{[^}]*font-size:\s*var\((--ran-booster-font-size-[a-z-]+)\)/s';
-			self::assertSame( 1, preg_match( $pattern, $packages, $m ), $selector_fragment );
+			if ( 1 !== preg_match( $pattern, $packages, $m ) ) {
+				self::fail( $selector_fragment );
+			}
 
 			return $m[1];
 		};

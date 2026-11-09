@@ -1306,11 +1306,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertGreaterThanOrEqual( $size( $extract( $head_size_token ) ), $size( $extract( $name_size_token ) ) );
 		self::assertGreaterThan( $weight( $extract( $head_weight ) ), $weight( $extract( $name_weight ) ) );
 
-		// Package-row disclosures only tighten padding; they never re-size the header.
-		self::assertSame(
-			1,
-			preg_match( '/summary,\s*\.ran-booster-admin\s+\.ran-booster-package-table\s+\.ran-booster-package-row__details\s+\[data-ran-booster-ui-disclosure="package-details"\]\s+\.ran-booster-ui-disclosure__header\s+>\s+\[role="button"\]\s*\{\s*padding-block:[^;]+;\s*\}/', $packages )
-		);
+		// Package-row disclosures use the generic compact header unchanged: no per-page size, weight or padding override.
+		self::assertStringNotContainsString( 'package-details"]', $packages );
 	}
 
 	private function asset( string $file ): string {

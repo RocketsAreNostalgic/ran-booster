@@ -324,31 +324,6 @@
 	background: var(--ran-booster-surface);
 }
 
-.ran-booster-admin .ran-booster-package-row__details summary {
-	color: var(--ran-booster-brand);
-}
-
-/*
- * Package-row disclosures sit under a 13px/600 package name. The generic
- * compact header is already 13px/500, so only its block padding is tightened
- * here, for the native fallback summary and the mounted header alike.
- */
-
-.ran-booster-admin
-	.ran-booster-package-table
-	.ran-booster-package-row__details
-	[data-ran-booster-ui-disclosure="package-details"]
-	> details[data-ran-booster-ui-disclosure-fallback]
-	> summary,
-.ran-booster-admin
-	.ran-booster-package-table
-	.ran-booster-package-row__details
-	[data-ran-booster-ui-disclosure="package-details"]
-	.ran-booster-ui-disclosure__header
-	> [role="button"] {
-	padding-block: var(--ran-booster-space-6);
-}
-
 .ran-booster-admin .ran-booster-package-row__details-grid {
 	display: grid;
 	grid-template-columns:

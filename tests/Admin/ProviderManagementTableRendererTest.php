@@ -26,12 +26,12 @@ final class ProviderManagementTableRendererTest extends TestCase {
 		);
 
 		self::assertSame( array( 'name', 'kind', 'scope', 'usage', 'health', 'actions' ), $rendered_columns );
-		self::assertStringContainsString( 'ran-booster-credential-table--access', $html );
+		self::assertStringContainsString( 'ran-booster-provider-management-table--access', $html );
 		self::assertStringContainsString( '<th scope="col">', $html );
 		self::assertStringContainsString( '<caption class="screen-reader-text">Credentials</caption>', $html );
 		self::assertStringContainsString( '>Credential type</a>', $html );
 		self::assertStringContainsString( 'data-label="Used by"', $html );
-		self::assertStringContainsString( 'class="ran-booster-actions" data-label="Actions"', $html );
+		self::assertStringContainsString( '<td class="ran-booster-provider-management-table__actions" data-label="Actions"><div class="ran-booster-actions">', $html );
 		self::assertStringContainsString( '<span class="screen-reader-text">Actions</span>', $html );
 		self::assertStringContainsString( 'Profile &lt;one&gt;', $html );
 		self::assertStringContainsString( 'orderby=name&amp;next=&lt;unsafe&gt;', $html );
@@ -50,10 +50,48 @@ final class ProviderManagementTableRendererTest extends TestCase {
 		);
 
 		self::assertSame( array( 'name', 'scope', 'usage', 'health', 'actions' ), $rendered_columns );
-		self::assertStringContainsString( 'ran-booster-credential-table--webhook', $html );
+		self::assertStringContainsString( 'ran-booster-provider-management-table--webhook', $html );
 		self::assertStringContainsString( '<caption class="screen-reader-text">Webhook secrets</caption>', $html );
 		self::assertStringNotContainsString( 'Credential type', $html );
 		self::assertSame( 5, substr_count( $html, '<th scope="col">' ) );
+	}
+
+	public function test_both_tables_render_inside_the_shared_collection_frame(): void {
+		$column_counts = array(
+			ProviderManagementTableRenderer::ACCESS  => 6,
+			ProviderManagementTableRenderer::WEBHOOK => 5,
+		);
+
+		foreach ( $column_counts as $type => $column_count ) {
+			$html = $this->render(
+				$type,
+				array( array( 'value' => 'Row' ), array( 'value' => 'Row' ) ),
+				static function ( array $row, string $column ): void {
+					unset( $column );
+					echo esc_html( $row['value'] );
+				}
+			);
+
+			if ( 1 !== preg_match( '/^\s*<div class="ran-booster-data-table-wrap">\s*<table class="([^"]+)">([\s\S]*)<\/table>\s*<\/div>\s*<div class="ran-booster-provider-table-navigation">/', $html, $m ) ) {
+				self::fail( 'The ' . $type . ' table must be the only child of the shared data-table wrapper, followed by its pagination.' );
+			}
+
+			$table = $m[2];
+
+			self::assertSame(
+				array( 'ran-booster-data-table', 'ran-booster-data-table--rows', 'ran-booster-provider-management-table', 'ran-booster-provider-management-table--' . $type ),
+				explode( ' ', $m[1] )
+			);
+			self::assertStringNotContainsString( 'widefat', $html );
+			self::assertStringNotContainsString( 'striped', $html );
+			self::assertSame( 1, preg_match_all( '/<caption class="screen-reader-text">[^<]+<\/caption>/', $table ) );
+			self::assertSame( $column_count, substr_count( $table, '<th scope="col">' ) );
+			self::assertSame( $column_count, preg_match_all( '/<th[\s>]/', $table ) );
+			self::assertSame( 1, substr_count( $table, '<tbody>' ) );
+			self::assertSame( 2 * $column_count, preg_match_all( '/<td[\s>]/', $table ) );
+			self::assertSame( 2 * $column_count, preg_match_all( '/<td[^>]* data-label="[^"]+"/', $table ) );
+			self::assertSame( 2, substr_count( $table, '<td class="ran-booster-provider-management-table__actions" data-label="Actions"><div class="ran-booster-actions">' ) );
+		}
 	}
 
 	public function test_it_escapes_the_empty_state_and_does_not_invoke_the_row_callback(): void {

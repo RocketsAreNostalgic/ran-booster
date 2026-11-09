@@ -952,7 +952,7 @@ final class AdminAssetContractTest extends TestCase {
 		$projection = $this->source( 'RAN/Admin/ProviderSettingsPresenter.php' );
 
 		self::assertStringContainsString( 'ProviderManagementTableRenderer', $dashboard );
-		self::assertStringContainsString( 'ran-booster-credential-table--<?php echo esc_attr( $type ); ?>', $renderer );
+		self::assertStringContainsString( 'ran-booster-provider-management-table--<?php echo esc_attr( $type ); ?>', $renderer );
 		self::assertStringContainsString( "public const ACCESS  = 'access';", $renderer );
 		self::assertStringContainsString( "public const WEBHOOK = 'webhook';", $renderer );
 		self::assertStringContainsString( 'data-credential-delete-modal', $modals );
@@ -972,32 +972,30 @@ final class AdminAssetContractTest extends TestCase {
 			$css
 		);
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-empty-state {', $css );
-		self::assertStringContainsString( '.ran-booster-credential-table--access', $css );
-		self::assertStringContainsString( '.ran-booster-credential-table--webhook', $css );
-		self::assertStringNotContainsString( '.ran-booster-credential-table th:nth-child(', $css );
-		// The provider-management rules own every column width; the credential-table
-		// width rules they overrode on every column were removed (#633).
-		self::assertDoesNotMatchRegularExpression( '/\\.ran-booster-admin \\.ran-booster-credential-table--(?:access|webhook) th:nth-child/', $css );
+		self::assertStringContainsString( '.ran-booster-provider-management-table--access', $css );
+		self::assertStringContainsString( '.ran-booster-provider-management-table--webhook', $css );
+		// The provider tables use the shared data-table frame; the retired
+		// credential-table class keeps no rules of its own.
+		self::assertStringNotContainsString( 'ran-booster-credential-table', $css );
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-admin \\.ran-booster-actions \\{[\\s\\S]+flex-wrap: nowrap;[\\s\\S]+justify-content: flex-end;[\\s\\S]+white-space: nowrap;/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-provider-management-table\\.ran-booster-credential-table--access[\\s\\S]+th:nth-child\\(1\\) \\{\\s+inline-size: 20%;\\s+\\}[\\s\\S]+th:nth-child\\(2\\) \\{\\s+inline-size: 12%;\\s+\\}[\\s\\S]+th:nth-child\\(3\\) \\{\\s+inline-size: 12%;\\s+\\}[\\s\\S]+th:nth-child\\(4\\) \\{\\s+inline-size: 12%;\\s+\\}[\\s\\S]+th:nth-child\\(5\\) \\{\\s+inline-size: 12%;\\s+\\}[\\s\\S]+th:nth-child\\(6\\) \\{\\s+inline-size: 32%;\\s+\\}/',
+			'/\\.ran-booster-provider-management-table--access[\\s\\S]+th:nth-child\\(1\\) \\{\\s+inline-size: 20%;\\s+\\}[\\s\\S]+th:nth-child\\(2\\) \\{\\s+inline-size: 12%;\\s+\\}[\\s\\S]+th:nth-child\\(3\\) \\{\\s+inline-size: 12%;\\s+\\}[\\s\\S]+th:nth-child\\(4\\) \\{\\s+inline-size: 12%;\\s+\\}[\\s\\S]+th:nth-child\\(5\\) \\{\\s+inline-size: 12%;\\s+\\}[\\s\\S]+th:nth-child\\(6\\) \\{\\s+inline-size: 32%;\\s+\\}/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-provider-management-table\\.ran-booster-credential-table--access[\\s\\S]+td\\.ran-booster-actions \\{\\s+flex-wrap: wrap;\\s+min-inline-size: 0;\\s+\\}/',
+			'/\\.ran-booster-provider-management-table--access\\s+\\.ran-booster-actions \\{\\s+flex-wrap: wrap;\\s+min-inline-size: 0;\\s+\\}/',
 			$css
 		);
-		self::assertStringContainsString( 'td.ran-booster-actions {', $css );
 		self::assertStringContainsString( 'inline-size: auto !important;', $css );
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-provider-management__back \\{[^}]+padding-inline: 0;/',
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> thead\\s+> tr\\s+> th \\{\\s+background: transparent;\\s+\\}/',
+			'/\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> thead\\s+> tr\\s+> th \\{\\s+background: transparent;\\s+font-size: var\\(--ran-booster-font-size-md\\);\\s+font-weight: 600;\\s+text-align: start;\\s+\\}/',
 			$css
 		);
 		foreach ( array( 'ran-booster-provider-management__header', 'ran-booster-provider-list-controls' ) as $flat_class ) {
@@ -1023,19 +1021,22 @@ final class AdminAssetContractTest extends TestCase {
 			$responsive
 		);
 		self::assertMatchesRegularExpression(
-			'/@media screen and \\(min-width: 783px\\) and \\(max-width: 1100px\\) \\{[\\s\\S]+credential-table--access\\s+th:nth-child\\(6\\) \\{\\s+inline-size: 28%;[\\s\\S]+padding-inline: var\\(--ran-booster-space-8\\);\\s+overflow-wrap: break-word;/',
+			'/@media screen and \\(min-width: 783px\\) and \\(max-width: 1100px\\) \\{[\\s\\S]+provider-management-table--access\\s+th:nth-child\\(6\\) \\{\\s+inline-size: 28%;[\\s\\S]+padding-inline: var\\(--ran-booster-space-8\\);\\s+overflow-wrap: break-word;/',
 			$responsive
 		);
-		// Compact stacked record: a wrapping flex row with inline label/value pairs on phones, not a tall padded card.
+		// Stacked records come from the shared data-table rules at 782px; the
+		// provider tables keep only the actions cell out of the label grid.
+		self::assertDoesNotMatchRegularExpression( '/provider-management-table\\s+> (?:thead|tbody\\s+> tr) \\{/', $responsive );
+		self::assertDoesNotMatchRegularExpression( '/provider-management-table[\\s\\S]{0,80}td\\[data-label\\]/', $responsive );
 		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 782px\\) \\{\\s+\\.ran-booster-admin\\s+\\.ran-booster-data-table\\.ran-booster-provider-management-table,[\\s\\S]+> thead \\{\\s+display: none;[\\s\\S]+> tr \\{\\s+display: flex;\\s+flex-wrap: wrap;\\s+column-gap: var\\(--ran-booster-space-24\\);\\s+padding-block: var\\(--ran-booster-space-8\\);[\\s\\S]+> td\\[data-label\\]::before \\{\\s+content: attr\\(data-label\\);[\\s\\S]+td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex: 0 0 100%;\\s+flex-wrap: wrap;[\\s\\S]+white-space: normal;/',
+			'/@media screen and \\(max-width: 782px\\) \\{\\s+\\.ran-booster-admin\\s+\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> tbody\\s+> tr\\s+> \\.ran-booster-provider-management-table__actions \\{\\s+display: block;\\s+\\}[\\s\\S]+__actions::before \\{\\s+content: none;\\s+\\}[\\s\\S]+\\.ran-booster-provider-management-table__actions\\s+> \\.ran-booster-actions \\{\\s+flex-wrap: wrap;\\s+justify-content: flex-start;\\s+white-space: normal;\\s+\\}/',
+			$responsive
+		);
+		self::assertMatchesRegularExpression(
+			'/\\.ran-booster-admin \\.ran-booster-data-table > tbody > tr > \\*,\\s+\\.ran-booster-admin \\.ran-booster-data-table--rows > tbody > tr \\+ tr > \\* \\{\\s+border: 0;\\s+\\}/',
 			$responsive
 		);
 		self::assertStringNotContainsString( 'padding: var(--ran-booster-space-14) var(--ran-booster-space-16);', $responsive );
-		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 480px\\) \\{\\s+\\.ran-booster-admin[\\s\\S]+provider-management-table[\\s\\S]+td\\[data-label\\]:not\\(\\.ran-booster-actions\\) \\{\\s+display: grid;[\\s\\S]+grid-template-columns: minmax\\(104px, 34%\\) minmax\\(0, 1fr\\);/',
-			$responsive
-		);
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-data-table\\s+> tbody\\s+> tr\\s+> \\[data-label\\]::before \\{/',
 			$css

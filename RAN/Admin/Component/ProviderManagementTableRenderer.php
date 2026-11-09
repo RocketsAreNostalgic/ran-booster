@@ -45,7 +45,8 @@ final class ProviderManagementTableRenderer {
 	): void {
 		$columns = $this->columns( $type );
 		?>
-		<table class="widefat striped ran-booster-data-table ran-booster-credential-table ran-booster-credential-table--<?php echo esc_attr( $type ); ?> ran-booster-provider-management-table">
+		<div class="ran-booster-data-table-wrap">
+		<table class="ran-booster-data-table ran-booster-data-table--rows ran-booster-provider-management-table ran-booster-provider-management-table--<?php echo esc_attr( $type ); ?>">
 			<caption class="screen-reader-text"><?php echo esc_html( self::ACCESS === $type ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></caption>
 			<thead>
 				<tr>
@@ -67,12 +68,17 @@ final class ProviderManagementTableRenderer {
 				<?php foreach ( $rows as $row ) { ?>
 					<tr>
 						<?php foreach ( $columns as $column ) { ?>
-							<td<?php echo $column['actions'] ? ' class="ran-booster-actions"' : ''; ?> data-label="<?php echo esc_attr( $column['label'] ); ?>"><?php $render_cell( $row, $column['key'] ); ?></td>
+							<?php if ( $column['actions'] ) { ?>
+								<td class="ran-booster-provider-management-table__actions" data-label="<?php echo esc_attr( $column['label'] ); ?>"><div class="ran-booster-actions"><?php $render_cell( $row, $column['key'] ); ?></div></td>
+							<?php } else { ?>
+								<td data-label="<?php echo esc_attr( $column['label'] ); ?>"><?php $render_cell( $row, $column['key'] ); ?></td>
+							<?php } ?>
 						<?php } ?>
 					</tr>
 				<?php } ?>
 			</tbody>
 		</table>
+		</div>
 		<?php
 		$this->render_pagination( $type, $pagination );
 	}

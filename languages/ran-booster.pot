@@ -108,18 +108,18 @@ msgstr ""
 msgid "A selected managed package changed or is no longer available. Refresh the page and try again."
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:49
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:50
 #: views/provider.php:204
 msgid "Credentials"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:49
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:50
 #: views/provider.php:204
 msgid "Webhook secrets"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:88
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:129
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:94
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:135
 #: RAN/Troubleshooting/TroubleshootingService.php:310
 #: views/troubleshooting-installation.php:189
 #: views/troubleshooting-installation.php:190
@@ -127,38 +127,38 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:94
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:100
 #: views/provider/modals.php:56
 msgid "Credential type"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:100
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:135
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:106
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:141
 #: views/provider/modals.php:157
 msgid "Scope"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:106
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:141
-msgid "Used by"
-msgstr ""
-
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:112
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:147
-msgid "Health"
+msgid "Used by"
 msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:118
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:153
+msgid "Health"
+msgstr ""
+
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:124
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:159
 #: views/packages/index.php:250
 msgid "Actions"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:186
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:192
 msgid "Rows"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:195
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:201
 #: views/packages/index.php:224
 msgid "Apply"
 msgstr ""

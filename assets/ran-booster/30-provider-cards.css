@@ -315,17 +315,6 @@
 	border-block-start: 0;
 }
 
-.ran-booster-admin .ran-booster-credential-table {
-	table-layout: fixed;
-}
-
-.ran-booster-admin .ran-booster-credential-table th,
-.ran-booster-admin .ran-booster-credential-table td {
-	padding: var(--ran-booster-table-cell-padding);
-	overflow-wrap: anywhere;
-	vertical-align: top;
-}
-
 .ran-booster-admin .ran-booster-provider-empty-state {
 	margin: 0;
 	padding: var(--ran-booster-space-16);
@@ -791,71 +780,83 @@
 	> tr
 	> th {
 	background: transparent;
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: 600;
+	text-align: start;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--access
+	.ran-booster-data-table.ran-booster-provider-management-table
+	> thead
+	> tr
+	> th
+	> a {
+	text-decoration: none;
+}
+
+.ran-booster-admin
+	.ran-booster-provider-management-table--access
 	th:nth-child(1) {
 	inline-size: 20%;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--access
+	.ran-booster-provider-management-table--access
 	th:nth-child(2) {
 	inline-size: 12%;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--access
+	.ran-booster-provider-management-table--access
 	th:nth-child(3) {
 	inline-size: 12%;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--access
+	.ran-booster-provider-management-table--access
 	th:nth-child(4) {
 	inline-size: 12%;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--access
+	.ran-booster-provider-management-table--access
 	th:nth-child(5) {
 	inline-size: 12%;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--access
+	.ran-booster-provider-management-table--access
 	th:nth-child(6) {
 	inline-size: 32%;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--access
-	td.ran-booster-actions {
+	.ran-booster-provider-management-table--access
+	.ran-booster-actions {
 	flex-wrap: wrap;
 	min-inline-size: 0;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--webhook
+	.ran-booster-provider-management-table--webhook
 	th:nth-child(1) {
 	inline-size: 24%;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--webhook
+	.ran-booster-provider-management-table--webhook
 	th:nth-child(2),
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--webhook
+	.ran-booster-provider-management-table--webhook
 	th:nth-child(3),
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--webhook
+	.ran-booster-provider-management-table--webhook
 	th:nth-child(4) {
 	inline-size: 20%;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-management-table.ran-booster-credential-table--webhook
+	.ran-booster-provider-management-table--webhook
 	th:nth-child(5) {
 	inline-size: 16%;
 }

@@ -1882,7 +1882,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Saved credentials can be used for repository access.', $html );
 		self::assertStringContainsString( '>Add credential</button>', $html );
 		self::assertStringContainsString( 'data-credential-modal="access"', $html );
-		self::assertStringNotContainsString( 'ran-booster-credential-table--access', $html );
+		self::assertStringNotContainsString( 'ran-booster-provider-management-table--access', $html );
 		self::assertStringContainsString( 'id="ran-booster-webhook-secrets-heading" class="ran-booster-section__title">Signing secrets</h3>', $html );
 		self::assertStringContainsString( 'Signing secrets verify repository webhook deliveries.', $html );
 		self::assertStringContainsString( 'data-modal="webhook">Add webhook secret</button>', $html );
@@ -1932,7 +1932,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( '>Set up in GitHub</a>', $html );
 		self::assertStringContainsString( 'Add Push-to-Deploy secret', $html );
 		self::assertStringContainsString( 'data-credential-modal="webhook"', $html );
-		self::assertStringNotContainsString( 'ran-booster-credential-table--webhook', $html );
+		self::assertStringNotContainsString( 'ran-booster-provider-management-table--webhook', $html );
 		self::assertStringContainsString( 'data-webhook-secret-tools', $html );
 		self::assertStringContainsString( 'data-webhook-secret-generate', $html );
 		self::assertStringNotContainsString( $secrets_path, $html );
@@ -2574,7 +2574,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertSame( 1, substr_count( $html, 'id="ran-booster-public-lookup-profile"' ) );
-		self::assertStringNotContainsString( 'ran-booster-credential-table--access', $html );
+		self::assertStringNotContainsString( 'ran-booster-provider-management-table--access', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-public-lookup-heading" class="ran-booster-section__title">Public repository lookup</h3>', $html );
 		self::assertStringContainsString( 'id="ran-booster-public-lookup-profile-region"', $html );
 		self::assertStringContainsString( 'data-ran-booster-admin-mutation-region="public-lookup-profile"', $html );
@@ -3397,7 +3397,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1">Webhook secrets</h2>', $html );
 		self::assertStringContainsString( 'Manage local signing material used to verify Bitbucket webhook deliveries.', $html );
 		self::assertStringContainsString( '>Add webhook secret</button>', $html );
-		self::assertStringContainsString( 'ran-booster-credential-table--webhook', $html );
+		self::assertStringContainsString( 'ran-booster-provider-management-table--webhook', $html );
 		self::assertStringContainsString( '<strong>Workspace hook</strong>', $html );
 		self::assertStringContainsString( 'Owner · workspace', $html );
 		self::assertStringContainsString( '>2 packages</td>', $html );
@@ -3464,7 +3464,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header[contains(@class,"ran-booster-action-row")]/div/h2[@id="ran-booster-provider-heading"][@tabindex="-1"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//h2[@id="ran-booster-provider-heading"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header/button[@data-modal])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/form[@class="ran-booster-provider-list-controls"]/following-sibling::table[contains(@class,"striped")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/form[@class="ran-booster-provider-list-controls"]/following-sibling::div[@class="ran-booster-data-table-wrap"]/table[contains(concat(" ", @class, " ")," ran-booster-data-table--rows ")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//table[contains(@class,"widefat") or contains(@class,"striped")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/footer)' ) );
 		self::assertStringNotContainsString( 'Saved credentials use Booster encrypted local storage', $html );
 		self::assertStringNotContainsString( 'ran-booster-secrets-location', $html );

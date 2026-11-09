@@ -807,7 +807,7 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertSame( 1, substr_count( $html, 'ran-booster-source-choice__current-source' ), $package_view->get_type() );
 				self::assertSame( 1, substr_count( $html, '>Active</span>' ), $package_view->get_type() );
 				self::assertMatchesRegularExpression(
-					'/<span[^>]*class="ran-booster-source-choice__current-source"[^>]*>Active<\\/span>/',
+					'/<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent ran-booster-source-choice__current-source" data-ran-booster-badge data-ran-booster-badge-intent="stable">Active<\\/span>/',
 					$html,
 					$package_view->get_type()
 				);

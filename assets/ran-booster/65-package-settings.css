@@ -266,14 +266,6 @@
 .ran-booster-source-choice__current-source {
 	margin-inline-start: auto;
 	flex: 0 0 auto;
-	display: inline-block;
-	padding: 2px var(--ran-booster-space-8);
-	border: 1px solid var(--ran-booster-status-ok-border);
-	border-radius: var(--ran-booster-radius-control);
-	background: var(--ran-booster-status-ok-background);
-	color: var(--ran-booster-status-ok);
-	font-size: var(--ran-booster-font-size-sm);
-	font-weight: 700;
 }
 
 .ran-booster-source-choice--navigation strong {

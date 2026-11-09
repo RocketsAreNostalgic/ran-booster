@@ -76,7 +76,7 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 					<?php } ?>
 				</span>
 				<?php if ( $is_current ) { ?>
-					<span class="ran-booster-source-choice__current-source"><?php esc_html_e( 'Active', 'ran-booster' ); ?></span>
+					<?php \RAN\Admin\Component\StatusBadge::print_intent( __( 'Active', 'ran-booster' ), 'stable', array( 'class' => 'ran-booster-source-choice__current-source' ) ); ?>
 				<?php } ?>
 			<?php if ( $is_navigation_link ) { ?>
 				</a>

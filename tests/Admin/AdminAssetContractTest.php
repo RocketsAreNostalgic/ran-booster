@@ -454,8 +454,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( ".ran-booster-source-choice--navigation\n\t.ran-booster-source-choice__current-source {", $settings );
 		self::assertStringContainsString( '.ran-booster-source-choice__current-source {', $settings );
 		self::assertStringContainsString( "\tmargin-inline-start: auto;\n\tflex: 0 0 auto;", $settings );
-		self::assertStringContainsString( "\tpadding: 2px var(--ran-booster-space-8);\n\tborder: 1px solid var(--ran-booster-status-ok-border);", $settings );
-		self::assertStringContainsString( "\tbackground: var(--ran-booster-status-ok-background);\n\tcolor: var(--ran-booster-status-ok);", $settings );
+		self::assertStringNotContainsString( 'var(--ran-booster-status-ok-background)', $settings );
+		self::assertStringContainsString( "StatusBadge::print_intent( __( 'Active', 'ran-booster' ), 'stable', array( 'class' => 'ran-booster-source-choice__current-source' ) );", $this->source( 'views/packages/source-choices.php' ) );
 	}
 
 	public function test_repository_branch_check_notice_sits_flush_beside_the_action(): void {

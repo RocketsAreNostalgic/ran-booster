@@ -1,4 +1,45 @@
 /* Buttons */
+
+/*
+ * The static Button sets display inside the wp-ui layer, which outranks the
+ * user agent's [hidden] rule.
+ */
+
+.ran-wp-ui-button[hidden] {
+	display: none;
+}
+
+/*
+ * The label may break anywhere, so a flex row would squeeze the Button until
+ * its label wraps. Keep it at its label's width; max-width still wraps a
+ * label that is wider than the row itself.
+ */
+
+.ran-wp-ui-button {
+	flex-shrink: 0;
+}
+
+/*
+ * wp-admin's unlayered link colour and focus rules outrank the wp-ui layer,
+ * and the anchor reset falls back to an inherited colour and square corners.
+ * Give a static anchor the Button's own colours, corners and box-sizing (the
+ * button reset sets box-sizing for a button; an anchor would inherit it).
+ */
+
+a.ran-wp-ui-button {
+	box-sizing: border-box;
+	border-radius: var(--wpds-border-radius-sm);
+	color: var(--wp-ui-button-foreground-color);
+}
+
+a.ran-wp-ui-button:not([aria-disabled="true"]):is(:hover, :focus, :active) {
+	color: var(--wp-ui-button-foreground-color-active);
+}
+
+a.ran-wp-ui-button[aria-disabled="true"] {
+	color: var(--wp-ui-button-foreground-color-disabled);
+}
+
 .wp-core-ui .ran-booster-admin .button-delete {
 	background-color: var(--ran-booster-danger);
 	border-color: var(--ran-booster-danger-strong);

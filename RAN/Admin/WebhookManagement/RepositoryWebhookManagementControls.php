@@ -121,7 +121,7 @@ final class RepositoryWebhookManagementControls {
 			<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong></summary>
 			<div data-ran-booster-ui-disclosure-content class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body ran-booster-disclosure__body">
 				<p><?php echo esc_html( $reason ); ?></p>
-				<p><button type="button" class="button" disabled><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?></button></p>
+				<p><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" disabled><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?></button></p>
 			</div>
 		</details></div>
 		<?php

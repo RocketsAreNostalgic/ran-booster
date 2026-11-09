@@ -921,7 +921,7 @@
 				'<label for="ran-booster-repository-picker-owner" class="ran-booster-repository-picker__owner-label"></label>' +
 				'<div class="ran-booster-repository-picker__public-search-fields">' +
 				'<input id="ran-booster-repository-picker-owner" class="regular-text ran-booster-repository-picker__owner" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">' +
-				'<button type="submit" class="button button-primary"></button>' +
+				'<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid"></button>' +
 				'</div>' +
 				'</form>' +
 				'<div class="ran-booster-repository-picker__filter">' +

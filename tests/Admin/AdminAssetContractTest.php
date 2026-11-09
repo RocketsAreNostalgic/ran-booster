@@ -1393,6 +1393,43 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'package-details"]', $packages );
 	}
 
+	public function test_converted_markup_draws_buttons_with_the_static_button_and_never_core_classes(): void {
+		$converted = array(
+			'RAN/Admin/Component/AdminActionRenderer.php',
+			'RAN/Admin/Component/ProviderManagementTableRenderer.php',
+			'RAN/Admin/Component/RepositoryDetailRenderer.php',
+			'RAN/Admin/Component/RepositoryTableRenderer.php',
+			'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php',
+			'RAN/Admin/WebhookManagement/views/panel.php',
+			'assets/ran-booster-repository-picker.js',
+		);
+
+		foreach ( $converted as $file ) {
+			self::assertSame( array(), $this->core_button_classes( $this->source( $file ) ), $file );
+		}
+	}
+
+	/**
+	 * Returns each class attribute or class string that carries a WordPress core
+	 * button class. Core's .button rules are unlayered and would outrank the
+	 * static Button's layered rules on the same element.
+	 *
+	 * @return list<string>
+	 */
+	private function core_button_classes( string $source ): array {
+		$found = array();
+		$token = '(?<![\w-])button(?:-primary|-secondary|-delete|-link-delete|-disabled)?(?![\w-])';
+		preg_match_all( '/class=(["\'])(?:(?!\1).)*?' . $token . '/', $source, $attributes );
+		preg_match_all( '/(?:className\s*=|classList\.\w+\(|\?|(?<!type):|\.)\s*[\'"][^\'"]*' . $token . '|[\'"][^\'"]*(?<![\w-])button-(?:primary|secondary|delete|link-delete|disabled)(?![\w-])/', $source, $strings );
+		foreach ( array_merge( $attributes[0], $strings[0] ) as $match ) {
+			if ( 1 !== preg_match( '/type\s*[=:]/', $match ) ) {
+				$found[] = $match;
+			}
+		}
+
+		return $found;
+	}
+
 	private function asset( string $file ): string {
 		if ( 'ran-booster.css' !== $file ) {
 			return $this->raw_asset( $file );

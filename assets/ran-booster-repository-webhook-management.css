@@ -46,7 +46,7 @@
 
 .ran-booster-admin
 	.ran-booster-repository-webhook-management__select-action
-	.button {
+	.ran-wp-ui-button {
 	flex: 0 0 auto;
 }
 
@@ -257,7 +257,7 @@
 
 	.ran-booster-admin
 		.ran-booster-repository-webhook-management__actions
-		.button {
+		.ran-wp-ui-button {
 		width: 100%;
 		text-align: center;
 	}
@@ -270,7 +270,7 @@
 
 	.ran-booster-admin
 		.ran-booster-repository-webhook-management__select-action
-		.button {
+		.ran-wp-ui-button {
 		width: 100%;
 		text-align: center;
 	}

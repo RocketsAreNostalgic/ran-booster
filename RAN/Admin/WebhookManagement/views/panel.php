@@ -45,7 +45,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 									<option value="<?php echo esc_attr( $choice['id'] ); ?>"<?php selected( $model['management_credential_id'] ?? null, $choice['id'] ); ?>><?php echo esc_html( $choice['label'] ); ?></option>
 								<?php endforeach; ?>
 							</select>
-							<a class="button" href="<?php echo esc_url( $model['credentials_url'] ); ?>"><?php esc_html_e( 'Manage credentials', 'ran-booster' ); ?></a>
+							<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $model['credentials_url'] ); ?>"><?php esc_html_e( 'Manage credentials', 'ran-booster' ); ?></a>
 						</div>
 						<span class="description"><?php esc_html_e( 'Choose the saved credential used to manage this repository webhook. A current selection does not prove Git provider authority until the operation checks it.', 'ran-booster' ); ?></span>
 					</div>
@@ -60,7 +60,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 									<option value="<?php echo esc_attr( $choice['id'] ); ?>"><?php echo esc_html( $choice['label'] . ' (' . $choice['scope'] . ')' ); ?></option>
 								<?php endforeach; ?>
 							</select>
-							<a class="button" href="<?php echo esc_url( $model['secrets_url'] ); ?>"><?php esc_html_e( 'Manage signing secrets', 'ran-booster' ); ?></a>
+							<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $model['secrets_url'] ); ?>"><?php esc_html_e( 'Manage signing secrets', 'ran-booster' ); ?></a>
 						</div>
 						<span class="description"><?php esc_html_e( 'Choose an applicable saved signing secret, or create one only for this repository.', 'ran-booster' ); ?></span>
 					</div>
@@ -68,7 +68,7 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 				<div class="ran-booster-action-row ran-booster-repository-webhook-management__actions">
 					<?php foreach ( $model['operations'] as $operation ) : ?>
 						<?php $operation_disabled = $disabled || true === ( $operation['disabled'] ?? false ); ?>
-						<button class="<?php echo esc_attr( $operation['primary'] ? 'button button-primary' : 'button' ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"<?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
+						<button class="<?php echo esc_attr( $operation['primary'] ? \RAN\Admin\Component\ButtonClasses::primary() : \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"<?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
 					<?php endforeach; ?>
 				</div>
 				<?php if ( is_string( $model['action_help'] ) ) : ?>

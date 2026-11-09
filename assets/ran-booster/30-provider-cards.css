@@ -898,7 +898,9 @@
 	min-inline-size: 0;
 }
 
-.ran-booster-admin .ran-booster-provider-table-navigation .button.disabled {
+.ran-booster-admin
+	.ran-booster-provider-table-navigation
+	.ran-wp-ui-button.disabled {
 	pointer-events: none;
 }
 

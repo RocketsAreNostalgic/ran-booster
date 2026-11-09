@@ -162,19 +162,18 @@ final class RepositoryTableRenderer {
 		$external      = true === ( $action['external'] ?? false );
 		$described_by  = is_string( $action['described_by'] ?? null ) ? $action['described_by'] : '';
 		$screen_reader = is_string( $action['screen_reader'] ?? null ) ? $action['screen_reader'] : '';
-		$class_name    = $button ? 'button' : '';
 
 		if ( '' === $label ) {
 			return;
 		}
 		if ( $disabled || '' === $url ) {
 			?>
-			<button type="button" class="<?php echo esc_attr( $class_name ); ?>" disabled aria-disabled="true"<?php echo '' === $described_by ? '' : ' aria-describedby="' . esc_attr( $described_by ) . '"'; ?>><?php echo esc_html( $label ); ?></button>
+			<button type="button"<?php echo $button ? ' class="' . esc_attr( ButtonClasses::secondary() ) . '"' : ''; ?> disabled aria-disabled="true"<?php echo '' === $described_by ? '' : ' aria-describedby="' . esc_attr( $described_by ) . '"'; ?>><?php echo esc_html( $label ); ?></button>
 			<?php
 			return;
 		}
 		?>
-		<a class="<?php echo esc_attr( $class_name ); ?>" href="<?php echo esc_url( $url ); ?>"<?php echo $external ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>>
+		<a<?php echo $button ? ' class="' . esc_attr( ButtonClasses::secondary( false, true ) ) . '"' : ''; ?> href="<?php echo esc_url( $url ); ?>"<?php echo $external ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>>
 			<?php echo esc_html( $label ); ?>
 			<?php if ( '' !== $screen_reader ) { ?>
 				<span class="screen-reader-text">: <?php echo esc_html( $screen_reader ); ?></span>

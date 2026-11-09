@@ -101,7 +101,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 		// The page-size form works without JavaScript: no inline handler, a native Apply submit.
 		self::assertStringNotContainsString( 'onchange', $html );
 		self::assertStringContainsString( 'data-ran-booster-auto-submit', $html );
-		self::assertMatchesRegularExpression( '/<button type="submit" class="button screen-reader-text">Apply<\/button>\s*<\/form>/', $html );
+		self::assertMatchesRegularExpression( '/<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline is-compact screen-reader-text">Apply<\/button>\s*<\/form>/', $html );
 		self::assertStringContainsString( 'name="tab" value="gh&quot;&gt;&lt;unsafe"', $html );
 		self::assertStringContainsString( 'paged=1&amp;mode=&lt;unsafe&gt;', $html );
 		self::assertStringContainsString( 'paged=3&amp;mode=&lt;unsafe&gt;', $html );

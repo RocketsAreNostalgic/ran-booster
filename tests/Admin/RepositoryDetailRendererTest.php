@@ -448,7 +448,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 
 		self::assertStringContainsString( 'Repository webhook management is temporarily unavailable for this repository.', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
-		self::assertStringContainsString( '<button type="button" class="button" disabled aria-disabled="true">Manage repository webhook</button>', $html );
+		self::assertStringContainsString( '<button type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Manage repository webhook</button>', $html );
 	}
 
 	public function test_published_releases_view_uses_provider_panel_and_keeps_package_controls_linked(): void {

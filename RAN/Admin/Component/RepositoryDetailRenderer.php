@@ -45,7 +45,7 @@ final class RepositoryDetailRenderer {
 					<p class="ran-booster-page-heading__description"><?php echo esc_html( $this->summary( $packages, $source, $omitted ) ); ?></p>
 				</div>
 				<?php if ( is_string( $row['repository_url'] ?? null ) && '' !== $row['repository_url'] ) { ?>
-					<a class="button" href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s is the repository provider name. */ __( 'Open on %s', 'ran-booster' ), $provider_label ) ); ?></a>
+					<a class="<?php echo esc_attr( ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s is the repository provider name. */ __( 'Open on %s', 'ran-booster' ), $provider_label ) ); ?></a>
 				<?php } ?>
 			</header>
 			<div class="notice notice-error inline ran-booster-provider-task-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load that repository view. The current view is unchanged; choose the view again to retry.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
@@ -198,7 +198,7 @@ final class RepositoryDetailRenderer {
 			<div class="ran-booster-settings-section__body">
 				<p><?php esc_html_e( 'Release workflow status is unavailable in this view. Package release settings remain available.', 'ran-booster' ); ?></p>
 				<?php foreach ( $packages as $package ) { ?>
-					<p><a class="button" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ _x( 'Open %s settings', 'Managed package settings link', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
+					<p><a class="<?php echo esc_attr( ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ _x( 'Open %s settings', 'Managed package settings link', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
 				<?php } ?>
 			</div>
 		</div></div></section>
@@ -213,7 +213,7 @@ final class RepositoryDetailRenderer {
 			<div class="ran-booster-settings-section__body">
 				<?php /* translators: %d is the number of package summaries omitted from repository inventory. */ ?>
 				<p><?php echo esc_html( sprintf( __( '%d connected package is not shown. Refresh repository inventory before using repository-wide workflow controls.', 'ran-booster' ), $omitted ) ); ?></p>
-				<p><button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( $label ); ?></button></p>
+				<p><button type="button" class="<?php echo esc_attr( ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"><?php echo esc_html( $label ); ?></button></p>
 			</div>
 		</div></div></section>
 		<?php
@@ -229,7 +229,7 @@ final class RepositoryDetailRenderer {
 				</header>
 				<div class="ran-booster-settings-section__body">
 					<p><?php esc_html_e( 'Repository webhook management is temporarily unavailable for this repository.', 'ran-booster' ); ?></p>
-					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
+					<p><button type="button" class="<?php echo esc_attr( ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
 				</div>
 			</div></div></section>
 			<?php
@@ -261,7 +261,7 @@ final class RepositoryDetailRenderer {
 				<h4 id="ran-booster-repository-webhook-setup-heading"><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></h4>
 				<p><?php echo esc_html( $message ); ?></p>
 				<?php if ( $has_branch_consumer && ! $receiver_ready ) { ?>
-					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
+					<p><button type="button" class="<?php echo esc_attr( ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
 				<?php } ?>
 			</div>
 		</div></div></section>
@@ -543,14 +543,14 @@ final class RepositoryDetailRenderer {
 				<?php foreach ( is_array( $action['hidden'] ?? null ) ? $action['hidden'] : array() as $name => $value ) { ?>
 					<input type="hidden" name="<?php echo esc_attr( (string) $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
 				<?php } ?>
-					<button type="submit" class="button"<?php disabled( true === ( $action['disabled'] ?? false ) ); ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
+					<button type="submit" class="<?php echo esc_attr( ButtonClasses::secondary() ); ?>"<?php disabled( true === ( $action['disabled'] ?? false ) ); ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
 				</form>
 			<?php } elseif ( true === ( $action['disabled'] ?? false ) ) { ?>
-				<button type="button" class="button" disabled aria-disabled="true"<?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
+				<button type="button" class="<?php echo esc_attr( ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"<?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( (string) ( $action['label'] ?? '' ) ); ?></button>
 			<?php } elseif ( 'link' === ( $action['type'] ?? null ) ) { ?>
 				<?php $webhooks_link = 'core:provider-webhooks' === ( $action['key'] ?? null ) && true === ( $action['external'] ?? false ); ?>
 				<?php /* translators: %s: repository provider name. */ ?>
-				<a<?php echo $webhooks_link ? '' : ' class="button"'; ?> href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( $webhooks_link ? sprintf( __( 'Manage repo webhooks on %s', 'ran-booster' ), 'GitHub' === $provider_label ? 'Github' : $provider_label ) : (string) ( $action['label'] ?? '' ) ); ?>
+				<a<?php echo $webhooks_link ? '' : ' class="' . esc_attr( ButtonClasses::secondary( false, true ) ) . '"'; ?> href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( $webhooks_link ? sprintf( __( 'Manage repo webhooks on %s', 'ran-booster' ), 'GitHub' === $provider_label ? 'Github' : $provider_label ) : (string) ( $action['label'] ?? '' ) ); ?>
 				<?php if ( $webhooks_link ) { ?>
 					<span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span>
 				<?php } ?></a>

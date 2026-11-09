@@ -813,9 +813,25 @@ final class AdminAssetContractTest extends TestCase {
 			'/\\.ran-booster-provider-table-navigation \\{[\\s\\S]+flex-wrap: wrap;[\\s\\S]+padding-inline: var\\(--ran-booster-space-(?:20|24)\\);/',
 			$css
 		);
+		// The real table persists down to the 782px shared mobile breakpoint, not the old 1100px one.
+		$responsive = $this->asset( 'ran-booster/80-responsive.css' );
+		self::assertDoesNotMatchRegularExpression(
+			'/@media screen and \\(max-width: (?:1100|960|900)px\\) \\{(?:(?!\\n\\}\\n)[\\s\\S])*provider-management-table\\s+> tbody\\s+> tr \\{/',
+			$responsive
+		);
 		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 1100px\\)[\\s\\S]+\\.ran-booster-provider-management-table tr \\{[\\s\\S]+grid-template-columns: repeat\\(2, minmax\\(0, 1fr\\)\\);[\\s\\S]+\\.ran-booster-data-table\\.ran-booster-provider-management-table[\\s\\S]+td\\[data-label\\]::before \\{[\\s\\S]+content: attr\\(data-label\\);[\\s\\S]+td\\.ran-booster-actions \\{[\\s\\S]+flex-wrap: wrap;[\\s\\S]+white-space: normal;/',
-			$css
+			'/@media screen and \\(min-width: 783px\\) and \\(max-width: 1100px\\) \\{[\\s\\S]+credential-table--access\\s+th:nth-child\\(6\\) \\{\\s+inline-size: 28%;[\\s\\S]+padding-inline: var\\(--ran-booster-space-8\\);\\s+overflow-wrap: break-word;/',
+			$responsive
+		);
+		// Compact stacked record: a wrapping flex row with inline label/value pairs on phones, not a tall padded card.
+		self::assertMatchesRegularExpression(
+			'/@media screen and \\(max-width: 782px\\) \\{\\s+\\.ran-booster-admin\\s+\\.ran-booster-data-table\\.ran-booster-provider-management-table,[\\s\\S]+> thead \\{\\s+display: none;[\\s\\S]+> tr \\{\\s+display: flex;\\s+flex-wrap: wrap;\\s+column-gap: var\\(--ran-booster-space-24\\);\\s+padding-block: var\\(--ran-booster-space-8\\);[\\s\\S]+> td\\[data-label\\]::before \\{\\s+content: attr\\(data-label\\);[\\s\\S]+td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex: 0 0 100%;\\s+flex-wrap: wrap;[\\s\\S]+white-space: normal;/',
+			$responsive
+		);
+		self::assertStringNotContainsString( 'padding: var(--ran-booster-space-14) var(--ran-booster-space-16);', $responsive );
+		self::assertMatchesRegularExpression(
+			'/@media screen and \\(max-width: 480px\\) \\{\\s+\\.ran-booster-admin[\\s\\S]+provider-management-table[\\s\\S]+td\\[data-label\\]:not\\(\\.ran-booster-actions\\) \\{\\s+display: grid;[\\s\\S]+grid-template-columns: minmax\\(104px, 34%\\) minmax\\(0, 1fr\\);/',
+			$responsive
 		);
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-data-table\\s+> tbody\\s+> tr\\s+> \\[data-label\\]::before,/',
@@ -835,10 +851,6 @@ final class AdminAssetContractTest extends TestCase {
 		);
 		self::assertMatchesRegularExpression(
 			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-provider-list-controls select \\{\\s+flex: 0 1 auto;\\s+inline-size: 100%;\\s+max-inline-size: none;/',
-			$css
-		);
-		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> tbody\\s+> tr\\s+> td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;/',
 			$css
 		);
 		self::assertDoesNotMatchRegularExpression(

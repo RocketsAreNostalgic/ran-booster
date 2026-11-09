@@ -751,6 +751,12 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		},
 		fetch: (url, requestOptions) => fetchResponse(requestOptions.body),
 		ranBoosterPortability: { ajaxUrl: '/admin-ajax.php' },
+		ranBoosterNotice: {
+			setIntent(host, intent) {
+				host.setAttribute('data-ran-booster-ui-notice-intent', intent);
+				return true;
+			},
+		},
 	};
 	Function('window', announceSource)(globalThis.window);
 	if (options.htmx) {
@@ -1073,7 +1079,7 @@ test('a failed preview cannot leave an older review actionable', async () => {
 		await tick();
 
 		assert.equal(state.message.textContent, 'Safe blueprint read error.');
-		assert.equal(state.message.className, 'notice inline notice-error');
+		assert.equal(state.message.hidden, false);
 		assert.equal(state.review.innerHTML, '<table>empty</table>');
 		assert.equal(state.apply.disabled, true);
 		assert.equal(state.previewSubmit.disabled, false);
@@ -2264,44 +2270,55 @@ test('preview failure updates only the retained paragraph inside its Notice', as
 	const notice = {
 		hidden: true,
 		className: '',
-		setAttribute(name, value) {
-			this[name] = value;
-		},
 		dispatchEvent(event) {
-			updates.push({
-				type: event.type,
-				bubbles: event.bubbles,
-				intent: this['data-ran-booster-ui-notice-intent'],
-				text: state.message.textContent,
-				hidden: this.hidden,
-			});
+			updates.push({ type: event.type });
 		},
 	};
 	Object.defineProperty(notice, 'textContent', {
 		set() {
-			throw new Error('Do not replace the mounted Notice root.');
+			throw new Error('Do not replace the Notice content.');
 		},
 	});
 	state.message.closest = () => notice;
+	const intents = [];
+	globalThis.window.ranBoosterNotice.setIntent = (host, intent) => {
+		intents.push({
+			host,
+			intent,
+			text: state.message.textContent,
+			hidden: host.hidden,
+		});
+		return true;
+	};
 	try {
 		loadFunction('initPortabilityPreview')();
 		state.listeners.get('form:submit')({ preventDefault() {} });
 		await tick();
+		// The static Notice redraws through the helper; nothing remounts it.
 		assert.deepEqual(
-			updates.map(({ intent, text, hidden }) => ({
+			intents.map(({ host, intent, text, hidden }) => ({
+				host: host === notice,
 				intent,
 				text,
 				hidden,
 			})),
 			[
-				{ intent: 'info', text: 'Reviewing blueprint…', hidden: false },
-				{ intent: 'error', text: 'Safe review error.', hidden: false },
+				{
+					host: true,
+					intent: 'info',
+					text: 'Reviewing blueprint…',
+					hidden: false,
+				},
+				{
+					host: true,
+					intent: 'error',
+					text: 'Safe review error.',
+					hidden: false,
+				},
 			]
 		);
-		assert.equal(updates.at(-1).type, 'ran-booster:ui-notice-update');
-		assert.equal(updates.at(-1).bubbles, true);
+		assert.deepEqual(updates, []);
 		assert.equal(state.message.className, '');
-		assert.equal(notice.className, 'notice inline notice-error');
 		assert.equal(state.message['aria-live'], undefined);
 		assert.equal(state.apply.disabled, true);
 		// Progress stays polite; the review failure is assertive.

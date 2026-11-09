@@ -687,8 +687,12 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertSame( '' !== $message, $notice->hasAttribute( 'data-ran-booster-repository-branch-check' ) );
 		self::assertSame( 'alert', $notice->getAttribute( 'role' ) );
 		self::assertSame( '-1', $notice->getAttribute( 'tabindex' ) );
-		self::assertSame( '' !== $message ? 'notice notice-warning inline' : 'notice notice-error inline', $notice->getAttribute( 'class' ) );
-		$primary = $xpath->query( './div[@data-ran-booster-ui-notice-content]/p[@data-ran-booster-ui-notice-primary]', $notice );
+		$intent = '' !== $message ? 'warning' : 'error';
+		self::assertSame( 'notice notice-' . $intent . ' inline ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent, $notice->getAttribute( 'class' ) );
+		$primary = $xpath->query( './div[@class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"][@data-ran-booster-ui-notice-content]/p[@data-ran-booster-ui-notice-primary]', $notice );
+		$icon    = $xpath->query( './div[@data-ran-booster-ui-notice-content]/following-sibling::*[1][local-name()="svg"][@class="ran-wp-ui-notice__icon"][@aria-hidden="true"]', $notice );
+		self::assertNotFalse( $icon );
+		self::assertCount( 1, $icon );
 		self::assertNotFalse( $primary );
 		self::assertCount( 1, $primary );
 		$paragraph = $primary->item( 0 );
@@ -773,11 +777,11 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/branch-readiness.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'notice notice-warning inline', $html );
+		self::assertStringContainsString( 'notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning', $html );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-repository-branch-check' ) );
 		self::assertSame( 1, substr_count( $html, 'id="ran-booster-repository-branch-check-error"' ) );
 		self::assertMatchesRegularExpression(
-			'/id="ran-booster-repository-branch-check-error"\s+class="notice notice-warning inline"\s+data-ran-booster-ui-notice\s+data-ran-booster-ui-notice-intent="warning"\s+role="alert"\s+tabindex="-1"\s+data-ran-booster-repository-branch-check\s*>\s*<div data-ran-booster-ui-notice-content>\s*<p data-ran-booster-ui-notice-primary>Booster could not access the saved repository and branch\. Check the branch name and repository access, then try again\.<\/p>\s*<\/div>\s*<\/div>/',
+			'/id="ran-booster-repository-branch-check-error"\s+class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"\s+data-ran-booster-ui-notice\s+data-ran-booster-ui-notice-intent="warning"\s+role="alert"\s+tabindex="-1"\s+data-ran-booster-repository-branch-check\s*>\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p data-ran-booster-ui-notice-primary>Booster could not access the saved repository and branch\. Check the branch name and repository access, then try again\.<\/p>\s*<\/div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*aria-hidden="true"[^>]*>(?:<path [^>]*><\/path>)+<\/svg>\s*<\/div>/',
 			$html
 		);
 		self::assertLessThan(

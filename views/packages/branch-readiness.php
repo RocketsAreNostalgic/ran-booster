@@ -117,8 +117,8 @@ $repository_branch_check_message  = match ( $repository_branch_check_outcome ?? 
 	'subdirectory_unverified'  => __( 'The saved branch is accessible, but Booster could not check the configured subdirectory. Try again later.', 'ran-booster' ),
 	default                => null,
 };
-$repository_branch_check_notice_class = null !== $repository_branch_check_message ? 'notice-warning' : 'notice-error';
-$repository_state_class               = match ( true ) {
+$repository_branch_check_intent = null !== $repository_branch_check_message ? 'warning' : 'error';
+$repository_state_class         = match ( true ) {
 	! $identity_ready                         => 'is-warning',
 	$repository_branch_verified                => 'is-ok',
 	$saved_identity_ready                      => 'is-ok',
@@ -258,9 +258,9 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 			<div class="ran-booster-readiness-actions">
 				<div
 					id="ran-booster-repository-branch-check-error"
-					class="notice <?php echo esc_attr( $repository_branch_check_notice_class ); ?> inline"
+					class="notice notice-<?php echo esc_attr( $repository_branch_check_intent ); ?> inline ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $repository_branch_check_intent ); ?>"
 					data-ran-booster-ui-notice
-					data-ran-booster-ui-notice-intent="<?php echo null !== $repository_branch_check_message ? 'warning' : 'error'; ?>"
+					data-ran-booster-ui-notice-intent="<?php echo esc_attr( $repository_branch_check_intent ); ?>"
 					role="alert"
 					tabindex="-1"
 					<?php if ( null !== $repository_branch_check_message ) { ?>
@@ -268,9 +268,10 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					<?php } else { ?>
 						hidden
 					<?php } ?>
-				><div data-ran-booster-ui-notice-content>
+				><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 						<p data-ran-booster-ui-notice-primary><?php echo esc_html( $repository_branch_check_message ?? '' ); ?></p>
 					</div>
+					<?php \RAN\Admin\Component\NoticeIcon::print_intent( $repository_branch_check_intent ); ?>
 				</div>
 				<?php if ( $is_package_edit ) { ?>
 					<button

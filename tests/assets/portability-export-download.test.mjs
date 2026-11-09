@@ -73,6 +73,7 @@ function fixture(fetch) {
 	message.hidden = true;
 	const messageText = { textContent: '' };
 	const noticeUpdates = [];
+	const intents = [];
 	message.dispatchEvent = (event) => {
 		noticeUpdates.push({
 			type: event.type,
@@ -155,6 +156,13 @@ function fixture(fetch) {
 		ranBoosterPortability: {
 			ajaxUrl: 'https://example.test/wp-admin/admin-ajax.php',
 		},
+		ranBoosterNotice: {
+			setIntent(host, intent) {
+				intents.push({ host, intent });
+				host.setAttribute('data-ran-booster-ui-notice-intent', intent);
+				return true;
+			},
+		},
 		URL: {
 			createObjectURL() {
 				return 'blob:blueprint';
@@ -172,6 +180,7 @@ function fixture(fetch) {
 		message,
 		messageText,
 		noticeUpdates,
+		intents,
 		politeness,
 		spoken,
 		submit,
@@ -289,7 +298,10 @@ test('a successful export downloads the Blueprint without leaving the Portabilit
 			message:
 				'Transporter Blueprint download started. Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction.',
 		});
-		assert.equal(state.message.className, 'notice notice-warning inline');
+		assert.deepEqual(state.intents.at(-1), {
+			host: state.message,
+			intent: 'warning',
+		});
 		assert.equal(
 			state.messageText.textContent,
 			state.events[0].detail.message
@@ -503,10 +515,10 @@ for (const count of [
 			assert.equal(state.links.length, 1);
 			assert.equal(state.links[0].clicks, 1);
 			assert.equal(state.message.hidden, false);
-			assert.equal(
-				state.message.className,
-				`notice notice-${expectedWarning ? 'warning' : 'success'} inline`
-			);
+			assert.deepEqual(state.intents.at(-1), {
+				host: state.message,
+				intent: expectedWarning ? 'warning' : 'success',
+			});
 			assert.equal(
 				state.events[0].detail.message,
 				'Transporter Blueprint download started.' +
@@ -524,7 +536,7 @@ for (const count of [
 	});
 }
 
-test('export Notice intent updates preserve the mounted content node and announcement owner', async () => {
+test('export Notice intent updates keep the content node and announcement owner', async () => {
 	let calls = 0;
 	const state = fixture(async () =>
 		++calls === 1
@@ -547,26 +559,29 @@ test('export Notice intent updates preserve the mounted content node and announc
 	const originalText = state.messageText;
 	Object.defineProperty(state.message, 'textContent', {
 		set() {
-			throw new Error('The mounted Notice root must remain intact.');
+			throw new Error('The Notice content node must remain intact.');
 		},
 	});
 	try {
 		loadFunction('initPortabilityExportDownload')();
 		await state.form.listeners.get('submit')(submitEvent());
 		assert.equal(state.messageText, originalText);
-		assert.equal(state.noticeUpdates.at(-1).intent, 'warning');
-		assert.equal(state.noticeUpdates.at(-1).text, originalText.textContent);
-		assert.equal(state.noticeUpdates.at(-1).hidden, false);
+		assert.equal(
+			state.message.getAttribute('data-ran-booster-ui-notice-intent'),
+			'warning'
+		);
+		assert.equal(state.message.hidden, false);
 		assert.equal(state.message.getAttribute('aria-live'), null);
 		assert.equal(state.spoken.length, 1);
 		await state.form.listeners.get('submit')(submitEvent());
-		assert.deepEqual(state.noticeUpdates.at(-1), {
-			type: 'ran-booster:ui-notice-update',
-			bubbles: true,
+		// The static Notice redraws through the helper; nothing remounts it.
+		assert.deepEqual(state.noticeUpdates, []);
+		assert.deepEqual(state.intents.at(-1), {
+			host: state.message,
 			intent: 'error',
-			text: 'Export failed.',
-			hidden: false,
 		});
+		assert.equal(originalText.textContent, 'Export failed.');
+		assert.equal(state.message.hidden, false);
 		assert.equal(state.message.getAttribute('role'), null);
 		assert.equal(state.message.getAttribute('aria-live'), null);
 		assert.deepEqual(state.politeness, ['polite', 'assertive']);

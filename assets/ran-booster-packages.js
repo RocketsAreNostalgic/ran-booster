@@ -805,27 +805,17 @@
 				}
 			});
 
-			summary.classList.remove(
-				'notice-error',
-				'notice-success',
-				'notice-warning'
-			);
-			const intent =
+			window.ranBoosterNotice.setIntent(
+				summary,
 				tracked.size || observedFailure || skipped
 					? 'warning'
-					: 'success';
-			summary.classList.add('notice-' + intent);
-			summary.setAttribute('data-ran-booster-ui-notice-intent', intent);
+					: 'success'
+			);
 			summaryMessage.textContent = summaryText(
 				tracked.size
 					? settings.labels.summaryActive
 					: settings.labels.summaryFinished,
 				tracked.size ? { queued, running, skipped } : { skipped }
-			);
-			summary.dispatchEvent(
-				new window.CustomEvent('ran-booster:ui-notice-update', {
-					bubbles: true,
-				})
 			);
 		}
 

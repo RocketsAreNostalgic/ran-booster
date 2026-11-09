@@ -399,17 +399,20 @@ Hosts that stay mounted by `ran-booster-cards.js`:
 
 | Host | Why |
 | --- | --- |
-| Transporter export message (`views/portability.php`) | `ran-booster-portability.js` changes its intent in place |
-| Transporter preview notice (`views/portability.php`) | `ran-booster-portability.js` changes its intent in place |
-| Repository branch check error (`views/packages/branch-readiness.php`) | `ran-booster-enhanced-mutations.js` switches warning and error in place |
-| Credential validation result (`views/provider-credential-health.php`) | `ran-booster-enhanced-mutations.js` switches success to error in place |
-| Bulk update queue summary (`views/notices.php`) | `ran-booster-packages.js` switches success and warning in place |
 | Unsupported Multisite notice (`RAN/Runtime/UnsupportedMultisiteBootstrap.php`) | The safety bootstrap loads no Booster styles or scripts; it renders as a core notice |
 | Plugins failure rows (`RAN/Admin/ManagedPluginFailureRows.php`) | Their screen loads the Notice assets only while the failure notice is unacknowledged, and `native-update-warning.js` rewrites the row |
 
-An in-place intent change needs the icon to change with the class; that waits for
-one shared per-page `<template>` of the four icons that scripts clone. Notices that
-scripts build from strings or templates are also still mounted. The signed
+A static notice whose intent a script changes in place (the Transporter export
+message and preview notice, the repository branch check, the credential
+validation result and the bulk update queue summary) changes it with
+`window.ranBoosterNotice.setIntent( host, intent )` from `ran-booster-notice.js`.
+The helper sets the `is-*` class, core's `notice-*` class and
+`data-ran-booster-ui-notice-intent`, and replaces the icon with a clone from the
+one `<template id="ran-booster-notice-icons">` that
+`NoticeIcon::print_template()` prints after the shell on the screens with such a
+host; neutral has no icon. It only redraws: announcements stay with
+`ranBoosterAnnounce` and focus with the calling script. Notices that scripts
+build from strings or templates are still mounted. The signed
 interaction outcome notice and the extension update warning are static on Booster
 screens only, which always load the static sheet; elsewhere they keep the mounted
 markup.

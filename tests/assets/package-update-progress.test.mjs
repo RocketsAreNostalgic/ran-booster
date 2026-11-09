@@ -166,6 +166,7 @@ function environment(rows, responses) {
 	});
 	const summaryMessage = element();
 	const noticeUpdates = [];
+	const intents = [];
 	summary.dispatchEvent = (event) =>
 		noticeUpdates.push({
 			type: event.type,
@@ -251,6 +252,22 @@ function environment(rows, responses) {
 				badge.updates = (badge.updates ?? 0) + 1;
 			},
 		},
+		ranBoosterNotice: {
+			setIntent(host, intent) {
+				host.classList.remove(
+					'notice-error',
+					'notice-success',
+					'notice-warning'
+				);
+				host.classList.add('notice-' + intent);
+				host.setAttribute('data-ran-booster-ui-notice-intent', intent);
+				intents.push({
+					intent,
+					text: summaryMessage.textContent,
+				});
+				return true;
+			},
+		},
 		ranBoosterPackageProgress: settings,
 		setTimeout(callback) {
 			timers.push(callback);
@@ -295,6 +312,7 @@ function environment(rows, responses) {
 		speech,
 		requests,
 		noticeUpdates,
+		intents,
 		summary,
 		summaryMessage,
 		timers,
@@ -836,21 +854,22 @@ for (const [terminal, skipped, intent] of [
 		fixture.summary.setAttribute('data-skipped', String(skipped));
 		Object.defineProperty(fixture.summary, 'textContent', {
 			set() {
-				throw new Error('Retain the mounted Notice content.');
+				throw new Error('Retain the Notice content.');
 			},
 		});
 		globalThis.document = fixture.document;
 		globalThis.window = fixture.window;
 		try {
 			loadFunction('initPackageUpdateProgress')();
-			assert.equal(fixture.noticeUpdates.at(-1).intent, 'warning');
+			assert.equal(fixture.intents.at(-1).intent, 'warning');
 			await runTimer(fixture.timers);
-			assert.deepEqual(fixture.noticeUpdates.at(-1), {
-				type: 'ran-booster:ui-notice-update',
-				bubbles: true,
-				intent,
-				text: `Booster reinstalls have finished. Skipped: ${skipped}.`,
-			});
+			// The helper redraws the static Notice before the text changes.
+			assert.equal(fixture.intents.at(-1).intent, intent);
+			assert.equal(
+				fixture.summaryMessage.textContent,
+				`Booster reinstalls have finished. Skipped: ${skipped}.`
+			);
+			assert.deepEqual(fixture.noticeUpdates, []);
 			assert.equal(
 				fixture.summary.classList.contains('notice-' + intent),
 				true

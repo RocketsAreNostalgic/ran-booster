@@ -85,6 +85,7 @@ function classList() {
 function fixture() {
 	const listeners = new Map();
 	const announcements = [];
+	const noticeIntents = [];
 	const animationFrames = [];
 	const replacedUrls = [];
 	const scrollCalls = [];
@@ -302,10 +303,27 @@ function fixture() {
 				},
 			},
 		},
+		// Records each in-place intent change and mirrors its class and
+		// attribute writes; the helper itself is covered by notice.test.mjs.
+		ranBoosterNotice: {
+			setIntent(host, intent) {
+				noticeIntents.push({ host, intent });
+				['notice-error', 'notice-success', 'notice-warning'].forEach(
+					(name) => host.classList?.remove(name)
+				);
+				host.classList?.add(`notice-${intent}`);
+				host.setAttribute?.(
+					'data-ran-booster-ui-notice-intent',
+					intent
+				);
+				return true;
+			},
+		},
 	};
 	Function('window', announceSource)(window);
 
 	return {
+		noticeIntents,
 		announcements,
 		animationFrames,
 		button,
@@ -3197,7 +3215,9 @@ test('a swapped failure is selected from its returned subtree, including the roo
 			assert.match(target.textContent, /could not complete/);
 		} else if (scenario === 'self-warning') {
 			assert.equal(focused, 1);
-			assert.equal(updates, 1);
+			// A rendered warning keeps its intent: nothing to redraw.
+			assert.equal(updates, 0);
+			assert.deepEqual(state.noticeIntents, []);
 			assert.deepEqual(state.announcements, []);
 		} else {
 			assert.equal(target.hidden, true);
@@ -3264,7 +3284,11 @@ test('an empty authoritative Notice primary receives the failure, not retained d
 	assert.match(primary.textContent, /could not complete/);
 	assert.equal(detail.hidden, true);
 	assert.equal(fields[0].textContent, '');
-	assert.equal(updates, 1);
+	// The static Notice redraws through the helper; nothing remounts it.
+	assert.equal(updates, 0);
+	assert.deepEqual(state.noticeIntents, [
+		{ host: state.error, intent: 'error' },
+	]);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
 	assert.deepEqual(state.announcements, []);
 	assert.equal(unrelated.textContent, 'Static unrelated failure');
@@ -3675,15 +3699,15 @@ test('credential transport errors update only the child Notice and retain their 
 	assert.equal(state.error.textContent, 'Expiry unknown');
 	assert.equal(classes.has('notice-success'), false);
 	assert.equal(classes.has('notice-error'), true);
-	assert.deepEqual(updates, [
-		{
-			type: 'ran-booster:ui-notice-update',
-			bubbles: true,
-			intent: 'error',
-			text: 'We could not complete that request. Please try again.',
-			hidden: false,
-		},
-	]);
+	assert.equal(attributes.get('data-ran-booster-ui-notice-intent'), 'error');
+	assert.deepEqual(state.noticeIntents, [{ host: notice, intent: 'error' }]);
+	assert.equal(
+		result.textContent,
+		'We could not complete that request. Please try again.'
+	);
+	assert.equal(notice.hidden, false);
+	// The static Notice redraws through the helper; nothing remounts it.
+	assert.deepEqual(updates, []);
 	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
 	assert.deepEqual(state.announcements, [
 		{ message: result.textContent, type: 'assertive' },

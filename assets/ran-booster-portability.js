@@ -170,15 +170,9 @@
 		}
 
 		function showMessage(text, type = 'error') {
-			message.setAttribute('data-ran-booster-ui-notice-intent', type);
-			message.className = 'notice notice-' + type + ' inline';
+			window.ranBoosterNotice.setIntent(message, type);
 			message.hidden = !text;
 			messageText.textContent = text || '';
-			message.dispatchEvent(
-				new window.CustomEvent('ran-booster:ui-notice-update', {
-					bubbles: true,
-				})
-			);
 			if (type === 'error') {
 				window.ranBoosterAnnounce(text, 'assertive');
 			}
@@ -498,15 +492,9 @@
 				message.closest('[data-ran-booster-ui-notice]') || message;
 			message.hidden = !text;
 			notice.hidden = !text;
-			notice.className = text ? 'notice inline notice-' + type : '';
 			message.textContent = text || '';
-			if (notice !== message) {
-				notice.setAttribute('data-ran-booster-ui-notice-intent', type);
-				notice.dispatchEvent(
-					new window.CustomEvent('ran-booster:ui-notice-update', {
-						bubbles: true,
-					})
-				);
+			if (text && notice !== message) {
+				window.ranBoosterNotice.setIntent(notice, type);
 			}
 			// Success is announced with its completion event.
 			if (type !== 'success') {

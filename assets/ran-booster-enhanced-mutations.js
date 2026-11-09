@@ -526,12 +526,7 @@
 			}
 			if (fallbackMessage) {
 				if (isBranchNotice) {
-					region.setAttribute(
-						'data-ran-booster-ui-notice-intent',
-						'error'
-					);
-					region.classList.remove('notice-warning');
-					region.classList.add('notice-error');
+					window.ranBoosterNotice.setIntent(region, 'error');
 				}
 				if (credentialResult) {
 					credentialResult.textContent = message;
@@ -579,30 +574,13 @@
 				}
 			}
 			region.hidden = false;
-			if (isBranchNotice) {
-				region.dispatchEvent(
-					new window.CustomEvent('ran-booster:ui-notice-update', {
-						bubbles: true,
-					})
-				);
-			}
 			if (isCredential) {
 				const notice = credentialResult?.closest?.(
 					'[data-ran-booster-ui-notice]'
 				);
 				if (notice) {
-					notice.setAttribute(
-						'data-ran-booster-ui-notice-intent',
-						'error'
-					);
-					notice.classList.remove('notice-success');
-					notice.classList.add('notice-error');
+					window.ranBoosterNotice.setIntent(notice, 'error');
 					notice.hidden = false;
-					notice.dispatchEvent(
-						new window.CustomEvent('ran-booster:ui-notice-update', {
-							bubbles: true,
-						})
-					);
 				}
 				region.removeAttribute?.('role');
 				region.focus?.({ preventScroll: true });
@@ -730,13 +708,10 @@
 				'data-ran-booster-ui-notice-intent'
 			);
 			if (isBranchNotice) {
-				const severity = intent === 'warning' ? 'warning' : 'error';
-				region.setAttribute(
-					'data-ran-booster-ui-notice-intent',
-					severity
+				window.ranBoosterNotice.setIntent(
+					region,
+					intent === 'warning' ? 'warning' : 'error'
 				);
-				region.classList.remove('notice-error', 'notice-warning');
-				region.classList.add(`notice-${severity}`);
 			}
 			const swap = {
 				swapStyle: 'outerHTML',

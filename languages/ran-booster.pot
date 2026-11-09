@@ -267,7 +267,7 @@ msgstr ""
 #: views/portability-review.php:255
 #: views/portability-review.php:286
 #: views/portability.php:240
-#: assets/ran-booster-portability.js:775
+#: assets/ran-booster-portability.js:763
 msgid "Package"
 msgstr ""
 
@@ -1052,7 +1052,7 @@ msgstr ""
 #: views/troubleshooting-installation.php:166
 #: views/troubleshooting-installation.php:174
 #: views/troubleshooting.php:236
-#: assets/ran-booster-portability.js:779
+#: assets/ran-booster-portability.js:767
 msgid "Unknown"
 msgstr ""
 
@@ -1399,8 +1399,8 @@ msgid "An add-on guide is temporarily unavailable. Check plugin compatibility an
 msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
-#: assets/ran-booster-enhanced-mutations.js:1038
-#: assets/ran-booster-enhanced-mutations.js:1218
+#: assets/ran-booster-enhanced-mutations.js:1013
+#: assets/ran-booster-enhanced-mutations.js:1193
 msgid "We could not complete that request. Please try again."
 msgstr ""
 
@@ -7847,7 +7847,7 @@ msgstr ""
 msgid "Webhook health"
 msgstr ""
 
-#: views/packages/branch-readiness.php:293
+#: views/packages/branch-readiness.php:294
 msgid "Save settings and check"
 msgstr ""
 
@@ -9237,7 +9237,7 @@ msgid "Eligible selected changes are applied independently."
 msgstr ""
 
 #: views/portability.php:302
-#: assets/ran-booster-portability.js:678
+#: assets/ran-booster-portability.js:666
 msgid "No changes selected."
 msgstr ""
 
@@ -9246,7 +9246,7 @@ msgid "Apply selected changes"
 msgstr ""
 
 #: views/portability.php:303
-#: assets/ran-booster-portability.js:1179
+#: assets/ran-booster-portability.js:1167
 msgid "Applying…"
 msgstr ""
 
@@ -10883,98 +10883,98 @@ msgid "Reinstall cancelled."
 msgstr ""
 
 #. translators: %s: deployment state label.
-#: assets/ran-booster-packages.js:896
+#: assets/ran-booster-packages.js:886
 #, js-format
 msgid "Deployment: %s"
 msgstr ""
 
-#: assets/ran-booster-portability.js:209
-#: assets/ran-booster-portability.js:254
+#: assets/ran-booster-portability.js:203
+#: assets/ran-booster-portability.js:248
 msgid "Booster could not export this Blueprint. Please try again."
 msgstr ""
 
-#: assets/ran-booster-portability.js:238
+#: assets/ran-booster-portability.js:232
 msgid "Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction."
 msgstr ""
 
-#: assets/ran-booster-portability.js:244
+#: assets/ran-booster-portability.js:238
 msgid "Transporter Blueprint download started."
 msgstr ""
 
 #. translators: %d: selected package-change count.
-#: assets/ran-booster-portability.js:686
+#: assets/ran-booster-portability.js:674
 #, js-format
 msgid "Package changes: %d"
 msgstr ""
 
 #. translators: %d: selected repository-credential import count.
-#: assets/ran-booster-portability.js:693
+#: assets/ran-booster-portability.js:681
 #, js-format
 msgid "Credentials to import: %d"
 msgstr ""
 
 #. translators: %d: selected saved-credential count.
-#: assets/ran-booster-portability.js:700
+#: assets/ran-booster-portability.js:688
 #, js-format
 msgid "Saved credentials to use: %d"
 msgstr ""
 
-#: assets/ran-booster-portability.js:707
+#: assets/ran-booster-portability.js:695
 msgid "Deployment will remain Disabled."
 msgstr ""
 
-#: assets/ran-booster-portability.js:708
+#: assets/ran-booster-portability.js:696
 msgid "Managed package settings will remain unchanged."
 msgstr ""
 
-#: assets/ran-booster-portability.js:712
+#: assets/ran-booster-portability.js:700
 msgid "Credential permissions have not been assessed."
 msgstr ""
 
 #. translators: 1: package type, 2: package name.
-#: assets/ran-booster-portability.js:784
+#: assets/ran-booster-portability.js:772
 #, js-format
 msgid "%1$s “%2$s”"
 msgstr ""
 
-#: assets/ran-booster-portability.js:793
+#: assets/ran-booster-portability.js:781
 msgid "Package result unavailable."
 msgstr ""
 
-#: assets/ran-booster-portability.js:802
+#: assets/ran-booster-portability.js:790
 msgid "Transferred credential is available on this site."
 msgstr ""
 
-#: assets/ran-booster-portability.js:806
+#: assets/ran-booster-portability.js:794
 msgid "Selected saved credential was verified for this repository."
 msgstr ""
 
-#: assets/ran-booster-portability.js:810
+#: assets/ran-booster-portability.js:798
 msgid "Repository credential was not made available on this site."
 msgstr ""
 
-#: assets/ran-booster-portability.js:874
+#: assets/ran-booster-portability.js:862
 msgid "Reviewing blueprint…"
 msgstr ""
 
-#: assets/ran-booster-portability.js:892
-#: assets/ran-booster-portability.js:942
+#: assets/ran-booster-portability.js:880
+#: assets/ran-booster-portability.js:930
 msgid "Unable to review this blueprint."
 msgstr ""
 
-#: assets/ran-booster-portability.js:925
+#: assets/ran-booster-portability.js:913
 msgid "Transporter Blueprint reviewed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1227
+#: assets/ran-booster-portability.js:1215
 msgid "Package apply failed."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1248
+#: assets/ran-booster-portability.js:1236
 msgid "Package apply failed. Review the blueprint again."
 msgstr ""
 
-#: assets/ran-booster-portability.js:1267
+#: assets/ran-booster-portability.js:1255
 msgid "All selected Transporter Blueprint changes were applied."
 msgstr ""
 

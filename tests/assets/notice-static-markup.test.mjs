@@ -119,31 +119,10 @@ test('static notices hand their frame to the layer and are never a fallback', ()
 
 /*
  * PHP-rendered notice hosts that stay mounted by ran-booster-cards.js, each
- * found by a marker inside its opening tag. Hosts whose intent changes in
- * place wait for the shared per-page icon template; the others render where
- * the static Notice CSS is not guaranteed to load.
+ * found by a marker inside its opening tag. They render where the static
+ * Notice CSS is not guaranteed to load.
  */
 const leftMounted = [
-	{
-		file: 'views/portability.php',
-		marker: 'data-portability-export-message',
-		reason: 'ran-booster-portability.js changes its intent in place',
-	},
-	{
-		file: 'views/portability.php',
-		marker: 'data-ran-booster-ui-notice-intent="info" hidden',
-		reason: 'ran-booster-portability.js changes the preview notice intent in place',
-	},
-	{
-		file: 'views/packages/branch-readiness.php',
-		marker: 'id="ran-booster-repository-branch-check-error"',
-		reason: 'ran-booster-enhanced-mutations.js switches warning and error in place',
-	},
-	{
-		file: 'views/provider-credential-health.php',
-		marker: 'class="notice notice-',
-		reason: 'ran-booster-enhanced-mutations.js switches success to error in place',
-	},
 	{
 		file: 'RAN/Runtime/UnsupportedMultisiteBootstrap.php',
 		marker: 'data-ran-booster-unsupported-multisite-notice',
@@ -235,4 +214,67 @@ test('every PHP-rendered notice host is a static Notice unless left mounted', ()
 		leftMounted.filter((item) => !allowed.has(item)),
 		[]
 	);
+});
+
+/*
+ * Static hosts whose intent a script changes in place. The script calls
+ * ranBoosterNotice.setIntent(), which takes the icon from the one per-page
+ * template; it never writes the intent classes or attribute itself.
+ */
+test('in-place intent changes go through the notice helper', () => {
+	for (const [file, calls] of [
+		['assets/ran-booster-portability.js', 2],
+		['assets/ran-booster-enhanced-mutations.js', 3],
+		['assets/ran-booster-packages.js', 1],
+	]) {
+		const source = fs.readFileSync(file, 'utf8');
+		assert.equal(
+			source.match(/window\.ranBoosterNotice\.setIntent\(/g)?.length,
+			calls,
+			file
+		);
+		assert.doesNotMatch(
+			source,
+			/notice\.className = |message\.className = |classList\.(?:add|remove)\([^)]*'notice-(?:error|warning|success|info)'/,
+			file
+		);
+	}
+	// Only JavaScript-built notices still write the attribute themselves.
+	const portability = fs.readFileSync(
+		'assets/ran-booster-portability.js',
+		'utf8'
+	);
+	assert.deepEqual(
+		Array.from(
+			portability.matchAll(
+				/(\w+)\.setAttribute\('data-ran-booster-ui-notice-intent'/g
+			),
+			(found) => found[1]
+		),
+		['item']
+	);
+	for (const file of [
+		'assets/ran-booster-enhanced-mutations.js',
+		'assets/ran-booster-packages.js',
+	]) {
+		assert.doesNotMatch(
+			fs.readFileSync(file, 'utf8'),
+			/setAttribute\(\s*'data-ran-booster-ui-notice-intent'/,
+			file
+		);
+	}
+});
+
+test('the shell prints the icon template once, after the page, where intents change', () => {
+	const base = fs.readFileSync('views/base.php', 'utf8');
+	assert.equal(base.match(/NoticeIcon::print_template\(\)/g)?.length, 1);
+	const tail = base.slice(base.lastIndexOf('</div>'));
+	assert.match(tail, /NoticeIcon::print_template\(\);/);
+	for (const screen of [
+		"'packages/index', 'packages/create', 'packages/edit'",
+		"'portability.php' === ( $tab_view ?? '' )",
+		"'credentials' === ( $provider_view ?? '' )",
+	]) {
+		assert.ok(tail.includes(screen), screen);
+	}
 });

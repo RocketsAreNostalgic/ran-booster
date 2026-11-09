@@ -902,7 +902,17 @@
 	margin: 0;
 }
 
-.ran-booster-admin [data-ran-booster-ui-disclosure="troubleshooting-logging"] {
+/*
+ * A Troubleshooting disclosure after an action row owns the gap above it: the
+ * Card's trailing-block reset zeroes the margin of the action's paragraph when
+ * it is the last child of its form.
+ */
+
+.ran-booster-admin
+	:is(
+		[data-ran-booster-ui-disclosure="troubleshooting-logging"],
+		[data-ran-booster-ui-disclosure="troubleshooting-evidence"]
+	) {
 	margin-block-start: var(--ran-booster-space-16);
 }
 

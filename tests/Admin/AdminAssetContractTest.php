@@ -324,7 +324,7 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_disclosure_hosts_own_their_margins_and_prominent_rules_stay_scoped(): void {
 		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		self::assertStringContainsString( '> details[data-ran-booster-ui-disclosure-fallback] {' . "\n\t" . 'margin: 0;', $css );
-		foreach ( array( 'troubleshooting-logging', 'package-webhook-setup', 'provider-webhook-setup', 'package-advanced-settings', 'package-release-track', 'package-danger-zone' ) as $kind ) {
+		foreach ( array( 'troubleshooting-logging', 'troubleshooting-evidence', 'package-webhook-setup', 'provider-webhook-setup', 'package-advanced-settings', 'package-release-track', 'package-danger-zone' ) as $kind ) {
 			self::assertStringContainsString( 'data-ran-booster-ui-disclosure="' . $kind . '"', $css, $kind );
 		}
 		// A prominent header rule must name the host's own disclosure, never every nested one.
@@ -333,17 +333,21 @@ final class AdminAssetContractTest extends TestCase {
 
 	/**
 	 * The Card's trailing-block reset zeroes the last child's bottom margin at
-	 * any depth, so space below a nested disclosure must come from container
-	 * padding (#765).
+	 * any depth, so space below or above a nested disclosure must come from
+	 * container padding or the following host's top margin (#765, #746).
 	 */
 	public function test_nested_disclosure_gaps_survive_the_card_trailing_block_reset(): void {
 		$activity   = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 		$responsive = $this->asset( 'ran-booster/80-responsive.css' );
+		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
 
 		// The Activity row, not its details host, owns the inset below the disclosure.
 		self::assertMatchesRegularExpression( '/\.ran-booster-admin \.ran-booster-attempt-row \{[^}]*\n\tpadding-block: 0 var\(--ran-booster-space-12\);/', $activity );
 		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-attempt-row__details \{[^}]*margin-block/', $activity );
 		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-attempt-row \{\s*padding: 0;/', $responsive );
+
+		// The support report disclosure keeps the logging disclosure's gap after its action.
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="troubleshooting-evidence"\]\s*\)\s*\{\s*margin-block-start: var\(--ran-booster-space-16\);/', $primitives );
 	}
 
 	public function test_framed_fact_grids_share_one_summary_grid_profile(): void {

@@ -266,7 +266,9 @@ blocks on the Card's bottom edge, so a margin on the last child of a nested
 group always computes to 0. Space after such a block must come from its
 container's padding or from the next sibling's top margin. Each Activity row
 keeps 12px (`--ran-booster-space-12`) of bottom padding below its details
-disclosure (#765).
+disclosure (#765). The Support report evidence disclosure takes the Logging
+disclosure's 16px (`--ran-booster-space-16`) top margin after its action
+(#746).
 
 Rules that follow from the table:
 

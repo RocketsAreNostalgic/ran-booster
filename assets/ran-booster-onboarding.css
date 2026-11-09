@@ -112,7 +112,7 @@
 .ran-booster-admin .ran-booster-onboarding__storage {
 	margin-block-start: var(--ran-booster-space-20);
 	padding-block: var(--ran-booster-card-inset-block-start)
-		var(--ran-booster-space-20);
+		var(--ran-booster-card-inset-block-end);
 	padding-inline: var(--ran-booster-space-24);
 }
 
@@ -1312,7 +1312,7 @@
 	[data-ran-booster-card="overview"]
 	.ran-booster-card__content {
 	padding-block: var(--ran-booster-card-inset-block-start)
-		var(--ran-booster-space-20);
+		var(--ran-booster-card-inset-block-end);
 	padding-inline: var(--ran-booster-space-24);
 }
 
@@ -1512,7 +1512,7 @@
 	)[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted]
 	.ran-booster-card__content {
 	padding-block: var(--ran-booster-card-inset-block-start)
-		var(--ran-booster-space-22);
+		var(--ran-booster-card-inset-block-end);
 	padding-inline: var(--ran-booster-space-24);
 }
 

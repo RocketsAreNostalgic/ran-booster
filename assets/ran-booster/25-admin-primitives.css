@@ -210,6 +210,28 @@
 	min-inline-size: 0;
 }
 
+/*
+ * The Card's bottom inset is the only space below its last visible block, at
+ * any depth, so a trailing group's own margin cannot add to it.
+ */
+
+.ran-booster-admin
+	.ran-booster-card__content
+	:nth-last-child(
+		1
+			of
+			:not(
+				[hidden],
+				input[type="hidden"],
+				script,
+				style,
+				template,
+				:has(> [hidden]:only-child)
+			)
+	):not(.ran-booster-provider__footer) {
+	margin-block-end: 0;
+}
+
 /* Keep eligible native Badge fallbacks aligned with the existing public Badge. */
 .ran-booster-admin
 	[data-ran-booster-ui-badge][data-ran-booster-ui-badge-intent="none"] {

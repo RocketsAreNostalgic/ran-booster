@@ -401,7 +401,7 @@
 }
 
 .ran-booster-admin .ran-booster-provider-section__body {
-	padding-block: 0 var(--ran-booster-space-22);
+	padding-block: 0 var(--ran-booster-card-inset-block-end);
 	padding-inline: var(--ran-booster-space-24);
 }
 
@@ -947,7 +947,7 @@
 	[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 	.ran-booster-card__content {
 	padding: var(--ran-booster-card-inset-block-start)
-		var(--ran-booster-space-24) var(--ran-booster-space-24);
+		var(--ran-booster-space-24) var(--ran-booster-card-inset-block-end);
 }
 
 .ran-booster-admin
@@ -960,7 +960,7 @@
 	.ran-booster-card__content
 	> .ran-booster-provider__footer {
 	margin: var(--ran-booster-space-24) calc(-1 * var(--ran-booster-space-24))
-		calc(-1 * var(--ran-booster-space-24));
+		calc(-1 * var(--ran-booster-card-inset-block-end));
 }
 
 @media screen and (max-width: 782px) {

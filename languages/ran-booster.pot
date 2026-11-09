@@ -8165,7 +8165,7 @@ msgid "Managed %s"
 msgstr ""
 
 #: views/packages/index.php:119
-msgid "Review package health, deploy saved branches and hand published releases to WordPress. Deployments run only when an administrator requests one."
+msgid "Review package health, deploy saved branches and hand published releases to WordPress. Manual deployments run only when an administrator requests one."
 msgstr ""
 
 #: views/packages/index.php:124

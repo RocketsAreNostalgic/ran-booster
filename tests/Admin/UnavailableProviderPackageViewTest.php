@@ -216,7 +216,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-badge data-ran-booster-badge-intent=' ) );
 		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
 		self::assertStringContainsString( 'Review package health, deploy saved branches', $html );
-		self::assertSame( 1, substr_count( $html, 'Deployments run only when an administrator requests one.' ) );
+		self::assertSame( 1, substr_count( $html, 'Manual deployments run only when an administrator requests one.' ) );
 		self::assertStringContainsString( 'Deployment activity', $html );
 	}
 
@@ -589,7 +589,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'button-update-package"  disabled="disabled"', $html );
 	}
 
-	public function test_repository_field_explains_provider_owned_nested_locators(): void {
+	public function test_repository_field_omits_provider_locator_helper_text(): void {
 		$package_view              = PackagePagePresenter::plugin();
 		$repository_value          = 'group/subgroup/example-plugin';
 		$provider_browse_available = false;

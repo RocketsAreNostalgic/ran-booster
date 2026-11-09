@@ -116,7 +116,7 @@ $policy_labels = array(
 
 <div class="ran-booster-package-intro">
 	<p class="ran-booster-page-heading__description">
-		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress. Deployments run only when an administrator requests one.', 'ran-booster' ); ?>
+		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress. Manual deployments run only when an administrator requests one.', 'ran-booster' ); ?>
 	</p>
 
 	<?php require dirname( __DIR__ ) . '/notices.php'; ?>

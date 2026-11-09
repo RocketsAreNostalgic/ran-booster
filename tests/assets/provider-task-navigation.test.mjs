@@ -357,7 +357,7 @@ test('provider task requests expose progress and notify swapped controls', () =>
 	assert.equal(state.dispatched[0].detail.root, state.region);
 });
 
-test('committed navigation delegates to the shared Link owner before focus without a second writer', () => {
+test('committed navigation delegates to the shared navigation owner before focus without a second writer', () => {
 	for (const handled of [true, false]) {
 		const state = fixture();
 		const focused = [];

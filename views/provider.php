@@ -492,7 +492,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 								'setup'        => __( 'Webhook receiver', 'ran-booster' ),
 							) as $task => $label ) {
 								?>
-								<li><a class="ran-booster-provider-task-tab ran-section-navigation__link<?php echo $provider_task === $task ? ' current' : ''; ?>" href="<?php echo esc_url( $task_urls[ $task ] ); ?>" hx-get="<?php echo esc_url( $task_request_urls[ $task ] ); ?>" data-ran-booster-provider-task="<?php echo esc_attr( $task ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $provider_task === $task ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a></li>
+								<li><a class="ran-wp-ui-box-sizing ran-wp-ui-reset-a ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-link is-unstyled ran-booster-provider-task-tab ran-section-navigation__link<?php echo $provider_task === $task ? ' current' : ''; ?>" href="<?php echo esc_url( $task_urls[ $task ] ); ?>" hx-get="<?php echo esc_url( $task_request_urls[ $task ] ); ?>" data-ran-booster-provider-task="<?php echo esc_attr( $task ); ?>" aria-controls="ran-booster-provider-task-panel" <?php echo $provider_task === $task ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?></a></li>
 							<?php } ?>
 							</ul>
 							<p class="ran-booster-provider-task-progress" data-ran-booster-provider-task-progress role="status" aria-live="polite" hidden>

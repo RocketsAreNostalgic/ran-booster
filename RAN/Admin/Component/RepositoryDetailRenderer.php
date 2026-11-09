@@ -62,7 +62,7 @@ final class RepositoryDetailRenderer {
 					$has_source  = ( 'branch' === $view && in_array( $source_key, array( 'branch', 'mixed' ), true ) )
 						|| ( 'releases' === $view && in_array( $source_key, array( 'release_asset', 'mixed' ), true ) );
 					?>
-					<li><a class="ran-booster-provider-task-tab ran-section-navigation__link<?php echo $active_view === $view ? ' current' : ''; ?>" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $request_url ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-profile-region" <?php echo $active_view === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $has_source ) { ?>
+					<li><a class="ran-wp-ui-box-sizing ran-wp-ui-reset-a ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-link is-unstyled ran-booster-provider-task-tab ran-section-navigation__link<?php echo $active_view === $view ? ' current' : ''; ?>" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $request_url ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-profile-region" <?php echo $active_view === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $has_source ) { ?>
 						<span class="ran-booster-provider-task-tab__source-indicator" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Active for one or more packages in this repository.', 'ran-booster' ); ?></span>
 					<?php } ?></a></li>
 				<?php } ?>

@@ -2,10 +2,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
-import {
-	navigationContract,
-	renderNavigationLinks,
-} from '../../scripts/ui-navigation.js';
 
 // Run the actual production scripts with the existing focused DOM substitutes.
 function loadHarness(file, names, additions = {}) {
@@ -30,18 +26,9 @@ function loadHarness(file, names, additions = {}) {
 		'fs',
 		'vm',
 		'assert',
-		'navigationContract',
-		'renderNavigationLinks',
 		'base',
 		`${code}\nreturn { ${names} };`
-	)(
-		fs,
-		vm,
-		assert,
-		navigationContract,
-		renderNavigationLinks,
-		import.meta.url
-	);
+	)(fs, vm, assert, import.meta.url);
 }
 const { fixture } = loadHarness('./navigation-lifecycle.test.mjs', 'fixture', {
 	shell: true,
@@ -316,14 +303,7 @@ function scenario(initial, desired, focus, focusOnly = false) {
 	}
 	const entry = nav.window.navigationTest.roots.get(shell);
 	assert.ok(entry, 'history restores the public navigation owner');
-	assert.deepEqual(
-		Array.from(entry.original, (node) => node.getAttribute('href')),
-		expected
-	);
-	assert.deepEqual(
-		Array.from(entry.links, (node) => node.getAttribute('href')),
-		expected
-	);
+	assert.ok(entry.sectionNavigation, 'the indicator behavior is attached');
 	assert.deepEqual(hrefs(), expected);
 	if (focus === 'remaining') {
 		assert.equal(focusWasConnected, true);

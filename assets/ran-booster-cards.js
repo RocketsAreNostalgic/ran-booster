@@ -585,125 +585,29 @@
 	}
 
 	function navigationLinks(host, provider) {
-		return window.ranBoosterUI.navigationContract.links(host, provider);
+		return Array.from(
+			host.querySelectorAll(provider ? ':scope > li > a' : ':scope > a')
+		);
 	}
 
 	function restoreNavigation(host, entry) {
 		entry.sectionNavigation?.destroy();
-		if (entry.nativeNavigation) {
-			roots.delete(host);
-			return;
-		}
-
-		const visible = navigationLinks(host, entry.provider);
-		const visibleIndex = visible.indexOf(host.ownerDocument.activeElement);
-		const index = entry.focusIndex ?? visibleIndex;
-		const scroll = entry.scroll ?? host.scrollLeft;
 		roots.delete(host);
-		try {
-			entry.root?.unmount();
-		} catch {
-			// Restore retained native nodes even if React cleanup fails.
-		}
-		host.replaceChildren(...entry.original);
-		host.scrollLeft = scroll;
-		const active = host.ownerDocument.activeElement;
-		if (
-			index >= 0 &&
-			(!active ||
-				active === host.ownerDocument.body ||
-				!active.isConnected)
-		) {
-			entry.links[index]?.focus({ preventScroll: true });
-		}
 	}
 
-	function renderNavigation(host, entry, animate = false) {
-		window.ranBoosterUI.renderNavigationLinks(
-			host,
-			entry,
-			window.wp.element,
-			window.ranBoosterUI.NavigationLinks
-		);
-		if (roots.get(host) === entry) {
-			entry.sectionNavigation?.update({ animate, afterPaint: animate });
-		}
-	}
-
+	// The server renders the links; this only adds the sliding indicator.
 	function mountNavigation(host, provider) {
-		const element = window.wp?.element;
 		const UI = window.ranBoosterUI;
-		if (
-			!host ||
-			!host.isConnected ||
-			roots.has(host) ||
-			pointerActive ||
-			activeKeys.size > 0 ||
-			host.contains(host.ownerDocument.activeElement) ||
-			host.closest('[aria-busy="true"]') ||
-			!UI?.NavigationLinks ||
-			!UI?.renderNavigationLinks ||
-			!UI?.createSectionNavigation ||
-			!UI?.navigationContract ||
-			!element?.createRoot ||
-			!element?.createElement ||
-			!element?.flushSync ||
-			!element?.Component
-		) {
+		if (!host || !host.isConnected || roots.has(host)) {
 			return;
 		}
-		const links = navigationLinks(host, provider);
-		if (!UI.navigationContract.allows(host, provider, links, window.htmx)) {
-			return;
-		}
-		const entry = {
-			navigation: true,
-			provider,
-			original: Array.from(host.childNodes),
-			links,
-			scroll: host.scrollLeft,
-		};
-		const scroll = host.scrollLeft;
-		class Boundary extends element.Component {
-			constructor(props) {
-				super(props);
-				this.state = { failed: false };
-			}
-			static getDerivedStateFromError() {
-				entry.scroll ??= host.scrollLeft;
-				entry.focusIndex ??= navigationLinks(host, provider).indexOf(
-					host.ownerDocument.activeElement
-				);
-				return { failed: true };
-			}
-			componentDidCatch() {
-				queueMicrotask(() => {
-					if (roots.get(host) === entry) {
-						restore(host);
-					}
-				});
-			}
-			render() {
-				return this.state.failed ? null : this.props.children;
-			}
-		}
-		entry.boundary = Boundary;
-		try {
-			entry.root = element.createRoot(host);
-			roots.set(host, entry);
-			renderNavigation(host, entry);
-			entry.sectionNavigation = UI.createSectionNavigation(host);
-			host.scrollLeft = scroll;
-			if (provider) {
-				navigationLinks(host, true).forEach((link) =>
-					window.htmx.process(link)
-				);
-			}
-			delete entry.scroll;
-		} catch {
-			if (roots.get(host) === entry) {
-				restore(host);
-			}
+		const sectionNavigation = UI?.createSectionNavigation?.(host);
+		if (sectionNavigation) {
+			roots.set(host, {
+				navigation: true,
+				provider,
+				sectionNavigation,
+			});
 		}
 	}
 
@@ -718,13 +622,8 @@
 		if (!host) {
 			return undefined;
 		}
-		const entry = roots.get(host);
-		const visible = navigationLinks(host, true);
-		const index = visible.indexOf(host.ownerDocument.activeElement);
-		const scroll = host.scrollLeft;
-		entry.focusIndex = index;
-		entry.scroll = scroll;
-		entry.links.forEach((link) => {
+		const links = navigationLinks(host, true);
+		links.forEach((link) => {
 			const selected =
 				typeof task === 'string' &&
 				task !== '' &&
@@ -736,32 +635,15 @@
 				link.removeAttribute('aria-current');
 			}
 		});
-		try {
-			renderNavigation(host, entry, true);
-			host.scrollLeft = scroll;
-			delete entry.focusIndex;
-			delete entry.scroll;
-			const updated = navigationLinks(host, true);
-			const active = host.ownerDocument.activeElement;
-			if (
-				index >= 0 &&
-				(!active ||
-					active === host.ownerDocument.body ||
-					!active.isConnected)
-			) {
-				updated[index]?.focus({ preventScroll: true });
-			}
-			return (
-				updated.find(
-					(link) =>
-						link.getAttribute('data-ran-booster-provider-task') ===
-						task
-				) || null
-			);
-		} catch {
-			restore(host);
-			return undefined;
-		}
+		roots
+			.get(host)
+			.sectionNavigation.update({ animate: true, afterPaint: true });
+		return (
+			links.find(
+				(link) =>
+					link.getAttribute('data-ran-booster-provider-task') === task
+			) || null
+		);
 	}
 
 	function mountDisclosure(host, restoreFocus = false) {

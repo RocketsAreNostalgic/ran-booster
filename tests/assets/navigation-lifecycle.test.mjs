@@ -1,7 +1,3 @@
-import {
-	navigationContract,
-	renderNavigationLinks,
-} from '../../scripts/ui-navigation.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
@@ -17,15 +13,12 @@ const source = fs
 		'window.navigationTest = { mountNavigation, setNavigationCurrent, cleanup, restoreAll, roots }; function initialize(scope, restoredDisclosure = null) {'
 	);
 
-function fixture({
-	fail = false,
-	processFail = false,
-	invalidTarget = false,
-} = {}) {
+function fixture({ fail = false } = {}) {
 	const queued = [];
 	const listeners = new Map();
-	let renders = 0;
-	let processed = 0;
+	const created = [];
+	const updates = [];
+	let destroyed = 0;
 	class Node {
 		constructor(tag, attrs = {}) {
 			this.tagName = tag.toUpperCase();
@@ -164,9 +157,7 @@ function fixture({
 	const region = doc.body.appendChild(
 		new Node('div', {
 			id: 'ran-booster-provider-tasks',
-			'hx-target': invalidTarget
-				? '#other'
-				: '#ran-booster-provider-task-panel',
+			'hx-target': '#ran-booster-provider-task-panel',
 			'hx-select': '#ran-booster-provider-task-panel',
 			'hx-swap': 'outerHTML transition:false show:none',
 			'hx-push-url': 'true',
@@ -193,64 +184,16 @@ function fixture({
 		link.textContent = task;
 	}
 	const original = [...host.children];
-	const element = {
-		Component: class {
-			constructor(props) {
-				this.props = props;
-			}
-		},
-		createElement: (type, props, ...children) => ({
-			type,
-			props,
-			children,
-		}),
-		flushSync: (fn) => fn(),
-		createRoot(track) {
-			return {
-				render(tree) {
-					if (fail) {
-						throw Error('render');
-					}
-					renders++;
-					const props = tree.children[0].props;
-					track.replaceChildren(
-						...props.items.map((item) => {
-							const li = new Node('li');
-							const link = li.appendChild(
-								new Node('a', {
-									href: item.href,
-									'data-ran-booster-provider-task': item.task,
-									...(item.current
-										? { 'aria-current': 'page' }
-										: {}),
-								})
-							);
-							link.textContent = item.label;
-							return li;
-						})
-					);
-				},
-				unmount() {
-					track.replaceChildren();
-				},
-			};
-		},
-	};
 	const window = {
-		wp: { element },
 		ranBoosterUI: {
-			NavigationLinks: 'NavigationLinks',
-			navigationContract,
-			renderNavigationLinks,
-			createSectionNavigation: () => ({ update() {}, destroy() {} }),
-		},
-		htmx: {
-			process() {
-				processed++;
-				if (processFail) {
-					host.scrollLeft = 0;
-					throw Error('process');
-				}
+			createSectionNavigation(track) {
+				created.push(track);
+				return fail
+					? null
+					: {
+							update: (options) => updates.push(options),
+							destroy: () => destroyed++,
+						};
 			},
 		},
 	};
@@ -267,14 +210,10 @@ function fixture({
 		host,
 		original,
 		panel,
-		get renders() {
-			return renders;
-		},
-		get processed() {
-			return processed;
-		},
-		setFail(value) {
-			fail = value;
+		created,
+		updates,
+		get destroyed() {
+			return destroyed;
 		},
 		fire(type, event = {}) {
 			(listeners.get(type) || []).forEach((fn) =>
@@ -289,176 +228,87 @@ function fixture({
 	};
 }
 
-test('provider uses same host, committed state and native history restoration', () => {
+test('mounting adds the indicator behavior and leaves the server links untouched', () => {
 	const f = fixture();
 	f.host.scrollLeft = 20;
 	f.window.navigationTest.mountNavigation(f.host, true);
 	assert.equal(f.window.navigationTest.roots.has(f.host), true);
+	assert.deepEqual(f.created, [f.host]);
+	assert.deepEqual(f.host.children, f.original);
 	assert.equal(f.host.scrollLeft, 20);
-	assert.equal(f.processed, 2);
+	f.window.navigationTest.mountNavigation(f.host, true);
+	assert.equal(f.created.length, 1, 'a host is mounted only once');
+});
+
+test('a track the section navigation declines stays an ordinary native list', () => {
+	const f = fixture({ fail: true });
+	f.window.navigationTest.mountNavigation(f.host, true);
+	assert.equal(f.window.navigationTest.roots.size, 0);
+	assert.deepEqual(f.host.children, f.original);
+	const absent = fixture();
+	delete absent.window.ranBoosterUI.createSectionNavigation;
+	absent.window.navigationTest.mountNavigation(absent.host, true);
+	assert.equal(absent.window.navigationTest.roots.has(absent.host), false);
+});
+
+test('committing a provider task moves aria-current and the indicator without replacing links', () => {
+	const f = fixture();
+	assert.equal(
+		f.window.navigationTest.setNavigationCurrent(f.region, 'repositories'),
+		undefined,
+		'unmounted navigation leaves the caller to write native state'
+	);
+	f.window.navigationTest.mountNavigation(f.host, true);
+	const [status, repositories] = f.original.map((li) => li.children[0]);
+	repositories.focus();
 	const selected = f.window.navigationTest.setNavigationCurrent(
 		f.region,
 		'repositories'
 	);
-	assert.equal(selected.getAttribute('aria-current'), 'page');
+	assert.equal(selected, repositories);
+	assert.equal(repositories.getAttribute('aria-current'), 'page');
+	assert.equal(repositories.matches('.current'), true);
+	assert.equal(status.getAttribute('aria-current'), null);
+	assert.equal(status.matches('.current'), false);
+	assert.equal(
+		JSON.stringify(f.updates),
+		JSON.stringify([{ animate: true, afterPaint: true }])
+	);
+	assert.equal(f.doc.activeElement, repositories, 'focus is not moved');
+	assert.deepEqual(f.host.children, f.original, 'nodes are never replaced');
 	assert.equal(
 		f.window.navigationTest.setNavigationCurrent(f.region, 'unknown'),
 		null
 	);
-	f.window.navigationTest.restoreAll([f.host]);
-	assert.deepEqual(f.host.children, f.original);
-	assert.equal(f.original[0].children[0].getAttribute('aria-current'), null);
-	assert.equal(f.original[1].children[0].getAttribute('aria-current'), null);
+	assert.equal(repositories.getAttribute('aria-current'), null);
+	assert.equal(status.getAttribute('aria-current'), null);
 });
 
-test('unsafe targets and busy states remain native', () => {
-	const unsafe = fixture({ invalidTarget: true });
-	unsafe.window.navigationTest.mountNavigation(unsafe.host, true);
-	assert.equal(unsafe.renders, 0);
-	const busy = fixture();
-	busy.region.setAttribute('aria-busy', 'true');
-	busy.window.navigationTest.mountNavigation(busy.host, true);
-	assert.equal(busy.renders, 0);
-});
-
-test('failed updates restore latest native state and focus; panel cleanup leaves navigation mounted', () => {
+test('panel cleanup leaves navigation mounted; restoring destroys only the behavior', () => {
 	const f = fixture();
 	f.window.navigationTest.mountNavigation(f.host, true);
 	f.window.navigationTest.cleanup(f.panel);
 	assert.equal(f.window.navigationTest.roots.has(f.host), true);
-	f.host.children[1].children[0].focus();
-	f.setFail(true);
-	assert.equal(
-		f.window.navigationTest.setNavigationCurrent(f.region, 'repositories'),
-		undefined
-	);
+	assert.equal(f.destroyed, 0);
+	f.window.navigationTest.setNavigationCurrent(f.region, 'repositories');
+	f.window.navigationTest.restoreAll([f.host]);
+	assert.equal(f.window.navigationTest.roots.has(f.host), false);
+	assert.equal(f.destroyed, 1);
 	assert.deepEqual(f.host.children, f.original);
-	assert.equal(f.doc.activeElement, f.original[1].children[0]);
 	assert.equal(
 		f.original[1].children[0].getAttribute('aria-current'),
-		'page'
+		'page',
+		'the committed native state survives cleanup'
 	);
 });
 
-test('initial processing failure restores original nodes', () => {
-	const f = fixture({ processFail: true });
-	f.host.scrollLeft = 73;
-	f.window.navigationTest.mountNavigation(f.host, true);
-	assert.deepEqual(f.host.children, f.original);
-	assert.equal(f.host.scrollLeft, 73);
-	assert.equal(f.window.navigationTest.roots.size, 0);
-});
-
-test('unrelated retries cannot end an active pointer or key gesture', () => {
+test('mounting is not deferred by pointer, key or busy state because no node is replaced', () => {
 	const f = fixture();
 	f.fire('pointerdown');
-	f.fire('focusout');
-	f.fire('htmx:afterRequest');
-	f.flush();
+	f.fire('keydown', { key: 'Enter' });
+	f.region.setAttribute('aria-busy', 'true');
+	f.host.children[0].children[0].focus();
 	f.window.navigationTest.mountNavigation(f.host, true);
-	assert.equal(f.renders, 0);
-	f.fire('pointerup');
-	f.window.navigationTest.mountNavigation(f.host, true);
-	assert.equal(f.renders, 0);
-	f.flush();
-	f.window.navigationTest.mountNavigation(f.host, true);
-	assert.equal(f.renders, 1);
-	const key = fixture();
-	key.fire('keydown', { key: 'Enter' });
-	key.fire('htmx:afterRequest');
-	key.flush();
-	key.window.navigationTest.mountNavigation(key.host, true);
-	assert.equal(key.renders, 0);
-	key.fire('keyup', { key: 'Enter' });
-	key.flush();
-	key.window.navigationTest.mountNavigation(key.host, true);
-	assert.equal(key.renders, 1);
-});
-
-test('aliased overrides and non-page current semantics keep native links', () => {
-	for (const target of ['nav', 'list', 'item', 'region']) {
-		const f = fixture();
-		const node = {
-			nav: f.host.parentElement,
-			list: f.host,
-			item: f.original[0],
-			region: f.region,
-		}[target];
-		node.setAttribute('data-hx-target', '#other');
-		f.window.navigationTest.mountNavigation(f.host, true);
-		assert.equal(f.renders, 0, target);
-	}
-	const f = fixture();
-	f.original[0].children[0].setAttribute('aria-current', 'location');
-	f.window.navigationTest.mountNavigation(f.host, true);
-	assert.equal(f.renders, 0);
-});
-
-test('disabled or overridden HTMX inheritance retains native provider links', () => {
-	for (const target of ['region', 'host']) {
-		for (const attribute of ['hx-disinherit', 'data-hx-disinherit']) {
-			const f = fixture();
-			f[target].setAttribute(attribute, 'hx-target');
-			f.window.navigationTest.mountNavigation(f.host, true);
-			assert.equal(f.renders, 0);
-			assert.deepEqual(f.host.children, f.original);
-		}
-	}
-	const f = fixture();
-	f.window.htmx.config = { disableInheritance: true };
-	f.window.navigationTest.mountNavigation(f.host, true);
-	assert.equal(f.renders, 0);
-	assert.deepEqual(f.host.children, f.original);
-});
-
-test('history restoration does not reclaim focus that explicitly left navigation', () => {
-	const f = fixture();
-	f.window.navigationTest.mountNavigation(f.host, true);
-	const link = f.host.children[0].children[0];
-	link.focus();
-	f.fire('focusin', { target: link });
-	f.doc.activeElement = f.doc.body;
-	f.fire('focusout', { target: link, relatedTarget: null });
-	f.window.navigationTest.restoreAll([f.host]);
-	assert.equal(f.doc.activeElement, f.doc.body);
-	assert.deepEqual(f.host.children, f.original);
-});
-
-test('visible text beside provider links remains native', () => {
-	for (const target of ['host', 'item']) {
-		const f = fixture();
-		const node = target === 'host' ? f.host : f.original[0];
-		Object.defineProperty(node, 'childNodes', {
-			get: () => [
-				...node.children,
-				{ nodeType: 3, textContent: ' (read only)' },
-			],
-		});
-		f.window.navigationTest.mountNavigation(f.host, true);
-		assert.equal(f.renders, 0);
-		assert.deepEqual(f.host.children, f.original);
-	}
-});
-
-test('late render failure restores the pre-error horizontal scroll and focused native link', () => {
-	const f = fixture();
-	f.window.navigationTest.mountNavigation(f.host, true);
-	f.host.scrollLeft = 155;
-	f.host.children[1].children[0].focus();
-	const entry = f.window.navigationTest.roots.get(f.host);
-	entry.boundary.getDerivedStateFromError();
-	f.host.replaceChildren();
-	f.host.scrollLeft = 0;
-	entry.boundary.prototype.componentDidCatch();
-	f.flush();
-	assert.deepEqual(f.host.children, f.original);
-	assert.equal(f.host.scrollLeft, 155);
-	assert.equal(f.doc.activeElement, f.original[1].children[0]);
-});
-
-test('absent optional Shell behavior retains the native navigation', () => {
-	const f = fixture();
-	delete f.window.ranBoosterUI.createSectionNavigation;
-	f.window.navigationTest.mountNavigation(f.host, true);
-	assert.equal(f.window.navigationTest.roots.has(f.host), false);
+	assert.equal(f.window.navigationTest.roots.has(f.host), true);
+	assert.equal(f.doc.activeElement, f.host.children[0].children[0]);
 });

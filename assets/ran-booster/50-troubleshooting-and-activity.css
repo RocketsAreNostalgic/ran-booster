@@ -186,7 +186,7 @@
 	justify-content: center;
 	inline-size: 32px;
 	block-size: 32px;
-	border-radius: var(--ran-booster-space-2);
+	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-surface);
 	color: var(--ran-booster-text-muted);
 }

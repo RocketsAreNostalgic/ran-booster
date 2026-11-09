@@ -386,12 +386,16 @@
 
 /*
  * One corner profile for every framed surface, defined here and nowhere else.
- * A component that draws a full border joins one of these two groups instead
- * of declaring its own radius. The AdminAssetContractTest fails on any other
- * full-border rule that is not listed here or explicitly allowed.
+ * A component that draws a full border joins one of these groups instead of
+ * declaring its own radius: top-level frames and dialogs take the Card radius,
+ * frames nested inside a Card take the inset radius. Controls keep the control
+ * radius on their own rules. The AdminAssetContractTest fails on any other
+ * full-border rule that is not listed here or explicitly allowed, and on any
+ * raw radius length outside its allowlist.
  */
 
-.ran-booster-admin :is(.ran-booster-settings-section) {
+.ran-booster-admin :is(.ran-booster-settings-section, .ran-booster-disclosure),
+:is(.ran-booster-repository-picker-modal, .ran-booster-dialog__surface) {
 	border-radius: var(--ran-booster-radius-card);
 }
 
@@ -411,11 +415,14 @@
 		.ran-booster-activity__details,
 		.ran-booster-troubleshooting__form,
 		.ran-booster-portability__credential-guidance,
+		.ran-booster-portability__credential-details,
+		.ran-booster-portability__credential-card,
 		.ran-booster-portability__table-scroll,
 		.ran-booster-repository-picker__list,
 		.ran-booster-source-transition,
 		.ran-booster-release-code,
 		.ran-booster-public-lookup-profile__panel,
+		.ran-booster-documentation__search-hint,
 		.ran-booster-package-danger-zone__actions > form
 	) {
 	border-radius: var(--ran-booster-radius-inset);
@@ -566,7 +573,6 @@
 
 .ran-booster-admin .ran-booster-disclosure {
 	border: 1px solid var(--ran-booster-divider);
-	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-surface);
 }
 
@@ -698,7 +704,6 @@
 .ran-booster-dialog__surface {
 	overflow: hidden;
 	border: 1px solid var(--ran-booster-strong-divider);
-	border-radius: var(--ran-booster-radius-control);
 	box-shadow: var(--ran-booster-shadow-modal);
 	background: var(--ran-booster-surface);
 }

@@ -777,7 +777,6 @@
 
 .ran-booster-admin .ran-booster-package-danger-zone {
 	margin-block-end: var(--ran-booster-space-18);
-	border-radius: var(--ran-booster-radius-surface);
 	border-color: var(--ran-booster-status-error-border);
 	border-width: var(--ran-booster-radius-control);
 }
@@ -1158,7 +1157,7 @@
 	flex: none;
 	border: var(--wpds-border-width-xs) solid
 		var(--wpds-color-stroke-interactive-neutral);
-	border-radius: 999px;
+	border-radius: var(--ran-booster-radius-pill);
 	background: var(--wpds-color-background-interactive-neutral-weak);
 }
 
@@ -1173,7 +1172,7 @@
 	block-size: calc(
 		var(--wpds-dimension-size-2xs) - var(--wpds-border-width-xs) * 4
 	);
-	border-radius: 50%;
+	border-radius: var(--ran-booster-radius-circle);
 	background: var(--wpds-color-foreground-interactive-neutral);
 	box-shadow: var(--ran-booster-shadow-switch-knob);
 	content: "";

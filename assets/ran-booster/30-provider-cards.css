@@ -328,7 +328,6 @@
 	margin: 0;
 	padding: var(--ran-booster-space-16);
 	border: 1px solid var(--ran-booster-divider);
-	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-surface-subtle);
 	color: var(--ran-booster-text-subtle);
 	text-align: center;

@@ -7,7 +7,6 @@ body.ran-booster-repository-picker-open {
 	block-size: min(720px, calc(100vh - 32px));
 	max-block-size: min(720px, calc(100vh - 32px));
 	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-surface);
 	box-shadow: var(--ran-booster-shadow-modal);
 }

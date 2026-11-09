@@ -90,7 +90,6 @@
 	align-items: center;
 	gap: var(--ran-booster-space-4);
 	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-status-neutral-background);
 	color: var(--ran-booster-text-muted);
 	font-size: var(--ran-booster-font-size-sm);

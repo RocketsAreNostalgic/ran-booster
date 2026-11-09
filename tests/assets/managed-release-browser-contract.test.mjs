@@ -1111,7 +1111,7 @@ test('managed browser removes stale candidates while Refresh releases is pending
 test('release automation and webhook setup use the shared native disclosure shell', () => {
 	assert.match(
 		primitiveStyles,
-		/\.ran-booster-disclosure \{[\s\S]*border-radius: var\(--ran-booster-radius-surface\)/
+		/:is\(\.ran-booster-settings-section, \.ran-booster-disclosure\),[\s\S]*?\{\s*border-radius: var\(--ran-booster-radius-card\)/
 	);
 	assert.match(
 		primitiveStyles,

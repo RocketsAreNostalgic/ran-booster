@@ -489,7 +489,6 @@
 	margin-block-start: var(--ran-booster-space-12);
 	padding: var(--ran-booster-space-16);
 	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-surface);
 }
 
@@ -507,7 +506,7 @@
 	padding-block: var(--ran-booster-space-14);
 	padding-inline: var(--ran-booster-space-16);
 	border: 1px solid var(--ran-booster-color-neutral-450);
-	border-radius: var(--ran-booster-radius-surface);
+	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-surface);
 	color: var(--ran-booster-text);
 	text-align: start;
@@ -666,7 +665,6 @@
 	margin: 0;
 	padding: var(--ran-booster-space-16);
 	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-surface);
 }
 
@@ -891,7 +889,7 @@
 	padding-block: var(--ran-booster-space-5);
 	padding-inline: var(--ran-booster-space-8);
 	border: 1px solid var(--ran-booster-strong-divider);
-	border-radius: var(--ran-booster-radius-surface);
+	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-surface);
 	line-height: 28px;
 }
@@ -904,7 +902,7 @@
 	padding-block: 0;
 	padding-inline: var(--ran-booster-space-14);
 	border: 1px solid var(--ran-booster-color-blue-300);
-	border-radius: var(--ran-booster-radius-surface);
+	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-surface-subtle);
 	color: var(--ran-booster-color-blue-300);
 	font-weight: var(--ran-booster-font-weight-semibold);

@@ -92,7 +92,7 @@
 .ran-booster-extension-details__header img {
 	inline-size: 96px;
 	block-size: 96px;
-	border-radius: 4px;
+	border-radius: var(--ran-booster-radius-inset);
 }
 
 .ran-booster-extension-details__header h2 {

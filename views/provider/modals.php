@@ -120,7 +120,7 @@ if ( $has_credential_settings ) {
 				<p data-delete-credential-public-default hidden><?php echo esc_html( sprintf( /* translators: 1: provider label. */ __( 'This credential is the default for public repository lookup. Deleting it returns %1$s public lookup to Anonymous and the Git provider’s public API limits.', 'ran-booster' ), $provider['label'] ) ); ?></p>
 				<div id="ran-booster-delete-access-profile-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 				<div class="ran-booster-credential-modal__actions">
-					<button type="submit" class="button button-delete" data-delete-credential-confirm><?php esc_html_e( 'Yes, delete credential', 'ran-booster' ); ?></button>
+					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'solid' ) ); ?>" data-delete-credential-confirm><?php esc_html_e( 'Yes, delete credential', 'ran-booster' ); ?></button>
 					<button type="button" class="button ran-booster-close-credential-modal" data-delete-credential-cancel><?php esc_html_e( 'Cancel', 'ran-booster' ); ?></button>
 				</div>
 			</form>

@@ -329,7 +329,7 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 					<?php if ( $show_package_operation_actions ) { ?>
 					<div class="ran-booster-package-operation-settings__actions" role="group" aria-label="<?php esc_attr_e( 'Package operations', 'ran-booster' ); ?>">
 						<?php if ( is_string( $word_press_action_url ) && is_string( $word_press_action_label ) ) { ?>
-							<a class="button" href="<?php echo esc_url( $word_press_action_url ); ?>"><?php echo esc_html( $word_press_action_label ); ?></a>
+							<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $word_press_action_url ); ?>"><?php echo esc_html( $word_press_action_label ); ?></a>
 						<?php } ?>
 						<?php if ( $show_branch_operations ) { ?>
 							<?php require __DIR__ . '/reinstall.php'; ?>

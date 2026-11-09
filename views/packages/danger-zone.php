@@ -34,7 +34,7 @@ $delete_description = 'plugin' === $package_view->get_type()
 				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'I understand Booster will stop managing this %s.', 'ran-booster' ), $package_type_label ) ); ?>
 			</label>
 			<p class="description"><?php esc_html_e( 'The installed files and WordPress activation state are unchanged.', 'ran-booster' ); ?></p>
-			<button type="submit" class="button ran-booster-red" disabled data-ran-booster-package-removal-submit>
+			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' ) ); ?>" disabled data-ran-booster-package-removal-submit>
 				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Stop managing %s', 'ran-booster' ), $package_type_label ) ); ?>
 			</button>
 		</form>
@@ -52,7 +52,7 @@ $delete_description = 'plugin' === $package_view->get_type()
 			<p class="description">
 				<?php echo esc_html( $delete_description ); ?>
 			</p>
-			<button type="submit" class="button button-delete" disabled data-ran-booster-package-removal-submit>
+			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'solid' ) ); ?>" disabled data-ran-booster-package-removal-submit>
 				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Stop managing and delete %s', 'ran-booster' ), $package_type_label ) ); ?>
 			</button>
 		</form>

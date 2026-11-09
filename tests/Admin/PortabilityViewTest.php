@@ -117,11 +117,11 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'name="action" value="ran_booster_preview_blueprint"', $html );
 		self::assertStringContainsString( 'data-portability-preview', $html );
 		self::assertStringContainsString( 'data-portability-apply-nonce=', $html );
-		self::assertStringContainsString( 'type="submit" class="button button-primary ran-booster-portability__progress-button" data-portability-preview-submit', $html );
+		self::assertStringContainsString( 'type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid ran-booster-portability__progress-button" data-portability-preview-submit', $html );
 		self::assertStringContainsString( 'data-idle-label="Review Transporter Blueprint"', $html );
 		self::assertStringContainsString( 'data-busy-label="Reviewing Transporter Blueprint…"', $html );
 		self::assertStringContainsString( '<span data-portability-preview-label>Review Transporter Blueprint</span>', $html );
-		self::assertStringContainsString( 'type="button" class="button button-primary ran-booster-portability__progress-button" data-portability-apply', $html );
+		self::assertStringContainsString( 'type="button" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid ran-booster-portability__progress-button" data-portability-apply', $html );
 		self::assertStringContainsString( 'data-idle-label="Apply selected changes"', $html );
 		self::assertStringContainsString( 'data-busy-label="Applying…" disabled', $html );
 		self::assertStringContainsString( '<span data-portability-apply-label>Apply selected changes</span>', $html );

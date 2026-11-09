@@ -12,7 +12,7 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_common_selectors_are_rooted_while_body_appended_picker_selectors_remain_available(): void {
 		$css = $this->asset( 'ran-booster.css' );
 
-		self::assertStringContainsString( '.wp-core-ui .ran-booster-admin .button-delete', $css );
+		self::assertStringContainsString( '.ran-wp-ui-button.ran-booster-button--danger.is-solid', $css );
 		self::assertStringContainsString( '#screen-meta-links', $css );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-masthead', $css );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-brand', $css );
@@ -116,7 +116,8 @@ final class AdminAssetContractTest extends TestCase {
 
 		$buttons = $this->asset( 'ran-booster/10-buttons.css' );
 
-		self::assertStringContainsString( '.wp-core-ui .ran-booster-admin .button-delete', $buttons );
+		self::assertStringContainsString( '.ran-wp-ui-button.ran-booster-button--danger.is-solid', $buttons );
+		self::assertStringNotContainsString( '.button-delete', $buttons );
 		self::assertStringContainsString( '.button-update-package.ran-booster-update-is-active', $buttons );
 		self::assertStringNotContainsString( "\n.wp-core-ui .button-delete", $buttons );
 	}
@@ -845,8 +846,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-delete-credential-package-link', $view );
 		self::assertStringContainsString( 'ran_booster[expires_on]', $modals );
 		self::assertStringContainsString( "profile['expiry_status']['badge_label']", $projection );
-		self::assertStringContainsString( 'class="button button-delete ran-booster-open-delete-credential-modal"', $view );
-		self::assertStringContainsString( 'class="button button-delete" data-confirm="<?php echo esc_attr( $profile[\'delete_confirmation\'] ); ?>"', $view );
+		self::assertStringContainsString( 'ButtonClasses::for( \'danger\', \'solid\' ) . \' ran-booster-open-delete-credential-modal\' ); ?>"', $view );
+		self::assertStringContainsString( 'ButtonClasses::for( \'danger\', \'solid\' ) ); ?>" data-confirm="<?php echo esc_attr( $profile[\'delete_confirmation\'] ); ?>"', $view );
 		self::assertStringNotContainsString( 'Before deleting a credential', $modals );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-delete-credential-package-list {', $css );
 		self::assertStringContainsString( 'max-block-size: 160px;', $css );
@@ -1085,7 +1086,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'class="ran-booster-meta__tiles"', $view );
 		self::assertStringNotContainsString( 'class="ran-booster-meta__badges"', $view );
 		self::assertMatchesRegularExpression(
-			'/button button-primary button-update-package[\s\S]+data-ran-booster-update-button/',
+			'/ButtonClasses::primary\(\) \. \' button-update-package\'[\s\S]+data-ran-booster-update-button/',
 			$view
 		);
 		self::assertStringContainsString( 'Reinstall', $view );
@@ -1253,7 +1254,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'border-color: var(--ran-booster-status-error-border);', $css );
 		self::assertStringContainsString( '.ran-booster-package-danger-zone__actions {', $css );
 		self::assertStringContainsString( 'grid-template-columns: repeat(2, minmax(0, 1fr));', $css );
-		self::assertStringContainsString( '.ran-booster-package-danger-zone__actions .button {', $css );
+		self::assertStringContainsString( '.ran-booster-package-danger-zone__actions .ran-wp-ui-button {', $css );
 		self::assertStringContainsString( 'inline-size: 100%;', $css );
 
 		self::assertStringNotContainsString( "\$package_view->get_action( 'unlink' )", $index );
@@ -1402,6 +1403,8 @@ final class AdminAssetContractTest extends TestCase {
 			'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php',
 			'RAN/Admin/WebhookManagement/views/panel.php',
 			'assets/ran-booster-repository-picker.js',
+			'views/packages/danger-zone.php',
+			'views/packages/reinstall.php',
 		);
 
 		foreach ( $converted as $file ) {

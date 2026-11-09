@@ -40,29 +40,35 @@ a.ran-wp-ui-button[aria-disabled="true"] {
 	color: var(--wp-ui-button-foreground-color-disabled);
 }
 
-.wp-core-ui .ran-booster-admin .button-delete {
-	background-color: var(--ran-booster-danger);
-	border-color: var(--ran-booster-danger-strong);
-	color: var(--ran-booster-surface);
-	-webkit-box-shadow: var(--ran-booster-shadow-delete-button);
-	box-shadow: var(--ran-booster-shadow-delete-button);
+/*
+ * Booster's danger tone sets only the Button's colour properties. On brand
+ * solid it is the destructive confirmation; on neutral outline, the step that
+ * arms one. Disabled, both draw as the disabled neutral outline.
+ */
+
+.ran-wp-ui-button.ran-booster-button--danger.is-solid {
+	--wp-ui-button-background-color: var(--ran-booster-danger);
+	--wp-ui-button-background-color-active: var(--ran-booster-danger-strong);
+	--wp-ui-button-background-color-disabled: var(
+		--wpds-color-background-interactive-neutral-weak-disabled
+	);
+	--wp-ui-button-border-color: var(--ran-booster-danger-strong);
+	--wp-ui-button-border-color-active: var(--ran-booster-danger-hover-border);
+	--wp-ui-button-border-color-disabled: var(
+		--wpds-color-stroke-interactive-neutral-disabled
+	);
+	--wp-ui-button-foreground-color: var(--ran-booster-surface);
+	--wp-ui-button-foreground-color-active: var(--ran-booster-surface);
+	--wp-ui-button-foreground-color-disabled: var(
+		--wpds-color-foreground-interactive-neutral-disabled
+	);
 }
 
-.wp-core-ui .ran-booster-admin .button-delete:active,
-.wp-core-ui .ran-booster-admin .button-delete:focus,
-.wp-core-ui .ran-booster-admin .button-delete:hover {
-	background-color: var(--ran-booster-danger-strong);
-	border-color: var(--ran-booster-danger-hover-border);
-	color: var(--ran-booster-surface);
-}
-
-.wp-core-ui .ran-booster-admin .button-delete.disabled,
-.wp-core-ui .ran-booster-admin .button-delete:disabled {
-	background-color: var(--ran-booster-surface-subtle);
-	border-color: var(--ran-booster-divider);
-	box-shadow: none;
-	color: var(--ran-booster-danger-muted);
-	cursor: default;
+.ran-wp-ui-button.ran-booster-button--danger.is-outline {
+	--wp-ui-button-border-color: var(--ran-booster-danger);
+	--wp-ui-button-border-color-active: var(--ran-booster-danger-strong);
+	--wp-ui-button-foreground-color: var(--ran-booster-text-danger);
+	--wp-ui-button-foreground-color-active: var(--ran-booster-text-danger);
 }
 
 .wp-core-ui .ran-booster-admin .button-update-package {
@@ -191,11 +197,6 @@ a.ran-wp-ui-button[aria-disabled="true"] {
 .ran-booster-admin .ran-booster-code {
 	font-size: var(--ran-booster-font-size-sm);
 	background-color: var(--ran-booster-surface-subtle);
-}
-
-.ran-booster-admin .ran-booster-red {
-	border-color: var(--ran-booster-danger);
-	color: var(--ran-booster-text-danger);
 }
 
 .ran-booster-admin .ran-booster-green {

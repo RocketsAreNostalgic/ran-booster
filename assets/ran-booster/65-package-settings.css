@@ -528,7 +528,9 @@
 	text-align: end;
 }
 
-.ran-booster-admin .ran-booster-package-operation-settings__actions .button {
+.ran-booster-admin
+	.ran-booster-package-operation-settings__actions
+	.ran-wp-ui-button {
 	inline-size: 100%;
 	text-align: center;
 }
@@ -820,7 +822,7 @@
 	margin-block: var(--ran-booster-space-10) var(--ran-booster-space-16);
 }
 
-.ran-booster-admin .ran-booster-package-danger-zone__actions .button {
+.ran-booster-admin .ran-booster-package-danger-zone__actions .ran-wp-ui-button {
 	justify-self: start;
 	inline-size: 100%;
 }
@@ -883,7 +885,7 @@
 
 	.ran-booster-admin
 		.ran-booster-package-operation-settings__actions
-		.button {
+		.ran-wp-ui-button {
 		inline-size: 100%;
 	}
 
@@ -904,7 +906,9 @@
 		text-align: center;
 	}
 
-	.ran-booster-admin .ran-booster-package-danger-zone__actions .button {
+	.ran-booster-admin
+		.ran-booster-package-danger-zone__actions
+		.ran-wp-ui-button {
 		inline-size: 100%;
 		justify-self: stretch;
 		text-align: center;

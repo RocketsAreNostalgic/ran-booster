@@ -283,7 +283,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 			<div class="ran-booster-portability__import-fields">
 				<p><label for="ran-booster-portability-file"><?php esc_html_e( 'Transporter Blueprint ZIP', 'ran-booster' ); ?></label><input id="ran-booster-portability-file" name="blueprint" type="file" accept="application/zip,application/x-zip-compressed,.zip"></p>
 				<p><label for="ran-booster-portability-import-password"><?php esc_html_e( 'ZIP password (optional)', 'ran-booster' ); ?></label><input id="ran-booster-portability-import-password" name="password" type="password" autocomplete="off"></p>
-				<button type="submit" class="button button-primary ran-booster-portability__progress-button" data-portability-preview-submit data-idle-label="<?php esc_attr_e( 'Review Transporter Blueprint', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Reviewing Transporter Blueprint…', 'ran-booster' ); ?>"><span data-portability-preview-label><?php esc_html_e( 'Review Transporter Blueprint', 'ran-booster' ); ?></span></button>
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-portability__progress-button' ); ?>" data-portability-preview-submit data-idle-label="<?php esc_attr_e( 'Review Transporter Blueprint', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Reviewing Transporter Blueprint…', 'ran-booster' ); ?>"><span data-portability-preview-label><?php esc_html_e( 'Review Transporter Blueprint', 'ran-booster' ); ?></span></button>
 			</div>
 			<div class="notice notice-info inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" hidden><div data-ran-booster-ui-notice-content><p data-portability-preview-message hidden></p></div></div>
 		</form>
@@ -300,7 +300,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		<div class="ran-booster-portability__apply">
 			<p><?php esc_html_e( 'Eligible selected changes are applied independently.', 'ran-booster' ); ?></p>
 			<p class="ran-booster-portability__apply-summary screen-reader-text" data-portability-apply-summary aria-live="polite"><?php esc_html_e( 'No changes selected.', 'ran-booster' ); ?></p>
-			<p><button type="button" class="button button-primary ran-booster-portability__progress-button" data-portability-apply data-idle-label="<?php esc_attr_e( 'Apply selected changes', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Applying…', 'ran-booster' ); ?>" disabled><span data-portability-apply-label><?php esc_html_e( 'Apply selected changes', 'ran-booster' ); ?></span></button></p>
+			<p><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-portability__progress-button' ); ?>" data-portability-apply data-idle-label="<?php esc_attr_e( 'Apply selected changes', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Applying…', 'ran-booster' ); ?>" disabled><span data-portability-apply-label><?php esc_html_e( 'Apply selected changes', 'ran-booster' ); ?></span></button></p>
 			<div data-portability-apply-results></div>
 		</div>
 	</div></div></section>

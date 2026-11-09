@@ -19,7 +19,7 @@ $reinstall_available = $package_mutation_available
 	name="ran_booster[reinstall_after_save]"
 	value="1"
 	form="ran-booster-package-edit-form"
-	class="button button-secondary button-update-package"
+	class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' button-update-package' ); ?>"
 	<?php disabled( ! $reinstall_available ); ?>
 	data-ran-booster-update-button
 	data-ran-booster-settings-reinstall

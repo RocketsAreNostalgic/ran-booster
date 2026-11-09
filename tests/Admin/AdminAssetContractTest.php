@@ -175,6 +175,23 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-debug-capture__panel ran-booster-panel', $debug );
 	}
 
+	public function test_framed_fact_grids_share_one_summary_grid_profile(): void {
+		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		foreach ( array(
+			'provider.php'      => 2,
+			'packages/edit.php' => 1,
+		) as $view => $expected ) {
+			self::assertSame( $expected, substr_count( $this->view( $view ), 'ran-booster-summary-grid' ) - substr_count( $this->view( $view ), 'ran-booster-summary-grid__label' ) - substr_count( $this->view( $view ), 'ran-booster-summary-grid--standalone' ), $view );
+		}
+		self::assertStringContainsString( 'gap: 1px;', $css );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-summary-grid > div {', $css );
+		foreach ( array( 'repository-integration-status', 'readiness-overview' ) as $legacy ) {
+			foreach ( array( '30-provider-cards.css', '80-responsive.css' ) as $file ) {
+				self::assertStringNotContainsString( $legacy . ' > div', $this->asset( 'ran-booster/' . $file ) );
+			}
+		}
+	}
+
 	public function test_package_summary_contains_long_copy_and_truncates_only_the_repository_link(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 
@@ -744,7 +761,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-repository-record__action-group {', $css );
 		self::assertStringContainsString( '.ran-booster-repository-record__actions {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-management__header {', $css );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-endpoint {', $css );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-endpoint > div:first-child {', $css );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-summary-grid {', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
 		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr);', $css );
 	}
 

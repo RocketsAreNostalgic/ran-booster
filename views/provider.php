@@ -519,7 +519,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 							<?php if ( ! $repository_inventory_available ) { ?>
 								<p><?php esc_html_e( 'Repository inventory is unavailable; shown records may be incomplete.', 'ran-booster' ); ?></p>
 							<?php } ?>
-							<dl class="ran-booster-repository-integration-status">
+							<dl class="ran-booster-repository-integration-status ran-booster-summary-grid">
 								<?php if ( ! empty( $provider['capabilities']['webhooks'] ) ) { ?>
 									<div><dt><?php esc_html_e( 'Site webhook delivery', 'ran-booster' ); ?></dt><dd><?php echo esc_html( ! $webhook_assistance_provider_capable ? __( 'Readiness not assessed', 'ran-booster' ) : ( $webhook_assistance_site_ready ? __( 'Ready for public HTTPS delivery', 'ran-booster' ) : __( 'Not ready for Git provider delivery', 'ran-booster' ) ) ); ?></dd></div>
 									<?php
@@ -576,7 +576,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 										<p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p>
 									</div>
 								</div>
-							<dl class="ran-booster-webhook-endpoint">
+							<dl class="ran-booster-webhook-endpoint ran-booster-summary-grid">
 								<div>
 									<dt id="ran-booster-webhook-url-label"><?php esc_html_e( 'Payload URL', 'ran-booster' ); ?></dt>
 									<dd><span class="ran-booster-webhook-url" data-webhook-url-tools><input type="text" class="regular-text code" value="<?php echo esc_attr( $webhook_endpoint ); ?>" readonly aria-labelledby="ran-booster-webhook-url-label" data-webhook-url><button type="button" class="button ran-booster-copy-value__button hide-if-no-js" data-webhook-url-copy data-copy-label="<?php esc_attr_e( 'Copy payload URL', 'ran-booster' ); ?>" data-copied-label="<?php esc_attr_e( 'URL copied', 'ran-booster' ); ?>" aria-label="<?php esc_attr_e( 'Copy payload URL', 'ran-booster' ); ?>" title="<?php esc_attr_e( 'Copy payload URL', 'ran-booster' ); ?>"><svg class="ran-booster-copy-value__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg><svg class="ran-booster-copy-value__check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m5 12 4 4L19 6"/></svg></button><span class="ran-booster-portability__password-status" data-webhook-url-status data-copied-message="<?php esc_attr_e( 'Payload URL copied to the clipboard.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The payload URL is selected; use your browser copy command.', 'ran-booster' ); ?>" role="status" aria-live="polite" aria-atomic="true"></span></span></dd>

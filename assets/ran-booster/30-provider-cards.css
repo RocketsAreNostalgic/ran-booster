@@ -533,38 +533,8 @@
 	background: var(--ran-booster-surface);
 }
 
-/*
- * The number of status cells varies, so cells wrap and grow to fill each row.
- * Overlapping 1px borders keep every divider continuous with no empty slots.
- */
-
 .ran-booster-admin .ran-booster-repository-integration-status {
-	display: flex;
-	flex-wrap: wrap;
-	margin-block: 0 var(--ran-booster-space-16);
-	margin-inline: 0;
-	padding-block: 0 1px;
-	padding-inline: 0 1px;
-}
-
-.ran-booster-admin .ran-booster-repository-integration-status > div {
-	flex: 1 1 12rem;
-	min-inline-size: 0;
-	margin-block: 0 -1px;
-	margin-inline: 0 -1px;
-	padding: var(--ran-booster-space-14);
-	border: 1px solid var(--ran-booster-divider);
-}
-
-.ran-booster-admin .ran-booster-repository-integration-status dt {
-	margin-block-end: var(--ran-booster-space-4);
-	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
-	font-weight: var(--ran-booster-font-weight-semibold);
-}
-
-.ran-booster-admin .ran-booster-repository-integration-status dd {
-	margin: 0;
+	margin-block-end: var(--ran-booster-space-16);
 }
 
 .ran-booster-admin .ran-booster-provider-task-actions {
@@ -753,34 +723,6 @@
 	margin-block-end: var(--ran-booster-space-16);
 }
 
-.ran-booster-admin .ran-booster-readiness-overview {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	border: 1px solid var(--ran-booster-divider);
-}
-
-.ran-booster-admin .ran-booster-readiness-overview article {
-	min-block-size: 138px;
-	padding: var(--ran-booster-space-16);
-	border-inline-end: 1px solid var(--ran-booster-divider);
-}
-
-.ran-booster-admin .ran-booster-readiness-overview article:last-child {
-	border-inline-end: 0;
-}
-
-.ran-booster-admin .ran-booster-readiness-overview strong {
-	display: block;
-	color: var(--ran-booster-text);
-	font-size: 14px;
-}
-
-.ran-booster-admin .ran-booster-readiness-overview article > p {
-	margin-block: var(--ran-booster-space-4) var(--ran-booster-space-10);
-	margin-inline: 0;
-	color: var(--ran-booster-text-muted);
-}
-
 .ran-booster-admin .ran-booster-provider-next-step {
 	display: flex;
 	align-items: center;
@@ -796,36 +738,6 @@
 	margin-block: var(--ran-booster-space-2) 0;
 	margin-inline: 0;
 	color: var(--ran-booster-text-muted);
-}
-
-.ran-booster-admin .ran-booster-webhook-endpoint {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) 170px 190px;
-	margin: 0;
-	border: 1px solid var(--ran-booster-divider);
-}
-
-.ran-booster-admin .ran-booster-webhook-endpoint > div {
-	min-inline-size: 0;
-	padding: var(--ran-booster-space-14);
-	border-inline-end: 1px solid var(--ran-booster-divider);
-}
-
-.ran-booster-admin .ran-booster-webhook-endpoint > div:last-child {
-	border-inline-end: 0;
-}
-
-.ran-booster-admin .ran-booster-webhook-endpoint dt {
-	margin-block-end: var(--ran-booster-space-6);
-	color: var(--ran-booster-text-subtle);
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-}
-
-.ran-booster-admin .ran-booster-webhook-endpoint dd {
-	margin: 0;
 }
 
 .ran-booster-admin .ran-booster-webhook-endpoint__notice {

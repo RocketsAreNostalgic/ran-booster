@@ -546,7 +546,6 @@
 .ran-booster-admin
 	:is(
 		.ran-booster-settings-section,
-		.ran-booster-package-summary,
 		.ran-booster-settings-actions.ran-booster-package-settings__save-actions
 	) {
 	border-radius: var(--ran-booster-radius-card);
@@ -555,12 +554,57 @@
 .ran-booster-admin
 	:is(
 		.ran-booster-status-summary,
+		.ran-booster-activity__details,
 		.ran-booster-webhook-step,
-		.ran-booster-webhook-endpoint,
 		.ran-booster-readiness-panel,
 		.ran-booster-provider-empty-state
 	) {
 	border-radius: var(--ran-booster-radius-inset);
+}
+
+/*
+ * Summary grid: one framed set of label/value cells. The 1px gap shows the
+ * frame colour between cells, so dividers stay continuous however the cells
+ * wrap and the outer corners clip cleanly to the radius.
+ */
+
+.ran-booster-admin .ran-booster-summary-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1px;
+	margin: 0;
+	overflow: hidden;
+	border: 1px solid var(--ran-booster-divider);
+	border-radius: var(--ran-booster-radius-inset);
+	background: var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-summary-grid--standalone {
+	border-radius: var(--ran-booster-radius-card);
+}
+
+.ran-booster-admin .ran-booster-summary-grid > div {
+	flex: 1 1 12rem;
+	min-inline-size: 0;
+	padding: var(--ran-booster-space-14);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-summary-grid dt,
+.ran-booster-admin .ran-booster-summary-grid__label {
+	margin: 0 0 var(--ran-booster-space-4);
+	color: var(--ran-booster-text-subtle);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-summary-grid dd {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-webhook-endpoint > div:first-child {
+	flex-grow: 3;
+	flex-basis: 18rem;
 }
 
 .ran-booster-admin .ran-booster-page-shell {

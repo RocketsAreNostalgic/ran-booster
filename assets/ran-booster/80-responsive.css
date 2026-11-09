@@ -110,23 +110,6 @@
 }
 
 @media screen and (max-width: 960px) {
-	.ran-booster-admin .ran-booster-webhook-endpoint {
-		grid-template-columns: minmax(0, 1fr) 190px;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:first-child {
-		grid-row: span 2;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:nth-child(2) {
-		border-block-end: 1px solid var(--ran-booster-divider);
-		border-inline-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:last-child {
-		border-inline-end: 0;
-	}
-
 	.ran-booster-admin .ran-booster-repository-detail__layout {
 		grid-template-columns: minmax(0, 1fr);
 	}
@@ -203,40 +186,6 @@
 		inline-size: auto;
 		align-self: flex-start;
 		text-align: center;
-	}
-
-	.ran-booster-admin .ran-booster-readiness-overview {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.ran-booster-admin .ran-booster-readiness-overview article {
-		min-block-size: auto;
-		border-block-end: 1px solid var(--ran-booster-divider);
-		border-inline-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-readiness-overview article:last-child {
-		border-block-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div {
-		min-block-size: auto;
-		border-block-end: 0;
-		border-inline-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:first-child {
-		grid-column: 1 / -1;
-		grid-row: auto;
-		border-block-end: 1px solid var(--ran-booster-divider);
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:nth-child(2) {
-		border-inline-end: 1px solid var(--ran-booster-divider);
 	}
 
 	.ran-booster-admin .ran-booster-credential-section {

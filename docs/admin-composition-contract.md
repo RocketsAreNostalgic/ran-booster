@@ -306,6 +306,17 @@ headers and `data-label` cells that stack at 782px and below. Nothing in it
 can scroll, so its wrapper is not a focusable region. The Activity heading sits
 8px (`--ran-booster-card-heading-gap`) above its description.
 
+The provider Credentials and Webhook secrets tables, drawn for every provider
+by `ProviderManagementTableRenderer`, use the same collection frame:
+`.ran-booster-data-table-wrap` around a `.ran-booster-data-table` with the
+`--rows` modifier for one record per row, without the core `widefat striped`
+classes. Headers are 13px/600 on the Card surface, records alternate the
+subtle surface with a divider between rows, and the wrapper takes the inset
+radius. Cells carry `data-label` and stack through the shared data-table rules
+at 782px and below; only the actions cell stays out of the label grid, with
+its Buttons in an inner `.ran-booster-actions` row so the cell remains a real
+table cell. Column widths stay on the `--access` and `--webhook` modifiers.
+
 `tests/browser/page-frame.mjs` measures these values on a rendered page. It is
 a private runner helper like the other browser checks, and it is how the
 status column above stays honest.

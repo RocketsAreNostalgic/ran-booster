@@ -9,7 +9,7 @@
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr));
 	gap: var(--ran-booster-space-16);
-	margin-block-start: var(--ran-booster-space-20);
+	margin-block-start: 0;
 }
 
 .ran-booster-admin .ran-booster-extensions__grid > .plugin-card {

@@ -642,6 +642,20 @@
 	padding-inline: var(--ran-booster-space-24);
 }
 
+/*
+ * Spacing ownership: the page header's bottom padding owns the gap to the first
+ * content block, and a container's inset owns the space above its first
+ * heading. Neither may be doubled by the content's own top margin.
+ */
+
+.ran-booster-admin .ran-booster-page-shell__header + * {
+	margin-block-start: 0;
+}
+
+.ran-booster-admin :is(h2, h3, h4):first-child {
+	margin-block-start: 0;
+}
+
 .ran-booster-admin .ran-booster-page-shell__body {
 	padding-block-end: var(--ran-booster-space-24);
 	padding-inline: var(--ran-booster-space-24);

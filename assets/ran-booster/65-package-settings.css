@@ -885,7 +885,7 @@
 
 .ran-booster-admin .ran-booster-settings > .ran-booster-panel,
 .ran-booster-admin .ran-booster-settings__general > .ran-booster-panel {
-	margin-block: var(--ran-booster-space-20);
+	margin-block: 0 var(--ran-booster-space-20);
 	padding: var(--ran-booster-space-24);
 }
 

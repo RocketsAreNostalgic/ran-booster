@@ -135,6 +135,8 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringContainsString( '<div class="ran-admin-shell-notices"><hr class="wp-header-end"></div>', $html );
 		self::assertSame( 1, substr_count( $html, 'id="ran-booster-core-development-notice-slot"' ) );
 		self::assertStringNotContainsString( 'hx-swap-oob', $html );
+		// No notice here changes intent in place, so no icon template.
+		self::assertStringNotContainsString( '<template id="ran-booster-notice-icons">', $html );
 		self::assertStringContainsString( 'Copyright © 2042', $html );
 		self::assertStringContainsString(
 			'<a href="https://example.test/header-author">Header Author</a>',
@@ -204,6 +206,7 @@ final class AdminIndexViewTest extends TestCase {
 		$overview = (string) ob_get_clean();
 
 		self::assertSame( 1, substr_count( $overview, 'data-ran-booster-development-safety' ) );
+		self::assertStringNotContainsString( '<template id="ran-booster-notice-icons">', $overview );
 		self::assertStringContainsString( 'class="notice notice-info inline is-dismissible ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-development-safety', $overview );
 		self::assertStringContainsString( 'data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>', $overview );
 		self::assertStringContainsString( 'data-ran-booster-notice-state="local-development-v2"', $overview );

@@ -882,6 +882,7 @@ class Booster {
 		}
 
 		$this->register_announce_script();
+		$this->register_notice_script();
 		wp_register_script( 'ran-booster-js', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster.js', array_merge( $script_dependencies, array( 'wp-i18n' ) ), $script_version, true );
 
 		wp_set_script_translations( 'ran-booster-js', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
@@ -897,7 +898,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-enhanced-mutations',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-enhanced-mutations.js',
-			array( 'ran-booster-js', 'ran-booster-announce', 'wp-i18n', 'wp-element', 'wp-components' ),
+			array( 'ran-booster-js', 'ran-booster-announce', 'ran-booster-notice', 'wp-i18n', 'wp-element', 'wp-components' ),
 			$enhanced_mutation_script_version,
 			true
 		);
@@ -906,7 +907,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-packages',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-packages.js',
-			array( 'ran-booster-enhanced-mutations', 'wp-i18n', 'ran-booster-cards' ),
+			array( 'ran-booster-enhanced-mutations', 'ran-booster-notice', 'wp-i18n', 'ran-booster-cards' ),
 			$package_script_version,
 			true
 		);
@@ -943,7 +944,7 @@ class Booster {
 				wp_register_script(
 					'ran-booster-portability',
 					trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-portability.js',
-					array( 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'wp-i18n' ),
+					array( 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'ran-booster-notice', 'wp-i18n' ),
 					$portability_script_version,
 					true
 				);
@@ -1172,6 +1173,12 @@ class Booster {
 	private function register_announce_script(): void {
 		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-announce.js';
 		wp_register_script( 'ran-booster-announce', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-announce.js', array( 'wp-a11y' ), $this->asset_version( $path ), true );
+	}
+
+	/** Register the helper that changes a static Notice's intent in place. */
+	private function register_notice_script(): void {
+		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-notice.js';
+		wp_register_script( 'ran-booster-notice', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-notice.js', array(), $this->asset_version( $path ), true );
 	}
 
 	/** Register the shared Dialog helper; it stays inert until the overlay module publishes Dialog. */

@@ -70,6 +70,9 @@ final class RepeatPackageViewTest extends TestCase {
 				$html = (string) ob_get_clean();
 				self::assertStringContainsString( 'page=' . $package_view->get_page_slug() . '&amp;s=release&amp;provider=gh', $html );
 				self::assertStringContainsString( '>' . $package_view->get_plural_label() . '</a>', $html );
+				// The branch check changes its intent in place: one icon template, after the shell.
+				self::assertSame( 1, substr_count( $html, 'id="ran-booster-notice-icons"' ) );
+				self::assertStringEndsWith( '</template>', $html );
 				$current = 'create' === $operation ? 'Install ' . $package_view->get_singular_label() : $package->name;
 				self::assertStringContainsString( 'aria-current="page">' . $current . '</span>', $html );
 				if ( 'edit' === $operation ) {

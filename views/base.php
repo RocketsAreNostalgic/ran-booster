@@ -197,3 +197,11 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 		</p>
 	</div>
 </div>
+<?php
+// Screens whose scripts change a notice's intent in place clone its icon from here.
+if ( in_array( $view, array( 'packages/index', 'packages/create', 'packages/edit' ), true )
+	|| 'portability.php' === ( $tab_view ?? '' )
+	|| ( 'provider.php' === ( $tab_view ?? '' ) && 'credentials' === ( $provider_view ?? '' ) )
+) {
+	\RAN\Admin\Component\NoticeIcon::print_template();
+}

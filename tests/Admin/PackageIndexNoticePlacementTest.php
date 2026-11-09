@@ -169,6 +169,8 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 		$description_position = strpos( $html, 'Review package health, deploy saved branches and hand published releases to WordPress.' );
 		$result_position      = strpos( $html, 'Scoped package result.' );
 		$table_position       = strpos( $html, 'ran-booster-package-table' );
+		// The bulk update summary changes its intent in place: one icon template.
+		self::assertSame( 1, substr_count( $html, 'id="ran-booster-notice-icons"' ) );
 
 		foreach ( array( $masthead_position, $heading_position, $description_position, $result_position, $table_position ) as $position ) {
 			self::assertIsInt( $position );
@@ -239,6 +241,7 @@ final class PackageIndexNoticePlacementTest extends TestCase {
 
 		$heading_position = strpos( $html, 'Booster can’t open settings for Refused package' );
 		$refusal_position = strpos( $html, 'Booster refused this package operation.' );
+		self::assertStringNotContainsString( 'id="ran-booster-notice-icons"', $html );
 
 		foreach ( array( $heading_position, $refusal_position ) as $position ) {
 			self::assertIsInt( $position );

@@ -11,10 +11,13 @@ namespace RAN\Admin\Component;
  * caution, published and error; neutral has none) after its children. A
  * static notice carries the same SVG as markup, decorative and hidden from
  * assistive technology: the notice text carries the meaning. A notice whose
- * intent a script changes in place stays mounted, because its icon would have
- * to change with its state class.
+ * intent a script changes in place takes its new icon from the one per-page
+ * template print_template() prints, through window.ranBoosterNotice.
  */
 final class NoticeIcon {
+
+	/** The id of the per-page icon template. */
+	public const TEMPLATE_ID = 'ran-booster-notice-icons';
 
 	/**
 	 * Path data per intent, with whether the path joins its strokes round.
@@ -42,6 +45,34 @@ final class NoticeIcon {
 	 * neutral and unknown intents.
 	 */
 	public static function markup( string $intent ): string {
+		return self::svg( $intent, '' );
+	}
+
+	/**
+	 * Prints the icon markup for a Notice intent.
+	 */
+	public static function print_intent( string $intent ): void {
+		echo self::markup( $intent ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- markup() escapes the path data; the rest is constant.
+	}
+
+	/**
+	 * Prints the one per-page template of the four intent icons that
+	 * ran-booster-notice.js clones when a script changes a notice's intent in
+	 * place. Each icon is keyed by its intent; the clone drops the key, so it
+	 * matches markup() exactly.
+	 */
+	public static function print_template(): void {
+		$icons = '';
+		foreach ( array_keys( self::PATHS ) as $intent ) {
+			$icons .= self::svg( $intent, ' data-ran-booster-notice-icon="' . $intent . '"' );
+		}
+		echo '<template id="' . esc_attr( self::TEMPLATE_ID ) . '">' . $icons . '</template>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- svg() escapes the path data; the intent keys and the rest are constant.
+	}
+
+	/**
+	 * Returns the icon markup with extra constant attributes on the svg.
+	 */
+	private static function svg( string $intent, string $attributes ): string {
 		if ( ! isset( self::PATHS[ $intent ] ) ) {
 			return '';
 		}
@@ -50,13 +81,6 @@ final class NoticeIcon {
 			$paths .= '<path d="' . esc_attr( $path[0] ) . '"' . ( $path[1] ? ' stroke-linejoin="round"' : '' ) . '></path>';
 		}
 
-		return '<svg class="ran-wp-ui-notice__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">' . $paths . '</svg>';
-	}
-
-	/**
-	 * Prints the icon markup for a Notice intent.
-	 */
-	public static function print_intent( string $intent ): void {
-		echo self::markup( $intent ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- markup() escapes the path data; the rest is constant.
+		return '<svg' . $attributes . ' class="ran-wp-ui-notice__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false">' . $paths . '</svg>';
 	}
 }

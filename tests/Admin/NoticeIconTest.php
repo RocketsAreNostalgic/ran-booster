@@ -41,4 +41,21 @@ final class NoticeIconTest extends TestCase {
 		NoticeIcon::print_intent( 'error' );
 		self::assertSame( NoticeIcon::markup( 'error' ), ob_get_clean() );
 	}
+
+	public function test_print_template_prints_one_keyed_icon_per_intent(): void {
+		ob_start();
+		NoticeIcon::print_template();
+		$template = (string) ob_get_clean();
+		if ( 1 !== preg_match( '#^<template id="ran-booster-notice-icons">(.*)</template>$#s', $template, $m ) ) {
+			self::fail( 'icon template' );
+		}
+		$icons = $m[1];
+		self::assertSame( 4, substr_count( $icons, '<svg ' ) );
+		foreach ( array( 'info', 'warning', 'success', 'error' ) as $intent ) {
+			// Dropping the key yields exactly the static icon.
+			self::assertStringContainsString( str_replace( '<svg ', '<svg data-ran-booster-notice-icon="' . $intent . '" ', NoticeIcon::markup( $intent ) ), $icons, $intent );
+		}
+		self::assertStringNotContainsString( 'neutral', $icons );
+		self::assertSame( 'ran-booster-notice-icons', NoticeIcon::TEMPLATE_ID );
+	}
 }

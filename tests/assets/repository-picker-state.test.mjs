@@ -518,7 +518,7 @@ test('picker teardown schedules Notice cleanup before the public root unmounts',
 	assert.equal(connected, false);
 });
 
-test('picker status speaks politely only while open and only on change', () => {
+test('picker status speaks only while open and on change, errors assertively', () => {
 	const announceSource = fs.readFileSync(
 		new URL('../../assets/ran-booster-announce.js', import.meta.url),
 		'utf8'
@@ -571,6 +571,9 @@ test('picker status speaks politely only while open and only on change', () => {
 	assert.ok(classes.has('ran-booster-repository-picker__status--error'));
 	assert.deepEqual(spoken, [
 		{ message: '3 repositories found.', politeness: 'polite' },
-		{ message: 'Repositories could not be loaded.', politeness: 'polite' },
+		{
+			message: 'Repositories could not be loaded.',
+			politeness: 'assertive',
+		},
 	]);
 });

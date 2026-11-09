@@ -2304,10 +2304,10 @@ test('preview failure updates only the retained paragraph inside its Notice', as
 		assert.equal(notice.className, 'notice inline notice-error');
 		assert.equal(state.message['aria-live'], undefined);
 		assert.equal(state.apply.disabled, true);
-		// A review failure keeps the polite announcement its live paragraph had.
+		// Progress stays polite; the review failure is assertive.
 		assert.deepEqual(state.announcements, [
 			{ text: 'Reviewing blueprint…', politeness: 'polite' },
-			{ text: 'Safe review error.', politeness: 'polite' },
+			{ text: 'Safe review error.', politeness: 'assertive' },
 		]);
 	} finally {
 		cleanup();

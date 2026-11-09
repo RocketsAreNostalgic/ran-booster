@@ -508,10 +508,12 @@
 					})
 				);
 			}
-			// Success is announced with its completion event; progress and
-			// failures keep their established polite announcement.
+			// Success is announced with its completion event.
 			if (type !== 'success') {
-				window.ranBoosterAnnounce(text);
+				window.ranBoosterAnnounce(
+					text,
+					type === 'error' ? 'assertive' : 'polite'
+				);
 			}
 		}
 

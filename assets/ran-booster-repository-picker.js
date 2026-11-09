@@ -1560,12 +1560,12 @@
 		}
 
 		// The status line is announced only while the dialog is open and only
-		// when its text changes, as its former polite live region was.
-		function writeStatus(message) {
+		// when its text changes. Load errors are assertive.
+		function writeStatus(message, politeness = 'polite') {
 			const changed = status.textContent !== message;
 			status.textContent = message;
 			if (changed && isOpen) {
-				window.ranBoosterAnnounce(message);
+				window.ranBoosterAnnounce(message, politeness);
 			}
 		}
 
@@ -1585,7 +1585,8 @@
 			list.replaceChildren();
 			writeStatus(
 				message ||
-					__('Repositories could not be loaded.', 'ran-booster')
+					__('Repositories could not be loaded.', 'ran-booster'),
+				'assertive'
 			);
 			status.classList.add(
 				'ran-booster-repository-picker__status--error'

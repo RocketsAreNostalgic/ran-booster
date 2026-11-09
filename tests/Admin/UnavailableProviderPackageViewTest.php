@@ -637,7 +637,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 				self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
 				continue;
 			}
-			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-local-development-warning' . ( $hidden ? ' hidden' : '' ) . '>\s*<div data-ran-booster-ui-notice-content>\s*<p>.*?Manual and Automatic can overwrite local changes when an update or reinstall runs\..*?<\/p>\s*<\/div>\s*<\/div>/s', $html );
+			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-local-development-warning' . ( $hidden ? ' hidden' : '' ) . '>\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p>.*?Manual and Automatic can overwrite local changes when an update or reinstall runs\..*?<\/p>\s*<\/div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>.*?<\/svg>\s*<\/div>/s', $html );
 			if ( $links ) {
 				self::assertStringContainsString( 'Push-to-Deploy setting</a> | <a', $html );
 				self::assertStringContainsString( '>Docs</a>', $html );
@@ -676,7 +676,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 		self::assertMatchesRegularExpression( '/value="automatic"[^>]*selected="selected"/', $html );
 		self::assertDoesNotMatchRegularExpression( '/value="automatic"[^>]*disabled="disabled"/', $html );
-		self::assertStringContainsString( 'class="notice notice-warning inline"', $html );
+		self::assertStringContainsString( 'class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $html );
 		self::assertStringContainsString( 'data-ran-booster-local-development-warning', $html );
 		self::assertStringContainsString( 'Editing this package’s files on this site? Choose Disabled.', $html );
 		self::assertStringContainsString( 'Push-to-Deploy setting', $html );

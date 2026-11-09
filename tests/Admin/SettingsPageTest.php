@@ -402,7 +402,7 @@ final class SettingsPageTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
 		$failed = (string) ob_get_clean();
-		self::assertStringContainsString( 'id="ran-booster-general-error" class="notice notice-info inline" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice role="alert" tabindex="-1"', $failed );
+		self::assertStringContainsString( 'id="ran-booster-general-error" class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice role="alert" tabindex="-1"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>', $failed );
 		self::assertStringContainsString( 'Settings changed. Review the values.', $failed );
 		$failed_dom      = new \DOMDocument();
 		$previous_errors = libxml_use_internal_errors( true );

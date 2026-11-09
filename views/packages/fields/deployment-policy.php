@@ -24,8 +24,8 @@ $hide_development_safety_notice   = \RAN\Deployment\DeploymentPolicy::DISABLED->
 $render_development_safety_notice = static function () use ( $show_development_safety_notice, $hide_development_safety_notice, $release_automation, $provider_webhook_available, $push_to_deploy_provider_url, $push_to_deploy_documentation_url ): void {
 	if ( $show_development_safety_notice ) {
 		?>
-	<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-local-development-warning<?php echo $hide_development_safety_notice ? ' hidden' : ''; ?>>
-		<div data-ran-booster-ui-notice-content>
+	<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-local-development-warning<?php echo $hide_development_safety_notice ? ' hidden' : ''; ?>>
+		<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 		<p>
 			<strong><?php esc_html_e( 'NOTICE: Editing this package’s files on this site? Choose Disabled.', 'ran-booster' ); ?></strong><br/>
 			<?php esc_html_e( 'Manual and Automatic can overwrite local changes when an update or reinstall runs.', 'ran-booster' ); ?>
@@ -34,6 +34,7 @@ $render_development_safety_notice = static function () use ( $show_development_s
 			<?php } ?>
 		</p>
 		</div>
+		<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
 	</div>
 		<?php
 	}

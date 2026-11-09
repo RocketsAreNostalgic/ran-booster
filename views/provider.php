@@ -504,9 +504,9 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 								<span class="screen-reader-text"><?php esc_html_e( 'Loading Git provider details…', 'ran-booster' ); ?></span>
 							</p>
 						</nav>
-						<div class="notice notice-error inline ran-booster-provider-task-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content>
+						<div class="notice notice-error inline ran-booster-provider-task-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 							<p><?php esc_html_e( 'Booster could not load that Git provider view. The current view is unchanged; choose the task again to retry.', 'ran-booster' ); ?></p>
-						</div></div>
+						</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 
 						<?php if ( 'status' === $provider_task ) { ?>
 							<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="status" aria-labelledby="ran-booster-provider-status-heading">

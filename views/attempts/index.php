@@ -240,7 +240,7 @@ $origin_labels = array(
 	<?php if ( null !== $next ) { ?>
 		<p data-ran-booster-activity-load-older-wrap><a class="button" data-ran-booster-activity-load-older href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'View older activity', 'ran-booster' ); ?></a></p>
 		<p data-ran-booster-activity-progress role="status" aria-live="polite" hidden><?php esc_html_e( 'Loading older activity…', 'ran-booster' ); ?></p>
-		<div class="notice notice-error inline" data-ran-booster-activity-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Older activity could not be loaded. Try again.', 'ran-booster' ); ?></p></div></div>
+		<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-activity-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Older activity could not be loaded. Try again.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 		<p data-ran-booster-activity-announcement role="status" aria-live="polite" tabindex="-1" hidden></p>
 	<?php } ?>
 </section>

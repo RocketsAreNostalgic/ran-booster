@@ -171,7 +171,7 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 		<?php require __DIR__ . '/notices.php'; ?>
 	<?php } ?>
 
-	<div id="ran-booster-package-mutation-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div></div>
+	<div id="ran-booster-package-mutation-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 
 	<?php require __DIR__ . '/' . $view . '.php'; ?>
 

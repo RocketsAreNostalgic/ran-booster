@@ -114,6 +114,7 @@ $general_save_succeeded = $general_save_succeeded ?? null;
 $general_failed_scope   = $general_failed_scope ?? null;
 $general_scope          = $general_scope ?? 'all';
 $general_tokens         = $general_tokens ?? array();
+$general_error_notice   = false === $general_save_succeeded || 'all' === $general_failed_scope;
 $global_failure         = 'all' === $general_scope && null !== $general_feedback && in_array( $general_failed_scope, array( null, 'all' ), true ) && ( false === $general_save_succeeded || 'all' === $general_failed_scope );
 $numeric_baseline       = array();
 foreach ( array( 'history_rows', 'history_days', 'max_download_bytes' ) as $numeric_key ) {
@@ -168,7 +169,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 	<section class="ran-booster-panel ran-booster-card ran-booster-settings__preferences" data-ran-booster-card="settings" aria-labelledby="ran-booster-general-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3 id="ran-booster-general-heading"><?php esc_html_e( 'General preferences', 'ran-booster' ); ?></h3>
 		<?php if ( null !== $general_feedback && in_array( $general_failed_scope, array( null, 'all' ), true ) ) { ?>
-		<div id="ran-booster-general-error" class="notice notice-info inline" data-ran-booster-admin-mutation-error<?php echo false === $general_save_succeeded || 'all' === $general_failed_scope ? ' data-ran-booster-ui-notice role="alert" tabindex="-1"' : ''; ?>><div data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo esc_html( $general_feedback ); ?></p></div></div>
+		<div id="ran-booster-general-error" class="notice notice-info inline<?php echo $general_error_notice ? ' ran-wp-ui-notice ran-wp-ui-box-sizing is-error' : ''; ?>" data-ran-booster-admin-mutation-error<?php echo $general_error_notice ? ' data-ran-booster-ui-notice role="alert" tabindex="-1"' : ''; ?>><div<?php echo $general_error_notice ? ' class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"' : ''; ?> data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo esc_html( $general_feedback ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( $general_error_notice ? 'error' : 'neutral' ); ?></div>
 		<?php } ?>
 		<noscript><p><?php esc_html_e( 'JavaScript is unavailable. Use Save setting beside each switch, and Save changes for numeric settings. Each save reloads Settings; save one group before editing another.', 'ran-booster' ); ?></p></noscript>
 <?php } ?>

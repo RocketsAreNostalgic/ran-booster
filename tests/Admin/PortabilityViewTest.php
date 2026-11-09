@@ -101,7 +101,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'data-generation-failed-message=', $html );
 		self::assertStringContainsString( 'data-copy-failed-message=', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-password-validation"', $html );
-		self::assertStringContainsString( 'class="notice notice-warning inline ran-booster-portability__password-validation"', $html );
+		self::assertStringContainsString( 'class="notice notice-warning inline ran-booster-portability__password-validation ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $html );
 		self::assertStringContainsString( 'data-required-message="Choose a Transporter Blueprint password before exporting credentials."', $html );
 		self::assertStringContainsString( 'data-mismatch-message="The Transporter Blueprint passwords do not match. Nothing was exported."', $html );
 		self::assertStringContainsString( 'role="alert" hidden', $html );

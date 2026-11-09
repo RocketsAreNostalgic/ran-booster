@@ -2340,7 +2340,7 @@ msgid "Stored · Validity checked on use"
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1646
-#: views/settings-storage.php:248
+#: views/settings-storage.php:249
 #: views/troubleshooting.php:53
 msgid "Not configured"
 msgstr ""
@@ -10209,7 +10209,7 @@ msgid "Booster checks a private location and, if it is safe, updates wp-config.p
 msgstr ""
 
 #: views/settings-storage.php:82
-msgid "Create secure storage"
+msgid "Set up default storage"
 msgstr ""
 
 #: views/settings-storage.php:88
@@ -10307,7 +10307,7 @@ msgid "If credentials already exist, move the secrets file together with its mat
 msgstr ""
 
 #: views/settings-storage.php:161
-msgid "Set up manually instead"
+msgid "Custom setup instructions"
 msgstr ""
 
 #: views/settings-storage.php:161
@@ -10392,44 +10392,44 @@ msgstr ""
 msgid "Configuration constant"
 msgstr ""
 
-#: views/settings-storage.php:254
+#: views/settings-storage.php:257
 #: views/troubleshooting-installation.php:25
 msgid "Path selection"
 msgstr ""
 
-#: views/settings-storage.php:260
+#: views/settings-storage.php:263
 #: views/troubleshooting-installation.php:26
 msgid "Storage directory"
 msgstr ""
 
-#: views/settings-storage.php:264
+#: views/settings-storage.php:267
 #: views/troubleshooting-installation.php:84
 msgid "Copy storage directory"
 msgstr ""
 
-#: views/settings-storage.php:271
+#: views/settings-storage.php:274
 #: views/troubleshooting-installation.php:27
 msgid "Storage file"
 msgstr ""
 
-#: views/settings-storage.php:275
+#: views/settings-storage.php:278
 #: views/troubleshooting-installation.php:84
 msgid "Copy storage file"
 msgstr ""
 
-#: views/settings-storage.php:285
+#: views/settings-storage.php:288
 msgid "The encrypted file and its separate database key are created when you save the first credential."
 msgstr ""
 
-#: views/settings-storage.php:287
+#: views/settings-storage.php:290
 msgid "Credentials are encrypted in this file. WordPress stores the encryption key separately."
 msgstr ""
 
-#: views/settings-storage.php:297
+#: views/settings-storage.php:300
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
-#: views/settings-storage.php:298
+#: views/settings-storage.php:301
 msgid "Manual storage override"
 msgstr ""
 

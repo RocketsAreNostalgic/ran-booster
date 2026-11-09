@@ -30,7 +30,7 @@ $storage_status_classes       = array(
 	'path_configured'         => 'neutral',
 	'storage_healthy'         => 'ok',
 	'storage_needs_attention' => 'warning',
-	'setup_available'         => 'neutral',
+	'setup_available'         => 'warning',
 	'manual_required'         => 'warning',
 	'unsupported'             => 'error',
 	'pending_verification'    => 'pending',
@@ -39,7 +39,7 @@ $storage_status_intents       = array(
 	'path_configured'         => 'none',
 	'storage_healthy'         => 'stable',
 	'storage_needs_attention' => 'medium',
-	'setup_available'         => 'none',
+	'setup_available'         => 'medium',
 	'manual_required'         => 'medium',
 	'unsupported'             => 'high',
 	'pending_verification'    => 'informational',
@@ -79,7 +79,7 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 				<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secrets_storage['action_url'] ); ?>">
 					<?php wp_nonce_field( 'ran-booster-create-secure-storage' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="create-secure-storage">
-					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Create secure storage', 'ran-booster' ); ?></button>
+					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Set up default storage', 'ran-booster' ); ?></button>
 				</form>
 			<?php } ?>
 
@@ -158,7 +158,7 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 			<?php if ( null !== $secrets_storage['config_alternatives'] ) { ?>
 				<div class="ran-booster-onboarding__storage-manual" data-ran-booster-ui-disclosure="settings-storage" data-ran-booster-ui-disclosure-density="compact">
 				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-onboarding__storage-manual ran-booster-disclosure" <?php echo esc_attr( 'manual_required' === $storage_status ? 'open' : '' ); ?>>
-					<summary><?php echo esc_html( $secrets_storage['can_provision'] ? __( 'Set up manually instead', 'ran-booster' ) : __( 'Manual setup instructions', 'ran-booster' ) ); ?></summary>
+					<summary><?php echo esc_html( $secrets_storage['can_provision'] ? __( 'Custom setup instructions', 'ran-booster' ) : __( 'Manual setup instructions', 'ran-booster' ) ); ?></summary>
 					<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 						<p><?php echo esc_html( $secrets_storage['manual_preflight'] ); ?></p>
 						<p><?php esc_html_e( 'Use an absolute private directory outside the public web root on durable local storage. It must be owned by PHP, readable and writable by PHP, and mode 0700; Booster manages ran-booster-store.json within it.', 'ran-booster' ); ?></p>
@@ -245,7 +245,10 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 								<code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_constant ); ?></code>
 								<?php
 							} else {
-								esc_html_e( 'Not configured', 'ran-booster' ); }
+								?>
+								<code class="ran-booster-onboarding__storage-inline"><?php esc_html_e( 'Not configured', 'ran-booster' ); ?></code>
+								<?php
+							}
 							?>
 							</dd></div>
 							<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>

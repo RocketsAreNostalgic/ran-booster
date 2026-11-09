@@ -853,11 +853,6 @@
 	align-items: center;
 }
 
-.ran-booster-admin .ran-booster-portability__review-action .button {
-	min-height: 40px;
-	white-space: nowrap;
-}
-
 .ran-booster-admin
 	.ran-booster-portability__flow
 	:is(

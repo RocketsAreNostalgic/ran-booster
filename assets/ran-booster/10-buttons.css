@@ -83,7 +83,6 @@ a.ran-wp-ui-button[aria-disabled="true"] {
 }
 
 .wp-core-ui .ran-booster-admin .button-update-package {
-	min-inline-size: 136px;
 	white-space: nowrap;
 }
 

@@ -1096,10 +1096,10 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '@media screen and (max-width: 782px)', $css );
 		self::assertStringContainsString( '@media screen and (max-width: 480px)', $css );
 		self::assertMatchesRegularExpression(
-			'/\.ran-booster-package-list-search input\[type="search"\],\s+\.ran-booster-admin \.ran-booster-package-list-search \.button \{\s+min-block-size: 40px;\s+\}/',
+			'/\.ran-booster-package-list-search input\[type="search"\] \{[^}]*min-block-size: 40px;\s+\}/',
 			$package_css
 		);
-		self::assertStringContainsString( 'line-height: 38px;', $package_css );
+		self::assertStringNotContainsString( 'line-height: 38px;', $package_css );
 		self::assertMatchesRegularExpression(
 			'/@media screen and \(max-width: 1100px\) \{\s+\.ran-booster-admin \.ran-booster-package-list-controls \{\s+align-items: stretch;\s+flex-direction: column;/',
 			$package_css
@@ -1196,7 +1196,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'initPackageUpdateProgress();', $script );
 		self::assertStringContainsString( 'data-ran-booster-update-summary', $script );
 		self::assertStringContainsString( '@keyframes ran-booster-update-stripes', $css );
-		self::assertStringContainsString( 'min-inline-size: 136px;', $css );
+		self::assertStringNotContainsString( 'min-inline-size: 136px;', $css );
 		self::assertStringContainsString( 'ran-booster-update-is-active::before', $css );
 		self::assertStringContainsString(
 			'var(--ran-booster-strong-divider) 8px',
@@ -1395,44 +1395,44 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	public function test_converted_markup_draws_buttons_with_the_static_button_and_never_core_classes(): void {
-		$converted = array(
-			'RAN/Admin/Component/AdminActionRenderer.php',
-			'RAN/Admin/Component/ProviderManagementTableRenderer.php',
-			'RAN/Admin/Component/RepositoryDetailRenderer.php',
-			'RAN/Admin/Component/RepositoryTableRenderer.php',
-			'RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php',
-			'RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php',
-			'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php',
-			'RAN/Admin/WebhookManagement/views/panel.php',
-			'assets/ran-booster-repository-picker.js',
-			'views/packages/branch-readiness.php',
-			'views/packages/create.php',
-			'views/packages/danger-zone.php',
-			'views/packages/edit.php',
-			'views/packages/fields/repository.php',
-			'views/packages/index.php',
-			'views/packages/recovery.php',
-			'views/packages/reinstall.php',
-			'views/attempts/detail.php',
-			'views/attempts/index.php',
-			'views/debug-capture.php',
-			'views/documentation.php',
-			'views/extensions.php',
-			'views/onboarding.php',
-			'views/portability.php',
-			'views/provider-public-lookup-profile.php',
-			'views/provider.php',
-			'views/provider/modals.php',
-			'views/settings-general.php',
-			'views/settings-storage.php',
-			'views/troubleshooting-support-report.php',
-			'views/troubleshooting.php',
-		);
+		$root  = dirname( __DIR__, 2 );
+		$files = glob( $root . '/assets/*.js' );
+		self::assertIsArray( $files );
+		foreach ( array( 'views', 'RAN' ) as $directory ) {
+			$iterator = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $root . '/' . $directory, \FilesystemIterator::SKIP_DOTS ) );
+			foreach ( $iterator as $file ) {
+				if ( $file instanceof \SplFileInfo && 'php' === $file->getExtension() ) {
+					$files[] = $file->getPathname();
+				}
+			}
+		}
 
-		foreach ( $converted as $file ) {
+		$scanned = 0;
+		foreach ( $files as $path ) {
+			$file = substr( $path, strlen( $root ) + 1 );
+			if ( isset( self::NATIVE_BUTTON_FILES[ $file ] ) ) {
+				continue;
+			}
 			self::assertSame( array(), $this->core_button_classes( $this->source( $file ) ), $file );
+			++$scanned;
+		}
+		self::assertGreaterThan( 100, $scanned );
+
+		foreach ( array_keys( self::NATIVE_BUTTON_FILES ) as $file ) {
+			self::assertNotSame( array(), $this->core_button_classes( $this->source( $file ) ), $file . ' no longer needs its allowlist entry.' );
 		}
 	}
+
+	/**
+	 * Files that still draw WordPress core buttons, with the reason.
+	 *
+	 * @var array<string, string>
+	 */
+	private const NATIVE_BUTTON_FILES = array(
+		'views/generated/ran-admin-shell.php'    => 'Generated Shell header actions, styled by ran-admin-shell.css; they move with the Shell.',
+		'RAN/Admin/CredentialExpiryNotice.php'   => 'Global notice that renders on core screens, where the static Button stylesheet is not loaded.',
+		'RAN/Admin/DeploymentAdminPresenter.php' => 'Global notice that renders on core screens, where the static Button stylesheet is not loaded.',
+	);
 
 	/**
 	 * Elements that keep a WordPress core button class on purpose, keyed by a

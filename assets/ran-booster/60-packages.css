@@ -63,15 +63,7 @@
 	flex: 1 1 200px;
 	inline-size: min(240px, 100%);
 	min-inline-size: 0;
-}
-
-.ran-booster-admin .ran-booster-package-list-search input[type="search"],
-.ran-booster-admin .ran-booster-package-list-search .button {
 	min-block-size: 40px;
-}
-
-.ran-booster-admin .ran-booster-package-list-search .button {
-	line-height: 38px;
 }
 
 .ran-booster-admin .ran-booster-package-toolbar.tablenav {

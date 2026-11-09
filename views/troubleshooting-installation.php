@@ -203,13 +203,13 @@ foreach ( $components as $component ) {
 	} elseif ( isset( $component['Provider'] ) && 'Yes' === $active && isset( $component['Name'] ) ) {
 		$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $component['Name'] );
 	}
+	// The dot is decorative, so the heading is announced as the name and version.
+	$version_markup = is_string( $version ) && '' !== $version
+		? ' <span class="ran-booster-troubleshooting__version-separator" aria-hidden="true">•</span> <code class="ran-booster-troubleshooting__version">' . esc_html( $version ) . '</code>'
+		: '';
 	?>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 class="ran-booster-section__title"><?php echo esc_html( $component_name ); ?>
-	<?php
-	if ( is_string( $version ) && '' !== $version ) {
-		?>
-	<code><?php echo esc_html( $version ); ?></code><?php } ?></h4><?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $component_status, 'ok' === $tone ? 'stable' : ( 'warning' === $tone ? 'medium' : 'none' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></header>
+<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 class="ran-booster-section__title"><?php echo esc_html( $component_name ) . $version_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The version is escaped where the markup is built. ?></h4><?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $component_status, 'ok' === $tone ? 'stable' : ( 'warning' === $tone ? 'medium' : 'none' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></header>
 <div class="ran-booster-page-shell__body">
 	<?php
 	if ( null !== $source || isset( $component['Provider'] ) ) {

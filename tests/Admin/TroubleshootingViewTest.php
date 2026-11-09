@@ -417,6 +417,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'RAN\\RepositoryProvider\\CredentialValidator', $html );
 		self::assertStringContainsString( 'Provider extension: Bitbucket Cloud', $html );
 		self::assertStringContainsString( 'Installed extension', $html );
+		$version_separator = ' <span class="ran-booster-troubleshooting__version-separator" aria-hidden="true">•</span> ';
+		self::assertStringContainsString( '<h4 class="ran-booster-section__title">Bitbucket Cloud' . $version_separator . '<code class="ran-booster-troubleshooting__version">2.0</code></h4>', $html );
+		self::assertStringContainsString( '<h4 class="ran-booster-section__title">Migration add-on' . $version_separator . '<code class="ran-booster-troubleshooting__version">1.0</code></h4>', $html );
 		self::assertStringNotContainsString( 'Provided by', $html );
 		self::assertStringContainsString( '>Inactive</span>', $html );
 		self::assertMatchesRegularExpression( '/>\s*Status unavailable\s*<\/span>/', $html );

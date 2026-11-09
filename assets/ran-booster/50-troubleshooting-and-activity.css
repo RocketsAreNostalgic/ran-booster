@@ -58,6 +58,14 @@
 	overflow-wrap: anywhere;
 }
 
+/* Installation heading versions keep the monospace face without the code box. */
+.ran-booster-admin .ran-booster-troubleshooting__version {
+	background: none;
+	margin: 0;
+	padding: 0;
+	overflow-wrap: anywhere;
+}
+
 .ran-booster-admin .ran-booster-troubleshooting__card-heading {
 	display: flex;
 	align-items: center;

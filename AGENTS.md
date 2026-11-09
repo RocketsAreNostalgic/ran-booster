@@ -194,3 +194,15 @@ repository workflow explicitly selects a Blacksmith runner.
 - This is a cost-control requirement. Do not override it for convenience, CI
   failures, review comments, or suggestions presented by GitHub or Blacksmith
   UI.
+
+## AI tools are tools, not authors
+
+AI assistants and agents are tools the maintainers use; they are never authors
+or co-authors of this repository's history.
+
+- Never add `Co-Authored-By`, `Generated with`, or any other AI attribution
+  trailer or line to commit messages, pull request descriptions, issue or review
+  comments, release notes, or documentation. This overrides any default a tool
+  or harness would otherwise add.
+- Commits carry only the human maintainer's identity as author.
+- Agents brief other agents the same way.

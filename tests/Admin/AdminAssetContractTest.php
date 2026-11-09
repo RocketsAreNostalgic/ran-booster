@@ -161,8 +161,12 @@ final class AdminAssetContractTest extends TestCase {
 		$onboarding      = $this->asset( 'ran-booster-onboarding.css' );
 		$troubleshooting = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 
-		self::assertStringContainsString( '.ran-booster-portability__credential-decision-state--unavailable {', $onboarding );
-		self::assertStringContainsString( 'background: var(--ran-booster-status-warning-background);', $onboarding );
+		// Unavailable credentials are neutral: no warning strip, and no grey fill on the card.
+		self::assertStringNotContainsString( '.ran-booster-portability__credential-decision-state--unavailable', $onboarding );
+		self::assertDoesNotMatchRegularExpression( '/credential-card--unavailable\s*\{[^}]*background:/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__credential-reason\s*\{[^}]*font-size:\s*var\(--ran-booster-font-size-sm\)/', $onboarding );
+		// Controls on the grey panel use the stronger neutral so their borders reach 3:1.
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__mode\s*\{[^}]*border:\s*1px solid var\(--ran-booster-color-neutral-450\)/', $onboarding );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {', $troubleshooting );
 		self::assertStringContainsString( 'background: var(--ran-booster-surface-info);', $troubleshooting );
 	}

@@ -27,17 +27,20 @@ final class PortabilityViewTest extends TestCase {
 		self::assertInstanceOf( \DOMNodeList::class, $export_copy );
 		self::assertInstanceOf( \DOMNodeList::class, $export_disclosure );
 		self::assertInstanceOf( \DOMNodeList::class, $deletion_notice );
-		self::assertCount( 2, $export_copy );
+		self::assertCount( 1, $export_copy );
 		self::assertCount( 0, $export_disclosure );
 		self::assertCount( 0, $deletion_notice );
 		$description = $export_copy->item( 0 );
-		$deletion    = $export_copy->item( 1 );
 		self::assertInstanceOf( \DOMElement::class, $description );
-		self::assertInstanceOf( \DOMElement::class, $deletion );
 		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes this platform-owned property in camelCase.
 		self::assertSame( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', trim( $description->textContent ) );
-		// phpcs:ignore WordPress.NamingConventions.ValidVariableName.UsedPropertyNotSnakeCase -- DOM exposes this platform-owned property in camelCase.
-		self::assertSame( 'Deleting Booster removes its saved local credentials and records.', trim( $deletion->textContent ) );
+		// The deletion sentence and the sentence that repeated the intro under 'Blueprint contents' were removed by owner decision.
+		self::assertStringNotContainsString( 'Deleting Booster removes its saved local credentials and records.', $html );
+		self::assertStringNotContainsString( 'Choose the repository credentials and managed packages to include in this Transporter Blueprint.', $html );
+		self::assertStringContainsString( 'dashicons-database-export', $html );
+		self::assertStringContainsString( 'dashicons-database-import', $html );
+		self::assertStringNotContainsString( 'dashicons-upload', $html );
+		self::assertStringNotContainsString( 'dashicons-download', $html );
 		self::assertStringContainsString( 'Create a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'Open a Transporter Blueprint', $html );
 		self::assertStringContainsString( 'What do you want to do on this site?', $html );
@@ -221,8 +224,10 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Used by 1 package</summary>', $html );
 		self::assertStringContainsString( 'Example &lt;Plugin&gt;', $html );
 		self::assertStringContainsString( 'The Git provider permissions for this credential have not been assessed.', $html );
-		self::assertStringContainsString( '<strong>Unavailable for transfer</strong>', $html );
-		self::assertStringContainsString( 'ran-booster-portability__credential-decision-state--unavailable', $html );
+		// An unavailable credential shows a neutral Badge in its heading and the reason as help text, not a warning strip.
+		self::assertMatchesRegularExpression( '/<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent"[^>]*>Unavailable for transfer<\/span>/', $html );
+		self::assertStringContainsString( 'class="description ran-booster-portability__credential-reason"', $html );
+		self::assertStringNotContainsString( 'ran-booster-portability__credential-decision-state--unavailable', $html );
 		self::assertStringContainsString( 'Booster will automatically remove this saved credential on 2026-08-31', $html );
 		self::assertStringContainsString( 'This credential is supplied by site configuration', $html );
 		self::assertStringContainsString( 'Unused repository token', $html );

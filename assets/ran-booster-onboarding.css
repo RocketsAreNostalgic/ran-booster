@@ -505,7 +505,7 @@
 	gap: var(--ran-booster-space-12);
 	padding-block: var(--ran-booster-space-14);
 	padding-inline: var(--ran-booster-space-16);
-	border: 1px solid var(--ran-booster-border);
+	border: 1px solid var(--ran-booster-color-neutral-450);
 	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-surface);
 	color: var(--ran-booster-text);
@@ -657,7 +657,12 @@
 
 .ran-booster-admin .ran-booster-portability__credential-card--unavailable {
 	color: var(--ran-booster-text-muted);
-	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-reason {
+	margin-block: var(--ran-booster-space-6) 0;
+	margin-inline: calc(16px + var(--ran-booster-space-10)) 0;
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin
@@ -836,6 +841,17 @@
 .ran-booster-admin .ran-booster-portability__review-action .button {
 	min-height: 40px;
 	white-space: nowrap;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__flow
+	:is(
+		input[type="text"],
+		input[type="password"],
+		input[type="file"],
+		select
+	):not(:focus) {
+	border-color: var(--ran-booster-color-neutral-450);
 }
 
 .ran-booster-admin .ran-booster-portability__password-fields input,
@@ -1143,12 +1159,6 @@
 	border: 0;
 	border-inline-start: 3px solid var(--ran-booster-status-ok);
 	background: var(--ran-booster-surface-subtle);
-}
-
-.ran-booster-admin
-	.ran-booster-portability__credential-decision-state--unavailable {
-	border-inline-start-color: var(--ran-booster-status-warning-border);
-	background: var(--ran-booster-status-warning-background);
 }
 
 .ran-booster-admin .ran-booster-portability__credential-footer {

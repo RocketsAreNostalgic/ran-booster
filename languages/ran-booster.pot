@@ -123,7 +123,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:310
 #: views/troubleshooting-installation.php:189
 #: views/troubleshooting-installation.php:190
-#: views/troubleshooting-installation.php:297
+#: views/troubleshooting-installation.php:296
 msgid "Name"
 msgstr ""
 
@@ -554,8 +554,8 @@ msgstr ""
 #: views/documentation.php:477
 #: views/documentation.php:479
 #: views/documentation.php:529
-#: views/provider.php:601
-#: views/provider.php:603
+#: views/provider.php:600
+#: views/provider.php:602
 msgid " (opens in a new tab)"
 msgstr ""
 
@@ -2879,7 +2879,7 @@ msgstr ""
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
 #: views/packages/index.php:345
-#: views/provider.php:717
+#: views/provider.php:716
 #: views/settings-storage.php:25
 #: views/troubleshooting-installation.php:18
 #: views/troubleshooting-installation.php:173
@@ -5828,13 +5828,13 @@ msgstr ""
 
 #. translators: %d: enabled replacement candidate number.
 #: RAN/Troubleshooting/TroubleshootingService.php:253
-#: views/troubleshooting-installation.php:285
+#: views/troubleshooting-installation.php:284
 #, php-format
 msgid "GitHub candidate %d"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:255
-#: views/troubleshooting-installation.php:282
+#: views/troubleshooting-installation.php:281
 msgid "Enabled candidates"
 msgstr ""
 
@@ -5927,32 +5927,32 @@ msgstr ""
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
 #: views/troubleshooting-installation.php:175
-#: views/troubleshooting-installation.php:297
+#: views/troubleshooting-installation.php:296
 msgid "Version"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:312
-#: views/troubleshooting-installation.php:253
-#: views/troubleshooting-installation.php:255
-#: views/troubleshooting-installation.php:297
+#: views/troubleshooting-installation.php:252
+#: views/troubleshooting-installation.php:254
+#: views/troubleshooting-installation.php:296
 msgid "Implementation"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:313
-#: views/troubleshooting-installation.php:256
-#: views/troubleshooting-installation.php:297
+#: views/troubleshooting-installation.php:255
+#: views/troubleshooting-installation.php:296
 msgid "Provider API"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:314
-#: views/troubleshooting-installation.php:256
-#: views/troubleshooting-installation.php:297
+#: views/troubleshooting-installation.php:255
+#: views/troubleshooting-installation.php:296
 msgid "Compatibility revision"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:315
-#: views/troubleshooting-installation.php:256
-#: views/troubleshooting-installation.php:297
+#: views/troubleshooting-installation.php:255
+#: views/troubleshooting-installation.php:296
 msgid "Webhook signing format"
 msgstr ""
 
@@ -5964,7 +5964,7 @@ msgstr ""
 
 #. translators: %d: locally declared credential format number.
 #: RAN/Troubleshooting/TroubleshootingService.php:324
-#: views/troubleshooting-installation.php:266
+#: views/troubleshooting-installation.php:265
 #, php-format
 msgid "API credential format %d"
 msgstr ""
@@ -6658,7 +6658,7 @@ msgstr ""
 #: views/documentation.php:406
 #: views/onboarding.php:187
 #: views/overview-dashboard.php:77
-#: views/provider.php:666
+#: views/provider.php:665
 msgid "Install a plugin"
 msgstr ""
 
@@ -6971,7 +6971,7 @@ msgstr ""
 #: views/documentation.php:407
 #: views/onboarding.php:188
 #: views/overview-dashboard.php:84
-#: views/provider.php:667
+#: views/provider.php:666
 msgid "Install a theme"
 msgstr ""
 
@@ -7078,17 +7078,17 @@ msgid "Git provider location"
 msgstr ""
 
 #: views/documentation.php:469
-#: views/provider.php:585
+#: views/provider.php:584
 msgid "Payload URL"
 msgstr ""
 
 #: views/documentation.php:471
-#: views/provider.php:588
+#: views/provider.php:587
 msgid "Content type"
 msgstr ""
 
 #: views/documentation.php:473
-#: views/provider.php:592
+#: views/provider.php:591
 msgid "Event"
 msgstr ""
 
@@ -7097,7 +7097,7 @@ msgid "Webhook setup instructions"
 msgstr ""
 
 #: views/documentation.php:479
-#: views/provider.php:603
+#: views/provider.php:602
 msgid "Delivery troubleshooting"
 msgstr ""
 
@@ -7582,7 +7582,7 @@ msgid "No recent activity."
 msgstr ""
 
 #: views/overview-dashboard.php:58
-#: views/provider.php:563
+#: views/provider.php:562
 msgid "View Activity"
 msgstr ""
 
@@ -7694,7 +7694,7 @@ msgid "Booster could not confirm the local webhook receiver. Manual deployments 
 msgstr ""
 
 #: views/packages/branch-readiness.php:99
-#: views/provider.php:562
+#: views/provider.php:561
 msgid "Review WordPress URLs"
 msgstr ""
 
@@ -8126,10 +8126,6 @@ msgstr ""
 msgid " — integration unavailable"
 msgstr ""
 
-#: views/packages/fields/provider.php:31
-msgid "Choose the Git service."
-msgstr ""
-
 #. translators: %1$s: Package type label, such as Plugin or Theme.
 #: views/packages/fields/repository.php:20
 #: views/packages/fields/repository.php:23
@@ -8145,10 +8141,6 @@ msgstr ""
 #: views/packages/fields/repository.php:28
 #, php-format
 msgid "Pick %1$s repository"
-msgstr ""
-
-#: views/packages/fields/repository.php:30
-msgid "Repository locator supplied by the selected Git provider."
 msgstr ""
 
 #. translators: %s: package type, such as plugin or theme.
@@ -8173,7 +8165,7 @@ msgid "Managed %s"
 msgstr ""
 
 #: views/packages/index.php:119
-msgid "Review package health, deploy saved branches and hand published releases to WordPress."
+msgid "Review package health, deploy saved branches and hand published releases to WordPress. Deployments run only when an administrator requests one."
 msgstr ""
 
 #: views/packages/index.php:124
@@ -8207,8 +8199,8 @@ msgid "Search managed %s"
 msgstr ""
 
 #: views/packages/index.php:188
-#: views/provider.php:697
-#: views/provider.php:717
+#: views/provider.php:696
+#: views/provider.php:716
 #: assets/ran-booster-repository-picker.js:1012
 msgid "Search"
 msgstr ""
@@ -8380,7 +8372,7 @@ msgid "Signed repository pushes deploy automatically. Review setup if pushes are
 msgstr ""
 
 #: views/packages/index.php:445
-msgid "Ready. Deployments run only when an administrator requests one."
+msgid "Ready."
 msgstr ""
 
 #: views/packages/index.php:448
@@ -8519,7 +8511,7 @@ msgid "Viewing settings does not change the update source."
 msgstr ""
 
 #: views/packages/source-choices.php:37
-msgid "Choose an update source. Selecting it does not install the package."
+msgid "Selecting it does not install the package."
 msgstr ""
 
 #: views/packages/source-choices.php:42
@@ -9528,12 +9520,12 @@ msgid "Saved credentials are unavailable."
 msgstr ""
 
 #: views/provider.php:389
-#: views/provider.php:632
+#: views/provider.php:631
 msgid "This site can receive Git provider webhook deliveries."
 msgstr ""
 
 #: views/provider.php:406
-#: views/provider.php:649
+#: views/provider.php:648
 msgid "That managed repository is no longer available. Return to the repository list and choose a current repository."
 msgstr ""
 
@@ -9558,8 +9550,8 @@ msgid "Review managed repositories and available integrations."
 msgstr ""
 
 #: views/provider.php:496
-#: views/provider.php:569
-#: views/provider.php:574
+#: views/provider.php:568
+#: views/provider.php:573
 msgid "Webhook receiver"
 msgstr ""
 
@@ -9571,48 +9563,44 @@ msgstr ""
 msgid "Booster could not load that Git provider view. The current view is unchanged; choose the task again to retry."
 msgstr ""
 
-#: views/provider.php:516
-msgid "Local records only; no Git provider request is made."
-msgstr ""
-
-#: views/provider.php:524
+#: views/provider.php:523
 msgid "Repository inventory is unavailable; shown records may be incomplete."
 msgstr ""
 
-#: views/provider.php:528
+#: views/provider.php:527
 msgid "Site webhook delivery"
 msgstr ""
 
-#: views/provider.php:528
+#: views/provider.php:527
 msgid "Readiness not assessed"
 msgstr ""
 
-#: views/provider.php:528
+#: views/provider.php:527
 msgid "Ready for public HTTPS delivery"
 msgstr ""
 
-#: views/provider.php:528
+#: views/provider.php:527
 msgid "Not ready for Git provider delivery"
 msgstr ""
 
-#: views/provider.php:532
+#: views/provider.php:531
 msgid "Signing profiles"
 msgstr ""
 
 #. translators: %d is the number of locally ready signing profiles.
-#: views/provider.php:532
+#: views/provider.php:531
 #, php-format
 msgid "%d ready locally"
 msgid_plural "%d ready locally"
 msgstr[0] ""
 msgstr[1] ""
 
-#: views/provider.php:535
+#: views/provider.php:534
 msgid "Release packages recorded"
 msgstr ""
 
 #. translators: %d is the number of recorded release packages.
-#: views/provider.php:537
+#: views/provider.php:536
 #, php-format
 msgid "%d package"
 msgid_plural "%d packages"
@@ -9620,159 +9608,159 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s is the lower-bound package count.
-#: views/provider.php:540
+#: views/provider.php:539
 #, php-format
 msgid "At least %s; exact totals unavailable."
 msgstr ""
 
-#: views/provider.php:547
+#: views/provider.php:546
 msgid "Release workflow observations"
 msgstr ""
 
 #. translators: %d is the number of observations needing review.
-#: views/provider.php:547
+#: views/provider.php:546
 #, php-format
 msgid "%d observation shown needs review; coverage may be incomplete."
 msgid_plural "%d observations shown need review; coverage may be incomplete."
 msgstr[0] ""
 msgstr[1] ""
 
-#: views/provider.php:551
+#: views/provider.php:550
 msgid "Release workflow observations are incomplete because some package details are omitted."
 msgstr ""
 
-#: views/provider.php:556
+#: views/provider.php:555
 msgid "Webhook delivery is not ready."
 msgstr ""
 
-#: views/provider.php:561
+#: views/provider.php:560
 msgid "Review repositories"
 msgstr ""
 
-#: views/provider.php:570
+#: views/provider.php:569
 msgid "Webhook receiver guidance is unavailable for this provider."
 msgstr ""
 
-#: views/provider.php:575
+#: views/provider.php:574
 msgid "This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories."
 msgstr ""
 
-#: views/provider.php:580
+#: views/provider.php:579
 msgid "Webhook signatures authorize deployment; they do not protect your host from traffic."
 msgstr ""
 
-#: views/provider.php:580
+#: views/provider.php:579
 msgid "Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity."
 msgstr ""
 
-#: views/provider.php:580
+#: views/provider.php:579
 msgid "Read the webhook operations guide"
 msgstr ""
 
-#: views/provider.php:586
+#: views/provider.php:585
 msgid "Copy payload URL"
 msgstr ""
 
-#: views/provider.php:586
+#: views/provider.php:585
 msgid "URL copied"
 msgstr ""
 
-#: views/provider.php:586
+#: views/provider.php:585
 msgid "Payload URL copied to the clipboard."
 msgstr ""
 
-#: views/provider.php:586
+#: views/provider.php:585
 msgid "Clipboard access failed. The payload URL is selected; use your browser copy command."
 msgstr ""
 
-#: views/provider.php:597
+#: views/provider.php:596
 msgid "Detailed manual setup and troubleshooting"
 msgstr ""
 
-#: views/provider.php:600
+#: views/provider.php:599
 msgid "Paste the payload URL and a matching signing secret."
 msgstr ""
 
-#: views/provider.php:600
+#: views/provider.php:599
 msgid "Keep SSL verification enabled and select the push event."
 msgstr ""
 
-#: views/provider.php:600
+#: views/provider.php:599
 msgid "Trigger a delivery and confirm the Git provider records a successful response."
 msgstr ""
 
-#: views/provider.php:608
+#: views/provider.php:607
 msgid "Manage repositories"
 msgstr ""
 
-#: views/provider.php:617
+#: views/provider.php:616
 #: views/provider/modals.php:174
 msgid "Managed repositories"
 msgstr ""
 
-#: views/provider.php:653
+#: views/provider.php:652
 msgid "Search managed repositories"
 msgstr ""
 
-#: views/provider.php:654
+#: views/provider.php:653
 msgid "Search managed repositories…"
 msgstr ""
 
-#: views/provider.php:670
+#: views/provider.php:669
 msgid "Managed repository status is temporarily unavailable."
 msgstr ""
 
-#: views/provider.php:684
+#: views/provider.php:683
 msgid "Filter by credential type"
 msgstr ""
 
-#: views/provider.php:685
+#: views/provider.php:684
 msgid "All credential types"
 msgstr ""
 
-#: views/provider.php:690
-#: views/provider.php:713
+#: views/provider.php:689
+#: views/provider.php:712
 msgid "Filter by scope"
 msgstr ""
 
-#: views/provider.php:691
-#: views/provider.php:713
+#: views/provider.php:690
+#: views/provider.php:712
 msgid "All scopes"
 msgstr ""
 
-#: views/provider.php:697
+#: views/provider.php:696
 msgid "Search credentials"
 msgstr ""
 
-#: views/provider.php:697
+#: views/provider.php:696
 msgid "Search credentials…"
 msgstr ""
 
-#: views/provider.php:703
+#: views/provider.php:702
 msgid "No credentials match the current filters."
 msgstr ""
 
-#: views/provider.php:717
+#: views/provider.php:716
 msgid "Filter by status"
 msgstr ""
 
-#: views/provider.php:717
+#: views/provider.php:716
 msgid "All statuses"
 msgstr ""
 
-#: views/provider.php:717
+#: views/provider.php:716
 msgid "Ready locally"
 msgstr ""
 
-#: views/provider.php:717
+#: views/provider.php:716
 msgid "Search webhook secrets"
 msgstr ""
 
-#: views/provider.php:717
+#: views/provider.php:716
 msgid "Search secrets…"
 msgstr ""
 
-#: views/provider.php:722
+#: views/provider.php:721
 msgid "No webhook secrets match the current filters."
 msgstr ""
 
@@ -10175,7 +10163,7 @@ msgid "History"
 msgstr ""
 
 #: views/settings-general.php:296
-msgid "Lowering these values does not delete protected running or recovery records immediately. Retention is irreversible once records are pruned."
+msgid "Lowering these values does not immediately delete protected records. Pruned records cannot be recovered."
 msgstr ""
 
 #: views/settings-general.php:307
@@ -10183,7 +10171,7 @@ msgid "Download limits"
 msgstr ""
 
 #: views/settings-general.php:309
-msgid "Limits the compressed repository ZIP, not installed size or History retention. One MiB is 1,048,576 bytes; fractional values round to the nearest byte."
+msgid "Limits the compressed repository ZIP."
 msgstr ""
 
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
@@ -10194,7 +10182,7 @@ msgstr ""
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
 #: views/settings-general.php:310
 #, php-format
-msgid "Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit). Host and updater safeguards may be stricter."
+msgid "Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit)."
 msgstr ""
 
 #: views/settings-general.php:312
@@ -10572,46 +10560,42 @@ msgstr ""
 msgid "GitHub provider selection needs attention. Review the provider settings before use."
 msgstr ""
 
-#: views/troubleshooting-installation.php:234
-msgid "These are local configuration details. Use Diagnostics to check repository access."
-msgstr ""
-
-#: views/troubleshooting-installation.php:234
-msgid "These are local configuration details."
-msgstr ""
-
-#: views/troubleshooting-installation.php:239
+#: views/troubleshooting-installation.php:238
 msgid "Implementation fingerprint"
 msgstr ""
 
-#: views/troubleshooting-installation.php:242
+#: views/troubleshooting-installation.php:241
 msgid "Implemented capabilities"
 msgstr ""
 
-#: views/troubleshooting-installation.php:255
+#: views/troubleshooting-installation.php:254
 msgid "Implementation ID"
 msgstr ""
 
-#: views/troubleshooting-installation.php:268
+#: views/troubleshooting-installation.php:267
 msgid "Classic personal access token"
 msgstr ""
 
-#: views/troubleshooting-installation.php:270
+#: views/troubleshooting-installation.php:269
 msgid "Fine-grained personal access token"
 msgstr ""
 
-#: views/troubleshooting-installation.php:274
+#: views/troubleshooting-installation.php:273
 msgid "Supported credential types"
 msgstr ""
 
-#: views/troubleshooting-installation.php:291
+#: views/troubleshooting-installation.php:290
 msgid "GitHub replacement plugins detected"
 msgstr ""
 
 #. translators: 1: displayed replacement plugins, 2: total replacement plugins.
-#: views/troubleshooting-installation.php:310
+#: views/troubleshooting-installation.php:309
 #, php-format
 msgid "Showing %1$d of %2$d replacement plugins."
+msgstr ""
+
+#: views/troubleshooting-installation.php:320
+msgid "These are local configuration details. Use Diagnostics to check repository access."
 msgstr ""
 
 #: views/troubleshooting-support-report.php:11

@@ -34,7 +34,7 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 			echo esc_html(
 				'edit' === $source_choice_mode
 					? __( 'Viewing settings does not change the update source.', 'ran-booster' )
-					: __( 'Choose an update source. Selecting it does not install the package.', 'ran-booster' )
+					: __( 'Selecting it does not install the package.', 'ran-booster' )
 			);
 			?>
 		</p>

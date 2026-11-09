@@ -513,7 +513,6 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 							<div class="ran-booster-provider-task-panel__heading">
 								<div>
 									<h4 id="ran-booster-provider-status-heading" class="ran-booster-section__title"><?php esc_html_e( 'Status', 'ran-booster' ); ?></h4>
-									<p class="ran-booster-section__description"><?php esc_html_e( 'Local records only; no Git provider request is made.', 'ran-booster' ); ?></p>
 								</div>
 							</div>
 							<?php

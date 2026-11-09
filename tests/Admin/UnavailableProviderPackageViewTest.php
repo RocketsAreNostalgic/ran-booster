@@ -216,6 +216,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-badge data-ran-booster-badge-intent=' ) );
 		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
 		self::assertStringContainsString( 'Review package health, deploy saved branches', $html );
+		self::assertSame( 1, substr_count( $html, 'Deployments run only when an administrator requests one.' ) );
 		self::assertStringContainsString( 'Deployment activity', $html );
 	}
 
@@ -598,7 +599,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/fields/repository.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Repository locator supplied by the selected Git provider.', $html );
+		self::assertStringNotContainsString( 'Repository locator supplied by', $html );
 		self::assertStringNotContainsString( 'Repository account and name', $html );
 		self::assertStringContainsString( 'name="ran_booster[repository]"', $html );
 		self::assertMatchesRegularExpression( '/ran-booster-open-repository-picker"[^>]* hidden\s+disabled="disabled"/', $html );

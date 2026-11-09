@@ -321,7 +321,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-package-operation-heading"', $form );
 		self::assertMatchesRegularExpression( '/<button[^>]*data-ran-booster-source-choice="branch"/', $form );
 		self::assertStringContainsString( 'Choose a repository before configuring its update source.', $html );
-		self::assertStringContainsString( 'Choose an update source. Selecting it does not install the package.', $html );
+		self::assertStringContainsString( 'Selecting it does not install the package.', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
 		self::assertStringNotContainsString( 'Save settings and check', $html );
 		self::assertMatchesRegularExpression(

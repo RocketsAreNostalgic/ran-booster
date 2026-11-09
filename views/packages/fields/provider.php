@@ -28,7 +28,6 @@ $repository_read_only = isset( $repository_read_only ) && true === $repository_r
 				<option value="<?php echo esc_attr( $provider_option['code'] ); ?>" data-label="<?php echo esc_attr( $provider_option['label'] ); ?>" data-browse="<?php echo $provider_option['browse'] ? '1' : '0'; ?>" data-deploy="<?php echo $provider_option['deploy'] ? '1' : '0'; ?>" data-webhooks="<?php echo $provider_option['webhooks'] ? '1' : '0'; ?>" data-repository-url-base="<?php echo esc_attr( $provider_option['repository_url_base'] ); ?>" <?php selected( $provider_code, $provider_option['code'] ); ?> <?php disabled( ! $provider_option['deploy'] && $provider_code !== $provider_option['code'] ); ?>><?php echo esc_html( $provider_option['label'] . $provider_status ); ?></option>
 			<?php } ?>
 		</select>
-		<p class="description ran-booster-provider-description"><?php esc_html_e( 'Choose the Git service.', 'ran-booster' ); ?></p>
 <?php if ( $package_field_grid ) { ?>
 	</div>
 <?php } else { ?>

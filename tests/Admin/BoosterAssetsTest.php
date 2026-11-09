@@ -611,6 +611,10 @@ final class BoosterAssetsTest extends TestCase {
 		$menu_style        = $registered_styles['ran-booster-menu'];
 		unset( $registered_styles['ran-booster-menu'] );
 		self::assertSame( array(), $menu_style['dependencies'] );
+		$static_style = $registered_styles['ran-booster-wp-ui-static'];
+		unset( $registered_styles['ran-booster-wp-ui-static'] );
+		self::assertStringEndsWith( '/assets/lib/ran-booster-wp-ui-static.css', $static_style['source'] );
+		self::assertSame( array(), $static_style['dependencies'] );
 
 		$expected_styles = array(
 			'ran-booster-admin-shell'                     => 'ran-admin-shell.css',
@@ -643,7 +647,11 @@ final class BoosterAssetsTest extends TestCase {
 				(string) filemtime( dirname( __DIR__, 2 ) . '/assets/' . ( 'ran-booster-admin-shell' === $handle ? $file : 'ran-booster/' . $file ) ),
 				$registered_style['version']
 			);
-			self::assertSame( null === $previous_handle ? array() : array( $previous_handle ), $registered_style['dependencies'] );
+			$expected_dependencies = null === $previous_handle ? array() : array( $previous_handle );
+			if ( 'ran-booster-styles' === $handle ) {
+				$expected_dependencies[] = 'ran-booster-wp-ui-static';
+			}
+			self::assertSame( $expected_dependencies, $registered_style['dependencies'] );
 			$previous_handle = $handle;
 		}
 	}

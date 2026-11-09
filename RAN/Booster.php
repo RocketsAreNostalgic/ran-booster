@@ -831,11 +831,18 @@ class Booster {
 			wp_register_style(
 				$style_handle,
 				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster/' . $style_component,
-				$style_dependencies,
+				'ran-booster-styles' === $style_handle ? array_merge( $style_dependencies, array( 'ran-booster-wp-ui-static' ) ) : $style_dependencies,
 				$this->asset_version( $style_component_path )
 			);
 			$style_dependencies = array( $style_handle );
 		}
+		$wp_ui_static_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/lib/ran-booster-wp-ui-static.css';
+		wp_register_style(
+			'ran-booster-wp-ui-static',
+			trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/ran-booster-wp-ui-static.css',
+			array(),
+			$this->asset_version( $wp_ui_static_path )
+		);
 		wp_enqueue_style( 'ran-booster-styles' );
 		wp_enqueue_style( 'wp-components' );
 		$this->load_ui_assets( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) );

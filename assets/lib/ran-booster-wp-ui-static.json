@@ -1,0 +1,60 @@
+{
+	"source": {
+		"package": "@wordpress/ui",
+		"version": "0.26.0"
+	},
+	"prefix": "ran-wp-ui",
+	"components": {
+		"box-sizing": {
+			"block": "ran-wp-ui-box-sizing",
+			"elements": [
+				"box-sizing"
+			],
+			"states": [],
+			"sourceSha256": "aba7dee71f71a1dd84361586a80e1cf73a8015c2d8243935e92b9e5e51bf824a"
+		},
+		"card": {
+			"block": "ran-wp-ui-card",
+			"elements": [
+				"content",
+				"fullbleed",
+				"header"
+			],
+			"states": [],
+			"sourceSha256": "bd749dbeab3afea2ccfd19ab22b35e68ed1f75f3ff05150edf80c07afa01ed03"
+		},
+		"text": {
+			"block": "ran-wp-ui-text",
+			"elements": [],
+			"states": [
+				"is-body-lg",
+				"is-body-md",
+				"is-body-sm",
+				"is-body-xl",
+				"is-heading-2xl",
+				"is-heading-lg",
+				"is-heading-md",
+				"is-heading-sm",
+				"is-heading-xl"
+			],
+			"sourceSha256": "3b21af7530066f80789a8473dc322e9b03023362ac7d6d3320cb28d9f76ad40e"
+		},
+		"badge": {
+			"block": "ran-wp-ui-badge",
+			"elements": [
+				"infotip-icon",
+				"infotip-trigger"
+			],
+			"states": [
+				"is-draft-intent",
+				"is-high-intent",
+				"is-informational-intent",
+				"is-low-intent",
+				"is-medium-intent",
+				"is-none-intent",
+				"is-stable-intent"
+			],
+			"sourceSha256": "bc6615fd3adbab4cdf79fa9e495d0d49ec1ffa0574cde758eaa4fd37398937c0"
+		}
+	}
+}

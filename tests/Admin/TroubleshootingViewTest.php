@@ -728,7 +728,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertCount( 0, $heading_panels );
 		self::assertCount( 0, $panel_nav );
 		self::assertStringContainsString( 'panel=debug-capture" aria-current="page"', $html );
-		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading">Logging</h3>', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading" class="ran-booster-section__title">Logging</h3>', $html );
 		self::assertStringContainsString( 'Start 60-minute capture', $html );
 		self::assertStringNotContainsString( '>Debug capture</a>', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="run-troubleshooting"', $html );

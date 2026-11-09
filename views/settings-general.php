@@ -167,7 +167,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 <?php if ( 'all' === $general_scope ) { ?>
 	<div id="ran-booster-general-region" class="ran-booster-settings__general"<?php echo ! empty( $general_save_succeeded ) ? ' data-ran-booster-general-saved' : ''; ?>>
 	<section class="ran-booster-panel ran-booster-card ran-booster-settings__preferences" data-ran-booster-card="settings" aria-labelledby="ran-booster-general-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
-		<h3 id="ran-booster-general-heading"><?php esc_html_e( 'General preferences', 'ran-booster' ); ?></h3>
+		<h3 id="ran-booster-general-heading" class="ran-booster-section__title"><?php esc_html_e( 'General preferences', 'ran-booster' ); ?></h3>
 		<?php if ( null !== $general_feedback && in_array( $general_failed_scope, array( null, 'all' ), true ) ) { ?>
 		<div id="ran-booster-general-error" class="notice notice-info inline<?php echo $general_error_notice ? ' ran-wp-ui-notice ran-wp-ui-box-sizing is-error' : ''; ?>" data-ran-booster-admin-mutation-error<?php echo $general_error_notice ? ' data-ran-booster-ui-notice role="alert" tabindex="-1"' : ''; ?>><div<?php echo $general_error_notice ? ' class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"' : ''; ?> data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo esc_html( $general_feedback ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( $general_error_notice ? 'error' : 'neutral' ); ?></div>
 		<?php } ?>
@@ -280,7 +280,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 <?php if ( 'all' === $general_scope ) { ?>
 	</div></div></section>
 	<section class="ran-booster-panel ran-booster-card ran-booster-settings__limits" data-ran-booster-card="settings" aria-labelledby="ran-booster-limits-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
-		<h3 id="ran-booster-limits-heading"><?php esc_html_e( 'History and download limits', 'ran-booster' ); ?></h3>
+		<h3 id="ran-booster-limits-heading" class="ran-booster-section__title"><?php esc_html_e( 'History and download limits', 'ran-booster' ); ?></h3>
 <?php } ?>
 <?php if ( 'all' === $general_scope || 'numeric' === $general_scope ) { ?>
 	<?php $open_scope( 'numeric' ); ?>

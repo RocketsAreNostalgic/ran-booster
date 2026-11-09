@@ -26,7 +26,7 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Logging details</summary>', $html );
 		self::assertStringContainsString( 'define( &#039;WP_DEBUG_DISPLAY&#039;, false );', $html );
 		self::assertStringNotContainsString( 'notice-warning', $html );
-		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading">Logging</h3>', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading" class="ran-booster-section__title">Logging</h3>', $html );
 		self::assertStringContainsString( 'Booster event capture', $html );
 		self::assertStringNotContainsString( 'Configured capture file:', $html );
 		self::assertStringNotContainsString( 'No temporary logging capture is active.', $html );

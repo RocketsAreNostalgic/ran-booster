@@ -46,7 +46,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 	</header>
 
 	<section class="ran-booster-card ran-booster-portability__chooser" data-ran-booster-card="transporter" aria-labelledby="ran-booster-portability-mode-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
-		<h3 id="ran-booster-portability-mode-heading" tabindex="-1"><?php esc_html_e( 'What do you want to do on this site?', 'ran-booster' ); ?></h3>
+		<h3 id="ran-booster-portability-mode-heading" class="ran-booster-section__title" tabindex="-1"><?php esc_html_e( 'What do you want to do on this site?', 'ran-booster' ); ?></h3>
 		<div class="ran-booster-portability__mode-options">
 			<button type="button" class="ran-booster-portability__mode" data-portability-mode="export" aria-controls="ran-booster-portability-export" aria-expanded="false" aria-pressed="false">
 				<span class="ran-booster-portability__mode-icon dashicons dashicons-database-export" aria-hidden="true"></span>

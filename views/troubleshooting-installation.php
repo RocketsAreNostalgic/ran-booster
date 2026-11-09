@@ -29,7 +29,7 @@ $storage_labels      = array(
 $components          = is_array( $troubleshooting['components'] ?? null ) ? $troubleshooting['components'] : array();
 ?>
 <section id="ran-booster-installation-details" aria-labelledby="ran-booster-installation-heading">
-<h3 id="ran-booster-installation-heading"><?php esc_html_e( 'Installation', 'ran-booster' ); ?></h3>
+<h3 id="ran-booster-installation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Installation', 'ran-booster' ); ?></h3>
 <section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
 <header class="ran-booster-page-shell__header"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Environment', 'ran-booster' ); ?></h4></header>
 <div class="ran-booster-page-shell__body">
@@ -149,7 +149,7 @@ if ( array() === $environment ) {
 			</section>
 </section>
 <section aria-labelledby="ran-booster-components-heading">
-<h3 id="ran-booster-components-heading"><?php esc_html_e( 'Providers and extensions', 'ran-booster' ); ?></h3>
+<h3 id="ran-booster-components-heading" class="ran-booster-section__title"><?php esc_html_e( 'Providers and extensions', 'ran-booster' ); ?></h3>
 <?php if ( ! empty( $troubleshooting['components_truncated'] ) ) { ?>
 <p><?php esc_html_e( 'Only the first 32 components are shown. Additional components are omitted.', 'ran-booster' ); ?></p>
 	<?php

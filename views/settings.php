@@ -24,7 +24,7 @@ if ( ! defined( 'WPINC' ) ) {
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Site-wide Booster preferences and secure credential storage.', 'ran-booster' ); ?></p>
 	</header>
 		<?php if ( null === $secrets_storage ) { ?>
-			<section class="ran-booster-panel ran-booster-card" data-ran-booster-card="settings" aria-labelledby="ran-booster-storage"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content"><h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3><p><?php esc_html_e( 'Storage status is unavailable. No setup or recovery action has been performed.', 'ran-booster' ); ?></p></div></div></section>
+			<section class="ran-booster-panel ran-booster-card" data-ran-booster-card="settings" aria-labelledby="ran-booster-storage"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content"><h3 id="ran-booster-storage" class="ran-booster-section__title"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3><p><?php esc_html_e( 'Storage status is unavailable. No setup or recovery action has been performed.', 'ran-booster' ); ?></p></div></div></section>
 		<?php } else { ?>
 			<?php require __DIR__ . '/settings-storage.php'; ?>
 		<?php } ?>

@@ -567,6 +567,20 @@
 }
 
 /*
+ * A plain paragraph after a Card heading keeps the same heading gap, including
+ * the no-JS note a Card shows in place of its enhanced controls.
+ */
+
+.ran-booster-admin .ran-booster-card__content > .ran-booster-section__title + p,
+.ran-booster-admin
+	.ran-booster-card__content
+	> .ran-booster-section__title
+	+ noscript
+	> p:first-child {
+	margin-block-start: var(--ran-booster-card-heading-gap);
+}
+
+/*
  * Private disclosure hooks keep native details behaviour while giving Core's
  * diagnostic, configuration and reference disclosures one shared surface.
  */

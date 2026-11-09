@@ -707,6 +707,123 @@
 	--wp-ui-dialog-z-index: var(--ran-booster-layer-modal);
 }
 
+/*
+ * Optional regions of ranBoosterOpenDialog. A banner header lets the moved
+ * banner fill the header, sets the title on a dark bar over its lower edge
+ * and keeps the close button at the top end. The popup clips the banner to
+ * its own corners.
+ */
+
+.ran-booster-ui-dialog__banner {
+	position: relative;
+	display: block;
+	flex: none;
+	padding: 0;
+}
+
+/* Two classes outrank the public UI's own heading color and size. */
+.ran-booster-ui-dialog__banner .ran-booster-ui-dialog__banner-title {
+	position: absolute;
+	inset-block-end: var(--ran-booster-space-16);
+	inset-inline-start: var(--ran-booster-space-16);
+	box-sizing: border-box;
+	max-inline-size: calc(100% - 2 * var(--ran-booster-space-16));
+	margin: 0;
+	padding: var(--ran-booster-space-6) var(--ran-booster-space-16);
+	border-radius: var(--ran-booster-radius-inset);
+	background: var(--ran-booster-color-black-a60);
+	color: var(--ran-booster-color-neutral-0);
+	font-size: var(--ran-booster-font-size-xl);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
+.ran-booster-ui-dialog__banner [data-wp-ui-dialog-close-icon] {
+	position: absolute;
+	inset-block-start: var(--ran-booster-space-12);
+	inset-inline-end: var(--ran-booster-space-12);
+	background-color: var(--ran-booster-surface);
+}
+
+.ran-booster-ui-dialog__banner [data-wp-ui-dialog-close-icon]:hover {
+	background-color: var(--ran-booster-surface-subtle);
+}
+
+/*
+ * Sections render as public WordPress UI Tabs: the tab row stays above the
+ * scrolling content on a subtle strip, and the selected tab joins the
+ * content surface across the strip's baseline.
+ */
+
+.ran-booster-ui-dialog__tabs {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-block-size: 0;
+}
+
+.ran-booster-ui-dialog__tablist {
+	flex: 0 0 auto;
+	inline-size: auto;
+	padding-block-start: var(--ran-booster-space-8);
+	padding-inline: var(--ran-booster-space-16);
+	border-block-end: 1px solid var(--ran-booster-divider);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-ui-dialog__tablist > [role="presentation"] {
+	display: none;
+}
+
+.ran-booster-ui-dialog__tablist > [role="tab"] {
+	flex: 0 0 auto;
+	margin-block-end: -1px;
+	border: 1px solid transparent;
+	border-block-end: 0;
+	border-start-start-radius: var(--ran-booster-radius-inset);
+	border-start-end-radius: var(--ran-booster-radius-inset);
+}
+
+.ran-booster-ui-dialog__tablist > [role="tab"][aria-selected="true"] {
+	border-color: var(--ran-booster-divider);
+	background: var(--ran-booster-surface);
+	color: var(--ran-booster-text);
+}
+
+/* Two classes outrank the public UI's own paragraph spacing. */
+.ran-booster-ui-dialog-portal .ran-booster-ui-dialog__description {
+	margin-block: 0 var(--ran-booster-space-16);
+}
+
+/* An aside sits beside the body and stacks under it on narrow screens. */
+.ran-booster-ui-dialog__layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 240px);
+	gap: var(--ran-booster-space-24);
+}
+
+.ran-booster-ui-dialog__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--ran-booster-space-8);
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-ui-dialog__layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media screen and (max-width: 600px) {
+	.ran-booster-ui-dialog__banner .ran-booster-ui-dialog__banner-title {
+		inset-block-end: var(--ran-booster-space-8);
+		inset-inline-start: var(--ran-booster-space-8);
+		max-inline-size: calc(100% - 2 * var(--ran-booster-space-8));
+		font-size: var(--ran-booster-font-size-lg);
+	}
+}
+
 .ran-booster-dialog[hidden] {
 	display: none;
 }

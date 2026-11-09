@@ -110,11 +110,18 @@ test('host React loads the foundation once and overlay extends the same object',
 			'CloseIconButton',
 			'Content',
 			'Description',
+			'Footer',
 			'Header',
 			'Popup',
 			'Portal',
 			'Root',
 			'Title',
+		]);
+		assert.deepEqual(Object.keys(ui.Tabs).sort(), [
+			'List',
+			'Panel',
+			'Root',
+			'Tab',
 		]);
 		assert.ok(ui.Input);
 		const render = require('react-dom/server').renderToStaticMarkup;
@@ -150,6 +157,55 @@ test('host React loads the foundation once and overlay extends the same object',
 		);
 		assert.match(html, /<div[^>]*><p>Error details<\/p><\/div>/);
 		assert.doesNotMatch(html, /role="alert"/);
+		// Server markup only: Base UI links tabs to panels after mount,
+		// which the browser checks cover.
+		const tabsMarkup = (ids) => {
+			const log = globalThis.console;
+			const quiet = log.error;
+			log.error = () => {};
+			try {
+				return render(
+					React.createElement(
+						ui.Tabs.Root,
+						{ defaultValue: ids[0] },
+						React.createElement(
+							ui.Tabs.List,
+							{ activateOnFocus: true },
+							ids.map((id) =>
+								React.createElement(
+									ui.Tabs.Tab,
+									{ key: id, value: id },
+									id
+								)
+							)
+						),
+						ids.map((id) =>
+							React.createElement(
+								ui.Tabs.Panel,
+								{ key: id, value: id, keepMounted: true },
+								`panel ${id}`
+							)
+						)
+					)
+				);
+			} finally {
+				log.error = quiet;
+			}
+		};
+		const single = tabsMarkup(['details']);
+		assert.equal(single.match(/role="tablist"/g).length, 1);
+		assert.equal(single.match(/role="tab"/g).length, 1);
+		assert.match(single, /role="tab" aria-selected="true"/);
+		assert.equal(single.match(/role="tabpanel"/g).length, 1);
+		assert.doesNotMatch(single, /role="tabpanel"[^>]*hidden/);
+		const pair = tabsMarkup(['details', 'changelog']);
+		assert.equal(pair.match(/role="tab"/g).length, 2);
+		assert.equal(pair.match(/aria-selected="true"/g).length, 1);
+		assert.equal(pair.match(/role="tabpanel"/g).length, 2);
+		assert.match(
+			pair,
+			/hidden=""[^>]*role="tabpanel"[^>]*>panel changelog/
+		);
 		const close = render(
 			React.createElement(
 				ui.Dialog.Root,

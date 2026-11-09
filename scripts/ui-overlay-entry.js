@@ -1,5 +1,5 @@
 import './ui-runtime-entry.js';
-import { Dialog, Input } from '@wordpress/ui';
+import { Dialog, Input, Tabs } from '@wordpress/ui';
 
 Object.assign(window.ranBoosterUI, {
 	Dialog: {
@@ -9,8 +9,15 @@ Object.assign(window.ranBoosterUI, {
 		Title: Dialog.Title,
 		Description: Dialog.Description,
 		Content: Dialog.Content,
+		Footer: Dialog.Footer,
 		CloseIconButton: Dialog.CloseIconButton,
 		Portal: Dialog.Portal,
 	},
 	Input,
+	Tabs: {
+		Root: Tabs.Root,
+		List: Tabs.List,
+		Tab: Tabs.Tab,
+		Panel: Tabs.Panel,
+	},
 });

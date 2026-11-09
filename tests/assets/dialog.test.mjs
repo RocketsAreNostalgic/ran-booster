@@ -18,7 +18,7 @@ const parts = [
 	'Portal',
 ];
 
-function install({ runtime = true, failRender = false } = {}) {
+function install({ runtime = true, failRender = false, tabs = true } = {}) {
 	class Node {
 		constructor(name, nodeType = 1) {
 			this.name = name;
@@ -120,6 +120,9 @@ function install({ runtime = true, failRender = false } = {}) {
 	let mounted = null;
 	let unmounts = 0;
 	function elementsOf(tree, type) {
+		if (Array.isArray(tree)) {
+			return tree.flatMap((child) => elementsOf(child, type));
+		}
 		if (!tree || typeof tree !== 'object') {
 			return [];
 		}
@@ -144,17 +147,28 @@ function install({ runtime = true, failRender = false } = {}) {
 					if (!mounted) {
 						const close = new Node('button');
 						close.setAttribute('data-wp-ui-dialog-close-icon', '');
-						const body = new Node('div');
-						portal.append(close, body);
-						mounted = { close, body, host };
+						portal.append(close);
+						mounted = { close, slots: new Map(), host };
 					}
-					elementsOf(tree, 'div')[0].props.ref(mounted.body);
+					// Every React-owned slot receives its own element.
+					elementsOf(tree, 'div')
+						.filter((node) => node.props.ref)
+						.forEach((node) => {
+							const name = `${node.props.className}:${node.props.key ?? ''}`;
+							if (!mounted.slots.has(name)) {
+								const slot = new Node('div');
+								slot.className = node.props.className;
+								portal.append(slot);
+								mounted.slots.set(name, slot);
+							}
+							node.props.ref(mounted.slots.get(name));
+						});
 				},
 				unmount() {
 					unmounts += 1;
 					if (mounted) {
 						mounted.close.remove();
-						mounted.body.remove();
+						mounted.slots.forEach((slot) => slot.remove());
 						mounted = null;
 					}
 				},
@@ -169,8 +183,18 @@ function install({ runtime = true, failRender = false } = {}) {
 	if (runtime) {
 		window.ranBoosterUI = {
 			version: '0.26.0',
-			Dialog: Object.fromEntries(parts.map((part) => [part, part])),
+			Dialog: Object.fromEntries(
+				[...parts, 'Footer'].map((part) => [part, part])
+			),
 		};
+		if (tabs) {
+			window.ranBoosterUI.Tabs = {
+				Root: 'Tabs.Root',
+				List: 'Tabs.List',
+				Tab: 'Tabs.Tab',
+				Panel: 'Tabs.Panel',
+			};
+		}
 	}
 	vm.runInNewContext(source, { window, AbortController });
 
@@ -186,8 +210,35 @@ function install({ runtime = true, failRender = false } = {}) {
 	doc.body.append(trigger, host);
 	trigger.focus();
 
+	// A details host with a banner, two sections, an aside and an action.
+	function region(name) {
+		const node = own(new Node(name));
+		node.appendChild(new Node('p'));
+		return node;
+	}
+	const regions = {
+		host: own(new Node('section')),
+		banner: region('figure'),
+		first: region('div'),
+		second: region('div'),
+		aside: region('aside'),
+		footer: region('div'),
+	};
+	regions.host.append(
+		regions.banner,
+		regions.first,
+		regions.second,
+		regions.aside
+	);
+	const card = own(new Node('li'));
+	card.append(regions.footer);
+	doc.body.append(regions.host, card);
+	regions.card = card;
+
 	return {
 		open: window.ranBoosterOpenDialog,
+		regions,
+		all: (type) => elementsOf(renders.at(-1), type),
 		window,
 		doc,
 		host,
@@ -385,4 +436,174 @@ test('only one namespaced function is published', () => {
 			'wp',
 		].sort()
 	);
+});
+
+function sectionsOf(page, count = 1) {
+	return [
+		{ id: 'details', label: 'Details', content: page.regions.first },
+		{ id: 'changelog', label: 'Changelog', content: page.regions.second },
+	].slice(0, count);
+}
+
+test('one section renders a tab list with one tab that labels its panel', () => {
+	const page = install();
+	const handle = page.open(page.trigger, null, {
+		title: 'Bitbucket Cloud',
+		sections: sectionsOf(page),
+	});
+
+	assert.ok(handle);
+	const [tabsRoot] = page.all('Tabs.Root');
+	assert.equal(tabsRoot.props.defaultValue, 'details');
+	const [list] = page.all('Tabs.List');
+	assert.equal(list.props.activateOnFocus, true);
+	const tabs = page.all('Tabs.Tab');
+	assert.deepEqual(
+		tabs.map((tab) => [tab.props.value, ...tab.children]),
+		[['details', 'Details']]
+	);
+	const panels = page.all('Tabs.Panel');
+	assert.deepEqual(
+		panels.map((panel) => [panel.props.value, panel.props.keepMounted]),
+		[['details', true]]
+	);
+	// The tab row sits outside the scrolling Content; the panels inside it.
+	assert.equal(page.all('Content')[0].children.length, 2);
+	assert.deepEqual(page.all('Tabs.Root')[0].children[1].type, 'Content');
+	assert.ok(page.portals()[0].contains(page.regions.first));
+	assert.equal(page.regions.second.parentNode, page.regions.host);
+});
+
+test('a second section adds a second tab and panel in declaration order', () => {
+	const page = install();
+	page.open(page.trigger, null, {
+		title: 'Bitbucket Cloud',
+		sections: sectionsOf(page, 2),
+	});
+
+	assert.deepEqual(
+		page.all('Tabs.Tab').map((tab) => tab.props.value),
+		['details', 'changelog']
+	);
+	assert.deepEqual(
+		page.all('Tabs.Panel').map((panel) => panel.props.value),
+		['details', 'changelog']
+	);
+	assert.ok(page.portals()[0].contains(page.regions.first));
+	assert.ok(page.portals()[0].contains(page.regions.second));
+
+	page.root().props.onOpenChange(false);
+	page.root().props.onOpenChangeComplete(false);
+	assert.deepEqual(page.regions.host.childNodes, [
+		page.regions.banner,
+		page.regions.first,
+		page.regions.second,
+		page.regions.aside,
+	]);
+});
+
+test('banner, aside and footer move into the header, layout and Footer and return on close', () => {
+	const page = install();
+	page.open(page.trigger, null, {
+		title: 'Bitbucket Cloud',
+		description: 'Deploy from Bitbucket.',
+		sections: sectionsOf(page),
+		banner: page.regions.banner,
+		aside: page.regions.aside,
+		footer: page.regions.footer,
+	});
+
+	const [header] = page.all('Header');
+	assert.equal(header.props.className, 'ran-booster-ui-dialog__banner');
+	assert.equal(
+		header.children[0].props.className,
+		'ran-booster-ui-dialog__banner-media'
+	);
+	assert.equal(header.children[1].type, 'Title');
+	assert.equal(
+		header.children[1].props.className,
+		'ran-booster-ui-dialog__banner-title'
+	);
+	assert.equal(header.children[2].type, 'CloseIconButton');
+	const [layout] = page
+		.all('div')
+		.filter(
+			(node) => node.props.className === 'ran-booster-ui-dialog__layout'
+		);
+	assert.ok(layout);
+	assert.equal(page.all('Footer').length, 1);
+	assert.deepEqual(page.text('Description'), ['Deploy from Bitbucket.']);
+	for (const name of ['banner', 'first', 'aside', 'footer']) {
+		assert.ok(page.portals()[0].contains(page.regions[name]), name);
+	}
+	assert.equal(page.regions.card.childNodes[0].nodeType, 8);
+
+	page.root().props.onOpenChange(false);
+	page.root().props.onOpenChangeComplete(false);
+	assert.deepEqual(page.regions.card.childNodes, [page.regions.footer]);
+	assert.deepEqual(page.regions.host.childNodes, [
+		page.regions.banner,
+		page.regions.first,
+		page.regions.second,
+		page.regions.aside,
+	]);
+	assert.equal(page.portals().length, 0);
+});
+
+test('a plain content dialog keeps the plain header and no tabs or footer', () => {
+	const page = install();
+	page.open(page.trigger, page.content, { title: 'Details' });
+	assert.equal(page.all('Header')[0].props.className, undefined);
+	assert.equal(page.all('Tabs.Root').length, 0);
+	assert.equal(page.all('Footer').length, 0);
+});
+
+test('invalid sections or missing Tabs keep native behaviour and move nothing', () => {
+	const page = install();
+	const invalid = [
+		[],
+		[{ id: '', label: 'Details', content: page.regions.first }],
+		[{ id: 'details', label: '', content: page.regions.first }],
+		[{ id: 'details', label: 'Details' }],
+		[
+			{ id: 'details', label: 'Details', content: page.regions.first },
+			{ id: 'details', label: 'Again', content: page.regions.second },
+		],
+	];
+	for (const sections of invalid) {
+		assert.equal(
+			page.open(page.trigger, null, { title: 'Details', sections }),
+			null
+		);
+	}
+	assert.equal(
+		page.open(page.trigger, page.content, {
+			title: 'Details',
+			sections: sectionsOf(page),
+		}),
+		null,
+		'content and sections are exclusive'
+	);
+	const detached = new page.doc.body.constructor('div');
+	detached.ownerDocument = page.doc;
+	assert.equal(
+		page.open(page.trigger, page.content, {
+			title: 'Details',
+			footer: detached,
+		}),
+		null,
+		'every moved node must be in the page'
+	);
+	assert.equal(page.regions.first.parentNode, page.regions.host);
+	assert.equal(page.portals().length, 0);
+
+	const tabless = install({ tabs: false });
+	assert.equal(
+		tabless.open(tabless.trigger, null, {
+			title: 'Details',
+			sections: sectionsOf(tabless),
+		}),
+		null
+	);
+	assert.equal(tabless.regions.first.parentNode, tabless.regions.host);
 });

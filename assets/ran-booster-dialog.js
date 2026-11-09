@@ -1,13 +1,19 @@
 (function () {
 	'use strict';
 
-	// Present an existing server-rendered node inside the public WordPress UI
-	// Dialog. The node is moved, not cloned, and returns to its original place
+	// Present existing server-rendered nodes inside the public WordPress UI
+	// Dialog. Nodes are moved, not cloned, and return to their original place
 	// when the dialog closes, so the page markup survives every open.
 	// ranBoosterOpenDialog returns a handle with close() and teardown(), or
 	// null when the overlay is unavailable; callers then keep their native
 	// behaviour. Pointer dismissal stays enabled by default for read-only
 	// content; a form dialog opts out with disablePointerDismissal.
+	//
+	// The body is either one content node or a list of sections
+	// ({ id, label, content }) shown as public WordPress UI Tabs; a single
+	// section is still a tab list with one selected tab. Optional banner,
+	// aside and footer nodes fill a banner header behind the title, a column
+	// beside the body and a Dialog footer.
 
 	const parts = [
 		'Root',
@@ -19,6 +25,7 @@
 		'CloseIconButton',
 		'Portal',
 	];
+	const tabParts = ['Root', 'List', 'Tab', 'Panel'];
 	let active = null;
 
 	function components() {
@@ -37,35 +44,75 @@
 			return null;
 		}
 
-		return { dialog, element };
+		return { dialog, element, tabs: ui.Tabs };
+	}
+
+	function validSections(sections, tabs) {
+		const ids = new Set();
+
+		return (
+			sections.length > 0 &&
+			tabParts.every((part) => tabs?.[part]) &&
+			sections.every(function (section) {
+				const fresh =
+					typeof section?.id === 'string' &&
+					section.id !== '' &&
+					!ids.has(section.id);
+				ids.add(section?.id);
+				return (
+					fresh &&
+					typeof section.label === 'string' &&
+					section.label !== '' &&
+					!!section.content
+				);
+			})
+		);
 	}
 
 	function openDialog(trigger, content, options = {}) {
 		const available = components();
-		const doc = content?.ownerDocument;
+		const sections = Array.isArray(options.sections)
+			? options.sections
+			: null;
+		const { banner, aside, footer } = options;
+		const moved = [
+			content,
+			...(sections || []).map((section) => section?.content),
+			banner,
+			aside,
+			footer,
+		].filter(Boolean);
+		const doc = moved[0]?.ownerDocument;
 
 		if (
 			!available ||
 			!doc?.body ||
-			!content.parentNode ||
 			typeof options.title !== 'string' ||
-			options.title === ''
+			options.title === '' ||
+			(sections
+				? content || !validSections(sections, available.tabs)
+				: !content) ||
+			(footer && !available.dialog.Footer) ||
+			!moved.every((node) => node.parentNode)
 		) {
 			return null;
 		}
 
 		active?.teardown();
 
-		const { dialog } = available;
+		const { dialog, tabs } = available;
 		const { createElement, createRoot, flushSync } = available.element;
 		const listeners = new AbortController();
-		const marker = doc.createComment('ran-booster-dialog');
+		const markers = moved.map(function (node) {
+			const marker = doc.createComment('ran-booster-dialog');
+			node.parentNode.insertBefore(marker, node);
+			return { node, marker };
+		});
 		const host = doc.createElement('div');
 		const portal = doc.createElement('div');
 		let open = true;
 		let finished = false;
 
-		content.parentNode.insertBefore(marker, content);
 		portal.className = 'ran-booster-ui-dialog-portal';
 		doc.body.append(host, portal);
 		const root = createRoot(host);
@@ -90,6 +137,91 @@
 			}
 
 			return trigger;
+		}
+
+		// React owns each slot; the caller owns the node moved into it.
+		function slot(className, node, key) {
+			return createElement('div', {
+				key,
+				className,
+				ref(element) {
+					if (element && node.parentNode !== element) {
+						element.appendChild(node);
+					}
+				},
+			});
+		}
+
+		function body() {
+			const main = sections
+				? createElement(
+						'div',
+						{ className: 'ran-booster-ui-dialog__panels' },
+						sections.map((section) =>
+							createElement(
+								tabs.Panel,
+								{
+									key: section.id,
+									value: section.id,
+									keepMounted: true,
+									className: 'ran-booster-ui-dialog__panel',
+								},
+								slot(
+									'ran-booster-ui-dialog__section',
+									section.content
+								)
+							)
+						)
+					)
+				: slot('ran-booster-ui-dialog__body', content);
+			const contentElement = createElement(
+				dialog.Content,
+				null,
+				options.description
+					? createElement(
+							dialog.Description,
+							{ className: 'ran-booster-ui-dialog__description' },
+							options.description
+						)
+					: null,
+				aside
+					? createElement(
+							'div',
+							{ className: 'ran-booster-ui-dialog__layout' },
+							main,
+							slot('ran-booster-ui-dialog__aside', aside)
+						)
+					: main
+			);
+
+			if (!sections) {
+				return contentElement;
+			}
+
+			// The tab row stays above the scrolling content, so Tabs.Root
+			// wraps both the list and the Content region holding the panels.
+			return createElement(
+				tabs.Root,
+				{
+					className: 'ran-booster-ui-dialog__tabs',
+					defaultValue: sections[0].id,
+				},
+				createElement(
+					tabs.List,
+					{
+						className: 'ran-booster-ui-dialog__tablist',
+						activateOnFocus: true,
+					},
+					sections.map((section) =>
+						createElement(
+							tabs.Tab,
+							{ key: section.id, value: section.id },
+							section.label
+						)
+					)
+				),
+				contentElement
+			);
 		}
 
 		function render() {
@@ -126,10 +258,26 @@
 							},
 							createElement(
 								dialog.Header,
-								null,
+								banner
+									? {
+											className:
+												'ran-booster-ui-dialog__banner',
+										}
+									: null,
+								banner
+									? slot(
+											'ran-booster-ui-dialog__banner-media',
+											banner
+										)
+									: null,
 								createElement(
 									dialog.Title,
-									null,
+									banner
+										? {
+												className:
+													'ran-booster-ui-dialog__banner-title',
+											}
+										: null,
 									options.title
 								),
 								createElement(
@@ -139,29 +287,17 @@
 										: null
 								)
 							),
-							createElement(
-								dialog.Content,
-								null,
-								options.description
-									? createElement(
-											dialog.Description,
-											null,
-											options.description
+							body(),
+							footer
+								? createElement(
+										dialog.Footer,
+										null,
+										slot(
+											'ran-booster-ui-dialog__actions',
+											footer
 										)
-									: null,
-								// React owns this container; the caller owns the moved node.
-								createElement('div', {
-									className: 'ran-booster-ui-dialog__body',
-									ref(node) {
-										if (
-											node &&
-											content.parentNode !== node
-										) {
-											node.appendChild(content);
-										}
-									},
-								})
-							)
+									)
+								: null
 						)
 					)
 				);
@@ -186,11 +322,13 @@
 				flushSync(function () {
 					root.unmount();
 				});
-				if (marker.parentNode) {
-					marker.replaceWith(content);
-				} else {
-					content.remove();
-				}
+				markers.forEach(function ({ node, marker }) {
+					if (marker.parentNode) {
+						marker.replaceWith(node);
+					} else {
+						node.remove();
+					}
+				});
 				host.remove();
 				portal.remove();
 				if (active === handle) {

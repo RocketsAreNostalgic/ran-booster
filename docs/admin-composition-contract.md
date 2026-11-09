@@ -423,6 +423,52 @@ every framed surface takes its radius from the `surface-radius` block in
   own fallbacks; the notice compatibility sheet, which loads only where the
   design-system tokens are absent; the status dot; and that legacy rule.
 
+### Buttons
+
+A server-rendered button on a Booster screen is the public Button drawn as
+static markup with its own CSS from `ran-booster-wp-ui-static.css`, never
+WordPress core's `.button`. Markup takes its classes from
+`RAN\Admin\Component\ButtonClasses`, so the composition cannot drift:
+
+```php
+<button type="submit" class="<?php echo esc_attr( ButtonClasses::primary() ); ?>">…</button>
+<a class="<?php echo esc_attr( ButtonClasses::secondary( false, true ) ); ?>" href="…">…</a>
+```
+
+- `primary()` is brand solid, for the one main action of a form or panel;
+  `secondary()` is neutral outline, for every other action.
+  `for( $tone, $variant )` takes `brand`, `neutral` or `danger` and `solid`,
+  `outline` or `minimal`.
+- The default is the library's 40px, the height of WordPress 7.1's own buttons.
+  Pass `$compact` (32px) only where the button sits with 32px controls: the bulk
+  action Apply and the provider table pagination. At 782px and below a compact
+  Button grows to 40px, as wp-admin grows the controls beside it.
+- Pass `$anchor` for an `a`. It takes the library's anchor reset instead of the
+  button reset, and `10-buttons.css` gives it the Button's colour, corners and
+  box-sizing, which wp-admin's unlayered link rules would otherwise take over.
+  A disabled anchor sets `aria-disabled="true"`.
+- The element must not also carry `button`, `button-primary`,
+  `button-secondary` or `button-delete`. Core's rules are unlayered and win
+  every property they set over the layered Button.
+- `danger` is Booster's own tone: `ran-booster-button--danger` in
+  `10-buttons.css` sets only the Button's colour custom properties, on brand
+  solid (destructive confirmations) or neutral outline (the arming step).
+- Native `disabled`, `aria-disabled="true"` and a disabled fieldset all draw the
+  disabled Button; the stylesheet bridges them to the library's `data-disabled`.
+- The Button sets `display` inside the layer, so `10-buttons.css` restores
+  `[hidden]`, and keeps a Button at its label's width in flex rows.
+- Busy update buttons keep their hooks (`button-update-package`,
+  `ran-booster-enhanced-mutation__submitter--busy`,
+  `ran-booster-portability__progress-button`, `ran-booster-update-is-active`):
+  the stripes are Booster's, not the library's loading spinner.
+- `test_converted_markup_draws_buttons_with_the_static_button_and_never_core_classes`
+  scans every view, PHP class and admin script and fails on a core button class.
+  Its allowlists name what stays native and why: the generated Shell header
+  actions, global notices that also render on core screens without the static
+  stylesheet, the icon-only copy controls and password tools, the segmented
+  release track options, and the no-JS fallback for the mounted Skip onboarding
+  button. `button-link` is Link, not Button, and is out of scope.
+
 ## Add-on generation and service delivery
 
 An administration add-on must check the exact Add-on API generation before

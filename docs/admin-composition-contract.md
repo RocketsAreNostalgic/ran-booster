@@ -362,6 +362,32 @@ interaction outcome notice and the extension update warning are static on Booste
 screens only, which always load the static sheet; elsewhere they keep the mounted
 markup.
 
+### Status badges
+
+Status and label pills are the public Badge only. Every short status or label
+pill is static markup from `RAN\Admin\Component\StatusBadge` (`print_tone()`,
+`print_intent()`, `markup()` or `for_intent()`), drawn by the Badge's own CSS in
+`ran-booster-wp-ui-static.css`. A script that changes one in place calls
+`window.ranBoosterBadge.update()`.
+
+- Intents: `none` for neutral or off, `stable` for ready or on, `medium` for
+  needs attention, `high` for failed, `informational` for a deliberate choice
+  that is neither, such as manual updates.
+- A Badge carries its own text, so status is never colour alone. Coloured dots
+  before text, tinted pill spans and middot status suffixes in headings are
+  retired; the provider status summaries, package row states and the active
+  update source tab use the Badge.
+- Booster CSS may lay a Badge out (margin, width, wrapping, alignment) but does
+  not repaint it. The owner-selected General settings spacing and accent are
+  set through the `--wpds-*` properties the Badge reads.
+- A sentence, a control state (a live selection count, a switch, a radio, a tab
+  decoration), a step marker beside a heading or a `kbd` key cap is not a Badge.
+- `AdminAssetContractTest` rejects pill and dot radii in Booster stylesheets
+  outside a short allowlist of non-label shapes, rules that repaint the Badge,
+  and the retired `ran-booster-status`, `ran-booster-status-dot`,
+  `ran-booster-package-row__state-value`, `ran-booster-tile` and
+  `ran-booster-pill` classes.
+
 ### Type scale
 
 Booster uses the WordPress design-system type scale, the same one Jetpack Boost

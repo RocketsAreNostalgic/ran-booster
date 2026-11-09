@@ -366,10 +366,14 @@ final class AdminAssetContractTest extends TestCase {
 			$matched = glob( $root . $pattern );
 			foreach ( false === $matched ? array() : $matched as $file ) {
 				$source = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
-				foreach ( array( 'ran-booster-pill', 'advanced-source-summary__badge', 'data-ran-booster-ui-badge', 'data-ran-booster-static-badge', 'ran-booster-tile' ) as $retired ) {
+				foreach ( array( 'ran-booster-pill', 'advanced-source-summary__badge', 'data-ran-booster-ui-badge', 'data-ran-booster-static-badge', 'ran-booster-tile', 'ran-booster-status-dot', 'ran-booster-package-row__state-value' ) as $retired ) {
 					if ( str_contains( $source, $retired ) ) {
 						$offences[] = basename( $file ) . ': retired ' . $retired;
 					}
+				}
+				// The retired dot-and-text status class, not the --ran-booster-status-* tokens.
+				if ( 1 === preg_match( '/(?<![\w-])ran-booster-status(?:--[a-z]+)?(?![\w-])/', $source ) ) {
+					$offences[] = basename( $file ) . ': retired ran-booster-status dot class';
 				}
 				if ( ! str_ends_with( $file, '.php' ) ) {
 					continue;
@@ -387,6 +391,57 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "'ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . \$intent . '-intent'", $badge );
 		self::assertStringContainsString( 'data-ran-booster-badge data-ran-booster-badge-intent=', $badge );
 		self::assertStringNotContainsString( 'data-ran-booster-ui-badge', $badge );
+	}
+
+	/**
+	 * Status and label pills are the public Badge only. No stylesheet draws its own
+	 * pill or status dot, and no rule repaints the Badge. Round shapes that are not
+	 * status labels are listed with the reason they are not a pill.
+	 */
+	public function test_no_stylesheet_draws_a_custom_pill_or_repaints_the_badge(): void {
+		$allowed     = array(
+			'ran-booster-readiness-icon'           => 'Checklist step marker: a symbol beside a heading and sentence, not a label.',
+			'ran-booster-webhook-step'             => 'Numbered webhook setup step marker beside a heading and sentence.',
+			'ran-booster-source-choice__radio'     => 'Native-looking radio control inside a source choice.',
+			'ran-booster-settings__switch-control' => 'Fallback for the public Switch control.',
+			'ran-booster-provider-task-tab__source-indicator' => 'Decoration on a navigation tab; the link carries screen-reader text.',
+			'ran-admin-shell__version'             => 'Vendored admin shell, generated from its own package; change it upstream.',
+		);
+		$pill_radius = '/(?:^|[;\s])border(?:-[a-z]+)*-radius:\s*(?:[^;]*\b(?:999|9999|100)px|[^;]*\b50rem|50%|100%|var\(--ran-booster-radius-(?:pill|circle|badge)\))/';
+		$repaint     = '/(?:^|[;\s])(?:background|border|color|padding|font)(?:-[a-z]+)*:/';
+
+		$offenders   = array();
+		$stylesheets = glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE );
+		foreach ( false === $stylesheets ? array() : $stylesheets as $file ) {
+			$css = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
+			if ( ! preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {
+				continue;
+			}
+			foreach ( $rules as $rule ) {
+				$selector = trim( (string) preg_replace( '/\s+/', ' ', $rule[1] ) );
+				if ( ( str_contains( $selector, 'data-ran-booster-badge' ) || str_contains( $selector, 'ran-wp-ui-badge' ) ) && 1 === preg_match( $repaint, $rule[2] ) ) {
+					$offenders[] = basename( $file ) . ': repaints the Badge: ' . $selector;
+				}
+				if ( 1 !== preg_match( $pill_radius, $rule[2] ) ) {
+					continue;
+				}
+				$covered = false;
+				if ( preg_match_all( '/\.(ran-[a-z0-9_-]+)/', $selector, $classes ) > 0 ) {
+					foreach ( $classes[1] as $class ) {
+						if ( isset( $allowed[ $class ] ) ) {
+							$covered = true;
+							break;
+						}
+					}
+				}
+				if ( ! $covered ) {
+					$offenders[] = basename( $file ) . ': pill or dot shape: ' . $selector;
+				}
+			}
+		}
+
+		self::assertSame( array(), $offenders, 'Status and label pills are the public Badge only. Use StatusBadge, or allow a non-label shape here with a reason.' );
 	}
 
 	public function test_disclosure_hosts_own_their_margins_and_prominent_rules_stay_scoped(): void {

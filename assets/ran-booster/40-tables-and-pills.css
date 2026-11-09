@@ -202,21 +202,6 @@
 	white-space: normal;
 }
 
-.ran-booster-admin .ran-booster-status {
-	font-weight: 600;
-}
-
-.ran-booster-admin .ran-booster-status--ok::before {
-	content: "";
-	display: inline-block;
-	inline-size: 7px;
-	block-size: 7px;
-	margin-inline-end: var(--ran-booster-space-6);
-	border-radius: var(--ran-booster-radius-circle);
-	background: var(--ran-booster-status-ok-indicator);
-	vertical-align: 1px;
-}
-
 .ran-booster-admin .ran-booster-actions {
 	display: flex;
 	flex-wrap: nowrap;

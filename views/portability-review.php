@@ -170,9 +170,19 @@ $has_credential_decisions         = array() !== array_filter(
 			<legend class="screen-reader-text"><?php echo esc_html( (string) ( $credential['provider_label'] ?? '' ) ); ?> — <?php echo esc_html( (string) ( $credential['label'] ?? '' ) ); ?></legend>
 			<div class="ran-booster-portability__credential-heading">
 				<h6 class="ran-booster-portability__credential-name"><?php echo esc_html( (string) ( $credential['label'] ?? '' ) ); ?></h6>
-				<span class="ran-booster-tile ran-booster-portability__credential-provider"><span class="screen-reader-text"><?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( (string) ( $credential['provider_label'] ?? '' ) ); ?></span></span>
+				<span class="screen-reader-text"><?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> </span>
+				<?php
+				// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
+				echo \RAN\Admin\Component\StatusBadge::for_intent( (string) ( $credential['provider_label'] ?? '' ), 'none', array( 'class' => 'ran-booster-portability__credential-provider' ) );
+				// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+				?>
 				<?php if ( '' !== (string) ( $credential['kind'] ?? '' ) ) : ?>
-					<span class="ran-booster-tile ran-booster-portability__credential-kind"><span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( (string) ( $credential['kind_label'] ?? $credential['kind'] ) ); ?></span></span>
+					<span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span>
+					<?php
+					// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
+					echo \RAN\Admin\Component\StatusBadge::for_intent( (string) ( $credential['kind_label'] ?? $credential['kind'] ), 'none', array( 'class' => 'ran-booster-portability__credential-kind' ) );
+					// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+					?>
 				<?php endif; ?>
 			</div>
 			<span id="<?php echo esc_attr( $description_id ); ?>" class="screen-reader-text"><?php echo esc_html( $package_summary ); ?>.</span>
@@ -243,10 +253,7 @@ $has_credential_decisions         = array() !== array_filter(
 	</div>
 </section>
 <?php endif; ?>
-<h5 id="ran-booster-portability-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title"><?php esc_html_e( 'Packages', 'ran-booster' ); ?></h5>
-<p class="ran-booster-portability__packages-description"><?php esc_html_e( 'Review the target state of each package and select the eligible changes you want to apply.', 'ran-booster' ); ?></p>
-<p class="description ran-booster-portability__packages-guidance"><?php esc_html_e( 'This review does not prove compatibility or that installed files match the Blueprint. Dependencies are not installed automatically.', 'ran-booster' ); ?></p>
-<div id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll" role="region" aria-labelledby="ran-booster-portability-packages-heading" tabindex="0">
+<div id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll" role="region" aria-labelledby="ran-booster-portability-review-heading" tabindex="0">
 	<table class="widefat ran-booster-portability__review-table">
 		<caption class="screen-reader-text"><?php esc_html_e( 'Packages in this import review', 'ran-booster' ); ?></caption>
 		<thead><tr><th scope="col"><?php esc_html_e( 'Package', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Type', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Target state', 'ran-booster' ); ?></th><th scope="col"><label><input type="checkbox" data-portability-select-all aria-label="<?php esc_attr_e( 'Select all actionable changes', 'ran-booster' ); ?>"<?php checked( $has_actionable_rows ); ?><?php disabled( ! $has_actionable_rows ); ?>> <?php esc_html_e( 'Apply plan', 'ran-booster' ); ?></label></th></tr></thead>
@@ -427,3 +434,4 @@ $has_credential_decisions         = array() !== array_filter(
 		</tbody>
 	</table>
 </div>
+<p class="description ran-booster-portability__packages-guidance"><?php esc_html_e( 'Booster does not check compatibility or installed files. Dependencies are not installed automatically.', 'ran-booster' ); ?></p>

@@ -51,7 +51,17 @@ final class PortabilityViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/id="ran-booster-portability-export"[^>]+hidden>/', $html );
 		self::assertMatchesRegularExpression( '/id="ran-booster-portability-import"[^>]+hidden>/', $html );
 		self::assertStringContainsString( '>Repository credentials<', $html );
-		self::assertStringContainsString( 'id="ran-booster-portability-export-review-heading" class="ran-booster-portability__review-title">Blueprint contents</h4>', $html );
+		// Repository credentials and Packages are each a nested card; the grouping wrapper has no heading of its own.
+		self::assertStringNotContainsString( 'Blueprint contents', $html );
+		self::assertStringNotContainsString( 'ran-booster-portability-export-review-heading', $html );
+		self::assertStringContainsString( '<div class="ran-booster-portability__export-review">', $html );
+		self::assertStringContainsString( '<section class="ran-booster-portability__credential-option"', $html );
+		self::assertStringContainsString( '<section class="ran-booster-portability__export-packages"', $html );
+		// Apply is a plain action area: no heading, one short sentence, the summary and the button.
+		self::assertStringNotContainsString( 'ran-booster-portability-apply-heading', $html );
+		self::assertStringContainsString( '<div class="ran-booster-portability__apply">', $html );
+		self::assertStringContainsString( '<p>Eligible selected changes are applied independently.</p>', $html );
+		self::assertStringNotContainsString( 'credential-only recovery rows are applied independently', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-export-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h5>', $html );
 		self::assertStringContainsString( 'data-portability-export-select-all', $html );
 		self::assertStringContainsString( 'name="packages[plugin][]" value="example/example.php" type="checkbox" checked', $html );
@@ -118,10 +128,9 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'Choose a Transporter Blueprint to review its packages.', $html );
 		self::assertStringContainsString( 'Packages in this import review', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-portability-review-heading" class="ran-booster-portability__review-title">Blueprint review</h4>', $html );
-		self::assertStringContainsString( 'Choose repository access, then review the changes below.', $html );
-		self::assertStringContainsString( '<h5 id="ran-booster-portability-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h5>', $html );
-		self::assertStringContainsString( 'Review the target state of each package and select the eligible changes you want to apply.', $html );
-		self::assertStringContainsString( 'aria-labelledby="ran-booster-portability-packages-heading"', $html );
+		self::assertStringContainsString( 'Choose repository access, then select the package changes to apply.', $html );
+		self::assertStringNotContainsString( 'ran-booster-portability-packages-heading', $html );
+		self::assertStringContainsString( 'role="region" aria-labelledby="ran-booster-portability-review-heading"', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-review-progress" class="ran-booster-portability__review-progress htmx-indicator" role="status" aria-live="polite"', $html );
 		self::assertStringContainsString( 'data-portability-review-error role="alert" hidden', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll"', $html );
@@ -219,8 +228,8 @@ final class PortabilityViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'Unused repository token' ), strpos( $html, 'Deployment &lt;PAT&gt;' ) );
 		self::assertLessThan( strpos( $html, 'id="ran-booster-portability-export-credential-details"' ), strpos( $html, 'Unused repository token' ) );
 		self::assertStringContainsString( 'ran-booster-portability__credential-name">Deployment &lt;PAT&gt;</strong>', $html );
-		self::assertStringContainsString( 'ran-booster-tile__value">GitHub</span>', $html );
-		self::assertStringContainsString( 'ran-booster-tile__value">Personal access token (classic)</span>', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-provider" data-ran-booster-badge data-ran-booster-badge-intent="none">GitHub</span>', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-kind" data-ran-booster-badge data-ran-booster-badge-intent="none">Personal access token (classic)</span>', $html );
 		self::assertStringContainsString( '<summary>Used by 1 package</summary>', $html );
 		self::assertStringContainsString( 'Example &lt;Plugin&gt;', $html );
 		self::assertStringContainsString( 'The Git provider permissions for this credential have not been assessed.', $html );
@@ -469,10 +478,10 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'Leave these packages unchanged', $html );
 		self::assertStringContainsString( '<legend class="screen-reader-text">GitHub &lt;Cloud&gt; — Imported &lt;PAT&gt;</legend>', $html );
 		self::assertStringContainsString( '<h6 class="ran-booster-portability__credential-name">Imported &lt;PAT&gt;</h6>', $html );
-		self::assertStringContainsString( 'ran-booster-tile ran-booster-portability__credential-provider', $html );
-		self::assertStringContainsString( 'ran-booster-tile__value">GitHub &lt;Cloud&gt;</span>', $html );
-		self::assertStringContainsString( 'ran-booster-tile ran-booster-portability__credential-kind', $html );
-		self::assertStringContainsString( 'ran-booster-tile__value">Classic personal access token</span>', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-provider', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-provider" data-ran-booster-badge data-ran-booster-badge-intent="none">GitHub &lt;Cloud&gt;</span>', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-kind', $html );
+		self::assertStringContainsString( 'ran-booster-portability__credential-kind" data-ran-booster-badge data-ran-booster-badge-intent="none">Classic personal access token</span>', $html );
 		self::assertStringContainsString( '<summary>Used by 2 packages; 1 package may change</summary>', $html );
 		self::assertStringContainsString( 'Protected &lt;Theme&gt;', $html );
 		self::assertStringContainsString( 'Saved &lt;Profile&gt;', $html );

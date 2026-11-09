@@ -410,6 +410,10 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	const applySummary = {
 		children: [],
 		textContent: '',
+		classList: {
+			add() {},
+			remove() {},
+		},
 		replaceChildren(...children) {
 			this.children = children;
 			this.textContent = children

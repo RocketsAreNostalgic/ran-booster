@@ -571,19 +571,23 @@
 
 .ran-booster-admin .ran-booster-portability__upload,
 .ran-booster-admin .ran-booster-portability__review,
-.ran-booster-admin .ran-booster-portability__apply,
 .ran-booster-admin .ran-booster-portability__export-packages,
 .ran-booster-admin .ran-booster-portability__credential-option {
-	margin-block-start: var(--ran-booster-space-20);
-	padding-block: var(--ran-booster-space-18);
-	padding-inline: var(--ran-booster-space-20);
-	border-radius: var(--ran-booster-radius-surface);
-	background: var(--ran-booster-surface-subtle);
+	margin-block-start: var(--ran-booster-card-gap);
+	padding-block: var(--ran-booster-card-inset-block-start)
+		var(--ran-booster-card-inset-block-end);
+	padding-inline: var(--ran-booster-space-24);
+	border: 1px solid var(--wpds-color-stroke-surface-neutral);
+	border-radius: var(--ran-booster-radius-card);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-portability__apply {
+	margin-block-start: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-portability__upload h4,
 .ran-booster-admin .ran-booster-portability__review h4,
-.ran-booster-admin .ran-booster-portability__apply h4,
 .ran-booster-admin .ran-booster-portability__credential-option legend {
 	margin-block: 0 var(--ran-booster-space-6);
 	margin-inline: 0;
@@ -591,19 +595,29 @@
 	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
-.ran-booster-admin .ran-booster-portability__credential-option {
-	min-inline-size: 0;
+/*
+ * Nested card titles are sub-section titles (13/600), one step below the flow
+ * title, and start at the card inset with the shared heading gap below them.
+ */
+
+.ran-booster-admin .ran-booster-portability__upload > h4,
+.ran-booster-admin
+	.ran-booster-portability__export-packages
+	> .ran-booster-portability__packages-title,
+.ran-booster-admin
+	.ran-booster-portability__credential-option
+	> .ran-booster-portability__credentials-title {
+	margin-block: 0 var(--ran-booster-card-heading-gap);
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
-.ran-booster-admin
-	.ran-booster-portability__export-review
-	> :is(
-		.ran-booster-portability__credential-option,
-		.ran-booster-portability__export-packages
-	) {
-	margin-block-start: var(--ran-booster-space-20);
-	padding: 0;
-	background: transparent;
+.ran-booster-admin .ran-booster-portability__flow-header h3 {
+	margin-block: 0 var(--ran-booster-card-heading-gap);
+}
+
+.ran-booster-admin .ran-booster-portability__credential-option {
+	min-inline-size: 0;
 }
 
 .ran-booster-admin
@@ -976,7 +990,7 @@
 	.ran-booster-portability__review
 	.ran-booster-portability__review-title {
 	margin-block-end: 0;
-	font-size: var(--ran-booster-font-size-lg);
+	font-size: var(--ran-booster-font-size-md);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: var(--ran-booster-line-height-tight);
 }
@@ -985,6 +999,7 @@
 	max-inline-size: 760px;
 	margin-block: var(--ran-booster-space-8) 0;
 	margin-inline: 0;
+	color: var(--ran-booster-text-muted);
 }
 
 .ran-booster-admin
@@ -999,13 +1014,15 @@
 
 .ran-booster-admin
 	.ran-booster-portability__review
-	.ran-booster-portability__packages-title {
-	margin-block-start: var(--ran-booster-space-20);
+	> [data-portability-review] {
+	margin-block-start: var(--ran-booster-space-12);
 }
 
-.ran-booster-admin .ran-booster-portability__packages-description {
+.ran-booster-admin
+	.ran-booster-portability__review
+	.ran-booster-portability__packages-guidance {
 	max-inline-size: 65ch;
-	margin-block: 0 var(--ran-booster-space-12);
+	margin-block: var(--ran-booster-space-12) 0;
 	margin-inline: 0;
 }
 
@@ -1052,8 +1069,22 @@
 
 .ran-booster-admin
 	.ran-booster-portability__credential-heading
-	.ran-booster-tile {
+	.ran-wp-ui-badge {
 	flex: 0 0 auto;
+}
+
+/* The disclosure wrapper owns the gap below the heading row; the details margin is overridden by the compact disclosure rules. */
+.ran-booster-admin
+	.ran-booster-portability__credential-row
+	> [data-ran-booster-ui-disclosure] {
+	margin-block-start: var(--ran-booster-space-14);
+}
+
+.ran-booster-admin .ran-booster-portability__password-title {
+	grid-column: 1 / -1;
+	margin: 0;
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
 .ran-booster-admin .ran-booster-portability__credential-packages {
@@ -1064,16 +1095,26 @@
 	color: var(--ran-booster-text-muted);
 }
 
-.ran-booster-admin .ran-booster-portability__credential-packages ul {
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="transporter-credential-packages"]
+	ul {
 	display: grid;
 	gap: var(--ran-booster-space-6);
 	margin-block: var(--ran-booster-space-10) 0;
 	margin-inline: var(--ran-booster-space-20) 0;
 	padding: 0;
+	list-style: disc;
 }
 
 .ran-booster-admin
-	.ran-booster-portability__credential-packages
+	[data-ran-booster-ui-disclosure="transporter-credential-packages"]
+	li {
+	display: list-item;
+	margin: 0;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="transporter-credential-packages"]
 	li
 	.description {
 	display: inline;
@@ -1234,13 +1275,6 @@
 	.ran-booster-admin .ran-booster-portability__chooser,
 	.ran-booster-admin .ran-booster-portability__flow {
 		padding: var(--ran-booster-space-18);
-	}
-
-	.ran-booster-admin .ran-booster-portability__upload,
-	.ran-booster-admin .ran-booster-portability__review,
-	.ran-booster-admin .ran-booster-portability__apply,
-	.ran-booster-admin .ran-booster-portability__credential-option {
-		padding-block-start: var(--ran-booster-space-18);
 	}
 
 	.ran-booster-admin .ran-booster-portability__credential-footer {
@@ -1516,4 +1550,10 @@
 			var(--ran-booster-card-inset-block-end);
 		padding-inline: var(--ran-booster-space-18);
 	}
+}
+
+/* Explanation lines under a nested-card heading are muted so they never read as a second heading. */
+.ran-booster-admin .ran-booster-portability__export-packages > p,
+.ran-booster-admin .ran-booster-portability__upload > p {
+	color: var(--ran-booster-text-muted);
 }

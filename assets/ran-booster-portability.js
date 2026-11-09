@@ -675,6 +675,8 @@
 						) !== 'true'
 				).length;
 				if (!selected) {
+					// Empty state: announced to assistive tech, not shown.
+					applySummary.classList.add('screen-reader-text');
 					applySummary.textContent = __(
 						'No changes selected.',
 						'ran-booster'
@@ -718,6 +720,7 @@
 		}
 
 		function setApplySummary(lines) {
+			applySummary.classList.remove('screen-reader-text');
 			applySummary.replaceChildren(
 				...lines.map(function (line) {
 					const fact = document.createElement('span');

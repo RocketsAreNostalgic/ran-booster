@@ -138,7 +138,7 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'The latest branch commit or release available for this package has not been determined.' ) );
 		self::assertSame( 2, substr_count( $html, 'This settings comparison does not inspect package files.' ) );
 		self::assertStringContainsString( 'data-portability-row="1" data-portability-action="blocked"', $html );
-		self::assertStringContainsString( 'This review does not prove compatibility or that installed files match the Blueprint.', $html );
+		self::assertStringContainsString( 'Booster does not check compatibility or installed files. Dependencies are not installed automatically.', $html );
 		self::assertNotNull( $provider );
 		self::assertSame( array( null, null ), $provider->credential_ids );
 	}

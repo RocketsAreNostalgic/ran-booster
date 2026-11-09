@@ -94,10 +94,10 @@ export async function assertPageFrame(tab) {
 		);
 	}
 	if (
-		frame.cardHeadingInsets.some((inset) => inset !== null && inset !== 17)
+		frame.cardHeadingInsets.some((inset) => inset !== null && inset !== 25)
 	) {
 		problems.push(
-			`Card heading insets are ${frame.cardHeadingInsets.join(', ')}px, not 17px.`
+			`Card heading insets are ${frame.cardHeadingInsets.join(', ')}px, not 25px.`
 		);
 	}
 	if (problems.length) {

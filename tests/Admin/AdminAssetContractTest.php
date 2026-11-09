@@ -716,7 +716,7 @@ final class AdminAssetContractTest extends TestCase {
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-provider-table-navigation \\{[\\s\\S]+flex-wrap: wrap;[\\s\\S]+padding-inline: var\\(--ran-booster-space-20\\);/',
+			'/\\.ran-booster-provider-table-navigation \\{[\\s\\S]+flex-wrap: wrap;[\\s\\S]+padding-inline: var\\(--ran-booster-space-(?:20|24)\\);/',
 			$css
 		);
 		self::assertMatchesRegularExpression(

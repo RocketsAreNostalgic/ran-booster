@@ -52,13 +52,16 @@
 }
 
 .ran-booster-admin .ran-booster-settings-section__header {
-	padding-block: var(--ran-booster-space-16) var(--ran-booster-space-14);
-	padding-inline: var(--ran-booster-space-20);
+	padding-block: var(--ran-booster-card-inset-block-start)
+		var(--ran-booster-space-14);
+	padding-inline: var(--ran-booster-space-24);
 	border-block-end: 1px solid var(--ran-booster-border);
 }
 
 .ran-booster-admin .ran-booster-settings-section__body {
-	padding: var(--ran-booster-space-20);
+	padding-block: var(--ran-booster-space-20)
+		var(--ran-booster-card-inset-block-end);
+	padding-inline: var(--ran-booster-space-24);
 }
 
 .ran-booster-admin .ran-booster-advanced-source-settings {

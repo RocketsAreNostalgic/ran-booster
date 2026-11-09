@@ -234,8 +234,8 @@ beta.44. Rows marked **Decision** need an owner choice and are not yet applied. 
 | Top margin of a first heading in any container       | 0; the container inset owns the space                           | `:is(h2, h3, h4):first-child`                                  | Applied in `c158dca8`                                                          |
 | Card inline inset                                    | 24px                                                            | Card content layer                                             | Matches, except legacy nested panels                                           |
 | Nested panel inside a Card                           | Takes the Card's inline inset and adds none                     | Panel rules scoped to the Card                                 | Capture panel fixed in `93a643c3`                                              |
-| Card block-start inset (to first heading) | 16px (`--ran-booster-card-inset-block-start`); the 1px border makes the heading sit 17px from the edge | Card content layer | Applied; was 18-25px by page |
-| Card block-end inset (last block to edge) | 16px (`--ran-booster-card-inset-block-end`); a trailing block adds no margin at any depth | Card content layer | Applied; was 20-24px plus trailing margins up to 37px |
+| Card block-start inset (to first heading) | 24px (`--ran-booster-card-inset-block-start`); with the 1px border the heading sits 25px from the edge | Card content layer | Applied; was 18-25px by page |
+| Card block-end inset (last block to edge) | 28px (`--ran-booster-card-inset-block-end`), 4px heavier than the sides; a trailing block adds no margin at any depth | Card content layer | Applied; was 20-24px plus trailing margins up to 37px |
 | Heading to description inside a Card | 8px (`--ran-booster-card-heading-gap`) | `.ran-booster-section__description` | Applied; was 4, 8, 12 or 16px |
 | Page title to description                            | 6px                                                             | `.ran-booster-page-heading__description`                       | 10px on package pages                                                          |
 | Shell navigation text to content edge                | **Decision D3**                                                 | Generated Shell; coordinate with its owner                     | Nav text 60px, content 58px                                                    |
@@ -258,7 +258,7 @@ Accepted answers (D1, D2 and D4 applied; D3 left to the Shell owner):
 - **D4:** 24px between Cards, as in Jetpack, up from 20px. This is the visible
   change on every page that stacks Cards.
 
-Card inline inset stays 24px, which already matches Jetpack. Card block-end inset is 16px to match the top. Two measured exceptions remain: Overview cards in a row stretch to the tallest, and Extensions keeps the WordPress plugin-card interior (21px). Heading size and
+Card inline inset is 24px and the block-start inset is 24px. Block-end is 28px: a frame reads balanced when its bottom is slightly heavier than its sides, and the heading's line box already adds optical space above it. This diverges deliberately from Jetpack's 16px, which relies on a divider under its Card headers; if Booster adds that divider later, revisit the block insets together. Two measured exceptions remain: Overview cards in a row stretch to the tallest, and Extensions keeps the WordPress plugin-card interior (21px). Heading size and
 weight (Jetpack 20px/500) belong to the separate typescale work in #726.
 
 Rules that follow from the table:

@@ -149,9 +149,10 @@ $repository_placeholder = array() === $locator_examples
 		</div>
 		<p class="description"><?php esc_html_e( 'Start with a Git provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results.', 'ran-booster' ); ?></p>
 
-		<details class="ran-booster-troubleshooting__specific ran-booster-troubleshooting__disclosure ran-booster-disclosure"<?php echo $show_specific_form ? ' open' : ''; ?>>
+		<div class="ran-booster-troubleshooting__specific" data-ran-booster-ui-disclosure="troubleshooting-credential-check" data-ran-booster-ui-disclosure-density="compact">
+		<details data-ran-booster-ui-disclosure-fallback class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"<?php echo $show_specific_form ? ' open' : ''; ?>>
 			<summary><?php esc_html_e( 'Check credential or repository access (optional)', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-troubleshooting__disclosure-body ran-booster-troubleshooting__fields ran-booster-disclosure__body">
+			<div data-ran-booster-ui-disclosure-content class="ran-booster-troubleshooting__disclosure-body ran-booster-troubleshooting__fields ran-booster-disclosure__body">
 				<p>
 					<label for="ran-booster-troubleshooting-credential"><?php esc_html_e( 'Saved credential', 'ran-booster' ); ?> <span class="description"><?php esc_html_e( '(optional)', 'ran-booster' ); ?></span></label>
 					<select id="ran-booster-troubleshooting-credential" class="ran-booster-troubleshooting__credential" name="ran_booster[credential_id]">
@@ -183,7 +184,7 @@ $repository_placeholder = array() === $locator_examples
 				</p>
 				<div class="notice notice-info inline ran-booster-troubleshooting__provider-notice" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p></div></div>
 			</div>
-		</details>
+		</details></div>
 
 		<p class="description"><?php esc_html_e( 'The full check makes temporary local marker files and up to five Git provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report.', 'ran-booster' ); ?></p>
 		<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Run full diagnostics', 'ran-booster' ); ?></button></p>

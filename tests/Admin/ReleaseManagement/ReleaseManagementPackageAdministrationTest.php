@@ -123,7 +123,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertMatchesRegularExpression(
-			'/<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section ran-booster-disclosure" data-ran-booster-package-disclosure>/',
+			'/<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure>/',
 			$html
 		);
 		self::assertStringContainsString( '<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label">Release Track</h3>', $html );
@@ -131,7 +131,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'/<span class="ran-booster-advanced-source-summary__badge" data-ran-booster-release-track-summary>\s*' . $expected_summary . '\s*<\\/span>/',
 			$html
 		);
-		self::assertStringContainsString( '<div class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">', $html );
+		self::assertStringContainsString( '<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">', $html );
 		self::assertStringContainsString( '<form id="ran-booster-release-track-form"', $html );
 		if ( 'branch' === $source ) {
 			self::assertStringContainsString( 'form="ran-booster-release-track-form"', $html );

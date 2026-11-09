@@ -516,9 +516,10 @@ $policy_labels = array(
 		</tr>
 		<tr class="ran-booster-package-row ran-booster-package-row--details<?php echo $word_press_plugin_active ? ' ran-booster-package-row--wordpress-active' : ''; ?>">
 			<td colspan="3" class="ran-booster-package-row__details">
-				<details class="ran-booster-disclosure">
+				<div data-ran-booster-ui-disclosure="package-details" data-ran-booster-ui-disclosure-density="compact">
+				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure">
 					<summary><?php echo esc_html( $details_label ); ?></summary>
-					<div class="ran-booster-disclosure__body">
+					<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 					<dl class="ran-booster-package-row__details-grid<?php echo $release_managed ? '' : ' ran-booster-package-row__details-grid--branch'; ?>">
 						<div>
 							<dt><?php esc_html_e( 'Git provider', 'ran-booster' ); ?></dt>
@@ -585,7 +586,7 @@ $policy_labels = array(
 						<?php } ?>
 					</dl>
 					</div>
-				</details>
+				</details></div>
 			</td>
 		</tr>
 		<?php } ?>

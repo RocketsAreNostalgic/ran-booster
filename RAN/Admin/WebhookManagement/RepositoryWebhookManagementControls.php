@@ -101,26 +101,28 @@ final class RepositoryWebhookManagementControls {
 		$form_attributes = '';
 		$open            = null !== $context['result'] || null !== $context['recovery'] || null !== $context['remediation'];
 		?>
-		<details class="ran-booster-package-disclosure ran-booster-package-webhook-setup ran-booster-disclosure" data-ran-booster-package-webhook-setup<?php echo $open ? ' open' : ''; ?>>
+		<div data-ran-booster-ui-disclosure="package-webhook-setup" data-ran-booster-ui-disclosure-density="compact">
+		<details data-ran-booster-ui-disclosure-fallback class="ran-booster-package-disclosure ran-booster-package-webhook-setup ran-booster-disclosure" data-ran-booster-package-webhook-setup<?php echo $open ? ' open' : ''; ?>>
 			<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong></summary>
-			<div class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body ran-booster-disclosure__body">
+			<div data-ran-booster-ui-disclosure-content class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body ran-booster-disclosure__body">
 				<p><?php esc_html_e( 'Set up or check this repository webhook. This does not enable Automatic updates; choose that separately in Package operation. Enhanced operations return to these package settings.', 'ran-booster' ); ?></p>
 				<?php require __DIR__ . '/views/panel.php'; ?>
 			</div>
-		</details>
+		</details></div>
 		<?php
 	}
 
 
 	private function render_unavailable_package_webhook_setup( string $reason ): void {
 		?>
-		<details class="ran-booster-package-disclosure ran-booster-package-webhook-setup ran-booster-disclosure" data-ran-booster-package-webhook-setup>
+		<div data-ran-booster-ui-disclosure="package-webhook-setup" data-ran-booster-ui-disclosure-density="compact">
+		<details data-ran-booster-ui-disclosure-fallback class="ran-booster-package-disclosure ran-booster-package-webhook-setup ran-booster-disclosure" data-ran-booster-package-webhook-setup>
 			<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong></summary>
-			<div class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body ran-booster-disclosure__body">
+			<div data-ran-booster-ui-disclosure-content class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body ran-booster-disclosure__body">
 				<p><?php echo esc_html( $reason ); ?></p>
 				<p><button type="button" class="button" disabled><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?></button></p>
 			</div>
-		</details>
+		</details></div>
 		<?php
 	}
 

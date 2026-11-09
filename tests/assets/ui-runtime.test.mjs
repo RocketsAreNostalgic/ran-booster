@@ -46,11 +46,11 @@ test('manifest identifies two canonical assets and separate page budgets', () =>
 	assert.match(entries.foundation, /^ran-booster-ui-foundation-[\w-]+\.js$/);
 	assert.match(entries.overlay, /^ran-booster-ui-overlay-[\w-]+\.js$/);
 	assert.ok(
-		foundation.length + adapter.length <= 166090,
+		foundation.length + adapter.length <= 166933,
 		'foundation and adapter raw'
 	);
 	assert.ok(
-		gzipSync(foundation).length + gzipSync(adapter).length <= 33383,
+		gzipSync(foundation).length + gzipSync(adapter).length <= 33576,
 		'foundation and adapter gzip sum'
 	);
 	assert.ok(overlay.length <= 320000, 'overlay raw');

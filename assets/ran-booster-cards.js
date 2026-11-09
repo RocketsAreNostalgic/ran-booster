@@ -7,14 +7,7 @@
 	window.ranBoosterCardsInitialized = true;
 	const selector = '.ran-booster-card[data-ran-booster-card]';
 	const noticeSelector = '[data-ran-booster-ui-notice]';
-	const disclosureSelector = [
-		'installation-component',
-		'settings-configuration',
-		'settings-storage',
-		'documentation',
-	]
-		.map((kind) => `[data-ran-booster-ui-disclosure="${kind}"]`)
-		.join(',');
+	const disclosureSelector = '[data-ran-booster-ui-disclosure]';
 	const badgeSelector = '[data-ran-booster-ui-badge]';
 	const buttonSelector = '[data-ran-booster-ui-button]';
 	const switchSelector = '[data-ran-booster-ui-switch="general-preference"]';
@@ -85,6 +78,9 @@
 				} else if (entry.lastFocusWasTrigger) {
 					active = entry.summary;
 				}
+			}
+			if (entry.meta) {
+				entry.summary.appendChild(entry.meta);
 			}
 			entry.details.appendChild(entry.body);
 			if (entry.documentation) {
@@ -837,6 +833,12 @@
 		const body = details?.querySelector(
 			':scope > div[data-ran-booster-ui-disclosure-content]'
 		);
+		const remembered = details?.id
+			? window.ranBoosterUI?.rememberedDisclosureStates?.[details.id]
+			: undefined;
+		if (typeof remembered === 'boolean') {
+			details.open = remembered;
+		}
 		const supportedChildren =
 			details &&
 			[...details.childNodes].every(
@@ -850,11 +852,22 @@
 			details.children[1] === body;
 		const ui = window.ranBoosterUI?.CollapsibleCard,
 			e = window.wp?.element;
+		const meta = summary?.querySelector(
+			':scope > [data-ran-booster-ui-disclosure-meta]'
+		);
+		let title = summary?.textContent.trim() ?? '';
+		if (meta) {
+			const titleSource = summary.cloneNode(true);
+			titleSource
+				.querySelector('[data-ran-booster-ui-disclosure-meta]')
+				.remove();
+			title = titleSource.textContent.trim();
+		}
 		const label =
 			summary?.getAttribute('aria-label') ||
 			(host.getAttribute('data-ran-booster-ui-disclosure') !==
 			'installation-component'
-				? summary?.textContent.trim()
+				? title
 				: '');
 		if (
 			(documentation && !documentationRoot) ||
@@ -938,12 +951,15 @@
 					h(
 						ui.Header,
 						{ className: 'ran-booster-ui-disclosure__header' },
-						h(
-							'span',
-							{ 'aria-hidden': 'true' },
-							summary.textContent
-						),
-						h('span', { className: 'screen-reader-text' }, label)
+						h('span', { 'aria-hidden': 'true' }, title),
+						h('span', { className: 'screen-reader-text' }, label),
+						meta
+							? h('span', {
+									className:
+										'ran-booster-ui-disclosure__meta',
+									ref: (node) => node?.appendChild(meta),
+								})
+							: null
 					),
 					h(ui.Content, {
 						className: documentation
@@ -1010,6 +1026,7 @@
 				mount,
 				disclosure: true,
 				documentation,
+				meta,
 				synchronize: () => updateOpen(details.open),
 				details,
 				summary,
@@ -1059,6 +1076,17 @@
 			const UI = window.ranBoosterUI;
 			if (UI) {
 				UI.setNavigationCurrent = setNavigationCurrent;
+				UI.disclosureOpenStates = () =>
+					Object.fromEntries(
+						[...roots.values()]
+							.filter(
+								(entry) => entry.disclosure && entry.details.id
+							)
+							.map((entry) => [
+								entry.details.id,
+								entry.details.open,
+							])
+					);
 				UI.repositoryNavigation ??=
 					UI.createRepositoryNavigationBridge?.(roots);
 			}

@@ -27,11 +27,12 @@ $report_generated = ! empty( $troubleshooting['report_generated'] );
 		<p class="description"><?php esc_html_e( 'Preview, Copy and Download use this same frozen JSON. To save it manually, select and copy the JSON into a text editor, then save it as a .json file.', 'ran-booster' ); ?></p>
 </div>
 <?php } ?>
-<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">
+<div data-ran-booster-ui-disclosure="troubleshooting-evidence" data-ran-booster-ui-disclosure-density="compact">
+<details data-ran-booster-ui-disclosure-fallback class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">
 	<summary><?php esc_html_e( 'Evidence and recovery guidance', 'ran-booster' ); ?></summary>
-	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+	<div data-ran-booster-ui-disclosure-content class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
 		<p><?php esc_html_e( 'Available diagnostic runs from the last hour for your administrator account and this site are included automatically.', 'ran-booster' ); ?></p>
 		<p><?php esc_html_e( 'Logging captures Booster events only. When evidence is missing, explicitly start Logging, reproduce the problem, then generate another report. Events from before capture cannot be recovered.', 'ran-booster' ); ?></p>
 		<p><?php esc_html_e( 'If Booster or WordPress administration cannot load, use WordPress recovery mode or your hosting support route. External server logs are not collected here.', 'ran-booster' ); ?></p>
 	</div>
-</details>
+</details></div>

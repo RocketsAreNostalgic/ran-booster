@@ -264,7 +264,7 @@ final class PortabilityViewTest extends TestCase {
 		$xpath = new \DOMXPath( $document );
 		foreach ( array_keys( $rows ) as $index ) {
 			$row     = '//tr[@data-portability-row="' . $index . '"]';
-			$details = '//tr[@data-portability-details-for="' . $index . '"]/td[@colspan="4"]/details[not(@open)]';
+			$details = '//tr[@data-portability-details-for="' . $index . '"]/td[@colspan="4"]/div[@data-ran-booster-ui-disclosure="transporter-package-details"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]';
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . ')' ) );
 			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $row . '//details)' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//li/strong[.="WordPress minimum"])' ) );

@@ -236,8 +236,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<section aria-label="<?php esc_attr_e( 'GitHub provider management', 'ran-booster' ); ?>">
 			<?php if ( $healthy_replacement && is_array( $current_implementation ) ) { ?>
 				<p><?php echo esc_html( sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $current_implementation['display_name'] ) ); ?></p>
-				<details class="ran-booster-disclosure"><summary><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></summary>
-				<div class="ran-booster-disclosure__body">
+				<div data-ran-booster-ui-disclosure="provider-manage" data-ran-booster-ui-disclosure-density="compact">
+				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure"><summary><?php esc_html_e( 'Manage GitHub provider', 'ran-booster' ); ?></summary>
+				<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 				<p><?php esc_html_e( 'To change the GitHub provider integration, deactivate the current replacement plugin and enable only the replacement you want to use. To return to bundled GitHub, deactivate all replacement plugins. Then return here to review and approve the change. GitHub operations pause until you complete that review.', 'ran-booster' ); ?></p>
 			<?php } else { ?>
 				<?php $native_recovery = $github_selection['recovery'] ?? null; ?>
@@ -280,11 +281,12 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 							<li><?php esc_html_e( 'Confirm the statements below to verify removal.', 'ran-booster' ); ?></li>
 						</ol>
 						<p><?php esc_html_e( 'Booster verifies removal, clears the installation block, and disconnects Booster management. It does not delete files or repair the installation.', 'ran-booster' ); ?></p>
-						<details class="ran-booster-disclosure"><summary><?php esc_html_e( 'Recovery details', 'ran-booster' ); ?></summary>
-						<div class="ran-booster-disclosure__body">
+						<div data-ran-booster-ui-disclosure="provider-recovery" data-ran-booster-ui-disclosure-density="compact">
+						<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure"><summary><?php esc_html_e( 'Recovery details', 'ran-booster' ); ?></summary>
+						<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 						<p><?php esc_html_e( 'Remove the target folder and all its contents, or the file itself for a standalone plugin. A missing main file alone is insufficient for a plugin or theme with a folder.', 'ran-booster' ); ?></p>
 						<p><?php esc_html_e( 'An occupied updater lock prevents recovery. Booster will not clear it based on its age. Cleanup of temporary files from the interrupted process remains unverified.', 'ran-booster' ); ?></p>
-						</div></details>
+						</div></details></div>
 								<?php if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
 									<?php wp_nonce_field( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
@@ -317,8 +319,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				<?php } ?>
 				<?php $adoption_review = $github_selection['review']; ?>
 				<?php if ( is_array( $adoption_review ) ) { ?>
-					<details class="ran-booster-disclosure"><summary><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Review return to bundled GitHub', 'ran-booster' ) : __( 'Review GitHub provider', 'ran-booster' ) ); ?></summary>
-					<div class="ran-booster-disclosure__body">
+					<div data-ran-booster-ui-disclosure="provider-adoption-review" data-ran-booster-ui-disclosure-density="compact">
+					<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure"><summary><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Review return to bundled GitHub', 'ran-booster' ) : __( 'Review GitHub provider', 'ran-booster' ) ); ?></summary>
+					<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 					<?php
 					$review_target = $selection_status['candidates'][ $adoption_review['target']['plugin_basename'] ] ?? null;
 					$review_name   = 'bundled' === $adoption_review['selected']
@@ -351,7 +354,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 						</form>
 					<?php } ?>
 					</div>
-					</details>
+					</details></div>
 				<?php } ?>
 			<?php } ?>
 			<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
@@ -359,7 +362,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 			if ( $healthy_replacement ) {
 				?>
 				</div>
-				</details><?php } ?>
+				</details><?php } ?></div>
 		</section>
 	<?php } ?>
 
@@ -585,9 +588,10 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 									<div><dt><?php esc_html_e( 'Event', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $webhook_setup['event'] ); ?></dd></div><?php } ?>
 							</dl>
 								<?php if ( null !== $webhook_setup ) { ?>
-								<details class="ran-booster-provider-disclosure ran-booster-disclosure">
+								<div data-ran-booster-ui-disclosure="provider-webhook-setup" data-ran-booster-ui-disclosure-density="compact">
+								<details data-ran-booster-ui-disclosure-fallback class="ran-booster-provider-disclosure ran-booster-disclosure">
 									<summary><?php esc_html_e( 'Detailed manual setup and troubleshooting', 'ran-booster' ); ?></summary>
-									<div class="ran-booster-provider-disclosure__body ran-booster-disclosure__body">
+									<div data-ran-booster-ui-disclosure-content class="ran-booster-provider-disclosure__body ran-booster-disclosure__body">
 										<p><?php echo esc_html( $manual_setup_description ); ?></p>
 										<ol><li><?php esc_html_e( 'Paste the payload URL and a matching signing secret.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Keep SSL verification enabled and select the push event.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Trigger a delivery and confirm the Git provider records a successful response.', 'ran-booster' ); ?></li></ol>
 										<p><a href="<?php echo esc_url( $webhook_setup['documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $provider_instructions_label ); ?> <span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a></p>
@@ -595,7 +599,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 											<p><a href="<?php echo esc_url( $webhook_setup['delivery_documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?> <span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a></p>
 										<?php } ?>
 									</div>
-								</details>
+								</details></div>
 							<?php } else { ?>
 								<p><a href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>
 							<?php } ?>

@@ -161,16 +161,17 @@ $render_portability_extension      = static function ( string $hook, string $ste
 									</span>
 								</label>
 								<?php if ( 0 < $package_count ) : ?>
-									<details class="ran-booster-portability__credential-packages ran-booster-disclosure">
+									<div data-ran-booster-ui-disclosure="transporter-credential-packages" data-ran-booster-ui-disclosure-density="compact">
+									<details data-ran-booster-ui-disclosure-fallback class="ran-booster-portability__credential-packages ran-booster-disclosure">
 										<summary><?php echo esc_html( $package_summary ); ?></summary>
-										<div class="ran-booster-disclosure__body">
+										<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 											<ul>
 										<?php foreach ( $packages as $package ) : ?>
 											<li><span><?php echo esc_html( (string) ( $package['name'] ?? '' ) ); ?></span> <span class="description"><?php echo esc_html( 'theme' === ( $package['type'] ?? null ) ? __( 'Theme', 'ran-booster' ) : __( 'Plugin', 'ran-booster' ) ); ?></span></li>
 										<?php endforeach; ?>
 											</ul>
 										</div>
-									</details>
+									</details></div>
 								<?php endif; ?>
 								<?php if ( $available ) : ?>
 									<span class="screen-reader-text" id="<?php echo esc_attr( $reason_id ); ?>"><?php echo esc_html( $description ); ?></span>

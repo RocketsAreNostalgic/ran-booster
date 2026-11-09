@@ -36,10 +36,11 @@ if ( '' === $package_advanced_summary_projection_heading
 }
 
 ?>
-<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings <?php echo $package_advanced_open ? 'open' : ''; ?>>
+<div data-ran-booster-ui-disclosure="package-advanced-settings" data-ran-booster-ui-disclosure-density="prominent">
+<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings <?php echo $package_advanced_open ? 'open' : ''; ?>>
 	<summary>
 		<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Advanced settings', 'ran-booster' ); ?></h3>
-		<small class="ran-booster-advanced-source-summary" data-ran-booster-advanced-source-summary>
+		<small class="ran-booster-advanced-source-summary" data-ran-booster-advanced-source-summary data-ran-booster-ui-disclosure-meta>
 			<?php if ( null !== $package_advanced_summary_projection && null !== $package_advanced_summary_projection_heading ) { ?>
 				<span class="ran-booster-advanced-source-summary__heading"><?php echo esc_html( $package_advanced_summary_projection_heading ); ?></span>
 				<?php foreach ( $package_advanced_summary_projection_badges as $package_advanced_summary_projection_badge ) { ?>
@@ -55,7 +56,7 @@ if ( '' === $package_advanced_summary_projection_heading
 			<?php } ?>
 		</small>
 	</summary>
-	<div class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">
+	<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">
 		<?php echo $package_advanced_body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core and bounded registered add-ons rendered this body. ?>
 	</div>
-</details>
+</details></div>

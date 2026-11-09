@@ -86,9 +86,10 @@ $has_credential_decisions         = array() !== array_filter(
 
 ?>
 <?php if ( ! empty( $portability_requirements_summary ) ) : ?>
-	<details class="ran-booster-portability__package-details ran-booster-portability__blueprint-requirements ran-booster-disclosure">
+	<div data-ran-booster-ui-disclosure="transporter-blueprint-requirements" data-ran-booster-ui-disclosure-density="compact">
+	<details data-ran-booster-ui-disclosure-fallback class="ran-booster-portability__package-details ran-booster-portability__blueprint-requirements ran-booster-disclosure">
 		<summary><?php esc_html_e( 'Blueprint requirements', 'ran-booster' ); ?></summary>
-		<div class="ran-booster-portability__details-body ran-booster-disclosure__body">
+		<div data-ran-booster-ui-disclosure-content class="ran-booster-portability__details-body ran-booster-disclosure__body">
 		<p><?php esc_html_e( 'Minimum versions reported for all packages in this Blueprint, including packages you have not selected. These reports do not guarantee compatibility.', 'ran-booster' ); ?></p>
 		<ul>
 		<?php foreach ( $portability_requirements_summary as $field => $floor ) : ?>
@@ -108,7 +109,7 @@ $has_credential_decisions         = array() !== array_filter(
 		<?php endforeach; ?>
 		</ul>
 		</div>
-	</details>
+	</details></div>
 <?php endif; ?>
 <?php if ( array() !== $portability_credential_rows ) : ?>
 	<section class="ran-booster-portability__credential-review" aria-labelledby="ran-booster-portability-credentials-heading">
@@ -175,16 +176,17 @@ $has_credential_decisions         = array() !== array_filter(
 				<?php endif; ?>
 			</div>
 			<span id="<?php echo esc_attr( $description_id ); ?>" class="screen-reader-text"><?php echo esc_html( $package_summary ); ?>.</span>
-			<details class="ran-booster-portability__credential-packages ran-booster-disclosure">
+			<div data-ran-booster-ui-disclosure="transporter-credential-packages" data-ran-booster-ui-disclosure-density="compact">
+			<details data-ran-booster-ui-disclosure-fallback class="ran-booster-portability__credential-packages ran-booster-disclosure">
 				<summary><?php echo esc_html( $package_summary ); ?></summary>
-				<div class="ran-booster-disclosure__body">
+				<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 					<ul>
 				<?php foreach ( $packages as $package ) : ?>
 					<li><span><?php echo esc_html( (string) ( $package['name'] ?? '' ) ); ?></span> <span class="description"><?php echo esc_html( (string) ( $package['type'] ?? '' ) ); ?></span></li>
 				<?php endforeach; ?>
 					</ul>
 				</div>
-			</details>
+			</details></div>
 
 			<?php if ( $decision_required ) : ?>
 				<div class="ran-booster-portability__credential-actions">
@@ -346,10 +348,11 @@ $has_credential_decisions         = array() !== array_filter(
 				<?php if ( null !== $requirements || null !== $comparison ) : ?>
 				<tr class="<?php echo esc_attr( $package_row_class ); ?>" data-portability-details-for="<?php echo esc_attr( (string) $row_index ); ?>">
 					<td colspan="4" class="ran-booster-portability__details-cell">
-						<details class="ran-booster-portability__package-details ran-booster-disclosure">
+						<div data-ran-booster-ui-disclosure="transporter-package-details" data-ran-booster-ui-disclosure-density="compact">
+						<details data-ran-booster-ui-disclosure-fallback class="ran-booster-portability__package-details ran-booster-disclosure">
 							<?php /* translators: %s: package name. */ ?>
 							<summary aria-label="<?php echo esc_attr( sprintf( __( 'Package details for %s', 'ran-booster' ), $package_name ) ); ?>"><?php esc_html_e( 'Package details', 'ran-booster' ); ?></summary>
-							<div class="ran-booster-portability__details-body ran-booster-disclosure__body">
+							<div data-ran-booster-ui-disclosure-content class="ran-booster-portability__details-body ran-booster-disclosure__body">
 					<?php if ( is_array( $requirements ) ) : ?>
 						<section class="ran-booster-portability__requirements-details">
 							<h6><?php esc_html_e( 'Requirement checks and dependencies', 'ran-booster' ); ?></h6>
@@ -415,7 +418,7 @@ $has_credential_decisions         = array() !== array_filter(
 						<?php endif; ?>
 					<?php endif; ?>
 							</div>
-						</details>
+						</details></div>
 					</td>
 				</tr>
 				<?php endif; ?>

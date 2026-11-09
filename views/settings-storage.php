@@ -120,7 +120,7 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 				<?php } ?>
 
 				<?php if ( $shows_storage_override ) { ?>
-					<div class="ran-booster-onboarding__storage-manual" data-ran-booster-ui-disclosure="settings-storage">
+					<div class="ran-booster-onboarding__storage-manual" data-ran-booster-ui-disclosure="settings-storage" data-ran-booster-ui-disclosure-density="compact">
 					<details class="ran-booster-onboarding__storage-manual ran-booster-disclosure" open data-ran-booster-ui-disclosure-fallback>
 						<summary><?php echo esc_html( 'storage_needs_attention' === $storage_status ? __( 'Use a different storage location', 'ran-booster' ) : __( 'Set a storage location manually', 'ran-booster' ) ); ?></summary>
 						<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
@@ -156,7 +156,7 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 			<?php } ?>
 
 			<?php if ( null !== $secrets_storage['config_alternatives'] ) { ?>
-				<div class="ran-booster-onboarding__storage-manual" data-ran-booster-ui-disclosure="settings-storage">
+				<div class="ran-booster-onboarding__storage-manual" data-ran-booster-ui-disclosure="settings-storage" data-ran-booster-ui-disclosure-density="compact">
 				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-onboarding__storage-manual ran-booster-disclosure" <?php echo esc_attr( 'manual_required' === $storage_status ? 'open' : '' ); ?>>
 					<summary><?php echo esc_html( $secrets_storage['can_provision'] ? __( 'Set up manually instead', 'ran-booster' ) : __( 'Manual setup instructions', 'ran-booster' ) ); ?></summary>
 					<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>

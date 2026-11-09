@@ -177,9 +177,10 @@ $origin_labels = array(
 							<span class="ran-booster-attempt-row__message"><?php echo esc_html( $summary ); ?></span>
 						<?php } ?></span></span>
 					</div>
-					<details class="ran-booster-attempt-row__details ran-booster-disclosure">
+					<div class="ran-booster-attempt-row__details" data-ran-booster-ui-disclosure="activity-details" data-ran-booster-ui-disclosure-density="compact">
+					<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure">
 						<summary><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>
-						<div class="ran-booster-disclosure__body">
+						<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 						<?php if ( $recorded_check ) { ?>
 							<dl class="ran-booster-activity__details">
 								<div><dt><?php esc_html_e( 'Reported by', 'ran-booster' ); ?></dt><dd><?php echo esc_html( 'core' === ( $item['provenance'] ?? '' ) ? __( 'Recorded by Core', 'ran-booster' ) : __( 'Reported by Git provider', 'ran-booster' ) ); ?></dd></div>
@@ -227,7 +228,7 @@ $origin_labels = array(
 						<?php } ?>
 						<?php } ?>
 						</div>
-					</details>
+					</details></div>
 				</li>
 			<?php } ?>
 			</ul>

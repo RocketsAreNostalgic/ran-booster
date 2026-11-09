@@ -271,7 +271,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			);
 
 			self::assertStringContainsString( 'Booster stopped before contacting the Git provider because this request no longer matched the current page or package.', $html, $diagnostic );
-			self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html, $diagnostic );
+			self::assertStringContainsString( '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>Failure details</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>', $html, $diagnostic );
 			self::assertStringContainsString( $message, $html, $diagnostic );
 			self::assertStringContainsString( 'Diagnostic code: <code>' . $diagnostic . '</code>', $html, $diagnostic );
 		}
@@ -293,7 +293,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 				)
 			);
 
-			self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html, $diagnostic );
+			self::assertStringContainsString( '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>Failure details</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>', $html, $diagnostic );
 			self::assertStringContainsString( $message, $html, $diagnostic );
 			self::assertStringContainsString( 'Diagnostic code: <code>' . $diagnostic . '</code>', $html, $diagnostic );
 		}
@@ -329,7 +329,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 
 		self::assertStringContainsString( 'Booster could not validate the package release before continuing. No draft was opened.', $html );
 		self::assertStringContainsString( '<div class="notice notice-error inline" data-ran-booster-release-workflow-result data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p>', $html );
-		self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html );
+		self::assertStringContainsString( '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>Failure details</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>', $html );
 		self::assertStringContainsString( 'Booster could not read release data using the package&#039;s saved repository access. The credential selected for workflow setup is used only after this release check.', $html );
 		self::assertStringContainsString( 'Diagnostic code: <code>provider_unavailable</code>', $html );
 		self::assertStringContainsString( 'Failure reference: <code>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</code>', $html );
@@ -359,7 +359,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html );
+		self::assertStringContainsString( '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>Failure details</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>', $html );
 		self::assertStringContainsString( 'Diagnostic code: <code>package_compatibility_invalid</code>', $html );
 	}
 

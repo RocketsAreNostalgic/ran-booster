@@ -268,14 +268,14 @@ final class ReleaseWorkflowDisplay {
 		$observation = in_array( $code, array( 'workflow_release_automation_conflict', 'workflow_release_automation_present', 'workflow_inspected' ), true );
 		if ( ! $successful && ! $observation && in_array( $stage, array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ) {
 			$remediation = is_string( $view['result_remediation'] ?? null ) && '' !== $view['result_remediation'] ? $view['result_remediation'] : $this->failure_diagnostic_message( $diagnostic, $stage );
-			$html       .= '<details class="ran-booster-disclosure"><summary>' . esc_html__( 'Failure details', 'ran-booster' ) . '</summary><div class="ran-booster-disclosure__body"><p>' . esc_html( $remediation ) . '</p>';
+			$html       .= '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>' . esc_html__( 'Failure details', 'ran-booster' ) . '</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content><p>' . esc_html( $remediation ) . '</p>';
 			if ( $this->valid_diagnostic_code( $diagnostic ) ) {
 				$html .= '<p>' . esc_html__( 'Diagnostic code:', 'ran-booster' ) . ' <code>' . esc_html( $diagnostic ) . '</code></p>';
 			}
 			if ( $diagnostic_available && 1 === preg_match( '/\A[a-f0-9]{32}\z/D', $reference ) ) {
 				$html .= '<p>' . esc_html__( 'Failure reference:', 'ran-booster' ) . ' <code>' . esc_html( $reference ) . '</code></p>';
 			}
-			$html .= '</div></details>';
+			$html .= '</div></details></div>';
 		}
 
 		return $html . '</div></div>';

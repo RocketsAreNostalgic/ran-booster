@@ -292,7 +292,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$package_view->get_type()
 		);
 		self::assertStringNotContainsString(
-			'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
+			'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 			$html
 		);
 		self::assertStringContainsString( 'Branch · repository default', $html );
@@ -691,7 +691,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 
 			self::assertStringContainsString(
-				'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
+				'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 				$html,
 				$package_view->get_type()
 			);

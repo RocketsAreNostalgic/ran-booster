@@ -113,13 +113,10 @@ function fixture({
 			this.attributes.delete(name);
 		}
 		matches(selector) {
-			if (selector.includes('[data-ran-booster-ui-disclosure="')) {
-				return [
-					'installation-component',
-					'settings-configuration',
-					'settings-storage',
-					'documentation',
-				].includes(this.getAttribute('data-ran-booster-ui-disclosure'));
+			if (selector.includes('[data-ran-booster-ui-disclosure]')) {
+				return (
+					this.getAttribute('data-ran-booster-ui-disclosure') !== null
+				);
 			}
 			if (
 				selector === '[role="button"]' ||
@@ -1305,12 +1302,12 @@ test('Transporter Card preserves its hidden state, form, link and identity on hi
 	assert.equal(form.firstChild, link);
 });
 
-test('Settings disclosures use visible summary as label while Installation requires context', () => {
+test('Disclosures use the visible summary as label, any kind mounts, and Installation requires context', () => {
 	for (const kind of [
 		'settings-configuration',
 		'settings-storage',
 		'installation-component',
-		'unknown',
+		'troubleshooting-support',
 	]) {
 		const f = fixture({ disclosureRuntime: true });
 		const host = new f.Node('div'),
@@ -1329,7 +1326,7 @@ test('Settings disclosures use visible summary as label while Installation requi
 		f.doc.body.appendChild(host);
 		f.run();
 		f.flush();
-		if (kind.startsWith('settings-')) {
+		if (kind !== 'installation-component') {
 			assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), '');
 			assert.equal(f.tree().props.className, 'ran-booster-ui-disclosure');
 			assert.equal(

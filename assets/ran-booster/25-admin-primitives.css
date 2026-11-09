@@ -787,35 +787,62 @@
 	background: transparent;
 }
 
+/*
+ * Prominent disclosures keep the public Disclosure's behaviour, radius, chevron
+ * and motion, with a larger title and a live status slot in the header.
+ */
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	.ran-booster-ui-disclosure__header
+	> [role="button"],
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	padding: 12px 16px;
+	font-size: 16px;
+	line-height: 24px;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	.ran-booster-ui-disclosure__header
+	> [role="button"]
+	> :first-child {
+	display: flex;
+	align-items: center;
+	gap: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	.ran-booster-ui-disclosure__meta,
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary
+	> [data-ran-booster-ui-disclosure-meta] {
+	margin-inline: auto 0;
+	color: var(--ran-booster-text-subtle);
+	font-size: var(--ran-booster-font-size-xs);
+	font-weight: 400;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-tone="danger"]
+	.ran-booster-ui-disclosure,
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-tone="danger"]
+	> details[data-ran-booster-ui-disclosure-fallback] {
+	border-color: var(--ran-booster-status-error-border);
+}
+
 .ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"] {
 	padding: 8px 16px;
 	font-size: 15px;
 	font-weight: 600;
 	line-height: 20px;
-}
-
-.ran-booster-admin
-	[data-ran-booster-ui-disclosure]:not(
-		[data-ran-booster-ui-disclosure-density="compact"]
-	)
-	> div
-	> .ran-booster-ui-disclosure
-	> .ran-booster-ui-disclosure__header
-	> [role="button"] {
-	min-block-size: 40px;
-}
-
-@media (pointer: coarse) {
-	.ran-booster-admin
-		[data-ran-booster-ui-disclosure]:not(
-			[data-ran-booster-ui-disclosure-density="compact"]
-		)
-		> div
-		> .ran-booster-ui-disclosure
-		> .ran-booster-ui-disclosure__header
-		> [role="button"] {
-		min-block-size: 44px;
-	}
 }
 
 .ran-booster-admin
@@ -896,28 +923,6 @@
 	> details[data-ran-booster-ui-disclosure-fallback][open]
 	> summary::after {
 	transform: rotate(180deg);
-}
-
-.ran-booster-admin
-	[data-ran-booster-ui-disclosure]:not(
-		[data-ran-booster-ui-disclosure="documentation"],
-		[data-ran-booster-ui-disclosure-density="compact"]
-	)
-	> details[data-ran-booster-ui-disclosure-fallback]
-	> summary {
-	min-block-size: 40px;
-}
-
-@media (pointer: coarse) {
-	.ran-booster-admin
-		[data-ran-booster-ui-disclosure]:not(
-			[data-ran-booster-ui-disclosure="documentation"],
-			[data-ran-booster-ui-disclosure-density="compact"]
-		)
-		> details[data-ran-booster-ui-disclosure-fallback]
-		> summary {
-		min-block-size: 44px;
-	}
 }
 
 /*

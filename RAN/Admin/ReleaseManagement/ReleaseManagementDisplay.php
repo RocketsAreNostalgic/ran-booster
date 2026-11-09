@@ -247,18 +247,19 @@ final class ReleaseManagementDisplay {
 			</div>
 		</section>
 		<?php $release_track_summary = null === $selected_channel ? __( 'Unknown', 'ran-booster' ) : $this->release_track_label( $selected_channel ); ?>
-		<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section ran-booster-disclosure" data-ran-booster-package-disclosure>
+		<div data-ran-booster-ui-disclosure="package-release-track" data-ran-booster-ui-disclosure-density="prominent">
+		<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure>
 			<summary>
 				<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Release Track', 'ran-booster' ); ?></h3>
-				<small class="ran-booster-advanced-source-summary">
+				<small class="ran-booster-advanced-source-summary" data-ran-booster-ui-disclosure-meta>
 					<span class="ran-booster-advanced-source-summary__badge" data-ran-booster-release-track-summary><?php echo esc_html( $release_track_summary ); ?></span>
 				</small>
 			</summary>
-			<div class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">
+			<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">
 				<?php $this->render_release_track_settings( $track_mode, $track_disabled, $selected_channel, $package, $track_nonce_action, $track_form_id ); ?>
 				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled ); ?>
 			</div>
-		</details>
+		</details></div>
 		<?php
 	}
 
@@ -1035,15 +1036,16 @@ final class ReleaseManagementDisplay {
 			admin_url( 'admin.php' )
 		);
 		?>
-		<details class="ran-booster-disclosure">
+		<div data-ran-booster-ui-disclosure="release-failure-help" data-ran-booster-ui-disclosure-density="compact">
+		<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure">
 			<summary><?php esc_html_e( 'Why this happened and how to fix it', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-disclosure__body">
+			<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 			<p><strong><?php esc_html_e( 'What Booster found:', 'ran-booster' ); ?></strong> <?php echo esc_html( '' !== $message ? $message : $this->diagnostic_message( $code ) ); ?></p>
 			<p><strong><?php esc_html_e( 'What to do:', 'ran-booster' ); ?></strong> <?php echo esc_html( $this->diagnostic_action( $code ) ); ?></p>
 			<p><a href="<?php echo esc_url( $troubleshooting_url ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a></p>
 			<p><strong><?php esc_html_e( 'Technical reason:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $code ); ?></code></p>
 			</div>
-		</details>
+		</details></div>
 		<?php
 	}
 

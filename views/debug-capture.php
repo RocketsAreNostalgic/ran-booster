@@ -134,9 +134,10 @@ $status_classes       = array(
 		<?php } ?>
 	</div>
 
-	<details id="ran-booster-logging-details" data-ran-booster-logging-disclosure class="ran-booster-debug-capture__wordpress-help ran-booster-troubleshooting__disclosure ran-booster-disclosure">
+	<div data-ran-booster-ui-disclosure="troubleshooting-logging" data-ran-booster-ui-disclosure-density="compact">
+	<details data-ran-booster-ui-disclosure-fallback id="ran-booster-logging-details" data-ran-booster-logging-disclosure class="ran-booster-debug-capture__wordpress-help ran-booster-troubleshooting__disclosure ran-booster-disclosure">
 		<summary><?php esc_html_e( 'Logging details', 'ran-booster' ); ?></summary>
-		<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+		<div data-ran-booster-ui-disclosure-content class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
 			<p>
 			<?php
 			if ( null !== $configured_path ) {
@@ -168,5 +169,5 @@ $status_classes       = array(
 			<p><?php esc_html_e( 'Turn off debugging after reproducing the issue, and review the log privately before sharing it.', 'ran-booster' ); ?></p>
 			<p><a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/"><?php esc_html_e( 'WordPress debugging documentation', 'ran-booster' ); ?></a></p>
 		</div>
-	</details>
+	</details></div>
 </section>

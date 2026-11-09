@@ -138,8 +138,8 @@ const adapter = await readFile('assets/ran-booster-cards.js');
 const [foundationBytes, foundationGzip] = size(foundation),
 	[overlayBytes, overlayGzip] = size(overlay);
 ensure(
-	foundationBytes + adapter.length <= 166090 &&
-		foundationGzip + gzipSync(adapter).length <= 33383 &&
+	foundationBytes + adapter.length <= 166933 &&
+		foundationGzip + gzipSync(adapter).length <= 33576 &&
 		overlayBytes <= 320000 &&
 		overlayGzip <= 90000,
 	`UI runtime exceeds reserved size: foundation+adapter ${foundationBytes + adapter.length}/${foundationGzip + gzipSync(adapter).length}, overlay ${overlayBytes}/${overlayGzip}`

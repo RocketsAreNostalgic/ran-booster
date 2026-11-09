@@ -331,18 +331,25 @@
 
 		function captureInteractionState(form, xhr) {
 			pendingInteractionState = {
-				disclosureStates: Object.fromEntries(
-					Array.from(
-						document.querySelectorAll(
-							'[data-ran-booster-package-disclosure], [data-ran-booster-logging-disclosure]'
-						),
-						(disclosure) => [disclosure.id, disclosure.open]
-					).filter(([id]) => id)
-				),
+				disclosureStates: {
+					...Object.fromEntries(
+						Array.from(
+							document.querySelectorAll(
+								'[data-ran-booster-package-disclosure], [data-ran-booster-logging-disclosure]'
+							),
+							(disclosure) => [disclosure.id, disclosure.open]
+						).filter(([id]) => id)
+					),
+					...(window.ranBoosterUI?.disclosureOpenStates?.() ?? {}),
+				},
 				form,
 				xhr,
 				scrollY: window.scrollY,
 			};
+			if (window.ranBoosterUI) {
+				window.ranBoosterUI.rememberedDisclosureStates =
+					pendingInteractionState.disclosureStates;
+			}
 		}
 
 		function restoreInteractionState(complete = false) {
@@ -366,6 +373,9 @@
 			}
 
 			pendingInteractionState = null;
+			if (window.ranBoosterUI) {
+				window.ranBoosterUI.rememberedDisclosureStates = undefined;
+			}
 			if (typeof state.scrollY === 'number') {
 				window.requestAnimationFrame(function () {
 					window.scrollTo(0, state.scrollY);

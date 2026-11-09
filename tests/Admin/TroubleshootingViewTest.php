@@ -1520,7 +1520,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-provider="gh" disabled="disabled" hidden', $html );
 		self::assertStringContainsString( 'maxlength="512"', $html );
 		self::assertStringContainsString( '>Check credential or repository access (optional)</summary>', $html );
-		self::assertStringContainsString( '<details class="ran-booster-troubleshooting__specific ran-booster-troubleshooting__disclosure ran-booster-disclosure" open>', $html );
+		self::assertMatchesRegularExpression( '/<div class="ran-booster-troubleshooting__specific" data-ran-booster-ui-disclosure="troubleshooting-credential-check" data-ran-booster-ui-disclosure-density="compact">\s*<details data-ran-booster-ui-disclosure-fallback class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open>/', $html );
 		self::assertStringContainsString( 'Start with a Git provider to run a general health check.', $html );
 		self::assertStringContainsString( 'check only credential and repository access; they do not scope Push-to-Deploy delivery results.', $html );
 		self::assertStringContainsString( 'This is a credential reference, not the credential secret;', $html );
@@ -1530,7 +1530,7 @@ final class TroubleshootingViewTest extends TestCase {
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previous );
 		$xpath  = new \DOMXPath( $document );
-		$fields = $xpath->query( '//details[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__specific ")]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields ")]' );
+		$fields = $xpath->query( '//div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__specific ")][@data-ran-booster-ui-disclosure]/details[@data-ran-booster-ui-disclosure-fallback]/div[@data-ran-booster-ui-disclosure-content][contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__fields ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $fields );
 		self::assertCount( 1, $fields );
 		$fields_body = $fields->item( 0 );

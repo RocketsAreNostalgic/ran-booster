@@ -253,7 +253,7 @@ $has_credential_decisions         = array() !== array_filter(
 	</div>
 </section>
 <?php endif; ?>
-<div id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll" role="region" aria-labelledby="ran-booster-portability-review-heading" tabindex="0">
+<div id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll" role="region" aria-label="<?php esc_attr_e( 'Package list', 'ran-booster' ); ?>" tabindex="0">
 	<table class="widefat ran-booster-portability__review-table">
 		<caption class="screen-reader-text"><?php esc_html_e( 'Packages in this import review', 'ran-booster' ); ?></caption>
 		<thead><tr><th scope="col"><?php esc_html_e( 'Package', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Type', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Target state', 'ran-booster' ); ?></th><th scope="col"><label><input type="checkbox" data-portability-select-all aria-label="<?php esc_attr_e( 'Select all actionable changes', 'ran-booster' ); ?>"<?php checked( $has_actionable_rows ); ?><?php disabled( ! $has_actionable_rows ); ?>> <?php esc_html_e( 'Apply plan', 'ran-booster' ); ?></label></th></tr></thead>

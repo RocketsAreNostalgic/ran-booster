@@ -62,7 +62,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( '<div class="ran-booster-portability__apply">', $html );
 		self::assertStringContainsString( '<p>Eligible selected changes are applied independently.</p>', $html );
 		self::assertStringNotContainsString( 'credential-only recovery rows are applied independently', $html );
-		self::assertStringContainsString( 'id="ran-booster-portability-export-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h5>', $html );
+		self::assertStringContainsString( 'id="ran-booster-portability-export-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h4>', $html );
 		self::assertStringContainsString( 'data-portability-export-select-all', $html );
 		self::assertStringContainsString( 'name="packages[plugin][]" value="example/example.php" type="checkbox" checked', $html );
 		self::assertStringContainsString( 'Example &lt;Plugin&gt;', $html );
@@ -130,7 +130,7 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( '<h4 id="ran-booster-portability-review-heading" class="ran-booster-portability__review-title">Blueprint review</h4>', $html );
 		self::assertStringContainsString( 'Choose repository access, then select the package changes to apply.', $html );
 		self::assertStringNotContainsString( 'ran-booster-portability-packages-heading', $html );
-		self::assertStringContainsString( 'role="region" aria-labelledby="ran-booster-portability-review-heading"', $html );
+		self::assertStringContainsString( 'role="region" aria-label="Package list"', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-review-progress" class="ran-booster-portability__review-progress htmx-indicator" role="status" aria-live="polite"', $html );
 		self::assertStringContainsString( 'data-portability-review-error role="alert" hidden', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll"', $html );

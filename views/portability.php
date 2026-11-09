@@ -76,7 +76,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 			<?php wp_nonce_field( \RAN\Admin\PortabilityController::EXPORT_NONCE_ACTION, 'nonce' ); ?>
 		<div class="ran-booster-portability__export-review">
 		<section class="ran-booster-portability__credential-option" aria-labelledby="ran-booster-portability-export-credentials-heading">
-			<h5 id="ran-booster-portability-export-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h5>
+			<h4 id="ran-booster-portability-export-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h4>
 			<p><?php esc_html_e( 'Select only the saved credentials that should be copied. Credential permissions have not been assessed.', 'ran-booster' ); ?></p>
 			<?php if ( $portability_export_credentials_unavailable ) : ?>
 				<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load repository credential choices. You can still create a package-only Blueprint.', 'ran-booster' ); ?></p></div></div>
@@ -236,9 +236,9 @@ $render_portability_extension      = static function ( string $hook, string $ste
 				</div>
 		</section>
 		<section class="ran-booster-portability__export-packages" aria-labelledby="ran-booster-portability-export-packages-heading">
-			<h5 id="ran-booster-portability-export-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title"><?php esc_html_e( 'Packages', 'ran-booster' ); ?></h5>
+			<h4 id="ran-booster-portability-export-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title"><?php esc_html_e( 'Packages', 'ran-booster' ); ?></h4>
 			<p><?php esc_html_e( 'Review the managed plugins and themes that will be recorded in this Transporter Blueprint.', 'ran-booster' ); ?></p>
-			<div class="ran-booster-portability__table-scroll" role="region" aria-labelledby="ran-booster-portability-export-packages-heading" tabindex="0">
+			<div class="ran-booster-portability__table-scroll" role="region" aria-label="<?php esc_attr_e( 'Package list', 'ran-booster' ); ?>" tabindex="0">
 				<table class="widefat striped ran-booster-portability__review-table ran-booster-portability__export-table">
 					<caption class="screen-reader-text"><?php esc_html_e( 'Managed packages available for export', 'ran-booster' ); ?></caption>
 					<thead><tr>

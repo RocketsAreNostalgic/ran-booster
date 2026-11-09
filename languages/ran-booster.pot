@@ -8821,6 +8821,11 @@ msgstr ""
 msgid "Manage repository credentials"
 msgstr ""
 
+#: views/portability-review.php:256
+#: views/portability.php:241
+msgid "Package list"
+msgstr ""
+
 #: views/portability-review.php:258
 msgid "Packages in this import review"
 msgstr ""

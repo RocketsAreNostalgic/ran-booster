@@ -20,6 +20,17 @@
 }
 
 /*
+ * A compact Button sits with 32px wp-admin controls, which wp-admin grows to
+ * 40px on small screens. Grow with them.
+ */
+
+@media screen and (max-width: 782px) {
+	.ran-wp-ui-button.is-compact {
+		--wp-ui-button-height: var(--wpds-dimension-size-lg);
+	}
+}
+
+/*
  * wp-admin's unlayered link colour and focus rules outrank the wp-ui layer,
  * and the anchor reset falls back to an inherited colour and square corners.
  * Give a static anchor the Button's own colours, corners and box-sizing (the

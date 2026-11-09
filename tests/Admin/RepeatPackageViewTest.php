@@ -141,7 +141,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertStringContainsString( 'ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high"', $html );
 			self::assertStringContainsString( '>Git provider unavailable</span>', $html );
-			self::assertMatchesRegularExpression( '/href="[^"]*page=' . $package_view->get_page_slug() . '&amp;package=[^"]*&amp;return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh" class="button">Edit settings/', $html );
+			self::assertMatchesRegularExpression( '/href="[^"]*page=' . $package_view->get_page_slug() . '&amp;package=[^"]*&amp;return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh" class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline">Edit settings/', $html );
 			$document = new \DOMDocument();
 			$previous = libxml_use_internal_errors( true );
 			$document->loadHTML( $html );
@@ -292,7 +292,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/name="ran_booster\[dry-run\]" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help"/', $html );
 		self::assertStringContainsString( 'id="ran-booster-link-installed-help"', $html );
 		self::assertStringContainsString( 'id="ran-booster-link-installed-folder-help"', $html );
-		self::assertMatchesRegularExpression( '/class="button button-primary" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help"/', $html );
+		self::assertMatchesRegularExpression( '/class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help"/', $html );
 		self::assertSame(
 			array( 'Repository configuration', 'Advanced settings', 'Update source', 'Package operation' ),
 			$this->h3_headings( $html ),
@@ -399,7 +399,7 @@ final class RepeatPackageViewTest extends TestCase {
 			. '&amp;package=' . $managed_package_identifier;
 
 		self::assertStringContainsString(
-			'<a class="button button-primary" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" href="' . $manage_url . '">Manage ' . $package_view->get_type() . '</a>',
+			'<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" href="' . $manage_url . '">Manage ' . $package_view->get_type() . '</a>',
 			$form
 		);
 		self::assertMatchesRegularExpression(
@@ -407,7 +407,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$form
 		);
 		self::assertStringNotContainsString( '>Install and add another</button>', $form );
-		self::assertStringNotContainsString( '<button type="submit" class="button button-primary"', $form );
+		self::assertStringNotContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid"', $form );
 		self::assertSame( 1, substr_count( $form, 'name="ran_booster[install_another]"' ) );
 	}
 
@@ -507,7 +507,7 @@ final class RepeatPackageViewTest extends TestCase {
 		$expected_install_url = $base_url
 			. '?page=' . $package_view->get_create_page_slug()
 			. '&amp;provider=gh&amp;open_picker=1';
-		$install_another_link = '<a class="button" href="' . $expected_install_url . '">Install another ' . $package_view->get_type() . '</a>';
+		$install_another_link = '<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" href="' . $expected_install_url . '">Install another ' . $package_view->get_type() . '</a>';
 
 		self::assertStringNotContainsString( 'ran-booster-package-settings__install-another', $html );
 		self::assertStringNotContainsString( '>Cancel</a>', $html );
@@ -649,7 +649,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 
 			$base_url             = 'https://example.test/wp-admin/admin.php';
-			$install_another_link = '<a class="button" href="' . $base_url . '?page=' . $package_view->get_create_page_slug() . '&amp;provider=gh&amp;open_picker=1">Install another ' . $package_view->get_type() . '</a>';
+			$install_another_link = '<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" href="' . $base_url . '?page=' . $package_view->get_create_page_slug() . '&amp;provider=gh&amp;open_picker=1">Install another ' . $package_view->get_type() . '</a>';
 			$actions              = $this->action_group_by_class( $html, 'ran-booster-settings-actions' );
 
 			self::assertStringNotContainsString( 'data-ran-booster-package-settings-save', $html, $package_view->get_type() );

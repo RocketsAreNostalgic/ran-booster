@@ -25,7 +25,7 @@ $repository_read_only               = isset( $repository_read_only ) && true ===
 <?php } ?>
 		<div class="ran-booster-repository-field">
 			<input id="ran-booster-repository-name" name="ran_booster[repository]" type="text" class="regular-text ran-booster-repository-input" placeholder="<?php esc_attr_e( 'repo-name/package-name', 'ran-booster' ); ?>" value="<?php echo esc_attr( $repository_value ); ?>" maxlength="512" required <?php disabled( $repository_read_only ); ?>>
-			<button type="button" class="button ran-booster-open-repository-picker" data-package-type="<?php echo esc_attr( $package_view->get_type() ); ?>"<?php echo esc_attr( $repository_picker_hidden_attribute ); ?> <?php disabled( ! $provider_browse_available || $repository_read_only ); ?>><?php echo esc_html( sprintf( /* translators: %1$s: Package type label, such as Plugin or Theme. */ __( 'Pick %1$s repository', 'ran-booster' ), $package_view->get_singular_label() ) ); ?></button>
+			<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' ran-booster-open-repository-picker' ); ?>" data-package-type="<?php echo esc_attr( $package_view->get_type() ); ?>"<?php echo esc_attr( $repository_picker_hidden_attribute ); ?> <?php disabled( ! $provider_browse_available || $repository_read_only ); ?>><?php echo esc_html( sprintf( /* translators: %1$s: Package type label, such as Plugin or Theme. */ __( 'Pick %1$s repository', 'ran-booster' ), $package_view->get_singular_label() ) ); ?></button>
 		</div>
 <?php if ( $package_field_grid ) { ?>
 	</div>

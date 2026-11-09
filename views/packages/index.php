@@ -169,7 +169,7 @@ $policy_labels = array(
 				<option value="manual" <?php selected( 'manual', $package_list_state['policy'] ); ?>><?php esc_html_e( 'Manual', 'ran-booster' ); ?></option>
 				<option value="disabled" <?php selected( 'disabled', $package_list_state['policy'] ); ?>><?php esc_html_e( 'Disabled', 'ran-booster' ); ?></option>
 			</select>
-			<button class="button" type="submit"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
+			<button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
 			<?php if ( $has_package_list_filters ) { ?>
 				<a class="ran-booster-package-list-filters__clear" href="<?php echo esc_url( $clear_filters_url ); ?>"><?php esc_html_e( 'Clear filters', 'ran-booster' ); ?></a>
 			<?php } ?>
@@ -185,7 +185,7 @@ $policy_labels = array(
 			<p class="search-box">
 				<label for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search"><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'Search managed %s', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?></label>
 				<input id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search" class="wp-filter-search" type="search" name="s" value="<?php echo esc_attr( $package_list_state['search'] ); ?>">
-				<button class="button" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button>
+				<button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button>
 			</p>
 		</form>
 	</div>
@@ -220,7 +220,7 @@ $policy_labels = array(
 					<option value="deactivate-plugins"><?php esc_html_e( 'Disable in WordPress', 'ran-booster' ); ?></option>
 				<?php } ?>
 			</select>
-			<button type="submit" class="button action" data-ran-booster-bulk-apply disabled><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
+			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( true ) . ' action' ); ?>" data-ran-booster-bulk-apply disabled><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
 			<span class="ran-booster-bulk-actions__status" aria-live="polite" data-ran-booster-selection-status><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( '0 %s selected', 'ran-booster' ), $bulk_type_label ) ); ?></span>
 		</form>
 		<?php } ?>
@@ -264,7 +264,7 @@ $policy_labels = array(
 					<td colspan="4" class="ran-booster-package-empty-state">
 						<h3><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></h3>
 						<p><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No %s are managed by RAN Booster yet.', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?></p>
-						<a class="button button-primary" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
+						<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 					</td>
 				<?php } ?>
 			</tr>
@@ -517,7 +517,7 @@ $policy_labels = array(
 							<span class="screen-reader-text" aria-live="polite" data-ran-booster-update-message></span>
 						</form>
 					<?php } ?>
-					<a href="<?php echo esc_url( $edit_url ); ?>" class="button"><?php esc_html_e( 'Edit settings', 'ran-booster' ); ?></a>
+					<a href="<?php echo esc_url( $edit_url ); ?>" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>"><?php esc_html_e( 'Edit settings', 'ran-booster' ); ?></a>
 					<?php if ( ! $release_managed ) { ?>
 						<?php $extension_action_renderer->render( $package_actions ); ?>
 					<?php } ?>

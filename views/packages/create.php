@@ -174,11 +174,11 @@ $managed_package_url        = '' === $managed_package_identifier
 						</fieldset>
 						<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Installation actions', 'ran-booster' ); ?>">
 							<?php if ( '' !== $managed_package_url ) { ?>
-								<a class="button button-primary" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" href="<?php echo esc_url( $managed_package_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
-								<button type="submit" class="button" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
+								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" href="<?php echo esc_url( $managed_package_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
 							<?php } else { ?>
-								<button type="submit" class="button button-primary" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
-								<button type="submit" class="button" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php esc_html_e( 'Install and add another', 'ran-booster' ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php esc_html_e( 'Install and add another', 'ran-booster' ); ?></button>
 							<?php } ?>
 						</div>
 					</div>

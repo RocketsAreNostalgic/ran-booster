@@ -278,7 +278,7 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					name="ran_booster[check_repository_branch_after_save]"
 					value="1"
 					form="ran-booster-package-edit-form"
-					class="button button-primary ran-booster-branch-readiness-check-form"
+					class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-branch-readiness-check-form' ); ?>"
 					data-ran-booster-enhanced-mutation
 					data-ran-booster-error-target="#ran-booster-repository-branch-check-error"
 					data-ran-booster-relocate-rendered-error
@@ -293,9 +293,9 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
 				<?php } ?>
 				<?php if ( $repository_detail_available ) { ?>
-					<a class="button" href="<?php echo esc_url( $provider_settings_url ); ?>"><?php echo esc_html( $webhook_action_label ); ?></a>
+					<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $provider_settings_url ); ?>"><?php echo esc_html( $webhook_action_label ); ?></a>
 				<?php } else { ?>
-					<button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( $webhook_action_label ); ?></button>
+					<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"><?php echo esc_html( $webhook_action_label ); ?></button>
 				<?php } ?>
 			</div>
 		</div>

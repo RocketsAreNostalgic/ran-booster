@@ -306,7 +306,9 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-package-row__action-group :is(.button, button) {
+.ran-booster-admin
+	.ran-booster-package-row__action-group
+	:is(.ran-wp-ui-button, button) {
 	min-inline-size: 112px;
 	text-align: center;
 }
@@ -438,7 +440,7 @@
 	.ran-booster-admin .ran-booster-package-row__action-group > *,
 	.ran-booster-admin
 		.ran-booster-package-row__action-group
-		:is(.button, button) {
+		:is(.ran-wp-ui-button, button) {
 		inline-size: 100%;
 	}
 }
@@ -492,9 +494,9 @@
 		max-inline-size: none;
 	}
 
-	.ran-booster-admin .ran-booster-package-list-filters .button,
-	.ran-booster-admin .ran-booster-package-list-search .button,
-	.ran-booster-admin .ran-booster-bulk-actions .button,
+	.ran-booster-admin .ran-booster-package-list-filters .ran-wp-ui-button,
+	.ran-booster-admin .ran-booster-package-list-search .ran-wp-ui-button,
+	.ran-booster-admin .ran-booster-bulk-actions .ran-wp-ui-button,
 	.ran-booster-admin .ran-booster-bulk-actions select {
 		inline-size: 100%;
 	}
@@ -590,7 +592,9 @@
 		flex-direction: column;
 	}
 
-	.ran-booster-admin .ran-booster-package-row__action-group .button {
+	.ran-booster-admin
+		.ran-booster-package-row__action-group
+		.ran-wp-ui-button {
 		inline-size: 100%;
 	}
 

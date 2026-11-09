@@ -162,7 +162,7 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringContainsString( '<h3>Add your first ' . $type . '</h3>', $html );
 		self::assertStringContainsString( 'No ' . $plural . ' are managed by RAN Booster yet.', $html );
 		self::assertStringContainsString(
-			'class="button button-primary" href="https://example.test/wp-admin/admin.php?page=' . $page_slug . '-create">Add your first ' . $type . '</a>',
+			'class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" href="https://example.test/wp-admin/admin.php?page=' . $page_slug . '-create">Add your first ' . $type . '</a>',
 			$html
 		);
 		self::assertStringNotContainsString( 'ran-booster-package-toolbar', $html );

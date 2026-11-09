@@ -1081,7 +1081,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-package-row__summary"', $view );
 		self::assertStringContainsString( 'class="ran-booster-package-row__actions"', $view );
 		self::assertStringContainsString( 'class="ran-booster-package-row__action-group"', $view );
-		self::assertStringContainsString( 'class="button"><?php esc_html_e( \'Edit settings\'', $view );
+		self::assertStringContainsString( 'ButtonClasses::secondary( false, true ) ); ?>"><?php esc_html_e( \'Edit settings\'', $view );
 		self::assertStringNotContainsString( "\$policy_disabled ? ' button-primary' : ''", $view );
 		self::assertStringNotContainsString( 'class="ran-booster-meta__tiles"', $view );
 		self::assertStringNotContainsString( 'class="ran-booster-meta__badges"', $view );
@@ -1403,7 +1403,13 @@ final class AdminAssetContractTest extends TestCase {
 			'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php',
 			'RAN/Admin/WebhookManagement/views/panel.php',
 			'assets/ran-booster-repository-picker.js',
+			'views/packages/branch-readiness.php',
+			'views/packages/create.php',
 			'views/packages/danger-zone.php',
+			'views/packages/edit.php',
+			'views/packages/fields/repository.php',
+			'views/packages/index.php',
+			'views/packages/recovery.php',
 			'views/packages/reinstall.php',
 		);
 

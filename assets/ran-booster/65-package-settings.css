@@ -901,7 +901,7 @@
 			.ran-booster-settings-actions,
 			.ran-booster-package-settings__save-actions
 		)
-		.button {
+		.ran-wp-ui-button {
 		inline-size: 100%;
 		text-align: center;
 	}

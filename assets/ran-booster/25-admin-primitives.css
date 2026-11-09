@@ -917,10 +917,19 @@
 
 .ran-booster-admin
 	[data-ran-booster-ui-disclosure-density="prominent"]
-	.ran-booster-ui-disclosure__header
-	> [role="button"],
+	> *
+	> .ran-booster-ui-disclosure
+	> .ran-booster-ui-disclosure__header
+	> [role="button"] {
+	padding: 12px 16px;
+	font-size: 16px;
+	line-height: 24px;
+}
+
 .ran-booster-admin
-	[data-ran-booster-ui-disclosure-density="prominent"]
+	[data-ran-booster-ui-disclosure-density="prominent"][data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
 	> details[data-ran-booster-ui-disclosure-fallback]
 	> summary {
 	padding: 12px 16px;
@@ -930,7 +939,9 @@
 
 .ran-booster-admin
 	[data-ran-booster-ui-disclosure-density="prominent"]
-	.ran-booster-ui-disclosure__header
+	> *
+	> .ran-booster-ui-disclosure
+	> .ran-booster-ui-disclosure__header
 	> [role="button"]
 	> :first-child {
 	display: flex;
@@ -1046,6 +1057,42 @@
 	> details[data-ran-booster-ui-disclosure-fallback][open]
 	> summary::after {
 	transform: rotate(180deg);
+}
+
+/*
+ * The host owns every disclosure's outer margin. The native fallback sits flush
+ * inside it, so the control keeps its position when the public Disclosure
+ * replaces the fallback.
+ */
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]
+	> details[data-ran-booster-ui-disclosure-fallback] {
+	margin: 0;
+}
+
+.ran-booster-admin [data-ran-booster-ui-disclosure="troubleshooting-logging"] {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin [data-ran-booster-ui-disclosure="package-webhook-setup"] {
+	margin-block: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin [data-ran-booster-ui-disclosure="provider-webhook-setup"] {
+	margin-block-start: var(--ran-booster-space-10);
+}
+
+.ran-booster-admin
+	:is(
+		[data-ran-booster-ui-disclosure="package-advanced-settings"],
+		[data-ran-booster-ui-disclosure="package-release-track"]
+	) {
+	margin-block-start: var(--ran-booster-card-gap);
+}
+
+.ran-booster-admin [data-ran-booster-ui-disclosure="package-danger-zone"] {
+	margin-block-end: var(--ran-booster-space-18);
 }
 
 /*

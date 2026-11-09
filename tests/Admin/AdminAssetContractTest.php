@@ -202,7 +202,7 @@ final class AdminAssetContractTest extends TestCase {
 
 		$offenders = array();
 		foreach ( glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE ) as $file ) {
-			$css = (string) file_get_contents( $file );
+			$css = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
 			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
 			if ( ! preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {
 				continue;
@@ -268,6 +268,16 @@ final class AdminAssetContractTest extends TestCase {
 		}
 
 		self::assertSame( array(), $offences );
+	}
+
+	public function test_disclosure_hosts_own_their_margins_and_prominent_rules_stay_scoped(): void {
+		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		self::assertStringContainsString( '> details[data-ran-booster-ui-disclosure-fallback] {' . "\n\t" . 'margin: 0;', $css );
+		foreach ( array( 'troubleshooting-logging', 'package-webhook-setup', 'provider-webhook-setup', 'package-advanced-settings', 'package-release-track', 'package-danger-zone' ) as $kind ) {
+			self::assertStringContainsString( 'data-ran-booster-ui-disclosure="' . $kind . '"', $css, $kind );
+		}
+		// A prominent header rule must name the host's own disclosure, never every nested one.
+		self::assertSame( 0, preg_match( '/density="prominent"\]\s+\.ran-booster-ui-disclosure__header/', $css ) );
 	}
 
 	public function test_framed_fact_grids_share_one_summary_grid_profile(): void {

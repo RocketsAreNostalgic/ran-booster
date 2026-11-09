@@ -229,14 +229,14 @@ beta.44. Rows marked **Decision** need an owner choice and are not yet applied. 
 | ---------------------------------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | Admin Shell bottom to page title                     | 24px (`.wrap` offset); real notices add their own height        | WordPress `.wrap`                                              | Matches on all pages                                                           |
 | Left edge of title, description, tabs and first card | The wrap's left edge; no inline inset on a top-level page shell | `.ran-booster-admin > .ran-booster-page-shell` header and body | Applied in `be3ef723`                                                          |
-| Page header bottom padding to first block            | 20px, owned by the header; the first block adds no top margin   | `.ran-booster-page-shell__header`                              | Applied in `c158dca8`                                                          |
+| Page subtitle (or tabs) to first Card | 24px (`--ran-booster-card-gap`), the same as the Card gap; the first block adds no top margin | `.ran-booster-page-shell__header`, the package intro and heading rules, the Troubleshooting tabs and the provider management header | Applied on every page; was 20px (16px on Credentials and Webhook secrets) |
 | Space between consecutive Cards | 24px (`--ran-booster-card-gap`), as in Jetpack | Card margin and stack gap | Applied; was 20px |
 | Top margin of a first heading in any container       | 0; the container inset owns the space                           | `:is(h2, h3, h4):first-child`                                  | Applied in `c158dca8`                                                          |
 | Card inline inset                                    | 24px                                                            | Card content layer                                             | Matches, except legacy nested panels                                           |
 | Nested panel inside a Card                           | Takes the Card's inline inset and adds none                     | Panel rules scoped to the Card                                 | Capture panel fixed in `93a643c3`                                              |
 | Card block-start inset (to first heading) | 24px (`--ran-booster-card-inset-block-start`); with the 1px border the heading sits 25px from the edge | Card content layer | Applied; was 18-25px by page |
 | Card block-end inset (last block to edge) | 32px (`--ran-booster-card-inset-block-end`), 8px heavier than the sides; a trailing block adds no margin at any depth | Card content layer | Applied; was 20-24px plus trailing margins up to 37px |
-| Heading to description inside a Card | 8px (`--ran-booster-card-heading-gap`) | `.ran-booster-section__description` | Applied; was 4, 8, 12 or 16px |
+| Heading to first content inside a Card | 8px (`--ran-booster-card-heading-gap`); a bare Card heading takes `.ran-booster-section__title`, so the WordPress `h3` margin never applies | `.ran-booster-section__description`, the shared heading-plus-paragraph rule, and the first block after a heading in Settings, Installation, Logging and Transporter | Applied; was 4, 8, 12, 13, 15, 16, 20 or 34px |
 | Page title to description                            | 6px                                                             | `.ran-booster-page-heading__description`                       | 10px on package pages                                                          |
 | Shell navigation text to content edge                | **Decision D3**                                                 | Generated Shell; coordinate with its owner                     | Nav text 60px, content 58px                                                    |
 
@@ -269,6 +269,13 @@ record's details cell keeps 12px (`--ran-booster-space-12`) of bottom padding
 below its disclosure (#765). The Support report evidence disclosure takes the Logging
 disclosure's 16px (`--ran-booster-space-16`) top margin after its action
 (#746).
+
+Insets and gaps are measured box to box. When a Card ends with a framed panel,
+such as a provider status summary or the public lookup panel, the 32px
+block-end inset runs to that panel's border; the panel's own 16px padding and
+1px border sit inside it and are content, not extra inset. Repository detail
+pages still place 18px between their header, view links and first Card; they
+are not yet aligned with the 24px page frame.
 
 Rules that follow from the table:
 

@@ -179,6 +179,46 @@ final class AdminAssetContractTest extends TestCase {
 	 * Every full-border rule must take its radius from the shared surface block,
 	 * so a new framed box cannot ship square. Entries below are intentional.
 	 */
+	public function test_headings_take_their_size_from_the_shared_type_scale(): void {
+		$allowed = array(
+			'dashicons'                          => 'Icon glyph size, not text.',
+			'ran-booster-dialog__close'          => 'Icon button glyph size.',
+			'ran-booster-portability__mode-icon' => 'Icon glyph size.',
+			'ran-booster-overview-package-count' => 'Stat numeral, not a heading.',
+			'ran-booster-storage'                => 'Storage path readout sized relative to its container.',
+		);
+
+		$offenders   = array();
+		$stylesheets = glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE );
+		foreach ( false === $stylesheets ? array() : $stylesheets as $file ) {
+			if ( str_ends_with( $file, '00-foundations.css' ) ) {
+				continue;
+			}
+			$css = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
+			if ( ! preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {
+				continue;
+			}
+			foreach ( $rules as $rule ) {
+				if ( 1 !== preg_match( '/font-size:\s*(?!(?:12|13|14)px\b)[0-9.]+(?:px|em|rem)\b/', $rule[2] ) ) {
+					continue;
+				}
+				$covered = false;
+				foreach ( array_keys( $allowed ) as $token ) {
+					if ( str_contains( $rule[1], $token ) ) {
+						$covered = true;
+						break;
+					}
+				}
+				if ( ! $covered ) {
+					$offenders[] = basename( $file ) . ': ' . trim( (string) preg_replace( '/\s+/', ' ', $rule[1] ) );
+				}
+			}
+		}
+
+		self::assertSame( array(), $offenders, 'Text sizes above 14px or below 12px must use the --ran-booster-font-size-* type scale tokens.' );
+	}
+
 	public function test_every_framed_surface_takes_its_radius_from_the_shared_block(): void {
 		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		$start      = strpos( $primitives, '/* surface-radius:start */' );

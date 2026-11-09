@@ -277,6 +277,27 @@ Rules that follow from the table:
 a private runner helper like the other browser checks, and it is how the
 status column above stays honest.
 
+### Type scale
+
+Text sizes come from tokens in `assets/ran-booster/00-foundations.css`. The
+scale follows Jetpack's admin pages, with the page title and sub-section sizes
+chosen for this plugin. `test_headings_take_their_size_from_the_shared_type_scale`
+fails on any other raw size.
+
+| Role        | Token                                  | Size / weight |
+| ----------- | -------------------------------------- | ------------- |
+| Page title  | `--ran-booster-font-size-page-title`   | 23px / 600    |
+| Card title  | `--ran-booster-font-size-card-title`   | 20px / 500    |
+| Sub-section | `--ran-booster-font-size-subsection`   | 16px / 600    |
+| Body        | `--ran-booster-font-size-base`         | 14px          |
+| Help text   | `--ran-booster-font-size-sm`           | 13px          |
+| Caption     | `--ran-booster-font-size-xs`           | 12px          |
+
+Card title weight is `--ran-booster-font-weight-heading` (500), chosen by the
+owner on the GitHub page against 18px and 600 to match Jetpack. Icon glyph
+sizes, the package-count numeral and the storage readout are the only raw
+exceptions.
+
 ## Add-on generation and service delivery
 
 An administration add-on must check the exact Add-on API generation before

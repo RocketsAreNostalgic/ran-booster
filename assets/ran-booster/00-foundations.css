@@ -107,6 +107,10 @@
 	--ran-booster-font-size-xs: 12px;
 	--ran-booster-font-size-sm: 13px;
 	--ran-booster-font-size-base: 14px;
+	--ran-booster-font-size-subsection: 16px;
+	--ran-booster-font-size-card-title: 20px;
+	--ran-booster-font-size-page-title: 23px;
+	--ran-booster-font-weight-heading: 500;
 	--ran-booster-font-weight-semibold: 600;
 	--ran-booster-line-height-tight: 1.3;
 	--ran-booster-line-height-heading: 1.4;

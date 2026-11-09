@@ -121,7 +121,7 @@
 		> summary {
 		padding-block: var(--ran-booster-space-8);
 		padding-inline-end: calc(3 * var(--ran-booster-space-16));
-		font-size: 15px;
+		font-size: var(--ran-booster-font-size-subsection);
 		line-height: 20px;
 		list-style-position: outside;
 	}

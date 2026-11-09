@@ -277,7 +277,7 @@
 	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-status-ok-background);
 	color: var(--ran-booster-status-ok);
-	font-size: 11px;
+	font-size: var(--ran-booster-font-size-xs);
 	font-weight: 700;
 }
 
@@ -304,7 +304,7 @@
 .ran-booster-source-choice__meta {
 	margin-block-start: var(--ran-booster-space-8);
 	color: var(--ran-booster-link-strong);
-	font-size: 11px;
+	font-size: var(--ran-booster-font-size-xs);
 	font-weight: 700;
 }
 
@@ -925,7 +925,7 @@
 
 .ran-booster-admin .ran-booster-settings__group legend {
 	padding-inline: 0 var(--ran-booster-space-8);
-	font-size: 15px;
+	font-size: var(--ran-booster-font-size-subsection);
 	font-weight: 600;
 }
 

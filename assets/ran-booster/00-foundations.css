@@ -114,6 +114,8 @@
 	--ran-booster-line-height-relaxed: 1.6;
 	--ran-booster-radius-control: 2px;
 	--ran-booster-radius-surface: 3px;
+	--ran-booster-radius-card: var(--wpds-border-radius-lg);
+	--ran-booster-radius-inset: var(--wpds-border-radius-md);
 	--ran-booster-radius-badge: 10px;
 	--ran-booster-radius-circle: 50%;
 	--ran-booster-radius-pill: 999px;

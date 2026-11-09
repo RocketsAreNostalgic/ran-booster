@@ -7,7 +7,7 @@
 
 .ran-booster-admin .ran-booster-card:not([data-ran-booster-card="extensions"]) {
 	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-surface);
+	border-radius: var(--ran-booster-radius-card);
 	box-shadow: var(--ran-booster-shadow-surface);
 	background: var(--ran-booster-surface);
 	color: var(--ran-booster-text);
@@ -532,9 +532,35 @@
 .ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {
 	overflow: hidden;
 	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-surface);
+	border-radius: var(--ran-booster-radius-card);
 	box-shadow: var(--ran-booster-shadow-surface);
 	background: var(--ran-booster-surface);
+}
+
+/*
+ * One corner profile for every framed surface. Cards, panels and package
+ * sections share the WordPress UI Card radius, so the native fallback matches
+ * the mounted Card. Boxes nested inside a Card use the smaller inset radius.
+ */
+
+.ran-booster-admin
+	:is(
+		.ran-booster-settings-section,
+		.ran-booster-package-summary,
+		.ran-booster-settings-actions.ran-booster-package-settings__save-actions
+	) {
+	border-radius: var(--ran-booster-radius-card);
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-status-summary,
+		.ran-booster-webhook-step,
+		.ran-booster-webhook-endpoint,
+		.ran-booster-readiness-panel,
+		.ran-booster-provider-empty-state
+	) {
+	border-radius: var(--ran-booster-radius-inset);
 }
 
 .ran-booster-admin .ran-booster-page-shell {

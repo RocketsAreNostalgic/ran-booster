@@ -1284,7 +1284,7 @@ final class AdminAssetContractTest extends TestCase {
 				self::fail( $token );
 			}
 
-			return isset( $m[1] ) && '' !== $m[1] ? (int) $m[1] : 600;
+			return isset( $m[1] ) ? (int) $m[1] : 600;
 		};
 
 		$declared = static function ( string $css, string $selector_fragment, string $property, string $value_pattern ): string {

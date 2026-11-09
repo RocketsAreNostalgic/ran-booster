@@ -187,7 +187,7 @@ $repository_placeholder = array() === $locator_examples
 		</details></div>
 
 		<p class="description"><?php esc_html_e( 'The full check makes temporary local marker files and up to five Git provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report.', 'ran-booster' ); ?></p>
-		<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Run full diagnostics', 'ran-booster' ); ?></button></p>
+		<p><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Run full diagnostics', 'ran-booster' ); ?></button></p>
 	</form>
 
 		<?php if ( ! empty( $troubleshooting['ran'] ) ) { ?>

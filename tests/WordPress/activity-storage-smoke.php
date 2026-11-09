@@ -340,7 +340,7 @@ return static function ( wpdb $database ): void {
 		$link_query      = static function ( string $html, string $label ) use ( $expect ): array {
 			$pattern = 'Clear filters' === $label
 				? '/class="ran-booster-package-list-filters__clear" href="([^"]+)"/'
-				: '/<a class="button"[^>]* href="([^"]+)">' . preg_quote( $label, '/' ) . '<\\/a>/';
+				: '/<a class="[^"]*ran-wp-ui-button[^"]*"[^>]* href="([^"]+)">' . preg_quote( $label, '/' ) . '<\\/a>/';
 			$expect( 1 === preg_match( $pattern, $html, $matches ), 'rendered ' . $label . ' link' );
 			$href = $matches[1] ?? null;
 			if ( ! is_string( $href ) ) {

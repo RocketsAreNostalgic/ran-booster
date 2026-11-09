@@ -120,7 +120,7 @@ $package_settings_label = 'theme' === $package_type
 				<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
 				<input type="hidden" name="ran_booster[correlation_id]" value="<?php echo esc_attr( (string) $item['correlation_id'] ); ?>">
 				<p><label><input type="checkbox" name="ran_booster[confirm_reviewed]" value="1" required> <?php esc_html_e( 'I have checked the package\'s current state and want to allow another deployment.', 'ran-booster' ); ?></label></p>
-				<button type="submit" class="button button-primary">
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>">
 					<?php
 					if ( '' === $package_settings_url ) {
 						esc_html_e( 'Allow retry', 'ran-booster' );
@@ -140,7 +140,7 @@ $package_settings_label = 'theme' === $package_type
 				<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
 				<input type="hidden" name="ran_booster[correlation_id]" value="<?php echo esc_attr( (string) $item['correlation_id'] ); ?>">
 				<p><label><input type="checkbox" name="ran_booster[confirm_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the deployment worker has stopped.', 'ran-booster' ); ?></label></p>
-				<button type="submit" class="button"><?php esc_html_e( 'Reconcile stopped worker', 'ran-booster' ); ?></button>
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Reconcile stopped worker', 'ran-booster' ); ?></button>
 			</form>
 		<?php } ?>
 	<?php } ?>

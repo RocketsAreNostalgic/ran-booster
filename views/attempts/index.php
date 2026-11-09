@@ -94,7 +94,7 @@ $origin_labels = array(
 					<?php } ?>
 				<?php } ?>
 			</select>
-			<button type="submit" class="button"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
+			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
 			<?php if ( '' !== $selected_provider || '' !== $selected_package ) { ?>
 				<a class="ran-booster-package-list-filters__clear" href="<?php echo esc_url( $troubleshooting_base . '&panel=activity' ); ?>"><?php esc_html_e( 'Clear filters', 'ran-booster' ); ?></a>
 			<?php } ?>
@@ -223,7 +223,7 @@ $origin_labels = array(
 								<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
 								<input type="hidden" name="ran_booster[correlation_id]" value="<?php echo esc_attr( (string) ( $item['correlation_id'] ?? '' ) ); ?>">
 								<p><label><input type="checkbox" name="ran_booster[confirm_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the deployment worker has stopped.', 'ran-booster' ); ?></label></p>
-								<button type="submit" class="button"><?php esc_html_e( 'Reconcile stopped worker', 'ran-booster' ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Reconcile stopped worker', 'ran-booster' ); ?></button>
 							</form>
 						<?php } ?>
 						<?php } ?>
@@ -235,10 +235,10 @@ $origin_labels = array(
 		</div>
 	<?php } ?>
 	<?php if ( ! $unavailable && $has_cursor ) { ?>
-		<p><a class="button" href="<?php echo esc_url( $base_url ); ?>"><?php esc_html_e( 'View latest activity', 'ran-booster' ); ?></a></p>
+		<p><a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $base_url ); ?>"><?php esc_html_e( 'View latest activity', 'ran-booster' ); ?></a></p>
 	<?php } ?>
 	<?php if ( null !== $next ) { ?>
-		<p data-ran-booster-activity-load-older-wrap><a class="button" data-ran-booster-activity-load-older href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'View older activity', 'ran-booster' ); ?></a></p>
+		<p data-ran-booster-activity-load-older-wrap><a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" data-ran-booster-activity-load-older href="<?php echo esc_url( $base_url . '&before=' . rawurlencode( $next ) ); ?>"><?php esc_html_e( 'View older activity', 'ran-booster' ); ?></a></p>
 		<p data-ran-booster-activity-progress role="status" aria-live="polite" hidden><?php esc_html_e( 'Loading older activity…', 'ran-booster' ); ?></p>
 		<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-activity-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Older activity could not be loaded. Try again.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 		<p data-ran-booster-activity-announcement role="status" aria-live="polite" tabindex="-1" hidden></p>

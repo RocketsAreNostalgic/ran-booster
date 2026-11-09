@@ -88,16 +88,16 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 						<ul class="plugin-action-buttons">
 								<li>
 								<?php if ( $extension['active'] ) : ?>
-									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Active', 'ran-booster' ); ?></button>
+									<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"><?php esc_html_e( 'Active', 'ran-booster' ); ?></button>
 								<?php elseif ( 'Installed, inactive' === $extension['state'] && current_user_can( 'activate_plugin', $extension['plugin'] ) && ! ( is_multisite() && is_network_only_plugin( $extension['plugin'] ) ) ) : ?>
 									<form method="post" class="ran-booster-extension-action" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 										<input type="hidden" name="action" value="ran_booster_extension_activate">
 										<input type="hidden" name="extension_id" value="<?php echo esc_attr( $extension['id'] ); ?>">
 										<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( wp_create_nonce( 'activate-plugin_' . $extension['plugin'] ) ); ?>">
-										<button type="submit" class="button button-primary" data-pending="<?php esc_attr_e( 'Activating…', 'ran-booster' ); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Extension name. */ _x( 'Activate %s', 'extension action', 'ran-booster' ), $extension['name'] ) ); ?>"><?php esc_html_e( 'Activate', 'ran-booster' ); ?></button>
+										<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" data-pending="<?php esc_attr_e( 'Activating…', 'ran-booster' ); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Extension name. */ _x( 'Activate %s', 'extension action', 'ran-booster' ), $extension['name'] ) ); ?>"><?php esc_html_e( 'Activate', 'ran-booster' ); ?></button>
 									</form>
 								<?php elseif ( $extension['installed'] ) : ?>
-									<button type="button" class="button button-disabled" disabled aria-disabled="true"><?php esc_html_e( 'Inactive', 'ran-booster' ); ?></button>
+									<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"><?php esc_html_e( 'Inactive', 'ran-booster' ); ?></button>
 									<?php if ( $extension['compatible'] ) : ?>
 										<span class="description"><?php echo esc_html( is_multisite() && is_network_only_plugin( $extension['plugin'] ) ? __( 'A network administrator must activate this plugin.', 'ran-booster' ) : __( 'You do not have permission to activate this plugin.', 'ran-booster' ) ); ?></span>
 									<?php endif; ?>
@@ -106,7 +106,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 										<input type="hidden" name="action" value="ran_booster_extension_install">
 										<input type="hidden" name="extension_id" value="<?php echo esc_attr( $extension['id'] ); ?>">
 										<input type="hidden" name="_wpnonce" value="<?php echo esc_attr( wp_create_nonce( 'ran_booster_extension_install_' . $extension['id'] ) ); ?>">
-										<button type="submit" class="button button-primary" data-pending="<?php esc_attr_e( 'Installing…', 'ran-booster' ); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Extension name. */ _x( 'Install %s', 'extension action', 'ran-booster' ), $extension['name'] ) ); ?>"><?php esc_html_e( 'Install', 'ran-booster' ); ?></button>
+										<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" data-pending="<?php esc_attr_e( 'Installing…', 'ran-booster' ); ?>" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: Extension name. */ _x( 'Install %s', 'extension action', 'ran-booster' ), $extension['name'] ) ); ?>"><?php esc_html_e( 'Install', 'ran-booster' ); ?></button>
 									</form>
 								<?php elseif ( $extension['compatible'] && '' !== $manual_install_url ) : ?>
 									<span class="description"><?php esc_html_e( 'You do not have permission to install plugins.', 'ran-booster' ); ?></span>

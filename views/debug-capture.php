@@ -117,17 +117,17 @@ $status_classes       = array(
 					<?php wp_nonce_field( 'ran-booster-manage-debug-capture' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="manage-debug-capture">
 					<?php if ( 'active' === $capture_state ) { ?>
-						<a class="button" href="<?php echo esc_url( $refresh_url ); ?>"><?php esc_html_e( 'Refresh', 'ran-booster' ); ?></a>
-						<button type="submit" class="button" name="ran_booster[operation]" value="stop"><?php esc_html_e( 'Stop capture', 'ran-booster' ); ?></button>
+						<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $refresh_url ); ?>"><?php esc_html_e( 'Refresh', 'ran-booster' ); ?></a>
+						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" name="ran_booster[operation]" value="stop"><?php esc_html_e( 'Stop capture', 'ran-booster' ); ?></button>
 					<?php } else { ?>
-						<button type="submit" class="button button-primary" name="ran_booster[operation]" value="start"><?php echo esc_html( 'retained' === $capture_state ? __( 'Start new capture', 'ran-booster' ) : __( 'Start 60-minute capture', 'ran-booster' ) ); ?></button>
+						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" name="ran_booster[operation]" value="start"><?php echo esc_html( 'retained' === $capture_state ? __( 'Start new capture', 'ran-booster' ) : __( 'Start 60-minute capture', 'ran-booster' ) ); ?></button>
 					<?php } ?>
 				</form>
 				<?php if ( in_array( $capture_state, array( 'active', 'retained' ), true ) ) { ?>
 				<form class="ran-booster-debug-capture__delete" method="post" action="">
 					<?php wp_nonce_field( 'ran-booster-manage-debug-capture' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="manage-debug-capture">
-					<button type="submit" class="button button-link-delete" name="ran_booster[operation]" value="delete"><?php esc_html_e( 'Delete capture', 'ran-booster' ); ?></button>
+					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' ) ); ?>" name="ran_booster[operation]" value="delete"><?php esc_html_e( 'Delete capture', 'ran-booster' ); ?></button>
 				</form>
 				<?php } ?>
 			</div>

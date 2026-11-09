@@ -13,7 +13,7 @@ $report_generated = ! empty( $troubleshooting['report_generated'] );
 <form method="post" action="<?php echo esc_url( $troubleshooting_base . '&panel=support-report' ); ?>">
 	<?php wp_nonce_field( 'ran-booster-generate-support-report' ); ?>
 	<input type="hidden" name="ran_booster[action]" value="generate-support-report">
-	<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Generate support report', 'ran-booster' ); ?></button></p>
+	<p><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Generate support report', 'ran-booster' ); ?></button></p>
 </form>
 <?php if ( $report_generated ) { ?>
 <div data-support-report-tools>
@@ -22,7 +22,7 @@ $report_generated = ! empty( $troubleshooting['report_generated'] );
 		<textarea id="ran-booster-troubleshooting-report" class="large-text code" rows="16" readonly><?php echo esc_textarea( $troubleshooting['report'] ?? '' ); ?></textarea>
 		<button type="button" class="button-link ran-booster-troubleshooting__report-copy hide-if-no-js" data-support-report-copy aria-label="<?php esc_attr_e( 'Copy JSON report', 'ran-booster' ); ?>"><svg class="dashicons dashicons-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><g class="ran-booster-copy-icon"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></g><path class="ran-booster-copy-check" d="m5 12 4 4L19 6"/></svg></button>
 	</div>
-	<p><button type="button" class="button hide-if-no-js" data-support-report-download data-support-report-filename="<?php echo esc_attr( $troubleshooting['report_filename'] ?? '' ); ?>"><?php esc_html_e( 'Download JSON report', 'ran-booster' ); ?></button></p>
+	<p><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' hide-if-no-js' ); ?>" data-support-report-download data-support-report-filename="<?php echo esc_attr( $troubleshooting['report_filename'] ?? '' ); ?>"><?php esc_html_e( 'Download JSON report', 'ran-booster' ); ?></button></p>
 	<p data-support-report-status role="status" aria-live="polite" aria-atomic="true" data-copied-message="<?php esc_attr_e( 'Support report copied to the clipboard.', 'ran-booster' ); ?>" data-copy-failed-message="<?php esc_attr_e( 'Clipboard access failed. The report is selected; use your browser copy command.', 'ran-booster' ); ?>" data-download-failed-message="<?php esc_attr_e( 'Download failed. Select the report and save it manually.', 'ran-booster' ); ?>"></p>
 		<p class="description"><?php esc_html_e( 'Preview, Copy and Download use this same frozen JSON. To save it manually, select and copy the JSON into a text editor, then save it as a .json file.', 'ran-booster' ); ?></p>
 </div>

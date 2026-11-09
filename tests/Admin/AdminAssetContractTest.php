@@ -475,6 +475,53 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="troubleshooting-evidence"\]\s*\)\s*\{\s*margin-block-start: var\(--ran-booster-space-16\);/', $primitives );
 	}
 
+	/**
+	 * A page subtitle sits one Card gap above the first Card on every page, and
+	 * a Card heading sits one heading gap above its first content (#746).
+	 */
+	public function test_page_and_card_heading_gaps_use_the_shared_spacing_tokens(): void {
+		$owners = array(
+			array( 'ran-booster/25-admin-primitives.css', '\n\.ran-booster-admin \.ran-booster-page-shell__header \{', 'padding-block: 0 var(--ran-booster-card-gap);' ),
+			array( 'ran-booster/25-admin-primitives.css', '\n\t> \.ran-booster-page-shell__header \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
+			array( 'ran-booster/60-packages.css', '(?:^|\n)\.ran-booster-admin \.ran-booster-package-intro \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
+			array( 'ran-booster/65-package-settings.css', '\n\.ran-booster-admin \.ran-booster-package-settings__intro \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
+			array( 'ran-booster/65-package-settings.css', '\n\t\+ \.ran-booster-package-settings \{', 'margin-block-start: var(--ran-booster-card-gap);' ),
+			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\.ran-booster-admin \.ran-booster-secondary-nav \{', 'margin-block: var(--ran-booster-space-18) var(--ran-booster-card-gap);' ),
+			array( 'ran-booster/30-provider-cards.css', '\n\.ran-booster-admin \.ran-booster-provider-management__header \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
+			array( 'ran-booster-onboarding.css', '\n\n\.ran-booster-admin \.ran-booster-portability__flow \{', 'margin-block-start: var(--ran-booster-card-gap);' ),
+			array( 'ran-booster/25-admin-primitives.css', '\n\t\+ noscript\n\t> p:first-child \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
+			array( 'ran-booster/65-package-settings.css', '\n\t\.ran-booster-settings__group:first-of-type \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
+			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-card \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
+			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-card\n\t> \.ran-booster-page-shell__header \{', 'padding-block-start: 0;' ),
+			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-debug-capture__panel \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
+			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-portability__mode-options \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
+			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-portability__flow-header > p \{', 'margin-block-start: 0;' ),
+		);
+		foreach ( $owners as $owner ) {
+			if ( 1 !== preg_match( '/' . $owner[1] . '([^}]*)\}/', $this->asset( $owner[0] ), $m ) ) {
+				self::fail( $owner[0] . ': spacing owner ' . stripslashes( $owner[1] ) . ' is missing.' );
+			}
+			self::assertStringContainsString( $owner[2], $m[1], $owner[0] );
+			self::assertDoesNotMatchRegularExpression( '/(?:margin|padding)[a-z-]*:[^;]*space-20/', $m[1], $owner[0] );
+		}
+
+		// The Logging heading no longer carries the paragraph's 16px bottom margin.
+		self::assertStringNotContainsString( '.ran-booster-debug-capture > h3', $this->asset( 'ran-booster-onboarding.css' ) );
+
+		// Bare Card headings take the shared title role, so the WordPress h3 margin never applies.
+		foreach ( array(
+			'settings.php'                     => array( 'ran-booster-storage' ),
+			'settings-general.php'             => array( 'ran-booster-general-heading', 'ran-booster-limits-heading' ),
+			'troubleshooting-installation.php' => array( 'ran-booster-installation-heading', 'ran-booster-components-heading' ),
+			'debug-capture.php'                => array( 'ran-booster-debug-capture-heading' ),
+			'portability.php'                  => array( 'ran-booster-portability-mode-heading' ),
+		) as $view => $ids ) {
+			foreach ( $ids as $id ) {
+				self::assertMatchesRegularExpression( '/<h3 id="' . $id . '" class="ran-booster-section__title"/', $this->view( $view ), $view . ' ' . $id );
+			}
+		}
+	}
+
 	public function test_framed_fact_grids_share_one_summary_grid_profile(): void {
 		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		foreach ( array(

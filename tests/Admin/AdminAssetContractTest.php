@@ -297,6 +297,54 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	/**
+	 * Every corner radius names a shared token, so a raw length or the retired
+	 * 3px surface radius cannot bring back an off-profile corner. Entries below
+	 * are intentional.
+	 */
+	public function test_every_radius_value_comes_from_a_shared_token(): void {
+		$allowed_files     = array(
+			'ran-admin-shell.css'           => 'Standalone shell sheet with its own fallbacks; its button radius follows core buttons.',
+			'ran-booster-notice-compat.css' => 'Loads only where the design-system tokens are absent, so it restates the Card radius as a length.',
+		);
+		$allowed_selectors = array(
+			'ran-booster-status-dot'          => 'Status dot circle, owned by the status indicator rules.',
+			'ran-booster-webhook-setup__tile' => 'Legacy rule with no rendered consumer; retire it with the rule.',
+		);
+		$token_pattern     = '/var\(--ran-booster-radius-(?:card|inset|control|circle|pill)\)|var\(--wpds-border-radius-[a-z0-9]+\)|\b0\b|revert-layer|inherit/';
+
+		$offenders   = array();
+		$stylesheets = glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE );
+		foreach ( false === $stylesheets ? array() : $stylesheets as $file ) {
+			if ( isset( $allowed_files[ basename( $file ) ] ) ) {
+				continue;
+			}
+			$css = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
+			if ( ! preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {
+				continue;
+			}
+			foreach ( $rules as $rule ) {
+				if ( ! preg_match_all( '/(?<![\w-])border(?:-[a-z]+)*-radius\s*:\s*([^;]+)/', $rule[2], $values ) ) {
+					continue;
+				}
+				$selector = trim( (string) preg_replace( '/\s+/', ' ', $rule[1] ) );
+				foreach ( array_keys( $allowed_selectors ) as $token ) {
+					if ( str_contains( $selector, $token ) ) {
+						continue 2;
+					}
+				}
+				foreach ( $values[1] as $value ) {
+					if ( '' !== trim( (string) preg_replace( $token_pattern, '', $value ) ) ) {
+						$offenders[] = basename( $file ) . ': ' . $selector . ' => ' . trim( $value );
+					}
+				}
+			}
+		}
+
+		self::assertSame( array(), $offenders, 'Every border radius must use --ran-booster-radius-card, -inset, -control, -circle or -pill (or a --wpds-border-radius token). Raw lengths and the retired surface radius are allowed only with a reason.' );
+	}
+
+	/**
 	 * Status pills are one static public Badge rendered through StatusBadge. The
 	 * retired pill classes and the fallback/mount pair must not return.
 	 */

@@ -390,6 +390,39 @@ asserts that relationship through the tokens. Icon glyph sizes and the dialog
 close icon are the only raw-size exceptions, plus the notice compatibility
 sheet, which loads only where the design-system tokens are absent.
 
+### Corner radius
+
+Every corner comes from a token in `assets/ran-booster/00-foundations.css`, and
+every framed surface takes its radius from the `surface-radius` block in
+`assets/ran-booster/25-admin-primitives.css`, not from its own rule.
+
+| Role                                         | Token                          | Value |
+| -------------------------------------------- | ------------------------------ | ----- |
+| Card, top-level frame, disclosure, dialog    | `--ran-booster-radius-card`    | 8px   |
+| Frame nested inside a Card or disclosure     | `--ran-booster-radius-inset`   | 4px   |
+| Control, selectable choice tile, inline code | `--ran-booster-radius-control` | 2px   |
+| Status dot, radio mark                       | `--ran-booster-radius-circle`  | 50%   |
+| Switch track                                 | `--ran-booster-radius-pill`    | 999px |
+
+- The card and inset values are the WordPress design-system `lg` and `md`
+  radii. A nested frame takes the smaller inset radius so its corners sit
+  inside the outer Card's curve.
+- Badges and notices are drawn by the public Badge and Notice CSS (8px); Booster
+  does not restate their radius. Buttons keep their own button rules.
+- A native `.ran-booster-disclosure` fallback takes the Card radius, so a
+  disclosure looks the same before and after the public Disclosure mounts and
+  without JavaScript.
+- A choice tile (`.ran-booster-source-choice`, the repository picker modes and
+  the Transporter Export/Import modes) is a control and takes the control radius.
+- `--ran-booster-radius-surface` (3px) is retired for new work. It stays defined
+  only for one legacy rule with no rendered consumer.
+- `test_every_framed_surface_takes_its_radius_from_the_shared_block` fails on a
+  full border outside the shared block, and
+  `test_every_radius_value_comes_from_a_shared_token` fails on a raw length or
+  the surface radius. The exceptions are the admin shell sheet, which keeps its
+  own fallbacks; the notice compatibility sheet, which loads only where the
+  design-system tokens are absent; the status dot; and that legacy rule.
+
 ## Add-on generation and service delivery
 
 An administration add-on must check the exact Add-on API generation before

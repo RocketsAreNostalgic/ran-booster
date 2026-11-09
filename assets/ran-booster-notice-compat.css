@@ -99,3 +99,7 @@
 	+ p {
 	margin-block-start: var(--ran-booster-space-8, 8px);
 }
+
+.ran-booster-admin .notice.ran-wp-ui-notice > .notice-dismiss {
+	margin-inline-start: 4px;
+}

@@ -225,6 +225,20 @@
 	display: none;
 }
 
+/*
+ * A dismissible static notice puts core's dismiss button, its own or the one
+ * common.js appends, in the Notice's close-icon slot: the third grid column
+ * of the first row, where Notice.CloseIconButton sits, instead of core's
+ * absolute position over the end of the text.
+ */
+
+.ran-booster-admin .notice.ran-wp-ui-notice > .notice-dismiss {
+	position: static;
+	grid-column: 3;
+	grid-row: 1;
+	margin-inline-start: var(--wpds-dimension-gap-xs);
+}
+
 [data-ran-booster-background-failure-row]
 	.update-message[data-ran-booster-ui-notice][data-ran-booster-ui-notice-scope="global"][data-ran-booster-ui-mounted]
 	[data-ran-booster-ui-notice-content]

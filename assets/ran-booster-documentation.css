@@ -82,11 +82,18 @@
 }
 
 .ran-booster-admin .ran-booster-documentation__search-hint {
-	display: flex;
+	display: inline-flex;
 	margin: var(--ran-booster-space-16) 0 0;
+	padding-block: var(--ran-booster-space-3);
+	padding-inline: var(--ran-booster-space-10);
 	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--ran-booster-space-4);
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-surface);
+	background: var(--ran-booster-status-neutral-background);
+	color: var(--ran-booster-text-muted);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-documentation__search-hint kbd {

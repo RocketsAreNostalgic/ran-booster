@@ -103,7 +103,6 @@ final class AdminAssetContractTest extends TestCase {
 				'20-repository-picker.css',
 				'25-admin-primitives.css',
 				'30-provider-cards.css',
-				'35-status-utilities.css',
 				'40-tables-and-pills.css',
 				'50-troubleshooting-and-activity.css',
 				'55-extensions.css',
@@ -137,8 +136,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-bottom', $extensions );
 	}
 
-	public function test_status_utilities_own_shared_pill_and_tile_contracts(): void {
-		$utilities  = $this->asset( 'ran-booster/35-status-utilities.css' );
+	public function test_status_pills_are_badges_and_the_legacy_tile_utilities_are_gone(): void {
 		$debug      = $this->view( 'debug-capture.php' );
 		$packages   = $this->view( 'packages/index.php' );
 		$provider   = $this->view( 'provider.php' );
@@ -146,8 +144,7 @@ final class AdminAssetContractTest extends TestCase {
 		$component  = $this->asset( 'ran-booster/40-tables-and-pills.css' );
 		$activity   = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 
-		self::assertStringNotContainsString( '.ran-booster-badge', $utilities );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-tile {', $utilities );
+		self::assertFileDoesNotExist( dirname( __DIR__, 2 ) . '/assets/ran-booster/35-status-utilities.css' );
 		self::assertStringNotContainsString( 'notice notice-warning inline ran-booster-debug-capture__scope', $debug );
 		self::assertStringContainsString( "StatusBadge::for_intent( (string) \$prominent_status['label'], (string) ( \$badge_intents[ \$prominent_status['tone'] ] ?? 'none' ), \$prominent_status_activity ? array( 'data-ran-booster-activity-badge' => '' ) : array() )", $packages );
 		self::assertStringContainsString( 'Stored · Validity checked on use', $projection );
@@ -301,7 +298,7 @@ final class AdminAssetContractTest extends TestCase {
 			$matched = glob( $root . $pattern );
 			foreach ( false === $matched ? array() : $matched as $file ) {
 				$source = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
-				foreach ( array( 'ran-booster-pill', 'advanced-source-summary__badge', 'data-ran-booster-ui-badge', 'data-ran-booster-static-badge' ) as $retired ) {
+				foreach ( array( 'ran-booster-pill', 'advanced-source-summary__badge', 'data-ran-booster-ui-badge', 'data-ran-booster-static-badge', 'ran-booster-tile' ) as $retired ) {
 					if ( str_contains( $source, $retired ) ) {
 						$offences[] = basename( $file ) . ': retired ' . $retired;
 					}

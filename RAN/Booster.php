@@ -48,7 +48,6 @@ class Booster {
 		'20-repository-picker.css',
 		'25-admin-primitives.css',
 		'30-provider-cards.css',
-		'35-status-utilities.css',
 		'40-tables-and-pills.css',
 		'50-troubleshooting-and-activity.css',
 		'55-extensions.css',

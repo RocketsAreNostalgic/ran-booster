@@ -624,7 +624,6 @@ final class BoosterAssetsTest extends TestCase {
 			'ran-booster-20-repository-picker'            => '20-repository-picker.css',
 			'ran-booster-25-admin-primitives'             => '25-admin-primitives.css',
 			'ran-booster-30-provider-cards'               => '30-provider-cards.css',
-			'ran-booster-35-status-utilities'             => '35-status-utilities.css',
 			'ran-booster-40-tables-and-pills'             => '40-tables-and-pills.css',
 			'ran-booster-50-troubleshooting-and-activity' => '50-troubleshooting-and-activity.css',
 			'ran-booster-55-extensions'                   => '55-extensions.css',

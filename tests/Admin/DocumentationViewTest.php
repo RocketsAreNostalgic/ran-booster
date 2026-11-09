@@ -242,7 +242,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertSame( 1, $callable_calls );
 		self::assertStringContainsString( '<aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading">On this page</h2>', $html );
-		self::assertStringContainsString( '<p class="ran-booster-tile ran-booster-documentation__search-hint"><span class="ran-booster-tile__label">Search this page with</span> <kbd>⌘F</kbd> <span>or</span> <kbd>Ctrl+F</kbd></p>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-documentation__search-hint">Search this page with <kbd>⌘F</kbd> <span>or</span> <kbd>Ctrl+F</kbd></p>', $html );
 		self::assertSame( 1, preg_match_all( '/href="#addon-guide"/', $html ) );
 		self::assertSame( 1, preg_match_all( '/id="addon-guide"/', $html ) );
 		self::assertStringContainsString( 'Add-on &lt;guide&gt;', $html );

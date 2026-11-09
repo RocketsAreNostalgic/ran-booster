@@ -255,7 +255,7 @@ unset( $chapter );
 				</div>
 			<?php } ?>
 		</div>
-		<p class="ran-booster-tile ran-booster-documentation__search-hint"><span class="ran-booster-tile__label"><?php esc_html_e( 'Search this page with', 'ran-booster' ); ?></span> <kbd>⌘F</kbd> <span><?php esc_html_e( 'or', 'ran-booster' ); ?></span> <kbd>Ctrl+F</kbd></p>
+		<p class="ran-booster-documentation__search-hint"><?php esc_html_e( 'Search this page with', 'ran-booster' ); ?> <kbd>⌘F</kbd> <span><?php esc_html_e( 'or', 'ran-booster' ); ?></span> <kbd>Ctrl+F</kbd></p>
 	</nav>
 </aside>
 <section class="ran-booster-documentation__main" aria-labelledby="ran-booster-documentation-heading">

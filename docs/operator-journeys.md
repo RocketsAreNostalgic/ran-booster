@@ -19,7 +19,7 @@ The [Blueprint reference](portability-briefcase.md) retains format and policy de
 1. Check the source and destination satisfy Booster's
    [requirements](../README.md#requirements-and-support), including single-site
    WordPress. On the source, open Booster → **Transporter** → **Create a Blueprint**.
-2. In **Packages**, select the managed plugins/themes to include.
+2. In **Blueprint contents**, select the managed plugins/themes to include.
    Review the package list even when all packages begin selected. Unselected
    packages do not travel. This exports their management configuration and readable
    installed requirement observations, not verified installed bytes or an inferred

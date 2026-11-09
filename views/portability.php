@@ -69,12 +69,17 @@ $render_portability_extension      = static function ( string $hook, string $ste
 	<section class="ran-booster-card ran-booster-portability__flow" data-ran-booster-card="transporter" id="ran-booster-portability-export" aria-labelledby="ran-booster-portability-export-heading" hidden>
 		<header class="ran-booster-portability__flow-header">
 			<h3 id="ran-booster-portability-export-heading" tabindex="-1"><?php esc_html_e( 'Create a Transporter Blueprint', 'ran-booster' ); ?></h3>
-			<p><?php esc_html_e( 'Choose the repository credentials and managed packages to include in this Transporter Blueprint.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', 'ran-booster' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Deleting Booster removes its saved local credentials and records.', 'ran-booster' ); ?></p>
 		</header>
 		<form class="ran-booster-portability__export-form" method="post" action="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-portability-export-form>
 			<input type="hidden" name="action" value="ran_booster_export_blueprint">
 			<?php wp_nonce_field( \RAN\Admin\PortabilityController::EXPORT_NONCE_ACTION, 'nonce' ); ?>
-		<div class="ran-booster-portability__review ran-booster-portability__export-review">
+		<section class="ran-booster-portability__review ran-booster-portability__export-review" aria-labelledby="ran-booster-portability-export-review-heading">
+			<div class="ran-booster-portability__review-heading">
+				<h4 id="ran-booster-portability-export-review-heading" class="ran-booster-portability__review-title"><?php esc_html_e( 'Blueprint contents', 'ran-booster' ); ?></h4>
+			</div>
+			<p><?php esc_html_e( 'Choose the repository credentials and managed packages to include in this Transporter Blueprint.', 'ran-booster' ); ?></p>
 		<section class="ran-booster-portability__credential-option" aria-labelledby="ran-booster-portability-export-credentials-heading">
 			<h5 id="ran-booster-portability-export-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h5>
 			<p><?php esc_html_e( 'Select only the saved credentials that should be copied. Credential permissions have not been assessed.', 'ran-booster' ); ?></p>
@@ -140,7 +145,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 								$description = 'configuration' === ( $credential['reason'] ?? null ) ? __( 'This credential is supplied by site configuration.', 'ran-booster' ) : __( 'This saved credential no longer exists.', 'ran-booster' );
 							}
 							?>
-							<li class="ran-booster-portability__credential-row<?php echo $available ? '' : ' ran-booster-portability__credential-row--unavailable'; ?>" data-portability-export-credential-row data-portability-credential-packages="<?php echo esc_attr( $package_indexes ); ?>">
+							<li class="ran-booster-portability__credential-row ran-booster-portability__credential-card<?php echo $available ? '' : ' ran-booster-portability__credential-card--unavailable'; ?>" data-portability-export-credential-row data-portability-credential-packages="<?php echo esc_attr( $package_indexes ); ?>">
 								<label for="<?php echo esc_attr( $control_id ); ?>" class="ran-booster-portability__credential-selection">
 									<?php if ( $available ) : ?>
 										<input id="<?php echo esc_attr( $control_id ); ?>" type="checkbox" name="credentials[<?php echo esc_attr( $provider_code ); ?>][]" value="<?php echo esc_attr( (string) $credential['id'] ); ?>" data-portability-export-credential aria-describedby="<?php echo esc_attr( $reason_id ); ?>">
@@ -153,16 +158,8 @@ $render_portability_extension      = static function ( string $hook, string $ste
 										<?php if ( '' !== $kind_label ) : ?>
 											<span class="ran-booster-tile ran-booster-portability__credential-kind"><span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span><span class="ran-booster-tile__value"><?php echo esc_html( $kind_label ); ?></span></span>
 										<?php endif; ?>
-										<?php if ( ! $available ) : ?>
-											<?php echo \RAN\Admin\Component\StatusBadge::for_intent( __( 'Unavailable for transfer', 'ran-booster' ), 'none' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
-										<?php endif; ?>
 									</span>
 								</label>
-								<?php if ( $available ) : ?>
-									<span class="screen-reader-text" id="<?php echo esc_attr( $reason_id ); ?>"><?php echo esc_html( $description ); ?></span>
-								<?php else : ?>
-									<p class="description ran-booster-portability__credential-reason" id="<?php echo esc_attr( $reason_id ); ?>"><?php echo esc_html( $description ); ?></p>
-								<?php endif; ?>
 								<?php if ( 0 < $package_count ) : ?>
 									<div data-ran-booster-ui-disclosure="transporter-credential-packages" data-ran-booster-ui-disclosure-density="compact">
 									<details data-ran-booster-ui-disclosure-fallback class="ran-booster-portability__credential-packages ran-booster-disclosure">
@@ -175,6 +172,11 @@ $render_portability_extension      = static function ( string $hook, string $ste
 											</ul>
 										</div>
 									</details></div>
+								<?php endif; ?>
+								<?php if ( $available ) : ?>
+									<span class="screen-reader-text" id="<?php echo esc_attr( $reason_id ); ?>"><?php echo esc_html( $description ); ?></span>
+								<?php else : ?>
+									<div class="ran-booster-portability__credential-decision-state ran-booster-portability__credential-decision-state--unavailable" id="<?php echo esc_attr( $reason_id ); ?>"><strong><?php esc_html_e( 'Unavailable for transfer', 'ran-booster' ); ?></strong><span class="description"><?php echo esc_html( $description ); ?></span></div>
 								<?php endif; ?>
 							</li>
 						<?php endforeach; ?>
@@ -216,12 +218,13 @@ $render_portability_extension      = static function ( string $hook, string $ste
 					</div>
 					<div class="ran-booster-portability__credential-guidance">
 						<p><strong><?php esc_html_e( 'Only transfer this Transporter Blueprint between sites you control.', 'ran-booster' ); ?></strong><br/><?php esc_html_e( 'Transporter Blueprints can contain file-backed repository credentials and must be handled as sensitive material.', 'ran-booster' ); ?></p>
-						<p class="description"><?php esc_html_e( 'Passwords are never stored by Booster. Keep yours safe; it is required to open this Transporter Blueprint.', 'ran-booster' ); ?> <?php esc_html_e( 'Deleting Booster removes its saved local credentials and records.', 'ran-booster' ); ?></p>
+						<p class="description"><?php esc_html_e( 'Passwords are never stored by Booster. Keep yours safe; it is required to open this Transporter Blueprint.', 'ran-booster' ); ?></p>
 					</div>
 				</div>
 		</section>
 		<section class="ran-booster-portability__export-packages" aria-labelledby="ran-booster-portability-export-packages-heading">
 			<h5 id="ran-booster-portability-export-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title"><?php esc_html_e( 'Packages', 'ran-booster' ); ?></h5>
+			<p><?php esc_html_e( 'Review the managed plugins and themes that will be recorded in this Transporter Blueprint.', 'ran-booster' ); ?></p>
 			<div class="ran-booster-portability__table-scroll" role="region" aria-labelledby="ran-booster-portability-export-packages-heading" tabindex="0">
 				<table class="widefat striped ran-booster-portability__review-table ran-booster-portability__export-table">
 					<caption class="screen-reader-text"><?php esc_html_e( 'Managed packages available for export', 'ran-booster' ); ?></caption>
@@ -254,11 +257,9 @@ $render_portability_extension      = static function ( string $hook, string $ste
 				</table>
 			</div>
 		</section>
-		</div>
-		<div class="ran-booster-portability__action-area">
-		<p id="ran-booster-portability-export-summary" class="ran-booster-portability__export-summary" data-portability-export-summary data-package-singular="<?php esc_attr_e( '1 package', 'ran-booster' ); ?>" data-package-plural="<?php echo esc_attr( $portability_package_plural ); ?>" data-credential-singular="<?php esc_attr_e( '1 selected repository credential profile', 'ran-booster' ); ?>" data-credential-plural="<?php echo esc_attr( $portability_credential_plural ); ?>" data-protected-template="<?php echo esc_attr( $portability_protected_summary ); ?>" data-package-only-template="<?php echo esc_attr( $portability_package_only_summary ); ?>" aria-live="polite"><?php echo esc_html( sprintf( $portability_package_only_summary, $portability_initial_package_count ) ); ?></p>
-		<button type="submit" class="button button-primary" data-portability-export-submit<?php disabled( $portability_export_unavailable || array() === $portability_export_rows ); ?> aria-describedby="ran-booster-portability-export-summary"><?php esc_html_e( 'Download Transporter Blueprint', 'ran-booster' ); ?></button>
-		</div>
+		</section>
+		<p class="ran-booster-portability__export-summary" data-portability-export-summary data-package-singular="<?php esc_attr_e( '1 package', 'ran-booster' ); ?>" data-package-plural="<?php echo esc_attr( $portability_package_plural ); ?>" data-credential-singular="<?php esc_attr_e( '1 selected repository credential profile', 'ran-booster' ); ?>" data-credential-plural="<?php echo esc_attr( $portability_credential_plural ); ?>" data-protected-template="<?php echo esc_attr( $portability_protected_summary ); ?>" data-package-only-template="<?php echo esc_attr( $portability_package_only_summary ); ?>" aria-live="polite"><?php echo esc_html( sprintf( $portability_package_only_summary, $portability_initial_package_count ) ); ?></p>
+		<p><button type="submit" class="button button-primary" data-portability-export-submit<?php disabled( $portability_export_unavailable || array() === $portability_export_rows ); ?>><?php esc_html_e( 'Download Transporter Blueprint', 'ran-booster' ); ?></button></p>
 		<div class="notice notice-error inline" data-portability-export-message role="alert" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p data-portability-export-message-text></p></div></div>
 		</form>
 	</section>
@@ -292,10 +293,8 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		<section class="ran-booster-portability__apply" aria-labelledby="ran-booster-portability-apply-heading">
 			<h4 id="ran-booster-portability-apply-heading"><?php esc_html_e( 'Apply selected changes', 'ran-booster' ); ?></h4>
 			<p><?php esc_html_e( 'Eligible package changes and credential-only recovery rows are applied independently. Credential-only recovery does not change an already-managed package’s settings.', 'ran-booster' ); ?></p>
-			<div class="ran-booster-portability__action-area">
-			<p id="ran-booster-portability-apply-summary" class="ran-booster-portability__apply-summary" data-portability-apply-summary aria-live="polite"><?php esc_html_e( 'No changes selected.', 'ran-booster' ); ?></p>
-			<button type="button" class="button button-primary ran-booster-portability__progress-button" data-portability-apply aria-describedby="ran-booster-portability-apply-summary" data-idle-label="<?php esc_attr_e( 'Apply selected changes', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Applying…', 'ran-booster' ); ?>" disabled><span data-portability-apply-label><?php esc_html_e( 'Apply selected changes', 'ran-booster' ); ?></span></button>
-			</div>
+			<p class="ran-booster-portability__apply-summary" data-portability-apply-summary aria-live="polite"><?php esc_html_e( 'No changes selected.', 'ran-booster' ); ?></p>
+			<p><button type="button" class="button button-primary ran-booster-portability__progress-button" data-portability-apply data-idle-label="<?php esc_attr_e( 'Apply selected changes', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Applying…', 'ran-booster' ); ?>" disabled><span data-portability-apply-label><?php esc_html_e( 'Apply selected changes', 'ran-booster' ); ?></span></button></p>
 			<div data-portability-apply-results aria-live="polite"></div>
 		</section>
 	</section>

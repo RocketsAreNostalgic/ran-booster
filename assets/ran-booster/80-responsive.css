@@ -328,6 +328,11 @@
 		gap: var(--ran-booster-space-12);
 	}
 
+	.ran-booster-admin .ran-booster-data-table > tbody > tr > [data-label] > * {
+		grid-column: 2;
+		justify-self: start;
+	}
+
 	.ran-booster-admin
 		.ran-booster-data-table
 		> tbody

@@ -144,8 +144,9 @@ final class RepositoryDetailRenderer {
 				<h3 id="ran-booster-repository-packages-heading"><?php esc_html_e( 'Packages using this repository', 'ran-booster' ); ?></h3>
 				<p class="description"><?php esc_html_e( 'Repository relationships are read-only here. Change package-owned settings from the linked plugin or theme.', 'ran-booster' ); ?></p>
 			</header>
-			<div class="ran-booster-settings-section__body ran-booster-repository-detail__table-wrap">
-				<table class="widefat striped ran-booster-repository-detail__packages">
+			<div class="ran-booster-settings-section__body">
+				<div class="ran-booster-data-table-wrap">
+				<table class="ran-booster-data-table ran-booster-data-table--rows ran-booster-repository-detail__packages">
 					<caption class="screen-reader-text"><?php esc_html_e( 'Packages using this repository', 'ran-booster' ); ?></caption>
 					<thead><tr><th scope="col"><?php esc_html_e( 'Package', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Source', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Settings', 'ran-booster' ); ?></th></tr></thead>
 					<tbody>
@@ -154,6 +155,7 @@ final class RepositoryDetailRenderer {
 					<?php } ?>
 					</tbody>
 				</table>
+				</div>
 			</div>
 		</div></div></section>
 		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integration-summary-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
@@ -280,14 +282,14 @@ final class RepositoryDetailRenderer {
 		}
 		?>
 		<tr>
-			<td><strong><?php echo esc_html( $package['display_name'] ); ?></strong><br><code><?php echo esc_html( $package['identifier'] ); ?></code></td>
-			<td><?php echo esc_html( $source ); ?>
+			<td data-label="<?php esc_attr_e( 'Package', 'ran-booster' ); ?>"><strong><?php echo esc_html( $package['display_name'] ); ?></strong><br><code><?php echo esc_html( $package['identifier'] ); ?></code></td>
+			<td data-label="<?php esc_attr_e( 'Source', 'ran-booster' ); ?>"><?php echo esc_html( $source ); ?>
 			<?php
 			if ( $release ) {
 				?>
 				<br><span class="description"><?php esc_html_e( 'Ignores pushes', 'ran-booster' ); ?></span><?php } ?></td>
-			<td><?php echo esc_html( $this->policy_label( $package['deployment_policy'] ?? null ) ); ?></td>
-			<td><a href="<?php echo esc_url( $package['settings_url'] ); ?>"><?php echo esc_html( 'plugin' === $package['type'] ? __( 'Plugin settings', 'ran-booster' ) : __( 'Theme settings', 'ran-booster' ) ); ?></a></td>
+			<td data-label="<?php esc_attr_e( 'Updates', 'ran-booster' ); ?>"><?php echo esc_html( $this->policy_label( $package['deployment_policy'] ?? null ) ); ?></td>
+			<td data-label="<?php esc_attr_e( 'Settings', 'ran-booster' ); ?>"><a href="<?php echo esc_url( $package['settings_url'] ); ?>"><?php echo esc_html( 'plugin' === $package['type'] ? __( 'Plugin settings', 'ran-booster' ) : __( 'Theme settings', 'ran-booster' ) ); ?></a></td>
 		</tr>
 		<?php
 	}

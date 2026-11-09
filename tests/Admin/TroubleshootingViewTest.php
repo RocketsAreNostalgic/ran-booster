@@ -1607,7 +1607,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 'The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', trim( $notice_text ) );
 		self::assertStringContainsString( 'placeholder="owner/repository (GitHub) or workspace/repository (Bitbucket)"', $html );
 		self::assertStringContainsString( 'class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap"', $html );
-		self::assertStringContainsString( 'class="widefat ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table"', $html );
+		self::assertStringContainsString( '<table class="ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table">', $html );
 		self::assertStringContainsString( 'class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent ran-booster-diagnostic-status ran-booster-diagnostic-status--pass"', $html );
 		self::assertStringContainsString( 'data-label="Status"', $html );
 		self::assertStringContainsString( 'data-label="Action"', $html );

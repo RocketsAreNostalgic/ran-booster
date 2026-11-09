@@ -315,7 +315,17 @@ subtle surface with a divider between rows, and the wrapper takes the inset
 radius. Cells carry `data-label` and stack through the shared data-table rules
 at 782px and below; only the actions cell stays out of the label grid, with
 its Buttons in an inner `.ran-booster-actions` row so the cell remains a real
-table cell. Column widths stay on the `--access` and `--webhook` modifiers.
+table cell. Column widths stay on the `--access` and `--webhook` modifiers, and
+their cells are vertically centred like Activity; other data tables keep the
+shared top alignment.
+
+The Repository detail "Packages using this repository" table and the
+Troubleshooting diagnostics table use the same frame and the `--rows`
+modifier, without `widefat`. Every data-table header is 13px/600, start-aligned
+on the Card surface; a `th scope="row"` in a body row reads as a normal cell.
+The diagnostics table keeps one `tbody` per result group with the strong
+divider between groups, and each group restarts the row stripe. In stacked
+cells every child sits in the value column.
 
 `tests/browser/page-frame.mjs` measures these values on a rendered page. It is
 a private runner helper like the other browser checks, and it is how the

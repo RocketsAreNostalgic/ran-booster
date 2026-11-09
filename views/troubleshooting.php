@@ -201,7 +201,7 @@ $repository_placeholder = array() === $locator_examples
 			<?php } ?>
 
 			<div class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap">
-				<table class="widefat ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table">
+				<table class="ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table">
 					<caption class="screen-reader-text"><?php esc_html_e( 'RAN Booster diagnostic results', 'ran-booster' ); ?></caption>
 					<thead><tr>
 						<th scope="col"><?php esc_html_e( 'Status', 'ran-booster' ); ?></th>

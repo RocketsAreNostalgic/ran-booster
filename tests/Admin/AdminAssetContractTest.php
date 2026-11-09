@@ -1006,7 +1006,27 @@ final class AdminAssetContractTest extends TestCase {
 			$css
 		);
 		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> thead\\s+> tr\\s+> th \\{\\s+background: transparent;\\s+font-size: var\\(--ran-booster-font-size-md\\);\\s+font-weight: 600;\\s+text-align: start;\\s+\\}/',
+			'/\\.ran-booster-admin \\.ran-booster-data-table > thead > tr > th \\{\\s+border-block-end: 1px solid var\\(--ran-booster-border\\);\\s+background: transparent;\\s+color: var\\(--ran-booster-text\\);\\s+font-size: var\\(--ran-booster-font-size-md\\);\\s+font-weight: 600;\\s+text-align: start;\\s+\\}/',
+			$css
+		);
+		self::assertDoesNotMatchRegularExpression( '/provider-management-table\\s+> thead\\s+> tr\\s+> th \\{\\s+(?:background|font-weight):/', $css );
+		self::assertMatchesRegularExpression(
+			'/\\.ran-booster-admin \\.ran-booster-data-table > tbody > tr > th \\{\\s+font-weight: inherit;\\s+text-align: start;\\s+\\}/',
+			$css
+		);
+		// Provider records centre their cells like the Activity table; the
+		// shared rows default stays top-aligned for other tables.
+		self::assertMatchesRegularExpression(
+			'/\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> tbody\\s+> tr\\s+> td \\{\\s+vertical-align: middle;\\s+\\}/',
+			$css
+		);
+		self::assertMatchesRegularExpression(
+			'/\\.ran-booster-admin \\.ran-booster-data-table th,\\s+\\.ran-booster-admin \\.ran-booster-data-table td \\{[^}]+vertical-align: top;/',
+			$css
+		);
+		// Grouped row-per-record tables restart the stripe in every group.
+		self::assertMatchesRegularExpression(
+			'/\\.ran-booster-data-table--rows\\s+> tbody:nth-of-type\\(even\\)\\s+> tr:nth-child\\(even\\)\\s+> \\* \\{\\s+background: transparent;\\s+\\}/',
 			$css
 		);
 		foreach ( array( 'ran-booster-provider-management__header', 'ran-booster-provider-list-controls' ) as $flat_class ) {
@@ -1045,6 +1065,10 @@ final class AdminAssetContractTest extends TestCase {
 		);
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-admin \\.ran-booster-data-table > tbody > tr > \\*,\\s+\\.ran-booster-admin \\.ran-booster-data-table--rows > tbody > tr \\+ tr > \\* \\{\\s+border: 0;\\s+\\}/',
+			$responsive
+		);
+		self::assertMatchesRegularExpression(
+			'/\\.ran-booster-admin \\.ran-booster-data-table > tbody > tr > \\[data-label\\] > \\* \\{\\s+grid-column: 2;\\s+justify-self: start;\\s+\\}/',
 			$responsive
 		);
 		self::assertStringNotContainsString( 'padding: var(--ran-booster-space-14) var(--ran-booster-space-16);', $responsive );

@@ -171,6 +171,19 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Integration status', $html );
 		self::assertStringContainsString( '<caption class="screen-reader-text">Packages using this repository</caption>', $html );
 		self::assertSame( 4, substr_count( $html, '<th scope="col">' ) );
+		if ( 1 !== preg_match( '/<div class="ran-booster-settings-section__body">\s*<div class="ran-booster-data-table-wrap">\s*<table class="([^"]+)">([\s\S]*?)<\/table>\s*<\/div>\s*<\/div>/', $html, $m ) ) {
+			self::fail( 'The packages table must be the only child of the shared data-table wrapper inside the section body.' );
+		}
+		$packages_table = $m[2];
+		self::assertSame( array( 'ran-booster-data-table', 'ran-booster-data-table--rows', 'ran-booster-repository-detail__packages' ), explode( ' ', $m[1] ) );
+		self::assertStringNotContainsString( 'widefat', $html );
+		self::assertStringNotContainsString( 'striped', $html );
+		self::assertStringNotContainsString( 'ran-booster-repository-detail__table-wrap', $html );
+		self::assertSame( 1, preg_match_all( '/<caption class="screen-reader-text">[^<]+<\/caption>/', $packages_table ) );
+		self::assertSame( 4, preg_match_all( '/<th[\s>]/', $packages_table ) );
+		self::assertSame( 1, substr_count( $packages_table, '<tbody>' ) );
+		self::assertSame( 8, preg_match_all( '/<td[\s>]/', $packages_table ) );
+		self::assertSame( 8, preg_match_all( '/<td data-label="(?:Package|Source|Updates|Settings)">/', $packages_table ) );
 		self::assertStringContainsString( 'hx-target="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( '<ul class="filter-links ran-section-navigation ran-section-navigation--thin">', $html );

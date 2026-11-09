@@ -591,17 +591,16 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-repository-detail__table-wrap {
-	overflow-x: auto;
+.ran-booster-admin .ran-booster-repository-detail__packages th:nth-child(1) {
+	inline-size: 46%;
 }
 
-.ran-booster-admin .ran-booster-repository-detail__packages {
-	margin: 0;
+.ran-booster-admin .ran-booster-repository-detail__packages th:nth-child(2) {
+	inline-size: 22%;
 }
 
-.ran-booster-admin .ran-booster-repository-detail__packages td,
-.ran-booster-admin .ran-booster-repository-detail__packages th {
-	vertical-align: top;
+.ran-booster-admin .ran-booster-repository-detail__packages th:nth-child(3) {
+	inline-size: 14%;
 }
 
 .ran-booster-admin .ran-booster-repository-detail__facts {
@@ -778,20 +777,17 @@
 	.ran-booster-data-table.ran-booster-provider-management-table
 	> thead
 	> tr
-	> th {
-	background: transparent;
-	font-size: var(--ran-booster-font-size-md);
-	font-weight: 600;
-	text-align: start;
+	> th
+	> a {
+	text-decoration: none;
 }
 
 .ran-booster-admin
 	.ran-booster-data-table.ran-booster-provider-management-table
-	> thead
+	> tbody
 	> tr
-	> th
-	> a {
-	text-decoration: none;
+	> td {
+	vertical-align: middle;
 }
 
 .ran-booster-admin

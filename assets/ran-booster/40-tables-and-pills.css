@@ -26,8 +26,16 @@
 
 .ran-booster-admin .ran-booster-data-table > thead > tr > th {
 	border-block-end: 1px solid var(--ran-booster-border);
-	background: var(--ran-booster-surface-subtle);
+	background: transparent;
 	color: var(--ran-booster-text);
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: 600;
+	text-align: start;
+}
+
+.ran-booster-admin .ran-booster-data-table > tbody > tr > th {
+	font-weight: inherit;
+	text-align: start;
 }
 
 .ran-booster-admin
@@ -53,6 +61,14 @@
 
 .ran-booster-admin .ran-booster-data-table > tbody:nth-of-type(even) > tr > * {
 	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-data-table--rows
+	> tbody:nth-of-type(even)
+	> tr:nth-child(even)
+	> * {
+	background: transparent;
 }
 
 .ran-booster-admin

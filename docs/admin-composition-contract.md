@@ -295,13 +295,14 @@ Rules that follow from the table:
 a private runner helper like the other browser checks, and it is how the
 status column above stays honest.
 
-### Static notices (pilot)
+### Static notices
 
-A notice can be static server-rendered markup drawn with the public Notice's
-own CSS from `ran-booster-wp-ui-static.css` instead of a mounted React
-`Notice.Root`. The Settings scope error hosts (`#ran-booster-general-{scope}-error`)
-are the only ones converted so far; every other `data-ran-booster-ui-notice` host
-is still mounted by `ran-booster-cards.js`.
+Booster's server-rendered notices are static markup drawn with the public
+Notice's own CSS from `ran-booster-wp-ui-static.css` instead of a mounted React
+`Notice.Root`. Every `data-ran-booster-ui-notice` host rendered by PHP in `views/`
+and `RAN/` is static except the ones listed below;
+`tests/assets/notice-static-markup.test.mjs` fails when a host lacks the static
+markup and is not on that list.
 
 ```html
 <div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error data-ran-booster-ui-notice …>
@@ -313,21 +314,53 @@ is still mounted by `ran-booster-cards.js`.
 - Core's `notice notice-{intent}` classes (and `inline`, `is-dismissible`) stay,
   because core relocates and dismisses notices by them. Core's unlayered `.notice`
   frame outranks the `wp-ui` layer, so `25-admin-primitives.css` hands padding,
-  border, radius, shadow and background back to the layer with `revert-layer`.
+  border, radius, shadow and background back to the layer with `revert-layer`,
+  and restates the Notice's `border-box`, which a Card's `content-box` would
+  otherwise pass down through the `wp-ui` box-sizing utility.
 - The Notice grid outranks the user agent's `[hidden]` rule; an unlayered
-  `.ran-wp-ui-notice[hidden] { display: none }` restores it.
+  `.ran-wp-ui-notice[hidden] { display: none }` restores it. Scripts that reveal a
+  notice toggle `hidden` and set its text, as before.
+- These rules match inside `.ran-booster-admin` and, for a notice that carries
+  `data-ran-booster-ui-notice-scope="global"`, anywhere: on core screens, in a
+  dialog portal, or where core moves a notice that is not `inline` above the
+  shell. Off Booster screens `load_global_notice_assets()` loads the static sheet
+  with the primitives sheet.
+- A dismissible notice's `.notice-dismiss` button, Booster's own or the one core's
+  `common.js` appends, is a direct child of the host and sits in the Notice's
+  close-icon slot (third grid column, first row) instead of core's absolute
+  position over the text.
 - The content host stays a `div` and becomes the Notice description, so producer
   scripts find `[data-ran-booster-ui-notice-content]` and its paragraphs unchanged.
 - `RAN\Admin\Component\NoticeIcon` prints the intent icon after the content, as
-  `Notice.Root` does. A script that changes the intent in place must swap the
-  `is-*` class, core's `notice-*` class and the icon together.
+  `Notice.Root` does: `print_intent()` in templates, `markup()` in string-built
+  output. Where the intent comes from a `notice-*` tone, the `is-*` class, the
+  icon and `data-ran-booster-ui-notice-intent` are derived from the same value.
 - `ran-booster-cards.js` never mounts a `.ran-wp-ui-notice`, so there is no
   flash and no focus move, and the page looks the same without JavaScript.
-- A static notice has no `Notice.List` live region. Announcements go through
-  `wp.a11y.speak`.
+- A static notice has no `Notice.List` live region and no
+  `data-wp-ui-notice-politeness`. Announcements go through `wp.a11y.speak`.
 - The fallback rules in `25-admin-primitives.css` and
   `ran-booster-notice-compat.css` exclude `.ran-wp-ui-notice`; the compatibility
   sheet stays until Booster requires the WordPress 7.1 `wp-theme` styles.
+
+Hosts that stay mounted by `ran-booster-cards.js`:
+
+| Host | Why |
+| --- | --- |
+| Transporter export message (`views/portability.php`) | `ran-booster-portability.js` changes its intent in place |
+| Transporter preview notice (`views/portability.php`) | `ran-booster-portability.js` changes its intent in place |
+| Repository branch check error (`views/packages/branch-readiness.php`) | `ran-booster-enhanced-mutations.js` switches warning and error in place |
+| Credential validation result (`views/provider-credential-health.php`) | `ran-booster-enhanced-mutations.js` switches success to error in place |
+| Bulk update queue summary (`views/notices.php`) | `ran-booster-packages.js` switches success and warning in place |
+| Unsupported Multisite notice (`RAN/Runtime/UnsupportedMultisiteBootstrap.php`) | The safety bootstrap loads no Booster styles or scripts; it renders as a core notice |
+| Plugins failure rows (`RAN/Admin/ManagedPluginFailureRows.php`) | Their screen loads the Notice assets only while the failure notice is unacknowledged, and `native-update-warning.js` rewrites the row |
+
+An in-place intent change needs the icon to change with the class; that waits for
+one shared per-page `<template>` of the four icons that scripts clone. Notices that
+scripts build from strings or templates are also still mounted. The signed
+interaction outcome notice and the extension update warning are static on Booster
+screens only, which always load the static sheet; elsewhere they keep the mounted
+markup.
 
 ### Type scale
 

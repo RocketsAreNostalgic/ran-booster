@@ -116,3 +116,123 @@ test('static notices hand their frame to the layer and are never a fallback', ()
 		);
 	}
 });
+
+/*
+ * PHP-rendered notice hosts that stay mounted by ran-booster-cards.js, each
+ * found by a marker inside its opening tag. Hosts whose intent changes in
+ * place wait for the shared per-page icon template; the others render where
+ * the static Notice CSS is not guaranteed to load.
+ */
+const leftMounted = [
+	{
+		file: 'views/portability.php',
+		marker: 'data-portability-export-message',
+		reason: 'ran-booster-portability.js changes its intent in place',
+	},
+	{
+		file: 'views/portability.php',
+		marker: 'data-ran-booster-ui-notice-intent="info" hidden',
+		reason: 'ran-booster-portability.js changes the preview notice intent in place',
+	},
+	{
+		file: 'views/packages/branch-readiness.php',
+		marker: 'id="ran-booster-repository-branch-check-error"',
+		reason: 'ran-booster-enhanced-mutations.js switches warning and error in place',
+	},
+	{
+		file: 'views/provider-credential-health.php',
+		marker: 'class="notice notice-',
+		reason: 'ran-booster-enhanced-mutations.js switches success to error in place',
+	},
+	{
+		file: 'RAN/Runtime/UnsupportedMultisiteBootstrap.php',
+		marker: 'data-ran-booster-unsupported-multisite-notice',
+		reason: 'the Multisite safety bootstrap loads no Booster styles or scripts',
+	},
+	{
+		file: 'RAN/Admin/ManagedPluginFailureRows.php',
+		marker: 'class="update-message notice inline notice-error notice-alt"',
+		reason: 'Plugins rows load the Notice styles only while the failure notice is unacknowledged, and native-update-warning.js rewrites them',
+	},
+];
+
+function phpFiles(dir) {
+	return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+		const file = path.join(dir, entry.name);
+		if (entry.isDirectory()) {
+			return phpFiles(file);
+		}
+		return entry.name.endsWith('.php') ? [file] : [];
+	});
+}
+
+function noticeHosts() {
+	const hosts = [];
+	for (const file of [...phpFiles('views'), ...phpFiles('RAN')]) {
+		const source = fs.readFileSync(file, 'utf8');
+		const markers = Array.from(
+			source.matchAll(/data-ran-booster-ui-notice(?![-\w])/g),
+			(found) => found.index
+		);
+		markers.forEach((at, index) => {
+			const open = source.lastIndexOf('<div', at);
+			const content = source.indexOf(
+				'data-ran-booster-ui-notice-content',
+				at
+			);
+			const next = markers[index + 1] ?? source.length;
+			hosts.push({
+				file,
+				tag: source.slice(open, at),
+				attributes: source.slice(at, content),
+				content: source.slice(Math.max(at, content - 160), content),
+				body: source.slice(content, next),
+			});
+		});
+	}
+	return hosts;
+}
+
+test('every PHP-rendered notice host is a static Notice unless left mounted', () => {
+	const hosts = noticeHosts();
+	assert.ok(hosts.length > 60, `found ${hosts.length} hosts`);
+	const allowed = new Set();
+	for (const host of hosts) {
+		const entry = leftMounted.find(
+			(item) =>
+				item.file === host.file &&
+				(host.tag + host.attributes).includes(item.marker)
+		);
+		const label = `${host.file}: ${host.tag.slice(0, 120)}`;
+		if (entry) {
+			allowed.add(entry);
+			assert.doesNotMatch(host.tag, /ran-wp-ui-notice/, label);
+			continue;
+		}
+		assert.match(
+			host.tag,
+			/ran-wp-ui-notice ran-wp-ui-box-sizing (?:is-|<\?php)/,
+			label
+		);
+		assert.match(
+			host.content,
+			/class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"/,
+			label
+		);
+		assert.match(
+			host.body,
+			/NoticeIcon::(?:print_intent|markup)\(/,
+			`${label}: intent icon`
+		);
+		assert.doesNotMatch(
+			host.tag + host.body,
+			/data-wp-ui-notice-(?:politeness|list)/,
+			label
+		);
+	}
+	// Every allowlisted host still exists, so the list cannot go stale.
+	assert.deepEqual(
+		leftMounted.filter((item) => !allowed.has(item)),
+		[]
+	);
+});

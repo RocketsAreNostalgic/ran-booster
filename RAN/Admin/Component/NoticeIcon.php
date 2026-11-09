@@ -10,9 +10,9 @@ namespace RAN\Admin\Component;
  * Notice.Root draws a 24px @wordpress/icons glyph for each intent (info,
  * caution, published and error; neutral has none) after its children. A
  * static notice carries the same SVG as markup, decorative and hidden from
- * assistive technology: the notice text carries the meaning.
- * ranBoosterNotice.update() in ran-booster-cards.js holds the same paths, so
- * an in-place intent change swaps the state class and the icon together.
+ * assistive technology: the notice text carries the meaning. A notice whose
+ * intent a script changes in place stays mounted, because its icon would have
+ * to change with its state class.
  */
 final class NoticeIcon {
 

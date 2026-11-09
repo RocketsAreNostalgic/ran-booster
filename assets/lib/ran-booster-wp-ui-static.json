@@ -11,6 +11,7 @@
 				"box-sizing"
 			],
 			"states": [],
+			"modifiers": [],
 			"sourceSha256": "aba7dee71f71a1dd84361586a80e1cf73a8015c2d8243935e92b9e5e51bf824a"
 		},
 		"card": {
@@ -21,6 +22,7 @@
 				"header"
 			],
 			"states": [],
+			"modifiers": [],
 			"sourceSha256": "bd749dbeab3afea2ccfd19ab22b35e68ed1f75f3ff05150edf80c07afa01ed03"
 		},
 		"text": {
@@ -37,6 +39,7 @@
 				"is-heading-sm",
 				"is-heading-xl"
 			],
+			"modifiers": [],
 			"sourceSha256": "3b21af7530066f80789a8473dc322e9b03023362ac7d6d3320cb28d9f76ad40e"
 		},
 		"badge": {
@@ -54,7 +57,43 @@
 				"is-none-intent",
 				"is-stable-intent"
 			],
+			"modifiers": [],
 			"sourceSha256": "bc6615fd3adbab4cdf79fa9e495d0d49ec1ffa0574cde758eaa4fd37398937c0"
+		},
+		"link": {
+			"block": "ran-wp-ui-link",
+			"elements": [
+				"contents",
+				"icon",
+				"with-icon"
+			],
+			"states": [
+				"is-brand",
+				"is-neutral",
+				"is-unstyled"
+			],
+			"modifiers": [],
+			"sourceSha256": "f73ab2b63ee269ab3d93c302421f28ef9e84a3d2f3025328a2a456de8463bad8"
+		},
+		"reset-a": {
+			"block": "ran-wp-ui-reset-a",
+			"elements": [],
+			"states": [],
+			"modifiers": [],
+			"sourceSha256": "e096c6d4f7283c7eb224b553b94a28ce548545dd05e367bb218d4d0e03830fca"
+		},
+		"outset-ring": {
+			"block": "ran-wp-ui-outset-ring",
+			"elements": [],
+			"states": [],
+			"modifiers": [
+				"focus",
+				"focus-except-active",
+				"focus-visible",
+				"focus-within",
+				"focus-within-except-active"
+			],
+			"sourceSha256": "f5c6b667170b6f22b58521d4471a294835435d315f17c36e42ec275564abacb7"
 		}
 	}
 }

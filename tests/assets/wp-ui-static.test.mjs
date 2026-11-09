@@ -60,10 +60,29 @@ test('every manifest class exists in the stylesheet', () => {
 		for (const state of entry.states) {
 			assert.ok(css.includes(`.${entry.block}.${state}`), state);
 		}
+		for (const modifier of entry.modifiers) {
+			assert.ok(css.includes(`.${entry.block}--${modifier}`), modifier);
+		}
 	}
 });
 
 test('the upstream prefix produces the same stylesheet apart from the namespace', async () => {
 	const upstream = await extract({ uiRoot, prefix: 'wp-ui' });
 	assert.equal(upstream.css.replaceAll('.wp-ui-', '.ran-wp-ui-'), css);
+});
+
+test('link and focus ring are extracted with their stable names', () => {
+	const link = manifest.components.link;
+	assert.deepEqual(link.states, ['is-brand', 'is-neutral', 'is-unstyled']);
+	assert.deepEqual(link.elements, ['contents', 'icon', 'with-icon']);
+	assert.ok(css.includes('.ran-wp-ui-link.is-unstyled{'));
+	assert.ok(
+		css.includes('.ran-wp-ui-reset-a:is(:hover,:focus,:active){'),
+		'the reset that reads the --_gcd-a-* variables is present'
+	);
+	const ring = manifest.components['outset-ring'];
+	assert.ok(ring.modifiers.includes('focus-except-active'));
+	assert.ok(
+		css.includes('.ran-wp-ui-outset-ring--focus-except-active:focus')
+	);
 });

@@ -11,7 +11,8 @@ stylesheet plus a manifest.
 
 ## Guarantees
 
-- Declarations are copied verbatim, still inside the `wp-ui` cascade layer.
+- Declarations are copied verbatim, still inside the `wp-ui` cascade layer
+  (except `reset-a`, which the library itself leaves unlayered).
 - Class names are renamed from hashed to stable names following the Gutenberg
   component convention:
     - `{prefix}-{component}` is the block (the library's `root` part)
@@ -37,7 +38,12 @@ prefix; `wp-ui` is the namespace an upstream release would use.
 
 ## Supported components
 
-`Card`, `Badge` and the `Text` styles `Badge` builds on. These work because
+`Card`, `Badge`, `Link` and the `Text` styles `Badge` builds on, plus the focus
+ring `Link` depends on (`{prefix}-outset-ring--focus-except-active`, applied on
+its own with no base class, together with `{prefix}-box-sizing`), and the
+library's bare-`a` reset (`{prefix}-reset-a`) that `Link` relies on: its
+`unstyled` and focus-ring styles only set `--_gcd-a-*` variables that this
+reset reads. These work because
 their CSS does not depend on state that React sets at runtime. Components whose
 styles key on Base UI attributes (Button, Dialog, Menu, Tabs, Switch) are not
 supported.
@@ -46,11 +52,15 @@ supported.
 
 - It reads the library's `registerStyle(hash, css)` calls. A change to that
   shape makes extraction fail loudly.
+- A library style string is extracted whole, so unused variants (for example
+  `Link`'s `is-brand`) come along. The library's global-css-defense reset for
+  other elements (`button`, `input` and so on) is not extracted; the `a` rule is
+  lifted on its own and, as in the library, sits outside the `wp-ui` layer.
 - State classes compound onto their block, so their specificity is one class
   higher than in the library. They still sit inside the `wp-ui` layer.
 - Markup is the consumer's job. Mirror the structure the React component
   renders, for example a Badge is `{prefix}-text is-body-sm {prefix}-badge
-  is-{intent}-intent`.
+is-{intent}-intent`.
 
 This directory imports nothing from the host plugin so it can move to its own
 repository unchanged.

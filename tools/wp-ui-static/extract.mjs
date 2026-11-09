@@ -14,6 +14,9 @@ import { readFile } from 'node:fs/promises';
  * - `{prefix}-{component}`            block (the library's `root` part)
  * - `{prefix}-{component}__{element}` child element
  * - `.is-{state}`                     state, compounded onto its block
+ * - `{prefix}-{block}--{modifier}`    standalone modifier (the focus ring's
+ *                                     `outset-ring--*` classes are applied on
+ *                                     their own, with no base class)
  *
  * This file imports nothing from the host plugin. Everything specific to a
  * consumer (prefix, paths) is an argument.
@@ -40,6 +43,26 @@ export const components = [
 		match: /__badge\{/,
 		root: 'badge',
 	},
+	{
+		name: 'link',
+		file: 'link/link.mjs',
+		match: /__link\{/,
+		root: 'link',
+		strip: /^link-/,
+	},
+	{
+		name: 'reset-a',
+		file: 'link/link.mjs',
+		match: /__a,\./,
+		rule: /\.[0-9a-f]{16}__a,[^{]*\{[^}]*\}/,
+		root: 'a',
+	},
+	{
+		name: 'outset-ring',
+		file: 'link/link.mjs',
+		match: /__outset-ring--focus-except-active:focus\b/,
+		modifiers: true,
+	},
 ];
 
 const ensure = (condition, message) => {
@@ -59,10 +82,10 @@ const hashed = /\._?[0-9a-f]{16}__([a-z0-9-]+)/g;
 /**
  * Renames one library class to its stable name, recording how it was used.
  *
- * @param {{name: string, root?: string, utility?: boolean, variants?: RegExp}} component Component definition.
- * @param {string}                                                              prefix    Namespace for generated classes.
- * @param {string}                                                              part      Source part name from the library.
- * @param {{elements: Set<string>, states: Set<string>}}                        found     Collected class contract.
+ * @param {{name: string, root?: string, rule?: RegExp, utility?: boolean, modifiers?: boolean, strip?: RegExp, variants?: RegExp}} component Component definition.
+ * @param {string}                                                                                                                  prefix    Namespace for generated classes.
+ * @param {string}                                                                                                                  part      Source part name from the library.
+ * @param {{elements: Set<string>, states: Set<string>, modifiers: Set<string>}}                                                    found     Collected class contract.
  * @return {string} Replacement selector fragment.
  */
 function rename(component, prefix, part, found) {
@@ -70,6 +93,14 @@ function rename(component, prefix, part, found) {
 	if (component.utility) {
 		found.elements.add(part);
 		return `.${block}`;
+	}
+	if (component.modifiers) {
+		ensure(
+			part.startsWith(`${component.name}--`),
+			`Expected ${component.name}--modifier, found ${part}`
+		);
+		found.modifiers.add(part.slice(component.name.length + 2));
+		return `.${prefix}-${part}`;
 	}
 	if (part === component.root) {
 		return `.${block}`;
@@ -79,8 +110,9 @@ function rename(component, prefix, part, found) {
 		found.states.add(state);
 		return `.${block}.${state}`;
 	}
-	found.elements.add(part);
-	return `.${block}__${part}`;
+	const element = component.strip ? part.replace(component.strip, '') : part;
+	found.elements.add(element);
+	return `.${block}__${element}`;
 }
 
 /**
@@ -112,9 +144,19 @@ export async function extract({ uiRoot, prefix }) {
 			styles.length === 1,
 			`Expected one ${component.name} style in ${component.file}`
 		);
-		const found = { elements: new Set(), states: new Set() };
+		const found = {
+			elements: new Set(),
+			states: new Set(),
+			modifiers: new Set(),
+		};
+		// A shared style string may hold many rules; `rule` lifts just one.
+		const lifted = component.rule ? styles[0].match(component.rule) : null;
+		ensure(
+			!component.rule || lifted,
+			`Expected a ${component.name} rule in ${component.file}`
+		);
 		chunks.push(
-			styles[0].replace(hashed, (_, part) =>
+			(lifted ? lifted[0] : styles[0]).replace(hashed, (_, part) =>
 				rename(component, prefix, part, found)
 			)
 		);
@@ -122,6 +164,7 @@ export async function extract({ uiRoot, prefix }) {
 			block: `${prefix}-${component.name}`,
 			elements: [...found.elements].sort(),
 			states: [...found.states].sort(),
+			modifiers: [...found.modifiers].sort(),
 			sourceSha256: createHash('sha256').update(styles[0]).digest('hex'),
 		};
 	}

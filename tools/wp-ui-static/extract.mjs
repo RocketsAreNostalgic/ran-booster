@@ -18,6 +18,9 @@ import { readFile } from 'node:fs/promises';
  *                                     `outset-ring--*` classes are applied on
  *                                     their own, with no base class)
  *
+ * A component whose style keys on an attribute only Base UI sets at runtime
+ * can `bridge` it to attributes static markup can carry; see `bridged()`.
+ *
  * This file imports nothing from the host plugin. Everything specific to a
  * consumer (prefix, paths) is an argument.
  */
@@ -64,6 +67,24 @@ export const components = [
 		root: 'notice',
 	},
 	{
+		name: 'reset-button',
+		file: 'button/button.mjs',
+		match: /__button\{box-sizing:var\(--_gcd-button-/,
+		rule: /\._?[0-9a-f]{16}__button\{[^}]*\}/,
+		root: 'button',
+	},
+	{
+		name: 'button',
+		file: 'button/button.mjs',
+		match: /__is-compact\{/,
+		root: 'button',
+		// Base UI sets data-disabled at runtime; static markup says the same
+		// thing with the native attribute or aria-disabled.
+		bridge: {
+			'[data-disabled]': [':disabled', '[aria-disabled=true]'],
+		},
+	},
+	{
 		name: 'outset-ring',
 		file: 'link/link.mjs',
 		match: /__outset-ring--focus-except-active:focus\b/,
@@ -103,6 +124,28 @@ const customProperties = (css) =>
 			)
 		),
 	].sort();
+
+/**
+ * Widens each runtime attribute selector to also match the attributes static
+ * markup can carry, for example `[data-disabled]` becomes
+ * `:is([data-disabled],:disabled,[aria-disabled=true])`. `:is()` takes the
+ * specificity of its most specific argument, so specificity is unchanged.
+ *
+ * @param {string}                   css    Extracted style string.
+ * @param {Record<string, string[]>} bridge Selector to its alternatives.
+ * @return {string} Bridged style string.
+ */
+function bridged(css, bridge = {}) {
+	let result = css;
+	for (const [selector, alternatives] of Object.entries(bridge)) {
+		ensure(result.includes(selector), `Expected ${selector} to bridge`);
+		result = result.replaceAll(
+			selector,
+			`:is(${[selector, ...alternatives].join(',')})`
+		);
+	}
+	return result;
+}
 
 /**
  * Renames one library class to its stable name, recording how it was used.
@@ -180,9 +223,11 @@ export async function extract({ uiRoot, prefix }) {
 			!component.rule || lifted,
 			`Expected a ${component.name} rule in ${component.file}`
 		);
-		const chunk = (lifted ? lifted[0] : styles[0]).replace(
-			hashed,
-			(_, part) => rename(component, prefix, part, found)
+		const chunk = bridged(
+			(lifted ? lifted[0] : styles[0]).replace(hashed, (_, part) =>
+				rename(component, prefix, part, found)
+			),
+			component.bridge
 		);
 		chunks.push(chunk);
 		manifest.components[component.name] = {
@@ -191,6 +236,7 @@ export async function extract({ uiRoot, prefix }) {
 			states: [...found.states].sort(),
 			modifiers: [...found.modifiers].sort(),
 			properties: customProperties(chunk),
+			...(component.bridge && { bridge: component.bridge }),
 			sourceSha256: createHash('sha256').update(styles[0]).digest('hex'),
 		};
 	}

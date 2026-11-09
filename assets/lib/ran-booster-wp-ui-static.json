@@ -120,6 +120,59 @@
 			],
 			"sourceSha256": "1f46d1390d0cde0acffa6bfa0ee79ccdecb9a0009cb9aae85170c2bfbc632914"
 		},
+		"reset-button": {
+			"block": "ran-wp-ui-reset-button",
+			"elements": [],
+			"states": [],
+			"modifiers": [],
+			"properties": [],
+			"sourceSha256": "e096c6d4f7283c7eb224b553b94a28ce548545dd05e367bb218d4d0e03830fca"
+		},
+		"button": {
+			"block": "ran-wp-ui-button",
+			"elements": [
+				"icon",
+				"spinner"
+			],
+			"states": [
+				"is-brand",
+				"is-compact",
+				"is-loading",
+				"is-minimal",
+				"is-neutral",
+				"is-outline",
+				"is-small",
+				"is-solid",
+				"is-unstyled"
+			],
+			"modifiers": [],
+			"properties": [
+				"--wp-ui-button-aspect-ratio",
+				"--wp-ui-button-background-color",
+				"--wp-ui-button-background-color-active",
+				"--wp-ui-button-background-color-disabled",
+				"--wp-ui-button-border-color",
+				"--wp-ui-button-border-color-active",
+				"--wp-ui-button-border-color-disabled",
+				"--wp-ui-button-font-size",
+				"--wp-ui-button-font-weight",
+				"--wp-ui-button-foreground-color",
+				"--wp-ui-button-foreground-color-active",
+				"--wp-ui-button-foreground-color-disabled",
+				"--wp-ui-button-height",
+				"--wp-ui-button-icon-margin",
+				"--wp-ui-button-min-width",
+				"--wp-ui-button-padding-block",
+				"--wp-ui-button-padding-inline"
+			],
+			"bridge": {
+				"[data-disabled]": [
+					":disabled",
+					"[aria-disabled=true]"
+				]
+			},
+			"sourceSha256": "b738f2f6fa22a648b27d5ba54c96b8228f7eb73657c247cf4f261adc048e6125"
+		},
 		"outset-ring": {
 			"block": "ran-wp-ui-outset-ring",
 			"elements": [],

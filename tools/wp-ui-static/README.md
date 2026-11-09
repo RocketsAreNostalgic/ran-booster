@@ -12,7 +12,8 @@ stylesheet plus a manifest.
 ## Guarantees
 
 - Declarations are copied verbatim, still inside the `wp-ui` cascade layer
-  (except `reset-a`, which the library itself leaves unlayered).
+  (except the `reset-a` and `reset-button` resets, which the library itself
+  leaves unlayered).
 - Class names are renamed from hashed to stable names following the Gutenberg
   component convention:
     - `{prefix}-{component}` is the block (the library's `root` part)
@@ -39,25 +40,34 @@ prefix; `wp-ui` is the namespace an upstream release would use.
 
 ## Supported components
 
-`Card`, `Badge`, `Notice`, `Link` and the `Text` styles `Badge` and `Notice`
-build on, plus the focus
-ring `Link` depends on (`{prefix}-outset-ring--focus-except-active`, applied on
-its own with no base class, together with `{prefix}-box-sizing`), and the
-library's bare-`a` reset (`{prefix}-reset-a`) that `Link` relies on: its
-`unstyled` and focus-ring styles only set `--_gcd-a-*` variables that this
-reset reads. These work because
-their CSS does not depend on state that React sets at runtime. Components whose
-styles key on Base UI attributes (Button, Dialog, Menu, Tabs, Switch) are not
-supported, and neither are the parts of `Notice` that render them (see below).
+`Card`, `Badge`, `Notice`, `Link`, `Button` and the `Text` styles `Badge` and
+`Notice` build on, plus the shared pieces they compose: the focus ring
+(`{prefix}-outset-ring--focus-except-active`, applied on its own with no base
+class), the box-sizing reset (`{prefix}-box-sizing`), and two of the library's
+global-css-defense resets, each lifted on its own and left unlayered as the
+library leaves them:
+
+- `{prefix}-reset-a`, the bare-`a` reset `Link` relies on: its `unstyled` and
+  focus-ring styles only set `--_gcd-a-*` variables that this reset reads.
+- `{prefix}-reset-button`, the `button` reset `Button` relies on: it reads the
+  `--_gcd-button-font-*` variables the Button sets, and outranks unlayered host
+  rules such as wp-admin's `button { font-weight: inherit }`.
+
+Most of these work because their CSS does not depend on state React sets at
+runtime. `Button` keys on two attributes, `[data-disabled]` and
+`[aria-pressed=true]`, so static markup follows a contract instead (see below).
+Dialog, Menu, Tabs and Switch depend on Base UI behaviour beyond attributes and
+are not supported.
 
 ## Limits to know about
 
 - It reads the library's `registerStyle(hash, css)` calls. A change to that
   shape makes extraction fail loudly.
 - A library style string is extracted whole, so unused variants (for example
-  `Link`'s `is-brand`) come along. The library's global-css-defense reset for
-  other elements (`button`, `input` and so on) is not extracted; the `a` rule is
-  lifted on its own and, as in the library, sits outside the `wp-ui` layer.
+  `Link`'s `is-brand`) come along. The library's global-css-defense resets for
+  other elements (`input`, `p` and so on) are not extracted; the `a` and
+  `button` rules are lifted on their own and, as in the library, sit outside
+  the `wp-ui` layer.
 - State classes compound onto their block, so their specificity is one class
   higher than in the library. They still sit inside the `wp-ui` layer.
 - Markup is the consumer's job. Mirror the structure the React component
@@ -100,7 +110,9 @@ on one element, its children, and then the intent icon. `Notice.Description` is
 	<span class="wp-ui-text is-heading-md wp-ui-notice__title">…</span>
 	<div class="wp-ui-text is-body-md wp-ui-notice__description">…</div>
 	<div class="wp-ui-notice__actions">…</div>
-	<svg class="wp-ui-notice__icon" aria-hidden="true" focusable="false" …>…</svg>
+	<svg class="wp-ui-notice__icon" aria-hidden="true" focusable="false" …>
+		…
+	</svg>
 </div>
 ```
 
@@ -125,13 +137,93 @@ Deliberately not extracted:
 - `Notice.List` announcing. It is a live region driven by script, not CSS; a
   static notice announces through whatever the host uses (for example
   `wp.a11y.speak`), and carries no `data-wp-ui-notice-politeness`.
-- `Notice.ActionButton` and `Notice.CloseIconButton`. They render the library
-  `Button` and `IconButton`, which are not supported. Their placement classes
+- `Notice.ActionButton` and `Notice.CloseIconButton`. Their placement classes
   (`__action-button`, `__close-icon`) come along in the shared style string and
-  can position a host's own button. `__action-link` is the `Link` component,
-  which is supported.
+  can position a static Button (see below). `IconButton` is not extracted.
+  `__action-link` is the `Link` component, which is supported.
 - The global-css-defense heading reset that reads the title's
   `--_gcd-heading-color`; a host heading takes its colour from `color` instead.
+
+## Button
+
+`Button` renders five classes besides its tone, variant and size: the `button`
+defense reset, the box-sizing reset, the focus ring and its root part. A static
+button carries the same set, and **no host button classes**:
+
+```html
+<button
+	type="button"
+	class="wp-ui-reset-button wp-ui-box-sizing wp-ui-outset-ring--focus-except-active wp-ui-button is-brand is-solid is-compact"
+>
+	…
+</button>
+```
+
+- Tone is `is-brand` or `is-neutral`; variant is `is-solid`, `is-outline` or
+  `is-minimal`; size is `is-compact` (32px), `is-small` (24px) or no class for
+  the 40px default. Like the library, every button needs one tone and one
+  variant.
+- An icon is markup: give a 24px SVG `{prefix}-button__icon`, whose negative
+  margin lets it sit in the 20px line box without growing the button.
+- A pressed toggle sets `aria-pressed="true"`; the library styles
+  `is-neutral is-minimal[aria-pressed=true]` as solid, exactly as mounted.
+- Size, colour and padding are public custom properties
+  (`--wp-ui-button-height`, `--wp-ui-button-background-color` and so on), which
+  the manifest records. A consumer tunes or adds a tone through these on its
+  own class rather than overriding declarations.
+
+Base UI sets `data-disabled` on a disabled button, and the library keys the
+disabled colours, the pointer cursor and the hover/focus colours on it
+(`:not([data-disabled]):is(:hover,:active,:focus)`). Static markup has no
+runtime to set it, so the extractor's `bridge` option widens every
+`[data-disabled]` in the Button's style to
+`:is([data-disabled],:disabled,[aria-disabled=true])`. `:is()` takes its most
+specific argument, so specificity is unchanged, and everything else stays
+verbatim. A native `disabled` button, an `aria-disabled="true"` button (still
+focusable, as Base UI's `focusableWhenDisabled` default renders it) and a
+disabled fieldset's buttons all render as the mounted disabled Button. The
+manifest records the bridge, and the source hash covers the unbridged string,
+so `--check` still detects upstream drift.
+
+An `a` button needs care in a host with unlayered link rules. wp-admin's
+`a { color }` and `a:focus { box-shadow }` outrank the `wp-ui` layer, so a
+static anchor shows the link colour, not the button's. Adding
+`{prefix}-reset-a` removes the box-shadow and transition but sets
+`color: var(--_gcd-a-color, inherit)` and `border-radius: 0`; the host must
+point those variables at the Button's, for example:
+
+```css
+a.wp-ui-button {
+	--_gcd-a-color: var(--wp-ui-button-foreground-color);
+	--_gcd-a-border-radius: var(--wpds-border-radius-sm, 2px);
+}
+a.wp-ui-button:not([aria-disabled='true']):is(:hover, :focus, :active) {
+	--_gcd-a-color: var(--wp-ui-button-foreground-color-active);
+}
+a.wp-ui-button[aria-disabled='true'] {
+	--_gcd-a-color: var(--wp-ui-button-foreground-color-disabled);
+}
+```
+
+A disabled anchor drops `href` and sets `aria-disabled="true"`; a `disabled`
+class alone is not bridged.
+
+Host classes that style the same element must go. wp-admin's `.button` and
+`.button-primary` are unlayered, so on an element that also carries them they
+win every property they set (height, padding, colours, line-height).
+
+Deliberately not extracted:
+
+- The loading spinner. `is-loading` and `__spinner` come along in the shared
+  style string, but the Spinner's SVG and keyframes live in another module and
+  `loading` also announces through `wp.a11y.speak`. Static markup does not use
+  `is-loading`; a host draws its own busy state on the static Button.
+- `is-unstyled` as the library uses it. The library drops the root class for
+  the unstyled variant, but the extracted state compounds onto the root, so the
+  rootless variant cannot be expressed.
+- A danger tone. The library has none; a host defines one by setting the
+  `--wp-ui-button-*` properties on its own modifier class.
+- `IconButton`, `ButtonLink` and the `render` prop's other elements.
 
 This directory imports nothing from the host plugin so it can move to its own
 repository unchanged.

@@ -194,3 +194,112 @@ test('the Notice keeps its modern CSS and leaves announcing to the host', () => 
 	// notice carries no politeness data or list semantics.
 	assert.doesNotMatch(css, /politeness|spoken-message|notice-list/);
 });
+
+const buttonLine = () => {
+	const start = css.indexOf('.ran-wp-ui-button{');
+	assert.ok(start > 0);
+	return css.slice(
+		css.lastIndexOf('\n', start) + 1,
+		css.indexOf('\n', start)
+	);
+};
+
+test('a static Button composes the same classes as the mounted Button', () => {
+	const button = manifest.components.button;
+	assert.deepEqual(button.elements, ['icon', 'spinner']);
+	assert.deepEqual(button.states, [
+		'is-brand',
+		'is-compact',
+		'is-loading',
+		'is-minimal',
+		'is-neutral',
+		'is-outline',
+		'is-small',
+		'is-solid',
+		'is-unstyled',
+	]);
+	assert.ok(button.properties.includes('--wp-ui-button-height'));
+	assert.ok(button.properties.includes('--wp-ui-button-background-color'));
+	// Button renders the global-css-defense button reset, the box-sizing
+	// reset, the focus ring, its root part, then tone, variant and size.
+	const source = fs.readFileSync(
+		`${uiRoot}/build-module/button/button.mjs`,
+		'utf8'
+	);
+	assert.match(
+		source,
+		/clsx\(global_css_defense_module_default\.button, resets_module_default\["box-sizing"\], focus_module_default\["outset-ring--focus-except-active"\], variant !== "unstyled" && style_module_default\.button, style_module_default\[`is-\$\{tone\}`\], style_module_default\[`is-\$\{variant\}`\], style_module_default\[`is-\$\{size\}`\]/
+	);
+	for (const selector of [
+		'.ran-wp-ui-box-sizing{',
+		'.ran-wp-ui-outset-ring--focus-except-active:focus',
+		'.ran-wp-ui-button.is-compact{',
+		'.ran-wp-ui-button.is-brand{',
+		'.ran-wp-ui-button.is-neutral{',
+	]) {
+		assert.ok(css.includes(selector), selector);
+	}
+	// The defense reset is unlayered, as in the library: wp-admin's
+	// unlayered `button { font-weight: inherit }` would otherwise win.
+	assert.match(
+		css,
+		/\n\.ran-wp-ui-reset-button\{box-sizing:var\(--_gcd-button-box-sizing,border-box\);[^}]*font-weight:var\(--_gcd-button-font-weight,inherit\)\}\n/
+	);
+	assert.match(
+		buttonLine(),
+		/--_gcd-button-font-weight:var\(--wp-ui-button-font-weight\)/
+	);
+});
+
+test('the Button bridges data-disabled to native and ARIA disabled', () => {
+	const bridge = '[data-disabled],:disabled,[aria-disabled=true]';
+	assert.deepEqual(manifest.components.button.bridge, {
+		'[data-disabled]': [':disabled', '[aria-disabled=true]'],
+	});
+	const line = buttonLine();
+	const source = fs.readFileSync(
+		`${uiRoot}/build-module/button/button.mjs`,
+		'utf8'
+	);
+	const upstream = source.match(/\[data-disabled\]/g).length;
+	assert.equal(line.split(`:is(${bridge})`).length - 1, upstream);
+	// No data-disabled selector is left unbridged anywhere.
+	assert.equal(
+		css.replaceAll(`:is(${bridge})`, '').includes('data-disabled'),
+		false
+	);
+	assert.ok(
+		line.includes(
+			`&:not(:is(${bridge})):is(:hover,:active,:focus){background-color:var(--wp-ui-button-background-color-active)`
+		),
+		'hover and focus skip every disabled form'
+	);
+	assert.ok(line.includes(`&:not(:is(${bridge})){cursor:`));
+	assert.ok(
+		line.includes(
+			`&:is(${bridge}):not(.ran-wp-ui-button.is-loading){background-color:var(--wp-ui-button-background-color-disabled)`
+		)
+	);
+	assert.match(
+		line,
+		/@media \(forced-colors:active\)\{border-bottom-color:GrayText/
+	);
+	// Pressed toggles key on a real ARIA attribute, so no bridge is needed.
+	assert.ok(line.includes('.ran-wp-ui-button.is-minimal[aria-pressed=true]'));
+	// The bridge is scoped to the Button.
+	assert.equal(css.split(':disabled').length - 1, upstream);
+});
+
+test('the Button loading spinner is carried but not animated', () => {
+	// The loading state and spinner placement come with the shared style
+	// string; the spinner's own SVG and keyframes live in spinner.mjs, which
+	// is not extracted, so static markup must not use is-loading.
+	const line = buttonLine();
+	assert.ok(line.includes('.ran-wp-ui-button.is-loading:not('));
+	assert.ok(line.includes('.ran-wp-ui-button__spinner{'));
+	assert.doesNotMatch(css, /@keyframes/);
+	assert.ok(
+		!Object.keys(manifest.components).includes('spinner'),
+		'the Spinner component is not extracted'
+	);
+});

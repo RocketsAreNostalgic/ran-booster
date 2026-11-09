@@ -42,7 +42,9 @@ final class DocumentationViewTest extends TestCase {
 		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( 'class="ran-booster-documentation__layout"', $html );
-		self::assertStringContainsString( 'class="ran-booster-documentation__main"', $html );
+		self::assertStringContainsString( '<section class="ran-booster-documentation__main">', $html );
+		self::assertStringNotContainsString( '<aside', $html );
+		self::assertSame( 1, substr_count( $html, 'aria-labelledby="ran-booster-documentation-heading"' ) );
 		self::assertStringContainsString( 'class="ran-booster-page-shell__header ran-booster-documentation__header"', $html );
 		self::assertStringContainsString( 'class="ran-booster-page-shell__body"', $html );
 		self::assertSame( 11, preg_match_all( '/<details\b/', $html ) );
@@ -240,7 +242,7 @@ final class DocumentationViewTest extends TestCase {
 		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertSame( 1, $callable_calls );
-		self::assertStringContainsString( '<aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>', $html );
+		self::assertStringContainsString( '<div class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>', $html );
 		self::assertStringContainsString( '<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading">On this page</h2>', $html );
 		self::assertStringContainsString( '<p class="ran-booster-documentation__search-hint">Search this page with <kbd>⌘F</kbd> <span>or</span> <kbd>Ctrl+F</kbd></p>', $html );
 		self::assertSame( 1, preg_match_all( '/href="#addon-guide"/', $html ) );
@@ -306,7 +308,7 @@ final class DocumentationViewTest extends TestCase {
 		$chapter_ids   = array();
 		$index_targets = array();
 		$chapters      = $xpath->query( '//details[@data-ran-booster-documentation-section]' );
-		$index_links   = $xpath->query( '//aside//nav//a' );
+		$index_links   = $xpath->query( '//*[@data-ran-booster-documentation-index]//nav//a' );
 		$local_links   = $xpath->query( '//a[starts-with(@href, "#")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $chapters );
 		self::assertInstanceOf( \DOMNodeList::class, $index_links );
@@ -456,7 +458,7 @@ final class DocumentationViewTest extends TestCase {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath       = new \DOMXPath( $document );
-		$nav_groups  = $xpath->query( '//aside//nav//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapters ")]/*[.//a]' );
+		$nav_groups  = $xpath->query( '//*[@data-ran-booster-documentation-index]//nav//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapters ")]/*[.//a]' );
 		$body_groups = $xpath->query( '//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapter ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $nav_groups );
 		self::assertInstanceOf( \DOMNodeList::class, $body_groups );
@@ -538,7 +540,7 @@ final class DocumentationViewTest extends TestCase {
 		$document->loadHTML( $inactive, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapter ")][h3="Reference"]//details[@id="surviving-guide"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//aside//a[@href="#surviving-guide"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-documentation-index]//a[@href="#surviving-guide"])' ) );
 	}
 
 	public function test_provider_articles_stay_with_provider_and_win_duplicate_ids(): void {

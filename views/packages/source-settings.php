@@ -36,7 +36,7 @@ ob_start();
 	<div
 		id="ran-booster-source-pane-branch"
 		class="ran-booster-package-source-pane<?php echo $is_package_edit ? '' : ' ran-booster-settings-fields__branch'; ?>"
-		aria-labelledby="ran-booster-source-tab-branch"
+		role="group" aria-labelledby="ran-booster-source-tab-branch"
 		data-ran-booster-source-pane="branch"
 		data-ran-booster-branch-fields
 		<?php echo $is_package_edit && ! ( $show_branch_settings ?? false ) ? 'hidden' : ''; ?>

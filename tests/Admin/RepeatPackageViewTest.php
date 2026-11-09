@@ -791,6 +791,9 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertStringContainsString( '>Releases</strong>', $html, $package_view->get_type() );
 				self::assertStringContainsString( '<legend class="screen-reader-text">Update source</legend>', $html, $package_view->get_type() );
 				self::assertStringContainsString( '<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title">Update source</h3>', $html, $package_view->get_type() );
+				self::assertStringContainsString( '<div class="ran-booster-package-source__header">', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( '<header', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( 'aria-labelledby="ran-booster-package-source-heading"', $html, $package_view->get_type() );
 				self::assertStringContainsString( 'ran-booster-package-source--navigation', $html, $package_view->get_type() );
 				self::assertStringContainsString( 'ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix', $html, $package_view->get_type() );
 				self::assertStringContainsString( ' nav-tab ', $html, $package_view->get_type() );
@@ -967,6 +970,7 @@ final class RepeatPackageViewTest extends TestCase {
 				$package_view->get_type()
 			);
 			self::assertStringContainsString( 'id="ran-booster-branch-readiness"', $html, $package_view->get_type() );
+			self::assertMatchesRegularExpression( '/id="ran-booster-source-pane-branch"[^>]*role="group"[^>]*aria-labelledby="ran-booster-source-tab-branch"/', $html, $package_view->get_type() );
 			$branch_pane_position   = strpos( $html, 'id="ran-booster-source-pane-branch"' );
 			$return_position        = strpos( $html, 'class="ran-booster-release-return"' );
 			$branch_fields_position = strpos( $html, '<fieldset class="ran-booster-branch-settings' );

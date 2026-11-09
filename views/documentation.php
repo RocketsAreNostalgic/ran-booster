@@ -240,7 +240,7 @@ unset( $chapter );
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Install from a public repository first. Add private access and Push-to-Deploy only when you need them.', 'ran-booster' ); ?></p>
 	</header>
 <div class="ran-booster-documentation__layout" data-ran-booster-documentation-layout>
-<aside class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>
+<div class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>
 	<nav aria-labelledby="ran-booster-documentation-index-heading">
 		<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading"><?php esc_html_e( 'On this page', 'ran-booster' ); ?></h2>
 		<div class="ran-booster-documentation__chapters">
@@ -257,8 +257,8 @@ unset( $chapter );
 		</div>
 		<p class="ran-booster-documentation__search-hint"><?php esc_html_e( 'Search this page with', 'ran-booster' ); ?> <kbd>⌘F</kbd> <span><?php esc_html_e( 'or', 'ran-booster' ); ?></span> <kbd>Ctrl+F</kbd></p>
 	</nav>
-</aside>
-<section class="ran-booster-documentation__main" aria-labelledby="ran-booster-documentation-heading">
+</div>
+<section class="ran-booster-documentation__main">
 	<div class="ran-booster-page-shell__body">
 		<div class="ran-booster-documentation__sections">
 		<section class="ran-booster-documentation__chapter" aria-labelledby="<?php echo esc_attr( $chapters['core']['heading_id'] ); ?>">

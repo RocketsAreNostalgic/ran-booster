@@ -2520,12 +2520,13 @@ final class TroubleshootingViewTest extends TestCase {
 
 		$explanation_position = strpos( $html, 'Choose Anonymous, or use a dedicated saved credential' );
 		$controls_position    = strpos( $html, 'ran-booster-public-lookup-profile__controls' );
-		$guidance_position    = strpos( $html, 'ran-booster-public-lookup-profile__guidance' );
+		$guidance_position    = strpos( $html, '<div class="ran-booster-public-lookup-profile__guidance">' );
 		self::assertIsInt( $explanation_position );
 		self::assertIsInt( $controls_position );
 		self::assertIsInt( $guidance_position );
 		self::assertLessThan( $controls_position, $explanation_position );
 		self::assertLessThan( $guidance_position, $controls_position );
+		self::assertStringNotContainsString( '<aside', $html );
 	}
 
 	public function test_provider_settings_shows_astale_public_lookup_preference(): void {

@@ -54,10 +54,10 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 						<button type="submit" class="button"><?php esc_html_e( 'Save', 'ran-booster' ); ?></button>
 					</div>
 				</form>
-				<aside class="ran-booster-public-lookup-profile__guidance">
+				<div class="ran-booster-public-lookup-profile__guidance">
 					<strong><?php esc_html_e( 'Credential guidance', 'ran-booster' ); ?></strong>
 					<p><?php esc_html_e( 'Prefer a dedicated, expiring, least-privilege credential kept separate from credentials that can access private repositories or deployments.', 'ran-booster' ); ?></p>
-				</aside>
+				</div>
 			</div>
 			<?php if ( $public_lookup_profile['stale'] ) { ?>
 				<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The configured public lookup profile is missing. Choose Anonymous or another saved profile, then save the preference.', 'ran-booster' ); ?></p></div></div>

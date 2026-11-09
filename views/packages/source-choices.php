@@ -26,8 +26,8 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 
 ?>
 <legend class="screen-reader-text"><?php esc_html_e( 'Update source', 'ran-booster' ); ?></legend>
-<div class="ran-booster-package-source<?php echo 'edit' === $source_choice_mode ? ' ran-booster-package-source--navigation' : ''; ?>" aria-labelledby="ran-booster-package-source-heading">
-	<header class="ran-booster-package-source__header">
+<div class="ran-booster-package-source<?php echo 'edit' === $source_choice_mode ? ' ran-booster-package-source--navigation' : ''; ?>">
+	<div class="ran-booster-package-source__header">
 		<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title"><?php esc_html_e( 'Update source', 'ran-booster' ); ?></h3>
 		<p class="ran-booster-section__description">
 			<?php
@@ -41,7 +41,7 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 		<p class="ran-booster-package-source__guidance" data-ran-booster-source-repository-guidance <?php echo ! empty( $package_repository_ready ) ? 'hidden' : ''; ?>>
 			<?php esc_html_e( 'Choose a repository before configuring its update source.', 'ran-booster' ); ?>
 		</p>
-	</header>
+	</div>
 	<div class="ran-booster-source-choices<?php echo 'edit' === $source_choice_mode ? ' ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix' : ''; ?>"<?php echo 'edit' === $source_choice_mode ? ' role="navigation" aria-label="' . esc_attr( __( 'Update source settings', 'ran-booster' ) ) . '"' : ''; ?>>
 		<?php foreach ( $package_source_choices as $source_key => $source_choice ) { ?>
 			<?php

@@ -169,6 +169,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'Theme settings', $html );
 		self::assertStringContainsString( 'Integration status', $html );
+		self::assertStringContainsString( '<caption class="screen-reader-text">Packages using this repository</caption>', $html );
+		self::assertSame( 4, substr_count( $html, '<th scope="col">' ) );
 		self::assertStringContainsString( 'hx-target="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( 'hx-select="#ran-booster-provider-profile-region"', $html );
 		self::assertStringContainsString( '<ul class="filter-links ran-section-navigation ran-section-navigation--thin">', $html );

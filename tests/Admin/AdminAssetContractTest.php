@@ -765,21 +765,12 @@ final class AdminAssetContractTest extends TestCase {
 			$css
 		);
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-empty-state {', $css );
-		self::assertStringContainsString( '.ran-booster-credential-table--access th:nth-child(3)', $css );
-		self::assertStringContainsString( '.ran-booster-credential-table--webhook th:nth-child(2)', $css );
+		self::assertStringContainsString( '.ran-booster-credential-table--access', $css );
+		self::assertStringContainsString( '.ran-booster-credential-table--webhook', $css );
 		self::assertStringNotContainsString( '.ran-booster-credential-table th:nth-child(', $css );
-		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-credential-table--access th:nth-child\\(1\\) \\{\\s+inline-size: 40%;\\s+\\}/',
-			$css
-		);
-		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-credential-table--access th:nth-child\\(2\\) \\{\\s+inline-size: 35%;\\s+\\}/',
-			$css
-		);
-		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-credential-table--access th:nth-child\\(3\\) \\{\\s+inline-size: 30%;\\s+\\}/',
-			$css
-		);
+		// The provider-management rules own every column width; the credential-table
+		// width rules they overrode on every column were removed (#633).
+		self::assertDoesNotMatchRegularExpression( '/\\.ran-booster-admin \\.ran-booster-credential-table--(?:access|webhook) th:nth-child/', $css );
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-admin \\.ran-booster-actions \\{[\\s\\S]+flex-wrap: nowrap;[\\s\\S]+justify-content: flex-end;[\\s\\S]+white-space: nowrap;/',
 			$css
@@ -830,10 +821,10 @@ final class AdminAssetContractTest extends TestCase {
 			'/\\.ran-booster-webhook-url input \\{\\s+min-inline-size: 0;\\s+inline-size: 100%;\\s+max-inline-size: 100%;/',
 			$css
 		);
-		self::assertMatchesRegularExpression(
-			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-credential-table td\\.ran-booster-actions \\{\\s+display: flex;\\s+flex-wrap: wrap;\\s+justify-content: flex-start;[\\s\\S]+white-space: normal;/',
-			$css
-		);
+		self::assertStringNotContainsString( '.ran-booster-credential-table td.ran-booster-actions {', $css );
+		self::assertStringNotContainsString( '.ran-booster-credential-table thead', $css );
+		self::assertStringNotContainsString( 'ran-booster-package-row__content', $css );
+		self::assertStringNotContainsString( 'ran-booster-package-row__secondary', $css );
 		self::assertMatchesRegularExpression(
 			'/@media screen and \\(max-width: 782px\\)[\\s\\S]+\\.ran-booster-provider \\.button \\{\\s+inline-size: auto;\\s+align-self: flex-start;\\s+text-align: center;\\s+\\}/',
 			$css
@@ -1231,6 +1222,15 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-repository-record__identity', $css );
 		self::assertStringContainsString( '.ran-booster-repository-record__overview', $css );
 		self::assertStringContainsString( '.ran-booster-repository-record__actions', $css );
+	}
+
+	public function test_package_table_has_a_caption_and_page_size_selects_submit_without_inline_handlers(): void {
+		$view   = $this->view( 'packages/index.php' );
+		$script = $this->asset( 'ran-booster.js' );
+
+		self::assertMatchesRegularExpression( '/<table class="wp-list-table.*\n\s*<caption class="screen-reader-text">/', $view );
+		self::assertStringContainsString( 'select[data-ran-booster-auto-submit]', $script );
+		self::assertStringContainsString( 'select.form.requestSubmit()', $script );
 	}
 
 	/**

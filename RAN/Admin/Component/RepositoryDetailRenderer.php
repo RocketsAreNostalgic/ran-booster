@@ -146,7 +146,8 @@ final class RepositoryDetailRenderer {
 			</header>
 			<div class="ran-booster-settings-section__body ran-booster-repository-detail__table-wrap">
 				<table class="widefat striped ran-booster-repository-detail__packages">
-					<thead><tr><th><?php esc_html_e( 'Package', 'ran-booster' ); ?></th><th><?php esc_html_e( 'Source', 'ran-booster' ); ?></th><th><?php esc_html_e( 'Updates', 'ran-booster' ); ?></th><th><?php esc_html_e( 'Settings', 'ran-booster' ); ?></th></tr></thead>
+					<caption class="screen-reader-text"><?php esc_html_e( 'Packages using this repository', 'ran-booster' ); ?></caption>
+					<thead><tr><th scope="col"><?php esc_html_e( 'Package', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Source', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Settings', 'ran-booster' ); ?></th></tr></thead>
 					<tbody>
 					<?php foreach ( $packages as $package ) { ?>
 						<?php $this->render_package( $package ); ?>

@@ -230,21 +230,6 @@
 		inline-size: 100%;
 	}
 
-	.ran-booster-admin
-		.wp-list-table.plugins
-		td.ran-booster-package-row__content,
-	.ran-booster-admin
-		.wp-list-table.plugins
-		td.ran-booster-package-row__secondary {
-		box-sizing: border-box;
-		clear: none;
-		padding-inline-end: var(--ran-booster-space-10);
-
-		/* stylelint-disable-next-line declaration-no-important -- Preserve the table rowspan while core stacks list-table cells. */
-		display: table-cell !important;
-		inline-size: auto !important;
-	}
-
 	.ran-booster-admin .ran-booster-secondary-nav {
 		align-items: stretch;
 		flex-direction: column;
@@ -418,10 +403,6 @@
 		inline-size: auto !important;
 	}
 
-	.ran-booster-admin .ran-booster-credential-table thead {
-		display: none;
-	}
-
 	.ran-booster-admin .ran-booster-credential-table tr {
 		padding-block: var(--ran-booster-space-10);
 		padding-inline: 0;
@@ -431,15 +412,6 @@
 	.ran-booster-admin .ran-booster-credential-table td {
 		padding-block: var(--ran-booster-space-5);
 		padding-inline: var(--ran-booster-space-12);
-	}
-
-	.ran-booster-admin .ran-booster-credential-table td.ran-booster-actions {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-start;
-		padding-block-start: var(--ran-booster-space-10);
-		border-block-start: 1px solid var(--ran-booster-divider);
-		white-space: normal;
 	}
 
 	.ran-booster-admin

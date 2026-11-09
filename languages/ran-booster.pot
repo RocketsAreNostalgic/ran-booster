@@ -108,8 +108,18 @@ msgstr ""
 msgid "A selected managed package changed or is no longer available. Refresh the page and try again."
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:87
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:128
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:49
+#: views/provider.php:203
+msgid "Credentials"
+msgstr ""
+
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:49
+#: views/provider.php:203
+msgid "Webhook secrets"
+msgstr ""
+
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:88
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:129
 #: RAN/Troubleshooting/TroubleshootingService.php:310
 #: views/troubleshooting-installation.php:189
 #: views/troubleshooting-installation.php:190
@@ -117,35 +127,40 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:93
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:94
 #: views/provider/modals.php:56
 msgid "Credential type"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:99
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:134
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:100
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:135
 #: views/provider/modals.php:157
 msgid "Scope"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:105
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:140
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:106
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:141
 msgid "Used by"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:111
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:146
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:112
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:147
 msgid "Health"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:117
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:152
-#: views/packages/index.php:248
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:118
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:153
+#: views/packages/index.php:249
 msgid "Actions"
 msgstr ""
 
-#: RAN/Admin/Component/ProviderManagementTableRenderer.php:185
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:186
 msgid "Rows"
+msgstr ""
+
+#: RAN/Admin/Component/ProviderManagementTableRenderer.php:195
+#: views/packages/index.php:223
+msgid "Apply"
 msgstr ""
 
 #. translators: %s is the repository provider name.
@@ -174,7 +189,7 @@ msgid "Status"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:57
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:273
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:274
 #: RAN/Admin/PackagePagePresenter.php:277
 #: RAN/Admin/PackagePagePresenter.php:447
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:479
@@ -186,7 +201,7 @@ msgid "Branch"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:58
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:273
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:274
 #: RAN/Admin/PackagePagePresenter.php:287
 #: RAN/Admin/PackagePagePresenter.php:448
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:409
@@ -197,8 +212,8 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:291
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:484
 #: views/packages/index.php:163
-#: views/packages/index.php:349
-#: views/packages/index.php:419
+#: views/packages/index.php:350
+#: views/packages/index.php:420
 #: assets/ran-booster-release-management.js:876
 #: assets/ran-booster-release-management.js:882
 msgid "Releases"
@@ -212,19 +227,20 @@ msgstr ""
 msgid "Loading repository details…"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:141
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:140
 msgid "Conflicting sources."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:141
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:140
 msgid "Review the package settings before using release workflow."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:145
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:144
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:149
 msgid "Packages using this repository"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:146
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:145
 msgid "Repository relationships are read-only here. Change package-owned settings from the linked plugin or theme."
 msgstr ""
 
@@ -256,7 +272,7 @@ msgstr ""
 #: views/packages/edit.php:372
 #: views/packages/fields/deployment-policy.php:44
 #: views/packages/fields/deployment-policy.php:47
-#: views/packages/index.php:479
+#: views/packages/index.php:480
 msgid "Updates"
 msgstr ""
 
@@ -305,184 +321,184 @@ msgid_plural "%d packages track Releases"
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:195
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:196
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:26
 msgid "Release publishing"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:198
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:199
 msgid "Release workflow status is unavailable in this view. Package release settings remain available."
 msgstr ""
 
 #. translators: %s is a managed package name.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:200
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:201
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:49
 #, php-format
 msgctxt "Managed package settings link"
 msgid "Open %s settings"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:208
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:209
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:570
 msgid "Manage webhook"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:208
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:209
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:336
 msgid "Assess release setup"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:211
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:212
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:413
 msgid "Package inventory incomplete"
 msgstr ""
 
 #. translators: %d is the number of package summaries omitted from repository inventory.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:214
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:215
 #, php-format
 msgid "%d connected package is not shown. Refresh repository inventory before using repository-wide workflow controls."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:227
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:241
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:256
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:228
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:242
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:257
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:316
 #: views/documentation.php:123
 #: views/documentation.php:442
 msgid "Push-to-deploy"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:230
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:231
 msgid "Repository webhook management is temporarily unavailable for this repository."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:231
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:263
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:232
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:264
 msgid "Manage repository webhook"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:244
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:245
 msgid "Assisted webhook management is unavailable in this view. Use the Git provider webhook settings when available."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:251
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:252
 msgid "Assisted webhook management is unavailable in this view. Receiver readiness has not been established."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:252
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:253
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:354
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:426
 msgid "Published-release packages ignore pushes; no Branch package currently uses this repository webhook."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:257
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:258
 msgid "Local readiness and the last recorded remote state."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:260
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:261
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:106
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:120
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:337
 msgid "Webhook setup"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:287
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:288
 msgid "Ignores pushes"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:289
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:290
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:625
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:256
 msgid "Plugin settings"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:289
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:290
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:625
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:256
 msgid "Theme settings"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:302
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:303
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:625
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:676
 msgid "Recorded hook status"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:303
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:311
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:304
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:312
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:626
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:659
 msgid "Managed hook not yet set"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:306
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:307
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:633
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:682
 msgid "Observation"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:307
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:308
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:634
 msgid "No historical observation"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:310
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:311
 msgid "Recorded hook profile"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:314
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:315
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:663
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:706
 msgid "Last checked"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:315
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:316
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:664
 msgid "Never"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:322
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:323
 msgid "Management history"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:323
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:324
 msgid "Repository-scoped records. This is local history, not live Git provider state."
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:326
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:327
 msgid "Webhook"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:329
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:330
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:93
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:529
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:536
 msgid "Release workflow"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:332
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:333
 msgid "View repository activity"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:370
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:371
 msgid "Repository details"
 msgstr ""
 
 #. translators: 1: shown package count, 2: omitted package count, 3: repository source summary.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:466
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:467
 #, php-format
 msgid "%1$d packages shown; %2$d more connected · %3$s"
 msgstr ""
 
 #. translators: 1: number of packages, 2: repository source summary.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:475
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:476
 #, php-format
 msgid "%1$d package · %2$s"
 msgid_plural "%1$d packages · %2$s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:483
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:484
 #: RAN/Admin/PackageAdminController.php:532
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:330
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
@@ -490,11 +506,11 @@ msgstr[1] ""
 #: views/packages/edit.php:245
 #: views/packages/index.php:109
 #: views/packages/index.php:168
-#: views/packages/index.php:414
+#: views/packages/index.php:415
 msgid "Automatic"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:484
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:485
 #: RAN/Admin/PackageAdminController.php:533
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:334
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
@@ -502,11 +518,11 @@ msgstr ""
 #: views/packages/edit.php:246
 #: views/packages/index.php:108
 #: views/packages/index.php:169
-#: views/packages/index.php:416
+#: views/packages/index.php:417
 msgid "Manual"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:485
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:486
 #: RAN/Admin/PackageAdminController.php:499
 #: RAN/Admin/PackageAdminController.php:531
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:338
@@ -516,8 +532,8 @@ msgstr ""
 #: views/packages/edit.php:244
 #: views/packages/index.php:107
 #: views/packages/index.php:170
-#: views/packages/index.php:415
-#: views/packages/index.php:475
+#: views/packages/index.php:416
+#: views/packages/index.php:476
 #: views/settings-general.php:184
 #: views/settings-general.php:221
 #: assets/ran-booster-settings.js:82
@@ -525,14 +541,14 @@ msgid "Disabled"
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:552
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:553
 #: RAN/Admin/WebhookManagement/views/panel.php:82
 #, php-format
 msgid "Manage repo webhooks on %s"
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:554
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:555
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:302
 #: RAN/Admin/WebhookManagement/views/panel.php:82
 #: views/documentation.php:477
@@ -1491,8 +1507,8 @@ msgid "deployment disabled"
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:468
-#: views/packages/index.php:330
-#: views/packages/index.php:373
+#: views/packages/index.php:331
+#: views/packages/index.php:374
 msgid "Git provider unavailable"
 msgstr ""
 
@@ -1521,7 +1537,7 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:499
 #: views/packages/edit.php:207
-#: views/packages/index.php:475
+#: views/packages/index.php:476
 #: views/settings-general.php:184
 #: views/settings-general.php:221
 #: assets/ran-booster-settings.js:81
@@ -1746,7 +1762,7 @@ msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:408
 #: views/packages/edit.php:239
-#: views/packages/index.php:423
+#: views/packages/index.php:424
 #: assets/ran-booster-release-management.js:803
 msgid "repository default"
 msgstr ""
@@ -2095,7 +2111,7 @@ msgstr ""
 
 #. translators: %d is the number of repositories shown.
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:134
-#: assets/ran-booster.js:705
+#: assets/ran-booster.js:719
 #, php-format,js-format
 msgctxt "Provider table repository count"
 msgid "%d repository shown"
@@ -2862,7 +2878,7 @@ msgstr ""
 #: views/overview-dashboard.php:32
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
-#: views/packages/index.php:344
+#: views/packages/index.php:345
 #: views/provider.php:713
 #: views/settings-storage.php:25
 #: views/troubleshooting-installation.php:18
@@ -4816,12 +4832,12 @@ msgid "Succeeded"
 msgstr ""
 
 #: RAN/Booster.php:989
-#: views/packages/index.php:340
+#: views/packages/index.php:341
 msgid "Reinstall queued"
 msgstr ""
 
 #: RAN/Booster.php:990
-#: views/packages/index.php:342
+#: views/packages/index.php:343
 msgid "Reinstall in progress…"
 msgstr ""
 
@@ -5775,7 +5791,7 @@ msgstr ""
 #: views/attempts/index.php:79
 #: views/packages/fields/provider.php:19
 #: views/packages/fields/provider.php:22
-#: views/packages/index.php:525
+#: views/packages/index.php:526
 #: views/portability-review.php:28
 #: views/troubleshooting.php:142
 #: assets/ran-booster-repository-picker.js:410
@@ -5907,7 +5923,7 @@ msgid "Not run"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:311
-#: views/packages/index.php:529
+#: views/packages/index.php:530
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
 #: views/troubleshooting-installation.php:175
@@ -6211,7 +6227,7 @@ msgid "Activity is temporarily unavailable."
 msgstr ""
 
 #: views/attempts/index.php:117
-#: assets/ran-booster.js:277
+#: assets/ran-booster.js:291
 msgid "No older activity is available."
 msgstr ""
 
@@ -6256,7 +6272,7 @@ msgid "Branch deployment"
 msgstr ""
 
 #: views/attempts/index.php:182
-#: views/packages/index.php:576
+#: views/packages/index.php:577
 msgid "View details"
 msgstr ""
 
@@ -7940,7 +7956,7 @@ msgstr ""
 
 #. translators: %s is the repository branch name.
 #: views/packages/edit.php:238
-#: views/packages/index.php:422
+#: views/packages/index.php:423
 #: assets/ran-booster-release-management.js:801
 #, php-format,js-format
 msgid "Branch · %s"
@@ -8151,6 +8167,7 @@ msgstr[1] ""
 
 #. translators: %s: Managed package type plural label, such as Plugins or Themes.
 #: views/packages/index.php:112
+#: views/packages/index.php:236
 #, php-format
 msgid "Managed %s"
 msgstr ""
@@ -8236,10 +8253,6 @@ msgstr ""
 msgid "Disable in WordPress"
 msgstr ""
 
-#: views/packages/index.php:223
-msgid "Apply"
-msgstr ""
-
 #. translators: %s is plugins or themes.
 #: views/packages/index.php:224
 #: assets/ran-booster-packages.js:617
@@ -8248,203 +8261,203 @@ msgid "0 %s selected"
 msgstr ""
 
 #. translators: %s is plugins or themes.
-#: views/packages/index.php:241
+#: views/packages/index.php:242
 #, php-format
 msgid "Select all %s"
 msgstr ""
 
-#: views/packages/index.php:243
+#: views/packages/index.php:244
 msgid "Selection"
 msgstr ""
 
-#: views/packages/index.php:247
+#: views/packages/index.php:248
 msgid "Management"
 msgstr ""
 
-#: views/packages/index.php:256
+#: views/packages/index.php:257
 msgid "Package settings could not be loaded. Review the notice above."
 msgstr ""
 
 #. translators: %s is plugins or themes.
-#: views/packages/index.php:260
+#: views/packages/index.php:261
 #, php-format
 msgid "No managed %s match the current filters."
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/index.php:264
-#: views/packages/index.php:266
+#: views/packages/index.php:265
+#: views/packages/index.php:267
 #, php-format
 msgid "Add your first %s"
 msgstr ""
 
 #. translators: %s is plugins or themes.
-#: views/packages/index.php:265
+#: views/packages/index.php:266
 #, php-format
 msgid "No %s are managed by RAN Booster yet."
 msgstr ""
 
-#: views/packages/index.php:328
+#: views/packages/index.php:329
 msgid "Deployment disabled"
 msgstr ""
 
-#: views/packages/index.php:332
-#: views/packages/index.php:383
+#: views/packages/index.php:333
+#: views/packages/index.php:384
 msgid "Credential unavailable"
 msgstr ""
 
 #. translators: %s is the managed package type, such as plugin or theme.
-#: views/packages/index.php:335
+#: views/packages/index.php:336
 #, php-format
 msgid "Reinstall %s"
 msgstr ""
 
-#: views/packages/index.php:337
-#: views/packages/index.php:505
+#: views/packages/index.php:338
+#: views/packages/index.php:506
 #: views/packages/reinstall.php:30
 #: views/packages/reinstall.php:39
 msgid "Reinstall"
 msgstr ""
 
 #. translators: %s is the repository branch name.
-#: views/packages/index.php:352
+#: views/packages/index.php:353
 #, php-format
 msgid "Branch: %s"
 msgstr ""
 
-#: views/packages/index.php:355
+#: views/packages/index.php:356
 msgid "Public repository"
 msgstr ""
 
-#: views/packages/index.php:358
+#: views/packages/index.php:359
 msgid "Private; Git provider unavailable"
 msgstr ""
 
 #. translators: %s is the saved credential label.
-#: views/packages/index.php:362
+#: views/packages/index.php:363
 #, php-format
 msgid "Private via %s"
 msgstr ""
 
-#: views/packages/index.php:366
+#: views/packages/index.php:367
 msgid "Private; credential missing"
 msgstr ""
 
-#: views/packages/index.php:378
+#: views/packages/index.php:379
 msgid "Integration unavailable"
 msgstr ""
 
-#: views/packages/index.php:426
+#: views/packages/index.php:427
 msgid "The saved Git provider is unavailable. Restore it before deploying this package."
 msgstr ""
 
-#: views/packages/index.php:428
+#: views/packages/index.php:429
 msgid "The saved repository credential is unavailable."
 msgstr ""
 
-#: views/packages/index.php:432
+#: views/packages/index.php:433
 msgid "Booster will not overwrite this package or respond to repository pushes."
 msgstr ""
 
-#: views/packages/index.php:435
+#: views/packages/index.php:436
 msgid "WordPress controls when validated published releases are installed."
 msgstr ""
 
-#: views/packages/index.php:436
+#: views/packages/index.php:437
 msgid "Installed package is current. Release checks run only when requested."
 msgstr ""
 
-#: views/packages/index.php:438
+#: views/packages/index.php:439
 msgid "A prior branch deployment is awaiting operator review. It is not running. Open deployment activity and record the review before retrying."
 msgstr ""
 
-#: views/packages/index.php:440
+#: views/packages/index.php:441
 msgid "The latest branch deployment failed. Open deployment activity for details before retrying."
 msgstr ""
 
-#: views/packages/index.php:442
+#: views/packages/index.php:443
 msgid "Signed repository pushes deploy automatically. Review setup if pushes are not arriving."
 msgstr ""
 
-#: views/packages/index.php:444
+#: views/packages/index.php:445
 msgid "Ready. Deployments run only when an administrator requests one."
 msgstr ""
 
-#: views/packages/index.php:447
+#: views/packages/index.php:448
 msgid "Release details"
 msgstr ""
 
 #. translators: %s: package name.
-#: views/packages/index.php:448
+#: views/packages/index.php:449
 #: views/portability-review.php:354
 msgid "Package details"
 msgstr ""
 
-#: views/packages/index.php:448
+#: views/packages/index.php:449
 msgid "Deployment activity"
 msgstr ""
 
 #. translators: %s is a package name.
-#: views/packages/index.php:464
+#: views/packages/index.php:465
 #, php-format
 msgid "Select %s"
 msgstr ""
 
-#: views/packages/index.php:474
+#: views/packages/index.php:475
 msgid "WordPress"
 msgstr ""
 
-#: views/packages/index.php:504
+#: views/packages/index.php:505
 #: views/packages/reinstall.php:32
 msgid "Reinstall from the saved branch and overwrite local changes?"
 msgstr ""
 
-#: views/packages/index.php:510
+#: views/packages/index.php:511
 msgid "Edit settings"
 msgstr ""
 
-#: views/packages/index.php:530
+#: views/packages/index.php:531
 msgid "Not available"
 msgstr ""
 
-#: views/packages/index.php:533
+#: views/packages/index.php:534
 msgid "Access"
 msgstr ""
 
-#: views/packages/index.php:539
+#: views/packages/index.php:540
 msgid "Last recorded check"
 msgstr ""
 
-#: views/packages/index.php:542
-#: views/packages/index.php:572
+#: views/packages/index.php:543
+#: views/packages/index.php:573
 msgid "Temporarily unavailable"
 msgstr ""
 
-#: views/packages/index.php:546
+#: views/packages/index.php:547
 msgid "No check recorded for the current settings"
 msgstr ""
 
-#: views/packages/index.php:560
+#: views/packages/index.php:561
 msgid "View activity"
 msgstr ""
 
-#: views/packages/index.php:564
+#: views/packages/index.php:565
 msgid "Last established result"
 msgstr ""
 
-#: views/packages/index.php:569
+#: views/packages/index.php:570
 msgid "Last activity"
 msgstr ""
 
-#: views/packages/index.php:578
+#: views/packages/index.php:579
 msgid "No activity recorded"
 msgstr ""
 
-#: views/packages/index.php:583
+#: views/packages/index.php:584
 msgid "Last succeeded"
 msgstr ""
 
-#: views/packages/index.php:584
+#: views/packages/index.php:585
 msgid "Not recorded"
 msgstr ""
 
@@ -9286,14 +9299,6 @@ msgstr ""
 
 #: views/provider.php:145
 msgid "(not installed)"
-msgstr ""
-
-#: views/provider.php:203
-msgid "Credentials"
-msgstr ""
-
-#: views/provider.php:203
-msgid "Webhook secrets"
 msgstr ""
 
 #: views/provider.php:215
@@ -11552,10 +11557,10 @@ msgstr ""
 msgid "Settings changed before confirmation. Review the current saved values before retrying:"
 msgstr ""
 
-#: assets/ran-booster.js:102
+#: assets/ran-booster.js:116
 msgid "Load older activity"
 msgstr ""
 
-#: assets/ran-booster.js:281
+#: assets/ran-booster.js:295
 msgid "Older activity loaded."
 msgstr ""

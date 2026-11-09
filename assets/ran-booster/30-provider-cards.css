@@ -324,26 +324,6 @@
 	vertical-align: top;
 }
 
-.ran-booster-admin .ran-booster-credential-table--access th:nth-child(1) {
-	inline-size: 40%;
-}
-
-.ran-booster-admin .ran-booster-credential-table--access th:nth-child(2) {
-	inline-size: 35%;
-}
-
-.ran-booster-admin .ran-booster-credential-table--access th:nth-child(3) {
-	inline-size: 30%;
-}
-
-.ran-booster-admin .ran-booster-credential-table--webhook th:nth-child(1) {
-	inline-size: 68%;
-}
-
-.ran-booster-admin .ran-booster-credential-table--webhook th:nth-child(2) {
-	inline-size: 32%;
-}
-
 .ran-booster-admin .ran-booster-provider-empty-state {
 	margin: 0;
 	padding: var(--ran-booster-space-16);

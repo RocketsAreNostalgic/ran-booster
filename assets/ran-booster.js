@@ -19,7 +19,21 @@
 		initProviderRepositoryFilter();
 		initProviderTaskNavigation();
 		initActivityHistoryAppend();
+		initAutoSubmitSelects();
 	});
+
+	// Selects that carry the marker submit their form on change. Without
+	// JavaScript the form's own Apply button remains the native fallback.
+	function initAutoSubmitSelects() {
+		document.addEventListener?.('change', function (event) {
+			const select = event.target?.closest?.(
+				'select[data-ran-booster-auto-submit]'
+			);
+			if (select?.form) {
+				select.form.requestSubmit();
+			}
+		});
+	}
 
 	function initActivityHistoryAppend() {
 		const root = document.querySelector('[data-ran-booster-activity]');

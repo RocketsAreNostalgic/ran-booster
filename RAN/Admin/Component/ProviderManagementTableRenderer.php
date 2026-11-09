@@ -46,6 +46,7 @@ final class ProviderManagementTableRenderer {
 		$columns = $this->columns( $type );
 		?>
 		<table class="widefat striped ran-booster-data-table ran-booster-credential-table ran-booster-credential-table--<?php echo esc_attr( $type ); ?> ran-booster-provider-management-table">
+			<caption class="screen-reader-text"><?php echo esc_html( self::ACCESS === $type ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></caption>
 			<thead>
 				<tr>
 					<?php foreach ( $columns as $column ) { ?>
@@ -187,10 +188,11 @@ final class ProviderManagementTableRenderer {
 					<?php foreach ( $pagination['hidden_fields'] as $name => $value ) { ?>
 						<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
 					<?php } ?>
-					<select id="<?php echo esc_attr( $page_size_id ); ?>" name="per_page" onchange="this.form.submit()">
+					<select id="<?php echo esc_attr( $page_size_id ); ?>" name="per_page" data-ran-booster-auto-submit>
 						<option value="20" <?php selected( 20, $pagination['per_page'] ); ?>>20</option>
 						<option value="50" <?php selected( 50, $pagination['per_page'] ); ?>>50</option>
 					</select>
+					<button type="submit" class="button screen-reader-text"><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
 				</form>
 				<a class="button <?php echo 1 >= $current ? 'disabled' : ''; ?>" href="<?php echo esc_url( $pagination['previous_url'] ); ?>" aria-disabled="<?php echo 1 >= $current ? 'true' : 'false'; ?>" <?php echo 1 >= $current ? 'tabindex="-1"' : ''; ?>>&lsaquo;</a>
 				<span><?php echo esc_html( $pagination['page_label'] ); ?></span>

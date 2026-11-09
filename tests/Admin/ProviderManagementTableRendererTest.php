@@ -28,6 +28,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 		self::assertSame( array( 'name', 'kind', 'scope', 'usage', 'health', 'actions' ), $rendered_columns );
 		self::assertStringContainsString( 'ran-booster-credential-table--access', $html );
 		self::assertStringContainsString( '<th scope="col">', $html );
+		self::assertStringContainsString( '<caption class="screen-reader-text">Credentials</caption>', $html );
 		self::assertStringContainsString( '>Credential type</a>', $html );
 		self::assertStringContainsString( 'data-label="Used by"', $html );
 		self::assertStringContainsString( 'class="ran-booster-actions" data-label="Actions"', $html );
@@ -50,6 +51,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 
 		self::assertSame( array( 'name', 'scope', 'usage', 'health', 'actions' ), $rendered_columns );
 		self::assertStringContainsString( 'ran-booster-credential-table--webhook', $html );
+		self::assertStringContainsString( '<caption class="screen-reader-text">Webhook secrets</caption>', $html );
 		self::assertStringNotContainsString( 'Credential type', $html );
 		self::assertSame( 5, substr_count( $html, '<th scope="col">' ) );
 	}
@@ -96,6 +98,10 @@ final class ProviderManagementTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'Page 2 &amp; 3', $html );
 		self::assertStringContainsString( 'id="ran-booster-credential-page-size"', $html );
 		self::assertStringContainsString( 'value="50"  selected="selected"', $html );
+		// The page-size form works without JavaScript: no inline handler, a native Apply submit.
+		self::assertStringNotContainsString( 'onchange', $html );
+		self::assertStringContainsString( 'data-ran-booster-auto-submit', $html );
+		self::assertMatchesRegularExpression( '/<button type="submit" class="button screen-reader-text">Apply<\/button>\s*<\/form>/', $html );
 		self::assertStringContainsString( 'name="tab" value="gh&quot;&gt;&lt;unsafe"', $html );
 		self::assertStringContainsString( 'paged=1&amp;mode=&lt;unsafe&gt;', $html );
 		self::assertStringContainsString( 'paged=3&amp;mode=&lt;unsafe&gt;', $html );

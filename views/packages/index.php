@@ -233,6 +233,7 @@ $policy_labels = array(
 <?php } ?>
 
 <table class="wp-list-table widefat plugins ran-booster-package-table" data-package-type="<?php echo esc_attr( $package_view->get_type() ); ?>">
+	<caption class="screen-reader-text"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></caption>
 	<thead>
 	<tr>
 		<th scope="col" class="manage-column column-cb check-column">

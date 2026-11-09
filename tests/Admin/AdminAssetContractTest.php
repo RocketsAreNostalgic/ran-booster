@@ -779,6 +779,27 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'style="text-align: center;', $base );
 	}
 
+	public function test_documentation_chapters_outrank_their_disclosures_and_articles(): void {
+		$documentation = $this->asset( 'ran-booster-documentation.css' );
+
+		if ( 1 !== preg_match( '/\.ran-booster-documentation__chapter > h3 \{([^}]*)\}/', $documentation, $m ) ) {
+			self::fail( 'The Documentation chapter heading rule is missing.' );
+		}
+		self::assertStringContainsString( 'font-size: var(--ran-booster-font-size-lg);', $m[1] );
+		self::assertStringContainsString( 'font-weight: var(--ran-booster-font-weight-semibold);', $m[1] );
+		if ( 1 !== preg_match( '/\.ran-booster-documentation__section\.ran-booster-disclosure\s+> summary \{([^}]*)\}/', $documentation, $m ) ) {
+			self::fail( 'The Documentation disclosure fallback summary rule is missing.' );
+		}
+		// The fallback matches the compact public header: 13px at medium weight.
+		self::assertStringContainsString( 'font-size: var(--ran-booster-font-size-md);', $m[1] );
+		self::assertStringContainsString( 'font-weight: var(--ran-booster-font-weight-medium);', $m[1] );
+		if ( 1 !== preg_match( '/\.ran-booster-documentation__content :is\(h3, h4\) \{([^}]*)\}/', $documentation, $m ) ) {
+			self::fail( 'The Documentation article heading rule is missing.' );
+		}
+		self::assertStringContainsString( 'font-size: var(--ran-booster-font-size-md);', $m[1] );
+		self::assertStringNotContainsString( 'text-transform', $documentation );
+	}
+
 	public function test_documentation_smooth_scrolling_is_scoped_and_respects_reduced_motion(): void {
 		$documentation = $this->asset( 'ran-booster-documentation.css' );
 

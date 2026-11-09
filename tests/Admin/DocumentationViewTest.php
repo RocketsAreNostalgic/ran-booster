@@ -82,7 +82,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'do not assume it remains stable across automatic attempts', $html );
 		self::assertStringContainsString( 'Git provider request ID shown on a webhook attempt in Booster Activity', $html );
 		self::assertStringContainsString( 'Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity', $html );
-		self::assertStringContainsString( '<h3 id="ran-booster-webhook-cleanup">Retained webhook setup and cleanup</h3>', $html );
+		self::assertStringContainsString( '<h4 id="ran-booster-webhook-cleanup">Retained webhook setup and cleanup</h4>', $html );
 		self::assertStringContainsString( 'Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup', $html );
 		self::assertStringContainsString( 'any branch-managed package using the same repository can continue to need the webhook', $html );
 		self::assertStringContainsString( 'Remove the remote Git provider webhook first, then remove only a local signing secret that is no longer used', $html );
@@ -95,7 +95,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( '<summary>Protect your files and know what actually moves</summary>', $html );
 		self::assertStringContainsString( '<summary>Credential storage, retention and removal</summary>', $html );
 		self::assertStringContainsString( 'id="ran-booster-credential-storage"', $html );
-		self::assertStringContainsString( '<h3 id="ran-booster-manual-storage-override">Use a different storage location</h3>', $html );
+		self::assertStringContainsString( '<h4 id="ran-booster-manual-storage-override">Use a different storage location</h4>', $html );
 		self::assertStringContainsString( "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );", $html );
 		self::assertStringNotContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_FILE', $html );
 		self::assertStringContainsString( 'Do not add group access as a workaround', $html );
@@ -243,7 +243,18 @@ final class DocumentationViewTest extends TestCase {
 
 		self::assertSame( 1, $callable_calls );
 		self::assertStringContainsString( '<div class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>', $html );
-		self::assertStringContainsString( '<h2 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading">On this page</h2>', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading">On this page</h3>', $html );
+		$outline = new \DOMDocument();
+		$outline->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$outline_xpath = new \DOMXPath( $outline );
+		// Chapters are the only h3 in the article column; article and index-group headings sit one level below.
+		self::assertSame( 0.0, $outline_xpath->evaluate( 'count(//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__content ")]//h3)' ) );
+		self::assertSame( 0.0, $outline_xpath->evaluate( 'count(//*[@data-ran-booster-documentation-index]//h2 | //*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__index-chapter ")]/h3)' ) );
+		self::assertGreaterThan( 0.0, $outline_xpath->evaluate( 'count(//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__content ")]//h4)' ) );
+		self::assertSame(
+			$outline_xpath->evaluate( 'count(//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapter ")]/h3)' ),
+			$outline_xpath->evaluate( 'count(//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__index-chapter ")]/h4)' )
+		);
 		self::assertStringContainsString( '<p class="ran-booster-documentation__search-hint">Search this page with <kbd>⌘F</kbd> <span>or</span> <kbd>Ctrl+F</kbd></p>', $html );
 		self::assertSame( 1, preg_match_all( '/href="#addon-guide"/', $html ) );
 		self::assertSame( 1, preg_match_all( '/id="addon-guide"/', $html ) );
@@ -465,8 +476,8 @@ final class DocumentationViewTest extends TestCase {
 		$nav = array();
 		foreach ( $nav_groups as $group ) {
 			self::assertInstanceOf( \DOMElement::class, $group );
-			self::assertSame( 0.0, $xpath->evaluate( 'count(./h3//a | ./h3//button | ./h3//details)', $group ) );
-			$title         = trim( (string) $xpath->evaluate( 'string(./h3)', $group ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./h4//a | ./h4//button | ./h4//details)', $group ) );
+			$title         = trim( (string) $xpath->evaluate( 'string(./h4)', $group ) );
 			$nav[ $title ] = array();
 			$links         = $xpath->query( './/a', $group );
 			self::assertInstanceOf( \DOMNodeList::class, $links );
@@ -739,7 +750,7 @@ final class DocumentationViewTest extends TestCase {
 		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertStringContainsString( '<summary>About RAN Booster</summary>', $html );
-		self::assertStringContainsString( '<h3>Where this came from</h3>', $html );
+		self::assertStringContainsString( '<h4>Where this came from</h4>', $html );
 		self::assertStringContainsString( 'modified derivative of WP Pusher 3.0.13', $html );
 		self::assertStringContainsString( 'WP Pusher was created by Peter Suhm', $html );
 		self::assertStringContainsString( 'inherited source was distributed under GPLv2', $html );
@@ -748,10 +759,10 @@ final class DocumentationViewTest extends TestCase {
 		self::assertStringContainsString( 'independent fork maintained by Rockets Are Nostalgic', $html );
 		self::assertStringContainsString( 'not affiliated with or endorsed by Peter Suhm, WP Pusher or its owners', $html );
 		self::assertStringContainsString( 'NOTICE.md and license.txt', $html );
-		self::assertStringContainsString( '<h3>Why we built this</h3>', $html );
+		self::assertStringContainsString( '<h4>Why we built this</h4>', $html );
 		self::assertStringContainsString( 'depended on a vendor-hosted licensing, OAuth and repository-picker service', $html );
 		self::assertStringContainsString( 'Every credential, webhook and deployment decision now lives on your own site, not a third party', $html );
-		self::assertStringContainsString( '<h3>What’s different</h3>', $html );
+		self::assertStringContainsString( '<h4>What’s different</h4>', $html );
 		self::assertStringContainsString( '<strong>Safety.</strong>', $html );
 		self::assertStringContainsString( '<strong>Transporter.</strong>', $html );
 		self::assertStringContainsString( '<strong>Independence &amp; Security.</strong>', $html );
@@ -901,7 +912,7 @@ final class DocumentationViewTest extends TestCase {
 	public function test_documents_the_effective_repository_archive_policy_and_override(): void {
 		$html = $this->render_view( $this->provider_documentation() );
 
-		self::assertStringContainsString( '<h3>Large repository archives</h3>', $html );
+		self::assertStringContainsString( '<h4>Large repository archives</h4>', $html );
 		self::assertStringContainsString( 'ZIP of the whole repository', $html );
 		self::assertStringContainsString( '50 MiB compressed and 200 MiB expanded', $html );
 		self::assertStringContainsString( 'Adjust the compressed limit in Booster Settings', $html );

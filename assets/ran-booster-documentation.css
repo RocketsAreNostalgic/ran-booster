@@ -48,17 +48,17 @@
 	gap: var(--ran-booster-space-12);
 }
 
-.ran-booster-admin .ran-booster-documentation__index-chapter h3,
+.ran-booster-admin .ran-booster-documentation__index-chapter h4,
 .ran-booster-admin .ran-booster-documentation__chapter > h3 {
 	margin: 0 0 var(--ran-booster-space-8);
 	padding-block-end: var(--ran-booster-space-8);
 	border-block-end: 1px solid var(--ran-booster-divider);
-	font-size: var(--ran-booster-font-size-md);
+	font-size: var(--ran-booster-font-size-lg);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: var(--ran-booster-line-height-heading);
 }
 
-.ran-booster-admin .ran-booster-documentation__index-chapter h3 {
+.ran-booster-admin .ran-booster-documentation__index-chapter h4 {
 	font-size: var(--ran-booster-font-size-md);
 }
 
@@ -139,6 +139,7 @@
 		padding-block: var(--ran-booster-space-8);
 		padding-inline-end: calc(3 * var(--ran-booster-space-16));
 		font-size: var(--ran-booster-font-size-md);
+		font-weight: var(--ran-booster-font-weight-medium);
 		line-height: 20px;
 		list-style-position: outside;
 	}
@@ -169,6 +170,11 @@
 
 .ran-booster-admin .ran-booster-documentation__content {
 	max-inline-size: 860px;
+}
+
+/* Article headings stay below the chapter heading, including contributed ones. */
+.ran-booster-admin .ran-booster-documentation__content :is(h3, h4) {
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-documentation__content p,
@@ -221,7 +227,7 @@
 	border-block-start: 1px solid var(--ran-booster-divider);
 }
 
-.ran-booster-admin .ran-booster-documentation__provider-webhook h3 {
+.ran-booster-admin .ran-booster-documentation__provider-webhook h4 {
 	margin-block-end: var(--ran-booster-space-10);
 }
 

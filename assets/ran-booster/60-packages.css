@@ -328,6 +328,30 @@
 	color: var(--ran-booster-brand);
 }
 
+/*
+ * Package-row disclosures sit under a 14px package name, so their header
+ * follows the 13px management label rather than the generic compact header.
+ * Covers the native fallback summary and the mounted header.
+ */
+
+.ran-booster-admin
+	.ran-booster-package-table
+	.ran-booster-package-row__details
+	[data-ran-booster-ui-disclosure="package-details"]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary,
+.ran-booster-admin
+	.ran-booster-package-table
+	.ran-booster-package-row__details
+	[data-ran-booster-ui-disclosure="package-details"]
+	.ran-booster-ui-disclosure__header
+	> [role="button"] {
+	padding-block: var(--ran-booster-space-6);
+	font-size: var(--ran-booster-font-size-sm);
+	font-weight: 600;
+	line-height: 20px;
+}
+
 .ran-booster-admin .ran-booster-package-row__details-grid {
 	display: grid;
 	grid-template-columns:

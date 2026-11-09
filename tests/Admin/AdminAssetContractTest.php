@@ -1233,6 +1233,41 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-repository-record__actions', $css );
 	}
 
+	/**
+	 * Package identity must stay the scan anchor of its row (#759): the details
+	 * disclosure header may never be larger than the package name. This asserts
+	 * the relationship through the foundation tokens, so a token change cannot
+	 * silently invert the hierarchy.
+	 */
+	public function test_package_row_disclosure_header_never_outsizes_the_package_name(): void {
+		$foundations = $this->asset( 'ran-booster/00-foundations.css' );
+		$packages    = $this->asset( 'ran-booster/60-packages.css' );
+
+		$size = static function ( string $token ) use ( $foundations ): int {
+			self::assertSame( 1, preg_match( '/' . preg_quote( $token, '/' ) . ':\s*(\d+)px;/', $foundations, $m ), $token );
+
+			return (int) $m[1];
+		};
+
+		$token_in = static function ( string $selector_fragment ) use ( $packages ): string {
+			$pattern = '/' . $selector_fragment . '[^{]*\{[^}]*font-size:\s*var\((--ran-booster-font-size-[a-z-]+)\)/s';
+			self::assertSame( 1, preg_match( $pattern, $packages, $m ), $selector_fragment );
+
+			return $m[1];
+		};
+
+		$name_token   = $token_in( '\.ran-booster-package-row__title\s' );
+		$header_token = $token_in( 'package-row__details\s+\[data-ran-booster-ui-disclosure="package-details"\]\s+>\s+details' );
+
+		self::assertGreaterThanOrEqual( $size( $header_token ), $size( $name_token ) );
+
+		// Both the native fallback summary and the mounted header carry the override.
+		self::assertSame(
+			1,
+			preg_match( '/summary,\s*\.ran-booster-admin\s+\.ran-booster-package-table\s+\.ran-booster-package-row__details\s+\[data-ran-booster-ui-disclosure="package-details"\]\s+\.ran-booster-ui-disclosure__header\s+>\s+\[role="button"\]\s*\{/', $packages )
+		);
+	}
+
 	private function asset( string $file ): string {
 		if ( 'ran-booster.css' !== $file ) {
 			return $this->raw_asset( $file );

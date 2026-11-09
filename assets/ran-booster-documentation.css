@@ -133,13 +133,6 @@
 		box-shadow: 0 1px 0 var(--ran-booster-divider);
 	}
 
-	.ran-booster-admin
-		[data-ran-booster-ui-disclosure="documentation"]
-		.ran-booster-ui-disclosure[data-open]
-		> .ran-booster-ui-disclosure__header {
-		box-shadow: 0 1px 0 var(--ran-booster-divider);
-	}
-
 	.ran-booster-admin .ran-booster-documentation__content pre {
 		max-inline-size: 100%;
 		padding: var(--ran-booster-space-12);

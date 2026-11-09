@@ -429,6 +429,26 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-documentation__content', $view );
 	}
 
+	public function test_every_public_disclosure_shares_one_open_header_divider(): void {
+		$css           = $this->asset( 'ran-booster.css' );
+		$documentation = $this->asset( 'ran-booster-documentation.css' );
+
+		// One shadow, outside the box model, for every public kind and its native fallback.
+		self::assertMatchesRegularExpression(
+			'/@media screen \{\s+\.ran-booster-admin\s+\[data-ran-booster-ui-disclosure\]\s+\.ran-booster-ui-disclosure\[data-open\]\s+> \.ran-booster-ui-disclosure__header,\s+\.ran-booster-admin\s+\[data-ran-booster-ui-disclosure\]\s+> details\[data-ran-booster-ui-disclosure-fallback\]\[open\]\s+> summary \{\s+box-shadow: 0 1px 0 var\(--ran-booster-divider\);/',
+			$css
+		);
+		// Documentation no longer carries a private mounted copy, so no kind can drift from the shared divider.
+		self::assertDoesNotMatchRegularExpression(
+			'/\[data-ran-booster-ui-disclosure="documentation"\]\s+\.ran-booster-ui-disclosure\[data-open\]/',
+			$documentation
+		);
+		self::assertMatchesRegularExpression(
+			'/\.ran-booster-documentation__section\.ran-booster-disclosure\[open\]\s+> summary \{\s+border-block-end: 0;\s+box-shadow: 0 1px 0 var\(--ran-booster-divider\);/',
+			$documentation
+		);
+	}
+
 	public function test_picker_and_credential_dialogs_retain_keyboard_focus_and_body_lock_contracts(): void {
 		$credential_script = $this->asset( 'ran-booster-secure-inputs.js' );
 		$picker_script     = $this->asset( 'ran-booster-repository-picker.js' );

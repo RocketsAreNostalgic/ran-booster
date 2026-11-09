@@ -919,3 +919,21 @@
 		min-block-size: 44px;
 	}
 }
+
+/*
+ * Every public Disclosure shares the approved Documentation open-state header
+ * divider. A shadow sits outside the box model, so opening adds no height and
+ * the native fallback matches the mounted header with no layout shift.
+ */
+@media screen {
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure]
+		.ran-booster-ui-disclosure[data-open]
+		> .ran-booster-ui-disclosure__header,
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure]
+		> details[data-ran-booster-ui-disclosure-fallback][open]
+		> summary {
+		box-shadow: 0 1px 0 var(--ran-booster-divider);
+	}
+}

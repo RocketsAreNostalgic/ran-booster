@@ -55,9 +55,11 @@
 }
 
 /*
- * More Details. The shared Dialog supplies the title, description, close
- * button and content padding; without JavaScript, :target reveals the
- * hidden section in place.
+ * More Details. Without JavaScript, :target reveals the hidden section in
+ * place: banner, title, summary, then the content beside its sidebar. With
+ * the shared Dialog, ranBoosterOpenDialog moves the banner behind the
+ * Dialog title, each section into its tab panel, the sidebar into the
+ * aside column and the card's action into the footer.
  */
 
 .ran-booster-extension-details-host:target {
@@ -65,35 +67,109 @@
 	margin-block-start: var(--ran-booster-space-30);
 }
 
+/*
+ * Banner artwork fills a 772:250 frame. Without artwork, the Booster shell
+ * gradient carries the extension icon so the header still looks finished.
+ */
+
+.ran-booster-extension-banner {
+	position: relative;
+	overflow: hidden;
+	inline-size: 100%;
+	aspect-ratio: 772 / 250;
+	max-block-size: min(250px, 32dvh);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-extension-details-host > .ran-booster-extension-banner {
+	max-inline-size: 772px;
+	border-radius: var(--ran-booster-radius-card);
+}
+
+.ran-booster-extension-banner__image {
+	display: block;
+	inline-size: 100%;
+	block-size: 100%;
+	object-fit: cover;
+}
+
+.ran-booster-extension-banner--fallback {
+	background:
+		radial-gradient(
+			circle at 82% 45%,
+			color-mix(in srgb, var(--ran-booster-accent) 30%, transparent),
+			transparent 55%
+		),
+		linear-gradient(
+			135deg,
+			var(--ran-booster-shell-gradient-start) 0%,
+			var(--ran-booster-shell-gradient-end) 100%
+		);
+}
+
+.ran-booster-extension-banner__icon {
+	position: absolute;
+	inset-block-start: 50%;
+	inset-inline-end: 10%;
+	inline-size: 28%;
+	max-inline-size: 128px;
+	block-size: auto;
+	border-radius: var(--ran-booster-radius-card);
+	box-shadow:
+		0 0 0 var(--ran-booster-space-4)
+			color-mix(
+				in srgb,
+				var(--ran-booster-color-neutral-0) 20%,
+				transparent
+			),
+		var(--ran-booster-shadow-modal);
+	translate: 0 -50%;
+}
+
+.ran-booster-extension-details-host
+	> .ran-booster-extension-details-host__title {
+	margin-block: var(--ran-booster-space-16) var(--ran-booster-space-8);
+	font-size: var(--ran-booster-font-size-xl);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
 .ran-booster-extension-details {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(0, 240px);
 	gap: var(--ran-booster-space-24);
+}
+
+.ran-booster-extension-details__section,
+.ran-booster-extension-details__sidebar {
 	color: var(--ran-booster-text);
 	font-size: var(--ran-booster-font-size-md);
 	line-height: var(--ran-booster-line-height-relaxed);
 }
 
-.ran-booster-ui-dialog__body .ran-booster-extension-details {
-	margin-block-start: var(--ran-booster-space-16);
-}
-
-.ran-booster-extension-details h3 {
+:is(
+		.ran-booster-extension-details__section,
+		.ran-booster-extension-details__sidebar
+	)
+	h3 {
 	margin-block: var(--ran-booster-space-20) var(--ran-booster-space-8);
 	font-size: var(--ran-booster-font-size-lg);
 	font-weight: var(--ran-booster-font-weight-heading);
 	line-height: var(--ran-booster-line-height-heading);
 }
 
-.ran-booster-extension-details :is(h3, dl):first-child {
+:is(
+		.ran-booster-extension-details__section,
+		.ran-booster-extension-details__sidebar
+	)
+	> :first-child {
 	margin-block-start: 0;
 }
 
-.ran-booster-extension-details p {
+.ran-booster-extension-details__section p {
 	margin-block: 0 var(--ran-booster-space-16);
 }
 
-.ran-booster-extension-details__main ul {
+.ran-booster-extension-details__section ul {
 	margin-block: 0 var(--ran-booster-space-16);
 	margin-inline: 0;
 	padding-inline-start: var(--ran-booster-space-24);
@@ -124,6 +200,7 @@
 .ran-booster-extension-details__sidebar dd {
 	margin-block: var(--ran-booster-space-3) 0;
 	margin-inline: 0;
+	overflow-wrap: anywhere;
 }
 
 .ran-booster-extension-details__sidebar p {
@@ -137,6 +214,22 @@
 
 .ran-booster-extension-details__compatibility--incompatible span {
 	color: var(--ran-booster-status-error);
+}
+
+/* The card's action keeps its own markup when it moves to the footer. */
+.ran-booster-ui-dialog__actions .description {
+	color: var(--ran-booster-text-subtle);
+}
+
+/* Short phone banners keep the title bar and close button clear. */
+@media screen and (max-width: 600px) {
+	.ran-booster-extension-banner {
+		min-block-size: 120px;
+	}
+
+	.ran-booster-extension-banner__icon {
+		display: none;
+	}
 }
 
 @media screen and (max-width: 782px) {

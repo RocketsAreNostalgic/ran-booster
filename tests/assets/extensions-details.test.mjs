@@ -24,12 +24,33 @@ function element(attributes = {}, extra = {}) {
 	};
 }
 
-function install({ helper = true, opened = true } = {}) {
+function install({
+	helper = true,
+	opened = true,
+	sections = 'details',
+	missing = [],
+} = {}) {
 	const listeners = new Map();
 	const calls = [];
+	const base = 'ran-booster-extension-details-ran-booster-bitbucket';
 	const description = element({}, { textContent: 'Deploy from Bitbucket.' });
-	const content = element();
-	const section = element({}, { querySelector: () => description });
+	const section = element(
+		{ 'data-ran-booster-dialog-sections': sections },
+		{ querySelector: () => description }
+	);
+	const regions = {
+		[base]: section,
+		[`${base}-banner`]: element(),
+		[`${base}-aside`]: element(),
+		[`${base}-section-details`]: element({
+			'data-ran-booster-dialog-section-label': 'Details',
+		}),
+		[`${base}-section-changelog`]: element({
+			'data-ran-booster-dialog-section-label': 'Changelog',
+		}),
+		'ran-booster-extension-action-ran-booster-bitbucket': element(),
+	};
+	missing.forEach((id) => delete regions[id]);
 	const link = element({
 		'data-ran-booster-extension-details': 'ran-booster-bitbucket',
 		'data-title': 'Bitbucket Cloud',
@@ -37,12 +58,7 @@ function install({ helper = true, opened = true } = {}) {
 	link.closest = () => link;
 	const document = {
 		addEventListener: (type, fn) => listeners.set(type, fn),
-		getElementById: (id) =>
-			({
-				'ran-booster-extension-details-ran-booster-bitbucket': section,
-				'ran-booster-extension-details-ran-booster-bitbucket-content':
-					content,
-			})[id] ?? null,
+		getElementById: (id) => regions[id] ?? null,
 	};
 	const spoken = [];
 	const window = {
@@ -71,24 +87,66 @@ function install({ helper = true, opened = true } = {}) {
 		return prevented;
 	}
 
-	return { listeners, calls, link, content, click, spoken };
+	return { listeners, calls, link, regions, base, click, spoken };
 }
 
-test('a plain activation opens the section content in the shared Dialog', () => {
+test('a plain activation opens the banner, tab sections, sidebar and card action in the shared Dialog', () => {
 	const page = install();
 	assert.equal(page.click(), true);
 	assert.equal(page.calls.length, 1);
 	const [trigger, content, options] = page.calls[0];
+	const region = (suffix) => page.regions[page.base + suffix];
 	assert.equal(trigger, page.link);
-	assert.equal(content, page.content);
+	assert.equal(content, null);
+	assert.equal(options.title, 'Bitbucket Cloud');
+	assert.equal(options.description, 'Deploy from Bitbucket.');
+	assert.equal(options.size, 'large');
 	assert.deepEqual(
-		{ ...options },
-		{
-			title: 'Bitbucket Cloud',
-			description: 'Deploy from Bitbucket.',
-			size: 'large',
-		}
+		Array.from(options.sections, (section) => ({ ...section })),
+		[
+			{
+				id: 'details',
+				label: 'Details',
+				content: region('-section-details'),
+			},
+		]
 	);
+	assert.equal(options.banner, region('-banner'));
+	assert.equal(options.aside, region('-aside'));
+	assert.equal(
+		options.footer,
+		page.regions['ran-booster-extension-action-ran-booster-bitbucket']
+	);
+});
+
+test('sections follow the order the server declares', () => {
+	const page = install({ sections: 'details changelog' });
+	page.click();
+	assert.deepEqual(
+		Array.from(page.calls[0][2].sections, (section) => [
+			section.id,
+			section.label,
+		]),
+		[
+			['details', 'Details'],
+			['changelog', 'Changelog'],
+		]
+	);
+});
+
+test('absent optional regions are passed as null for the helper to skip', () => {
+	const page = install({
+		missing: [
+			'ran-booster-extension-details-ran-booster-bitbucket-banner',
+			'ran-booster-extension-action-ran-booster-bitbucket',
+		],
+	});
+	page.click();
+	assert.equal(page.calls[0][2].banner, null);
+	assert.equal(page.calls[0][2].footer, null);
+	const unknown = install({ sections: 'details faq' });
+	unknown.click();
+	assert.equal(unknown.calls[0][2].sections[1].content, null);
 });
 
 test('modified clicks, other buttons and handled events keep the fragment link', () => {

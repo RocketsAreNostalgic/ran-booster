@@ -3,8 +3,9 @@
 
 	// More Details links point at a hidden, server-rendered details section,
 	// which :target reveals in place without JavaScript. With the shared
-	// Dialog available, the same section opens in a Dialog instead and goes
-	// back to the page when it closes.
+	// Dialog available, the section's banner, tab sections and sidebar open
+	// in a Dialog instead, with the card's own action in its footer, and all
+	// go back to the page when it closes.
 	document.addEventListener('click', function (event) {
 		const link = event.target.closest?.(
 			'a[data-ran-booster-extension-details]'
@@ -23,23 +24,45 @@
 			return;
 		}
 
-		const id =
-			'ran-booster-extension-details-' +
-			link.getAttribute('data-ran-booster-extension-details');
+		const extension = link.getAttribute(
+			'data-ran-booster-extension-details'
+		);
+		const id = 'ran-booster-extension-details-' + extension;
 		const section = document.getElementById(id);
-		// Look the content up by ID: during a closing transition it is still
-		// inside the previous Dialog, which the helper restores before reopening.
-		const content = document.getElementById(id + '-content');
+		// Look every region up by ID: during a closing transition they are
+		// still inside the previous Dialog, which the helper restores first.
+		const sections = (
+			section?.getAttribute('data-ran-booster-dialog-sections') || ''
+		)
+			.split(' ')
+			.filter(Boolean)
+			.map(function (key) {
+				const content = document.getElementById(id + '-section-' + key);
+
+				return {
+					id: key,
+					label:
+						content?.getAttribute(
+							'data-ran-booster-dialog-section-label'
+						) || '',
+					content,
+				};
+			});
 		const handle =
 			section &&
-			content &&
-			window.ranBoosterOpenDialog(link, content, {
+			window.ranBoosterOpenDialog(link, null, {
 				title: link.getAttribute('data-title') || '',
 				description:
 					section.querySelector(
 						'.ran-booster-extension-details-host__description'
 					)?.textContent || '',
 				size: 'large',
+				sections,
+				banner: document.getElementById(id + '-banner'),
+				aside: document.getElementById(id + '-aside'),
+				footer: document.getElementById(
+					'ran-booster-extension-action-' + extension
+				),
 			});
 
 		if (handle) {

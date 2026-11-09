@@ -331,7 +331,24 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 2, substr_count( $output, 'class="ran-booster-extension-details"' ) );
 		self::assertStringContainsString( '<div id="ran-booster-extension-details-ran-booster-bitbucket-content" class="ran-booster-extension-details">', $output );
 		self::assertSame( 2, substr_count( $output, '>About this extension<' ) );
-		self::assertSame( 1, substr_count( $output, '<section id="ran-booster-extension-details-ran-booster-bitbucket" class="ran-booster-extension-details-host" aria-labelledby="ran-booster-extension-details-ran-booster-bitbucket-title" hidden>' ) );
+		self::assertSame( 1, substr_count( $output, '<section id="ran-booster-extension-details-ran-booster-bitbucket" class="ran-booster-extension-details-host" aria-labelledby="ran-booster-extension-details-ran-booster-bitbucket-title" data-ran-booster-dialog-sections="details" hidden>' ) );
+		self::assertSame( 2, substr_count( $output, 'data-ran-booster-dialog-sections="details" hidden>' ) );
+		self::assertSame( 2, substr_count( $output, 'class="ran-booster-extension-details__section" data-ran-booster-dialog-section-label="Details">' ) );
+		self::assertStringContainsString( '<div id="ran-booster-extension-details-ran-booster-bitbucket-section-details" class="ran-booster-extension-details__section"', $output );
+		self::assertStringContainsString( '<div id="ran-booster-extension-details-ran-booster-bitbucket-aside" class="ran-booster-extension-details__sidebar">', $output );
+		self::assertStringNotContainsString( '<aside', $output );
+		self::assertSame( 2, substr_count( $output, '<li><div id="ran-booster-extension-action-ran-booster-' ) );
+		self::assertStringContainsString( '<li><div id="ran-booster-extension-action-ran-booster-bitbucket" class="ran-booster-extension-card__action">', $output );
+		self::assertSame( 2, substr_count( $output, 'class="ran-booster-extension-banner ran-booster-extension-banner--fallback"' ) );
+		self::assertStringContainsString( '<img class="ran-booster-extension-banner__icon" src="https://example.test/wp-content/plugins/ran-booster/assets/extensions/bitbucket-cloud.svg" width="128" height="128" alt="">', $output );
+		self::assertStringNotContainsString( 'ran-booster-extension-banner__image', $output );
+		self::assertSame( 2, substr_count( $output, '>Version</dt>' ) );
+		self::assertStringContainsString( '<dd>0.1.0-beta.17</dd>', $output );
+		self::assertStringContainsString( '<dd>0.1.0-beta.11</dd>', $output );
+		self::assertStringNotContainsString( 'Installed version', $output );
+		self::assertStringContainsString( '<dd><a href="https://github.com/RocketsAreNostalgic/ran-booster-bitbucket">RocketsAreNostalgic/ran-booster-bitbucket</a></dd>', $output );
+		self::assertStringNotContainsString( '>Author<', $output );
+		self::assertStringNotContainsString( 'Requires WordPress', $output );
 		self::assertSame( 2, substr_count( $output, 'class="ran-booster-extension-details-host__description"' ) );
 		self::assertStringNotContainsString( 'thickbox', $output );
 		self::assertStringNotContainsString( 'TB_inline', $output );
@@ -602,6 +619,35 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'nonce-for-activate-plugin_ran-booster-bitbucket/ran-booster-bitbucket.php', $output );
 		self::assert_plugin_search_link( $output, 'RAN Booster Bitbucket Cloud' );
 		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
+		self::assertSame( 1, substr_count( $output, '>Installed version</dt>' ) );
+		if ( 1 !== preg_match( '/<div id="ran-booster-extension-action-ran-booster-bitbucket" class="ran-booster-extension-card__action">(.*?)<\/div><\/li>/s', $output, $m ) ) {
+			self::fail( 'The Bitbucket card action wrapper is missing.' );
+		}
+		self::assertStringContainsString( 'name="action" value="ran_booster_extension_activate"', $m[1] );
+		self::assertSame( 1, substr_count( $output, 'name="action" value="ran_booster_extension_activate"' ) );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_shipped_banner_artwork_replaces_the_fallback_for_that_extension_only(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$output = $this->render_with_banners( array( 'ran-booster-bitbucket/banner-772x250.png', 'ran-booster-bitbucket/banner-1544x500.webp', 'ran-booster-bitbucket/banner-1544x500.png' ) );
+
+		$url = 'https://example.test/wp-content/plugins/ran-booster/assets/extensions/ran-booster-bitbucket/';
+		self::assertStringContainsString( '<div id="ran-booster-extension-details-ran-booster-bitbucket-banner" class="ran-booster-extension-banner">', $output );
+		self::assertStringContainsString( '<img class="ran-booster-extension-banner__image" src="' . $url . 'banner-772x250.png" srcset="' . $url . 'banner-772x250.png 1x, ' . $url . 'banner-1544x500.webp 2x" width="772" height="250" alt="" decoding="async">', $output );
+		self::assertSame( 1, substr_count( $output, 'ran-booster-extension-banner__image' ) );
+		self::assertStringContainsString( '<div id="ran-booster-extension-details-ran-booster-wp-pusher-migrator-banner" class="ran-booster-extension-banner ran-booster-extension-banner--fallback">', $output );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_a_single_banner_size_renders_without_a_srcset(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$output = $this->render_with_banners( array( 'ran-booster-wp-pusher-migrator/banner-772x250.jpg' ) );
+
+		self::assertStringContainsString( '<img class="ran-booster-extension-banner__image" src="https://example.test/wp-content/plugins/ran-booster/assets/extensions/ran-booster-wp-pusher-migrator/banner-772x250.jpg" width="772" height="250" alt="" decoding="async">', $output );
+		self::assertStringNotContainsString( 'srcset', $output );
 	}
 
 	#[RunInSeparateProcess]
@@ -714,9 +760,50 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertContains( $expected, $searches );
 	}
 
-	private function render(): string {
+	/**
+	 * Render with banner files under an isolated plugin root.
+	 *
+	 * @param list<string> $files Paths below assets/extensions/.
+	 */
+	private function render_with_banners( array $files ): string {
+		$root        = sys_get_temp_dir() . '/ran-booster-banner-' . bin2hex( random_bytes( 8 ) );
+		$directories = array();
+		try {
+			foreach ( $files as $file ) {
+				$directory = dirname( $root . '/assets/extensions/' . $file );
+				if ( ! is_dir( $directory ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Create an isolated local test fixture.
+					self::assertTrue( mkdir( $directory, 0700, true ) );
+					$directories[] = $directory;
+				}
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Write the isolated local fixture only.
+				self::assertNotFalse( file_put_contents( $root . '/assets/extensions/' . $file, 'banner' ) );
+			}
+
+			return $this->render( $root );
+		} finally {
+			foreach ( $files as $file ) {
+				if ( is_file( $root . '/assets/extensions/' . $file ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Remove the isolated local fixture.
+					unlink( $root . '/assets/extensions/' . $file );
+				}
+			}
+			foreach ( array_merge( $directories, array( $root . '/assets/extensions', $root . '/assets', $root ) ) as $directory ) {
+				if ( is_dir( $directory ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Remove the isolated local fixture directory.
+					rmdir( $directory );
+				}
+			}
+		}
+	}
+
+	private function render( ?string $booster_path = null ): string {
+		$booster = $this->booster();
+		if ( null !== $booster_path ) {
+			$booster->booster_path = $booster_path;
+		}
 		ob_start();
-		$this->booster()->render_extensions_page();
+		$booster->render_extensions_page();
 
 		return (string) ob_get_clean();
 	}

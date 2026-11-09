@@ -501,6 +501,8 @@ class Booster {
 			$extension['installed']                     = $installed;
 			$extension['active']                        = $active;
 			$extension['image_url']                     = trailingslashit( $this->booster_url ?? '' ) . 'assets/extensions/' . $extension['image'];
+			$extension['banner_url']                    = $this->extension_banner_url( $extension['id'], '772x250' );
+			$extension['banner_2x_url']                 = '' === $extension['banner_url'] ? '' : $this->extension_banner_url( $extension['id'], '1544x500' );
 			$extension['compatible']                    = $compatible;
 			$extension['installed_version']             = $installed_version;
 			$extension['installed_release_status']      = $installed_release_status;
@@ -542,6 +544,21 @@ class Booster {
 		unset( $extension );
 
 		return $catalogue;
+	}
+
+	/**
+	 * Optional marketing banner shipped at
+	 * assets/extensions/<id>/banner-<size>.<webp|png|jpg>; empty when absent.
+	 */
+	private function extension_banner_url( string $id, string $size ): string {
+		$relative = 'assets/extensions/' . $id . '/banner-' . $size . '.';
+		foreach ( array( 'webp', 'png', 'jpg' ) as $format ) {
+			if ( is_file( trailingslashit( $this->booster_path ?? '' ) . $relative . $format ) ) {
+				return trailingslashit( $this->booster_url ?? '' ) . $relative . $format;
+			}
+		}
+
+		return '';
 	}
 
 	/** @return string */

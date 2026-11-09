@@ -819,6 +819,59 @@ card's server-rendered details section in the shared WordPress UI Dialog and
 returns it to the page on close; without JavaScript the fragment link reveals
 the same section in place. The section links to the selected release page.
 
+### Extension details dialog
+
+The dialog follows the WordPress plugin-information layout: a banner header
+with the extension name on a dark bar and the close button at its top end, a
+tab row, the tab panel beside a key-facts sidebar, and a footer with the
+card's action. `ranBoosterOpenDialog` builds it from server-rendered nodes in
+the hidden details section, moving each into place and back on close:
+
+- `…-banner` becomes the header behind the Dialog title;
+- each `…-section-<key>` listed in the section's
+  `data-ran-booster-dialog-sections` becomes a public WordPress UI Tabs panel,
+  labelled by its `data-ran-booster-dialog-section-label`;
+- `…-aside` becomes the sidebar column, which stacks under the panel at 782px
+  and below;
+- `ran-booster-extension-action-<id>`, the card's own Install or Activate form
+  or its state, moves into the Dialog footer, so the dialog submits the same
+  nonce-bound form as the card.
+
+The view declares the tabs in `$details_sections`. One **Details** tab is
+intended for now; a new section adds an entry there and its panel markup, and
+renders a second tab with arrow-key, Home and End navigation without script
+changes. A single section still renders a tab list with one selected tab that
+labels its panel. Without JavaScript the section shows the banner, title,
+summary, content and sidebar in place, with no tab row.
+
+The sidebar lists only catalogue facts: the selected release version, the
+installed version when one is installed, availability, maturity, state,
+compatibility and the source repository, then the documentation, release and
+support links. It never shows compatibility ranges, authorship, ratings or
+install counts that the catalogue does not hold.
+
+#### Banner artwork
+
+Banners follow the WordPress.org plugin banner sizes. Drop the files in
+`assets/extensions/<extension-id>/`:
+
+| File | Size | Use |
+| --- | --- | --- |
+| `banner-772x250.<webp\|png\|jpg>` | 772 × 250 | Required for a banner |
+| `banner-1544x500.<webp\|png\|jpg>` | 1544 × 500 | Optional high-density variant |
+
+Core looks for WebP, then PNG, then JPEG, and uses the high-density file only
+when the 772 × 250 file exists. The image renders with an empty `alt`, because
+the title bar carries the name, and with explicit dimensions so it does not
+shift the layout. The frame keeps the 772:250 ratio, caps its height at 250px
+or a third of the viewport, and crops with `object-fit: cover`, so keep text
+and logos inside the central area and clear of the lower-left title bar and
+the upper-right close button. Phones show at least a 120px-tall slice.
+
+Without artwork the banner draws the Booster shell gradient from design tokens
+with the extension icon, which hides on phones. No artwork ships in the
+repository until marketing supplies it.
+
 After provider registration, Core may register an installed, active or inactive
 catalogue extension for manual native updates only. The shared updater must first
 offer its descriptor-admission capability; Core then re-reads the same catalogue

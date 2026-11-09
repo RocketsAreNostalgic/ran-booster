@@ -385,6 +385,15 @@
 	font-size: var(--ran-booster-font-size-sm);
 }
 
+/* The two help sentences read as one statement, so they sit without a gap. */
+.ran-booster-admin
+	.ran-booster-package-link-choice
+	.ran-booster-settings-field
+	.description
+	+ .description {
+	margin-block-start: 0;
+}
+
 .ran-booster-admin
 	[data-ran-booster-branch-install-actions]
 	.ran-booster-settings-actions {

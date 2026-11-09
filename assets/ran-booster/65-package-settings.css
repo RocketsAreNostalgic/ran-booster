@@ -1104,6 +1104,7 @@
 	.ran-booster-settings__group:has(.ran-booster-settings__switch-row)
 	> :is(
 		.description,
+		.ran-booster-settings__reason,
 		.ran-booster-settings__configuration,
 		.ran-booster-settings__update-summary,
 		.ran-booster-settings__update-facts--detail

@@ -98,6 +98,7 @@ $branch_ceiling         = $download_bytes <= intdiv( PHP_INT_MAX, 4 ) ? $downloa
 $branch_ceiling_mib     = null === $branch_ceiling ? null : $mib_value( $branch_ceiling );
 $status_mode            = is_string( $core_update_status['effective_mode'] ?? null ) ? $core_update_status['effective_mode'] : 'disabled';
 $status_reason          = is_string( $core_update_status['reason'] ?? null ) ? $core_update_status['reason'] : '';
+$status_intent          = 'enabled' !== $status_mode && ! in_array( $status_reason, array( 'source_checkout', 'configuration_disabled', 'preference_disabled' ), true ) ? 'warning' : 'info';
 $update_reasons         = array(
 	'source_checkout'                   => __( 'This development copy cannot receive Booster updates.', 'ran-booster' ),
 	'release_marker_missing_or_invalid' => __( 'This installation cannot verify its release information.', 'ran-booster' ),
@@ -194,7 +195,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 						);
 						?>
 																																																																																																			</div>
-				<p id="ran-booster-hide-github-help" class="description"><?php echo esc_html( $source_labels[ $hide['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?>. <?php echo esc_html( $visibility_reasons[ $github_visibility['reason'] ] ?? ( $github_visibility['hidden'] ? __( 'GitHub navigation is currently hidden.', 'ran-booster' ) : __( 'GitHub navigation remains available.', 'ran-booster' ) ) ); ?></p>
+				<div id="ran-booster-hide-github-help" class="notice notice-info inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $source_labels[ $hide['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?>. <?php echo esc_html( $visibility_reasons[ $github_visibility['reason'] ] ?? ( $github_visibility['hidden'] ? __( 'GitHub navigation is currently hidden.', 'ran-booster' ) : __( 'GitHub navigation remains available.', 'ran-booster' ) ) ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 				<?php $render_configuration( array( 'hide_github' => 'RAN_BOOSTER_HIDE_GITHUB_UI' ) ); ?>
 			</fieldset>
 <div class="ran-booster-settings__toggle-actions">
@@ -243,7 +244,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 					?>
 					</div></div>
 				</div>
-				<p id="ran-booster-self-update-discovery-help" class="description"><?php echo esc_html( 'enabled' === $status_mode ? __( 'Booster update checks are enabled.', 'ran-booster' ) : $update_reasons[ $status_reason ] ?? __( 'Booster update checks are currently unavailable.', 'ran-booster' ) ); ?></p>
+				<div id="ran-booster-self-update-discovery-help" class="notice notice-<?php echo esc_attr( $status_intent ); ?> inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $status_intent ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $status_intent ); ?>"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( 'enabled' === $status_mode ? __( 'Booster update checks are enabled.', 'ran-booster' ) : $update_reasons[ $status_reason ] ?? __( 'Booster update checks are currently unavailable.', 'ran-booster' ) ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( $status_intent ); ?></div>
 				<div class="ran-booster-settings__update-summary">
 					<dl class="ran-booster-settings__update-facts">
 						<div><dt><?php esc_html_e( 'Installed version', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $installed_version ?? __( 'Unknown', 'ran-booster' ) ); ?></code></dd></div>

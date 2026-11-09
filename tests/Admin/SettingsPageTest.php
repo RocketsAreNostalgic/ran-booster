@@ -309,6 +309,14 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-error"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//label[@for="ran-booster-self-update-discovery"]//input[@role="switch" and @disabled and not(@checked) and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-self-update-discovery-help"])' ) );
+		// Each switch explanation is a static public Notice that stays the switch's description: informational for an
+		// explanation, caution when update checks are unavailable for an unrecognised reason. Nothing announces it.
+		foreach ( array(
+			'ran-booster-hide-github-help'           => array( 'info', 'Saved for this site. GitHub navigation remains available.' ),
+			'ran-booster-self-update-discovery-help' => array( 'warning', 'Booster update checks are currently unavailable.' ),
+		) as $help_id => $expected ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset/div[@id="' . $help_id . '" and @class="notice notice-' . $expected[0] . ' inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $expected[0] . '" and @data-ran-booster-ui-notice and @data-ran-booster-ui-notice-intent="' . $expected[0] . '" and not(@role) and not(@aria-live)][count(*)=2]/*[1][self::div and @class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" and @data-ran-booster-ui-notice-content and p="' . $expected[1] . '"]/following-sibling::*[1][local-name()="svg" and @aria-hidden="true"])' ), $help_id );
+		}
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@role="switch" and @aria-checked])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status and @data-ran-booster-badge and @data-ran-booster-badge-intent and @role="status" and contains(@class, "ran-wp-ui-badge") and not(*)])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status]/span)' ) );

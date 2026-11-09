@@ -534,8 +534,8 @@ msgstr ""
 #: views/packages/index.php:170
 #: views/packages/index.php:416
 #: views/packages/index.php:481
-#: views/settings-general.php:188
-#: views/settings-general.php:236
+#: views/settings-general.php:189
+#: views/settings-general.php:237
 #: assets/ran-booster-settings.js:82
 msgid "Disabled"
 msgstr ""
@@ -1037,8 +1037,8 @@ msgstr ""
 #: views/overview-dashboard.php:81
 #: views/overview-dashboard.php:88
 #: views/portability-review.php:102
-#: views/settings-general.php:112
-#: views/settings-general.php:249
+#: views/settings-general.php:113
+#: views/settings-general.php:250
 #: views/troubleshooting-installation.php:165
 #: views/troubleshooting-installation.php:173
 #: views/troubleshooting.php:236
@@ -1538,8 +1538,8 @@ msgstr ""
 #: RAN/Admin/PackageAdminController.php:499
 #: views/packages/edit.php:207
 #: views/packages/index.php:481
-#: views/settings-general.php:188
-#: views/settings-general.php:236
+#: views/settings-general.php:189
+#: views/settings-general.php:237
 #: assets/ran-booster-settings.js:81
 msgid "Enabled"
 msgstr ""
@@ -4661,7 +4661,7 @@ msgstr ""
 #: views/base.php:51
 #: views/overview-dashboard.php:73
 #: views/overview-dashboard.php:74
-#: views/settings-general.php:212
+#: views/settings-general.php:213
 msgid "Plugins"
 msgstr ""
 
@@ -4677,7 +4677,7 @@ msgstr ""
 #: views/base.php:56
 #: views/overview-dashboard.php:80
 #: views/overview-dashboard.php:81
-#: views/settings-general.php:213
+#: views/settings-general.php:214
 msgid "Themes"
 msgstr ""
 
@@ -5850,7 +5850,7 @@ msgid "Enabled candidates"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:258
-#: views/settings-general.php:249
+#: views/settings-general.php:250
 msgid "Installed version"
 msgstr ""
 
@@ -9990,14 +9990,14 @@ msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
-#: views/settings-general.php:157
+#: views/settings-general.php:158
 #: assets/ran-booster-settings.js:486
 msgid "On"
 msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
 #: views/settings-general.php:50
-#: views/settings-general.php:157
+#: views/settings-general.php:158
 #: assets/ran-booster-settings.js:487
 msgid "Off"
 msgstr ""
@@ -10007,7 +10007,7 @@ msgid "Configuration constants"
 msgstr ""
 
 #: views/settings-general.php:60
-#: views/settings-general.php:197
+#: views/settings-general.php:198
 msgid "Unknown source"
 msgstr ""
 
@@ -10031,170 +10031,170 @@ msgstr ""
 msgid "GitHub remains visible until provider availability is known."
 msgstr ""
 
-#: views/settings-general.php:102
+#: views/settings-general.php:103
 msgid "This development copy cannot receive Booster updates."
 msgstr ""
 
-#: views/settings-general.php:103
+#: views/settings-general.php:104
 msgid "This installation cannot verify its release information."
 msgstr ""
 
-#: views/settings-general.php:104
+#: views/settings-general.php:105
 msgid "Your site configuration has turned update checks off. This setting cannot be changed here."
 msgstr ""
 
-#: views/settings-general.php:105
+#: views/settings-general.php:106
 msgid "Your site’s update configuration is invalid. Correct it before checking."
 msgstr ""
 
-#: views/settings-general.php:106
+#: views/settings-general.php:107
 msgid "Update checks are turned off. Enable the switch to turn them on."
 msgstr ""
 
-#: views/settings-general.php:129
-#: views/settings-general.php:184
+#: views/settings-general.php:130
+#: views/settings-general.php:185
 msgid "Hide GitHub UI"
 msgstr ""
 
-#: views/settings-general.php:130
-#: views/settings-general.php:232
+#: views/settings-general.php:131
+#: views/settings-general.php:233
 msgid "Check for Booster updates"
 msgstr ""
 
-#: views/settings-general.php:132
-#: views/settings-general.php:291
+#: views/settings-general.php:133
+#: views/settings-general.php:292
 msgid "Maximum records"
 msgstr ""
 
-#: views/settings-general.php:133
-#: views/settings-general.php:294
+#: views/settings-general.php:134
+#: views/settings-general.php:295
 msgid "Retention days"
 msgstr ""
 
-#: views/settings-general.php:134
-#: views/settings-general.php:309
+#: views/settings-general.php:135
+#: views/settings-general.php:310
 msgid "Maximum repository ZIP download (MiB)"
 msgstr ""
 
-#: views/settings-general.php:157
+#: views/settings-general.php:158
 msgid "Current saved value:"
 msgstr ""
 
 #. translators: 1: saved maximum records, 2: saved retention days, 3: saved download limit in MiB.
-#: views/settings-general.php:157
+#: views/settings-general.php:158
 #, php-format
 msgid "Maximum records: %1$s; Retention days: %2$s; Download limit: %3$s MiB."
 msgstr ""
 
-#: views/settings-general.php:170
+#: views/settings-general.php:171
 msgid "General preferences"
 msgstr ""
 
-#: views/settings-general.php:174
+#: views/settings-general.php:175
 msgid "JavaScript is unavailable. Use Save setting beside each switch, and Save changes for numeric settings. Each save reloads Settings; save one group before editing another."
 msgstr ""
 
-#: views/settings-general.php:179
+#: views/settings-general.php:180
 msgid "Appearance"
 msgstr ""
 
-#: views/settings-general.php:197
+#: views/settings-general.php:198
 msgid "GitHub navigation is currently hidden."
 msgstr ""
 
-#: views/settings-general.php:197
+#: views/settings-general.php:198
 msgid "GitHub navigation remains available."
 msgstr ""
 
-#: views/settings-general.php:201
-#: views/settings-general.php:276
+#: views/settings-general.php:202
+#: views/settings-general.php:277
 msgid "Save setting"
 msgstr ""
 
-#: views/settings-general.php:226
+#: views/settings-general.php:227
 msgid "Booster updates"
 msgstr ""
 
-#: views/settings-general.php:246
+#: views/settings-general.php:247
 msgid "Booster update checks are enabled."
 msgstr ""
 
-#: views/settings-general.php:246
+#: views/settings-general.php:247
 msgid "Booster update checks are currently unavailable."
 msgstr ""
 
-#: views/settings-general.php:250
+#: views/settings-general.php:251
 msgid "Available version"
 msgstr ""
 
-#: views/settings-general.php:250
+#: views/settings-general.php:251
 msgid "No verified newer offer"
 msgstr ""
 
-#: views/settings-general.php:251
+#: views/settings-general.php:252
 msgid "Latest check result"
 msgstr ""
 
-#: views/settings-general.php:251
+#: views/settings-general.php:252
 msgid "No completed check recorded"
 msgstr ""
 
-#: views/settings-general.php:253
+#: views/settings-general.php:254
 msgid "Check for updates"
 msgstr ""
 
-#: views/settings-general.php:257
+#: views/settings-general.php:258
 msgid "Checking is unavailable for this site or your account."
 msgstr ""
 
-#: views/settings-general.php:262
+#: views/settings-general.php:263
 msgid "Last successful Booster check"
 msgstr ""
 
-#: views/settings-general.php:265
+#: views/settings-general.php:266
 msgid "Check diagnostic code"
 msgstr ""
 
-#: views/settings-general.php:272
+#: views/settings-general.php:273
 msgid "Update now"
 msgstr ""
 
-#: views/settings-general.php:283
+#: views/settings-general.php:284
 msgid "History and download limits"
 msgstr ""
 
-#: views/settings-general.php:288
+#: views/settings-general.php:289
 msgid "History"
 msgstr ""
 
-#: views/settings-general.php:297
+#: views/settings-general.php:298
 msgid "Lowering these values does not immediately delete protected records. Pruned records cannot be recovered."
 msgstr ""
 
-#: views/settings-general.php:308
+#: views/settings-general.php:309
 msgid "Download limits"
 msgstr ""
 
-#: views/settings-general.php:310
+#: views/settings-general.php:311
 msgid "Limits the compressed repository ZIP."
 msgstr ""
 
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings-general.php:311
+#: views/settings-general.php:312
 msgid "The derived branch expansion ceiling cannot be calculated on this host."
 msgstr ""
 
 #. translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes.
-#: views/settings-general.php:311
+#: views/settings-general.php:312
 #, php-format
 msgid "Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit)."
 msgstr ""
 
-#: views/settings-general.php:313
+#: views/settings-general.php:314
 msgid "Save changes"
 msgstr ""
 
-#: views/settings-general.php:313
+#: views/settings-general.php:314
 #: assets/ran-booster-settings.js:91
 msgid "No pending numeric changes."
 msgstr ""

@@ -97,6 +97,16 @@
 	gap: var(--ran-booster-space-12);
 }
 
+.ran-booster-admin .ran-booster-repository-webhook-management__notices {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+	margin-block: 0 var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-management__notices .notice {
+	margin: 0;
+}
+
 .ran-booster-admin .ran-booster-webhook-step {
 	display: grid;
 	grid-template-columns:
@@ -111,6 +121,9 @@
 	grid-template-rows: auto 1fr;
 	align-content: start;
 	min-inline-size: 0;
+
+	/* WordPress adds a 6px bottom margin to every li, which shortens all but the last step in a row. */
+	margin: 0;
 	padding: var(--ran-booster-space-12);
 	border: 1px solid var(--ran-booster-divider);
 	background: var(--ran-booster-surface-subtle);

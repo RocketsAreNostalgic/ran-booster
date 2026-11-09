@@ -416,6 +416,10 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-repository-release-lifecycle {', $webhook_management );
 		self::assertDoesNotMatchRegularExpression( '/max-width: 782px\)\s*\{\s*\.ran-booster-admin \.ran-booster-webhook-steps/', $webhook_management );
 		self::assertStringContainsString( "grid-template-rows: auto 1fr;\n\talign-content: start;", $webhook_management );
+		// WordPress gives every li a 6px bottom margin; without a reset all but the last step in a row are shorter.
+		self::assertMatchesRegularExpression( '/\.ran-booster-webhook-step\s*\{[^}]*\n\tmargin:\s*0;/', $webhook_management );
+		// The webhook notices wrapper owns the gap between a notice and the steps below it.
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management__notices\s*\{[^}]*margin-block:\s*0 var\(--ran-booster-space-16\)/', $webhook_management );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-ok > span {', $webhook_management );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-warning > span {', $webhook_management );
 		self::assertStringContainsString(

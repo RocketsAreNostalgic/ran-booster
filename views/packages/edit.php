@@ -309,7 +309,7 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 
 			<?php require __DIR__ . '/source-settings.php'; ?>
 
-			<section class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card" data-ran-booster-card="package-edit" aria-labelledby="ran-booster-package-operation-heading">
+			<section class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card" data-ran-booster-card="package-edit" aria-labelledby="ran-booster-package-operation-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-package-operation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Package operation', 'ran-booster' ); ?></h3>
 					<p class="ran-booster-section__description"><?php esc_html_e( 'Choose when Booster may update this package.', 'ran-booster' ); ?></p>
@@ -336,7 +336,7 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 					<?php } ?>
 					<?php $render_development_safety_notice(); ?>
 				</div>
-			</section>
+			</div></div></section>
 
 			<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-package-settings__save-card">
 				<div class="ran-wp-ui-card__content ran-booster-package-settings__save-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">

@@ -63,7 +63,7 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 
 ?>
 	<?php if ( null !== $secrets_storage ) { ?>
-		<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="settings" aria-labelledby="ran-booster-storage" data-ran-booster-storage-reason="<?php echo esc_attr( $storage_reason_code ); ?>">
+		<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="settings" aria-labelledby="ran-booster-storage" data-ran-booster-storage-reason="<?php echo esc_attr( $storage_reason_code ); ?>"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<div class="ran-booster-onboarding__storage-heading">
 				<h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
 				<?php $storage_status_label = $storage_status_labels[ $storage_status ] ?? __( 'Status unknown', 'ran-booster' ); ?>
@@ -297,5 +297,5 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 				<a href="<?php echo esc_url( $credential_storage_documentation_url ); ?>"><?php esc_html_e( 'Learn how Booster manages credentials and keys', 'ran-booster' ); ?></a>
 					<span aria-hidden="true"> · </span><a href="<?php echo esc_url( str_replace( '#ran-booster-credential-storage', '#ran-booster-manual-storage-override', $credential_storage_documentation_url ) ); ?>"><?php esc_html_e( 'Manual storage override', 'ran-booster' ); ?></a>
 			</p>
-		</section>
+		</div></div></section>
 	<?php } ?>

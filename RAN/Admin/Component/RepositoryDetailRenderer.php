@@ -139,7 +139,7 @@ final class RepositoryDetailRenderer {
 		<?php if ( 'mixed' === ( $row['source_key'] ?? null ) ) { ?>
 			<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><strong><?php esc_html_e( 'Conflicting sources.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Review the package settings before using release workflow.', 'ran-booster' ); ?></p></div></div>
 		<?php } ?>
-		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-packages-heading">
+		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-packages-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-packages-heading"><?php esc_html_e( 'Packages using this repository', 'ran-booster' ); ?></h3>
 				<p class="description"><?php esc_html_e( 'Repository relationships are read-only here. Change package-owned settings from the linked plugin or theme.', 'ran-booster' ); ?></p>
@@ -155,8 +155,8 @@ final class RepositoryDetailRenderer {
 					</tbody>
 				</table>
 			</div>
-		</section>
-		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integration-summary-heading">
+		</div></div></section>
+		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integration-summary-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-integration-summary-heading"><?php esc_html_e( 'Integration status', 'ran-booster' ); ?></h3>
 			</header>
@@ -184,14 +184,14 @@ final class RepositoryDetailRenderer {
 				</dl>
 				<?php $this->render_status_links( $row ); ?>
 			</div>
-		</section>
+		</div></div></section>
 		<?php
 	}
 
 	/** @param list<array<string, mixed>> $packages */
 	private function render_unavailable_release_guidance( array $packages ): void {
 		?>
-		<section class="ran-booster-settings-section ran-booster-repository-release-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-release-heading">
+		<section class="ran-booster-settings-section ran-booster-repository-release-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-release-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-release-heading"><?php esc_html_e( 'Release publishing', 'ran-booster' ); ?></h3>
 			</header>
@@ -201,21 +201,21 @@ final class RepositoryDetailRenderer {
 					<p><a class="button" href="<?php echo esc_url( (string) ( $package['settings_url'] ?? '' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is a managed package name. */ _x( 'Open %s settings', 'Managed package settings link', 'ran-booster' ), (string) ( $package['display_name'] ?? '' ) ) ); ?></a></p>
 				<?php } ?>
 			</div>
-		</section>
+		</div></div></section>
 		<?php
 	}
 
 	private function render_incomplete_workflow_controls( string $view, int $omitted ): void {
 		$label = 'branch' === $view ? __( 'Manage webhook', 'ran-booster' ) : __( 'Assess release setup', 'ran-booster' );
 		?>
-		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-incomplete-inventory-heading">
+		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-incomplete-inventory-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header"><h3 id="ran-booster-repository-incomplete-inventory-heading"><?php esc_html_e( 'Package inventory incomplete', 'ran-booster' ); ?></h3></header>
 			<div class="ran-booster-settings-section__body">
 				<?php /* translators: %d is the number of package summaries omitted from repository inventory. */ ?>
 				<p><?php echo esc_html( sprintf( __( '%d connected package is not shown. Refresh repository inventory before using repository-wide workflow controls.', 'ran-booster' ), $omitted ) ); ?></p>
 				<p><button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( $label ); ?></button></p>
 			</div>
-		</section>
+		</div></div></section>
 		<?php
 	}
 
@@ -223,7 +223,7 @@ final class RepositoryDetailRenderer {
 		$has_branch_consumer = in_array( $source, array( 'branch', 'mixed' ), true );
 		if ( $management_supported ) {
 			?>
-			<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading">
+			<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
 				</header>
@@ -231,20 +231,20 @@ final class RepositoryDetailRenderer {
 					<p><?php esc_html_e( 'Repository webhook management is temporarily unavailable for this repository.', 'ran-booster' ); ?></p>
 					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
 				</div>
-			</section>
+			</div></div></section>
 			<?php
 			return;
 		}
 		if ( $has_branch_consumer && $receiver_ready ) {
 			?>
-			<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading">
+			<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
 				</header>
 				<div class="ran-booster-settings-section__body">
 					<p><?php esc_html_e( 'Assisted webhook management is unavailable in this view. Use the Git provider webhook settings when available.', 'ran-booster' ); ?></p>
 				</div>
-			</section>
+			</div></div></section>
 			<?php
 			return;
 		}
@@ -252,7 +252,7 @@ final class RepositoryDetailRenderer {
 			? __( 'Assisted webhook management is unavailable in this view. Receiver readiness has not been established.', 'ran-booster' )
 			: __( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', 'ran-booster' );
 		?>
-		<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading">
+		<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
 				<p class="description"><?php esc_html_e( 'Local readiness and the last recorded remote state.', 'ran-booster' ); ?></p>
@@ -264,7 +264,7 @@ final class RepositoryDetailRenderer {
 					<p><button type="button" class="button" disabled aria-disabled="true"><?php esc_html_e( 'Manage repository webhook', 'ran-booster' ); ?></button></p>
 				<?php } ?>
 			</div>
-		</section>
+		</div></div></section>
 		<?php
 	}
 
@@ -318,7 +318,7 @@ final class RepositoryDetailRenderer {
 			);
 		}
 		?>
-		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-activity-heading">
+		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-activity-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-activity-heading"><?php esc_html_e( 'Management history', 'ran-booster' ); ?></h3>
 				<p class="description"><?php esc_html_e( 'Repository-scoped records. This is local history, not live Git provider state.', 'ran-booster' ); ?></p>
@@ -332,7 +332,7 @@ final class RepositoryDetailRenderer {
 			<?php } ?>
 			<p><a href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View repository activity', 'ran-booster' ); ?></a></p>
 			</div>
-		</section>
+		</div></div></section>
 		<?php
 	}
 
@@ -367,10 +367,10 @@ final class RepositoryDetailRenderer {
 			return;
 		}
 		?>
-		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-details-heading">
+		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-details-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header"><h3 id="ran-booster-repository-details-heading"><?php esc_html_e( 'Repository details', 'ran-booster' ); ?></h3></header>
 			<div class="ran-booster-settings-section__body"><?php $this->render_facts( $details ); ?></div>
-		</section>
+		</div></div></section>
 		<?php
 	}
 

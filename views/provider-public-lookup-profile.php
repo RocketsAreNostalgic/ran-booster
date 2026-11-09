@@ -25,7 +25,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 		'stale'         => false,
 	);
 ?>
-<section id="ran-booster-public-lookup-profile-region" class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" data-ran-booster-admin-mutation-region="public-lookup-profile" aria-labelledby="ran-booster-public-lookup-heading">
+<section id="ran-booster-public-lookup-profile-region" class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" data-ran-booster-admin-mutation-region="public-lookup-profile" aria-labelledby="ran-booster-public-lookup-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 	<header class="ran-booster-provider-section__header">
 		<h3 id="ran-booster-public-lookup-heading" class="ran-booster-section__title"><?php esc_html_e( 'Public repository lookup', 'ran-booster' ); ?></h3>
 		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose Anonymous, or use a dedicated saved credential to reduce Git provider rate-limit interruptions.', 'ran-booster' ); ?></p>
@@ -64,4 +64,4 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 			<?php } ?>
 		</div>
 	</div>
-</section>
+</div></div></section>

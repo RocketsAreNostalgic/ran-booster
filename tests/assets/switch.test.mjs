@@ -7,12 +7,7 @@ const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-cards.js', import.meta.url),
 	'utf8'
 );
-function fixture({
-	runtime = true,
-	cardComponent = true,
-	fail = false,
-	moveFail = false,
-} = {}) {
+function fixture({ runtime = true, fail = false, moveFail = false } = {}) {
 	const listeners = new Map(),
 		microtasks = [];
 	const unmountOrder = [];
@@ -263,17 +258,12 @@ function fixture({
 					if (host.redirectFocus) {
 						host.redirectFocus.focus();
 					}
-					if (
-						value.type === 'CardRoot' ||
-						value.type === 'NoticeRoot'
-					) {
+					if (value.type === 'NoticeRoot') {
 						const surface = new Node('surface'),
 							content = new Node('content');
 						content.content = true;
 						content.setAttribute(
-							value.type === 'CardRoot'
-								? 'data-ran-booster-card-content'
-								: 'data-ran-booster-ui-notice-slot',
+							'data-ran-booster-ui-notice-slot',
 							''
 						);
 						host.appendChild(surface);
@@ -305,7 +295,6 @@ function fixture({
 		wp: { element },
 		ranBoosterUI: runtime
 			? {
-					CardRoot: cardComponent ? 'CardRoot' : null,
 					Button: 'Button',
 					Switch: 'Switch',
 					NoticeRoot: 'NoticeRoot',
@@ -677,7 +666,7 @@ test('explicit cleanup uses pending failure focus without reclaiming outside foc
 	}
 });
 
-test('pre-held native gestures defer only the containing Settings Card', () => {
+test('a static Settings Card never moves its switch during a native gesture', () => {
 	for (const gesture of ['keyboard', 'pointer']) {
 		const f = fixture();
 		const { card } = f.make('settings');
@@ -690,11 +679,6 @@ test('pre-held native gestures defer only the containing Settings Card', () => {
 		}
 		f.run();
 		f.flush();
-		assert.equal(
-			card.hasAttribute('data-ran-booster-ui-mounted'),
-			false,
-			gesture
-		);
 		assert.equal(s.fallback.hidden, false);
 		s.input.checked = true;
 		s.input.dispatchEvent({ type: 'change', bubbles: true });
@@ -704,12 +688,6 @@ test('pre-held native gestures defer only the containing Settings Card', () => {
 			f.emit('pointerup', s.input);
 		} else {
 			f.emit('keyup', s.input, { key: ' ' });
-			f.flushTimers();
-			f.flush();
-			assert.equal(
-				card.hasAttribute('data-ran-booster-ui-mounted'),
-				false
-			);
 			f.doc.body.focus();
 			f.emit('focusout', s.input);
 		}
@@ -717,114 +695,10 @@ test('pre-held native gestures defer only the containing Settings Card', () => {
 		f.flush();
 		assert.equal(
 			card.hasAttribute('data-ran-booster-ui-mounted'),
-			true,
+			false,
 			gesture
 		);
+		assert.equal(s.form.parentElement, card, gesture);
 		assert.equal(s.input.checked, true);
-	}
-});
-
-test('idle Settings and unrelated or malformed Card hosts are not deferred', () => {
-	for (const variant of ['idle', 'other-card', 'malformed']) {
-		const f = fixture();
-		const { card } = f.make(
-			variant === 'other-card' ? 'overview' : 'settings'
-		);
-		const s = f.generalSwitch({
-			parent: card,
-			scope: variant === 'malformed' ? 'other' : 'hide_github',
-		});
-		if (variant !== 'idle') {
-			s.input.focus();
-		}
-		f.run();
-		f.flush();
-		assert.equal(
-			card.hasAttribute('data-ran-booster-ui-mounted'),
-			true,
-			variant
-		);
-	}
-});
-
-test('pre-held external label defers its Settings Card with or without Switch export', () => {
-	for (const available of [true, false]) {
-		const f = fixture();
-		const { card } = f.make('settings');
-		const s = f.generalSwitch({ parent: card });
-		if (!available) {
-			f.window.ranBoosterUI.Switch = null;
-		}
-		s.label.active = true;
-		f.run();
-		f.flush();
-		assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), false);
-		assert.equal(s.fallback.hidden, false);
-		s.input.checked = true;
-		s.input.dispatchEvent({ type: 'change', bubbles: true });
-		assert.equal(s.input.events.length, 1);
-		s.label.active = false;
-		f.emit('pointerup', s.label);
-		f.flushTimers();
-		f.flush();
-		assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), true);
-		assert.equal(s.input.checked, true);
-		assert.equal(s.fallback.hidden, available);
-	}
-});
-
-test('a mounted second switch protects its deferred Card while focused or active', () => {
-	for (const mode of ['focused', 'active']) {
-		const f = fixture();
-		const { card } = f.make('settings');
-		const first = f.generalSwitch({ parent: card, scope: 'hide_github' });
-		const second = f.generalSwitch({
-			parent: card,
-			scope: 'self_update_discovery',
-		});
-		first.input.focus();
-		f.run();
-		f.flush();
-		assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), false);
-		assert.equal(first.fallback.hidden, false);
-		assert.equal(second.fallback.hidden, true);
-		let button = second.mount.querySelector('button[role="switch"]');
-		f.emit('pointerdown', button);
-		if (mode === 'focused') {
-			button.focus();
-		} else {
-			f.doc.body.focus();
-			second.mount.active = true;
-		}
-		f.emit('focusout', first.input);
-		f.flushTimers();
-		f.flush();
-		assert.equal(
-			card.hasAttribute('data-ran-booster-ui-mounted'),
-			false,
-			mode
-		);
-		second.input.checked = true;
-		f.emit('ran-booster:ui-switch-update', second.input);
-		assert.equal(f.tree().props.checked, true);
-		button = second.mount.querySelector('button[role="switch"]');
-		if (mode === 'focused') {
-			button.focus();
-		}
-		f.emit('pointerup', button);
-		f.flushTimers();
-		f.flush();
-		assert.equal(
-			card.hasAttribute('data-ran-booster-ui-mounted'),
-			false,
-			mode
-		);
-		second.mount.active = false;
-		f.doc.body.focus();
-		f.emit('focusout', button);
-		f.flushTimers();
-		f.flush();
-		assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), true);
-		assert.equal(second.input.checked, true);
 	}
 });

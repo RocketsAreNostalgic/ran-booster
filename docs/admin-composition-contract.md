@@ -272,6 +272,15 @@ Rules that follow from the table:
    a page shell is nested inside a Card or panel.
 4. A new page uses the existing shell, header and Card classes. It does not
    introduce a local width, inset or heading margin.
+5. A page Card is static server-rendered markup, never a mounted React
+   component. The host keeps its section or div, the `ran-booster-card` class
+   and its `data-ran-booster-card` kind, and its first child is the public Card
+   frame from the generated `ran-booster-wp-ui-static.css`:
+   `<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">`.
+   The host draws nothing; the frame draws the border, radius and surface, and
+   the content layer holds the inset profile above. A hidden Card puts `hidden`
+   on the host, because the frame's layered `display: flex` outranks the user
+   agent's `[hidden]` rule.
 
 `tests/browser/page-frame.mjs` measures these values on a rendered page. It is
 a private runner helper like the other browser checks, and it is how the

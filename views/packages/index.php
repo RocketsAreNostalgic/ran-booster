@@ -139,7 +139,7 @@ $policy_labels = array(
 	<?php } ?>
 </div>
 
-<div id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-collection" class="ran-booster-card ran-booster-package-collection" data-ran-booster-card="<?php echo esc_attr( $package_view->get_type() . 's' ); ?>">
+<div id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-collection" class="ran-booster-card ran-booster-package-collection" data-ran-booster-card="<?php echo esc_attr( $package_view->get_type() . 's' ); ?>"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 
 <?php if ( $package_list_total > 0 ) { ?>
 	<div class="ran-booster-package-collection__toolbar">
@@ -611,4 +611,4 @@ $policy_labels = array(
 		<?php } ?>
 	</tbody>
 </table>
-</div>
+</div></div></div>

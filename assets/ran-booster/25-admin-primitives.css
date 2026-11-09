@@ -6,17 +6,20 @@
  */
 
 .ran-booster-admin .ran-booster-card:not([data-ran-booster-card="extensions"]) {
-	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-card);
-	box-shadow: var(--ran-booster-shadow-surface);
-	background: var(--ran-booster-surface);
 	color: var(--ran-booster-text);
 	font-family: inherit;
 	font-size: var(--ran-booster-font-size-md);
 	line-height: var(--ran-booster-line-height-base);
 }
 
-.ran-booster-admin .ran-booster-card[data-ran-booster-ui-mounted] {
+/*
+ * A page Card is a plain host around a server-rendered static Card
+ * (ran-booster-wp-ui-static.css): .ran-wp-ui-card.ran-booster-card__surface
+ * draws the frame, .ran-booster-card__content holds the inset. The host draws
+ * nothing, so legacy panel and section frames never double the Card's.
+ */
+
+.ran-booster-admin .ran-booster-card[data-ran-booster-card] {
 	overflow: visible;
 	border: 0;
 	border-radius: 0;
@@ -707,7 +710,7 @@
 
 .ran-booster-admin
 	.ran-booster-portability
-	> .ran-booster-portability__flow[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted] {
+	> .ran-booster-portability__flow[data-ran-booster-card="transporter"].ran-booster-card {
 	overflow: visible;
 	border: 0;
 	border-radius: 0;

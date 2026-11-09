@@ -107,7 +107,7 @@ $provider_attention        = array_filter(
 	$overview_storage_problem      = in_array( $overview_storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true );
 	?>
 	<?php if ( $overview_inventory_incomplete || $overview_storage_unknown || $overview_storage_problem || array() !== $provider_attention || 'unavailable' === $credential_expiry['status'] || ( 'captured' === $credential_expiry['status'] && array() !== $credential_expiry['items'] ) ) { ?>
-		<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-attention">
+		<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-attention"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<h3 id="ran-booster-overview-attention"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></h3>
 			<?php if ( 'captured' === $credential_expiry['status'] ) { ?>
 				<?php foreach ( $credential_expiry['items'] as $expiry_item ) { ?>
@@ -134,7 +134,7 @@ $provider_attention        = array_filter(
 			<?php } elseif ( $overview_storage_problem ) { ?>
 				<p><?php echo esc_html( $overview_storage_summary['message'] ?? '' ); ?> <a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review storage', 'ran-booster' ); ?></a></p>
 			<?php } ?>
-		</section>
+		</div></div></section>
 	<?php } ?>
 
 	<div class="ran-booster-overview-grid">
@@ -148,7 +148,7 @@ $provider_attention        = array_filter(
 		<?php unset( $overview_dashboard_activity ); ?>
 		<?php require __DIR__ . '/overview-dashboard.php'; ?>
 	<?php } ?>
-	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-storage-heading">
+	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-storage-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<div class="ran-booster-onboarding__storage-heading">
 			<h3 id="ran-booster-onboarding-storage-heading"><?php echo esc_html( 'onboarding' === $overview_view ? __( '1. Secure credential storage', 'ran-booster' ) : __( 'Secure credential storage', 'ran-booster' ) ); ?></h3>
 			<?php $overview_storage_label = $overview_storage_labels[ $overview_storage_status ] ?? __( 'Status unknown', 'ran-booster' ); ?>
@@ -156,13 +156,13 @@ $provider_attention        = array_filter(
 		</div>
 		<p><?php echo esc_html( $overview_storage_summary['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
 		<p><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>
-	</section>
+	</div></div></section>
 
 
 
 	<?php if ( 'onboarding' === $overview_view ) { ?>
 
-	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-connect-heading">
+	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-connect-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3 id="ran-booster-onboarding-connect-heading"><?php esc_html_e( '2. Choose a Git provider', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Add credentials on the provider’s page if needed.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
@@ -171,23 +171,23 @@ $provider_attention        = array_filter(
 			<?php } ?>
 			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Install another provider', 'ran-booster' ); ?></a>
 		</p>
-	</section>
-	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-next-heading">
+	</div></div></section>
+	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-next-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3 id="ran-booster-onboarding-next-heading"><?php esc_html_e( '3. Import or migrate (optional)', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Import a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
 			<a class="button" href="<?php echo esc_url( $onboarding['portability_url'] ); ?>"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></a>
 			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Browse extensions', 'ran-booster' ); ?></a>
 		</p>
-	</section>
-	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview">
+	</div></div></section>
+	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3><?php esc_html_e( '4. Install and manage packages', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Install a plugin or theme from a Git repository, or link one already installed on this site.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
 			<a class="button button-primary" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
 			<a class="button" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
 		</p>
-	</section>
+	</div></div></section>
 
 	<?php } ?>
 	</div>

@@ -73,7 +73,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 				$extension['name']
 			);
 			?>
-			<div class="plugin-card plugin-card-<?php echo esc_attr( $extension['id'] ); ?> ran-booster-extension-card ran-booster-card" data-extension="<?php echo esc_attr( $extension['id'] ); ?>" data-ran-booster-card="extensions">
+			<div class="plugin-card plugin-card-<?php echo esc_attr( $extension['id'] ); ?> ran-booster-extension-card ran-booster-card" data-extension="<?php echo esc_attr( $extension['id'] ); ?>" data-ran-booster-card="extensions"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<div class="plugin-card-top">
 					<div class="name column-name">
 						<h3>
@@ -156,7 +156,7 @@ else :
 					<?php endif; ?>
 					</div>
 				</div>
-			</div>
+			</div></div></div>
 		<?php endforeach; ?>
 		</div>
 		<?php foreach ( $extensions as $extension ) : ?>

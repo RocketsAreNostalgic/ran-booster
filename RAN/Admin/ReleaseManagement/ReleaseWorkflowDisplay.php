@@ -22,6 +22,7 @@ final class ReleaseWorkflowDisplay {
 	public function repository_section( array $projection ): string {
 		$settings_url = is_string( $projection['settings_url'] ?? null ) ? $projection['settings_url'] : '';
 		$html         = '<section class="ran-booster-settings-section ran-booster-repository-release-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-release-heading">'
+			. '<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">'
 			. '<header class="ran-booster-settings-section__header ran-booster-repository-release-section__header">'
 			. '<h3 id="ran-booster-repository-release-heading">' . esc_html__( 'Release publishing', 'ran-booster' ) . '</h3>';
 		if ( '' !== $settings_url ) {
@@ -99,7 +100,7 @@ final class ReleaseWorkflowDisplay {
 			$html .= '<div class="ran-booster-repository-release-automation__body">' . $this->workflow( $view, false ) . '</div></section>';
 		}
 
-		return $html . '</div></section>';
+		return $html . '</div></div></div></section>';
 	}
 
 	/** @param list<array{label:string,message:string,state:string}> $items */

@@ -6,8 +6,9 @@
 	}
 	window.ranBoosterCardsInitialized = true;
 
-	// Badges are static markup drawn with the public Badge's own CSS. Scripts
-	// that change a status in place go through this one helper.
+	// Page Cards and Badges are static markup drawn with the public
+	// components' own CSS (ran-booster-wp-ui-static.css) and are never mounted.
+	// Scripts that change a Badge status in place go through this one helper.
 	const badgeIntents = ['none', 'stable', 'medium', 'high', 'informational'];
 	window.ranBoosterBadge = {
 		update(badge, label, intent) {
@@ -23,7 +24,6 @@
 			}
 		},
 	};
-	const selector = '.ran-booster-card[data-ran-booster-card]';
 	const noticeSelector = '[data-ran-booster-ui-notice]';
 	const disclosureSelector = '[data-ran-booster-ui-disclosure]';
 	const buttonSelector = '[data-ran-booster-ui-button]';
@@ -171,79 +171,42 @@
 		restoreAll(affected);
 	}
 
-	function mountSurface(card) {
-		const notice = card.getAttribute('data-ran-booster-ui-notice') !== null;
-		const intent = notice
-			? (card.getAttribute('data-ran-booster-ui-notice-intent') ??
-				'error')
-			: null;
-		const validIntent =
-			!notice || ['error', 'warning', 'info', 'success'].includes(intent);
-		const current = roots.get(card);
-		if (notice && current && (!validIntent || current.intent !== intent)) {
+	function mountNotice(notice) {
+		const intent =
+			notice.getAttribute('data-ran-booster-ui-notice-intent') ?? 'error';
+		const validIntent = ['error', 'warning', 'info', 'success'].includes(
+			intent
+		);
+		const current = roots.get(notice);
+		if (current && (!validIntent || current.intent !== intent)) {
 			restoreAll(
-				Array.from(roots.keys()).filter((host) => card.contains(host))
+				Array.from(roots.keys()).filter((host) => notice.contains(host))
 			);
-			initialize(card);
+			initialize(notice);
 			return;
 		}
 		if (!validIntent) {
 			return;
 		}
-		const ownSelector = notice ? noticeSelector : selector;
-		const nativeContent = notice
-			? card.querySelector('[data-ran-booster-ui-notice-content]')
-			: null;
+		const nativeContent = notice.querySelector(
+			'[data-ran-booster-ui-notice-content]'
+		);
 		if (
-			roots.has(card) ||
-			!card.isConnected ||
-			(!card.closest('.ran-booster-admin') &&
-				!(
-					notice &&
-					card.getAttribute('data-ran-booster-ui-notice-scope') ===
-						'global'
-				)) ||
-			(!notice &&
-				![
-					'extensions',
-					'installation-component',
-					'overview',
-					'plugins',
-					'provider',
-					'settings',
-					'themes',
-					'transporter',
-					'package-edit',
-					'activity',
-					'troubleshooting',
-				].includes(card.getAttribute('data-ran-booster-card'))) ||
-			card.parentElement?.closest(ownSelector) ||
-			card.querySelector(ownSelector) ||
-			!['DIV', 'SECTION'].includes(card.tagName) ||
-			(notice &&
-				(card.tagName !== 'DIV' ||
-					nativeContent?.parentElement !== card))
-		) {
-			return;
-		}
-		if (
-			!notice &&
-			card.getAttribute('data-ran-booster-card') === 'settings' &&
-			Array.from(card.querySelectorAll(switchSelector)).some((host) => {
-				const switchEntry = roots.get(host);
-				const parts = switchParts(host, switchEntry);
-				return parts && switchEngaged(parts, switchEntry);
-			})
+			roots.has(notice) ||
+			!notice.isConnected ||
+			(!notice.closest('.ran-booster-admin') &&
+				notice.getAttribute('data-ran-booster-ui-notice-scope') !==
+					'global') ||
+			notice.parentElement?.closest(noticeSelector) ||
+			notice.querySelector(noticeSelector) ||
+			notice.tagName !== 'DIV' ||
+			nativeContent?.parentElement !== notice
 		) {
 			return;
 		}
 		const element = window.wp?.element;
-		const Surface = notice
-			? window.ranBoosterUI?.NoticeRoot
-			: window.ranBoosterUI?.CardRoot;
-		const Description = notice
-			? window.ranBoosterUI?.NoticeDescription
-			: 'div';
+		const Surface = window.ranBoosterUI?.NoticeRoot;
+		const Description = window.ranBoosterUI?.NoticeDescription;
 		if (
 			!element?.createRoot ||
 			!element.createElement ||
@@ -253,47 +216,41 @@
 		) {
 			return;
 		}
-		const original = Array.from(card.childNodes);
-		const active = card.contains(card.ownerDocument.activeElement)
-			? card.ownerDocument.activeElement
+		const original = Array.from(notice.childNodes);
+		const active = notice.contains(notice.ownerDocument.activeElement)
+			? notice.ownerDocument.activeElement
 			: null;
 		const host = document.createElement('div');
 		host.className = 'ran-booster-card__mount';
-		card.appendChild(host);
+		notice.appendChild(host);
 		let root;
 		try {
 			const h = element.createElement;
-			const contentSelector = notice
-				? '[data-ran-booster-ui-notice-slot]'
-				: '[data-ran-booster-card-content]';
-			const surfaceProps = notice
-				? { intent, className: 'ran-booster-ui-notice' }
-				: { className: 'ran-booster-card__surface' };
-			const contentProps = notice
-				? {
-						render: h('div'),
-						className: 'ran-booster-ui-notice__description',
-						'data-ran-booster-ui-notice-slot': '',
-					}
-				: {
-						className: 'ran-booster-card__content',
-						'data-ran-booster-card-content': '',
-					};
 			root = element.createRoot(host);
 			element.flushSync(() =>
 				root.render(
-					h(Surface, surfaceProps, h(Description, contentProps))
+					h(
+						Surface,
+						{ intent, className: 'ran-booster-ui-notice' },
+						h(Description, {
+							render: h('div'),
+							className: 'ran-booster-ui-notice__description',
+							'data-ran-booster-ui-notice-slot': '',
+						})
+					)
 				)
 			);
-			const content = host.querySelector(contentSelector);
+			const content = host.querySelector(
+				'[data-ran-booster-ui-notice-slot]'
+			);
 			if (!content) {
 				throw new Error('Missing component content');
 			}
 			original.forEach((node) => content.appendChild(node));
-			roots.set(card, { root, mount: host, content, intent });
-			card.setAttribute(mounted, '');
+			roots.set(notice, { root, mount: host, content, intent });
+			notice.setAttribute(mounted, '');
 		} catch {
-			original.forEach((node) => card.insertBefore(node, host));
+			original.forEach((node) => notice.insertBefore(node, host));
 			try {
 				root?.unmount();
 			} catch {
@@ -301,7 +258,7 @@
 			}
 			host.remove();
 		}
-		focusAfterMove(card, active);
+		focusAfterMove(notice, active);
 	}
 
 	function switchParts(host, current) {
@@ -929,13 +886,11 @@
 					restore(host);
 				}
 			});
-			[selector, noticeSelector].forEach((surfaceSelector) => {
-				const closest = scope.closest?.(surfaceSelector);
-				if (closest) {
-					mountSurface(closest);
-				}
-				scope.querySelectorAll?.(surfaceSelector).forEach(mountSurface);
-			});
+			const notice = scope.closest?.(noticeSelector);
+			if (notice) {
+				mountNotice(notice);
+			}
+			scope.querySelectorAll?.(noticeSelector).forEach(mountNotice);
 			const disclosure = scope.closest?.(disclosureSelector);
 			if (disclosure) {
 				mountDisclosure(disclosure, disclosure === restoredDisclosure);

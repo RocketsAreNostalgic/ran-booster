@@ -47,7 +47,7 @@
 	.ran-booster-onboarding__storage
 	> h3,
 .ran-booster-admin
-	.ran-booster-onboarding__storage[data-ran-booster-card="overview"][data-ran-booster-ui-mounted]
+	.ran-booster-onboarding__storage[data-ran-booster-card="overview"].ran-booster-card
 	.ran-booster-card__content
 	> h3 {
 	margin-block: 0 var(--ran-booster-space-8);
@@ -58,7 +58,7 @@
 	.ran-booster-onboarding__storage
 	> :is(h3, .ran-booster-onboarding__storage-heading),
 .ran-booster-admin
-	.ran-booster-onboarding__storage[data-ran-booster-card="overview"][data-ran-booster-ui-mounted]
+	.ran-booster-onboarding__storage[data-ran-booster-card="overview"].ran-booster-card
 	.ran-booster-card__content
 	> :is(h3, .ran-booster-onboarding__storage-heading) {
 	margin-block-end: 0;
@@ -70,7 +70,7 @@
 	> :is(h3, .ran-booster-onboarding__storage-heading)
 	+ *,
 .ran-booster-admin
-	.ran-booster-onboarding__storage[data-ran-booster-card="overview"][data-ran-booster-ui-mounted]
+	.ran-booster-onboarding__storage[data-ran-booster-card="overview"].ran-booster-card
 	.ran-booster-card__content
 	> :is(h3, .ran-booster-onboarding__storage-heading)
 	+ *,
@@ -140,7 +140,7 @@
 
 .ran-booster-admin .ran-booster-onboarding__storage > p,
 .ran-booster-admin
-	.ran-booster-onboarding__storage[data-ran-booster-card="overview"][data-ran-booster-ui-mounted]
+	.ran-booster-onboarding__storage[data-ran-booster-card="overview"].ran-booster-card
 	.ran-booster-card__content
 	> p,
 .ran-booster-admin
@@ -1334,17 +1334,10 @@
 }
 
 .ran-booster-admin
-	.ran-booster-onboarding__storage[data-ran-booster-card="overview"][data-ran-booster-ui-mounted] {
+	.ran-booster-onboarding__storage[data-ran-booster-card="overview"].ran-booster-card {
 	display: flex;
 	flex-direction: column;
 	padding: 0;
-}
-
-.ran-booster-admin [data-ran-booster-card="overview"] .ran-booster-card__mount {
-	display: flex;
-	flex: 1;
-	flex-direction: column;
-	min-inline-size: 0;
 }
 
 .ran-booster-admin
@@ -1522,7 +1515,7 @@
 	> :is(
 		.ran-booster-portability__chooser,
 		.ran-booster-portability__flow
-	)[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted] {
+	)[data-ran-booster-card="transporter"].ran-booster-card {
 	padding: 0;
 }
 
@@ -1531,7 +1524,7 @@
 	> :is(
 		.ran-booster-portability__chooser,
 		.ran-booster-portability__flow
-	)[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted]
+	)[data-ran-booster-card="transporter"].ran-booster-card
 	.ran-booster-card__content {
 	padding-block: var(--ran-booster-card-inset-block-start)
 		var(--ran-booster-card-inset-block-end);
@@ -1544,7 +1537,7 @@
 		> :is(
 			.ran-booster-portability__chooser,
 			.ran-booster-portability__flow
-		)[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted]
+		)[data-ran-booster-card="transporter"].ran-booster-card
 		.ran-booster-card__content {
 		padding-block: var(--ran-booster-card-inset-block-start)
 			var(--ran-booster-card-inset-block-end);

@@ -286,18 +286,18 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-autosave-description])' ) );
 		self::assertStringNotContainsString( 'Changes save automatically.', $html );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")])' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[@data-ran-booster-card="settings" and contains(@class, "ran-booster-card")]/div[contains(@class, "ran-booster-card__content")])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[@data-ran-booster-card="settings" and contains(@class, "ran-booster-card")]/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region" and @data-ran-booster-card])' ) );
 		self::assertSame( 3.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope]/div[@data-ran-booster-ui-notice and @data-ran-booster-admin-mutation-error]/div[@data-ran-booster-ui-notice-content][p[@data-ran-booster-ui-notice-primary] and p[@data-ran-booster-ui-notice-detail]])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-notice-mount])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]/div[not(@role) and not(@data-ran-booster-general-failed)]//p[@id="ran-booster-hide-github-error" and @data-ran-booster-ui-notice-field and @data-ran-booster-ui-notice-request-field and text()="Hide GitHub UI: Invalid selection."])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//*[@role="alert"])' ) );
 
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="General preferences"]//*[@id="ran-booster-general-hide_github"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="General preferences"]//*[@id="ran-booster-general-self_update_discovery"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="History and download limits"]//*[@id="ran-booster-general-numeric"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="History and download limits"]//button[@id="ran-booster-save-numeric-bottom"])' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[h3="General preferences"]//button[@type="submit" and not(@data-ran-booster-toggle-save) and not(@form)])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="General preferences"]//*[@id="ran-booster-general-hide_github"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="General preferences"]//*[@id="ran-booster-general-self_update_discovery"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="History and download limits"]//*[@id="ran-booster-general-numeric"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="History and download limits"]//button[@id="ran-booster-save-numeric-bottom"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="General preferences"]//button[@type="submit" and not(@data-ran-booster-toggle-save) and not(@form)])' ) );
 
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Appearance"]//label[@for="ran-booster-hide-github"]//input[@type="checkbox" and @role="switch" and @checked and @aria-invalid="true" and @aria-describedby="ran-booster-hide-github-help ran-booster-hide-github-error"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-help"])' ) );

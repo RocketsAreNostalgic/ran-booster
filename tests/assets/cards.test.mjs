@@ -9,7 +9,6 @@ const source = fs.readFileSync(
 );
 function fixture({
 	runtime = true,
-	cardComponent = true,
 	fail = false,
 	moveFail = false,
 	disclosureRuntime = false,
@@ -284,7 +283,6 @@ function fixture({
 		wp: { element },
 		ranBoosterUI: runtime
 			? {
-					CardRoot: cardComponent ? 'CardRoot' : null,
 					Button: 'Button',
 					NoticeRoot: 'NoticeRoot',
 					NoticeDescription: 'NoticeDescription',
@@ -398,111 +396,68 @@ function fixture({
 	};
 }
 
-test('three supported hosts move native child nodes once, keeping form, link and focus', () => {
+test('page Cards are static markup and are never mounted or moved', () => {
 	const f = fixture();
-	const cards = ['extensions', 'overview', 'plugins'].map((label) =>
-		f.make(label)
-	);
+	const labels = [
+		'extensions',
+		'overview',
+		'plugins',
+		'themes',
+		'provider',
+		'settings',
+		'transporter',
+		'package-edit',
+		'troubleshooting',
+	];
+	const cards = labels.map((label) => f.make(label, f.doc.body, 'section'));
+	const transporter = cards[labels.indexOf('transporter')];
+	transporter.card.hidden = true;
+	transporter.card.setAttribute('id', 'transport-flow');
 	cards[0].link.focus();
 	f.run();
 	f.flush();
-	f.run();
-	f.flush();
 	f.emit('htmx:load');
-	assert.equal(f.counts().renders, 3);
-	assert.equal(f.tree().type, 'CardRoot');
-	assert.equal(f.tree().props.className, 'ran-booster-card__surface');
-	for (const { card, whitespace, form, link } of cards) {
-		const content = card.querySelector('[data-ran-booster-card-content]');
-		assert.deepEqual(content.childNodes, [whitespace, form]);
-		assert.equal(form.firstChild, link);
-	}
-	assert.equal(f.doc.activeElement, cards[0].link);
-	assert.equal(cards[0].link.focusOptions.preventScroll, true);
-});
-
-test('unknown, nested, outside admin and invalid hosts retain native content', () => {
-	const f = fixture();
-	const unknown = f.make('other');
-	const outer = f.make('overview');
-	const inner = f.make('plugins', outer.card);
-	const outside = new f.Node('div');
-	outside.parentElement = f.doc;
-	const external = f.make('extensions', outside);
-	const invalid = f.make('plugins', f.doc.body, 'form');
-	f.run();
-	f.flush();
-	for (const item of [unknown, outer, inner, external, invalid]) {
-		assert.equal(item.card.firstChild, item.whitespace);
-	}
-	assert.equal(f.counts().renders, 0);
-});
-
-test('descendant and ancestor cleanup restore live children and partial load remounts', () => {
-	const f = fixture();
-	const { card, form, link } = f.make();
-	f.run();
-	f.flush();
-	const content = card.querySelector('[data-ran-booster-card-content]');
-	const fresh = new f.Node('fresh');
-	content.appendChild(fresh);
-	link.focus();
-	f.emit('htmx:beforeCleanupElement', form);
-	assert.equal(card.childNodes.at(-1), fresh);
-	assert.equal(f.doc.activeElement, link);
-	f.emit('htmx:load', fresh);
-	f.flush();
-	assert.equal(fresh.parentElement.content, true);
-	f.emit('htmx:beforeCleanupElement', f.doc.body);
-	assert.equal(card.childNodes.at(-1), fresh);
-	assert.deepEqual(f.counts(), { renders: 2, unmounts: 2 });
-});
-
-test('host swap restores before cleanup only when the response will swap', () => {
-	const f = fixture();
-	const { card, form, link } = f.make();
-	f.run();
-	f.flush();
-	link.focus();
-	const beforeSwap = f.doc.listeners.get('htmx:beforeSwap')[0];
-	beforeSwap({ detail: { shouldSwap: false, target: card } });
-	assert.equal(form.parentElement.content, true);
-	assert.equal(f.counts().unmounts, 0);
-	beforeSwap({ detail: { shouldSwap: true, target: card } });
-	assert.equal(form.parentElement, card);
-	assert.equal(f.doc.activeElement, link);
-	assert.equal(f.counts().unmounts, 1);
-});
-
-test('history caches native children, remounts and prunes detached roots', () => {
-	const f = fixture();
-	const { card, form } = f.make();
-	f.run();
+	f.emit('htmx:afterProcessNode', cards[1].card);
 	f.flush();
 	f.emit('htmx:beforeHistorySave');
-	assert.equal(form.parentElement, card);
-	f.flush();
-	assert.equal(form.parentElement.content, true);
-	card.remove();
 	f.emit('htmx:historyRestore');
 	f.flush();
-	assert.equal(form.parentElement, card);
-	assert.deepEqual(f.counts(), { renders: 2, unmounts: 2 });
+	f.doc.listeners.get('htmx:beforeSwap')[0]({
+		detail: { shouldSwap: true, target: cards[2].card },
+	});
+	f.emit('htmx:beforeCleanupElement', cards[3].form);
+	assert.deepEqual(f.counts(), { renders: 0, unmounts: 0 });
+	for (const { card, whitespace, form, link } of cards) {
+		assert.deepEqual(card.childNodes, [whitespace, form]);
+		assert.equal(form.firstChild, link);
+		assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), false);
+	}
+	assert.equal(transporter.card.hidden, true);
+	assert.equal(transporter.card.getAttribute('id'), 'transport-flow');
+	assert.equal(f.doc.activeElement, cards[0].link);
 });
 
-test('missing prerequisites and partial failures keep native children', () => {
-	for (const options of [
-		{ runtime: false },
-		{ cardComponent: false },
-		{ fail: true },
-		{ moveFail: true },
-	]) {
-		const f = fixture(options);
-		const { card, whitespace, form } = f.make();
-		f.run();
-		f.flush();
-		assert.deepEqual(card.childNodes, [whitespace, form]);
-	}
+test('an inner region replaced in a static Card keeps its identity and focus', () => {
+	const f = fixture();
+	const { card, form } = f.make('troubleshooting', f.doc.body, 'section');
+	const navigation = new f.Node('nav');
+	f.doc.body.insertBefore(navigation, card);
+	f.run();
+	f.flush();
+	f.emit('htmx:beforeCleanupElement', form);
+	const replacement = new f.Node('form');
+	const replacementLink = new f.Node('a');
+	replacement.appendChild(replacementLink);
+	form.replaceWith(replacement);
+	replacementLink.focus();
+	f.emit('htmx:afterProcessNode', replacement);
+	f.emit('htmx:load', replacement);
+	f.flush();
+	assert.deepEqual(f.counts(), { renders: 0, unmounts: 0 });
+	assert.equal(replacement.parentElement, card);
+	assert.equal(replacement.firstChild, replacementLink);
+	assert.equal(f.doc.activeElement, replacementLink);
+	assert.equal(navigation.parentElement, f.doc.body);
 });
 
 test('ranBoosterBadge.update swaps the intent class, attribute and label in place', () => {
@@ -531,19 +486,6 @@ test('ranBoosterBadge.update swaps the intent class, attribute and label in plac
 	assert.doesNotThrow(() =>
 		f.window.ranBoosterBadge.update(null, 'x', 'none')
 	);
-});
-
-test('Settings is a supported Card host', () => {
-	const f = fixture();
-	const { card, form } = f.make('settings');
-	f.run();
-	f.flush();
-	assert.equal(f.tree().type, 'CardRoot');
-	assert.equal(
-		form.parentElement.getAttribute('data-ran-booster-card-content'),
-		''
-	);
-	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
 });
 
 test('hidden alert retains its native content, paragraph ID and focus through mounting and current-content cleanup', () => {
@@ -646,7 +588,7 @@ test('owned global Notice keeps native content when runtime or rendering fails',
 	}
 });
 
-test('nested Card and Notice restore child-first for cleanup, history and host swap', () => {
+test('a Notice inside a static Card restores alone for cleanup, history and host swap', () => {
 	for (const mode of ['cleanup', 'history', 'swap']) {
 		const f = fixture();
 		const { card, form } = f.make('settings');
@@ -654,7 +596,7 @@ test('nested Card and Notice restore child-first for cleanup, history and host s
 		const n = f.notice(form);
 		f.run();
 		f.flush();
-		assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
+		assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), false);
 		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), '');
 		if (mode === 'cleanup') {
 			f.emit('htmx:beforeCleanupElement', card);
@@ -667,11 +609,10 @@ test('nested Card and Notice restore child-first for cleanup, history and host s
 				detail: { shouldSwap: true, target: card },
 			});
 		}
-		assert.deepEqual(f.unmountOrder, ['notice', 'card']);
+		assert.deepEqual(f.unmountOrder, ['notice']);
 		assert.equal(form.parentElement, card);
 		assert.equal(n.host.firstChild, n.content);
 		assert.equal(n.host.getAttribute('role'), 'alert');
-		assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
 		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
 		if (mode === 'history') {
 			f.flush();
@@ -999,7 +940,7 @@ test('Notice update events refresh intent and retain content on invalid metadata
 	assert.equal(f.counts().unmounts, 2);
 });
 
-test('Notice intent changes preserve the current form without unmounting an ancestor Card', () => {
+test('Notice intent changes inside a static Card preserve the current form', () => {
 	const f = fixture();
 	const { card, form } = f.make('settings');
 	const n = f.notice(form);
@@ -1009,13 +950,14 @@ test('Notice intent changes preserve the current form without unmounting an ance
 	n.content.appendChild(nativeForm);
 	f.run();
 	f.flush();
-	assert.equal(f.counts().renders, 2);
+	assert.equal(f.counts().renders, 1);
 	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'info');
 	f.emit('ran-booster:ui-notice-update', n.paragraph);
 	f.flush();
-	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
+	assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), false);
+	assert.equal(form.parentElement, card);
 	assert.equal(nativeForm.firstChild, input);
-	assert.equal(f.counts().renders, 3);
+	assert.equal(f.counts().renders, 2);
 	assert.equal(f.counts().unmounts, 1);
 });
 
@@ -1049,20 +991,6 @@ test('changed Notice rendering failure stays native without a second unsolicited
 		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
 		assert.equal(f.doc.activeElement, n.link);
 	}
-});
-
-test('Notice update preserves an ancestor Card', () => {
-	const f = fixture();
-	const { card, form } = f.make('settings');
-	const n = f.notice(form);
-	f.run();
-	f.flush();
-	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
-	f.emit('ran-booster:ui-notice-update', n.link);
-	f.flush();
-	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
-	assert.equal(f.counts().renders, 3);
-	assert.equal(f.counts().unmounts, 1);
 });
 
 test('Notice producer changes warning to error through a descendant update event', () => {
@@ -1101,47 +1029,6 @@ test('Notice update without a runtime leaves native content and actions intact',
 	assert.equal(n.paragraph.firstChild, n.link);
 	assert.equal(n.host.getAttribute('role'), 'alert');
 	assert.equal(f.doc.activeElement, n.link);
-});
-
-test('provider Card preserves native form and link through cleanup and history', () => {
-	const f = fixture();
-	const { card, form, link } = f.make('provider', f.doc.body, 'section');
-	link.focus();
-	f.run();
-	f.flush();
-	assert.equal(f.tree().type, 'CardRoot');
-	assert.equal(form.firstChild, link);
-	assert.equal(f.doc.activeElement, link);
-	f.emit('htmx:beforeCleanupElement', link);
-	assert.equal(form.parentElement, card);
-	assert.equal(form.firstChild, link);
-	f.emit('htmx:load', card);
-	f.flush();
-	f.emit('htmx:beforeHistorySave');
-	assert.equal(form.parentElement, card);
-	assert.equal(form.firstChild, link);
-	f.flush();
-	assert.equal(form.firstChild, link);
-});
-
-test('Transporter Card preserves its hidden state, form, link and identity on history', () => {
-	const f = fixture();
-	const { card, form, link } = f.make('transporter', f.doc.body, 'section');
-	card.hidden = true;
-	card.setAttribute('id', 'transport-flow');
-	link.focus();
-	f.run();
-	f.flush();
-	assert.equal(f.tree().type, 'CardRoot');
-	assert.equal(card.hidden, true);
-	assert.equal(card.getAttribute('id'), 'transport-flow');
-	assert.equal(form.firstChild, link);
-	assert.equal(f.doc.activeElement, link);
-	f.emit('htmx:beforeHistorySave');
-	assert.equal(form.parentElement, card);
-	assert.equal(form.firstChild, link);
-	f.flush();
-	assert.equal(form.firstChild, link);
 });
 
 test('Disclosures use the visible summary as label, any kind mounts, and Installation requires context', () => {
@@ -1197,60 +1084,6 @@ test('Disclosures use the visible summary as label, any kind mounts, and Install
 				false
 			);
 		}
-	}
-});
-
-test('Troubleshooting Card leaves navigation outside and remounts once after an inner region replacement', () => {
-	const f = fixture();
-	const { card, form, link } = f.make(
-		'troubleshooting',
-		f.doc.body,
-		'section'
-	);
-	const navigation = new f.Node('nav');
-	f.doc.body.insertBefore(navigation, card);
-	link.focus();
-	f.run();
-	f.flush();
-	assert.equal(f.tree().type, 'CardRoot');
-	assert.equal(f.doc.activeElement, link);
-	assert.equal(navigation.parentElement, f.doc.body);
-	assert.equal(card.contains(navigation), false);
-	assert.equal(form.firstChild, link);
-	f.emit('htmx:beforeCleanupElement', form);
-	assert.equal(form.parentElement, card);
-	const replacement = new f.Node('form');
-	const replacementLink = new f.Node('a');
-	replacement.appendChild(replacementLink);
-	form.replaceWith(replacement);
-	replacementLink.focus();
-	f.emit('htmx:afterProcessNode', replacement);
-	f.emit('htmx:load', replacement);
-	f.flush();
-	assert.equal(f.counts().renders, 2);
-	assert.equal(f.counts().unmounts, 1);
-	assert.equal(
-		card.querySelectorAll('[data-ran-booster-card-content]').length,
-		1
-	);
-	assert.equal(replacement.firstChild, replacementLink);
-	assert.equal(f.doc.activeElement, replacementLink);
-	assert.equal(navigation.parentElement, f.doc.body);
-	f.emit('htmx:beforeHistorySave');
-	f.flush();
-	assert.equal(replacement.firstChild, replacementLink);
-	assert.equal(f.doc.activeElement, replacementLink);
-});
-
-test('Troubleshooting retains its native content when the Card runtime is unavailable or fails', () => {
-	for (const options of [{ runtime: false }, { fail: true }]) {
-		const f = fixture(options);
-		const { card, form, link } = f.make('troubleshooting');
-		f.run();
-		f.flush();
-		assert.equal(form.parentElement, card);
-		assert.equal(form.firstChild, link);
-		assert.equal(card.hasAttribute('data-ran-booster-ui-mounted'), false);
 	}
 });
 

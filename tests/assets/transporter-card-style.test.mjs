@@ -14,14 +14,14 @@ const onboarding = fs.readFileSync(
 	'utf8'
 );
 
-test('Transporter surface overrides are limited to mounted Core hosts', () => {
+test('Transporter surface overrides are limited to static Core Card hosts', () => {
 	assert.ok(
 		primitives.includes(
-			'.ran-booster-portability__flow[data-ran-booster-card="transporter"][data-ran-booster-ui-mounted]'
+			'.ran-booster-portability__flow[data-ran-booster-card="transporter"].ran-booster-card'
 		)
 	);
 	assert.ok(
-		/:is\(\s*\.ran-booster-portability__chooser,\s*\.ran-booster-portability__flow\s*\)\[data-ran-booster-card="transporter"\]\[data-ran-booster-ui-mounted\]/.test(
+		/:is\(\s*\.ran-booster-portability__chooser,\s*\.ran-booster-portability__flow\s*\)\[data-ran-booster-card="transporter"\]\.ran-booster-card/.test(
 			onboarding
 		)
 	);

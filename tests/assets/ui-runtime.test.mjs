@@ -83,11 +83,9 @@ test('host React loads the foundation once and overlay extends the same object',
 			pathToFileURL(fileURLToPath(new URL(entries.foundation, assets)))
 				.href
 		);
-		const ui = globalThis.window.ranBoosterUI,
-			card = ui.CardRoot;
+		const ui = globalThis.window.ranBoosterUI;
 		assert.deepEqual(Object.keys(ui).sort(), [
 			'Button',
-			'CardRoot',
 			'CollapsibleCard',
 			'NoticeDescription',
 			'NoticeRoot',
@@ -107,7 +105,7 @@ test('host React loads the foundation once and overlay extends the same object',
 			pathToFileURL(fileURLToPath(new URL(entries.overlay, assets))).href
 		);
 		assert.equal(globalThis.window.ranBoosterUI, ui);
-		assert.equal(ui.CardRoot, card);
+		assert.equal(ui.CardRoot, undefined);
 		assert.deepEqual(Object.keys(ui.Dialog).sort(), [
 			'CloseIconButton',
 			'Content',
@@ -141,10 +139,6 @@ test('host React loads the foundation once and overlay extends the same object',
 		assert.match(button, /name="mode"/);
 		assert.match(button, /value="compact"/);
 		assert.match(button, /disabled=""/);
-		assert.match(
-			render(React.createElement(ui.CardRoot, null, 'Card content')),
-			/Card content/
-		);
 		const content = React.createElement(
 			ui.NoticeDescription,
 			{ render: React.createElement('div') },

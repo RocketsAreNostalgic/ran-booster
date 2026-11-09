@@ -36,7 +36,7 @@ if ( ! empty( $overview_dashboard_activity ) ) {
 		'records'   => array(),
 	);
 	?>
-	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-activity">
+	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-activity"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3 class="ran-booster-overview-card-title" id="ran-booster-overview-activity"><?php esc_html_e( 'Recent Activity', 'ran-booster' ); ?></h3>
 		<?php if ( empty( $activity['available'] ) ) { ?>
 			<p class="ran-booster-overview-card-note"><?php esc_html_e( 'Activity is unavailable.', 'ran-booster' ); ?></p>
@@ -56,7 +56,7 @@ if ( ! empty( $overview_dashboard_activity ) ) {
 			</ul>
 		<?php } ?>
 		<p class="ran-booster-overview-card-note"><a href="<?php echo esc_url( $onboarding['activity_url'] ); ?>"><?php esc_html_e( 'View Activity', 'ran-booster' ); ?></a></p>
-	</section>
+	</div></div></section>
 	<?php
 	return;
 }
@@ -67,7 +67,7 @@ $inventory = $onboarding['inventory'] ?? array(
 	'complete' => false,
 );
 ?>
-<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-packages">
+<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-packages"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 	<h3 class="ran-booster-overview-card-title" id="ran-booster-overview-packages"><?php esc_html_e( 'Managed packages', 'ran-booster' ); ?></h3>
 	<div class="ran-booster-overview-package-actions">
 		<div class="ran-booster-overview-package-actions__group" role="group" aria-label="<?php esc_attr_e( 'Plugins', 'ran-booster' ); ?>">
@@ -86,8 +86,8 @@ $inventory = $onboarding['inventory'] ?? array(
 		</div>
 	</div>
 	<p class="ran-booster-overview-package-policy"><?php esc_html_e( 'Updates disabled:', 'ran-booster' ); ?> <?php echo esc_html( null === $inventory['disabled'] ? __( 'Unknown', 'ran-booster' ) : (string) $inventory['disabled'] ); ?></p>
-</section>
-<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-providers">
+</div></div></section>
+<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-providers"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 	<h3 class="ran-booster-overview-card-title" id="ran-booster-overview-providers"><?php esc_html_e( 'Git providers', 'ran-booster' ); ?></h3>
 	<?php if ( array() === $provider_summaries ) { ?>
 		<p class="ran-booster-overview-card-note"><?php esc_html_e( 'No provider settings are currently available.', 'ran-booster' ); ?></p>
@@ -118,4 +118,4 @@ $inventory = $onboarding['inventory'] ?? array(
 			</li>
 		<?php } ?></ul>
 	<?php } ?>
-</section>
+</div></div></section>

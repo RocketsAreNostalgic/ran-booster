@@ -3388,8 +3388,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header[contains(@class,"ran-booster-action-row")]/div/h2[@id="ran-booster-provider-heading"][@tabindex="-1"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//h2[@id="ran-booster-provider-heading"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header/button[@data-modal])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/form[@class="ran-booster-provider-list-controls"]/following-sibling::table[contains(@class,"striped")])' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '/footer)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/form[@class="ran-booster-provider-list-controls"]/following-sibling::table[contains(@class,"striped")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/footer)' ) );
 		self::assertStringNotContainsString( 'Saved credentials use Booster encrypted local storage', $html );
 		self::assertStringNotContainsString( 'ran-booster-secrets-location', $html );
 	}

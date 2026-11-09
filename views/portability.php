@@ -45,7 +45,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Use Transporter to create a Blueprint here or open one from another site.', 'ran-booster' ); ?></p>
 	</header>
 
-	<section class="ran-booster-card ran-booster-portability__chooser" data-ran-booster-card="transporter" aria-labelledby="ran-booster-portability-mode-heading">
+	<section class="ran-booster-card ran-booster-portability__chooser" data-ran-booster-card="transporter" aria-labelledby="ran-booster-portability-mode-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3 id="ran-booster-portability-mode-heading" tabindex="-1"><?php esc_html_e( 'What do you want to do on this site?', 'ran-booster' ); ?></h3>
 		<div class="ran-booster-portability__mode-options">
 			<button type="button" class="ran-booster-portability__mode" data-portability-mode="export" aria-controls="ran-booster-portability-export" aria-expanded="false" aria-pressed="false">
@@ -64,9 +64,9 @@ $render_portability_extension      = static function ( string $hook, string $ste
 			</button>
 			<?php $render_portability_extension( 'ran_booster_portability_render_migration_modes', 'portability_migration_modes_render' ); ?>
 		</div>
-	</section>
+	</div></div></section>
 
-	<section class="ran-booster-card ran-booster-portability__flow" data-ran-booster-card="transporter" id="ran-booster-portability-export" aria-labelledby="ran-booster-portability-export-heading" hidden>
+	<section class="ran-booster-card ran-booster-portability__flow" data-ran-booster-card="transporter" id="ran-booster-portability-export" aria-labelledby="ran-booster-portability-export-heading" hidden><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<header class="ran-booster-portability__flow-header">
 			<h3 id="ran-booster-portability-export-heading" tabindex="-1"><?php esc_html_e( 'Create a Transporter Blueprint', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'The Transporter Blueprint contains managed plugin and theme configuration. Choose any eligible repository credentials that should travel with it.', 'ran-booster' ); ?></p>
@@ -269,9 +269,9 @@ $render_portability_extension      = static function ( string $hook, string $ste
 		<p><button type="submit" class="button button-primary" data-portability-export-submit<?php disabled( $portability_export_unavailable || array() === $portability_export_rows ); ?>><?php esc_html_e( 'Download Transporter Blueprint', 'ran-booster' ); ?></button></p>
 		<div class="notice notice-error inline" data-portability-export-message role="alert" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p data-portability-export-message-text></p></div></div>
 		</form>
-	</section>
+	</div></div></section>
 
-	<section class="ran-booster-card ran-booster-portability__flow" data-ran-booster-card="transporter" id="ran-booster-portability-import" aria-labelledby="ran-booster-portability-import-heading" hidden>
+	<section class="ran-booster-card ran-booster-portability__flow" data-ran-booster-card="transporter" id="ran-booster-portability-import" aria-labelledby="ran-booster-portability-import-heading" hidden><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<header class="ran-booster-portability__flow-header">
 			<h3 id="ran-booster-portability-import-heading" tabindex="-1"><?php esc_html_e( 'Open a Transporter Blueprint', 'ran-booster' ); ?></h3>
 			<p><?php esc_html_e( 'Choose a Transporter Blueprint and Booster will validate it and build a review before anything can change.', 'ran-booster' ); ?></p>
@@ -303,7 +303,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 			<p><button type="button" class="button button-primary ran-booster-portability__progress-button" data-portability-apply data-idle-label="<?php esc_attr_e( 'Apply selected changes', 'ran-booster' ); ?>" data-busy-label="<?php esc_attr_e( 'Applying…', 'ran-booster' ); ?>" disabled><span data-portability-apply-label><?php esc_html_e( 'Apply selected changes', 'ran-booster' ); ?></span></button></p>
 			<div data-portability-apply-results aria-live="polite"></div>
 		</div>
-	</section>
+	</div></div></section>
 
 	<?php $render_portability_extension( 'ran_booster_portability_render_migration_flows', 'portability_migration_flows_render' ); ?>
 </section>

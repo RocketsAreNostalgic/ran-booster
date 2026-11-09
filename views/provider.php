@@ -192,6 +192,7 @@ $render_webhook_cell  = static function ( array $profile, string $column ) use (
 	<?php
 };
 $is_repository_detail = 'overview' === $provider_view && 'repositories' === $provider_task && '' !== $requested_repository_id;
+$provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets' ), true );
 
 ?>
 
@@ -218,7 +219,10 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 	</header>
 <?php } ?>
-<section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ( 'overview' === $provider_view ? ' ran-booster-provider--overview' : '' ); ?><?php echo in_array( $provider_view, array( 'credentials', 'secrets' ), true ) ? ' ran-booster-card' : ''; ?>"<?php echo in_array( $provider_view, array( 'credentials', 'secrets' ), true ) ? ' data-ran-booster-card="provider"' : ''; ?> aria-labelledby="ran-booster-provider-heading">
+<section class="ran-booster-page-shell ran-booster-provider<?php echo $is_repository_detail ? ' ran-booster-repository-page' : ( 'overview' === $provider_view ? ' ran-booster-provider--overview' : '' ); ?><?php echo $provider_is_card ? ' ran-booster-card' : ''; ?>"<?php echo $provider_is_card ? ' data-ran-booster-card="provider"' : ''; ?> aria-labelledby="ran-booster-provider-heading">
+<?php if ( $provider_is_card ) { ?>
+	<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
+<?php } ?>
 	<?php if ( 'overview' === $provider_view && ! $is_repository_detail ) { ?>
 		<header class="ran-booster-page-shell__header ran-booster-provider__header">
 			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( $provider['label'] ); ?></h2>
@@ -403,7 +407,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 	<?php } elseif ( 'overview' === $provider_view ) { ?>
 		<?php if ( ! empty( $provider['credential_kinds'] ) ) { ?>
-		<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-access-tokens-heading">
+		<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-access-tokens-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
 					<p class="ran-booster-section__description"><?php echo esc_html( __( 'Saved credentials can be used for repository access.', 'ran-booster' ) ); ?></p>
@@ -428,7 +432,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 				);
 			?>
 			</div>
-		</section>
+		</div></div></section>
 		<?php } ?>
 
 		<?php if ( null !== $public_lookup_profile ) { ?>
@@ -436,7 +440,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 		<?php } ?>
 
 		<?php if ( $has_webhook_settings ) { ?>
-			<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-webhook-secrets-heading">
+			<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-webhook-secrets-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-webhook-secrets-heading" class="ran-booster-section__title"><?php esc_html_e( 'Signing secrets', 'ran-booster' ); ?></h3>
 					<p class="ran-booster-section__description"><?php esc_html_e( 'Signing secrets verify repository webhook deliveries.', 'ran-booster' ); ?></p>
@@ -461,11 +465,11 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 					);
 			?>
 				</div>
-			</section>
+			</div></div></section>
 		<?php } ?>
 
 		<?php if ( $repository_integration_available ) { ?>
-			<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integrations-heading">
+			<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integrations-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-repository-integrations-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository integrations', 'ran-booster' ); ?></h3>
 				<p class="ran-booster-section__description">
@@ -669,7 +673,7 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 			<?php } ?>
 					</div>
 				</div>
-			</section>
+			</div></div></section>
 		<?php } ?>
 	<?php } elseif ( 'credentials' === $provider_view ) { ?>
 		<?php if ( $has_credential_settings ) { ?>
@@ -723,7 +727,9 @@ $is_repository_detail = 'overview' === $provider_view && 'repositories' === $pro
 			?>
 		<?php } ?>
 	<?php } ?>
-
+<?php if ( $provider_is_card ) { ?>
+	</div></div>
+<?php } ?>
 </section>
 
 <?php require __DIR__ . '/provider/modals.php'; ?>

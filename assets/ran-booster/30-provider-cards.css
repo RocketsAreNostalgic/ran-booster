@@ -918,25 +918,16 @@
 	color: var(--ran-booster-text-danger);
 }
 
-/* Credential lists keep the same native and public Card interior spacing. */
+/* Credential lists own the Card's interior spacing. */
 .ran-booster-admin
-	.ran-booster-provider[data-ran-booster-card="provider"]:not(
-		[data-ran-booster-ui-mounted]
-	),
-.ran-booster-admin
-	[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	[data-ran-booster-card="provider"].ran-booster-card
 	.ran-booster-card__content {
 	padding: var(--ran-booster-card-inset-block-start)
 		var(--ran-booster-space-24) var(--ran-booster-card-inset-block-end);
 }
 
 .ran-booster-admin
-	.ran-booster-provider[data-ran-booster-card="provider"]:not(
-		[data-ran-booster-ui-mounted]
-	)
-	> .ran-booster-provider__footer,
-.ran-booster-admin
-	[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	[data-ran-booster-card="provider"].ran-booster-card
 	.ran-booster-card__content
 	> .ran-booster-provider__footer {
 	margin: var(--ran-booster-space-24) calc(-1 * var(--ran-booster-space-24))
@@ -945,22 +936,13 @@
 
 @media screen and (max-width: 782px) {
 	.ran-booster-admin
-		.ran-booster-provider[data-ran-booster-card="provider"]:not(
-			[data-ran-booster-ui-mounted]
-		),
-	.ran-booster-admin
-		[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+		[data-ran-booster-card="provider"].ran-booster-card
 		.ran-booster-card__content {
 		padding-inline: var(--ran-booster-space-18);
 	}
 
 	.ran-booster-admin
-		.ran-booster-provider[data-ran-booster-card="provider"]:not(
-			[data-ran-booster-ui-mounted]
-		)
-		> .ran-booster-provider__footer,
-	.ran-booster-admin
-		[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+		[data-ran-booster-card="provider"].ran-booster-card
 		.ran-booster-card__content
 		> .ran-booster-provider__footer {
 		margin-inline: calc(-1 * var(--ran-booster-space-18));
@@ -969,8 +951,7 @@
 
 /* Core detail sections already own their header and body insets. */
 .ran-booster-admin
-	.ran-booster-settings-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
-	> .ran-booster-card__mount
+	.ran-booster-settings-section[data-ran-booster-card="provider"].ran-booster-card
 	> .ran-booster-card__surface
 	> .ran-booster-card__content {
 	padding: 0;
@@ -979,19 +960,19 @@
 /* Provider overview sections already own their responsive header and body insets. */
 .ran-booster-admin
 	.ran-booster-provider--overview
-	> .ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted] {
+	> .ran-booster-provider-section[data-ran-booster-card="provider"].ran-booster-card {
 	border: 0;
 	background: transparent;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-provider-section[data-ran-booster-card="provider"].ran-booster-card
 	.ran-booster-card__content {
 	padding: 0;
 }
 
 .ran-booster-admin
-	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-provider-section[data-ran-booster-card="provider"].ran-booster-card
 	.ran-booster-provider-section__body
 	> .ran-booster-public-lookup-profile__panel,
 .ran-booster-admin
@@ -1010,7 +991,7 @@
 }
 
 .ran-booster-admin
-	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
+	.ran-booster-provider-section[data-ran-booster-card="provider"].ran-booster-card
 	.ran-booster-provider-section__body
 	> .ran-booster-public-lookup-profile__panel {
 	border: 1px solid var(--wpds-color-stroke-surface-neutral);

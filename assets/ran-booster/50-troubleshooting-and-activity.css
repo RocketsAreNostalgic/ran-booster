@@ -484,11 +484,7 @@
 
 /* The selected Troubleshooting Card owns its content inset. */
 .ran-booster-admin
-	[data-ran-booster-card="troubleshooting"]:not(
-		[data-ran-booster-ui-mounted]
-	),
-.ran-booster-admin
-	[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
+	[data-ran-booster-card="troubleshooting"].ran-booster-card
 	.ran-booster-card__content {
 	padding: var(--ran-booster-card-inset-block-start)
 		var(--ran-booster-space-24) var(--ran-booster-card-inset-block-end);
@@ -496,11 +492,7 @@
 
 @media screen and (max-width: 782px) {
 	.ran-booster-admin
-		[data-ran-booster-card="troubleshooting"]:not(
-			[data-ran-booster-ui-mounted]
-		),
-	.ran-booster-admin
-		[data-ran-booster-card="troubleshooting"][data-ran-booster-ui-mounted]
+		[data-ran-booster-card="troubleshooting"].ran-booster-card
 		.ran-booster-card__content {
 		padding-block: var(--ran-booster-card-inset-block-start)
 			var(--ran-booster-card-inset-block-end);

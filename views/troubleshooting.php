@@ -107,7 +107,7 @@ $repository_placeholder = array() === $locator_examples
 		<?php } ?>
 		</nav>
 
-		<div class="ran-booster-card" data-ran-booster-card="troubleshooting">
+		<div class="ran-booster-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 	<?php if ( 'installation' === $troubleshooting_panel ) { ?>
 		<?php require __DIR__ . '/troubleshooting-installation.php'; ?>
 	<?php } elseif ( 'support-report' === $troubleshooting_panel ) { ?>
@@ -269,6 +269,6 @@ $repository_placeholder = array() === $locator_examples
 	<?php } ?>
 
 	<?php } ?>
-		</div>
+		</div></div></div>
 	</div>
 </section>

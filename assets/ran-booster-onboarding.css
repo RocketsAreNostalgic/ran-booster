@@ -1329,11 +1329,7 @@
 }
 
 .ran-booster-admin
-	:is(
-		.ran-booster-overview-card-note,
-		.ran-booster-overview-package-note,
-		.ran-booster-overview-package-policy
-	) {
+	:is(.ran-booster-overview-card-note, .ran-booster-overview-package-policy) {
 	margin-block: var(--ran-booster-space-8) 0;
 	margin-inline: 0;
 }
@@ -1376,7 +1372,7 @@
 .ran-booster-admin .ran-booster-overview-package-actions {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
-	gap: var(--ran-booster-space-16) var(--ran-booster-space-24);
+	gap: var(--ran-booster-space-24);
 	margin-block-start: var(--ran-booster-space-16);
 }
 
@@ -1400,14 +1396,13 @@
 	.ran-booster-overview-package-count {
 	order: -1;
 	color: var(--ran-booster-brand);
-	font-size: 20px;
+	font-size: var(--ran-booster-font-size-card-title);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: var(--ran-booster-line-height-tight);
 	overflow-wrap: anywhere;
 }
 
 .ran-booster-admin .ran-booster-overview-package-count,
-.ran-booster-admin .ran-booster-overview-package-note,
 .ran-booster-admin .ran-booster-overview-package-policy,
 .ran-booster-admin .ran-booster-overview-provider-origin {
 	color: var(--ran-booster-text-muted);
@@ -1423,14 +1418,10 @@
 	overflow-wrap: anywhere;
 }
 
-.ran-booster-admin .ran-booster-overview-package-install {
-	font-size: var(--ran-booster-font-size-xs);
-}
-
 .ran-booster-admin .ran-booster-overview-package-policy {
-	padding-block-start: var(--ran-booster-space-12);
+	padding-block-start: var(--ran-booster-space-16);
 	border-block-start: 1px solid var(--ran-booster-border);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-overview-provider-list {

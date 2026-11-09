@@ -1035,7 +1035,7 @@ msgstr ""
 #: views/overview-dashboard.php:53
 #: views/overview-dashboard.php:74
 #: views/overview-dashboard.php:81
-#: views/overview-dashboard.php:91
+#: views/overview-dashboard.php:88
 #: views/portability-review.php:102
 #: views/settings-general.php:112
 #: views/settings-general.php:252
@@ -1729,7 +1729,7 @@ msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:279
 #: RAN/Admin/PackagePagePresenter.php:291
-#: views/overview-dashboard.php:106
+#: views/overview-dashboard.php:103
 #: views/troubleshooting-installation.php:188
 msgid "Included with Booster"
 msgstr ""
@@ -6552,7 +6552,7 @@ msgid "WordPress debugging documentation"
 msgstr ""
 
 #: views/documentation.php:48
-#: views/overview-dashboard.php:94
+#: views/overview-dashboard.php:91
 msgid "Git providers"
 msgstr ""
 
@@ -7605,28 +7605,24 @@ msgstr ""
 msgid "Manage themes"
 msgstr ""
 
-#: views/overview-dashboard.php:89
-msgid "Install from a repository, or review existing packages with Manage."
-msgstr ""
-
-#: views/overview-dashboard.php:91
+#: views/overview-dashboard.php:88
 msgid "Updates disabled:"
 msgstr ""
 
-#: views/overview-dashboard.php:96
+#: views/overview-dashboard.php:93
 msgid "No provider settings are currently available."
 msgstr ""
 
-#: views/overview-dashboard.php:103
+#: views/overview-dashboard.php:100
 msgid "Manage provider"
 msgstr ""
 
-#: views/overview-dashboard.php:108
+#: views/overview-dashboard.php:105
 msgid "Provider extension"
 msgstr ""
 
 #. translators: %s: selected provider plugin name.
-#: views/overview-dashboard.php:111
+#: views/overview-dashboard.php:108
 #: views/provider.php:238
 #: views/troubleshooting-installation.php:198
 #: views/troubleshooting-installation.php:204
@@ -7634,12 +7630,12 @@ msgstr ""
 msgid "Provider extension: %s"
 msgstr ""
 
-#: views/overview-dashboard.php:113
+#: views/overview-dashboard.php:110
 #: views/troubleshooting-installation.php:217
 msgid "Provider source unknown"
 msgstr ""
 
-#: views/overview-dashboard.php:117
+#: views/overview-dashboard.php:114
 msgid "Custom provider"
 msgstr ""
 

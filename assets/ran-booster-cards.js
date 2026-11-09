@@ -1221,6 +1221,12 @@
 		initialize(document)
 	);
 
+	document.addEventListener('ran-booster:ui-disclosure-update', (event) => {
+		const host = event.target.closest?.(disclosureSelector);
+		if (host) {
+			mountDisclosure(host);
+		}
+	});
 	document.addEventListener('ran-booster:ui-badge-update', (event) => {
 		const host = event.target.closest?.(badgeSelector);
 		if (host) {

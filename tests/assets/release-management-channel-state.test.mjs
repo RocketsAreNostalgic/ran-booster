@@ -7,6 +7,11 @@ const source = fs.readFileSync(
 	'utf8'
 );
 
+const earlierDisclosureHelpers = source.slice(
+	source.indexOf('const earlierReleasesDisclosure ='),
+	source.indexOf('const initializeManagedReleaseBrowser =')
+);
+
 function declaration(name) {
 	const start = source.indexOf(`\tconst ${name} = `);
 	assert.notEqual(start, -1, `The ${name} declaration must exist.`);
@@ -201,6 +206,13 @@ test('loading candidates preserves provider order and uses the shared disclosure
 			}
 			return {
 				children: [],
+				attributes: {},
+				setAttribute(name, value) {
+					this.attributes[name] = value;
+				},
+				dispatchEvent(event) {
+					this.dispatched = event;
+				},
 				append(...nodes) {
 					this.children.push(...nodes);
 				},
@@ -223,6 +235,7 @@ test('loading candidates preserves provider order and uses the shared disclosure
 		`"use strict";
 		let requestSequence = 0;
 		let selectedRelease = null;
+		${earlierDisclosureHelpers}
 		${declaration('showCandidates')}
 		return {
 			showCandidates,
@@ -286,13 +299,25 @@ test('loading candidates preserves provider order and uses the shared disclosure
 	assert.equal(harness.state().selectedRelease.channel, 'stable');
 	assert.equal(candidateList.children.length, 2);
 	assert.equal(candidateList.children[0].children[0].checked, true);
+	const host = candidateList.children[1];
+	assert.equal(host.className, 'ran-booster-release-settings-disclosure');
 	assert.equal(
-		candidateList.children[1].className,
-		'ran-booster-release-settings-disclosure ran-booster-disclosure'
+		host.attributes['data-ran-booster-ui-disclosure'],
+		'release-earlier-releases'
 	);
+	assert.equal(host.dispatched.type, 'ran-booster:ui-disclosure-update');
+	const details = host.children[0];
+	assert.equal(details.className, 'ran-booster-disclosure');
 	assert.equal(
-		candidateList.children[1].children[1].className,
-		'ran-booster-disclosure__body'
+		details.attributes['data-ran-booster-ui-disclosure-fallback'],
+		''
+	);
+	assert.equal(details.children[1].className, 'ran-booster-disclosure__body');
+	assert.equal(
+		details.children[1].attributes[
+			'data-ran-booster-ui-disclosure-content'
+		],
+		''
 	);
 });
 

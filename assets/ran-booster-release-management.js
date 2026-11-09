@@ -1,5 +1,32 @@
 const managedReleaseBrowsers = new WeakSet();
 
+const earlierReleasesDisclosure = (summaryText) => {
+	const host = document.createElement('div');
+	host.setAttribute(
+		'data-ran-booster-ui-disclosure',
+		'release-earlier-releases'
+	);
+	host.setAttribute('data-ran-booster-ui-disclosure-density', 'compact');
+	host.className = 'ran-booster-release-settings-disclosure';
+	const disclosure = document.createElement('details');
+	disclosure.className = 'ran-booster-disclosure';
+	disclosure.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+	const summary = document.createElement('summary');
+	summary.textContent = summaryText;
+	const body = document.createElement('div');
+	body.className = 'ran-booster-disclosure__body';
+	body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+	disclosure.append(summary, body);
+	host.append(disclosure);
+	return { host, body };
+};
+const mountDisclosure = (host) =>
+	host.dispatchEvent(
+		new CustomEvent('ran-booster:ui-disclosure-update', {
+			bubbles: true,
+		})
+	);
+
 const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const { __, sprintf } = wp.i18n;
 	if (
@@ -460,24 +487,18 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				candidateList.append(installed);
 			}
 			if (earlier.length > 0) {
-				const disclosure = document.createElement('details');
-				disclosure.className =
-					'ran-booster-release-settings-disclosure ran-booster-disclosure';
-				const summary = document.createElement('summary');
-				summary.textContent = wp.i18n.sprintf(
-					/* translators: %d: number of earlier releases. */
-					wp.i18n._n(
-						'Show %d earlier release',
-						'Show %d earlier releases',
-						earlier.length,
-						'ran-booster'
-					),
-					earlier.length
+				const { host: disclosure, body } = earlierReleasesDisclosure(
+					wp.i18n.sprintf(
+						/* translators: %d: number of earlier releases. */
+						wp.i18n._n(
+							'Show %d earlier release',
+							'Show %d earlier releases',
+							earlier.length,
+							'ran-booster'
+						),
+						earlier.length
+					)
 				);
-				disclosure.append(summary);
-				const body = document.createElement('div');
-				body.className = 'ran-booster-disclosure__body';
-				disclosure.append(body);
 				if (
 					earlier.some(
 						(candidate) =>
@@ -495,6 +516,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					appendCandidate(candidate, body)
 				);
 				candidateList.append(disclosure);
+				mountDisclosure(disclosure);
 			}
 			if (candidates) {
 				candidates.hidden = false;
@@ -718,6 +740,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const channelControl = setup.querySelector(
 		'[data-ran-booster-release-channel-control]'
 	);
+
 	const advancedSummary = document.querySelector(
 		'[data-ran-booster-advanced-source-summary]'
 	);
@@ -1198,27 +1221,22 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		};
 		appendCandidate(releases[0], candidateList);
 		if (releases.length > 1) {
-			const disclosure = document.createElement('details');
-			disclosure.className =
-				'ran-booster-release-settings-disclosure ran-booster-disclosure';
-			const summary = document.createElement('summary');
 			const earlier = releases.slice(1);
-			summary.textContent = wp.i18n.sprintf(
-				/* translators: %d: number of earlier releases. */
-				wp.i18n._n(
-					'Show %d earlier release',
-					'Show %d earlier releases',
-					earlier.length,
-					'ran-booster'
-				),
-				earlier.length
+			const { host: disclosure, body } = earlierReleasesDisclosure(
+				wp.i18n.sprintf(
+					/* translators: %d: number of earlier releases. */
+					wp.i18n._n(
+						'Show %d earlier release',
+						'Show %d earlier releases',
+						earlier.length,
+						'ran-booster'
+					),
+					earlier.length
+				)
 			);
-			disclosure.append(summary);
-			const body = document.createElement('div');
-			body.className = 'ran-booster-disclosure__body';
-			disclosure.append(body);
 			earlier.forEach((candidate) => appendCandidate(candidate, body));
 			candidateList.append(disclosure);
+			mountDisclosure(disclosure);
 		}
 		setChoiceState(
 			'available',

@@ -191,6 +191,12 @@ const createHarness = (
 	const documentListeners = new Map();
 	let swappedBrowser = null;
 	const context = {
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options?.bubbles;
+			}
+		},
 		Date,
 		FormData,
 		URL,

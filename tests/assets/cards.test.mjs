@@ -1049,6 +1049,53 @@ test('Disclosure keeps native details, body identity, open state and focus throu
 	assert.equal(host.querySelector('[data-disclosure-slot]').firstChild, body);
 });
 
+test('Mounted disclosures report open state by id and honour remembered state when remounted', () => {
+	const f = fixture({ disclosureRuntime: true });
+	const build = (id) => {
+		const host = new f.Node('div'),
+			details = new f.Node('details'),
+			summary = new f.Node('summary'),
+			body = new f.Node('div'),
+			link = new f.Node('a');
+		host.setAttribute('data-ran-booster-ui-disclosure', 'package-details');
+		details.setAttribute('id', id);
+		details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+		summary.textContent = 'Package details';
+		body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+		body.appendChild(link);
+		details.appendChild(summary);
+		details.appendChild(body);
+		host.appendChild(details);
+		f.doc.body.appendChild(host);
+		details.open = false;
+		return { host, details };
+	};
+	const first = build('package-panel');
+	f.run();
+	f.flush();
+	assert.deepEqual(
+		{ ...f.window.ranBoosterUI.disclosureOpenStates() },
+		{
+			'package-panel': false,
+		}
+	);
+	f.tree().props.onOpenChange(true);
+	assert.deepEqual(
+		{ ...f.window.ranBoosterUI.disclosureOpenStates() },
+		{
+			'package-panel': true,
+		}
+	);
+	first.host.remove?.();
+	f.window.ranBoosterUI.rememberedDisclosureStates = {
+		'package-panel-next': true,
+	};
+	const next = build('package-panel-next');
+	f.emit('htmx:load', next.host);
+	f.flush();
+	assert.equal(next.details.open, true);
+});
+
 test('Disclosure render failure leaves the original native body untouched', () => {
 	const f = fixture({ disclosureRuntime: true, disclosureFail: true });
 	const host = new f.Node('div'),

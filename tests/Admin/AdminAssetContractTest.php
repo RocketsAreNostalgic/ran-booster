@@ -117,6 +117,17 @@ final class AdminAssetContractTest extends TestCase {
 		$buttons = $this->asset( 'ran-booster/10-buttons.css' );
 
 		self::assertStringContainsString( '.ran-wp-ui-button.ran-booster-button--danger.is-solid', $buttons );
+		// The danger tone takes the design system's strong error colours so its
+		// label keeps AA contrast at rest and in the active states.
+		self::assertMatchesRegularExpression(
+			'/\\.ran-booster-button--danger\\.is-solid \\{\\s+--wp-ui-button-background-color: var\\(\\s+--wpds-color-background-interactive-error-strong\\s+\\);\\s+--wp-ui-button-background-color-active: var\\(\\s+--wpds-color-background-interactive-error-strong-active\\s+\\);/',
+			$buttons
+		);
+		self::assertMatchesRegularExpression(
+			'/\\.ran-booster-button--danger\\.is-outline \\{\\s+--wp-ui-button-border-color: var\\(--wpds-color-stroke-interactive-error\\);[\\s\\S]+--wp-ui-button-foreground-color: var\\(\\s+--wpds-color-foreground-interactive-error\\s+\\);/',
+			$buttons
+		);
+		self::assertStringNotContainsString( 'var(--ran-booster-danger', $buttons );
 		self::assertStringNotContainsString( '.button-delete', $buttons );
 		self::assertStringContainsString( '.button-update-package.ran-booster-update-is-active', $buttons );
 		self::assertStringNotContainsString( "\n.wp-core-ui .button-delete", $buttons );

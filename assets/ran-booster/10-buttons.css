@@ -58,13 +58,21 @@ a.ran-wp-ui-button[aria-disabled="true"] {
  */
 
 .ran-wp-ui-button.ran-booster-button--danger.is-solid {
-	--wp-ui-button-background-color: var(--ran-booster-danger);
-	--wp-ui-button-background-color-active: var(--ran-booster-danger-strong);
+	--wp-ui-button-background-color: var(
+		--wpds-color-background-interactive-error-strong
+	);
+	--wp-ui-button-background-color-active: var(
+		--wpds-color-background-interactive-error-strong-active
+	);
 	--wp-ui-button-background-color-disabled: var(
 		--wpds-color-background-interactive-neutral-weak-disabled
 	);
-	--wp-ui-button-border-color: var(--ran-booster-danger-strong);
-	--wp-ui-button-border-color-active: var(--ran-booster-danger-hover-border);
+	--wp-ui-button-border-color: var(
+		--wpds-color-stroke-interactive-error-strong
+	);
+	--wp-ui-button-border-color-active: var(
+		--wpds-color-stroke-interactive-error-active
+	);
 	--wp-ui-button-border-color-disabled: var(
 		--wpds-color-stroke-interactive-neutral-disabled
 	);
@@ -76,10 +84,16 @@ a.ran-wp-ui-button[aria-disabled="true"] {
 }
 
 .ran-wp-ui-button.ran-booster-button--danger.is-outline {
-	--wp-ui-button-border-color: var(--ran-booster-danger);
-	--wp-ui-button-border-color-active: var(--ran-booster-danger-strong);
-	--wp-ui-button-foreground-color: var(--ran-booster-text-danger);
-	--wp-ui-button-foreground-color-active: var(--ran-booster-text-danger);
+	--wp-ui-button-border-color: var(--wpds-color-stroke-interactive-error);
+	--wp-ui-button-border-color-active: var(
+		--wpds-color-stroke-interactive-error-active
+	);
+	--wp-ui-button-foreground-color: var(
+		--wpds-color-foreground-interactive-error
+	);
+	--wp-ui-button-foreground-color-active: var(
+		--wpds-color-foreground-interactive-error-active
+	);
 }
 
 .wp-core-ui .ran-booster-admin .button-update-package {

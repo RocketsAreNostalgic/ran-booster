@@ -504,7 +504,10 @@ WordPress core's `.button`. Markup takes its classes from
   every property they set over the layered Button.
 - `danger` is Booster's own tone: `ran-booster-button--danger` in
   `10-buttons.css` sets only the Button's colour custom properties, on brand
-  solid (destructive confirmations) or neutral outline (the arming step).
+  solid (destructive confirmations) or neutral outline (the arming step). It
+  takes the design system's interactive error colours, so the solid label
+  keeps 4.5:1 contrast at rest and when active; disabled, it draws as the
+  shared disabled Button.
 - Native `disabled`, `aria-disabled="true"` and a disabled fieldset all draw the
   disabled Button; the stylesheet bridges them to the library's `data-disabled`.
 - The Button sets `display` inside the layer, so `10-buttons.css` restores

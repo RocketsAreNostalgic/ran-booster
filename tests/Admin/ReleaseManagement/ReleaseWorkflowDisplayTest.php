@@ -147,8 +147,11 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			self::assertInstanceOf( \DOMElement::class, $host );
 			self::assertTrue( $host->hasAttribute( 'data-ran-booster-ui-notice' ) );
 			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-notice-intent' ) );
-			self::assertSame( 1.0, $xpath->evaluate( 'count(./div[@data-ran-booster-ui-notice-content])', $host ) );
-			self::assertSame( 1.0, $xpath->evaluate( 'count(./*)', $host ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./div[@data-ran-booster-ui-notice-content and @class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"])', $host ) );
+			// A static Notice: the description, then the decorative intent icon.
+			self::assertStringContainsString( ' ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent, ' ' . $host->getAttribute( 'class' ) );
+			self::assertSame( 2.0, $xpath->evaluate( 'count(./*)', $host ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./*[2][local-name()="svg" and @class="ran-wp-ui-notice__icon" and @aria-hidden="true"])', $host ) );
 			self::assertFalse( $host->hasAttribute( 'role' ) );
 			self::assertStringNotContainsString( '<source>', $html );
 			self::assertStringNotContainsString( '<provider>', $html );
@@ -230,7 +233,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( '<div class="notice notice-info inline"', $html );
+		self::assertStringContainsString( '<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info"', $html );
 		self::assertStringContainsString( 'An existing release workflow was found. Booster will not overwrite it. Review it before using Booster setup.', $html );
 		self::assertStringNotContainsString( 'Failure details', $html );
 		self::assertStringNotContainsString( 'Diagnostic code:', $html );
@@ -246,7 +249,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( '<div class="notice notice-warning inline"', $html );
+		self::assertStringContainsString( '<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $html );
 		self::assertStringContainsString( 'The Git provider has temporarily rate-limited the release workflow request.', $html );
 		self::assertStringNotContainsString( 'selected saved credential', $html );
 	}
@@ -326,7 +329,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'Booster could not validate the package release before continuing. No draft was opened.', $html );
-		self::assertStringContainsString( '<div class="notice notice-error inline" data-ran-booster-release-workflow-result data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p>', $html );
+		self::assertStringContainsString( '<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-release-workflow-result data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>', $html );
 		self::assertStringContainsString( '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>Failure details</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>', $html );
 		self::assertStringContainsString( 'Booster could not read release data using the package&#039;s saved repository access. The credential selected for workflow setup is used only after this release check.', $html );
 		self::assertStringContainsString( 'Diagnostic code: <code>provider_unavailable</code>', $html );

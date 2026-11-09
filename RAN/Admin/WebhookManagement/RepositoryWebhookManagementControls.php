@@ -5,6 +5,7 @@ declare( strict_types = 1 );
 namespace RAN\Admin\WebhookManagement;
 
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
+use RAN\Admin\Component\NoticeIcon;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
@@ -318,7 +319,7 @@ final class RepositoryWebhookManagementControls {
 			<div class="ran-booster-settings-section__body">
 				<div class="ran-booster-repository-webhook-management__notices">
 					<?php foreach ( $notices as $notice ) { ?>
-						<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( $notice['class'], 7 ) ); ?>"><div data-ran-booster-ui-notice-content>
+						<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( substr( $notice['class'], 7 ) ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( $notice['class'], 7 ) ); ?>"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 							<?php
 							if ( isset( $notice['heading'] ) ) :
 								?>
@@ -328,7 +329,7 @@ final class RepositoryWebhookManagementControls {
 							foreach ( $notice['details'] ?? array() as $detail ) :
 								?>
 								<p><?php echo esc_html( $detail ); ?></p><?php endforeach; ?>
-						</div></div>
+						</div><?php NoticeIcon::print_intent( substr( $notice['class'], 7 ) ); ?></div>
 					<?php } ?>
 				</div>
 				<?php $this->render_repository_webhook_lifecycle( $items, $inactive ); ?>

@@ -48,7 +48,7 @@ final class RepositoryDetailRenderer {
 					<a class="button" href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s is the repository provider name. */ __( 'Open on %s', 'ran-booster' ), $provider_label ) ); ?></a>
 				<?php } ?>
 			</header>
-			<div class="notice notice-error inline ran-booster-provider-task-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load that repository view. The current view is unchanged; choose the view again to retry.', 'ran-booster' ); ?></p></div></div>
+			<div class="notice notice-error inline ran-booster-provider-task-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load that repository view. The current view is unchanged; choose the view again to retry.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 			<nav class="ran-booster-provider-task-tabs ran-booster-repository-detail__tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:false show:none" hx-push-url="true" hx-history="false" hx-sync="this:replace">
 				<ul class="filter-links ran-section-navigation ran-section-navigation--thin">
 				<?php
@@ -137,7 +137,7 @@ final class RepositoryDetailRenderer {
 		$release_count = count( $packages ) - $branch_count;
 		?>
 		<?php if ( 'mixed' === ( $row['source_key'] ?? null ) ) { ?>
-			<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><strong><?php esc_html_e( 'Conflicting sources.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Review the package settings before using release workflow.', 'ran-booster' ); ?></p></div></div>
+			<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><strong><?php esc_html_e( 'Conflicting sources.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Review the package settings before using release workflow.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 		<?php } ?>
 		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-packages-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">

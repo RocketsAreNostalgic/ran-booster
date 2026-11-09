@@ -139,22 +139,18 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_extension_action_text_links_keep_a_minimum_pointer_target(): void {
 		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
 
-		self::assertSame(
-			1,
-			preg_match( '/\.ran-booster-admin \.ran-booster-extensions__grid \.plugin-action-buttons a \{([^}]*)\}/', $extensions, $link_rule )
-		);
-		self::assertArrayHasKey( 1, $link_rule );
+		if ( 1 !== preg_match( '/\.ran-booster-admin \.ran-booster-extensions__grid \.plugin-action-buttons a \{([^}]*)\}/', $extensions, $link_rule ) || ! isset( $link_rule[1] ) ) {
+			self::fail( 'The extension action link rule is missing.' );
+		}
 		self::assertStringContainsString( 'min-block-size: var(--ran-booster-space-24);', $link_rule[1] );
 	}
 
 	public function test_package_list_filters_size_to_their_longest_option(): void {
 		$packages = $this->asset( 'ran-booster/60-packages.css' );
 
-		self::assertSame(
-			1,
-			preg_match( '/\n\.ran-booster-admin \.ran-booster-package-list-filters select \{([^}]*)\}/', $packages, $filter_rule )
-		);
-		self::assertArrayHasKey( 1, $filter_rule );
+		if ( 1 !== preg_match( '/\n\.ran-booster-admin \.ran-booster-package-list-filters select \{([^}]*)\}/', $packages, $filter_rule ) || ! isset( $filter_rule[1] ) ) {
+			self::fail( 'The package list filter select rule is missing.' );
+		}
 		self::assertStringContainsString( 'inline-size: auto;', $filter_rule[1] );
 		self::assertStringNotContainsString( '130px', $filter_rule[1] );
 	}

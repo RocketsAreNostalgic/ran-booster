@@ -1,3 +1,14 @@
+/*
+ * The page itself scrolls, so only the root element can make in-page links
+ * glide. Scoped to pages that contain Documentation, and only when motion is
+ * welcome; anchor offsets still come from scroll-margin on the target.
+ */
+@media (prefers-reduced-motion: no-preference) {
+	html:has(.ran-booster-admin .ran-booster-documentation) {
+		scroll-behavior: smooth;
+	}
+}
+
 .ran-booster-admin .ran-booster-documentation__layout {
 	display: grid;
 	grid-template-areas: "main index";

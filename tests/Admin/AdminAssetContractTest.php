@@ -767,6 +767,17 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'style="text-align: center;', $base );
 	}
 
+	public function test_documentation_smooth_scrolling_is_scoped_and_respects_reduced_motion(): void {
+		$documentation = $this->asset( 'ran-booster-documentation.css' );
+
+		// The document scrolls, so the root element owns scroll-behavior, only on Documentation and only when motion is welcome.
+		self::assertMatchesRegularExpression(
+			'/@media \(prefers-reduced-motion: no-preference\) \{\s+html:has\(\.ran-booster-admin \.ran-booster-documentation\) \{\s+scroll-behavior: smooth;\s+\}\s+\}/',
+			$documentation
+		);
+		self::assertSame( 1, substr_count( $documentation, 'scroll-behavior:' ) );
+	}
+
 	public function test_documentation_print_contract_preserves_guidance_and_removes_admin_chrome(): void {
 		$documentation = $this->asset( 'ran-booster-documentation.css' );
 		$view          = $this->view( 'documentation.php' );

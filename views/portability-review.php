@@ -172,16 +172,12 @@ $has_credential_decisions         = array() !== array_filter(
 				<h6 class="ran-booster-portability__credential-name"><?php echo esc_html( (string) ( $credential['label'] ?? '' ) ); ?></h6>
 				<span class="screen-reader-text"><?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> </span>
 				<?php
-				// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
-				echo \RAN\Admin\Component\StatusBadge::for_intent( (string) ( $credential['provider_label'] ?? '' ), 'none', array( 'class' => 'ran-booster-portability__credential-provider' ) );
-				// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+				\RAN\Admin\Component\StatusBadge::print_intent( (string) ( $credential['provider_label'] ?? '' ), 'none', array( 'class' => 'ran-booster-portability__credential-provider' ) );
 				?>
 				<?php if ( '' !== (string) ( $credential['kind'] ?? '' ) ) : ?>
 					<span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span>
 					<?php
-					// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
-					echo \RAN\Admin\Component\StatusBadge::for_intent( (string) ( $credential['kind_label'] ?? $credential['kind'] ), 'none', array( 'class' => 'ran-booster-portability__credential-kind' ) );
-					// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+					\RAN\Admin\Component\StatusBadge::print_intent( (string) ( $credential['kind_label'] ?? $credential['kind'] ), 'none', array( 'class' => 'ran-booster-portability__credential-kind' ) );
 					?>
 				<?php endif; ?>
 			</div>
@@ -290,7 +286,7 @@ $has_credential_decisions         = array() !== array_filter(
 					data-portability-credential-ordinal="<?php echo esc_attr( (string) $credential_ordinal ); ?>"<?php endif; ?> data-portability-package-name="<?php echo esc_attr( $package_name ); ?>" data-portability-package-type="<?php echo esc_attr( (string) ( $row['type'] ?? __( 'Package', 'ran-booster' ) ) ); ?>" data-portability-package-identifier="<?php echo esc_attr( (string) ( $row['identifier'] ?? '' ) ); ?>">
 					<td><strong><?php echo esc_html( $row['name'] ?? '' ); ?></strong><code><?php echo esc_html( $row['identifier'] ?? '' ); ?></code></td>
 					<td><?php echo esc_html( $row['type'] ?? '' ); ?></td>
-					<td class="ran-booster-portability__review-state"><?php echo \RAN\Admin\Component\StatusBadge::markup( $portability_action_labels[ $review_action ][0], $portability_action_pills[ $review_action ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span>
+					<td class="ran-booster-portability__review-state"><?php \RAN\Admin\Component\StatusBadge::print_tone( $portability_action_labels[ $review_action ][0], $portability_action_pills[ $review_action ] ); ?><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span>
 					<?php if ( null !== $release_review ) : ?>
 						<?php /* translators: 1: reviewed release version, 2: reviewed release tag. */ ?>
 						<p class="description"><?php echo esc_html( sprintf( __( 'Reviewed release %1$s (%2$s). Booster will install this first candidate preferred by the Git provider only; it does not claim the newest eligible release. The package will remain inactive and deployment Disabled.', 'ran-booster' ), (string) ( $release_review['version'] ?? '' ), (string) ( $release_review['tag'] ?? '' ) ) ); ?></p>

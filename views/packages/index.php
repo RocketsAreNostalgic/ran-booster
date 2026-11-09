@@ -487,8 +487,7 @@ $policy_labels = array(
 					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $prominent_status['label'], (string) ( $badge_intents[ $prominent_status['tone'] ] ?? 'none' ), $prominent_status_activity ? array( 'data-ran-booster-activity-badge' => '' ) : array() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<?php } elseif ( ! $release_managed ) { ?>
 					<?php
-					// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
-					echo \RAN\Admin\Component\StatusBadge::for_intent(
+					\RAN\Admin\Component\StatusBadge::print_intent(
 						'',
 						'none',
 						array(
@@ -496,7 +495,6 @@ $policy_labels = array(
 							'hidden' => '1',
 						)
 					);
-					// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 					?>
 				<?php } ?>
 				<p class="ran-booster-package-row__management"><?php echo esc_html( $management_line ); ?></p>
@@ -585,8 +583,7 @@ $policy_labels = array(
 									<?php } elseif ( is_array( $latest_activity ) ) { ?>
 										<?php $active_detail_url = $activity_detail_base_url . '&attempt=' . rawurlencode( (string) $latest_activity['id'] ) . '&reference=' . rawurlencode( (string) $latest_activity['correlation_id'] ); ?>
 										<?php
-										// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
-										echo \RAN\Admin\Component\StatusBadge::for_intent(
+										\RAN\Admin\Component\StatusBadge::print_intent(
 											(string) ( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ),
 											(string) $badge_intents[ $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ],
 											array(
@@ -594,7 +591,6 @@ $policy_labels = array(
 												'class' => 'ran-booster-deployment-state ran-booster-deployment-state--' . (string) $latest_activity['state'],
 											)
 										);
-										// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 										?>
 										<a href="<?php echo esc_url( $active_detail_url ); ?>"><?php esc_html_e( 'View details', 'ran-booster' ); ?></a>
 									<?php } else { ?>

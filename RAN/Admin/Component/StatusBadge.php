@@ -80,4 +80,22 @@ final class StatusBadge {
 
 		return '<span class="' . esc_attr( $classes ) . '" data-ran-booster-badge data-ran-booster-badge-intent="' . esc_attr( $intent ) . '"' . $extra . '>' . esc_html( $label ) . '</span>';
 	}
+
+	/**
+	 * Prints the Badge markup for a tone. The markup is escaped by markup().
+	 *
+	 * @param array<string,string> $attributes Extra attributes: data-*, role, class or hidden.
+	 */
+	public static function print_tone( string $label, string $tone = 'neutral', array $attributes = array() ): void {
+		echo self::markup( $label, $tone, $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- markup() escapes the label, tone and attributes.
+	}
+
+	/**
+	 * Prints the Badge markup for a public intent. The markup is escaped by for_intent().
+	 *
+	 * @param array<string,string> $attributes Extra attributes: data-*, role, class or hidden.
+	 */
+	public static function print_intent( string $label, string $intent, array $attributes = array() ): void {
+		echo self::for_intent( $label, $intent, $attributes ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- for_intent() escapes the label, intent and attributes.
+	}
 }

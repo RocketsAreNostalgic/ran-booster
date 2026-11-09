@@ -151,23 +151,17 @@ $render_portability_extension      = static function ( string $hook, string $ste
 										<strong class="ran-booster-portability__credential-name"><?php echo esc_html( $label ); ?></strong>
 										<span class="screen-reader-text"><?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> </span>
 										<?php
-										// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
-										echo \RAN\Admin\Component\StatusBadge::for_intent( $provider_label, 'none', array( 'class' => 'ran-booster-portability__credential-provider' ) );
-										// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+										\RAN\Admin\Component\StatusBadge::print_intent( $provider_label, 'none', array( 'class' => 'ran-booster-portability__credential-provider' ) );
 										?>
 										<?php if ( '' !== $kind_label ) : ?>
 											<span class="screen-reader-text"><?php esc_html_e( 'Credential type:', 'ran-booster' ); ?> </span>
 											<?php
-											// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
-											echo \RAN\Admin\Component\StatusBadge::for_intent( $kind_label, 'none', array( 'class' => 'ran-booster-portability__credential-kind' ) );
-											// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+											\RAN\Admin\Component\StatusBadge::print_intent( $kind_label, 'none', array( 'class' => 'ran-booster-portability__credential-kind' ) );
 											?>
 										<?php endif; ?>
 										<?php if ( ! $available ) : ?>
 											<?php
-											// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
-											echo \RAN\Admin\Component\StatusBadge::for_intent( __( 'Unavailable for transfer', 'ran-booster' ), 'none' );
-											// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
+											\RAN\Admin\Component\StatusBadge::print_intent( __( 'Unavailable for transfer', 'ran-booster' ), 'none' );
 											?>
 										<?php endif; ?>
 									</span>

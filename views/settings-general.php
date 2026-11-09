@@ -183,8 +183,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 						<label id="ran-booster-hide-github-label" class="ran-booster-settings__switch-label" for="ran-booster-hide-github"><?php esc_html_e( 'Hide GitHub UI', 'ran-booster' ); ?></label>
 						<div class="ran-booster-settings__switch-row"><span data-ran-booster-ui-switch="general-preference"><label class="ran-booster-settings__switch" data-ran-booster-ui-switch-fallback for="ran-booster-hide-github"><input id="ran-booster-hide-github" type="checkbox" role="switch" aria-labelledby="ran-booster-hide-github-label" aria-describedby="ran-booster-hide-github-help<?php echo null === $field_error( 'hide_github' ) ? '' : ' ran-booster-hide-github-error'; ?>" name="ran_booster[preferences][hide_github]" value="1"<?php checked( true, $hide_display_value ); ?><?php disabled( $hide_locked ); ?><?php echo null === $field_error( 'hide_github' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span></label><span data-ran-booster-ui-switch-mount></span></span>
 						<?php
-						// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
-						echo \RAN\Admin\Component\StatusBadge::for_intent(
+						\RAN\Admin\Component\StatusBadge::print_intent(
 							$hide_confirmed ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ),
 							$hide_confirmed ? 'stable' : 'none',
 							array(
@@ -192,7 +191,6 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 								'role' => 'status',
 							)
 						);
-						// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 						?>
 																																																																																																			</div>
 				<p id="ran-booster-hide-github-help" class="description"><?php echo esc_html( $source_labels[ $hide['source'] ] ?? __( 'Unknown source', 'ran-booster' ) ); ?>. <?php echo esc_html( $visibility_reasons[ $github_visibility['reason'] ] ?? ( $github_visibility['hidden'] ? __( 'GitHub navigation is currently hidden.', 'ran-booster' ) : __( 'GitHub navigation remains available.', 'ran-booster' ) ) ); ?></p>
@@ -233,8 +231,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 					<div><label id="ran-booster-self-update-discovery-label" class="ran-booster-settings__switch-label" for="ran-booster-self-update-discovery"><?php esc_html_e( 'Check for Booster updates', 'ran-booster' ); ?></label>
 					<div class="ran-booster-settings__switch-row"><span data-ran-booster-ui-switch="general-preference"><label class="ran-booster-settings__switch" data-ran-booster-ui-switch-fallback for="ran-booster-self-update-discovery"><input id="ran-booster-self-update-discovery" type="checkbox" role="switch" aria-labelledby="ran-booster-self-update-discovery-label" aria-describedby="ran-booster-self-update-discovery-help<?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' ran-booster-self-update-discovery-error'; ?>" name="ran_booster[preferences][self_update_discovery]" value="1"<?php checked( '1', $general_attempted['self_update_discovery'] ?? ( $discovery['value'] ? '1' : '0' ) ); ?><?php disabled( $discovery['locked'] ); ?><?php echo null === $field_error( 'self_update_discovery' ) ? '' : ' aria-invalid="true"'; ?>><span class="ran-booster-settings__switch-control" aria-hidden="true"></span></label><span data-ran-booster-ui-switch-mount></span></span>
 					<?php
-					// phpcs:disable WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value.
-					echo \RAN\Admin\Component\StatusBadge::for_intent(
+					\RAN\Admin\Component\StatusBadge::print_intent(
 						$discovery['value'] ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ),
 						$discovery['value'] ? 'stable' : 'none',
 						array(
@@ -242,7 +239,6 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 							'role' => 'status',
 						)
 					);
-					// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 					?>
 					</div></div>
 				</div>

@@ -200,8 +200,9 @@ final class AdminAssetContractTest extends TestCase {
 			'ran-booster-portability__flow'       => 'Declared with the panel profile.',
 		);
 
-		$offenders = array();
-		foreach ( glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE ) as $file ) {
+		$offenders   = array();
+		$stylesheets = glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE );
+		foreach ( false === $stylesheets ? array() : $stylesheets as $file ) {
 			$css = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
 			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
 			if ( ! preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {

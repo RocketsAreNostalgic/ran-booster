@@ -75,17 +75,19 @@
 	opacity: 0.58;
 }
 
+/* Steps reflow by the list's own usable width, never below one readable column. */
 .ran-booster-admin .ran-booster-webhook-steps {
+	--ran-booster-step-min-inline-size: 208px;
+
 	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
+	grid-template-columns: repeat(
+		auto-fit,
+		minmax(min(100%, var(--ran-booster-step-min-inline-size)), 1fr)
+	);
 	gap: var(--ran-booster-space-12);
 	margin: 0 0 var(--ran-booster-space-18);
 	padding: 0;
 	list-style: none;
-}
-
-.ran-booster-admin .ran-booster-repository-release-lifecycle {
-	grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .ran-booster-admin .ran-booster-repository-release-section__header {
@@ -104,6 +106,10 @@
 		)
 		minmax(0, 1fr);
 	column-gap: var(--ran-booster-space-10);
+
+	/* Rows pack under the heading; spare height from taller neighbours stays below the text. */
+	grid-template-rows: auto 1fr;
+	align-content: start;
 	min-inline-size: 0;
 	padding: var(--ran-booster-space-12);
 	border: 1px solid var(--ran-booster-divider);
@@ -133,6 +139,7 @@
 
 .ran-booster-admin .ran-booster-webhook-step strong {
 	display: block;
+	overflow-wrap: break-word;
 	color: var(--ran-booster-text);
 }
 
@@ -230,10 +237,6 @@
 }
 
 @media screen and (max-width: 782px) {
-	.ran-booster-admin .ran-booster-webhook-steps {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
 	.ran-booster-admin .ran-booster-repository-webhook-management__actions {
 		align-items: stretch;
 		flex-direction: column;

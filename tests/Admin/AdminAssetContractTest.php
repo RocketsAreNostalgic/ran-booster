@@ -408,13 +408,14 @@ final class AdminAssetContractTest extends TestCase {
 			$webhook_management
 		);
 		self::assertStringContainsString(
-			".ran-booster-admin .ran-booster-webhook-steps {\n\tdisplay: grid;\n\tgrid-template-columns: repeat(4, minmax(0, 1fr));",
+			"\tdisplay: grid;\n\tgrid-template-columns: repeat(\n\t\tauto-fit,\n\t\tminmax(min(100%, var(--ran-booster-step-min-inline-size)), 1fr)\n\t);",
 			$webhook_management
 		);
-		self::assertStringContainsString(
-			".ran-booster-admin .ran-booster-repository-release-lifecycle {\n\tgrid-template-columns: repeat(3, minmax(0, 1fr));",
-			$webhook_management
-		);
+		self::assertStringContainsString( '--ran-booster-step-min-inline-size: 208px;', $webhook_management );
+		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-webhook-steps\s*\{[^}]*repeat\(\s*[34]\s*,/', $webhook_management );
+		self::assertStringNotContainsString( '.ran-booster-repository-release-lifecycle {', $webhook_management );
+		self::assertDoesNotMatchRegularExpression( '/max-width: 782px\)\s*\{\s*\.ran-booster-admin \.ran-booster-webhook-steps/', $webhook_management );
+		self::assertStringContainsString( "grid-template-rows: auto 1fr;\n\talign-content: start;", $webhook_management );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-ok > span {', $webhook_management );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-warning > span {', $webhook_management );
 		self::assertStringContainsString(

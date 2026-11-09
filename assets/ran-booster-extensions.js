@@ -47,7 +47,8 @@
 		}
 	});
 
-	// Install and Activate submit once and show their pending label.
+	// Install and Activate submit once, show their pending label and
+	// announce it through the shared helper.
 	document.addEventListener('submit', function (event) {
 		const form = event.target;
 
@@ -63,14 +64,15 @@
 		const pending = button?.getAttribute('data-pending');
 
 		form.setAttribute('aria-busy', 'true');
-		form.setAttribute('role', 'status');
-		form.setAttribute('aria-live', 'polite');
 		if (button) {
 			button.disabled = true;
 		}
 		if (button && pending) {
 			button.setAttribute('aria-label', pending);
 			button.textContent = pending;
+		}
+		if (pending && typeof window.ranBoosterAnnounce === 'function') {
+			window.ranBoosterAnnounce(pending, 'polite');
 		}
 	});
 })();

@@ -853,10 +853,11 @@ class Booster {
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {
 			// More Details opens its server-rendered section in the shared Dialog.
 			$extensions_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extensions.js';
+			$this->register_announce_script();
 			wp_enqueue_script(
 				'ran-booster-extensions',
 				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-extensions.js',
-				array( 'ran-booster-dialog' ),
+				array( 'ran-booster-dialog', 'ran-booster-announce' ),
 				$this->asset_version( $extensions_script_path ),
 				true
 			);

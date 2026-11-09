@@ -44,7 +44,11 @@ function install({ helper = true, opened = true } = {}) {
 					content,
 			})[id] ?? null,
 	};
-	const window = {};
+	const spoken = [];
+	const window = {
+		ranBoosterAnnounce: (message, politeness) =>
+			spoken.push({ message, politeness }),
+	};
 	if (helper) {
 		window.ranBoosterOpenDialog = (...args) => {
 			calls.push(args);
@@ -67,7 +71,7 @@ function install({ helper = true, opened = true } = {}) {
 		return prevented;
 	}
 
-	return { listeners, calls, link, content, click };
+	return { listeners, calls, link, content, click, spoken };
 }
 
 test('a plain activation opens the section content in the shared Dialog', () => {
@@ -109,7 +113,7 @@ test('without the helper or an opened dialog the fragment link follows natively'
 	assert.equal(declined.calls.length, 1);
 });
 
-test('an extension action submits once and shows its pending label', () => {
+test('an extension action submits once, shows its pending label and announces it', () => {
 	const page = install();
 	const button = element({ 'data-pending': 'Installing…' });
 	button.textContent = 'Install';
@@ -135,8 +139,14 @@ test('an extension action submits once and shows its pending label', () => {
 	assert.equal(button.textContent, 'Installing…');
 	assert.equal(button.getAttribute('aria-label'), 'Installing…');
 	assert.equal(form.getAttribute('aria-busy'), 'true');
+	assert.equal(form.hasAttribute('role'), false);
+	assert.equal(form.hasAttribute('aria-live'), false);
+	assert.deepEqual(page.spoken, [
+		{ message: 'Installing…', politeness: 'polite' },
+	]);
 	submit();
 	assert.equal(prevented, 1);
+	assert.equal(page.spoken.length, 1, 'a repeated submit is not announced');
 
 	const other = element({}, { matches: () => false });
 	page.listeners.get('submit')({ target: other });

@@ -255,16 +255,15 @@ final class AdminAssetContractTest extends TestCase {
 		$shared = substr( $primitives, $start, $end - $start );
 
 		$allowed = array(
-			'ran-booster-data-table'              => 'Table inside the rounded data-table-wrap.',
-			'ran-booster-extension-details__tabs' => 'Tab header pills share the tab strip, not a frame.',
-			'ran-booster-panel'                   => 'Panel radius is declared with its card profile.',
-			'ran-booster-card'                    => 'Native Card fallback declares the card radius.',
-			'ran-booster-summary-grid'            => 'Summary grid declares its own radius.',
-			'ran-booster-ui-disclosure'           => 'Public Disclosure fallback uses the WordPress UI radius.',
-			'ran-booster-provider-section'        => 'Provider sections are Cards with their own profile.',
-			'ran-booster-provider__footer'        => 'Overview footer is a Card region.',
-			'ran-booster-onboarding__storage'     => 'Declared with the panel profile.',
-			'ran-booster-portability__flow'       => 'Declared with the panel profile.',
+			'ran-booster-data-table'          => 'Table inside the rounded data-table-wrap.',
+			'ran-booster-panel'               => 'Panel radius is declared with its card profile.',
+			'ran-booster-card'                => 'Native Card fallback declares the card radius.',
+			'ran-booster-summary-grid'        => 'Summary grid declares its own radius.',
+			'ran-booster-ui-disclosure'       => 'Public Disclosure fallback uses the WordPress UI radius.',
+			'ran-booster-provider-section'    => 'Provider sections are Cards with their own profile.',
+			'ran-booster-provider__footer'    => 'Overview footer is a Card region.',
+			'ran-booster-onboarding__storage' => 'Declared with the panel profile.',
+			'ran-booster-portability__flow'   => 'Declared with the panel profile.',
 		);
 
 		$offenders   = array();

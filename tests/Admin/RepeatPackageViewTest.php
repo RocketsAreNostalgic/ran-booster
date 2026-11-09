@@ -271,6 +271,17 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( '>Repository configuration</h3>', $html );
 		self::assertStringContainsString( 'ran-booster-settings-fields', $html );
 		self::assertStringNotContainsString( 'class="form-table"', $html );
+		$trust_guidance = 'Only install Git provider integrations you trust: an active Git provider can read its saved credentials. Booster does not authenticate a third-party publisher.';
+		self::assertSame( 1, substr_count( $html, $trust_guidance ), 'The trust guidance renders once.' );
+		self::assertStringContainsString( '<div class="notice notice-info inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>' . $trust_guidance . '</p></div>', $html );
+		$credential_position = strpos( $html, 'id="ran-booster-credential-id"' );
+		$trust_position      = strpos( $html, $trust_guidance );
+		$locator_position    = strpos( $html, 'name="ran_booster[repository]"' );
+		self::assertIsInt( $credential_position );
+		self::assertIsInt( $trust_position );
+		self::assertIsInt( $locator_position );
+		self::assertTrue( $credential_position < $trust_position, 'The trust Notice follows the access field.' );
+		self::assertTrue( $trust_position < $locator_position, 'The trust Notice precedes the repository locator.' );
 		$repository_position = strpos( $html, 'id="ran-booster-package-configuration-heading"' );
 		$advanced_position   = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure"' );
 		$operation_position  = strpos( $html, 'id="ran-booster-package-operation-heading"' );

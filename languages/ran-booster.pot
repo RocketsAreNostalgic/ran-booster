@@ -8081,10 +8081,6 @@ msgstr ""
 msgid "Private repos require a PAT with appropriate access."
 msgstr ""
 
-#: views/packages/fields/credential.php:44
-msgid "Only install Git provider integrations you trust: an active Git provider can read its saved credentials. Booster does not authenticate a third-party publisher."
-msgstr ""
-
 #: views/packages/fields/deployment-policy.php:30
 msgid "NOTICE: Editing this package’s files on this site? Choose Disabled."
 msgstr ""
@@ -8513,6 +8509,10 @@ msgstr ""
 
 #: views/packages/repository-configuration.php:18
 msgid "Repository configuration"
+msgstr ""
+
+#: views/packages/repository-configuration.php:26
+msgid "Only install Git provider integrations you trust: an active Git provider can read its saved credentials. Booster does not authenticate a third-party publisher."
 msgstr ""
 
 #: views/packages/source-choices.php:36

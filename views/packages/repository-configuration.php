@@ -23,6 +23,7 @@ $package_repository_description = isset( $package_repository_description ) && is
 			<div class="ran-booster-settings-fields">
 				<?php require __DIR__ . '/fields/provider.php'; ?>
 				<?php require __DIR__ . '/fields/credential.php'; ?>
+				<div class="notice notice-info inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Only install Git provider integrations you trust: an active Git provider can read its saved credentials. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 				<?php require __DIR__ . '/fields/repository.php'; ?>
 			</div>
 		</fieldset>

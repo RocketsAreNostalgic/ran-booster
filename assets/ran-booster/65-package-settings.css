@@ -331,6 +331,12 @@
 	grid-column: 1 / -1;
 }
 
+/* Guidance that applies to the whole row spans both field columns. */
+.ran-booster-admin .ran-booster-settings-fields__notice {
+	grid-column: 1 / -1;
+	margin: 0;
+}
+
 .ran-booster-admin .ran-booster-settings-field > label {
 	display: block;
 	margin-block-end: var(--ran-booster-space-6);

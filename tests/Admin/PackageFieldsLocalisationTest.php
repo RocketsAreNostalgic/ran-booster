@@ -29,7 +29,6 @@ final class PackageFieldsLocalisationTest extends TestCase {
 				'Repository access'           => 'Accès au dépôt',
 				'Default / public repository' => 'Dépôt public par défaut',
 				'Private repos require a PAT with appropriate access.' => 'Les dépôts privés nécessitent un PAT avec l\'accès approprié.',
-				'Only install Git provider integrations you trust: an active Git provider can read its saved credentials. Booster does not authenticate a third-party publisher.' => 'N\'installez que des intégrations fiables.',
 				' — Git provider unavailable' => ' — Fournisseur indisponible',
 			),
 		);

@@ -258,7 +258,7 @@ Accepted answers (D1, D2 and D4 applied; D3 left to the Shell owner):
 - **D4:** 24px between Cards, as in Jetpack, up from 20px. This is the visible
   change on every page that stacks Cards.
 
-Card inline inset is 24px and the block-start inset is 24px. Block-end is 32px: a frame reads balanced when its bottom is slightly heavier than its sides, and the heading's line box already adds optical space above it. This diverges deliberately from Jetpack's 16px, which relies on a divider under its Card headers; if Booster adds that divider later, revisit the block insets together. Two measured exceptions remain: Overview cards in a row stretch to the tallest, and Extensions keeps the WordPress plugin-card interior (21px). Heading size and
+Card inline inset is 24px and the block-start inset is 24px. Block-end is 32px: a frame reads balanced when its bottom is slightly heavier than its sides, and the heading's line box already adds optical space above it. This diverges deliberately from Jetpack's 16px, which relies on a divider under its Card headers; if Booster adds that divider later, revisit the block insets together. Two measured exceptions remain: Overview cards in a row stretch to the tallest, and Extensions keeps the WordPress plugin-card footer band, whose bottom padding stays at the native 20px. Extensions heading inset and the grid gap follow the Card tokens. At 782px and 375px only the inline inset shrinks; the top and bottom insets stay the same. Heading size and
 weight (Jetpack 20px/500) belong to the separate typescale work in #726.
 
 Rules that follow from the table:

@@ -128,8 +128,9 @@ msgid "Name"
 msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:100
-#: views/provider/modals.php:56
-msgid "Credential type"
+#: views/portability-review.php:255
+#: views/portability.php:241
+msgid "Type"
 msgstr ""
 
 #: RAN/Admin/Component/ProviderManagementTableRenderer.php:106
@@ -8845,11 +8846,6 @@ msgid "Packages in this import review"
 msgstr ""
 
 #: views/portability-review.php:255
-#: views/portability.php:241
-msgid "Type"
-msgstr ""
-
-#: views/portability-review.php:255
 msgid "Target state"
 msgstr ""
 
@@ -9811,6 +9807,10 @@ msgstr ""
 
 #: views/provider/modals.php:54
 msgid "e.g. Deployment access"
+msgstr ""
+
+#: views/provider/modals.php:56
+msgid "Credential type"
 msgstr ""
 
 #: views/provider/modals.php:62

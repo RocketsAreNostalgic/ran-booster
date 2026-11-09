@@ -97,7 +97,7 @@ final class ProviderManagementTableRenderer {
 				),
 				array(
 					'key'     => 'kind',
-					'label'   => __( 'Credential type', 'ran-booster' ),
+					'label'   => __( 'Type', 'ran-booster' ),
 					'sort'    => 'kind',
 					'actions' => false,
 				),

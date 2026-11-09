@@ -29,7 +29,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-provider-management-table--access', $html );
 		self::assertStringContainsString( '<th scope="col">', $html );
 		self::assertStringContainsString( '<caption class="screen-reader-text">Credentials</caption>', $html );
-		self::assertStringContainsString( '>Credential type</a>', $html );
+		self::assertStringContainsString( '>Type</a>', $html );
 		self::assertStringContainsString( 'data-label="Used by"', $html );
 		self::assertStringContainsString( '<td class="ran-booster-provider-management-table__actions" data-label="Actions"><div class="ran-booster-actions">', $html );
 		self::assertStringContainsString( '<span class="screen-reader-text">Actions</span>', $html );

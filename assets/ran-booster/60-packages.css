@@ -55,10 +55,6 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-package-list-search label {
-	white-space: nowrap;
-}
-
 .ran-booster-admin .ran-booster-package-list-search input[type="search"] {
 	flex: 1 1 200px;
 	inline-size: min(240px, 100%);

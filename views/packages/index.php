@@ -183,8 +183,9 @@ $policy_labels = array(
 				<?php } ?>
 			<?php } ?>
 			<p class="search-box">
-				<label for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search"><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'Search managed %s', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?></label>
-				<input id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search" class="wp-filter-search" type="search" name="s" value="<?php echo esc_attr( $package_list_state['search'] ); ?>">
+				<?php $package_search_label = sprintf( /* translators: %s is plugins or themes. */ __( 'Search managed %s', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ); ?>
+				<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search"><?php echo esc_html( $package_search_label ); ?></label>
+				<input id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search" class="wp-filter-search" type="search" name="s" value="<?php echo esc_attr( $package_list_state['search'] ); ?>" placeholder="<?php echo esc_attr( $package_search_label ); ?>">
 				<button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button>
 			</p>
 		</form>

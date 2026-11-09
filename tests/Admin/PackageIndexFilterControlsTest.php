@@ -84,6 +84,9 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		self::assertStringContainsString( 'name="page" value="' . $page_slug . '"', $html );
 		self::assertStringContainsString( 'type="hidden" name="s" value="Release Plugin"', $html );
 		self::assertStringContainsString( 'type="search" name="s" value="Release Plugin"', $html );
+		// The search purpose sits inside the empty field, and the associated label stays for assistive technology.
+		self::assertStringContainsString( '<label class="screen-reader-text" for="ran-booster-' . $type . '-search">Search managed ' . $plural . '</label>', $html );
+		self::assertStringContainsString( 'id="ran-booster-' . $type . '-search" class="wp-filter-search" type="search" name="s" value="Release Plugin" placeholder="Search managed ' . $plural . '"', $html );
 		self::assertMatchesRegularExpression( '/name="provider"[\s\S]*value="gh"\s+selected="selected"[\s\S]*>GitHub</', $html );
 		self::assertMatchesRegularExpression( '/name="source"[\s\S]*value="release_asset"\s+selected="selected"/', $html );
 		self::assertMatchesRegularExpression( '/name="policy"[\s\S]*value="automatic"\s+selected="selected"/', $html );

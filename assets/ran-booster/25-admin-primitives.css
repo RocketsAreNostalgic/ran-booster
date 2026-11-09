@@ -206,11 +206,14 @@
  * (ran-booster-wp-ui-static.css) and is never mounted. It keeps core's
  * .notice classes, which core relocates and dismisses by, but core's
  * unlayered .notice frame outranks the wp-ui layer: revert-layer hands each
- * frame property back to the Notice. The Notice grid also outranks the user
- * agent's [hidden] rule, so hiding is restated here.
+ * frame property back to the Notice. Inside a Card, the wp-ui box-sizing
+ * utility makes the root inherit the Card content's content-box, so the
+ * Notice's own border-box is restated. The Notice grid also outranks the
+ * user agent's [hidden] rule, so hiding is restated here.
  */
 
 .ran-booster-admin .notice.ran-wp-ui-notice {
+	box-sizing: border-box;
 	padding: revert-layer;
 	border: revert-layer;
 	border-radius: revert-layer;

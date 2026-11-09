@@ -60,7 +60,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 				</div>
 			</div>
 			<?php if ( $public_lookup_profile['stale'] ) { ?>
-				<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The configured public lookup profile is missing. Choose Anonymous or another saved profile, then save the preference.', 'ran-booster' ); ?></p></div></div>
+				<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The configured public lookup profile is missing. Choose Anonymous or another saved profile, then save the preference.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 			<?php } ?>
 		</div>
 	</div>

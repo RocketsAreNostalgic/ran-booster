@@ -250,8 +250,8 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 <h2 class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is the item being edited. */ __( 'Edit %s', 'ran-booster' ), $package->name ) ); ?></h2>
 
 <?php if ( $provider_unavailable ) { ?>
-	<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error">
-		<div data-ran-booster-ui-notice-content>
+	<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error">
+		<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 		<p><strong><?php esc_html_e( 'Git provider unavailable.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This package remains linked but cannot be edited or deployed until its Git provider is registered again.', 'ran-booster' ); ?></p>
 		<p>
 			<?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> <code><?php echo esc_html( $stored_provider_code ); ?></code><br>
@@ -259,6 +259,7 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 			<?php esc_html_e( 'Git provider repository ID:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) ( $package->get_provider_repository_id() ?? '' ) ); ?></code>
 		</p>
 		</div>
+		<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?>
 	</div>
 <?php } ?>
 
@@ -271,10 +272,11 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 					<p class="ran-booster-section__description"><?php esc_html_e( 'The package remains linked, but its update source controls require an add-on that is not currently available.', 'ran-booster' ); ?></p>
 				</header>
 				<div class="ran-booster-settings-section__body">
-					<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
-						<div data-ran-booster-ui-notice-content>
+					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
+						<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 						<p><?php esc_html_e( 'Booster will not reinterpret this package as a branch deployment. Restore the update source add-on to manage updates or unlink the package.', 'ran-booster' ); ?></p>
 						</div>
+						<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
 					</div>
 					<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
 						<a class="button" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>

@@ -247,7 +247,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 			<?php } else { ?>
 				<?php $native_recovery = $github_selection['recovery'] ?? null; ?>
 				<?php if ( 'decision_required' !== $selection_status['state'] ) { ?>
-					<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content>
+					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 						<h3>
 						<?php
 						echo esc_html(
@@ -314,7 +314,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 						<?php if ( ! $github_selection['available'] ) { ?>
 							<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available and Bitbucket is unaffected.', 'ran-booster' ); ?></p>
 						<?php } ?>
-					</div></div>
+					</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 				<?php } elseif ( ! $github_selection['available'] ) { ?>
 					<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available and Bitbucket is unaffected.', 'ran-booster' ); ?></p>
 				<?php } ?>
@@ -371,9 +371,9 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 	<?php } ?>
 
 	<?php if ( $storage_unavailable && ! $is_repository_detail ) { ?>
-		<div class="notice notice-error inline ran-booster-provider__notice" data-ran-booster-provider-storage-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content>
+		<div class="notice notice-error inline ran-booster-provider__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-provider-storage-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<p><strong><?php esc_html_e( 'Saved credentials are unavailable.', 'ran-booster' ); ?></strong> <a href="<?php echo esc_url( ( function_exists( 'is_network_admin' ) && is_network_admin() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster-settings#ran-booster-storage' ); ?>"><?php esc_html_e( 'Review Secure credential storage in Settings', 'ran-booster' ); ?></a></p>
-		</div></div>
+		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 	<?php } ?>
 
 	<?php if ( $is_repository_detail ) { ?>
@@ -403,7 +403,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 			);
 			?>
 		<?php } else { ?>
-			<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div></div>
+			<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 		<?php } ?>
 	<?php } elseif ( 'overview' === $provider_view ) { ?>
 		<?php if ( ! empty( $provider['credential_kinds'] ) ) { ?>
@@ -550,10 +550,11 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 								<p><?php esc_html_e( 'Release workflow observations are incomplete because some package details are omitted.', 'ran-booster' ); ?></p>
 							<?php } ?>
 							<?php if ( $webhook_assistance_provider_capable && ! $webhook_assistance_site_ready ) { ?>
-								<div class="notice <?php echo esc_attr( $webhook_has_hard_failure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo $webhook_has_hard_failure ? 'error' : 'warning'; ?>">
-									<div data-ran-booster-ui-notice-content>
+								<div class="notice <?php echo esc_attr( $webhook_has_hard_failure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice ran-wp-ui-notice ran-wp-ui-box-sizing <?php echo esc_attr( $webhook_has_hard_failure ? 'is-error' : 'is-warning' ); ?>" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo $webhook_has_hard_failure ? 'error' : 'warning'; ?>">
+									<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 										<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?></p>
 									</div>
+									<?php \RAN\Admin\Component\NoticeIcon::print_intent( $webhook_has_hard_failure ? 'error' : 'warning' ); ?>
 								</div>
 							<?php } ?>
 							<div class="ran-booster-provider-task-actions">
@@ -574,10 +575,11 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 									<p class="ran-booster-section__description"><?php esc_html_e( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', 'ran-booster' ); ?></p>
 								</div>
 							</div>
-								<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
-									<div data-ran-booster-ui-notice-content>
+								<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
+									<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 										<p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p>
 									</div>
+									<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
 								</div>
 							<dl class="ran-booster-webhook-endpoint ran-booster-summary-grid">
 								<div>
@@ -645,7 +647,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 									);
 									?>
 								<?php } else { ?>
-									<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div></div>
+									<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 								<?php } ?>
 							<?php } elseif ( array() !== $repository_table_rows ) { ?>
 								<div class="ran-booster-provider-repository-tools">

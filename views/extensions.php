@@ -55,7 +55,8 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 	</header>
 	<div class="ran-booster-page-shell__body ran-booster-extensions__body">
 		<?php if ( null !== $result_extension && isset( $result_messages[ $result ] ) ) : ?>
-			<div class="notice inline <?php echo in_array( $result, array( 'installed', 'activated' ), true ) ? 'notice-success' : 'notice-warning'; ?>" role="status" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo in_array( $result, array( 'installed', 'activated' ), true ) ? 'success' : 'warning'; ?>"><div data-ran-booster-ui-notice-content><p><?php echo esc_html( $result_messages[ $result ] ); ?></p></div></div>
+			<?php $result_intent = in_array( $result, array( 'installed', 'activated' ), true ) ? 'success' : 'warning'; ?>
+			<div class="notice inline notice-<?php echo esc_attr( $result_intent ); ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $result_intent ); ?>" role="status" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $result_intent ); ?>"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $result_messages[ $result ] ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( $result_intent ); ?></div>
 		<?php endif; ?>
 		<div id="the-list" class="plugin-group ran-booster-extensions__grid">
 		<?php foreach ( $extensions as $extension ) : ?>

@@ -2065,7 +2065,7 @@ final class TroubleshootingViewTest extends TestCase {
 				ob_start();
 				require dirname( __DIR__, 2 ) . '/views/provider.php';
 				$html = (string) ob_get_clean();
-				self::assertMatchesRegularExpression( '~<div class="notice notice-' . $intent . ' inline ran-booster-push-deploy__notice" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . $intent . '">\s*<div data-ran-booster-ui-notice-content>\s*<p><strong>Webhook delivery is not ready\.</strong> ' . preg_quote( $reason, '~' ) . '</p>\s*</div>\s*</div>~', $html );
+				self::assertMatchesRegularExpression( '~<div class="notice notice-' . $intent . ' inline ran-booster-push-deploy__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent . '" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . $intent . '">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p><strong>Webhook delivery is not ready\.</strong> ' . preg_quote( $reason, '~' ) . '</p>\s*</div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg>\s*</div>~', $html );
 				self::assertStringNotContainsString( 'unknown-canary', $html );
 			}
 		}
@@ -2827,7 +2827,7 @@ final class TroubleshootingViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
 			$html = (string) ob_get_clean();
-			self::assertMatchesRegularExpression( '~<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div data-ran-booster-ui-notice-content>\s*<p><strong>Webhook signatures authorize deployment; they do not protect your host from traffic\.</strong> Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback\. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity\. <a href="https://example\.test/guide\?one=1&amp;two=&quot;safe&quot;">Read the webhook operations guide</a>\.</p>\s*</div>\s*</div>~', $html );
+			self::assertMatchesRegularExpression( '~<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p><strong>Webhook signatures authorize deployment; they do not protect your host from traffic\.</strong> Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback\. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity\. <a href="https://example\.test/guide\?one=1&amp;two=&quot;safe&quot;">Read the webhook operations guide</a>\.</p>\s*</div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg>\s*</div>~', $html );
 		}
 		foreach ( array( 'status', 'repositories' ) as $task ) {
 			$provider_task = $task;

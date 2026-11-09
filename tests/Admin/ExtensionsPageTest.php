@@ -365,7 +365,7 @@ final class ExtensionsPageTest extends TestCase {
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Version' => '0.1.0-beta.17' );
 		$output = $this->render();
 		self::assertStringContainsString( 'Extension installed. Activate it', $output );
-		self::assertStringContainsString( 'class="notice inline notice-success"', $output );
+		self::assertStringContainsString( 'class="notice inline notice-success ran-wp-ui-notice ran-wp-ui-box-sizing is-success"', $output );
 		$_GET['ran_booster_extension_id'] = '<script>alert(1)</script>';
 		$output                           = $this->render();
 		self::assertStringNotContainsString( 'Extension installed. Activate it', $output );
@@ -380,7 +380,7 @@ final class ExtensionsPageTest extends TestCase {
 		$_GET['ran_booster_extension_result'] = 'failed';
 		$output                               = $this->render();
 		self::assertStringContainsString( 'The extension could not be installed.', $output );
-		self::assertStringContainsString( 'class="notice inline notice-warning"', $output );
+		self::assertStringContainsString( 'class="notice inline notice-warning ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $output );
 		$_GET['ran_booster_extension_result'] = '<script>alert(1)</script>';
 		$output                               = $this->render();
 		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );
@@ -639,7 +639,7 @@ final class ExtensionsPageTest extends TestCase {
 		$GLOBALS['ran_booster_extensions_active_plugins'] = array( $plugin );
 		$output = $this->render();
 		self::assertStringContainsString( 'Extension activated.', $output );
-		self::assertStringContainsString( 'class="notice inline notice-success"', $output );
+		self::assertStringContainsString( 'class="notice inline notice-success ran-wp-ui-notice ran-wp-ui-box-sizing is-success"', $output );
 	}
 
 	public function test_denied_request_renders_nothing(): void {

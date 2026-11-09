@@ -103,7 +103,7 @@ $origin_labels = array(
 	<?php
 	if ( is_string( $deployment_activity['filter_notice'] ?? null ) ) {
 		?>
-		<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php echo esc_html( $deployment_activity['filter_notice'] ); ?></p></div></div><?php } ?>
+		<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $deployment_activity['filter_notice'] ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div><?php } ?>
 	<?php if ( $has_queued ) { ?>
 		<form method="post" data-ran-booster-activity-runner>
 			<?php wp_nonce_field( 'ran-booster-request-deployment-runner' ); ?>
@@ -112,7 +112,7 @@ $origin_labels = array(
 		</form>
 	<?php } ?>
 	<?php if ( $unavailable ) { ?>
-		<div class="notice notice-error inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Activity is temporarily unavailable.', 'ran-booster' ); ?></p></div></div>
+		<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Activity is temporarily unavailable.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 	<?php } elseif ( array() === $items && $has_cursor ) { ?>
 		<p data-ran-booster-activity-exhausted><?php esc_html_e( 'No older activity is available.', 'ran-booster' ); ?></p>
 	<?php } elseif ( array() === $items && ( '' !== $selected_provider || '' !== $selected_package ) ) { ?>

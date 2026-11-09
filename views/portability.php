@@ -79,7 +79,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 			<h4 id="ran-booster-portability-export-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h4>
 			<p><?php esc_html_e( 'Select only the saved credentials that should be copied. Credential permissions have not been assessed.', 'ran-booster' ); ?></p>
 			<?php if ( $portability_export_credentials_unavailable ) : ?>
-				<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load repository credential choices. You can still create a package-only Blueprint.', 'ran-booster' ); ?></p></div></div>
+				<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load repository credential choices. You can still create a package-only Blueprint.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 			<?php elseif ( array() === $portability_export_credential_groups ) : ?>
 				<p class="description"><?php esc_html_e( 'No saved repository credentials are available on this site.', 'ran-booster' ); ?></p>
 			<?php else : ?>

@@ -460,9 +460,12 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertCount( 1, $content );
 		$notice_children = $xpath->query( './*', $provider_notice );
 		self::assertNotFalse( $notice_children );
-		self::assertCount( 1, $notice_children );
+		// The static Notice description is followed only by its decorative error icon.
+		self::assertCount( 2, $notice_children );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(./*[2][local-name()="svg" and @class="ran-wp-ui-notice__icon" and @aria-hidden="true"])', $provider_notice ) );
 		$notice_content = $content->item( 0 );
 		self::assertInstanceOf( \DOMElement::class, $notice_content );
+		self::assertSame( 'ran-wp-ui-text is-body-md ran-wp-ui-notice__description', $notice_content->getAttribute( 'class' ) );
 		$paragraphs = $xpath->query( './p', $notice_content );
 		self::assertNotFalse( $paragraphs );
 		self::assertCount( 2, $paragraphs );
@@ -631,7 +634,7 @@ final class RepeatPackageViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
 			$html = (string) ob_get_clean();
-			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div data-ran-booster-ui-notice-content>\s*<p>Booster will not reinterpret this package as a branch deployment\..*?<\/p>\s*<\/div>\s*<\/div>/s', $html );
+			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p>Booster will not reinterpret this package as a branch deployment\..*?<\/p>\s*<\/div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>.*?<\/svg>\s*<\/div>/s', $html );
 		}
 	}
 

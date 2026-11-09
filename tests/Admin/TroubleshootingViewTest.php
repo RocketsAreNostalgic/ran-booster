@@ -188,7 +188,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub provider details', $html );
 		self::assertStringContainsString( 'GitHub replacement plugins detected', $html );
 		self::assertStringContainsString( 'Needs attention', $html );
-		self::assertStringContainsString( 'These are local configuration details. Use Diagnostics to check repository access.', $html );
+		self::assertSame( 1, substr_count( $html, 'These are local configuration details. Use Diagnostics to check repository access.' ) );
 		self::assertStringContainsString( '<summary aria-label="Technical details: GitHub">Technical details</summary>', $html );
 		foreach ( array( '<implementation>', '<revision>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );

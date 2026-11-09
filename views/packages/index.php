@@ -116,7 +116,7 @@ $policy_labels = array(
 
 <div class="ran-booster-package-intro">
 	<p class="ran-booster-page-heading__description">
-		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress.', 'ran-booster' ); ?>
+		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress. Deployments run only when an administrator requests one.', 'ran-booster' ); ?>
 	</p>
 
 	<?php require dirname( __DIR__ ) . '/notices.php'; ?>
@@ -442,7 +442,7 @@ $policy_labels = array(
 			} elseif ( \RAN\Deployment\DeploymentPolicy::AUTOMATIC === $deployment_policy ) {
 				$status_line = __( 'Signed repository pushes deploy automatically. Review setup if pushes are not arriving.', 'ran-booster' );
 			} else {
-				$status_line = __( 'Ready. Deployments run only when an administrator requests one.', 'ran-booster' );
+				$status_line = __( 'Ready.', 'ran-booster' );
 			}
 			$details_label = $release_managed
 				? __( 'Release details', 'ran-booster' )

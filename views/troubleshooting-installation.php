@@ -231,7 +231,6 @@ foreach ( $components as $component ) {
 <details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback>
 <summary aria-label="<?php echo esc_attr( $technical_details_label ); ?>"><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
 <div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
-<p><?php echo esc_html( isset( $component['Provider'] ) ? __( 'These are local configuration details. Use Diagnostics to check repository access.', 'ran-booster' ) : __( 'These are local configuration details.', 'ran-booster' ) ); ?></p>
 <dl class="ran-booster-troubleshooting__fields-list">
 		<?php
 		foreach ( $technical_fields as $label => $value ) {
@@ -316,5 +315,8 @@ foreach ( $components as $component ) {
 </div>
 	<?php } ?>
 </div></section>
+<?php } ?>
+<?php if ( array() !== $components ) { ?>
+<p><?php esc_html_e( 'These are local configuration details. Use Diagnostics to check repository access.', 'ran-booster' ); ?></p>
 <?php } ?>
 </section>

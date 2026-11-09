@@ -21,7 +21,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 			'warning' => 'medium',
 			'error'   => 'high',
 			'info'    => 'informational',
-			'future'  => '',
+			'future'  => 'none',
 		) as $tone => $intent ) {
 			ob_start();
 			$render->invoke(
@@ -32,9 +32,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 				)
 			);
 			$html = (string) ob_get_clean();
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Exact &lt;status&gt; &quot;quoted&quot;"', $html );
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-intent="' . $intent . '"', $html );
-			self::assertStringContainsString( '<span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--' . $tone . '">Exact &lt;status&gt; &quot;quoted&quot;</span><span data-ran-booster-ui-badge-mount></span>', $html );
+			self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $intent . '-intent" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '">Exact &lt;status&gt; &quot;quoted&quot;</span>', $html );
 		}
 	}
 
@@ -190,7 +188,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringNotContainsString( 'Git provider receiver', $html );
 		self::assertStringNotContainsString( 'Receiver ready.', $html );
 		self::assertStringContainsString( 'This is local history, not live Git provider state.', $html );
-		self::assertStringContainsString( 'ran-booster-badge--warning', $html );
+		self::assertStringContainsString( 'ran-wp-ui-badge is-medium-intent" data-ran-booster-badge data-ran-booster-badge-intent="medium"', $html );
 		self::assertStringContainsString( '<time datetime="2026-08-20T01:02:03Z">August 20, 2026</time>', $html );
 		self::assertStringContainsString( 'Repository details', $html );
 		self::assertStringContainsString( 'Provider access', $html );

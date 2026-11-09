@@ -483,9 +483,9 @@ $policy_labels = array(
 			</td>
 			<td class="ran-booster-package-row__summary">
 				<?php if ( is_array( $prominent_status ) ) { ?>
-					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $prominent_status['label'] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $badge_intents[ $prominent_status['tone'] ] ?? 'none' ); ?>"<?php echo $prominent_status_activity ? ' data-ran-booster-activity-badge' : ''; ?>><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $prominent_status['tone'] ); ?>"><?php echo esc_html( $prominent_status['label'] ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $prominent_status['label'], (string) ( $badge_intents[ $prominent_status['tone'] ] ?? 'none' ), $prominent_status_activity ? array( 'data-ran-booster-activity-badge' => '' ) : array() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<?php } elseif ( ! $release_managed ) { ?>
-					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="" data-ran-booster-ui-badge-intent="none" data-ran-booster-activity-badge hidden><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--neutral"></span><span data-ran-booster-ui-badge-mount></span></span>
+					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( '', 'none', array( 'data-ran-booster-activity-badge' => '', 'hidden' => '1' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<?php } ?>
 				<p class="ran-booster-package-row__management"><?php echo esc_html( $management_line ); ?></p>
 				<p class="ran-booster-package-row__status-line"><?php echo esc_html( $status_line ); ?></p>
@@ -572,7 +572,7 @@ $policy_labels = array(
 										<?php esc_html_e( 'Temporarily unavailable', 'ran-booster' ); ?>
 									<?php } elseif ( is_array( $latest_activity ) ) { ?>
 										<?php $active_detail_url = $activity_detail_base_url . '&attempt=' . rawurlencode( (string) $latest_activity['id'] ) . '&reference=' . rawurlencode( (string) $latest_activity['correlation_id'] ); ?>
-										<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $badge_intents[ $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ] ); ?>" data-ran-booster-activity-state><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ); ?> ran-booster-deployment-state ran-booster-deployment-state--<?php echo esc_attr( (string) $latest_activity['state'] ); ?>"><?php echo esc_html( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+										<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) ( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ), (string) $badge_intents[ $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ], array( 'data-ran-booster-activity-state' => '', 'class' => 'ran-booster-deployment-state ran-booster-deployment-state--' . (string) $latest_activity['state'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 										<a href="<?php echo esc_url( $active_detail_url ); ?>"><?php esc_html_e( 'View details', 'ran-booster' ); ?></a>
 									<?php } else { ?>
 										<?php esc_html_e( 'No activity recorded', 'ran-booster' ); ?>

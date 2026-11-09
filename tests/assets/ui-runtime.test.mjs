@@ -46,11 +46,11 @@ test('manifest identifies two canonical assets and separate page budgets', () =>
 	assert.match(entries.foundation, /^ran-booster-ui-foundation-[\w-]+\.js$/);
 	assert.match(entries.overlay, /^ran-booster-ui-overlay-[\w-]+\.js$/);
 	assert.ok(
-		foundation.length + adapter.length <= 167117,
+		foundation.length + adapter.length <= 156715,
 		'foundation and adapter raw'
 	);
 	assert.ok(
-		gzipSync(foundation).length + gzipSync(adapter).length <= 33592,
+		gzipSync(foundation).length + gzipSync(adapter).length <= 32387,
 		'foundation and adapter gzip sum'
 	);
 	assert.ok(overlay.length <= 320000, 'overlay raw');
@@ -86,7 +86,6 @@ test('host React loads the foundation once and overlay extends the same object',
 		const ui = globalThis.window.ranBoosterUI,
 			card = ui.CardRoot;
 		assert.deepEqual(Object.keys(ui).sort(), [
-			'Badge',
 			'Button',
 			'CardRoot',
 			'CollapsibleCard',
@@ -152,21 +151,6 @@ test('host React loads the foundation once and overlay extends the same object',
 			render(React.createElement(ui.CardRoot, null, 'Card content')),
 			/Card content/
 		);
-		assert.match(
-			render(
-				React.createElement(ui.Badge, { intent: 'stable' }, 'Ready')
-			),
-			/Ready/
-		);
-		const informational = render(
-			React.createElement(
-				ui.Badge,
-				{ intent: 'informational' },
-				'Pending'
-			)
-		);
-		assert.match(informational, /is-informational-intent/);
-		assert.match(informational, /Pending/);
 		const content = React.createElement(
 			ui.NoticeDescription,
 			{ render: React.createElement('div') },

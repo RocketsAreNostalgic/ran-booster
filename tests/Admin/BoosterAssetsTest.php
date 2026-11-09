@@ -556,7 +556,7 @@ final class BoosterAssetsTest extends TestCase {
 			self::assertLessThan( $translated_at, $registered_at );
 		}
 		self::assertSame(
-			array( 'ran-booster-enhanced-mutations', 'wp-i18n' ),
+			array( 'ran-booster-enhanced-mutations', 'wp-i18n', 'ran-booster-cards' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-packages']['dependencies']
 		);
 		self::assertStringEndsWith(

@@ -306,7 +306,6 @@ function fixture({
 		ranBoosterUI: runtime
 			? {
 					CardRoot: cardComponent ? 'CardRoot' : null,
-					Badge: 'Badge',
 					Button: 'Button',
 					Switch: 'Switch',
 					NoticeRoot: 'NoticeRoot',
@@ -383,19 +382,6 @@ function fixture({
 		return { form, nonce, host, button, mount };
 	}
 
-	function badge(parent = doc.body) {
-		const host = new Node('span'),
-			fallback = new Node('span'),
-			mount = new Node('span');
-		host.setAttribute('data-ran-booster-ui-badge', '');
-		host.setAttribute('role', 'status');
-		fallback.setAttribute('data-ran-booster-ui-badge-fallback', '');
-		mount.setAttribute('data-ran-booster-ui-badge-mount', '');
-		host.appendChild(fallback);
-		host.appendChild(mount);
-		parent.appendChild(host);
-		return { host, fallback, mount };
-	}
 	function generalSwitch({
 		scope = 'hide_github',
 		checked = false,
@@ -447,11 +433,6 @@ function fixture({
 			microtasks.shift()();
 		}
 	};
-	const publish = (host, label, intent) => {
-		host.setAttribute('data-ran-booster-ui-badge-label', label);
-		host.setAttribute('data-ran-booster-ui-badge-intent', intent);
-		emit('ran-booster:ui-badge-update', host);
-	};
 	return {
 		doc,
 		Node,
@@ -465,14 +446,12 @@ function fixture({
 		},
 		make,
 		presentation,
-		badge,
 		notice,
 		unmountOrder,
 		window,
 		run: () => vm.runInContext(source, context),
 		emit,
 		flush,
-		publish,
 		counts: () => ({ renders, unmounts, creates }),
 		flushTimers: () => {
 			while (timers.length) {

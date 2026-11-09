@@ -62,6 +62,13 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 	};
 	const window = {
 		document,
+		ranBoosterBadge: {
+			update(badge, label, intent) {
+				badge.textContent = label;
+				badge.setAttribute('data-ran-booster-badge-intent', intent);
+				badge.events.push({ label, intent });
+			},
+		},
 		...(enhanced ? { htmx: { process() {} } } : {}),
 		DOMParser: class {
 			parseFromString(body) {
@@ -98,17 +105,12 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 									querySelector(selector) {
 										if (
 											selector ===
-											'[data-ran-booster-toggle-status][data-ran-booster-ui-badge]'
+											'[data-ran-booster-toggle-status][data-ran-booster-badge]'
 										) {
 											if (mode === 'badge-host') {
 												return null;
 											}
-											return {
-												querySelector: (child) =>
-													child.includes(mode)
-														? null
-														: {},
-											};
+											return {};
 										}
 										if (
 											selector ===
@@ -420,6 +422,9 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 			setAttribute(name, item) {
 				this.attributes.set(name, item);
 			},
+			getAttribute(name) {
+				return this.attributes.get(name) ?? null;
+			},
 			removeAttribute(name) {
 				this.attributes.delete(name);
 			},
@@ -441,47 +446,8 @@ function harness({ enhanced = true, initialActive = null } = {}) {
 				},
 			},
 		};
-		const badgeMount = { sentinel: true };
-		form.status =
-			scope === 'numeric'
-				? fallback
-				: {
-						get textContent() {
-							return fallback.textContent;
-						},
-						set textContent(item) {
-							throw new Error(
-								'Cannot replace badge host children: ' + item
-							);
-						},
-						writes: fallback.writes,
-						classList: fallback.classList,
-						mount: badgeMount,
-						attributes: new Map(),
-						events: [],
-						querySelector(selector) {
-							return selector.includes('fallback')
-								? fallback
-								: badgeMount;
-						},
-						setAttribute(name, item) {
-							this.attributes.set(name, item);
-						},
-						dispatchEvent(event) {
-							this.events.push({
-								type: event.type,
-								bubbles: event.bubbles,
-								label: this.attributes.get(
-									'data-ran-booster-ui-badge-label'
-								),
-								intent: this.attributes.get(
-									'data-ran-booster-ui-badge-intent'
-								),
-								fallback: fallback.textContent,
-								mount: this.mount,
-							});
-						},
-					};
+		fallback.events = [];
+		form.status = fallback;
 		form.retry = scope === 'numeric' ? null : { hidden: false };
 		const uiButton = element(`ui-${scope}`);
 		const switchHost = {
@@ -797,37 +763,16 @@ test('the script releases the first-paint hold and leaves Save visible without H
 	assert.equal(native.toggle.retry.hidden, false);
 });
 
-test('older cached badge markup cannot abort history recovery or clear numeric drafts', () => {
-	const h = harness();
-	h.numeric.value = '2700';
-	h.doc('input', { target: h.numeric.numeric });
-	h.toggle.status.querySelector = () => null;
-	const publications = h.toggle.status.events.length;
-	assert.doesNotThrow(() => h.doc('htmx:historyRestore', {}));
-	assert.equal(h.numeric.value, '2700');
-	assert.equal(pending(h.numeric), true);
-	assert.equal(h.toggle.error.hidden, false);
-	assert.match(h.toggle.error.textContent, /unconfirmed/i);
-	assert.equal(h.toggle.status.events.length, publications);
-});
-
 test('badge remains confirmed during pending work and adopts the successful projection', () => {
 	const h = harness();
 	assert.equal(h.toggle.status.textContent, 'Disabled');
-	assert.equal(
-		h.toggle.status.classList.values.has('ran-booster-badge--neutral'),
-		true
-	);
 	h.toggle.toggle.checked = true;
 	h.doc('change', { target: h.toggle.toggle });
 	const xhr = start(h, h.toggle);
 	assert.equal(h.toggle.status.textContent, 'Disabled');
 	assert.ok(h.toggle.status.writes.every((item) => item === 'Disabled'));
-	assert.equal(h.toggle.status.mount.sentinel, true);
 	assert.equal(h.toggle.status.events.at(-1).label, 'Disabled');
 	assert.equal(h.toggle.status.events.at(-1).intent, 'none');
-	assert.equal(h.toggle.status.events.at(-1).fallback, 'Disabled');
-	assert.equal(h.toggle.status.events.at(-1).bubbles, true);
 	h.doc('htmx:beforeOnLoad', { detail: { xhr } });
 	const next = h.replace(
 		h.make('hide', { checked: true, confirmed: true, saved: true })
@@ -836,10 +781,9 @@ test('badge remains confirmed during pending work and adopts the successful proj
 	h.doc('htmx:afterRequest', { detail: { xhr } });
 	assert.equal(next.status.textContent, 'Enabled');
 	assert.equal(next.status.events.at(-1).intent, 'stable');
-	assert.equal(next.status.events.at(-1).mount, next.status.mount);
 	assert.equal(
-		next.status.classList.values.has('ran-booster-badge--ok'),
-		true
+		next.status.getAttribute('data-ran-booster-badge-intent'),
+		'stable'
 	);
 });
 
@@ -1527,7 +1471,7 @@ test('malformed response body or missing token vetoes swap and preserves numeric
 });
 
 test('malformed badge response is vetoed before swap', () => {
-	for (const mode of ['badge-host', 'fallback', 'mount']) {
+	for (const mode of ['badge-host']) {
 		const h = harness();
 		const xhr = start(h, h.toggle);
 		xhr.responseText = `hide:${mode}`;

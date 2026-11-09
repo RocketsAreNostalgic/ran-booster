@@ -135,10 +135,10 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 				</div>
 				<div class="plugin-card-bottom">
 					<div class="vers column-rating ran-booster-extension-card__metadata">
-						<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $availability_label ); ?>" data-ran-booster-ui-badge-intent="none"><span class="ran-booster-extension-card__badge" data-ran-booster-ui-badge-fallback><?php echo esc_html( $availability_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+						<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $availability_label, 'none', array( 'class' => 'ran-booster-extension-card__badge' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 						<?php $beta_label = __( 'Beta', 'ran-booster' ); ?>
-						<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $beta_label ); ?>" data-ran-booster-ui-badge-intent="none"><span class="ran-booster-extension-card__badge" data-ran-booster-ui-badge-fallback><?php echo esc_html( $beta_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
-						<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $state_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $extension_state_intents[ $extension['state_kind'] ] ); ?>"><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $extension['state_kind'] ); ?>" data-ran-booster-ui-badge-fallback><?php echo esc_html( $state_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+						<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $beta_label, 'none', array( 'class' => 'ran-booster-extension-card__badge' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
+						<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $state_label, (string) $extension_state_intents[ $extension['state_kind'] ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 					</div>
 					<div class="column-compatibility">
 					<?php if ( $extension['compatible'] ) : ?>

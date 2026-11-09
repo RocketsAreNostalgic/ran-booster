@@ -1382,7 +1382,7 @@
 
 .ran-booster-admin
 	.ran-booster-overview-activity__row
-	> [data-ran-booster-ui-badge] {
+	> [data-ran-booster-badge] {
 	max-inline-size: 100%;
 	flex: none;
 }

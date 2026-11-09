@@ -5,10 +5,27 @@
 		return;
 	}
 	window.ranBoosterCardsInitialized = true;
+
+	// Badges are static markup drawn with the public Badge's own CSS. Scripts
+	// that change a status in place go through this one helper.
+	const badgeIntents = ['none', 'stable', 'medium', 'high', 'informational'];
+	window.ranBoosterBadge = {
+		update(badge, label, intent) {
+			if (!badge || !badgeIntents.includes(intent)) {
+				return;
+			}
+			badgeIntents.forEach((name) =>
+				badge.classList.toggle(`is-${name}-intent`, name === intent)
+			);
+			badge.setAttribute('data-ran-booster-badge-intent', intent);
+			if (typeof label === 'string' && badge.textContent !== label) {
+				badge.textContent = label;
+			}
+		},
+	};
 	const selector = '.ran-booster-card[data-ran-booster-card]';
 	const noticeSelector = '[data-ran-booster-ui-notice]';
 	const disclosureSelector = '[data-ran-booster-ui-disclosure]';
-	const badgeSelector = '[data-ran-booster-ui-badge]';
 	const buttonSelector = '[data-ran-booster-ui-button]';
 	const switchSelector = '[data-ran-booster-ui-switch="general-preference"]';
 	const mounted = 'data-ran-booster-ui-mounted';
@@ -285,71 +302,6 @@
 			host.remove();
 		}
 		focusAfterMove(card, active);
-	}
-
-	function mountBadge(host) {
-		if (
-			!host.isConnected ||
-			host.tagName !== 'SPAN' ||
-			!host.closest('.ran-booster-admin') ||
-			host.parentElement?.closest(badgeSelector)
-		) {
-			return;
-		}
-		const fallback = host.querySelector(
-			'[data-ran-booster-ui-badge-fallback]'
-		);
-		const mount = host.querySelector('[data-ran-booster-ui-badge-mount]');
-		if (
-			!fallback ||
-			!mount ||
-			fallback.parentElement !== host ||
-			mount.parentElement !== host
-		) {
-			return;
-		}
-		const label = host.getAttribute('data-ran-booster-ui-badge-label');
-		const intent = host.getAttribute('data-ran-booster-ui-badge-intent');
-		const element = window.wp?.element;
-		const Badge = window.ranBoosterUI?.Badge;
-		if (
-			!label ||
-			!['none', 'stable', 'medium', 'high', 'informational'].includes(
-				intent
-			) ||
-			!Badge ||
-			!element?.createRoot ||
-			!element.createElement ||
-			!element.flushSync
-		) {
-			restore(host);
-			fallback.hidden = false;
-			return;
-		}
-		const current = roots.get(host);
-		if (current?.label === label && current.intent === intent) {
-			return;
-		}
-		let root;
-		try {
-			root = current?.root || element.createRoot(mount);
-			roots.set(host, { root, mount, fallback });
-			element.flushSync(() =>
-				root.render(
-					element.createElement(
-						Badge,
-						{ intent, className: 'ran-booster-ui-badge' },
-						label
-					)
-				)
-			);
-			roots.set(host, { root, mount, fallback, label, intent });
-			fallback.hidden = true;
-			host.setAttribute(mounted, '');
-		} catch {
-			restore(host);
-			fallback.hidden = false;
-		}
 	}
 
 	function switchParts(host, current) {
@@ -1111,11 +1063,6 @@
 				.forEach((host) =>
 					mountDisclosure(host, host === restoredDisclosure)
 				);
-			const badge = scope.closest?.(badgeSelector);
-			if (badge) {
-				mountBadge(badge);
-			}
-			scope.querySelectorAll?.(badgeSelector).forEach(mountBadge);
 			const switchHost = scope.closest?.(switchSelector);
 			if (switchHost) {
 				mountSwitch(switchHost);
@@ -1225,12 +1172,6 @@
 		const host = event.target.closest?.(disclosureSelector);
 		if (host) {
 			mountDisclosure(host);
-		}
-	});
-	document.addEventListener('ran-booster:ui-badge-update', (event) => {
-		const host = event.target.closest?.(badgeSelector);
-		if (host) {
-			mountBadge(host);
 		}
 	});
 	document.addEventListener('ran-booster:documentation-state', (event) => {

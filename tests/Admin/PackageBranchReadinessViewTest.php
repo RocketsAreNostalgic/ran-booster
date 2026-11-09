@@ -156,7 +156,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-error-target="#ran-booster-package-mutation-error"', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-package-mutation', $html );
 		self::assertStringNotContainsString( 'remote webhook is configured', strtolower( $html ) );
-		self::assertStringNotContainsString( 'ran-booster-badge--error', $html );
+		self::assertStringNotContainsString( 'is-high-intent', $html );
 	}
 
 	public function test_missing_stable_repository_identity_does_not_provide_anavigable_webhook_route(): void {
@@ -651,9 +651,7 @@ final class PackageBranchReadinessViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		unset( $GLOBALS['ran_booster_package_view_translations'] );
-		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Attention &amp; &quot;review&quot;" data-ran-booster-ui-badge-intent="high"', $html );
-		self::assertStringContainsString( 'data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--error"', $html );
-		self::assertStringContainsString( '>Attention &amp; &quot;review&quot;</span><span data-ran-booster-ui-badge-mount', $html );
+		self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high">Attention &amp; &quot;review&quot;</span>', $html );
 		self::assertSame( 1, substr_count( $html, '<h4 id="ran-booster-branch-readiness-heading">Branch readiness</h4>' ) );
 		self::assertStringContainsString( 'Local webhook requirements need attention.', $html );
 	}

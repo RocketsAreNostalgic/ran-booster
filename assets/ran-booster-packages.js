@@ -896,66 +896,22 @@
 					__('Deployment: %s', 'ran-booster'),
 					stateLabels[state]
 				);
-				const fallback = badge.hasAttribute('data-ran-booster-ui-badge')
-					? badge.querySelector(
-							'[data-ran-booster-ui-badge-fallback]'
-						)
-					: badge;
-				fallback.className =
-					'ran-booster-badge ran-booster-badge--' + variants[state];
-				fallback.textContent = label;
-				if (fallback !== badge) {
-					badge.setAttribute(
-						'data-ran-booster-ui-badge-label',
-						label
-					);
-					badge.setAttribute(
-						'data-ran-booster-ui-badge-intent',
-						intent
-					);
-					badge.dispatchEvent(
-						new window.CustomEvent('ran-booster:ui-badge-update', {
-							bubbles: true,
-						})
-					);
-				}
+				window.ranBoosterBadge?.update(badge, label, intent);
 			}
 
 			const activityState = row.nextElementSibling?.querySelector(
 				'[data-ran-booster-activity-state]'
 			);
 			if (activityState) {
-				const fallback = activityState.hasAttribute(
-					'data-ran-booster-ui-badge'
-				)
-					? activityState.querySelector(
-							'[data-ran-booster-ui-badge-fallback]'
-						)
-					: activityState;
-				fallback.className =
-					(fallback === activityState
-						? ''
-						: 'ran-booster-badge ran-booster-badge--' +
-							variants[state] +
-							' ') +
-					'ran-booster-deployment-state ran-booster-deployment-state--' +
-					state;
-				fallback.textContent = stateLabels[state];
-				if (fallback !== activityState) {
-					activityState.setAttribute(
-						'data-ran-booster-ui-badge-label',
-						stateLabels[state]
-					);
-					activityState.setAttribute(
-						'data-ran-booster-ui-badge-intent',
-						intent
-					);
-					activityState.dispatchEvent(
-						new window.CustomEvent('ran-booster:ui-badge-update', {
-							bubbles: true,
-						})
-					);
-				}
+				window.ranBoosterBadge?.update(
+					activityState,
+					stateLabels[state],
+					intent
+				);
+				activityState.className = activityState.className.replace(
+					/\bran-booster-deployment-state--\S+/,
+					'ran-booster-deployment-state--' + state
+				);
 			}
 
 			const button = row.querySelector(

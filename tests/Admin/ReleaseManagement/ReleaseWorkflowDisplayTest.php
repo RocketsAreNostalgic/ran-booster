@@ -21,7 +21,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			'warning' => 'medium',
 			'error'   => 'high',
 			'info'    => 'informational',
-			'future'  => '',
+			'future'  => 'none',
 		) as $tone => $intent ) {
 			$html = ( new ReleaseWorkflowDisplay() )->repository_section(
 				array(
@@ -32,9 +32,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 					),
 				)
 			);
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Exact &lt;workflow&gt; &quot;quoted&quot;"', $html );
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-intent="' . $intent . '"', $html );
-			self::assertStringContainsString( '<span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--' . $tone . '">Exact &lt;workflow&gt; &quot;quoted&quot;</span><span data-ran-booster-ui-badge-mount></span>', $html );
+			self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $intent . '-intent" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '">Exact &lt;workflow&gt; &quot;quoted&quot;</span>', $html );
 		}
 	}
 

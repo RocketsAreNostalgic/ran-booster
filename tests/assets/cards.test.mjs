@@ -285,7 +285,6 @@ function fixture({
 		ranBoosterUI: runtime
 			? {
 					CardRoot: cardComponent ? 'CardRoot' : null,
-					Badge: 'Badge',
 					Button: 'Button',
 					NoticeRoot: 'NoticeRoot',
 					NoticeDescription: 'NoticeDescription',
@@ -373,19 +372,6 @@ function fixture({
 		return { form, nonce, host, button, mount };
 	}
 
-	function badge(parent = doc.body) {
-		const host = new Node('span'),
-			fallback = new Node('span'),
-			mount = new Node('span');
-		host.setAttribute('data-ran-booster-ui-badge', '');
-		host.setAttribute('role', 'status');
-		fallback.setAttribute('data-ran-booster-ui-badge-fallback', '');
-		mount.setAttribute('data-ran-booster-ui-badge-mount', '');
-		host.appendChild(fallback);
-		host.appendChild(mount);
-		parent.appendChild(host);
-		return { host, fallback, mount };
-	}
 	const emit = (type, elt = doc.body) =>
 		(listeners.get(type) || []).forEach((fn) =>
 			fn({ detail: { elt }, target: elt })
@@ -395,17 +381,11 @@ function fixture({
 			microtasks.shift()();
 		}
 	};
-	const publish = (host, label, intent) => {
-		host.setAttribute('data-ran-booster-ui-badge-label', label);
-		host.setAttribute('data-ran-booster-ui-badge-intent', intent);
-		emit('ran-booster:ui-badge-update', host);
-	};
 	return {
 		doc,
 		Node,
 		make,
 		presentation,
-		badge,
 		notice,
 		unmountOrder,
 		stateUpdates,
@@ -413,7 +393,6 @@ function fixture({
 		run: () => vm.runInContext(source, context),
 		emit,
 		flush,
-		publish,
 		counts: () => ({ renders, unmounts }),
 		tree: () => tree,
 	};
@@ -526,180 +505,32 @@ test('missing prerequisites and partial failures keep native children', () => {
 	}
 });
 
-test('badge waits for producer projection and preserves fallback, mount and status identity', () => {
+test('ranBoosterBadge.update swaps the intent class, attribute and label in place', () => {
 	const f = fixture();
-	const { host, fallback, mount } = f.badge();
 	f.run();
-	f.flush();
-	assert.equal(f.counts().renders, 0);
-	assert.equal(fallback.hidden, false);
-	f.publish(host, 'Confirmed', 'stable');
-	assert.equal(f.tree().type, 'Badge');
-	assert.equal(f.tree().props.intent, 'stable');
-	assert.equal(f.tree().children[0], 'Confirmed');
-	assert.equal(host.getAttribute('role'), 'status');
-	assert.equal(host.childNodes[0], fallback);
-	assert.equal(host.childNodes[1], mount);
-	assert.equal(fallback.hidden, true);
-	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), '');
-	f.publish(host, 'Confirmed', 'stable');
-	assert.equal(f.counts().renders, 1);
-	f.publish(host, 'Pending', 'none');
-	assert.equal(f.counts().renders, 2);
-	assert.equal(f.tree().children[0], 'Pending');
-});
-
-test('badge discovers producer state in both startup orders', () => {
-	const first = fixture();
-	const a = first.badge();
-	a.host.setAttribute('data-ran-booster-ui-badge-label', 'Ready');
-	a.host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
-	first.run();
-	first.flush();
-	assert.equal(first.tree().type, 'Badge');
-	assert.equal(a.fallback.hidden, true);
-	const second = fixture();
-	const b = second.badge();
-	second.run();
-	second.publish(b.host, 'Ready', 'stable');
-	second.flush();
-	assert.equal(second.counts().renders, 1);
-	assert.equal(second.tree().children[0], 'Ready');
-});
-
-test('confirmed Badge intents preserve the producer text and sole results live region', () => {
-	const f = fixture();
-	const results = new f.Node('div');
-	results.setAttribute('role', 'status');
-	f.doc.body.appendChild(results);
-	const { host, fallback } = f.badge(results);
-	host.removeAttribute('role');
-	f.run();
-	f.flush();
-	for (const intent of [
-		'none',
-		'stable',
-		'medium',
-		'high',
-		'informational',
-	]) {
-		f.publish(host, `Producer ${intent}`, intent);
-		assert.equal(f.tree().props.intent, intent);
-		assert.equal(f.tree().children[0], `Producer ${intent}`);
-		assert.equal(fallback.hidden, true);
-		assert.equal(host.getAttribute('role'), null);
-		assert.equal(results.getAttribute('role'), 'status');
-	}
-	assert.equal(f.counts().renders, 5);
-});
-
-test('informational linked badges retain their native link, focus and fallback through updates and history', () => {
-	const f = fixture();
-	const link = new f.Node('a');
-	link.setAttribute('href', 'https://example.test/dependency');
-	link.setAttribute('target', '_blank');
-	f.doc.body.appendChild(link);
-	const { host, fallback, mount } = f.badge(link);
-	host.removeAttribute('role');
-	link.focus();
-	f.run();
-	f.publish(host, 'Installed dependency', 'informational');
-	f.flush();
-	assert.equal(f.tree().props.intent, 'informational');
-	assert.equal(f.tree().children[0], 'Installed dependency');
-	assert.equal(fallback.hidden, true);
-	assert.equal(f.doc.activeElement, link);
-	assert.equal(host.parentElement, link);
-	assert.equal(link.getAttribute('href'), 'https://example.test/dependency');
-	assert.equal(link.getAttribute('target'), '_blank');
-	assert.equal(link.childNodes.length, 1);
-	f.publish(host, 'Updated dependency', 'informational');
-	assert.equal(f.tree().children[0], 'Updated dependency');
-	f.emit('htmx:beforeHistorySave');
-	assert.equal(fallback.hidden, false);
-	assert.equal(mount.childNodes.length, 0);
-	assert.equal(f.doc.activeElement, link);
-	f.flush();
-	assert.equal(f.tree().children[0], 'Updated dependency');
-	assert.equal(fallback.hidden, true);
-	f.publish(host, 'Invalid producer intent', 'info');
-	assert.equal(fallback.hidden, false);
-	assert.equal(host.parentElement, link);
-	assert.equal(f.doc.activeElement, link);
-	assert.equal(host.getAttribute('role'), null);
-});
-
-test('invalid projection, missing runtime and failed badge render reveal native fallback', () => {
-	const f = fixture();
-	const { host, fallback, mount } = f.badge();
-	f.run();
-	f.flush();
-	f.publish(host, 'Ready', 'stable');
-	f.publish(host, 'Ready', 'unsupported');
-	assert.equal(fallback.hidden, false);
-	assert.equal(mount.childNodes.length, 0);
-	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
-	f.publish(host, '', 'stable');
-	assert.equal(fallback.hidden, false);
-	assert.equal(mount.childNodes.length, 0);
-	f.window.ranBoosterUI = null;
-	f.publish(host, 'Ready', 'stable');
-	assert.equal(fallback.hidden, false);
-	assert.equal(mount.childNodes.length, 0);
-	f.window.ranBoosterUI = { Badge: 'Badge' };
-	mount.fail = true;
-	f.publish(host, 'Ready', 'stable');
-	assert.equal(fallback.hidden, false);
-	assert.equal(mount.childNodes.length, 0);
-	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
-});
-
-test('history saves native fallback and later producer supersedes cached badge projection', () => {
-	const f = fixture();
-	const { host, fallback, mount } = f.badge();
-	f.run();
-	f.publish(host, 'Old', 'stable');
-	f.flush();
-	f.emit('htmx:beforeHistorySave');
-	assert.equal(fallback.hidden, false);
-	assert.equal(mount.childNodes.length, 0);
-	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
-	f.publish(host, 'Current', 'none');
-	f.flush();
-	assert.equal(f.tree().children[0], 'Current');
-	assert.equal(f.tree().props.intent, 'none');
-	assert.equal(f.counts().renders, 2);
-	assert.equal(fallback.hidden, true);
-});
-
-test('nested card and badge cleanup restores both roots even when card moves its children', () => {
-	const f = fixture();
-	const { card, form } = f.make();
-	const { host, fallback, mount } = f.badge(form);
-	f.run();
-	f.publish(host, 'Ready', 'stable');
-	f.flush();
-	assert.equal(f.counts().renders, 2);
-	f.emit('htmx:beforeCleanupElement', card);
-	assert.equal(form.parentElement, card);
-	assert.equal(fallback.hidden, false);
-	assert.equal(mount.childNodes.length, 0);
-	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), null);
-	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
-	assert.equal(f.counts().unmounts, 2);
-	f.emit('htmx:beforeCleanupElement', card);
-	assert.equal(f.counts().unmounts, 2);
-});
-
-test('disconnected badges do not mount from events or deferred discovery', () => {
-	const f = fixture();
-	const { host, fallback } = f.badge();
-	f.run();
-	host.remove();
-	f.publish(host, 'Ready', 'stable');
-	f.flush();
-	assert.equal(f.counts().renders, 0);
-	assert.equal(fallback.hidden, false);
+	const classes = new Set(['is-none-intent', 'other']);
+	const attributes = {};
+	const badge = {
+		textContent: 'Old',
+		classList: {
+			toggle: (name, on) =>
+				on ? classes.add(name) : classes.delete(name),
+		},
+		setAttribute: (name, value) => (attributes[name] = value),
+	};
+	f.window.ranBoosterBadge.update(badge, 'Ready', 'stable');
+	assert.deepEqual([...classes].sort(), ['is-stable-intent', 'other']);
+	assert.equal(attributes['data-ran-booster-badge-intent'], 'stable');
+	assert.equal(badge.textContent, 'Ready');
+	f.window.ranBoosterBadge.update(badge, undefined, 'high');
+	assert.deepEqual([...classes].sort(), ['is-high-intent', 'other']);
+	assert.equal(badge.textContent, 'Ready');
+	f.window.ranBoosterBadge.update(badge, 'Nope', 'unknown');
+	assert.deepEqual([...classes].sort(), ['is-high-intent', 'other']);
+	assert.equal(badge.textContent, 'Ready');
+	assert.doesNotThrow(() =>
+		f.window.ranBoosterBadge.update(null, 'x', 'none')
+	);
 });
 
 test('Settings is a supported Card host', () => {
@@ -815,16 +646,13 @@ test('owned global Notice keeps native content when runtime or rendering fails',
 	}
 });
 
-test('nested Card, Notice and Badge restore child-first for cleanup, history and host swap', () => {
+test('nested Card and Notice restore child-first for cleanup, history and host swap', () => {
 	for (const mode of ['cleanup', 'history', 'swap']) {
 		const f = fixture();
 		const { card, form } = f.make('settings');
 		card.setAttribute('id', 'card');
 		const n = f.notice(form);
-		const b = f.badge(n.content);
-		b.host.setAttribute('id', 'badge');
 		f.run();
-		f.publish(b.host, 'Ready', 'stable');
 		f.flush();
 		assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
 		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), '');
@@ -839,11 +667,9 @@ test('nested Card, Notice and Badge restore child-first for cleanup, history and
 				detail: { shouldSwap: true, target: card },
 			});
 		}
-		assert.deepEqual(f.unmountOrder, ['badge', 'notice', 'card']);
+		assert.deepEqual(f.unmountOrder, ['notice', 'card']);
 		assert.equal(form.parentElement, card);
 		assert.equal(n.host.firstChild, n.content);
-		assert.equal(b.fallback.hidden, false);
-		assert.equal(b.mount.childNodes.length, 0);
 		assert.equal(n.host.getAttribute('role'), 'alert');
 		assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), null);
 		assert.equal(n.host.getAttribute('data-ran-booster-ui-mounted'), null);
@@ -987,27 +813,6 @@ test('presentation Button preserves disabled state and never steals external foc
 	assert.equal(button.disabled, true);
 	assert.equal(f.doc.activeElement, other);
 	assert.equal(mount.firstChild, undefined);
-});
-
-test('HTMX processing a newly appended row discovers its Badge exactly once without a load event', () => {
-	const f = fixture();
-	f.run();
-	f.flush();
-	const row = new f.Node('div');
-	f.doc.body.appendChild(row);
-	const { host, fallback, mount } = f.badge(row);
-	host.setAttribute('data-ran-booster-ui-badge-label', 'Complete');
-	host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
-	f.emit('htmx:afterProcessNode', row);
-	f.flush();
-	assert.equal(f.counts().renders, 1);
-	assert.equal(f.tree().type, 'Badge');
-	assert.equal(f.tree().children[0], 'Complete');
-	assert.equal(fallback.hidden, true);
-	assert.ok(mount.firstChild);
-	f.emit('htmx:afterProcessNode', row);
-	f.flush();
-	assert.equal(f.counts().renders, 1);
 });
 
 test('Disclosure keeps native details, body identity, open state and focus through history', () => {
@@ -1194,7 +999,7 @@ test('Notice update events refresh intent and retain content on invalid metadata
 	assert.equal(f.counts().unmounts, 2);
 });
 
-test('Notice intent changes preserve the current form and nested Badge without unmounting an ancestor Card', () => {
+test('Notice intent changes preserve the current form without unmounting an ancestor Card', () => {
 	const f = fixture();
 	const { card, form } = f.make('settings');
 	const n = f.notice(form);
@@ -1202,21 +1007,16 @@ test('Notice intent changes preserve the current form and nested Badge without u
 	const input = new f.Node('input');
 	nativeForm.appendChild(input);
 	n.content.appendChild(nativeForm);
-	const b = f.badge(n.content);
-	b.host.setAttribute('data-ran-booster-ui-badge-label', 'Saved');
-	b.host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
 	f.run();
 	f.flush();
-	assert.equal(f.counts().renders, 3);
+	assert.equal(f.counts().renders, 2);
 	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'info');
 	f.emit('ran-booster:ui-notice-update', n.paragraph);
 	f.flush();
 	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
 	assert.equal(nativeForm.firstChild, input);
-	assert.equal(b.fallback.hidden, true);
-	assert.ok(b.mount.firstChild);
-	assert.equal(f.counts().renders, 5);
-	assert.equal(f.counts().unmounts, 2);
+	assert.equal(f.counts().renders, 3);
+	assert.equal(f.counts().unmounts, 1);
 });
 
 test('changed Notice rendering failure stays native without a second unsolicited attempt', () => {
@@ -1251,22 +1051,17 @@ test('changed Notice rendering failure stays native without a second unsolicited
 	}
 });
 
-test('Notice update preserves an ancestor Card and sibling Badge', () => {
+test('Notice update preserves an ancestor Card', () => {
 	const f = fixture();
 	const { card, form } = f.make('settings');
 	const n = f.notice(form);
-	const b = f.badge(form);
-	b.host.setAttribute('data-ran-booster-ui-badge-label', 'Saved');
-	b.host.setAttribute('data-ran-booster-ui-badge-intent', 'stable');
 	f.run();
 	f.flush();
 	n.host.setAttribute('data-ran-booster-ui-notice-intent', 'warning');
 	f.emit('ran-booster:ui-notice-update', n.link);
 	f.flush();
 	assert.equal(card.getAttribute('data-ran-booster-ui-mounted'), '');
-	assert.equal(b.fallback.hidden, true);
-	assert.ok(b.mount.firstChild);
-	assert.equal(f.counts().renders, 4);
+	assert.equal(f.counts().renders, 3);
 	assert.equal(f.counts().unmounts, 1);
 });
 

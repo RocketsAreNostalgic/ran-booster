@@ -111,7 +111,7 @@ $provider_attention        = array_filter(
 			<h3 id="ran-booster-overview-attention"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></h3>
 			<?php if ( 'captured' === $credential_expiry['status'] ) { ?>
 				<?php foreach ( $credential_expiry['items'] as $expiry_item ) { ?>
-					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> <span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $expiry_item['badge_label'] ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'high' : 'medium' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'error' : 'warning' ); ?>"><?php echo esc_html( $expiry_item['badge_label'] ); ?></span><span data-ran-booster-ui-badge-mount></span></span></p>
+					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> <?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $expiry_item['badge_label'], in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'high' : 'medium' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></p>
 				<?php } ?>
 				<?php if ( null !== $credential_expiry['total'] && $credential_expiry['total'] > count( $credential_expiry['items'] ) ) { ?>
 					<?php // translators: 1: displayed reminders, 2: total actionable reminders. ?>
@@ -152,7 +152,7 @@ $provider_attention        = array_filter(
 		<div class="ran-booster-onboarding__storage-heading">
 			<h3 id="ran-booster-onboarding-storage-heading"><?php echo esc_html( 'onboarding' === $overview_view ? __( '1. Secure credential storage', 'ran-booster' ) : __( 'Secure credential storage', 'ran-booster' ) ); ?></h3>
 			<?php $overview_storage_label = $overview_storage_labels[ $overview_storage_status ] ?? __( 'Status unknown', 'ran-booster' ); ?>
-			<span data-ran-booster-storage-status="<?php echo esc_attr( $overview_storage_status ); ?>" data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $overview_storage_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $overview_storage_intents[ $overview_storage_status ] ?? 'none' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $overview_storage_classes[ $overview_storage_status ] ?? 'neutral' ); ?>"><?php echo esc_html( $overview_storage_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+			<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $overview_storage_label, (string) ( $overview_storage_intents[ $overview_storage_status ] ?? 'none' ), array( 'data-ran-booster-storage-status' => (string) $overview_storage_status ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 		</div>
 		<p><?php echo esc_html( $overview_storage_summary['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
 		<p><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>

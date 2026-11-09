@@ -413,7 +413,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'WordPress 7.0 ou version ultérieure et PHP 8.2 ou version ultérieure.', $output );
 		self::assertSame( 4, substr_count( $output, '>Gratuit<' ) );
 		self::assert_badge( $output, 'Bêta & "test"', 'none', 2 );
-		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Bêta &amp; &quot;test&quot;"', $output );
+		self::assertStringContainsString( '>Bêta &amp; &quot;test&quot;</span>', $output );
 		self::assertSame( 4, substr_count( $output, '>Non installé<' ) );
 		self::assertStringContainsString( 'Bitbucket Cloud', $output );
 		self::assertStringContainsString( 'WP Pusher Migrator', $output );
@@ -525,7 +525,7 @@ final class ExtensionsPageTest extends TestCase {
 
 		self::assertSame( 2, substr_count( $output, '>Incompatible<' ) );
 		self::assertSame( 1, substr_count( $output, '>Inactive<' ) );
-		self::assertStringContainsString( 'ran-booster-badge--error', $output );
+		self::assert_badge( $output, 'Incompatible', 'high', 1 );
 		self::assertStringContainsString( 'requires a different version of Booster. Review its documentation before installing or updating.', $output );
 		self::assertStringNotContainsString( '>Active<', $output );
 	}
@@ -545,7 +545,6 @@ final class ExtensionsPageTest extends TestCase {
 
 		self::assert_badge( $output, 'Incompatible traduit', 'high', 1 );
 		self::assertSame( 2, substr_count( $output, '>Incompatible traduit<' ) );
-		self::assertStringContainsString( 'ran-booster-badge--error', $output );
 		self::assertStringContainsString( '>Inactive<', $output );
 	}
 
@@ -666,30 +665,22 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertTrue( $document->loadHTML( '<?xml encoding="UTF-8">' . $html ) );
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previous );
-		$xpath = new \DOMXPath( $document );
-		$hosts = $xpath->query( '//span[@data-ran-booster-ui-badge]' );
-		self::assertInstanceOf( \DOMNodeList::class, $hosts );
+		$xpath  = new \DOMXPath( $document );
+		$badges = $xpath->query( '//span[@data-ran-booster-badge]' );
+		self::assertInstanceOf( \DOMNodeList::class, $badges );
 		$matched = 0;
-		foreach ( $hosts as $host ) {
-			self::assertInstanceOf( \DOMElement::class, $host );
-			if ( $label !== $host->getAttribute( 'data-ran-booster-ui-badge-label' ) ) {
+		foreach ( $badges as $badge ) {
+			self::assertInstanceOf( \DOMElement::class, $badge );
+			if ( $label !== $xpath->evaluate( 'string(.)', $badge ) ) {
 				continue;
 			}
 			++$matched;
-			self::assertSame( 3, $host->attributes->length );
-			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
-			$fallback = $xpath->query( './span[@data-ran-booster-ui-badge-fallback]', $host );
-			$mount    = $xpath->query( './span[@data-ran-booster-ui-badge-mount]', $host );
-			self::assertInstanceOf( \DOMNodeList::class, $fallback );
-			self::assertInstanceOf( \DOMNodeList::class, $mount );
-			self::assertCount( 1, $fallback );
-			self::assertCount( 1, $mount );
-			$fallback_node = $fallback->item( 0 );
-			$mount_node    = $mount->item( 0 );
-			self::assertInstanceOf( \DOMElement::class, $fallback_node );
-			self::assertInstanceOf( \DOMElement::class, $mount_node );
-			self::assertSame( $label, $xpath->evaluate( 'string(.)', $fallback_node ) );
-			self::assertSame( 0.0, $xpath->evaluate( 'count(node())', $mount_node ) );
+			self::assertSame( $intent, $badge->getAttribute( 'data-ran-booster-badge-intent' ) );
+			$classes = preg_split( '/\s+/', $badge->getAttribute( 'class' ) );
+			self::assertIsArray( $classes );
+			self::assertContains( 'ran-wp-ui-badge', $classes );
+			self::assertContains( 'is-' . $intent . '-intent', $classes );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./*)', $badge ) );
 		}
 		self::assertSame( $count, $matched );
 	}

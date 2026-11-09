@@ -238,7 +238,7 @@ $repository_placeholder = array() === $locator_examples
 							$status_intent     = $status_badge_intents[ $diagnostic_status ] ?? 'none';
 							?>
 						<tr>
-							<td data-label="<?php esc_attr_e( 'Status', 'ran-booster' ); ?>"><span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $status_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $status_intent ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_tone ); ?> ran-booster-diagnostic-status ran-booster-diagnostic-status--<?php echo esc_attr( $diagnostic_status ); ?>"><?php echo esc_html( $status_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span></td>
+							<td data-label="<?php esc_attr_e( 'Status', 'ran-booster' ); ?>"><?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $status_label, (string) $status_intent, array( 'class' => 'ran-booster-diagnostic-status ran-booster-diagnostic-status--' . $diagnostic_status ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></td>
 							<th scope="row" data-label="<?php esc_attr_e( 'Check', 'ran-booster' ); ?>">
 							<?php
 								$check_family = explode( '.', $result['code'] )[1] ?? '';

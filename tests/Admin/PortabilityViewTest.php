@@ -323,10 +323,9 @@ final class PortabilityViewTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--ok', $html );
-		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--info', $html );
-		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--warning', $html );
-		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--error', $html );
+		foreach ( array( 'stable', 'informational', 'medium', 'high' ) as $intent ) {
+			self::assertStringContainsString( 'ran-wp-ui-badge is-' . $intent . '-intent" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '"', $html );
+		}
 		self::assertStringContainsString( 'data-portability-select-all', $html );
 		self::assertSame( 2, substr_count( $html, 'data-portability-select value=' ) );
 		self::assertStringContainsString( 'data-portability-select value="0" checked', $html );

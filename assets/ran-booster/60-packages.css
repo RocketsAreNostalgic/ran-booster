@@ -246,14 +246,10 @@
 	min-inline-size: 0;
 }
 
-.ran-booster-admin .ran-booster-package-row__summary > .ran-booster-badge {
-	margin-block-end: var(--ran-booster-space-7);
-}
-
 .ran-booster-admin
 	.ran-booster-package-row__summary
-	> .ran-booster-badge[hidden] {
-	display: none;
+	> [data-ran-booster-badge] {
+	margin-block-end: var(--ran-booster-space-7);
 }
 
 .ran-booster-admin .ran-booster-package-row__management {

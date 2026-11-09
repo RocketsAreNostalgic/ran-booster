@@ -305,16 +305,16 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//label[@for="ran-booster-self-update-discovery"]//input[@role="switch" and @disabled and not(@checked) and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//input[@role="switch" and @aria-checked])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status and @data-ran-booster-ui-badge and @role="status" and not(@data-ran-booster-ui-badge-label) and not(@data-ran-booster-ui-badge-intent)]/span[@data-ran-booster-ui-badge-fallback])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status and @data-ran-booster-ui-badge]/span[@data-ran-booster-ui-badge-mount and not(node())])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status and @data-ran-booster-badge and @data-ran-booster-badge-intent and @role="status" and contains(@class, "ran-wp-ui-badge") and not(*)])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//span[@data-ran-booster-toggle-status]/span)' ) );
 		foreach ( array( 'ran-booster-hide-github', 'ran-booster-self-update-discovery' ) as $switch_id ) {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//label[@id="' . $switch_id . '-label" and @for="' . $switch_id . '"]/following-sibling::div[contains(@class, "ran-booster-settings__switch-row")][1]/span[@data-ran-booster-ui-switch="general-preference"]/label[@data-ran-booster-ui-switch-fallback and not(@hidden)]/input[@id="' . $switch_id . '" and @aria-labelledby="' . $switch_id . '-label"])' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $switch_id . '"]/parent::label/parent::span[@data-ran-booster-ui-switch="general-preference"]/following-sibling::span[@data-ran-booster-toggle-status and @role="status"])' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $switch_id . '"]/parent::label/following-sibling::span[@data-ran-booster-ui-switch-mount and not(node())])' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//input[@id="' . $switch_id . '"]/ancestor::form[1]//input[@type="checkbox" and @name])' ) );
 		}
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and contains(@class, "ran-booster-badge--ok") and text()="Enabled"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and contains(@class, "ran-booster-badge--neutral") and text()="Disabled"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//span[@data-ran-booster-toggle-status and @data-ran-booster-badge-intent="stable" and contains(@class, "is-stable-intent") and text()="Enabled"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//span[@data-ran-booster-toggle-status and @data-ran-booster-badge-intent="none" and contains(@class, "is-none-intent") and text()="Disabled"])' ) );
 		$general_attempted = array(
 			'hide_github'           => '0',
 			'self_update_discovery' => '1',
@@ -329,9 +329,9 @@ final class SettingsPageTest extends TestCase {
 		libxml_use_internal_errors( $previous_errors );
 		$attempted_xpath = new \DOMXPath( $attempted_dom );
 		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//input[@id="ran-booster-hide-github" and not(@checked)])' ) );
-		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and text()="Enabled"])' ) );
+		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//span[@data-ran-booster-toggle-status and @data-ran-booster-badge and text()="Enabled"])' ) );
 		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//input[@id="ran-booster-self-update-discovery" and @checked])' ) );
-		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and text()="Disabled"])' ) );
+		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//span[@data-ran-booster-toggle-status and @data-ran-booster-badge and text()="Disabled"])' ) );
 		$github_visibility['eligible'] = false;
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/settings-general.php';
@@ -341,7 +341,7 @@ final class SettingsPageTest extends TestCase {
 		libxml_clear_errors();
 		libxml_use_internal_errors( $previous_errors );
 		$attempted_xpath = new \DOMXPath( $attempted_dom );
-		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github" and @data-ran-booster-confirmed="0"]//span[@data-ran-booster-toggle-status]/*[@data-ran-booster-ui-badge-fallback and contains(@class, "ran-booster-badge--neutral") and text()="Disabled"])' ) );
+		self::assertSame( 1.0, $attempted_xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github" and @data-ran-booster-confirmed="0"]//span[@data-ran-booster-toggle-status and @data-ran-booster-badge-intent="none" and contains(@class, "is-none-intent") and text()="Disabled"])' ) );
 		$github_visibility['eligible'] = true;
 		$general_attempted             = array();
 

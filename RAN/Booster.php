@@ -893,7 +893,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-packages',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-packages.js',
-			array( 'ran-booster-enhanced-mutations', 'wp-i18n' ),
+			array( 'ran-booster-enhanced-mutations', 'wp-i18n', 'ran-booster-cards' ),
 			$package_script_version,
 			true
 		);

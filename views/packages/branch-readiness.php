@@ -198,7 +198,7 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 				</div>
 				<?php if ( $needs_attention ) { ?>
 					<?php $needs_attention_label = __( 'Needs attention', 'ran-booster' ); ?>
-					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $needs_attention_label ); ?>" data-ran-booster-ui-badge-intent="high"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--error"><?php echo esc_html( $needs_attention_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $needs_attention_label, 'high' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<?php } ?>
 			</div>
 			<ul class="ran-booster-readiness-list">

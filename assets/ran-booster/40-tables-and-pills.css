@@ -197,7 +197,7 @@
 
 .ran-booster-admin
 	.ran-booster-repository-record__details-layout
-	.ran-booster-badge {
+	[data-ran-booster-badge] {
 	inline-size: fit-content;
 	white-space: normal;
 }

@@ -77,7 +77,8 @@ final class AdminAssetContractTest extends TestCase {
 			$css
 		);
 		self::assertSame( 1, substr_count( $css, 'rgb(0 0 0 / 60%)' ) );
-		self::assertStringContainsString( '.ran-booster-badge--error,', $css );
+		self::assertStringContainsString( '[data-ran-booster-badge]', $css );
+		self::assertStringNotContainsString( '.ran-booster-badge--error', $css );
 		self::assertStringNotContainsString( "\n.wp-core-ui .button-delete", $css );
 		self::assertStringNotContainsString( "\n.notice-info {", $css );
 		self::assertStringNotContainsString( '.ran-booster-admin .theme-screenshot .content', $css );
@@ -123,8 +124,10 @@ final class AdminAssetContractTest extends TestCase {
 
 	public function test_extensions_styles_do_not_reimplement_the_word_press_plugin_card_layout(): void {
 		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
+		$view       = $this->view( 'extensions.php' );
 
-		self::assertStringContainsString( '.ran-booster-extension-card__badge {', $extensions );
+		self::assertStringContainsString( "array( 'class' => 'ran-booster-extension-card__badge' )", $view );
+		self::assertStringNotContainsString( '.ran-booster-extension-card__badge', $extensions );
 		self::assertStringContainsString( '.ran-booster-extension-details {', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-top', $extensions );
@@ -143,14 +146,14 @@ final class AdminAssetContractTest extends TestCase {
 		$component  = $this->asset( 'ran-booster/40-tables-and-pills.css' );
 		$activity   = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 
-		self::assertStringContainsString( '.ran-booster-admin :is(.ran-booster-badge) {', $utilities );
+		self::assertStringNotContainsString( '.ran-booster-badge', $utilities );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-tile {', $utilities );
-		self::assertStringContainsString( '.ran-booster-badge--pending', $utilities );
 		self::assertStringNotContainsString( 'notice notice-warning inline ran-booster-debug-capture__scope', $debug );
-		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activity_badge_variants[ $latest_activity[\'state\'] ] ?? \'neutral\' ); ?>', $packages );
+		self::assertStringContainsString( "StatusBadge::for_intent( (string) \$prominent_status['label'], (string) ( \$badge_intents[ \$prominent_status['tone'] ] ?? 'none' ), \$prominent_status_activity ? array( 'data-ran-booster-activity-badge' => '' ) : array() )", $packages );
 		self::assertStringContainsString( 'Stored · Validity checked on use', $projection );
 		self::assertStringContainsString( 'ran-booster-delete-credential-package-link', $provider );
-		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-badge {', $component );
+		self::assertStringNotContainsString( '.ran-booster-badge', $component );
+		self::assertStringContainsString( '[data-ran-booster-badge]', $component );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-deployment-state {', $activity );
 	}
 
@@ -274,8 +277,8 @@ final class AdminAssetContractTest extends TestCase {
 	}
 
 	/**
-	 * Status pills are public Badges rendered through StatusBadge. The retired
-	 * ran-booster-pill family and bare badge spans must not return.
+	 * Status pills are one static public Badge rendered through StatusBadge. The
+	 * retired pill classes and the fallback/mount pair must not return.
 	 */
 	public function test_status_pills_use_the_public_badge_and_no_retired_pill_classes_remain(): void {
 		$root     = dirname( __DIR__, 2 );
@@ -285,6 +288,8 @@ final class AdminAssetContractTest extends TestCase {
 			'/views/*/*.php',
 			'/assets/ran-booster/*.css',
 			'/assets/*.css',
+			'/assets/*.js',
+			'/assets/*/*.js',
 			'/RAN/Admin/*.php',
 			'/RAN/Admin/*/*.php',
 		);
@@ -292,23 +297,27 @@ final class AdminAssetContractTest extends TestCase {
 			$matched = glob( $root . $pattern );
 			foreach ( false === $matched ? array() : $matched as $file ) {
 				$source = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
-				if ( str_contains( $source, 'ran-booster-pill' ) || str_contains( $source, 'advanced-source-summary__badge' ) ) {
-					$offences[] = basename( $file ) . ': retired pill class';
+				foreach ( array( 'ran-booster-pill', 'advanced-source-summary__badge', 'data-ran-booster-ui-badge', 'data-ran-booster-static-badge' ) as $retired ) {
+					if ( str_contains( $source, $retired ) ) {
+						$offences[] = basename( $file ) . ': retired ' . $retired;
+					}
 				}
-				// RepositoryTableRenderer keeps a bare badge for historical records with an unknown tone.
-				// Disclosure header status badges are static and marked data-ran-booster-static-badge.
-				if ( ! str_ends_with( $file, '.php' ) || str_ends_with( $file, 'RepositoryTableRenderer.php' ) ) {
+				if ( ! str_ends_with( $file, '.php' ) ) {
 					continue;
 				}
-				foreach ( explode( "\n", $source ) as $line ) {
-					if ( str_contains( $line, '<span class="ran-booster-badge' ) && ! str_contains( $line, 'data-ran-booster-ui-badge' ) && ! str_contains( $line, 'data-ran-booster-static-badge' ) ) {
-						$offences[] = basename( $file ) . ': bare badge span, use StatusBadge::markup()';
-					}
+				// Tone strings such as ran-booster-badge--error are presenter data, never a class on an element.
+				if ( 1 === preg_match( '/(?<![\w-])ran-booster-badge(?![\w-])/', $source ) ) {
+					$offences[] = basename( $file ) . ': ran-booster-badge pill class, use StatusBadge';
 				}
 			}
 		}
 
 		self::assertSame( array(), $offences );
+
+		$badge = $this->source( 'RAN/Admin/Component/StatusBadge.php' );
+		self::assertStringContainsString( "'ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . \$intent . '-intent'", $badge );
+		self::assertStringContainsString( 'data-ran-booster-badge data-ran-booster-badge-intent=', $badge );
+		self::assertStringNotContainsString( 'data-ran-booster-ui-badge', $badge );
 	}
 
 	public function test_disclosure_hosts_own_their_margins_and_prominent_rules_stay_scoped(): void {
@@ -1202,7 +1211,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-attempt-list', $view );
 		self::assertStringContainsString( 'ran-booster-attempt-row__details', $view );
 		self::assertStringContainsString( 'ran-booster-data-table-wrap ran-booster-attempt-table', $view );
-		self::assertStringContainsString( 'ran-booster-badge ran-booster-badge--', $view );
+		self::assertStringContainsString( 'StatusBadge::for_intent(', $view );
+		self::assertStringContainsString( "'class' => 'ran-booster-deployment-state ran-booster-deployment-state--'", $view );
 		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Time\'', $view );
 		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Subject\'', $view );
 		self::assertStringContainsString( 'data-label="<?php esc_attr_e( \'Source\'', $view );

@@ -314,7 +314,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$migrator = '//section[header/h4[starts-with(normalize-space(.), "Migrator")]]';
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__installation-card ") and ancestor::*[@data-ran-booster-card="troubleshooting"]])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/h4/code[text()="1.0"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[@data-ran-booster-ui-badge and @data-ran-booster-ui-badge-label="Inactive"]/span[@data-ran-booster-ui-badge-fallback and text()="Inactive"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[@data-ran-booster-badge and @data-ran-booster-badge-intent and text()="Inactive" and not(*)])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/div/p[text()="Installed extension"])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[header/h4[normalize-space(.)="Facts"]]//dd/code[text()="0"])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//div[@data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/div[@data-ran-booster-ui-disclosure-content])' ) );
@@ -634,19 +634,18 @@ final class TroubleshootingViewTest extends TestCase {
 				libxml_use_internal_errors( $previous_errors );
 			}
 			$xpath = new \DOMXPath( $document );
-			$hosts = $xpath->query( '//header/span[@data-ran-booster-ui-badge]' );
+			$hosts = $xpath->query( '//header/span[@data-ran-booster-badge]' );
 			self::assertInstanceOf( \DOMNodeList::class, $hosts );
 			self::assertCount( 3, $hosts );
 			foreach ( array_slice( $case, 4 ) as $index => $expected ) {
 				$host = $hosts->item( $index );
 				self::assertInstanceOf( \DOMElement::class, $host );
-				self::assertSame( $expected[0], $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
-				self::assertSame( $expected[1], $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
+				self::assertSame( $expected[0], $xpath->evaluate( 'string(.)', $host ) );
+				self::assertSame( $expected[1], $host->getAttribute( 'data-ran-booster-badge-intent' ) );
 				self::assertFalse( $host->hasAttribute( 'role' ) );
 				self::assertFalse( $host->hasAttribute( 'aria-live' ) );
-				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-fallback and @class="ran-booster-badge ran-booster-badge--' . $expected[2] . '"])', $host ) );
-				self::assertSame( $expected[0], $xpath->evaluate( 'string(./span[@data-ran-booster-ui-badge-fallback])', $host ) );
-				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
+				self::assertSame( 'ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $expected[1] . '-intent', $host->getAttribute( 'class' ) );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(./*)', $host ) );
 				self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live])', $host ) );
 			}
 		}
@@ -890,7 +889,7 @@ final class TroubleshootingViewTest extends TestCase {
 			if ( 'succeeded' === $state ) {
 				self::assertStringContainsString( 'Plugin: example/example.php', $html );
 			}
-			self::assertStringContainsString( 'ran-booster-badge--' . $tone . ' ran-booster-deployment-state ran-booster-deployment-state--' . $state . '">' . esc_html( $expected_label ) . '</span>', $html );
+			self::assertStringContainsString( 'is-' . $intent . '-intent ran-booster-deployment-state ran-booster-deployment-state--' . $state . '" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '">' . esc_html( $expected_label ) . '</span>', $html );
 			if ( 'deployment' === $source ) {
 				self::assertStringNotContainsString( 'ran-booster-attempt-row__message', $html );
 			} else {
@@ -910,28 +909,15 @@ final class TroubleshootingViewTest extends TestCase {
 				libxml_use_internal_errors( $previous_errors );
 			}
 			$xpath = new \DOMXPath( $document );
-			$hosts = $xpath->query( '//span[@class="ran-booster-attempt-row__outcome"]/span[@data-ran-booster-ui-badge]' );
+			$hosts = $xpath->query( '//span[@class="ran-booster-attempt-row__outcome"]/span[@data-ran-booster-badge]' );
 			self::assertInstanceOf( \DOMNodeList::class, $hosts );
 			self::assertCount( 1, $hosts );
 			$host = $hosts->item( 0 );
 			self::assertInstanceOf( \DOMElement::class, $host );
-			self::assertSame( $expected_label, $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
-			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
-			self::assertSame( 3, $host->attributes->length );
-			self::assertSame( 2.0, $xpath->evaluate( 'count(./*)', $host ) );
-			$fallback = $xpath->query( './span[@data-ran-booster-ui-badge-fallback]', $host );
-			$mount    = $xpath->query( './span[@data-ran-booster-ui-badge-mount]', $host );
-			self::assertInstanceOf( \DOMNodeList::class, $fallback );
-			self::assertInstanceOf( \DOMNodeList::class, $mount );
-			self::assertCount( 1, $fallback );
-			self::assertCount( 1, $mount );
-			$fallback_element = $fallback->item( 0 );
-			$mount_element    = $mount->item( 0 );
-			self::assertInstanceOf( \DOMElement::class, $fallback_element );
-			self::assertInstanceOf( \DOMElement::class, $mount_element );
-			self::assertSame( $expected_label, $xpath->evaluate( 'string(.)', $fallback_element ) );
-			self::assertSame( '', $xpath->evaluate( 'string(.)', $mount_element ) );
-			self::assertSame( 0.0, $xpath->evaluate( 'count(./node())', $mount_element ) );
+			self::assertSame( $expected_label, $xpath->evaluate( 'string(.)', $host ) );
+			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-badge-intent' ) );
+			self::assertSame( 'ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $intent . '-intent ran-booster-deployment-state ran-booster-deployment-state--' . $state, $host->getAttribute( 'class' ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./*)', $host ) );
 			self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live])', $host ) );
 			self::assertSame( 'activity' === $source ? 1.0 : 0.0, $xpath->evaluate( 'count(./following-sibling::span[@class="ran-booster-attempt-row__message"])', $host ) );
 		}
@@ -1100,7 +1086,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'activity_provider=gh&amp;activity_package=%5B%22gh%22%2C%22plugin%22%2C%22example%2Fexample.php%22%5D&amp;before=v1%7Ccursor', $html );
 		self::assertStringContainsString( 'data-label="Source"', $html );
 		self::assertStringContainsString( 'data-label="Source">Branch deployment</span>', $html );
-		self::assertStringContainsString( 'ran-booster-deployment-state--failed">Failed</span>', $html );
+		self::assertStringContainsString( 'ran-booster-deployment-state--failed" data-ran-booster-badge data-ran-booster-badge-intent="high">Failed</span>', $html );
 		self::assertStringContainsString( 'data-label="Activity"', $html );
 		self::assertStringContainsString( 'data-label="Outcome"', $html );
 		self::assertStringContainsString( 'Review recorded checks and deployments.', $html );
@@ -1549,7 +1535,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'placeholder="owner/repository (GitHub) or workspace/repository (Bitbucket)"', $html );
 		self::assertStringContainsString( 'class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap"', $html );
 		self::assertStringContainsString( 'class="widefat ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table"', $html );
-		self::assertStringContainsString( 'class="ran-booster-badge ran-booster-badge--ok ran-booster-diagnostic-status ran-booster-diagnostic-status--pass"', $html );
+		self::assertStringContainsString( 'class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent ran-booster-diagnostic-status ran-booster-diagnostic-status--pass"', $html );
 		self::assertStringContainsString( 'data-label="Status"', $html );
 		self::assertStringContainsString( 'data-label="Action"', $html );
 		self::assertStringContainsString( 'aria-live="polite"', $html );

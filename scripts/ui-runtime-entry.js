@@ -1,5 +1,4 @@
 import {
-	Badge,
 	Button,
 	Card,
 	CollapsibleCard,
@@ -28,7 +27,6 @@ window.ranBoosterUI = {
 		Header: CollapsibleCard.Header,
 		Content: CollapsibleCard.Content,
 	},
-	Badge,
 	Button,
 	Link,
 	Switch,

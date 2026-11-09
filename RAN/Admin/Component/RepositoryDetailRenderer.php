@@ -445,7 +445,7 @@ final class RepositoryDetailRenderer {
 				'info'    => 'informational',
 			)[ $tone ] ?? '';
 			?>
-			<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $value ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $intent ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+			<?php echo StatusBadge::for_intent( (string) $value, (string) $intent ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 			<?php
 			return;
 		}

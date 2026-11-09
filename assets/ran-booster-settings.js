@@ -80,32 +80,11 @@
 			message = state.confirmed
 				? __('Enabled', 'ran-booster')
 				: __('Disabled', 'ran-booster');
-			const fallback = status?.querySelector(
-				'[data-ran-booster-ui-badge-fallback]'
+			window.ranBoosterBadge?.update(
+				status,
+				message,
+				state.confirmed ? 'stable' : 'none'
 			);
-			if (fallback) {
-				if (fallback.textContent !== message) {
-					fallback.textContent = message;
-				}
-				fallback.classList.toggle(
-					'ran-booster-badge--ok',
-					state.confirmed
-				);
-				fallback.classList.toggle(
-					'ran-booster-badge--neutral',
-					!state.confirmed
-				);
-				status.setAttribute('data-ran-booster-ui-badge-label', message);
-				status.setAttribute(
-					'data-ran-booster-ui-badge-intent',
-					state.confirmed ? 'stable' : 'none'
-				);
-				status.dispatchEvent(
-					new CustomEvent('ran-booster:ui-badge-update', {
-						bubbles: true,
-					})
-				);
-			}
 		} else {
 			message = dirty
 				? __('Unsaved numeric changes.', 'ran-booster')
@@ -368,7 +347,7 @@
 				const badge =
 					state.toggle &&
 					responseForm?.querySelector(
-						'[data-ran-booster-toggle-status][data-ran-booster-ui-badge]'
+						'[data-ran-booster-toggle-status][data-ran-booster-badge]'
 					);
 				const error = responseForm?.querySelector(
 					'[data-ran-booster-admin-mutation-error][data-ran-booster-ui-notice]'
@@ -414,12 +393,6 @@
 					) ||
 					(state.toggle &&
 						(!badge ||
-							!badge.querySelector(
-								'[data-ran-booster-ui-badge-fallback]'
-							) ||
-							!badge.querySelector(
-								'[data-ran-booster-ui-badge-mount]'
-							) ||
 							!responseForm.querySelector(
 								'input[role="switch"]'
 							) ||

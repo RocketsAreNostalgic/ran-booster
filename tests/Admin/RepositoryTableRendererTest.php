@@ -34,30 +34,25 @@ final class RepositoryTableRendererTest extends TestCase {
 					),
 				)
 			);
-			if ( '' === $intent ) {
-				self::assertStringNotContainsString( 'data-ran-booster-ui-badge', $html );
-				self::assertStringContainsString( '<span class="ran-booster-badge ran-booster-badge--future">Exact &lt;status&gt; &quot;quoted&quot;</span>', $html );
-				continue;
-			}
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Exact &lt;status&gt; &quot;quoted&quot;"', $html );
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-intent="' . $intent . '"', $html );
-			self::assertStringContainsString( '<span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--' . $tone . '">Exact &lt;status&gt; &quot;quoted&quot;</span><span data-ran-booster-ui-badge-mount></span>', $html );
+			// An unknown tone keeps the exact label and renders as a neutral Badge.
+			$intent = '' === $intent ? 'none' : $intent;
+			self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $intent . '-intent" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '">Exact &lt;status&gt; &quot;quoted&quot;</span>', $html );
 		}
-		self::assertStringNotContainsString(
-			'data-ran-booster-ui-badge',
-			$this->render(
-				array(
-					'historical' => true,
-					'details'    => array(
-						array(
-							'label' => 'Empty recorded fact',
-							'value' => '',
-							'tone'  => 'warning',
-						),
+		// An empty recorded fact never takes the tone's intent; it stays a neutral, empty Badge.
+		$empty = $this->render(
+			array(
+				'historical' => true,
+				'details'    => array(
+					array(
+						'label' => 'Empty recorded fact',
+						'value' => '',
+						'tone'  => 'warning',
 					),
-				)
+				),
 			)
 		);
+		self::assertStringNotContainsString( 'is-medium-intent', $empty );
+		self::assertStringContainsString( 'is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none"></span>', $empty );
 	}
 
 	public function test_it_owns_the_complete_common_repository_markup(): void {

@@ -116,7 +116,7 @@ $inventory = $onboarding['inventory'] ?? array(
 				if ( 'replacement' === ( $provider['source_kind'] ?? null ) ) {
 					$custom_provider_label = __( 'Custom provider', 'ran-booster' );
 					?>
-					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $custom_provider_label ); ?>" data-ran-booster-ui-badge-intent="none"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--neutral"><?php echo esc_html( $custom_provider_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span><?php } ?>
+					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $custom_provider_label, 'none' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?><?php } ?>
 				</span>
 			</li>
 		<?php } ?></ul>

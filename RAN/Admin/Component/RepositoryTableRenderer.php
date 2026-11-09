@@ -138,11 +138,11 @@ final class RepositoryTableRenderer {
 					)[ $tone ] ?? '';
 					if ( '' === $intent || '' === $value ) {
 						?>
-						<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span>
+						<?php echo StatusBadge::for_intent( (string) $value, 'none' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 						<?php
 					} else {
 						?>
-					<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $value ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $intent ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+					<?php echo StatusBadge::for_intent( (string) $value, (string) $intent ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 					<?php } ?>
 				<?php } elseif ( '' !== $datetime ) { ?>
 					<time datetime="<?php echo esc_attr( $datetime ); ?>"><?php echo esc_html( $value ); ?></time>

@@ -139,9 +139,8 @@ final class RepeatPackageViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 			$html = (string) ob_get_clean();
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Git provider unavailable" data-ran-booster-ui-badge-intent="high"', $html );
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--error"', $html );
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-mount', $html );
+			self::assertStringContainsString( 'ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high"', $html );
+			self::assertStringContainsString( '>Git provider unavailable</span>', $html );
 			self::assertMatchesRegularExpression( '/href="[^"]*page=' . $package_view->get_page_slug() . '&amp;package=[^"]*&amp;return_type=' . $package_view->get_type() . '&amp;return_s=release&amp;return_provider=gh" class="button">Edit settings/', $html );
 			$document = new \DOMDocument();
 			$previous = libxml_use_internal_errors( true );
@@ -1178,10 +1177,10 @@ final class RepeatPackageViewTest extends TestCase {
 			}
 			$html = $render( $attempt );
 			unset( $GLOBALS['ran_booster_package_view_translations'] );
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="' . $label . '" data-ran-booster-ui-badge-intent="' . $intent . '" data-ran-booster-activity-state', $html );
-			self::assertStringContainsString( 'ran-booster-badge--' . $tone . ' ran-booster-deployment-state ran-booster-deployment-state--' . $state . '">' . $label . '</span>', $html );
+			self::assertStringContainsString( 'is-' . $intent . '-intent ran-booster-deployment-state ran-booster-deployment-state--' . $state . '" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '" data-ran-booster-activity-state', $html );
+			self::assertStringContainsString( '>' . $label . '</span>', $html );
 			if ( 'succeeded' !== $state ) {
-				self::assertStringContainsString( 'data-ran-booster-ui-badge-intent="' . $intent . '" data-ran-booster-activity-badge', $html );
+				self::assertStringContainsString( 'is-' . $intent . '-intent" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '" data-ran-booster-activity-badge>' . $label . '</span>', $html );
 			}
 		}
 
@@ -1201,10 +1200,9 @@ final class RepeatPackageViewTest extends TestCase {
 					),
 				)
 			);
-			self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Release &amp; &quot;review&quot;" data-ran-booster-ui-badge-intent="' . $intent . '"', $html );
-			self::assertStringContainsString( 'ran-booster-badge--' . $tone . '">Release &amp; &quot;review&quot;</span>', $html );
+			self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $intent . '-intent" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '">Release &amp; &quot;review&quot;</span>', $html );
 		}
-		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="" data-ran-booster-ui-badge-intent="none" data-ran-booster-activity-badge hidden', $render( null ) );
+		self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none" data-ran-booster-activity-badge hidden></span>', $render( null ) );
 	}
 
 	/** @return array{default_provider: string, providers: list<array<string, mixed>>} */

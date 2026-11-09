@@ -26,8 +26,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ob_start();
 		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, null, $package->settings_url() );
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Unavailable" data-ran-booster-ui-badge-intent="high"', $html );
-		self::assertStringContainsString( '<span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--error">Unavailable</span><span data-ran-booster-ui-badge-mount></span>', $html );
+		self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high">Unavailable</span>', $html );
 		self::assertStringContainsString( 'Published release status is temporarily unavailable. Try again.', $html );
 	}
 
@@ -128,7 +127,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		);
 		self::assertStringContainsString( '<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label">Release Track</h3>', $html );
 		self::assertMatchesRegularExpression(
-			'/<span class="ran-booster-badge ran-booster-badge--neutral" data-ran-booster-static-badge data-ran-booster-release-track-summary>\s*' . $expected_summary . '\s*<\\/span>/',
+			'/<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none" data-ran-booster-release-track-summary>\s*' . $expected_summary . '\s*<\\/span>/',
 			$html
 		);
 		self::assertStringContainsString( '<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-disclosure__body">', $html );

@@ -510,14 +510,13 @@ final class OnboardingViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'Git providers' ), strpos( $html, 'Managed packages' ) );
 		self::assertSame( '0 managed', trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Plugins"]/p/span)' ) ) );
 		self::assertSame( 'Unknown', trim( (string) $xpath->evaluate( 'string(//div[@role="group" and @aria-label="Themes"]/p/span)' ) ) );
-		self::assertStringContainsString( 'ran-booster-badge--neutral', $html );
+		self::assertStringContainsString( 'is-none-intent', $html );
 		self::assertStringNotContainsString( 'id="ran-booster-overview-expiry"', $html );
 		self::assertSame( 5, substr_count( $html, '&lt;operation&gt;' ) );
 		self::assertStringNotContainsString( '<operation>', $html );
 		self::assertStringNotContainsString( '&lt;status&gt;', $html );
-		self::assertStringContainsString( 'ran-booster-badge--error', $html );
-		self::assertStringContainsString( '>Failed</span>', $html );
-		self::assertStringContainsString( 'ran-booster-badge--neutral', $html );
+		self::assertStringContainsString( 'data-ran-booster-badge-intent="high">Failed</span>', $html );
+		self::assertStringContainsString( 'is-none-intent', $html );
 		self::assertStringContainsString( '&lt;time&gt;', $html );
 		self::assertStringContainsString( '<strong>&lt;operation&gt;</strong><span aria-hidden="true"> · </span><span class="ran-booster-overview-activity__time">&lt;time&gt;</span>', $html );
 		$document = new \DOMDocument();
@@ -825,7 +824,7 @@ final class OnboardingViewTest extends TestCase {
 			self::assertStringNotContainsString( '<GitHub>', $html );
 			if ( 'dashboard' === $view ) {
 				self::assertStringContainsString( 'Provider source unknown', $html );
-				self::assertStringNotContainsString( 'ran-booster-badge--ok">Admitted</span>', $html );
+				self::assertStringNotContainsString( 'data-ran-booster-badge-intent="stable">Admitted</span>', $html );
 				self::assertStringNotContainsString( 'Repository access has not been checked here.', $html );
 			}
 			$extra['provider_summaries'][0]['admitted'] = true;
@@ -884,22 +883,18 @@ final class OnboardingViewTest extends TestCase {
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Custom provider'] = 'Custom <provider> & "partner"';
 		$html = $this->render_view( null, null, $extra );
 		self::assertStringContainsString( 'Provider extension: &lt;Selected Plugin&gt;', $html );
-		self::assertStringContainsString( 'data-ran-booster-ui-badge-label="Custom &lt;provider&gt; &amp; &quot;partner&quot;"', $html );
 		self::assertStringContainsString( 'Custom &lt;provider&gt; &amp; &quot;partner&quot;</span>', $html );
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
-		$hosts = $xpath->query( '//section[@aria-labelledby="ran-booster-overview-providers"]//span[@data-ran-booster-ui-badge]' );
+		$hosts = $xpath->query( '//section[@aria-labelledby="ran-booster-overview-providers"]//span[@data-ran-booster-badge]' );
 		self::assertInstanceOf( \DOMNodeList::class, $hosts );
 		self::assertCount( 1, $hosts );
 		$host = $hosts->item( 0 );
 		self::assertInstanceOf( \DOMElement::class, $host );
-		self::assertSame( 'Custom <provider> & "partner"', $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
-		self::assertSame( 'none', $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
-		self::assertFalse( $host->hasAttribute( 'class' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-fallback and @class="ran-booster-badge ran-booster-badge--neutral"])', $host ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(./*)', $host ) );
+		self::assertSame( 'none', $host->getAttribute( 'data-ran-booster-badge-intent' ) );
+		self::assertSame( 'ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent', $host->getAttribute( 'class' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(./*)', $host ) );
 		self::assertSame( 'Custom <provider> & "partner"', $xpath->evaluate( 'string(.)', $host ) );
 		self::assertStringNotContainsString( '<Selected Plugin>', $html );
 		$extra['provider_summaries'][0]['source_kind'] = null;
@@ -1021,15 +1016,14 @@ final class OnboardingViewTest extends TestCase {
 				$host = $hosts->item( 0 );
 				self::assertInstanceOf( \DOMElement::class, $host );
 				self::assertSame( 4, $host->attributes->length );
-				self::assertTrue( $host->hasAttribute( 'data-ran-booster-ui-badge' ) );
+				self::assertTrue( $host->hasAttribute( 'data-ran-booster-badge' ) );
 				self::assertSame( $status, $host->getAttribute( 'data-ran-booster-storage-status' ) );
-				self::assertSame( $expected[0], $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
-				self::assertSame( $expected[1], $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
-				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-fallback and @class="ran-booster-badge ran-booster-badge--' . $expected[2] . '"])', $host ) );
-				self::assertSame( $expected[0], $xpath->evaluate( 'string(./span[@data-ran-booster-ui-badge-fallback])', $host ) );
-				self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
+				self::assertSame( $expected[0], $xpath->evaluate( 'string(.)', $host ) );
+				self::assertSame( $expected[1], $host->getAttribute( 'data-ran-booster-badge-intent' ) );
+				self::assertSame( 'ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $expected[1] . '-intent', $host->getAttribute( 'class' ) );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(./*)', $host ) );
 				self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live] | self::*[@role or @aria-live])', $host ) );
-				self::assertStringNotContainsString( 'canary', $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+				self::assertStringNotContainsString( 'canary', $xpath->evaluate( 'string(.)', $host ) );
 			}
 		}
 		foreach ( array(
@@ -1044,18 +1038,17 @@ final class OnboardingViewTest extends TestCase {
 			),
 		) as $html ) {
 			$xpath = $this->storage_xpath( $html );
-			self::assertSame( 'Status unknown', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-ui-badge-label)' ) );
-			self::assertSame( 'none', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-ui-badge-intent)' ) );
+			self::assertSame( 'Status unknown', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status])' ) );
+			self::assertSame( 'none', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-badge-intent)' ) );
 		}
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Status unknown'] = 'Unknown <storage> & "quoted"';
 		foreach ( array( $this->render_view(), $this->render_storage_status( '', 'automatic' ) ) as $html ) {
 			$xpath = $this->storage_xpath( $html );
-			self::assertSame( 'Unknown <storage> & "quoted"', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/@data-ran-booster-ui-badge-label)' ) );
-			self::assertSame( 'Unknown <storage> & "quoted"', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status]/span[@data-ran-booster-ui-badge-fallback])' ) );
+			self::assertSame( 'Unknown <storage> & "quoted"', $xpath->evaluate( 'string(//span[@data-ran-booster-storage-status])' ) );
 		}
 	}
 
-	public function test_expiry_badges_preserve_labels_and_static_fallbacks(): void {
+	public function test_expiry_badges_preserve_labels_and_render_static_badges(): void {
 		foreach ( array(
 			'expired' => 'high',
 			'urgent'  => 'high',
@@ -1084,18 +1077,18 @@ final class OnboardingViewTest extends TestCase {
 				)
 			);
 			$xpath = $this->storage_xpath( $html );
-			$hosts = $xpath->query( '//a[@href="/credentials"]/following-sibling::span[@data-ran-booster-ui-badge]' );
+			$hosts = $xpath->query( '//a[@href="/credentials"]/following-sibling::span[@data-ran-booster-badge]' );
 			self::assertInstanceOf( \DOMNodeList::class, $hosts );
 			self::assertCount( 1, $hosts );
 			$host = $hosts->item( 0 );
 			self::assertInstanceOf( \DOMElement::class, $host );
 			self::assertSame( 3, $host->attributes->length );
-			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-badge-intent' ) );
-			self::assertSame( $item['badge_label'], $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
-			self::assertSame( $item['badge_label'], $xpath->evaluate( 'string(./span[@data-ran-booster-ui-badge-fallback])', $host ) );
-			self::assertSame( 1.0, $xpath->evaluate( 'count(./span[@data-ran-booster-ui-badge-mount and not(node())])', $host ) );
+			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-badge-intent' ) );
+			self::assertSame( 'ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $intent . '-intent', $host->getAttribute( 'class' ) );
+			self::assertSame( $item['badge_label'], $xpath->evaluate( 'string(.)', $host ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./*)', $host ) );
 			self::assertSame( 0.0, $xpath->evaluate( 'count(.//*[@role or @aria-live] | self::*[@role or @aria-live])', $host ) );
-			self::assertStringNotContainsString( 'private-', $host->getAttribute( 'data-ran-booster-ui-badge-label' ) );
+			self::assertStringNotContainsString( 'private-', $xpath->evaluate( 'string(.)', $host ) );
 		}
 	}
 

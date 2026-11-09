@@ -91,7 +91,7 @@ final class ReleaseWorkflowDisplay {
 			$html         .= '<section class="ran-booster-readiness-panel ran-booster-repository-release-automation" aria-labelledby="ran-booster-repository-release-automation-heading">'
 				. '<header class="ran-booster-readiness-panel__top ran-booster-repository-release-automation__header"><div><div class="ran-booster-release-automation-heading">'
 				. '<h4 id="ran-booster-repository-release-automation-heading">' . esc_html__( 'Release workflow', 'ran-booster' ) . '</h4>'
-				. '<span data-ran-booster-ui-badge data-ran-booster-ui-badge-label="' . esc_attr( (string) ( $state['label'] ?? '' ) ) . '" data-ran-booster-ui-badge-intent="' . esc_attr( $intent ) . '"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ' . esc_attr( (string) ( $state['tone'] ?? '' ) ) . '">' . esc_html( (string) ( $state['label'] ?? '' ) ) . '</span><span data-ran-booster-ui-badge-mount></span></span></div>'
+				. '' . \RAN\Admin\Component\StatusBadge::for_intent( (string) ( $state['label'] ?? '' ), $intent ) . '</div>'
 				. '<p class="description">' . esc_html( (string) ( $state['provenance'] ?? '' ) ) . '</p></div></header>';
 			if ( '' !== $notice || '' !== $result_notice ) {
 				$html .= '<div class="ran-booster-repository-release-automation__notices">' . $notice . $result_notice . '</div>';

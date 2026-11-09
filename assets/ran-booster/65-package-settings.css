@@ -1075,33 +1075,15 @@
 	margin-block: var(--ran-booster-space-4);
 }
 
-.ran-booster-admin
-	.ran-booster-settings__switch-row
-	[data-ran-booster-ui-badge] {
-	display: block;
+.ran-booster-admin .ran-booster-settings__switch-row [data-ran-booster-badge] {
+	display: inline-flex;
 	box-sizing: border-box;
 	inline-size: 12ch;
 	min-inline-size: min(12ch, 100%);
 	max-inline-size: 100%;
-}
-
-.ran-booster-admin
-	.ran-booster-settings__switch-row
-	:is([data-ran-booster-ui-badge-fallback], .ran-booster-ui-badge) {
-	display: inline-flex;
-	box-sizing: border-box;
-	inline-size: 100%;
 	justify-content: center;
 	overflow-wrap: anywhere;
 	white-space: normal;
-}
-
-.ran-booster-admin [data-ran-booster-ui-badge-mount] {
-	display: block;
-}
-
-.ran-booster-admin [data-ran-booster-ui-badge-fallback][hidden] {
-	display: none;
 }
 
 .ran-booster-admin .ran-booster-settings__switch {
@@ -1399,20 +1381,20 @@ body.js:not(.ran-booster-settings-ready)
 /* Keep General status Badges proportional to the default public Switch. */
 #ran-booster-general-region
 	.ran-booster-settings__switch-row
-	[data-ran-booster-ui-badge] {
+	[data-ran-booster-badge] {
 	display: flex;
 	align-items: center;
 	inline-size: 9ch;
 	min-inline-size: min(9ch, 100%);
-}
-
-#ran-booster-general-region
-	.ran-booster-settings__switch-row
-	.ran-booster-ui-badge {
 	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Apply the owner-selected compact spacing to General status Badges. */
 	--wpds-dimension-padding-xs: 1px;
 	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Apply the owner-selected compact spacing to General status Badges. */
 	--wpds-dimension-padding-sm: 6px;
+}
+
+#ran-booster-general-region
+	.ran-booster-settings__switch-row
+	[data-ran-booster-badge].is-stable-intent {
 	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties -- Use the owner-selected WordPress admin accent for enabled General status. */
 	--wpds-color-background-surface-success: var(--wp-admin-theme-color);
 	/* stylelint-disable-next-line plugin-wpds/no-setting-wpds-custom-properties, plugin-wpds/no-token-fallback-values -- Match the public brand foreground fallback for enabled General status. */
@@ -1420,68 +1402,4 @@ body.js:not(.ran-booster-settings-ready)
 		--wpds-color-foreground-interactive-brand-strong,
 		var(--ran-booster-color-neutral-0)
 	);
-}
-
-#ran-booster-general-region
-	.ran-booster-settings__switch-row
-	[data-ran-booster-ui-badge-mount] {
-	display: flex;
-	align-items: center;
-	inline-size: 100%;
-}
-
-/* An empty mount must not share the host's width with the native fallback. */
-#ran-booster-general-region
-	.ran-booster-settings__switch-row
-	[data-ran-booster-ui-badge-mount]:empty {
-	display: none;
-}
-
-/* The native status Badge fallback mirrors the public Badge until it mounts. */
-#ran-booster-general-region
-	.ran-booster-settings__switch-row
-	[data-ran-booster-toggle-status]
-	> [data-ran-booster-ui-badge-fallback]:not([hidden]) {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	box-sizing: border-box;
-	inline-size: 100%;
-	padding-block: 0;
-	padding-inline: 5px;
-	border: var(--wpds-border-width-xs) solid
-		var(--wpds-color-stroke-surface-neutral);
-	border-radius: var(--wpds-border-radius-lg);
-	background: var(--wpds-color-background-surface-neutral-strong);
-	color: var(--wpds-color-foreground-content-neutral);
-	font-family: var(--wpds-typography-font-family-body);
-	font-size: var(--wpds-typography-font-size-sm);
-	font-weight: var(--wpds-typography-font-weight-default);
-	line-height: var(--wpds-typography-line-height-xs);
-}
-
-#ran-booster-general-region
-	.ran-booster-settings__switch-row
-	[data-ran-booster-toggle-status]
-	> [data-ran-booster-ui-badge-fallback]::before {
-	content: none;
-}
-
-#ran-booster-general-region
-	.ran-booster-settings__switch-row
-	[data-ran-booster-toggle-status]
-	> [data-ran-booster-ui-badge-fallback].ran-booster-badge--ok {
-	padding-block: 1px;
-	padding-inline: 6px;
-	border-width: 0;
-	background: var(--wp-admin-theme-color);
-	color: var(--wpds-color-foreground-interactive-brand-strong);
-}
-
-#ran-booster-general-region
-	.ran-booster-settings__switch-row
-	[data-ran-booster-ui-badge-fallback].ran-booster-badge--ok {
-	--ran-booster-status-ok: var(--ran-booster-color-neutral-0);
-	--ran-booster-status-ok-background: var(--wp-admin-theme-color);
-	--ran-booster-status-ok-border: var(--wp-admin-theme-color);
 }

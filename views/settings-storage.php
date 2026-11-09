@@ -67,7 +67,7 @@ $has_storage_details          = in_array( $storage_status, array( 'path_configur
 			<div class="ran-booster-onboarding__storage-heading">
 				<h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
 				<?php $storage_status_label = $storage_status_labels[ $storage_status ] ?? __( 'Status unknown', 'ran-booster' ); ?>
-				<span data-ran-booster-storage-status="<?php echo esc_attr( $storage_status ); ?>" data-ran-booster-ui-badge data-ran-booster-ui-badge-label="<?php echo esc_attr( $storage_status_label ); ?>" data-ran-booster-ui-badge-intent="<?php echo esc_attr( $storage_status_intents[ $storage_status ] ?? 'none' ); ?>"><span data-ran-booster-ui-badge-fallback class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $storage_status_classes[ $storage_status ] ?? 'neutral' ); ?>"><?php echo esc_html( $storage_status_label ); ?></span><span data-ran-booster-ui-badge-mount></span></span>
+				<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $storage_status_label, (string) ( $storage_status_intents[ $storage_status ] ?? 'none' ), array( 'data-ran-booster-storage-status' => (string) $storage_status ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 			</div>
 			<p><?php echo esc_html( $secrets_storage['message'] ); ?></p>
 			<?php if ( '' !== $storage_reason_code && in_array( $storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true ) ) { ?>

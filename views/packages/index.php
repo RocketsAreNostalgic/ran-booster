@@ -416,6 +416,11 @@ $policy_labels = array(
 				\RAN\Deployment\DeploymentPolicy::DISABLED => __( 'Disabled', 'ran-booster' ),
 				default => __( 'Manual', 'ran-booster' ),
 			};
+			$automation_state_intent = match ( $deployment_policy ) {
+				\RAN\Deployment\DeploymentPolicy::AUTOMATIC => 'stable',
+				\RAN\Deployment\DeploymentPolicy::DISABLED => 'none',
+				default => 'informational',
+			};
 			$management_line = $release_managed
 				? __( 'Releases', 'ran-booster' )
 				: sprintf(
@@ -471,14 +476,14 @@ $policy_labels = array(
 				</h3>
 				<div class="ran-booster-package-row__states">
 					<?php if ( $is_plugin_list ) { ?>
-						<p class="ran-booster-package-row__state ran-booster-package-row__wordpress-state<?php echo $word_press_plugin_active ? ' is-enabled' : ' is-disabled'; ?>">
+						<p class="ran-booster-package-row__state ran-booster-package-row__wordpress-state">
 							<span class="ran-booster-package-row__state-label"><?php esc_html_e( 'WordPress', 'ran-booster' ); ?></span>
-							<span class="ran-booster-package-row__state-value"><?php echo esc_html( $word_press_plugin_active ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ) ); ?></span>
+							<?php \RAN\Admin\Component\StatusBadge::print_intent( $word_press_plugin_active ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ), $word_press_plugin_active ? 'stable' : 'none' ); ?>
 						</p>
 					<?php } ?>
-					<p class="ran-booster-package-row__state ran-booster-package-row__update-state is-<?php echo esc_attr( $deployment_policy->value ); ?>">
+					<p class="ran-booster-package-row__state ran-booster-package-row__update-state">
 						<span class="ran-booster-package-row__state-label"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></span>
-						<span class="ran-booster-package-row__state-value"><?php echo esc_html( $automation_state_label ); ?></span>
+						<?php \RAN\Admin\Component\StatusBadge::print_intent( $automation_state_label, $automation_state_intent ); ?>
 					</p>
 				</div>
 			</td>

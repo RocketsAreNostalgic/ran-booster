@@ -206,35 +206,6 @@
 	min-inline-size: 72px;
 }
 
-.ran-booster-admin .ran-booster-package-row__state-value {
-	display: flex;
-	align-items: center;
-	gap: var(--ran-booster-space-6);
-}
-
-.ran-booster-admin .ran-booster-package-row__state-value::before {
-	inline-size: 7px;
-	block-size: 7px;
-	flex: 0 0 7px;
-	border-radius: var(--ran-booster-radius-circle);
-	background: var(
-		--ran-booster-package-state-indicator,
-		var(--ran-booster-text-subtle)
-	);
-	content: "";
-}
-
-.ran-booster-admin .ran-booster-package-row__wordpress-state.is-enabled,
-.ran-booster-admin .ran-booster-package-row__update-state.is-automatic {
-	--ran-booster-package-state-indicator: var(
-		--ran-booster-status-ok-indicator
-	);
-}
-
-.ran-booster-admin .ran-booster-package-row__update-state.is-manual {
-	--ran-booster-package-state-indicator: var(--wp-admin-theme-color);
-}
-
 .ran-booster-admin .ran-booster-package-row__summary {
 	min-inline-size: 0;
 }

@@ -1120,10 +1120,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-package-row__action-group {', $css );
 		self::assertStringContainsString( 'ran-booster-package-row__state ran-booster-package-row__wordpress-state', $view );
 		self::assertStringContainsString( 'ran-booster-package-row__state ran-booster-package-row__update-state', $view );
-		self::assertStringContainsString( 'is-<?php echo esc_attr( $deployment_policy->value ); ?>', $view );
-		self::assertStringContainsString( '.ran-booster-package-row__state-value::before {', $package_css );
-		self::assertStringContainsString( '.ran-booster-package-row__update-state.is-automatic {', $package_css );
-		self::assertStringContainsString( '.ran-booster-package-row__update-state.is-manual {', $package_css );
+		self::assertStringContainsString( 'StatusBadge::print_intent( $automation_state_label, $automation_state_intent );', $view );
+		self::assertStringNotContainsString( 'ran-booster-package-row__state-value', $view . $package_css );
 		self::assertStringContainsString( 'rgba(var(--wp-admin-theme-color--rgb), 0.08);', $package_css );
 		self::assertStringContainsString( ".ran-booster-package-row--wordpress-active\n\t> .check-column,", $package_css );
 		self::assertStringContainsString( 'border-inline-start: 4px solid var(--wp-admin-theme-color);', $package_css );

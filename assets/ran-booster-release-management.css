@@ -83,7 +83,7 @@
 	color: var(--ran-booster-text-muted);
 }
 
-.ran-booster-admin .ran-booster-release-candidate > .button {
+.ran-booster-admin .ran-booster-release-candidate > .ran-wp-ui-button {
 	grid-column: 2;
 	justify-self: start;
 	margin-block-start: var(--ran-booster-space-5);
@@ -142,7 +142,9 @@
 		flex-direction: column;
 	}
 
-	.ran-booster-admin .ran-booster-managed-release-browser__header .button {
+	.ran-booster-admin
+		.ran-booster-managed-release-browser__header
+		.ran-wp-ui-button {
 		align-self: start;
 	}
 }

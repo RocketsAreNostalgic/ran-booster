@@ -370,7 +370,7 @@ final class ReleaseWorkflowDisplay {
 		}
 		$html .= '</select></label>';
 		if ( '' !== $credentials_url ) {
-			$html .= ' <a class="button" href="' . esc_url( $credentials_url ) . '">' . esc_html__( 'Manage credentials', 'ran-booster' ) . '</a>';
+			$html .= ' <a class="' . esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ) . '" href="' . esc_url( $credentials_url ) . '">' . esc_html__( 'Manage credentials', 'ran-booster' ) . '</a>';
 		}
 		$html .= '</p>';
 		$html .= '<p class="description">' . esc_html(
@@ -381,7 +381,7 @@ final class ReleaseWorkflowDisplay {
 				: __( 'Private repository inspection needs a saved credential.', 'ran-booster' ) )
 		) . '</p>';
 
-		return $html . '<p><button type="submit" class="button' . ( $write ? ' button-primary' : '' ) . '"' . ( $disabled ? ' disabled aria-disabled="true"' : '' ) . '>'
+		return $html . '<p><button type="submit" class="' . esc_attr( $write ? \RAN\Admin\Component\ButtonClasses::primary() : \RAN\Admin\Component\ButtonClasses::secondary() ) . '"' . ( $disabled ? ' disabled aria-disabled="true"' : '' ) . '>'
 			. esc_html( $buttons[ $operation ] ) . '</button></p></form>';
 	}
 

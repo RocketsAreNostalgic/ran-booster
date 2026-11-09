@@ -1400,6 +1400,8 @@ final class AdminAssetContractTest extends TestCase {
 			'RAN/Admin/Component/ProviderManagementTableRenderer.php',
 			'RAN/Admin/Component/RepositoryDetailRenderer.php',
 			'RAN/Admin/Component/RepositoryTableRenderer.php',
+			'RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php',
+			'RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php',
 			'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php',
 			'RAN/Admin/WebhookManagement/views/panel.php',
 			'assets/ran-booster-repository-picker.js',
@@ -1437,6 +1439,7 @@ final class AdminAssetContractTest extends TestCase {
 	private const NATIVE_BUTTON_ALLOWLIST = array(
 		'ran-booster-copy-value__button'       => 'Icon-only copy control attached to a read-only field; stays bespoke like the in-input password tools.',
 		'ran-booster-portability__icon-button' => 'Icon-only copy control inside the password and secret tools; stays bespoke.',
+		'ran-booster-release-track-option'     => 'Segmented release track control (current track, switch, radio label); deferred until segmented controls convert.',
 	);
 
 	/**
@@ -1448,9 +1451,9 @@ final class AdminAssetContractTest extends TestCase {
 	 */
 	private function core_button_classes( string $source ): array {
 		$found = array();
-		$token = '(?<![\w-])button(?:-primary|-secondary|-delete|-link-delete|-disabled)?(?![\w-])';
+		$token = '(?<![\w<\/-])button(?:-primary|-secondary|-delete|-link-delete|-disabled)?(?![\w-])';
 		preg_match_all( '/class=(["\'])(?:(?!\1).)*?' . $token . '(?:(?!\1).)*/', $source, $attributes );
-		preg_match_all( '/(?:className\s*=|classList\.\w+\(|\?|(?<!type):|\.)\s*[\'"][^\'"]*' . $token . '|[\'"][^\'"]*(?<![\w-])button-(?:primary|secondary|delete|link-delete|disabled)(?![\w-])/', $source, $strings );
+		preg_match_all( '/(?:className\s*=|classList\.\w+\(|\?|(?<!type):|\.)\s*[\'"][^\'"]*' . $token . '|[\'"][^\'"]*(?<![\w-])button-(?:primary|secondary|delete|link-delete|disabled)(?![\w-])[^\'"]*/', $source, $strings );
 		foreach ( array_merge( $attributes[0], $strings[0] ) as $match ) {
 			if ( 1 === preg_match( '/type\s*[=:]/', $match ) ) {
 				continue;

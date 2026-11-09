@@ -252,7 +252,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Booster could not safely read this package&#039;s repository storage. Check package storage and retry.', $html );
 		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );
 		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Check releases<\/button>/', $html );
-		self::assertStringContainsString( '<a class="button disabled" aria-disabled="true" tabindex="-1">Open WordPress updates</a>', $html );
+		self::assertStringContainsString( '<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline disabled" aria-disabled="true" tabindex="-1">Open WordPress updates</a>', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser-disabled="true"', $html );
 		self::assertStringNotContainsString( 'Conflicting packages', $html );
 		self::assertStringNotContainsString( '<ul class="ul-disc">', $html );
@@ -684,7 +684,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-version="1.2.0"', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-release-id=""', $html );
-		self::assertStringContainsString( 'button button-primary disabled ran-booster-managed-release-native-update', $html );
+		self::assertStringContainsString( 'ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid disabled ran-booster-managed-release-native-update', $html );
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		self::assertStringContainsString( 'action=upgrade-plugin', $html );
 		self::assertStringContainsString( 'plugin=example%2Fexample.php', $html );
@@ -1050,7 +1050,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertIsInt( $checklist_position );
 		self::assertTrue( $recovery_position < $checklist_position );
 		self::assertSame( 1, preg_match_all( '/class="[^"]*\\bran-booster-source-transition\\b[^"]*"/', $html ) );
-		self::assertStringContainsString( 'class="button button-primary" aria-disabled="false">Use branch', $html );
+		self::assertStringContainsString( 'class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" aria-disabled="false">Use branch', $html );
 	}
 
 	public function test_ordinary_published_release_does_not_offer_branch_recovery(): void {

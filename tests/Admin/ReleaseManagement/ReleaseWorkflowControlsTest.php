@@ -301,7 +301,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 
 		self::assertStringContainsString( '>Unavailable<', $html );
 		self::assertStringNotContainsString( 'Ready to assess', $html );
-		self::assertStringContainsString( 'button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringContainsString( 'button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
 	}
 
 	public function test_passive_repository_render_reads_only_status_and_opaque_preview_without_a_workflow_mutation(): void {

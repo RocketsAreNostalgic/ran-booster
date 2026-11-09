@@ -129,6 +129,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "array( 'class' => 'ran-booster-extension-card__badge' )", $view );
 		self::assertStringNotContainsString( '.ran-booster-extension-card__badge', $extensions );
 		self::assertStringContainsString( '.ran-booster-extension-details {', $extensions );
+		self::assertStringContainsString( '.ran-booster-extension-details-host:target {', $extensions );
+		self::assertStringNotContainsString( '#TB_', $extensions );
+		self::assertStringNotContainsString( '__tabs', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card.plugin-card', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-top', $extensions );
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-icon', $extensions );

@@ -180,7 +180,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:56
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:43
-#: views/extensions.php:208
+#: views/extensions.php:199
 #: views/provider.php:496
 #: views/provider.php:517
 #: views/troubleshooting.php:207
@@ -1059,7 +1059,7 @@ msgid "Completed"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:80
-#: RAN/Booster.php:987
+#: RAN/Booster.php:982
 #: views/attempts/index.php:59
 #: views/overview-dashboard.php:29
 #: views/packages/index.php:64
@@ -2370,7 +2370,7 @@ msgstr ""
 #: RAN/Admin/ProviderSettingsPresenter.php:1787
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:713
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:339
-#: RAN/Booster.php:988
+#: RAN/Booster.php:983
 #: views/attempts/index.php:62
 #: views/onboarding.php:84
 #: views/onboarding.php:111
@@ -4821,74 +4821,74 @@ msgstr ""
 msgid "Manage with RAN Booster"
 msgstr ""
 
-#: RAN/Booster.php:984
+#: RAN/Booster.php:979
 #: views/attempts/index.php:54
 #: views/overview-dashboard.php:24
 #: views/packages/index.php:61
 msgid "Queued"
 msgstr ""
 
-#: RAN/Booster.php:985
+#: RAN/Booster.php:980
 #: views/attempts/index.php:55
 #: views/overview-dashboard.php:25
 #: views/packages/index.php:62
 msgid "Running"
 msgstr ""
 
-#: RAN/Booster.php:986
+#: RAN/Booster.php:981
 #: views/attempts/index.php:57
 #: views/overview-dashboard.php:27
 #: views/packages/index.php:63
 msgid "Succeeded"
 msgstr ""
 
-#: RAN/Booster.php:989
+#: RAN/Booster.php:984
 #: views/packages/index.php:341
 msgid "Reinstall queued"
 msgstr ""
 
-#: RAN/Booster.php:990
+#: RAN/Booster.php:985
 #: views/packages/index.php:343
 msgid "Reinstall in progress…"
 msgstr ""
 
-#: RAN/Booster.php:991
+#: RAN/Booster.php:986
 msgid "Package reinstalled."
 msgstr ""
 
-#: RAN/Booster.php:992
+#: RAN/Booster.php:987
 msgid "Package reinstall failed. Review deployment activity."
 msgstr ""
 
-#: RAN/Booster.php:993
+#: RAN/Booster.php:988
 msgid "Package reinstall needs attention. Review deployment activity before retrying."
 msgstr ""
 
-#: RAN/Booster.php:994
+#: RAN/Booster.php:989
 msgid "Live reinstall progress is unavailable. Refresh this page to check the latest state."
 msgstr ""
 
-#: RAN/Booster.php:995
+#: RAN/Booster.php:990
 msgid "Booster reinstalls are in progress. Queued: {queued}. Reinstalling: {running}. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:996
+#: RAN/Booster.php:991
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:1174
+#: RAN/Booster.php:1178
 msgid "RAN Booster could not save this notice preference. Please try again."
 msgstr ""
 
-#: RAN/Booster.php:1211
+#: RAN/Booster.php:1215
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:1213
+#: RAN/Booster.php:1217
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:1215
+#: RAN/Booster.php:1219
 msgid "Contact a site administrator."
 msgstr ""
 
@@ -6635,7 +6635,7 @@ msgid "Reference"
 msgstr ""
 
 #: views/documentation.php:239
-#: views/extensions.php:216
+#: views/extensions.php:207
 msgid "Documentation"
 msgstr ""
 
@@ -7362,12 +7362,12 @@ msgid "By"
 msgstr ""
 
 #: views/extensions.php:132
-#: views/extensions.php:220
+#: views/extensions.php:211
 msgid "Support"
 msgstr ""
 
 #: views/extensions.php:140
-#: views/extensions.php:207
+#: views/extensions.php:198
 msgid "Beta"
 msgstr ""
 
@@ -7379,41 +7379,35 @@ msgstr ""
 msgid "with your version of Booster"
 msgstr ""
 
-#: views/extensions.php:182
-#: views/troubleshooting.php:209
-#: views/troubleshooting.php:258
-msgid "Details"
-msgstr ""
-
-#: views/extensions.php:186
+#: views/extensions.php:177
 msgid "About this extension"
 msgstr ""
 
-#: views/extensions.php:188
+#: views/extensions.php:179
 msgid "What it adds"
 msgstr ""
 
-#: views/extensions.php:194
+#: views/extensions.php:185
 msgid "Before you install"
 msgstr ""
 
-#: views/extensions.php:202
+#: views/extensions.php:193
 msgid "Extension details"
 msgstr ""
 
-#: views/extensions.php:204
+#: views/extensions.php:195
 msgid "Availability"
 msgstr ""
 
-#: views/extensions.php:206
+#: views/extensions.php:197
 msgid "Maturity"
 msgstr ""
 
-#: views/extensions.php:210
+#: views/extensions.php:201
 msgid "Compatibility"
 msgstr ""
 
-#: views/extensions.php:218
+#: views/extensions.php:209
 msgid "Release page"
 msgstr ""
 
@@ -10775,6 +10769,11 @@ msgstr ""
 #: views/troubleshooting.php:208
 #: views/troubleshooting.php:242
 msgid "Check"
+msgstr ""
+
+#: views/troubleshooting.php:209
+#: views/troubleshooting.php:258
+msgid "Details"
 msgstr ""
 
 #: views/troubleshooting.php:210

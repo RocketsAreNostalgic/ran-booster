@@ -775,8 +775,10 @@ WordPress.org Plugins API. Rendering the catalogue performs no remote request,
 mutation, entitlement check or add-on callback. Each card names the qualified
 satellite release and API tuple it represents. Core maintainers update that fixed
 metadata in a Core pull request after the satellite release is qualified; the
-page never discovers releases or polls repositories. More Details links to the
-selected release page.
+page never discovers releases or polls repositories. More Details opens the
+card's server-rendered details section in the shared WordPress UI Dialog and
+returns it to the page on close; without JavaScript the fragment link reveals
+the same section in place. The section links to the selected release page.
 
 After provider registration, Core may register an installed, active or inactive
 catalogue extension for manual native updates only. The shared updater must first

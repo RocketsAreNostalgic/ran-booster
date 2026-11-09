@@ -86,7 +86,7 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertNull( $booster->booster_path );
 		self::assertNull( $booster->booster_url );
 		self::assertSame( '/assets/ran-admin-shell.css', $GLOBALS['ran_booster_asset_test_registered_styles']['ran-booster-admin-shell']['source'] );
-		self::assertSame( '/assets/ran-booster-extension-details.js', $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['source'] );
+		self::assertSame( '/assets/ran-booster-extensions.js', $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extensions']['source'] );
 	}
 
 	/** @return list<array{string|null,string|null,string}> */
@@ -110,9 +110,9 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame( $path, $booster->booster_path );
 		self::assertSame( $url, $booster->booster_url );
 		self::assertSame( $expected_url . 'assets/ran-admin-shell.css', $GLOBALS['ran_booster_asset_test_registered_styles']['ran-booster-admin-shell']['source'] );
-		self::assertSame( $expected_url . 'assets/ran-booster-extension-details.js', $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['source'] );
+		self::assertSame( $expected_url . 'assets/ran-booster-extensions.js', $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extensions']['source'] );
 		self::assertNull( $GLOBALS['ran_booster_asset_test_registered_styles']['ran-booster-admin-shell']['version'] );
-		self::assertNull( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['version'] );
+		self::assertNull( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extensions']['version'] );
 	}
 
 	/** @return list<array{string}> */
@@ -130,16 +130,18 @@ final class BoosterAssetsTest extends TestCase {
 		$booster->load_scripts( 'ran-booster_page_ran-booster-extensions' );
 	}
 
-	public function test_extensions_page_receives_the_common_and_native_modal_assets(): void {
+	public function test_extensions_page_receives_the_common_assets_and_the_shared_dialog(): void {
 		$this->booster()->load_scripts( 'ran-booster_page_ran-booster-extensions' );
 
-		self::assertSame( array( 'ran-booster-menu', 'ran-booster-admin-shell', 'ran-booster-styles', 'wp-components', 'thickbox' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
-		self::assertSame( array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y', 'ran-booster-cards', 'thickbox', 'ran-booster-extension-details' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
-		self::assertSame( array( 'ran-booster-cards', 'ran-booster-extension-details' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
+		self::assertSame( array( 'ran-booster-menu', 'ran-booster-admin-shell', 'ran-booster-styles', 'wp-components' ), $GLOBALS['ran_booster_asset_test_enqueued_styles'] );
+		self::assertSame( array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y', 'ran-booster-cards', 'ran-booster-extensions' ), $GLOBALS['ran_booster_asset_test_enqueued_scripts'] );
+		self::assertSame( array( 'ran-booster-cards', 'ran-booster-dialog', 'ran-booster-extensions' ), array_keys( $GLOBALS['ran_booster_asset_test_registered_scripts'] ) );
+		self::assertSame( array( 'ran-booster-ui', 'ran-booster-ui-overlay' ), array_keys( $GLOBALS['ran_booster_asset_test_enqueued_modules'] ) );
 		self::assertSame(
-			array( 'jquery', 'thickbox' ),
-			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extension-details']['dependencies']
+			array( 'ran-booster-dialog' ),
+			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extensions']['dependencies']
 		);
+		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-extensions']['footer'] );
 		self::assertSame(
 			array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards']['dependencies']
@@ -186,7 +188,7 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'toplevel_page_ran-booster', 'troubleshooting', true, false ),
 			array( 'toplevel_page_ran-booster', 'gh', true, false ),
 			array( 'toplevel_page_ran-booster', 'documentation', true, false ),
-			array( 'ran-booster_page_ran-booster-extensions', null, true, false ),
+			array( 'ran-booster_page_ran-booster-extensions', null, true, true ),
 			array( 'ran-booster_page_ran-booster-settings', null, true, false ),
 			array( 'ran-booster_page_ran-booster-plugins', null, true, true ),
 			array( 'ran-booster_page_ran-booster-plugins-create', null, true, true ),

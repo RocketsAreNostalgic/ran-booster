@@ -62,7 +62,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 		<?php foreach ( $extensions as $extension ) : ?>
 			<?php
 			$details_id           = 'ran-booster-extension-details-' . $extension['id'];
-			$details_url          = '#TB_inline?width=772&height=600&inlineId=' . $details_id;
+			$details_url          = '#' . $details_id;
 			$availability_label   = $extension['availability'];
 			$state_label          = $extension_state_labels[ $extension['state'] ] ?? $extension['state'];
 			$manual_install_url   = is_string( $extension['manual_install_url'] ?? null ) ? $extension['manual_install_url'] : '';
@@ -78,7 +78,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 				<div class="plugin-card-top">
 					<div class="name column-name">
 						<h3>
-							<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>">
+							<a class="ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-ran-booster-extension-details="<?php echo esc_attr( $extension['id'] ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>">
 								<?php echo esc_html( $extension['name'] ); ?>
 								<img class="plugin-icon" src="<?php echo esc_url( $extension['image_url'] ); ?>" alt="">
 							</a>
@@ -115,7 +115,7 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 								<?php endif; ?>
 								</li>
 								<li>
-									<a class="thickbox ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a>
+									<a class="ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-ran-booster-extension-details="<?php echo esc_attr( $extension['id'] ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a>
 								<?php if ( $extension['installed'] ) : ?>
 									<br><a href="<?php echo esc_url( add_query_arg( 's', $extension['installed_name'], $plugins_url ) ); ?>"><?php esc_html_e( 'Manage plugin', 'ran-booster' ); ?></a>
 								<?php endif; ?>
@@ -169,59 +169,49 @@ else :
 			$release_is_installed = (bool) ( $extension['selected_release_is_installed'] ?? true );
 			$compatibility_label  = $extension['compatibility_label'];
 			?>
-			<div id="<?php echo esc_attr( $details_id ); ?>" class="hidden">
-				<article class="ran-booster-extension-details" aria-labelledby="<?php echo esc_attr( $details_title_id ); ?>">
-					<header class="ran-booster-extension-details__header">
-						<img src="<?php echo esc_url( $extension['image_url'] ); ?>" alt="">
-						<div>
-							<h2 id="<?php echo esc_attr( $details_title_id ); ?>"><?php echo esc_html( $extension['name'] ); ?></h2>
-							<p><?php echo esc_html( $extension['description'] ); ?></p>
-						</div>
-					</header>
-					<div class="ran-booster-extension-details__tabs" aria-hidden="true">
-						<span><?php esc_html_e( 'Details', 'ran-booster' ); ?></span>
+			<section id="<?php echo esc_attr( $details_id ); ?>" class="ran-booster-extension-details-host" aria-labelledby="<?php echo esc_attr( $details_title_id ); ?>" hidden>
+				<h2 id="<?php echo esc_attr( $details_title_id ); ?>"><?php echo esc_html( $extension['name'] ); ?></h2>
+				<p class="ran-booster-extension-details-host__description"><?php echo esc_html( $extension['description'] ); ?></p>
+				<div id="<?php echo esc_attr( $details_id . '-content' ); ?>" class="ran-booster-extension-details">
+					<div class="ran-booster-extension-details__main">
+						<h3><?php esc_html_e( 'About this extension', 'ran-booster' ); ?></h3>
+						<p><?php echo esc_html( $extension['details'] ); ?></p>
+						<h3><?php esc_html_e( 'What it adds', 'ran-booster' ); ?></h3>
+						<ul>
+						<?php foreach ( $extension['features'] as $feature ) : ?>
+							<li><?php echo esc_html( $feature ); ?></li>
+						<?php endforeach; ?>
+						</ul>
+						<h3><?php esc_html_e( 'Before you install', 'ran-booster' ); ?></h3>
+						<ul>
+						<?php foreach ( $extension['requirements'] as $requirement ) : ?>
+							<li><?php echo esc_html( $requirement ); ?></li>
+						<?php endforeach; ?>
+						</ul>
 					</div>
-					<div class="ran-booster-extension-details__content">
-						<div class="ran-booster-extension-details__main">
-							<h3><?php esc_html_e( 'About this extension', 'ran-booster' ); ?></h3>
-							<p><?php echo esc_html( $extension['details'] ); ?></p>
-							<h3><?php esc_html_e( 'What it adds', 'ran-booster' ); ?></h3>
-							<ul>
-							<?php foreach ( $extension['features'] as $feature ) : ?>
-								<li><?php echo esc_html( $feature ); ?></li>
-							<?php endforeach; ?>
-							</ul>
-							<h3><?php esc_html_e( 'Before you install', 'ran-booster' ); ?></h3>
-							<ul>
-							<?php foreach ( $extension['requirements'] as $requirement ) : ?>
-								<li><?php echo esc_html( $requirement ); ?></li>
-							<?php endforeach; ?>
-							</ul>
-						</div>
-						<aside class="ran-booster-extension-details__sidebar">
-							<h3><?php esc_html_e( 'Extension details', 'ran-booster' ); ?></h3>
-							<dl>
-								<dt><?php esc_html_e( 'Availability', 'ran-booster' ); ?></dt>
-								<dd><?php echo esc_html( $availability_label ); ?></dd>
-								<dt><?php esc_html_e( 'Maturity', 'ran-booster' ); ?></dt>
-								<dd><?php esc_html_e( 'Beta', 'ran-booster' ); ?></dd>
-								<dt><?php esc_html_e( 'Status', 'ran-booster' ); ?></dt>
-								<dd><?php echo esc_html( $state_label ); ?></dd>
-								<dt><?php esc_html_e( 'Compatibility', 'ran-booster' ); ?></dt>
-								<dd class="ran-booster-extension-details__compatibility<?php echo $extension['compatible'] ? '' : ' ran-booster-extension-details__compatibility--incompatible'; ?>">
-									<span aria-hidden="true"><?php echo $extension['compatible'] ? '✓' : '×'; ?></span>
-									<?php echo esc_html( $compatibility_label ); ?>
-								</dd>
-							</dl>
-							<p><a href="<?php echo esc_url( $extension['docs_url'] ); ?>"><?php esc_html_e( 'Documentation', 'ran-booster' ); ?></a></p>
-								<?php if ( ! empty( $extension['manual_install_url'] ) ) : ?>
-									<p><a href="<?php echo esc_url( $extension['manual_install_url'] ); ?>"><?php esc_html_e( 'Release page', 'ran-booster' ); ?></a></p>
-								<?php endif; ?>
-							<p><a href="<?php echo esc_url( $extension['support_url'] ); ?>"><?php esc_html_e( 'Support', 'ran-booster' ); ?></a></p>
-						</aside>
-					</div>
-				</article>
-			</div>
+					<aside class="ran-booster-extension-details__sidebar">
+						<h3><?php esc_html_e( 'Extension details', 'ran-booster' ); ?></h3>
+						<dl>
+							<dt><?php esc_html_e( 'Availability', 'ran-booster' ); ?></dt>
+							<dd><?php echo esc_html( $availability_label ); ?></dd>
+							<dt><?php esc_html_e( 'Maturity', 'ran-booster' ); ?></dt>
+							<dd><?php esc_html_e( 'Beta', 'ran-booster' ); ?></dd>
+							<dt><?php esc_html_e( 'Status', 'ran-booster' ); ?></dt>
+							<dd><?php echo esc_html( $state_label ); ?></dd>
+							<dt><?php esc_html_e( 'Compatibility', 'ran-booster' ); ?></dt>
+							<dd class="ran-booster-extension-details__compatibility<?php echo $extension['compatible'] ? '' : ' ran-booster-extension-details__compatibility--incompatible'; ?>">
+								<span aria-hidden="true"><?php echo $extension['compatible'] ? '✓' : '×'; ?></span>
+								<?php echo esc_html( $compatibility_label ); ?>
+							</dd>
+						</dl>
+						<p><a href="<?php echo esc_url( $extension['docs_url'] ); ?>"><?php esc_html_e( 'Documentation', 'ran-booster' ); ?></a></p>
+						<?php if ( ! empty( $extension['manual_install_url'] ) ) : ?>
+							<p><a href="<?php echo esc_url( $extension['manual_install_url'] ); ?>"><?php esc_html_e( 'Release page', 'ran-booster' ); ?></a></p>
+						<?php endif; ?>
+						<p><a href="<?php echo esc_url( $extension['support_url'] ); ?>"><?php esc_html_e( 'Support', 'ran-booster' ); ?></a></p>
+					</aside>
+				</div>
+			</section>
 		<?php endforeach; ?>
 	</div>
 </section>

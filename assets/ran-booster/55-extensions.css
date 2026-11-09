@@ -54,177 +54,99 @@
 	margin-block-start: var(--ran-booster-space-16);
 }
 
-/* Keep the selected extension modal within the viewport, including its close button. */
-/* stylelint-disable selector-id-pattern, declaration-no-important -- ThickBox owns the ID and writes dimensions and margins inline. */
-#TB_window.ran-booster-extension-modal {
-	box-sizing: border-box;
-	inline-size: min(802px, calc(100vw - 80px)) !important;
-	block-size: min(640px, calc(100vh - 80px)) !important;
-	margin: 0 !important;
-	transform: translate(-50%, -50%);
-}
-/* stylelint-enable selector-id-pattern, declaration-no-important */
+/*
+ * More Details. The shared Dialog supplies the title, description, close
+ * button and content padding; without JavaScript, :target reveals the
+ * hidden section in place.
+ */
 
-/* stylelint-disable-next-line selector-id-pattern -- WordPress ThickBox owns these IDs. */
-#TB_window.plugin-details-modal #TB_ajaxContent {
-	box-sizing: border-box;
-	inline-size: 100% !important;
-	block-size: 100% !important;
-	padding: 0;
-	overflow: auto;
+.ran-booster-extension-details-host:target {
+	display: block;
+	margin-block-start: var(--ran-booster-space-30);
 }
 
 .ran-booster-extension-details {
-	min-block-size: 100%;
-	background: var(--ran-booster-surface);
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 240px);
+	gap: var(--ran-booster-space-24);
 	color: var(--ran-booster-text);
-}
-
-.ran-booster-extension-details__header {
-	display: grid;
-	grid-template-columns: 96px minmax(0, 1fr);
-	align-items: center;
-	gap: 20px;
-	padding: 20px 26px;
-	background: var(--ran-booster-surface-subtle);
-}
-
-.ran-booster-extension-details__header img {
-	inline-size: 96px;
-	block-size: 96px;
-	border-radius: var(--ran-booster-radius-inset);
-}
-
-.ran-booster-extension-details__header h2 {
-	margin: 0 0 6px;
-	font-size: var(--ran-booster-font-size-xl);
-	line-height: 1.3;
-}
-
-.ran-booster-extension-details__header p {
-	margin: 0;
-	color: var(--ran-booster-text-muted);
 	font-size: var(--ran-booster-font-size-md);
-	line-height: 1.6;
+	line-height: var(--ran-booster-line-height-relaxed);
 }
 
-.ran-booster-extension-details__tabs {
-	min-block-size: 36px;
-	padding-inline: 16px;
-	border-block: 1px solid var(--ran-booster-divider);
-	background: var(--ran-booster-surface-subtle);
+.ran-booster-ui-dialog__body .ran-booster-extension-details {
+	margin-block-start: var(--ran-booster-space-16);
 }
 
-.ran-booster-extension-details__tabs span {
-	display: inline-block;
-	box-sizing: border-box;
-	block-size: 37px;
-	margin-block: -1px;
-	padding: 9px 10px;
-	border: 1px solid var(--ran-booster-divider);
-	border-block-end-color: var(--ran-booster-surface);
-	background: var(--ran-booster-surface);
-	font-size: var(--ran-booster-font-size-md);
-	line-height: 1.3;
-}
-
-.ran-booster-extension-details__content {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) 250px;
-	align-items: stretch;
-	min-block-size: 360px;
-}
-
-.ran-booster-extension-details__main {
-	padding: 16px 26px 28px;
-	font-size: var(--ran-booster-font-size-md);
-	line-height: 1.7;
-}
-
-.ran-booster-extension-details__main h3 {
-	margin-block: 20px 8px;
+.ran-booster-extension-details h3 {
+	margin-block: var(--ran-booster-space-20) var(--ran-booster-space-8);
 	font-size: var(--ran-booster-font-size-lg);
+	font-weight: var(--ran-booster-font-weight-heading);
+	line-height: var(--ran-booster-line-height-heading);
 }
 
-.ran-booster-extension-details__main p {
-	margin-block: 0 16px;
+.ran-booster-extension-details :is(h3, dl):first-child {
+	margin-block-start: 0;
+}
+
+.ran-booster-extension-details p {
+	margin-block: 0 var(--ran-booster-space-16);
 }
 
 .ran-booster-extension-details__main ul {
-	margin: 0 0 16px 24px;
+	margin-block: 0 var(--ran-booster-space-16);
+	margin-inline: 0;
+	padding-inline-start: var(--ran-booster-space-24);
 	list-style: disc;
 }
 
 .ran-booster-extension-details__sidebar {
-	padding: 20px 16px;
+	padding-inline-start: var(--ran-booster-space-24);
 	border-inline-start: 1px solid var(--ran-booster-divider);
-	background: var(--ran-booster-surface-subtle);
-	color: var(--ran-booster-text-subtle);
 }
 
 .ran-booster-extension-details__sidebar h3,
 .ran-booster-extension-details__sidebar dt {
 	color: var(--ran-booster-text-subtle);
 	font-size: var(--ran-booster-font-size-sm);
-	font-weight: 600;
+	font-weight: var(--ran-booster-font-weight-semibold);
 	text-transform: uppercase;
 }
 
-.ran-booster-extension-details__sidebar h3 {
-	margin: 0 0 16px;
-}
-
 .ran-booster-extension-details__sidebar dl {
-	margin: 0 0 20px;
+	margin-block: 0 var(--ran-booster-space-20);
 }
 
 .ran-booster-extension-details__sidebar dt {
-	margin-block-start: 14px;
+	margin-block-start: var(--ran-booster-space-14);
 }
 
 .ran-booster-extension-details__sidebar dd {
-	margin: 3px 0 0;
-	color: var(--ran-booster-text);
+	margin-block: var(--ran-booster-space-3) 0;
+	margin-inline: 0;
+}
+
+.ran-booster-extension-details__sidebar p {
+	margin-block: var(--ran-booster-space-8) 0;
 }
 
 .ran-booster-extension-details__compatibility span {
 	color: var(--ran-booster-status-ok);
-	font-weight: 600;
+	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
 .ran-booster-extension-details__compatibility--incompatible span {
 	color: var(--ran-booster-status-error);
 }
 
-.ran-booster-extension-details__sidebar p {
-	margin: 8px 0 0;
-}
-
-@media screen and (max-width: 600px) {
-	.ran-booster-extension-details__header {
-		grid-template-columns: 64px minmax(0, 1fr);
-		gap: 14px;
-		padding: 16px;
-	}
-
-	.ran-booster-extension-details__header img {
-		inline-size: 64px;
-		block-size: 64px;
-	}
-
-	.ran-booster-extension-details__header h2 {
-		font-size: var(--ran-booster-font-size-lg);
-	}
-
-	.ran-booster-extension-details__content {
+@media screen and (max-width: 782px) {
+	.ran-booster-extension-details {
 		grid-template-columns: minmax(0, 1fr);
 	}
 
-	.ran-booster-extension-details__main {
-		padding-inline: 20px;
-	}
-
 	.ran-booster-extension-details__sidebar {
+		padding-block-start: var(--ran-booster-space-20);
+		padding-inline-start: 0;
 		border-block-start: 1px solid var(--ran-booster-divider);
 		border-inline-start: 0;
 	}

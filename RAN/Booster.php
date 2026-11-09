@@ -844,27 +844,22 @@ class Booster {
 		);
 		wp_enqueue_style( 'ran-booster-styles' );
 		wp_enqueue_style( 'wp-components' );
-		$this->load_ui_assets( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) );
+		$this->load_ui_assets( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) || 'ran-booster_page_ran-booster-extensions' === $hook );
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
 			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'wp-i18n', 'ran-booster-cards', 'ran-booster-announce' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
 			wp_set_script_translations( 'ran-booster-settings', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 		}
 
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {
-
-			$extension_details_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extension-details.js';
-			$extension_details_version = $this->asset_version( $extension_details_path );
-
-			wp_enqueue_style( 'thickbox' );
-			wp_enqueue_script( 'thickbox' );
-			wp_register_script(
-				'ran-booster-extension-details',
-				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-extension-details.js',
-				array( 'jquery', 'thickbox' ),
-				$extension_details_version,
+			// More Details opens its server-rendered section in the shared Dialog.
+			$extensions_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extensions.js';
+			wp_enqueue_script(
+				'ran-booster-extensions',
+				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-extensions.js',
+				array( 'ran-booster-dialog' ),
+				$this->asset_version( $extensions_script_path ),
 				true
 			);
-			wp_enqueue_script( 'ran-booster-extension-details' );
 			return;
 		}
 

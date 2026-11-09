@@ -1901,6 +1901,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'owner/example', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-list" role="list"', $html );
 		self::assertStringContainsString( 'data-ran-booster-provider-repository', $html );
+		self::assertStringContainsString( '<label class="screen-reader-text" for="ran-booster-provider-repository-search">Filter managed repositories</label>', $html );
+		self::assertStringContainsString( 'placeholder="Filter managed repositories…" data-ran-booster-provider-repository-filter', $html );
+		self::assertStringNotContainsString( 'Search managed repositories', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-record__summary"', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-record__identity"', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-record__overview"', $html );

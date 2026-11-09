@@ -9717,11 +9717,11 @@ msgid "Managed repositories"
 msgstr ""
 
 #: views/provider.php:656
-msgid "Search managed repositories"
+msgid "Filter managed repositories"
 msgstr ""
 
 #: views/provider.php:657
-msgid "Search managed repositories…"
+msgid "Filter managed repositories…"
 msgstr ""
 
 #: views/provider.php:673

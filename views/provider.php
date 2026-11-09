@@ -653,8 +653,8 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 								<?php } ?>
 							<?php } elseif ( array() !== $repository_table_rows ) { ?>
 								<div class="ran-booster-provider-repository-tools">
-									<label class="screen-reader-text" for="ran-booster-provider-repository-search"><?php esc_html_e( 'Search managed repositories', 'ran-booster' ); ?></label>
-									<input id="ran-booster-provider-repository-search" type="search" placeholder="<?php esc_attr_e( 'Search managed repositories…', 'ran-booster' ); ?>" data-ran-booster-provider-repository-filter>
+									<label class="screen-reader-text" for="ran-booster-provider-repository-search"><?php esc_html_e( 'Filter managed repositories', 'ran-booster' ); ?></label>
+									<input id="ran-booster-provider-repository-search" type="search" placeholder="<?php esc_attr_e( 'Filter managed repositories…', 'ran-booster' ); ?>" data-ran-booster-provider-repository-filter>
 									<span
 										data-ran-booster-provider-repository-count
 										aria-live="polite"

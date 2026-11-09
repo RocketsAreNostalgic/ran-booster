@@ -147,6 +147,18 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'min-block-size: var(--ran-booster-space-24);', $link_rule[1] );
 	}
 
+	public function test_package_list_filters_size_to_their_longest_option(): void {
+		$packages = $this->asset( 'ran-booster/60-packages.css' );
+
+		self::assertSame(
+			1,
+			preg_match( '/\n\.ran-booster-admin \.ran-booster-package-list-filters select \{([^}]*)\}/', $packages, $filter_rule )
+		);
+		self::assertArrayHasKey( 1, $filter_rule );
+		self::assertStringContainsString( 'inline-size: auto;', $filter_rule[1] );
+		self::assertStringNotContainsString( '130px', $filter_rule[1] );
+	}
+
 	public function test_status_pills_are_badges_and_the_legacy_tile_utilities_are_gone(): void {
 		$debug      = $this->view( 'debug-capture.php' );
 		$packages   = $this->view( 'packages/index.php' );

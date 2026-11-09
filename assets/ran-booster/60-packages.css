@@ -32,9 +32,10 @@
 	margin: 0;
 }
 
+/* Size each filter to its longest option so the selected value never clips. */
 .ran-booster-admin .ran-booster-package-list-filters select {
-	inline-size: 130px;
-	max-inline-size: 130px;
+	inline-size: auto;
+	max-inline-size: 100%;
 }
 
 .ran-booster-admin .ran-booster-package-list-filters__clear {

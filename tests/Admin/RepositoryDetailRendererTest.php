@@ -114,6 +114,12 @@ final class RepositoryDetailRendererTest extends TestCase {
 					'url'   => 'https://example.test/plugins?source_view=release_asset',
 				),
 			),
+			'status_links'      => array(
+				array(
+					'label' => 'Review shared owner secret',
+					'url'   => 'https://example.test/secrets',
+				),
+			),
 		);
 
 		$webhook_rendered = false;
@@ -146,6 +152,10 @@ final class RepositoryDetailRendererTest extends TestCase {
 			self::assertStringContainsString( 'data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-' . $section . '-heading"', $html );
 		}
 		self::assertSame( 4, substr_count( $html, 'data-ran-booster-card="provider"' ) );
+		$integration = (string) strstr( $html, 'ran-booster-repository-integration-summary-heading' );
+		$integration = substr( $integration, 0, (int) strpos( $integration, '</section>' ) );
+		self::assertStringContainsString( '<p><a href="https://example.test/secrets">Review shared owner secret</a></p>', preg_replace( '/\s+/', ' ', str_replace( array( "\n", "\t" ), '', $integration ) ) ?? '' );
+		self::assertStringNotContainsString( 'repository-detail__status-links', $html );
 		self::assertFalse( $webhook_rendered );
 		self::assertFalse( $release_rendered );
 		self::assertStringContainsString( '2 packages · Conflicting sources', $html );

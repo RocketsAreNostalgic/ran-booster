@@ -74,7 +74,6 @@ final class RepositoryDetailRenderer {
 				<main class="ran-booster-repository-detail__main">
 					<?php if ( 'status' === $active_view ) { ?>
 						<?php $this->render_status( $row, $packages, $omitted ); ?>
-						<?php $this->render_status_links( $row ); ?>
 					<?php } elseif ( 'branch' === $active_view && 0 < $omitted ) { ?>
 						<?php $this->render_incomplete_workflow_controls( 'branch', $omitted ); ?>
 					<?php } elseif ( 'branch' === $active_view ) { ?>
@@ -182,6 +181,7 @@ final class RepositoryDetailRenderer {
 						<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php $this->render_detail_value( $detail ); ?></dd></div>
 					<?php } ?>
 				</dl>
+				<?php $this->render_status_links( $row ); ?>
 			</div>
 		</section>
 		<?php
@@ -507,7 +507,7 @@ final class RepositoryDetailRenderer {
 			return;
 		}
 		?>
-		<p class="ran-booster-repository-detail__status-links">
+		<p>
 		<?php foreach ( $links as $index => $link ) { ?>
 			<?php
 			if ( 0 < $index ) {

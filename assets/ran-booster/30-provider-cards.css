@@ -214,7 +214,6 @@
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);
 	align-items: start;
-	border-block-start: 1px solid var(--ran-booster-divider);
 }
 
 .ran-booster-admin .ran-booster-public-lookup-profile__form,
@@ -1033,8 +1032,8 @@
 	.ran-booster-provider-section[data-ran-booster-card="provider"][data-ran-booster-ui-mounted]
 	.ran-booster-provider-section__body
 	> .ran-booster-public-lookup-profile__panel {
-	border-inline: 1px solid var(--ran-booster-divider);
-	border-block-end: 1px solid var(--ran-booster-divider);
+	border: 1px solid var(--ran-booster-divider);
+	border-radius: var(--ran-booster-radius-inset);
 }
 
 .ran-booster-admin .ran-booster-release-workflow__body {

@@ -75,6 +75,7 @@
 }
 
 .ran-booster-admin .ran-booster-repository-list {
+	overflow: hidden;
 	border: 1px solid var(--ran-booster-border);
 	background: var(--ran-booster-surface);
 }

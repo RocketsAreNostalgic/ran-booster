@@ -537,10 +537,13 @@
 	background: var(--ran-booster-surface);
 }
 
+/* surface-radius:start */
+
 /*
- * One corner profile for every framed surface. Cards, panels and package
- * sections share the WordPress UI Card radius, so the native fallback matches
- * the mounted Card. Boxes nested inside a Card use the smaller inset radius.
+ * One corner profile for every framed surface, defined here and nowhere else.
+ * A component that draws a full border joins one of these two groups instead
+ * of declaring its own radius. The AdminAssetContractTest fails on any other
+ * full-border rule that is not listed here or explicitly allowed.
  */
 
 .ran-booster-admin
@@ -554,13 +557,34 @@
 .ran-booster-admin
 	:is(
 		.ran-booster-status-summary,
-		.ran-booster-activity__details,
 		.ran-booster-webhook-step,
 		.ran-booster-readiness-panel,
-		.ran-booster-provider-empty-state
+		.ran-booster-provider-empty-state,
+		.ran-booster-provider-empty-actions,
+		.ran-booster-provider-next-step,
+		.ran-booster-provider-assistance-note,
+		.ran-booster-provider-task-panel,
+		.ran-booster-repository-detail__receiver,
+		.ran-booster-repository-list,
+		.ran-booster-data-table-wrap,
+		.ran-booster-activity__details,
+		.ran-booster-troubleshooting__form,
+		.ran-booster-portability__credential-guidance,
+		.ran-booster-portability__table-scroll,
+		.ran-booster-repository-picker__list,
+		.ran-booster-source-transition,
+		.ran-booster-release-code,
+		.ran-booster-public-lookup-profile__panel,
+		.ran-booster-package-danger-zone__actions > form
 	) {
 	border-radius: var(--ran-booster-radius-inset);
 }
+
+.ran-booster-repository-picker__list {
+	border-radius: var(--ran-booster-radius-inset);
+}
+
+/* surface-radius:end */
 
 /*
  * Summary grid: one framed set of label/value cells. The 1px gap shows the

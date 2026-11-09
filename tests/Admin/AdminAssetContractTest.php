@@ -175,6 +175,63 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-debug-capture__panel ran-booster-panel', $debug );
 	}
 
+	/**
+	 * Every full-border rule must take its radius from the shared surface block,
+	 * so a new framed box cannot ship square. Entries below are intentional.
+	 */
+	public function test_every_framed_surface_takes_its_radius_from_the_shared_block(): void {
+		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		$start      = strpos( $primitives, '/* surface-radius:start */' );
+		$end        = strpos( $primitives, '/* surface-radius:end */' );
+		self::assertNotFalse( $start );
+		self::assertNotFalse( $end );
+		$shared = substr( $primitives, $start, $end - $start );
+
+		$allowed = array(
+			'ran-booster-data-table'              => 'Table inside the rounded data-table-wrap.',
+			'ran-booster-extension-details__tabs' => 'Tab header pills share the tab strip, not a frame.',
+			'ran-booster-panel'                   => 'Panel radius is declared with its card profile.',
+			'ran-booster-card'                    => 'Native Card fallback declares the card radius.',
+			'ran-booster-summary-grid'            => 'Summary grid declares its own radius.',
+			'ran-booster-ui-disclosure'           => 'Public Disclosure fallback uses the WordPress UI radius.',
+			'ran-booster-provider-section'        => 'Provider sections are Cards with their own profile.',
+			'ran-booster-provider__footer'        => 'Overview footer is a Card region.',
+			'ran-booster-onboarding__storage'     => 'Declared with the panel profile.',
+			'ran-booster-portability__flow'       => 'Declared with the panel profile.',
+		);
+
+		$offenders = array();
+		foreach ( glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE ) as $file ) {
+			$css = (string) file_get_contents( $file );
+			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
+			if ( ! preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {
+				continue;
+			}
+			foreach ( $rules as $rule ) {
+				$body = $rule[2];
+				if ( 1 !== preg_match( '/(?:^|[;\s])border:\s*(?!0|none)[^;]*\d+px/', $body ) || str_contains( $body, 'radius' ) ) {
+					continue;
+				}
+				$selector = trim( (string) preg_replace( '/\s+/', ' ', $rule[1] ) );
+				if ( preg_match_all( '/\.(ran-booster-(?!admin\b)[a-z0-9_-]+)/', $selector, $classes ) > 0 ) {
+					$covered = false;
+					foreach ( array_unique( $classes[1] ) as $class ) {
+						if ( str_contains( $shared, '.' . $class ) || isset( $allowed[ $class ] ) ) {
+							$covered = true;
+							break;
+						}
+					}
+					if ( $covered ) {
+						continue;
+					}
+				}
+				$offenders[] = basename( $file ) . ': ' . $selector;
+			}
+		}
+
+		self::assertSame( array(), $offenders, 'These full-border rules have no radius. Add them to the shared surface-radius block or allow them with a reason.' );
+	}
+
 	public function test_framed_fact_grids_share_one_summary_grid_profile(): void {
 		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		foreach ( array(

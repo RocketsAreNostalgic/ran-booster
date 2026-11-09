@@ -210,6 +210,11 @@ final class BoosterAssetsTest extends TestCase {
 		self::assertSame( $cards, isset( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-cards'] ) );
 		self::assertSame( $cards || $overlay, isset( $modules['ran-booster-ui'] ) );
 		self::assertSame( $overlay, isset( $modules['ran-booster-ui-overlay'] ) );
+		self::assertSame( $overlay, isset( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-dialog'] ) );
+		if ( $overlay ) {
+			self::assertSame( array( 'wp-element' ), $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-dialog']['dependencies'] );
+			self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-dialog']['footer'] );
+		}
 		self::assertSame( $cards || $overlay, in_array( 'wp-i18n', $GLOBALS['ran_booster_asset_test_enqueued_scripts'], true ) );
 		self::assertSame( $cards || $overlay, in_array( 'wp-a11y', $GLOBALS['ran_booster_asset_test_enqueued_scripts'], true ) );
 		self::assertSame( 'plugins.php' !== $hook, in_array( 'wp-components', $GLOBALS['ran_booster_asset_test_enqueued_styles'], true ) );

@@ -7,6 +7,7 @@ Object.assign(window.ranBoosterUI, {
 		Popup: Dialog.Popup,
 		Header: Dialog.Header,
 		Title: Dialog.Title,
+		Description: Dialog.Description,
 		Content: Dialog.Content,
 		CloseIconButton: Dialog.CloseIconButton,
 		Portal: Dialog.Portal,

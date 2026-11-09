@@ -685,6 +685,14 @@
  * namespaced scope rather than relying on the Booster page wrapper.
  */
 
+/* Shared WordPress UI Dialog portals cover the admin bar and menu. */
+.ran-booster-ui-dialog-portal {
+	position: relative;
+	z-index: var(--ran-booster-layer-modal);
+	isolation: isolate;
+	--wp-ui-dialog-z-index: var(--ran-booster-layer-modal);
+}
+
 .ran-booster-dialog[hidden] {
 	display: none;
 }

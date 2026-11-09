@@ -1082,6 +1082,9 @@ class Booster {
 			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
 			true
 		);
+		if ( $has_ui_overlay ) {
+			$this->register_dialog_script();
+		}
 	}
 
 	/**
@@ -1156,6 +1159,12 @@ class Booster {
 	private function register_announce_script(): void {
 		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-announce.js';
 		wp_register_script( 'ran-booster-announce', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-announce.js', array( 'wp-a11y' ), $this->asset_version( $path ), true );
+	}
+
+	/** Register the shared Dialog helper; it stays inert until the overlay module publishes Dialog. */
+	private function register_dialog_script(): void {
+		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-dialog.js';
+		wp_register_script( 'ran-booster-dialog', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-dialog.js', array( 'wp-element' ), $this->asset_version( $path ), true );
 	}
 
 	private function load_notice_preference_script( string $object_name, string $action, string $nonce_action ): void {

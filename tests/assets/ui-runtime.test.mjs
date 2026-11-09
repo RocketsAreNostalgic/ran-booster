@@ -109,6 +109,7 @@ test('host React loads the foundation once and overlay extends the same object',
 		assert.deepEqual(Object.keys(ui.Dialog).sort(), [
 			'CloseIconButton',
 			'Content',
+			'Description',
 			'Header',
 			'Popup',
 			'Portal',

@@ -505,7 +505,7 @@
 	gap: var(--ran-booster-space-12);
 	padding-block: var(--ran-booster-space-14);
 	padding-inline: var(--ran-booster-space-16);
-	border: 1px solid var(--ran-booster-border);
+	border: 1px solid var(--ran-booster-strong-divider);
 	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-surface);
 	color: var(--ran-booster-text);
@@ -573,11 +573,10 @@
 .ran-booster-admin .ran-booster-portability__apply,
 .ran-booster-admin .ran-booster-portability__export-packages,
 .ran-booster-admin .ran-booster-portability__credential-option {
-	margin-block-start: var(--ran-booster-space-20);
-	padding-block: var(--ran-booster-space-18);
-	padding-inline: var(--ran-booster-space-20);
-	border-radius: var(--ran-booster-radius-surface);
-	background: var(--ran-booster-surface-subtle);
+	margin-block-start: var(--ran-booster-space-24);
+	padding-block: var(--ran-booster-space-24) 0;
+	padding-inline: 0;
+	border-block-start: 1px solid var(--wpds-color-stroke-surface-neutral);
 }
 
 .ran-booster-admin .ran-booster-portability__upload h4,
@@ -592,17 +591,6 @@
 
 .ran-booster-admin .ran-booster-portability__credential-option {
 	min-inline-size: 0;
-}
-
-.ran-booster-admin
-	.ran-booster-portability__export-review
-	> :is(
-		.ran-booster-portability__credential-option,
-		.ran-booster-portability__export-packages
-	) {
-	margin-block-start: var(--ran-booster-space-20);
-	padding: 0;
-	background: transparent;
 }
 
 .ran-booster-admin
@@ -959,7 +947,7 @@
 	.ran-booster-portability__review
 	.ran-booster-portability__review-title {
 	margin-block-end: 0;
-	font-size: var(--ran-booster-font-size-card-title);
+	font-size: var(--ran-booster-font-size-subsection);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: var(--ran-booster-line-height-tight);
 }
@@ -1223,13 +1211,6 @@
 	.ran-booster-admin .ran-booster-portability__chooser,
 	.ran-booster-admin .ran-booster-portability__flow {
 		padding: var(--ran-booster-space-18);
-	}
-
-	.ran-booster-admin .ran-booster-portability__upload,
-	.ran-booster-admin .ran-booster-portability__review,
-	.ran-booster-admin .ran-booster-portability__apply,
-	.ran-booster-admin .ran-booster-portability__credential-option {
-		padding-block-start: var(--ran-booster-space-18);
 	}
 
 	.ran-booster-admin .ran-booster-portability__credential-footer {

@@ -15,6 +15,55 @@ final class ExternalLinkMarkerTest extends TestCase {
 		self::assertSame( '<span aria-hidden="true">↗</span><span class="screen-reader-text"> (opens in a new tab)</span>', ExternalLinkMarker::markup() );
 	}
 
+	public function test_normaliser_inserts_the_arrow_before_an_existing_hint_without_duplicating_it(): void {
+		$html = '<a href="https://e.test" target="_blank" rel="noopener noreferrer">Docs<span class="screen-reader-text"> (opens in a new tab)</span></a>';
+
+		self::assertSame(
+			'<a href="https://e.test" target="_blank" rel="noopener noreferrer">Docs <span aria-hidden="true">↗</span><span class="screen-reader-text"> (opens in a new tab)</span></a>',
+			ExternalLinkMarker::normalize_html( $html )
+		);
+	}
+
+	public function test_normaliser_appends_the_full_marker_when_a_new_tab_link_has_neither(): void {
+		self::assertSame(
+			'<a href="https://e.test" target=\'_blank\'>Docs ' . ExternalLinkMarker::markup() . '</a>',
+			ExternalLinkMarker::normalize_html( '<a href="https://e.test" target=\'_blank\'>Docs</a>' )
+		);
+	}
+
+	public function test_normaliser_is_idempotent_and_leaves_marked_links_alone(): void {
+		$marked = '<a href="https://e.test" target="_blank">Docs ' . ExternalLinkMarker::markup() . '</a>';
+		$once   = ExternalLinkMarker::normalize_html( '<a href="https://e.test" target="_blank">Docs</a>' );
+
+		self::assertSame( $marked, ExternalLinkMarker::normalize_html( $marked ) );
+		self::assertSame( $once, ExternalLinkMarker::normalize_html( $once ) );
+		$hint_only = ExternalLinkMarker::normalize_html( '<a target="_blank" href="x">Docs<span class="screen-reader-text"> (opens in a new tab)</span></a>' );
+		self::assertSame( $hint_only, ExternalLinkMarker::normalize_html( $hint_only ) );
+	}
+
+	public function test_normaliser_leaves_same_tab_and_button_anchors_untouched(): void {
+		$html = '<p><a href="#x">Same tab</a> <a class="ran-wp-ui-button button" href="https://e.test" target="_blank">Open</a> <a href="https://e.test" data-target="_blank">Data</a></p>';
+
+		self::assertSame( $html, ExternalLinkMarker::normalize_html( $html ) );
+	}
+
+	public function test_normaliser_marks_each_of_several_anchors(): void {
+		$html = ExternalLinkMarker::normalize_html( '<a target="_blank" href="a">A</a> and <a href="b" target="_blank">B<span class="screen-reader-text"> (opens in a new tab)</span></a>' );
+
+		self::assertSame( 2, substr_count( $html, '↗' ) );
+		self::assertSame( 2, substr_count( $html, '(opens in a new tab)' ) );
+	}
+
+	public function test_normaliser_keeps_malformed_and_nested_input_intact(): void {
+		self::assertSame( '<p>No anchors &amp; <b>bold</p>', ExternalLinkMarker::normalize_html( '<p>No anchors &amp; <b>bold</p>' ) );
+		self::assertSame( '<a href="x" target="_blank">Unclosed', ExternalLinkMarker::normalize_html( '<a href="x" target="_blank">Unclosed' ) );
+		self::assertSame( '', ExternalLinkMarker::normalize_html( '' ) );
+
+		$nested = ExternalLinkMarker::normalize_html( '<a href="o" target="_blank">Outer <a href="i" target="_blank">Inner</a>' );
+		self::assertSame( 1, substr_count( $nested, '↗' ) );
+		self::assertStringStartsWith( '<a href="o" target="_blank">Outer <a href="i" target="_blank">Inner ', $nested );
+	}
+
 	public function test_every_new_tab_text_link_in_admin_sources_ends_with_exactly_one_marker(): void {
 		$root  = dirname( __DIR__, 2 );
 		$files = array_merge(

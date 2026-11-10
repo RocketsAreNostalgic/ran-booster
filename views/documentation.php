@@ -136,7 +136,7 @@ if ( $add_documentation_item( 'ran-booster-wp-pusher-migration', $migration_summ
 	$prepared_global_sections[] = array(
 		'id'      => 'ran-booster-wp-pusher-migration',
 		'summary' => $migration_summary,
-		'content' => '<p>' . esc_html__( 'The detailed migration guide is supplied by a compatible RAN Booster WP Pusher Migrator. If it is unavailable here, check the extension and consult its installation and compatibility guidance.', 'ran-booster' ) . '</p><p><a href="' . esc_url( 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme' ) . '">' . esc_html__( 'Read the Migrator guidance', 'ran-booster' ) . '</a> ' . esc_html__( 'Repository access may be required.', 'ran-booster' ) . '</p>',
+		'content' => '<p>' . esc_html__( 'The detailed migration guide is supplied by a compatible RAN Booster WP Pusher Migrator. If it is unavailable here, check the extension and consult its installation and compatibility guidance.', 'ran-booster' ) . '</p><p><a href="' . esc_url( 'https://github.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator#readme' ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Read the Migrator guidance', 'ran-booster' ) . ' ' . \RAN\Admin\Component\ExternalLinkMarker::markup() . '</a> ' . esc_html__( 'Repository access may be required.', 'ran-booster' ) . '</p>',
 		'open'    => false,
 		'chapter' => null,
 	);

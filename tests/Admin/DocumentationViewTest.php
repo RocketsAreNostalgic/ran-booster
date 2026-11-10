@@ -619,6 +619,41 @@ final class DocumentationViewTest extends TestCase {
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[h3="Booster Core concepts"]/details[@id="ran-booster-wp-pusher-migration"])' ) );
 	}
 
+	public function test_migrator_guidance_link_opens_in_a_new_tab_with_exactly_one_marker(): void {
+		$html = $this->render_view( $this->provider_documentation() );
+
+		if ( 1 !== preg_match( '#<a href="https://github\.com/RocketsAreNostalgic/ran-booster-wp-pusher-migrator\#readme"([^>]*)>(.*?)</a>#s', $html, $m ) ) {
+			self::fail( 'The Migrator guidance link is missing.' );
+		}
+		self::assertStringContainsString( 'target="_blank"', $m[1] );
+		self::assertStringContainsString( 'rel="noopener noreferrer"', $m[1] );
+		self::assertSame( 1, substr_count( $m[2], '↗' ) );
+		self::assertSame( 1, substr_count( $m[2], '(opens in a new tab)' ) );
+	}
+
+	public function test_extension_section_links_get_exactly_one_marker_when_rendered(): void {
+		$global_filter =
+			static function ( array $sections ): array {
+				$sections[] = array(
+					'id'      => 'fixture-marker-guide',
+					'summary' => 'Marker fixture guide',
+					'content' => '<p><a href="https://example.test/a" target="_blank" rel="noopener noreferrer">Hint only<span class="screen-reader-text"> (opens in a new tab)</span></a> <a href="https://example.test/b" target="_blank">Neither</a> <a href="https://example.test/c">Same tab</a></p>',
+				);
+
+				return $sections;
+			};
+		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] = $global_filter;
+		$GLOBALS['ran_booster_admin_view_filters']['ran_booster_documentation_sections_before_about'][]         = $global_filter;
+		$html = $this->render_view( $this->provider_documentation() );
+
+		if ( 1 !== preg_match( '#<details id="fixture-marker-guide".*?</details>#s', $html, $m ) ) {
+			self::fail( 'The fixture section is missing.' );
+		}
+		self::assertSame( 2, substr_count( $m[0], '↗' ) );
+		self::assertSame( 2, substr_count( $m[0], '(opens in a new tab)' ) );
+		self::assertStringContainsString( '>Same tab</a>', $m[0] );
+	}
+
 	public function test_migrator_contribution_owns_one_reference_article_and_suppresses_fallback(): void {
 		$calls = 0;
 		$GLOBALS['ran_booster_documentation_test_filters']['ran_booster_documentation_sections_before_about'][] = static function ( array $sections, string $url, string $scope ) use ( &$calls ): array {

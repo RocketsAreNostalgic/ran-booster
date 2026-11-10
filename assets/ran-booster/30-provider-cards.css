@@ -612,21 +612,30 @@
 
 /* Auto layout: headings and short values keep whole words; only the package
    identifier (long path) breaks, so narrow containers scroll instead of wrapping mid-word. */
-.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages {
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-repository-detail__packages {
 	table-layout: auto;
 }
 
-.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages th,
-.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages td:not(:first-child) {
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-repository-detail__packages
+	th,
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-repository-detail__packages
+	td:not(:first-child) {
 	overflow-wrap: normal;
 	word-break: normal;
 }
 
-.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages th {
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-repository-detail__packages
+	th {
 	white-space: nowrap;
 }
 
-.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages td:first-child {
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-repository-detail__packages
+	td:first-child {
 	min-inline-size: 12rem;
 }
 
@@ -636,17 +645,26 @@
 }
 
 @container (max-width: 40rem) {
-	.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages thead {
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-repository-detail__packages
+		thead {
 		display: none;
 	}
 
-	.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages,
-	.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages tbody,
-	.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages tr {
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-repository-detail__packages,
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-repository-detail__packages
+		tbody,
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-repository-detail__packages
+		tr {
 		display: block;
 	}
 
-	.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages td {
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-repository-detail__packages
+		td {
 		display: grid;
 		grid-template-columns: minmax(5rem, 28%) minmax(0, 1fr);
 		gap: var(--ran-booster-space-12);
@@ -654,17 +672,23 @@
 		border: 0;
 	}
 
-	.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages td:first-child {
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-repository-detail__packages
+		td:first-child {
 		display: block;
 		min-inline-size: 0;
 		overflow-wrap: anywhere;
 	}
 
-	.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages td:first-child[data-label]::before {
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-repository-detail__packages
+		td:first-child[data-label]::before {
 		display: none;
 	}
 
-	.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages td[data-label]::before {
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-repository-detail__packages
+		td[data-label]::before {
 		display: block;
 		color: var(--ran-booster-text-subtle);
 		font-size: var(--ran-booster-font-size-sm);
@@ -672,7 +696,10 @@
 		line-height: 1.5;
 	}
 
-	.ran-booster-admin .ran-booster-data-table.ran-booster-repository-detail__packages tr + tr {
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-repository-detail__packages
+		tr
+		+ tr {
 		border-block-start: 1px solid var(--ran-booster-divider);
 	}
 }

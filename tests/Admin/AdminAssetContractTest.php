@@ -1332,7 +1332,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-task-progress {', $css );
 		self::assertStringContainsString( 'ran-booster-provider-automated-setup', $view );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-automated-setup ul {', $css );
-		self::assertStringContainsString( '.ran-booster-provider-task-panel .ran-booster-provider-automated-setup {', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-provider-task-panel\s+\.ran-booster-provider-automated-setup \{/', $css );
 		self::assertStringNotContainsString( 'ran-booster-provider-task-actions', $css );
 		self::assertStringContainsString( "document.addEventListener('htmx:afterSwap'", $script );
 		self::assertStringContainsString( "'ran-booster:provider-tasks-ready'", $script );

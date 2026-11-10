@@ -292,6 +292,21 @@ test('remembered provider restores only on unpinned create forms', () => {
 	assert.equal(removed.input.value, 'gh');
 });
 
+test('a fixed Edit provider is a hidden input without options and never throws', () => {
+	const edit = formFixture({});
+	delete edit.input.options;
+
+	assert.equal(
+		restoreRepositoryPickerProvider(
+			edit.form,
+			{ lastProvider: 'bb' },
+			{ bb: { browse: true } }
+		),
+		false
+	);
+	assert.equal(edit.input.value, 'gh');
+});
+
 test('picker auto-opens only from a safe create-form marker', () => {
 	const repeat = formFixture({
 		'data-ran-booster-package-create': '1',

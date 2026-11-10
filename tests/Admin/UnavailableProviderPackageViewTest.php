@@ -121,7 +121,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( '<code>owner/exact-repository</code>', $html );
 		self::assertStringContainsString( '<code>stable-provider-id</code>', $html );
 		self::assertStringContainsString( '<fieldset  disabled="disabled"', $html );
-		self::assertStringContainsString( 'temporarily-offline — Git provider unavailable', $html );
+		self::assertStringContainsString( '<span>temporarily-offline</span>', $html );
 		self::assertStringNotContainsString( 'href="https://github.com/owner/exact-repository"', $html );
 		self::assertStringContainsString( 'id="ran-booster-package-edit-form"', $html );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );

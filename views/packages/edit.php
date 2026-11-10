@@ -291,7 +291,7 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 						<input type="hidden" name="ran_booster[provider_repository_identity_source]" class="ran-booster-provider-repository-identity-source-input" value="<?php echo esc_attr( $provider_repository_identity_source ); ?>">
 						<input type="hidden" name="ran_booster[public_lookup_profile_id]" class="ran-booster-public-lookup-profile-input" value="<?php echo esc_attr( $public_lookup_profile_id ); ?>">
 						<?php if ( $repository_read_only ) { ?>
-							<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider_code ); ?>">
+							<input type="hidden" name="ran_booster[provider]" class="ran-booster-provider-input" value="<?php echo esc_attr( $provider_code ); ?>">
 							<input type="hidden" name="ran_booster[repository]" value="<?php echo esc_attr( $repository_value ); ?>">
 						<?php } ?>
 						<?php if ( $release_managed ) { ?>

@@ -756,7 +756,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringContainsString( 'name="ran_booster[reinstall_after_save]"', $html );
 			self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
 			self::assertStringNotContainsString( 'ran-booster-package-settings__reinstall-form', $html );
-			self::assertStringContainsString( '<input type="hidden" name="ran_booster[provider]" value="gh">', $edit_form );
+			self::assertStringContainsString( '<input type="hidden" name="ran_booster[provider]" class="ran-booster-provider-input" value="gh">', $edit_form );
 			self::assertStringContainsString( '<input type="hidden" name="ran_booster[repository]" value="owner/example">', $edit_form );
 			self::assertStringNotContainsString( 'owner/attempted', $html );
 			self::assertMatchesRegularExpression( '/name="ran_booster\[branch\]"[^>]*value="attempted-branch"/', $html );
@@ -777,15 +777,16 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 
 			$edit_form = $this->form_by_id( $html, 'ran-booster-package-edit-form' );
-			self::assertStringContainsString( '<input type="hidden" name="ran_booster[provider]" value="gh">', $edit_form );
+			self::assertStringContainsString( '<input type="hidden" name="ran_booster[provider]" class="ran-booster-provider-input" value="gh">', $edit_form );
 			self::assertStringContainsString( '<input type="hidden" name="ran_booster[repository]" value="owner/example">', $edit_form );
 			self::assertStringContainsString( 'name="ran_booster[provider_repository_id]" class="ran-booster-provider-repository-id-input" value="provider-id"', $edit_form );
 			self::assertStringContainsString( 'name="ran_booster[provider_repository_identity_source]" class="ran-booster-provider-repository-identity-source-input" value="stored"', $edit_form );
-			if ( 1 !== preg_match( '/<select id="ran-booster-provider"([^>]*)>/', $edit_form, $provider ) ) {
-				self::fail( 'The Edit form must render the saved Git provider.' );
+			self::assertStringNotContainsString( 'id="ran-booster-provider"', $edit_form );
+			if ( 1 !== preg_match( '/<div id="ran-booster-provider-name"([^>]*)>(.*?)<\/div>/s', $edit_form, $provider ) ) {
+				self::fail( 'The Edit form must render the saved Git provider as text.' );
 			}
-			self::assertStringContainsString( 'aria-describedby="ran-booster-repository-fixed-description"', $provider[1] );
-			self::assertStringContainsString( 'disabled="disabled"', $provider[1] );
+			self::assertStringContainsString( 'role="group" aria-labelledby="ran-booster-provider-name-label" aria-describedby="ran-booster-repository-fixed-description"', $provider[1] );
+			self::assertStringContainsString( '<a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=gh&amp;view=credentials">GitHub</a>', $provider[2] );
 			if ( 1 !== preg_match( '/<div id="ran-booster-repository-name"([^>]*)>(.*?)<\/div>/s', $edit_form, $repository ) ) {
 				self::fail( 'The Edit form must render the saved repository as text.' );
 			}
@@ -834,6 +835,11 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 		self::assertStringContainsString( '<span>owner/example</span>', $repository[1] );
 		self::assertStringNotContainsString( '<a ', $repository[1] );
+		if ( 1 !== preg_match( '/<div id="ran-booster-provider-name"[^>]*>(.*?)<\/div>/s', $html, $provider ) ) {
+			self::fail( 'The Edit form must render the saved Git provider as text.' );
+		}
+		self::assertStringContainsString( '<span>GitHub</span>', $provider[1] );
+		self::assertStringNotContainsString( '<a ', $provider[1] );
 		self::assertStringContainsString( '<input type="hidden" name="ran_booster[repository]" value="owner/example">', $html );
 	}
 
@@ -1318,6 +1324,7 @@ final class RepeatPackageViewTest extends TestCase {
 					'label'                 => 'GitHub',
 					'owner_label'           => 'Owner',
 					'repository_url_base'   => $available ? 'https://github.com/' : '',
+					'credentials_url'       => $available ? 'admin.php?page=ran-booster&tab=gh&view=credentials' : '',
 					'available'             => $available,
 					'browse'                => $available,
 					'deploy'                => $available,

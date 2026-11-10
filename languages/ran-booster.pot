@@ -5814,8 +5814,10 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:238
 #: views/attempts/detail.php:107
 #: views/attempts/index.php:79
-#: views/packages/fields/provider.php:19
-#: views/packages/fields/provider.php:22
+#: views/packages/fields/provider.php:32
+#: views/packages/fields/provider.php:35
+#: views/packages/fields/provider.php:47
+#: views/packages/fields/provider.php:50
 #: views/packages/index.php:542
 #: views/portability-review.php:28
 #: views/troubleshooting.php:142
@@ -8145,11 +8147,11 @@ msgstr ""
 msgid "Automatic deployment is unavailable because this Git provider does not support signed webhooks."
 msgstr ""
 
-#: views/packages/fields/provider.php:27
+#: views/packages/fields/provider.php:56
 msgid " — Git provider unavailable"
 msgstr ""
 
-#: views/packages/fields/provider.php:27
+#: views/packages/fields/provider.php:56
 msgid " — integration unavailable"
 msgstr ""
 

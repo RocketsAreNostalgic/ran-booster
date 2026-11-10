@@ -747,8 +747,15 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
+	justify-content: space-between;
 	gap: var(--ran-booster-space-8) var(--ran-booster-space-12);
 	margin-block-start: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	.ran-booster-release-switch-actions
+	> [data-ran-booster-use-releases] {
+	margin-inline-start: auto;
 }
 
 .ran-booster-admin .ran-booster-release-switch-actions__summary {

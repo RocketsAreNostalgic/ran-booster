@@ -1255,3 +1255,14 @@ test('managed browser footer right-aligns the Update now link and the helper cop
 		/@media \(max-width: 782px\)[\s\S]*?\.ran-wp-ui-button \{\s*align-self: flex-end;/
 	);
 });
+
+test('use releases row keeps the summary left and right-aligns the button, including when wrapped', () => {
+	assert.match(
+		packageStyles,
+		/\.ran-booster-release-switch-actions \{[^}]*display: flex;[^}]*flex-wrap: wrap;[^}]*justify-content: space-between/
+	);
+	assert.match(
+		packageStyles,
+		/\.ran-booster-release-switch-actions\s+> \[data-ran-booster-use-releases\] \{[^}]*margin-inline-start: auto/
+	);
+});

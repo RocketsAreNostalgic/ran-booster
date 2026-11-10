@@ -748,7 +748,7 @@
 	flex-wrap: wrap;
 	align-items: center;
 	gap: var(--ran-booster-space-8) var(--ran-booster-space-12);
-	margin-block-start: var(--ran-booster-space-18);
+	margin-block-start: var(--ran-booster-space-24);
 }
 
 .ran-booster-admin .ran-booster-release-switch-actions__summary {

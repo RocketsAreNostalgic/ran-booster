@@ -426,7 +426,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card"', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-repository-webhook-setup-heading">Webhook setup</h4>', $html );
 		self::assertStringNotContainsString( '<details', $html );
-		self::assertStringNotContainsString( '>Set up webhook</button>', $html );
+		self::assertStringNotContainsString( '>Set up</button>', $html );
 		self::assertStringContainsString( 'Management history', $html );
 		self::assertStringContainsString( 'Recorded hook status', $html );
 		self::assertStringContainsString( 'Managed hook not yet set', $html );

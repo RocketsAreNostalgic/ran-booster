@@ -331,9 +331,52 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$link = $links->item( 0 );
 		self::assertInstanceOf( \DOMElement::class, $link );
 		self::assertSame( $url, $rendered_url );
-		self::assertSame( 'Test webhook is disabled until Booster has an exact recorded hook for this repository.', $xpath->evaluate( 'normalize-space(../preceding-sibling::*[1])', $link ) );
+		// The link follows the button group's field directly; no visible reason paragraph sits between them.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(../preceding-sibling::*[1][self::div][contains(@class,"__field")][.//*[@role="group"]])', $link ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(ancestor::div[contains(@class,"__actions")])', $link ) );
-		self::assertSame( 5.0, $xpath->evaluate( 'count(//button[@name="repository_webhook_management_operation"])' ) );
+		self::assertSame( 4.0, $xpath->evaluate( 'count(//button[@name="repository_webhook_management_operation"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//p[contains(@class,"__action-help")])' ) );
+		self::assertStringNotContainsString( 'Test webhook is disabled until', $html );
+		$reason = 'Set up the webhook to enable these actions.';
+		self::assertSame( 1, substr_count( $html, '>' . $reason . '</span>' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//span[@id="repository-webhook-management-disabled-reason"][contains(@class,"screen-reader-text")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//p[normalize-space(.)="' . $reason . '"])' ) );
+		$group = $xpath->query( '//*[@role="group"][@aria-labelledby="repository-webhook-management-actions-label"]' );
+		self::assertNotFalse( $group );
+		self::assertCount( 1, $group );
+		self::assertSame( 'Webhook', $xpath->evaluate( 'normalize-space(//*[@id="repository-webhook-management-actions-label"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="repository-webhook-management-actions-label"][contains(@class,"ran-booster-public-lookup-profile__label")])' ) );
+		self::assertSame( array( 'Set up', 'Validate settings', 'Test ping', 'Remove' ), $this->button_labels( $xpath ) );
+		$operation_buttons = $xpath->query( '//button[@name="repository_webhook_management_operation"]' );
+		self::assertNotFalse( $operation_buttons );
+		foreach ( $operation_buttons as $button ) {
+			self::assertInstanceOf( \DOMElement::class, $button );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(ancestor::*[@role="group"])', $button ) );
+			$value = $button->getAttribute( 'value' );
+			self::assertContains( $value, array( 'setup', 'check', 'test', 'remove' ) );
+			$describedby = explode( ' ', $button->getAttribute( 'aria-describedby' ) );
+			self::assertContains( 'repository-webhook-management-description-' . $value, $describedby );
+			self::assertNotSame( '', $button->getAttribute( 'title' ) );
+			if ( 'setup' === $value ) {
+				self::assertFalse( $button->hasAttribute( 'disabled' ) || $button->hasAttribute( 'data-confirm' ) );
+				continue;
+			}
+			// Disabled buttons are not focusable, so the reason is also the hover text.
+			self::assertTrue( $button->hasAttribute( 'disabled' ) );
+			self::assertContains( 'repository-webhook-management-disabled-reason', $describedby );
+			self::assertStringContainsString( $reason, $button->getAttribute( 'title' ) );
+		}
+		$remove = $xpath->query( '//button[@value="remove"]' );
+		self::assertNotFalse( $remove );
+		$remove_button = $remove->item( 0 );
+		self::assertInstanceOf( \DOMElement::class, $remove_button );
+		self::assertStringContainsString( 'ran-booster-button--danger', $remove_button->getAttribute( 'class' ) );
+		self::assertStringNotContainsString( 'is-brand', $remove_button->getAttribute( 'class' ) );
+		self::assertSame( 'Remove this webhook from the repository? Booster will delete the webhook on Fixture Forge and clear its local record.', $remove_button->getAttribute( 'data-confirm' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//button[@data-confirm])' ) );
+		foreach ( array( 'Set up webhook', 'Check webhook', 'Update webhook', 'Test webhook', 'Remove webhook' ) as $old ) {
+			self::assertStringNotContainsString( '>' . $old . '</button>', $html );
+		}
 
 		ob_start();
 		self::assertTrue( $controls->render_repository_panel( 'fixture-provider', '1234', 'https://example.test/repository' ) );
@@ -353,7 +396,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$document->loadHTML( $no_help, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form/p/a[@target="_blank"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//form/p[a]/preceding-sibling::*[1][self::div][contains(@class,"__actions")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form/p[a]/preceding-sibling::*[1][self::div][contains(@class,"__field")][.//*[@role="group"]])' ) );
+		// Nothing is disabled here, so there is no hidden reason text and no aria-describedby on it.
+		self::assertStringNotContainsString( 'repository-webhook-management-disabled-reason', $no_help );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//button[@disabled])' ) );
 	}
 
 	public function test_repository_checklist_remains_visible_when_webhook_operations_are_unavailable(): void {
@@ -414,8 +460,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'name="booster_credential_id" disabled="disabled"', $html );
 		self::assertStringContainsString( 'name="webhook_profile_id" disabled="disabled"', $html );
 		self::assertStringContainsString( 'name="repository_webhook_management_operation" value="setup"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Test webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Test ping</button>', $html );
 		self::assertStringContainsString( 'Manage credentials</a>', $html );
 		self::assertStringContainsString( 'Manage signing secrets</a>', $html );
 	}
@@ -493,7 +539,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				'state'   => 'is-pending',
 			),
 		);
-		$panel  = '<div class="ran-booster-repository-webhook-management__panel"><button>Set up webhook</button><button>Test webhook</button></div>';
+		$panel  = '<div class="ran-booster-repository-webhook-management__panel"><button>Set up</button><button>Test ping</button></div>';
 
 		ob_start();
 		$method->invoke( $this->controls(), $items, $panel, true, array() );
@@ -514,7 +560,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$inactive = (string) ob_get_clean();
 
 		self::assertSame( $this->repository_webhook_shell_structure( $active ), $this->repository_webhook_shell_structure( $inactive ) );
-		foreach ( array( 'Push-to-deploy', 'Repository webhook lifecycle', 'Webhook setup', 'Set up webhook', 'Test webhook' ) as $label ) {
+		foreach ( array( 'Push-to-deploy', 'Repository webhook lifecycle', 'Webhook setup', 'Set up', 'Test ping' ) as $label ) {
 			self::assertStringContainsString( $label, $active );
 			self::assertStringContainsString( $label, $inactive );
 		}
@@ -526,7 +572,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	 */
 	public function test_branch_steps_carry_each_state_and_setup_disclosure_follows_the_receiver_or_an_operation_notice(): void {
 		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
-		$panel  = '<div class="ran-booster-repository-webhook-management__panel"><button>Set up webhook</button></div>';
+		$panel  = '<div class="ran-booster-repository-webhook-management__panel"><button>Set up</button></div>';
 		// Case order is the data order: demand, signing profile, receiver, remote hook; steps show receiver, signing, webhook, packages.
 		$cases = array(
 			'all ok'                  => array( 'is-ok', 'is-ok', 'is-ok', 'is-ok' ),
@@ -881,14 +927,18 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				)
 			),
 			'inactive'           => $this->webhook_panel_model( true, true, array() ),
+			'all_available'      => $this->webhook_panel_model( true, false, array() ),
 		);
 
 		foreach ( $states as $state => $model ) {
 			$html = (string) $method->invoke( $this->controls(), $model );
+			// The reason text exists only while some button is disabled.
+			self::assertSame( 'all_available' === $state ? 0 : 1, substr_count( $html, 'id="repository-webhook-management-disabled-reason"' ), $state );
+			self::assertStringNotContainsString( 'Test webhook is disabled until', $html, $state );
 			self::assertSame( 1, substr_count( $html, 'name="booster_credential_id"' ), $state );
 			self::assertSame( 1, substr_count( $html, 'name="webhook_profile_id"' ), $state );
-			foreach ( array( 'Set up webhook', 'Check webhook', 'Update webhook', 'Test webhook', 'Remove webhook' ) as $label ) {
-				self::assertStringContainsString( $label, $html, $state );
+			foreach ( array( 'unconfigured' === $state ? 'Set up' : 'Repair', 'Validate settings', 'Test ping', 'Remove' ) as $label ) {
+				self::assertStringContainsString( '>' . $label . '</button>', $html, $state );
 			}
 		}
 	}
@@ -926,7 +976,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'request_credential', $html );
 		self::assertStringContainsString( 'Create a repository signing secret', $html );
 		self::assertStringContainsString( 'name="repository_webhook_management_operation" value="setup"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;view=credentials">Manage credentials</a>', $html );
 		self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=fixture-provider&amp;view=secrets">Manage signing secrets</a>', $html );
 		self::assertDoesNotMatchRegularExpression( '/<form[^>]*ran-booster-repository-webhook-management__form[^>]*aria-disabled="true"/', $html );
@@ -1071,25 +1121,44 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	}
 
 	/**
+	 * @return list<string>
+	 */
+	private function button_labels( \DOMXPath $xpath ): array {
+		$labels  = array();
+		$buttons = $xpath->query( '//button[@name="repository_webhook_management_operation"]' );
+		foreach ( false === $buttons ? array() : $buttons as $button ) {
+			$text = $xpath->evaluate( 'string(.)', $button );
+			if ( is_string( $text ) ) {
+				$labels[] = trim( $text );
+			}
+		}
+
+		return $labels;
+	}
+
+	/**
 	 * @param array<string,bool> $enabled_operations
 	 * @return array<string,mixed>
 	 */
 	private function webhook_panel_model( bool $recorded, bool $disabled, array $enabled_operations ): array {
+		$first      = $recorded ? 'reconfigure' : 'setup';
 		$operations = array();
 		$labels     = array(
-			'setup'       => 'Set up webhook',
-			'check'       => 'Check webhook',
-			'reconfigure' => 'Update webhook',
-			'test'        => 'Test webhook',
-			'remove'      => 'Remove webhook',
+			$first   => $recorded ? 'Repair' : 'Set up',
+			'check'  => 'Validate settings',
+			'test'   => 'Test ping',
+			'remove' => 'Remove',
 		);
 		foreach ( $labels as $key => $label ) {
 			$operations[] = array(
-				'key'      => $key,
-				'label'    => $label,
-				'url'      => 'https://example.test/' . $key,
-				'primary'  => 'setup' === $key,
-				'disabled' => ! ( $enabled_operations[ $key ] ?? true ),
+				'key'         => $key,
+				'label'       => $label,
+				'description' => 'Describes ' . $key . ' on Fixture Forge.',
+				'url'         => 'https://example.test/' . $key,
+				'primary'     => $first === $key,
+				'destructive' => 'remove' === $key,
+				'confirm'     => 'remove' === $key ? 'Remove this webhook from the repository? Booster will delete the webhook on Fixture Forge and clear its local record.' : null,
+				'disabled'    => ! ( $enabled_operations[ $key ] ?? true ),
 			);
 		}
 

@@ -35,7 +35,7 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
  *   management_credential_id:?string,
  *   credential_choices:list<array{id:string,label:string}>,
  *   webhook_profile_choices:list<array{id:string,label:string,scope:string}>,
- *   operations:list<array{key:string,label:string,url:string,primary:bool,disabled:bool}>,
+ *   operations:list<array{key:string,label:string,description:string,url:string,primary:bool,destructive:bool,confirm:?string,disabled:bool}>,
  *   action_help:?string
  * }
  */
@@ -172,12 +172,12 @@ final class WebhookDisplayModel {
 		$status                   = null === $record ? null : $this->projected_status( $record );
 		$credentials              = $this->credential_choices( $provider_code );
 		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, array() !== $credentials ) : array();
-		$operation_models         = $this->operation_models( $operations, $provider_code, $repository_id );
+		$operation_models         = $this->operation_models( $operations, $provider_code, $provider_label, $repository_id, null !== $record && ! $record->requires_hook_identification() );
 
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {
 			/* translators: %s: repository provider name. */
-			$help = sprintf( __( 'The recorded secret is no longer available. Update the %s webhook to use the current applicable secret; Booster creates a repository secret when none applies.', 'ran-booster' ), $provider_label );
+			$help = sprintf( __( 'The recorded secret is no longer available. Repair the %s webhook to use the current applicable secret; Booster creates a repository secret when none applies.', 'ran-booster' ), $provider_label );
 		} elseif ( null !== $record && 'remote_missing' === $status ) {
 			/* translators: %s: repository provider name. */
 			$help = sprintf( __( 'Managed removal is unavailable because the recorded %1$s hook cannot be confirmed. Inspect %1$s manually before continuing.', 'ran-booster' ), $provider_label );
@@ -244,25 +244,44 @@ final class WebhookDisplayModel {
 	}
 
 	/**
+	 * Four fixed slots. The first is Set up until a hook is recorded, then Repair;
+	 * both map to server operations that are never available together.
+	 *
 	 * @param array<string,true> $available
-	 * @return list<array{key:string,label:string,url:string,primary:bool,disabled:bool}>
+	 * @return list<array{key:string,label:string,description:string,url:string,primary:bool,destructive:bool,confirm:?string,disabled:bool}>
 	 */
-	private function operation_models( array $available, string $provider_code, string $repository_id ): array {
-		$labels     = array(
-			'setup'       => __( 'Set up webhook', 'ran-booster' ),
-			'check'       => __( 'Check webhook', 'ran-booster' ),
-			'reconfigure' => __( 'Update webhook', 'ran-booster' ),
-			'test'        => __( 'Test webhook', 'ran-booster' ),
-			'remove'      => __( 'Remove webhook', 'ran-booster' ),
+	private function operation_models( array $available, string $provider_code, string $provider_label, string $repository_id, bool $recorded ): array {
+		$first = ( $recorded || isset( $available['reconfigure'] ) ) ? 'reconfigure' : 'setup';
+		/* translators: %s: repository provider name. */
+		$setup_description = sprintf( __( 'Create the webhook on %s.', 'ran-booster' ), $provider_label );
+		/* translators: %s: repository provider name. */
+		$repair_description = sprintf( __( 'Make the webhook on %s match this site\'s settings.', 'ran-booster' ), $provider_label );
+		/* translators: %s: repository provider name. */
+		$check_description = sprintf( __( 'Compare the webhook on %s with this site\'s settings. Nothing is sent.', 'ran-booster' ), $provider_label );
+		/* translators: %s: repository provider name. */
+		$test_description = sprintf( __( 'Ask %s to send a ping. Delivery counts only when it arrives.', 'ran-booster' ), $provider_label );
+		/* translators: %s: repository provider name. */
+		$remove_description = sprintf( __( 'Delete the webhook from %s and clear its local record.', 'ran-booster' ), $provider_label );
+		/* translators: %s: repository provider name. */
+		$remove_confirm = sprintf( __( 'Remove this webhook from the repository? Booster will delete the webhook on %s and clear its local record.', 'ran-booster' ), $provider_label );
+		$slots          = array(
+			array( $first, 'setup' === $first ? __( 'Set up', 'ran-booster' ) : __( 'Repair', 'ran-booster' ), 'setup' === $first ? $setup_description : $repair_description ),
+			array( 'check', __( 'Validate settings', 'ran-booster' ), $check_description ),
+			array( 'test', __( 'Test ping', 'ran-booster' ), $test_description ),
+			array( 'remove', __( 'Remove', 'ran-booster' ), $remove_description ),
 		);
-		$operations = array();
-		foreach ( $labels as $operation => $label ) {
-			$operations[] = array(
-				'key'      => $operation,
-				'label'    => $label,
-				'url'      => $this->operation_url( $operation, $provider_code, $repository_id ),
-				'primary'  => 'setup' === $operation,
-				'disabled' => ! isset( $available[ $operation ] ),
+		$operations     = array();
+		foreach ( $slots as $index => $slot ) {
+			list( $operation, $label, $description ) = $slot;
+			$operations[]                            = array(
+				'key'         => $operation,
+				'label'       => $label,
+				'description' => $description,
+				'url'         => $this->operation_url( $operation, $provider_code, $repository_id ),
+				'primary'     => 0 === $index,
+				'destructive' => 'remove' === $operation,
+				'confirm'     => 'remove' === $operation ? $remove_confirm : null,
+				'disabled'    => ! isset( $available[ $operation ] ),
 			);
 		}
 
@@ -294,7 +313,7 @@ final class WebhookDisplayModel {
 			'recovery_warning'            => null,
 			'credential_choices'          => $this->credential_choices( $provider_code ),
 			'webhook_profile_choices'     => array(),
-			'operations'                  => $this->operation_models( array(), $provider_code, $repository_id ),
+			'operations'                  => $this->operation_models( array(), $provider_code, $provider_label, $repository_id, false ),
 			'action_help'                 => null,
 		);
 	}

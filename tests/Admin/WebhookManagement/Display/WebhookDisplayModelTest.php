@@ -124,7 +124,7 @@ final class WebhookDisplayModelTest extends TestCase {
 
 	public function test_new_installation_keeps_all_fixed_controls_but_only_allows_setup_with_credentials(): void {
 		$GLOBALS['ran_booster_webhook_display_test_translations']['ran-booster'] = array(
-			'Set up webhook' => 'Configurer le webhook',
+			'Set up' => 'Configurer',
 		);
 		foreach ( array( false, true ) as $has_credential ) {
 			$facade = $this->createMock( WebhookAssistanceFacade::class );
@@ -159,8 +159,8 @@ final class WebhookDisplayModelTest extends TestCase {
 			$panel   = $display->panel( 'fixture-provider', 'Fixture Forge', '1234', 'https://example.test/settings', null, null, true );
 
 			self::assertNotNull( $panel );
-			self::assertSame( array( 'setup', 'check', 'reconfigure', 'test', 'remove' ), array_column( $panel['operations'], 'key' ) );
-			self::assertSame( array( ! $has_credential, true, true, true, true ), array_column( $panel['operations'], 'disabled' ) );
+			self::assertSame( array( 'setup', 'check', 'test', 'remove' ), array_column( $panel['operations'], 'key' ) );
+			self::assertSame( array( ! $has_credential, true, true, true ), array_column( $panel['operations'], 'disabled' ) );
 			$recovery = $display->panel(
 				'fixture-provider',
 				'<Fixture Forge>',
@@ -200,12 +200,54 @@ final class WebhookDisplayModelTest extends TestCase {
 			self::assertStringContainsString( '<Fixture Forge>', $other_recovery['recovery_warning']['details'][0] ?? '' );
 			self::assertSame( 'Git provider hook reference: <hook>', $other_recovery['recovery_warning']['details'][1] ?? null );
 			self::assertSame( 'Core signing profile: <profile>', $other_recovery['recovery_warning']['details'][2] ?? null );
-			self::assertSame( array( true, true, true, true, true ), array_column( $recovery['operations'], 'disabled' ) );
-			self::assertSame( 'Configurer le webhook', $panel['operations'][0]['label'] );
+			self::assertSame( array( true, true, true, true ), array_column( $recovery['operations'], 'disabled' ) );
+			self::assertSame( 'Configurer', $panel['operations'][0]['label'] );
 			foreach ( $panel['operations'] as $operation ) {
 				self::assertStringContainsString( 'nonce-for-' . hash( 'sha256', 'ran_booster_repository_webhook_' . $operation['key'] . '_fixture-provider_1234' ), $operation['url'] );
 			}
 		}
+	}
+
+	public function test_the_four_fixed_slots_share_the_first_slot_between_setup_and_repair(): void {
+		$method = new ReflectionMethod( WebhookDisplayModel::class, 'operation_models' );
+		$labels = static fn ( array $operations ): array => array_column( $operations, 'label' );
+		$keys   = static fn ( array $operations ): array => array_column( $operations, 'key' );
+		$off    = static fn ( array $operations ): array => array_column( $operations, 'disabled' );
+
+		$none = $method->invoke( $this->display(), array(), 'gh', 'GitHub', '1', false );
+		self::assertSame( array( 'Set up', 'Validate settings', 'Test ping', 'Remove' ), $labels( $none ) );
+		self::assertSame( array( 'setup', 'check', 'test', 'remove' ), $keys( $none ) );
+		self::assertSame( array( true, true, true, true ), $off( $none ) );
+
+		$setup = $method->invoke( $this->display(), array( 'setup' => true ), 'gh', 'GitHub', '1', false );
+		self::assertSame( array( false, true, true, true ), $off( $setup ) );
+		self::assertTrue( $setup[0]['primary'] );
+
+		$all    = array(
+			'reconfigure' => true,
+			'check'       => true,
+			'test'        => true,
+			'remove'      => true,
+		);
+		$repair = $method->invoke( $this->display(), $all, 'gh', 'GitHub', '1', true );
+		self::assertSame( array( 'Repair', 'Validate settings', 'Test ping', 'Remove' ), $labels( $repair ) );
+		self::assertSame( array( 'reconfigure', 'check', 'test', 'remove' ), $keys( $repair ) );
+		self::assertSame( array( false, false, false, false ), $off( $repair ) );
+		self::assertSame( array( true, false, false, false ), array_column( $repair, 'primary' ) );
+		self::assertSame( array( false, false, false, true ), array_column( $repair, 'destructive' ) );
+
+		unset( $all['reconfigure'] );
+		$in_sync = $method->invoke( $this->display(), $all, 'gh', 'GitHub', '1', true );
+		self::assertSame( 'Repair', $in_sync[0]['label'] );
+		self::assertSame( array( true, false, false, false ), $off( $in_sync ) );
+
+		self::assertSame( 'Create the webhook on GitHub.', $none[0]['description'] );
+		self::assertSame( 'Make the webhook on GitHub match this site\'s settings.', $repair[0]['description'] );
+		self::assertSame( 'Compare the webhook on GitHub with this site\'s settings. Nothing is sent.', $repair[1]['description'] );
+		self::assertSame( 'Ask GitHub to send a ping. Delivery counts only when it arrives.', $repair[2]['description'] );
+		self::assertSame( 'Delete the webhook from GitHub and clear its local record.', $repair[3]['description'] );
+		self::assertSame( 'Remove this webhook from the repository? Booster will delete the webhook on GitHub and clear its local record.', $repair[3]['confirm'] );
+		self::assertSame( array( null, null, null ), array( $repair[0]['confirm'], $repair[1]['confirm'], $repair[2]['confirm'] ) );
 	}
 
 	private function display(): WebhookDisplayModel {

@@ -65,17 +65,42 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 						<span class="description"><?php esc_html_e( 'Choose an applicable saved signing secret, or create one only for this repository.', 'ran-booster' ); ?></span>
 					</div>
 
-				<div class="ran-booster-action-row ran-booster-repository-webhook-management__actions">
-					<?php foreach ( $model['operations'] as $operation ) : ?>
-						<?php $operation_disabled = $disabled || true === ( $operation['disabled'] ?? false ); ?>
-						<button class="<?php echo esc_attr( $operation['primary'] ? \RAN\Admin\Component\ButtonClasses::primary() : \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>"<?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
-					<?php endforeach; ?>
+				<?php
+				$any_disabled = false;
+				foreach ( $model['operations'] as $operation ) {
+					$any_disabled = $any_disabled || $disabled || true === ( $operation['disabled'] ?? false );
+				}
+				?>
+				<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
+					<p class="ran-booster-public-lookup-profile__label" id="repository-webhook-management-actions-label"><?php esc_html_e( 'Webhook', 'ran-booster' ); ?></p>
+					<div class="ran-booster-action-row ran-booster-repository-webhook-management__actions" role="group" aria-labelledby="repository-webhook-management-actions-label">
+						<?php foreach ( $model['operations'] as $operation ) : ?>
+							<?php
+							$operation_disabled = $disabled || true === ( $operation['disabled'] ?? false );
+							$description_id     = 'repository-webhook-management-description-' . $operation['key'];
+							$describedby        = $description_id . ( $operation_disabled ? ' repository-webhook-management-disabled-reason' : '' );
+							if ( $operation['primary'] ) {
+								$button_classes = \RAN\Admin\Component\ButtonClasses::primary();
+							} elseif ( $operation['destructive'] ) {
+								$button_classes = \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' );
+							} else {
+								$button_classes = \RAN\Admin\Component\ButtonClasses::secondary();
+							}
+							$button_title = $operation['description'];
+							if ( $operation_disabled ) {
+								$button_title .= ' ' . __( 'Set up the webhook to enable these actions.', 'ran-booster' );
+							}
+							?>
+							<button type="submit" class="<?php echo esc_attr( $button_classes ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>" title="<?php echo esc_attr( $button_title ); ?>" aria-describedby="<?php echo esc_attr( $describedby ); ?>"<?php echo is_string( $operation['confirm'] ) ? ' data-confirm="' . esc_attr( $operation['confirm'] ) . '"' : ''; ?><?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
+							<span class="screen-reader-text" id="<?php echo esc_attr( $description_id ); ?>"><?php echo esc_html( $operation['description'] ); ?></span>
+						<?php endforeach; ?>
+					</div>
+					<?php if ( $any_disabled ) : ?>
+						<span class="screen-reader-text" id="repository-webhook-management-disabled-reason"><?php esc_html_e( 'Set up the webhook to enable these actions.', 'ran-booster' ); ?></span>
+					<?php endif; ?>
 				</div>
 				<?php if ( is_string( $model['action_help'] ) ) : ?>
 					<p class="description ran-booster-repository-webhook-management__action-help"><?php echo esc_html( $model['action_help'] ); ?></p>
-				<?php endif; ?>
-				<?php if ( null === ( $model['management_credential_id'] ?? null ) ) : ?>
-					<p class="description ran-booster-repository-webhook-management__action-help"><?php esc_html_e( 'Test webhook is disabled until Booster has an exact recorded hook for this repository.', 'ran-booster' ); ?></p>
 				<?php endif; ?>
 				<?php if ( is_string( $model['webhooks_url'] ?? null ) && '' !== $model['webhooks_url'] ) : ?>
 					<?php /* translators: %s: repository provider name. */ ?>

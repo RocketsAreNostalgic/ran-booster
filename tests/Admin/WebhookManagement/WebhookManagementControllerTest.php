@@ -917,7 +917,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 		self::assertStringContainsString( 'without a stable hook ID', $html );
 		self::assertStringContainsString( 'value="setup"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
 	}
 
 	public function test_setup_save_failure_falls_back_to_durable_orphan_evidence(): void {
@@ -954,7 +954,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'Git provider hook reference: 77' ) );
 		self::assertSame( 1, substr_count( $html, 'Core signing profile: wh_0123456789abcdef01234567' ) );
 		self::assertStringContainsString( 'value="setup"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
 	}
 
 	public function test_core_authoritative_fitness_block_makes_no_remote_mutation_and_leaves_records_unchanged(): void {
@@ -1047,13 +1047,13 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertIsArray( $model );
 		self::assertSame( array(), $model['credential_choices'] );
 		self::assertSame(
-			array( 'setup', 'check', 'reconfigure', 'test', 'remove' ),
+			array( 'reconfigure', 'check', 'test', 'remove' ),
 			array_column( $model['operations'], 'key' )
 		);
-		self::assertSame( array( true, true, true, true, true ), array_column( $model['operations'], 'disabled' ) );
+		self::assertSame( array( true, true, true, true ), array_column( $model['operations'], 'disabled' ) );
 
 		$html = $this->render_panel( $gateway, $store );
-		foreach ( array( 'Set up webhook', 'Check webhook', 'Update webhook', 'Test webhook', 'Remove webhook' ) as $label ) {
+		foreach ( array( 'Repair', 'Validate settings', 'Test ping', 'Remove' ) as $label ) {
 			self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">' . $label . '</button>', $html );
 		}
 	}
@@ -1198,7 +1198,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'could not confirm whether the remote hook was removed', $html );
 		self::assertStringContainsString( 'value="check"', $html );
 		self::assertStringContainsString( 'value="remove"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Remove webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Remove</button>', $html );
 	}
 
 	public function test_confirmed_absence_deletes_only_the_local_recovery_record(): void {
@@ -1278,7 +1278,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'Run Check or inspect the hook at the Git provider before retrying an update', $html );
 		self::assertStringContainsString( 'value="check"', $html );
 		self::assertStringContainsString( 'value="reconfigure"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Update webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Repair</button>', $html );
 	}
 
 	public function test_ambiguous_provider_remediation_survives_only_its_signed_redirect(): void {
@@ -1389,7 +1389,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'then run Check before retrying', $html );
 		self::assertStringContainsString( 'value="check"', $html );
 		self::assertStringContainsString( 'value="reconfigure"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Update webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Repair</button>', $html );
 	}
 
 	public function test_verified_result_copy_does_not_claim_that_check_proved_signed_delivery(): void {

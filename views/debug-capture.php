@@ -112,7 +112,7 @@ $status_classes       = array(
 			<?php } ?>
 		</div>
 		<?php if ( in_array( $capture_state, array( 'inactive', 'active', 'retained' ), true ) ) { ?>
-			<div class="ran-booster-debug-capture__footer" role="group" aria-label="<?php esc_attr_e( 'Logging capture actions', 'ran-booster' ); ?>">
+			<div class="ran-booster-debug-capture__footer" role="group" aria-label="<?php esc_attr_e( 'Logging capture actions', 'ran-booster' ); ?>" data-ran-booster-success-feedback>
 				<form class="ran-booster-debug-capture__primary-actions" method="post" action="" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-debug-capture-error" hx-post="" hx-target="#ran-booster-debug-capture-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
 					<?php wp_nonce_field( 'ran-booster-manage-debug-capture' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="manage-debug-capture">

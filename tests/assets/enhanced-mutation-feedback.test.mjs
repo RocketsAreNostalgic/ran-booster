@@ -2408,6 +2408,77 @@ test('a retained non-save result is announced once after its own settled respons
 	}
 });
 
+test('a region can anchor its hidden confirmation beside its actions', () => {
+	for (const anchored of [true, false]) {
+		const state = fixture();
+		const handlers = new Map();
+		const target = {
+			id: 'ran-booster-debug-capture-region',
+			isConnected: true,
+			contains: () => true,
+		};
+		const message = 'Temporary logging capture started.';
+		const xhr = {
+			status: 200,
+			addEventListener() {},
+			getResponseHeader: () =>
+				JSON.stringify({
+					'ran-booster:admin-mutation-success': { message },
+				}),
+		};
+		state.form.isConnected = true;
+		state.form.addEventListener = (name, handler) =>
+			handlers.set(name, handler);
+		state.form.removeEventListener = () => {};
+		let current = target;
+		state.document.getElementById = (id) =>
+			id === 'ran-booster-debug-capture-region' ? current : state.error;
+		loadFunction('initEnhancedMutationFeedback', {
+			document: state.document,
+			window: state.window,
+		})();
+		const detail = { elt: state.form, target, xhr };
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		handlers.get('htmx:beforeOnLoad')({
+			detail,
+			preventDefault() {
+				assert.fail('current response vetoed');
+			},
+		});
+		const anchorChildren = [];
+		const regionChildren = [];
+		current = {
+			id: 'ran-booster-debug-capture-region',
+			querySelectorAll: () => [],
+			querySelector: (selector) =>
+				anchored && selector === '[data-ran-booster-success-feedback]'
+					? { append: (child) => anchorChildren.push(child) }
+					: null,
+			append: (child) => regionChildren.push(child),
+		};
+		state.listeners.get('htmx:afterSwap')({ detail });
+		state.listeners.get('ran-booster:admin-mutation-success')({
+			detail: { message },
+		});
+
+		if (anchored) {
+			assert.equal(anchorChildren.length, 1);
+			assert.equal(anchorChildren[0].textContent, message);
+			assert.equal(anchorChildren[0].className, 'screen-reader-text');
+			assert.equal(regionChildren.length, 0);
+		} else {
+			assert.equal(regionChildren.length, 1);
+			assert.equal(regionChildren[0].textContent, message);
+			assert.notEqual(regionChildren[0].className, 'screen-reader-text');
+			assert.equal(anchorChildren.length, 0);
+		}
+		assert.deepEqual(
+			state.announcements.filter((item) => item.type === 'polite'),
+			[{ message, type: 'polite' }]
+		);
+	}
+});
+
 test('stale source and current save failures release their own controls for retry', () => {
 	const state = fixture();
 	const target = {

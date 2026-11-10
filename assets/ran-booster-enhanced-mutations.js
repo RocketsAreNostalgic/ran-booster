@@ -1158,12 +1158,23 @@
 				if (!existing) {
 					const feedback = document.createElement('p');
 					feedback.textContent = message;
-					const result =
-						region.tagName === 'TR'
-							? region.cells[region.cells.length - 1] ||
-								region.insertCell()
-							: region;
-					result.append(feedback);
+					// A region can name where its confirmation belongs. The
+					// text is for assistive technology only, so it stays
+					// visually hidden beside the actions that caused it.
+					const anchor = region.querySelector?.(
+						'[data-ran-booster-success-feedback]'
+					);
+					if (anchor) {
+						feedback.className = 'screen-reader-text';
+						anchor.append(feedback);
+					} else {
+						const result =
+							region.tagName === 'TR'
+								? region.cells[region.cells.length - 1] ||
+									region.insertCell()
+								: region;
+						result.append(feedback);
+					}
 				}
 				window.ranBoosterAnnounce(message, 'polite', existing);
 			}

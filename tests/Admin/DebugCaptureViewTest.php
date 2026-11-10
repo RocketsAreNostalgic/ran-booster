@@ -178,6 +178,7 @@ final class DebugCaptureViewTest extends TestCase {
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__header")]//form)' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer") and @role="group"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer")][@data-ran-booster-success-feedback])' ), 'The capture confirmation is anchored beside the actions.' );
 		foreach ( $operations as $operation ) {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer")]//button[@name="ran_booster[operation]" and @value="' . $operation . '"])' ) );
 		}

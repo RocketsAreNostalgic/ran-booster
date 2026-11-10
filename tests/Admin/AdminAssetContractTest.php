@@ -536,6 +536,35 @@ final class AdminAssetContractTest extends TestCase {
 		}
 	}
 
+	/**
+	 * Repository detail headings sit one heading gap above what they introduce,
+	 * and its Cards, columns and tab row sit one Card gap apart (#746).
+	 */
+	public function test_repository_detail_spacing_uses_the_shared_heading_and_card_gaps(): void {
+		$cards = 'ran-booster/30-provider-cards.css';
+		$rows  = array(
+			array( $cards, '\n\.ran-booster-admin \.ran-booster-repository-detail__tabs \{', 'margin-block: 0 var(--ran-booster-card-gap);' ),
+			array( $cards, '\n\.ran-booster-admin \.ran-booster-repository-detail__header p \{', 'margin-block: var(--ran-booster-card-heading-gap) 0;' ),
+			array( $cards, '\n\.ran-booster-admin \.ran-booster-repository-detail__layout \{', 'gap: var(--ran-booster-card-gap);' ),
+			array( $cards, '\n\.ran-booster-admin\n\t\.ran-booster-repository-detail__main\n\t> \.ran-booster-settings-section \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
+			array( $cards, '\n\.ran-booster-admin\n\t\.ran-booster-repository-detail\n\t\.ran-booster-settings-section__header\n\tp,\n\.ran-booster-admin\n\t\.ran-booster-repository-detail\n\t\.ran-booster-readiness-panel__top\n\tp \{', 'margin-block: var(--ran-booster-card-heading-gap) 0;' ),
+			array( $cards, '\n\.ran-booster-admin\n\t\.ran-booster-repository-detail\n\t\.ran-booster-settings-section__body\n\t> h4 \{', 'margin-block-end: var(--ran-booster-card-heading-gap);' ),
+			array( $cards, '\n\.ran-booster-admin\n\t\.ran-booster-repository-detail\n\t> \.ran-booster-settings-section \{', 'margin-block-start: var(--ran-booster-card-gap);' ),
+			array( $cards, '\n\.ran-booster-admin\n\t\.ran-booster-repository-detail\n\th4\n\t\+ \.ran-booster-repository-detail__facts \{', 'margin-block-start: 0;' ),
+			array( 'ran-booster/80-responsive.css', '\n\t\.ran-booster-admin \.ran-booster-repository-detail__tabs \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
+		);
+		foreach ( $rows as $row ) {
+			if ( 1 !== preg_match( '/' . $row[1] . '([^}]*)\}/', $this->asset( $row[0] ), $m ) ) {
+				self::fail( $row[0] . ': repository detail spacing owner ' . stripslashes( $row[1] ) . ' is missing.' );
+			}
+			self::assertStringContainsString( $row[2], $m[1], $row[0] );
+		}
+
+		// The retired 2px, 6px, 16px, 18px and 22px literals no longer set these gaps.
+		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-repository-detail__layout \{[^}]*space-22/', $this->asset( $cards ) );
+		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-repository-detail__header p \{[^}]*space-6/', $this->asset( $cards ) );
+	}
+
 	public function test_framed_fact_grids_share_one_summary_grid_profile(): void {
 		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		foreach ( array(

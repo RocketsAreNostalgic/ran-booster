@@ -517,11 +517,11 @@
 
 .ran-booster-admin .ran-booster-repository-detail__tabs {
 	max-inline-size: 100%;
-	margin-block: 0 var(--ran-booster-space-18);
+	margin-block: 0 var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-repository-detail__header p {
-	margin-block: var(--ran-booster-space-6) 0;
+	margin-block: var(--ran-booster-card-heading-gap) 0;
 }
 
 .ran-booster-admin .ran-booster-repository-detail__receiver {
@@ -543,7 +543,7 @@
 	display: grid;
 	grid-template-columns: minmax(0, 1.5fr) minmax(250px, 290px);
 	align-items: start;
-	gap: var(--ran-booster-space-22);
+	gap: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-repository-detail__main {
@@ -564,7 +564,7 @@
 .ran-booster-admin
 	.ran-booster-repository-detail__main
 	> .ran-booster-settings-section {
-	margin-block-end: var(--ran-booster-space-16);
+	margin-block-end: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin
@@ -603,6 +603,32 @@
 	inline-size: 14%;
 }
 
+/* Repository detail headings keep the shared heading gap to what they introduce. */
+.ran-booster-admin
+	.ran-booster-repository-detail
+	.ran-booster-settings-section__header
+	p,
+.ran-booster-admin
+	.ran-booster-repository-detail
+	.ran-booster-readiness-panel__top
+	p {
+	margin-block: var(--ran-booster-card-heading-gap) 0;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-detail
+	.ran-booster-settings-section__body
+	> h4 {
+	margin-block-end: var(--ran-booster-card-heading-gap);
+}
+
+/* Cards that follow the layout row keep the card gap above them. */
+.ran-booster-admin
+	.ran-booster-repository-detail
+	> .ran-booster-settings-section {
+	margin-block-start: var(--ran-booster-card-gap);
+}
+
 .ran-booster-admin .ran-booster-repository-detail__facts {
 	display: grid;
 	gap: var(--ran-booster-space-8);
@@ -612,6 +638,13 @@
 	display: grid;
 	grid-template-columns: minmax(140px, 0.4fr) minmax(0, 1fr);
 	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin
+	.ran-booster-repository-detail
+	h4
+	+ .ran-booster-repository-detail__facts {
+	margin-block-start: 0;
 }
 
 .ran-booster-admin .ran-booster-repository-detail__facts dt {

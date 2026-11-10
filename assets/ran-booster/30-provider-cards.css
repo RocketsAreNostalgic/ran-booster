@@ -793,6 +793,18 @@
 	font-weight: normal;
 }
 
+/* Integration status holds only short usage rows: label and badge side by side when wide. */
+@media screen and (min-width: 783px) {
+	.ran-booster-admin
+		.ran-booster-repository-detail__record.ran-booster-repository-detail__summary
+		.ran-booster-repository-detail__facts
+		> div {
+		align-items: center;
+		gap: var(--ran-booster-space-8);
+		grid-template-columns: minmax(140px, 0.4fr) minmax(0, 1fr);
+	}
+}
+
 ::view-transition-group(ran-booster-provider-task-panel),
 ::view-transition-old(ran-booster-provider-task-panel),
 ::view-transition-new(ran-booster-provider-task-panel) {

@@ -16,11 +16,14 @@ use ReflectionClass;
 use ReflectionMethod;
 
 /**
- * The management history Card, the Integration status Card and the repository list share
- * one detail projection: short state values are Badges, data stays plain text or time.
+ * The management history Card and the repository list share one detail projection (short
+ * state values are Badges, data stays plain text or time); the Integration status Card shows only usage.
  */
 final class ManagementHistoryDetailsTest extends TestCase {
 	private const LABEL_CLASS = 'class="ran-booster-repository-detail__fact-label"';
+
+	/** Rows that only the Management history card shows. */
+	private const HISTORY_LABELS = array( 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked', 'Release workflow' );
 
 	public function test_no_record_state_renders_every_short_state_value_as_a_badge(): void {
 		$html = $this->history( $this->details( 'not_configured', null ) );
@@ -76,7 +79,7 @@ final class ManagementHistoryDetailsTest extends TestCase {
 		self::assertSame( 0, preg_match( '#<dt[^>]*>Status</dt>#', $html ) );
 	}
 
-	public function test_the_status_card_keeps_the_release_workflow_label_without_a_group_heading(): void {
+	public function test_the_status_card_renders_only_the_usage_rows_and_none_of_the_history_rows(): void {
 		$workflow = array(
 			'key'      => 'core:release-workflow-abc',
 			'label'    => 'Release workflow',
@@ -84,23 +87,48 @@ final class ManagementHistoryDetailsTest extends TestCase {
 			'tone'     => 'warning',
 			'category' => 'release_workflow',
 		);
-		$card     = $this->integration( array_merge( $this->details( 'not_configured', null ), array( $workflow ) ) );
+		foreach ( array( array( 'not_configured', null ), array( 'configuration_drift', $this->record() ) ) as $case ) {
+			$card = $this->integration( array_merge( $this->details( $case[0], $case[1] ), array( $workflow ) ), 1, 1 );
 
-		self::assertSame( 1, preg_match( $this->row_pattern( 'Release workflow', 'badge', 'warning', 'Unavailable' ), $card ) );
-		self::assertStringNotContainsString( 'group-heading', $card );
+			self::assertSame( array( 'Branch demand', 'Recorded release usage' ), $this->labels( $card ) );
+			foreach ( self::HISTORY_LABELS as $label ) {
+				self::assertStringNotContainsString( $label, $card );
+			}
+			self::assertStringNotContainsString( 'group-heading', $card );
+		}
 	}
 
-	public function test_status_and_history_cards_render_identical_markup_for_the_shared_rows(): void {
-		foreach ( array( array( 'not_configured', null ), array( 'configuration_drift', $this->record() ) ) as $case ) {
-			$details = $this->details( $case[0], $case[1] );
-			$history = $this->history( $details );
-			$card    = $this->integration( $details );
-			foreach ( $details as $detail ) {
-				$row_pattern = '#<div><dt class="ran-booster-repository-detail__fact-label">' . preg_quote( $detail['label'], '#' ) . '</dt>.*?</dd></div>#s';
-				self::assertSame( 1, preg_match( $row_pattern, $history, $in_history ), $detail['label'] );
-				self::assertSame( 1, preg_match( $row_pattern, $card, $in_card ), $detail['label'] );
-				self::assertSame( $in_history[0], $in_card[0], $detail['label'] );
+	public function test_the_status_card_adds_package_sources_only_when_the_inventory_is_incomplete(): void {
+		$card = $this->integration( array(), 0, 0, 1 );
+
+		self::assertSame( array( 'Package sources' ), $this->labels( $card ) );
+		self::assertStringContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $card );
+		self::assertSame( array( 'Branch demand', 'Recorded release usage' ), $this->labels( $this->integration( array(), 1, 0 ) ) );
+	}
+
+	public function test_the_sidebar_history_card_renders_the_six_rows_on_every_tab_and_no_card_repeats_a_label(): void {
+		$workflow = array(
+			'key'      => 'core:release-workflow-abc',
+			'label'    => 'Release workflow',
+			'value'    => 'Unavailable',
+			'tone'     => 'warning',
+			'category' => 'release_workflow',
+		);
+		$details  = array_merge( $this->details( 'configuration_drift', $this->record() ), array( $workflow ) );
+		foreach ( array( 'status', 'branch', 'releases' ) as $view ) {
+			$html = $this->render( $details, $view );
+			if ( 1 !== preg_match( '#ran-booster-repository-activity-heading.*?</section>#s', $html, $m ) ) {
+				self::fail( 'The Management history card was not rendered on ' . $view . '.' );
 			}
+			$history_labels = $this->labels( $m[0] );
+			foreach ( array( 'Recorded hook status', 'Observation', 'Management credential', 'Recorded signing secret', 'Last checked', 'Status' ) as $label ) {
+				self::assertContains( $label, $history_labels, $view . ': ' . $label );
+			}
+			self::assertSame( $history_labels, array_values( array_unique( $history_labels ) ), $view . ' repeats a row.' );
+			if ( 'status' === $view ) {
+				self::assertSame( array(), array_intersect( $history_labels, $this->labels( $this->integration( $details ) ) ) );
+			}
+			self::assertSame( 1, substr_count( $html, 'Recorded hook status' ), $view . ' shows the hook status twice.' );
 		}
 	}
 
@@ -165,8 +193,18 @@ final class ManagementHistoryDetailsTest extends TestCase {
 				self::assertStringContainsString( $declaration, $m[1] );
 			}
 		}
+		self::assertSame( 1, preg_match( '/@media screen and \(min-width: 783px\) \{\n\t\.ran-booster-admin\n\t\t\.ran-booster-repository-detail__record\.ran-booster-repository-detail__summary\n\t\t\.ran-booster-repository-detail__facts\n\t\t> div \{([^}]*)\}/', $css, $summary ) );
+		self::assertStringContainsString( 'grid-template-columns: minmax(140px, 0.4fr) minmax(0, 1fr);', $summary[1] );
+		self::assertStringContainsString( 'align-items: center;', $summary[1] );
 		// Every new selector carries the record or history scope.
 		self::assertSame( 0, preg_match( '/\n\.ran-booster-admin \.ran-booster-repository-detail__(group-heading|fact-label)/', $css ) );
+	}
+
+	/** @return list<string> Row labels of one card, in order. */
+	private function labels( string $html ): array {
+		preg_match_all( '#<dt class="ran-booster-repository-detail__fact-label">([^<]+)</dt>#', $html, $m );
+
+		return array_values( array_map( static fn ( string $label ): string => html_entity_decode( $label ), $m[1] ) );
 	}
 
 	/** @return list<array<string, mixed>> */
@@ -189,8 +227,8 @@ final class ManagementHistoryDetailsTest extends TestCase {
 	}
 
 	/** @param list<array<string, mixed>> $details */
-	private function integration( array $details, int $branch = 1, int $release = 0 ): string {
-		$html = $this->render( $details, 'status', $branch, $release );
+	private function integration( array $details, int $branch = 1, int $release = 0, int $omitted = 0 ): string {
+		$html = $this->render( $details, 'status', $branch, $release, $omitted );
 		if ( 1 !== preg_match( '#ran-booster-repository-integration-summary-heading.*?</section>#s', $html, $m ) ) {
 			self::fail( 'The Integration status card was not rendered.' );
 		}
@@ -199,7 +237,7 @@ final class ManagementHistoryDetailsTest extends TestCase {
 	}
 
 	/** @param list<array<string, mixed>> $details */
-	private function render( array $details, string $view, int $branch = 1, int $release = 0 ): string {
+	private function render( array $details, string $view, int $branch = 1, int $release = 0, int $omitted = 0 ): string {
 		$packages = array();
 		for ( $i = 0; $i < $branch; $i++ ) {
 			$packages[] = $this->package( 'branch', 'branch-' . $i );
@@ -215,12 +253,13 @@ final class ManagementHistoryDetailsTest extends TestCase {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(
 			array(
-				'repository'        => 'owner/example',
-				'source_label'      => 'Branch',
-				'source_key'        => 'branch',
-				'package_summaries' => $packages,
-				'details'           => $details,
-				'actions'           => array(),
+				'repository'                => 'owner/example',
+				'source_label'              => 'Branch',
+				'source_key'                => 'branch',
+				'package_summaries'         => $packages,
+				'package_summaries_omitted' => $omitted,
+				'details'                   => $details,
+				'actions'                   => array(),
 			),
 			'GitHub',
 			'https://example.test/repositories',

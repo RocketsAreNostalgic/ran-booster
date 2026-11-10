@@ -162,12 +162,12 @@ final class RepositoryDetailRenderer {
 				</div>
 			</div>
 		</div></div></section>
-		<section class="ran-booster-settings-section ran-booster-card ran-booster-repository-detail__record" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integration-summary-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
+		<section class="ran-booster-settings-section ran-booster-card ran-booster-repository-detail__record ran-booster-repository-detail__summary" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integration-summary-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-integration-summary-heading"><?php esc_html_e( 'Integration status', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-settings-section__body">
-				<?php $this->render_facts( array_merge( $this->usage_details( $omitted, $branch_count, $release_count ), $this->integration_details( $row ) ) ); ?>
+				<?php $this->render_facts( $this->usage_details( $omitted, $branch_count, $release_count ) ); ?>
 				<?php $this->render_status_links( $row ); ?>
 			</div>
 		</div></div></section>
@@ -413,22 +413,6 @@ final class RepositoryDetailRenderer {
 		$key = $entry['key'] ?? null;
 
 		return is_string( $key ) && str_starts_with( $key, 'core:webhook-' );
-	}
-
-	/**
-	 * @param array<string, mixed> $row
-	 * @return list<array<string, mixed>>
-	 */
-	private function integration_details( array $row ): array {
-		return array_values(
-			array_filter(
-				is_array( $row['details'] ?? null ) ? $row['details'] : array(),
-				fn ( mixed $detail ): bool => is_array( $detail )
-					&& ( in_array( $detail['category'] ?? null, array( 'webhook', 'release_workflow' ), true )
-						|| str_starts_with( (string) ( $detail['key'] ?? '' ), 'core:webhook-' )
-						|| $this->is_release_automation_key( $detail['key'] ?? null ) )
-			)
-		);
 	}
 
 	/**

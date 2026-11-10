@@ -460,7 +460,7 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_disclosure_hosts_own_their_margins_and_prominent_rules_stay_scoped(): void {
 		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		self::assertStringContainsString( '> details[data-ran-booster-ui-disclosure-fallback] {' . "\n\t" . 'margin: 0;', $css );
-		foreach ( array( 'troubleshooting-logging', 'troubleshooting-evidence', 'package-webhook-setup', 'provider-webhook-setup', 'package-advanced-settings', 'package-release-track', 'package-danger-zone' ) as $kind ) {
+		foreach ( array( 'troubleshooting-logging', 'troubleshooting-evidence', 'package-webhook-setup', 'provider-webhook-setup', 'package-advanced-settings', 'package-release-track', 'package-danger-zone', 'repository-webhook-setup', 'repository-release-readiness', 'repository-release-workflow' ) as $kind ) {
 			self::assertStringContainsString( 'data-ran-booster-ui-disclosure="' . $kind . '"', $css, $kind );
 		}
 		// A prominent header rule must name the host's own disclosure, never every nested one.
@@ -651,21 +651,29 @@ final class AdminAssetContractTest extends TestCase {
 			substr_count( $package_settings, 'var(--ran-booster-status-marker-size) +' )
 		);
 		self::assertStringNotContainsString( 'grid-template-columns: 20px', $package_settings );
-		self::assertStringContainsString(
-			".ran-booster-repository-webhook-readiness\n\t.ran-booster-readiness-icon,",
-			$webhook_management
-		);
+		self::assertStringNotContainsString( '.ran-booster-repository-webhook-readiness', $webhook_management );
 		self::assertStringContainsString(
 			".ran-booster-repository-release-readiness\n\t.ran-booster-readiness-icon {\n\tbox-sizing: content-box;",
 			$webhook_management
 		);
-		self::assertStringContainsString(
-			"\tdisplay: grid;\n\tgrid-template-columns: repeat(\n\t\tauto-fit,\n\t\tminmax(min(100%, var(--ran-booster-step-min-inline-size)), 1fr)\n\t);",
-			$webhook_management
-		);
-		self::assertStringContainsString( '--ran-booster-step-min-inline-size: 208px;', $webhook_management );
-		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-webhook-steps\s*\{[^}]*repeat\(\s*[34]\s*,/', $webhook_management );
-		self::assertStringNotContainsString( '.ran-booster-repository-release-lifecycle {', $webhook_management );
+		// Steps reflow by the Card body's width, never by an auto-fit wrap that orphans a step.
+		self::assertStringNotContainsString( 'auto-fit', $webhook_management );
+		self::assertStringNotContainsString( '--ran-booster-step-min-inline-size', $webhook_management );
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-release-section\s*\)\s*>\s*\.ran-wp-ui-card\s*\.ran-booster-settings-section__body\s*\{\s*container-type: inline-size;/', $webhook_management );
+		self::assertMatchesRegularExpression( '/\.ran-booster-webhook-steps \{[^}]*grid-template-columns: minmax\(0, 1fr\);/', $webhook_management );
+		self::assertMatchesRegularExpression( '/@container \(min-width: 440px\) \{\s*\.ran-booster-admin \.ran-booster-webhook-steps \{\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/', $webhook_management );
+		self::assertMatchesRegularExpression( '/@container \(min-width: 440px\)[^@]*\.ran-booster-repository-release-lifecycle \{\s*grid-auto-flow: column;[^}]*grid-auto-columns: minmax\(0, 1fr\);/', $webhook_management );
+		self::assertMatchesRegularExpression( '/@container \(min-width: 868px\) \{[^@]*:not\(\s*\.ran-booster-repository-release-lifecycle\s*\)\s*\{\s*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/', $webhook_management );
+		// Each step's state is a glyph in its marker, drawn like the readiness icons; an optional step never set up is neutral.
+		foreach ( array(
+			'is-ok'      => '✓',
+			'is-warning' => '!',
+			'is-pending' => '?',
+			'is-neutral' => '–',
+		) as $state => $glyph ) {
+			self::assertStringContainsString( ".ran-booster-admin .ran-booster-webhook-step.{$state} > span::after {\n\tcontent: \"{$glyph}\";", $webhook_management, $state );
+		}
+		self::assertStringContainsString( ".ran-booster-webhook-step.is-neutral > span {\n\tcolor: var(--ran-booster-text-muted);", $webhook_management );
 		self::assertDoesNotMatchRegularExpression( '/max-width: 782px\)\s*\{\s*\.ran-booster-admin \.ran-booster-webhook-steps/', $webhook_management );
 		self::assertStringContainsString( "grid-template-rows: auto 1fr;\n\talign-content: start;", $webhook_management );
 		// WordPress gives every li a 6px bottom margin; without a reset all but the last step in a row are shorter.
@@ -688,30 +696,24 @@ final class AdminAssetContractTest extends TestCase {
 		);
 		self::assertStringContainsString( 'max-block-size: var(--ran-booster-status-marker-size);', $webhook_management );
 		self::assertStringContainsString( 'line-height: 1;', $webhook_management );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-release-automation {', $webhook_management );
-		self::assertStringContainsString(
-			".ran-booster-admin .ran-booster-release-automation-heading {\n\tdisplay: flex;\n\tflex-wrap: wrap;\n\talign-items: center;\n\tgap: var(--ran-booster-space-8);",
-			$webhook_management
-		);
-		self::assertStringContainsString(
-			".ran-booster-admin .ran-booster-repository-release-package {\n\tborder: 0;\n\tbackground: transparent;",
-			$webhook_management
-		);
-		self::assertStringContainsString(
-			".ran-booster-admin .ran-booster-repository-release-package__body {\n\tpadding: var(--ran-booster-space-16) var(--ran-booster-space-18);",
-			$webhook_management
-		);
+		// Repository disclosures use the standard disclosure border; no nested-panel reset may strip it.
+		$provider_cards = $this->asset( 'ran-booster/30-provider-cards.css' );
+		foreach ( array( 'repository-webhook-setup', 'repository-release-readiness', 'repository-release-automation' ) as $class ) {
+			self::assertStringNotContainsString( '.ran-booster-' . $class, $provider_cards, $class );
+		}
+		// Disclosures after each other sit one Card gap apart; the step list owns the gap above the first.
+		self::assertMatchesRegularExpression( '/\+ \[data-ran-booster-ui-disclosure\] \{\s*margin-block-start: var\(--ran-booster-card-gap\);/', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
+		self::assertMatchesRegularExpression( '/\.ran-booster-webhook-steps \{[^}]*margin: 0 0 var\(--ran-booster-card-gap\);/', $webhook_management );
 	}
 
 	public function test_repository_webhook_setup_keeps_its_form_full_width(): void {
 		$webhook_management = $this->asset( 'ran-booster-repository-webhook-management.css' );
 		$controls           = $this->source( 'RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php' );
 
-		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup', $controls );
-		self::assertStringContainsString( 'class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading"', $controls );
-		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup__body"', $controls );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-webhook-setup__body {', $webhook_management );
-		self::assertStringContainsString( 'padding: var(--ran-booster-space-20);', $webhook_management );
+		self::assertStringContainsString( 'data-ran-booster-ui-disclosure="repository-webhook-setup"', $controls );
+		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup ran-booster-disclosure', $controls );
+		self::assertStringContainsString( 'ran-booster-repository-webhook-setup__body ran-booster-disclosure__body', $controls );
+		self::assertStringNotContainsString( 'ran-booster-readiness-panel', $controls );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-webhook-management__manage-link {', $webhook_management );
 
 		self::assertStringContainsString(

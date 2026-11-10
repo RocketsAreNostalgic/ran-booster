@@ -209,10 +209,10 @@ final class RepositoryWebhookManagementControls {
 		$model           = $has_branch_consumer ? $this->repository_webhook_panel_model( $provider_code, $repository_id, $return_url ) : null;
 		$notices         = array();
 		if ( ! is_array( $model ) && $metadata instanceof ProviderMetadata ) {
-			$reason    = ! $has_branch_consumer
+			$reason = ! $has_branch_consumer
 				? __( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', 'ran-booster' )
 				: $this->repository_webhook_unavailable_reason( $provider_code, $repository_id );
-			$model     = $this->display->unavailable_panel(
+			$model  = $this->display->unavailable_panel(
 				$provider_code,
 				$metadata->label,
 				$repository_id,
@@ -221,24 +221,30 @@ final class RepositoryWebhookManagementControls {
 				$reason,
 				$this->repository_webhook_settings_url( $provider_code, ( '' !== trim( $repository ) ) ? $repository : null )
 			);
-			$notices[] = array(
-				'class'   => 'notice-warning',
-				'message' => $reason,
-			);
+			// Step 1 (Site receiver) already says a public HTTPS URL is missing; repeat only other reasons.
+			if ( 'is-ok' === ( $readiness_items[2]['state'] ?? '' ) || $reason !== $this->receiver_unavailable_message() ) {
+				$notices[] = array(
+					'class'   => 'notice-warning',
+					'message' => $reason,
+				);
+			}
 		}
+		$operation_notice = false;
 		if ( is_array( $model ) ) {
 			$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $model['repository'] );
 			if ( is_array( $model['result'] ?? null ) ) {
-				$notices[] = $model['result'];
+				$notices[]        = $model['result'];
+				$operation_notice = true;
 			}
 			if ( is_array( $model['recovery_warning'] ?? null ) ) {
-				$notices[] = $model['recovery_warning'];
+				$notices[]        = $model['recovery_warning'];
+				$operation_notice = true;
 			}
 			$model['result']           = null;
 			$model['recovery_warning'] = null;
 		}
 
-		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $has_branch_consumer, $notices );
+		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $has_branch_consumer, $notices, true, $operation_notice );
 		return $model['webhooks_url'] ?? null;
 	}
 
@@ -262,10 +268,14 @@ final class RepositoryWebhookManagementControls {
 		}
 	}
 
+	private function receiver_unavailable_message(): string {
+		return __( 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.', 'ran-booster' );
+	}
+
 	/** Explain a failed local readiness projection without probing a provider. */
 	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id, ?string $package_identifier = null ): string {
 		$messages = array(
-			'callback_requires_public_https'  => __( 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.', 'ran-booster' ),
+			'callback_requires_public_https'  => $this->receiver_unavailable_message(),
 			'database_unavailable'            => __( 'Webhook setup is unavailable because Booster database storage is unavailable.', 'ran-booster' ),
 			'secrets_storage_unavailable'     => __( 'Webhook setup is unavailable because encrypted signing-secret storage is unavailable.', 'ran-booster' ),
 			'managed_packages_unavailable'    => __( 'Webhook setup is unavailable because Booster could not read managed packages.', 'ran-booster' ),
@@ -309,14 +319,17 @@ final class RepositoryWebhookManagementControls {
 	 * @param list<array{label:string,message:string,state:string}> $items
 	 * @param list<array{class:string,message:string,heading?:string,details?:list<string>}> $notices
 	 */
-	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true ): void {
+	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true, bool $operation_notice = false ): void {
 		$inactive = ! $has_branch_consumer || ! $setup_available;
+		// Setup opens once the receiver can accept deliveries, and always for an operation result or validation error.
+		$open = 'is-ok' === ( $items[2]['state'] ?? '' ) || $operation_notice;
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-settings-section__body">
+				<?php if ( array() !== $notices ) { ?>
 				<div class="ran-booster-repository-webhook-management__notices">
 					<?php foreach ( $notices as $notice ) { ?>
 						<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( substr( $notice['class'], 7 ) ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( $notice['class'], 7 ) ); ?>"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
@@ -332,14 +345,18 @@ final class RepositoryWebhookManagementControls {
 						</div><?php NoticeIcon::print_intent( substr( $notice['class'], 7 ) ); ?></div>
 					<?php } ?>
 				</div>
+				<?php } ?>
 				<?php $this->render_repository_webhook_lifecycle( $items, $inactive ); ?>
-				<?php $this->render_repository_webhook_readiness( $items, $inactive ); ?>
-				<section class="ran-booster-readiness-panel ran-booster-repository-webhook-setup<?php echo $inactive ? ' is-inactive' : ''; ?>" aria-labelledby="ran-booster-repository-webhook-setup-heading"<?php echo $inactive ? ' aria-disabled="true"' : ''; ?>>
-					<div class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading"><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></h4><p><?php esc_html_e( 'Sets up this repository’s webhook. Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p></div></div>
-					<div class="ran-booster-repository-webhook-setup__body">
+				<?php if ( '' !== $panel ) { ?>
+				<div data-ran-booster-ui-disclosure="repository-webhook-setup" data-ran-booster-ui-disclosure-density="compact">
+				<details id="ran-booster-repository-webhook-setup" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-webhook-setup ran-booster-disclosure<?php echo $inactive ? ' is-inactive' : ''; ?>"<?php echo $open ? ' open' : ''; ?>>
+					<summary><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></summary>
+					<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-webhook-setup__body ran-booster-disclosure__body"<?php echo $inactive ? ' aria-disabled="true"' : ''; ?>>
+						<p><?php esc_html_e( 'Sets up this repository’s webhook. Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p>
 						<?php $this->render_repository_webhook_setup_region( $panel ); ?>
 					</div>
-				</section>
+				</details></div>
+				<?php } ?>
 			</div>
 		</div></div></section>
 		<?php
@@ -490,35 +507,17 @@ final class RepositoryWebhookManagementControls {
 		?>
 		<ol class="ran-booster-webhook-steps ran-booster-repository-webhook-lifecycle<?php echo $inactive ? ' is-inactive' : ''; ?>" aria-label="<?php esc_attr_e( 'Repository webhook lifecycle', 'ran-booster' ); ?>">
 		<?php
-		foreach ( $steps as $number => $step ) {
+		foreach ( $steps as $step ) {
 			$item  = $step['item'];
 			$state = is_array( $item ) && is_string( $item['state'] ?? null ) ? $item['state'] : 'is-pending';
 			?>
 				<li class="ran-booster-webhook-step <?php echo esc_attr( $state ); ?>">
-					<span aria-hidden="true"><?php echo esc_html( (string) ( $number + 1 ) ); ?></span>
+					<span aria-hidden="true"></span>
 					<strong><?php echo esc_html( $step['label'] ); ?></strong>
 					<p><?php echo esc_html( is_array( $item ) && is_string( $item['message'] ?? null ) ? $item['message'] : __( 'Booster could not confirm this step.', 'ran-booster' ) ); ?></p>
 				</li>
 		<?php } ?>
 		</ol>
-		<?php
-	}
-
-	/** @param list<array{label:string,message:string,state:string}> $items */
-	private function render_repository_webhook_readiness( array $items, bool $inactive = false ): void {
-		?>
-		<div class="ran-booster-readiness-panel ran-booster-repository-webhook-readiness<?php echo $inactive ? ' is-inactive' : ''; ?>"<?php echo $inactive ? ' aria-disabled="true"' : ''; ?>>
-			<div class="ran-booster-readiness-panel__top"><div><h4><?php esc_html_e( 'Webhook readiness', 'ran-booster' ); ?></h4></div></div>
-			<ul class="ran-booster-readiness-list">
-			<?php foreach ( $items as $item ) { ?>
-				<li class="ran-booster-readiness-item <?php echo esc_attr( $item['state'] ); ?>">
-					<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
-					<strong><?php echo esc_html( $item['label'] ); ?></strong>
-					<span><?php echo esc_html( $item['message'] ); ?></span>
-				</li>
-			<?php } ?>
-			</ul>
-		</div>
 		<?php
 	}
 

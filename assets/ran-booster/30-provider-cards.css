@@ -1083,42 +1083,6 @@
 	padding-inline: var(--ran-booster-space-24);
 }
 
-/* Nested workflow groups retain their separators inside the single Card frame. */
-.ran-booster-admin
-	.ran-booster-repository-page
-	.ran-booster-settings-section[data-ran-booster-card="provider"]
-	:is(
-		.ran-booster-repository-webhook-readiness,
-		.ran-booster-repository-webhook-setup,
-		.ran-booster-repository-release-readiness,
-		.ran-booster-repository-release-automation
-	) {
-	border: 0;
-	box-shadow: none;
-}
-
-.ran-booster-admin
-	.ran-booster-repository-page
-	.ran-booster-settings-section[data-ran-booster-card="provider"]
-	:is(
-		.ran-booster-repository-webhook-readiness,
-		.ran-booster-repository-webhook-setup,
-		.ran-booster-repository-release-readiness,
-		.ran-booster-repository-release-automation
-	)
-	> .ran-booster-readiness-panel__top,
-.ran-booster-admin
-	.ran-booster-repository-page
-	.ran-booster-settings-section[data-ran-booster-card="provider"]
-	:is(
-		.ran-booster-repository-webhook-setup__body,
-		.ran-booster-repository-release-automation__notices,
-		.ran-booster-repository-release-automation__summary,
-		.ran-booster-release-workflow__body
-	) {
-	padding-inline: 0;
-}
-
 @media screen and (max-width: 782px) {
 	.ran-booster-admin
 		.ran-booster-repository-page

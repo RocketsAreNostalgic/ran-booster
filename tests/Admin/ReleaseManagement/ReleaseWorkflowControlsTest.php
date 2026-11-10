@@ -85,6 +85,46 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 	}
 
+	/**
+	 * The optional workflow step is neutral whenever it was never configured, and
+	 * a problem only when a record blocks setup for a feature the person enabled.
+	 */
+	public function test_optional_release_workflow_step_is_neutral_unless_a_record_blocks_setup(): void {
+		$method = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'repository_lifecycle_projection' );
+		$step   = static function ( array $arguments ) use ( $method ): array {
+			$items = $method->invoke( ( new \ReflectionClass( ReleaseWorkflowPresenter::class ) )->newInstanceWithoutConstructor(), ...$arguments );
+			self::assertIsArray( $items );
+			self::assertCount( 3, $items );
+			$third = $items[2];
+			self::assertIsArray( $third );
+
+			return array( (string) $third['state'], (string) $third['message'] );
+		};
+		// Arguments: package ready, tracking ready, workflow recorded, ready to assess, releases working, observation, available, record occupied.
+		self::assertSame( array( 'is-neutral', 'Not assessed' ), $step( array( false, false, false, false, false, 'unassessed', true, false ) ), 'ineligible package, never configured' );
+		self::assertSame( array( 'is-neutral', 'Ready to assess.' ), $step( array( true, false, false, true, false, 'unassessed', true, false ) ), 'ready to assess' );
+		self::assertSame( array( 'is-neutral', 'Releases are available; workflow not assessed.' ), $step( array( true, true, false, false, true, 'unassessed', true, false ) ), 'releases working, never assessed' );
+		self::assertSame( array( 'is-warning', 'Workflow setup needs attention.' ), $step( array( true, false, false, false, false, 'unassessed', true, true ) ), 'occupied record blocks setup' );
+		self::assertSame( array( 'is-ok', 'Existing workflow found.' ), $step( array( true, true, false, false, true, 'existing_automation_detected', true, false ) ), 'existing workflow' );
+		self::assertSame( array( 'is-ok', 'Setup pull request recorded; check its outcome.' ), $step( array( true, false, true, false, false, 'unassessed', true, true ) ), 'recorded for this package' );
+		// The badge agrees with the step: never configured is neutral, a blocking record stays an error.
+		$state_method = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'repository_release_automation_state' );
+		$presenter    = ( new \ReflectionClass( ReleaseWorkflowPresenter::class ) )->newInstanceWithoutConstructor();
+		$never        = $state_method->invoke( $presenter, '', false, false, false, 'unassessed' );
+		self::assertIsArray( $never );
+		self::assertSame( 'Not assessed', $never['label'] );
+		self::assertSame( 'ran-booster-badge--neutral', $never['tone'] );
+		self::assertSame( 'notice-info', $never['notice_tone'] );
+		$blocked = $state_method->invoke( $presenter, '', false, false, true, 'unassessed' );
+		self::assertIsArray( $blocked );
+		self::assertSame( 'Blocked', $blocked['label'] );
+		self::assertSame( 'ran-booster-badge--error', $blocked['tone'] );
+		// A provider without workflow capability shows only the two steps.
+		$items = $method->invoke( ( new \ReflectionClass( ReleaseWorkflowPresenter::class ) )->newInstanceWithoutConstructor(), true, true, false, false, true, 'unassessed', false, false );
+		self::assertIsArray( $items );
+		self::assertCount( 2, $items );
+	}
+
 	public function test_null_repository_projection_emits_no_card_or_output(): void {
 		$controls = $this->controls();
 		foreach ( array(

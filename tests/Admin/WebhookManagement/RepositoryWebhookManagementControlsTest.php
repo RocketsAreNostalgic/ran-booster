@@ -174,8 +174,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		self::assertStringContainsString( 'Fitness only webhook configuration is incomplete.', $html );
 		self::assertStringContainsString( 'Branch packages can still be updated manually', $html );
-		self::assertStringContainsString( 'ran-booster-repository-webhook-setup is-inactive', $html );
-		self::assertStringContainsString( 'aria-disabled="true"', $html );
+		// Without a setup form there is nothing to disclose; the notice and the steps say why.
+		self::assertStringNotContainsString( 'ran-booster-repository-webhook-setup', $html );
+		self::assertStringNotContainsString( '<details', $html );
+		self::assertStringContainsString( 'ran-booster-repository-webhook-lifecycle is-inactive', $html );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
 		self::assertSame( 0, $provider->provider_operation_calls );
 	}
@@ -268,17 +270,20 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'Webhook setup', $html );
 		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider"', $html );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider"' ) );
-		self::assertSame( 1, substr_count( $html, 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup"' ) );
-		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup"', $html );
-		self::assertStringContainsString( '<div class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-webhook-setup-heading">Webhook setup</h4><p>Sets up this repository’s webhook. Automatic updates remain configured separately for each package.</p></div></div>', $html );
+		// Webhook setup is the project-standard disclosure, open because the site receiver step is ok.
+		self::assertSame( 1, substr_count( $html, '<div data-ran-booster-ui-disclosure="repository-webhook-setup" data-ran-booster-ui-disclosure-density="compact">' ) );
+		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-webhook-setup ran-booster-disclosure" open>\s*<summary>Webhook setup<\/summary>\s*<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-webhook-setup__body ran-booster-disclosure__body">\s*<p>Sets up this repository’s webhook\. Automatic updates remain configured separately for each package\.<\/p>/', $html ) );
+		self::assertStringNotContainsString( 'ran-booster-readiness-panel', $html );
+		self::assertStringNotContainsString( '<h4', $html );
 		self::assertStringNotContainsString( 'What this changes', $html );
 		self::assertStringNotContainsString( 'Booster checks the repository before making changes and never adopts or deletes an unverified webhook.', $html );
-		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup__body"', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup__content"', $html );
+		// The refreshed region stays inside the disclosure content.
+		self::assertLessThan( strpos( $html, 'class="ran-booster-repository-webhook-setup__content"' ), strpos( $html, 'data-ran-booster-ui-disclosure-content' ) );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-management__panel"', $html );
 		self::assertStringNotContainsString( 'ran-booster-panel ran-booster-push-deploy__panel', $html );
 		self::assertStringContainsString( 'class="ran-booster-settings-section__body"', $html );
-		self::assertStringNotContainsString( '<details', $html );
+		self::assertSame( 1, substr_count( $html, '<details' ) );
 		self::assertStringContainsString( 'name="action" value="ran_booster_repository_webhook_management_operation"', $html );
 		self::assertStringContainsString( 'name="repository_webhook_management_operation" value="setup"', $html );
 		self::assertStringContainsString( '<a href="https://fixture-provider.example.test/owner%2Fexample/settings/hooks" target="_blank" rel="noopener noreferrer">', $html );
@@ -290,19 +295,15 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( '<strong>Signing secret</strong>', $html );
 		self::assertStringContainsString( '<strong>Repository webhook</strong>', $html );
 		self::assertStringContainsString( '<strong>Automatic packages</strong>', $html );
-		self::assertStringContainsString( 'aria-hidden="true">1</span>', $html );
-		self::assertStringContainsString( 'aria-hidden="true">2</span>', $html );
-		self::assertStringContainsString( 'aria-hidden="true">3</span>', $html );
-		self::assertStringContainsString( 'aria-hidden="true">4</span>', $html );
+		// Each step's marker is an empty aria-hidden span; its state glyph is drawn by CSS from the state class.
+		self::assertSame( 4, preg_match_all( '/<span aria-hidden="true"><\/span>\s*<strong>/', $html ) );
 		self::assertStringContainsString( 'ran-booster-webhook-step is-ok', $html );
-		self::assertTrue( strpos( $html, 'Repository webhook lifecycle' ) < strpos( $html, 'Webhook readiness' ) );
-		self::assertStringContainsString( 'Webhook readiness', $html );
-		self::assertStringContainsString( 'Branch demand', $html );
-		self::assertStringContainsString( '1 Automatic Branch package uses this repository webhook.', $html );
-		self::assertStringContainsString( 'Signing profile', $html );
-		self::assertStringContainsString( 'A signing secret is ready for this repository.', $html );
-		self::assertStringContainsString( 'Git provider receiver', $html );
-		self::assertStringContainsString( 'Remote hook', $html );
+		// The four steps carry the data; there is no second readiness list repeating them.
+		self::assertStringNotContainsString( 'Webhook readiness', $html );
+		self::assertStringNotContainsString( 'ran-booster-readiness-list', $html );
+		self::assertSame( 1, substr_count( $html, '1 Automatic Branch package uses this repository webhook.' ) );
+		self::assertSame( 1, substr_count( $html, 'A signing secret is ready for this repository.' ) );
+		self::assertSame( 1, substr_count( $html, 'This site can receive webhook deliveries.' ) );
 		self::assertStringNotContainsString( 'Bundled webhook management', $html );
 		self::assertStringContainsString( 'Create a repository signing secret', $html );
 		self::assertStringNotContainsString( 'request_credential', $html );
@@ -390,17 +391,17 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', false );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Webhook readiness', $html );
-		self::assertStringContainsString( 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.', $html );
-		self::assertStringContainsString( 'ran-booster-repository-webhook-readiness is-inactive', $html );
+		self::assertStringNotContainsString( 'Webhook readiness', $html );
+		self::assertSame( 1, substr_count( $html, 'Published-release packages ignore pushes; no Branch package currently uses this repository webhook.' ) );
+		self::assertStringContainsString( 'ran-booster-repository-webhook-lifecycle is-inactive', $html );
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		self::assertStringContainsString( 'A signing secret was available when Booster last checked.', $html );
 		self::assertStringContainsString( 'This site can receive webhook deliveries.', $html );
 		self::assertStringContainsString( 'Configured at the last recorded check on 2026-08-20T01:02:03Z.', $html );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		self::assertStringContainsString( 'Webhook operations are unavailable while no eligible Branch package uses this repository.', $html );
-		self::assertStringContainsString( 'class="ran-booster-readiness-panel ran-booster-repository-webhook-setup is-inactive"', $html );
-		self::assertStringContainsString( 'aria-labelledby="ran-booster-repository-webhook-setup-heading" aria-disabled="true"', $html );
+		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup ran-booster-disclosure is-inactive" open>', $html );
+		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup__body ran-booster-disclosure__body" aria-disabled="true"', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-management__panel"', $html );
 		self::assertStringContainsString( 'name="booster_credential_id" disabled="disabled"', $html );
 		self::assertStringContainsString( 'name="webhook_profile_id" disabled="disabled"', $html );
@@ -505,10 +506,160 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$inactive = (string) ob_get_clean();
 
 		self::assertSame( $this->repository_webhook_shell_structure( $active ), $this->repository_webhook_shell_structure( $inactive ) );
-		foreach ( array( 'Push-to-deploy', 'Repository webhook lifecycle', 'Webhook readiness', 'Webhook setup', 'Set up webhook', 'Test webhook' ) as $label ) {
+		foreach ( array( 'Push-to-deploy', 'Repository webhook lifecycle', 'Webhook setup', 'Set up webhook', 'Test webhook' ) as $label ) {
 			self::assertStringContainsString( $label, $active );
 			self::assertStringContainsString( $label, $inactive );
 		}
+	}
+
+	/**
+	 * Steps carry the state; setup is a standard disclosure that opens with the receiver step,
+	 * and always for an operation result or validation error.
+	 */
+	public function test_branch_steps_carry_each_state_and_setup_disclosure_follows_the_receiver_or_an_operation_notice(): void {
+		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
+		$panel  = '<div class="ran-booster-repository-webhook-management__panel"><button>Set up webhook</button></div>';
+		// Case order is the data order: demand, signing profile, receiver, remote hook; steps show receiver, signing, webhook, packages.
+		$cases = array(
+			'all ok'                  => array( 'is-ok', 'is-ok', 'is-ok', 'is-ok' ),
+			'receiver warning'        => array( 'is-pending', 'is-ok', 'is-warning', 'is-pending' ),
+			'receiver pending'        => array( 'is-pending', 'is-pending', 'is-pending', 'is-pending' ),
+			'signing pending'         => array( 'is-ok', 'is-pending', 'is-ok', 'is-ok' ),
+			'signing warning'         => array( 'is-pending', 'is-warning', 'is-ok', 'is-pending' ),
+			'webhook ok, packages ok' => array( 'is-ok', 'is-ok', 'is-ok', 'is-ok' ),
+			'webhook warning'         => array( 'is-ok', 'is-ok', 'is-ok', 'is-warning' ),
+			'webhook pending'         => array( 'is-ok', 'is-ok', 'is-ok', 'is-pending' ),
+			'packages pending'        => array( 'is-pending', 'is-ok', 'is-ok', 'is-ok' ),
+		);
+		foreach ( $cases as $name => $states ) {
+			$demand   = $states[0];
+			$signing  = $states[1];
+			$receiver = $states[2];
+			$hook     = $states[3];
+			$items    = array(
+				array(
+					'label'   => 'Branch demand',
+					'message' => 'Demand ' . $demand,
+					'state'   => $demand,
+				),
+				array(
+					'label'   => 'Signing profile',
+					'message' => 'Signing ' . $signing,
+					'state'   => $signing,
+				),
+				array(
+					'label'   => 'Git provider receiver',
+					'message' => 'Receiver ' . $receiver,
+					'state'   => $receiver,
+				),
+				array(
+					'label'   => 'Remote hook',
+					'message' => 'Hook ' . $hook,
+					'state'   => $hook,
+				),
+			);
+			foreach ( array( false, true ) as $operation_notice ) {
+				ob_start();
+				$method->invoke(
+					$this->controls(),
+					$items,
+					$panel,
+					true,
+					$operation_notice ? array(
+						array(
+							'class'   => 'notice-success',
+							'message' => 'Operation done.',
+						),
+					) : array(),
+					true,
+					$operation_notice
+				);
+				$html     = (string) ob_get_clean();
+				$document = new \DOMDocument();
+				$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+				$xpath = new \DOMXPath( $document );
+
+				$classes = array();
+				$nodes   = $xpath->query( '//ol[contains(@class,"ran-booster-webhook-steps")]/li' );
+				self::assertNotFalse( $nodes );
+				foreach ( $nodes as $node ) {
+					self::assertInstanceOf( \DOMElement::class, $node );
+					$classes[] = trim( str_replace( 'ran-booster-webhook-step', '', $node->getAttribute( 'class' ) ) );
+				}
+				self::assertSame( array( $receiver, $signing, $hook, $demand ), $classes, $name );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-readiness-list")])' ), $name );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-repository-webhook-setup"])' ), $name );
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//details/summary[normalize-space()="Webhook setup"])' ), $name );
+				self::assertSame( 'is-ok' === $receiver || $operation_notice, 1.0 === (float) $xpath->evaluate( 'count(//details[@id="ran-booster-repository-webhook-setup"][@open])' ), $name );
+				// The setup region sits inside the disclosure content.
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//details//div[@data-ran-booster-ui-disclosure-content]//div[contains(@class,"ran-booster-repository-webhook-setup__content")])' ), $name );
+				if ( $operation_notice ) {
+					// The operation result keeps its place above the steps.
+					self::assertLessThan( strpos( $html, 'ran-booster-webhook-steps' ), strpos( $html, 'Operation done.' ), $name );
+				} else {
+					self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__notices', $html, $name );
+				}
+			}
+		}
+
+		// Blocked: no eligible Branch package keeps the steps and setup, both marked inactive.
+		ob_start();
+		$method->invoke(
+			$this->controls(),
+			array(
+				array(
+					'label'   => 'Branch demand',
+					'message' => 'a',
+					'state'   => 'is-pending',
+				),
+				array(
+					'label'   => 'Signing profile',
+					'message' => 'b',
+					'state'   => 'is-ok',
+				),
+				array(
+					'label'   => 'Git provider receiver',
+					'message' => 'c',
+					'state'   => 'is-ok',
+				),
+				array(
+					'label'   => 'Remote hook',
+					'message' => 'd',
+					'state'   => 'is-pending',
+				),
+			),
+			$panel,
+			false,
+			array()
+		);
+		$blocked = (string) ob_get_clean();
+		self::assertStringContainsString( 'ran-booster-repository-webhook-lifecycle is-inactive', $blocked );
+		self::assertStringContainsString( 'ran-booster-repository-webhook-setup ran-booster-disclosure is-inactive', $blocked );
+	}
+
+	public function test_a_different_unavailable_reason_still_gets_its_notice_beside_the_receiver_step(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array( 'database_unavailable' ), 'http://localhost:10008/webhook', array() ) );
+		$facade->method( 'target' )->willReturn( null );
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->package_authorities()
+		);
+		$controls->register();
+
+		ob_start();
+		$controls->render_repository_webhook_setup( 'fixture-provider', '1315521150', 'https://example.test/repository' );
+		$html = (string) ob_get_clean();
+
+		self::assertSame( 1, substr_count( $html, 'Webhook setup is unavailable because Booster database storage is unavailable.' ) );
+		self::assertStringContainsString( 'ran-booster-repository-webhook-management__notices', $html );
+		// An availability notice is not an operation result: the receiver step is not ok, so setup stays collapsed.
+		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup"[^>]*ran-booster-disclosure">/', $html ) );
 	}
 
 	public function test_structured_results_are_escaped_and_rendered_in_both_surfaces(): void {
@@ -648,14 +799,14 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1315521150', 'https://example.test/repository' );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Webhook readiness', $html );
+		self::assertStringNotContainsString( 'Webhook readiness', $html );
 		self::assertStringContainsString( 'Webhook setup', $html );
-		self::assertStringContainsString( 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.', $html );
-		self::assertLessThan(
-			strpos( $html, 'Webhook readiness' ),
-			strpos( $html, 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.' )
-		);
-		self::assertSame( 1, substr_count( $html, 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.' ) );
+		// Step 1 states the missing public HTTPS URL, so the amber notice does not repeat it.
+		self::assertStringNotContainsString( 'This site needs a public HTTPS URL before a Git provider can deliver webhooks.', $html );
+		self::assertSame( 1, substr_count( $html, 'This site needs a public HTTPS URL to receive webhooks. Manual updates still work.' ) );
+		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__notices', $html );
+		// With the receiver step not ok, setup starts collapsed.
+		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup"[^>]*ran-booster-disclosure">/', $html ) );
 		self::assertStringNotContainsString( 'Bundled webhook management', $html );
 		self::assertStringContainsString( 'name="booster_credential_id" disabled="disabled"', $html );
 		self::assertStringContainsString( 'name="webhook_profile_id" disabled="disabled"', $html );
@@ -792,9 +943,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	private function repository_webhook_shell_structure( string $html ): array {
 		$zones     = array(
 			'ran-booster-settings-section__header',
-			'ran-booster-repository-webhook-management__notices',
 			'ran-booster-repository-webhook-lifecycle',
-			'ran-booster-repository-webhook-readiness',
 			'ran-booster-repository-webhook-setup',
 		);
 		$positions = array();

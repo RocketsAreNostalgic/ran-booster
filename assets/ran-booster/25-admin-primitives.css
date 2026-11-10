@@ -1099,6 +1099,21 @@
 	margin-block-start: var(--ran-booster-card-gap);
 }
 
+/*
+ * Repository detail disclosures follow the step list, which owns the Card gap
+ * above the first; each later one sits one Card gap below the one before.
+ */
+
+.ran-booster-admin
+	:is(
+		[data-ran-booster-ui-disclosure="repository-webhook-setup"],
+		[data-ran-booster-ui-disclosure="repository-release-readiness"],
+		[data-ran-booster-ui-disclosure="repository-release-workflow"]
+	)
+	+ [data-ran-booster-ui-disclosure] {
+	margin-block-start: var(--ran-booster-card-gap);
+}
+
 .ran-booster-admin [data-ran-booster-ui-disclosure="package-danger-zone"] {
 	margin-block-end: var(--ran-booster-space-18);
 }

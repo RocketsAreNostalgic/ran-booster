@@ -268,7 +268,8 @@ final class ReleaseWorkflowPresenter {
 				$workflow_available && $exact && $status->eligible() && 'branch' === $status->source(),
 				$exact && $this->published_releases_working( $status ),
 				$observation_kind,
-				$workflow_available
+				$workflow_available,
+				$workflow_status?->record_occupied() ?? false
 			),
 			'readiness'              => array(
 				'repository'         => $repository,
@@ -279,6 +280,7 @@ final class ReleaseWorkflowPresenter {
 			'show_automation'        => null !== $this->workflow_provider( $provider_code ) || null !== $this->workflow_capability( $provider_code ),
 			'automation'             => $automation,
 			'automation_unavailable' => ! $shared && ! $conflicted && true === ( $view['unavailable'] ?? false ),
+			'automation_redundant'   => $exact && ! $status->eligible() && ( $view['unavailable_reason'] ?? null ) === $this->workflow_unavailable_reason( $status ),
 			'automation_notice'      => ! $shared && ! $conflicted,
 			'provider_workflow_url'  => 'existing_automation_detected' === $observation_kind ? ( $workflow_status?->provider_workflow_url() ?? '' ) : '',
 			'show_result_notice'     => null !== $result_observation && ( '' === $result_observation || ! hash_equals( $result_observation, $observation_kind ) ),
@@ -304,13 +306,13 @@ final class ReleaseWorkflowPresenter {
 	}
 
 	/** @return list<array{label:string,message:string,state:string}> */
-	private function repository_lifecycle_projection( bool $package_ready, bool $tracking_ready, bool $workflow_recorded, bool $workflow_ready_to_assess, bool $published_releases_working, string $observation_kind, bool $workflow_available ): array {
+	private function repository_lifecycle_projection( bool $package_ready, bool $tracking_ready, bool $workflow_recorded, bool $workflow_ready_to_assess, bool $published_releases_working, string $observation_kind, bool $workflow_available, bool $record_occupied = false ): array {
 		$automation_ready = $workflow_recorded || in_array( $observation_kind, array( 'existing_automation_detected', 'booster_setup_verified' ), true );
 		$automation_label = $workflow_recorded ? __( 'Setup pull request recorded; check its outcome.', 'ran-booster' ) : match ( $observation_kind ) {
 			'existing_automation_detected' => __( 'Existing workflow found.', 'ran-booster' ),
 			'booster_setup_verified'       => __( 'Compatible workflow configuration verified.', 'ran-booster' ),
 			'no_recognisable_automation'   => __( 'No workflow found; setup is available.', 'ran-booster' ),
-			default                        => $workflow_ready_to_assess ? __( 'Ready to assess.', 'ran-booster' ) : ( $published_releases_working ? __( 'Releases are available; workflow not assessed.', 'ran-booster' ) : __( 'Workflow setup needs attention.', 'ran-booster' ) ),
+			default                        => $workflow_ready_to_assess ? __( 'Ready to assess.', 'ran-booster' ) : ( $published_releases_working ? __( 'Releases are available; workflow not assessed.', 'ran-booster' ) : ( $record_occupied ? __( 'Workflow setup needs attention.', 'ran-booster' ) : __( 'Not assessed', 'ran-booster' ) ) ),
 		};
 		$items = array(
 			array(
@@ -328,7 +330,8 @@ final class ReleaseWorkflowPresenter {
 			$items[] = array(
 				'label'   => __( 'Release workflow — optional', 'ran-booster' ),
 				'message' => $automation_label,
-				'state'   => $automation_ready ? 'is-ok' : ( $published_releases_working ? 'is-pending' : 'is-warning' ),
+				// Optional and never configured is neutral; only a record that blocks setup is a problem to fix.
+				'state'   => $automation_ready ? 'is-ok' : ( $record_occupied ? 'is-warning' : 'is-neutral' ),
 			);
 		}
 		return $items;
@@ -336,10 +339,11 @@ final class ReleaseWorkflowPresenter {
 
 	/** @return array{label:string,tone:string,message:string,notice_tone:string,provenance:string} */
 	private function repository_release_automation_state( string $workflow_owner, bool $workflow_ready_to_assess, bool $published_releases_working, bool $record_occupied, string $observation_kind, bool $unavailable = false ): array {
-		$state   = __( 'Needs attention', 'ran-booster' );
-		$tone    = 'ran-booster-badge--error';
+		// Never configured is not a fault: the optional workflow stays neutral until a record blocks it.
+		$state   = __( 'Not assessed', 'ran-booster' );
+		$tone    = 'ran-booster-badge--neutral';
 		$message = __( 'Release workflow status is unavailable.', 'ran-booster' );
-		$notice  = 'notice-warning';
+		$notice  = 'notice-info';
 		$origin  = __( 'Booster setup: Not recorded.', 'ran-booster' );
 		if ( $unavailable ) {
 			$state   = __( 'Unavailable', 'ran-booster' );
@@ -378,6 +382,8 @@ final class ReleaseWorkflowPresenter {
 			$message = __( 'Assess this repository before preparing a setup pull request.', 'ran-booster' );
 		} elseif ( $record_occupied ) {
 			$state   = __( 'Blocked', 'ran-booster' );
+			$tone    = 'ran-booster-badge--error';
+			$notice  = 'notice-warning';
 			$message = __( 'A local workflow record is occupied by a different package or revision. Review it before setup.', 'ran-booster' );
 		} elseif ( $published_releases_working ) {
 			$state   = __( 'Not assessed', 'ran-booster' );

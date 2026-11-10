@@ -486,7 +486,9 @@
 	margin-block-end: var(--ran-booster-space-16);
 }
 
-.ran-booster-admin .ran-booster-provider-task-panel .ran-booster-provider-automated-setup {
+.ran-booster-admin
+	.ran-booster-provider-task-panel
+	.ran-booster-provider-automated-setup {
 	margin-block: var(--ran-booster-space-16);
 }
 

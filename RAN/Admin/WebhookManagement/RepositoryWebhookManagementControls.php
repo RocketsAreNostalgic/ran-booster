@@ -336,11 +336,8 @@ final class RepositoryWebhookManagementControls {
 		$open = 'is-ok' === ( $items[2]['state'] ?? '' ) || $operation_notice;
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
-				<?php echo RepositoryPublishing::header( __( 'Branch publishing', 'ran-booster' ), 'ran-booster-repository-webhook-heading', $in_use, $link['url'], $link['label'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Shared header escapes its parts. ?>
+				<?php echo RepositoryPublishing::header( __( 'Branch publishing', 'ran-booster' ), 'ran-booster-repository-webhook-heading', $in_use, $link['url'], $link['label'], $in_use ? __( 'Manual updates work without setting up Push-to-deploy.', 'ran-booster' ) : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Shared header escapes its parts. ?>
 			<div class="ran-booster-settings-section__body">
-				<?php if ( $in_use ) { ?>
-				<p class="ran-booster-repository-publishing__line"><?php esc_html_e( 'Manual updates work without setup.', 'ran-booster' ); ?></p>
-				<?php } ?>
 				<div class="ran-booster-repository-publishing__tier">
 				<h4 id="ran-booster-repository-webhook-automation-heading" class="ran-booster-repository-publishing__subheading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?><?php echo $this->automation_badge( $items, $in_use ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes its label. ?></h4>
 				<?php if ( array() !== $notices ) { ?>

@@ -694,18 +694,19 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		);
 		foreach ( $cases as $name => $case ) {
 			$html = $this->render_branch_section( $case[0], true, $row );
-			if ( 1 !== preg_match( '/<h3 id="ran-booster-repository-webhook-heading">Branch publishing<\/h3>(<span[^>]*>[^<]*<\/span>)<\/div><a href="([^"]+)">Plugin settings<\/a><\/header>/', $html, $m ) ) {
+			if ( 1 !== preg_match( '/<h3 id="ran-booster-repository-webhook-heading">Branch publishing<\/h3>(<span[^>]*>[^<]*<\/span>)<\/div><a href="([^"]+)">Plugin settings<\/a><\/div><p class="ran-booster-section__description">Manual updates work without setting up Push-to-deploy\.<\/p><\/header>/', $html, $m ) ) {
 				self::fail( $name . ': header must be title, delivery badge, then the settings link.' );
 			}
 			self::assertStringContainsString( 'is-stable-intent', $m[1], $name );
 			self::assertStringContainsString( 'Active', $m[1], $name );
 			self::assertSame( 'https://example.test/plugin?a=1&amp;b=2', $m[2], $name );
-			self::assertStringContainsString( 'Manual updates work without setup.', $html, $name );
+			self::assertStringNotContainsString( 'Manual updates work without setup.', $html, $name );
 			if ( 1 !== preg_match( '/<h4 id="ran-booster-repository-webhook-automation-heading"[^>]*>Push-to-deploy<span[^>]*class="[^"]*is-' . $case[2] . '-intent[^"]*"[^>]*>' . $case[1] . '<\/span><\/h4>/', $html ) ) {
 				self::fail( $name . ': automation badge must read ' . $case[1] . ' (' . $case[2] . ').' );
 			}
 			self::assertLessThan( strpos( $html, 'ran-booster-webhook-steps' ), strpos( $html, 'ran-booster-repository-publishing__subheading' ), $name );
-			self::assertLessThan( strpos( $html, 'ran-booster-repository-publishing__subheading' ), strpos( $html, 'Manual updates work without setup.' ), $name );
+			// The strapline sits in the header, before the body and the Push-to-deploy tier.
+			self::assertLessThan( strpos( $html, 'ran-booster-settings-section__body' ), strpos( $html, 'Manual updates work without setting up Push-to-deploy.' ), $name );
 			self::assertStringNotContainsString( 'is-neutral"', (string) strstr( $html, '<ol' ), $name );
 		}
 
@@ -713,7 +714,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$many = $this->render_branch_section( array( 'is-pending', 'is-warning', 'is-warning', 'is-pending' ), false, array( 'package_summaries' => array( array( 'source' => 'release_asset' ), array( 'source' => 'release_asset' ) ) ) );
 		self::assertSame( 1, preg_match( '/Branch publishing<\/h3><span[^>]*is-none-intent[^>]*>Not in use<\/span>/', $many ) );
 		self::assertSame( 1, preg_match( '/Push-to-deploy<span[^>]*is-none-intent[^>]*>Not in use<\/span><\/h4>/', $many ) );
-		self::assertStringNotContainsString( 'Manual updates work without setup.', $many );
+		self::assertStringNotContainsString( 'Manual updates work without setting up Push-to-deploy.', $many );
 		self::assertStringNotContainsString( 'Plugin settings', $many );
 		self::assertStringNotContainsString( 'Theme settings', $many );
 		self::assertSame( 4, substr_count( $many, 'ran-booster-webhook-step is-neutral' ) );

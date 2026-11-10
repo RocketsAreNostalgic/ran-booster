@@ -27,11 +27,8 @@ final class ReleaseWorkflowDisplay {
 		$in_use       = true === ( $projection['in_use'] ?? false );
 		$html         = '<section class="ran-booster-settings-section ran-booster-repository-release-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-release-heading">'
 			. '<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">'
-			. \RAN\Admin\Component\RepositoryPublishing::header( __( 'Release publishing', 'ran-booster' ), 'ran-booster-repository-release-heading', $in_use, $settings_url, (string) ( $projection['settings_label'] ?? '' ) )
+			. \RAN\Admin\Component\RepositoryPublishing::header( __( 'Release publishing', 'ran-booster' ), 'ran-booster-repository-release-heading', $in_use, $settings_url, (string) ( $projection['settings_label'] ?? '' ), $in_use ? '' : __( 'No package on this repository tracks releases.', 'ran-booster' ) )
 			. '<div class="ran-booster-settings-section__body">';
-		if ( ! $in_use ) {
-			$html .= '<p class="ran-booster-repository-publishing__line">' . esc_html__( 'No package on this repository tracks releases.', 'ran-booster' ) . '</p>';
-		}
 
 		if ( true === ( $projection['shared'] ?? false ) ) {
 			$html .= '<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>'

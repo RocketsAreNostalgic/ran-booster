@@ -107,7 +107,8 @@
 	}
 }
 
-.ran-booster-admin .ran-booster-repository-release-section__header {
+/* The header row carries the title, the delivery badge and the settings link; an optional strapline sits under it. */
+.ran-booster-admin .ran-booster-repository-publishing__row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -120,11 +121,6 @@
 	flex-wrap: wrap;
 	gap: var(--ran-booster-space-8);
 	min-inline-size: 0;
-}
-
-/* The delivery line sits under the header and one card gap above the next tier or the steps. */
-.ran-booster-admin .ran-booster-repository-publishing__line {
-	margin: 0 0 var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-repository-publishing__subheading {

@@ -62,7 +62,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 	public function test_release_header_carries_delivery_badge_settings_link_and_the_not_in_use_line(): void {
 		$display = new ReleaseWorkflowDisplay();
 		$active  = $display->repository_section( $this->release_projection() );
-		self::assertSame( 1, preg_match( '/<h3 id="ran-booster-repository-release-heading">Release publishing<\/h3><span[^>]*is-stable-intent[^>]*>Active<\/span><\/div><a href="https:\/\/example.test\/settings">Plugin settings<\/a><\/header>/', $active ) );
+		self::assertSame( 1, preg_match( '/<h3 id="ran-booster-repository-release-heading">Release publishing<\/h3><span[^>]*is-stable-intent[^>]*>Active<\/span><\/div><a href="https:\/\/example.test\/settings">Plugin settings<\/a><\/div><\/header>/', $active ) );
 		self::assertStringNotContainsString( 'No package on this repository tracks releases.', $active );
 		// The release workflow is the second tier through its own disclosure; no step card and no extra sub-heading.
 		self::assertStringNotContainsString( 'Release workflow — optional', $active );
@@ -86,7 +86,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		);
 		$html              = $display->repository_section( $idle );
 		self::assertSame( 1, preg_match( '/Release publishing<\/h3><span[^>]*is-none-intent[^>]*>Not in use<\/span>/', $html ) );
-		self::assertStringContainsString( '<p class="ran-booster-repository-publishing__line">No package on this repository tracks releases.</p>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-section__description">No package on this repository tracks releases.</p></header>', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-webhook-step is-neutral' ) );
 		self::assertStringContainsString( 'Prepare message.', $html );
 		self::assertStringContainsString( 'id="ran-booster-repository-release-workflow"', $html );

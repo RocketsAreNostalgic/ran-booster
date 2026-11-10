@@ -48,12 +48,17 @@ final class RepositoryPublishing {
 		return StatusBadge::for_intent( $in_use ? __( 'Active', 'ran-booster' ) : __( 'Not in use', 'ran-booster' ), $in_use ? 'stable' : 'none' );
 	}
 
-	/** Card header: title, delivery badge, and the package settings link on the right. */
-	public static function header( string $title, string $heading_id, bool $in_use, string $settings_url = '', string $settings_label = '' ): string {
+	/** Card header: title, delivery badge and the package settings link on one row, with an optional strapline under them. */
+	public static function header( string $title, string $heading_id, bool $in_use, string $settings_url = '', string $settings_label = '', string $strapline = '' ): string {
 		$html = '<header class="ran-booster-settings-section__header ran-booster-repository-release-section__header">'
+			. '<div class="ran-booster-repository-publishing__row">'
 			. '<div class="ran-booster-repository-publishing__heading"><h3 id="' . esc_attr( $heading_id ) . '">' . esc_html( $title ) . '</h3>' . self::delivery_badge( $in_use ) . '</div>';
 		if ( '' !== $settings_url ) {
 			$html .= '<a href="' . esc_url( $settings_url ) . '">' . esc_html( $settings_label ) . '</a>';
+		}
+		$html .= '</div>';
+		if ( '' !== $strapline ) {
+			$html .= '<p class="ran-booster-section__description">' . esc_html( $strapline ) . '</p>';
 		}
 
 		return $html . '</header>';

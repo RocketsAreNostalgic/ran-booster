@@ -680,7 +680,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-webhook-step\s*\{[^}]*\n\tmargin:\s*0;/', $webhook_management );
 		// Two-tier publishing: the header badge sits one heading gap after its title, the delivery line and the Push-to-deploy tier sit one card gap apart, and the tier heading uses the shared heading size and gap.
 		self::assertMatchesRegularExpression( '/\.ran-booster-repository-publishing__heading\s*\{[^}]*display: flex;[^}]*gap: var\(--ran-booster-space-8\);/', $webhook_management );
-		self::assertMatchesRegularExpression( '/\.ran-booster-repository-publishing__line\s*\{\s*margin: 0 0 var\(--ran-booster-card-gap\);/', $webhook_management );
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-publishing__row\s*\{[^}]*display: flex;[^}]*justify-content: space-between;/', $webhook_management );
+		self::assertStringNotContainsString( 'ran-booster-repository-publishing__line', $webhook_management );
 		self::assertMatchesRegularExpression( '/\.ran-booster-repository-publishing__subheading\s*\{[^}]*gap: var\(--ran-booster-space-8\);[^}]*margin: 0 0 var\(--ran-booster-space-8\);[^}]*font-size: var\(--ran-booster-font-size-lg\);/', $webhook_management );
 		// The webhook notices wrapper owns the gap between a notice and the steps below it.
 		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management__notices\s*\{[^}]*margin-block:\s*0 var\(--ran-booster-space-16\)/', $webhook_management );

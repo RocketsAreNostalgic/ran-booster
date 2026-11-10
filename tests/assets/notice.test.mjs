@@ -106,7 +106,10 @@ class Element {
 // Builds the page the way NoticeIcon prints it: one template keyed by intent.
 function page({ template = true } = {}) {
 	const ids = new Map();
-	const doc = { getElementById: (id) => ids.get(id) || null };
+	const doc = {
+		getElementById: (id) => ids.get(id) || null,
+		createElement: (tag) => new Element(doc, tag),
+	};
 	if (template) {
 		const element = new Element(doc, 'template', {
 			id: 'ran-booster-notice-icons',
@@ -144,7 +147,7 @@ function page({ template = true } = {}) {
 	}
 	const dismiss = new Element(doc, 'button', { class: 'notice-dismiss' });
 	host.append(dismiss);
-	const window = {};
+	const window = { document: doc };
 	vm.runInNewContext(source, { window });
 	return { doc, host, description, dismiss, window, ids };
 }
@@ -263,4 +266,60 @@ test('the template id and icon key match what NoticeIcon prints', () => {
 		source,
 		/icon\.removeAttribute\('data-ran-booster-notice-icon'\)/
 	);
+});
+
+test('create builds the static Notice markup a PHP host prints', () => {
+	const { window } = page();
+	const { host, content } = window.ranBoosterNotice.create('warning', {
+		className: 'ran-booster-release-candidate__warning',
+		scope: 'global',
+	});
+	// Same classes, in the order the PHP hosts print them.
+	assert.equal(
+		host.className,
+		'notice inline ran-wp-ui-notice ran-wp-ui-box-sizing ran-booster-release-candidate__warning is-warning notice-warning'
+	);
+	assert.equal(host.hasAttribute('data-ran-booster-ui-notice'), true);
+	assert.equal(
+		host.getAttribute('data-ran-booster-ui-notice-intent'),
+		'warning'
+	);
+	assert.equal(
+		host.getAttribute('data-ran-booster-ui-notice-scope'),
+		'global'
+	);
+	assert.equal(
+		content.className,
+		'ran-wp-ui-text is-body-md ran-wp-ui-notice__description'
+	);
+	assert.equal(
+		content.hasAttribute('data-ran-booster-ui-notice-content'),
+		true
+	);
+	// Content first, then the icon, as NoticeIcon prints it, and no role: the
+	// caller announces through ranBoosterAnnounce.
+	assert.deepEqual(host.children[0], content);
+	assert.equal(host.children.length, 2);
+	assert.equal(host.children[1].getAttribute('aria-hidden'), 'true');
+	assert.equal(host.children[1].children[0].getAttribute('d'), 'warning');
+	assert.equal(host.hasAttribute('role'), false);
+	assert.equal(host.hasAttribute('aria-live'), false);
+});
+
+test('create omits scope unless asked and draws no icon for neutral or without the template', () => {
+	const { window } = page();
+	const { host } = window.ranBoosterNotice.create('info');
+	assert.equal(host.hasAttribute('data-ran-booster-ui-notice-scope'), false);
+	assert.equal(
+		host.className,
+		'notice inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info notice-info'
+	);
+	const neutral = window.ranBoosterNotice.create('neutral').host;
+	assert.equal(neutral.children.length, 1);
+	assert.equal(neutral.className.includes('notice-neutral'), false);
+	const bare = page({ template: false }).window.ranBoosterNotice.create(
+		'error'
+	).host;
+	assert.equal(bare.children.length, 1);
+	assert.equal(bare.className.endsWith('is-error notice-error'), true);
 });

@@ -388,7 +388,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 			listeners.set(`apply:${type}`, listener);
 		},
 	};
-	const noticeUpdates = [];
+	const noticeCalls = [];
 	const results = {
 		setAttribute(name, value) {
 			this[name] = value;
@@ -685,16 +685,6 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 			return {
 				setAttribute: (name, value) => attributes.set(name, value),
 				getAttribute: (name) => attributes.get(name) ?? null,
-				dispatchEvent(event) {
-					noticeUpdates.push({
-						item: this,
-						type: event.type,
-						bubbles: event.bubbles,
-						intent: attributes.get(
-							'data-ran-booster-ui-notice-intent'
-						),
-					});
-				},
 				children: [],
 				appendChild(child) {
 					this.children.push(child);
@@ -752,7 +742,18 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		fetch: (url, requestOptions) => fetchResponse(requestOptions.body),
 		ranBoosterPortability: { ajaxUrl: '/admin-ajax.php' },
 		ranBoosterNotice: {
+			// Records how a notice is built and redrawn: the apply results
+			// must come from the shared static Notice, never hand-set classes.
+			create(intent, notice) {
+				const host = globalThis.document.createElement();
+				const content = globalThis.document.createElement();
+				host.appendChild(content);
+				noticeCalls.push({ call: 'create', intent, ...notice });
+				globalThis.window.ranBoosterNotice.setIntent(host, intent);
+				return { host, content };
+			},
 			setIntent(host, intent) {
+				noticeCalls.push({ call: 'setIntent', intent });
 				host.setAttribute('data-ran-booster-ui-notice-intent', intent);
 				return true;
 			},
@@ -780,7 +781,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		htmxProcesses,
 		listeners,
 		master: () => master,
-		noticeUpdates,
+		noticeCalls,
 		message,
 		announcements,
 		spoken,
@@ -1545,8 +1546,10 @@ test('managed credential recovery enables Apply without claiming a package chang
 			'import'
 		);
 		assert.equal(
-			state.results.items[0].className.includes('notice-success'),
-			true
+			state.results.items[0].getAttribute(
+				'data-ran-booster-ui-notice-intent'
+			),
+			'success'
 		);
 		assert.equal(
 			state.results.items[0].children[0].children[1].textContent,
@@ -1988,7 +1991,12 @@ test('partial apply keeps row feedback without claiming all changes succeeded', 
 			state.results.items[0].children[0].children[0].textContent,
 			/Needs recovery\./
 		);
-		assert.match(state.results.items[0].className, /notice-warning/);
+		assert.equal(
+			state.results.items[0].getAttribute(
+				'data-ran-booster-ui-notice-intent'
+			),
+			'warning'
+		);
 		assert.equal(
 			state.spoken.some((text) => text.includes('changes were applied')),
 			false
@@ -2411,6 +2419,23 @@ test('apply result keeps its message, credential and added recovery nodes across
 			'success'
 		);
 		assert.equal(state.results['aria-live'], undefined);
+		// One static Notice is created per row and only redrawn after that;
+		// the apply result never sets the Notice classes itself.
+		assert.deepEqual(
+			state.noticeCalls.filter(({ call }) => call === 'create'),
+			[
+				{
+					call: 'create',
+					intent: 'info',
+					className: 'ran-booster-portability__apply-result',
+				},
+			]
+		);
+		assert.deepEqual(
+			state.noticeCalls.map(({ call, intent }) => `${call}:${intent}`),
+			['create:info', 'setIntent:info', 'setIntent:success']
+		);
+		assert.equal(item.className, '');
 		// Each row result and the completion are spoken politely, once, in
 		// the order the former polite results region announced them.
 		assert.deepEqual(

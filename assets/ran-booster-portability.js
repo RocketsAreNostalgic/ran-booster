@@ -515,13 +515,6 @@
 					ignoreTitle: true,
 				});
 			} else {
-				results
-					.querySelector('[data-ran-booster-ui-notice]')
-					?.dispatchEvent(
-						new window.CustomEvent('ran-booster:ui-notice-update', {
-							bubbles: true,
-						})
-					);
 				results.replaceChildren();
 			}
 		}
@@ -751,11 +744,14 @@
 			} else if (result.status === 'pending') {
 				resultType = 'info';
 			}
-			const item = rendered?.item || document.createElement('div');
 			const text = rendered?.text || document.createElement('p');
-			const content = rendered
-				? text.parentNode
-				: document.createElement('div');
+			const created = rendered
+				? null
+				: window.ranBoosterNotice.create(resultType, {
+						className: 'ran-booster-portability__apply-result',
+					});
+			const item = rendered?.item || created.host;
+			const content = rendered ? text.parentNode : created.content;
 			const credentialText =
 				rendered?.credentialText || document.createElement('p');
 			const type =
@@ -780,12 +776,9 @@
 				result.message ||
 				__('Package result unavailable.', 'ran-booster');
 
-			item.className =
-				'notice inline notice-' +
-				resultType +
-				' ran-booster-portability__apply-result';
-			item.setAttribute('data-ran-booster-ui-notice', '');
-			item.setAttribute('data-ran-booster-ui-notice-intent', resultType);
+			if (rendered) {
+				window.ranBoosterNotice.setIntent(item, resultType);
+			}
 			const credentialMessages = {
 				transferred_available: __(
 					'Transferred credential is available on this site.',
@@ -808,12 +801,10 @@
 			credentialText.hidden = !credentialText.textContent;
 			text.textContent = label + ' — ' + resultMessage;
 			if (!rendered) {
-				content.setAttribute('data-ran-booster-ui-notice-content', '');
 				content.appendChild(text);
 				if (credentialText.textContent) {
 					content.appendChild(credentialText);
 				}
-				item.appendChild(content);
 				results.appendChild(item);
 			} else if (
 				credentialText.textContent &&
@@ -830,12 +821,6 @@
 				]
 					.filter(Boolean)
 					.join(' ')
-			);
-
-			item.dispatchEvent(
-				new window.CustomEvent('ran-booster:ui-notice-update', {
-					bubbles: true,
-				})
 			);
 
 			return { item, text, credentialText };

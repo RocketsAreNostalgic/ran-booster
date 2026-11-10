@@ -199,7 +199,7 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:277
 #: RAN/Admin/PackagePagePresenter.php:445
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:479
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:477
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:475
 #: views/packages/index.php:162
 #: views/portability-review.php:32
 #: views/portability-review.php:415
@@ -214,12 +214,12 @@ msgstr ""
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:478
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:125
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:268
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:291
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:484
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:289
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:482
 #: views/packages/index.php:163
 #: views/packages/index.php:352
 #: views/packages/index.php:427
-#: assets/ran-booster-release-management.js:839
+#: assets/ran-booster-release-management.js:849
 msgid "Releases"
 msgstr ""
 
@@ -561,8 +561,8 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryPublishing.php:48
 #: RAN/Admin/PackagePagePresenter.php:457
 #: RAN/Admin/PackagePagePresenter.php:462
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:479
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:490
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:477
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:488
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:395
 #: views/extensions.php:16
 #: views/extensions.php:91
@@ -1042,7 +1042,7 @@ msgid "Diagnostic partial-result reason"
 msgstr ""
 
 #: RAN/Admin/DeploymentOutcomeMessage.php:79
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:249
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:237
 #: RAN/Troubleshooting/TroubleshootingService.php:234
 #: RAN/Troubleshooting/TroubleshootingService.php:247
 #: views/attempts/index.php:179
@@ -1772,19 +1772,19 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:406
 #: views/packages/edit.php:234
 #: views/packages/index.php:431
-#: assets/ran-booster-release-management.js:766
+#: assets/ran-booster-release-management.js:776
 msgid "repository default"
 msgstr ""
 
 #. translators: 1: package type, 2: package display name.
 #: RAN/Admin/PackagePagePresenter.php:460
 #: RAN/Admin/PackagePagePresenter.php:466
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:487
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:794
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:485
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:789
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:163
 #: assets/ran-booster-release-management.js:452
-#: assets/ran-booster-release-management.js:757
-#: assets/ran-booster-release-management.js:1101
+#: assets/ran-booster-release-management.js:767
+#: assets/ran-booster-release-management.js:1111
 msgid "Stable"
 msgstr ""
 
@@ -2365,7 +2365,7 @@ msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1782
 #: RAN/Admin/ProviderSettingsPresenter.php:1788
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:699
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:694
 #: RAN/Booster.php:1002
 #: views/attempts/index.php:62
 #: views/onboarding.php:84
@@ -2579,8 +2579,8 @@ msgid "Repository shared"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:102
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:874
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:925
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:869
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:920
 msgid "Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed."
 msgstr ""
 
@@ -2608,40 +2608,28 @@ msgstr ""
 msgid "Switching resets Automatic to Manual. Existing repository webhook configuration is unchanged."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:147
-msgid "Branch currently active."
-msgstr ""
-
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:149
-msgid "Initial release track"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:156
-msgid "Use releases"
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:161
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:181
 msgid "Release readiness"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:166
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:154
 msgid "Eligibility recheck complete."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:166
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:154
 msgid "The current eligibility evidence is shown below."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:171
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:159
 msgid "Ready for releases"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:171
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:159
 msgid "Not ready for releases"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:174
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:162
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:331
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:482
 #: RAN/Troubleshooting/TroubleshootingService.php:246
@@ -2660,499 +2648,505 @@ msgstr ""
 msgid "Unavailable"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:180
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:168
 msgid "Installed identity and Update URI"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:181
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:186
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:169
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:174
 msgid "Cannot be checked until release status is available."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:181
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:169
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:391
 msgid "This package uses a repository subdirectory. Published releases require the repository root."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:181
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:169
 msgid "The installed package identity and Update URI match the configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:185
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:173
 msgid "Release status"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:186
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:174
 msgid "Branch is active; releases are not tracked."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:192
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:180
 msgid "Add this exact header, deploy the corrected package, then check again:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:201
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:305
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:189
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:303
 msgid "Published release browsing is unavailable until the current package status and controls are available."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:228
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:216
 msgid "Recheck eligibility"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:235
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:750
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:223
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:745
 msgid "Check releases"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:237
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:773
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:225
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:768
 msgid "Open WordPress updates"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:240
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:228
 msgid "Open repository"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:253
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:241
 msgid "Release Track"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:292
+#. translators: %s is the selected release track, Stable or Preview.
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:254
+#, php-format
+msgid "Switch to releases using the %s track."
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:258
+msgid "Use releases"
+msgstr ""
+
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:290
 msgid "Review the latest eligible release and the installed version."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:294
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:292
 msgid "Refresh releases"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:300
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:298
 msgid "Available published releases"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:304
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:611
-#: assets/ran-booster-release-management.js:851
-#: assets/ran-booster-release-management.js:874
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:302
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:606
+#: assets/ran-booster-release-management.js:861
+#: assets/ran-booster-release-management.js:884
 msgid "Release candidates appear here"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:305
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:303
 msgid "Check the saved release track for eligible candidates."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:307
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:305
 #: assets/ran-booster-release-management.js:112
 msgid "Install now"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:404
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:402
 msgid "Branch cannot be selected because source transition controls are temporarily unavailable. No package settings were changed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:409
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:407
 msgid "Returning resets Automatic to Manual. Existing repository webhook configuration is unchanged."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:416
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:414
 msgid "Releases currently active."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:417
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:614
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:415
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:609
 msgid "Use branch"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:434
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:432
 msgid "Releases · Stable"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:444
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:442
 msgid "Branch · Active"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:445
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:443
 msgid "Releases · Active"
 msgstr ""
 
 #. translators: 1: package type, 2: package display name.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:487
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:794
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:485
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:789
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:163
 #: assets/ran-booster-release-management.js:451
-#: assets/ran-booster-release-management.js:756
-#: assets/ran-booster-release-management.js:1100
+#: assets/ran-booster-release-management.js:766
+#: assets/ran-booster-release-management.js:1110
 msgid "Preview"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:517
-msgid "Activate Releases to change the release track."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:528
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:523
 msgid "Preview includes published alpha, beta, release-candidate, and stable releases; switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:530
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:525
 msgid "Stable follows final published releases. Preview also includes eligible alpha, beta and release-candidate builds. Drafts remain excluded."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:531
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:526
 msgid "Stable follows final published releases. Preview also includes prereleases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:534
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:529
 msgid "Release track"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:540
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:535
 msgid "Current release track"
 msgstr ""
 
 #. translators: %s is the destination release track, Stable or Preview.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:544
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:539
 #, php-format
 msgid "Switch to %s releases"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:598
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:593
 msgid "Preview includes eligible alpha, beta and release-candidate builds as well as stable releases. Drafts remain excluded."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:602
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:597
 msgid "Published release selection"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:603
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:598
 msgid "Choose one exact release, inspect it, then install the reviewed package."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:606
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:601
 msgid "Choose a published release"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:613
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:608
 msgid "Choose a repository above, then select Releases to load eligible stable releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:617
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:612
 msgid "Retry release check"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:627
-#: assets/ran-booster-release-management.js:1217
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:622
+#: assets/ran-booster-release-management.js:1227
 msgid "Published release inspected"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:628
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:623
 msgid "The exact published release was checked. Its ZIP was downloaded, validated for repository identity, digest, headers and package identity, then discarded. Installation will freshly acquire and verify it again before WordPress changes files."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:634
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:629
 msgid "Release"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:639
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:634
 msgid "Expected plugin identity"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:639
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:634
 msgid "Expected theme identity"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:644
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:639
 msgid "Install published plugin"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:644
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:639
 msgid "Install published theme"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:681
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:676
 msgid "Release status unavailable"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:707
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:702
 msgid "Update available"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:738
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:733
 msgid "Release check unavailable"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:745
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:764
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:740
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:759
 msgid "Working…"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:827
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:822
 msgid "Published release controls are temporarily unavailable. No package settings were changed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:854
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:849
 msgid "Package present, Booster management not established"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:854
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:849
 msgid "Installation outcome needs review"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:858
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:853
 msgid "Inspect the installed version, activation state and Booster management before using Link installed or retrying."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:875
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:870
 msgid "The published release was installed and is now managed by Booster. WordPress activation was not changed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:876
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:871
 msgid "Release tracking enabled."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:877
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:872
 msgid "Release track changed. The installed package was not changed and Automatic was reset to Manual."
 msgstr ""
 
 #. translators: 1: package type, 2: release track.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:880
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:875
 #, php-format
 msgid "This %1$s is already using the %2$s release track. No settings were changed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:881
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:876
 msgid "theme"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:881
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:876
 msgid "plugin"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:886
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:881
 msgid "The release check could not start. Review this package’s published release settings, then retry."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:887
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:882
 msgid "Branch-based package management is restored."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:888
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:883
 msgid "Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:889
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:884
 msgid "This package already registers its own release updater. Use one release owner only."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:890
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:885
 msgid "You are not authorized to perform this published release operation. No package was installed or adopted."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:891
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:886
 msgid "Published releases are not available for this Git provider. Use Branch tracking instead."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:892
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:887
 msgid "The published release request was invalid. No package was installed or adopted. Reload and try again."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:893
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:888
 msgid "Published release controls are temporarily unavailable. No package settings were changed. No package was installed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:894
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:889
 msgid "That plugin or theme is already installed or managed. No package was overwritten."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:895
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:890
 msgid "A package is present, but Booster did not establish management for it."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:896
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:891
 msgid "Booster could not confirm the final installation or management state."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:897
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:892
 msgid "Booster could not confirm the installation or management state after finalization failed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:902
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:897
 msgid "WordPress did not install the selected published release, and Booster did not adopt it."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:903
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:898
 msgid "The install request could not be completed. Review installed packages before retrying because the final state was not reported."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:904
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:899
 msgid "No eligible published release is available for the selected channel. No package was installed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:905
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:900
 msgid "The selected release does not satisfy the selected channel requirements. No package was installed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:906
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:901
 msgid "Published releases could not be checked. No package was installed and no package settings were changed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:917
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:912
 msgid "The published release operation completed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:918
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:913
 msgid "The published release operation could not be completed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:926
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1043
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:921
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1038
 msgid "Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:928
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:923
 msgid "This package uses retired published-release settings, so Booster could not start its release checker. Return it to Branch, then validate and switch it back to Published releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:929
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:924
 msgid "Release version mismatch — check published releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:930
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:925
 msgid "The published package is missing its WordPress version header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:931
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:926
 msgid "The published package has an invalid WordPress version header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:932
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:927
 msgid "The published release archive could not be inspected."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:933
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:928
 msgid "No matching published release is available yet."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:934
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:929
 msgid "The published release assets could not be validated."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:935
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:930
 msgid "Published release validation is temporarily unavailable."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:936
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:931
 msgid "This server cannot currently run the published-release validator."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:937
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:932
 msgid "The published ZIP is missing the required Update URI header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:938
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:933
 msgid "The published ZIP’s Update URI does not match its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:940
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:935
 msgid "The published release is not compatible with this WordPress site."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:941
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:936
 msgid "This server cannot inspect ZIP packages because its ZIP extension is unavailable."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:943
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:938
 msgid "The published ZIP has an invalid or excessive uncompressed size."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:948
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:943
 msgid "The published ZIP has an unsafe or unsupported archive structure."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:949
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:944
 msgid "The published ZIP contains more than one possible WordPress package header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:950
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:945
 msgid "The published release tag does not contain a valid package version."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:951
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:946
 msgid "Published release status needs attention."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:967
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:962
 msgid "Stop managing the other packages in Booster before switching this package to releases. Their files can stay installed."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:968
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:963
 msgid "Return the package to Branch to keep its configured repository subdirectory."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:969
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:964
 msgid "Publish a release for the selected Stable or Preview track, then recheck eligibility."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:971
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:966
 msgid "Correct the Update URI in the packaged plugin or theme header, publish a new ZIP, then recheck."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:973
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:968
 msgid "Publish a package whose WordPress and PHP compatibility headers include this site, or choose a compatible release track."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:975
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:970
 msgid "Make the release tag and packaged WordPress Version header describe the same valid version, then publish a corrected ZIP."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:980
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:975
 msgid "Correct the plugin or theme header in the distributable ZIP, publish a new release asset, then recheck."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:982
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:977
 msgid "Ask the site administrator to restore the required PHP and temporary-file runtime support, then retry."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:984
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:979
 msgid "Return the package to Branch, verify its repository settings, then validate and switch it back to Published releases."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:985
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:980
 msgid "Review the release, repository access and packaged WordPress headers, then retry. If it still fails, open Troubleshooting with the error code below."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:991
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:986
 msgid "The release check completed, but its version result is unavailable. Review the package status below."
 msgstr ""
 
 #. translators: 1: installed version, 2: available version.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1002
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:997
 #, php-format
 msgid "Version %1$s is installed; version %2$s is available. WordPress controls installation."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1003
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1011
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:998
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1006
 msgid "unknown"
 msgstr ""
 
 #. translators: %s is the installed version.
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1010
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1005
 #, php-format
 msgid "Version %s is installed; no newer eligible release was found."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1027
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1022
 msgid "Why this happened and how to fix it"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1029
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1024
 msgid "What Booster found:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1030
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1025
 msgid "What to do:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1031
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1026
 #: views/documentation.php:293
 #: views/documentation.php:455
 #: views/packages/index.php:137
@@ -3160,55 +3154,55 @@ msgstr ""
 msgid "Open Troubleshooting"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1032
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1027
 msgid "Technical reason:"
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1042
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1037
 msgid "Published releases require this plugin or theme to be at the repository root. This package can continue using its configured repository subdirectory with Branch deployments."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1044
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1039
 msgid "This package header does not declare an Update URI for its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1045
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1040
 msgid "This package header Update URI does not match its configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1046
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1041
 msgid "The Git provider does not support published release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1047
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1042
 msgid "The configured repository is invalid."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1048
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1043
 msgid "This package already registers its own release updater. Use either that updater or Booster published-release tracking, not both."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1049
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1044
 msgid "The installed plugin or theme identity is not eligible for published release tracking."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1055
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1050
 msgid "Published releases require the repository root."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1056
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1051
 msgid "Missing from the installed package header."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1057
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1052
 msgid "Does not match the configured repository."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1058
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1053
 msgid "Matches, but this package already registers its own updater."
 msgstr ""
 
-#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1059
+#: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1054
 msgid "Cannot be validated until the Git provider and repository are ready."
 msgstr ""
 
@@ -7934,7 +7928,7 @@ msgstr ""
 #. translators: %s is the repository branch name.
 #: views/packages/edit.php:233
 #: views/packages/index.php:430
-#: assets/ran-booster-release-management.js:764
+#: assets/ran-booster-release-management.js:774
 #, php-format,js-format
 msgid "Branch · %s"
 msgstr ""
@@ -8215,7 +8209,7 @@ msgstr ""
 
 #. translators: %s is plugins or themes.
 #: views/packages/index.php:225
-#: assets/ran-booster-packages.js:617
+#: assets/ran-booster-packages.js:639
 #, php-format,js-format
 msgid "0 %s selected"
 msgstr ""
@@ -10795,16 +10789,16 @@ msgctxt "plugin"
 msgid "%s update failed."
 msgstr ""
 
-#: assets/ran-booster-packages.js:603
+#: assets/ran-booster-packages.js:625
 msgid "package"
 msgstr ""
 
-#: assets/ran-booster-packages.js:606
+#: assets/ran-booster-packages.js:628
 msgid "packages"
 msgstr ""
 
 #. translators: 1: number of selected packages, 2: package type label.
-#: assets/ran-booster-packages.js:644
+#: assets/ran-booster-packages.js:666
 #, js-format
 msgid "%1$d %2$s selected"
 msgid_plural "%1$d %2$s selected"
@@ -10812,27 +10806,27 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: selected-package summary, 2: number eligible for branch reinstall.
-#: assets/ran-booster-packages.js:658
+#: assets/ran-booster-packages.js:680
 #, js-format
 msgid "%1$s. %2$d eligible for branch Reinstall."
 msgstr ""
 
 #. translators: %s: package type label.
-#: assets/ran-booster-packages.js:693
+#: assets/ran-booster-packages.js:715
 #, js-format
 msgid "Select at least one %s."
 msgstr ""
 
-#: assets/ran-booster-packages.js:703
+#: assets/ran-booster-packages.js:725
 msgid "Select at least one branch package eligible for Reinstall."
 msgstr ""
 
-#: assets/ran-booster-packages.js:719
+#: assets/ran-booster-packages.js:741
 msgid "Reinstall cancelled."
 msgstr ""
 
 #. translators: %s: deployment state label.
-#: assets/ran-booster-packages.js:886
+#: assets/ran-booster-packages.js:908
 #, js-format
 msgid "Deployment: %s"
 msgstr ""
@@ -10988,7 +10982,7 @@ msgid "The saved package or release may have changed. Refresh and try again."
 msgstr ""
 
 #: assets/ran-booster-release-management.js:338
-#: assets/ran-booster-release-management.js:957
+#: assets/ran-booster-release-management.js:967
 msgid "Checking published releases…"
 msgstr ""
 
@@ -11038,7 +11032,7 @@ msgstr ""
 
 #. translators: %d: number of earlier releases.
 #: assets/ran-booster-release-management.js:479
-#: assets/ran-booster-release-management.js:1118
+#: assets/ran-booster-release-management.js:1128
 #, js-format
 msgid "Show %d earlier release"
 msgid_plural "Show %d earlier releases"
@@ -11050,7 +11044,7 @@ msgid "Downgrades are unavailable because package data migrations may not be rev
 msgstr ""
 
 #: assets/ran-booster-release-management.js:512
-#: assets/ran-booster-release-management.js:1133
+#: assets/ran-booster-release-management.js:1143
 msgid "Release candidates loaded"
 msgstr ""
 
@@ -11079,7 +11073,7 @@ msgid "Booster could not load published releases. The Git provider may be tempor
 msgstr ""
 
 #: assets/ran-booster-release-management.js:570
-#: assets/ran-booster-release-management.js:1008
+#: assets/ran-booster-release-management.js:1018
 msgid "Published releases could not be checked"
 msgstr ""
 
@@ -11088,101 +11082,101 @@ msgid "Booster could not read eligible releases for the saved package."
 msgstr ""
 
 #. translators: %s: selected release channel.
-#: assets/ran-booster-release-management.js:754
+#: assets/ran-booster-release-management.js:764
 #, js-format
 msgid "Releases · %s"
 msgstr ""
 
 #. translators: %s: release availability description.
-#: assets/ran-booster-release-management.js:836
+#: assets/ran-booster-release-management.js:846
 #, js-format
 msgid "Releases unavailable: %s"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:853
+#: assets/ran-booster-release-management.js:863
 msgid "Select Releases to load stable and preview candidates."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:857
+#: assets/ran-booster-release-management.js:867
 msgid "Select Releases to load eligible stable candidates."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:875
+#: assets/ran-booster-release-management.js:885
 msgid "Choose a repository above to load eligible published releases."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:893
-#: assets/ran-booster-release-management.js:913
+#: assets/ran-booster-release-management.js:903
+#: assets/ran-booster-release-management.js:923
 msgid "Published releases are unavailable"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:894
+#: assets/ran-booster-release-management.js:904
 msgid "This Git provider does not expose the complete published-release capability. Use Branch tracking for this repository."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:914
+#: assets/ran-booster-release-management.js:924
 msgid "Published releases require the repository root. Branch supports the configured subdirectory."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:956
+#: assets/ran-booster-release-management.js:966
 msgid "Validating published release…"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:959
+#: assets/ran-booster-release-management.js:969
 msgid "Booster is downloading and validating the exact release ZIP for review. It will be discarded after inspection."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:963
+#: assets/ran-booster-release-management.js:973
 msgid "Booster is checking release metadata without downloading a package."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1012
+#: assets/ran-booster-release-management.js:1022
 msgid "Repository access or the Git provider may be temporarily unavailable."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1017
+#: assets/ran-booster-release-management.js:1027
 msgid "No eligible stable release or prerelease found"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1021
+#: assets/ran-booster-release-management.js:1031
 msgid "This repository does not publish an eligible stable or preview release."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1026
+#: assets/ran-booster-release-management.js:1036
 msgid "No eligible stable published release found"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1030
+#: assets/ran-booster-release-management.js:1040
 msgid "This repository does not publish an eligible stable release."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1050
+#: assets/ran-booster-release-management.js:1060
 msgid "Published release could not be used"
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1052
+#: assets/ran-booster-release-management.js:1062
 msgid "The selected release did not pass the package checks. Earlier releases remain available."
 msgstr ""
 
-#: assets/ran-booster-release-management.js:1056
+#: assets/ran-booster-release-management.js:1066
 msgid "The selected release could not be checked. Earlier releases remain available."
 msgstr ""
 
 #. translators: 1: release version, 2: release tag, 3: release channel label.
-#: assets/ran-booster-release-management.js:1104
+#: assets/ran-booster-release-management.js:1114
 #, js-format
 msgid "%1$s (%2$s) · %3$s"
 msgstr ""
 
 #. translators: %d: number of eligible releases.
-#: assets/ran-booster-release-management.js:1136
+#: assets/ran-booster-release-management.js:1146
 #, js-format
 msgid "%d eligible release available. Choose one to run its pre-flight checks."
 msgid_plural "%d eligible releases available. Choose one to run its pre-flight checks."
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/ran-booster-release-management.js:1218
+#: assets/ran-booster-release-management.js:1228
 msgid "The selected release passed initial inspection. Review the pre-flight checks below before installing."
 msgstr ""
 

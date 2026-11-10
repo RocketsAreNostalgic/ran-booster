@@ -186,6 +186,14 @@ a.ran-wp-ui-button[aria-disabled="true"] {
 	z-index: 1;
 }
 
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-enhanced-mutation__submitter--busy.ran-booster-update-is-active
+	[data-ran-booster-submit-busy-label] {
+	position: relative;
+	z-index: 1;
+}
+
 @keyframes ran-booster-update-stripes {
 	to {
 		background-position: 23px 0;

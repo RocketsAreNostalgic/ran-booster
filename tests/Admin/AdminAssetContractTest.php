@@ -720,6 +720,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-repository-publishing__subheading\s*\{[^}]*gap: var\(--ran-booster-space-8\);[^}]*margin: 0 0 var\(--ran-booster-space-8\);[^}]*font-size: var\(--ran-booster-font-size-lg\);/', $webhook_management );
 		// The webhook notices wrapper owns the gap between a notice and the steps below it.
 		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management__notices\s*\{[^}]*margin-block:\s*0 var\(--ran-booster-space-16\)/', $webhook_management );
+		// The operation result sits exactly one section gap (16px) under the Webhook group, with no extra margin from the notice itself.
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management__result\s*\{[^}]*margin-block:\s*var\(--ran-booster-space-16\) 0;/', $webhook_management );
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management__result \.notice\s*\{\s*margin:\s*0;/', $webhook_management );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-ok > span {', $webhook_management );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-step.is-warning > span {', $webhook_management );
 		self::assertStringContainsString(

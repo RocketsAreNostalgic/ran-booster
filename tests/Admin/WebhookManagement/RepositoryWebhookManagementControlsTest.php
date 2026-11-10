@@ -822,6 +822,46 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup"[^>]*ran-booster-disclosure">/', $html ) );
 	}
 
+	public function test_operation_result_renders_under_the_webhook_group_after_the_busy_status_region(): void {
+		$panel                     = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
+		$model                     = $this->webhook_panel_model( false, false, array() );
+		$result                    = array(
+			'class'   => 'notice-success',
+			'heading' => 'Webhook validated',
+			'message' => 'Operation done.',
+		);
+		$warning                   = array(
+			'class'   => 'notice-warning',
+			'message' => 'Check the provider.',
+		);
+		$model['result']           = $result;
+		$model['recovery_warning'] = $warning;
+		$html                      = (string) $panel->invoke( $this->controls(), $model );
+
+		$group  = strpos( $html, 'role="group"' );
+		$status = strpos( $html, 'data-ran-booster-submit-busy-status' );
+		$first  = strpos( $html, 'Operation done.' );
+		$second = strpos( $html, 'Check the provider.' );
+		if ( false === $group || false === $status || false === $first || false === $second ) {
+			self::fail( 'The group, busy status region and both result notices must render.' );
+		}
+		self::assertLessThan( $status, $group );
+		self::assertLessThan( $first, $status );
+		self::assertLessThan( $second, $first );
+		// The group, status region and result share one field wrapper, so the result follows the group directly.
+		self::assertSame( 1, preg_match( '/role="group".*?<\/button>.*?<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-repository-webhook-management__result">\s*<div class="notice notice-success /s', $html ) );
+		self::assertSame( 2, substr_count( $html, 'data-ran-booster-ui-notice-content' ) );
+		self::assertSame( 2, substr_count( $html, 'ran-wp-ui-notice__icon' ) );
+		self::assertSame( 1, preg_match( '/<form [^>]*data-ran-booster-submit-busy/', $html ) );
+		foreach ( array( 'setup', 'validate', 'remove' ) as $key ) {
+			self::assertStringContainsString( 'data-ran-booster-busy-label="Working on ' . $key . '…" data-ran-booster-busy-message="Busy message for ' . $key . '."', $html );
+		}
+
+		$without = (string) $panel->invoke( $this->controls(), $this->webhook_panel_model( false, false, array() ) );
+		self::assertStringContainsString( 'data-ran-booster-submit-busy-status', $without );
+		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__result', $without );
+	}
+
 	public function test_structured_results_are_escaped_and_rendered_in_both_surfaces(): void {
 		$display      = ( new \ReflectionClass( \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::class ) )->newInstanceWithoutConstructor();
 		$presentation = new \ReflectionMethod( $display, 'result_presentation' );
@@ -1177,6 +1217,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 				'primary'         => $first === $key,
 				'destructive'     => 'remove' === $key,
 				'confirm'         => 'remove' === $key ? 'Remove this webhook from the repository? Booster will delete the webhook on Fixture Forge and clear its local record.' : null,
+				'busy_label'      => 'Working on ' . $key . '…',
+				'busy_message'    => 'Busy message for ' . $key . '.',
 				'disabled'        => ! ( $enabled_operations[ $key ] ?? true ),
 				'disabled_reason' => ( $disabled || ! ( $enabled_operations[ $key ] ?? true ) ) ? 'Reason for ' . $key . '.' : '',
 			);

@@ -13,6 +13,134 @@
 	}
 
 	onDomReady(initEnhancedMutationFeedback);
+	initSubmitBusy();
+
+	/**
+	 * Plain POST + redirect forms opt in with data-ran-booster-submit-busy. The
+	 * pressed button must stay enabled so its name and value still submit; the
+	 * browser builds the entry list after the submit event, so only the other
+	 * buttons are disabled. Reuses the shared busy classes and styling.
+	 */
+	function initSubmitBusy() {
+		if (window.ranBoosterSubmitBusyInitialized) {
+			return;
+		}
+		window.ranBoosterSubmitBusyInitialized = true;
+
+		const formSelector = 'form[data-ran-booster-submit-busy]';
+		const states = new WeakMap();
+
+		function statusRegion(form) {
+			return form.querySelector('[data-ran-booster-submit-busy-status]');
+		}
+
+		function resetSubmitBusy(form) {
+			const state = states.get(form);
+			if (!state) {
+				return;
+			}
+			states.delete(form);
+			state.others.forEach(function (other) {
+				other.control.disabled = other.disabled;
+				if (other.ariaDisabled === null) {
+					other.control.removeAttribute('aria-disabled');
+				} else {
+					other.control.setAttribute(
+						'aria-disabled',
+						other.ariaDisabled
+					);
+				}
+			});
+			const submitter = state.submitter;
+			submitter.textContent = state.label;
+			submitter.style.minInlineSize = state.minInlineSize;
+			submitter.removeAttribute('aria-busy');
+			submitter.classList.remove(
+				'ran-booster-enhanced-mutation__submitter--busy',
+				'ran-booster-update-is-active'
+			);
+			form.removeAttribute('aria-busy');
+			form.classList.remove('ran-booster-enhanced-mutation-is-busy');
+			const status = statusRegion(form);
+			if (status) {
+				status.textContent = '';
+			}
+		}
+
+		function startSubmitBusy(event) {
+			const form = event.target;
+			if (event.defaultPrevented || !form?.matches?.(formSelector)) {
+				return;
+			}
+			if (states.has(form)) {
+				// A second submit while the first is in flight.
+				event.preventDefault();
+				return;
+			}
+			const submitter = event.submitter;
+			const busyLabel = submitter?.getAttribute?.(
+				'data-ran-booster-busy-label'
+			);
+			if (!busyLabel || !form.contains(submitter)) {
+				return;
+			}
+
+			const others = Array.from(
+				form.querySelectorAll('button[type="submit"]')
+			)
+				.filter(function (control) {
+					return control !== submitter;
+				})
+				.map(function (control) {
+					return {
+						control,
+						disabled: control.disabled,
+						ariaDisabled: control.getAttribute('aria-disabled'),
+					};
+				});
+			states.set(form, {
+				submitter,
+				others,
+				label: submitter.textContent,
+				minInlineSize: submitter.style.minInlineSize,
+			});
+			const width = submitter.getBoundingClientRect().width;
+			if (width > 0) {
+				submitter.style.minInlineSize = `${Math.ceil(width)}px`;
+			}
+			form.setAttribute('aria-busy', 'true');
+			form.classList.add('ran-booster-enhanced-mutation-is-busy');
+			others.forEach(function (other) {
+				other.control.disabled = true;
+				other.control.setAttribute('aria-disabled', 'true');
+			});
+			submitter.setAttribute('aria-busy', 'true');
+			submitter.classList.add(
+				'ran-booster-enhanced-mutation__submitter--busy',
+				'ran-booster-update-is-active'
+			);
+			const label = document.createElement('span');
+			label.setAttribute('data-ran-booster-submit-busy-label', '');
+			label.textContent = busyLabel;
+			submitter.textContent = '';
+			submitter.append(label);
+			const status = statusRegion(form);
+			if (status) {
+				status.textContent =
+					submitter.getAttribute('data-ran-booster-busy-message') ||
+					busyLabel;
+			}
+		}
+
+		document.addEventListener('submit', startSubmitBusy);
+		// Back/forward cache restores the page exactly as it was left.
+		window.addEventListener('pageshow', function (event) {
+			if (!event.persisted) {
+				return;
+			}
+			document.querySelectorAll(formSelector).forEach(resetSubmitBusy);
+		});
+	}
 
 	/**
 	 * Keep the interaction layer deliberately inert until a Core-rendered form

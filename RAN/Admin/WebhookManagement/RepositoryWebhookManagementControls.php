@@ -240,16 +240,8 @@ final class RepositoryWebhookManagementControls {
 		$operation_notice = false;
 		if ( is_array( $model ) ) {
 			$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $model['repository'] );
-			if ( is_array( $model['result'] ?? null ) ) {
-				$notices[]        = $model['result'];
-				$operation_notice = true;
-			}
-			if ( is_array( $model['recovery_warning'] ?? null ) ) {
-				$notices[]        = $model['recovery_warning'];
-				$operation_notice = true;
-			}
-			$model['result']           = null;
-			$model['recovery_warning'] = null;
+			// The panel renders the operation result directly under the Webhook group; the section only keeps the disclosure open for it.
+			$operation_notice = is_array( $model['result'] ?? null ) || is_array( $model['recovery_warning'] ?? null );
 		}
 
 		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $has_branch_consumer, $notices, true, $operation_notice, $row );

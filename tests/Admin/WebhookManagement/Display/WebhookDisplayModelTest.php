@@ -255,6 +255,9 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( 'Delete the webhook from GitHub and clear its local record.', $repair[2]['description'] );
 		self::assertSame( 'Remove this webhook from the repository? Booster will delete the webhook on GitHub and clear its local record.', $repair[2]['confirm'] );
 		self::assertSame( array( null, null ), array( $repair[0]['confirm'], $repair[1]['confirm'] ) );
+		self::assertSame( array( 'Repairing…', 'Validating…', 'Removing…' ), array_column( $repair, 'busy_label' ) );
+		self::assertSame( 'Setting up…', $none[0]['busy_label'] );
+		self::assertSame( 'Comparing the webhook with this site\'s settings, then asking GitHub to send a ping. This can take a few seconds.', $repair[1]['busy_message'] );
 	}
 
 	public function test_validate_is_available_only_when_both_check_and_test_are_and_reports_the_unavailable_reason(): void {

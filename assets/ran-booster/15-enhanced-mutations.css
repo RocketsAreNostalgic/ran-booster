@@ -4,9 +4,15 @@
 }
 
 .ran-booster-admin
-	[data-ran-booster-enhanced-mutation].ran-booster-enhanced-mutation-is-busy,
+	:is(
+		[data-ran-booster-enhanced-mutation],
+		[data-ran-booster-submit-busy]
+	).ran-booster-enhanced-mutation-is-busy,
 .ran-booster-admin
-	[data-ran-booster-enhanced-mutation].ran-booster-enhanced-mutation-is-busy
+	:is(
+		[data-ran-booster-enhanced-mutation],
+		[data-ran-booster-submit-busy]
+	).ran-booster-enhanced-mutation-is-busy
 	[type="submit"] {
 	cursor: progress;
 	pointer-events: none;

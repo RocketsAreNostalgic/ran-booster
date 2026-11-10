@@ -179,6 +179,17 @@
 	margin: 0;
 }
 
+/* The operation result sits one section gap under the Webhook button group. */
+.ran-booster-admin .ran-booster-repository-webhook-management__result {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+	margin-block: var(--ran-booster-space-16) 0;
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-management__result .notice {
+	margin: 0;
+}
+
 .ran-booster-admin .ran-booster-webhook-step {
 	display: grid;
 	grid-template-columns:

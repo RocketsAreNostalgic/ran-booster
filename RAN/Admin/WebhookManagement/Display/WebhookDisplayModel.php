@@ -36,7 +36,7 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
  *   management_credential_id:?string,
  *   credential_choices:list<array{id:string,label:string}>,
  *   webhook_profile_choices:list<array{id:string,label:string,scope:string}>,
- *   operations:list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,disabled:bool,disabled_reason:string}>,
+ *   operations:list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,busy_label:string,busy_message:string,disabled:bool,disabled_reason:string}>,
  *   action_help:?string
  * }
  */
@@ -251,7 +251,7 @@ final class WebhookDisplayModel {
 	 *
 	 * @param array<string,true> $available
 	 * @param array<string,string> $reasons Why each operation is disabled, keyed by operation.
-	 * @return list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,disabled:bool,disabled_reason:string}>
+	 * @return list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,busy_label:string,busy_message:string,disabled:bool,disabled_reason:string}>
 	 */
 	private function operation_models( array $available, string $provider_code, string $provider_label, string $repository_id, bool $recorded, array $reasons ): array {
 		$first = ( $recorded || isset( $available['reconfigure'] ) ) ? 'reconfigure' : 'setup';
@@ -265,7 +265,15 @@ final class WebhookDisplayModel {
 		$remove_description = sprintf( __( 'Delete the webhook from %s and clear its local record.', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
 		$remove_confirm = sprintf( __( 'Remove this webhook from the repository? Booster will delete the webhook on %s and clear its local record.', 'ran-booster' ), $provider_label );
-		$slots          = array(
+		/* translators: %s: repository provider name. */
+		$validate_busy = sprintf( __( 'Comparing the webhook with this site\'s settings, then asking %s to send a ping. This can take a few seconds.', 'ran-booster' ), $provider_label );
+		$busy          = array(
+			'setup'       => array( __( 'Setting up…', 'ran-booster' ), __( 'Creating the webhook. This can take a few seconds.', 'ran-booster' ) ),
+			'reconfigure' => array( __( 'Repairing…', 'ran-booster' ), __( 'Updating the webhook to match this site\'s settings. This can take a few seconds.', 'ran-booster' ) ),
+			'validate'    => array( __( 'Validating…', 'ran-booster' ), $validate_busy ),
+			'remove'      => array( __( 'Removing…', 'ran-booster' ), __( 'Deleting the webhook and clearing its local record. This can take a few seconds.', 'ran-booster' ) ),
+		);
+		$slots         = array(
 			array( $first, 'setup' === $first ? __( 'Set up', 'ran-booster' ) : __( 'Repair', 'ran-booster' ), 'setup' === $first ? $setup_description : $repair_description ),
 			array( 'validate', __( 'Validate', 'ran-booster' ), $validate_description ),
 			array( 'remove', __( 'Remove', 'ran-booster' ), $remove_description ),
@@ -291,6 +299,8 @@ final class WebhookDisplayModel {
 				'primary'         => 0 === $index,
 				'destructive'     => 'remove' === $operation,
 				'confirm'         => 'remove' === $operation ? $remove_confirm : null,
+				'busy_label'      => $busy[ $operation ][0],
+				'busy_message'    => $busy[ $operation ][1],
 				'disabled'        => ! isset( $available[ $operation ] ),
 				'disabled_reason' => isset( $available[ $operation ] ) ? '' : ( $reasons[ $operation ] ?? '' ),
 			);

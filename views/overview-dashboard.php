@@ -98,23 +98,23 @@ $inventory = $onboarding['inventory'] ?? array(
 			$provider_uses_cloud_name = 'extension' === ( $provider['source_kind'] ?? null ) && 'bb' === $provider['code'] && 'Bitbucket Cloud' === ( $provider['source_name'] ?? null ) && in_array( $provider['label'], array( 'Bitbucket', 'Bitbucket Cloud' ), true );
 			?>
 			<li><a class="ran-booster-overview-provider-link" href="<?php echo esc_url( $provider['url'] ); ?>"><strong><?php echo esc_html( $provider_uses_cloud_name ? $provider['source_name'] : $provider['label'] ); ?></strong><span><?php esc_html_e( 'Manage provider', 'ran-booster' ); ?> <span aria-hidden="true">→</span></span></a>
-				<?php if ( 'bundled' !== ( $provider['source_kind'] ?? null ) ) { ?>
 				<span class="ran-booster-overview-provider-origin">
-					<?php if ( $provider_uses_cloud_name ) { ?>
-						<?php esc_html_e( 'Provider extension', 'ran-booster' ); ?>
+				<?php if ( 'bundled' === ( $provider['source_kind'] ?? null ) ) { ?>
+					<?php esc_html_e( 'Included with Booster', 'ran-booster' ); ?>
+				<?php } elseif ( $provider_uses_cloud_name ) { ?>
+					<?php esc_html_e( 'Provider extension', 'ran-booster' ); ?>
 				<?php } elseif ( is_string( $provider['source_name'] ?? null ) && '' !== $provider['source_name'] ) { ?>
-						<?php /* translators: %s: selected provider plugin name. */ ?>
-						<?php echo esc_html( sprintf( __( 'Provider extension: %s', 'ran-booster' ), $provider['source_name'] ) ); ?>
+					<?php /* translators: %s: selected provider plugin name. */ ?>
+					<?php echo esc_html( sprintf( __( 'Provider extension: %s', 'ran-booster' ), $provider['source_name'] ) ); ?>
 				<?php } else { ?>
 					<?php esc_html_e( 'Provider source unknown', 'ran-booster' ); ?>
 				<?php } ?>
-					<?php
-					if ( 'replacement' === ( $provider['source_kind'] ?? null ) ) {
-						$custom_provider_label = __( 'Custom provider', 'ran-booster' );
-						?>
-						<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $custom_provider_label, 'none' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?><?php } ?>
+				<?php
+				if ( 'replacement' === ( $provider['source_kind'] ?? null ) ) {
+					$custom_provider_label = __( 'Custom provider', 'ran-booster' );
+					?>
+					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $custom_provider_label, 'none' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?><?php } ?>
 				</span>
-				<?php } ?>
 			</li>
 		<?php } ?></ul>
 	<?php } ?>

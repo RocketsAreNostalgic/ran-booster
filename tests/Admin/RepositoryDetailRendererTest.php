@@ -194,14 +194,16 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'title="In use"' ) );
 		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
 		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
-		self::assertStringContainsString( '1 package uses Branch', $html );
-		self::assertStringContainsString( '1 package tracks Releases', $html );
+		self::assertMatchesRegularExpression( '#Branch demand</dt><dd>\s*<span[^>]*is-stable-intent[^>]*>1 package</span>#', $html );
+		self::assertMatchesRegularExpression( '#Recorded release usage</dt><dd>\s*<span[^>]*is-stable-intent[^>]*>1 package</span>#', $html );
+		self::assertStringNotContainsString( 'uses Branch', $html );
+		self::assertStringNotContainsString( 'tracks Releases', $html );
 		self::assertStringContainsString( 'État du flux de publication', $html );
-		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
+		self::assertStringContainsString( '<h4 class="ran-booster-repository-detail__group-heading">Release workflow</h4>', $html );
 		self::assertStringContainsString( 'Flux de publication — owner/theme', $html );
 		self::assertStringContainsString( 'Release automation — owner/legacy.php', $html );
 		$webhook_history_position = strpos( $html, 'Configured at last check' );
-		$release_history_position = strpos( $html, '<h4>Release workflow</h4>' );
+		$release_history_position = strpos( $html, '<h4 class="ran-booster-repository-detail__group-heading">Release workflow</h4>' );
 		$legacy_history_position  = strpos( $html, 'Release automation — owner/legacy.php' );
 		self::assertIsInt( $webhook_history_position );
 		self::assertIsInt( $release_history_position );
@@ -380,8 +382,10 @@ final class RepositoryDetailRendererTest extends TestCase {
 		);
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '1 package uses Branch', $html );
-		self::assertStringContainsString( '1 package tracks Releases', $html );
+		self::assertMatchesRegularExpression( '#Branch demand</dt><dd>\s*<span[^>]*is-stable-intent[^>]*>1 package</span>#', $html );
+		self::assertMatchesRegularExpression( '#Recorded release usage</dt><dd>\s*<span[^>]*is-stable-intent[^>]*>1 package</span>#', $html );
+		self::assertStringNotContainsString( 'uses Branch', $html );
+		self::assertStringNotContainsString( 'tracks Releases', $html );
 		self::assertStringNotContainsString( 'Exact counts are unavailable while package inventory is incomplete.', $html );
 	}
 
@@ -430,7 +434,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Management history', $html );
 		self::assertStringContainsString( 'Recorded hook status', $html );
 		self::assertStringContainsString( 'Managed hook not yet set', $html );
-		self::assertStringContainsString( 'No historical observation', $html );
+		self::assertStringContainsString( 'None', $html );
 		self::assertStringContainsString( 'Recorded hook profile', $html );
 		self::assertStringContainsString( 'Last checked', $html );
 		self::assertStringContainsString( 'Never', $html );
@@ -629,7 +633,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertSame( 3, substr_count( $html, 'aria-controls="ran-booster-provider-profile-region"' ) );
 		self::assertStringContainsString( 'data-test-release', $html );
 		self::assertStringNotContainsString( 'Packages using this repository', $html );
-		self::assertStringContainsString( '<h4>Release workflow</h4>', $html );
+		self::assertStringContainsString( '<h4 class="ran-booster-repository-detail__group-heading">Release workflow</h4>', $html );
 		self::assertStringContainsString( 'Configured', $html );
 	}
 

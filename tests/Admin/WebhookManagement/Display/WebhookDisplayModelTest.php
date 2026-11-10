@@ -77,7 +77,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertTrue( $details['core:webhook-recorded-status']['recorded'] );
 		self::assertSame( 'profile_revision_stale', $details['core:webhook-recorded-status']['state'] );
 		self::assertSame( 'Signing secret changed; webhook update required', $details['core:webhook-current-warning']['value'] );
-		self::assertSame( 'Historical only; not live readiness or a signed delivery', $details['core:webhook-observation']['value'] );
+		self::assertSame( 'Historical only', $details['core:webhook-observation']['value'] );
 		self::assertSame( '2026-08-20T01:02:03Z', $details['core:webhook-last-checked']['value'] );
 		self::assertSame( '2026-08-20T01:02:03Z', $details['core:webhook-last-checked']['datetime'] );
 	}
@@ -88,7 +88,7 @@ final class WebhookDisplayModelTest extends TestCase {
 
 		self::assertFalse( $details['core:webhook-recorded-status']['recorded'] );
 		self::assertSame( 'Managed hook not yet set', $details['core:webhook-recorded-status']['value'] );
-		self::assertSame( 'No historical observation', $details['core:webhook-observation']['value'] );
+		self::assertSame( 'None', $details['core:webhook-observation']['value'] );
 		self::assertSame( 'Never', $details['core:webhook-last-checked']['value'] );
 		self::assertSame( '', $details['core:webhook-last-checked']['datetime'] );
 		self::assertArrayNotHasKey( 'core:webhook-current-warning', $details );
@@ -113,7 +113,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		$details = array_column( $result['package']['details'], null, 'key' );
 
 		self::assertSame( 'Configured at last check', $details['core:webhook-recorded-status']['value'] );
-		self::assertSame( 'Historical only; not live readiness or a signed delivery', $details['core:webhook-observation']['value'] );
+		self::assertSame( 'Historical only', $details['core:webhook-observation']['value'] );
 		self::assertSame( '2026-08-20T01:02:03Z', $details['core:webhook-last-checked']['datetime'] );
 		self::assertArrayNotHasKey( 'core:webhook-current-warning', $details );
 	}

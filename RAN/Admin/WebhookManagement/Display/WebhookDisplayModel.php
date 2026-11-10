@@ -731,7 +731,7 @@ final class WebhookDisplayModel {
 			array(
 				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
-				'value' => null === $record ? __( 'No historical observation', 'ran-booster' ) : __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
+				'value' => null === $record ? __( 'None', 'ran-booster' ) : __( 'Historical only', 'ran-booster' ),
 				'tone'  => 'neutral',
 			),
 		);
@@ -751,17 +751,20 @@ final class WebhookDisplayModel {
 				array(
 					'key'   => 'core:webhook-management-credential',
 					'label' => __( 'Management credential', 'ran-booster' ),
-					'value' => null === $record ? __( 'Webhook has not been managed yet', 'ran-booster' ) : $this->management_credential_label( $record ),
+					'value' => null === $record ? __( 'None', 'ran-booster' ) : $this->management_credential_label( $record ),
+					'tone'  => null === $record ? 'neutral' : '',
 				),
 				array(
 					'key'   => 'core:webhook-signing-secret',
 					'label' => __( 'Recorded signing secret', 'ran-booster' ),
-					'value' => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->recorded_profile_label( $status_code, $record ),
+					'value' => null === $record ? __( 'None', 'ran-booster' ) : $this->recorded_profile_label( $status_code, $record ),
+					'tone'  => null === $record ? 'neutral' : '',
 				),
 				array(
 					'key'      => 'core:webhook-last-checked',
 					'label'    => __( 'Last checked', 'ran-booster' ),
 					'value'    => null === $record ? __( 'Never', 'ran-booster' ) : $record->checked_at(),
+					'tone'     => null === $record ? 'neutral' : '',
 					'datetime' => null === $record ? '' : $record->checked_at(),
 				),
 			)
@@ -780,7 +783,7 @@ final class WebhookDisplayModel {
 			array(
 				'key'   => 'core:webhook-observation',
 				'label' => __( 'Observation', 'ran-booster' ),
-				'value' => __( 'Historical only; not live readiness or a signed delivery', 'ran-booster' ),
+				'value' => __( 'Historical only', 'ran-booster' ),
 				'tone'  => 'neutral',
 			),
 			array(

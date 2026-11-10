@@ -162,36 +162,48 @@ final class RepositoryDetailRenderer {
 				</div>
 			</div>
 		</div></div></section>
-		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integration-summary-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
+		<section class="ran-booster-settings-section ran-booster-card ran-booster-repository-detail__record" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integration-summary-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-integration-summary-heading"><?php esc_html_e( 'Integration status', 'ran-booster' ); ?></h3>
 			</header>
 			<div class="ran-booster-settings-section__body">
-				<dl class="ran-booster-repository-detail__facts">
-					<?php if ( 0 < $omitted ) { ?>
-						<div><dt><?php esc_html_e( 'Package sources', 'ran-booster' ); ?></dt><dd><?php esc_html_e( 'Exact counts are unavailable while package inventory is incomplete.', 'ran-booster' ); ?></dd></div>
-					<?php } else { ?>
-						<div><dt><?php esc_html_e( 'Branch demand', 'ran-booster' ); ?></dt><dd>
-							<?php
-							echo esc_html(
-								sprintf(
-									/* translators: %d is the number of Branch packages. */
-									_n( '%d package uses Branch', '%d packages use Branch', $branch_count, 'ran-booster' ),
-									$branch_count
-								)
-							);
-							?>
-						</dd></div>
-						<div><dt><?php echo esc_html( _x( 'Recorded release usage', 'Repository integration status label', 'ran-booster' ) ); ?></dt><dd><?php echo esc_html( sprintf( /* translators: %d is the number of Published-release packages. */ _n( '%d package tracks Releases', '%d packages track Releases', $release_count, 'ran-booster' ), $release_count ) ); ?></dd></div>
-					<?php } ?>
-					<?php foreach ( $this->integration_details( $row ) as $detail ) { ?>
-						<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php $this->render_detail_value( $detail ); ?></dd></div>
-					<?php } ?>
-				</dl>
+				<?php $this->render_facts( array_merge( $this->usage_details( $omitted, $branch_count, $release_count ), $this->integration_details( $row ) ) ); ?>
 				<?php $this->render_status_links( $row ); ?>
 			</div>
 		</div></div></section>
 		<?php
+	}
+
+	/**
+	 * Package usage as detail maps: a count is a badge, and none is a neutral badge.
+	 *
+	 * @return list<array<string, mixed>>
+	 */
+	private function usage_details( int $omitted, int $branch_count, int $release_count ): array {
+		if ( 0 < $omitted ) {
+			return array(
+				array(
+					'label' => __( 'Package sources', 'ran-booster' ),
+					'value' => __( 'Exact counts are unavailable while package inventory is incomplete.', 'ran-booster' ),
+				),
+			);
+		}
+		$count_detail = static fn ( string $label, int $count ): array => array(
+			'label' => $label,
+			'value' => 0 < $count
+				? sprintf(
+					/* translators: %d: number of packages. */
+					_n( '%d package', '%d packages', $count, 'ran-booster' ),
+					$count
+				)
+				: __( 'None', 'ran-booster' ),
+			'tone'  => 0 < $count ? 'ok' : 'neutral',
+		);
+
+		return array(
+			$count_detail( __( 'Branch demand', 'ran-booster' ), $branch_count ),
+			$count_detail( _x( 'Recorded release usage', 'Repository integration status label', 'ran-booster' ), $release_count ),
+		);
 	}
 
 	/** @param list<array<string, mixed>> $packages */
@@ -308,33 +320,41 @@ final class RepositoryDetailRenderer {
 				array(
 					'label' => __( 'Recorded hook status', 'ran-booster' ),
 					'value' => __( 'Managed hook not yet set', 'ran-booster' ),
+					'tone'  => 'warning',
 				),
 				array(
 					'label' => __( 'Observation', 'ran-booster' ),
-					'value' => __( 'No historical observation', 'ran-booster' ),
+					'value' => __( 'None', 'ran-booster' ),
+					'tone'  => 'neutral',
 				),
 				array(
 					'label' => __( 'Recorded hook profile', 'ran-booster' ),
-					'value' => __( 'Managed hook not yet set', 'ran-booster' ),
+					'value' => __( 'None', 'ran-booster' ),
+					'tone'  => 'neutral',
 				),
 				array(
 					'label' => __( 'Last checked', 'ran-booster' ),
 					'value' => __( 'Never', 'ran-booster' ),
+					'tone'  => 'neutral',
 				),
 			);
 		}
 		?>
-		<section class="ran-booster-settings-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-activity-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
+		<section class="ran-booster-settings-section ran-booster-card ran-booster-repository-detail__record ran-booster-repository-detail__history" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-activity-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-activity-heading"><?php esc_html_e( 'Management history', 'ran-booster' ); ?></h3>
 				<p class="description"><?php esc_html_e( 'Repository-scoped records. This is local history, not live Git provider state.', 'ran-booster' ); ?></p>
 			</header>
 			<div class="ran-booster-settings-section__body">
-			<h4><?php esc_html_e( 'Webhook', 'ran-booster' ); ?></h4>
-			<?php $this->render_facts( $webhooks ); ?>
+			<div class="ran-booster-repository-detail__group">
+				<h4 class="ran-booster-repository-detail__group-heading"><?php esc_html_e( 'Webhook', 'ran-booster' ); ?></h4>
+				<?php $this->render_facts( $webhooks ); ?>
+			</div>
 			<?php if ( array() !== $releases ) { ?>
-				<h4><?php esc_html_e( 'Release workflow', 'ran-booster' ); ?></h4>
-				<?php $this->render_facts( $releases ); ?>
+				<div class="ran-booster-repository-detail__group">
+					<h4 class="ran-booster-repository-detail__group-heading"><?php esc_html_e( 'Release workflow', 'ran-booster' ); ?></h4>
+					<?php $this->render_facts( $releases, __( 'Release workflow', 'ran-booster' ), __( 'Status', 'ran-booster' ) ); ?>
+				</div>
 			<?php } ?>
 			<p><a href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View repository activity', 'ran-booster' ); ?></a></p>
 			</div>
@@ -342,12 +362,20 @@ final class RepositoryDetailRenderer {
 		<?php
 	}
 
-	/** @param list<array<string, mixed>> $details */
-	private function render_facts( array $details ): void {
+	/**
+	 * Renders one group of history facts.
+	 *
+	 * A row labelled like its group heading takes the replacement label, so the
+	 * heading is never repeated as a row label.
+	 *
+	 * @param list<array<string, mixed>> $details
+	 */
+	private function render_facts( array $details, string $group_label = '', string $replacement_label = '' ): void {
 		?>
 		<dl class="ran-booster-repository-detail__facts">
 		<?php foreach ( $details as $detail ) { ?>
-			<div><dt><?php echo esc_html( (string) ( $detail['label'] ?? '' ) ); ?></dt><dd><?php $this->render_detail_value( $detail ); ?></dd></div>
+			<?php $label = (string) ( $detail['label'] ?? '' ); ?>
+			<div><dt class="ran-booster-repository-detail__fact-label"><?php echo esc_html( '' !== $group_label && $label === $group_label ? $replacement_label : $label ); ?></dt><dd><?php $this->render_detail_value( $detail ); ?></dd></div>
 		<?php } ?>
 		</dl>
 		<?php

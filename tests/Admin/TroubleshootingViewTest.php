@@ -189,7 +189,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'GitHub replacement plugins detected', $html );
 		self::assertStringContainsString( 'Needs attention', $html );
 		self::assertSame( 1, substr_count( $html, 'These are local configuration details. Use Diagnostics to check repository access.' ) );
-		self::assertStringContainsString( '<summary aria-label="Technical details: GitHub">Technical details</summary>', $html );
+		self::assertStringContainsString( '<summary aria-label="GitHub • 1.0">', $html );
 		foreach ( array( '<implementation>', '<revision>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
 			self::assertStringContainsString( htmlspecialchars( $claim, ENT_QUOTES ), $html );
@@ -208,8 +208,8 @@ final class TroubleshootingViewTest extends TestCase {
 			libxml_use_internal_errors( $previous_errors );
 		}
 		$xpath = new \DOMXPath( $document );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__installation-card ") and ancestor::*[@data-ran-booster-card="troubleshooting"] and .//div[@id="ran-booster-github-provider-diagnostics"]]/header/h4)' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics" and self::div and @data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/summary[@aria-label="Technical details: GitHub"]/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__installation-entry ") and ancestor::*[@data-ran-booster-card="troubleshooting"]])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics" and self::div and @data-ran-booster-ui-disclosure="installation-section" and @data-ran-booster-ui-disclosure-density="prominent"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/summary[starts-with(@aria-label, "GitHub")]/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-github-provider-diagnostics"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]//code[text()="<component-implementation>"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-github-provider-diagnostics"]/details[@data-ran-booster-ui-disclosure-fallback]//div[dt="Implementation fingerprint"]/dd/code[text()="<component-implementation>"])' ) );
@@ -224,7 +224,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 	}
 
-	public function test_component_disclosure_labels_use_translated_format_and_displayed_names(): void {
+	public function test_component_card_labels_use_displayed_names(): void {
 		$troubleshooting_panel = 'installation';
 		$troubleshooting       = array(
 			'providers'  => array(),
@@ -252,12 +252,13 @@ final class TroubleshootingViewTest extends TestCase {
 			unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details: %s'], $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details'], $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Unknown'] );
 		}
 
-		self::assertStringContainsString( 'aria-label="Détails techniques : GitHub">Détails techniques</summary>', $html );
-		self::assertStringContainsString( 'aria-label="Détails techniques : Extension &quot;&lt;unsafe&gt;&quot;">Détails techniques</summary>', $html );
-		self::assertStringContainsString( 'aria-label="Détails techniques : Inconnu">Détails techniques</summary>', $html );
-		self::assertStringContainsString( '<h4 class="ran-booster-section__title">Extension &quot;&lt;unsafe&gt;&quot;', $html );
-		self::assertStringContainsString( '<h4 class="ran-booster-section__title">Inconnu', $html );
-		self::assertStringContainsString( 'id="ran-booster-github-provider-diagnostics" data-ran-booster-ui-disclosure="installation-component"', $html );
+		self::assertStringContainsString( '<summary aria-label="GitHub">', $html );
+		self::assertStringContainsString( '<summary aria-label="Extension &quot;&lt;unsafe&gt;&quot;">', $html );
+		self::assertStringContainsString( '<summary aria-label="Inconnu">', $html );
+		self::assertStringContainsString( '<span class="ran-booster-troubleshooting__entry-title">Extension &quot;&lt;unsafe&gt;&quot;', $html );
+		self::assertStringContainsString( '<span class="ran-booster-troubleshooting__entry-title">Inconnu', $html );
+		self::assertStringNotContainsString( 'Détails techniques', $html );
+		self::assertStringContainsString( 'id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__installation-entry" data-ran-booster-ui-disclosure="installation-section"', $html );
 		self::assertStringContainsString( '<code>fingerprint</code>', $html );
 	}
 
@@ -306,23 +307,26 @@ final class TroubleshootingViewTest extends TestCase {
 			libxml_use_internal_errors( $previous_errors );
 		}
 		$xpath = new \DOMXPath( $document );
+		$entry = static fn( string $name ): string => '//div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__installation-entry ") and .//span[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__entry-title ") and starts-with(normalize-space(.), "' . $name . '")]]';
 		foreach ( array( 'Migrator', 'Unknown', 'Empty capabilities', 'Invalid capabilities' ) as $name ) {
-			$card = '//section[header/h4[starts-with(normalize-space(.), "' . $name . '")]]';
-			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $card . ')' ) );
-			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $card . '//details | ' . $card . '//div[@data-ran-booster-ui-disclosure] | ' . $card . '//div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-disclosure__body ")])' ) );
+			$card = $entry( $name );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $card . ')' ), $name );
+			// An entry with nothing to expand keeps the card header without the disclosure.
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $card . '[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__installation-entry--static ") and not(@data-ran-booster-ui-disclosure)])' ), $name );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(' . $card . '//details | ' . $card . '//*[@data-ran-booster-ui-disclosure] | ' . $card . '//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-disclosure__body ")])' ), $name );
 		}
-		$migrator = '//section[header/h4[starts-with(normalize-space(.), "Migrator")]]';
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__installation-card ") and ancestor::*[@data-ran-booster-card="troubleshooting"]])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/h4/code[text()="1.0"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/header/span[@data-ran-booster-badge and @data-ran-booster-badge-intent and text()="Inactive" and not(*)])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '/div/p[text()="Installed extension"])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[header/h4[normalize-space(.)="Facts"]]//dd/code[text()="0"])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//div[@data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/div[@data-ran-booster-ui-disclosure-content])' ) );
+		$migrator = $entry( 'Migrator' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '[ancestor::*[@data-ran-booster-card="troubleshooting"]])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '//span[contains(@class, "ran-booster-troubleshooting__entry-title")]/code[text()="1.0"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '//span[contains(@class, "ran-booster-troubleshooting__entry-meta")]/span[@data-ran-booster-badge and @data-ran-booster-badge-intent and text()="Inactive" and not(*)])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $migrator . '//span[contains(@class, "ran-booster-troubleshooting__entry-description") and text()="Installed extension"])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(' . $entry( 'Facts' ) . '//dd/code[text()="0"])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//div[@data-ran-booster-ui-disclosure="installation-section" and @data-ran-booster-ui-disclosure-density="prominent"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/div[@data-ran-booster-ui-disclosure-content])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]//details[not(@open)])' ) );
 		foreach ( array( '0', 'Unknown', 'Unavailable', 'RepositoryBrowser' ) as $value ) {
 			self::assertStringContainsString( '<code>' . $value . '</code>', $html );
 		}
-		self::assertStringContainsString( 'aria-label="Technical details: Capabilities only"', $html );
+		self::assertStringContainsString( '<summary aria-label="Capabilities only">', $html );
 		self::assertStringContainsString( 'Implemented capabilities', $html );
 	}
 
@@ -347,8 +351,8 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">', $html );
-		self::assertStringContainsString( 'aria-label="Technical details: GitHub"', $html );
+		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__installation-entry" data-ran-booster-ui-disclosure="installation-section" data-ran-booster-ui-disclosure-density="prominent">', $html );
+		self::assertStringContainsString( '<summary aria-label="GitHub">', $html );
 		self::assertStringContainsString( '<dt>Provider</dt><dd><code>gh</code>', $html );
 		self::assertStringContainsString( '<dt>Provider API</dt><dd><code>15</code>', $html );
 		self::assertStringContainsString( '<dt>Name</dt><dd><code>Candidate</code>', $html );
@@ -357,7 +361,7 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$candidate_only = (string) ob_get_clean();
-		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">', $candidate_only );
+		self::assertStringContainsString( '<div id="ran-booster-github-provider-diagnostics" class="ran-booster-troubleshooting__installation-entry" data-ran-booster-ui-disclosure="installation-section" data-ran-booster-ui-disclosure-density="prominent">', $candidate_only );
 		self::assertStringContainsString( '<dt>Name</dt><dd><code>Candidate</code>', $candidate_only );
 		self::assertStringContainsString( 'Showing 1 of 2 replacement plugins.', $candidate_only );
 	}
@@ -418,8 +422,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Provider extension: Bitbucket Cloud', $html );
 		self::assertStringContainsString( 'Installed extension', $html );
 		$version_separator = ' <span class="ran-booster-troubleshooting__version-separator" aria-hidden="true">•</span> ';
-		self::assertStringContainsString( '<h4 class="ran-booster-section__title">Bitbucket Cloud' . $version_separator . '<code class="ran-booster-troubleshooting__version">2.0</code></h4>', $html );
-		self::assertStringContainsString( '<h4 class="ran-booster-section__title">Migration add-on' . $version_separator . '<code class="ran-booster-troubleshooting__version">1.0</code></h4>', $html );
+		self::assertStringContainsString( '<span class="ran-booster-troubleshooting__entry-title">Bitbucket Cloud' . $version_separator . '<code class="ran-booster-troubleshooting__version">2.0</code></span>', $html );
+		self::assertStringContainsString( '<span class="ran-booster-troubleshooting__entry-title">Migration add-on' . $version_separator . '<code class="ran-booster-troubleshooting__version">1.0</code></span>', $html );
 		self::assertStringNotContainsString( 'Provided by', $html );
 		self::assertStringContainsString( '>Inactive</span>', $html );
 		self::assertMatchesRegularExpression( '/>\s*Status unavailable\s*<\/span>/', $html );
@@ -454,42 +458,74 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Rockets Are Nostalgic', $html );
 	}
 
-	public function test_installation_reference_disclosures_keep_compact_native_fallbacks(): void {
+	public function test_installation_sections_are_expandable_cards_with_header_summary_and_badge(): void {
 		$troubleshooting_panel = 'installation';
 		$troubleshooting       = array(
 			'environment'          => array(
 				'WordPress' => '7.1',
+				'PHP'       => '8.4',
 				'Database'  => '<database>',
 			),
 			'storage'              => array(),
-			'components'           => array( array( 'Name' => 'Migrator' ) ),
+			'components'           => array(
+				array(
+					'Name'      => 'Migrator',
+					'Installed' => 'Yes',
+					'Active'    => 'No',
+					'Version'   => '1.0',
+				),
+			),
 			'installation_details' => array( 'Booster Core updates' => array( 'Updater code' => '<update>' ) ),
 		);
-		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details: %s'] = 'Détails techniques : %s';
-		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Booster Core updates']  = 'Mises à jour Core';
-		try {
-			ob_start();
-			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
-			$html = (string) ob_get_clean();
-		} finally {
-			unset( $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Technical details: %s'], $GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Booster Core updates'] );
-		}
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html     = (string) ob_get_clean();
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
-		foreach ( array( 'Environment details', 'Storage details' ) as $label ) {
-			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/summary[@aria-label="' . $label . '"]/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ), $label );
+		$entry = ' contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__installation-entry ")';
+		$class = static fn( string $name ): string => 'contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__' . $name . ' ")';
+		// Environment, storage and Core updates are expandable; the Migrator has nothing to expand.
+		self::assertSame( 3.0, $xpath->evaluate( 'count(//section[@id="ran-booster-installation-details"]/div[' . $entry . '])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]/div[' . $entry . '])' ) );
+		self::assertSame( 3.0, $xpath->evaluate( 'count(//section[@id="ran-booster-installation-details"]/div[' . $entry . ' and @data-ran-booster-ui-disclosure="installation-section" and @data-ran-booster-ui-disclosure-density="prominent"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/div[@data-ran-booster-ui-disclosure-content])' ) );
+		foreach ( array( 'Environment', 'Secure credential storage', 'Booster Core updates' ) as $title ) {
+			$summary = '//div[' . $entry . ']/details/summary[@aria-label="' . $title . '" and .//span[' . $class( 'entry-title' ) . ' and normalize-space(.)="' . $title . '"]]';
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/span[@data-ran-booster-ui-disclosure-heading]/span[' . $class( 'entry-description' ) . '])' ), $title );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ), $title );
 		}
-		self::assertStringContainsString( 'aria-label="Détails techniques : Mises à jour Core"', $html );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-core-updates-heading"]//div[@data-ran-booster-ui-disclosure="installation-component" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/div[@data-ran-booster-ui-disclosure-content])' ) );
+		// The header summaries keep the existing sentences and code formatting.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Environment"]//span[' . $class( 'entry-description' ) . ']/code[text()="7.1"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Environment"]//span[' . $class( 'entry-description' ) . ']/code[text()="8.4"])' ) );
+		// Badges sit in the header meta slot, and the body holds the details and the settings link.
+		foreach ( array( 'Secure credential storage', 'Booster Core updates' ) as $title ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="' . $title . '"]/span[@data-ran-booster-ui-disclosure-meta]/span[@data-ran-booster-badge])' ), $title );
+		}
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Environment"]/following-sibling::div[@data-ran-booster-ui-disclosure-content]//dt[text()="Database"]/following-sibling::dd/code[text()="<database>"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Secure credential storage"]/following-sibling::div[@data-ran-booster-ui-disclosure-content]//p[text()="Storage details are unavailable for this request."])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Secure credential storage"]/following-sibling::div[@data-ran-booster-ui-disclosure-content]//a[contains(@href, "ran-booster-settings#ran-booster-storage") and text()="Open secure credential storage settings"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Booster Core updates"]/following-sibling::div[@data-ran-booster-ui-disclosure-content]//dt[text()="Updater code"]/following-sibling::dd/code[text()="<update>"])' ) );
+		// No nested Card, no compact installation disclosures and no removed disclosure labels remain.
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[contains(@class, "ran-booster-troubleshooting__installation-card")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@id="ran-booster-installation-details"]//*[@data-ran-booster-ui-disclosure="installation-component" or @data-ran-booster-ui-disclosure-density="compact"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@id="ran-booster-installation-details"]//*[contains(@class, "ran-booster-panel") or contains(@class, "ran-booster-page-shell")])' ) );
+		foreach ( array( 'Environment details', 'Technical details' ) as $removed ) {
+			self::assertStringNotContainsString( $removed, $html );
+		}
+		self::assertStringNotContainsString( 'aria-label="Storage details"', $html );
+		self::assertStringNotContainsString( '>Storage details</summary>', $html );
 		self::assertStringContainsString( '&lt;database&gt;', $html );
-		self::assertStringContainsString( 'Storage details are unavailable for this request.', $html );
-		self::assertStringNotContainsString( 'aria-label="Technical details: Migrator"', $html );
+		// The Providers and extensions heading follows the Core updates card and the footnote follows the cards.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@id="ran-booster-installation-details"]/following-sibling::section[@aria-labelledby="ran-booster-components-heading"]/h3[@id="ran-booster-components-heading"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]/div[' . $entry . ']/following-sibling::p[starts-with(normalize-space(.), "These are local configuration details.")])' ) );
 		$troubleshooting['environment'] = array( 'WordPress' => '7.1' );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$summary_only = (string) ob_get_clean();
-		self::assertStringNotContainsString( 'Environment details', $summary_only );
+		$document     = new \DOMDocument();
+		$document->loadHTML( $summary_only, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[' . $entry . ' and ' . $class( 'installation-entry--static' ) . ']//span[' . $class( 'entry-title' ) . ' and text()="Environment"])' ) );
 	}
 
 	public function test_installation_is_default_and_renders_ordered_escaped_facts(): void {
@@ -524,17 +560,17 @@ final class TroubleshootingViewTest extends TestCase {
 			}
 			self::assertStringContainsString( 'href="https://example.test/wp-admin/admin.php?page=ran-booster-settings#ran-booster-storage"', $html );
 			self::assertStringContainsString( '<code class="ran-booster-onboarding__storage-inline">&lt;constant&gt;</code>', $html );
-			self::assertStringContainsString( '<summary aria-label="Storage details">Storage details</summary>', $html );
+			self::assertStringContainsString( '<summary aria-label="Secure credential storage">', $html );
 			self::assertStringContainsString( '>Open secure credential storage settings</a>', $html );
 			self::assertStringNotContainsString( '<form', $html );
 			self::assertStringContainsString( '<dt>Storage directory</dt>', $html );
 			self::assertStringContainsString( '<dt>Storage file</dt>', $html );
 			self::assertStringContainsString( '<code class="ran-booster-onboarding__storage-inline">Configured path</code>', $html );
 			self::assertStringNotContainsString( 'Custom wp-config.php path', $html );
-			self::assertStringContainsString( '<summary aria-label="Environment details">Environment details</summary>', $html );
-			self::assertStringContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary aria-label="Environment details">Environment details</summary>', $html );
-			self::assertStringNotContainsString( '<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback open><summary aria-label="Environment details">Environment details</summary>', $html );
-			$labels    = array( '>Environment</h4>', '>Secure credential storage</h4>', '>Booster Core updates</h4>', '>Providers and extensions</h3>' );
+			self::assertStringContainsString( '<summary aria-label="Environment">', $html );
+			self::assertStringContainsString( '<details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback>' . "\n" . '<summary aria-label="Environment">', $html );
+			self::assertStringNotContainsString( 'data-ran-booster-ui-disclosure-fallback open>', $html );
+			$labels    = array( 'entry-title">Environment</span>', 'entry-title">Secure credential storage</span>', 'entry-title">Booster Core updates</span>', '>Providers and extensions</h3>' );
 			$positions = array_map( static fn ( $label ) => strpos( $html, $label ), $labels );
 			foreach ( $positions as $position ) {
 				self::assertIsInt( $position ); }
@@ -640,7 +676,7 @@ final class TroubleshootingViewTest extends TestCase {
 				libxml_use_internal_errors( $previous_errors );
 			}
 			$xpath = new \DOMXPath( $document );
-			$hosts = $xpath->query( '//header/span[@data-ran-booster-badge]' );
+			$hosts = $xpath->query( '//span[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__entry-meta ")]/span[@data-ran-booster-badge]' );
 			self::assertInstanceOf( \DOMNodeList::class, $hosts );
 			self::assertCount( 3, $hosts );
 			foreach ( array_slice( $case, 4 ) as $index => $expected ) {
@@ -773,13 +809,12 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Booster Core updates</h4>', $html );
-		self::assertStringContainsString( 'ran-booster-troubleshooting__core-updates', $html );
+		self::assertStringContainsString( '<span class="ran-booster-troubleshooting__entry-title">Booster Core updates</span>', $html );
 		self::assertStringContainsString(
 			'Core updates are off for this source installation. Booster will not check for or replace itself.',
 			$html
 		);
-		self::assertStringContainsString( '<summary aria-label="Technical details: Booster Core updates">Technical details</summary>', $html );
+		self::assertStringContainsString( '<summary aria-label="Booster Core updates">', $html );
 		self::assertStringContainsString( '<code>native_discovery_disabled</code>', $html );
 		self::assertStringNotContainsString( 'cannot reach its configured GitHub release feed', $html );
 		$troubleshooting['core_self_update']['requested_mode'] = 'disabled';

@@ -490,6 +490,18 @@ final class AdminAssetContractTest extends TestCase {
 	 * A page subtitle sits one Card gap above the first Card on every page, and
 	 * a Card heading sits one heading gap above its first content (#746).
 	 */
+	public function test_installation_entries_are_single_cards_with_a_clear_section_gap(): void {
+		$css = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+		// The entries are the Cards: the nested inner panel frame and its divider rules are gone.
+		self::assertStringNotContainsString( 'ran-booster-troubleshooting__installation-card', $css );
+		self::assertStringNotContainsString( 'ran-booster-troubleshooting__card-heading', $css );
+		// The static header mirrors the Disclosure frame, so an entry with nothing to expand is not a bare row.
+		self::assertMatchesRegularExpression( '/__installation-entry--static\s+\.ran-booster-troubleshooting__entry-header \{[^}]*border: var\(--wpds-border-width-xs\) solid\s+var\(--wpds-color-stroke-surface-neutral\);[^}]*border-radius: var\(--wpds-border-radius-lg\);/', $css );
+		// The badge never wraps and the open-state divider stays the shared Disclosure header rule.
+		self::assertMatchesRegularExpression( '/__entry-meta\s*\) \{[^}]*flex: none;[^}]*white-space: nowrap;/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
+	}
+
 	public function test_page_and_card_heading_gaps_use_the_shared_spacing_tokens(): void {
 		$owners = array(
 			array( 'ran-booster/25-admin-primitives.css', '\n\.ran-booster-admin \.ran-booster-page-shell__header \{', 'padding-block: 0 var(--ran-booster-card-gap);' ),
@@ -504,8 +516,9 @@ final class AdminAssetContractTest extends TestCase {
 			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin\n\t\[data-ran-booster-ui-disclosure="transporter-blueprint-requirements"\] \{', 'margin-block-end: var(--ran-booster-space-16);' ),
 			array( 'ran-booster/25-admin-primitives.css', '\n\t\+ noscript\n\t> p:first-child \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster/65-package-settings.css', '\n\t\.ran-booster-settings__group:first-of-type \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
-			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-card \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
-			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-card\n\t> \.ran-booster-page-shell__header \{', 'padding-block-start: 0;' ),
+			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-entry \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
+			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\.ran-booster-troubleshooting__installation-entry\n\t\+ \.ran-booster-troubleshooting__installation-entry \{', 'margin-block-start: var(--ran-booster-card-gap);' ),
+			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\.ran-booster-admin \[aria-labelledby="ran-booster-components-heading"\] \{', 'var(--ran-booster-card-gap) + var(--ran-booster-space-8)' ),
 			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-debug-capture__panel \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-portability__mode-options \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-portability__flow-header > p \{', 'margin-block-start: 0;' ),

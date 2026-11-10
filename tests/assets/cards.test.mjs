@@ -93,6 +93,17 @@ function fixture({
 			}
 			this.insertBefore(node, null);
 		}
+		cloneNode() {
+			const copy = new Node(this.name);
+			copy.textContent = this.textContent;
+			this.attributes.forEach((value, name) =>
+				copy.setAttribute(name, value)
+			);
+			this.childNodes.forEach((child) =>
+				copy.appendChild(child.cloneNode())
+			);
+			return copy;
+		}
 		replaceChildren(...nodes) {
 			for (const child of [...this.childNodes]) {
 				child.remove();
@@ -157,11 +168,11 @@ function fixture({
 				const part = selector.slice(9);
 				return this.children.filter((n) => {
 					const match = part.match(
-						/^(details|summary|div)(?:\[([^\]]+)\])?$/
+						/^(details|summary|div|span)?(?:\[([^\]]+)\])?$/
 					);
 					return (
 						match &&
-						n.tagName === match[1].toUpperCase() &&
+						(!match[1] || n.tagName === match[1].toUpperCase()) &&
 						(!match[2] || n.hasAttribute(match[2]))
 					);
 				});
@@ -817,6 +828,50 @@ test('Disclosure keeps native details, body identity, open state and focus throu
 	assert.equal(f.doc.activeElement, summary);
 	f.flush();
 	assert.equal(host.querySelector('[data-disclosure-slot]').firstChild, body);
+});
+
+test('Disclosure heading slot fills the header, keeps one accessible name and returns to the summary', () => {
+	const f = fixture({ disclosureRuntime: true });
+	const host = new f.Node('div'),
+		details = new f.Node('details'),
+		summary = new f.Node('summary'),
+		heading = new f.Node('span'),
+		meta = new f.Node('span'),
+		body = new f.Node('div'),
+		link = new f.Node('a');
+	host.setAttribute('data-ran-booster-ui-disclosure', 'installation-section');
+	details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+	summary.setAttribute('aria-label', 'Bitbucket Cloud');
+	heading.setAttribute('data-ran-booster-ui-disclosure-heading', '');
+	heading.textContent = 'Bitbucket Cloud Provider extension: Bitbucket Cloud';
+	meta.setAttribute('data-ran-booster-ui-disclosure-meta', '');
+	meta.textContent = 'Active';
+	body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+	body.appendChild(link);
+	summary.appendChild(heading);
+	summary.appendChild(meta);
+	details.appendChild(summary);
+	details.appendChild(body);
+	host.appendChild(details);
+	f.doc.body.appendChild(host);
+	f.run();
+	f.flush();
+	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), '');
+	const [title, label, badge] = f.tree().children[0].children;
+	// The heading slot replaces the plain title and is hidden from assistive technology.
+	assert.equal(title.props['aria-hidden'], 'true');
+	assert.deepEqual(title.children, [null]);
+	const target = new f.Node('span');
+	title.props.ref(target);
+	assert.equal(target.childNodes[0], heading);
+	// The accessible name is the single screen-reader label; the badge text stays readable.
+	assert.equal(label.props.className, 'screen-reader-text');
+	assert.deepEqual(label.children, ['Bitbucket Cloud']);
+	assert.equal(badge.props.className, 'ran-booster-ui-disclosure__meta');
+	f.emit('htmx:beforeHistorySave');
+	assert.equal(host.firstChild, details);
+	assert.deepEqual(summary.children, [heading, meta]);
+	assert.equal(details.children[1], body);
 });
 
 test('Mounted disclosures report open state by id and honour remembered state when remounted', () => {

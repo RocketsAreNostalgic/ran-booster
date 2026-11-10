@@ -2,32 +2,98 @@
 	background: var(--ran-booster-surface-info);
 }
 
-.ran-booster-admin
-	.ran-booster-troubleshooting__installation-card
-	.ran-booster-page-shell__header {
-	padding-block-start: var(--ran-booster-space-18);
-	padding-block-end: var(--ran-booster-space-6);
-}
+/*
+ * Each Installation section is one non-compact Card: the heading gap sits below
+ * a section heading and one Card gap between Cards. Providers and extensions is
+ * a section of its own, so its heading gets clear space above it.
+ */
 
-/* A section's first installation card sits the heading gap below its heading. */
 .ran-booster-admin
 	.ran-booster-section__title
-	+ .ran-booster-troubleshooting__installation-card {
+	+ .ran-booster-troubleshooting__installation-entry {
 	margin-block-start: var(--ran-booster-card-heading-gap);
 }
 
 .ran-booster-admin
-	.ran-booster-section__title
-	+ .ran-booster-troubleshooting__installation-card
-	> .ran-booster-page-shell__header {
-	padding-block-start: 0;
+	.ran-booster-troubleshooting__installation-entry
+	+ .ran-booster-troubleshooting__installation-entry {
+	margin-block-start: var(--ran-booster-card-gap);
+}
+
+.ran-booster-admin [aria-labelledby="ran-booster-components-heading"] {
+	margin-block-start: calc(
+		var(--ran-booster-card-gap) + var(--ran-booster-space-8)
+	);
+}
+
+/*
+ * The header holds the title, a one-line summary and the status badge. The
+ * native fallback and the mounted Disclosure share this layout. An entry with
+ * nothing to expand keeps the header without the disclosure.
+ */
+
+.ran-booster-admin .ran-booster-troubleshooting__entry-heading {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	min-inline-size: 0;
+	overflow-wrap: anywhere;
+	text-align: start;
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__entry-description {
+	margin-block-start: var(--ran-booster-space-4);
+	color: var(--ran-booster-text-subtle);
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: 400;
+	line-height: 20px;
 }
 
 .ran-booster-admin
-	.ran-booster-troubleshooting__installation-card
-	.ran-booster-page-shell__body
-	> p:first-child {
-	margin-block-start: 0;
+	.ran-booster-troubleshooting__installation-entry
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	align-items: flex-start;
+	gap: var(--ran-booster-space-8);
+}
+
+/* The badge and chevron align with the title row, not the summary line. */
+.ran-booster-admin
+	.ran-booster-troubleshooting__installation-entry
+	:is(
+		.ran-booster-ui-disclosure__meta,
+		.ran-booster-troubleshooting__entry-meta
+	) {
+	flex: none;
+	align-self: flex-start;
+	margin-block-start: 1px;
+	white-space: nowrap;
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__installation-entry
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary
+	> .ran-booster-troubleshooting__entry-heading {
+	flex: 1 1 auto;
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__installation-entry--static
+	.ran-booster-troubleshooting__entry-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-8);
+	box-sizing: border-box;
+	padding: 12px 16px;
+	border: var(--wpds-border-width-xs) solid
+		var(--wpds-color-stroke-surface-neutral);
+	border-radius: var(--wpds-border-radius-lg);
+	background: var(--wpds-color-background-surface-neutral-strong);
+	font-size: var(--ran-booster-font-size-lg);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: 24px;
 }
 
 .ran-booster-admin
@@ -64,18 +130,6 @@
 	margin: 0;
 	padding: 0;
 	overflow-wrap: anywhere;
-}
-
-.ran-booster-admin .ran-booster-troubleshooting__card-heading {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	justify-content: space-between;
-	gap: var(--ran-booster-space-8);
-}
-
-.ran-booster-admin .ran-booster-troubleshooting__installation-card h4 {
-	margin: 0;
 }
 
 .ran-booster-admin .ran-booster-secondary-nav {
@@ -493,11 +547,7 @@
 /* The common Card frames the native semantic groups within each panel. */
 .ran-booster-admin
 	[data-ran-booster-card="troubleshooting"]
-	:is(
-		.ran-booster-troubleshooting__installation-card,
-		.ran-booster-debug-capture__panel,
-		.ran-booster-troubleshooting__form
-	) {
+	:is(.ran-booster-debug-capture__panel, .ran-booster-troubleshooting__form) {
 	overflow: visible;
 	border: 0;
 	border-radius: 0;
@@ -518,20 +568,6 @@
 	padding-inline: 0;
 }
 
-.ran-booster-admin
-	[data-ran-booster-card="troubleshooting"]
-	.ran-booster-troubleshooting__installation-card
-	> .ran-booster-page-shell__header {
-	padding-inline: 0;
-}
-
-.ran-booster-admin
-	[data-ran-booster-card="troubleshooting"]
-	.ran-booster-troubleshooting__installation-card
-	> .ran-booster-page-shell__body {
-	padding: 0;
-}
-
 /* The selected Troubleshooting Card owns its content inset. */
 .ran-booster-admin
 	[data-ran-booster-card="troubleshooting"].ran-booster-card
@@ -548,11 +584,4 @@
 			var(--ran-booster-card-inset-block-end);
 		padding-inline: var(--ran-booster-space-18);
 	}
-}
-
-.ran-booster-admin
-	[aria-labelledby="ran-booster-components-heading"]
-	> .ran-booster-troubleshooting__installation-card
-	+ .ran-booster-troubleshooting__installation-card {
-	border-block-start: 1px solid var(--ran-booster-border);
 }

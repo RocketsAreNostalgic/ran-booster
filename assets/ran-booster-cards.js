@@ -99,9 +99,9 @@
 					active = entry.summary;
 				}
 			}
-			if (entry.meta) {
-				entry.summary.appendChild(entry.meta);
-			}
+			[entry.heading, entry.meta].forEach(
+				(part) => part && entry.summary.appendChild(part)
+			);
 			entry.details.appendChild(entry.body);
 			if (entry.documentation) {
 				entry.details.hidden = false;
@@ -652,6 +652,10 @@
 		const meta = summary?.querySelector(
 			':scope > [data-ran-booster-ui-disclosure-meta]'
 		);
+		// An optional heading slot (title and description) fills the header.
+		const heading = summary?.querySelector(
+			':scope > [data-ran-booster-ui-disclosure-heading]'
+		);
 		let title = summary?.textContent.trim() ?? '';
 		if (meta) {
 			const titleSource = summary.cloneNode(true);
@@ -748,7 +752,15 @@
 					h(
 						ui.Header,
 						{ className: 'ran-booster-ui-disclosure__header' },
-						h('span', { 'aria-hidden': 'true' }, title),
+						h(
+							'span',
+							{
+								'aria-hidden': 'true',
+								ref:
+									heading && ((n) => n?.appendChild(heading)),
+							},
+							heading ? null : title
+						),
 						h('span', { className: 'screen-reader-text' }, label),
 						meta
 							? h('span', {
@@ -823,6 +835,7 @@
 				mount,
 				disclosure: true,
 				documentation,
+				heading,
 				meta,
 				synchronize: () => updateOpen(details.open),
 				details,

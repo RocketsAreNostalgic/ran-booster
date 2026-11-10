@@ -30,38 +30,39 @@ $components          = is_array( $troubleshooting['components'] ?? null ) ? $tro
 ?>
 <section id="ran-booster-installation-details" aria-labelledby="ran-booster-installation-heading">
 <h3 id="ran-booster-installation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Installation', 'ran-booster' ); ?></h3>
-<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Environment', 'ran-booster' ); ?></h4></header>
-<div class="ran-booster-page-shell__body">
 <?php
+// Environment.
+ob_start();
 if ( array() === $environment ) {
+	esc_html_e( 'Environment information is unavailable.', 'ran-booster' );
+} else {
+	$environment_separator = '';
+	foreach ( $environment_summary as $label => $value ) {
+		echo esc_html( $environment_separator ) . esc_html( $label ) . ' <code>' . esc_html( $value ) . '</code>';
+		$environment_separator = ' · ';
+	}
+}
+$entry_description = (string) ob_get_clean();
+ob_start();
+if ( array() !== $environment_details ) {
 	?>
-	<p><?php esc_html_e( 'Environment information is unavailable.', 'ran-booster' ); ?></p><?php } else { ?>
-<p class="ran-booster-troubleshooting__environment-summary">
-	<?php $environment_separator = ''; ?>
-	<?php foreach ( $environment_summary as $label => $value ) { ?>
-		<?php echo esc_html( $environment_separator ); ?><?php echo esc_html( $label ); ?> <code><?php echo esc_html( $value ); ?></code>
-		<?php $environment_separator = ' · '; ?>
-	<?php } ?>
-</p><?php } ?>
-<?php if ( array() !== $environment_details ) { ?>
-<div data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">
-<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary aria-label="<?php esc_attr_e( 'Environment details', 'ran-booster' ); ?>"><?php esc_html_e( 'Environment details', 'ran-booster' ); ?></summary>
-	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 		<dl class="ran-booster-troubleshooting__fields-list">
 		<?php foreach ( $environment_details as $label => $value ) { ?>
 			<div><dt><?php echo esc_html( $label ); ?></dt><dd><code><?php echo esc_html( $value ); ?></code></dd></div><?php } ?>
 		</dl>
-	</div>
-</details></div><?php } ?>
-</div></section>
-<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header ran-booster-onboarding__storage-heading"><h4 class="ran-booster-section__title"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h4><?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $storage_status[0], 'ok' === $storage_status[1] ? 'stable' : ( 'warning' === $storage_status[1] ? 'medium' : ( 'error' === $storage_status[1] ? 'high' : 'none' ) ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></header>
-<div class="ran-booster-page-shell__body">
-<p><?php echo esc_html( $storage['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
-<div data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">
-<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary aria-label="<?php esc_attr_e( 'Storage details', 'ran-booster' ); ?>"><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
-	<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
+	<?php
+}
+$entry_body  = (string) ob_get_clean();
+$entry_title = esc_html__( 'Environment', 'ran-booster' );
+$entry_label = __( 'Environment', 'ran-booster' );
+$entry_badge = '';
+$entry_id    = '';
+require __DIR__ . '/troubleshooting-installation-entry.php';
+
+// Secure credential storage.
+$entry_description = esc_html( $storage['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) );
+ob_start();
+?>
 		<?php if ( ! empty( $storage['details'] ) && is_array( $storage['details'] ) ) { ?>
 		<dl class="ran-booster-onboarding__storage-facts">
 			<?php
@@ -93,10 +94,15 @@ if ( array() === $environment ) {
 		<?php } else { ?>
 			<p><?php esc_html_e( 'Storage details are unavailable for this request.', 'ran-booster' ); ?></p>
 		<?php } ?>
-	</div>
-</details></div>
-<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ) ); ?>"><?php esc_html_e( 'Open secure credential storage settings', 'ran-booster' ); ?></a></p>
-</div></section>
+		<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ) ); ?>"><?php esc_html_e( 'Open secure credential storage settings', 'ran-booster' ); ?></a></p>
+<?php
+$entry_body  = (string) ob_get_clean();
+$entry_title = esc_html__( 'Secure credential storage', 'ran-booster' );
+$entry_label = __( 'Secure credential storage', 'ran-booster' );
+$entry_badge = \RAN\Admin\Component\StatusBadge::for_intent( (string) $storage_status[0], 'ok' === $storage_status[1] ? 'stable' : ( 'warning' === $storage_status[1] ? 'medium' : ( 'error' === $storage_status[1] ? 'high' : 'none' ) ) );
+$entry_id    = '';
+require __DIR__ . '/troubleshooting-installation-entry.php';
+?>
 			<?php
 			$self_update_mode   = $core_self_update['effective_mode'] ?? null;
 			$self_update_reason = $core_self_update['reason'] ?? 'release_marker_missing_or_invalid';
@@ -118,36 +124,28 @@ if ( array() === $environment ) {
 			} else {
 				$self_update_message = __( 'Core update status is unavailable.', 'ran-booster' );
 			}
-			$technical_details_label = sprintf(
-				/* translators: %s: component or section name. */
-				__( 'Technical details: %s', 'ran-booster' ),
-				__( 'Booster Core updates', 'ran-booster' )
-			);
-			?>
-			<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__core-updates ran-booster-troubleshooting__installation-card" aria-labelledby="ran-booster-core-updates-heading">
-				<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 id="ran-booster-core-updates-heading" class="ran-booster-section__title"><?php esc_html_e( 'Booster Core updates', 'ran-booster' ); ?></h4>
-				<?php
-				$self_update_label = match ( $self_update_mode ) {
-					'enabled' => __( 'Checks enabled', 'ran-booster' ),
-					'disabled' => __( 'Checks disabled', 'ran-booster' ),
-					default => __( 'Status unavailable', 'ran-booster' ) };
+			$self_update_label = match ( $self_update_mode ) {
+				'enabled' => __( 'Checks enabled', 'ran-booster' ),
+				'disabled' => __( 'Checks disabled', 'ran-booster' ),
+				default => __( 'Status unavailable', 'ran-booster' ) };
+			$core_fields = $installation[ __( 'Booster Core updates', 'ran-booster' ) ] ?? array();
+			ob_start();
+			if ( ! empty( $core_fields ) ) {
 				?>
-				<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $self_update_label, 'enabled' === $self_update_mode ? 'stable' : 'none' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></header>
-				<div class="ran-booster-page-shell__body">
-					<p><?php echo esc_html( $self_update_message ); ?></p>
-					<div data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">
-					<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary aria-label="<?php echo esc_attr( $technical_details_label ); ?>"><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
-						<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
-						<dl class="ran-booster-troubleshooting__fields-list">
-						<?php
-						foreach ( $installation[ __( 'Booster Core updates', 'ran-booster' ) ] ?? array() as $field_label => $field_value ) {
-							?>
-							<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd></div><?php } ?></dl>
-						</div>
-					</details>
-					</div>
-				</div>
-			</section>
+				<dl class="ran-booster-troubleshooting__fields-list">
+				<?php foreach ( $core_fields as $field_label => $field_value ) { ?>
+					<div><dt><?php echo esc_html( $field_label ); ?></dt><dd><code><?php echo esc_html( $field_value ); ?></code></dd></div><?php } ?>
+				</dl>
+				<?php
+			}
+			$entry_body        = (string) ob_get_clean();
+			$entry_title       = esc_html__( 'Booster Core updates', 'ran-booster' );
+			$entry_label       = __( 'Booster Core updates', 'ran-booster' );
+			$entry_description = esc_html( $self_update_message );
+			$entry_badge       = \RAN\Admin\Component\StatusBadge::for_intent( (string) $self_update_label, 'enabled' === $self_update_mode ? 'stable' : 'none' );
+			$entry_id          = '';
+			require __DIR__ . '/troubleshooting-installation-entry.php';
+			?>
 </section>
 <section aria-labelledby="ran-booster-components-heading">
 <h3 id="ran-booster-components-heading" class="ran-booster-section__title"><?php esc_html_e( 'Providers and extensions', 'ran-booster' ); ?></h3>
@@ -208,30 +206,13 @@ foreach ( $components as $component ) {
 	$version_markup = is_string( $version ) && '' !== $version
 		? ' <span class="ran-booster-troubleshooting__version-separator" aria-hidden="true">•</span> <code class="ran-booster-troubleshooting__version">' . esc_html( $version ) . '</code>'
 		: '';
-	?>
-<section class="ran-booster-panel ran-booster-page-shell ran-booster-troubleshooting__installation-card">
-<header class="ran-booster-page-shell__header ran-booster-troubleshooting__card-heading"><h4 class="ran-booster-section__title"><?php echo esc_html( $component_name ) . $version_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The version is escaped where the markup is built. ?></h4><?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $component_status, 'ok' === $tone ? 'stable' : ( 'warning' === $tone ? 'medium' : 'none' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></header>
-<div class="ran-booster-page-shell__body">
-	<?php
-	if ( null !== $source || isset( $component['Provider'] ) ) {
-		?>
-		<p><?php echo esc_html( $source ?? __( 'Provider source unknown', 'ran-booster' ) ); ?></p><?php } ?>
-	<?php
+	ob_start();
 	if ( $problem ) {
 		?>
 		<p><?php echo esc_html( $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. Review the provider settings before use.', 'ran-booster' ) ); ?></p><?php } ?>
 	<?php
 	if ( array() !== $technical_fields || $has_capabilities ) {
-		$technical_details_label = sprintf(
-			/* translators: %s: component or section name. */
-			__( 'Technical details: %s', 'ran-booster' ),
-			$component_name
-		);
 		?>
-<div<?php echo $is_github ? ' id="ran-booster-github-provider-diagnostics"' : ''; ?> data-ran-booster-ui-disclosure="installation-component" data-ran-booster-ui-disclosure-density="compact">
-<details class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback>
-<summary aria-label="<?php echo esc_attr( $technical_details_label ); ?>"><?php esc_html_e( 'Technical details', 'ran-booster' ); ?></summary>
-<div class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
 <dl class="ran-booster-troubleshooting__fields-list">
 		<?php
 		foreach ( $technical_fields as $label => $value ) {
@@ -312,11 +293,18 @@ foreach ( $components as $component ) {
 			}
 		}
 		?>
-</div></details>
-</div>
-	<?php } ?>
-</div></section>
-<?php } ?>
+
+		<?php
+	}
+	$entry_body        = (string) ob_get_clean();
+	$entry_title       = esc_html( $component_name ) . $version_markup;
+	$entry_label       = is_string( $version ) && '' !== $version ? $component_name . ' • ' . $version : $component_name;
+	$entry_description = null !== $source || isset( $component['Provider'] ) ? esc_html( $source ?? __( 'Provider source unknown', 'ran-booster' ) ) : '';
+	$entry_badge       = \RAN\Admin\Component\StatusBadge::for_intent( (string) $component_status, 'ok' === $tone ? 'stable' : ( 'warning' === $tone ? 'medium' : 'none' ) );
+	$entry_id          = $is_github ? 'ran-booster-github-provider-diagnostics' : '';
+	require __DIR__ . '/troubleshooting-installation-entry.php';
+}
+?>
 <?php if ( array() !== $components ) { ?>
 <p><?php esc_html_e( 'These are local configuration details. Use Diagnostics to check repository access.', 'ran-booster' ); ?></p>
 <?php } ?>

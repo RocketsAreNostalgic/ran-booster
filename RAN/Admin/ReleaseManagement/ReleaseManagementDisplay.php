@@ -247,7 +247,7 @@ final class ReleaseManagementDisplay {
 		<div data-ran-booster-ui-disclosure="package-release-track" data-ran-booster-ui-disclosure-density="prominent">
 		<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure>
 			<summary>
-				<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Release Track', 'ran-booster' ); ?></h3>
+				<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Release track', 'ran-booster' ); ?></h3>
 				<small class="ran-booster-advanced-source-summary" data-ran-booster-ui-disclosure-meta>
 					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $release_track_summary, 'none', array( 'data-ran-booster-release-track-summary' => '' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				</small>

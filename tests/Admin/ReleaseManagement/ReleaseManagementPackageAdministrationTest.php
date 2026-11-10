@@ -126,7 +126,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'/<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure>/',
 			$html
 		);
-		self::assertStringContainsString( '<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label">Release Track</h3>', $html );
+		self::assertStringContainsString( '<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label">Release track</h3>', $html );
+		self::assertStringNotContainsString( 'Release Track', $html );
 		self::assertMatchesRegularExpression(
 			'/<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none" data-ran-booster-release-track-summary>\s*' . $expected_summary . '\s*<\\/span>/',
 			$html

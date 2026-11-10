@@ -441,7 +441,9 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
-		self::assertStringNotContainsString( 'Included with Booster', $html );
+		// A bundled provider can be replaced, so the card names its origin and never falls back to an unknown source.
+		self::assertStringContainsString( 'Included with Booster', $html );
+		self::assertStringNotContainsString( 'Provider source unknown', $html );
 
 		$troubleshooting['installation_details']['GitHub provider']['Source'] = 'External replacement';
 		$troubleshooting['installation_details']['GitHub provider']['Name']   = 'Unavailable';

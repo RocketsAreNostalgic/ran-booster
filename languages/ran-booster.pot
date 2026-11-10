@@ -274,9 +274,10 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:155
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:307
-#: views/packages/edit.php:369
-#: views/packages/fields/deployment-policy.php:45
-#: views/packages/fields/deployment-policy.php:48
+#: views/packages/edit.php:377
+#: views/packages/fields/deployment-policy.php:78
+#: views/packages/fields/deployment-policy.php:91
+#: views/packages/fields/deployment-policy.php:94
 #: views/packages/index.php:487
 msgid "Updates"
 msgstr ""
@@ -6914,7 +6915,7 @@ msgid "Incoming branch-deployment webhooks are generally unavailable on local or
 msgstr ""
 
 #: views/documentation.php:352
-#: views/packages/fields/deployment-policy.php:65
+#: views/packages/fields/deployment-policy.php:67
 msgid "Read the Push-to-Deploy guide."
 msgstr ""
 
@@ -7985,7 +7986,7 @@ msgstr ""
 #. translators: %s is plugin or theme.
 #: views/packages/create.php:178
 #: views/packages/edit.php:276
-#: views/packages/edit.php:342
+#: views/packages/edit.php:350
 #: views/packages/index.php:114
 #, php-format
 msgid "Install another %s"
@@ -8110,7 +8111,7 @@ msgid "Booster will not reinterpret this package as a branch deployment. Restore
 msgstr ""
 
 #: views/packages/edit.php:275
-#: views/packages/edit.php:340
+#: views/packages/edit.php:348
 msgid "Package settings actions"
 msgstr ""
 
@@ -8118,27 +8119,27 @@ msgstr ""
 msgid "The saved repository and access used by this package."
 msgstr ""
 
-#: views/packages/edit.php:326
+#: views/packages/edit.php:325
 msgid "Package operations"
 msgstr ""
 
-#: views/packages/edit.php:356
+#: views/packages/edit.php:364
 msgid "Package summary"
 msgstr ""
 
-#: views/packages/edit.php:358
+#: views/packages/edit.php:366
 msgid "Current source"
 msgstr ""
 
-#: views/packages/edit.php:371
+#: views/packages/edit.php:379
 msgid "Source changes reset Automatic to Manual"
 msgstr ""
 
-#: views/packages/edit.php:374
+#: views/packages/edit.php:382
 msgid "WordPress state"
 msgstr ""
 
-#: views/packages/edit.php:376
+#: views/packages/edit.php:384
 msgid "Independent of package source"
 msgstr ""
 
@@ -8170,45 +8171,45 @@ msgstr ""
 msgid "Private repos require a PAT with appropriate access."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:30
+#: views/packages/fields/deployment-policy.php:37
 msgid "NOTICE: Editing this package’s files on this site? Choose Disabled."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:31
+#: views/packages/fields/deployment-policy.php:38
 msgid "Manual and Automatic can overwrite local changes when an update or reinstall runs."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:33
-#: views/packages/fields/deployment-policy.php:68
+#: views/packages/fields/deployment-policy.php:40
+#: views/packages/fields/deployment-policy.php:70
 msgid "Push-to-Deploy setting"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:33
-#: views/packages/fields/deployment-policy.php:68
+#: views/packages/fields/deployment-policy.php:40
+#: views/packages/fields/deployment-policy.php:70
 msgid "Docs"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:52
+#: views/packages/fields/deployment-policy.php:53
 msgid "Disabled — do not let Booster update this package"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:53
+#: views/packages/fields/deployment-policy.php:54
 msgid "Manual — update only when requested"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:54
+#: views/packages/fields/deployment-policy.php:55
 msgid "Automatic — install validated releases through WordPress Updates"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:54
+#: views/packages/fields/deployment-policy.php:55
 msgid "Automatic — deploy signed repository pushes"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:61
+#: views/packages/fields/deployment-policy.php:63
 msgid "Manual waits for an administrator; Automatic lets WordPress install validated published updates."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:64
+#: views/packages/fields/deployment-policy.php:66
 msgid "Automatic deployment is unavailable because this Git provider does not support signed webhooks."
 msgstr ""
 
@@ -8591,7 +8592,7 @@ msgstr ""
 msgid "No management changes have been made. Booster will not disconnect a package whose management identity or operation state cannot be verified."
 msgstr ""
 
-#: views/packages/reinstall.php:40
+#: views/packages/reinstall-guidance.php:16
 msgid "Set Updates to Manual or Automatic before reinstalling."
 msgstr ""
 

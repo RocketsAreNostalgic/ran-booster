@@ -1246,4 +1246,8 @@ test('managed browser footer right-aligns the Update now link and the helper cop
 		/\.ran-booster-release-candidate__skeleton \{[^}]*block-size: 12px;[^}]*inline-size: 55%/
 	);
 	assert.doesNotMatch(styles, /animation/);
+	assert.match(
+		styles,
+		/@media \(max-width: 782px\)[\s\S]*?\.ran-wp-ui-button \{\s*align-self: flex-end;/
+	);
 });

@@ -162,7 +162,7 @@
 	.ran-booster-admin
 		.ran-booster-managed-release-browser__header
 		.ran-wp-ui-button {
-		align-self: start;
+		align-self: flex-end;
 	}
 }
 

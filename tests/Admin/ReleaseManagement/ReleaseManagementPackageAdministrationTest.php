@@ -104,7 +104,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'name="release_channel" value="prerelease"', $html );
 		self::assertStringNotContainsString( 'ran_booster_release_deployments', $html );
 		self::assertStringContainsString( '<strong>Installed identity and Update URI</strong>', $html );
-		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Ready for releases</h4>', $html );
+		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Ready</h4>', $html );
+		self::assertStringNotContainsString( 'Ready for releases', $html );
 		self::assertStringContainsString( 'Branch is active; releases are not tracked.', $html );
 		self::assertStringNotContainsString( '<strong>Provider</strong>', $html );
 		self::assertStringNotContainsString( '<strong>Repository</strong>', $html );
@@ -230,7 +231,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=nested%2Fnested.php', $html );
 		self::assertStringContainsString( 'page=ran-booster-themes&amp;package=companion-theme', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Repository shared</h4>', $html );
-		self::assertStringNotContainsString( '<h4 id="ran-booster-release-readiness-status">Ready for releases</h4>', $html );
+		self::assertStringNotContainsString( '<h4 id="ran-booster-release-readiness-status">Ready</h4>', $html );
 		self::assertStringContainsString( 'The installed package identity and Update URI match the configured repository.', $html );
 		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Use releases<\/button>/', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser-disabled="true"', $html );
@@ -290,7 +291,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			self::assertSame( 1, substr_count( $html, 'Releases require exclusive use of this repository.' ) );
 			self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Use releases<\/button>/', $html );
 			self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
-			self::assertStringNotContainsString( '<h4 id="ran-booster-release-readiness-status">Ready for releases</h4>', $html );
+			self::assertStringNotContainsString( '<h4 id="ran-booster-release-readiness-status">Ready</h4>', $html );
 		}
 	}
 
@@ -490,7 +491,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'class="button ran-booster-release-track-option"' ) );
 		self::assertStringContainsString( 'Stable follows final published releases. Preview also includes eligible alpha, beta and release-candidate builds.', $html );
 		self::assertStringContainsString( 'ran-booster-release-notices', $html );
-		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Not ready for releases</h4>', $html );
+		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Not ready</h4>', $html );
+		self::assertStringNotContainsString( 'Not ready for releases', $html );
 		self::assertStringContainsString( 'Published releases require an Update URI matching this repository. Use the header shown below, then recheck eligibility.', $html );
 		self::assertStringNotContainsString( 'This package header does not declare an Update URI for its configured repository.', $html );
 		self::assertStringContainsString( 'Add this exact header, deploy the corrected package, then check again:', $html );

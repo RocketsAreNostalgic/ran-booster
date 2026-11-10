@@ -165,7 +165,7 @@ final class ReleaseManagementDisplay {
 				<?php } ?>
 				<div class="ran-booster-readiness-panel__top">
 					<div>
-						<h4 id="ran-booster-release-readiness-status"><?php echo esc_html( $repository_blocked ? $repository_status_heading : ( $status_available && $eligibility->eligible() ? __( 'Ready for releases', 'ran-booster' ) : __( 'Not ready for releases', 'ran-booster' ) ) ); ?></h4>
+						<h4 id="ran-booster-release-readiness-status"><?php echo esc_html( $repository_blocked ? $repository_status_heading : ( $status_available && $eligibility->eligible() ? __( 'Ready', 'ran-booster' ) : __( 'Not ready', 'ran-booster' ) ) ); ?></h4>
 					</div>
 					<?php if ( ! $status_available || ! $eligibility->eligible() || $repository_blocked ) { ?>
 						<?php echo \RAN\Admin\Component\StatusBadge::for_intent( __( 'Unavailable', 'ran-booster' ), 'high' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>

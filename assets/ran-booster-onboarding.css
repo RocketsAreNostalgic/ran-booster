@@ -504,6 +504,12 @@
 	margin-block-start: var(--ran-booster-space-16);
 }
 
+/* The requirements disclosure keeps a field-row gap above whatever the review shows next, such as the credential choices or the package table. */
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="transporter-blueprint-requirements"] {
+	margin-block-end: var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-portability__mode {
 	display: flex;
 	align-items: center;

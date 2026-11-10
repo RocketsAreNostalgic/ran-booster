@@ -500,6 +500,8 @@ final class AdminAssetContractTest extends TestCase {
 			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\.ran-booster-admin \.ran-booster-secondary-nav \{', 'margin-block: var(--ran-booster-space-18) var(--ran-booster-card-gap);' ),
 			array( 'ran-booster/30-provider-cards.css', '\n\.ran-booster-admin \.ran-booster-provider-management__header \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
 			array( 'ran-booster-onboarding.css', '\n\n\.ran-booster-admin \.ran-booster-portability__flow \{', 'margin-block-start: var(--ran-booster-card-gap);' ),
+			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-portability__import-fields \+ \.notice \{', 'margin-block-start: var(--ran-booster-space-16);' ),
+			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin\n\t\[data-ran-booster-ui-disclosure="transporter-blueprint-requirements"\] \{', 'margin-block-end: var(--ran-booster-space-16);' ),
 			array( 'ran-booster/25-admin-primitives.css', '\n\t\+ noscript\n\t> p:first-child \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster/65-package-settings.css', '\n\t\.ran-booster-settings__group:first-of-type \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster/65-package-settings.css', '\n\t\.ran-booster-settings__group:first-of-type \{', 'border-block-start: 0;' ),

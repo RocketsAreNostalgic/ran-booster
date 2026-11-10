@@ -544,6 +544,22 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'margin-block-start: var(--ran-booster-card-heading-gap);', $activity );
 	}
 
+	public function test_installation_header_padding_is_constant_and_the_divider_sits_below_the_warning_row(): void {
+		$activity = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+		// The toggle row and the native summary keep 16px vertical padding closed and open, scoped to Installation sections.
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="installation-section"\]\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\],[^{]*> summary \{\s*padding-block: 16px;\s*\}/', $activity );
+		// The warning row carries 16px bottom padding and sits outside the toggle.
+		self::assertMatchesRegularExpression( '/__entry-warning \{[^}]*display: block;[^}]*padding: 0 16px 16px;/', $activity );
+		// With a warning the open header drops its shadow and the warning row carries the divider; no border adds height.
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure-warned\]\s*\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header \{\s*box-shadow: none;\s*\}/', $activity );
+		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*\.ran-booster-troubleshooting__entry-warning \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);\s*\}/', $activity );
+		self::assertDoesNotMatchRegularExpression( '/__entry-warning \{[^}]*border/', $activity );
+		// The closed state has no divider rule: every divider selector is gated on the open state.
+		self::assertSame( 0, preg_match( '/__entry-warning[^{]*\{[^}]*box-shadow/', (string) preg_replace( '/\[data-open\][^{]*\{[^}]*\}/', '', $activity ) ) );
+		// Entries without a warning keep the shared divider on the header or summary.
+		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
+	}
+
 	public function test_page_and_card_heading_gaps_use_the_shared_spacing_tokens(): void {
 		$owners = array(
 			array( 'ran-booster/25-admin-primitives.css', '\n\.ran-booster-admin \.ran-booster-page-shell__header \{', 'padding-block: 0 var(--ran-booster-card-gap);' ),

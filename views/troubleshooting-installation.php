@@ -174,12 +174,18 @@ foreach ( $components as $component ) {
 	$version                 = $is_github ? ( $github_fields[ __( 'Version', 'ran-booster' ) ] ?? null ) : ( $component['Version'] ?? null );
 	$source                  = null;
 	$github_problem_messages = array(
-		'missing'             => __( 'The selected GitHub provider plugin is not active or available. Review provider settings.', 'ran-booster' ),
-		'conflict'            => __( 'Multiple GitHub provider plugins need review in provider settings.', 'ran-booster' ),
-		'incompatible'        => __( 'A GitHub provider plugin is incompatible. Review provider settings.', 'ran-booster' ),
-		'recovery_required'   => __( 'GitHub provider recovery is required. Review provider settings.', 'ran-booster' ),
-		'decision_required'   => __( 'The GitHub provider selection needs a decision. Review provider settings.', 'ran-booster' ),
-		'storage_unavailable' => __( 'GitHub provider selection could not be checked. Review provider settings.', 'ran-booster' ),
+		/* translators: %s: link to the GitHub provider settings. */
+		'missing'             => __( 'The selected GitHub provider plugin is not active or available. %s.', 'ran-booster' ),
+		/* translators: %s: link to the GitHub provider settings. */
+		'conflict'            => __( 'Multiple GitHub provider plugins need review. %s.', 'ran-booster' ),
+		/* translators: %s: link to the GitHub provider settings. */
+		'incompatible'        => __( 'A GitHub provider plugin is incompatible. %s.', 'ran-booster' ),
+		/* translators: %s: link to the GitHub provider settings. */
+		'recovery_required'   => __( 'GitHub provider recovery is required. %s.', 'ran-booster' ),
+		/* translators: %s: link to the GitHub provider settings. */
+		'decision_required'   => __( 'The GitHub provider selection needs a decision. %s.', 'ran-booster' ),
+		/* translators: %s: link to the GitHub provider settings. */
+		'storage_unavailable' => __( 'GitHub provider selection could not be checked. %s.', 'ran-booster' ),
 	);
 	if ( $is_github ) {
 		$selected_name = null;
@@ -206,8 +212,16 @@ foreach ( $components as $component ) {
 	$version_markup = is_string( $version ) && '' !== $version
 		? ' <span class="ran-booster-troubleshooting__version-separator" aria-hidden="true">•</span> <code class="ran-booster-troubleshooting__version">' . esc_html( $version ) . '</code>'
 		: '';
-	// The problem message sits in the header beside the badge, not in the body.
-	$entry_warning = $problem ? esc_html( $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. Review the provider settings before use.', 'ran-booster' ) ) : '';
+	// Every problem state is resolved on the GitHub provider page, which explains
+	// the state and hosts the recovery and decision forms.
+	$entry_warning = '';
+	if ( $problem ) {
+		$provider_settings_url  = ( is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' ) ) . '?page=ran-booster&tab=gh';
+		$provider_settings_link = '<a href="' . esc_url( $provider_settings_url ) . '">' . esc_html__( 'Review provider settings', 'ran-booster' ) . '</a>';
+		/* translators: %s: link to the GitHub provider settings. */
+		$problem_message = $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. %s.', 'ran-booster' );
+		$entry_warning   = sprintf( esc_html( $problem_message ), $provider_settings_link );
+	}
 	ob_start();
 	if ( array() !== $technical_fields || $has_capabilities ) {
 		?>

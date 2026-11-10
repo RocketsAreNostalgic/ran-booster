@@ -41,12 +41,86 @@
 	text-align: start;
 }
 
+/*
+ * The warning is an ordinary row directly beneath the header, outside the
+ * heading and the toggle, so it can hold a link. It is visible closed and open.
+ */
 .ran-booster-admin .ran-booster-troubleshooting__entry-warning {
-	margin-block-start: var(--ran-booster-space-4);
+	display: block;
+	margin: 0;
+	padding: 0 16px 16px;
 	color: var(--ran-booster-status-warning);
 	font-size: var(--ran-booster-font-size-md);
 	font-weight: 400;
 	line-height: 20px;
+}
+
+/*
+ * Every Installation header keeps 16px of vertical padding closed and open, so
+ * nothing shifts on toggle.
+ */
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="installation-section"]
+	> *
+	> .ran-booster-ui-disclosure
+	> .ran-booster-ui-disclosure__header
+	> [role="button"],
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="installation-section"]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	padding-block: 16px;
+}
+
+/*
+ * The native fallback keeps the warning inside the summary, on its own row
+ * below the title row, so the shared summary divider already sits below it.
+ */
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-warned]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	flex-wrap: wrap;
+	row-gap: 16px;
+	padding-block-end: 0;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-warned]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary
+	> .ran-booster-troubleshooting__entry-heading {
+	flex: 1 1 0;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-warned]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary
+	> .ran-booster-troubleshooting__entry-warning {
+	order: 3;
+	flex: 0 0 100%;
+	padding-inline: 0;
+}
+
+/*
+ * Once mounted, the open-state divider sits below the warning row when there is
+ * one. It is a shadow like the shared divider, so opening adds no height.
+ */
+@media screen {
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="installation-section"][data-ran-booster-ui-disclosure-warned]
+		.ran-booster-ui-disclosure[data-open]
+		> .ran-booster-ui-disclosure__header {
+		box-shadow: none;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="installation-section"]
+		.ran-booster-ui-disclosure[data-open]
+		.ran-booster-troubleshooting__entry-warning {
+		box-shadow: 0 1px 0 var(--ran-booster-divider);
+	}
 }
 
 /* The title is the real h4 of an entry with nothing to expand. */
@@ -97,12 +171,7 @@
 .ran-booster-admin
 	.ran-booster-troubleshooting__installation-entry--static
 	.ran-booster-troubleshooting__entry-header {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	gap: var(--ran-booster-space-8);
 	box-sizing: border-box;
-	padding: 12px 16px;
 	border: var(--wpds-border-width-xs) solid
 		var(--wpds-color-stroke-surface-neutral);
 	border-radius: var(--wpds-border-radius-lg);
@@ -110,6 +179,14 @@
 	font-size: var(--ran-booster-font-size-lg);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: 24px;
+}
+
+.ran-booster-admin .ran-booster-troubleshooting__entry-row {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-8);
+	padding: 16px;
 }
 
 .ran-booster-admin

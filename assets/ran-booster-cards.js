@@ -99,7 +99,7 @@
 					active = entry.summary;
 				}
 			}
-			[entry.heading, entry.meta].forEach(
+			[entry.heading, entry.note, entry.meta].forEach(
 				(part) => part && entry.summary.appendChild(part)
 			);
 			entry.details.appendChild(entry.body);
@@ -656,6 +656,9 @@
 		const heading = summary?.querySelector(
 			':scope > [data-ran-booster-ui-disclosure-heading]'
 		);
+		const note = summary?.querySelector(
+			'[data-ran-booster-ui-disclosure-warning]'
+		);
 		let title = summary?.textContent.trim() ?? '';
 		if (meta) {
 			const titleSource = summary.cloneNode(true);
@@ -729,9 +732,6 @@
 			};
 			if (heading) {
 				headerProps.render = h('h4');
-				headerProps['aria-describedby'] = heading.querySelector(
-					'[data-ran-booster-ui-disclosure-warning]'
-				)?.id;
 			}
 			let updateOpen;
 			function Disclosure() {
@@ -779,6 +779,7 @@
 								})
 							: null
 					),
+					note && h('div', { ref: (n) => n?.appendChild(note) }),
 					h(ui.Content, {
 						className: documentation
 							? 'ran-booster-documentation__ui-panel'
@@ -845,6 +846,7 @@
 				disclosure: true,
 				documentation,
 				heading,
+				note,
 				meta,
 				synchronize: () => updateOpen(details.open),
 				details,

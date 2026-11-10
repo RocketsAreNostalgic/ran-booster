@@ -304,27 +304,94 @@ final class TroubleshootingViewTest extends TestCase {
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath   = new \DOMXPath( $document );
 		$class   = static fn( string $name ): string => 'contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__' . $name . ' ")';
-		$message = 'The selected GitHub provider plugin is not active or available. Review provider settings.';
 		$github  = '//div[@id="ran-booster-github-provider-diagnostics"]';
-		// The problem message sits once in the header heading slot, tied to the toggle, and never in the body.
-		self::assertSame( 1, substr_count( $html, $message ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $github . '/details/summary/span[@data-ran-booster-ui-disclosure-heading]/span[' . $class( 'entry-warning' ) . ' and @data-ran-booster-ui-disclosure-warning and normalize-space(.)="' . $message . '"])' ) );
+		$summary = $github . '/details/summary';
+		$url     = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh';
+		// The warning is a direct child of the summary beside the heading slot (the Disclosure moves it out of the toggle when mounted), never in the heading or the body.
+		self::assertSame( 1, substr_count( $html, 'The selected GitHub provider plugin is not active or available.' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/span[' . $class( 'entry-warning' ) . ' and @data-ran-booster-ui-disclosure-warning and not(@aria-hidden) and not(@id) and normalize-space(.)="The selected GitHub provider plugin is not active or available. Review provider settings."])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/span[@data-ran-booster-ui-disclosure-warning]/a[@href="' . $url . '" and not(@target) and normalize-space(.)="Review provider settings"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $summary . '/span[@data-ran-booster-ui-disclosure-heading]//*[@data-ran-booster-ui-disclosure-warning or self::a])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $github . '//div[@data-ran-booster-ui-disclosure-content]//*[contains(normalize-space(.), "Review provider settings")])' ) );
-		if ( 1 !== preg_match( '/<summary aria-label="GitHub[^"]*" aria-describedby="([^"]+)"/', $html, $described ) ) {
-			self::fail( 'The GitHub summary must reference its warning.' );
-		}
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="' . $described[1] . '" and ' . $class( 'entry-warning' ) . '])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $github . '/details/summary/span[@data-ran-booster-ui-disclosure-meta]/span[@data-ran-booster-badge and normalize-space(.)="Needs attention"])' ) );
-		// A healthy entry has no warning element and no description reference.
-		$bitbucket = '//summary[starts-with(@aria-label, "Bitbucket Cloud")]';
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $bitbucket . '[not(@aria-describedby)])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $github . '[@data-ran-booster-ui-disclosure-warned])' ) );
+		// The toggle has no description wiring for the warning.
+		self::assertSame( 0, substr_count( $html, 'aria-describedby="ran-booster-installation-entry-warning' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//summary[@aria-describedby])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/span[@data-ran-booster-ui-disclosure-meta]/span[@data-ran-booster-badge and normalize-space(.)="Needs attention"])' ) );
+		// A healthy entry has no warning row.
+		$bitbucket = '//div[@data-ran-booster-ui-disclosure="installation-section" and details/summary[starts-with(@aria-label, "Bitbucket Cloud")]]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $bitbucket . '[not(@data-ran-booster-ui-disclosure-warned)]/details/summary[not(.//*[@data-ran-booster-ui-disclosure-warning])])' ) );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-disclosure-warning' ) );
 		// An entry with nothing to expand is a real h4 (the GitHub provider always has technical fields, so a warning only reaches the disclosure header).
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[' . $class( 'installation-entry--static' ) . ']/div[' . $class( 'entry-header' ) . ']/div[' . $class( 'entry-heading' ) . ']/h4[' . $class( 'entry-title' ) . ' and normalize-space(.)="Migrator"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[' . $class( 'installation-entry--static' ) . ']/div[' . $class( 'entry-header' ) . ']/div[' . $class( 'entry-row' ) . ']/div[' . $class( 'entry-heading' ) . ']/h4[' . $class( 'entry-title' ) . ' and normalize-space(.)="Migrator"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//h4//h4 | //summary//h4 | //*[@role="heading"])' ) );
 		// The ruled section headings stay real h3 elements.
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//h3[@id="ran-booster-installation-heading" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-section__title--ruled ")])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//h3[@id="ran-booster-components-heading" and contains(concat(" ", normalize-space(@class), " "), " ran-booster-section__title--ruled ")])' ) );
+	}
+
+	/**
+	 * @return array<string, array{0: string, 1: string}>
+	 */
+	public static function provider_problem_states(): array {
+		return array(
+			'missing'             => array( 'missing', 'The selected GitHub provider plugin is not active or available. Review provider settings.' ),
+			'conflict'            => array( 'conflict', 'Multiple GitHub provider plugins need review. Review provider settings.' ),
+			'incompatible'        => array( 'incompatible', 'A GitHub provider plugin is incompatible. Review provider settings.' ),
+			'recovery_required'   => array( 'recovery_required', 'GitHub provider recovery is required. Review provider settings.' ),
+			'decision_required'   => array( 'decision_required', 'The GitHub provider selection needs a decision. Review provider settings.' ),
+			'storage_unavailable' => array( 'storage_unavailable', 'GitHub provider selection could not be checked. Review provider settings.' ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'provider_problem_states' )]
+	public function test_every_provider_problem_state_links_to_the_github_provider_page( string $state, string $message ): void {
+		$troubleshooting_panel = 'installation';
+		$troubleshooting       = array(
+			'providers'            => array(),
+			'components'           => array(
+				array(
+					'Name'     => 'GitHub',
+					'Provider' => 'gh',
+				),
+			),
+			'installation_details' => array(
+				'GitHub provider' => array(
+					'Name'            => 'Selected plugin',
+					'Source'          => 'External replacement',
+					'Selection state' => $state,
+				),
+			),
+		);
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html     = (string) ob_get_clean();
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath   = new \DOMXPath( $document );
+		$warning = '//div[@id="ran-booster-github-provider-diagnostics"]/details/summary/span[@data-ran-booster-ui-disclosure-warning and not(@aria-hidden) and normalize-space(.)="' . $message . '"]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $warning . ')' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $warning . '/a[@href="https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh" and normalize-space(.)="Review provider settings"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//summary[@aria-describedby])' ) );
+		self::assertStringNotContainsString( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh#', $html );
+	}
+
+	public function test_a_static_installation_entry_renders_its_warning_row_inside_the_card_without_a_disclosure(): void {
+		$entry_title       = 'Static';
+		$entry_description = '';
+		$entry_badge       = '';
+		$entry_body        = '';
+		$entry_label       = 'Static';
+		$entry_warning     = 'Problem. <a href="https://example.test/">Review provider settings</a>.';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting-installation-entry.php';
+		$html     = (string) ob_get_clean();
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//details | //summary | //*[@aria-describedby])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(@class, "entry-header")]/span[contains(@class, "entry-warning") and not(@aria-hidden)]/a[@href="https://example.test/"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//h4//span[contains(@class, "entry-warning")] | //div[contains(@class, "entry-row")]//span[contains(@class, "entry-warning")])' ) );
 	}
 
 	public function test_component_details_only_render_when_they_have_facts(): void {

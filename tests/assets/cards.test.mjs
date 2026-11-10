@@ -243,7 +243,7 @@ function fixture({
 						throw Error('bad disclosure');
 					}
 					const component = value.children[0].type();
-					const content = component.children[1];
+					const content = component.children.at(-1);
 					const trigger = new Node('button'),
 						panel = new Node('div'),
 						slot = new Node('div');
@@ -878,14 +878,14 @@ test('Disclosure heading slot fills the header, keeps one accessible name and re
 	assert.equal(details.children[1], body);
 });
 
-test('Disclosure heading slot warning describes the toggle and a plain disclosure keeps its header unchanged', () => {
+test('Disclosure warning row mounts between header and content, outside the heading, and restores in place', () => {
 	const build = (withHeading, withWarning) => {
 		const f = fixture({ disclosureRuntime: true });
 		const host = new f.Node('div'),
 			details = new f.Node('details'),
 			summary = new f.Node('summary'),
 			heading = new f.Node('span'),
-			warning = new f.Node('span'),
+			warning = new f.Node('div'),
 			body = new f.Node('div');
 		host.setAttribute(
 			'data-ran-booster-ui-disclosure',
@@ -895,15 +895,14 @@ test('Disclosure heading slot warning describes the toggle and a plain disclosur
 		summary.setAttribute('aria-label', 'GitHub');
 		heading.setAttribute('data-ran-booster-ui-disclosure-heading', '');
 		warning.setAttribute('data-ran-booster-ui-disclosure-warning', '');
-		warning.setAttribute('id', 'gh-warning');
 		warning.textContent = 'Review provider settings.';
 		body.setAttribute('data-ran-booster-ui-disclosure-content', '');
 		body.appendChild(new f.Node('a'));
 		if (withHeading) {
-			if (withWarning) {
-				heading.appendChild(warning);
-			}
 			summary.appendChild(heading);
+			if (withWarning) {
+				summary.appendChild(warning);
+			}
 		} else {
 			summary.textContent = 'GitHub';
 		}
@@ -913,16 +912,35 @@ test('Disclosure heading slot warning describes the toggle and a plain disclosur
 		f.doc.body.appendChild(host);
 		f.run();
 		f.flush();
-		return f.tree().children[0];
+		return { f, host, details, summary, heading, warning, body };
 	};
 	const warned = build(true, true);
-	assert.equal(warned.props.render.type, 'h4');
-	assert.equal(warned.props['aria-describedby'], 'gh-warning');
-	// The accessible name stays the single label; the warning is only the description.
-	assert.deepEqual(warned.children[1].children, ['GitHub']);
+	assert.equal(warned.host.getAttribute('data-ran-booster-ui-mounted'), '');
+	const [header, row, content] = warned.f.tree().children;
+	assert.equal(header.props.render.type, 'h4');
+	// The warning is plain flow text: no description wiring and not inside the header or aria-hidden title.
+	assert.equal(header.props['aria-describedby'], undefined);
+	assert.equal(row.type, 'div');
+	assert.equal(row.props['aria-hidden'], undefined);
+	assert.equal(content.props.keepMounted, true);
+	assert.deepEqual(header.children[1].children, ['GitHub']);
+	const target = new warned.f.Node('div');
+	row.props.ref(target);
+	assert.equal(target.childNodes[0], warned.warning);
+	// Restoring returns the warning to the native summary after the heading.
+	warned.f.emit('htmx:beforeHistorySave');
+	assert.equal(warned.host.firstChild, warned.details);
+	assert.deepEqual(warned.summary.children, [warned.heading, warned.warning]);
+	const healthy = build(true, false);
+	assert.equal(healthy.f.tree().children[1], null);
 	const plain = build(false, false);
-	assert.deepEqual(Object.keys(plain.props), ['className']);
-	assert.equal(plain.props.className, 'ran-booster-ui-disclosure__header');
+	assert.deepEqual(Object.keys(plain.f.tree().children[0].props), [
+		'className',
+	]);
+	assert.equal(
+		plain.f.tree().children[0].props.className,
+		'ran-booster-ui-disclosure__header'
+	);
 });
 
 test('Mounted disclosures report open state by id and honour remembered state when remounted', () => {
@@ -1197,7 +1215,7 @@ test('Disclosures use the visible summary as label, any kind mounts, and Install
 				'Configuration details'
 			);
 			assert.equal(
-				f.tree().children[1].props.render.props.style.padding,
+				f.tree().children.at(-1).props.render.props.style.padding,
 				0
 			);
 			assert.equal(

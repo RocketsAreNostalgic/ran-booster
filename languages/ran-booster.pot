@@ -1421,7 +1421,7 @@ msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:64
-#: RAN/Dashboard.php:1553
+#: RAN/Dashboard.php:1555
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
@@ -1430,7 +1430,7 @@ msgid "Booster could not confirm safe management removal. Refresh this page and 
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:165
-#: RAN/Dashboard.php:868
+#: RAN/Dashboard.php:870
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
@@ -4696,7 +4696,7 @@ msgid "Themes"
 msgstr ""
 
 #: RAN/Booster.php:263
-#: views/onboarding.php:179
+#: views/onboarding.php:186
 msgid "Transporter"
 msgstr ""
 
@@ -4919,7 +4919,7 @@ msgid "The saved Settings document is malformed. Runtime safety defaults remain 
 msgstr ""
 
 #: RAN/Dashboard.php:649
-#: RAN/Dispatcher.php:663
+#: RAN/Dispatcher.php:677
 msgid "Settings saved."
 msgstr ""
 
@@ -4956,55 +4956,55 @@ msgstr ""
 msgid "Storage status is unavailable. No setup or recovery action has been performed."
 msgstr ""
 
-#: RAN/Dashboard.php:748
+#: RAN/Dashboard.php:750
 msgid "Storage health has not been checked in this request."
 msgstr ""
 
-#: RAN/Dashboard.php:878
+#: RAN/Dashboard.php:880
 msgid "Open the package from Managed Plugins or Managed Themes. If its saved settings cannot be opened, Booster will explain the problem for that package."
 msgstr ""
 
-#: RAN/Dashboard.php:897
+#: RAN/Dashboard.php:899
 msgid "Booster can open this package’s saved management settings. Use its settings page to review its status or stop managing it."
 msgstr ""
 
-#: RAN/Dashboard.php:912
+#: RAN/Dashboard.php:914
 msgid "Queued, running or unresolved deployment work prevents disconnection. Review the package’s deployment activity before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:913
+#: RAN/Dashboard.php:915
 msgid "Booster cannot verify the exact management record, installed files or operation state needed for safe disconnection. Resolve this uncertainty before trying again."
 msgstr ""
 
-#: RAN/Dashboard.php:918
+#: RAN/Dashboard.php:920
 msgid "Booster cannot verify this installed package and its management record. No management changes have been made."
 msgstr ""
 
-#: RAN/Dashboard.php:943
+#: RAN/Dashboard.php:945
 msgid "Booster’s saved update revision is invalid. It cannot safely use this package’s management settings."
 msgstr ""
 
-#: RAN/Dashboard.php:944
+#: RAN/Dashboard.php:946
 msgid "Booster’s saved update source is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:945
+#: RAN/Dashboard.php:947
 msgid "Booster’s saved deployment policy is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:946
+#: RAN/Dashboard.php:948
 msgid "Booster’s saved repository credential reference is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:947
+#: RAN/Dashboard.php:949
 msgid "Booster’s saved repository privacy setting is invalid."
 msgstr ""
 
-#: RAN/Dashboard.php:948
+#: RAN/Dashboard.php:950
 msgid "Booster’s saved management configuration for this package is invalid and cannot be opened safely."
 msgstr ""
 
-#: RAN/Dashboard.php:1220
+#: RAN/Dashboard.php:1222
 msgid "Booster could not open a package’s saved management settings. No package changes were made."
 msgstr ""
 
@@ -5032,85 +5032,85 @@ msgstr ""
 msgid "Automatic secure storage setup could not be completed."
 msgstr ""
 
-#: RAN/Dispatcher.php:353
+#: RAN/Dispatcher.php:357
 msgid "You do not have sufficient permissions to recover Booster storage."
 msgstr ""
 
-#: RAN/Dispatcher.php:370
+#: RAN/Dispatcher.php:374
 msgid "Automatic storage recovery is unavailable."
 msgstr ""
 
-#: RAN/Dispatcher.php:389
+#: RAN/Dispatcher.php:393
 msgid "Automatic storage recovery could not be completed."
 msgstr ""
 
-#: RAN/Dispatcher.php:412
+#: RAN/Dispatcher.php:416
 msgid "You do not have sufficient permissions to reset Booster storage."
 msgstr ""
 
-#: RAN/Dispatcher.php:429
+#: RAN/Dispatcher.php:433
 msgid "Empty credential storage reset is unavailable."
 msgstr ""
 
-#: RAN/Dispatcher.php:448
+#: RAN/Dispatcher.php:452
 msgid "Empty credential storage could not be reset safely."
 msgstr ""
 
-#: RAN/Dispatcher.php:468
+#: RAN/Dispatcher.php:472
 msgid "You cannot perform this Settings action."
 msgstr ""
 
-#: RAN/Dispatcher.php:474
-#: RAN/Dispatcher.php:480
+#: RAN/Dispatcher.php:478
+#: RAN/Dispatcher.php:484
 msgid "Invalid Settings request. Reload Settings and try again."
 msgstr ""
 
-#: RAN/Dispatcher.php:515
+#: RAN/Dispatcher.php:529
 msgid "Storage controls have moved. Open Settings → Secure credential storage and submit a fresh form."
 msgstr ""
 
-#: RAN/Dispatcher.php:515
+#: RAN/Dispatcher.php:529
 msgid "Open secure credential storage"
 msgstr ""
 
-#: RAN/Dispatcher.php:529
+#: RAN/Dispatcher.php:543
 msgid "You do not have sufficient permissions to manage logging capture."
 msgstr ""
 
-#: RAN/Dispatcher.php:556
-#: RAN/Dispatcher.php:564
+#: RAN/Dispatcher.php:570
+#: RAN/Dispatcher.php:578
 msgid "Booster could not update the temporary logging capture. No deployment was interrupted."
 msgstr ""
 
-#: RAN/Dispatcher.php:578
+#: RAN/Dispatcher.php:592
 msgid "Temporary logging capture started."
 msgstr ""
 
-#: RAN/Dispatcher.php:579
+#: RAN/Dispatcher.php:593
 msgid "Temporary logging capture stopped."
 msgstr ""
 
-#: RAN/Dispatcher.php:595
+#: RAN/Dispatcher.php:609
 msgid "You do not have sufficient permissions to generate a support report."
 msgstr ""
 
-#: RAN/Dispatcher.php:601
+#: RAN/Dispatcher.php:615
 msgid "Invalid support report request. Open Support report and try again."
 msgstr ""
 
-#: RAN/Dispatcher.php:610
+#: RAN/Dispatcher.php:624
 msgid "You do not have sufficient permissions to run troubleshooting."
 msgstr ""
 
-#: RAN/Dispatcher.php:663
+#: RAN/Dispatcher.php:677
 msgid "Numeric settings saved."
 msgstr ""
 
-#: RAN/Dispatcher.php:663
+#: RAN/Dispatcher.php:677
 msgid "Setting saved."
 msgstr ""
 
-#: RAN/Dispatcher.php:707
+#: RAN/Dispatcher.php:721
 msgid "Diagnostics completed successfully."
 msgstr ""
 
@@ -6689,7 +6689,7 @@ msgstr ""
 
 #: views/documentation.php:273
 #: views/documentation.php:406
-#: views/onboarding.php:187
+#: views/onboarding.php:194
 #: views/overview-dashboard.php:77
 #: views/provider.php:692
 msgid "Install a plugin"
@@ -7002,7 +7002,7 @@ msgid "Choose a Git provider, then search for a repository or enter its account 
 msgstr ""
 
 #: views/documentation.php:407
-#: views/onboarding.php:188
+#: views/onboarding.php:195
 #: views/overview-dashboard.php:84
 #: views/provider.php:693
 msgid "Install a theme"
@@ -7566,39 +7566,44 @@ msgstr ""
 msgid "Storage status is unavailable."
 msgstr ""
 
-#: views/onboarding.php:158
+#: views/onboarding.php:162
+#: views/settings-storage.php:83
+msgid "Set up default storage"
+msgstr ""
+
+#: views/onboarding.php:165
 msgid "Review secure credential storage"
 msgstr ""
 
-#: views/onboarding.php:166
+#: views/onboarding.php:173
 msgid "2. Choose a Git provider"
 msgstr ""
 
-#: views/onboarding.php:167
+#: views/onboarding.php:174
 msgid "Add credentials on the provider’s page if needed."
 msgstr ""
 
-#: views/onboarding.php:172
+#: views/onboarding.php:179
 msgid "Install another provider"
 msgstr ""
 
-#: views/onboarding.php:176
+#: views/onboarding.php:183
 msgid "3. Import or migrate (optional)"
 msgstr ""
 
-#: views/onboarding.php:177
+#: views/onboarding.php:184
 msgid "Import a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions."
 msgstr ""
 
-#: views/onboarding.php:180
+#: views/onboarding.php:187
 msgid "Browse extensions"
 msgstr ""
 
-#: views/onboarding.php:184
+#: views/onboarding.php:191
 msgid "4. Install and manage packages"
 msgstr ""
 
-#: views/onboarding.php:185
+#: views/onboarding.php:192
 msgid "Install a plugin or theme from a Git repository, or link one already installed on this site."
 msgstr ""
 
@@ -10232,10 +10237,6 @@ msgstr ""
 
 #: views/settings-storage.php:79
 msgid "Booster checks a private location and, if it is safe, updates wp-config.php. The encrypted file and its separate database key are created when you save the first credential."
-msgstr ""
-
-#: views/settings-storage.php:83
-msgid "Set up default storage"
 msgstr ""
 
 #: views/settings-storage.php:89

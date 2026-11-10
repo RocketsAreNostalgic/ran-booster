@@ -35,6 +35,15 @@
 	margin-block-end: var(--ran-booster-space-8);
 }
 
+/* Same label as the Edit screen fields; the group label is a paragraph, so it also drops the paragraph's top margin. */
+.ran-booster-admin
+	.ran-booster-repository-webhook-management
+	.ran-booster-public-lookup-profile__label {
+	margin-block-start: 0;
+	color: var(--ran-booster-text);
+	font-weight: 600;
+}
+
 .ran-booster-admin .ran-booster-repository-webhook-management__field input {
 	width: 100%;
 	max-width: none;

@@ -780,6 +780,10 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/__select-action\s+\.ran-wp-ui-button \{\s*flex: 0 0 auto;\s*white-space: nowrap;/', $webhook_management );
 		self::assertMatchesRegularExpression( '/__field\s+\.description \{\s*display: block;\s*max-inline-size: none;\s*margin-block: var\(--ran-booster-space-8\) 0;/', $webhook_management );
 		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management\s+\.ran-booster-public-lookup-profile__label \{\s*margin-block-end: var\(--ran-booster-space-8\);/', $webhook_management );
+		// The management labels (and the Webhook group label) match the Edit screen field labels: text colour token, weight 600.
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management\s+\.ran-booster-public-lookup-profile__label \{\s*margin-block-start: 0;\s*color: var\(--ran-booster-text\);\s*font-weight: 600;\s*\}/', $webhook_management );
+		$edit_label = $this->asset( 'ran-booster/65-package-settings.css' );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings-field > label \{[^}]*color: var\(--ran-booster-text\);\s*font-weight: 600;/', $edit_label );
 		// Every shared public-lookup-profile override is scoped under the management root.
 		preg_match_all( '/[^{}]*public-lookup-profile[^{}]*\{/', $webhook_management, $selectors );
 		self::assertNotEmpty( $selectors[0] );

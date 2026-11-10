@@ -196,17 +196,18 @@ final readonly class ProviderSettingsPresenter {
 	 * Local admission and passive selected implementation.
 	 *
 	 * @phpstan-impure
-	 * @return array<string, array{admitted:bool,selection:?string,source_kind:?string,source_name:?string,replacement_detected?:bool}>
+	 * @return array<string, array{admitted:bool,selection:?string,source_kind:?string,source_name:?string,replacement_detected:bool}>
 	 */
 	public function overview_provider_facts(): array {
 		$metadata = $this->providers->metadata();
 		$facts    = array();
 		foreach ( $metadata as $code => $provider ) {
 			$facts[ $code ] = array(
-				'admitted'    => true,
-				'selection'   => null,
-				'source_kind' => null,
-				'source_name' => null,
+				'admitted'             => true,
+				'selection'            => null,
+				'source_kind'          => null,
+				'source_name'          => null,
+				'replacement_detected' => false,
 			);
 		}
 		foreach ( \RAN\Booster::extension_declarations() as $extension ) {

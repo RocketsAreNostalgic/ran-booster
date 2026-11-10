@@ -91,10 +91,11 @@ final class OverviewProviderFactsTest extends TestCase {
 		);
 		self::assertSame(
 			array(
-				'admitted'    => true,
-				'selection'   => null,
-				'source_kind' => null,
-				'source_name' => null,
+				'admitted'             => true,
+				'selection'            => null,
+				'source_kind'          => null,
+				'source_name'          => null,
+				'replacement_detected' => false,
 			),
 			$presenter->overview_provider_facts()['bb']
 		);
@@ -135,10 +136,11 @@ final class OverviewProviderFactsTest extends TestCase {
 		$no_selection_admitted = new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader() );
 		self::assertSame(
 			array(
-				'admitted'    => true,
-				'selection'   => null,
-				'source_kind' => null,
-				'source_name' => null,
+				'admitted'             => true,
+				'selection'            => null,
+				'source_kind'          => null,
+				'source_name'          => null,
+				'replacement_detected' => false,
 			),
 			$no_selection_admitted->overview_provider_facts()['gh']
 		);

@@ -10,6 +10,7 @@ use RAN\Admin\Interaction\AdminInteractionRequest;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
 use RAN\Admin\WebhookManagement\Operation\WebhookOperationCoordinator;
+use RAN\Admin\WebhookManagement\Operation\WebhookValidationWrapper;
 use RAN\RepositoryProvider\ProviderMetadata;
 use RAN\RepositoryProvider\ProviderRegistry;
 use RAN\RepositoryProvider\RepositoryWebhookFitness;
@@ -18,8 +19,9 @@ use RAN\RepositoryProvider\WebhookNormalizer;
 
 /** @internal Owns the registered request boundary and response transport. */
 final class WebhookManagementController {
-	public const ADMIN_POST_ACTION        = 'ran_booster_repository_webhook_management_operation';
-	public const CREATE_REPOSITORY_SECRET = 'create_repository_secret';
+	public const ADMIN_POST_ACTION         = 'ran_booster_repository_webhook_management_operation';
+	public const CREATE_REPOSITORY_SECRET  = 'create_repository_secret';
+	public const VALIDATE_TEST_NONCE_FIELD = '_wpnonce_test';
 
 	private const NONCE_ACTION_PREFIX = 'ran_booster_repository_webhook_';
 
@@ -34,6 +36,8 @@ final class WebhookManagementController {
 
 	private ?AdminInteractionFacade $admin_interaction = null;
 
+	private readonly WebhookValidationWrapper $validation;
+
 	public function __construct(
 		private readonly WebhookOperationCoordinator $operations,
 		private readonly WebhookDisplayModel $display,
@@ -43,6 +47,7 @@ final class WebhookManagementController {
 		?callable $verify_nonce = null,
 		?callable $create_nonce = null
 	) {
+		$this->validation   = new WebhookValidationWrapper( $operations );
 		$this->can_manage   = null === $can_manage
 			? static fn (): bool => current_user_can( 'manage_options' )
 			: \Closure::fromCallable( $can_manage );
@@ -78,14 +83,35 @@ final class WebhookManagementController {
 			'inline_safe' => true,
 		);
 
+		$inline_safe = true;
+		$successful  = false;
+		// Null unless a Validate request ran: then 'skipped' or the ping operation's own code.
+		$ping = null;
+
 		if ( ! ( $this->can_manage )() ) {
 			$result['code'] = 'forbidden';
 		} elseif ( 'setup' === $operation && '' === $profile_id ) {
 			$result['code'] = 'invalid_request';
+		} elseif ( 'validate' === $operation ) {
+			// Both operation nonces are verified up front so a bad second nonce never leaves a half-run validation.
+			if ( $metadata instanceof ProviderMetadata
+				&& ( $this->verify_nonce )( $nonce, $this->nonce_action( 'check', $provider_code, $repository_id ) )
+				&& ( $this->verify_nonce )( $this->string_value( $request, self::VALIDATE_TEST_NONCE_FIELD ), $this->nonce_action( 'test', $provider_code, $repository_id ) ) ) {
+				$validation           = $this->validation->validate( $provider_code, $repository_id, '' === $credential_id ? null : $credential_id, $nonce, $this->string_value( $request, self::VALIDATE_TEST_NONCE_FIELD ) );
+				$result               = $validation['check'];
+				$ping                 = null === $validation['ping'] ? 'skipped' : $validation['ping']['code'];
+				$inline_safe          = $result['inline_safe'] && ( null === $validation['ping'] || $validation['ping']['inline_safe'] );
+				$successful           = $result['successful'] && null !== $validation['ping'] && $validation['ping']['successful'];
+				$result['recovery'] ??= $validation['ping']['recovery'] ?? null;
+			}
 		} elseif ( $metadata instanceof ProviderMetadata
 			&& in_array( $operation, array( 'setup', 'check', 'reconfigure', 'remove', 'test' ), true )
 			&& ( $this->verify_nonce )( $nonce, $this->nonce_action( $operation, $provider_code, $repository_id ) ) ) {
 			$result = $this->operations->execute( $operation, $provider_code, $repository_id, '' === $credential_id ? null : $credential_id, 'setup' === $operation ? ( self::CREATE_REPOSITORY_SECRET === $profile_id ? null : $profile_id ) : null, $nonce );
+		}
+		if ( 'validate' !== $operation || null === $ping ) {
+			$inline_safe = $result['inline_safe'];
+			$successful  = $result['successful'];
 		}
 		$result_code = $result['code'];
 
@@ -95,15 +121,21 @@ final class WebhookManagementController {
 		if ( null !== $this->admin_interaction
 			&& null !== $interaction_request
 			&& $metadata instanceof ProviderMetadata
-			&& true === $result['inline_safe'] ) {
-			$outcome = true === $result['successful']
-				? AdminInteractionOutcome::success( $interaction_request, $this->display->notice( $result_code, $result['recovery'], $result['remediation'] ) )
-				: AdminInteractionOutcome::validation_failure( $interaction_request, $this->display->notice( $result_code, $result['recovery'], $result['remediation'] ) );
+			&& true === $inline_safe ) {
+			$notice  = null === $ping
+				? $this->display->notice( $result_code, $result['recovery'], $result['remediation'] )
+				: $this->display->validation_notice( $result_code, $ping, $result['recovery'], $result['remediation'] );
+			$outcome = true === $successful
+				? AdminInteractionOutcome::success( $interaction_request, $notice )
+				: AdminInteractionOutcome::validation_failure( $interaction_request, $notice );
 			$this->admin_interaction->respond( $outcome );
 		}
 
 		$remediation = false === $result['inline_safe'] ? $this->safe_remediation( $result['remediation'] ) : null;
 		$args        = array( 'webhook_management_result' => $result_code );
+		if ( null !== $ping ) {
+			$args['webhook_management_ping'] = $ping;
+		}
 		if ( null !== $result['recovery'] ) {
 			$args['recovery_hook']    = $result['recovery']['hook_id'];
 			$args['recovery_profile'] = $result['recovery']['profile_id'];
@@ -135,7 +167,7 @@ final class WebhookManagementController {
 		return $this->capable_provider_metadata( $provider_code );
 	}
 
-	/** @return array{result:?string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string} */
+	/** @return array{result:?string,ping:?string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string} */
 	public function panel_context(): array {
 		$get            = $GLOBALS['_GET'] ?? null;
 		$query          = is_array( $get ) ? wp_unslash( $get ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Bounded display-only context.
@@ -160,8 +192,11 @@ final class WebhookManagementController {
 			$remediation = null;
 		}
 
+		$ping = $this->string_value( $query, 'webhook_management_ping' );
+
 		return array(
 			'result'      => '' === $code ? null : $this->safe_code( $code, 'request_completed' ),
+			'ping'        => '' === $code || '' === $ping ? null : $this->safe_code( $ping, 'operation_failed' ),
 			'recovery'    => null !== $hook_id && null !== $profile_id ? array(
 				'hook_id'    => $hook_id,
 				'profile_id' => $profile_id,

@@ -95,7 +95,7 @@ final class RepositoryWebhookManagementControls {
 		}
 
 		$context = $this->controller->panel_context();
-		$model   = $this->display->panel( $authority['provider_code'], $metadata->label, $authority['repository_id'], $return_url, $context['result'], $context['recovery'], true, $context['remediation'] );
+		$model   = $this->display->panel( $authority['provider_code'], $metadata->label, $authority['repository_id'], $return_url, $context['result'], $context['recovery'], true, $context['remediation'], null, $context['ping'] );
 		if ( null === $model ) {
 			$this->render_unavailable_package_webhook_setup( $this->repository_webhook_unavailable_reason( $authority['provider_code'], $authority['repository_id'], $package->identifier() ) );
 			return;
@@ -171,7 +171,7 @@ final class RepositoryWebhookManagementControls {
 		}
 
 		$context = $this->controller->panel_context();
-		return $this->display->panel( $provider_code, $metadata->label, $repository_id, $return_url, $context['result'], $context['recovery'], current_user_can( 'manage_options' ), $context['remediation'] );
+		return $this->display->panel( $provider_code, $metadata->label, $repository_id, $return_url, $context['result'], $context['recovery'], current_user_can( 'manage_options' ), $context['remediation'], null, $context['ping'] );
 	}
 
 	/** @param array<string,mixed> $model */

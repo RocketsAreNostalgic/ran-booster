@@ -20,7 +20,16 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 				if ( isset( $notice['heading'] ) ) :
 					?>
 					<p><strong><?php echo esc_html( $notice['heading'] ); ?></strong></p><?php endif; ?>
-				<p><?php echo esc_html( $notice['message'] ); ?></p>
+				<?php
+				if ( isset( $notice['lines'] ) ) :
+					foreach ( $notice['lines'] as $line ) :
+						?>
+					<p><strong><?php echo esc_html( $line['label'] ); ?>:</strong> <?php echo esc_html( $line['text'] ); ?></p>
+						<?php
+					endforeach;
+				else :
+					?>
+					<p><?php echo esc_html( $notice['message'] ); ?></p><?php endif; ?>
 				<?php
 				foreach ( $notice['details'] ?? array() as $detail ) :
 					?>
@@ -89,6 +98,9 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 							?>
 							<button type="submit" class="<?php echo esc_attr( $button_classes ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>" title="<?php echo esc_attr( $button_title ); ?>" aria-describedby="<?php echo esc_attr( $describedby ); ?>"<?php echo is_string( $operation['confirm'] ) ? ' data-confirm="' . esc_attr( $operation['confirm'] ) . '"' : ''; ?><?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
 							<span class="screen-reader-text" id="<?php echo esc_attr( $description_id ); ?>"><?php echo esc_html( $operation['description'] ); ?></span>
+							<?php if ( is_array( $operation['companion_nonce'] ?? null ) ) : ?>
+								<input type="hidden" name="<?php echo esc_attr( $operation['companion_nonce']['name'] ); ?>" value="<?php echo esc_attr( $operation['companion_nonce']['value'] ); ?>">
+							<?php endif; ?>
 							<?php if ( '' !== $reason ) : ?>
 								<span class="screen-reader-text" id="<?php echo esc_attr( $reason_id ); ?>"><?php echo esc_html( $reason ); ?></span>
 							<?php endif; ?>

@@ -8,6 +8,7 @@ use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Interaction\AdminInteractionRequest;
 use RAN\Admin\WebhookManagement\WebhookManagementAdminUrl;
+use RAN\Admin\WebhookManagement\WebhookManagementController;
 use RAN\Admin\WebhookManagement\Installation\InstallationRecord;
 use RAN\Admin\WebhookManagement\Installation\InstallationStore;
 
@@ -30,12 +31,12 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
  *   webhooks_url:?string,
  *   return_url:string,
  *   interaction_request:AdminInteractionRequest|null,
- *   result:array{class:string,message:string,heading?:string,details?:list<string>}|null,
+ *   result:array{class:string,message:string,heading?:string,details?:list<string>,lines?:list<array{label:string,text:string}>}|null,
  *   recovery_warning:array{class:string,message:string,heading?:string,details?:list<string>}|null,
  *   management_credential_id:?string,
  *   credential_choices:list<array{id:string,label:string}>,
  *   webhook_profile_choices:list<array{id:string,label:string,scope:string}>,
- *   operations:list<array{key:string,label:string,description:string,url:string,primary:bool,destructive:bool,confirm:?string,disabled:bool,disabled_reason:string}>,
+ *   operations:list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,disabled:bool,disabled_reason:string}>,
  *   action_help:?string
  * }
  */
@@ -152,7 +153,7 @@ final class WebhookDisplayModel {
 	 * @param array{hook_id:string,profile_id:string}|null $recovery
 	 * @return WebhookPanel|null
 	 */
-	public function panel( string $provider_code, string $provider_label, string $repository_id, string $return_url, ?string $result_code, ?array $recovery, bool $can_manage, ?string $remediation = null, ?string $webhooks_url = null ): ?array {
+	public function panel( string $provider_code, string $provider_label, string $repository_id, string $return_url, ?string $result_code, ?array $recovery, bool $can_manage, ?string $remediation = null, ?string $webhooks_url = null, ?string $ping_code = null ): ?array {
 		if ( ! $can_manage || '' === trim( $repository_id ) ) {
 			return null;
 		}
@@ -233,7 +234,7 @@ final class WebhookDisplayModel {
 			'webhooks_url'                => $webhooks_url,
 			'return_url'                  => $this->panel_url( $return_url, $repository_id ),
 			'interaction_request'         => AdminInteractionRequest::provider_repositories( 'repository-webhook-management:manage-webhook', $this->panel_url( $return_url, $repository_id ), 'repository-webhook-management-error' ),
-			'result'                      => null === $result_code ? null : $this->result_presentation( $result_code, $recovery, $remediation ),
+			'result'                      => null === $result_code ? null : ( null === $ping_code ? $this->result_presentation( $result_code, $recovery, $remediation ) : $this->validation_presentation( $result_code, $ping_code, $remediation ) ),
 			'recovery_warning'            => $recovery_warning,
 			'management_credential_id'    => null === $record ? null : $record->management_credential_id(),
 			'credential_choices'          => $credentials,
@@ -244,12 +245,13 @@ final class WebhookDisplayModel {
 	}
 
 	/**
-	 * Four fixed slots. The first is Set up until a hook is recorded, then Repair;
-	 * both map to server operations that are never available together.
+	 * Three fixed slots. The first is Set up until a hook is recorded, then Repair;
+	 * both map to server operations that are never available together. The second is
+	 * Validate, a wrapper over the separate check and test operations.
 	 *
 	 * @param array<string,true> $available
 	 * @param array<string,string> $reasons Why each operation is disabled, keyed by operation.
-	 * @return list<array{key:string,label:string,description:string,url:string,primary:bool,destructive:bool,confirm:?string,disabled:bool,disabled_reason:string}>
+	 * @return list<array{key:string,label:string,description:string,url:string,companion_nonce:array{name:string,value:string}|null,primary:bool,destructive:bool,confirm:?string,disabled:bool,disabled_reason:string}>
 	 */
 	private function operation_models( array $available, string $provider_code, string $provider_label, string $repository_id, bool $recorded, array $reasons ): array {
 		$first = ( $recorded || isset( $available['reconfigure'] ) ) ? 'reconfigure' : 'setup';
@@ -257,28 +259,35 @@ final class WebhookDisplayModel {
 		$setup_description = sprintf( __( 'Create the webhook on %s.', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
 		$repair_description = sprintf( __( 'Make the webhook on %s match this site\'s settings.', 'ran-booster' ), $provider_label );
-		/* translators: %s: repository provider name. */
-		$check_description = sprintf( __( 'Compare the webhook on %s with this site\'s settings. Nothing is sent.', 'ran-booster' ), $provider_label );
-		/* translators: %s: repository provider name. */
-		$test_description = sprintf( __( 'Ask %s to send a ping. Delivery counts only when it arrives.', 'ran-booster' ), $provider_label );
+		/* translators: 1: repository provider name, 2: repository provider name (repeated). */
+		$validate_description = sprintf( __( 'Compare the webhook on %1$s with this site\'s settings, then ask %2$s to send a ping. Delivery counts only when it arrives.', 'ran-booster' ), $provider_label, $provider_label );
 		/* translators: %s: repository provider name. */
 		$remove_description = sprintf( __( 'Delete the webhook from %s and clear its local record.', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
 		$remove_confirm = sprintf( __( 'Remove this webhook from the repository? Booster will delete the webhook on %s and clear its local record.', 'ran-booster' ), $provider_label );
 		$slots          = array(
 			array( $first, 'setup' === $first ? __( 'Set up', 'ran-booster' ) : __( 'Repair', 'ran-booster' ), 'setup' === $first ? $setup_description : $repair_description ),
-			array( 'check', __( 'Validate settings', 'ran-booster' ), $check_description ),
-			array( 'test', __( 'Test ping', 'ran-booster' ), $test_description ),
+			array( 'validate', __( 'Validate', 'ran-booster' ), $validate_description ),
 			array( 'remove', __( 'Remove', 'ran-booster' ), $remove_description ),
 		);
-		$operations     = array();
+		// Validate needs both of its operations; an unavailable one supplies the reason.
+		if ( isset( $available['check'], $available['test'] ) ) {
+			$available['validate'] = true;
+		}
+		$reasons['validate'] = isset( $available['check'] ) ? ( $reasons['test'] ?? '' ) : ( $reasons['check'] ?? '' );
+		$operations          = array();
 		foreach ( $slots as $index => $slot ) {
 			list( $operation, $label, $description ) = $slot;
 			$operations[]                            = array(
 				'key'             => $operation,
+				// Validate posts with the Check nonce in its URL and carries the Test nonce beside the button.
+				'url'             => $this->operation_url( 'validate' === $operation ? 'check' : $operation, $provider_code, $repository_id ),
+				'companion_nonce' => 'validate' === $operation ? array(
+					'name'  => WebhookManagementController::VALIDATE_TEST_NONCE_FIELD,
+					'value' => wp_create_nonce( $this->operation_action( 'test', $provider_code, $repository_id ) ),
+				) : null,
 				'label'           => $label,
 				'description'     => $description,
-				'url'             => $this->operation_url( $operation, $provider_code, $repository_id ),
 				'primary'         => 0 === $index,
 				'destructive'     => 'remove' === $operation,
 				'confirm'         => 'remove' === $operation ? $remove_confirm : null,
@@ -403,6 +412,75 @@ final class WebhookDisplayModel {
 			$result['details'] = array( $next_steps[ $code ] );
 		}
 		return $result;
+	}
+
+	/**
+	 * One result block, two lines: the Settings outcome and the Ping outcome (or why it was skipped).
+	 *
+	 * @return array{class:string,message:string,lines:list<array{label:string,text:string}>,details?:list<string>}
+	 */
+	private function validation_presentation( string $check_code, string $ping_code, ?string $remediation ): array {
+		$lines = $this->validation_lines( $check_code, $ping_code, $remediation );
+		$class = $this->result_notice_class( $check_code );
+		if ( 'skipped' !== $ping_code && $this->notice_rank( $this->result_notice_class( $ping_code ) ) > $this->notice_rank( $class ) ) {
+			$class = $this->result_notice_class( $ping_code );
+		}
+		$result = array(
+			'class'   => $class,
+			'message' => implode( ' ', array_column( $lines, 'text' ) ),
+			'lines'   => $lines,
+		);
+		$next   = 'skipped' === $ping_code ? array() : ( $this->result_presentation( $ping_code, null, null )['details'] ?? array() );
+		if ( array() !== $next ) {
+			$result['details'] = $next;
+		}
+
+		return $result;
+	}
+
+	/** @return list<array{label:string,text:string}> */
+	private function validation_lines( string $check_code, string $ping_code, ?string $remediation ): array {
+		$settings = $this->result_presentation( $check_code, null, $remediation );
+		if ( 'skipped' === $ping_code ) {
+			$ping_text = 'configuration_drift' === $check_code
+				? __( 'Skipped because the settings did not match.', 'ran-booster' )
+				: __( 'Skipped because the settings were not confirmed.', 'ran-booster' );
+		} else {
+			$ping      = $this->result_presentation( $ping_code, null, null );
+			$ping_text = $ping['heading'] ?? $ping['message'];
+		}
+
+		return array(
+			array(
+				'label' => __( 'Settings', 'ran-booster' ),
+				'text'  => $settings['heading'] ?? $settings['message'],
+			),
+			array(
+				'label' => __( 'Ping', 'ran-booster' ),
+				'text'  => $ping_text,
+			),
+		);
+	}
+
+	private function notice_rank( string $notice_class ): int {
+		return match ( $notice_class ) {
+			'notice-success' => 0,
+			'notice-warning' => 1,
+			default          => 2,
+		};
+	}
+
+	/** Inline (enhanced) text for a Validate result: both lines in one string. @param array{hook_id: string, profile_id: string}|null $recovery */
+	public function validation_notice( string $check_code, string $ping_code, ?array $recovery = null, ?string $remediation = null ): string {
+		unset( $recovery );
+
+		return implode(
+			' ',
+			array_map(
+				static fn ( array $line ): string => $line['label'] . ': ' . $line['text'],
+				$this->validation_lines( $check_code, $ping_code, $remediation )
+			)
+		);
 	}
 
 	/** @param array{hook_id: string, profile_id: string}|null $recovery */
@@ -808,9 +886,11 @@ final class WebhookDisplayModel {
 	}
 
 	private function operation_url( string $operation, string $provider_code, string $repository_id ): string {
-		$action = 'ran_booster_repository_webhook_' . implode( '_', array( $operation, $provider_code, $repository_id ) );
+		return WebhookManagementAdminUrl::for_path( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $this->operation_action( $operation, $provider_code, $repository_id ) ) ) );
+	}
 
-		return WebhookManagementAdminUrl::for_path( 'admin-post.php?action=ran_booster_repository_webhook_management_operation&_wpnonce=' . rawurlencode( wp_create_nonce( $action ) ) );
+	private function operation_action( string $operation, string $provider_code, string $repository_id ): string {
+		return 'ran_booster_repository_webhook_' . implode( '_', array( $operation, $provider_code, $repository_id ) );
 	}
 
 	private function provider_settings_url( string $provider_code, string $view ): string {

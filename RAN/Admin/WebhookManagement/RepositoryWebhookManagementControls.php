@@ -39,13 +39,14 @@ final class RepositoryWebhookManagementControls {
 		private readonly string $plugin_path,
 		private readonly string $plugin_url,
 		ManagedPackageWebhookAuthorityResolver $authorities,
-		?\RAN\Activity\ActivityStore $activity = null
+		?\RAN\Activity\ActivityStore $activity = null,
+		?\Closure $verified_deliveries = null
 	) {
 		$this->assistance         = $facade;
 		$this->authorities        = $authorities;
 		$store                    = new WordPressInstallationStore();
 		$this->installation_store = $store;
-		$this->display            = new WebhookDisplayModel( $facade, $store );
+		$this->display            = new WebhookDisplayModel( $facade, $store, $verified_deliveries );
 		$this->controller         = new WebhookManagementController(
 			new WebhookOperationCoordinator( $facade, $store, activity: $activity ),
 			$this->display,
@@ -466,6 +467,7 @@ final class RepositoryWebhookManagementControls {
 		$policies        = is_array( $repository['deployment_policies'] ?? null ) ? $repository['deployment_policies'] : array();
 		$automatic_count = is_int( $policies['automatic'] ?? null ) ? $policies['automatic'] : 0;
 		$record          = $this->installation_store->find( $provider_code, $repository_id );
+		$manual_at       = $this->display->manual_delivery_time( $provider_code, $repository_id );
 		$secret_coverage = is_string( $repository['local_secret_coverage'] ?? null )
 			? $repository['local_secret_coverage']
 			: ( null === $record ? 'unknown' : 'recorded-' . $record->webhook_profile_scope() );
@@ -509,7 +511,9 @@ final class RepositoryWebhookManagementControls {
 			array(
 				'label'   => __( 'Remote hook', 'ran-booster' ),
 				'message' => null === $record
-					? __( 'Booster has not set up a webhook for this repository.', 'ran-booster' )
+					? ( null === $manual_at
+						? __( 'Booster has not set up a webhook for this repository.', 'ran-booster' )
+						: WebhookDisplayModel::manual_step_message( $manual_at ) )
 					: ( $record_healthy
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */
@@ -517,7 +521,7 @@ final class RepositoryWebhookManagementControls {
 							$record->checked_at()
 						)
 						: __( 'The recorded remote webhook needs review. Run Check or inspect it at the Git provider.', 'ran-booster' ) ),
-				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? 'is-pending' : 'is-warning' ),
+				'state'   => $record_healthy ? 'is-ok' : ( null === $record ? ( null === $manual_at ? 'is-pending' : 'is-ok' ) : 'is-warning' ),
 			),
 		);
 	}

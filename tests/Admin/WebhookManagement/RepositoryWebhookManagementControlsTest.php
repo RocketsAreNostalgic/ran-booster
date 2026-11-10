@@ -467,6 +467,82 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'Manage signing secrets</a>', $html );
 	}
 
+	public function test_branch_tab_shows_manual_webhook_only_for_a_verified_delivery_without_a_record(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$render = function ( array $deliveries ): string {
+			$facade = $this->createMock( WebhookAssistanceFacade::class );
+			$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array(), 'https://example.test/webhook', array() ) );
+			$facade->expects( self::never() )->method( 'profile' );
+			$controls = new RepositoryWebhookManagementControls(
+				$facade,
+				$this->createMock( AdminInteractionFacade::class ),
+				new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+				dirname( __DIR__, 3 ) . '/',
+				'https://example.test/wp-content/plugins/ran-booster/',
+				$this->package_authorities(),
+				verified_deliveries: static fn (): array => $deliveries
+			);
+			$controls->register();
+			ob_start();
+			$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', true );
+
+			return (string) ob_get_clean();
+		};
+		$step   = static function ( string $html ): string {
+			if ( 1 !== preg_match( '#<li class="ran-booster-webhook-step ([^"]*)">\s*<span[^>]*></span>\s*<strong>Repository webhook</strong>\s*<p>([^<]*)</p>#', $html, $match ) ) {
+				self::fail( 'The Repository webhook step is missing.' );
+			}
+
+			return $match[1] . '|' . $match[2];
+		};
+
+		self::assertSame(
+			'is-ok|A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.',
+			$step( $render( array( '1234' => '2026-08-21 09:30:15' ) ) )
+		);
+		self::assertSame( 'is-pending|Booster has not set up a webhook for this repository.', $step( $render( array() ) ) );
+		self::assertSame( 'is-pending|Booster has not set up a webhook for this repository.', $step( $render( array( '9999' => '2026-08-21 09:30:15' ) ) ) );
+	}
+
+	public function test_management_history_row_reads_manual_webhook_for_a_verified_delivery(): void {
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'readiness' )->willReturn(
+			new AssistanceReadiness(
+				array(),
+				'https://example.test/webhook',
+				array(
+					array(
+						'provider_code' => 'fixture-provider',
+						'repository_id' => '1234',
+						'eligible'      => true,
+					),
+				)
+			)
+		);
+		$controls = new RepositoryWebhookManagementControls(
+			$facade,
+			$this->createMock( AdminInteractionFacade::class ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+			dirname( __DIR__, 3 ) . '/',
+			'https://example.test/wp-content/plugins/ran-booster/',
+			$this->package_authorities(),
+			verified_deliveries: static fn (): array => array( '1234' => '2026-08-21 09:30:15' )
+		);
+		$controls->register();
+		$rows   = array(
+			'1234' => array(
+				'details' => array(),
+				'actions' => array(),
+			),
+		);
+		$result = $controls->enrich_repository_rows( $rows, 'fixture-provider', array( '1234' => array( 'repository_id' => '1234' ) ), 'https://example.test/' );
+		$status = array_column( $result['1234']['details'], null, 'key' )['core:webhook-recorded-status'];
+
+		self::assertSame( 'Manual webhook', $status['value'] );
+		self::assertSame( 'ok', $status['tone'] );
+		self::assertFalse( $status['recorded'] );
+	}
+
 	public function test_package_webhook_disclosure_opens_for_an_operation_result_and_recovery_context(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		$_GET    = array(

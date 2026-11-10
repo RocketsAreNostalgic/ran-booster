@@ -937,6 +937,27 @@ final class DeploymentAttemptRepositoryTest extends TestCase {
 		self::assertTrue( $this->repository->latest_authenticated_delivery( ProviderCode::parse( 'gh' ) )?->matched_managed_package );
 	}
 
+	public function test_latest_verified_repository_deliveries_read_only_authenticated_package_attempts(): void {
+		$gh = ProviderCode::parse( 'gh' );
+		self::assertSame( array(), $this->repository->latest_verified_repository_deliveries( $gh, array() ) );
+		self::assertSame( array(), $this->repository->latest_verified_repository_deliveries( $gh, array( 'R_github', '' ) ) );
+
+		// A zero-target acknowledgement and another provider's attempt carry no evidence for this repository.
+		$this->repository->admit_webhook_batch( 'gh', 'delivery-empty', str_repeat( 'd', 64 ), array() );
+		$this->repository->admit_webhook_batch( 'bb', 'delivery-bitbucket', str_repeat( 'b', 64 ), array( $this->target( 'bitbucket' ) ) );
+		self::assertSame( array(), $this->repository->latest_verified_repository_deliveries( $gh, array( 'R_github', 'R_bitbucket' ) ) );
+
+		$this->repository->admit_webhook_batch( 'gh', 'delivery-matched', str_repeat( 'e', 64 ), array( $this->target( 'github' ) ) );
+		$this->database->queries = array();
+		$found                   = $this->repository->latest_verified_repository_deliveries( $gh, array( 'R_github', 'R_missing' ) );
+
+		self::assertSame( array( 'R_github' ), array_keys( $found ) );
+		self::assertSame( '2026-07-19 00:00:00', $found['R_github'] );
+		self::assertCount( 1, $this->database->queries, 'One grouped read, never one per repository.' );
+		self::assertStringContainsString( 'GROUP BY provider_repository_id', $this->database->queries[0] );
+		self::assertStringContainsString( 'LIMIT 200', $this->database->queries[0] );
+	}
+
 	public function test_claim_transition_is_one_atomic_transaction(): void {
 		$queued                  = $this->webhook( 'first' );
 		$this->database->queries = array();

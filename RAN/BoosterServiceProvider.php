@@ -271,7 +271,10 @@ final class BoosterServiceProvider {
 				$container->make( PluginRepository::class ),
 				$container->make( ThemeRepository::class )
 			),
-			activity: $activity
+			activity: $activity,
+			verified_deliveries: static fn ( string $provider_code, array $repository_ids ): array => $container
+				->make( DeploymentAttemptRepository::class )
+				->latest_verified_repository_deliveries( ProviderCode::parse( $provider_code ), $repository_ids )
 		);
 		$container->bind( RepositoryWebhookManagementControls::class, $webhook_controls );
 		$expiry_reminders = new CredentialExpiryReminder(

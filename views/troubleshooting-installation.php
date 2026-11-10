@@ -185,16 +185,12 @@ foreach ( $components as $component ) {
 	);
 	if ( $is_github ) {
 		$selected_name = null;
-		if ( __( 'Bundled with Booster', 'ran-booster' ) === ( $github_fields[ __( 'Source', 'ran-booster' ) ] ?? null ) ) {
-			$selected_name = __( 'Included with Booster', 'ran-booster' );
-		} elseif ( __( 'External replacement', 'ran-booster' ) === ( $github_fields[ __( 'Source', 'ran-booster' ) ] ?? null ) && is_string( $github_fields[ __( 'Name', 'ran-booster' ) ] ?? null ) && __( 'Unavailable', 'ran-booster' ) !== $github_fields[ __( 'Name', 'ran-booster' ) ] ) {
+		if ( __( 'External replacement', 'ran-booster' ) === ( $github_fields[ __( 'Source', 'ran-booster' ) ] ?? null ) && is_string( $github_fields[ __( 'Name', 'ran-booster' ) ] ?? null ) && __( 'Unavailable', 'ran-booster' ) !== $github_fields[ __( 'Name', 'ran-booster' ) ] ) {
 			$selected_name = $github_fields[ __( 'Name', 'ran-booster' ) ];
 		}
 		if ( null !== $selected_name ) {
 			if ( $problem || __( 'Available', 'ran-booster' ) !== $github_available ) {
 				$source = sprintf( /* translators: %s: configured GitHub provider name. */ __( 'Selected provider: %s', 'ran-booster' ), $selected_name );
-			} elseif ( __( 'Bundled with Booster', 'ran-booster' ) === ( $github_fields[ __( 'Source', 'ran-booster' ) ] ?? null ) ) {
-				$source = $selected_name;
 			} else {
 				$source = sprintf( /* translators: %s: selected provider plugin name. */ __( 'Provider extension: %s', 'ran-booster' ), $selected_name );
 			}

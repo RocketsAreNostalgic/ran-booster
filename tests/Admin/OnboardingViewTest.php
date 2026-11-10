@@ -963,7 +963,8 @@ final class OnboardingViewTest extends TestCase {
 			),
 		);
 		$html  = $this->render_view( null, null, $extra );
-		self::assertStringContainsString( 'Included with Booster', $html );
+		self::assertStringNotContainsString( 'Included with Booster', $html );
+		self::assertStringNotContainsString( 'Provider source unknown', $html );
 		self::assertSame( 1, substr_count( $html, '<strong>Bitbucket Cloud</strong>' ) );
 		self::assertStringContainsString( 'Provider extension', $html );
 		self::assertStringNotContainsString( 'Custom provider', $html );

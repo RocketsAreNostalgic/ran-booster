@@ -441,7 +441,7 @@ final class TroubleshootingViewTest extends TestCase {
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( 'Included with Booster', $html );
+		self::assertStringNotContainsString( 'Included with Booster', $html );
 
 		$troubleshooting['installation_details']['GitHub provider']['Source'] = 'External replacement';
 		$troubleshooting['installation_details']['GitHub provider']['Name']   = 'Unavailable';

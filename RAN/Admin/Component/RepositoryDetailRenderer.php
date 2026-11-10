@@ -192,7 +192,7 @@ final class RepositoryDetailRenderer {
 			'label' => $label,
 			'value' => 0 < $count
 				? sprintf(
-					/* translators: %d: number of packages. */
+					/* translators: %d is the number of recorded release packages. */
 					_n( '%d package', '%d packages', $count, 'ran-booster' ),
 					$count
 				)

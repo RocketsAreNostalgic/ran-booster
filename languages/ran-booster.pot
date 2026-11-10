@@ -3393,7 +3393,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:396
 #: RAN/Admin/WebhookManagement/views/panel.php:48
 #: views/provider.php:451
-#: assets/ran-booster-repository-picker.js:1082
+#: assets/ran-booster-repository-picker.js:1086
 msgid "Manage credentials"
 msgstr ""
 
@@ -5798,14 +5798,12 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:238
 #: views/attempts/detail.php:107
 #: views/attempts/index.php:79
-#: views/packages/fields/provider.php:32
-#: views/packages/fields/provider.php:35
-#: views/packages/fields/provider.php:47
-#: views/packages/fields/provider.php:50
+#: views/packages/fields/provider.php:19
+#: views/packages/fields/provider.php:22
 #: views/packages/index.php:542
 #: views/portability-review.php:28
 #: views/troubleshooting.php:142
-#: assets/ran-booster-repository-picker.js:500
+#: assets/ran-booster-repository-picker.js:504
 msgid "Git provider"
 msgstr ""
 
@@ -8136,11 +8134,11 @@ msgstr ""
 msgid "Automatic deployment is unavailable because this Git provider does not support signed webhooks."
 msgstr ""
 
-#: views/packages/fields/provider.php:56
+#: views/packages/fields/provider.php:28
 msgid " — Git provider unavailable"
 msgstr ""
 
-#: views/packages/fields/provider.php:56
+#: views/packages/fields/provider.php:28
 msgid " — integration unavailable"
 msgstr ""
 
@@ -8150,16 +8148,12 @@ msgstr ""
 msgid "%1$s repository"
 msgstr ""
 
-#: views/packages/fields/repository.php:40
-msgid "The Git provider and repository cannot change once a package is installed."
-msgstr ""
-
-#: views/packages/fields/repository.php:51
+#: views/packages/fields/repository.php:29
 msgid "repo-name/package-name"
 msgstr ""
 
 #. translators: %1$s: Package type label, such as Plugin or Theme.
-#: views/packages/fields/repository.php:52
+#: views/packages/fields/repository.php:30
 #, php-format
 msgid "Pick %1$s repository"
 msgstr ""
@@ -8222,7 +8216,7 @@ msgstr ""
 #: views/packages/index.php:189
 #: views/provider.php:723
 #: views/provider.php:744
-#: assets/ran-booster-repository-picker.js:1099
+#: assets/ran-booster-repository-picker.js:1103
 msgid "Search"
 msgstr ""
 
@@ -8523,12 +8517,16 @@ msgstr ""
 msgid "Set Updates to Manual or Automatic before reinstalling."
 msgstr ""
 
-#: views/packages/repository-configuration.php:18
+#: views/packages/repository-configuration.php:20
 msgid "Repository configuration"
 msgstr ""
 
-#: views/packages/repository-configuration.php:26
+#: views/packages/repository-configuration.php:29
 msgid "Only install Git provider integrations you trust: an active Git provider can read its saved credentials. Booster does not authenticate a third-party publisher."
+msgstr ""
+
+#: views/packages/repository-configuration.php:33
+msgid "The Git provider and repository cannot change once a package is installed."
 msgstr ""
 
 #: views/packages/source-choices.php:36
@@ -9261,7 +9259,7 @@ msgid "Lookup credential"
 msgstr ""
 
 #: views/provider-public-lookup-profile.php:44
-#: assets/ran-booster-repository-picker.js:1200
+#: assets/ran-booster-repository-picker.js:1204
 msgid "Anonymous"
 msgstr ""
 
@@ -11318,169 +11316,169 @@ msgstr ""
 msgid "The selected release passed initial inspection. Review the pre-flight checks below before installing."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:79
+#: assets/ran-booster-repository-picker.js:83
 msgid "Repository browsing is not available for this Git provider."
 msgstr ""
 
 #. translators: %d is the number of repositories.
-#: assets/ran-booster-repository-picker.js:88
+#: assets/ran-booster-repository-picker.js:92
 #, js-format
 msgid "%d repository"
 msgid_plural "%d repositories"
 msgstr[0] ""
 msgstr[1] ""
 
-#: assets/ran-booster-repository-picker.js:502
+#: assets/ran-booster-repository-picker.js:506
 msgid "owner"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:759
+#: assets/ran-booster-repository-picker.js:763
 msgid "Close repository picker"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:782
+#: assets/ran-booster-repository-picker.js:786
 msgid "Filter repository results"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:786
+#: assets/ran-booster-repository-picker.js:790
 msgid "Filter repository results…"
 msgstr ""
 
 #. translators: %s: repository provider label.
-#: assets/ran-booster-repository-picker.js:853
+#: assets/ran-booster-repository-picker.js:857
 #, js-format
 msgid "Pick a theme repository from %s"
 msgstr ""
 
 #. translators: %s: repository provider label.
-#: assets/ran-booster-repository-picker.js:861
+#: assets/ran-booster-repository-picker.js:865
 #, js-format
 msgid "Pick a plugin repository from %s"
 msgstr ""
 
 #. translators: %s: provider-specific repository owner label.
-#: assets/ran-booster-repository-picker.js:941
+#: assets/ran-booster-repository-picker.js:945
 #, js-format
 msgid "Enter the %s to search."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1033
+#: assets/ran-booster-repository-picker.js:1037
 msgid "Repository source"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1035
+#: assets/ran-booster-repository-picker.js:1039
 msgid "Public repositories"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1039
+#: assets/ran-booster-repository-picker.js:1043
 msgid "Find public repositories by owner using anonymous or saved access."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1045
+#: assets/ran-booster-repository-picker.js:1049
 msgid "Public only"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1046
+#: assets/ran-booster-repository-picker.js:1050
 msgid "Accessible repositories"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1050
+#: assets/ran-booster-repository-picker.js:1054
 msgid "Browse repositories available to a saved access profile."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1056
+#: assets/ran-booster-repository-picker.js:1060
 msgid "Saved access required"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1062
+#: assets/ran-booster-repository-picker.js:1066
 msgid "Repository access profile"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1067
+#: assets/ran-booster-repository-picker.js:1071
 msgid "Anonymous API requests have lower rate limits."
 msgstr ""
 
 #. translators: %s: Manage credentials link.
-#: assets/ran-booster-repository-picker.js:1074
+#: assets/ran-booster-repository-picker.js:1078
 #, js-format
 msgid "%s to add a search credential for more reliable repository lookup."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1093
+#: assets/ran-booster-repository-picker.js:1097
 msgid "Repository owner"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1096
+#: assets/ran-booster-repository-picker.js:1100
 msgid "e.g. organisation-or-user"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1150
-#: assets/ran-booster-repository-picker.js:1217
+#: assets/ran-booster-repository-picker.js:1154
+#: assets/ran-booster-repository-picker.js:1221
 msgid "Repository credential"
 msgstr ""
 
 #. translators: 1: repository provider label, 2: provider-specific repository owner label.
-#: assets/ran-booster-repository-picker.js:1183
+#: assets/ran-booster-repository-picker.js:1187
 #, js-format
 msgid "%1$s %2$s"
 msgstr ""
 
 #. translators: 1: provider-specific repository owner label, 2: repository provider label.
-#: assets/ran-booster-repository-picker.js:1300
-#: assets/ran-booster-repository-picker.js:1657
+#: assets/ran-booster-repository-picker.js:1304
+#: assets/ran-booster-repository-picker.js:1661
 #, js-format
 msgid "Enter the %1$s to find public repositories on %2$s."
 msgstr ""
 
 #. translators: %s: repository provider label.
-#: assets/ran-booster-repository-picker.js:1324
+#: assets/ran-booster-repository-picker.js:1328
 #, js-format
 msgid "Add a repository access credential for %s to browse accessible repositories."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1357
+#: assets/ran-booster-repository-picker.js:1361
 msgid "This Git provider does not support browsing."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1369
+#: assets/ran-booster-repository-picker.js:1373
 msgid "Loading repositories…"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1414
+#: assets/ran-booster-repository-picker.js:1418
 msgid "The Git provider returned invalid results."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1497
+#: assets/ran-booster-repository-picker.js:1501
 msgid "No repositories are available to the selected access profile."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1503
+#: assets/ran-booster-repository-picker.js:1507
 msgid "No repositories match your filter."
 msgstr ""
 
 #. translators: %s: provider-specific repository owner label.
-#: assets/ran-booster-repository-picker.js:1510
+#: assets/ran-booster-repository-picker.js:1514
 #, js-format
 msgid "No public repositories were found for this %s."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1543
+#: assets/ran-booster-repository-picker.js:1547
 msgid "Private"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1544
+#: assets/ran-booster-repository-picker.js:1548
 msgid "Public"
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1638
+#: assets/ran-booster-repository-picker.js:1642
 msgid "Repositories could not be loaded."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1670
+#: assets/ran-booster-repository-picker.js:1674
 msgid "Public repositories could not be loaded. Check the owner name and try again."
 msgstr ""
 
-#: assets/ran-booster-repository-picker.js:1674
+#: assets/ran-booster-repository-picker.js:1678
 msgid "Repositories could not be loaded. Check the selected access profile and try again."
 msgstr ""
 

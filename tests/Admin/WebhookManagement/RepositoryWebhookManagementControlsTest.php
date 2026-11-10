@@ -505,8 +505,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	}
 
 	public function test_manual_webhook_notice_renders_under_the_group_as_static_info_content(): void {
-		$panel  = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
-		$model  = $this->webhook_panel_model( false, false, array() );
+		$panel    = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
+		$model    = $this->webhook_panel_model( false, false, array() );
 		$sentence = 'A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.';
 
 		$model['manual_notice'] = \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::manual_notice( '2026-08-21T09:30:15Z' );
@@ -579,8 +579,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	}
 
 	public function test_push_to_deploy_badge_reads_manual_webhook_only_for_the_manual_state_in_an_active_layout(): void {
-		$in_use  = array( 'package_summaries' => array( array( 'source' => 'branch' ) ) );
-		$badge   = static function ( string $html ): string {
+		$in_use = array( 'package_summaries' => array( array( 'source' => 'branch' ) ) );
+		$badge  = static function ( string $html ): string {
 			if ( 1 !== preg_match( '/<h4 id="ran-booster-repository-webhook-automation-heading"[^>]*>Push-to-deploy<span[^>]*class="[^"]*is-([a-z]+)-intent[^"]*"[^>]*>([^<]*)<\/span><\/h4>/', $html, $match ) ) {
 				self::fail( 'The Push-to-deploy badge is missing.' );
 			}

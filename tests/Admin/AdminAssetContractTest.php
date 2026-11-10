@@ -704,6 +704,8 @@ final class AdminAssetContractTest extends TestCase {
 		// Disclosures after each other sit one Card gap apart; the step list owns the gap above the first.
 		self::assertMatchesRegularExpression( '/\+ \[data-ran-booster-ui-disclosure\] \{\s*margin-block-start: var\(--ran-booster-card-gap\);/', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
 		self::assertMatchesRegularExpression( '/\.ran-booster-webhook-steps \{[^}]*margin: 0 0 var\(--ran-booster-card-gap\);/', $webhook_management );
+		// The release workflow badge keeps the heading gap from its title.
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="repository-release-workflow"\]\s*\.ran-booster-ui-disclosure__meta \{\s*margin-inline-start: var\(--ran-booster-space-8\);/', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
 	}
 
 	public function test_repository_webhook_setup_keeps_its_form_full_width(): void {

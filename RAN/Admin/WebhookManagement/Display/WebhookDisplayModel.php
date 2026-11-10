@@ -727,16 +727,17 @@ final class WebhookDisplayModel {
 		);
 	}
 
-	/** @return list<array{key:string,label:string,value:string,tone?:string,recorded?:bool,state?:string,datetime?:string}> */
+	/** @return list<array{key:string,label:string,value:string,tone?:string,recorded?:bool,identified?:bool,state?:string,datetime?:string}> */
 	private function history_details( string $status_code, ?InstallationRecord $record ): array {
 		$details = array(
 			array(
-				'key'      => 'core:webhook-recorded-status',
-				'label'    => __( 'Recorded hook status', 'ran-booster' ),
-				'value'    => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historical_status_label( $record->status() ),
-				'tone'     => null === $record ? 'warning' : $this->historical_status_tone( $record->status() ),
-				'recorded' => null !== $record,
-				'state'    => $status_code,
+				'key'        => 'core:webhook-recorded-status',
+				'label'      => __( 'Recorded hook status', 'ran-booster' ),
+				'value'      => null === $record ? __( 'Managed hook not yet set', 'ran-booster' ) : $this->historical_status_label( $record->status() ),
+				'tone'       => null === $record ? 'warning' : $this->historical_status_tone( $record->status() ),
+				'recorded'   => null !== $record,
+				'identified' => null !== $record && ! $record->requires_hook_identification(),
+				'state'      => $status_code,
 			),
 			array(
 				'key'   => 'core:webhook-observation',

@@ -1330,9 +1330,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-task-panel {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-task-progress {', $css );
-		self::assertStringContainsString( 'ran-booster-provider-automated-setup', $view );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-automated-setup ul {', $css );
-		self::assertMatchesRegularExpression( '/\.ran-booster-provider-task-panel\s+\.ran-booster-provider-automated-setup \{/', $css );
+		self::assertStringContainsString( 'ran-booster-provider-receiver', $view );
+		self::assertStringNotContainsString( 'ran-booster-provider-automated-setup', $css );
+		// The receiver Card pads its content and bleeds the tab strip to both borders, keeping the tab inset.
+		self::assertMatchesRegularExpression( '/\.ran-booster-provider-receiver\.ran-booster-settings-section\[data-ran-booster-card="provider"\]\.ran-booster-card\s+> \.ran-booster-card__surface\s+> \.ran-booster-card__content \{\s+padding: var\(--ran-booster-space-20\) var\(--ran-booster-receiver-inset\)\s+var\(--ran-booster-space-24\);/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-provider-receiver__tabs \{\s+margin-block: 0 var\(--ran-booster-space-20\);\s+margin-inline: calc\(-1 \* var\(--ran-booster-receiver-inset\)\);\s+padding-inline: var\(--ran-booster-receiver-inset\);/', $css );
 		self::assertStringNotContainsString( 'ran-booster-provider-task-actions', $css );
 		self::assertStringContainsString( "document.addEventListener('htmx:afterSwap'", $script );
 		self::assertStringContainsString( "'ran-booster:provider-tasks-ready'", $script );

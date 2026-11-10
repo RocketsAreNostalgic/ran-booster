@@ -20,7 +20,108 @@
 		initProviderTaskNavigation();
 		initActivityHistoryAppend();
 		initAutoSubmitSelects();
+		initReceiverSetup();
 	});
+
+	// The webhook receiver card: Automated/Manual tabs and the repository
+	// chooser. Without JavaScript both panels stay visible and the GET form
+	// still works, so this only adds tab switching and the button state.
+	function selectReceiverTab(tab, focus) {
+		const tabs = Array.from(
+			tab.closest('[role="tablist"]').querySelectorAll('[role="tab"]')
+		);
+		const card = tab.closest('[data-ran-booster-receiver-setup]');
+		tabs.forEach(function (item) {
+			const active = item === tab;
+			item.setAttribute('aria-selected', active ? 'true' : 'false');
+			item.setAttribute('tabindex', active ? '0' : '-1');
+			item.classList.toggle('current', active);
+			const panel = card.querySelector(
+				'#' + item.getAttribute('aria-controls')
+			);
+			if (panel) {
+				panel.classList.remove('hide-if-js');
+				panel.hidden = !active;
+			}
+		});
+		if (focus) {
+			tab.focus();
+		}
+	}
+
+	function syncReceiverSubmit(select) {
+		const form = select.form;
+		const button = form?.querySelector(
+			'[data-ran-booster-receiver-submit]'
+		);
+		if (!button) {
+			return;
+		}
+		const option = select.options[select.selectedIndex];
+		const chosen = Boolean(select.value);
+		const set = chosen && option?.dataset.ranBoosterWebhookSet === 'true';
+		button.disabled = !chosen;
+		button.textContent = set
+			? button.dataset.manageLabel
+			: button.dataset.setLabel;
+	}
+
+	function initReceiverSetup() {
+		document
+			.querySelectorAll('[data-ran-booster-receiver-repository]')
+			.forEach(syncReceiverSubmit);
+		if (document.ranBoosterReceiverBound) {
+			return;
+		}
+		document.ranBoosterReceiverBound = true;
+		document.addEventListener?.('click', function (event) {
+			const tab = event.target?.closest?.(
+				'[data-ran-booster-receiver-tab]'
+			);
+			if (tab) {
+				selectReceiverTab(tab, false);
+			}
+		});
+		document.addEventListener?.('keydown', function (event) {
+			const tab = event.target?.closest?.(
+				'[data-ran-booster-receiver-tab]'
+			);
+			const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+			if (!tab || !keys.includes(event.key)) {
+				return;
+			}
+			const tabs = Array.from(
+				tab.closest('[role="tablist"]').querySelectorAll('[role="tab"]')
+			);
+			let index = tabs.indexOf(tab);
+			if (event.key === 'Home') {
+				index = 0;
+			} else if (event.key === 'End') {
+				index = tabs.length - 1;
+			} else {
+				index =
+					(index +
+						(event.key === 'ArrowRight' ? 1 : -1) +
+						tabs.length) %
+					tabs.length;
+			}
+			event.preventDefault();
+			selectReceiverTab(tabs[index], true);
+		});
+		document.addEventListener?.('change', function (event) {
+			const select = event.target?.closest?.(
+				'[data-ran-booster-receiver-repository]'
+			);
+			if (select) {
+				syncReceiverSubmit(select);
+			}
+		});
+		document.addEventListener?.('htmx:afterSwap', function () {
+			document
+				.querySelectorAll('[data-ran-booster-receiver-repository]')
+				.forEach(syncReceiverSubmit);
+		});
+	}
 
 	// Selects that carry the marker submit their form on change. Without
 	// JavaScript the form's own Apply button remains the native fallback.

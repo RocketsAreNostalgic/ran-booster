@@ -612,30 +612,68 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								</div>
 							</div>
 								<?php $render_webhook_delivery_notice(); ?>
-								<?php if ( array() !== $repository_table_rows ) { ?>
-							<section class="ran-booster-provider-automated-setup" aria-labelledby="ran-booster-webhook-automated-heading">
-								<h5 id="ran-booster-webhook-automated-heading" class="ran-booster-section__title"><?php esc_html_e( 'Automated setup', 'ran-booster' ); ?></h5>
-								<p><?php esc_html_e( 'Booster can set up and check a webhook for each repository. Choose a repository to start.', 'ran-booster' ); ?></p>
-								<ul>
-									<?php
-									foreach ( $repository_table_rows as $automated_row ) {
-										$automated_url  = is_string( $automated_row['detail_url'] ?? null ) ? $automated_row['detail_url'] : '';
-										$automated_name = is_string( $automated_row['repository'] ?? null ) ? $automated_row['repository'] : '';
-										$automated_src  = is_string( $automated_row['source_label'] ?? null ) ? $automated_row['source_label'] : '';
-										$automated_note = 'release_asset' === ( $automated_row['source_key'] ?? null ) && is_string( $automated_row['consequence'] ?? null ) ? $automated_row['consequence'] : '';
-										?>
-								<li><strong><?php echo esc_html( $automated_name ); ?></strong> <span class="description"><?php echo esc_html( $automated_src ); ?></span>
-										<?php if ( '' !== $automated_note ) { ?>
-											<br><?php echo esc_html( $automated_note ); ?>
-									<?php } elseif ( '' !== $automated_url && empty( $automated_row['historical'] ) ) { ?>
-										<a href="<?php echo esc_url( add_query_arg( 'repository_view', 'branch', $automated_url ) ); ?>"><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?><span class="screen-reader-text"> <?php echo esc_html( $automated_name ); ?></span></a>
-									<?php } ?>
-								</li>
-									<?php } ?>
-								</ul>
-							</section>
-							<?php } ?>
-							<h5 id="ran-booster-webhook-manual-heading" class="ran-booster-section__title"><?php esc_html_e( 'Manual setup', 'ran-booster' ); ?></h5>
+								<?php
+								$receiver_rows = array_values(
+									array_filter(
+										$repository_table_rows,
+										static fn ( array $receiver_row ): bool => '' !== ( is_string( $receiver_row['detail_url'] ?? null ) ? $receiver_row['detail_url'] : '' ) && empty( $receiver_row['historical'] ) && '' !== ( is_string( $receiver_row['repository_id'] ?? null ) ? $receiver_row['repository_id'] : '' )
+									)
+								);
+								$receiver_tabs = array() !== $receiver_rows;
+								$receiver_form = array();
+								parse_str( substr( (string) strstr( $overview_url, '?' ), 1 ), $receiver_form );
+								unset( $receiver_form['repository'], $receiver_form['repository_view'], $receiver_form['panel'] );
+								?>
+							<section class="ran-booster-settings-section ran-booster-card ran-booster-provider-receiver" data-ran-booster-card="provider" data-ran-booster-receiver-setup><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
+								<?php if ( $receiver_tabs ) { ?>
+								<div class="<?php echo esc_attr( \RAN\Admin\Component\SectionTabs::STRIP_CLASS ); ?> ran-booster-provider-receiver__tabs hide-if-no-js">
+									<ul class="<?php echo esc_attr( \RAN\Admin\Component\SectionTabs::LIST_CLASS ); ?>" role="tablist" aria-label="<?php esc_attr_e( 'Webhook setup', 'ran-booster' ); ?>">
+										<li role="presentation"><button type="button" role="tab" id="ran-booster-receiver-tab-automated" class="<?php echo esc_attr( \RAN\Admin\Component\SectionTabs::TAB_CLASS ); ?> current" aria-selected="true" aria-controls="ran-booster-receiver-panel-automated" data-ran-booster-receiver-tab="automated"><?php esc_html_e( 'Automated setup', 'ran-booster' ); ?></button></li>
+										<li role="presentation"><button type="button" role="tab" id="ran-booster-receiver-tab-manual" class="<?php echo esc_attr( \RAN\Admin\Component\SectionTabs::TAB_CLASS ); ?>" aria-selected="false" aria-controls="ran-booster-receiver-panel-manual" tabindex="-1" data-ran-booster-receiver-tab="manual"><?php esc_html_e( 'Manual setup', 'ran-booster' ); ?></button></li>
+									</ul>
+								</div>
+								<div id="ran-booster-receiver-panel-automated" class="ran-booster-provider-receiver__panel" role="tabpanel" aria-labelledby="ran-booster-receiver-tab-automated" data-ran-booster-receiver-panel="automated">
+									<form class="ran-booster-provider-receiver__form" method="get" action="<?php echo esc_url( (string) strtok( $overview_url, '?' ) ); ?>">
+										<?php foreach ( $receiver_form as $receiver_field => $receiver_value ) { ?>
+											<?php if ( is_scalar( $receiver_value ) ) { ?>
+												<input type="hidden" name="<?php echo esc_attr( (string) $receiver_field ); ?>" value="<?php echo esc_attr( (string) $receiver_value ); ?>">
+											<?php } ?>
+										<?php } ?>
+										<input type="hidden" name="panel" value="repositories">
+										<input type="hidden" name="repository_view" value="branch">
+										<div class="ran-booster-provider-receiver__field">
+											<label for="ran-booster-receiver-repository"><?php esc_html_e( 'Repository', 'ran-booster' ); ?></label>
+											<select id="ran-booster-receiver-repository" name="repository" required data-ran-booster-receiver-repository>
+												<option value=""><?php esc_html_e( 'Choose a repository', 'ran-booster' ); ?></option>
+												<?php
+												foreach ( $receiver_rows as $receiver_row ) {
+													$receiver_name = is_string( $receiver_row['repository'] ?? null ) ? $receiver_row['repository'] : '';
+													$receiver_set  = false;
+													foreach ( is_array( $receiver_row['details'] ?? null ) ? $receiver_row['details'] : array() as $receiver_detail ) {
+														if ( is_array( $receiver_detail ) && 'core:webhook-recorded-status' === ( $receiver_detail['key'] ?? null ) ) {
+															$receiver_set = true === ( $receiver_detail['recorded'] ?? false ) && false !== ( $receiver_detail['identified'] ?? true );
+															break;
+														}
+													}
+													?>
+													<option value="<?php echo esc_attr( (string) $receiver_row['repository_id'] ); ?>" data-ran-booster-webhook-set="<?php echo $receiver_set ? 'true' : 'false'; ?>">
+														<?php
+														echo esc_html(
+															$receiver_set
+																/* translators: %s: repository name. */
+																? sprintf( __( '🟢 %s — webhook set up', 'ran-booster' ), $receiver_name )
+																: $receiver_name
+														);
+														?>
+													</option>
+												<?php } ?>
+											</select>
+											<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" data-ran-booster-receiver-submit data-set-label="<?php esc_attr_e( 'Set up webhook', 'ran-booster' ); ?>" data-manage-label="<?php esc_attr_e( 'Manage webhook', 'ran-booster' ); ?>"><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?></button>
+										</div>
+									</form>
+								</div>
+								<?php } ?>
+								<div<?php echo $receiver_tabs ? ' id="ran-booster-receiver-panel-manual" class="ran-booster-provider-receiver__panel hide-if-js" role="tabpanel" aria-labelledby="ran-booster-receiver-tab-manual" data-ran-booster-receiver-panel="manual"' : ' class="ran-booster-provider-receiver__panel"'; ?>>
 							<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info">
 								<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 									<p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback.', 'ran-booster' ); ?></p>
@@ -673,6 +711,8 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								<p><a href="<?php echo esc_url( $webhook_operations_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 								<p><a href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>
 							<?php } ?>
+								</div>
+							</div></div></section>
 							<?php } ?>
 				</section>
 				<?php } else { ?>
@@ -684,7 +724,6 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								<p class="ran-booster-section__description"><?php echo esc_html( $repository_webhook_description ); ?></p>
 							</div>
 						</div>
-							<?php $render_webhook_delivery_notice(); ?>
 						<?php } ?>
 							<?php if ( '' !== $requested_repository_id ) { ?>
 								<?php if ( is_array( $selected_repository_row ) ) { ?>

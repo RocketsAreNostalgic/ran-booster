@@ -488,28 +488,8 @@
 
 .ran-booster-admin
 	.ran-booster-provider-task-panel
-	.ran-booster-provider-automated-setup {
-	margin-block: var(--ran-booster-space-16);
-}
-
-.ran-booster-admin
-	.ran-booster-provider-task-panel
 	h5.ran-booster-section__title {
 	margin-block: var(--ran-booster-space-16) var(--ran-booster-space-8);
-}
-
-.ran-booster-admin
-	.ran-booster-provider-automated-setup
-	h5.ran-booster-section__title {
-	margin-block-start: 0;
-}
-
-.ran-booster-admin .ran-booster-provider-automated-setup ul {
-	display: grid;
-	gap: var(--ran-booster-space-8);
-	margin: 0;
-	padding: 0;
-	list-style: none;
 }
 
 .ran-booster-admin .ran-booster-repository-detail {
@@ -1249,5 +1229,66 @@
 			.ran-booster-settings-section__body
 		) {
 		padding-inline: var(--ran-booster-space-18);
+	}
+}
+
+/* The receiver Card's tab strip is full-bleed: its rule meets both borders and the labels keep the content inset. */
+.ran-booster-admin .ran-booster-provider-receiver {
+	--ran-booster-receiver-inset: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	.ran-booster-provider-receiver.ran-booster-settings-section[data-ran-booster-card="provider"].ran-booster-card
+	> .ran-booster-card__surface
+	> .ran-booster-card__content {
+	padding: var(--ran-booster-space-20) var(--ran-booster-receiver-inset)
+		var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	.ran-booster-provider-receiver
+	.ran-booster-provider-receiver__tabs {
+	margin-block: 0 var(--ran-booster-space-20);
+	margin-inline: calc(-1 * var(--ran-booster-receiver-inset));
+	padding-inline: var(--ran-booster-receiver-inset);
+}
+
+.ran-booster-admin
+	.ran-booster-provider-receiver
+	.ran-section-navigation__link {
+	border-width: 0;
+	border-block-end: var(--ran-section-indicator-size) solid transparent;
+	background: transparent;
+	cursor: pointer;
+}
+
+.ran-booster-admin
+	.ran-booster-provider-receiver
+	.ran-section-navigation
+	.ran-section-navigation__link[aria-selected="true"] {
+	border-block-end-color: var(--ran-section-indicator-color);
+}
+
+.ran-booster-admin .ran-booster-provider-receiver__field {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-provider-receiver__field > label {
+	flex: 1 0 100%;
+	font-weight: 600;
+}
+
+.ran-booster-admin .ran-booster-provider-receiver__field > select {
+	flex: 0 1 28rem;
+	min-inline-size: 0;
+	max-inline-size: 100%;
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-admin .ran-booster-provider-receiver {
+		--ran-booster-receiver-inset: var(--ran-booster-space-18);
 	}
 }

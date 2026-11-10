@@ -1921,7 +1921,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( '0 of 1 packages Automatic', $html );
 		self::assertStringNotContainsString( 'Repository identified', $html );
 		self::assertStringContainsString( 'No secret', $html );
-		self::assertStringContainsString( 'Push-to-Deploy disabled; pushes are ignored.', $html );
+		self::assertStringNotContainsString( 'Push-to-Deploy disabled; pushes are ignored.', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--warning">No secret</span>', $html );
 		self::assertStringNotContainsString( '>1 managed package</span>', $html );
 		self::assertStringContainsString( 'data-webhook-target-options="owner"', $html );
@@ -2085,7 +2085,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'Theme · Releases · 1 package', $html );
 		self::assertStringContainsString( 'Releases', $html );
 		self::assertStringContainsString( 'ran-booster-repository-record__management-detail--info">Push-to-Deploy unavailable</span>', $html );
-		self::assertStringContainsString( 'Local signing setup is retained for an easier return to Branch.', $html );
+		self::assertStringNotContainsString( 'Local signing setup is retained for an easier return to Branch.', $html );
+		self::assertStringNotContainsString( 'Pushes are ignored.', $html );
 		self::assertSame( 0, substr_count( $html, 'disabled aria-disabled="true"' ) );
 		self::assertStringContainsString( 'Manage repository', $html );
 		self::assertStringNotContainsString( 'Review webhook cleanup', $html );
@@ -2106,8 +2107,8 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'No matching local signing setup is saved.', $without_evidence );
 		self::assertStringNotContainsString( 'Local signing setup could not be checked.', $without_evidence );
 		self::assertStringNotContainsString( 'This package ignores pushes.', $without_evidence );
-		self::assertStringContainsString( 'Pushes are ignored.', $without_evidence );
-		self::assertStringContainsString( 'id="ran-booster-provider-readiness-reason-0-release-source"', $without_evidence );
+		self::assertStringNotContainsString( 'Pushes are ignored.', $without_evidence );
+		self::assertStringNotContainsString( 'release-source', $without_evidence );
 		self::assertStringContainsString( 'Theme · Releases · 1 package', $without_evidence );
 		self::assertStringContainsString( 'Push-to-Deploy unavailable', $without_evidence );
 		self::assertStringNotContainsString( 'Fixture webhooks', $without_evidence );
@@ -2171,6 +2172,11 @@ final class TroubleshootingViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
 			$html = (string) ob_get_clean();
+			if ( 'repositories' === $delivery_task ) {
+				self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+				self::assertStringNotContainsString( 'Webhook delivery is not ready', $html );
+				continue;
+			}
 			self::assertSame( 1, substr_count( $html, 'data-ran-booster-assistance-site-notice' ), $delivery_task );
 			self::assertSame( 1, substr_count( $html, 'Review WordPress URLs' ), $delivery_task );
 			if ( 1 !== preg_match( '~<div class="notice [^"]*" data-ran-booster-assistance-site-notice.*?</svg>\s*</div>~s', $html, $notice ) ) {
@@ -2186,7 +2192,6 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertStringContainsString( 'notice-warning', $delivery_notices[ $delivery_task ], $delivery_task );
 		}
 		self::assertSame( $delivery_notices['status'], $delivery_notices['setup'] );
-		self::assertSame( $delivery_notices['status'], $delivery_notices['repositories'] );
 		$provider_task = 'status';
 		foreach ( array(
 			array(
@@ -2230,9 +2235,10 @@ final class TroubleshootingViewTest extends TestCase {
 	/**
 	 * @param array<string,mixed> $readiness
 	 * @param list<array<string,mixed>> $repositories
+	 * @param (callable(array<string,mixed>):array<string,mixed>)|null $mutate_view_data Adjusts the projected view data before rendering.
 	 * @return array<string,string> Rendered HTML per sub-panel.
 	 */
-	private function render_provider_panels( array $readiness, array $repositories ): array {
+	private function render_provider_panels( array $readiness, array $repositories, ?callable $mutate_view_data = null ): array {
 		$provider                             = $this->provider_without_optional_settings();
 		$provider['code']                     = 'gh';
 		$provider['webhook_scopes']           = $this->webhook_scopes();
@@ -2254,6 +2260,9 @@ final class TroubleshootingViewTest extends TestCase {
 		foreach ( array( 'status', 'repositories', 'setup' ) as $panel_name ) {
 			$provider_task      = $panel_name;
 			$provider_view_data = $this->provider_view_data( get_defined_vars() );
+			if ( null !== $mutate_view_data ) {
+				$provider_view_data = $mutate_view_data( $provider_view_data );
+			}
 			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
 			extract( $provider_view_data );
 			ob_start();
@@ -2286,7 +2295,7 @@ final class TroubleshootingViewTest extends TestCase {
 		);
 	}
 
-	public function test_receiver_lists_automated_setup_links_and_manual_setup_in_order(): void {
+	public function test_receiver_puts_automated_and_manual_setup_in_one_tabbed_card(): void {
 		$ready = array(
 			'site'         => array(
 				'status'       => 'ready',
@@ -2298,29 +2307,88 @@ final class TroubleshootingViewTest extends TestCase {
 		$html  = $this->render_provider_panels( $ready, $this->branch_and_release_repositories() )['setup'];
 
 		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
-		self::assertStringContainsString( 'Automated setup</h5>', $html );
-		self::assertStringContainsString( 'Booster can set up and check a webhook for each repository. Choose a repository to start.', $html );
-		if ( 1 !== preg_match( '~<ul>(.*?)</ul>~s', $html, $list ) ) {
-			self::fail( 'The automated setup list is missing.' );
+		self::assertStringContainsString( '<section class="ran-booster-settings-section ran-booster-card ran-booster-provider-receiver" data-ran-booster-card="provider" data-ran-booster-receiver-setup><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">', $html );
+		self::assertStringNotContainsString( 'Automated setup</h5>', $html );
+		self::assertStringNotContainsString( 'Manual setup</h5>', $html );
+		self::assertStringNotContainsString( 'Booster can set up and check a webhook', $html );
+		self::assertStringContainsString( 'class="' . \RAN\Admin\Component\SectionTabs::STRIP_CLASS . ' ran-booster-provider-receiver__tabs hide-if-no-js"', $html );
+		self::assertStringContainsString( 'class="' . \RAN\Admin\Component\SectionTabs::LIST_CLASS . '" role="tablist"', $html );
+		self::assertSame( 2, substr_count( $html, 'role="tab"' ) );
+		self::assertSame( 2, substr_count( $html, 'role="tabpanel"' ) );
+		self::assertMatchesRegularExpression( '~role="tab" id="ran-booster-receiver-tab-automated" class="[^"]*' . preg_quote( \RAN\Admin\Component\SectionTabs::TAB_CLASS, '~' ) . ' current" aria-selected="true" aria-controls="ran-booster-receiver-panel-automated"[^>]*>Automated setup</button>~', $html );
+		self::assertMatchesRegularExpression( '~role="tab" id="ran-booster-receiver-tab-manual"[^>]*aria-selected="false" aria-controls="ran-booster-receiver-panel-manual" tabindex="-1"[^>]*>Manual setup</button>~', $html );
+		self::assertMatchesRegularExpression( '~id="ran-booster-receiver-panel-manual" class="[^"]*hide-if-js"~', $html );
+		self::assertDoesNotMatchRegularExpression( '~id="ran-booster-receiver-panel-automated" class="[^"]*hide-if-js"~', $html );
+
+		self::assertMatchesRegularExpression( '~<label for="ran-booster-receiver-repository">Repository</label>\s*<select id="ran-booster-receiver-repository" name="repository" required~', $html );
+		if ( 1 !== preg_match( '~<form class="ran-booster-provider-receiver__form" method="get" action="[^"]*">(.*?)</form>~s', $html, $form ) ) {
+			self::fail( 'The automated setup form is missing.' );
 		}
-		self::assertSame( 2, substr_count( $list[1], '<li>' ) );
-		self::assertSame( 1, substr_count( $list[1], 'Set up webhook' ) );
-		self::assertMatchesRegularExpression( '~<strong>owner/branch-repo</strong> <span class="description">Branch</span>\s*<a href="[^"]*repository=branch-1&(?:amp;)?repository_view=branch">Set up webhook<span class="screen-reader-text"> owner/branch-repo</span></a>~', $list[1] );
-		self::assertMatchesRegularExpression( '~<strong>owner/release-repo</strong> <span class="description">Releases</span>\s*<br>Pushes are ignored\.~', $list[1] );
-		self::assertStringNotContainsString( 'repository=release-1', $list[1] );
-		// Order: automated list, manual heading, security notice, then the Payload URL block.
-		$automated = (int) strpos( $html, 'Automated setup</h5>' );
-		$manual    = (int) strpos( $html, 'Manual setup</h5>' );
-		$security  = (int) strpos( $html, 'Webhook signatures authorize deployment' );
-		$payload   = (int) strpos( $html, 'Payload URL' );
-		self::assertTrue( $automated > 0 && $automated < $manual && $manual < $security && $security < $payload );
+		self::assertStringContainsString( 'name="page" value="ran-booster"', $form[1] );
+		self::assertStringContainsString( 'name="tab" value="gh"', $form[1] );
+		self::assertStringContainsString( 'name="panel" value="repositories"', $form[1] );
+		self::assertStringContainsString( 'name="repository_view" value="branch"', $form[1] );
+		self::assertStringContainsString( '<option value="">Choose a repository</option>', $form[1] );
+		self::assertMatchesRegularExpression( '~<option value="branch-1" data-ran-booster-webhook-set="false">\s*owner/branch-repo\s*</option>~', $form[1] );
+		self::assertMatchesRegularExpression( '~<option value="release-1" data-ran-booster-webhook-set="false">\s*owner/release-repo\s*</option>~', $form[1] );
+		self::assertStringNotContainsString( '🟢', $form[1] );
+		self::assertMatchesRegularExpression( '~<button type="submit" [^>]*data-ran-booster-receiver-submit data-set-label="Set up webhook" data-manage-label="Manage webhook">Set up webhook</button>~', $form[1] );
+		self::assertStringNotContainsString( 'Pushes are ignored', $html );
+
+		// Order: the tabs, the automated panel, then the manual panel with the security notice and Payload URL.
+		$tabs     = (int) strpos( $html, 'role="tablist"' );
+		$auto     = (int) strpos( $html, 'data-ran-booster-receiver-panel="automated"' );
+		$manual   = (int) strpos( $html, 'data-ran-booster-receiver-panel="manual"' );
+		$security = (int) strpos( $html, 'Webhook signatures authorize deployment' );
+		$payload  = (int) strpos( $html, 'Payload URL' );
+		self::assertTrue( $tabs > 0 && $tabs < $auto && $auto < $manual && $manual < $security && $security < $payload );
 		self::assertStringContainsString( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $html );
 
 		$empty = $this->render_provider_panels( $ready, array() )['setup'];
+		self::assertStringNotContainsString( 'role="tablist"', $empty );
 		self::assertStringNotContainsString( 'Automated setup', $empty );
 		self::assertStringNotContainsString( 'Set up webhook', $empty );
-		self::assertStringContainsString( 'Manual setup</h5>', $empty );
-		self::assertGreaterThan( (int) strpos( $empty, 'Manual setup</h5>' ), (int) strpos( $empty, 'Payload URL' ) );
+		self::assertStringContainsString( 'Payload URL', $empty );
+	}
+
+	public function test_receiver_marks_repositories_with_a_recorded_identified_webhook(): void {
+		$ready        = array(
+			'site'         => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+				'callback_url' => 'https://example.test/wp-json/ran-booster/v1/webhooks/gh',
+			),
+			'repositories' => array(),
+		);
+		$with_records = static function ( array $data ): array {
+			$flags = array(
+				'branch-1'  => array( true, true ),
+				'release-1' => array( true, false ),
+			);
+			foreach ( $data['repository_table_rows'] as $index => $row ) {
+				$flag = $flags[ $row['repository_id'] ] ?? null;
+				if ( null === $flag ) {
+					continue;
+				}
+				$data['repository_table_rows'][ $index ]['details'] = array(
+					array(
+						'key'        => 'core:webhook-recorded-status',
+						'label'      => 'Recorded hook status',
+						'value'      => 'Configured',
+						'recorded'   => $flag[0],
+						'identified' => $flag[1],
+					),
+				);
+			}
+
+			return $data;
+		};
+		$html         = $this->render_provider_panels( $ready, $this->branch_and_release_repositories(), $with_records )['setup'];
+
+		self::assertStringContainsString( 'data-ran-booster-webhook-set="true">', $html );
+		self::assertMatchesRegularExpression( '~<option value="branch-1" data-ran-booster-webhook-set="true">\s*🟢 owner/branch-repo — webhook set up\s*</option>~u', $html );
+		self::assertMatchesRegularExpression( '~<option value="release-1" data-ran-booster-webhook-set="false">\s*owner/release-repo\s*</option>~', $html );
+		self::assertSame( 1, substr_count( $html, '🟢' ) );
 	}
 
 	public function test_status_panel_leads_with_the_notice_and_has_no_button_row(): void {
@@ -2431,7 +2499,8 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertSame( 1, substr_count( $html, 'data-ran-booster-assistance-site-notice' ) );
+		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+		self::assertStringNotContainsString( 'Webhook delivery is not ready', $html );
 		self::assertStringContainsString( 'Owner secret', $html );
 		self::assertStringContainsString( 'Repository identity conflict', $html );
 		self::assertStringNotContainsString( 'Review record', $html );

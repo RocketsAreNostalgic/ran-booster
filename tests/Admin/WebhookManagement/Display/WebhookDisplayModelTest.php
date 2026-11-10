@@ -75,6 +75,7 @@ final class WebhookDisplayModelTest extends TestCase {
 
 		self::assertSame( 'Configured at last check', $details['core:webhook-recorded-status']['value'] );
 		self::assertTrue( $details['core:webhook-recorded-status']['recorded'] );
+		self::assertTrue( $details['core:webhook-recorded-status']['identified'] );
 		self::assertSame( 'profile_revision_stale', $details['core:webhook-recorded-status']['state'] );
 		self::assertSame( 'Signing secret changed; webhook update required', $details['core:webhook-current-warning']['value'] );
 		self::assertSame( 'Historical only', $details['core:webhook-observation']['value'] );
@@ -87,6 +88,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		$details = array_column( $method->invoke( $this->display(), 'not_configured', null ), null, 'key' );
 
 		self::assertFalse( $details['core:webhook-recorded-status']['recorded'] );
+		self::assertFalse( $details['core:webhook-recorded-status']['identified'] );
 		self::assertSame( 'Managed hook not yet set', $details['core:webhook-recorded-status']['value'] );
 		self::assertSame( 'None', $details['core:webhook-observation']['value'] );
 		self::assertSame( 'Never', $details['core:webhook-last-checked']['value'] );

@@ -39,16 +39,16 @@ final class ExternalLinkMarker {
 
 		$normalized = preg_replace_callback(
 			'#<a\b((?:"[^"]*"|\'[^\']*\'|[^\'">])*)>((?:(?!<a\b|</a>).)*)</a>#is',
-			static function ( array $match ) use ( $hint ): string {
-				$attributes = $match[1];
-				$inner      = $match[2];
+			static function ( array $found ) use ( $hint ): string {
+				$attributes = $found[1];
+				$inner      = $found[2];
 
 				if (
 					1 !== preg_match( '#(?<![\w-])target\s*=\s*(["\']?)_blank\1(?=[\s/]|$)#i', $attributes )
 					|| 1 === preg_match( '#(?<![\w-])class\s*=\s*(?:"[^"]*|\'[^\']*)button#i', $attributes )
 					|| str_contains( $inner, '↗' )
 				) {
-					return $match[0];
+					return $found[0];
 				}
 
 				if ( 1 === preg_match( $hint, $inner, $hint_match, PREG_OFFSET_CAPTURE ) ) {

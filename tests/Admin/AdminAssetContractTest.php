@@ -170,6 +170,32 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '130px', $filter_rule[1] );
 	}
 
+	public function test_activity_filters_share_one_row_with_a_truncating_subject_select(): void {
+		$activity = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+		$scope    = '.ran-booster-admin .ran-booster-activity .ran-booster-package-list-filters';
+
+		if ( 1 !== preg_match( '/\n' . preg_quote( $scope, '/' ) . ' \{([^}]*)\}/', $activity, $row_rule ) ) {
+			self::fail( 'The scoped Activity filter row rule is missing.' );
+		}
+		self::assertStringContainsString( 'flex-wrap: nowrap;', $row_rule[1] );
+		self::assertStringContainsString( 'gap: var(--ran-booster-space-8);', $row_rule[1] );
+
+		$subject = '/\n\.ran-booster-admin\s+\.ran-booster-activity\s+\.ran-booster-package-list-filters\s+#ran-booster-activity-package \{([^}]*)\}/';
+		if ( 1 !== preg_match( $subject, $activity, $subject_rule ) ) {
+			self::fail( 'The Activity subject select rule is missing.' );
+		}
+		foreach ( array( 'flex: 1 1 0;', 'min-width: 0;', 'max-width: 100%;', 'overflow: hidden;', 'text-overflow: ellipsis;', 'white-space: nowrap;' ) as $declaration ) {
+			self::assertStringContainsString( $declaration, $subject_rule[1] );
+		}
+
+		$narrow = '/@media screen and \(max-width: 782px\) \{\s*\.ran-booster-admin \.ran-booster-activity \.ran-booster-package-list-filters \{([^}]*)\}\s*\.ran-booster-admin\s+\.ran-booster-activity\s+\.ran-booster-package-list-filters\s+#ran-booster-activity-package \{([^}]*)\}/';
+		if ( 1 !== preg_match( $narrow, $activity, $narrow_rules ) ) {
+			self::fail( 'The 782px Activity filter wrap rule is missing.' );
+		}
+		self::assertStringContainsString( 'flex-wrap: wrap;', $narrow_rules[1] );
+		self::assertStringContainsString( 'flex: 1 1 100%;', $narrow_rules[2] );
+	}
+
 	public function test_status_pills_are_badges_and_the_legacy_tile_utilities_are_gone(): void {
 		$debug      = $this->view( 'debug-capture.php' );
 		$packages   = $this->view( 'packages/index.php' );

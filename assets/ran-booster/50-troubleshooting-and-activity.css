@@ -297,6 +297,57 @@
 	font-size: var(--ran-booster-font-size-md);
 }
 
+/* Keep the provider, subject and Filter controls on one row at desktop widths;
+   a long subject label truncates instead of pushing Filter onto its own row. */
+.ran-booster-admin .ran-booster-activity .ran-booster-package-list-filters {
+	flex-wrap: nowrap;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin
+	.ran-booster-activity
+	.ran-booster-package-list-filters
+	select {
+	flex: 0 0 auto;
+}
+
+.ran-booster-admin
+	.ran-booster-activity
+	.ran-booster-package-list-filters
+	#ran-booster-activity-package {
+	flex: 1 1 0;
+	min-inline-size: 0;
+	min-width: 0;
+	max-inline-size: 100%;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ran-booster-admin
+	.ran-booster-activity
+	.ran-booster-package-list-filters
+	.ran-wp-ui-button {
+	flex: 0 0 auto;
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-admin .ran-booster-activity .ran-booster-package-list-filters {
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.ran-booster-admin
+		.ran-booster-activity
+		.ran-booster-package-list-filters
+		#ran-booster-activity-package {
+		flex: 1 1 100%;
+	}
+}
+
 .ran-booster-admin .ran-booster-activity__details {
 	display: grid;
 	max-inline-size: 1000px;

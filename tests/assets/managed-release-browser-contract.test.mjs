@@ -1263,6 +1263,6 @@ test('use releases row keeps the summary left and right-aligns the button, inclu
 	);
 	assert.match(
 		packageStyles,
-		/\.ran-booster-release-switch-actions\s+> \[data-ran-booster-use-releases\] \{[^}]*margin-inline-start: auto/
+		/\.ran-booster-release-switch-actions\s+> \[data-ran-booster-use-releases\] \{[^}]*margin-inline: auto calc\(var\(--ran-booster-space-16\) \+ 1px\)/
 	);
 });

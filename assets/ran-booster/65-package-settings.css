@@ -755,7 +755,7 @@
 .ran-booster-admin
 	.ran-booster-release-switch-actions
 	> [data-ran-booster-use-releases] {
-	margin-inline-start: auto;
+	margin-inline: auto calc(var(--ran-booster-space-16) + 1px);
 }
 
 .ran-booster-admin .ran-booster-release-switch-actions__summary {

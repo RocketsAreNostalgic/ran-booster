@@ -40,20 +40,26 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 		</p>
 		<div class="notice notice-info inline ran-booster-package-source__guidance ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-source-repository-guidance <?php echo ! empty( $package_repository_ready ) ? 'hidden' : ''; ?>><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Choose a repository before configuring its update source.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 	</div>
-	<div class="ran-booster-source-choices<?php echo 'edit' === $source_choice_mode ? ' ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix' : ''; ?>"<?php echo 'edit' === $source_choice_mode ? ' role="navigation" aria-label="' . esc_attr( __( 'Update source settings', 'ran-booster' ) ) . '"' : ''; ?>>
+	<div class="ran-booster-source-choices<?php echo 'edit' === $source_choice_mode ? esc_attr( ' ran-booster-source-choices--navigation ' . \RAN\Admin\Component\SectionTabs::STRIP_CLASS ) : ''; ?>"<?php echo 'edit' === $source_choice_mode ? ' role="navigation" aria-label="' . esc_attr( __( 'Update source settings', 'ran-booster' ) ) . '"' : ''; ?>>
+		<?php if ( 'edit' === $source_choice_mode ) { ?>
+			<ul class="<?php echo esc_attr( \RAN\Admin\Component\SectionTabs::LIST_CLASS ); ?>">
+		<?php } ?>
 		<?php foreach ( $package_source_choices as $source_key => $source_choice ) { ?>
 			<?php
 			$is_selected          = $source_key === $package_source_view;
 			$is_current           = 'edit' === $source_choice_mode && isset( $package_current_source ) && $source_key === $package_current_source;
 			$is_navigation_link   = 'edit' === $source_choice_mode && ! $source_choice['disabled'] && ! $is_selected;
 			$is_current_view      = 'edit' === $source_choice_mode && ! $source_choice['disabled'] && $is_selected;
-			$classes              = 'ran-booster-source-choice' . ( 'edit' === $source_choice_mode ? ' ran-booster-source-choice--navigation nav-tab' : '' ) . ( $is_selected ? ' is-selected' : '' ) . ( 'edit' === $source_choice_mode && $is_selected ? ' nav-tab-active' : '' ) . ( $source_choice['disabled'] ? ' is-disabled' : '' );
+			$classes              = 'ran-booster-source-choice' . ( 'edit' === $source_choice_mode ? ' ran-booster-source-choice--navigation ' . \RAN\Admin\Component\SectionTabs::TAB_CLASS : '' ) . ( $is_selected ? ' is-selected' : '' ) . ( 'edit' === $source_choice_mode && $is_selected ? ' current' : '' ) . ( $source_choice['disabled'] ? ' is-disabled' : '' );
 			$source_heading       = $source_choice['heading'];
 			$source_slug          = preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $source_key ) );
 			$tab_id               = 'ran-booster-source-tab-' . $source_slug;
 			$source_url           = wp_make_link_relative( add_query_arg( array_map( 'rawurlencode', $package_return_args ?? array() ), $source_choice['url'] ) );
 			$disabled_explanation = $source_choice['disabled'] ? (string) $source_choice['description'] : '';
 			?>
+			<?php if ( 'edit' === $source_choice_mode ) { ?>
+				<li>
+			<?php } ?>
 			<?php if ( $is_navigation_link ) { ?>
 				<a id="<?php echo esc_attr( $tab_id ); ?>" class="<?php echo esc_attr( $classes ); ?>" href="<?php echo esc_url( $source_url . '#ran-booster-advanced-source-settings' ); ?>" hx-get="<?php echo esc_url( $source_url ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-push-url="true" hx-history="false" hx-sync="closest [data-ran-booster-source-controls]:replace" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-source-choice="<?php echo esc_attr( $source_key ); ?>">
 			<?php } elseif ( $is_current_view ) { ?>
@@ -71,7 +77,7 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 					<?php } ?>
 				</span>
 				<?php if ( $is_current ) { ?>
-					<?php \RAN\Admin\Component\StatusBadge::print_intent( __( 'Active', 'ran-booster' ), 'stable', array( 'class' => 'ran-booster-source-choice__current-source' ) ); ?>
+					<?php \RAN\Admin\Component\SectionTabs::print_in_use_marker(); ?>
 				<?php } ?>
 			<?php if ( $is_navigation_link ) { ?>
 				</a>
@@ -80,8 +86,12 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 			<?php } else { ?>
 				</button>
 			<?php } ?>
+			<?php if ( 'edit' === $source_choice_mode ) { ?>
+				</li>
+			<?php } ?>
 		<?php } ?>
 		<?php if ( 'edit' === $source_choice_mode ) { ?>
+			</ul>
 			<p class="ran-booster-provider-task-progress" data-ran-booster-source-progress role="status" aria-live="polite" hidden><span class="spinner is-active" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Loading source settings…', 'ran-booster' ); ?></span></p>
 		<?php } ?>
 	</div>

@@ -903,26 +903,28 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertStringNotContainsString( '<header', $html, $package_view->get_type() );
 				self::assertStringNotContainsString( 'aria-labelledby="ran-booster-package-source-heading"', $html, $package_view->get_type() );
 				self::assertStringContainsString( 'ran-booster-package-source--navigation', $html, $package_view->get_type() );
-				self::assertStringContainsString( 'ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix', $html, $package_view->get_type() );
-				self::assertStringContainsString( ' nav-tab ', $html, $package_view->get_type() );
-				self::assertSame( 1, substr_count( $html, 'nav-tab-active' ), $package_view->get_type() );
+				self::assertStringContainsString( 'ran-booster-source-choices--navigation ran-booster-provider-task-tabs', $html, $package_view->get_type() );
+				self::assertStringContainsString( '<ul class="filter-links ran-section-navigation ran-section-navigation--thin">', $html, $package_view->get_type() );
+				self::assertSame( 2, substr_count( $html, 'ran-booster-provider-task-tab ran-section-navigation__link' ), $package_view->get_type() );
+				self::assertSame( 2, substr_count( $html, '<li>' ), $package_view->get_type() );
+				self::assertStringNotContainsString( 'nav-tab', $html, $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, ' current"' ), $package_view->get_type() );
 				self::assertStringContainsString( 'role="navigation" aria-label="Update source settings"', $html, $package_view->get_type() );
 				self::assertStringContainsString( 'Viewing settings does not change the update source.', $html, $package_view->get_type() );
 				self::assertStringNotContainsString( 'aria-controls=', $html, $package_view->get_type() );
-				self::assertSame( 1, substr_count( $html, 'ran-booster-source-choice__current-source' ), $package_view->get_type() );
-				self::assertSame( 1, substr_count( $html, '>Active</span>' ), $package_view->get_type() );
+				// The method in use gets the shared dot with its hidden label and no text badge.
+				self::assertStringNotContainsString( 'ran-booster-source-choice__current-source', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( '>Active<', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( 'ran-wp-ui-badge', $html, $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ), $package_view->get_type() );
+				self::assertSame( 1, substr_count( $html, '<span class="screen-reader-text">In use</span>' ), $package_view->get_type() );
 				self::assertMatchesRegularExpression(
-					'/<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent ran-booster-source-choice__current-source" data-ran-booster-badge data-ran-booster-badge-intent="stable">Active<\\/span>/',
+					'/data-ran-booster-source-choice="' . $package_current_source . '"[^>]*>[\\s\\S]*?<span class="ran-booster-provider-task-tab__source-indicator" title="In use" aria-hidden="true"><\\/span><span class="screen-reader-text">In use<\\/span>/',
 					$html,
 					$package_view->get_type()
 				);
 				self::assertStringContainsString( 'ran-booster-source-choice__content', $html, $package_view->get_type() );
 				self::assertStringNotContainsString( 'Current source', $html, $package_view->get_type() );
-				self::assertMatchesRegularExpression(
-					'/data-ran-booster-source-choice="' . $package_current_source . '"[^>]*>[\\s\\S]*?ran-booster-source-choice__current-source[^>]*>Active<\\/span>/',
-					$html,
-					$package_view->get_type()
-				);
 				self::assertStringNotContainsString( 'Branch description', $html, $package_view->get_type() );
 				self::assertStringNotContainsString( 'Releases meta', $html, $package_view->get_type() );
 				self::assertStringNotContainsString( 'ran-booster-source-choice__radio', $html, $package_view->get_type() );
@@ -968,6 +970,77 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'title="Published releases require the repository root."', $html );
 		self::assertStringNotContainsString( 'aria-controls=', $html );
 		self::assertStringNotContainsString( ' disabled=', $html );
+	}
+
+	public function test_edit_source_tabs_keep_a_disabled_releases_tab_visible_with_its_reason(): void {
+		$package_view           = PackagePagePresenter::plugin();
+		$package_source_mode    = 'edit';
+		$package_source_view    = 'branch';
+		$package_current_source = 'branch';
+		$package_source_choices = array(
+			'branch'        => array(
+				'heading'           => 'Branch',
+				'description'       => 'Deploy the configured branch.',
+				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&source_view=branch',
+				'disabled'          => false,
+				'client_hydratable' => false,
+			),
+			'release_asset' => array(
+				'heading'           => 'Releases',
+				'description'       => 'Releases need the repository root.',
+				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&source_view=release_asset',
+				'disabled'          => true,
+				'client_hydratable' => false,
+			),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
+		$html = (string) ob_get_clean();
+
+		if ( 1 !== preg_match( '/<button id="ran-booster-source-tab-release_asset"[^>]*>/', $html, $tab ) ) {
+			self::fail( 'The disabled Releases tab must render as a button.' );
+		}
+		self::assertStringContainsString( 'aria-disabled="true"', $tab[0] );
+		self::assertStringContainsString( 'title="Releases need the repository root."', $tab[0] );
+		self::assertStringContainsString( 'is-disabled', $tab[0] );
+		self::assertStringContainsString( 'ran-booster-provider-task-tab ran-section-navigation__link', $tab[0] );
+		self::assertStringNotContainsString( ' disabled=', $tab[0] );
+		self::assertStringContainsString( '>Releases</strong>', $html );
+		// Only the active method carries the dot; the disabled tab does not.
+		self::assertSame( 1, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
+	}
+
+	public function test_add_source_cards_markup_is_unchanged_by_the_shared_tab_strip(): void {
+		$package_view           = PackagePagePresenter::plugin();
+		$package_source_mode    = 'create';
+		$package_source_view    = 'branch';
+		$package_source_choices = array();
+		foreach (
+			array(
+				'branch'        => 'Branch',
+				'release_asset' => 'Releases',
+			) as $source_key => $heading
+		) {
+			$package_source_choices[ $source_key ] = array(
+				'heading'           => $heading,
+				'description'       => $heading . ' description',
+				'url'               => '',
+				'disabled'          => 'release_asset' === $source_key,
+				'client_hydratable' => 'branch' === $source_key,
+			);
+		}
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
+		$html = (string) ob_get_clean();
+
+		$expected = file_get_contents( dirname( __DIR__ ) . '/fixtures/source-choices-create.html' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads a repository fixture in a test.
+		self::assertIsString( $expected );
+		// Indentation is template whitespace; every tag, attribute and text node is pinned.
+		self::assertSame( preg_replace( '/\s+/', ' ', $expected ), preg_replace( '/\s+/', ' ', $html ) );
+		self::assertStringNotContainsString( 'ran-section-navigation', $html );
+		self::assertStringNotContainsString( 'ran-booster-provider-task-tab', $html );
 	}
 
 	/**

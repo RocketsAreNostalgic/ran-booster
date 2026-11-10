@@ -53,8 +53,8 @@ final class RepositoryDetailRenderer {
 				<?php } ?>
 			</header>
 			<div class="notice notice-error inline ran-booster-provider-task-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load that repository view. The current view is unchanged; choose the view again to retry.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
-			<nav class="ran-booster-provider-task-tabs ran-booster-repository-detail__tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:false show:none" hx-push-url="true" hx-history="false" hx-sync="this:replace">
-				<ul class="filter-links ran-section-navigation ran-section-navigation--thin">
+			<nav class="<?php echo esc_attr( SectionTabs::STRIP_CLASS ); ?> ran-booster-repository-detail__tabs" aria-label="<?php esc_attr_e( 'Repository integration views', 'ran-booster' ); ?>" hx-boost="true" hx-target="#ran-booster-provider-profile-region" hx-select="#ran-booster-provider-profile-region" hx-swap="outerHTML transition:false show:none" hx-push-url="true" hx-history="false" hx-sync="this:replace">
+				<ul class="<?php echo esc_attr( SectionTabs::LIST_CLASS ); ?>">
 				<?php
 				foreach ( array(
 					'status'   => __( 'Status', 'ran-booster' ),
@@ -65,8 +65,9 @@ final class RepositoryDetailRenderer {
 					$request_url = is_string( $view_request_urls[ $view ] ?? null ) ? $view_request_urls[ $view ] : $url;
 					$has_source  = 'branch' === $view ? $branch_in_use : ( 'releases' === $view && $releases_in_use );
 					?>
-					<li><a class="ran-wp-ui-box-sizing ran-wp-ui-reset-a ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-link is-unstyled ran-booster-provider-task-tab ran-section-navigation__link<?php echo $active_view === $view ? ' current' : ''; ?>" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $request_url ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-profile-region" <?php echo $active_view === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $has_source ) { ?>
-						<span class="ran-booster-provider-task-tab__source-indicator" title="<?php esc_attr_e( 'In use', 'ran-booster' ); ?>" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'In use', 'ran-booster' ); ?></span>
+					<li><a class="<?php echo esc_attr( SectionTabs::TAB_CLASS ); ?><?php echo $active_view === $view ? ' current' : ''; ?>" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $request_url ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-profile-region" <?php echo $active_view === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $has_source ) { ?>
+						<?php SectionTabs::print_in_use_marker(); ?>
+
 					<?php } ?></a></li>
 				<?php } ?>
 				</ul>

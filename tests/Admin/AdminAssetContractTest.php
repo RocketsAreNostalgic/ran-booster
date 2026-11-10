@@ -593,15 +593,32 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'white-space: nowrap;', $settings );
 	}
 
-	public function test_package_source_navigation_preserves_current_source_status_badge(): void {
+	public function test_edit_source_tabs_reuse_the_repository_tab_strip_and_in_use_dot(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
+		$provider = $this->asset( 'ran-booster/30-provider-cards.css' );
+		$view     = $this->source( 'views/packages/source-choices.php' );
+		$tabs     = $this->source( 'RAN/Admin/Component/SectionTabs.php' );
 
+		// One definition of the strip classes and the dot, used by both screens.
+		self::assertStringContainsString( "'ran-booster-provider-task-tabs'", $tabs );
+		self::assertStringContainsString( "'filter-links ran-section-navigation ran-section-navigation--thin'", $tabs );
+		self::assertStringContainsString( 'ran-booster-provider-task-tab ran-section-navigation__link', $tabs );
+		self::assertStringContainsString( 'SectionTabs::TAB_CLASS', $view );
+		self::assertStringContainsString( 'SectionTabs::print_in_use_marker()', $view );
+		self::assertStringContainsString( 'SectionTabs::TAB_CLASS', $this->source( 'RAN/Admin/Component/RepositoryDetailRenderer.php' ) );
+		self::assertStringContainsString( 'SectionTabs::print_in_use_marker()', $this->source( 'RAN/Admin/Component/RepositoryDetailRenderer.php' ) );
+
+		// The tab strip and dot are styled once, in the repository stylesheet; Edit adds only button resets.
+		self::assertSame( 1, substr_count( $provider, '.ran-booster-provider-task-tab__source-indicator {' ) );
+		self::assertSame( 1, substr_count( $provider, '.ran-booster-provider-task-tabs {' ) );
+		self::assertStringNotContainsString( 'source-indicator', $settings );
+		self::assertStringNotContainsString( 'nav-tab', $settings );
+		self::assertStringNotContainsString( 'current-source', $settings );
+		self::assertStringNotContainsString( 'StatusBadge', $view );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-source-choices--navigation {', $settings );
-		self::assertStringContainsString( ".ran-booster-source-choice--navigation\n\t.ran-booster-source-choice__current-source {", $settings );
-		self::assertStringContainsString( '.ran-booster-source-choice__current-source {', $settings );
-		self::assertStringContainsString( "\tmargin-inline-start: auto;\n\tflex: 0 0 auto;", $settings );
+		self::assertStringContainsString( '.ran-booster-admin button.ran-booster-source-choice--navigation {', $settings );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-source-choice--navigation.is-disabled {', $settings );
 		self::assertStringNotContainsString( 'var(--ran-booster-status-ok-background)', $settings );
-		self::assertStringContainsString( "StatusBadge::print_intent( __( 'Active', 'ran-booster' ), 'stable', array( 'class' => 'ran-booster-source-choice__current-source' ) );", $this->source( 'views/packages/source-choices.php' ) );
 	}
 
 	public function test_first_settings_group_keeps_its_divider_and_padding(): void {

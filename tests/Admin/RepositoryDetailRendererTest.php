@@ -286,6 +286,53 @@ final class RepositoryDetailRendererTest extends TestCase {
 		}
 	}
 
+	/**
+	 * The shared tab strip is also used by the Edit source switcher, so the repository page markup is pinned byte for byte.
+	 */
+	public function test_repository_tab_strip_markup_is_pinned(): void {
+		$summaries = array();
+		foreach ( array( 'branch', 'release_asset' ) as $source ) {
+			$summaries[] = array(
+				'type'            => 'plugin',
+				'identifier'      => $source . '/plugin.php',
+				'display_name'    => 'Plugin ' . $source,
+				'settings_url'    => 'https://example.test/' . $source,
+				'source'          => $source,
+				'source_revision' => 1,
+				'branch'          => 'branch' === $source ? 'main' : '',
+				'subdirectory'    => '',
+			);
+		}
+		ob_start();
+		( new RepositoryDetailRenderer() )->render(
+			array(
+				'repository'        => 'owner/dot',
+				'source_label'      => 'Branch',
+				'source_key'        => 'mixed',
+				'package_summaries' => $summaries,
+				'details'           => array(),
+				'actions'           => array(),
+			),
+			'GitHub',
+			'https://example.test/repositories',
+			'https://example.test/activity',
+			true,
+			'Receiver ready.',
+			'branch',
+			$this->view_urls(),
+			$this->view_request_urls(),
+			null,
+			null
+		);
+		$html = (string) ob_get_clean();
+		if ( 1 !== preg_match( '#<nav class="ran-booster-provider-task-tabs ran-booster-repository-detail__tabs".*?</nav>#s', $html, $strip ) ) {
+			self::fail( 'The repository tab strip was not rendered.' );
+		}
+		$expected = file_get_contents( dirname( __DIR__ ) . '/fixtures/repository-tab-strip.html' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads a repository fixture in a test.
+		self::assertIsString( $expected );
+		self::assertSame( $expected, $strip[0] . "\n" );
+	}
+
 	public function test_status_keeps_exact_source_counts_for_complete_package_inventory(): void {
 		ob_start();
 		( new RepositoryDetailRenderer() )->render(

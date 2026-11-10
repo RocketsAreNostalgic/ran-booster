@@ -189,15 +189,37 @@
 	background: var(--ran-booster-surface-subtle);
 }
 
+.ran-booster-admin .ran-booster-source-choices--navigation {
+	display: flex;
+	gap: 0;
+}
+
+/* Edit tabs share the repository tab strip; only button resets and the disabled tab are local. */
+.ran-booster-admin .ran-booster-source-choice--navigation,
+.ran-booster-admin .ran-booster-source-choice--navigation:hover,
+.ran-booster-admin .ran-booster-source-choice--navigation.is-disabled,
+.ran-booster-admin .ran-booster-source-choice--navigation.is-disabled:hover {
+	background: transparent;
+	font-family: inherit;
+	font-size: inherit;
+}
+
+.ran-booster-admin button.ran-booster-source-choice--navigation {
+	border-block-start: 0;
+	border-inline: 0;
+	cursor: pointer;
+}
+
+.ran-booster-admin .ran-booster-source-choice--navigation.is-disabled {
+	color: var(--ran-booster-text-subtle);
+	cursor: not-allowed;
+	opacity: 0.58;
+}
+
 .ran-booster-source-choice:not(.ran-booster-source-choice--navigation):focus,
 .ran-booster-source-choice:not(.ran-booster-source-choice--navigation):hover {
 	background: var(--ran-booster-surface-info);
 	color: var(--ran-booster-text-muted);
-}
-
-.ran-booster-source-choice--navigation:focus-visible {
-	outline: 2px solid var(--ran-booster-link-strong);
-	outline-offset: 2px;
 }
 
 .ran-booster-source-choice:not(
@@ -207,20 +229,6 @@
 	border-radius: var(--ran-booster-radius-control)
 		var(--ran-booster-radius-control) 0 0;
 	background: var(--ran-booster-surface-info);
-}
-
-.ran-booster-admin .ran-booster-source-choices--navigation {
-	display: flex;
-	align-items: stretch;
-	flex-wrap: wrap;
-}
-
-.ran-booster-source-choice--navigation {
-	box-sizing: border-box;
-	min-inline-size: 0;
-	max-inline-size: 100%;
-	overflow-wrap: anywhere;
-	white-space: normal;
 }
 
 /*
@@ -277,18 +285,11 @@
 	display: block;
 }
 
-.ran-booster-source-choice__current-source {
-	margin-inline-start: auto;
-	flex: 0 0 auto;
-}
-
 .ran-booster-source-choice--navigation strong {
 	display: inline;
-}
-
-.ran-booster-source-choice--navigation
-	.ran-booster-source-choice__current-source {
-	margin-inline-start: var(--ran-booster-space-10);
+	color: inherit;
+	font-size: inherit;
+	font-weight: inherit;
 }
 
 .ran-booster-source-choice strong {

@@ -97,10 +97,6 @@
 
 .ran-booster-admin .ran-booster-package-source__guidance {
 	margin-block: var(--ran-booster-space-10) 0;
-	padding: var(--ran-booster-space-10) var(--ran-booster-space-12);
-	border-inline-start: 3px solid var(--ran-booster-status-warning);
-	background: var(--ran-booster-status-warning-background);
-	color: var(--ran-booster-text-muted);
 }
 
 .ran-booster-admin

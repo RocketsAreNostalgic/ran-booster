@@ -38,9 +38,7 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 			);
 			?>
 		</p>
-		<p class="ran-booster-package-source__guidance" data-ran-booster-source-repository-guidance <?php echo ! empty( $package_repository_ready ) ? 'hidden' : ''; ?>>
-			<?php esc_html_e( 'Choose a repository before configuring its update source.', 'ran-booster' ); ?>
-		</p>
+		<div class="notice notice-info inline ran-booster-package-source__guidance ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-source-repository-guidance <?php echo ! empty( $package_repository_ready ) ? 'hidden' : ''; ?>><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Choose a repository before configuring its update source.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 	</div>
 	<div class="ran-booster-source-choices<?php echo 'edit' === $source_choice_mode ? ' ran-booster-source-choices--navigation nav-tab-wrapper wp-clearfix' : ''; ?>"<?php echo 'edit' === $source_choice_mode ? ' role="navigation" aria-label="' . esc_attr( __( 'Update source settings', 'ran-booster' ) ) . '"' : ''; ?>>
 		<?php foreach ( $package_source_choices as $source_key => $source_choice ) { ?>

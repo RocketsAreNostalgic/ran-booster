@@ -605,6 +605,23 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "StatusBadge::print_intent( __( 'Active', 'ran-booster' ), 'stable', array( 'class' => 'ran-booster-source-choice__current-source' ) );", $this->source( 'views/packages/source-choices.php' ) );
 	}
 
+	public function test_package_source_repository_guidance_is_a_shared_static_notice(): void {
+		$view     = $this->source( 'views/packages/source-choices.php' );
+		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
+
+		self::assertStringContainsString( '<div class="notice notice-info inline ran-booster-package-source__guidance ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-source-repository-guidance', $view );
+		self::assertStringContainsString( "\\RAN\\Admin\\Component\\NoticeIcon::print_intent( 'info' )", $view );
+		self::assertStringNotContainsString( '<p class="ran-booster-package-source__guidance"', $view );
+		$hook_start = (int) strpos( $view, 'data-ran-booster-source-repository-guidance' );
+		$notice     = substr( $view, $hook_start, (int) strpos( $view, "\n", $hook_start ) - $hook_start );
+		self::assertStringNotContainsString( 'role=', $notice );
+		self::assertStringNotContainsString( 'aria-live', $notice );
+		$rule_start = (int) strpos( $settings, '.ran-booster-admin .ran-booster-package-source__guidance {' );
+		$rule       = substr( $settings, $rule_start, (int) strpos( $settings, '}', $rule_start ) - $rule_start );
+		self::assertStringNotContainsString( 'border-inline-start', $rule );
+		self::assertStringNotContainsString( 'background', $rule );
+	}
+
 	public function test_repository_branch_check_notice_sits_flush_beside_the_action(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 

@@ -1269,6 +1269,13 @@
 	border-block-end-color: var(--ran-section-indicator-color);
 }
 
+.ran-booster-admin
+	.ran-booster-provider-receiver
+	.ran-booster-provider-receiver__panel
+	> .ran-booster-section__description {
+	margin-block-end: var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-provider-receiver__field {
 	display: flex;
 	flex-wrap: wrap;

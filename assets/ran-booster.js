@@ -57,13 +57,7 @@
 		if (!button) {
 			return;
 		}
-		const option = select.options[select.selectedIndex];
-		const chosen = Boolean(select.value);
-		const set = chosen && option?.dataset.ranBoosterWebhookSet === 'true';
-		button.disabled = !chosen;
-		button.textContent = set
-			? button.dataset.manageLabel
-			: button.dataset.setLabel;
+		button.disabled = !select.value;
 	}
 
 	function initReceiverSetup() {

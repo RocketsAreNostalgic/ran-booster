@@ -2333,25 +2333,25 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '~<option value="branch-1" data-ran-booster-webhook-set="false">\s*owner/branch-repo\s*</option>~', $form[1] );
 		self::assertMatchesRegularExpression( '~<option value="release-1" data-ran-booster-webhook-set="false">\s*owner/release-repo\s*</option>~', $form[1] );
 		self::assertStringNotContainsString( '🟢', $form[1] );
-		self::assertMatchesRegularExpression( '~<button type="submit" [^>]*data-ran-booster-receiver-submit data-set-label="Set up webhook" data-manage-label="Manage webhook">Set up webhook</button>~', $form[1] );
+		self::assertMatchesRegularExpression( '~<button type="submit" [^>]*data-ran-booster-receiver-submit>Manage webhook</button>~', $form[1] );
 		self::assertStringNotContainsString( 'Pushes are ignored', $html );
 
 		// Order: the receiver sentence, the tabs, the automated panel (line before the select), then the manual panel (line first) and Payload URL.
 		$receiver  = (int) strpos( $html, 'Keep this URL reachable: do not cache, challenge or transform its requests.' );
 		$tabs      = (int) strpos( $html, 'role="tablist"' );
 		$auto      = (int) strpos( $html, 'data-ran-booster-receiver-panel="automated"' );
-		$auto_line = (int) strpos( $html, 'Choose a repository and Booster sets up its webhook for Push-to-Deploy.' );
+		$auto_line = (int) strpos( $html, 'Booster can set up a Push-to-Deploy webhook for you. Choose a repository below to get started.' );
 		$select    = (int) strpos( $html, '<select id="ran-booster-receiver-repository"' );
 		$manual    = (int) strpos( $html, 'data-ran-booster-receiver-panel="manual"' );
-		$man_line  = (int) strpos( $html, 'Create the webhook yourself at your Git provider with these values. Use a unique generated secret for each repository.' );
+		$man_line  = (int) strpos( $html, 'Generate a webhook for Push-to-Deploy manually using these values. Use a unique generated secret for each repository.' );
 		$payload   = (int) strpos( $html, 'Payload URL' );
 		self::assertTrue( $receiver > 0 && $receiver < $tabs && $tabs < $auto && $auto < $auto_line && $auto_line < $select && $select < $manual && $manual < $man_line && $man_line < $payload );
 		self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $html );
 		// The receiver sentence sits outside both tabpanels, and its Learn more link is the external operations guide.
 		self::assertSame( 2, preg_match_all( '~<div id="ran-booster-receiver-panel-[^"]*"[^>]*role="tabpanel"~', $html ) );
 		self::assertMatchesRegularExpression( '~<p class="ran-booster-section__description">Keep this URL reachable: do not cache, challenge or transform its requests\. <a href="[^"]+" target="_blank" rel="noopener noreferrer">Learn more<span class="screen-reader-text"> about keeping the webhook receiver URL reachable</span> <span aria-hidden="true">~', $html );
-		self::assertMatchesRegularExpression( '~<div id="ran-booster-receiver-panel-manual"[^>]*>\s*<p class="ran-booster-section__description">Create the webhook yourself~', $html );
-		self::assertMatchesRegularExpression( '~data-ran-booster-receiver-panel="automated">\s*<p class="ran-booster-section__description">Choose a repository and Booster sets up its webhook for Push-to-Deploy\.</p>\s*<form~', $html );
+		self::assertMatchesRegularExpression( '~<div id="ran-booster-receiver-panel-manual"[^>]*>\s*<p class="ran-booster-section__description">Generate a webhook for Push-to-Deploy manually using these values\.~', $html );
+		self::assertMatchesRegularExpression( '~data-ran-booster-receiver-panel="automated">\s*<p class="ran-booster-section__description">Booster can set up a Push-to-Deploy webhook for you\. Choose a repository below to get started\.</p>\s*<form~', $html );
 		// Standing guidance is plain description text, never a notice.
 		if ( preg_match_all( '~<div class="notice [^"]*ran-wp-ui-notice[^"]*".*?</div>\s*(?:<svg.*?</svg>\s*)?</div>~s', $html, $notices ) ) {
 			foreach ( $notices[0] as $notice_html ) {
@@ -2364,7 +2364,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$empty = $this->render_provider_panels( $ready, array() )['setup'];
 		self::assertStringNotContainsString( 'role="tablist"', $empty );
 		self::assertStringNotContainsString( 'Automated setup', $empty );
-		self::assertStringNotContainsString( 'Set up webhook', $empty );
+		self::assertStringNotContainsString( 'Manage webhook', $empty );
 		self::assertStringContainsString( 'Payload URL', $empty );
 	}
 

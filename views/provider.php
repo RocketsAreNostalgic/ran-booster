@@ -634,7 +634,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 									</ul>
 								</div>
 								<div id="ran-booster-receiver-panel-automated" class="ran-booster-provider-receiver__panel" role="tabpanel" aria-labelledby="ran-booster-receiver-tab-automated" data-ran-booster-receiver-panel="automated">
-									<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a repository and Booster sets up its webhook for Push-to-Deploy.', 'ran-booster' ); ?></p>
+									<p class="ran-booster-section__description"><?php esc_html_e( 'Booster can set up a Push-to-Deploy webhook for you. Choose a repository below to get started.', 'ran-booster' ); ?></p>
 									<form class="ran-booster-provider-receiver__form" method="get" action="<?php echo esc_url( (string) strtok( $overview_url, '?' ) ); ?>">
 										<?php foreach ( $receiver_form as $receiver_field => $receiver_value ) { ?>
 											<?php if ( is_scalar( $receiver_value ) ) { ?>
@@ -670,13 +670,13 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 													</option>
 												<?php } ?>
 											</select>
-											<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" data-ran-booster-receiver-submit data-set-label="<?php esc_attr_e( 'Set up webhook', 'ran-booster' ); ?>" data-manage-label="<?php esc_attr_e( 'Manage webhook', 'ran-booster' ); ?>"><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?></button>
+											<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" data-ran-booster-receiver-submit><?php esc_html_e( 'Manage webhook', 'ran-booster' ); ?></button>
 										</div>
 									</form>
 								</div>
 								<?php } ?>
 								<div<?php echo $receiver_tabs ? ' id="ran-booster-receiver-panel-manual" class="ran-booster-provider-receiver__panel hide-if-js" role="tabpanel" aria-labelledby="ran-booster-receiver-tab-manual" data-ran-booster-receiver-panel="manual"' : ' class="ran-booster-provider-receiver__panel"'; ?>>
-							<p class="ran-booster-section__description"><?php esc_html_e( 'Create the webhook yourself at your Git provider with these values. Use a unique generated secret for each repository.', 'ran-booster' ); ?></p>
+							<p class="ran-booster-section__description"><?php esc_html_e( 'Generate a webhook for Push-to-Deploy manually using these values. Use a unique generated secret for each repository.', 'ran-booster' ); ?></p>
 							<dl class="ran-booster-webhook-endpoint ran-booster-summary-grid">
 								<div>
 									<dt id="ran-booster-webhook-url-label"><?php esc_html_e( 'Payload URL', 'ran-booster' ); ?></dt>

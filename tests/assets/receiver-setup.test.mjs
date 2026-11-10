@@ -92,39 +92,27 @@ test('selecting a receiver tab swaps the panels and roving tabindex', () => {
 	assert.equal(tabA.focused, false);
 });
 
-test('the receiver button is disabled until a repository is chosen and names the action', () => {
+test('the receiver button is disabled until a repository is chosen', () => {
 	const syncReceiverSubmit = Function(
 		`"use strict"; return (${extract('syncReceiverSubmit')});`
 	)();
-	const button = {
-		disabled: false,
-		textContent: 'Set up webhook',
-		dataset: { setLabel: 'Set up webhook', manageLabel: 'Manage webhook' },
-	};
-	const options = [
-		{ dataset: {} },
-		{ dataset: { ranBoosterWebhookSet: 'false' } },
-		{ dataset: { ranBoosterWebhookSet: 'true' } },
-	];
+	const button = { disabled: false, textContent: 'Manage webhook' };
 	const select = {
 		value: '',
 		selectedIndex: 0,
-		options,
+		options: [
+			{ dataset: {} },
+			{ dataset: { ranBoosterWebhookSet: 'true' } },
+		],
 		form: { querySelector: () => button },
 	};
 
 	syncReceiverSubmit(select);
 	assert.equal(button.disabled, true);
-	assert.equal(button.textContent, 'Set up webhook');
+	assert.equal(button.textContent, 'Manage webhook');
 
 	select.value = 'a';
 	select.selectedIndex = 1;
-	syncReceiverSubmit(select);
-	assert.equal(button.disabled, false);
-	assert.equal(button.textContent, 'Set up webhook');
-
-	select.value = 'b';
-	select.selectedIndex = 2;
 	syncReceiverSubmit(select);
 	assert.equal(button.disabled, false);
 	assert.equal(button.textContent, 'Manage webhook');

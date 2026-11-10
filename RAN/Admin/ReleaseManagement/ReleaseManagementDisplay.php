@@ -168,7 +168,7 @@ final class ReleaseManagementDisplay {
 						<strong><?php esc_html_e( 'Installed identity and Update URI', 'ran-booster' ); ?></strong>
 						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( $subdirectory_incompatible ? __( 'This package uses a repository subdirectory. Published releases require the repository root.', 'ran-booster' ) : ( $update_uri_ready ? __( 'The installed package identity and Update URI match the configured repository.', 'ran-booster' ) : $this->update_uri_readiness_message( $eligibility_code ) ) ) ); ?></span>
 					</li>
-					<li class="ran-booster-readiness-item <?php echo $status_available && 'release_asset' === $source && '' === $status->failure_code() ? 'is-ok' : 'is-warning'; ?>">
+					<li class="ran-booster-readiness-item <?php echo $status_available && 'release_asset' === $source && '' === $status->failure_code() ? 'is-ok' : ( $status_available && 'branch' === $source && ! $repository_blocked ? 'is-neutral' : 'is-warning' ); ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 						<strong><?php esc_html_e( 'Release status', 'ran-booster' ); ?></strong>
 						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? $this->release_status_message( $status ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>

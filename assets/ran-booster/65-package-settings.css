@@ -731,6 +731,18 @@
 	content: "?";
 }
 
+.ran-booster-admin
+	.ran-booster-readiness-item.is-neutral
+	.ran-booster-readiness-icon {
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin
+	.ran-booster-readiness-item.is-neutral
+	.ran-booster-readiness-icon::after {
+	content: "–";
+}
+
 .ran-booster-admin .ran-booster-release-switch-actions {
 	display: flex;
 	flex-wrap: wrap;

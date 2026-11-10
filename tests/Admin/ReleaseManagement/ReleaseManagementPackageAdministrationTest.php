@@ -1138,6 +1138,32 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( '>Switch to releases using the Preview track.</span>', $html );
 	}
 
+	public function test_branch_release_status_row_is_neutral_only_while_releases_are_not_tracked(): void {
+		$render = static function ( string $source, string $failure = '', ?string $eligibility = null ): string {
+			$status  = null === $eligibility
+				? ReleaseManagementFixture::status( $source, 'plugin', failure_code: $failure )
+				: ReleaseManagementFixture::status( $source, 'plugin', $eligibility, failure_code: $failure );
+			$package = new PackageProjection( $source );
+			ob_start();
+			ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( $status ) )->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+			return (string) ob_get_clean();
+		};
+		$row    = static function ( string $html ): string {
+			if ( 1 !== preg_match( '/<li class="ran-booster-readiness-item ([^"]*)">\s*<span class="ran-booster-readiness-icon" aria-hidden="true"><\/span>\s*<strong>Release status<\/strong>/', $html, $m ) ) {
+				self::fail( 'Expected the Release status readiness row.' );
+			}
+			return $m[1];
+		};
+
+		$branch = $render( 'branch' );
+		self::assertStringContainsString( 'Branch is active; releases are not tracked.', $branch );
+		self::assertSame( 'is-neutral', $row( $branch ) );
+		self::assertSame( 'is-ok', $row( $render( 'release_asset' ) ) );
+		self::assertSame( 'is-warning', $row( $render( 'release_asset', 'release_unavailable' ) ) );
+		self::assertSame( 'is-warning', $row( $render( 'branch', 'release_unavailable' ) ) );
+		self::assertSame( 'is-warning', $row( $render( 'branch', 'repository_source_unavailable' ) ) );
+	}
+
 	public function test_automatic_branch_transition_shows_its_warning_only_at_the_top(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( deployment_policy: 'automatic' ) );
 		$controls = ReleaseManagementFixture::controls( $tracking );

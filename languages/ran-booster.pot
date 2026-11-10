@@ -10946,7 +10946,7 @@ msgstr ""
 #. translators: %s: release version.
 #: assets/ran-booster-release-management.js:135
 #, js-format
-msgid "Install %s now"
+msgid "Update to %s"
 msgstr ""
 
 #: assets/ran-booster-release-management.js:214

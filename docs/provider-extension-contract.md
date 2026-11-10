@@ -144,6 +144,11 @@ closed actions `setup`, `check`, `reconfigure`, `remove` and `test`, with
 matching read-only `assess_setup`, `assess_check`, `assess_reconfigure`,
 `assess_remove` and `assess_test` methods. There is no operation dispatcher,
 callable, provider client, transport or credential handle in the public contract.
+Core presents them as three fixed buttons, Set up (Repair when a recorded hook
+needs reconfiguring), Validate and Remove. Validate runs `check` and then, only
+if the settings are confirmed, `test`. Core derives the labels and unavailable
+reasons in the webhook display model that provider add-ons receive; the old
+separate Check, Test and Update labels no longer exist.
 
 Saved credential IDs are display-safe inputs. The provider resolves their
 plaintext only through its already-bound `ProviderCredentialStore` and only

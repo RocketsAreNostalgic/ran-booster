@@ -177,3 +177,6 @@ Option C shipped in beta.44: one Validate button that is a thin wrapper over the
 - Two nonces: the Check nonce stays in the button's `formaction`, the Test nonce is a hidden `_wpnonce_test` field. The controller verifies both before anything runs.
 - The redirect carries `webhook_management_result` (settings) and `webhook_management_ping` (the test code or `skipped`); the panel shows two lines, Settings and Ping.
 - No coordinator, facade or Core authorization change. The second call re-reads the record the first one wrote, so its compare-and-swap succeeds.
+- Later on the branch the four labelled buttons became three fixed buttons: Set up (Repair when a recorded hook needs reconfiguring), Validate and Remove. Unavailable buttons stay visible but disabled with a reason; Remove asks for confirmation. The separate Check, Test and Update labels no longer exist.
+- A running operation shows a busy state (striped button, busy label) and the result notice appears directly under the button group.
+- A ping request being accepted is not proof of signed delivery; only a verified signed delivery establishes that. A webhook created by hand at the Git provider is not recorded: Booster shows Manual webhook after a verified signed delivery and cannot validate, repair or remove it (follow-ups: issue #780).

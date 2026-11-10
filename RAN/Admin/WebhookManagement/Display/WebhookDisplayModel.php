@@ -416,11 +416,11 @@ final class WebhookDisplayModel {
 	/** @return list<array{heading:?string,body:string}> */
 	public function documentation( string $provider_label ): array {
 		/* translators: %s: repository provider name. */
-		$intro = sprintf( __( 'Booster can set up, check, reconfigure and remove one %s webhook per managed repository. Manual webhook setup remains available.', 'ran-booster' ), $provider_label );
+		$intro = sprintf( __( 'Booster can set up, validate, repair and remove one %s webhook per managed repository. Manual webhook setup remains available.', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
 		$credential_heading = sprintf( __( 'Saved %s access', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */
-		$readiness = sprintf( __( 'Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Check.', 'ran-booster' ), $provider_label ) . ' ' . __( 'A webhook you created yourself cannot be validated by Booster; a verified delivery in Activity shows it works.', 'ran-booster' );
+		$readiness = sprintf( __( 'Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Validate.', 'ran-booster' ), $provider_label ) . ' ' . __( 'A webhook you created yourself cannot be validated by Booster; a verified delivery in Activity shows it works.', 'ran-booster' );
 		/* translators: %s: repository provider name. */
 		$lifecycle = sprintf( __( 'Webhook management never enables Automatic deployment. Blueprint import, plugin deactivation and plugin deletion do not contact %s or remove remote hooks.', 'ran-booster' ), $provider_label );
 		/* translators: %s: repository provider name. */

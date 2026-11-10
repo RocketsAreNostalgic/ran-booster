@@ -37,8 +37,9 @@ twice; a provider retry with a new delivery ID is a new delivery.
 
 Setting up webhooks can be a bit daunting, so Booster brings the callback
 details, secret, repository context, and setup checks together. Where the
-credential permits it, Booster can also create, check, reconfigure, and remove
-the GitHub webhook.
+credential permits it, Booster can also set up, validate, repair, and remove
+the GitHub webhook. Webhooks you create by hand at the Git provider are not
+recorded, so Booster cannot validate, repair, or remove them.
 
 You still choose whether the package becomes Automatic; creating a webhook does
 not make that decision for you.

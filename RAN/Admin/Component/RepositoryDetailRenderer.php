@@ -46,7 +46,7 @@ final class RepositoryDetailRenderer {
 				</div>
 				<?php if ( is_string( $row['repository_url'] ?? null ) && '' !== $row['repository_url'] ) { ?>
 					<a href="<?php echo esc_url( $row['repository_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( /* translators: %s: repository provider name. */ __( 'Open on %s', 'ran-booster' ), $provider_label ) ); ?>
-					<span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a>
+					<?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
 				<?php } ?>
 			</header>
 			<div class="notice notice-error inline ran-booster-provider-task-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-provider-task-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Booster could not load that repository view. The current view is unchanged; choose the view again to retry.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
@@ -555,7 +555,7 @@ final class RepositoryDetailRenderer {
 				<?php /* translators: %s: repository provider name. */ ?>
 				<a<?php echo $webhooks_link ? '' : ' class="' . esc_attr( ButtonClasses::secondary( false, true ) ) . '"'; ?> href="<?php echo esc_url( (string) ( $action['url'] ?? '' ) ); ?>"<?php echo true === ( $action['external'] ?? false ) ? ' target="_blank" rel="noopener noreferrer"' : ''; ?><?php echo '' !== $described_by ? ' aria-describedby="' . esc_attr( $described_by ) . '"' : ''; ?>><?php echo esc_html( $webhooks_link ? sprintf( __( 'Manage repo webhooks on %s', 'ran-booster' ), 'GitHub' === $provider_label ? 'Github' : $provider_label ) : (string) ( $action['label'] ?? '' ) ); ?>
 				<?php if ( $webhooks_link ) { ?>
-					<span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span>
+					<?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?>
 				<?php } ?></a>
 			<?php } ?>
 		<?php } ?>

@@ -237,7 +237,7 @@ final class ReleaseManagementDisplay {
 					<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) . ( $updates_enabled ? '' : ' disabled' ) ); ?>"<?php echo $updates_enabled ? ' href="' . esc_url( admin_url( 'update-core.php' ) ) . '"' : ' aria-disabled="true" tabindex="-1"'; ?>><?php esc_html_e( 'Open WordPress updates', 'ran-booster' ); ?></a>
 					<?php if ( '' !== $expected_update_uri ) { ?>
 						<span class="ran-booster-readiness-actions__links">
-							<a href="<?php echo esc_url( $expected_update_uri ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open repository', 'ran-booster' ); ?></a>
+							<a href="<?php echo esc_url( $expected_update_uri ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open repository', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
 						</span>
 					<?php } ?>
 					<?php if ( $status_available ) { ?>

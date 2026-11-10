@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin\ReleaseManagement;
 
+use RAN\Admin\Component\ExternalLinkMarker;
 use RAN\Admin\Component\NoticeIcon;
 
 /** @internal Fixed Core presentation for optional provider release workflows. */
@@ -86,7 +87,7 @@ final class ReleaseWorkflowDisplay {
 					$workflow_url  = is_string( $projection['provider_workflow_url'] ?? null ) ? $projection['provider_workflow_url'] : '';
 					if ( '' !== $workflow_url ) {
 						$notice .= '<p><a href="' . esc_url( $workflow_url ) . '" target="_blank" rel="noopener noreferrer">'
-							. esc_html__( 'Review existing workflow', 'ran-booster' ) . '</a></p>';
+							. esc_html__( 'Review existing workflow', 'ran-booster' ) . ' ' . ExternalLinkMarker::markup() . '</a></p>';
 					}
 					$notice .= '</div>' . NoticeIcon::markup( $notice_intent ) . '</div>';
 				}
@@ -181,7 +182,7 @@ final class ReleaseWorkflowDisplay {
 		$html .= '<hr><p><a href="' . esc_url( $this->documentation_url() ) . '">'
 			. esc_html__( 'Booster Releases docs', 'ran-booster' ) . '</a>';
 		foreach ( $view['documentation_links'] ?? array() as $link ) {
-			$html .= ' · <a href="' . esc_url( $link['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $link['label'] ) . '</a>';
+			$html .= ' · <a href="' . esc_url( $link['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $link['label'] ) . ' ' . ExternalLinkMarker::markup() . '</a>';
 		}
 		$html .= '</p>';
 
@@ -210,7 +211,7 @@ final class ReleaseWorkflowDisplay {
 		} elseif ( null !== $record ) {
 			$detail = '<hr>';
 			if ( is_string( $record['pull_request_url'] ?? null ) && '' !== $record['pull_request_url'] ) {
-				$detail .= '<p><a href="' . esc_url( $record['pull_request_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review recorded setup pull request', 'ran-booster' ) . '</a></p>';
+				$detail .= '<p><a href="' . esc_url( $record['pull_request_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review recorded setup pull request', 'ran-booster' ) . ' ' . ExternalLinkMarker::markup() . '</a></p>';
 			}
 			$detail .= $this->form( is_array( $forms['outcome'] ?? null ) ? $forms['outcome'] : array() );
 		} elseif ( null !== $legacy ) {

@@ -32,7 +32,7 @@ $repository_read_only_url = $repository_read_only && isset( $stored_repository_u
 	<?php } ?>
 		<div id="ran-booster-repository-name" class="ran-booster-repository-field ran-booster-repository-field--read-only" role="group" aria-labelledby="ran-booster-repository-name-label" aria-describedby="ran-booster-repository-fixed-description">
 			<?php if ( '' !== $repository_read_only_url ) { ?>
-				<a href="<?php echo esc_url( $repository_read_only_url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $repository_value ); ?></a>
+				<a href="<?php echo esc_url( $repository_read_only_url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $repository_value ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
 			<?php } else { ?>
 				<span><?php echo esc_html( $repository_value ); ?></span>
 			<?php } ?>

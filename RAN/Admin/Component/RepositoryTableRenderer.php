@@ -63,7 +63,7 @@ final class RepositoryTableRenderer {
 		?>
 		<a class="ran-booster-repository-record__name" href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener noreferrer">
 			<?php echo esc_html( $label ); ?>
-			<span class="screen-reader-text"><?php esc_html_e( ' (opens repository in a new tab)', 'ran-booster' ); ?></span>
+			<?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?>
 		</a>
 		<?php
 	}
@@ -177,6 +177,9 @@ final class RepositoryTableRenderer {
 			<?php echo esc_html( $label ); ?>
 			<?php if ( '' !== $screen_reader ) { ?>
 				<span class="screen-reader-text">: <?php echo esc_html( $screen_reader ); ?></span>
+			<?php } ?>
+			<?php if ( $external && ! $button ) { ?>
+				<?php ExternalLinkMarker::print(); ?>
 			<?php } ?>
 		</a>
 		<?php

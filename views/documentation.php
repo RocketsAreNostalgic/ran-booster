@@ -474,9 +474,9 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 								<dd><?php echo esc_html( $webhook['event'] ?? '' ); ?></dd>
 							</dl>
 							<p>
-								<a href="<?php echo esc_url( $webhook['documentation_url'] ?? '' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Webhook setup instructions', 'ran-booster' ); ?><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a>
+								<a href="<?php echo esc_url( $webhook['documentation_url'] ?? '' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Webhook setup instructions', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
 								<span aria-hidden="true"> · </span>
-								<a href="<?php echo esc_url( $webhook['delivery_documentation_url'] ?? '' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a>
+								<a href="<?php echo esc_url( $webhook['delivery_documentation_url'] ?? '' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
 							</p>
 							<?php if ( 'bb' === $provider_guide['code'] ) { ?>
 								<p><?php esc_html_e( 'For Bitbucket, enable Request History before you need it and treat its request UUID only as a cross-reference; do not assume it remains stable across automatic attempts.', 'ran-booster' ); ?></p>
@@ -526,7 +526,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 									<?php if ( isset( $credential_link['label'], $credential_link['url'] ) ) { ?>
 										<li>
 											<a href="<?php echo esc_url( $credential_link['url'] ); ?>" target="_blank" rel="noopener noreferrer">
-												<?php echo esc_html( $credential_link['label'] ); ?><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span>
+												<?php echo esc_html( $credential_link['label'] ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?>
 											</a>
 										</li>
 									<?php } ?>

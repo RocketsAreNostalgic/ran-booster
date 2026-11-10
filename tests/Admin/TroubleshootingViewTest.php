@@ -1912,7 +1912,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-webhook-repositories__setup-link', $html );
 		self::assertStringContainsString( 'Plugin · Branch · 1 package', $html );
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
-		self::assertStringContainsString( 'opens repository in a new tab', $html );
+		self::assertStringContainsString( '(opens in a new tab)', $html );
 		self::assertStringNotContainsString( 'Push-to-Deploy URL configured', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
 		self::assertStringNotContainsString( '1 repositories', $html );

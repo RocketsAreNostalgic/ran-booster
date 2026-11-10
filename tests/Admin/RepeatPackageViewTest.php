@@ -791,7 +791,7 @@ final class RepeatPackageViewTest extends TestCase {
 				self::fail( 'The Edit form must render the saved repository as text.' );
 			}
 			self::assertStringContainsString( 'role="group" aria-labelledby="ran-booster-repository-name-label" aria-describedby="ran-booster-repository-fixed-description"', $repository[1] );
-			self::assertStringContainsString( '<a href="https://github.com/owner/example" target="_blank" rel="noopener noreferrer">owner/example</a>', $repository[2] );
+			self::assertStringContainsString( '<a href="https://github.com/owner/example" target="_blank" rel="noopener noreferrer">owner/example <span aria-hidden="true">↗</span><span class="screen-reader-text"> (opens in a new tab)</span></a>', $repository[2] );
 			self::assertMatchesRegularExpression( '/<span id="ran-booster-repository-name-label" class="ran-booster-settings-field__label">[^<]+<\/span>/', $edit_form );
 			self::assertStringContainsString( '<p id="ran-booster-repository-fixed-description" class="description">The Git provider and repository cannot change once a package is installed.</p>', $edit_form );
 			self::assertStringNotContainsString( 'ran-booster-open-repository-picker', $html );

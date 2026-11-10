@@ -37,7 +37,7 @@ final class AdminActionRenderer {
 				<?php if ( '' !== $action['screen_reader'] ) { ?>
 					<span class="screen-reader-text">: <?php echo esc_html( $action['screen_reader'] ); ?></span>
 				<?php } ?>
-				<span aria-hidden="true">↗</span><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span>
+				<?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?>
 			</a>
 			<?php
 			return;

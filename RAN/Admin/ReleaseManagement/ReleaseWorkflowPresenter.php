@@ -489,7 +489,7 @@ final class ReleaseWorkflowPresenter {
 				$tone  = 'pending';
 			} elseif ( 'existing_automation_detected' === $observation_kind ) {
 				$value = __( 'Existing workflow found', 'ran-booster' );
-				$tone  = 'info';
+				$tone  = 'neutral';
 			} elseif ( 'booster_setup_verified' === $observation_kind ) {
 				$value = __( 'Compatible workflow verified', 'ran-booster' );
 				$tone  = 'ok';

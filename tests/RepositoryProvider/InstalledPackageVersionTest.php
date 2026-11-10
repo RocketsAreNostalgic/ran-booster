@@ -20,8 +20,8 @@ final class InstalledPackageVersionTest extends TestCase {
 
 	public function test_failing_or_malformed_metadata_is_unavailable(): void {
 		self::assertNull( ( new InstalledPackageVersion( static fn (): ?string => throw new \RuntimeException( 'boom' ) ) )->for_package( 'a/b' ) );
-		self::assertNull( ( new InstalledPackageVersion( static fn (): ?string => str_repeat( '1', 81 ) ) )->for_package( 'a/b' ) );
-		self::assertNull( ( new InstalledPackageVersion( static fn (): ?string => '' ) )->for_package( 'a/b' ) );
-		self::assertSame( 'v1.2.3', ( new InstalledPackageVersion( static fn (): ?string => 'v1.2.3' ) )->for_package( 'a/b' ) );
+		self::assertNull( ( new InstalledPackageVersion( static fn (): string => str_repeat( '1', 81 ) ) )->for_package( 'a/b' ) );
+		self::assertNull( ( new InstalledPackageVersion( static fn (): string => '' ) )->for_package( 'a/b' ) );
+		self::assertSame( 'v1.2.3', ( new InstalledPackageVersion( static fn (): string => 'v1.2.3' ) )->for_package( 'a/b' ) );
 	}
 }

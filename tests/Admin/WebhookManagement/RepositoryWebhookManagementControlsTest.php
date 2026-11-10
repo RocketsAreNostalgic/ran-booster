@@ -1127,6 +1127,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$labels  = array();
 		$buttons = $xpath->query( '//button[@name="repository_webhook_management_operation"]' );
 		foreach ( false === $buttons ? array() : $buttons as $button ) {
+			if ( ! $button instanceof \DOMElement ) {
+				continue;
+			}
 			$text = $xpath->evaluate( 'string(.)', $button );
 			if ( is_string( $text ) ) {
 				$labels[] = trim( $text );

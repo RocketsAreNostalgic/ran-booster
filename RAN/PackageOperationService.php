@@ -321,7 +321,7 @@ final readonly class PackageOperationService {
 			: $this->repository( $operation, $this->provider_repository_id_for_edit( $operation, $existing ) );
 		if ( $repository->provider->value !== $existing->get_provider_code()
 			|| $repository->reference->provider_repository_id !== $existing->get_provider_repository_id() ) {
-			throw new RuntimeException( 'Stop managing this package before adopting a different repository.' );
+			throw new PackageRepositoryChangeRejected( 'Stop managing this package before adopting a different repository.' );
 		}
 		$this->source_guard->assert_allowed( $repository->provider->value, $repository->reference->provider_repository_id, 'plugin' === $operation->package_type ? 1 : 2, $identifier, $existing->get_source() );
 		$result = 'plugin' === $operation->package_type

@@ -24,6 +24,7 @@ use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
+use RAN\PackageRepositoryChangeRejected;
 use RAN\PackageRemoval\PackageRemovalGateway;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\PackageSource;
@@ -464,7 +465,12 @@ final class PackageOperationServiceTest extends TestCase {
 	public function test_repository_replacement_requires_a_new_adoption_before_any_write(): void {
 		$plugins = new OperationPluginRepository( $this->plugin() );
 		$service = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
-		foreach ( array( array( 'gh', 'R_other' ), array( 'bb', 'R_example' ) ) as [$provider, $repository_id] ) {
+		foreach (
+			array(
+				'different repository id' => array( 'gh', 'R_other' ),
+				'different provider'      => array( 'bb', 'R_example' ),
+			) as $case => [$provider, $repository_id]
+		) {
 			try {
 				$service->execute(
 					PackageOperation::from_input(
@@ -478,12 +484,73 @@ final class PackageOperationServiceTest extends TestCase {
 						)
 					)
 				);
-				self::fail( 'A repository replacement must not edit the current adoption.' );
-			} catch ( \RuntimeException $failure ) {
-				self::assertStringContainsString( 'Stop managing', $failure->getMessage() );
-				self::assertSame( array(), $plugins->edited );
+				self::fail( 'A repository replacement must not edit the current adoption: ' . $case );
+			} catch ( PackageRepositoryChangeRejected $failure ) {
+				self::assertStringContainsString( 'Stop managing', $failure->getMessage(), $case );
+				self::assertSame( array(), $plugins->edited, $case );
 			}
 		}
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_dashboard_explains_a_rejected_repository_change_without_a_generic_reference(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- The notice view only renders inside WordPress; this isolated process stands in for it.
+		define( 'WPINC', 'wp-includes' );
+		foreach (
+			array(
+				'different repository id' => array( 'gh', 'R_other' ),
+				'different provider'      => array( 'bb', 'R_example' ),
+			) as $case => [$provider, $repository_id]
+		) {
+			$dashboard = $this->dashboard( new OperationCoordinator() );
+			$input     = $this->input(
+				'edit-plugin',
+				array(
+					'provider'               => $provider,
+					'provider_repository_id' => $repository_id,
+				)
+			);
+
+			self::assertFalse( $dashboard->post_package_operation( 'edit-plugin', $input ), $case );
+			self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'], $case );
+			self::assertCount( 1, $dashboard->messages, $case );
+			self::assertSame( 'error', $dashboard->messages[0]['type'], $case );
+			self::assertSame( 'ran_booster_package_repository_change_rejected', $dashboard->messages[0]['code'], $case );
+			self::assertSame( 'To use a different Git provider or repository, stop managing this package and adopt it again.', $dashboard->messages[0]['message'], $case );
+			self::assertStringNotContainsString( 'Reference:', $dashboard->messages[0]['message'], $case );
+			unset( $GLOBALS['ran_booster_test_status_header'] );
+
+			$messages = $dashboard->messages;
+			require_once __DIR__ . '/Admin/AdminViewWordPressFunctions.php';
+			ob_start();
+			require dirname( __DIR__ ) . '/views/notices.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( '<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error"', $html, $case );
+			self::assertStringContainsString( '<p>To use a different Git provider or repository, stop managing this package and adopt it again.</p>', $html, $case );
+		}
+	}
+
+	public function test_other_edit_failures_keep_the_generic_reference_notice(): void {
+		$plugin = $this->plugin();
+		$plugin->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$plugin->set_subdirectory( 'packages/example' );
+		$dashboard = $this->dashboard( new OperationCoordinator(), $plugin );
+		$input     = $this->input(
+			'edit-plugin',
+			array(
+				'expected_source'          => PackageSource::RELEASE_ASSET->value,
+				'expected_source_revision' => '2',
+				'expected_subdirectory'    => 'packages/example',
+			)
+		);
+
+		self::assertFalse( $dashboard->post_package_operation( 'edit-plugin', $input ) );
+		self::assertSame( 400, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( 'ran_booster_manual_action_failed', $dashboard->messages[0]['code'] );
+		self::assertStringContainsString( 'Reference: ran_booster_manual_action_failed.', $dashboard->messages[0]['message'] );
+		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
 	/** @return list<array{string}> */

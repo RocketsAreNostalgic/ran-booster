@@ -13,6 +13,7 @@ use RAN\InvalidPackageSubdirectory;
 use RAN\Package;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
+use RAN\PackageRepositoryChangeRejected;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\{InvalidProviderCode, ProviderRegistry, UnknownProvider, UnsupportedProviderCapability};
 use RAN\Storage\{PackageStorageFailure, PluginRepository, ThemeRepository};
@@ -252,6 +253,16 @@ final class PackageAdminController {
 				? $this->active_deployment( $dashboard, $failure, $action )
 
 				: $this->manual_failure( $dashboard, $add_context_message, $failure, $action );
+		} catch ( PackageRepositoryChangeRejected ) {
+			status_header( 409 );
+			$add_context_message(
+				new WP_Error( 'ran_booster_package_repository_change_rejected', __( 'To use a different Git provider or repository, stop managing this package and adopt it again.', 'ran-booster' ) ),
+				array(
+					'operation' => $action,
+					'step'      => 'package_repository_change',
+				)
+			);
+			return false;
 		} catch ( Throwable $failure ) {
 
 			return $this->manual_failure( $dashboard, $add_context_message, $failure, $action );

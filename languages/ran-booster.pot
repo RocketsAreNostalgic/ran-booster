@@ -90,17 +90,17 @@ msgid "Review deployment activity: %s"
 msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:17
-#: RAN/Admin/PackageAdminController.php:433
+#: RAN/Admin/PackageAdminController.php:444
 msgid "A selected package uses an unavailable Git provider."
 msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:21
-#: RAN/Admin/PackageAdminController.php:431
+#: RAN/Admin/PackageAdminController.php:442
 msgid "A selected package does not have its required repository credential."
 msgstr ""
 
 #: RAN/Admin/BulkPackageActionFailure.php:25
-#: RAN/Admin/PackageAdminController.php:436
+#: RAN/Admin/PackageAdminController.php:447
 msgid "A selected package Git provider does not support Automatic deployment."
 msgstr ""
 
@@ -519,7 +519,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:487
-#: RAN/Admin/PackageAdminController.php:532
+#: RAN/Admin/PackageAdminController.php:543
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:330
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
 #: views/documentation.php:348
@@ -531,7 +531,7 @@ msgid "Automatic"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:488
-#: RAN/Admin/PackageAdminController.php:533
+#: RAN/Admin/PackageAdminController.php:544
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:334
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
 #: views/documentation.php:347
@@ -543,8 +543,8 @@ msgid "Manual"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:489
-#: RAN/Admin/PackageAdminController.php:499
-#: RAN/Admin/PackageAdminController.php:531
+#: RAN/Admin/PackageAdminController.php:510
+#: RAN/Admin/PackageAdminController.php:542
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:338
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
 #: views/documentation.php:346
@@ -742,7 +742,7 @@ msgstr ""
 
 #: RAN/Admin/DeploymentAdminController.php:72
 #: RAN/Admin/DeploymentAdminController.php:110
-#: RAN/Admin/PackageAdminController.php:107
+#: RAN/Admin/PackageAdminController.php:108
 msgid "You do not have sufficient permissions to manage this package."
 msgstr ""
 
@@ -823,8 +823,8 @@ msgid "Older activity filters were cleared. Use Git provider and Activity subjec
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:297
-#: RAN/Admin/PackageAdminController.php:347
-#: RAN/Admin/PackageAdminController.php:366
+#: RAN/Admin/PackageAdminController.php:358
+#: RAN/Admin/PackageAdminController.php:377
 #: RAN/Admin/PortabilityController.php:631
 #: RAN/Admin/PortabilityController.php:757
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:346
@@ -837,8 +837,8 @@ msgid "Theme"
 msgstr ""
 
 #: RAN/Admin/DeploymentAdminPresenter.php:297
-#: RAN/Admin/PackageAdminController.php:347
-#: RAN/Admin/PackageAdminController.php:366
+#: RAN/Admin/PackageAdminController.php:358
+#: RAN/Admin/PackageAdminController.php:377
 #: RAN/Admin/PortabilityController.php:631
 #: RAN/Admin/PortabilityController.php:757
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:346
@@ -1420,132 +1420,136 @@ msgstr ""
 msgid "RAN Booster automatic deployment failed."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:63
+#: RAN/Admin/PackageAdminController.php:64
 #: RAN/Dashboard.php:1553
 msgid "You do not have sufficient permissions to access this page."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:133
+#: RAN/Admin/PackageAdminController.php:134
 msgid "Booster could not confirm safe management removal. Refresh this page and review the current management and operation state before trying again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:164
+#: RAN/Admin/PackageAdminController.php:165
 #: RAN/Dashboard.php:868
 msgid "You do not have sufficient permissions to manage these packages."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:232
+#: RAN/Admin/PackageAdminController.php:233
 msgid "Package settings were saved before the reinstall."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:300
+#: RAN/Admin/PackageAdminController.php:259
+msgid "To use a different Git provider or repository, stop managing this package and adopt it again."
+msgstr ""
+
+#: RAN/Admin/PackageAdminController.php:311
 msgid "Package settings changed after this page was loaded. No settings were saved and no repository check ran. Review the refreshed current settings, then choose Save settings and check again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:301
+#: RAN/Admin/PackageAdminController.php:312
 msgid "Package settings changed after this page was loaded. No settings were saved. Review the refreshed current settings, then resubmit your attempted changes."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:346
+#: RAN/Admin/PackageAdminController.php:357
 #, php-format
 msgid "%s is already installed and managed by Booster. No package settings were changed."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:355
+#: RAN/Admin/PackageAdminController.php:366
 msgid "installed"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:356
+#: RAN/Admin/PackageAdminController.php:367
 msgid "updated"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:357
+#: RAN/Admin/PackageAdminController.php:368
 msgid "saved"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:358
+#: RAN/Admin/PackageAdminController.php:369
 msgid "unlinked"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:359
+#: RAN/Admin/PackageAdminController.php:370
 msgid "unlinked and deleted"
 msgstr ""
 
 #. translators: 1: package type, 2: completed operation.
-#: RAN/Admin/PackageAdminController.php:365
+#: RAN/Admin/PackageAdminController.php:376
 #, php-format
 msgid "%1$s was successfully %2$s."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:428
+#: RAN/Admin/PackageAdminController.php:439
 msgid "plugins"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:428
+#: RAN/Admin/PackageAdminController.php:439
 msgid "themes"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:432
+#: RAN/Admin/PackageAdminController.php:443
 msgid "Choose a bulk action and a supported number of managed packages."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:434
+#: RAN/Admin/PackageAdminController.php:445
 msgid "A selected managed package changed or is no longer available. Refresh and try again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:435
+#: RAN/Admin/PackageAdminController.php:446
 msgid "Booster could not safely complete this bulk action. No success was reported."
 msgstr ""
 
 #. translators: 1: queued count, 2: package type, 3: skipped count.
-#: RAN/Admin/PackageAdminController.php:456
+#: RAN/Admin/PackageAdminController.php:467
 #, php-format
 msgid "Queued %1$d %2$s for sequential branch reinstall. Skipped: %3$d."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:465
+#: RAN/Admin/PackageAdminController.php:476
 msgid "already queued, running, or needs attention"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:466
+#: RAN/Admin/PackageAdminController.php:477
 msgid "credential unavailable"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:467
+#: RAN/Admin/PackageAdminController.php:478
 msgid "deployment disabled"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:468
+#: RAN/Admin/PackageAdminController.php:479
 #: views/packages/index.php:333
 #: views/packages/index.php:376
 msgid "Git provider unavailable"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:469
+#: RAN/Admin/PackageAdminController.php:480
 msgid "published-release source"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:470
+#: RAN/Admin/PackageAdminController.php:481
 msgid "Booster self-update blocked"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:471
-#: RAN/Admin/PackageAdminController.php:512
+#: RAN/Admin/PackageAdminController.php:482
+#: RAN/Admin/PackageAdminController.php:523
 msgid "selection stale"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:475
+#: RAN/Admin/PackageAdminController.php:486
 msgid "The updates remain queued, but WordPress could not schedule the deployment runner. Open Troubleshooting to request it."
 msgstr ""
 
 #. translators: 1: changed count, 2: enabled or disabled label, 3: unchanged count, 4: skipped count.
-#: RAN/Admin/PackageAdminController.php:497
+#: RAN/Admin/PackageAdminController.php:508
 #, php-format
 msgid "Changed %1$d plugins to %2$s in WordPress. Already in that state: %3$d. Skipped: %4$d."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:499
+#: RAN/Admin/PackageAdminController.php:510
 #: views/packages/edit.php:202
 #: views/packages/index.php:483
 #: views/settings-general.php:189
@@ -1554,161 +1558,161 @@ msgstr ""
 msgid "Enabled"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:507
+#: RAN/Admin/PackageAdminController.php:518
 msgid "required by active plugins"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:508
+#: RAN/Admin/PackageAdminController.php:519
 msgid "activation failed"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:509
+#: RAN/Admin/PackageAdminController.php:520
 msgid "deactivation failed"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:510
+#: RAN/Admin/PackageAdminController.php:521
 msgid "permission denied"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:511
+#: RAN/Admin/PackageAdminController.php:522
 msgid "Booster cannot disable itself"
 msgstr ""
 
 #. translators: 1: changed count, 2: package type, 3: policy label, 4: unchanged count.
-#: RAN/Admin/PackageAdminController.php:540
+#: RAN/Admin/PackageAdminController.php:551
 #, php-format
 msgid "Changed %1$d %2$s to %3$s. Already in that state: %4$d."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:569
+#: RAN/Admin/PackageAdminController.php:580
 msgid "This package cannot be edited until its stored Git provider is registered again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:571
+#: RAN/Admin/PackageAdminController.php:582
 msgid "Booster could not verify the managed package Git provider. No changes were made."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:598
+#: RAN/Admin/PackageAdminController.php:609
 #: RAN/Admin/RepositoryPickerController.php:124
 msgid "The selected Git provider is not available."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:600
+#: RAN/Admin/PackageAdminController.php:611
 msgid "The selected Git provider does not yet support this package operation."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:602
+#: RAN/Admin/PackageAdminController.php:613
 msgid "Enter a repository-relative subdirectory. Do not use a leading slash, empty path segments, or current-directory and parent-directory segments."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:604
+#: RAN/Admin/PackageAdminController.php:615
 msgid "Check the Git provider, account, repository, and credential fields."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:607
+#: RAN/Admin/PackageAdminController.php:618
 msgid "The Git provider rejected the selected credential."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:608
+#: RAN/Admin/PackageAdminController.php:619
 msgid "The Git provider denied access. Check credential permissions or rate limits."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:609
+#: RAN/Admin/PackageAdminController.php:620
 msgid "The repository could not be found, or the selected credential cannot access it."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:610
+#: RAN/Admin/PackageAdminController.php:621
 #: RAN/Admin/RepositoryPickerController.php:181
 msgid "The Git provider rate limit has been reached. Try again later."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:611
-#: RAN/Admin/PackageAdminController.php:614
+#: RAN/Admin/PackageAdminController.php:622
+#: RAN/Admin/PackageAdminController.php:625
 msgid "Booster could not verify the repository. Please try again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:758
+#: RAN/Admin/PackageAdminController.php:769
 msgid "RAN Booster could not complete this action. Reference: ran_booster_manual_action_failed."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:774
+#: RAN/Admin/PackageAdminController.php:785
 msgctxt "package type"
 msgid "Plugin"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:775
+#: RAN/Admin/PackageAdminController.php:786
 msgctxt "package type"
 msgid "Theme"
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:777
+#: RAN/Admin/PackageAdminController.php:788
 msgid "Plugin was not removed because an active plugin depends on it."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:778
+#: RAN/Admin/PackageAdminController.php:789
 msgid "Plugin was disabled in Booster, but WordPress could not deactivate it. No files were deleted."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:781
+#: RAN/Admin/PackageAdminController.php:792
 #, php-format
 msgid "%s was disabled in Booster, but WordPress could not delete it."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:786
+#: RAN/Admin/PackageAdminController.php:797
 #, php-format
 msgid "%s was disabled in Booster, but its files are still present."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:791
+#: RAN/Admin/PackageAdminController.php:802
 #, php-format
 msgid "%s removal could not be verified. Review its files and Booster management before retrying."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:796
+#: RAN/Admin/PackageAdminController.php:807
 #, php-format
 msgid "%s was not removed because another Booster operation still owns it."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:801
+#: RAN/Admin/PackageAdminController.php:812
 #, php-format
 msgid "%s removal could not safely acquire or release the WordPress updater lock."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:804
+#: RAN/Admin/PackageAdminController.php:815
 msgid "Plugin was not removed because its directory contains another registered plugin."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:807
+#: RAN/Admin/PackageAdminController.php:818
 #, php-format
 msgid "%s settings changed before this request. Refresh the package settings and try again."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:810
+#: RAN/Admin/PackageAdminController.php:821
 msgid "Theme was not removed because it is the active theme."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:811
+#: RAN/Admin/PackageAdminController.php:822
 msgid "Theme was not removed because an installed child theme depends on it."
 msgstr ""
 
-#: RAN/Admin/PackageAdminController.php:812
+#: RAN/Admin/PackageAdminController.php:823
 msgid "Theme was not removed because the active theme depends on it."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:815
+#: RAN/Admin/PackageAdminController.php:826
 #, php-format
 msgid "%s was not removed because WordPress could not verify a safe installed path."
 msgstr ""
 
 #. translators: %s: package type, such as Plugin or Theme.
-#: RAN/Admin/PackageAdminController.php:820
+#: RAN/Admin/PackageAdminController.php:831
 #, php-format
 msgid "%s removal could not be completed safely."
 msgstr ""

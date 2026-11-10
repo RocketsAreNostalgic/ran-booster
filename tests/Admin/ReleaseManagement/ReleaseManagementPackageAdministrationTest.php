@@ -559,7 +559,15 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser', $html );
-		self::assertStringContainsString( 'Review the latest eligible release and the installed version.', $html );
+		self::assertStringNotContainsString( 'Review the latest eligible release and the installed version.', $html );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-managed-release-placeholder' ) );
+		self::assertStringContainsString( 'class="ran-booster-release-candidates ran-booster-release-candidates--pending" aria-hidden="true" data-ran-booster-managed-release-placeholder>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-release-candidates__heading">Available published releases</p>', $html );
+		self::assertSame( 2, substr_count( $html, 'class="ran-booster-release-candidate ran-booster-release-candidate--placeholder"' ) );
+		self::assertSame( 2, substr_count( $html, '<input type="radio" disabled tabindex="-1">' ) );
+		self::assertSame( 2, substr_count( $html, 'class="ran-booster-release-candidate__skeleton"></span>' ) );
+		self::assertStringContainsString( '<p class="ran-booster-release-candidates__note">Published releases appear here once releases are in use.</p>', $html );
+		self::assertStringContainsString( '<fieldset class="ran-booster-release-candidates" data-ran-booster-managed-release-candidates hidden>', $html );
 		self::assertStringNotContainsString( 'Downgrades are unavailable because package data migrations may not be reversible.', $html );
 		self::assertStringContainsString( '<strong>Installed identity and Update URI</strong>', $html );
 		self::assertStringContainsString( '<strong>Release status</strong>', $html );
@@ -687,7 +695,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Install now</a>', $html );
+		self::assertStringContainsString( '>Update now</a>', $html );
+		self::assertStringNotContainsString( '>Install now</a>', $html );
+		self::assertMatchesRegularExpression( '/<div class="ran-booster-managed-release-browser__footer">\s*<a [^>]*ran-booster-managed-release-native-update[^>]*>Update now<\/a>\s*<\/div>/', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-version="1.2.0"', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-release-id=""', $html );

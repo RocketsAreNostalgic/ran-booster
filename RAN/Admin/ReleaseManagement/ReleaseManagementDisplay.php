@@ -285,15 +285,24 @@ final class ReleaseManagementDisplay {
 			<?php } ?>
 		>
 			<div class="ran-booster-managed-release-browser__header">
-				<div>
-					<h4><?php esc_html_e( 'Releases', 'ran-booster' ); ?></h4>
-					<p><?php esc_html_e( 'Review the latest eligible release and the installed version.', 'ran-booster' ); ?></p>
-				</div>
+				<h4><?php esc_html_e( 'Releases', 'ran-booster' ); ?></h4>
 				<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-managed-release-retry<?php disabled( ! $enabled ); ?> aria-disabled="<?php echo $enabled ? 'false' : 'true'; ?>"><?php esc_html_e( 'Refresh releases', 'ran-booster' ); ?></button>
 			</div>
 			<div class="notice notice-warning inline ran-booster-managed-release-browser__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-managed-release-error hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 				<p data-ran-booster-managed-release-error-message></p>
 			</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
+			<div class="ran-booster-release-candidates ran-booster-release-candidates--pending" aria-hidden="true" data-ran-booster-managed-release-placeholder>
+				<p class="ran-booster-release-candidates__heading"><?php esc_html_e( 'Available published releases', 'ran-booster' ); ?></p>
+				<label class="ran-booster-release-candidate ran-booster-release-candidate--placeholder">
+					<input type="radio" disabled tabindex="-1">
+					<span class="ran-booster-release-candidate__skeleton"></span>
+				</label>
+				<label class="ran-booster-release-candidate ran-booster-release-candidate--placeholder">
+					<input type="radio" disabled tabindex="-1">
+					<span class="ran-booster-release-candidate__skeleton"></span>
+				</label>
+				<p class="ran-booster-release-candidates__note"><?php esc_html_e( 'Published releases appear here once releases are in use.', 'ran-booster' ); ?></p>
+			</div>
 			<fieldset class="ran-booster-release-candidates" data-ran-booster-managed-release-candidates hidden>
 				<legend class="screen-reader-text"><?php esc_html_e( 'Available published releases', 'ran-booster' ); ?></legend>
 				<div data-ran-booster-managed-release-candidate-list></div>
@@ -302,7 +311,9 @@ final class ReleaseManagementDisplay {
 				<h4 data-ran-booster-managed-release-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
 				<p data-ran-booster-managed-release-message><?php echo esc_html( $enabled ? __( 'Check the saved release track for eligible candidates.', 'ran-booster' ) : __( 'Published release browsing is unavailable until the current package status and controls are available.', 'ran-booster' ) ); ?></p>
 			</div>
-			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) . ' disabled ran-booster-managed-release-native-update' ); ?>" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update><?php esc_html_e( 'Install now', 'ran-booster' ); ?></a>
+			<div class="ran-booster-managed-release-browser__footer">
+				<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) . ' disabled ran-booster-managed-release-native-update' ); ?>" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update><?php esc_html_e( 'Update now', 'ran-booster' ); ?></a>
+			</div>
 		</div>
 		<?php
 	}

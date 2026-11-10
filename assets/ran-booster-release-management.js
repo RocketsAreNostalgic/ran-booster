@@ -47,6 +47,14 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const candidateList = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-candidate-list]'
 	);
+	const placeholder = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-placeholder]'
+	);
+	const showPlaceholder = (visible) => {
+		if (placeholder) {
+			placeholder.hidden = !visible;
+		}
+	};
 	const heading = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-heading]'
 	);
@@ -109,7 +117,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		nativeUpdate.setAttribute('aria-disabled', 'true');
 		nativeUpdate.setAttribute('tabindex', '-1');
 		nativeUpdate.classList.add('disabled');
-		nativeUpdate.textContent = __('Install now', 'ran-booster');
+		nativeUpdate.textContent = __('Update now', 'ran-booster');
 	};
 	const enableNativeUpdate = (version) => {
 		const url =
@@ -334,6 +342,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		if (candidates) {
 			candidates.hidden = true;
 		}
+		showPlaceholder(true);
 		setStatus(
 			wp.i18n.__('Checking published releases…', 'ran-booster'),
 			wp.i18n.__(
@@ -375,6 +384,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				candidateList.append(empty);
 				if (candidates) {
 					candidates.hidden = false;
+					showPlaceholder(false);
 				}
 				setStatus(
 					wp.i18n.__('No published releases found', 'ran-booster'),
@@ -506,6 +516,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			}
 			if (candidates) {
 				candidates.hidden = false;
+					showPlaceholder(false);
 			}
 			if (inspectable.length > 0) {
 				setStatus(
@@ -560,6 +571,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			}
 		} catch {
 			if (current === sequence) {
+				showPlaceholder(false);
 				showError(
 					wp.i18n.__(
 						'Booster could not load published releases. The Git provider may be temporarily unavailable or rate-limited. Try again later.',

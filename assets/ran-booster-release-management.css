@@ -89,8 +89,32 @@
 	margin-block-start: var(--ran-booster-space-5);
 }
 
-.ran-booster-admin .ran-booster-managed-release-native-update {
+.ran-booster-admin .ran-booster-managed-release-browser__footer {
+	display: flex;
+	justify-content: flex-end;
 	margin-block-start: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-release-candidates--pending {
+	margin-block: var(--ran-booster-space-16) 0;
+}
+
+.ran-booster-admin .ran-booster-release-candidates__heading {
+	margin: 0 0 var(--ran-booster-space-8);
+	font-weight: 600;
+}
+
+.ran-booster-admin .ran-booster-release-candidates__note {
+	margin: var(--ran-booster-space-8) 0 0;
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-release-candidate__skeleton {
+	display: block;
+	block-size: 12px;
+	inline-size: 55%;
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-border);
 }
 
 .ran-booster-admin .ran-booster-release-candidate__warning {
@@ -117,15 +141,8 @@
 	justify-content: space-between;
 }
 
-.ran-booster-admin .ran-booster-managed-release-browser__header h4,
-.ran-booster-admin .ran-booster-managed-release-browser__header p {
+.ran-booster-admin .ran-booster-managed-release-browser__header h4 {
 	margin: 0;
-}
-
-.ran-booster-admin .ran-booster-managed-release-browser__header p {
-	max-inline-size: 42rem;
-	margin-block-start: var(--ran-booster-space-5);
-	color: var(--ran-booster-text-muted);
 }
 
 .ran-booster-admin .ran-booster-managed-release-browser__notice {

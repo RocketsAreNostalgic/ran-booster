@@ -158,6 +158,7 @@ const createHarness = (
 	};
 	for (const name of [
 		'candidates',
+		'placeholder',
 		'candidate-list',
 		'heading',
 		'message',
@@ -174,7 +175,7 @@ const createHarness = (
 	nodes.get('candidates').hidden = true;
 	nodes.get('error').hidden = true;
 	nodes.get('native-update').setAttribute('aria-disabled', 'true');
-	nodes.get('native-update').textContent = 'Install now';
+	nodes.get('native-update').textContent = 'Update now';
 	nodes.get('retry').textContent = 'Refresh releases';
 	browser.querySelector = (selector) =>
 		nodes.get(selector.match(/managed-release-([a-z-]+)/)?.[1]) || null;
@@ -375,7 +376,7 @@ test('managed browser selects and inspects the newest current candidate, preserv
 		harness.nodes.get('native-update').classList.contains('disabled'),
 		true
 	);
-	assert.equal(harness.nodes.get('native-update').textContent, 'Install now');
+	assert.equal(harness.nodes.get('native-update').textContent, 'Update now');
 	assert.equal(harness.nodes.get('retry').disabled, false);
 	assert.equal(
 		harness.nodes
@@ -783,7 +784,7 @@ test('managed browser leaves the native Core update disabled for a newer release
 		'true'
 	);
 	assert.equal(harness.nodes.get('native-update').getAttribute('href'), null);
-	assert.equal(harness.nodes.get('native-update').textContent, 'Install now');
+	assert.equal(harness.nodes.get('native-update').textContent, 'Update now');
 });
 
 test('managed browser leaves the native Core update disabled when a same-version release has a different identity', async () => {
@@ -1155,4 +1156,94 @@ test('release automation and webhook setup use the shared native disclosure shel
 		/ran-booster-package-disclosure > summary::before/
 	);
 	assert.doesNotMatch(styles, /ran-booster-release-workflow \{/);
+});
+
+test('managed browser hides the pending placeholder once real rows render', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate('old', '1.0.0', 'older', '2026-08-02T00:00:00Z'),
+				],
+			},
+		},
+		{
+			successful: true,
+			code: 'release_ready',
+			data: {
+				version: '1.0.0',
+				tag: 'v1.0.0',
+				installed_version: '2.0.0',
+				version_relationship: 'older',
+			},
+		},
+	]);
+	harness.nodes.get('placeholder').hidden = false;
+	harness.initialize(harness.browser);
+	assert.equal(harness.nodes.get('placeholder').hidden, false);
+	assert.equal(harness.nodes.get('candidates').hidden, true);
+	await flush();
+	await flush();
+	assert.equal(harness.nodes.get('candidates').hidden, false);
+	assert.equal(harness.nodes.get('placeholder').hidden, true);
+});
+
+test('managed browser hides the pending placeholder beside an empty or failed list', async () => {
+	const empty = createHarness([
+		{
+			successful: true,
+			code: 'no_releases',
+			data: { installed_version: '2.0.0', candidates: [] },
+		},
+	]);
+	empty.nodes.get('placeholder').hidden = false;
+	empty.initialize(empty.browser);
+	await flush();
+	assert.equal(empty.nodes.get('placeholder').hidden, true);
+
+	const failed = createHarness([
+		{ successful: false, code: 'provider_error', data: {} },
+	]);
+	failed.nodes.get('placeholder').hidden = false;
+	failed.initialize(failed.browser);
+	await flush();
+	assert.equal(failed.nodes.get('placeholder').hidden, true);
+});
+
+test('managed browser shows the pending placeholder again while Refresh releases reads', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'no_releases',
+			data: { installed_version: '2.0.0', candidates: [] },
+		},
+		{
+			successful: true,
+			code: 'no_releases',
+			data: { installed_version: '2.0.0', candidates: [] },
+		},
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	assert.equal(harness.nodes.get('placeholder').hidden, true);
+	harness.nodes.get('retry').listeners.click[0]();
+	assert.equal(harness.nodes.get('placeholder').hidden, false);
+	await flush();
+	assert.equal(harness.nodes.get('placeholder').hidden, true);
+});
+
+test('managed browser footer right-aligns the Update now link and the helper copy is gone', () => {
+	assert.match(
+		styles,
+		/\.ran-booster-managed-release-browser__footer \{[^}]*display: flex;[^}]*justify-content: flex-end/
+	);
+	assert.doesNotMatch(styles, /browser__header p/);
+	assert.match(
+		styles,
+		/\.ran-booster-release-candidate__skeleton \{[^}]*block-size: 12px;[^}]*inline-size: 55%/
+	);
+	assert.doesNotMatch(styles, /animation/);
 });

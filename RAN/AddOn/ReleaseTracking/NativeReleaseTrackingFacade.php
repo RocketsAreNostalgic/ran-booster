@@ -1230,6 +1230,12 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			return null;
 		}
 
+		// The provider reports a candidate that is not newer than the installed version with the generic incompatible code. That is a completed check with nothing to offer, not a rejected release.
+		if ( 'github_updater_release_incompatible' === $target_status->candidate_code
+			&& in_array( $target_status->version_relationship, array( 'same', 'older' ), true ) ) {
+			return null;
+		}
+
 		$code = match ( $target_status->candidate_code ) {
 			'release_identity_verified' => ReleaseTrackingPreflight::READY,
 			'release_version_mismatch' => ReleaseTrackingPreflight::RELEASE_VERSION_MISMATCH,

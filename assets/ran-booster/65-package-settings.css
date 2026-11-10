@@ -1490,3 +1490,18 @@ body.js:not(.ran-booster-settings-ready)
 		var(--ran-booster-color-neutral-0)
 	);
 }
+
+.ran-booster-admin
+	.ran-booster-package-source-pane__header
+	> .ran-booster-release-notices {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+	margin-block-end: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin
+	.ran-booster-package-source-pane__header
+	> .ran-booster-release-notices
+	.notice {
+	margin: 0;
+}

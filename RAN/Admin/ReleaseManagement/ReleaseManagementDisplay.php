@@ -98,7 +98,9 @@ final class ReleaseManagementDisplay {
 
 			&& '' !== ( $nonce_actions['inspect_candidate'] ?? '' )
 			&& ! $repository_blocked;
-		$gate_notice = $repository_conflict_code
+		$status_notice_visible = $status_available && 'release_asset' === $source && '' !== $failure_code && ! $repository_blocked;
+		$release_unchecked     = $status_available && 'release_asset' === $source && '' === $failure_code && '' === $status->last_checked_at() && ! $status->update_available();
+		$gate_notice           = $repository_conflict_code
 			? __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' )
 			: ( $repository_source_blocked
 				? __( 'Booster could not safely read this package\'s repository storage. Check package storage and retry.', 'ran-booster' )
@@ -131,10 +133,17 @@ final class ReleaseManagementDisplay {
 								?>
 							(<?php echo esc_html( (string) ( $other['type'] ?? '' ) ); ?>)<?php } ?></li><?php } ?></ul><?php } ?></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 				<?php } ?>
-				<?php if ( '' !== $operation_notice_html ) { ?>
+				<?php if ( '' !== $operation_notice_html || $status_notice_visible ) { ?>
 					<div class="ran-booster-release-notices" data-ran-booster-release-notices>
 						<?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Retain the public named-parameter contract. Captured trusted admin operation notice. ?>
 						<?php echo $operation_notice_html; ?>
+						<?php if ( $status_notice_visible ) { ?>
+							<?php $status_reason = null === $status->preflight() ? '' : $status->preflight()->reason_code(); ?>
+							<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-release-status-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+								<p><?php echo esc_html( $this->diagnostic_message( $failure_code, $status_reason ) ); ?></p>
+								<?php $this->render_failure_help( $failure_code, '', $status_reason ); ?>
+							</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
+						<?php } ?>
 					</div>
 				<?php } ?>
 				<?php if ( 'branch' === $source ) { ?>
@@ -168,29 +177,29 @@ final class ReleaseManagementDisplay {
 						<strong><?php esc_html_e( 'Installed identity and Update URI', 'ran-booster' ); ?></strong>
 						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( $subdirectory_incompatible ? __( 'This package uses a repository subdirectory. Published releases require the repository root.', 'ran-booster' ) : ( $update_uri_ready ? __( 'The installed package identity and Update URI match the configured repository.', 'ran-booster' ) : $this->update_uri_readiness_message( $eligibility_code ) ) ) ); ?></span>
 					</li>
-					<li class="ran-booster-readiness-item <?php echo $status_available && 'release_asset' === $source && '' === $status->failure_code() ? 'is-ok' : ( $status_available && 'branch' === $source && ! $repository_blocked ? 'is-neutral' : 'is-warning' ); ?>">
+					<li class="ran-booster-readiness-item <?php echo $status_available && 'release_asset' === $source && '' === $status->failure_code() ? ( $release_unchecked ? 'is-neutral' : 'is-ok' ) : ( $status_available && 'branch' === $source && ! $repository_blocked ? 'is-neutral' : 'is-warning' ); ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 						<strong><?php esc_html_e( 'Release status', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? $this->release_status_message( $status ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
+						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? ( $release_unchecked ? __( 'Releases have not been checked yet. Use Check releases.', 'ran-booster' ) : $this->release_status_message( $status ) ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
 					</li>
 				</ul>
-				<div class="ran-booster-release-notices" data-ran-booster-release-notices>
+				<?php ob_start(); ?>
 					<?php if ( $status_available && 'branch' === $source && ! $eligibility->eligible() && $this->requires_update_uri_remediation( $eligibility ) ) { ?>
 						<div class="ran-booster-settings-section__body ran-booster-release-remediation">
 							<p><strong><?php esc_html_e( 'Add this exact header, deploy the corrected package, then check again:', 'ran-booster' ); ?></strong></p>
 							<p class="ran-booster-release-code"><code><?php echo esc_html( 'Update URI: ' . $expected_update_uri ); ?></code></p>
 						</div>
-					<?php } elseif ( $status_available && 'release_asset' === $source && '' !== $status->failure_code() && ! $repository_blocked ) { ?>
-						<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-						<p><?php echo esc_html( $this->diagnostic_message( $status->failure_code() ) ); ?></p>
-						<?php $this->render_failure_help( $status->failure_code() ); ?>
-					</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
-					<?php } elseif ( $status_available && 'release_asset' === $source && ! $browser_enabled && ! $repository_blocked ) { ?>
+					<?php } elseif ( $status_available && 'release_asset' === $source && '' === $failure_code && ! $browser_enabled && ! $repository_blocked ) { ?>
 						<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Published release browsing is unavailable until the current package status and controls are available.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
-					<?php } elseif ( $status_available && $track_disabled && 'release_asset' === $source && ! $repository_blocked ) { ?>
+					<?php } elseif ( $status_available && $track_disabled && 'release_asset' === $source && '' === $failure_code && ! $repository_blocked ) { ?>
 						<?php $this->render_controls_unavailable(); ?>
 					<?php } ?>
-				</div>
+				<?php $panel_notices = trim( (string) ob_get_clean() ); ?>
+				<?php if ( '' !== $panel_notices ) { ?>
+					<div class="ran-booster-release-notices" data-ran-booster-release-notices>
+						<?php echo $panel_notices; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured markup rendered by this class. ?>
+					</div>
+				<?php } ?>
 				<div class="ran-booster-readiness-actions">
 					<form
 						action="<?php echo esc_url( $recheck_action_url ); ?>"
@@ -692,7 +701,7 @@ final class ReleaseManagementDisplay {
 			}
 			if ( '' === (string) ( $rows[ $identifier ]['status'] ?? '' ) ) {
 				if ( '' !== $status->failure_code() ) {
-					$rows[ $identifier ]['status'] = $this->diagnostic_message( $status->failure_code() );
+					$rows[ $identifier ]['status'] = $this->diagnostic_message( $status->failure_code(), null === $status->preflight() ? '' : $status->preflight()->reason_code() );
 				} else {
 					$rows[ $identifier ]['status'] = $this->release_status_message( $status );
 				}
@@ -925,7 +934,15 @@ final class ReleaseManagementDisplay {
 		};
 	}
 
-	private function diagnostic_message( string $code ): string {
+	private function diagnostic_message( string $code, string $reason = '' ): string {
+		if ( 'release_unavailable' === $code ) {
+			return match ( $reason ) {
+				'no_releases' => __( 'No published release was found for the selected track.', 'ran-booster' ),
+				'release_incompatible' => __( 'A published release was found, but it is not eligible.', 'ran-booster' ),
+				default => __( 'Booster could not confirm an eligible published release for this track.', 'ran-booster' ),
+			};
+		}
+
 		return match ( $code ) {
 			'release_repository_conflict',
 			'repository_release_owner_exists' => __( 'Releases require exclusive use of this repository. Stop managing the other packages in Booster before switching; their files can stay installed.', 'ran-booster' ),
@@ -936,7 +953,6 @@ final class ReleaseManagementDisplay {
 			'release_header_missing' => __( 'The published package is missing its WordPress version header.', 'ran-booster' ),
 			'release_header_invalid' => __( 'The published package has an invalid WordPress version header.', 'ran-booster' ),
 			'release_archive_unreadable' => __( 'The published release archive could not be inspected.', 'ran-booster' ),
-			'release_unavailable' => __( 'No matching published release is available yet.', 'ran-booster' ),
 			'invalid_release_assets' => __( 'The published release assets could not be validated.', 'ran-booster' ),
 			'preflight_unavailable' => __( 'Published release validation is temporarily unavailable.', 'ran-booster' ),
 			'release_runtime_unavailable' => __( 'This server cannot currently run the published-release validator.', 'ran-booster' ),
@@ -967,12 +983,19 @@ final class ReleaseManagementDisplay {
 			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'subdirectory_not_supported', 'target_registration_failed', 'repository_release_owner_exists' ), true );
 	}
 
-	private function diagnostic_action( string $code ): string {
+	private function diagnostic_action( string $code, string $reason = '' ): string {
+		if ( 'release_unavailable' === $code ) {
+			return match ( $reason ) {
+				'no_releases' => __( 'Publish a release for the selected Stable or Preview track, then use Check releases.', 'ran-booster' ),
+				'release_incompatible' => __( 'Make sure the release has exactly one package ZIP asset, and that its plugin or theme header and Update URI match this repository. Then use Check releases.', 'ran-booster' ),
+				default => __( 'Publish a release for the selected Stable or Preview track, make sure it has one package ZIP whose header and Update URI match this repository, then use Check releases.', 'ran-booster' ),
+			};
+		}
+
 		return match ( $code ) {
 			'release_repository_conflict',
 			'repository_release_owner_exists' => __( 'Stop managing the other packages in Booster before switching this package to releases. Their files can stay installed.', 'ran-booster' ),
 			'subdirectory_not_supported' => __( 'Return the package to Branch to keep its configured repository subdirectory.', 'ran-booster' ),
-			'release_unavailable' => __( 'Publish a release for the selected Stable or Preview track, then recheck eligibility.', 'ran-booster' ),
 			'package_update_uri_missing',
 			'package_update_uri_invalid' => __( 'Correct the Update URI in the packaged plugin or theme header, publish a new ZIP, then recheck.', 'ran-booster' ),
 			'package_compatibility_missing',
@@ -995,7 +1018,7 @@ final class ReleaseManagementDisplay {
 	private function refreshed_result_message( ?ReleaseTrackingStatus $status ): string {
 		return null === $status
 			? __( 'The release check completed, but its version result is unavailable. Review the package status below.', 'ran-booster' )
-			: $this->release_status_message( $status );
+			: __( 'Release check complete.', 'ran-booster' );
 	}
 
 	/** @param ReleaseTrackingStatus $status */
@@ -1018,7 +1041,7 @@ final class ReleaseManagementDisplay {
 		);
 	}
 
-	private function render_failure_help( string $code, string $message = '' ): void {
+	private function render_failure_help( string $code, string $message = '', string $reason = '' ): void {
 		$troubleshooting_url = add_query_arg(
 			array(
 				'page'  => 'ran-booster',
@@ -1032,8 +1055,8 @@ final class ReleaseManagementDisplay {
 		<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure">
 			<summary><?php esc_html_e( 'Why this happened and how to fix it', 'ran-booster' ); ?></summary>
 			<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
-			<p><strong><?php esc_html_e( 'What Booster found:', 'ran-booster' ); ?></strong> <?php echo esc_html( '' !== $message ? $message : $this->diagnostic_message( $code ) ); ?></p>
-			<p><strong><?php esc_html_e( 'What to do:', 'ran-booster' ); ?></strong> <?php echo esc_html( $this->diagnostic_action( $code ) ); ?></p>
+			<p><strong><?php esc_html_e( 'What Booster found:', 'ran-booster' ); ?></strong> <?php echo esc_html( '' !== $message ? $message : $this->diagnostic_message( $code, $reason ) ); ?></p>
+			<p><strong><?php esc_html_e( 'What to do:', 'ran-booster' ); ?></strong> <?php echo esc_html( $this->diagnostic_action( $code, $reason ) ); ?></p>
 			<p><a href="<?php echo esc_url( $troubleshooting_url ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a></p>
 			<p><strong><?php esc_html_e( 'Technical reason:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $code ); ?></code></p>
 			</div>

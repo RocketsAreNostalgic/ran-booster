@@ -3008,6 +3008,97 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( '2.0.0', $status->preflight()->package_header_version() );
 	}
 
+	/** @param array<string, mixed> $diagnostics */
+	private function release_status_for_diagnostics( array $diagnostics ): \RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'all_deployment_plugins' )->willReturn( array( 'example/example.php' => $package ) );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes = $this->createStub( ThemeRepository::class );
+		$themes->method( 'all_deployment_themes' )->willReturn( array() );
+		$store     = new RuntimeReleaseStore(
+			array(
+				"plugin\0example/example.php" => new ManagedReleaseConfiguration( 'example', 'example.php' ),
+			)
+		);
+		$registrar = $this->registrar(
+			$plugins,
+			$themes,
+			$store,
+			new RuntimeUpdaterLock(),
+			$this->release_metadata_registry(
+				// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.Found -- The release-runtime fixture callback retains the registered factory or provider callable signature while returning a controlled result.
+				target_factory: static fn ( mixed ...$options ): object => new RuntimeUpdaterFacade( diagnostics: $diagnostics )
+			)
+		);
+		$registrar->register();
+		$facade = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$registrar,
+			new RuntimeUpdaterLock(),
+			$this->release_metadata_registry(),
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadata_eligible: static fn (): bool => true
+		);
+
+		return $facade->status( 'plugin', 'example/example.php' );
+	}
+
+	public function test_release_managed_status_treats_a_candidate_that_is_not_newer_as_a_completed_check_with_nothing_to_offer(): void {
+		foreach ( array( 'same', 'older' ) as $relationship ) {
+			$status = $this->release_status_for_diagnostics(
+				array(
+					'state'                => 'ready',
+					'code'                 => 'release_available',
+					'offered_version'      => null,
+					'last_check'           => 1790000000,
+					'version_relationship' => $relationship,
+					'candidate_validation' => array(
+						'code'                   => 'github_updater_release_incompatible',
+						'release_tag'            => 'v2.0.0',
+						'release_version'        => '2.0.0',
+						'package_header_version' => '',
+					),
+				)
+			);
+
+			self::assertSame( '', $status->failure_code(), $relationship );
+			self::assertFalse( $status->update_available(), $relationship );
+			self::assertNull( $status->preflight(), $relationship );
+			self::assertNotSame( '', $status->last_checked_at(), $relationship );
+		}
+	}
+
+	public function test_release_managed_status_still_reports_a_newer_candidate_that_failed_eligibility(): void {
+		$status = $this->release_status_for_diagnostics(
+			array(
+				'state'                => 'ready',
+				'code'                 => 'release_available',
+				'offered_version'      => null,
+				'last_check'           => 1790000000,
+				'version_relationship' => 'newer',
+				'candidate_validation' => array(
+					'code'                   => 'github_updater_release_incompatible',
+					'release_tag'            => 'v3.0.0',
+					'release_version'        => '3.0.0',
+					'package_header_version' => '',
+				),
+			)
+		);
+
+		self::assertSame( 'release_unavailable', $status->failure_code() );
+		self::assertNotNull( $status->preflight() );
+		self::assertSame( 'release_incompatible', $status->preflight()->reason_code() );
+	}
+
 	public function test_returning_to_branch_remains_truthful_when_provider_and_native_cache_cleanup_fail(): void {
 		$package = $this->package(
 			'plugin',

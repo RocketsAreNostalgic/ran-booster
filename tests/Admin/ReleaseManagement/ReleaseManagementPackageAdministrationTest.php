@@ -1174,6 +1174,105 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 'is-warning', $row( $render( 'branch', 'repository_source_unavailable' ) ) );
 	}
 
+	/** @param array<string,mixed> $arguments */
+	private function render_release_view( array $arguments, string $operation_notice = '' ): string {
+		$status  = ReleaseManagementFixture::status( 'release_asset', 'plugin', ...$arguments );
+		$package = new PackageProjection( 'release_asset' );
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url(), '', array(), false, $operation_notice );
+		return (string) ob_get_clean();
+	}
+
+	private function readiness_panel( string $html ): string {
+		$start = strpos( $html, '<div class="ran-booster-readiness-panel">' );
+		$end   = strpos( $html, '</section>', (int) $start );
+		if ( false === $start || false === $end ) {
+			self::fail( 'Expected the readiness panel.' );
+		}
+		return substr( $html, $start, $end - $start );
+	}
+
+	public function test_release_status_notice_sits_under_the_operation_notice_above_the_readiness_panel(): void {
+		$operation = '<div class="notice notice-success" data-test-operation-notice><p>Release tracking enabled.</p></div>';
+		foreach ( array( $operation, '' ) as $notice ) {
+			$html = $this->render_release_view(
+				array(
+					'failure_code'     => 'release_unavailable',
+					'preflight_reason' => 'release_incompatible',
+				),
+				$notice
+			);
+
+			$status_at = strpos( $html, 'data-ran-booster-release-status-notice' );
+			$panel_at  = strpos( $html, '<div class="ran-booster-readiness-panel">' );
+			self::assertNotFalse( $status_at );
+			self::assertNotFalse( $panel_at );
+			self::assertLessThan( $panel_at, $status_at );
+			if ( '' !== $notice ) {
+				$operation_at = strpos( $html, 'data-test-operation-notice' );
+				self::assertNotFalse( $operation_at );
+				self::assertLessThan( $status_at, $operation_at );
+				self::assertSame( 1, substr_count( $html, 'data-ran-booster-release-notices' ) );
+			}
+			$panel = $this->readiness_panel( $html );
+			self::assertStringNotContainsString( 'data-ran-booster-release-notices', $panel );
+			self::assertStringNotContainsString( 'class="notice', $panel );
+			self::assertStringNotContainsString( 'Why this happened and how to fix it', $panel );
+			self::assertStringContainsString( 'Why this happened and how to fix it', $html );
+		}
+	}
+
+	public function test_release_failure_states_use_accurate_wording_and_never_the_old_message(): void {
+		$cases = array(
+			'no_releases'          => array( 'No published release was found for the selected track.', 'Publish a release for the selected Stable or Preview track, then use Check releases.' ),
+			'release_incompatible' => array( 'A published release was found, but it is not eligible.', 'exactly one package ZIP asset' ),
+			''                     => array( 'Booster could not confirm an eligible published release for this track.', 'make sure it has one package ZIP' ),
+		);
+		foreach ( $cases as $reason => $expected ) {
+			$html = $this->render_release_view(
+				array(
+					'failure_code'     => 'release_unavailable',
+					'preflight_reason' => (string) $reason,
+				)
+			);
+			self::assertStringContainsString( $expected[0], $html, (string) $reason );
+			self::assertStringContainsString( $expected[1], $html, (string) $reason );
+			self::assertStringContainsString( '<code>release_unavailable</code>', $html, (string) $reason );
+			self::assertStringNotContainsString( 'No matching published release is available yet.', $html, (string) $reason );
+			self::assertStringNotContainsString( 'then recheck eligibility', $html, (string) $reason );
+			self::assertSame( 'is-warning', $this->release_status_row_class( $html ), (string) $reason );
+		}
+	}
+
+	private function release_status_row_class( string $html ): string {
+		if ( 1 !== preg_match( '/<li class="ran-booster-readiness-item ([^"]*)">\s*<span class="ran-booster-readiness-icon" aria-hidden="true"><\/span>\s*<strong>Release status<\/strong>/', $html, $m ) ) {
+			self::fail( 'Expected the Release status readiness row.' );
+		}
+		return $m[1];
+	}
+
+	public function test_up_to_date_release_status_is_green_without_a_warning_notice(): void {
+		$html = $this->render_release_view( array() );
+
+		self::assertSame( 'is-ok', $this->release_status_row_class( $html ) );
+		self::assertStringContainsString( 'Version 1.0.0 is installed; no newer eligible release was found.', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-release-status-notice', $html );
+		self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
+		self::assertStringNotContainsString( 'Releases have not been checked yet.', $html );
+	}
+
+	public function test_never_checked_release_status_is_neutral_and_never_uses_failure_wording(): void {
+		$html = $this->render_release_view( array( 'last_checked_at' => '' ) );
+
+		self::assertSame( 'is-neutral', $this->release_status_row_class( $html ) );
+		self::assertStringContainsString( 'Releases have not been checked yet. Use Check releases.', $html );
+		self::assertStringNotContainsString( 'no newer eligible release was found', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-release-status-notice', $html );
+		self::assertStringNotContainsString( 'No published release was found', $html );
+		self::assertStringNotContainsString( 'could not confirm an eligible published release', $html );
+		self::assertStringNotContainsString( 'No matching published release is available yet.', $html );
+	}
+
 	public function test_automatic_branch_transition_shows_its_warning_only_at_the_top(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( deployment_policy: 'automatic' ) );
 		$controls = ReleaseManagementFixture::controls( $tracking );
@@ -1389,7 +1488,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'notice-success', $html );
-		self::assertStringContainsString( 'Version 1.0.0 is installed; no newer eligible release was found.', $html );
+		self::assertStringContainsString( 'Release check complete.', $html );
+		self::assertStringNotContainsString( 'no newer eligible release was found', $html );
 		self::assertStringNotContainsString( 'release_deployments', $html );
 		self::assertSame(
 			array( array( 'refresh', 'plugin', 'example/example.php', 3, $this->nonce( 'refresh' ) ) ),

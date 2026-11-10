@@ -216,6 +216,28 @@ $render_webhook_cell  = static function ( array $profile, string $column ) use (
 };
 $is_repository_detail = 'overview' === $provider_view && 'repositories' === $provider_task && '' !== $requested_repository_id;
 $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets' ), true );
+/*
+ * One shared "delivery not ready" notice, printed at the top of every
+ * repository integrations sub-panel while the site cannot receive webhook
+ * deliveries. Severity: a local, private or non-HTTPS callback URL is an
+ * environment condition, so it is info (blue); only a hard failure (database,
+ * encrypted credential storage or the managed package inventory unavailable)
+ * is a genuine error, so it is warning.
+ */
+$render_webhook_delivery_notice = static function () use ( $webhook_assistance_provider_capable, $webhook_assistance_site_ready, $webhook_has_hard_failure, $webhook_site_reasons, $wordpress_urls_url ): void {
+	if ( ! $webhook_assistance_provider_capable || $webhook_assistance_site_ready ) {
+		return;
+	}
+	$intent = $webhook_has_hard_failure ? 'warning' : 'info';
+	?>
+	<div class="notice notice-<?php echo esc_attr( $intent ); ?> inline ran-booster-push-deploy__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $intent ); ?>" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $intent ); ?>">
+		<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+			<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?> <a href="<?php echo esc_url( $wordpress_urls_url ); ?>"><?php esc_html_e( 'Review WordPress URLs', 'ran-booster' ); ?></a></p>
+		</div>
+		<?php \RAN\Admin\Component\NoticeIcon::print_intent( $intent ); ?>
+	</div>
+	<?php
+};
 
 ?>
 
@@ -544,6 +566,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 							$release_package_count = (int) $repository_integration_summary['release_packages'];
 							$workflow_review_count = (int) $repository_integration_summary['release_workflows_needing_review'];
 							?>
+							<?php $render_webhook_delivery_notice(); ?>
 							<?php if ( ! $repository_inventory_available ) { ?>
 								<p><?php esc_html_e( 'Repository inventory is unavailable; shown records may be incomplete.', 'ran-booster' ); ?></p>
 							<?php } ?>
@@ -574,19 +597,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 							<?php if ( ! empty( $repository_integration_summary['release_workflows_inventory_incomplete'] ) ) { ?>
 								<p><?php esc_html_e( 'Release workflow observations are incomplete because some package details are omitted.', 'ran-booster' ); ?></p>
 							<?php } ?>
-							<?php if ( $webhook_assistance_provider_capable && ! $webhook_assistance_site_ready ) { ?>
-								<div class="notice <?php echo esc_attr( $webhook_has_hard_failure ? 'notice-error' : 'notice-warning' ); ?> inline ran-booster-push-deploy__notice ran-wp-ui-notice ran-wp-ui-box-sizing <?php echo esc_attr( $webhook_has_hard_failure ? 'is-error' : 'is-warning' ); ?>" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo $webhook_has_hard_failure ? 'error' : 'warning'; ?>">
-									<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-										<p><strong><?php esc_html_e( 'Webhook delivery is not ready.', 'ran-booster' ); ?></strong> <?php echo esc_html( implode( ' ', $webhook_site_reasons ) ); ?></p>
-									</div>
-									<?php \RAN\Admin\Component\NoticeIcon::print_intent( $webhook_has_hard_failure ? 'error' : 'warning' ); ?>
-								</div>
-							<?php } ?>
-							<div class="ran-booster-provider-task-actions">
-								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Review repositories', 'ran-booster' ); ?></a>
-								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $wordpress_urls_url ); ?>"><?php esc_html_e( 'Review WordPress URLs', 'ran-booster' ); ?></a>
-								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View Activity', 'ran-booster' ); ?></a>
-							</div>
+							<p><a href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View Activity', 'ran-booster' ); ?></a></p>
 					</section>
 				<?php } elseif ( 'setup' === $provider_task ) { ?>
 					<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="setup" aria-labelledby="ran-booster-webhook-instructions-heading">
@@ -600,12 +611,37 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 									<p class="ran-booster-section__description"><?php esc_html_e( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', 'ran-booster' ); ?></p>
 								</div>
 							</div>
-								<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
-									<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-										<p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?></a>.</p>
-									</div>
-									<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
+								<?php $render_webhook_delivery_notice(); ?>
+								<?php if ( array() !== $repository_table_rows ) { ?>
+							<section class="ran-booster-provider-automated-setup" aria-labelledby="ran-booster-webhook-automated-heading">
+								<h5 id="ran-booster-webhook-automated-heading" class="ran-booster-section__title"><?php esc_html_e( 'Automated setup', 'ran-booster' ); ?></h5>
+								<p><?php esc_html_e( 'Booster can set up and check a webhook for each repository. Choose a repository to start.', 'ran-booster' ); ?></p>
+								<ul>
+									<?php
+									foreach ( $repository_table_rows as $automated_row ) {
+										$automated_url  = is_string( $automated_row['detail_url'] ?? null ) ? $automated_row['detail_url'] : '';
+										$automated_name = is_string( $automated_row['repository'] ?? null ) ? $automated_row['repository'] : '';
+										$automated_src  = is_string( $automated_row['source_label'] ?? null ) ? $automated_row['source_label'] : '';
+										$automated_note = 'release_asset' === ( $automated_row['source_key'] ?? null ) && is_string( $automated_row['consequence'] ?? null ) ? $automated_row['consequence'] : '';
+										?>
+								<li><strong><?php echo esc_html( $automated_name ); ?></strong> <span class="description"><?php echo esc_html( $automated_src ); ?></span>
+										<?php if ( '' !== $automated_note ) { ?>
+											<?php echo esc_html( $automated_note ); ?>
+									<?php } elseif ( '' !== $automated_url && empty( $automated_row['historical'] ) ) { ?>
+										<a href="<?php echo esc_url( add_query_arg( 'repository_view', 'branch', $automated_url ) ); ?>"><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?><span class="screen-reader-text"> <?php echo esc_html( $automated_name ); ?></span></a>
+									<?php } ?>
+								</li>
+									<?php } ?>
+								</ul>
+							</section>
+							<?php } ?>
+							<h5 id="ran-booster-webhook-manual-heading" class="ran-booster-section__title"><?php esc_html_e( 'Manual setup', 'ran-booster' ); ?></h5>
+							<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info">
+								<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+									<p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback.', 'ran-booster' ); ?></p>
 								</div>
+								<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?>
+							</div>
 							<dl class="ran-booster-webhook-endpoint ran-booster-summary-grid">
 								<div>
 									<dt id="ran-booster-webhook-url-label"><?php esc_html_e( 'Payload URL', 'ran-booster' ); ?></dt>
@@ -624,6 +660,8 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 									<div data-ran-booster-ui-disclosure-content class="ran-booster-provider-disclosure__body ran-booster-disclosure__body">
 										<p><?php echo esc_html( $manual_setup_description ); ?></p>
 										<ol><li><?php esc_html_e( 'Paste the payload URL and a matching signing secret.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Keep SSL verification enabled and select the push event.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Trigger a delivery and confirm the Git provider records a successful response.', 'ran-booster' ); ?></li></ol>
+										<p><?php esc_html_e( 'For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?></p>
+										<p><a href="<?php echo esc_url( $webhook_operations_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 										<p><a href="<?php echo esc_url( $webhook_setup['documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $provider_instructions_label ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 										<?php if ( $webhook_setup['documentation_url'] !== $webhook_setup['delivery_documentation_url'] ) { ?>
 											<p><a href="<?php echo esc_url( $webhook_setup['delivery_documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Delivery troubleshooting', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
@@ -631,6 +669,8 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 									</div>
 								</details></div>
 							<?php } else { ?>
+								<p><?php esc_html_e( 'For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?></p>
+								<p><a href="<?php echo esc_url( $webhook_operations_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 								<p><a href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>
 							<?php } ?>
 							<?php } ?>
@@ -644,6 +684,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 								<p class="ran-booster-section__description"><?php echo esc_html( $repository_webhook_description ); ?></p>
 							</div>
 						</div>
+							<?php $render_webhook_delivery_notice(); ?>
 						<?php } ?>
 							<?php if ( '' !== $requested_repository_id ) { ?>
 								<?php if ( is_array( $selected_repository_row ) ) { ?>

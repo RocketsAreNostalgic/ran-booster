@@ -2122,13 +2122,13 @@ final class TroubleshootingViewTest extends TestCase {
 		$webhook_profiles                     = array();
 		$provider_task                        = 'status';
 		$cases                                = array(
-			array( array( 'database_unavailable' ), 'https://example.test/hook', 'error', 'Booster database storage must be healthy before Push-to-Deploy can run.' ),
-			array( array( 'secrets_storage_unavailable' ), 'https://example.test/hook', 'error', 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.' ),
-			array( array( 'managed_packages_unavailable' ), 'https://example.test/hook', 'error', 'Booster could not read the managed package inventory needed for Push-to-Deploy.' ),
-			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'warning', 'This site uses a local URL, so Git providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy.' ),
-			array( array( 'callback_requires_public_https' ), 'http://example.test/hook', 'warning', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it.' ),
-			array( array( 'unknown-canary' ), 'https://example.test/hook', 'warning', '' ),
-			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'error', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it. Booster database storage must be healthy before Push-to-Deploy can run.' ),
+			array( array( 'database_unavailable' ), 'https://example.test/hook', 'warning', 'Booster database storage must be healthy before Push-to-Deploy can run.' ),
+			array( array( 'secrets_storage_unavailable' ), 'https://example.test/hook', 'warning', 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.' ),
+			array( array( 'managed_packages_unavailable' ), 'https://example.test/hook', 'warning', 'Booster could not read the managed package inventory needed for Push-to-Deploy.' ),
+			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'info', 'This site uses a local URL, so Git providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy.' ),
+			array( array( 'callback_requires_public_https' ), 'http://example.test/hook', 'info', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it.' ),
+			array( array( 'unknown-canary' ), 'https://example.test/hook', 'info', '' ),
+			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'warning', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it. Booster database storage must be healthy before Push-to-Deploy can run.' ),
 		);
 		foreach ( array( 'gh', 'bb', 'other' ) as $code ) {
 			$provider['code'] = $code;
@@ -2146,7 +2146,7 @@ final class TroubleshootingViewTest extends TestCase {
 				ob_start();
 				require dirname( __DIR__, 2 ) . '/views/provider.php';
 				$html = (string) ob_get_clean();
-				self::assertMatchesRegularExpression( '~<div class="notice notice-' . $intent . ' inline ran-booster-push-deploy__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent . '" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . $intent . '">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p><strong>Webhook delivery is not ready\.</strong> ' . preg_quote( $reason, '~' ) . '</p>\s*</div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg>\s*</div>~', $html );
+				self::assertMatchesRegularExpression( '~<div class="notice notice-' . $intent . ' inline ran-booster-push-deploy__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent . '" data-ran-booster-assistance-site-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . $intent . '">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p><strong>Webhook delivery is not ready\.</strong> ' . preg_quote( $reason, '~' ) . ' ?<a href="[^"]*options-general\.php">Review WordPress URLs</a></p>\s*</div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg>\s*</div>~', $html );
 				self::assertStringNotContainsString( 'unknown-canary', $html );
 			}
 		}
@@ -2165,13 +2165,28 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( '&lt;unsafe &amp; reason&gt;', $html );
-		foreach ( array( 'setup', 'repositories' ) as $task ) {
-			$provider_task = $task;
+		$delivery_notices = array();
+		foreach ( array( 'status', 'setup', 'repositories' ) as $delivery_task ) {
+			$provider_task = $delivery_task;
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
 			$html = (string) ob_get_clean();
-			self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+			self::assertSame( 1, substr_count( $html, 'data-ran-booster-assistance-site-notice' ), $delivery_task );
+			self::assertSame( 1, substr_count( $html, 'Review WordPress URLs' ), $delivery_task );
+			if ( 1 !== preg_match( '~<div class="notice [^"]*" data-ran-booster-assistance-site-notice.*?</svg>\s*</div>~s', $html, $notice ) ) {
+				self::fail( 'The shared delivery notice is missing from ' . $delivery_task . '.' );
+			}
+			$delivery_notices[ $delivery_task ] = $notice[0];
+			// The notice is the first thing in the panel after its heading.
+			if ( 1 !== preg_match( '~<section id="ran-booster-provider-task-panel".*?<div class="notice [^"]*" data-ran-booster-assistance-site-notice~s', $html, $head ) ) {
+				self::fail( 'The shared delivery notice does not sit in the ' . $delivery_task . ' panel.' );
+			}
+			self::assertStringNotContainsString( 'ran-booster-repository-integration-status', $head[0], $delivery_task );
+			self::assertStringNotContainsString( 'ran-booster-webhook-endpoint', $head[0], $delivery_task );
+			self::assertStringContainsString( 'notice-warning', $delivery_notices[ $delivery_task ], $delivery_task );
 		}
+		self::assertSame( $delivery_notices['status'], $delivery_notices['setup'] );
+		self::assertSame( $delivery_notices['status'], $delivery_notices['repositories'] );
 		$provider_task = 'status';
 		foreach ( array(
 			array(
@@ -2210,6 +2225,146 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+	}
+
+	/**
+	 * @param array<string,mixed> $readiness
+	 * @param list<array<string,mixed>> $repositories
+	 * @return array<string,string> Rendered HTML per sub-panel.
+	 */
+	private function render_provider_panels( array $readiness, array $repositories ): array {
+		$provider                             = $this->provider_without_optional_settings();
+		$provider['code']                     = 'gh';
+		$provider['webhook_scopes']           = $this->webhook_scopes();
+		$provider['capabilities']['webhooks'] = true;
+		$provider['webhook_setup']            = array(
+			'location'                   => 'Repository Settings → Webhooks → Add webhook',
+			'event'                      => 'Push event',
+			'documentation_url'          => 'https://provider.example/webhooks',
+			'delivery_documentation_url' => 'https://provider.example/deliveries',
+		);
+		$credential_profiles                  = array();
+		$webhook_profiles                     = array();
+		$webhook_assistance_readiness         = $readiness;
+		$provider_repositories                = array(
+			'available'    => true,
+			'repositories' => $repositories,
+		);
+		$panels                               = array();
+		foreach ( array( 'status', 'repositories', 'setup' ) as $panel_name ) {
+			$provider_task      = $panel_name;
+			$provider_view_data = $this->provider_view_data( get_defined_vars() );
+			// phpcs:ignore WordPress.PHP.DontExtract.extract_extract -- Fixed test fixture locals mirror Dashboard output.
+			extract( $provider_view_data );
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$panels[ $panel_name ] = (string) ob_get_clean();
+		}
+
+		return $panels;
+	}
+
+	/** @return list<array<string,mixed>> */
+	private function branch_and_release_repositories(): array {
+		return array(
+			array(
+				'target'              => 'owner/branch-repo',
+				'repository_id'       => 'branch-1',
+				'source'              => 'branch',
+				'package_references'  => array( 'branch/package.php' ),
+				'deployment_policies' => array(
+					'automatic' => 1,
+					'manual'    => 0,
+					'disabled'  => 0,
+				),
+			),
+			array(
+				'target'        => 'owner/release-repo',
+				'repository_id' => 'release-1',
+				'source'        => 'release_asset',
+			),
+		);
+	}
+
+	public function test_receiver_lists_automated_setup_links_and_manual_setup_in_order(): void {
+		$ready = array(
+			'site'         => array(
+				'status'       => 'ready',
+				'reason_codes' => array(),
+				'callback_url' => 'https://example.test/wp-json/ran-booster/v1/webhooks/gh',
+			),
+			'repositories' => array(),
+		);
+		$html  = $this->render_provider_panels( $ready, $this->branch_and_release_repositories() )['setup'];
+
+		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+		self::assertStringContainsString( 'Automated setup</h5>', $html );
+		self::assertStringContainsString( 'Booster can set up and check a webhook for each repository. Choose a repository to start.', $html );
+		if ( 1 !== preg_match( '~<ul>(.*?)</ul>~s', $html, $list ) ) {
+			self::fail( 'The automated setup list is missing.' );
+		}
+		self::assertSame( 2, substr_count( $list[1], '<li>' ) );
+		self::assertSame( 1, substr_count( $list[1], 'Set up webhook' ) );
+		self::assertMatchesRegularExpression( '~<strong>owner/branch-repo</strong> <span class="description">Branch</span>\s*<a href="[^"]*repository=branch-1&(?:amp;)?repository_view=branch">Set up webhook<span class="screen-reader-text"> owner/branch-repo</span></a>~', $list[1] );
+		self::assertMatchesRegularExpression( '~<strong>owner/release-repo</strong> <span class="description">Releases</span>\s*Pushes are ignored\.~', $list[1] );
+		self::assertStringNotContainsString( 'repository=release-1', $list[1] );
+		// Order: automated list, manual heading, security notice, then the Payload URL block.
+		$automated = (int) strpos( $html, 'Automated setup</h5>' );
+		$manual    = (int) strpos( $html, 'Manual setup</h5>' );
+		$security  = (int) strpos( $html, 'Webhook signatures authorize deployment' );
+		$payload   = (int) strpos( $html, 'Payload URL' );
+		self::assertTrue( $automated > 0 && $automated < $manual && $manual < $security && $security < $payload );
+		self::assertStringContainsString( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $html );
+
+		$empty = $this->render_provider_panels( $ready, array() )['setup'];
+		self::assertStringNotContainsString( 'Automated setup', $empty );
+		self::assertStringNotContainsString( 'Set up webhook', $empty );
+		self::assertStringContainsString( 'Manual setup</h5>', $empty );
+		self::assertGreaterThan( (int) strpos( $empty, 'Manual setup</h5>' ), (int) strpos( $empty, 'Payload URL' ) );
+	}
+
+	public function test_status_panel_leads_with_the_notice_and_has_no_button_row(): void {
+		$blocked = array(
+			'site'         => array(
+				'status'       => 'blocked',
+				'reason_codes' => array( 'callback_requires_public_https' ),
+				'callback_url' => 'http://localhost:10013/wp-json/ran-booster/v1/webhooks/gh',
+			),
+			'repositories' => array(),
+		);
+		$html    = $this->render_provider_panels( $blocked, $this->branch_and_release_repositories() )['status'];
+
+		self::assertGreaterThan( 0, (int) strpos( $html, 'data-ran-booster-assistance-site-notice' ) );
+		self::assertLessThan( (int) strpos( $html, 'ran-booster-repository-integration-status' ), (int) strpos( $html, 'data-ran-booster-assistance-site-notice' ) );
+		self::assertStringContainsString( 'notice-info', $html );
+		self::assertStringNotContainsString( 'Review repositories', $html );
+		self::assertStringNotContainsString( 'ran-booster-provider-task-actions', $html );
+		if ( 1 !== preg_match( '~</dl>.*?</section>~s', $html, $after_rows ) ) {
+			self::fail( 'The Status panel does not end after its summary rows.' );
+		}
+		self::assertStringNotContainsString( 'ran-wp-ui-button', $after_rows[0] );
+		// View Activity is one plain text link after the summary rows.
+		self::assertMatchesRegularExpression( '~</dl>\s*<p><a href="[^"]*">View Activity</a></p>~', $html );
+		// Review WordPress URLs lives only inside the notice.
+		self::assertSame( 1, substr_count( $html, 'Review WordPress URLs' ) );
+		if ( 1 !== preg_match( '~data-ran-booster-assistance-site-notice.*?</svg>\s*</div>~s', $html, $notice ) ) {
+			self::fail( 'The notice is missing.' );
+		}
+		self::assertStringContainsString( 'Review WordPress URLs', $notice[0] );
+
+		$ready_html = $this->render_provider_panels(
+			array(
+				'site'         => array(
+					'status'       => 'ready',
+					'reason_codes' => array(),
+				),
+				'repositories' => array(),
+			),
+			$this->branch_and_release_repositories()
+		)['status'];
+		self::assertStringNotContainsString( 'Review WordPress URLs', $ready_html );
+		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $ready_html );
+		self::assertMatchesRegularExpression( '~</dl>\s*<p><a href="[^"]*">View Activity</a></p>~', $ready_html );
 	}
 
 	public function test_provider_settings_explains_blocked_local_assisted_hook_setup(): void {
@@ -2276,7 +2431,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/provider.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $html );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-assistance-site-notice' ) );
 		self::assertStringContainsString( 'Owner secret', $html );
 		self::assertStringContainsString( 'Repository identity conflict', $html );
 		self::assertStringNotContainsString( 'Review record', $html );
@@ -2479,10 +2634,10 @@ final class TroubleshootingViewTest extends TestCase {
 			// The short Health label lives in its own cell, not in the result row.
 			self::assertSame( 0.0, $xpath->evaluate( 'count(./span)', $region ) );
 			self::assertStringNotContainsString( 'Retained status label', $html );
-			$notices = $xpath->query( './div[@data-ran-booster-ui-notice]', $region );
-			self::assertNotFalse( $notices );
-			self::assertCount( 1, $notices );
-			$notice = $notices->item( 0 );
+			$delivery_notices = $xpath->query( './div[@data-ran-booster-ui-notice]', $region );
+			self::assertNotFalse( $delivery_notices );
+			self::assertCount( 1, $delivery_notices );
+			$notice = $delivery_notices->item( 0 );
 			self::assertInstanceOf( \DOMElement::class, $notice );
 			self::assertSame( null !== $credential_validation_error ? 'error' : 'success', $notice->getAttribute( 'data-ran-booster-ui-notice-intent' ) );
 			self::assertSame( null === $credential_validation_error && null === $credential_validation_message, $notice->hasAttribute( 'hidden' ) );
@@ -2941,7 +3096,14 @@ final class TroubleshootingViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
 			$html = (string) ob_get_clean();
-			self::assertMatchesRegularExpression( '~<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p><strong>Webhook signatures authorize deployment; they do not protect your host from traffic\.</strong> Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback\. For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity\. <a href="https://example\.test/guide\?one=1&amp;two=&quot;safe&quot;">Read the webhook operations guide</a>\.</p>\s*</div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg>\s*</div>~', $html );
+			self::assertMatchesRegularExpression( '~<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p><strong>Webhook signatures authorize deployment; they do not protect your host from traffic\.</strong> Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback\.</p>\s*</div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg>\s*</div>~', $html );
+			self::assertStringNotContainsString( 'notice-warning', $html );
+			// The troubleshooting sentence and the operations guide moved into the manual setup disclosure (inline when the provider has no setup metadata).
+			$guidance = 1 === preg_match( '~<details.*?</details>~s', $html, $disclosure ) ? $disclosure[0] : $html;
+			self::assertStringContainsString( 'For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', $guidance );
+			self::assertMatchesRegularExpression( '~<a href="https://example\.test/guide\?one=1&amp;two=&quot;safe&quot;" target="_blank" rel="noopener noreferrer">Read the webhook operations guide <span aria-hidden="true">~', $guidance );
+			self::assertSame( 1, substr_count( $html, 'Read the webhook operations guide' ) );
+			self::assertSame( 1, substr_count( $html, 'Git provider request ID in Booster Activity' ) );
 		}
 		foreach ( array( 'status', 'repositories' ) as $task ) {
 			$provider_task = $task;
@@ -3038,9 +3200,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'hx-push-url="true"', $status_html );
 		self::assertStringContainsString( 'hx-history="false"', $status_html );
 		self::assertStringContainsString( 'hx-sync="this:replace"', $status_html );
-		self::assertSame( 4, substr_count( $status_html, 'hx-get="admin.php?page=ran-booster&amp;tab=bb&amp;panel=' ) );
+		self::assertSame( 3, substr_count( $status_html, 'hx-get="admin.php?page=ran-booster&amp;tab=bb&amp;panel=' ) );
 		self::assertSame( 4, substr_count( $status_html, 'data-ran-booster-provider-task="' ) );
-		self::assertSame( 2, substr_count( $status_html, 'hx-boost="true"' ) );
+		self::assertSame( 1, substr_count( $status_html, 'hx-boost="true"' ) );
 		$dom             = new \DOMDocument();
 		$previous_errors = libxml_use_internal_errors( true );
 		$dom->loadHTML( $status_html );
@@ -3338,7 +3500,7 @@ final class TroubleshootingViewTest extends TestCase {
 				self::assertSame( 'distinct' === $state ? 1.0 : 0.0, $xpath->evaluate( 'count(//a[starts-with(normalize-space(.),"Delivery troubleshooting")])' ) );
 				$external = $xpath->query( '//details//a[@target="_blank"]' );
 				self::assertNotFalse( $external );
-				self::assertCount( 'absent' === $state ? 0 : ( 'same' === $state ? 1 : 2 ), $external );
+				self::assertCount( 'absent' === $state ? 0 : ( 'same' === $state ? 2 : 3 ), $external );
 				foreach ( $external as $anchor ) {
 					self::assertInstanceOf( \DOMElement::class, $anchor );
 					self::assertSame( '', $anchor->getAttribute( 'class' ) );

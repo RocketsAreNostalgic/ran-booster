@@ -128,7 +128,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:310
 #: views/troubleshooting-installation.php:188
 #: views/troubleshooting-installation.php:189
-#: views/troubleshooting-installation.php:278
+#: views/troubleshooting-installation.php:276
 msgid "Name"
 msgstr ""
 
@@ -5888,13 +5888,13 @@ msgstr ""
 
 #. translators: %d: enabled replacement candidate number.
 #: RAN/Troubleshooting/TroubleshootingService.php:253
-#: views/troubleshooting-installation.php:266
+#: views/troubleshooting-installation.php:264
 #, php-format
 msgid "GitHub candidate %d"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:255
-#: views/troubleshooting-installation.php:263
+#: views/troubleshooting-installation.php:261
 msgid "Enabled candidates"
 msgstr ""
 
@@ -5989,32 +5989,32 @@ msgstr ""
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
 #: views/troubleshooting-installation.php:174
-#: views/troubleshooting-installation.php:278
+#: views/troubleshooting-installation.php:276
 msgid "Version"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:312
+#: views/troubleshooting-installation.php:232
 #: views/troubleshooting-installation.php:234
-#: views/troubleshooting-installation.php:236
-#: views/troubleshooting-installation.php:278
+#: views/troubleshooting-installation.php:276
 msgid "Implementation"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:313
-#: views/troubleshooting-installation.php:237
-#: views/troubleshooting-installation.php:278
+#: views/troubleshooting-installation.php:235
+#: views/troubleshooting-installation.php:276
 msgid "Provider API"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:314
-#: views/troubleshooting-installation.php:237
-#: views/troubleshooting-installation.php:278
+#: views/troubleshooting-installation.php:235
+#: views/troubleshooting-installation.php:276
 msgid "Compatibility revision"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:315
-#: views/troubleshooting-installation.php:237
-#: views/troubleshooting-installation.php:278
+#: views/troubleshooting-installation.php:235
+#: views/troubleshooting-installation.php:276
 msgid "Webhook signing format"
 msgstr ""
 
@@ -6026,7 +6026,7 @@ msgstr ""
 
 #. translators: %d: locally declared credential format number.
 #: RAN/Troubleshooting/TroubleshootingService.php:324
-#: views/troubleshooting-installation.php:247
+#: views/troubleshooting-installation.php:245
 #, php-format
 msgid "API credential format %d"
 msgstr ""
@@ -7717,7 +7717,7 @@ msgid "Provider extension: %s"
 msgstr ""
 
 #: views/overview-dashboard.php:110
-#: views/troubleshooting-installation.php:302
+#: views/troubleshooting-installation.php:300
 msgid "Provider source unknown"
 msgstr ""
 
@@ -10632,45 +10632,45 @@ msgstr ""
 msgid "Installed extension"
 msgstr ""
 
-#: views/troubleshooting-installation.php:212
+#: views/troubleshooting-installation.php:210
 msgid "GitHub provider selection needs attention. Review the provider settings before use."
 msgstr ""
 
-#: views/troubleshooting-installation.php:220
+#: views/troubleshooting-installation.php:218
 msgid "Implementation fingerprint"
 msgstr ""
 
-#: views/troubleshooting-installation.php:223
+#: views/troubleshooting-installation.php:221
 msgid "Implemented capabilities"
 msgstr ""
 
-#: views/troubleshooting-installation.php:236
+#: views/troubleshooting-installation.php:234
 msgid "Implementation ID"
 msgstr ""
 
-#: views/troubleshooting-installation.php:249
+#: views/troubleshooting-installation.php:247
 msgid "Classic PAT"
 msgstr ""
 
-#: views/troubleshooting-installation.php:251
+#: views/troubleshooting-installation.php:249
 msgid "Fine-grained PAT"
 msgstr ""
 
-#: views/troubleshooting-installation.php:255
+#: views/troubleshooting-installation.php:253
 msgid "Supported credential types"
 msgstr ""
 
-#: views/troubleshooting-installation.php:272
+#: views/troubleshooting-installation.php:270
 msgid "GitHub replacement plugins detected"
 msgstr ""
 
 #. translators: 1: displayed replacement plugins, 2: total replacement plugins.
-#: views/troubleshooting-installation.php:291
+#: views/troubleshooting-installation.php:289
 #, php-format
 msgid "Showing %1$d of %2$d replacement plugins."
 msgstr ""
 
-#: views/troubleshooting-installation.php:309
+#: views/troubleshooting-installation.php:307
 msgid "These are local configuration details. Use Diagnostics to check repository access."
 msgstr ""
 

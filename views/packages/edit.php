@@ -41,9 +41,7 @@ $selected_credential_id = isset( $_POST['ran_booster']['credential_id'] )
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 	? sanitize_text_field( (string) $_POST['ran_booster']['credential_id'] )
 	: $package->get_credential_id();
-$repository_value            = isset( $submitted_package['repository'] ) && is_scalar( $submitted_package['repository'] )
-	? sanitize_text_field( wp_unslash( (string) $submitted_package['repository'] ) )
-	: (string) $package->repository;
+$repository_value            = (string) $package->repository;
 $branch_value                = isset( $submitted_package['branch'] ) && is_scalar( $submitted_package['branch'] )
 	? sanitize_text_field( wp_unslash( (string) $submitted_package['branch'] ) )
 	: (string) $package->get_branch();
@@ -57,11 +55,8 @@ $submitted_deployment_policy = isset( $submitted_package['deployment_policy'] ) 
 $deployment_policy           = ( $submitted_deployment_policy ?? $package->get_deployment_policy() )->value;
 $identifier_value            = (string) $package->get_identifier();
 $stored_provider_code        = (string) ( $package->get_provider_code() ?? '' );
-// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
-$provider_code = isset( $_POST['ran_booster']['provider'] )
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
-	? sanitize_key( (string) $_POST['ran_booster']['provider'] )
-	: $stored_provider_code;
+// The Git provider and repository are fixed once installed, so a failed save never repopulates them.
+$provider_code = $stored_provider_code;
 // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 $provider_repository_id = isset( $_POST['ran_booster']['provider_repository_id'] )
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
@@ -198,7 +193,7 @@ $settings_url               = add_query_arg(
 );
 $show_branch_settings       = 'branch' === $package_source_view;
 $show_branch_operations     = $show_branch_settings && ! $release_managed;
-$repository_read_only       = $release_managed;
+$repository_read_only       = true;
 $branch_read_only           = $release_managed;
 $package_mutation_available = $package_mutation_available && ! $package_source_unavailable;
 $word_press_enabled         = 'plugin' === $package_view->get_type()
@@ -295,9 +290,11 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 						<input type="hidden" name="ran_booster[provider_repository_id]" class="ran-booster-provider-repository-id-input" value="<?php echo esc_attr( $provider_repository_id ); ?>">
 						<input type="hidden" name="ran_booster[provider_repository_identity_source]" class="ran-booster-provider-repository-identity-source-input" value="<?php echo esc_attr( $provider_repository_identity_source ); ?>">
 						<input type="hidden" name="ran_booster[public_lookup_profile_id]" class="ran-booster-public-lookup-profile-input" value="<?php echo esc_attr( $public_lookup_profile_id ); ?>">
-						<?php if ( $release_managed ) { ?>
+						<?php if ( $repository_read_only ) { ?>
 							<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider_code ); ?>">
 							<input type="hidden" name="ran_booster[repository]" value="<?php echo esc_attr( $repository_value ); ?>">
+						<?php } ?>
+						<?php if ( $release_managed ) { ?>
 							<input type="hidden" name="ran_booster[branch]" value="<?php echo esc_attr( $branch_value ); ?>">
 							<input type="hidden" name="ran_booster[subdirectory]" value="<?php echo esc_attr( $subdirectory_value ); ?>">
 						<?php } elseif ( ! $show_branch_settings ) { ?>

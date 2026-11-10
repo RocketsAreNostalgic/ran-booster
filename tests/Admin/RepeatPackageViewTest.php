@@ -756,13 +756,85 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringContainsString( 'name="ran_booster[reinstall_after_save]"', $html );
 			self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
 			self::assertStringNotContainsString( 'ran-booster-package-settings__reinstall-form', $html );
-			self::assertMatchesRegularExpression( '/name="ran_booster\[repository\]"[^>]*value="owner\/attempted"/', $edit_form );
+			self::assertStringContainsString( '<input type="hidden" name="ran_booster[provider]" value="gh">', $edit_form );
+			self::assertStringContainsString( '<input type="hidden" name="ran_booster[repository]" value="owner/example">', $edit_form );
+			self::assertStringNotContainsString( 'owner/attempted', $html );
 			self::assertMatchesRegularExpression( '/name="ran_booster\[branch\]"[^>]*value="attempted-branch"/', $html );
 			self::assertMatchesRegularExpression( '/name="ran_booster\[subdirectory\]"[^>]*value="attempted\/path"/', $html );
 			self::assertMatchesRegularExpression( '/<option value="automatic"[^>]*selected="selected"/', $html );
 			self::assertStringContainsString( '<p class="ran-booster-package-summary__value">Branch · main</p>', $html );
 			self::assertStringContainsString( '<p class="ran-booster-package-summary__value">Manual</p>', $html );
 		}
+	}
+
+	public function test_installed_edit_locks_provider_and_repository_while_install_stays_editable(): void {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			$package                   = $this->package( $package_view );
+			$package_provider_settings = $this->provider_settings( true );
+
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+			$html = (string) ob_get_clean();
+
+			$edit_form = $this->form_by_id( $html, 'ran-booster-package-edit-form' );
+			self::assertStringContainsString( '<input type="hidden" name="ran_booster[provider]" value="gh">', $edit_form );
+			self::assertStringContainsString( '<input type="hidden" name="ran_booster[repository]" value="owner/example">', $edit_form );
+			self::assertStringContainsString( 'name="ran_booster[provider_repository_id]" class="ran-booster-provider-repository-id-input" value="provider-id"', $edit_form );
+			self::assertStringContainsString( 'name="ran_booster[provider_repository_identity_source]" class="ran-booster-provider-repository-identity-source-input" value="stored"', $edit_form );
+			if ( 1 !== preg_match( '/<select id="ran-booster-provider"([^>]*)>/', $edit_form, $provider ) ) {
+				self::fail( 'The Edit form must render the saved Git provider.' );
+			}
+			self::assertStringContainsString( 'aria-describedby="ran-booster-repository-fixed-description"', $provider[1] );
+			self::assertStringContainsString( 'disabled="disabled"', $provider[1] );
+			if ( 1 !== preg_match( '/<div id="ran-booster-repository-name"([^>]*)>(.*?)<\/div>/s', $edit_form, $repository ) ) {
+				self::fail( 'The Edit form must render the saved repository as text.' );
+			}
+			self::assertStringContainsString( 'role="group" aria-labelledby="ran-booster-repository-name-label" aria-describedby="ran-booster-repository-fixed-description"', $repository[1] );
+			self::assertStringContainsString( '<a href="https://github.com/owner/example" target="_blank" rel="noopener noreferrer">owner/example</a>', $repository[2] );
+			self::assertMatchesRegularExpression( '/<span id="ran-booster-repository-name-label" class="ran-booster-settings-field__label">[^<]+<\/span>/', $edit_form );
+			self::assertStringContainsString( '<p id="ran-booster-repository-fixed-description" class="description">The Git provider and repository cannot change once a package is installed.</p>', $edit_form );
+			self::assertStringNotContainsString( 'ran-booster-open-repository-picker', $html );
+			self::assertStringNotContainsString( 'ran-booster-repository-input', $html );
+			self::assertMatchesRegularExpression( '/name="ran_booster\[credential_id\]"(?![^>]*disabled)[^>]*>/', $edit_form );
+			self::assertMatchesRegularExpression( '/name="ran_booster\[branch\]"(?![^>]*disabled)[^>]*form="ran-booster-package-edit-form"/', $html );
+			self::assertMatchesRegularExpression( '/name="ran_booster\[deployment_policy\]"(?![^>]*disabled)[^>]*>/', $html );
+
+			// The Install page renders in its own scope so no Edit bindings leak into it.
+			// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The included production view reads these parameters as local template variables.
+			$create = ( static function ( PackagePagePresenter $package_view, array $package_provider_settings ): string {
+				$explicit_provider      = false;
+				$open_repository_picker = false;
+				ob_start();
+				require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+
+				return (string) ob_get_clean();
+			} )( $package_view, $package_provider_settings );
+
+			$create_form = $this->form_by_id( $create, 'ran-booster-package-create-form' );
+			self::assertMatchesRegularExpression( '/<select id="ran-booster-provider" name="ran_booster\[provider\]" class="ran-booster-provider-input" >/', $create_form );
+			self::assertMatchesRegularExpression( '/<input id="ran-booster-repository-name" name="ran_booster\[repository\]"[^>]*required>/', $create_form );
+			self::assertMatchesRegularExpression( '/class="[^"]*ran-booster-open-repository-picker"[^>]*>[^<]+<\/button>/', $create_form );
+			self::assertStringNotContainsString( 'ran-booster-open-repository-picker" data-package-type="' . $package_view->get_type() . '"  disabled', $create_form );
+			self::assertStringNotContainsString( 'ran-booster-repository-fixed-description', $create );
+			self::assertStringNotContainsString( '<input type="hidden" name="ran_booster[provider]"', $create_form );
+		}
+	}
+
+	public function test_installed_edit_shows_the_repository_name_without_a_link_when_no_provider_url_exists(): void {
+		$package_view              = PackagePagePresenter::plugin();
+		$package                   = $this->package( $package_view );
+		$package_provider_settings = $this->provider_settings( false );
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		if ( 1 !== preg_match( '/<div id="ran-booster-repository-name"[^>]*>(.*?)<\/div>/s', $html, $repository ) ) {
+			self::fail( 'The Edit form must render the saved repository as text.' );
+		}
+		self::assertStringContainsString( '<span>owner/example</span>', $repository[1] );
+		self::assertStringNotContainsString( '<a ', $repository[1] );
+		self::assertStringContainsString( '<input type="hidden" name="ran_booster[repository]" value="owner/example">', $html );
 	}
 
 	public function test_edit_source_choices_use_in_place_navigation_with_anchored_fallback(): void {

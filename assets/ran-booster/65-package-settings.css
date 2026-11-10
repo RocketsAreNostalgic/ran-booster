@@ -337,7 +337,9 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-settings-field > label {
+.ran-booster-admin
+	.ran-booster-settings-field
+	> :is(label, .ran-booster-settings-field__label) {
 	display: block;
 	margin-block-end: var(--ran-booster-space-6);
 	color: var(--ran-booster-text);
@@ -485,6 +487,12 @@
 	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: stretch;
 	gap: var(--ran-booster-space-8);
+}
+
+/* A fixed repository reads as text: the link keeps its own width and long names wrap. */
+.ran-booster-admin .ran-booster-repository-field--read-only {
+	justify-items: start;
+	overflow-wrap: anywhere;
 }
 
 .ran-booster-admin .ran-booster-settings-actions {

@@ -2109,7 +2109,7 @@ msgstr ""
 
 #. translators: %d is the number of repositories shown.
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:134
-#: assets/ran-booster.js:820
+#: assets/ran-booster.js:814
 #, php-format,js-format
 msgctxt "Provider table repository count"
 msgid "%d repository shown"
@@ -4463,7 +4463,6 @@ msgid "Set up or check this repository webhook. This does not enable Automatic u
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:126
-#: views/provider.php:673
 msgid "Set up webhook"
 msgstr ""
 
@@ -6263,7 +6262,7 @@ msgid "Activity is temporarily unavailable."
 msgstr ""
 
 #: views/attempts/index.php:117
-#: assets/ran-booster.js:392
+#: assets/ran-booster.js:386
 msgid "No older activity is available."
 msgstr ""
 
@@ -9691,7 +9690,7 @@ msgid "Manual setup"
 msgstr ""
 
 #: views/provider.php:637
-msgid "Choose a repository and Booster sets up its webhook for Push-to-Deploy."
+msgid "Booster can set up a Push-to-Deploy webhook for you. Choose a repository below to get started."
 msgstr ""
 
 #: views/provider.php:649
@@ -9705,7 +9704,7 @@ msgid "🟢 %s — webhook set up"
 msgstr ""
 
 #: views/provider.php:679
-msgid "Create the webhook yourself at your Git provider with these values. Use a unique generated secret for each repository."
+msgid "Generate a webhook for Push-to-Deploy manually using these values. Use a unique generated secret for each repository."
 msgstr ""
 
 #: views/provider.php:683
@@ -11502,10 +11501,10 @@ msgstr ""
 msgid "Settings changed before confirmation. Review the current saved values before retrying:"
 msgstr ""
 
-#: assets/ran-booster.js:217
+#: assets/ran-booster.js:211
 msgid "Load older activity"
 msgstr ""
 
-#: assets/ran-booster.js:396
+#: assets/ran-booster.js:390
 msgid "Older activity loaded."
 msgstr ""

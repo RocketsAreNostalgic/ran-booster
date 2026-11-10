@@ -656,7 +656,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		return $items;
 	}
 
-	/** @param array<array-key,mixed> $row */
+	/**
+	 * @param list<string> $states
+	 * @param array<array-key,mixed> $row
+	 */
 	private function render_branch_section( array $states, bool $in_use, array $row ): string {
 		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
 		ob_start();

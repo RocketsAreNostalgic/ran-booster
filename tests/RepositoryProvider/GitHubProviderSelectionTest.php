@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\AuthenticatedWebhookDeliveryEvidenceReader;
 use RAN\RepositoryProvider\GitHubProviderSelection;
 use RAN\RepositoryProvider\GitHubReplacementDeclaration;
+use RAN\RepositoryProvider\InstalledPackageVersion;
 use RAN\RepositoryProvider\ProviderCode;
 use RAN\RepositoryProvider\ProviderCredentialStore;
 use RAN\RepositoryProvider\ProviderDiagnostics;
@@ -129,6 +130,52 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( '2.3', $status['candidates']['replacement.php']['display_version'] );
 		self::assertIsArray( $status['current'] );
 		self::assertSame( array( 'selection_generation', 'selected', 'declaration', 'approval' ), array_keys( $status['current'] ) );
+	}
+
+	/** @param array<string, string|null> $packages Installed Composer package versions by name. */
+	private function bundled_display_version( string $core_version, array $packages ): mixed {
+		$this->write( 'booster.php', "<?php\n/*\nPlugin Name: RAN Booster\nVersion: $core_version\n*/" );
+		$context = new GitHubProviderSelection(
+			$this->store,
+			$this->root,
+			$this->bundled,
+			new InstalledPackageVersion( static fn ( string $package ): ?string => $packages[ $package ] ?? null )
+		);
+		$status  = $context->status();
+		self::assertSame( 'bundled', $status['current']['selected'] ?? null );
+		$declaration = $status['current']['declaration'] ?? null;
+		self::assertIsArray( $declaration );
+		return $declaration['display_version'] ?? null;
+	}
+
+	public function test_bundled_provider_version_ignores_core_version_changes(): void {
+		$packages = array( 'booster.php' => 'v1.0.0-beta.21' );
+		self::assertSame( 'v1.0.0-beta.21', $this->bundled_display_version( '1.0.0-beta.43', $packages ) );
+		self::assertSame( 'v1.0.0-beta.21', $this->bundled_display_version( '1.0.0-beta.44', $packages ) );
+	}
+
+	public function test_bundled_provider_version_follows_the_installed_package(): void {
+		self::assertSame( 'v1.0.0-beta.21', $this->bundled_display_version( '1.0.0-beta.43', array( 'booster.php' => 'v1.0.0-beta.21' ) ) );
+		self::assertSame( 'v1.0.0-beta.22', $this->bundled_display_version( '1.0.0-beta.43', array( 'booster.php' => 'v1.0.0-beta.22' ) ) );
+	}
+
+	public function test_bundled_provider_version_is_unknown_without_package_metadata_and_never_core_version(): void {
+		self::assertSame( 'Unknown', $this->bundled_display_version( '1.0.0-beta.43', array() ) );
+		self::assertSame( 'Unknown', $this->bundled_display_version( '1.0.0-beta.43', array( 'booster.php' => "bad\nversion" ) ) );
+	}
+
+	public function test_replacement_provider_keeps_its_own_plugin_header_version(): void {
+		$this->candidate( 'replacement.php', '1', '4.5.6' );
+		$this->activate( array( 'booster.php', 'replacement.php' ) );
+		$context = new GitHubProviderSelection(
+			$this->store,
+			$this->root,
+			$this->bundled,
+			new InstalledPackageVersion( static fn ( string $package ): ?string => 'booster.php' === $package ? 'v1.0.0-beta.21' : null )
+		);
+		$status  = $context->status();
+		self::assertIsArray( $status['candidates']['replacement.php'] );
+		self::assertSame( '4.5.6', $status['candidates']['replacement.php']['display_version'] );
 	}
 
 	public function test_support_observation_reuses_bootstrap_without_authority_or_candidate_rescans(): void {

@@ -868,51 +868,24 @@ test('a stale in-flight inspection cannot restore install authority after source
 	assert.equal(harness.selected(), null);
 });
 
-test('managed release failures update the retained warning Notice after its original message', () => {
+test('managed release failures show the static warning Notice without a redraw event', () => {
 	const errorMessage = { textContent: '' };
-	const updates = [];
-	const errorNotice = {
-		hidden: true,
-		dispatchEvent: (event) =>
-			updates.push({
-				type: event.type,
-				bubbles: event.bubbles,
-				text: errorMessage.textContent,
-				hidden: errorNotice.hidden,
-			}),
-	};
-	const window = {
-		CustomEvent: class {
-			constructor(type, options) {
-				this.type = type;
-				this.bubbles = options.bubbles;
-			}
-		},
-	};
+	const errorNotice = { hidden: true };
 	const showError = Function(
 		'errorMessage',
 		'errorNotice',
-		'window',
 		`${declaration('showError')} return showError;`
-	)(errorMessage, errorNotice, window);
+	)(errorMessage, errorNotice);
+	// The PHP-rendered Notice has no dispatchEvent here: calling one throws.
 	showError('Could not load releases.');
-	assert.deepEqual(updates, [
-		{
-			type: 'ran-booster:ui-notice-update',
-			bubbles: true,
-			text: 'Could not load releases.',
-			hidden: false,
-		},
-	]);
+	assert.equal(errorMessage.textContent, 'Could not load releases.');
+	assert.equal(errorNotice.hidden, false);
 });
 
 for (const enhanced of [true, false]) {
-	test(`managed candidate refresh uses ${enhanced ? 'HTMX swap' : 'native removal with queued Notice cleanup'}`, async () => {
+	test(`managed candidate refresh uses ${enhanced ? 'HTMX swap' : 'native removal'}`, async () => {
 		const order = [];
 		const candidateList = {
-			querySelector: () => ({
-				dispatchEvent: () => order.push('notice-update'),
-			}),
 			replaceChildren: () => order.push('native-clear'),
 		};
 		const window = { CustomEvent: class {} };
@@ -941,9 +914,6 @@ for (const enhanced of [true, false]) {
 			async () => ({ successful: false })
 		);
 		await list();
-		assert.deepEqual(order, [
-			'notice-update',
-			enhanced ? 'htmx-swap' : 'native-clear',
-		]);
+		assert.deepEqual(order, [enhanced ? 'htmx-swap' : 'native-clear']);
 	});
 }

@@ -223,7 +223,7 @@ test('every PHP-rendered notice host is a static Notice unless left mounted', ()
  */
 test('in-place intent changes go through the notice helper', () => {
 	for (const [file, calls] of [
-		['assets/ran-booster-portability.js', 2],
+		['assets/ran-booster-portability.js', 3],
 		['assets/ran-booster-enhanced-mutations.js', 3],
 		['assets/ran-booster-packages.js', 1],
 	]) {
@@ -239,21 +239,9 @@ test('in-place intent changes go through the notice helper', () => {
 			file
 		);
 	}
-	// Only JavaScript-built notices still write the attribute themselves.
-	const portability = fs.readFileSync(
-		'assets/ran-booster-portability.js',
-		'utf8'
-	);
-	assert.deepEqual(
-		Array.from(
-			portability.matchAll(
-				/(\w+)\.setAttribute\('data-ran-booster-ui-notice-intent'/g
-			),
-			(found) => found[1]
-		),
-		['item']
-	);
+	// No script writes the intent attribute itself: it comes from the helper.
 	for (const file of [
+		'assets/ran-booster-portability.js',
 		'assets/ran-booster-enhanced-mutations.js',
 		'assets/ran-booster-packages.js',
 	]) {

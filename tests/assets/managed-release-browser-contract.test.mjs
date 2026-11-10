@@ -189,6 +189,7 @@ const createHarness = (
 		}
 	}
 	const documentListeners = new Map();
+	const noticeCalls = [];
 	let swappedBrowser = null;
 	const context = {
 		CustomEvent: class {
@@ -235,6 +236,17 @@ const createHarness = (
 			}),
 		},
 		window: {
+			ranBoosterNotice: {
+				// Records how the warning is built; the helper's own markup
+				// is covered by notice.test.mjs.
+				create(intent, notice) {
+					const host = new Node('div');
+					const content = new Node('div');
+					host.append(content);
+					noticeCalls.push({ intent, ...notice });
+					return { host, content };
+				},
+			},
 			CustomEvent: class {
 				constructor(type, options) {
 					this.type = type;
@@ -257,6 +269,7 @@ const createHarness = (
 	return {
 		browser,
 		nodes,
+		noticeCalls,
 		requests,
 		requestedUrls,
 		initialize: context.initialize,
@@ -883,6 +896,18 @@ test('managed browser shows an explicit no-downgrade warning when Preview offers
 			.join(' '),
 		/Preview track currently offers only versions older than installed\. WordPress Updates will not downgrade this package\./
 	);
+	// The warning is the shared static Notice, placed in the candidate list
+	// with no event asking anything to redraw it.
+	assert.deepEqual(harness.noticeCalls, [
+		{
+			intent: 'warning',
+			className: 'ran-booster-release-candidate__warning',
+			scope: 'global',
+		},
+	]);
+	const warning = harness.nodes.get('candidate-list').children.at(-1);
+	assert.equal(warning.children[0].children[0].tagName, 'p');
+	assert.deepEqual(warning.dispatchedEvents, []);
 });
 
 test('managed browser keeps provider failures visible beside Refresh releases', async () => {

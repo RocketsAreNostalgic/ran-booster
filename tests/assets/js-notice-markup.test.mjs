@@ -25,3 +25,13 @@ test('portability apply results are created as static Notices', () => {
 		/if \(rendered\) \{\s*window\.ranBoosterNotice\.setIntent\(item, resultType\);/
 	);
 });
+
+test('the release candidate warning is created as a static Notice', () => {
+	const source = read('ran-booster-release-management.js');
+	assert.match(
+		source,
+		/window\.ranBoosterNotice\.create\('warning', \{\s*className: 'ran-booster-release-candidate__warning',\s*scope: 'global',\s*\}\)/
+	);
+	assert.doesNotMatch(source, handBuilt);
+	assert.doesNotMatch(source, /ui-notice-update/);
+});

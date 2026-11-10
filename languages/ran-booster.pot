@@ -3134,7 +3134,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1060
 #: views/documentation.php:293
-#: views/documentation.php:455
+#: views/documentation.php:457
 #: views/packages/index.php:137
 #: views/packages/recovery.php:69
 msgid "Open Troubleshooting"
@@ -4077,7 +4077,7 @@ msgstr ""
 #. translators: %s: repository provider name.
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:419
 #, php-format
-msgid "Booster can set up, check, reconfigure and remove one %s webhook per managed repository. Manual webhook setup remains available."
+msgid "Booster can set up, validate, repair and remove one %s webhook per managed repository. Manual webhook setup remains available."
 msgstr ""
 
 #. translators: %s: repository provider name.
@@ -4089,7 +4089,7 @@ msgstr ""
 #. translators: %s: repository provider name.
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:423
 #, php-format
-msgid "Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Check."
+msgid "Current readiness verifies Booster storage, a public HTTPS callback and stable repository identity without contacting %s. Timestamped hook status is historical until an administrator runs Validate."
 msgstr ""
 
 #. translators: %s: repository provider name.
@@ -6650,7 +6650,7 @@ msgstr ""
 
 #. translators: %s: Repository provider name.
 #: views/documentation.php:101
-#: views/documentation.php:507
+#: views/documentation.php:509
 #, php-format
 msgid "%s credentials and access"
 msgstr ""
@@ -6678,7 +6678,7 @@ msgstr ""
 
 #: views/documentation.php:144
 #: views/documentation.php:201
-#: views/documentation.php:561
+#: views/documentation.php:563
 msgid "About RAN Booster"
 msgstr ""
 
@@ -6709,7 +6709,7 @@ msgstr ""
 
 #: views/documentation.php:258
 #: views/documentation.php:274
-#: views/documentation.php:579
+#: views/documentation.php:581
 msgid "or"
 msgstr ""
 
@@ -7087,7 +7087,7 @@ msgid "The value may range from 1 MiB through 536,870,911 bytes (just under 512 
 msgstr ""
 
 #: views/documentation.php:444
-msgid "Push-to-Deploy is optional and configured separately on every target site. Use the matching Git provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that Git provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic."
+msgid "Push-to-Deploy is optional and configured separately on every target site. Use the matching Git provider tab as the source of truth for the secret scope, payload URL, content type and event. Follow that Git provider’s webhook instructions, test delivery, and only then deliberately set the installed package to Automatic. The Webhook receiver tab shows one shared receiver: Automated setup opens a repository’s webhook controls, and Manual setup lists the payload URL, content type, event and detailed instructions."
 msgstr ""
 
 #: views/documentation.php:445
@@ -7095,203 +7095,211 @@ msgid "The Git provider screen reports site readiness, stable repository identit
 msgstr ""
 
 #: views/documentation.php:446
-msgid "Security, delivery history and hosting"
+msgid "A repository webhook set up by Booster has three buttons: Set up (Repair when a recorded hook needs reconfiguring), Validate and Remove. A button that is unavailable stays visible but disabled, with a reason. While an operation runs its button shows a busy state, and the result appears directly under the buttons. Validate checks the settings without changing anything and, only if they are confirmed, requests a ping; the result shows Settings and Ping lines. An accepted ping request is not proof of signed delivery; only a verified signed delivery is. Remove asks for confirmation, deletes the hook at the Git provider and clears Booster’s local recovery record."
 msgstr ""
 
 #: views/documentation.php:447
-msgid "HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection for the network, web server, PHP workers or WordPress bootstrap. Use public HTTPS with certificate verification enabled, a unique generated secret for each repository, the Git provider’s JSON delivery option and only the required push event. Rotate or disable a suspected secret."
+msgid "Booster does not record such a webhook, so Set up, Validate and Remove stay unavailable for it and it cannot be repaired or removed from Booster. The repository shows Manual webhook once a verified signed delivery has been received."
 msgstr ""
 
 #: views/documentation.php:448
-msgid "Do not cache, challenge, redirect or transform either accepted callback form: the pretty /wp-json/ route or the equivalent ?rest_route= query route. Proxies must preserve the raw body and signature headers. WordPress may already have buffered the body before Booster runs, so Core enforces its measured 256 KiB limit but does not trust or parse Content-Length as transport protection."
+msgid "Security, delivery history and hosting"
 msgstr ""
 
 #: views/documentation.php:449
-msgid "A Git provider can time out after Booster has durably admitted work. Git provider delivery history remains authoritative for request duration, response status and redelivery. Compare the Git provider identifier with the Git provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive."
+msgid "HMAC verification authorizes deployment after WordPress accepts the request; it is not DDoS protection for the network, web server, PHP workers or WordPress bootstrap. Use public HTTPS with certificate verification enabled, a unique generated secret for each repository, the Git provider’s JSON delivery option and only the required push event. Rotate or disable a suspected secret."
 msgstr ""
 
 #: views/documentation.php:450
-msgid "At a trusted edge or host, you may bound body and header size, read time and connections for both callback forms. IP ranges published by the Git provider are optional defence in depth only where the real peer address is trustworthy; keep them current and retain HMAC. Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity."
+msgid "Do not cache, challenge, redirect or transform either accepted callback form: the pretty /wp-json/ route or the equivalent ?rest_route= query route. Proxies must preserve the raw body and signature headers. WordPress may already have buffered the body before Booster runs, so Core enforces its measured 256 KiB limit but does not trust or parse Content-Length as transport protection."
 msgstr ""
 
 #: views/documentation.php:451
-msgid "Retained webhook setup and cleanup"
+msgid "A Git provider can time out after Booster has durably admitted work. Git provider delivery history remains authoritative for request duration, response status and redelivery. Compare the Git provider identifier with the Git provider request ID shown on a webhook attempt in Booster Activity. Probes, ignored events and zero-target deliveries may create no attempt, so absence from Activity is inconclusive."
 msgstr ""
 
 #: views/documentation.php:452
-msgid "Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup. That package ignores pushes while it remains release-managed, while any branch-managed package using the same repository can continue to need the webhook. Keeping the setup is useful for a temporary switch back and forth."
+msgid "At a trusted edge or host, you may bound body and header size, read time and connections for both callback forms. IP ranges published by the Git provider are optional defence in depth only where the real peer address is trustworthy; keep them current and retain HMAC. Host, Origin, Referer, forwarded headers, reverse DNS, hidden paths and in-WordPress IP checks do not prove webhook identity."
 msgstr ""
 
 #: views/documentation.php:453
-msgid "For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote Git provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source."
+msgid "Retained webhook setup and cleanup"
 msgstr ""
 
 #: views/documentation.php:454
-msgid "Open the repository webhook settings from the Git provider screen, remove the hook at the Git provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place."
+msgid "Switching a package to Published releases does not remove any existing remote webhook or local signing-secret setup. That package ignores pushes while it remains release-managed, while any branch-managed package using the same repository can continue to need the webhook. Keeping the setup is useful for a temporary switch back and forth."
 msgstr ""
 
 #: views/documentation.php:455
+msgid "For a long-term move to Published releases, a retired site or repository, or a changed callback or credential, review the retained setup. Confirm that no branch-managed package still needs the repository hook or its shared owner secret. Remove the remote Git provider webhook first, then remove only a local signing secret that is no longer used. Never remove an owner-shared secret merely because one package changed source."
+msgstr ""
+
+#: views/documentation.php:456
+msgid "Open the repository webhook settings from the Git provider screen, remove the hook at the Git provider, then use Manage signing secrets to remove an unused local secret. If ownership or remaining use is uncertain, leave the setup in place."
+msgstr ""
+
+#: views/documentation.php:457
 msgid "The Git provider must be able to reach this WordPress site over public HTTPS. Localhost sites need a development tunnel. Test delivery from the Git provider, then review Deployment activity in Troubleshooting for Booster-managed results."
 msgstr ""
 
 #. translators: %s: Repository provider name.
-#: views/documentation.php:463
+#: views/documentation.php:465
 #, php-format
 msgid "%s webhook settings"
 msgstr ""
 
-#: views/documentation.php:467
+#: views/documentation.php:469
 msgid "Git provider location"
 msgstr ""
 
-#: views/documentation.php:469
+#: views/documentation.php:471
 #: views/provider.php:682
 msgid "Payload URL"
 msgstr ""
 
-#: views/documentation.php:471
+#: views/documentation.php:473
 #: views/provider.php:685
 msgid "Content type"
 msgstr ""
 
-#: views/documentation.php:473
+#: views/documentation.php:475
 #: views/provider.php:689
 msgid "Event"
 msgstr ""
 
-#: views/documentation.php:477
+#: views/documentation.php:479
 msgid "Webhook setup instructions"
 msgstr ""
 
-#: views/documentation.php:479
+#: views/documentation.php:481
 #: views/provider.php:702
 msgid "Delivery troubleshooting"
 msgstr ""
 
-#: views/documentation.php:482
+#: views/documentation.php:484
 msgid "For Bitbucket, enable Request History before you need it and treat its request UUID only as a cross-reference; do not assume it remains stable across automatic attempts."
 msgstr ""
 
-#: views/documentation.php:512
+#: views/documentation.php:514
 msgid "Minimum credential permissions"
 msgstr ""
 
 #. translators: %s: Repository provider name.
-#: views/documentation.php:518
+#: views/documentation.php:520
 #, php-format
 msgctxt "Repository provider settings link"
 msgid "Open %s settings"
 msgstr ""
 
-#: views/documentation.php:523
+#: views/documentation.php:525
 msgid "Provider setup guidance"
 msgstr ""
 
-#: views/documentation.php:537
+#: views/documentation.php:539
 msgid "Setup guidance is not available for this Git provider yet."
 msgstr ""
 
-#: views/documentation.php:538
+#: views/documentation.php:540
 msgid "You can still use a public repository or enter repository details manually when the Git provider supports package deployment."
 msgstr ""
 
-#: views/documentation.php:563
+#: views/documentation.php:565
 msgid "Where this came from"
 msgstr ""
 
-#: views/documentation.php:564
+#: views/documentation.php:566
 msgid "Booster is a developer-focused repository deployment plugin for WordPress. It began as a modified derivative of WP Pusher 3.0.13. WP Pusher was created by Peter Suhm, and the inherited source was distributed under GPLv2. We are grateful for Peter’s original work and its central idea: use WordPress’s updater to deploy plugins and themes from version-controlled repositories."
 msgstr ""
 
-#: views/documentation.php:565
+#: views/documentation.php:567
 msgid "WP Pusher changed ownership in 2021 and is a separate product. Booster is an independent fork maintained by Rockets Are Nostalgic. It is not affiliated with or endorsed by Peter Suhm, WP Pusher or its owners. The distributed NOTICE.md and license.txt record the full source provenance and license."
 msgstr ""
 
-#: views/documentation.php:567
+#: views/documentation.php:569
 msgid "Why we built this"
 msgstr ""
 
-#: views/documentation.php:568
+#: views/documentation.php:570
 msgid "The inherited release depended on a vendor-hosted licensing, OAuth and repository-picker service just to work at all — repository access, credential storage and even the repository browser all ran through that service. We forked it to remove that dependency. Every credential, webhook and deployment decision now lives on your own site, not a third party’s."
 msgstr ""
 
-#: views/documentation.php:570
+#: views/documentation.php:572
 msgid "What’s different"
 msgstr ""
 
-#: views/documentation.php:572
+#: views/documentation.php:574
 msgid "Safety."
 msgstr ""
 
-#: views/documentation.php:572
+#: views/documentation.php:574
 msgid "Booster verifies a repository’s identity and an archive’s contents before it touches a file, and will not let a delayed or out-of-order webhook roll back code that has already been updated. Saved credentials use authenticated encryption in a file with restrictive"
 msgstr ""
 
-#: views/documentation.php:572
+#: views/documentation.php:574
 msgid "permissions; the independent key remains in the WordPress database, so neither a file-only nor database-only copy contains usable credentials."
 msgstr ""
 
-#: views/documentation.php:573
+#: views/documentation.php:575
 msgid "Transporter."
 msgstr ""
 
-#: views/documentation.php:573
+#: views/documentation.php:575
 msgid "A password-protected Transporter Blueprint moves package and repository configuration, and any credentials you choose, between sites without copying a development checkout."
 msgstr ""
 
-#: views/documentation.php:574
+#: views/documentation.php:576
 msgid "Independence & Security."
 msgstr ""
 
-#: views/documentation.php:574
+#: views/documentation.php:576
 msgid "No vendor-hosted licensing, OAuth broker or repository-picker service. Further, the inherited codebase stored a private repository’s access token as a WordPress option in the database; Booster instead saves your repository credential in a file on your own site, never in the WordPress database."
 msgstr ""
 
-#: views/documentation.php:575
+#: views/documentation.php:577
 msgid "Extensibility."
 msgstr ""
 
-#: views/documentation.php:575
+#: views/documentation.php:577
 msgid "Additional git providers can be added through a documented registration hook without modifying Booster itself."
 msgstr ""
 
-#: views/documentation.php:578
+#: views/documentation.php:580
 msgid "How a deployment stays honest"
 msgstr ""
 
-#: views/documentation.php:579
+#: views/documentation.php:581
 msgid "Every deployment is recorded as one attempt with a clear status —"
 msgstr ""
 
-#: views/documentation.php:579
+#: views/documentation.php:581
 msgid "— so there is always an honest history and something concrete to point to if something goes wrong. Beyond that record, Booster protects a deployment in a few concrete ways:"
 msgstr ""
 
-#: views/documentation.php:581
+#: views/documentation.php:583
 msgid "It will not deploy an old version over a newer one."
 msgstr ""
 
-#: views/documentation.php:581
+#: views/documentation.php:583
 msgid "If a webhook arrives late or out of order, Booster checks the repository’s current commit before replacing anything, so a delayed notification cannot roll back code that has already been updated."
 msgstr ""
 
-#: views/documentation.php:582
+#: views/documentation.php:584
 msgid "It verifies the download before touching any files."
 msgstr ""
 
-#: views/documentation.php:582
+#: views/documentation.php:584
 msgid "Before installing anything, Booster checks the downloaded archive’s exact contents, confirms it matches the expected package, and confirms every file it contains stays inside the expected folder."
 msgstr ""
 
-#: views/documentation.php:583
+#: views/documentation.php:585
 msgid "WordPress Core does the actual file replacement."
 msgstr ""
 
-#: views/documentation.php:583
+#: views/documentation.php:585
 msgid "Booster hands the verified files to WordPress’s own updater, which owns backup behaviour during the swap. Booster then checks the result and will show you a warning rather than reporting success when the outcome is unclear."
 msgstr ""
 
-#: views/documentation.php:585
+#: views/documentation.php:587
 msgid "Booster delegates package replacement to WordPress Core. It does not build, test or make untrusted repository code safe."
 msgstr ""
 

@@ -768,6 +768,10 @@ final class AdminAssetContractTest extends TestCase {
 			'/\.ran-booster-repository-webhook-management\s+\.ran-booster-repository-webhook-management__form \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\);\s*gap: var\(--ran-booster-space-20\);\s*padding: 0;\s*\}/',
 			$webhook_management
 		);
+		// The tier strapline: no top margin (the sub-heading owns the 8px gap), a 16px gap before the steps.
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-publishing__tier\s*> \.ran-booster-repository-publishing__strapline \{\s*margin-block: 0 var\(--ran-booster-space-16\);/', $webhook_management );
+		self::assertStringNotContainsString( 'Sets up this repository', $controls );
+		self::assertStringContainsString( 'ran-booster-section__description ran-booster-repository-publishing__strapline', $controls );
 		// An empty error slot is a grid item and must not add a gap above the first field.
 		self::assertMatchesRegularExpression( '/> #repository-webhook-management-error:empty \{\s*display: none;/', $webhook_management );
 		self::assertStringContainsString( 'id="repository-webhook-management-error"', $this->source( 'RAN/Admin/WebhookManagement/views/panel.php' ) );

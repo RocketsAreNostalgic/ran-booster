@@ -340,6 +340,7 @@ final class RepositoryWebhookManagementControls {
 			<div class="ran-booster-settings-section__body">
 				<div class="ran-booster-repository-publishing__tier">
 				<h4 id="ran-booster-repository-webhook-automation-heading" class="ran-booster-repository-publishing__subheading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?><?php echo $this->automation_badge( $items, $in_use ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes its label. ?></h4>
+				<p class="ran-booster-section__description ran-booster-repository-publishing__strapline"><?php esc_html_e( 'Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p>
 				<?php if ( array() !== $notices ) { ?>
 				<div class="ran-booster-repository-webhook-management__notices">
 					<?php foreach ( $notices as $notice ) { ?>
@@ -363,7 +364,6 @@ final class RepositoryWebhookManagementControls {
 				<details id="ran-booster-repository-webhook-setup" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-webhook-setup ran-booster-disclosure<?php echo $inactive ? ' is-inactive' : ''; ?>"<?php echo $open ? ' open' : ''; ?>>
 					<summary><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></summary>
 					<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-webhook-setup__body ran-booster-disclosure__body"<?php echo $inactive ? ' aria-disabled="true"' : ''; ?>>
-						<p><?php esc_html_e( 'Sets up this repository’s webhook. Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p>
 						<?php $this->render_repository_webhook_setup_region( $panel ); ?>
 					</div>
 				</details></div>

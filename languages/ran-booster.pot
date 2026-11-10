@@ -403,7 +403,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:267
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:109
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:123
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:364
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:365
 msgid "Webhook setup"
 msgstr ""
 
@@ -4456,8 +4456,8 @@ msgstr ""
 msgid "Manual updates work without setting up Push-to-deploy."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:366
-msgid "Sets up this repository’s webhook. Automatic updates remain configured separately for each package."
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:343
+msgid "Automatic updates remain configured separately for each package."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:417

@@ -273,7 +273,13 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider"' ) );
 		// Webhook setup is the project-standard disclosure, open because the site receiver step is ok.
 		self::assertSame( 1, substr_count( $html, '<div data-ran-booster-ui-disclosure="repository-webhook-setup" data-ran-booster-ui-disclosure-density="compact">' ) );
-		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-webhook-setup ran-booster-disclosure" open>\s*<summary>Webhook setup<\/summary>\s*<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-webhook-setup__body ran-booster-disclosure__body">\s*<p>Sets up this repository’s webhook\. Automatic updates remain configured separately for each package\.<\/p>/', $html ) );
+		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-webhook-setup ran-booster-disclosure" open>\s*<summary>Webhook setup<\/summary>\s*<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-webhook-setup__body ran-booster-disclosure__body">\s*<div class="ran-booster-repository-webhook-setup__content">/', $html ) );
+		// The strapline sits directly under the Push-to-deploy sub-heading, not in the disclosure body.
+		self::assertSame( 1, preg_match( '/<\/h4>\s*<p class="ran-booster-section__description ran-booster-repository-publishing__strapline">Automatic updates remain configured separately for each package\.<\/p>/', $html ) );
+		self::assertLessThan( strpos( $html, 'ran-booster-webhook-steps' ), strpos( $html, 'ran-booster-repository-publishing__strapline' ) );
+		self::assertGreaterThan( strpos( $html, 'ran-booster-repository-publishing__subheading' ), strpos( $html, 'ran-booster-repository-publishing__strapline' ) );
+		self::assertStringNotContainsString( 'Sets up this repository', $html );
+		self::assertSame( 1, substr_count( $html, 'Automatic updates remain configured separately for each package.' ) );
 		self::assertStringNotContainsString( 'ran-booster-readiness-panel', $html );
 		// The only sub-heading is the Push-to-deploy tier title.
 		self::assertSame( 1, substr_count( $html, '<h4' ) );

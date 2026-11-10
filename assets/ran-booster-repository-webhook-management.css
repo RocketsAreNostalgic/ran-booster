@@ -153,6 +153,13 @@
 	font-size: var(--ran-booster-font-size-lg);
 }
 
+/* The strapline sits one heading gap under the sub-heading row (which carries that gap itself) and a section gap above the steps. */
+.ran-booster-admin
+	.ran-booster-repository-publishing__tier
+	> .ran-booster-repository-publishing__strapline {
+	margin-block: 0 var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-repository-webhook-management__notices {
 	display: grid;
 	gap: var(--ran-booster-space-12);

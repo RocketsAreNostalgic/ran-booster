@@ -367,6 +367,7 @@ final class WebhookDisplayModel {
 		$headings = array(
 			'configured_pending_delivery' => __( 'Webhook configured; delivery unverified', 'ran-booster' ),
 			'verified'                    => __( 'Remote configuration confirmed; signed delivery unverified', 'ran-booster' ),
+			'configuration_confirmed'     => __( 'Remote configuration confirmed; signed delivery unverified', 'ran-booster' ),
 			'ping_requested'              => __( 'Ping request accepted; signed delivery unverified', 'ran-booster' ),
 			'ping_verified'               => __( 'Ping request accepted; signed delivery unverified', 'ran-booster' ),
 			'ping_delivery_failed'        => __( 'Ping delivery failed', 'ran-booster' ),
@@ -427,7 +428,7 @@ final class WebhookDisplayModel {
 			'ping_requested', 'ping_verified' => __( 'GitHub accepted the ping request for the recorded hook. This does not prove an authenticated inbound delivery or verify the signing secret; recorded status remains needs verification.', 'ran-booster' ),
 			'ping_delivery_failed' => __( 'GitHub recorded a new ping delivery for the exact hook, but it did not succeed. Signed delivery remains unverified; inspect the Git provider delivery details.', 'ran-booster' ),
 			'configured_pending_delivery' => __( 'Webhook management configured the remote hook. Signed delivery verification is still pending.', 'ran-booster' ),
-			'verified' => __( 'Webhook management confirmed the recorded remote configuration. Correlate Git provider delivery history with the Git provider request ID in Booster Activity before treating signed delivery as established.', 'ran-booster' ),
+			'verified', 'configuration_confirmed' => __( 'Webhook management confirmed the recorded remote configuration. Correlate Git provider delivery history with the Git provider request ID in Booster Activity before treating signed delivery as established.', 'ran-booster' ),
 			'removed' => __( 'Webhook management confirmed the remote hook is absent and cleared its local recovery record.', 'ran-booster' ),
 			'forbidden' => __( 'You are not permitted to manage this repository webhook. Nothing was changed.', 'ran-booster' ),
 			'invalid_request' => __( 'The webhook request was invalid or expired. Nothing was changed; reload this repository and try again.', 'ran-booster' ),
@@ -459,7 +460,7 @@ final class WebhookDisplayModel {
 	}
 
 	public function is_successful_result( string $code ): bool {
-		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'removed' ), true );
+		return in_array( $code, array( 'configured_pending_delivery', 'verified', 'configuration_confirmed', 'removed' ), true );
 	}
 
 	private function result_notice_class( string $code ): string {

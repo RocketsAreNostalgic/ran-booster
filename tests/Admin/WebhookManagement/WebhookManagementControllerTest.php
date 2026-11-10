@@ -156,6 +156,32 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( '', $query['args'][2] );
 	}
 
+	public function test_clean_check_records_a_succeeded_activity_entry(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$gateway                                 = $this->gateway();
+		$gateway->result                         = $this->operation_result( 'succeeded', 'configuration_confirmed', '77', delivery: 'unknown' );
+		$store                                   = new OperationStoreFixture();
+		$store->record                           = $this->record();
+		$result                                  = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'check', 'gh', '1234', 'credential_1', null, 'valid' );
+		self::assertSame( 'configuration_confirmed', $result['code'] );
+		self::assertSame( 'needs_verification', $store->record->status() );
+		$query = end( $connection->prepared );
+		self::assertIsArray( $query );
+		self::assertSame( 'succeeded', $query['args'][0] );
+		self::assertSame( 'webhook.operation_succeeded', $query['args'][1] );
+	}
+
+	public function test_clean_check_result_is_presented_as_success(): void {
+		$_GET = array( 'webhook_management_result' => 'configuration_confirmed' );
+		$html = $this->render_panel();
+
+		self::assertStringContainsString( 'notice-success', $html );
+		self::assertStringNotContainsString( 'notice-error', $html );
+		self::assertStringContainsString( 'Remote configuration confirmed; signed delivery unverified', $html );
+		self::assertStringNotContainsString( 'Review the bounded operation result.', $html );
+	}
+
 	public function test_remote_exception_leaves_activity_incomplete_without_unwind_reporting(): void {
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
 		$connection                              = new \RAN\Tests\Activity\ActivityConnection();

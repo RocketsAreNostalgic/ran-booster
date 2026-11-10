@@ -504,7 +504,6 @@ final class AdminAssetContractTest extends TestCase {
 			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin\n\t\[data-ran-booster-ui-disclosure="transporter-blueprint-requirements"\] \{', 'margin-block-end: var(--ran-booster-space-16);' ),
 			array( 'ran-booster/25-admin-primitives.css', '\n\t\+ noscript\n\t> p:first-child \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster/65-package-settings.css', '\n\t\.ran-booster-settings__group:first-of-type \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
-			array( 'ran-booster/65-package-settings.css', '\n\t\.ran-booster-settings__group:first-of-type \{', 'border-block-start: 0;' ),
 			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-card \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-card\n\t> \.ran-booster-page-shell__header \{', 'padding-block-start: 0;' ),
 			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-debug-capture__panel \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
@@ -603,6 +602,16 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "\tmargin-inline-start: auto;\n\tflex: 0 0 auto;", $settings );
 		self::assertStringNotContainsString( 'var(--ran-booster-status-ok-background)', $settings );
 		self::assertStringContainsString( "StatusBadge::print_intent( __( 'Active', 'ran-booster' ), 'stable', array( 'class' => 'ran-booster-source-choice__current-source' ) );", $this->source( 'views/packages/source-choices.php' ) );
+	}
+
+	public function test_first_settings_group_keeps_its_divider_and_padding(): void {
+		$css = $this->asset( 'ran-booster/65-package-settings.css' );
+		if ( 1 !== preg_match( '/\n\t\.ran-booster-settings__group:first-of-type \{([^}]*)\}/', $css, $m ) ) {
+			self::fail( 'The first settings group rule is missing.' );
+		}
+		self::assertStringContainsString( 'margin-block-start: var(--ran-booster-card-heading-gap);', $m[1] );
+		self::assertStringNotContainsString( 'border-block-start', $m[1] );
+		self::assertStringNotContainsString( 'padding-block-start', $m[1] );
 	}
 
 	public function test_source_tab_strip_keeps_the_same_gap_above_every_pane(): void {

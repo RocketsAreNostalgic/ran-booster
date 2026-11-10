@@ -108,7 +108,8 @@ msgstr ""
 msgid "A selected managed package changed or is no longer available. Refresh the page and try again."
 msgstr ""
 
-#: RAN/Admin/Component/ExternalLinkMarker.php:18
+#: RAN/Admin/Component/ExternalLinkMarker.php:20
+#: RAN/Admin/Component/ExternalLinkMarker.php:37
 msgid " (opens in a new tab)"
 msgstr ""
 
@@ -1380,7 +1381,7 @@ msgstr ""
 msgid "RAN Booster could not identify the current administrator."
 msgstr ""
 
-#: RAN/Admin/DocumentationHookRenderer.php:108
+#: RAN/Admin/DocumentationHookRenderer.php:109
 msgid "An add-on guide is temporarily unavailable. Check plugin compatibility and the error log."
 msgstr ""
 

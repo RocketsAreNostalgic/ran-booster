@@ -728,6 +728,32 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'background', $rule );
 	}
 
+	public function test_notice_disclosures_take_a_full_width_row_below_the_icon_and_message(): void {
+		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
+
+		if ( 1 !== preg_match( '/\.ran-wp-ui-notice > \[data-ran-booster-ui-disclosure\] \{([^}]*)\}/', $css, $rule ) ) {
+			self::fail( 'The notice disclosure row rule is missing.' );
+		}
+		// Row two, spanning every column of the Notice grid, so the icon column is not left empty beside it.
+		self::assertStringContainsString( 'grid-column: 1 / -1;', $rule[1] );
+		self::assertStringContainsString( 'grid-row: 2;', $rule[1] );
+		self::assertStringContainsString( 'min-inline-size: 0;', $rule[1] );
+		// The gap above comes from the shared spacing token, never a literal, and the rule adds no padding, border or colour.
+		self::assertStringContainsString( 'margin-block-start: var(--wpds-dimension-gap-md);', $rule[1] );
+		self::assertStringNotContainsString( 'padding', $rule[1] );
+		self::assertStringNotContainsString( 'color', $rule[1] );
+		self::assertStringNotContainsString( 'border', $rule[1] );
+		self::assertDoesNotMatchRegularExpression( '/\.ran-wp-ui-notice__description\s*>\s*\[data-ran-booster-ui-disclosure\]/', $css );
+	}
+
+	public function test_notice_views_print_their_disclosure_after_the_icon(): void {
+		$display = $this->source( 'RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php' );
+
+		// Each failure notice closes its message column, prints the icon, then the disclosure, then closes the notice.
+		self::assertSame( 1, preg_match_all( '/<\/div><\?php [^;]*print_intent\( \'warning\' \); \?>\s*<\?php \$this->render_failure_help\( \$failure_code, \'\', \$status_reason \); \?><\/div>/', $display ) );
+		self::assertSame( 1, preg_match_all( '/print_intent\( substr\( \$tone, 7 \) \); \?>\s*<\?php if \( ! \$successful && \$this->is_diagnostic_code\( \$code \) \) \{ \?>\s*<\?php \$this->render_failure_help\( \$code, \$message \); \?>\s*<\?php \} \?>\s*<\/div>/', $display ) );
+	}
+
 	public function test_repository_branch_check_notice_sits_flush_beside_the_action(): void {
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
 

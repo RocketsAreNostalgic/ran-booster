@@ -202,6 +202,21 @@
 }
 
 /*
+ * A disclosure in any notice, whatever its severity, is the notice's own
+ * last child instead of part of the message column. The icon and message keep
+ * the first row; the disclosure takes a second row across the whole inner
+ * width, below the icon column, with the Notice's own action gap above it.
+ * Core's notice padding stays the outer inset.
+ */
+
+.ran-wp-ui-notice > [data-ran-booster-ui-disclosure] {
+	grid-column: 1 / -1;
+	grid-row: 2;
+	min-inline-size: 0;
+	margin-block-start: var(--wpds-dimension-gap-md);
+}
+
+/*
  * A static notice is drawn with the public Notice's own CSS
  * (ran-booster-wp-ui-static.css) and is never mounted. It keeps core's
  * .notice classes, which core relocates and dismisses by, but core's

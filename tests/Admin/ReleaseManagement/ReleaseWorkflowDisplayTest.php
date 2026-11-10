@@ -354,7 +354,9 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./div[@data-ran-booster-ui-notice-content and @class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"])', $host ) );
 			// A static Notice: the description, then the decorative intent icon.
 			self::assertStringContainsString( ' ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent, ' ' . $host->getAttribute( 'class' ) );
-			self::assertSame( 2.0, $xpath->evaluate( 'count(./*)', $host ) );
+			// A failure carries its disclosure as the notice's own third child, never inside the message column.
+			self::assertSame( 'error' === $intent ? 3.0 : 2.0, $xpath->evaluate( 'count(./*)', $host ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./div[@data-ran-booster-ui-notice-content]//*[@data-ran-booster-ui-disclosure])', $host ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./*[2][local-name()="svg" and @class="ran-wp-ui-notice__icon" and @aria-hidden="true"])', $host ) );
 			self::assertFalse( $host->hasAttribute( 'role' ) );
 			self::assertStringNotContainsString( '<source>', $html );
@@ -591,6 +593,24 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Diagnostic code: <code>preflight_contract_unavailable</code>', $html );
 		self::assertStringNotContainsString( 'Earlier workflow record', $html );
 		self::assertStringNotContainsString( 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', $html );
+	}
+
+	public function test_result_notice_disclosure_is_a_direct_row_of_the_notice_after_the_icon(): void {
+		$html = ( new ReleaseWorkflowDisplay() )->result_notice(
+			array(
+				'result_code'       => 'workflow_invalid_request',
+				'result_successful' => false,
+				'failure_stage'     => 'request_validation',
+			)
+		);
+		$dom  = new \DOMDocument();
+		$prev = libxml_use_internal_errors( true );
+		$dom->loadHTML( $html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $prev );
+		$xpath = new \DOMXPath( $dom );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(concat(" ", normalize-space(@class), " "), " ran-wp-ui-notice ")]/div[@data-ran-booster-ui-notice-content]/following-sibling::svg[@class="ran-wp-ui-notice__icon"]/following-sibling::div[@data-ran-booster-ui-disclosure="release-failure-details"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-notice-content]//*[@data-ran-booster-ui-disclosure])' ) );
 	}
 
 	public function test_result_notice_uses_provider_messages_only_when_non_empty_and_falls_back_otherwise(): void {

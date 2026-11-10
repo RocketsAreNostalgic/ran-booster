@@ -289,7 +289,7 @@ final class ReleaseWorkflowDisplay {
 				is_string( $view['result_message'] ?? null ) && '' !== $view['result_message']
 				? $view['result_message']
 				: $this->workflow_message( $code )
-			) . '</p>';
+			) . '</p></div>' . NoticeIcon::markup( $intent );
 		$observation = in_array( $code, array( 'workflow_release_automation_conflict', 'workflow_release_automation_present', 'workflow_inspected' ), true );
 		if ( ! $successful && ! $observation && in_array( $stage, array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ) {
 			$remediation = is_string( $view['result_remediation'] ?? null ) && '' !== $view['result_remediation'] ? $view['result_remediation'] : $this->failure_diagnostic_message( $diagnostic, $stage );
@@ -303,7 +303,7 @@ final class ReleaseWorkflowDisplay {
 			$html .= '</div></details></div>';
 		}
 
-		return $html . '</div>' . NoticeIcon::markup( $intent ) . '</div>';
+		return $html . '</div>';
 	}
 
 	/**

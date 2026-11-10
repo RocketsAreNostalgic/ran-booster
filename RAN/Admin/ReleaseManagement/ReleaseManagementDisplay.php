@@ -141,8 +141,8 @@ final class ReleaseManagementDisplay {
 							<?php $status_reason = null === $status->preflight() ? '' : $status->preflight()->reason_code(); ?>
 							<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-release-status-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 								<p><?php echo esc_html( $this->diagnostic_message( $failure_code, $status_reason ) ); ?></p>
-								<?php $this->render_failure_help( $failure_code, '', $status_reason ); ?>
-							</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
+							</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
+							<?php $this->render_failure_help( $failure_code, '', $status_reason ); ?></div>
 						<?php } ?>
 					</div>
 				<?php } ?>
@@ -872,10 +872,11 @@ final class ReleaseManagementDisplay {
 			<?php if ( $review ) { ?>
 				<p><?php esc_html_e( 'Inspect the installed version, activation state and Booster management before using Link installed or retrying.', 'ran-booster' ); ?></p>
 			<?php } ?>
+		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( substr( $tone, 7 ) ); ?>
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>
 				<?php $this->render_failure_help( $code, $message ); ?>
 			<?php } ?>
-		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( substr( $tone, 7 ) ); ?></div>
+		</div>
 		<?php
 	}
 

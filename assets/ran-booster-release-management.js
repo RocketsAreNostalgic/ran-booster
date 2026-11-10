@@ -516,7 +516,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			}
 			if (candidates) {
 				candidates.hidden = false;
-					showPlaceholder(false);
+				showPlaceholder(false);
 			}
 			if (inspectable.length > 0) {
 				setStatus(

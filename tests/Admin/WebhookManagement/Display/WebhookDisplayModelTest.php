@@ -257,6 +257,32 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( array( null, null ), array( $repair[0]['confirm'], $repair[1]['confirm'] ) );
 	}
 
+	public function test_validate_is_available_only_when_both_check_and_test_are_and_reports_the_unavailable_reason(): void {
+		$method  = new ReflectionMethod( WebhookDisplayModel::class, 'operation_models' );
+		$reasons = array(
+			'check' => 'Check reason.',
+			'test'  => 'Test reason.',
+		);
+		$slot    = static fn ( array $available ): array => $method->invoke( ( new ReflectionClass( WebhookDisplayModel::class ) )->newInstanceWithoutConstructor(), $available, 'gh', 'GitHub', '1', true, $reasons )[1];
+
+		$both = $slot(
+			array(
+				'check' => true,
+				'test'  => true,
+			)
+		);
+		self::assertSame( 'validate', $both['key'] );
+		self::assertFalse( $both['disabled'] );
+		self::assertSame( '', $both['disabled_reason'] );
+		$only_check = $slot( array( 'check' => true ) );
+		self::assertTrue( $only_check['disabled'] );
+		self::assertSame( 'Test reason.', $only_check['disabled_reason'] );
+		$only_test = $slot( array( 'test' => true ) );
+		self::assertTrue( $only_test['disabled'] );
+		self::assertSame( 'Check reason.', $only_test['disabled_reason'] );
+		self::assertTrue( $slot( array() )['disabled'] );
+	}
+
 	private function display(): WebhookDisplayModel {
 		return ( new ReflectionClass( WebhookDisplayModel::class ) )->newInstanceWithoutConstructor();
 	}

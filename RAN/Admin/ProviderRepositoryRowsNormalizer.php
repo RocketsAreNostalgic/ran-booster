@@ -947,7 +947,7 @@ final class ProviderRepositoryRowsNormalizer {
 
 	/** @return list<string> */
 	private function tones(): array {
-		return array( 'neutral', 'ok', 'pending', 'warning', 'error' );
+		return array( 'neutral', 'ok', 'pending', 'warning', 'error', 'info' );
 	}
 
 	/** @return array{available:bool,owners:list<mixed>,repositories:list<mixed>} */

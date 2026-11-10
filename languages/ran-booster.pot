@@ -492,20 +492,20 @@ msgid "Repository details"
 msgstr ""
 
 #. translators: 1: shown package count, 2: omitted package count, 3: repository source summary.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:501
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:485
 #, php-format
 msgid "%1$d packages shown; %2$d more connected · %3$s"
 msgstr ""
 
 #. translators: 1: number of packages, 2: repository source summary.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:510
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:494
 #, php-format
 msgid "%1$d package · %2$s"
 msgid_plural "%1$d packages · %2$s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:518
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:502
 #: RAN/Admin/PackageAdminController.php:543
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:330
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
@@ -517,7 +517,7 @@ msgstr[1] ""
 msgid "Automatic"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:519
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:503
 #: RAN/Admin/PackageAdminController.php:544
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:334
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:391
@@ -529,7 +529,7 @@ msgstr ""
 msgid "Manual"
 msgstr ""
 
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:520
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:504
 #: RAN/Admin/PackageAdminController.php:510
 #: RAN/Admin/PackageAdminController.php:542
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:338
@@ -548,7 +548,7 @@ msgid "Disabled"
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/Component/RepositoryDetailRenderer.php:587
+#: RAN/Admin/Component/RepositoryDetailRenderer.php:571
 #: RAN/Admin/WebhookManagement/views/panel.php:115
 #, php-format
 msgid "Manage repo webhooks on %s"

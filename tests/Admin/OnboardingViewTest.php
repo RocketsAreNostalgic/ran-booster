@@ -766,6 +766,68 @@ final class OnboardingViewTest extends TestCase {
 		}
 	}
 
+	/** @return array<string,mixed> */
+	private function storage_extra( string $status, bool $can_provision, string $view = 'onboarding' ): array {
+		return array(
+			'view'            => $view,
+			'storage_summary' => array(
+				'status'        => $status,
+				'message'       => 'Pathless storage status.',
+				'url'           => '/settings#ran-booster-storage',
+				'can_provision' => $can_provision,
+				'action_url'    => 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview',
+			),
+		);
+	}
+
+	public function test_onboarding_storage_card_offers_default_storage_setup_when_available(): void {
+		$html  = $this->render_view( null, null, $this->storage_extra( 'setup_available', true ) );
+		$xpath = $this->storage_xpath( $html );
+		self::assertSame( 1, substr_count( $html, 'Set up default storage' ) );
+		self::assertSame( 1, substr_count( $html, 'value="create-secure-storage"' ) );
+		self::assertSame( 0, substr_count( $html, 'adopt-secure-storage' ) );
+		self::assertSame( 0, substr_count( $html, 'reset-empty-storage' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-onboarding-storage-heading"]//form[@method="post" and @action="https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview"]//button[@type="submit"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-onboarding-storage-heading"]//form//input[@name="ran_booster[action]" and @value="create-secure-storage"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-onboarding-storage-heading"]//a[@href="/settings#ran-booster-storage"])' ) );
+		self::assertStringNotContainsString( '/private', $html );
+	}
+
+	public function test_onboarding_storage_card_has_no_setup_button_unless_setup_is_available(): void {
+		foreach ( array( 'path_configured', 'storage_healthy', 'pending_verification', 'manual_required', 'storage_needs_attention', 'unsupported' ) as $status ) {
+			$html = $this->render_view( null, null, $this->storage_extra( $status, false ) );
+			self::assertSame( 0, substr_count( $html, 'Set up default storage' ), $status );
+			self::assertSame( 0, substr_count( $html, 'create-secure-storage' ), $status );
+			self::assertSame( 0, substr_count( $html, 'ran-booster-create-secure-storage' ), $status );
+		}
+	}
+
+	public function test_failed_or_pending_setup_never_renders_a_premature_success_state(): void {
+		foreach ( array( 'pending_verification', 'manual_required' ) as $status ) {
+			$html  = $this->render_view( null, null, $this->storage_extra( $status, false ) );
+			$xpath = $this->storage_xpath( $html );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-storage-status="storage_healthy" or @data-ran-booster-storage-status="path_configured"])' ), $status );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-storage-status="' . $status . '"])' ), $status );
+		}
+	}
+
+	public function test_dashboard_presentation_never_renders_the_setup_form_even_when_available(): void {
+		$html = $this->render_view(
+			null,
+			null,
+			array_merge(
+				$this->storage_extra( 'setup_available', true, 'dashboard' ),
+				array(
+					'plugins_url'  => '/plugins',
+					'themes_url'   => '/themes',
+					'activity_url' => '/activity',
+				)
+			)
+		);
+		self::assertSame( 0, substr_count( $html, 'Set up default storage' ) );
+		self::assertSame( 0, substr_count( $html, 'create-secure-storage' ) );
+	}
+
 	public function test_attention_is_visible_in_both_presentations_for_incomplete_inventory_and_storage_failure(): void {
 		foreach ( array( 'onboarding', 'dashboard' ) as $view ) {
 			$extra = array(

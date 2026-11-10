@@ -726,14 +726,16 @@ class Dashboard {
 		return $this->secrets_storage_result;
 	}
 
-	/** @return array{status:string,reason_code:string,message:string,url:string}|null */
+	/** @return array{status:string,reason_code:string,message:string,url:string,can_provision:bool,action_url:string}|null */
 	public function storage_summary(): ?array {
 		$result = $this->storage_status();
 		return null === $result ? null : array(
-			'status'      => $result->status(),
-			'reason_code' => $result->code(),
-			'message'     => $result->message(),
-			'url'         => admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ),
+			'status'        => $result->status(),
+			'reason_code'   => $result->code(),
+			'message'       => $result->message(),
+			'url'           => admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ),
+			'can_provision' => $result->can_provision_automatically(),
+			'action_url'    => admin_url( 'admin.php?page=ran-booster&tab=overview' ),
 		);
 	}
 

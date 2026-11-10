@@ -155,6 +155,13 @@ $provider_attention        = array_filter(
 			<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $overview_storage_label, (string) ( $overview_storage_intents[ $overview_storage_status ] ?? 'none' ), array( 'data-ran-booster-storage-status' => (string) $overview_storage_status ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 		</div>
 		<p><?php echo esc_html( $overview_storage_summary['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
+		<?php if ( 'onboarding' === $overview_view && ! empty( $overview_storage_summary['can_provision'] ) ) { ?>
+			<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( (string) ( $overview_storage_summary['action_url'] ?? admin_url( 'admin.php?page=ran-booster&tab=overview' ) ) ); ?>">
+				<?php wp_nonce_field( 'ran-booster-create-secure-storage' ); ?>
+				<input type="hidden" name="ran_booster[action]" value="create-secure-storage">
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Set up default storage', 'ran-booster' ); ?></button>
+			</form>
+		<?php } ?>
 		<p><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>
 	</div></div></section>
 

@@ -1661,6 +1661,23 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
+	public function test_overview_storage_summary_offers_provisioning_only_when_setup_is_available(): void {
+		$_GET['tab'] = 'overview';
+		foreach ( array(
+			'setup_available' => array( \RAN\Secrets\SecretsStorageProvisioningResult::setup_available( '/private/secrets.json' ), true ),
+			'storage_healthy' => array( \RAN\Secrets\SecretsStorageProvisioningResult::storage_healthy( '/private/secrets.json', 'manual' ), false ),
+			'pending'         => array( \RAN\Secrets\SecretsStorageProvisioningResult::pending_verification( '/private/secrets.json' ), false ),
+		) as $label => list( $result, $expected ) ) {
+			$provisioner = $this->createStub( \RAN\Secrets\SecretsStorageProvisioner::class );
+			$provisioner->method( 'status' )->willReturn( $result );
+			$summary = $this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner )->get_index()['data']['onboarding']['storage_summary'];
+			self::assertIsArray( $summary, $label );
+			self::assertSame( $expected, $summary['can_provision'], $label );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $summary['action_url'], $label );
+			self::assertStringNotContainsString( 'private', (string) wp_json_encode( $summary ), $label );
+		}
+	}
+
 	/** @return list<array{mixed}> */
 	public static function fallback_tab_provider(): array {
 		return array(

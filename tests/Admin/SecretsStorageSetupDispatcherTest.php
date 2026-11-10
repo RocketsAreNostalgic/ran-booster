@@ -149,11 +149,45 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 	}
 
-	public function test_old_overview_form_is_rejected_without_provisioning(): void {
+	public function test_create_from_overview_provisions_and_redirects_to_overview_without_paths(): void {
 		$_GET        = array(
 			'page' => 'ran-booster',
 			'tab'  => 'overview',
 		);
+		$provisioner = new SetupActionProvisioner(
+			SecretsStorageProvisioningResult::pending_verification( '/private/canary/secrets.json' )
+		);
+
+		try {
+			$this->dispatcher( $this->createStub( Dashboard::class ), $provisioner )->dispatch_post_requests();
+			self::fail( 'Successful setup must redirect for a fresh configuration load.' );
+		} catch ( SetupActionRedirect $redirect ) {
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $redirect->url );
+			self::assertStringNotContainsString( 'private', $redirect->url );
+		}
+
+		self::assertSame( 1, $provisioner->provision_calls );
+		self::assertSame( array( 'ran-booster-create-secure-storage' ), $GLOBALS['ran_booster_test_nonce_checks'] );
+	}
+
+	public function test_create_from_overview_failure_stays_on_the_protected_response(): void {
+		$_GET        = array(
+			'page' => 'ran-booster',
+			'tab'  => 'overview',
+		);
+		$result      = SecretsStorageProvisioningResult::manual_required( 'filesystem_probe_failed', 'Could not verify.', '/private/canary/secrets.json' );
+		$provisioner = new SetupActionProvisioner( $result );
+		$dashboard   = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'set_secrets_storage_provisioning_result' )->with( $result );
+		$dashboard->expects( self::never() )->method( 'add_message' );
+
+		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
+
+		self::assertSame( 1, $provisioner->provision_calls );
+	}
+
+	public function test_create_from_the_overview_page_without_the_overview_tab_is_rejected(): void {
+		$_GET        = array( 'page' => 'ran-booster' );
 		$provisioner = new SetupActionProvisioner( SecretsStorageProvisioningResult::setup_available( '/private/canary/secrets.json' ) );
 		$dashboard   = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )->method( 'add_message' )->with(
@@ -163,6 +197,36 @@ final class SecretsStorageSetupDispatcherTest extends TestCase {
 		);
 		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
 		self::assertSame( 0, $provisioner->provision_calls );
+	}
+
+	/** @return iterable<string, array{string, array<string,string>}> */
+	public static function overview_forbidden_action_cases(): iterable {
+		yield 'adopt' => array( 'adopt-secure-storage', array( 'recovery_token' => 'token' ) );
+		yield 'reset' => array( 'reset-empty-storage', array( 'reset_confirmation' => 'RESET' ) );
+	}
+
+	/** @param array<string,string> $fields */
+	#[DataProvider( 'overview_forbidden_action_cases' )]
+	public function test_adopt_and_reset_from_overview_are_still_rejected( string $action, array $fields ): void {
+		$_GET                 = array(
+			'page' => 'ran-booster',
+			'tab'  => 'overview',
+		);
+		$_POST['ran_booster'] = array_merge( array( 'action' => $action ), $fields );
+		$provisioner          = new SetupActionProvisioner( SecretsStorageProvisioningResult::setup_available( '/private/canary/secrets.json' ) );
+		$dashboard            = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_message' )->with(
+			self::callback(
+				static fn ( \WP_Error $error ): bool => 'ran_booster_storage_route_changed' === $error->get_error_code()
+			)
+		);
+		$dashboard->expects( self::never() )->method( 'set_secrets_storage_provisioning_result' );
+
+		$this->dispatcher( $dashboard, $provisioner )->dispatch_post_requests();
+
+		self::assertSame( 0, $provisioner->provision_calls );
+		self::assertSame( array(), $provisioner->adopt_tokens );
+		self::assertSame( array(), $provisioner->reset_confirmations );
 	}
 
 	public function test_protected_post_provisions_and_redirects_without_result_data_in_the_url(): void {

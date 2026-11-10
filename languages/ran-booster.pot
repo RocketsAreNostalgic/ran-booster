@@ -1773,7 +1773,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:490
 #: views/extensions.php:16
 #: views/extensions.php:91
-#: views/packages/source-choices.php:79
+#: views/packages/source-choices.php:77
 #: views/troubleshooting-installation.php:174
 #: views/troubleshooting-installation.php:175
 msgid "Active"
@@ -8541,15 +8541,15 @@ msgstr ""
 msgid "Selecting it does not install the package."
 msgstr ""
 
-#: views/packages/source-choices.php:42
+#: views/packages/source-choices.php:41
 msgid "Choose a repository before configuring its update source."
 msgstr ""
 
-#: views/packages/source-choices.php:45
+#: views/packages/source-choices.php:43
 msgid "Update source settings"
 msgstr ""
 
-#: views/packages/source-choices.php:90
+#: views/packages/source-choices.php:88
 msgid "Loading source settings…"
 msgstr ""
 

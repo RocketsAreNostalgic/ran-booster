@@ -193,9 +193,11 @@ final class ManagementHistoryDetailsTest extends TestCase {
 				self::assertStringContainsString( $declaration, $m[1] );
 			}
 		}
-		self::assertSame( 1, preg_match( '/@media screen and \(min-width: 783px\) \{\n\t\.ran-booster-admin\n\t\t\.ran-booster-repository-detail__record\.ran-booster-repository-detail__summary\n\t\t\.ran-booster-repository-detail__facts\n\t\t> div \{([^}]*)\}/', $css, $summary ) );
-		self::assertStringContainsString( 'grid-template-columns: minmax(140px, 0.4fr) minmax(0, 1fr);', $summary[1] );
-		self::assertStringContainsString( 'align-items: center;', $summary[1] );
+		self::assertSame( 1, preg_match( '/\.ran-booster-admin \.ran-booster-repository-detail__record \{\n\tcontainer-type: inline-size;\n\}/', $css ), 'The record card must be an inline-size container.' );
+		self::assertSame( 1, preg_match( '/@container \(min-width: 400px\) \{\n\t\.ran-booster-admin\n\t\t\.ran-booster-repository-detail__record\n\t\t\.ran-booster-repository-detail__facts\n\t\t> div \{([^}]*)\}/', $css, $inline ) );
+		self::assertStringContainsString( 'grid-template-columns: minmax(140px, 0.4fr) minmax(0, 1fr);', $inline[1] );
+		self::assertStringContainsString( 'align-items: center;', $inline[1] );
+		self::assertStringNotContainsString( 'repository-detail__summary', $css );
 		// Every new selector carries the record or history scope.
 		self::assertSame( 0, preg_match( '/\n\.ran-booster-admin \.ran-booster-repository-detail__(group-heading|fact-label)/', $css ) );
 	}

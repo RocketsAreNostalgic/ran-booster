@@ -156,7 +156,6 @@ final class RepositoryDetailRendererTest extends TestCase {
 		$integration = substr( $integration, 0, (int) strpos( $integration, '</section>' ) );
 		self::assertStringContainsString( '<p><a href="https://example.test/secrets">Review shared owner secret</a></p>', preg_replace( '/\s+/', ' ', str_replace( array( "\n", "\t" ), '', $integration ) ) ?? '' );
 		self::assertStringNotContainsString( 'repository-detail__status-links', $html );
-		self::assertStringContainsString( 'ran-booster-repository-detail__record ran-booster-repository-detail__summary', $html );
 		self::assertSame( 2, preg_match_all( '#<dt class="ran-booster-repository-detail__fact-label">([^<]+)</dt>#', $integration, $integration_labels ) );
 		self::assertSame( array( 'Branch demand', 'Recorded release usage' ), $integration_labels[1] );
 		foreach ( array( 'Recorded hook', 'Current local warning', 'Last checked', 'Provider access', 'État du flux de publication' ) as $history_label ) {

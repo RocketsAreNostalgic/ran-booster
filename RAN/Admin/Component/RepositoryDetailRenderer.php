@@ -162,7 +162,7 @@ final class RepositoryDetailRenderer {
 				</div>
 			</div>
 		</div></div></section>
-		<section class="ran-booster-settings-section ran-booster-card ran-booster-repository-detail__record ran-booster-repository-detail__summary" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integration-summary-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
+		<section class="ran-booster-settings-section ran-booster-card ran-booster-repository-detail__record" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integration-summary-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<header class="ran-booster-settings-section__header">
 				<h3 id="ran-booster-repository-integration-summary-heading"><?php esc_html_e( 'Integration status', 'ran-booster' ); ?></h3>
 			</header>

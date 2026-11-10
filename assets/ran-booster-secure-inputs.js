@@ -41,6 +41,7 @@
 	);
 
 	document.addEventListener('htmx:afterSwap', handleProviderProfileSwap);
+	document.addEventListener('click', confirmDelegatedSubmit);
 	document.addEventListener('input', function (event) {
 		const input = event.target.closest?.(
 			'[data-support-report-tools] textarea'
@@ -66,6 +67,29 @@
 		'ran-booster:admin-mutation-success',
 		handleProviderProfileSuccess
 	);
+
+	/*
+	 * Submit buttons with data-confirm that the initial binding below never saw,
+	 * such as controls inside a panel that an HTMX swap replaced, still confirm.
+	 * Buttons the binding already owns are skipped so they confirm once.
+	 */
+	function confirmDelegatedSubmit(event) {
+		const button = event.target.closest?.(
+			'button[type="submit"][data-confirm]'
+		);
+		if (
+			!button ||
+			button.dataset.ranBoosterConfirmBound === 'true' ||
+			button.disabled
+		) {
+			return;
+		}
+
+		// eslint-disable-next-line no-alert -- Native confirmation is intentional for destructive admin actions.
+		if (!window.confirm(button.getAttribute('data-confirm'))) {
+			event.preventDefault();
+		}
+	}
 
 	function resetClipboard(button) {
 		const state = clipboardStates.get(button);

@@ -359,10 +359,31 @@
 		const notice = sourceShell.querySelector(
 			'[data-ran-booster-source-unsaved-notice]'
 		);
+		const useReleases = document.querySelector(
+			'[data-ran-booster-use-releases]'
+		);
+		const syncUseReleases = function () {
+			if (
+				!useReleases ||
+				useReleases.dataset.ranBoosterUseReleasesReady !== 'true'
+			) {
+				return;
+			}
+			const dirty = isDirty();
+			useReleases.disabled = dirty;
+			useReleases.setAttribute('aria-disabled', dirty ? 'true' : 'false');
+			if (dirty && notice) {
+				notice.hidden = false;
+				useReleases.setAttribute('aria-describedby', notice.id);
+			} else {
+				useReleases.removeAttribute('aria-describedby');
+			}
+		};
 		const hideNoticeIfClean = function () {
 			if (!isDirty() && notice) {
 				notice.hidden = true;
 			}
+			syncUseReleases();
 		};
 		const blockIfDirty = function (event) {
 			if (!isDirty()) {
@@ -381,6 +402,7 @@
 			control.addEventListener('input', hideNoticeIfClean);
 			control.addEventListener('change', hideNoticeIfClean);
 		});
+		syncUseReleases();
 
 		sourceShell
 			.querySelectorAll('[data-ran-booster-source-choice]')

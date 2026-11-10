@@ -105,6 +105,7 @@ test('branch release track selection updates only its local disclosure summary',
 	const updateReleaseTrackSummary = Function(
 		`"use strict"; ${declaration('updateReleaseTrackSummary')} return updateReleaseTrackSummary;`
 	)();
+	globalThis.document = { querySelector: () => null };
 	const badge = { textContent: 'Stable' };
 	const disclosure = {
 		querySelector(selector) {
@@ -140,6 +141,7 @@ test('branch release track selection updates only its local disclosure summary',
 	updateReleaseTrackSummary({ target: { matches: () => false } });
 	updateReleaseTrackSummary({ target: radio(label('Preview'), null) });
 	assert.equal(badge.textContent, 'Stable');
+	delete globalThis.document;
 });
 
 test('prospective client contains no managed release track dirty-state behavior', () => {
@@ -920,3 +922,39 @@ for (const enhanced of [true, false]) {
 		assert.deepEqual(order, [enhanced ? 'htmx-swap' : 'native-clear']);
 	});
 }
+
+test('the Use releases sentence follows the selected release track radio', () => {
+	const summary = {
+		textContent: 'Switch to releases using the Stable track.',
+		dataset: {
+			ranBoosterUseReleasesSummary:
+				'Switch to releases using the %s track.',
+		},
+	};
+	const badge = { textContent: 'Stable' };
+	const target = {
+		matches: () => true,
+		closest: (selector) =>
+			selector === 'label'
+				? { querySelector: () => ({ textContent: 'Preview' }) }
+				: { querySelector: () => badge },
+	};
+	const document = {
+		querySelector: (selector) =>
+			selector === '[data-ran-booster-use-releases-summary]'
+				? summary
+				: null,
+	};
+
+	new Function(
+		'document',
+		'event',
+		`${declaration('updateReleaseTrackSummary')}\nupdateReleaseTrackSummary(event);`
+	)(document, { target });
+
+	assert.equal(badge.textContent, 'Preview');
+	assert.equal(
+		summary.textContent,
+		'Switch to releases using the Preview track.'
+	);
+});

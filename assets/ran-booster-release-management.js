@@ -609,6 +609,16 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		if (summary && labelText) {
 			summary.textContent = labelText.textContent;
 		}
+		const switchSummary = document.querySelector(
+			'[data-ran-booster-use-releases-summary]'
+		);
+		const template = switchSummary?.dataset.ranBoosterUseReleasesSummary;
+		if (switchSummary && template && labelText) {
+			switchSummary.textContent = template.replace(
+				'%s',
+				labelText.textContent
+			);
+		}
 	};
 
 	document.addEventListener('change', updateReleaseTrackSummary);

@@ -143,18 +143,6 @@ final class ReleaseManagementDisplay {
 							<p><?php esc_html_e( 'Switching resets Automatic to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
 						</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 					<?php } ?>
-					<div class="ran-booster-source-transition">
-						<p><?php esc_html_e( 'Branch currently active.', 'ran-booster' ); ?></p>
-						<div>
-							<label for="ran-booster-initial-release-track"><?php esc_html_e( 'Initial release track', 'ran-booster' ); ?></label>
-							<select id="ran-booster-initial-release-track" name="release_channel" form="<?php echo esc_attr( $track_form_id ); ?>"<?php disabled( $track_disabled ); ?>>
-								<?php foreach ( array( 'stable', 'prerelease' ) as $channel ) { ?>
-									<option value="<?php echo esc_attr( $channel ); ?>"<?php selected( $channel === $selected_channel ); ?>><?php echo esc_html( $this->release_track_label( $channel ) ); ?></option>
-								<?php } ?>
-							</select>
-						</div>
-						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" form="<?php echo esc_attr( $track_form_id ); ?>"<?php disabled( $track_disabled ); ?> aria-disabled="<?php echo $track_disabled ? 'true' : 'false'; ?>"><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
-					</div>
 				<?php } elseif ( $status_available && 'release_asset' === $source && $subdirectory_incompatible ) { ?>
 					<?php $this->render_return_to_branch( $package, $nonce_actions['return_to_branch'] ?? null, '', $automatic_policy ); ?>
 				<?php } ?>
@@ -168,7 +156,7 @@ final class ReleaseManagementDisplay {
 				<?php } ?>
 				<div class="ran-booster-readiness-panel__top">
 					<div>
-						<h4><?php echo esc_html( $repository_blocked ? $repository_status_heading : ( $status_available && $eligibility->eligible() ? __( 'Ready for releases', 'ran-booster' ) : __( 'Not ready for releases', 'ran-booster' ) ) ); ?></h4>
+						<h4 id="ran-booster-release-readiness-status"><?php echo esc_html( $repository_blocked ? $repository_status_heading : ( $status_available && $eligibility->eligible() ? __( 'Ready for releases', 'ran-booster' ) : __( 'Not ready for releases', 'ran-booster' ) ) ); ?></h4>
 					</div>
 					<?php if ( ! $status_available || ! $eligibility->eligible() || $repository_blocked ) { ?>
 						<?php echo \RAN\Admin\Component\StatusBadge::for_intent( __( 'Unavailable', 'ran-booster' ), 'high' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
@@ -260,6 +248,16 @@ final class ReleaseManagementDisplay {
 				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled ); ?>
 			</div>
 		</details></div>
+		<?php if ( 'branch' === $source ) { ?>
+			<?php
+			/* translators: %s is the selected release track, Stable or Preview. */
+			$switch_track_template = __( 'Switch to releases using the %s track.', 'ran-booster' );
+			?>
+			<div class="ran-booster-release-switch-actions">
+				<span class="ran-booster-release-switch-actions__summary" data-ran-booster-use-releases-summary="<?php echo esc_attr( $switch_track_template ); ?>"><?php echo esc_html( sprintf( $switch_track_template, $release_track_summary ) ); ?></span>
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" form="<?php echo esc_attr( $track_form_id ); ?>" data-ran-booster-use-releases data-ran-booster-use-releases-ready="<?php echo $track_disabled ? 'false' : 'true'; ?>"<?php disabled( $track_disabled ); ?> aria-disabled="<?php echo $track_disabled ? 'true' : 'false'; ?>"<?php echo $track_disabled ? ' aria-describedby="ran-booster-release-readiness-status"' : ''; ?>><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
+			</div>
+		<?php } ?>
 		<?php
 	}
 
@@ -512,15 +510,12 @@ final class ReleaseManagementDisplay {
 			<?php } ?>
 
 		<?php
-		$this->render_release_track( $selected_channel, $mode, $disabled || 'branch' === $mode );
-		if ( 'branch' === $mode ) {
-			echo '<p class="description">' . esc_html__( 'Activate Releases to change the release track.', 'ran-booster' ) . '</p>';
-		}
+		$this->render_release_track( $selected_channel, $mode, $disabled, 'ran-booster-release-track-description', null, $form_id );
 
 		echo '</form>';
 	}
 
-	private function render_release_track( ?string $selected_channel, string $mode = 'branch', bool $disabled = false, string $description_id = 'ran-booster-release-track-description', ?string $custom_description = null ): void {
+	private function render_release_track( ?string $selected_channel, string $mode = 'branch', bool $disabled = false, string $description_id = 'ran-booster-release-track-description', ?string $custom_description = null, string $form_id = '' ): void {
 		$managed      = 'managed' === $mode;
 		$preview      = 'prerelease' === $selected_channel;
 		$next_channel = $preview ? 'stable' : 'prerelease';
@@ -546,7 +541,7 @@ final class ReleaseManagementDisplay {
 						</button>
 					<?php } else { ?>
 						<label class="button ran-booster-release-track-option">
-							<input type="radio" class="screen-reader-text" name="release_channel" value="<?php echo esc_attr( $channel ); ?>"<?php checked( $channel === $selected_channel ); ?> aria-describedby="<?php echo esc_attr( $description_id ); ?>"<?php echo 'branch' === $mode ? ' data-ran-booster-release-channel' : ''; ?>>
+							<input type="radio" class="screen-reader-text" name="release_channel" value="<?php echo esc_attr( $channel ); ?>"<?php checked( $channel === $selected_channel ); ?><?php echo '' !== $form_id ? ' form="' . esc_attr( $form_id ) . '"' : ''; ?> aria-describedby="<?php echo esc_attr( $description_id ); ?>"<?php echo 'branch' === $mode ? ' data-ran-booster-release-channel' : ''; ?>>
 							<span><?php echo esc_html( $this->release_track_label( $channel ) ); ?></span>
 						</label>
 					<?php } ?>

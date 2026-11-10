@@ -617,3 +617,82 @@ test('package leave warning follows edits, submissions, failed attempts and leav
 	documentListeners.get('htmx:historyRestore')();
 	assert.equal(warning(), false);
 });
+
+function useReleasesButton(ready) {
+	const attributes = new Map();
+	return {
+		attributes,
+		dataset: { ranBoosterUseReleasesReady: ready ? 'true' : 'false' },
+		disabled: !ready,
+		setAttribute(name, value) {
+			attributes.set(name, value);
+		},
+		removeAttribute(name) {
+			attributes.delete(name);
+		},
+	};
+}
+
+test('Use releases is disabled with the existing unsaved notice as its reason while settings are dirty', () => {
+	const state = sourceUnsavedGuardFixture();
+	const button = useReleasesButton(true);
+	const lookup = globalThis.document.querySelector;
+	state.notice.id = 'ran-booster-source-unsaved-notice';
+	globalThis.document.querySelector = (selector) =>
+		selector === '[data-ran-booster-use-releases]'
+			? button
+			: lookup(selector);
+
+	try {
+		loadFunction('initPackageSourceUnsavedGuard')();
+		assert.equal(button.disabled, false);
+
+		state.text.value = 'changed';
+		state.controlListeners.get('text:input')();
+		assert.equal(button.disabled, true);
+		assert.equal(button.attributes.get('aria-disabled'), 'true');
+		assert.equal(
+			button.attributes.get('aria-describedby'),
+			'ran-booster-source-unsaved-notice'
+		);
+		assert.equal(state.notice.hidden, false);
+
+		state.text.value = 'saved';
+		state.controlListeners.get('text:input')();
+		assert.equal(button.disabled, false);
+		assert.equal(button.attributes.get('aria-disabled'), 'false');
+		assert.equal(button.attributes.has('aria-describedby'), false);
+		assert.equal(state.notice.hidden, true);
+	} finally {
+		delete globalThis.document;
+	}
+});
+
+test('Use releases stays disabled for the readiness gate whatever the form state', () => {
+	const state = sourceUnsavedGuardFixture();
+	const button = useReleasesButton(false);
+	const lookup = globalThis.document.querySelector;
+	button.attributes.set(
+		'aria-describedby',
+		'ran-booster-release-readiness-status'
+	);
+	globalThis.document.querySelector = (selector) =>
+		selector === '[data-ran-booster-use-releases]'
+			? button
+			: lookup(selector);
+
+	try {
+		loadFunction('initPackageSourceUnsavedGuard')();
+		state.text.value = 'changed';
+		state.controlListeners.get('text:input')();
+		state.text.value = 'saved';
+		state.controlListeners.get('text:input')();
+		assert.equal(button.disabled, true);
+		assert.equal(
+			button.attributes.get('aria-describedby'),
+			'ran-booster-release-readiness-status'
+		);
+	} finally {
+		delete globalThis.document;
+	}
+});

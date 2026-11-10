@@ -731,6 +731,19 @@
 	content: "?";
 }
 
+.ran-booster-admin .ran-booster-release-switch-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-8) var(--ran-booster-space-12);
+	margin-block-start: var(--ran-booster-space-18);
+}
+
+.ran-booster-admin .ran-booster-release-switch-actions__summary {
+	min-inline-size: 0;
+	color: var(--ran-booster-text-muted);
+}
+
 .ran-booster-admin .ran-booster-readiness-actions {
 	display: flex;
 	flex-wrap: wrap;

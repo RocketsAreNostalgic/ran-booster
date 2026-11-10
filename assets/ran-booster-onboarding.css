@@ -499,6 +499,11 @@
 	align-items: end;
 }
 
+/* The review status notice sits a field-row gap below the import inputs, not at core's 5px notice margin. */
+.ran-booster-admin .ran-booster-portability__import-fields + .notice {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-portability__mode {
 	display: flex;
 	align-items: center;

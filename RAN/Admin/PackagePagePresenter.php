@@ -276,7 +276,6 @@ final class PackagePagePresenter {
 				'key'               => 'branch',
 				'heading'           => __( 'Branch', 'ran-booster' ),
 				'description'       => __( 'Deploy the saved branch manually or on a signed push.', 'ran-booster' ),
-				'meta'              => __( 'Included with Booster', 'ran-booster' ),
 				'url'               => add_query_arg( 'source_view', 'branch', $page_url ),
 				'disabled'          => false,
 				'hydrated'          => true,
@@ -288,7 +287,6 @@ final class PackagePagePresenter {
 				'description'       => $fallback
 					? __( 'Install verified packages from a supported Git provider\'s published releases.', 'ran-booster' )
 					: __( 'Install published releases through WordPress.', 'ran-booster' ),
-				'meta'              => $fallback ? __( 'Git provider capability required', 'ran-booster' ) : __( 'Included with Booster', 'ran-booster' ),
 				'url'               => '',
 				'disabled'          => true,
 				'hydrated'          => false,

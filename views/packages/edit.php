@@ -234,8 +234,7 @@ $source_summary                 = 'branch' === $package_current_source
 		'' !== (string) $package->get_branch() ? (string) $package->get_branch() : __( 'repository default', 'ran-booster' )
 	)
 	: (string) ( $package_source_choices[ $package_current_source ]['heading'] ?? __( 'Unavailable update source', 'ran-booster' ) );
-$source_summary_meta = (string) ( $package_source_choices[ $package_current_source ]['meta'] ?? __( 'The update source Git provider is unavailable', 'ran-booster' ) );
-$automation_summary  = match ( $package->get_deployment_policy()->value ) {
+$automation_summary = match ( $package->get_deployment_policy()->value ) {
 	\RAN\Deployment\DeploymentPolicy::DISABLED->value => __( 'Disabled', 'ran-booster' ),
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
 	default => __( 'Manual', 'ran-booster' ),
@@ -365,7 +364,6 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 						<a href="<?php echo esc_url( $repository_url ); ?>" class="ran-booster-repository-link" data-repository-base="<?php echo esc_attr( $stored_repository_url_base ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) $package->repository ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
 					<?php } ?>
 				</p>
-				<p class="ran-booster-package-summary__meta"><?php echo esc_html( $source_summary_meta ); ?></p>
 		</div>
 		<div>
 			<p class="ran-booster-summary-grid__label"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></p>

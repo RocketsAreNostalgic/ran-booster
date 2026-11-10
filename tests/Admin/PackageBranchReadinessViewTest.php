@@ -20,7 +20,6 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			'branch' => array(
 				'heading'           => 'Branch',
 				'description'       => 'Deploy a saved repository branch.',
-				'meta'              => 'Included with Booster',
 				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
 				'disabled'          => false,
 				'hydrated'          => true,
@@ -239,7 +238,6 @@ final class PackageBranchReadinessViewTest extends TestCase {
 			'branch' => array(
 				'heading'           => 'Branch',
 				'description'       => 'Deploy a saved repository branch.',
-				'meta'              => 'Included with Booster',
 				'url'               => 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins',
 				'disabled'          => false,
 				'hydrated'          => true,

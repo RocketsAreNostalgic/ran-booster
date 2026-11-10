@@ -165,15 +165,3 @@
 	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-available {
 	opacity: 1;
 }
-
-.ran-booster-admin
-	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-available
-	.ran-booster-source-choice__meta {
-	color: var(--ran-booster-status-ok);
-}
-
-.ran-booster-admin
-	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-unavailable
-	.ran-booster-source-choice__meta {
-	color: var(--ran-booster-status-warning);
-}

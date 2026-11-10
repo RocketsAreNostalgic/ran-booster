@@ -528,6 +528,13 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'class="ran-booster-package-settings__intro ran-booster-page-heading__description"', $html );
 		self::assertStringNotContainsString( 'WordPress disabled', $html );
 		self::assertStringContainsString( '<p class="ran-booster-package-summary__value">Branch · main</p>', $html );
+		if ( 1 !== preg_match( '/Current source<\/p>(.*?)<\/div>/s', $html, $current_source ) ) {
+			self::fail( 'The Current source summary did not render.' );
+		}
+		// Heading value plus the repository line; no third source-state line.
+		self::assertSame( 2, substr_count( $current_source[1], '<p ' ), $package_view->get_type() );
+		self::assertStringNotContainsString( 'Included with Booster', $current_source[1] );
+		self::assertStringNotContainsString( 'provider is unavailable', $current_source[1] );
 		$save_actions = $this->action_group_by_class( $html, 'ran-booster-package-settings__save-actions' );
 		self::assertStringContainsString( $install_another_link, $save_actions );
 		// The Shell breadcrumb is the route back to the Managed list; the action bar no longer repeats it.
@@ -871,7 +878,6 @@ final class RepeatPackageViewTest extends TestCase {
 					$package_source_choices[ $source_key ] = array(
 						'heading'           => $heading,
 						'description'       => $heading . ' description',
-						'meta'              => $heading . ' meta',
 						'url'               => 'https://example.test/wp-admin/admin.php?page=' . $package_view->get_page_slug() . '&source_view=' . $source_key,
 						'disabled'          => false,
 						'client_hydratable' => false,
@@ -938,7 +944,6 @@ final class RepeatPackageViewTest extends TestCase {
 			'branch'        => array(
 				'heading'           => 'Branch',
 				'description'       => 'Deploy the configured branch.',
-				'meta'              => 'Available',
 				'url'               => '',
 				'disabled'          => false,
 				'client_hydratable' => false,
@@ -946,7 +951,6 @@ final class RepeatPackageViewTest extends TestCase {
 			'release_asset' => array(
 				'heading'           => 'Published releases',
 				'description'       => 'Published releases require the repository root.',
-				'meta'              => 'Repository root required',
 				'url'               => '',
 				'disabled'          => true,
 				'client_hydratable' => false,
@@ -966,6 +970,54 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( ' disabled=', $html );
 	}
 
+	/**
+	 * @return array<string, array{string, string, bool}>
+	 */
+	public static function source_card_state_provider(): array {
+		$states = array();
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			foreach ( array( 'create', 'edit' ) as $mode ) {
+				foreach ( array( false, true ) as $fallback ) {
+					$states[ $type . ' ' . $mode . ( $fallback ? ' fallback' : ' default' ) ] = array( $type, $mode, $fallback );
+				}
+			}
+		}
+
+		return $states;
+	}
+
+	#[DataProvider( 'source_card_state_provider' )]
+	public function test_source_cards_render_no_meta_line_in_any_context( string $type, string $mode, bool $fallback ): void {
+		$package_source_mode = $mode;
+		$package_view        = 'plugin' === $type ? PackagePagePresenter::plugin() : PackagePagePresenter::theme();
+		$page_url            = 'https://example.test/wp-admin/admin.php?page=' . $package_view->get_page_slug();
+
+		$package_source_choices = $package_view->get_source_choice_defaults( $page_url, $fallback );
+		foreach ( $package_source_choices as $choice ) {
+			self::assertFalse( array_key_exists( 'meta', $choice ), 'The projection carries no meta key.' );
+		}
+		// A legacy filter that still supplies meta must not bring the line back.
+		foreach ( $package_source_choices as $key => $choice ) {
+			$package_source_choices[ $key ]['meta'] = 'Legacy meta text';
+		}
+		$package_source_choices['release_asset']['disabled'] = ! $fallback;
+		$package_source_view                                 = 'branch';
+		$package_current_source                              = 'branch';
+		$identifier_value                                    = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/source-choices.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Releases</strong>', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-source-meta', $html );
+		self::assertStringNotContainsString( 'ran-booster-source-choice__meta', $html );
+		self::assertStringNotContainsString( 'Legacy meta text', $html );
+		self::assertStringNotContainsString( 'Included with Booster', $html );
+		self::assertStringNotContainsString( 'Choose repository first', $html );
+		self::assertStringNotContainsString( 'Git provider capability required', $html );
+	}
+
 	public function test_unavailable_edit_source_choice_does_not_reference_a_missing_pane(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
 			$identifier_value       = 'plugin' === $package_view->get_type() ? 'example/example.php' : 'example-theme';
@@ -976,7 +1028,6 @@ final class RepeatPackageViewTest extends TestCase {
 				'branch'        => array(
 					'heading'           => 'Branch',
 					'description'       => 'Deploy the configured branch.',
-					'meta'              => 'Available',
 					'url'               => 'https://example.test/wp-admin/admin.php?page=' . $package_view->get_page_slug() . '&source_view=branch',
 					'disabled'          => false,
 					'client_hydratable' => false,
@@ -984,7 +1035,6 @@ final class RepeatPackageViewTest extends TestCase {
 				'release_asset' => array(
 					'heading'           => 'Releases',
 					'description'       => 'Published releases are unavailable.',
-					'meta'              => 'Unavailable',
 					'url'               => '',
 					'disabled'          => true,
 					'client_hydratable' => false,

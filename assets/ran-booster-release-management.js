@@ -699,12 +699,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const choiceDescription = releaseChoice.querySelector(
 		'[data-ran-booster-source-description]'
 	);
-	const choiceHeading = releaseChoice.querySelector(
-		'[data-ran-booster-source-heading]'
-	);
-	const choiceMeta = releaseChoice.querySelector(
-		'[data-ran-booster-source-meta]'
-	);
+	const staticDescription = choiceDescription?.textContent ?? '';
 	const channelControl = setup.querySelector(
 		'[data-ran-booster-release-channel-control]'
 	);
@@ -800,7 +795,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		setHidden(switchBranch, options.switchBranch !== true);
 	};
 
-	const setChoiceState = (state, description, meta) => {
+	const setChoiceState = (state) => {
 		const disabled =
 			state === 'waiting' ||
 			state === 'unsupported' ||
@@ -832,14 +827,14 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			'aria-disabled',
 			disabled ? 'true' : 'false'
 		);
-		releaseChoice.setAttribute('title', disabled ? description : '');
+		releaseChoice.setAttribute('title', disabled ? staticDescription : '');
 		releaseChoice.setAttribute(
 			'aria-label',
 			disabled
 				? wp.i18n.sprintf(
 						/* translators: %s: release availability description. */
 						wp.i18n.__('Releases unavailable: %s', 'ran-booster'),
-						description
+						staticDescription
 					)
 				: wp.i18n.__('Releases', 'ran-booster')
 		);
@@ -847,21 +842,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			'aria-busy',
 			state === 'checking' ? 'true' : 'false'
 		);
-		setText(choiceHeading, wp.i18n.__('Releases', 'ran-booster'));
-		setText(choiceDescription, description);
-		setText(choiceMeta, meta);
 	};
 
 	const showIdle = () => {
 		selectedRelease = null;
-		setChoiceState(
-			'available',
-			wp.i18n.__(
-				'View eligible published releases from this repository.',
-				'ran-booster'
-			),
-			wp.i18n.__('Stable by default', 'ran-booster')
-		);
+		setChoiceState('available');
 		setStatus(
 			wp.i18n.__('Release candidates appear here', 'ran-booster'),
 			includesPrereleases()
@@ -884,14 +869,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 
 	const showWaitingForRepository = () => {
 		selectedRelease = null;
-		setChoiceState(
-			'waiting',
-			wp.i18n.__(
-				'Choose a repository before selecting this source.',
-				'ran-booster'
-			),
-			wp.i18n.__('Choose repository first', 'ran-booster')
-		);
+		setChoiceState('waiting');
 		setStatus(
 			wp.i18n.__('Release candidates appear here', 'ran-booster'),
 			wp.i18n.__(
@@ -910,14 +888,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const showUnsupportedProvider = () => {
 		selectedRelease = null;
 		releaseSelected = false;
-		setChoiceState(
-			'unsupported',
-			wp.i18n.__(
-				'Published releases are not available for this Git provider.',
-				'ran-booster'
-			),
-			wp.i18n.__('Git provider capability unavailable', 'ran-booster')
-		);
+		setChoiceState('unsupported');
 		setStatus(
 			wp.i18n.__('Published releases are unavailable', 'ran-booster'),
 			wp.i18n.__(
@@ -937,14 +908,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const showSubdirectoryUnsupported = () => {
 		selectedRelease = null;
 		releaseSelected = false;
-		setChoiceState(
-			'subdirectory',
-			wp.i18n.__(
-				'Published releases require the repository root. Branch supports the configured subdirectory.',
-				'ran-booster'
-			),
-			wp.i18n.__('Repository root required', 'ran-booster')
-		);
+		setChoiceState('subdirectory');
 		setStatus(
 			wp.i18n.__('Published releases are unavailable', 'ran-booster'),
 			wp.i18n.__(
@@ -985,19 +949,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 
 	const setChecking = (checking, phase = 'discover') => {
 		if (checking) {
-			setChoiceState(
-				'checking',
-				includesPrereleases()
-					? wp.i18n.__(
-							'Checking the selected repository for stable releases and prereleases…',
-							'ran-booster'
-						)
-					: wp.i18n.__(
-							'Checking the selected repository for a stable published release…',
-							'ran-booster'
-						),
-				wp.i18n.__('Checking repository…', 'ran-booster')
-			);
+			setChoiceState('checking');
 			const inspecting = phase === 'inspect';
 			setStatus(
 				inspecting
@@ -1061,10 +1013,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			'Repository access or the Git provider may be temporarily unavailable.',
 			'ran-booster'
 		);
-		let choiceMessage = wp.i18n.__(
-			'Booster could not confirm release availability.',
-			'ran-booster'
-		);
 		if (noRelease && includesPrereleases()) {
 			statusHeading = wp.i18n.__(
 				'No eligible stable release or prerelease found',
@@ -1072,10 +1020,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			);
 			statusMessage = wp.i18n.__(
 				'This repository does not publish an eligible stable or preview release.',
-				'ran-booster'
-			);
-			choiceMessage = wp.i18n.__(
-				'No eligible stable release or prerelease is currently available.',
 				'ran-booster'
 			);
 		} else if (noRelease) {
@@ -1087,19 +1031,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				'This repository does not publish an eligible stable release.',
 				'ran-booster'
 			);
-			choiceMessage = wp.i18n.__(
-				'No eligible stable published release is currently available.',
-				'ran-booster'
-			);
 		}
 		selectedRelease = null;
-		setChoiceState(
-			'unavailable',
-			choiceMessage,
-			noRelease
-				? wp.i18n.__('Branch only', 'ran-booster')
-				: wp.i18n.__('Check failed', 'ran-booster')
-		);
+		setChoiceState('unavailable');
 		setStatus(statusHeading, statusMessage, {
 			retry: !noRelease,
 			switchBranch: true,
@@ -1111,19 +1045,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 
 	const showCandidateUnavailable = (code) => {
 		selectedRelease = null;
-		setChoiceState(
-			'unavailable',
-			code === 'release_invalid'
-				? wp.i18n.__(
-						'The selected release is not an eligible WordPress package. Choose another release.',
-						'ran-booster'
-					)
-				: wp.i18n.__(
-						'The selected release could not be checked. Choose another release or retry.',
-						'ran-booster'
-					),
-			wp.i18n.__('Choose another', 'ran-booster')
-		);
+		setChoiceState('unavailable');
 		setStatus(
 			wp.i18n.__('Published release could not be used', 'ran-booster'),
 			code === 'release_invalid'
@@ -1206,29 +1128,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			candidateList.append(disclosure);
 			mountDisclosure(disclosure);
 		}
-		setChoiceState(
-			'available',
-			wp.i18n.sprintf(
-				/* translators: %d: number of eligible published releases. */
-				wp.i18n._n(
-					'%d eligible published release found.',
-					'%d eligible published releases found.',
-					releases.length,
-					'ran-booster'
-				),
-				releases.length
-			),
-			wp.i18n.sprintf(
-				/* translators: %d: number of available releases. */
-				wp.i18n._n(
-					'%d available',
-					'%d available',
-					releases.length,
-					'ran-booster'
-				),
-				releases.length
-			)
-		);
+		setChoiceState('available');
 		setStatus(
 			wp.i18n.__('Release candidates loaded', 'ran-booster'),
 			wp.i18n.sprintf(
@@ -1312,18 +1212,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		selectedRelease.fingerprint = data.fingerprint;
 		selectedRelease.providerExpectation = data.provider_expectation;
 		selectedRelease.installNonce = data.install_nonce;
-		setChoiceState(
-			'available',
-			wp.i18n.sprintf(
-				/* translators: %s: inspected release version. */
-				wp.i18n.__(
-					'Release %s was inspected and is ready for final acquisition.',
-					'ran-booster'
-				),
-				data.version
-			),
-			wp.i18n.__('Inspected', 'ran-booster')
-		);
+		setChoiceState('available');
 		setStatus(
 			wp.i18n.__('Published release inspected', 'ran-booster'),
 			wp.i18n.__(

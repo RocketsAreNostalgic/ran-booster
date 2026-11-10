@@ -492,20 +492,6 @@ final class ReleaseManagementDisplay {
 	}
 
 
-	public function release_track_meta( string $fallback, object $package, ?ReleaseTrackingStatus $status ): string {
-		if ( ! $this->is_projection( $package ) || 'release_asset' !== $package->source() ) {
-			return $fallback;
-		}
-		if ( null === $status ) {
-			return $fallback;
-		}
-
-		return 'prerelease' === $status->channel()
-			? __( 'Preview track', 'ran-booster' )
-			: __( 'Stable track', 'ran-booster' );
-	}
-
-
 	public function release_provider_supported( object $package, ?ReleaseTrackingStatus $status ): ?bool {
 		if ( ! $this->is_projection( $package ) ) {
 			return null;

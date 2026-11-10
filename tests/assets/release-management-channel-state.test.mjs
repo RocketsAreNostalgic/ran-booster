@@ -53,13 +53,16 @@ async function flush() {
 }
 
 test('client hydration normalizes the release source label', () => {
-	assert.match(
-		source,
-		/const choiceHeading = releaseChoice\.querySelector\(\s*'\[data-ran-booster-source-heading\]'\s*\);/
-	);
+	// The card keeps its server-rendered heading, description and meta-free layout.
+	assert.doesNotMatch(source, /choiceHeading|choiceMeta|source-meta/);
+	assert.doesNotMatch(source, /setText\(choiceDescription/);
 	assert.match(
 		declaration('setChoiceState'),
-		/setText\(choiceHeading, wp\.i18n\.__\(\'Releases\', \'ran-booster\'\)\);/
+		/^\s*const setChoiceState = \(state\) =>/
+	);
+	assert.doesNotMatch(
+		source,
+		/Choose repository first|Stable by default|Choose another'|Branch only|Check failed|Checking repository…|Inspected'|Repository root required|Git provider capability unavailable|%d available/
 	);
 	assert.ok(
 		declaration('setChoiceState').includes(
@@ -397,7 +400,7 @@ test('a configured subdirectory makes Published releases unavailable and keeps B
 	);
 	assert.match(
 		declaration('setChoiceState'),
-		/releaseChoice\.setAttribute\('title', disabled \? description : ''\)/
+		/releaseChoice\.setAttribute\('title', disabled \? staticDescription : ''\)/
 	);
 	assert.match(
 		declaration('chooseRelease'),

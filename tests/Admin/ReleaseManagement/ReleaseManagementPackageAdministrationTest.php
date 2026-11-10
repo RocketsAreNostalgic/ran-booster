@@ -857,7 +857,6 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'release_asset' => array(
 				'heading'     => 'Unavailable',
 				'description' => 'Unavailable.',
-				'meta'        => 'Unavailable',
 				'url'         => '',
 				'disabled'    => false,
 			),
@@ -892,7 +891,6 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'release_asset' => array(
 				'heading'     => 'Published releases',
 				'description' => '',
-				'meta'        => '',
 				'url'         => '',
 				'disabled'    => false,
 			),

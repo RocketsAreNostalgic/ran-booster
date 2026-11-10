@@ -126,10 +126,6 @@ final class ReleaseManagementControls {
 				'description'       => 'create' === $mode
 					? __( 'Choose a repository, then view its eligible published releases.', 'ran-booster' )
 					: __( 'Install published releases through WordPress.', 'ran-booster' ),
-				'meta'              => 'create' === $mode
-					? __( 'Choose repository first', 'ran-booster' )
-					: __( 'Releases', 'ran-booster' ),
-
 				'url'               => 'edit' === $mode ? add_query_arg( 'source_view', 'release_asset', $page_url ) : '',
 				'disabled'          => 'create' === $mode,
 				'hydrated'          => true,
@@ -137,19 +133,16 @@ final class ReleaseManagementControls {
 			)
 		);
 		if ( 'edit' === $mode && null !== $package ) {
-			$status                           = $this->package_status( $package );
-			$choices['release_asset']['meta'] = $this->request_boundary( fn (): string => $this->display->release_track_meta( $choices['release_asset']['meta'], $package, $status ), $choices['release_asset']['meta'] );
-			$release_source_is_current        = is_callable( array( $package, 'source' ) )
+			$status                    = $this->package_status( $package );
+			$release_source_is_current = is_callable( array( $package, 'source' ) )
 				&& 'release_asset' === $package->source();
 			if ( ! $release_source_is_current
 				&& ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $status?->eligibility()->code() ) {
 				$choices['release_asset']['description'] = __( 'Published releases require this plugin or theme to be at the repository root. This package uses a repository subdirectory, so continue using Branch deployments.', 'ran-booster' );
-				$choices['release_asset']['meta']        = __( 'Repository subdirectory not supported', 'ran-booster' );
 				$choices['release_asset']['disabled']    = true;
 			} elseif ( ! $release_source_is_current
 				&& false === $this->display->release_provider_supported( $package, $status ) ) {
 				$choices['release_asset']['description'] = __( 'Published releases are not available for this Git provider.', 'ran-booster' );
-				$choices['release_asset']['meta']        = __( 'Git provider capability unavailable', 'ran-booster' );
 				$choices['release_asset']['disabled']    = true;
 			}
 		}

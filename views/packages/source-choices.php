@@ -68,9 +68,6 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 					<strong id="<?php echo esc_attr( $tab_id . '-heading' ); ?>" data-ran-booster-source-heading><?php echo esc_html( $source_heading ); ?></strong>
 					<?php if ( 'create' === $source_choice_mode ) { ?>
 						<small data-ran-booster-source-description><?php echo esc_html( $source_choice['description'] ); ?></small>
-						<?php if ( '' !== $source_choice['meta'] ) { ?>
-							<span class="ran-booster-source-choice__meta" data-ran-booster-source-meta><?php echo esc_html( $source_choice['meta'] ); ?></span>
-						<?php } ?>
 					<?php } ?>
 				</span>
 				<?php if ( $is_current ) { ?>

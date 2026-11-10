@@ -46,7 +46,6 @@ final class AdminPackageSourceChoiceNormalizer {
 				'key'               => $key,
 				'heading'           => $this->bounded_string( $choice['heading'] ?? null, 96, false ),
 				'description'       => $this->bounded_string( $choice['description'] ?? null, 255, false ),
-				'meta'              => $this->bounded_string( $choice['meta'] ?? '', 96, true ),
 				'url'               => $url,
 				'disabled'          => $disabled,
 				'hydrated'          => true === ( $choice['hydrated'] ?? false ),

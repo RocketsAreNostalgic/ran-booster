@@ -505,7 +505,7 @@ class Dispatcher {
 	/** @param array<string, mixed> $request */
 	private function storage_route_is_current( array $request ): bool {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Each storage action verified its purpose nonce before this route/payload check.
-		$page   = $_GET['page'] ?? null;
+		$page = $_GET['page'] ?? null;
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Same purpose-nonce precondition as the page read above.
 		$tab    = $_GET['tab'] ?? null;
 		$action = $request['action'] ?? null;

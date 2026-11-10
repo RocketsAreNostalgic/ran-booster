@@ -66,32 +66,29 @@ $status_classes       = array(
 	'malformed'   => 'error',
 );
 
+$deadline_text = '';
+if ( 'active' === $capture_state && '' !== $capture_until ) {
+	/* translators: %s: UTC capture end time. */
+	$deadline_text = sprintf( __( 'until %s.', 'ran-booster' ), $capture_until );
+} elseif ( 'retained' === $capture_state && '' !== $delete_after ) {
+	/* translators: %s: UTC automatic deletion time. */
+	$deadline_text = sprintf( __( 'retained until %s.', 'ran-booster' ), $delete_after );
+}
+
 ?>
 <section id="ran-booster-debug-capture-region" class="ran-booster-debug-capture" aria-labelledby="ran-booster-debug-capture-heading">
-	<h3 id="ran-booster-debug-capture-heading" class="ran-booster-section__title"><?php esc_html_e( 'Logging', 'ran-booster' ); ?></h3>
+	<div class="ran-booster-debug-capture__header">
+		<h3 id="ran-booster-debug-capture-heading" class="ran-booster-section__title"><?php esc_html_e( 'Logging', 'ran-booster' ); ?></h3>
+		<?php echo \RAN\Admin\Component\StatusBadge::markup( $status_labels[ $capture_state ], $status_classes[ $capture_state ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
+		<?php if ( '' !== $deadline_text ) { ?>
+			<span class="ran-booster-debug-capture__deadline description"><?php echo esc_html( $deadline_text ); ?></span>
+		<?php } ?>
+	</div>
 	<div id="ran-booster-debug-capture-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $debug_capture_error ? 'hidden' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo null === $debug_capture_error ? '' : esc_html( $debug_capture_error ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 
 	<div class="ran-booster-debug-capture__panel ran-booster-panel">
-		<div class="ran-booster-debug-capture__header">
-			<div class="ran-booster-debug-capture__heading">
-				<h4 class="ran-booster-section__title"><?php esc_html_e( 'Booster event capture', 'ran-booster' ); ?></h4>
-				<?php echo \RAN\Admin\Component\StatusBadge::markup( $status_labels[ $capture_state ], $status_classes[ $capture_state ] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
-				<span class="ran-booster-debug-capture__deadline description">
-					<?php if ( 'active' === $capture_state && '' !== $capture_until ) { ?>
-						<?php echo esc_html( sprintf( /* translators: %s: UTC capture end time. */ __( 'until %s.', 'ran-booster' ), $capture_until ) ); ?>
-					<?php } elseif ( 'retained' === $capture_state && '' !== $delete_after ) { ?>
-						<?php echo esc_html( sprintf( /* translators: %s: UTC automatic deletion time. */ __( 'retained until %s.', 'ran-booster' ), $delete_after ) ); ?>
-					<?php } ?>
-				</span>
-			</div>
-		</div>
 		<div class="ran-booster-debug-capture__body">
-			<p>
-				<?php
-				/* translators: %s: WP_DEBUG_LOG constant. */
-				printf( esc_html__( 'This temporary capture records Booster events only. It does not require or enable %s and excludes PHP, WordPress, theme, and other-plugin messages.', 'ran-booster' ), '<code>WP_DEBUG_LOG</code>' );
-				?>
-			</p>
+			<p><?php esc_html_e( 'Temporarily records Booster events.', 'ran-booster' ); ?></p>
 			<div class="ran-booster-debug-capture__events">
 				<div class="ran-booster-debug-capture__events-header">
 					<h4 id="ran-booster-debug-capture-events-heading"><?php esc_html_e( 'Captured Booster events', 'ran-booster' ); ?></h4>
@@ -155,7 +152,13 @@ $status_classes       = array(
 			</p>
 			<p><?php esc_html_e( 'Starting a new capture replaces any retained capture.', 'ran-booster' ); ?></p>
 			<p><?php esc_html_e( 'For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
-			<pre><code><?php echo esc_html( "define( 'WP_DEBUG', true );\n" . $wp_debug_log_example . "\ndefine( 'WP_DEBUG_DISPLAY', false );" ); ?></code></pre>
+			<?php
+			$snippet_value      = "define( 'WP_DEBUG', true );\n" . $wp_debug_log_example . "\ndefine( 'WP_DEBUG_DISPLAY', false );";
+			$snippet_label      = __( 'Example wp-config.php lines', 'ran-booster' );
+			$snippet_copy_label = __( 'Copy example wp-config.php lines', 'ran-booster' );
+			$snippet_rows       = 3;
+			require __DIR__ . '/copy-setup-snippet.php';
+			?>
 			<p>
 				<?php if ( $wp_debug_log_hidden ) { ?>
 					<?php esc_html_e( 'A custom log destination is configured. Review wp-config.php for its location.', 'ran-booster' ); ?>

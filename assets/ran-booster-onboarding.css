@@ -334,23 +334,12 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-debug-capture__wordpress-help pre {
-	box-sizing: border-box;
-	max-inline-size: 100%;
-	padding: var(--ran-booster-space-16);
-	border: 1px solid var(--ran-booster-divider);
-	border-radius: var(--ran-booster-radius-control);
-	background: var(--ran-booster-surface-subtle);
-	overflow-x: auto;
-}
-
-.ran-booster-admin .ran-booster-debug-capture__wordpress-help pre > code {
-	display: block;
-	margin: 0;
-	padding: 0;
-	background: transparent;
-	line-height: var(--ran-booster-line-height-relaxed);
-	white-space: inherit;
+/* The example grows to fit its wrapped lines, so narrow screens show no scrollbar. */
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="troubleshooting-logging"]
+	.ran-booster-setup-snippet
+	textarea {
+	field-sizing: content;
 }
 
 .ran-booster-admin .ran-booster-debug-capture__panel {
@@ -359,17 +348,11 @@
 
 .ran-booster-admin .ran-booster-debug-capture__header {
 	display: flex;
-	box-sizing: border-box;
-	min-block-size: 4rem;
-	align-items: flex-start;
+	align-items: center;
 	flex-wrap: wrap;
-	justify-content: space-between;
 	gap: var(--ran-booster-space-12);
-	padding-block: var(--ran-booster-space-12);
-	padding-inline: var(--ran-booster-space-20);
 }
 
-.ran-booster-admin .ran-booster-debug-capture__heading,
 .ran-booster-admin .ran-booster-debug-capture__primary-actions {
 	display: flex;
 	align-items: center;
@@ -377,7 +360,9 @@
 	gap: var(--ran-booster-space-8);
 }
 
-.ran-booster-admin .ran-booster-debug-capture__heading h4 {
+.ran-booster-admin
+	.ran-booster-debug-capture__header
+	.ran-booster-section__title {
 	margin: 0;
 }
 
@@ -438,18 +423,8 @@
 }
 
 @media screen and (max-width: 600px) {
-	.ran-booster-admin .ran-booster-debug-capture__header {
-		min-block-size: 7rem;
-	}
-
 	.ran-booster-admin .ran-booster-debug-capture__footer {
 		min-block-size: 8.125rem;
-	}
-}
-
-@media screen and (max-width: 375px) {
-	.ran-booster-admin .ran-booster-debug-capture__header {
-		min-block-size: 8rem;
 	}
 }
 

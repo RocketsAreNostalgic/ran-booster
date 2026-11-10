@@ -22,12 +22,17 @@ final class DebugCaptureViewTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'This temporary capture records Booster events only. It does not require or enable <code>WP_DEBUG_LOG</code> and excludes PHP, WordPress, theme, and other-plugin messages.', $html );
+		self::assertStringContainsString( '<p>Temporarily records Booster events.</p>', $html );
+		self::assertStringNotContainsString( 'This temporary capture records Booster events only.', $html );
+		self::assertStringNotContainsString( 'excludes PHP, WordPress, theme, and other-plugin messages', $html );
 		self::assertStringContainsString( '<summary>Logging details</summary>', $html );
 		self::assertStringContainsString( 'define( &#039;WP_DEBUG_DISPLAY&#039;, false );', $html );
+		$this->assert_logging_details_snippet( $html );
 		self::assertStringNotContainsString( 'notice-warning', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading" class="ran-booster-section__title">Logging</h3>', $html );
-		self::assertStringContainsString( 'Booster event capture', $html );
+		self::assertStringNotContainsString( 'Booster event capture', $html );
+		self::assertSame( 0, preg_match( '/<h4[^>]*>\s*Booster event capture/', $html ) );
+		$this->assert_heading_row( $html, 'Inactive', false );
 		self::assertStringNotContainsString( 'Configured capture file:', $html );
 		self::assertStringNotContainsString( 'No temporary logging capture is active.', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="manage-debug-capture"', $html );
@@ -60,6 +65,7 @@ final class DebugCaptureViewTest extends TestCase {
 
 		self::assertStringContainsString( '>Capture active</span>', $html );
 		self::assertStringContainsString( 'until 23 July &lt;18:30&gt;.', $html );
+		$this->assert_heading_row( $html, 'Capture active', true );
 		self::assertStringContainsString( 'for="ran-booster-debug-capture-content"', $html );
 		self::assertStringContainsString( 'id="ran-booster-debug-capture-content"', $html );
 		self::assertStringContainsString( 'readonly', $html );
@@ -105,7 +111,8 @@ final class DebugCaptureViewTest extends TestCase {
 		);
 
 		self::assertStringContainsString( '>Capture retained</span>', $html );
-		self::assertStringContainsString( 'until 24 July &lt;18:30&gt;.', $html );
+		self::assertStringContainsString( 'retained until 24 July &lt;18:30&gt;.', $html );
+		$this->assert_heading_row( $html, 'Capture retained', true );
 		self::assertStringContainsString( '[ran-booster] first &lt;event&gt;', $html );
 		self::assertStringContainsString( '[ran-booster] second &amp; event', $html );
 		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy captured events"', $html );
@@ -161,6 +168,29 @@ final class DebugCaptureViewTest extends TestCase {
 			self::assertStringNotContainsString( 'ran-booster-debug-capture__footer', $html );
 			$this->assert_empty_capture_field( $html );
 		}
+	}
+
+	private function assert_heading_row( string $html, string $badge, bool $has_deadline ): void {
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$row   = '//section[@aria-labelledby="ran-booster-debug-capture-heading"]/div[contains(@class,"ran-booster-debug-capture__header")]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $row . '/h3[@id="ran-booster-debug-capture-heading"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $row . '/h3/following-sibling::*[1][@data-ran-booster-badge][normalize-space()="' . $badge . '"])' ) );
+		self::assertSame( $has_deadline ? 1.0 : 0.0, $xpath->evaluate( 'count(' . $row . '/*[@data-ran-booster-badge]/following-sibling::span[contains(@class,"ran-booster-debug-capture__deadline")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//h4[normalize-space()="Booster event capture"])' ) );
+	}
+
+	private function assert_logging_details_snippet( string $html ): void {
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath   = new \DOMXPath( $document );
+		$details = '//details[@id="ran-booster-logging-details"]';
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $details . '//pre)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//div[@data-support-report-tools]//textarea[@readonly and @rows="3" and @aria-label="Example wp-config.php lines"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//div[@data-support-report-tools]//button[@data-support-report-copy and @aria-label="Copy example wp-config.php lines"])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@data-support-report-tools])' ) );
+		self::assertSame( "define( 'WP_DEBUG', true );\ndefine( 'WP_DEBUG_LOG', true );\ndefine( 'WP_DEBUG_DISPLAY', false );", trim( (string) $xpath->evaluate( 'string(' . $details . '//textarea)' ) ) );
 	}
 
 	private function assert_empty_capture_field( string $html ): void {

@@ -577,7 +577,7 @@ final class BoosterAssetsTest extends TestCase {
 		);
 		self::assertTrue( $GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-packages']['footer'] );
 		self::assertSame(
-			array( 'ran-booster-js', 'ran-booster-announce', 'wp-i18n' ),
+			array( 'ran-booster-js', 'ran-booster-announce', 'ran-booster-notice', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-repository-picker']['dependencies']
 		);
 		self::assertStringEndsWith(

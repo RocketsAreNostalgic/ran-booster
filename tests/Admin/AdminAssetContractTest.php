@@ -995,7 +995,8 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_portability_apply_results_use_word_press_notice_states(): void {
 		$script = $this->asset( 'ran-booster-portability.js' );
 
-		self::assertStringContainsString( "'notice inline notice-'", $script );
+		self::assertStringContainsString( 'window.ranBoosterNotice.create(resultType', $script );
+		self::assertStringNotContainsString( "'notice inline notice-'", $script );
 		self::assertStringContainsString( "result.status === 'failed'", $script );
 		self::assertStringContainsString( "result.status === 'skipped'", $script );
 		self::assertStringContainsString( 'initPortabilityExportDownload();', $script );

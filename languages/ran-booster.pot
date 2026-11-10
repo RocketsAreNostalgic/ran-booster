@@ -1400,7 +1400,7 @@ msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
 #: assets/ran-booster-enhanced-mutations.js:1039
-#: assets/ran-booster-enhanced-mutations.js:1219
+#: assets/ran-booster-enhanced-mutations.js:1230
 msgid "We could not complete that request. Please try again."
 msgstr ""
 

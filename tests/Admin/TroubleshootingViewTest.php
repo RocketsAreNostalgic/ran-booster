@@ -2474,7 +2474,9 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertInstanceOf( \DOMElement::class, $region );
 			self::assertFalse( $region->hasAttribute( 'data-ran-booster-ui-notice' ) );
 			self::assertSame( '-1', $region->getAttribute( 'tabindex' ) );
-			self::assertSame( 'Retained status label', $xpath->evaluate( 'string(./span)', $region ) );
+			// The short Health label lives in its own cell, not in the result row.
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./span)', $region ) );
+			self::assertStringNotContainsString( 'Retained status label', $html );
 			$notices = $xpath->query( './div[@data-ran-booster-ui-notice]', $region );
 			self::assertNotFalse( $notices );
 			self::assertCount( 1, $notices );
@@ -2487,6 +2489,29 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertIsString( $text );
 			self::assertSame( $credential_validation_error ?? $credential_validation_message ?? '', trim( $text ) );
 		}
+	}
+
+	public function test_credential_health_label_is_replaced_out_of_band_only_in_the_validation_response(): void {
+		$credential_health_id    = 'fixture';
+		$credential_health_label = 'Expires <soon>';
+		foreach ( array( false, true ) as $credential_health_label_oob ) {
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider-credential-health-label.php';
+			$html = trim( (string) ob_get_clean() );
+			self::assertSame(
+				'<span id="ran-booster-credential-health-fixture"' . ( $credential_health_label_oob ? ' hx-swap-oob="true"' : '' ) . '>Expires &lt;soon&gt;</span>',
+				$html
+			);
+		}
+
+		$controller = (string) file_get_contents( dirname( __DIR__, 2 ) . '/RAN/Admin/ProviderProfileAdminController.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+		if ( 1 !== preg_match( '/function respond_to_htmx_credential_validation\([\s\S]*?\n\t}\n/', $controller, $m ) ) {
+			self::fail( 'The credential validation HTMX response is missing.' );
+		}
+		$response = $m[0];
+		self::assertStringContainsString( '$credential_health_label_oob   = true;', $response );
+		// The result host is the primary swap; the label follows as an out-of-band fragment.
+		self::assertMatchesRegularExpression( "#require [^;]+'/views/provider-credential-health\\.php';\s+require [^;]+'/views/provider-credential-health-label\\.php';#", $response );
 	}
 
 	public function test_provider_settings_shows_only_pathless_recovery_guidance_when_storage_is_unavailable(): void {
@@ -2716,14 +2741,22 @@ final class TroubleshootingViewTest extends TestCase {
 		$xpath  = new \DOMXPath( $dom );
 		$first  = $xpath->query( '//*[@id="ran-booster-credential-validation-error-profile_one"]' );
 		$second = $xpath->query( '//*[@id="ran-booster-credential-validation-error-profile_two"]' );
-		$health = $xpath->query( '//td[@data-label="Health"]//*[@id="ran-booster-credential-validation-error-profile_one"]' );
+		$health = $xpath->query( '//tbody/tr[@class="ran-booster-provider-management-table__result"][not(@hidden)]/td[@colspan="6"][@class="ran-booster-provider-management-table__result-cell"]/*[@id="ran-booster-credential-validation-error-profile_one"]' );
+		$hidden = $xpath->query( '//tbody/tr[@class="ran-booster-provider-management-table__result"][@hidden]/td/*[@id="ran-booster-credential-validation-error-profile_two"]' );
+		$label  = $xpath->query( '//td[@data-label="Health"]/span[@id="ran-booster-credential-health-profile_one"]' );
 		self::assertInstanceOf( \DOMNodeList::class, $first );
 		self::assertInstanceOf( \DOMNodeList::class, $second );
 		self::assertInstanceOf( \DOMNodeList::class, $health );
 		self::assertCount( 1, $first );
 		self::assertCount( 1, $second );
 		self::assertCount( 1, $health );
-		self::assertStringContainsString( 'Expiry unknown', (string) $xpath->evaluate( 'string(//*[@id="ran-booster-credential-validation-error-profile_one"])' ) );
+		self::assertInstanceOf( \DOMNodeList::class, $hidden );
+		self::assertCount( 1, $hidden );
+		self::assertInstanceOf( \DOMNodeList::class, $label );
+		self::assertCount( 1, $label );
+		self::assertSame( 'Expiry unknown', (string) $xpath->evaluate( 'string(//*[@id="ran-booster-credential-health-profile_one"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//td[@data-label="Health"]//*[@data-ran-booster-admin-mutation-error])' ) );
+		self::assertStringNotContainsString( 'Expiry unknown', (string) $xpath->evaluate( 'string(//*[@id="ran-booster-credential-validation-error-profile_one"])' ) );
 		self::assertStringContainsString( 'Rejected <unsafe>', (string) $xpath->evaluate( 'string(//*[@id="ran-booster-credential-validation-error-profile_one"])' ) );
 		self::assertStringNotContainsString( 'Rejected', (string) $xpath->evaluate( 'string(//*[@id="ran-booster-credential-validation-error-profile_two"])' ) );
 		self::assertStringContainsString( 'Rejected &lt;unsafe&gt;', $html );
@@ -3468,7 +3501,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header[contains(@class,"ran-booster-action-row")]/div/h2[@id="ran-booster-provider-heading"][@tabindex="-1"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//h2[@id="ran-booster-provider-heading"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header/button[@data-modal])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/form[@class="ran-booster-provider-list-controls"]/following-sibling::div[@class="ran-booster-data-table-wrap"]/table[contains(concat(" ", @class, " ")," ran-booster-data-table--rows ")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/form[@class="ran-booster-provider-list-controls"]/following-sibling::div[@class="ran-booster-data-table-wrap"]/table[contains(concat(" ", @class, " ")," ran-booster-provider-management-table ")][not(contains(@class,"--rows"))])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//table[contains(@class,"widefat") or contains(@class,"striped")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/footer)' ) );
 		self::assertStringNotContainsString( 'Saved credentials use Booster encrypted local storage', $html );

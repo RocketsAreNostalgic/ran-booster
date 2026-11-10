@@ -663,6 +663,7 @@ class ProviderProfileAdminController {
 		$credential_validation_message = $message;
 		$credential_validation_error   = $error;
 		$credential_health_label       = __( 'Expiry unknown', 'ran-booster' );
+		$credential_health_label_oob   = true;
 		try {
 			$provider = $this->validation_response_provider;
 			if ( null !== $provider ) {
@@ -675,7 +676,9 @@ class ProviderProfileAdminController {
 			unset( $failure );
 			// The validation result remains useful even when expiry cannot be read back.
 		}
+		// The result fills its own row; the Health cell's short label is replaced out of band.
 		require dirname( __DIR__, 2 ) . '/views/provider-credential-health.php';
+		require dirname( __DIR__, 2 ) . '/views/provider-credential-health-label.php';
 		exit;
 	}
 	private function emit_success_header( ?string $message ): void {

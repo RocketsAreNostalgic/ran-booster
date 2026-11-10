@@ -1048,6 +1048,21 @@ final class AdminAssetContractTest extends TestCase {
 			'/\\.ran-booster-admin \\.ran-booster-data-table th,\\s+\\.ran-booster-admin \\.ran-booster-data-table td \\{[^}]+vertical-align: top;/',
 			$css
 		);
+		// Provider records are row groups: the group owns the stripe and the
+		// divider, and a hidden result row stays hidden in the stacked layout.
+		foreach (
+			array(
+				'/provider-management-table\\s+> tbody \\{\\s+border-block-end: 1px solid var\\(--ran-booster-divider\\);\\s+\\}/',
+				'/provider-management-table\\s+> tbody:last-child \\{\\s+border-block-end: 0;\\s+\\}/',
+				'/provider-management-table\\s+> tbody\\s+\\+ tbody\\s+> tr:first-child\\s+> \\* \\{\\s+border-block-start: 0;\\s+\\}/',
+				'/provider-management-table\\s+> tbody:nth-of-type\\(odd\\)\\s+> tr\\s+> \\* \\{\\s+background: var\\(--ran-booster-surface-subtle\\);\\s+\\}/',
+				'/provider-management-table\\s+> tbody:nth-of-type\\(even\\)\\s+> tr\\s+> \\* \\{\\s+background: transparent;\\s+\\}/',
+				'/\\.ran-booster-admin \\.ran-booster-provider-management-table__result\\[hidden\\] \\{\\s+display: none;\\s+\\}/',
+				'/> \\.ran-booster-provider-management-table__result-cell \\{\\s+padding-block: 0 var\\(--ran-booster-space-12\\);\\s+\\}/',
+			) as $record_rule
+		) {
+			self::assertMatchesRegularExpression( $record_rule, $css );
+		}
 		// Grouped row-per-record tables restart the stripe in every group.
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-data-table--rows\\s+> tbody:nth-of-type\\(even\\)\\s+> tr:nth-child\\(even\\)\\s+> \\* \\{\\s+background: transparent;\\s+\\}/',
@@ -1080,8 +1095,21 @@ final class AdminAssetContractTest extends TestCase {
 			$responsive
 		);
 		// Stacked records come from the shared data-table rules at 782px; the
-		// provider tables keep only the actions cell out of the label grid.
-		self::assertDoesNotMatchRegularExpression( '/provider-management-table\\s+> (?:thead|tbody\\s+> tr) \\{/', $responsive );
+		// provider tables keep only the actions cell out of the label grid and
+		// let each record group own its single divider.
+		self::assertDoesNotMatchRegularExpression( '/provider-management-table\\s+> thead \\{/', $responsive );
+		if ( 1 !== preg_match( '/@media screen and \\(max-width: 782px\\) \\{\\n((?:(?!\\n\\}\\n)[\\s\\S])*)\\n\\}\\n/', $responsive, $stacked ) ) {
+			self::fail( 'The provider tables need their 782px stacking rules.' );
+		}
+		foreach (
+			array(
+				'/provider-management-table\\s+> tbody\\s+\\+ tbody \\{\\s+border-block-start: 0;\\s+\\}/',
+				'/provider-management-table\\s+> tbody\\s+> tr \\{\\s+border-block-end: 0;\\s+\\}/',
+				'/\\.ran-booster-data-table\\s+\\.ran-booster-provider-management-table__result-cell \\{\\s+display: flow-root;\\s+\\}/',
+			) as $stacked_rule
+		) {
+			self::assertMatchesRegularExpression( $stacked_rule, $stacked[1] );
+		}
 		self::assertDoesNotMatchRegularExpression( '/provider-management-table[\\s\\S]{0,80}td\\[data-label\\]/', $responsive );
 		self::assertMatchesRegularExpression(
 			'/@media screen and \\(max-width: 782px\\) \\{\\s+\\.ran-booster-admin\\s+\\.ran-booster-data-table\\.ran-booster-provider-management-table\\s+> tbody\\s+> tr\\s+> \\.ran-booster-provider-management-table__actions \\{\\s+display: block;\\s+\\}[\\s\\S]+__actions::before \\{\\s+content: none;\\s+\\}[\\s\\S]+\\.ran-booster-provider-management-table__actions\\s+> \\.ran-booster-actions \\{\\s+flex-wrap: wrap;\\s+justify-content: flex-start;\\s+white-space: normal;\\s+\\}/',

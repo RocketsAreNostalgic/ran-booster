@@ -499,6 +499,19 @@
 			form.classList.remove('ran-booster-enhanced-mutation-is-busy');
 		}
 
+		// A credential result fills its own table row, shown only with a result.
+		function syncCredentialResultRow(region) {
+			const row = region?.closest?.(
+				'.ran-booster-provider-management-table__result'
+			);
+			if (row) {
+				const notice = region.querySelector?.(
+					'[data-ran-booster-ui-notice]'
+				);
+				row.hidden = region.hidden || !notice || notice.hidden;
+			}
+		}
+
 		function focusError(form, fallbackMessage, region = errorRegion(form)) {
 			if (!region) {
 				return;
@@ -522,6 +535,9 @@
 			).trim();
 			if (!message) {
 				region.hidden = true;
+				if (isCredential) {
+					syncCredentialResultRow(region);
+				}
 				return;
 			}
 			if (fallbackMessage) {
@@ -582,6 +598,7 @@
 					window.ranBoosterNotice.setIntent(notice, 'error');
 					notice.hidden = false;
 				}
+				syncCredentialResultRow(region);
 				region.removeAttribute?.('role');
 				region.focus?.({ preventScroll: true });
 				window.ranBoosterAnnounce(message, 'assertive');
@@ -906,6 +923,15 @@
 			}
 			if (!form || isStaleSourceRequest(event, form)) {
 				return;
+			}
+			if (form.hasAttribute?.('data-ran-booster-credential-validation')) {
+				const result = errorRegion(form);
+				if (event.target && event.target !== result) {
+					// The out-of-band Health label reports its own swap.
+					return;
+				}
+				// Before the success trigger looks for the visible result.
+				syncCredentialResultRow(result);
 			}
 			if (
 				!pendingInteractionState?.xhr ||

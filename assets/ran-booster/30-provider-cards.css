@@ -790,6 +790,63 @@
 	vertical-align: middle;
 }
 
+/*
+ * Each credential or secret is its own row group: the summary row, then an
+ * optional full-width result row. The group owns the divider and the
+ * alternating surface, so a hidden result row never shifts the stripes.
+ */
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-provider-management-table
+	> tbody {
+	border-block-end: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-provider-management-table
+	> tbody:last-child {
+	border-block-end: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-provider-management-table
+	> tbody
+	+ tbody
+	> tr:first-child
+	> * {
+	border-block-start: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-provider-management-table
+	> tbody:nth-of-type(odd)
+	> tr
+	> * {
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-provider-management-table
+	> tbody:nth-of-type(even)
+	> tr
+	> * {
+	background: transparent;
+}
+
+/* Table rows restate hiding; the stacked layout sets rows to block. */
+.ran-booster-admin .ran-booster-provider-management-table__result[hidden] {
+	display: none;
+}
+
+/* The result Notice keeps the cell's inline padding as its indent. */
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-provider-management-table
+	> tbody
+	> tr
+	> .ran-booster-provider-management-table__result-cell {
+	padding-block: 0 var(--ran-booster-space-12);
+}
+
 .ran-booster-admin
 	.ran-booster-provider-management-table--access
 	th:nth-child(1) {

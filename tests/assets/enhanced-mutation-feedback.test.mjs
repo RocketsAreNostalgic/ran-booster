@@ -1028,6 +1028,74 @@ test('credential 422 and 500 failures focus and announce only their own result',
 	}
 });
 
+function credentialResultRowFixture(noticeHidden) {
+	const state = fixture();
+	state.form.hasAttribute = (name) =>
+		name === 'data-ran-booster-credential-validation';
+	const row = { hidden: true };
+	const notice = { hidden: noticeHidden };
+	const result = {
+		textContent: 'The repository provider rejected this credential.',
+		closest: (selector) =>
+			selector === '[data-ran-booster-ui-notice]' ? notice : null,
+	};
+	state.error.hidden = false;
+	state.error.closest = (selector) =>
+		selector === '.ran-booster-provider-management-table__result'
+			? row
+			: null;
+	state.error.querySelector = (selector) =>
+		({
+			'[data-ran-booster-credential-result]': result,
+			'[data-ran-booster-ui-notice]': notice,
+		})[selector] || null;
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	return { state, row, notice };
+}
+
+test('credential failure reveals its result row once, after the out-of-band label swap', () => {
+	const { state, row } = credentialResultRowFixture(false);
+	const detail = {
+		elt: state.swapTarget,
+		requestConfig: { elt: state.form },
+		xhr: { status: 422 },
+	};
+	const afterSwap = state.listeners.get('htmx:afterSwap');
+	afterSwap({ target: { id: 'ran-booster-credential-health-one' }, detail });
+	assert.equal(row.hidden, true);
+	assert.equal(state.error.focusOptions, null);
+	assert.deepEqual(state.announcements, []);
+
+	afterSwap({ target: state.error, detail });
+	assert.equal(row.hidden, false);
+	assert.deepEqual(state.error.focusOptions, { preventScroll: true });
+	assert.deepEqual(state.announcements, [
+		{
+			message: 'The repository provider rejected this credential.',
+			type: 'assertive',
+		},
+	]);
+});
+
+test('credential success shows its result row only while the Notice is visible', () => {
+	for (const noticeHidden of [false, true]) {
+		const { state, row } = credentialResultRowFixture(noticeHidden);
+		state.listeners.get('htmx:afterSwap')({
+			target: state.error,
+			detail: {
+				elt: state.swapTarget,
+				requestConfig: { elt: state.form },
+				xhr: { status: 200 },
+			},
+		});
+		assert.equal(row.hidden, noticeHidden);
+		assert.equal(state.error.focusOptions, null);
+	}
+});
+
 test('credential transport failure preserves expiry and announces the replacement result', () => {
 	const state = fixture();
 	state.form.hasAttribute = (name) =>

@@ -77,7 +77,23 @@ if ( ! defined( 'WPINC' ) ) {
 }
 
 $credential_validation_feedback = isset( $credential_validation_feedback ) && is_array( $credential_validation_feedback ) ? $credential_validation_feedback : null;
-$render_credential_cell         = static function ( array $profile, string $column ) use ( $package_type_labels, $provider, $provider_mutation_fields, $credential_validation_feedback ): void {
+$credential_feedback_for        = static function ( array $profile ) use ( $provider, $credential_validation_feedback ): array {
+	$matches = ( $credential_validation_feedback['provider'] ?? null ) === $provider['code'] && ( $credential_validation_feedback['id'] ?? null ) === (string) $profile['id'];
+
+	return array(
+		'message' => $matches ? ( $credential_validation_feedback['message'] ?? null ) : null,
+		'error'   => $matches ? ( $credential_validation_feedback['error'] ?? null ) : null,
+	);
+};
+$credential_result_visibility   = static function ( array $profile ) use ( $provider, $credential_feedback_for ): ?bool {
+	if ( ! $profile['configured'] || ! $provider['capabilities']['credentials'] ) {
+		return null;
+	}
+	$feedback = $credential_feedback_for( $profile );
+
+	return null !== $feedback['message'] || null !== $feedback['error'];
+};
+$render_credential_cell         = static function ( array $profile, string $column ) use ( $package_type_labels, $provider, $provider_mutation_fields, $credential_feedback_for ): void {
 	if ( 'name' === $column ) {
 		?>
 		<strong><?php echo esc_html( $profile['label'] ); ?></strong>
@@ -107,11 +123,18 @@ $render_credential_cell         = static function ( array $profile, string $colu
 	}
 
 	if ( 'health' === $column ) {
+		$credential_health_id        = (string) $profile['id'];
+		$credential_health_label     = (string) $profile['health_label'];
+		$credential_health_label_oob = false;
+		require __DIR__ . '/provider-credential-health-label.php';
+		return;
+	}
+
+	if ( 'result' === $column ) {
 		$credential_health_id          = (string) $profile['id'];
-		$credential_health_label       = (string) $profile['health_label'];
-		$matches                       = ( $credential_validation_feedback['provider'] ?? null ) === $provider['code'] && ( $credential_validation_feedback['id'] ?? null ) === $credential_health_id;
-		$credential_validation_message = $matches ? ( $credential_validation_feedback['message'] ?? null ) : null;
-		$credential_validation_error   = $matches ? ( $credential_validation_feedback['error'] ?? null ) : null;
+		$feedback                      = $credential_feedback_for( $profile );
+		$credential_validation_message = $feedback['message'];
+		$credential_validation_error   = $feedback['error'];
 		require __DIR__ . '/provider-credential-health.php';
 		return;
 	}
@@ -706,7 +729,8 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 					__( 'No credentials match the current filters.', 'ran-booster' ),
 					$render_credential_cell,
 					$credential_sort_urls,
-					$credential_pagination
+					$credential_pagination,
+					$credential_result_visibility
 				);
 			?>
 		<?php } ?>

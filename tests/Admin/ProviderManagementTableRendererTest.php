@@ -79,7 +79,7 @@ final class ProviderManagementTableRendererTest extends TestCase {
 			$table = $m[2];
 
 			self::assertSame(
-				array( 'ran-booster-data-table', 'ran-booster-data-table--rows', 'ran-booster-provider-management-table', 'ran-booster-provider-management-table--' . $type ),
+				array( 'ran-booster-data-table', 'ran-booster-provider-management-table', 'ran-booster-provider-management-table--' . $type ),
 				explode( ' ', $m[1] )
 			);
 			self::assertStringNotContainsString( 'widefat', $html );
@@ -87,11 +87,55 @@ final class ProviderManagementTableRendererTest extends TestCase {
 			self::assertSame( 1, preg_match_all( '/<caption class="screen-reader-text">[^<]+<\/caption>/', $table ) );
 			self::assertSame( $column_count, substr_count( $table, '<th scope="col">' ) );
 			self::assertSame( $column_count, preg_match_all( '/<th[\s>]/', $table ) );
-			self::assertSame( 1, substr_count( $table, '<tbody>' ) );
+			// One row group per record; without a result callback, no result rows.
+			self::assertSame( 2, substr_count( $table, '<tbody>' ) );
+			self::assertSame( 2, preg_match_all( '/<tr[\s>]/', $table ) - 1 );
+			self::assertStringNotContainsString( '__result', $table );
 			self::assertSame( 2 * $column_count, preg_match_all( '/<td[\s>]/', $table ) );
 			self::assertSame( 2 * $column_count, preg_match_all( '/<td[^>]* data-label="[^"]+"/', $table ) );
 			self::assertSame( 2, substr_count( $table, '<td class="ran-booster-provider-management-table__actions" data-label="Actions"><div class="ran-booster-actions">' ) );
 		}
+	}
+
+	public function test_each_record_is_a_row_group_with_an_optional_full_width_result_row(): void {
+		$result_rows = array();
+		$html        = $this->render(
+			ProviderManagementTableRenderer::ACCESS,
+			array( array( 'value' => 'none' ), array( 'value' => 'hidden' ), array( 'value' => 'shown' ) ),
+			static function ( array $row, string $column ) use ( &$result_rows ): void {
+				if ( 'result' === $column ) {
+					$result_rows[] = $row['value'];
+					?>
+					<div data-result="<?php echo esc_attr( $row['value'] ); ?>"></div>
+					<?php
+				}
+			},
+			'Nothing found.',
+			array(),
+			static fn ( array $row ): ?bool => match ( $row['value'] ) {
+				'hidden' => false,
+				'shown' => true,
+				default => null,
+			}
+		);
+
+		if ( 1 !== preg_match( '/<\/thead>([\s\S]*)<\/table>/', $html, $m ) ) {
+			self::fail( 'The provider table must render its records after the header.' );
+		}
+		$body = $m[1];
+
+		self::assertSame( array( 'hidden', 'shown' ), $result_rows );
+		if ( 3 !== preg_match_all( '/<tbody>([\s\S]*?)<\/tbody>/', $body, $groups ) ) {
+			self::fail( 'Each record must be its own row group.' );
+		}
+		self::assertSame( 1, preg_match_all( '/<tr[\s>]/', $groups[1][0] ) );
+		self::assertSame( 2, preg_match_all( '/<tr[\s>]/', $groups[1][1] ) );
+		self::assertSame( 2, preg_match_all( '/<tr[\s>]/', $groups[1][2] ) );
+		self::assertStringContainsString( '<tr class="ran-booster-provider-management-table__result" hidden><td colspan="6" class="ran-booster-provider-management-table__result-cell">', $groups[1][1] );
+		self::assertStringContainsString( '<tr class="ran-booster-provider-management-table__result"><td colspan="6" class="ran-booster-provider-management-table__result-cell">', $groups[1][2] );
+		self::assertStringContainsString( 'data-result="shown"', $groups[1][2] );
+		// The result cell spans the record without a stacking label.
+		self::assertDoesNotMatchRegularExpression( '/__result-cell"[^>]*data-label/', $body );
 	}
 
 	public function test_it_escapes_the_empty_state_and_does_not_invoke_the_row_callback(): void {
@@ -173,13 +217,15 @@ final class ProviderManagementTableRendererTest extends TestCase {
 	 * @param list<array<string, mixed>> $rows
 	 * @param \Closure(array<string, mixed>, string): void $render_cell
 	 * @param array<string, mixed> $pagination_overrides
+	 * @param (\Closure(array<string, mixed>): ?bool)|null $result_visibility
 	 */
 	private function render(
 		string $type,
 		array $rows,
 		\Closure $render_cell,
 		string $empty_message = 'Nothing found.',
-		array $pagination_overrides = array()
+		array $pagination_overrides = array(),
+		?\Closure $result_visibility = null
 	): string {
 		$pagination = array_merge(
 			array(
@@ -210,7 +256,8 @@ final class ProviderManagementTableRendererTest extends TestCase {
 				array( 'name', 'kind', 'scope', 'usage', 'health' ),
 				'https://example.test/list?orderby=name&next=<unsafe>'
 			),
-			$pagination
+			$pagination,
+			$result_visibility
 		);
 
 		return (string) ob_get_clean();

@@ -123,6 +123,28 @@
 		justify-content: flex-start;
 		white-space: normal;
 	}
+
+	/* Stacked records keep one divider per group, as on wide screens. */
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-provider-management-table
+		> tbody
+		+ tbody {
+		border-block-start: 0;
+	}
+
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-provider-management-table
+		> tbody
+		> tr {
+		border-block-end: 0;
+	}
+
+	/* A block cell keeps the Notice's margin on the record's surface. */
+	.ran-booster-admin
+		.ran-booster-data-table
+		.ran-booster-provider-management-table__result-cell {
+		display: flow-root;
+	}
 }
 
 @media screen and (max-width: 960px) {

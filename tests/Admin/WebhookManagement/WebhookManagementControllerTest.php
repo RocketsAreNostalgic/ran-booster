@@ -1652,7 +1652,18 @@ final class WebhookManagementControllerTest extends TestCase {
 		return array( $gateway, $store );
 	}
 
-	/** @return array<string, mixed> */
+	private function stored_status( OperationStoreFixture $store ): string {
+		if ( null === $store->record ) {
+			self::fail( 'The stored record is missing.' );
+		}
+
+		return $store->record->status();
+	}
+
+	/**
+	 * @param array<string, mixed> $changes
+	 * @return array<string, mixed>
+	 */
 	private function validate_request( array $changes = array() ): array {
 		return $this->request(
 			array_merge(
@@ -1712,7 +1723,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array( 'check' ), array_column( $gateway->mutation_calls, 0 ) );
 		self::assertSame( $code, $redirect['webhook_management_result'] );
 		self::assertSame( 'skipped', $redirect['webhook_management_ping'] );
-		self::assertSame( $status, $store->record->status() );
+		self::assertSame( $status, $this->stored_status( $store ) );
 		self::assertSame( array( 'webhook.check' ), array_column( $connection->inserted, 'operation' ) );
 	}
 
@@ -1732,7 +1743,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 'test_nonce', $gateway->mutation_calls[1][5] );
 		self::assertSame( 'configuration_confirmed', $redirect['webhook_management_result'] );
 		self::assertSame( 'ping_requested', $redirect['webhook_management_ping'] );
-		self::assertSame( 'needs_verification', $store->record->status() );
+		self::assertSame( 'needs_verification', $this->stored_status( $store ) );
 		self::assertSame( array( 'webhook.check', 'webhook.test' ), array_column( $connection->inserted, 'operation' ) );
 	}
 
@@ -1759,7 +1770,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertSame( 2, $store->save_attempts );
 		self::assertSame( 'configuration_drift', $redirect['webhook_management_ping'] );
-		self::assertSame( 'configuration_drift', $store->record->status() );
+		self::assertSame( 'configuration_drift', $this->stored_status( $store ) );
 	}
 
 	public function test_validate_failed_ping_keeps_the_settings_line_and_shows_the_worse_intent(): void {
@@ -1809,7 +1820,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array(), $connection->inserted );
 		self::assertSame( 'invalid_request', $redirect['webhook_management_result'] );
 		self::assertArrayNotHasKey( 'webhook_management_ping', $redirect );
-		self::assertSame( 'configured', $store->record->status() );
+		self::assertSame( 'configured', $this->stored_status( $store ) );
 	}
 
 	public function test_validate_rejects_a_bad_test_nonce_before_the_check_runs(): void {
@@ -1895,8 +1906,12 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-notice ' ), $check );
 		self::assertStringContainsString( 'notice ' . $notice_class . ' inline', $html );
-		self::assertSame( 1, preg_match( '#<p><strong>Settings:</strong> ([^<]*)</p>#', $html, $settings_line ) );
-		self::assertSame( 1, preg_match( '#<p><strong>Ping:</strong> ([^<]*)</p>#', $html, $ping_line ) );
+		if ( 1 !== preg_match( '#<p><strong>Settings:</strong> ([^<]*)</p>#', $html, $settings_line ) ) {
+			self::fail( 'The Settings line is missing.' );
+		}
+		if ( 1 !== preg_match( '#<p><strong>Ping:</strong> ([^<]*)</p>#', $html, $ping_line ) ) {
+			self::fail( 'The Ping line is missing.' );
+		}
 		self::assertStringContainsString( $settings, html_entity_decode( $settings_line[1] ) );
 		self::assertSame( $ping_text, html_entity_decode( $ping_line[1] ) );
 		self::assertSame( 0, preg_match( '/(?<!un)verified/i', $ping_line[1] ), 'A ping request is never verified delivery.' );
@@ -1923,8 +1938,12 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'name="repository_webhook_management_operation" value="validate"' ) );
 		self::assertSame( 0, substr_count( $html, 'value="test"' ) );
 		self::assertSame( 0, substr_count( $html, 'value="check"' ) );
-		self::assertSame( 1, preg_match( '/value="validate" formaction="[^"]*_wpnonce=nonce-for-([0-9a-f]{64})"/', $html, $check_nonce ) );
-		self::assertSame( 1, preg_match( '/name="_wpnonce_test" value="nonce-for-([0-9a-f]{64})"/', $html, $test_nonce ) );
+		if ( 1 !== preg_match( '/value="validate" formaction="[^"]*_wpnonce=nonce-for-([0-9a-f]{64})"/', $html, $check_nonce ) ) {
+			self::fail( 'The Validate formaction carries no Check nonce.' );
+		}
+		if ( 1 !== preg_match( '/name="_wpnonce_test" value="nonce-for-([0-9a-f]{64})"/', $html, $test_nonce ) ) {
+			self::fail( 'The Test nonce field is missing.' );
+		}
 		self::assertSame( hash( 'sha256', 'ran_booster_repository_webhook_check_gh_1234' ), $check_nonce[1] );
 		self::assertSame( hash( 'sha256', 'ran_booster_repository_webhook_test_gh_1234' ), $test_nonce[1] );
 	}

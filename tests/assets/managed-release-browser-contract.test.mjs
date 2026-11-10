@@ -681,7 +681,11 @@ test('managed browser enables the native Core update only for its exact newer in
 	);
 	assert.equal(
 		harness.nodes.get('native-update').textContent,
-		'Install 3.0.0 now'
+		'Update to 3.0.0'
+	);
+	assert.doesNotMatch(
+		harness.nodes.get('native-update').textContent,
+		/Install .* now/
 	);
 	assert.equal(
 		harness.nodes.get('native-update').getAttribute('href'),

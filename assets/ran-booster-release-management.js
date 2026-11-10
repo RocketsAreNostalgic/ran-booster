@@ -132,7 +132,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		/* translators: %s: release version. */
 		nativeUpdate.textContent = sprintf(
 			/* translators: %s: release version. */
-			__('Install %s now', 'ran-booster'),
+			__('Update to %s', 'ran-booster'),
 			version
 		);
 		return true;

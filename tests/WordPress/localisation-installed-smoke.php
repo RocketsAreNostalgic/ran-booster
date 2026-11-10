@@ -71,7 +71,7 @@ foreach (
 		'ran-booster-js'                 => array( 'ran-booster.js', '%d dépôt affiché' ),
 		'ran-booster-packages'           => array( 'ran-booster-packages.js', 'Réinstallation annulée.' ),
 		'ran-booster-portability'        => array( 'ran-booster-portability.js', 'Examen du plan…' ),
-		'ran-booster-release-management' => array( 'ran-booster-release-management.js', 'Installer %s maintenant' ),
+		'ran-booster-release-management' => array( 'ran-booster-release-management.js', 'Mettre à jour vers %s' ),
 		'ran-booster-repository-picker'  => array( 'ran-booster-repository-picker.js', 'Fermer le sélecteur de dépôt' ),
 		'ran-booster-secure-inputs'      => array( 'ran-booster-secure-inputs.js', 'Ajouter %s' ),
 	) as $ran_booster_handle => [ $ran_booster_source_file, $ran_booster_expected_translation ]

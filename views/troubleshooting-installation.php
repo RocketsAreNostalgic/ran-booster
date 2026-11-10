@@ -29,7 +29,7 @@ $storage_labels      = array(
 $components          = is_array( $troubleshooting['components'] ?? null ) ? $troubleshooting['components'] : array();
 ?>
 <section id="ran-booster-installation-details" aria-labelledby="ran-booster-installation-heading">
-<h3 id="ran-booster-installation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Installation', 'ran-booster' ); ?></h3>
+<h3 id="ran-booster-installation-heading" class="ran-booster-section__title ran-booster-section__title--ruled"><?php esc_html_e( 'Installation', 'ran-booster' ); ?></h3>
 <?php
 // Environment.
 ob_start();
@@ -148,7 +148,7 @@ require __DIR__ . '/troubleshooting-installation-entry.php';
 			?>
 </section>
 <section aria-labelledby="ran-booster-components-heading">
-<h3 id="ran-booster-components-heading" class="ran-booster-section__title"><?php esc_html_e( 'Providers and extensions', 'ran-booster' ); ?></h3>
+<h3 id="ran-booster-components-heading" class="ran-booster-section__title ran-booster-section__title--ruled"><?php esc_html_e( 'Providers and extensions', 'ran-booster' ); ?></h3>
 <?php if ( ! empty( $troubleshooting['components_truncated'] ) ) { ?>
 <p><?php esc_html_e( 'Only the first 32 components are shown. Additional components are omitted.', 'ran-booster' ); ?></p>
 	<?php
@@ -206,11 +206,9 @@ foreach ( $components as $component ) {
 	$version_markup = is_string( $version ) && '' !== $version
 		? ' <span class="ran-booster-troubleshooting__version-separator" aria-hidden="true">•</span> <code class="ran-booster-troubleshooting__version">' . esc_html( $version ) . '</code>'
 		: '';
+	// The problem message sits in the header beside the badge, not in the body.
+	$entry_warning = $problem ? esc_html( $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. Review the provider settings before use.', 'ran-booster' ) ) : '';
 	ob_start();
-	if ( $problem ) {
-		?>
-		<p><?php echo esc_html( $github_problem_messages[ $selection_state ?? '' ] ?? __( 'GitHub provider selection needs attention. Review the provider settings before use.', 'ran-booster' ) ); ?></p><?php } ?>
-	<?php
 	if ( array() !== $technical_fields || $has_capabilities ) {
 		?>
 <dl class="ran-booster-troubleshooting__fields-list">

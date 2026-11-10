@@ -724,6 +724,15 @@
 					return this.state.failed ? null : this.props.children;
 				}
 			}
+			const headerProps = {
+				className: 'ran-booster-ui-disclosure__header',
+			};
+			if (heading) {
+				headerProps.render = h('h4');
+				headerProps['aria-describedby'] = heading.querySelector(
+					'[data-ran-booster-ui-disclosure-warning]'
+				)?.id;
+			}
 			let updateOpen;
 			function Disclosure() {
 				const [open, setOpen] = window.React.useState(details.open);
@@ -751,7 +760,7 @@
 					},
 					h(
 						ui.Header,
-						{ className: 'ran-booster-ui-disclosure__header' },
+						headerProps,
 						h(
 							'span',
 							{

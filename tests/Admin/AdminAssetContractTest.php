@@ -502,6 +502,22 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
 	}
 
+	public function test_installation_headings_and_warning_use_the_shared_divider_and_status_tokens(): void {
+		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		$activity   = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+		// The ruled heading reuses the Settings group divider colour, thickness and 8px gap.
+		self::assertMatchesRegularExpression( '/\.ran-booster-section__title--ruled \{\s*display: flex;\s*align-items: center;\s*gap: var\(--ran-booster-space-8\);\s*\}/', $primitives );
+		self::assertMatchesRegularExpression( '/\.ran-booster-section__title--ruled::after \{[^}]*flex: 1 1 auto;[^}]*border-block-start: 1px solid var\(--ran-booster-divider\);/', $primitives );
+		// The header warning uses the existing warning status colour and no new colour.
+		self::assertMatchesRegularExpression( '/__entry-warning \{[^}]*color: var\(--ran-booster-status-warning\);/', $activity );
+		self::assertDoesNotMatchRegularExpression( '/__entry-warning \{[^}]*#[0-9a-f]{3,6}/i', $activity );
+		// The static h4 title resets the WordPress heading margin and size.
+		self::assertMatchesRegularExpression( '/h4\.ran-booster-troubleshooting__entry-title \{[^}]*margin: 0;[^}]*font: inherit;/', $activity );
+		// The spacing above and below the Providers heading is unchanged.
+		self::assertStringContainsString( 'var(--ran-booster-card-gap) + var(--ran-booster-space-8)', $activity );
+		self::assertStringContainsString( 'margin-block-start: var(--ran-booster-card-heading-gap);', $activity );
+	}
+
 	public function test_page_and_card_heading_gaps_use_the_shared_spacing_tokens(): void {
 		$owners = array(
 			array( 'ran-booster/25-admin-primitives.css', '\n\.ran-booster-admin \.ran-booster-page-shell__header \{', 'padding-block: 0 var(--ran-booster-card-gap);' ),
@@ -543,7 +559,7 @@ final class AdminAssetContractTest extends TestCase {
 			'portability.php'                  => array( 'ran-booster-portability-mode-heading' ),
 		) as $view => $ids ) {
 			foreach ( $ids as $id ) {
-				self::assertMatchesRegularExpression( '/<h3 id="' . $id . '" class="ran-booster-section__title"/', $this->view( $view ), $view . ' ' . $id );
+				self::assertMatchesRegularExpression( '/<h3 id="' . $id . '" class="ran-booster-section__title( ran-booster-section__title--ruled)?"/', $this->view( $view ), $view . ' ' . $id );
 			}
 		}
 	}

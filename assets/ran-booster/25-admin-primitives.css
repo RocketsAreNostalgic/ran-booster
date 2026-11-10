@@ -560,6 +560,24 @@
 	line-height: 1.5;
 }
 
+/*
+ * A ruled section heading runs the Settings group divider (same colour,
+ * thickness and 8px gap as the group legend) from the end of the text to the
+ * edge of the row. The heading stays a real heading element.
+ */
+
+.ran-booster-admin .ran-booster-section__title--ruled {
+	display: flex;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-section__title--ruled::after {
+	content: "";
+	flex: 1 1 auto;
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
 .ran-booster-admin .ran-booster-section__description {
 	margin-block: var(--ran-booster-card-heading-gap) 0;
 	margin-inline: 0;

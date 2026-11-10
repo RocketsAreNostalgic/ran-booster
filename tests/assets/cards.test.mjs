@@ -857,7 +857,11 @@ test('Disclosure heading slot fills the header, keeps one accessible name and re
 	f.run();
 	f.flush();
 	assert.equal(host.getAttribute('data-ran-booster-ui-mounted'), '');
-	const [title, label, badge] = f.tree().children[0].children;
+	const header = f.tree().children[0];
+	const [title, label, badge] = header.children;
+	// The header wrapper becomes a real h4 around the toggle, with no description without a warning.
+	assert.equal(header.props.render.type, 'h4');
+	assert.equal(header.props['aria-describedby'], undefined);
 	// The heading slot replaces the plain title and is hidden from assistive technology.
 	assert.equal(title.props['aria-hidden'], 'true');
 	assert.deepEqual(title.children, [null]);
@@ -872,6 +876,53 @@ test('Disclosure heading slot fills the header, keeps one accessible name and re
 	assert.equal(host.firstChild, details);
 	assert.deepEqual(summary.children, [heading, meta]);
 	assert.equal(details.children[1], body);
+});
+
+test('Disclosure heading slot warning describes the toggle and a plain disclosure keeps its header unchanged', () => {
+	const build = (withHeading, withWarning) => {
+		const f = fixture({ disclosureRuntime: true });
+		const host = new f.Node('div'),
+			details = new f.Node('details'),
+			summary = new f.Node('summary'),
+			heading = new f.Node('span'),
+			warning = new f.Node('span'),
+			body = new f.Node('div');
+		host.setAttribute(
+			'data-ran-booster-ui-disclosure',
+			'installation-section'
+		);
+		details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+		summary.setAttribute('aria-label', 'GitHub');
+		heading.setAttribute('data-ran-booster-ui-disclosure-heading', '');
+		warning.setAttribute('data-ran-booster-ui-disclosure-warning', '');
+		warning.setAttribute('id', 'gh-warning');
+		warning.textContent = 'Review provider settings.';
+		body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+		body.appendChild(new f.Node('a'));
+		if (withHeading) {
+			if (withWarning) {
+				heading.appendChild(warning);
+			}
+			summary.appendChild(heading);
+		} else {
+			summary.textContent = 'GitHub';
+		}
+		details.appendChild(summary);
+		details.appendChild(body);
+		host.appendChild(details);
+		f.doc.body.appendChild(host);
+		f.run();
+		f.flush();
+		return f.tree().children[0];
+	};
+	const warned = build(true, true);
+	assert.equal(warned.props.render.type, 'h4');
+	assert.equal(warned.props['aria-describedby'], 'gh-warning');
+	// The accessible name stays the single label; the warning is only the description.
+	assert.deepEqual(warned.children[1].children, ['GitHub']);
+	const plain = build(false, false);
+	assert.deepEqual(Object.keys(plain.props), ['className']);
+	assert.equal(plain.props.className, 'ran-booster-ui-disclosure__header');
 });
 
 test('Mounted disclosures report open state by id and honour remembered state when remounted', () => {

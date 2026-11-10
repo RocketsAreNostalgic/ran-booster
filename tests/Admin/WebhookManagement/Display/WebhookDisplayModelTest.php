@@ -151,6 +151,17 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertNull( ( new WebhookDisplayModel( $this->never_contacting_facade(), $this->store_returning( null ) ) )->manual_delivery_time( 'gh', 'repo-42' ) );
 	}
 
+	public function test_manual_notice_is_an_info_notice_with_heading_and_the_delivery_sentence(): void {
+		self::assertSame(
+			array(
+				'class'   => 'notice-info',
+				'heading' => 'Manual webhook detected',
+				'message' => 'A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.',
+			),
+			WebhookDisplayModel::manual_notice( '2026-08-21T09:30:15Z' )
+		);
+	}
+
 	public function test_manual_history_row_reads_manual_webhook_and_other_rows_are_unchanged(): void {
 		$method  = new ReflectionMethod( WebhookDisplayModel::class, 'history_details' );
 		$display = $this->display();

@@ -96,6 +96,15 @@ final class WebhookDisplayModel {
 		return __( 'Manual webhook', 'ran-booster' );
 	}
 
+	/** @return array{class:string,heading:string,message:string} Static informational notice for the Manual webhook state. */
+	public static function manual_notice( string $received_at ): array {
+		return array(
+			'class'   => 'notice-info',
+			'heading' => __( 'Manual webhook detected', 'ran-booster' ),
+			'message' => self::manual_step_message( $received_at ),
+		);
+	}
+
 	public static function manual_step_message( string $received_at ): string {
 		return sprintf(
 			/* translators: %s: UTC timestamp of the last verified signed webhook delivery. */
@@ -235,7 +244,8 @@ final class WebhookDisplayModel {
 		$status                   = null === $record ? null : $this->projected_status( $record );
 		$credentials              = $this->credential_choices( $provider_code );
 		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, array() !== $credentials ) : array();
-		$manual                   = null !== $this->manual_delivery_time( $provider_code, $repository_id );
+		$manual_at                = $this->manual_delivery_time( $provider_code, $repository_id );
+		$manual                   = null !== $manual_at;
 		$operation_models         = $this->operation_models( $operations, $provider_code, $provider_label, $repository_id, null !== $record && ! $record->requires_hook_identification(), $this->disabled_reasons( $record, $status, array() !== $credentials, null !== $recovery, $provider_label, $manual ) );
 
 		$help = null;
@@ -299,6 +309,7 @@ final class WebhookDisplayModel {
 			'interaction_request'         => AdminInteractionRequest::provider_repositories( 'repository-webhook-management:manage-webhook', $this->panel_url( $return_url, $repository_id ), 'repository-webhook-management-error' ),
 			'result'                      => null === $result_code ? null : ( null === $ping_code ? $this->result_presentation( $result_code, $recovery, $remediation ) : $this->validation_presentation( $result_code, $ping_code, $remediation ) ),
 			'recovery_warning'            => $recovery_warning,
+			'manual_notice'               => null === $manual_at ? null : self::manual_notice( $manual_at ),
 			'management_credential_id'    => null === $record ? null : $record->management_credential_id(),
 			'credential_choices'          => $credentials,
 			'webhook_profile_choices'     => null === $record ? $this->webhook_profile_choices( $provider_code, $repository_id ) : array(),

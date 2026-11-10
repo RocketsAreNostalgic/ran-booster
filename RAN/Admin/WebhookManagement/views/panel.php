@@ -11,6 +11,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 $disabled         = true === ( $model['disabled'] ?? false );
 $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?? false );
 $result_notices   = array_values( array_filter( array( $model['result'] ?? null, $model['recovery_warning'] ?? null ), 'is_array' ) );
+// The persistent Manual webhook notice is static page content; a fresh operation result or recovery notice replaces it for this load.
+if ( array() === $result_notices && is_array( $model['manual_notice'] ?? null ) ) {
+	$result_notices = array( $model['manual_notice'] );
+}
 ?>
 <div class="ran-booster-repository-webhook-management">
 	<div class="ran-booster-repository-webhook-management__panel">

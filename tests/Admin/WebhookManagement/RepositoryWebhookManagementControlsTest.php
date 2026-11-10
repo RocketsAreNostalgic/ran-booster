@@ -497,11 +497,104 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		};
 
 		self::assertSame(
-			'is-ok|A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.',
+			'is-ok|Set up outside Booster.',
 			$step( $render( array( '1234' => '2026-08-21 09:30:15' ) ) )
 		);
 		self::assertSame( 'is-pending|Booster has not set up a webhook for this repository.', $step( $render( array() ) ) );
 		self::assertSame( 'is-pending|Booster has not set up a webhook for this repository.', $step( $render( array( '9999' => '2026-08-21 09:30:15' ) ) ) );
+	}
+
+	public function test_manual_webhook_notice_renders_under_the_group_as_static_info_content(): void {
+		$panel  = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
+		$model  = $this->webhook_panel_model( false, false, array() );
+		$sentence = 'A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.';
+
+		$model['manual_notice'] = \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::manual_notice( '2026-08-21T09:30:15Z' );
+		$html                   = (string) $panel->invoke( $this->controls(), $model );
+		if ( 1 !== preg_match( '/role="group".*?<\/button>.*?data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-repository-webhook-management__result">\s*(<div class="notice notice-info inline [^"]*is-info"[^>]*data-ran-booster-ui-notice-intent="info">.*?<\/div>\s*<svg.*?<\/svg><\/div>)\s*<\/div>/s', $html, $m ) ) {
+			self::fail( 'The Manual webhook notice must be the info result notice directly after the busy status region.' );
+		}
+		self::assertStringContainsString( '<p><strong>Manual webhook detected</strong></p>', $m[1] );
+		self::assertStringContainsString( '<p>' . $sentence . '</p>', $m[1] );
+		self::assertStringContainsString( 'ran-wp-ui-notice__icon', $m[1] );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-notice-content' ) );
+		// Static page content: no live region of its own beyond the existing busy status region.
+		self::assertSame( 1, substr_count( $html, 'role="status"' ) );
+		self::assertSame( 1, substr_count( $html, 'aria-live' ) );
+		self::assertStringNotContainsString( 'role="alert"', $html );
+
+		// An operation result or recovery notice replaces it for this load.
+		$model['result'] = array(
+			'class'   => 'notice-success',
+			'heading' => 'Webhook validated',
+			'message' => 'Operation done.',
+		);
+		$replaced        = (string) $panel->invoke( $this->controls(), $model );
+		self::assertStringContainsString( 'Operation done.', $replaced );
+		self::assertStringNotContainsString( 'Manual webhook detected', $replaced );
+		self::assertStringNotContainsString( $sentence, $replaced );
+		$model['result']           = null;
+		$model['recovery_warning'] = array(
+			'class'   => 'notice-warning',
+			'message' => 'Check the provider.',
+		);
+		self::assertStringNotContainsString( 'Manual webhook detected', (string) $panel->invoke( $this->controls(), $model ) );
+
+		// Not manual: no notice and no result wrapper.
+		$none = (string) $panel->invoke( $this->controls(), $this->webhook_panel_model( false, false, array() ) );
+		self::assertStringNotContainsString( 'Manual webhook detected', $none );
+		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__result', $none );
+	}
+
+	public function test_display_model_panel_carries_the_manual_notice_only_for_the_manual_state(): void {
+		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
+		$render = function ( array $deliveries ): string {
+			$facade = $this->createMock( WebhookAssistanceFacade::class );
+			$facade->method( 'readiness' )->willReturn( new AssistanceReadiness( array(), 'https://example.test/webhook', array() ) );
+			$controls = new RepositoryWebhookManagementControls(
+				$facade,
+				$this->createMock( AdminInteractionFacade::class ),
+				new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'fixture-provider', 'Fixture Forge' ) ) ),
+				dirname( __DIR__, 3 ) . '/',
+				'https://example.test/wp-content/plugins/ran-booster/',
+				$this->package_authorities(),
+				verified_deliveries: static fn (): array => $deliveries
+			);
+			$controls->register();
+			ob_start();
+			$controls->render_repository_webhook_setup( 'fixture-provider', '1234', 'https://example.test/repository', true );
+
+			return (string) ob_get_clean();
+		};
+
+		$manual = $render( array( '1234' => '2026-08-21 09:30:15' ) );
+		self::assertSame( 1, substr_count( $manual, 'Manual webhook detected' ) );
+		self::assertSame( 1, substr_count( $manual, 'A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.' ) );
+		self::assertSame( 1, preg_match( '/role="group".*?data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-repository-webhook-management__result">\s*<div class="notice notice-info /s', $manual ) );
+		foreach ( array( array(), array( '9999' => '2026-08-21 09:30:15' ) ) as $deliveries ) {
+			$other = $render( $deliveries );
+			self::assertStringNotContainsString( 'Manual webhook detected', $other );
+			self::assertStringNotContainsString( 'A signed delivery was last received', $other );
+		}
+	}
+
+	public function test_push_to_deploy_badge_reads_manual_webhook_only_for_the_manual_state_in_an_active_layout(): void {
+		$in_use  = array( 'package_summaries' => array( array( 'source' => 'branch' ) ) );
+		$badge   = static function ( string $html ): string {
+			if ( 1 !== preg_match( '/<h4 id="ran-booster-repository-webhook-automation-heading"[^>]*>Push-to-deploy<span[^>]*class="[^"]*is-([a-z]+)-intent[^"]*"[^>]*>([^<]*)<\/span><\/h4>/', $html, $match ) ) {
+				self::fail( 'The Push-to-deploy badge is missing.' );
+			}
+
+			return $match[2] . '|' . $match[1];
+		};
+		// Receiver not ok would be Not ready; the manual state takes priority.
+		$states = array( 'is-pending', 'is-ok', 'is-warning', 'is-ok' );
+		self::assertSame( 'Manual webhook|stable', $badge( $this->render_branch_section( $states, true, $in_use, true ) ) );
+		self::assertSame( 'Not ready|medium', $badge( $this->render_branch_section( $states, true, $in_use, false ) ) );
+		self::assertSame( 'Active|stable', $badge( $this->render_branch_section( array( 'is-ok', 'is-ok', 'is-ok', 'is-ok' ), true, $in_use, false ) ) );
+		// Releases-only inactive layout keeps Not in use even when a manual delivery exists.
+		$releases = array( 'package_summaries' => array( array( 'source' => 'release_asset' ) ) );
+		self::assertSame( 'Not in use|none', $badge( $this->render_branch_section( $states, false, $releases, true ) ) );
 	}
 
 	public function test_management_history_row_reads_manual_webhook_for_a_verified_delivery(): void {
@@ -789,10 +882,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	 * @param list<string> $states
 	 * @param array<array-key,mixed> $row
 	 */
-	private function render_branch_section( array $states, bool $in_use, array $row ): string {
+	private function render_branch_section( array $states, bool $in_use, array $row, bool $manual = false ): string {
 		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
 		ob_start();
-		$method->invoke( $this->controls(), $this->branch_items( $states ), '<div>panel</div>', $in_use, array(), true, false, $row );
+		$method->invoke( $this->controls(), $this->branch_items( $states ), '<div>panel</div>', $in_use, array(), true, false, $row, $manual );
 
 		return (string) ob_get_clean();
 	}

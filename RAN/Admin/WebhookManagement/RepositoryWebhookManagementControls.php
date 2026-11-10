@@ -238,14 +238,19 @@ final class RepositoryWebhookManagementControls {
 				);
 			}
 		}
+		$manual_at        = $this->display->manual_delivery_time( $provider_code, $repository_id );
 		$operation_notice = false;
 		if ( is_array( $model ) ) {
+			// The unavailable panel is built without the Manual webhook state, so carry its notice here too.
+			if ( null !== $manual_at && ! is_array( $model['manual_notice'] ?? null ) ) {
+				$model['manual_notice'] = WebhookDisplayModel::manual_notice( $manual_at );
+			}
 			$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $model['repository'] );
 			// The panel renders the operation result directly under the Webhook group; the section only keeps the disclosure open for it.
 			$operation_notice = is_array( $model['result'] ?? null ) || is_array( $model['recovery_warning'] ?? null );
 		}
 
-		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $has_branch_consumer, $notices, true, $operation_notice, $row );
+		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $has_branch_consumer, $notices, true, $operation_notice, $row, null !== $manual_at );
 		return $model['webhooks_url'] ?? null;
 	}
 
@@ -320,7 +325,7 @@ final class RepositoryWebhookManagementControls {
 	 * @param list<array{label:string,message:string,state:string}> $items
 	 * @param list<array{class:string,message:string,heading?:string,details?:list<string>}> $notices
 	 */
-	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true, bool $operation_notice = false, array $row = array() ): void {
+	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true, bool $operation_notice = false, array $row = array(), bool $manual = false ): void {
 		$usage    = RepositoryPublishing::usage( $row );
 		$in_use   = is_array( $row['package_summaries'] ?? null ) && array() !== $row['package_summaries'] ? 0 < $usage['branch'] : $has_branch_consumer;
 		$link     = RepositoryPublishing::settings_link( $row );
@@ -332,7 +337,7 @@ final class RepositoryWebhookManagementControls {
 				<?php echo RepositoryPublishing::header( __( 'Branch publishing', 'ran-booster' ), 'ran-booster-repository-webhook-heading', $in_use, $link['url'], $link['label'], $in_use ? __( 'Manual updates work without setting up Push-to-deploy.', 'ran-booster' ) : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Shared header escapes its parts. ?>
 			<div class="ran-booster-settings-section__body">
 				<div class="ran-booster-repository-publishing__tier">
-				<h4 id="ran-booster-repository-webhook-automation-heading" class="ran-booster-repository-publishing__subheading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?><?php echo $this->automation_badge( $items, $in_use ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes its label. ?></h4>
+				<h4 id="ran-booster-repository-webhook-automation-heading" class="ran-booster-repository-publishing__subheading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?><?php echo $this->automation_badge( $items, $in_use, $manual ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes its label. ?></h4>
 				<p class="ran-booster-section__description ran-booster-repository-publishing__strapline"><?php esc_html_e( 'Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p>
 				<?php if ( array() !== $notices ) { ?>
 				<div class="ran-booster-repository-webhook-management__notices">
@@ -372,13 +377,17 @@ final class RepositoryWebhookManagementControls {
 	 *
 	 * Items are demand [0], secret [1], receiver [2], hook [3]. Not in use: neutral Not in use.
 	 * Receiver or secret not ok, or hook a warning: amber Not ready. Hook and automatic packages ok: green Active.
+	 * Manual webhook (verified delivery, no Booster record) in use: green Manual webhook, ahead of the readiness badges.
 	 * Otherwise (receiver and secret ok, hook or automatic packages not yet): neutral Ready.
 	 *
 	 * @param list<array{label:string,message:string,state:string}> $items
 	 */
-	private function automation_badge( array $items, bool $in_use ): string {
+	private function automation_badge( array $items, bool $in_use, bool $manual = false ): string {
 		if ( ! $in_use ) {
 			return StatusBadge::for_intent( __( 'Not in use', 'ran-booster' ), 'none' );
+		}
+		if ( $manual ) {
+			return StatusBadge::for_intent( WebhookDisplayModel::manual_status_label(), StatusBadge::INTENTS['ok'] );
 		}
 		$state = static fn ( int $index ): string => $items[ $index ]['state'] ?? 'is-pending';
 		if ( 'is-ok' !== $state( 2 ) || 'is-ok' !== $state( 1 ) || 'is-warning' === $state( 3 ) ) {
@@ -513,7 +522,7 @@ final class RepositoryWebhookManagementControls {
 				'message' => null === $record
 					? ( null === $manual_at
 						? __( 'Booster has not set up a webhook for this repository.', 'ran-booster' )
-						: WebhookDisplayModel::manual_step_message( $manual_at ) )
+						: __( 'Set up outside Booster.', 'ran-booster' ) )
 					: ( $record_healthy
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */

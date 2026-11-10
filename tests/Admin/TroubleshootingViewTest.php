@@ -1959,8 +1959,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$setup_html    = (string) ob_get_clean();
 		$provider_task = 'repositories';
 
-		self::assertStringContainsString( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', $setup_html );
-		self::assertStringContainsString( 'unique generated repository secret', $setup_html );
+		self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $setup_html );
+		self::assertStringContainsString( 'Keep this URL reachable: do not cache, challenge or transform its requests.', $setup_html );
+		self::assertStringContainsString( 'Use a unique generated secret for each repository.', $setup_html );
 		self::assertStringContainsString( 'Git provider request ID in Booster Activity', $setup_html );
 		self::assertStringContainsString( 'tab=documentation#ran-booster-push-to-deploy', html_entity_decode( $setup_html ) );
 
@@ -2335,13 +2336,29 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '~<button type="submit" [^>]*data-ran-booster-receiver-submit data-set-label="Set up webhook" data-manage-label="Manage webhook">Set up webhook</button>~', $form[1] );
 		self::assertStringNotContainsString( 'Pushes are ignored', $html );
 
-		// Order: the tabs, the automated panel, then the manual panel with the security notice and Payload URL.
-		$tabs     = (int) strpos( $html, 'role="tablist"' );
-		$auto     = (int) strpos( $html, 'data-ran-booster-receiver-panel="automated"' );
-		$manual   = (int) strpos( $html, 'data-ran-booster-receiver-panel="manual"' );
-		$security = (int) strpos( $html, 'Webhook signatures authorize deployment' );
-		$payload  = (int) strpos( $html, 'Payload URL' );
-		self::assertTrue( $tabs > 0 && $tabs < $auto && $auto < $manual && $manual < $security && $security < $payload );
+		// Order: the receiver sentence, the tabs, the automated panel (line before the select), then the manual panel (line first) and Payload URL.
+		$receiver  = (int) strpos( $html, 'Keep this URL reachable: do not cache, challenge or transform its requests.' );
+		$tabs      = (int) strpos( $html, 'role="tablist"' );
+		$auto      = (int) strpos( $html, 'data-ran-booster-receiver-panel="automated"' );
+		$auto_line = (int) strpos( $html, 'Choose a repository and Booster sets up its webhook for Push-to-Deploy.' );
+		$select    = (int) strpos( $html, '<select id="ran-booster-receiver-repository"' );
+		$manual    = (int) strpos( $html, 'data-ran-booster-receiver-panel="manual"' );
+		$man_line  = (int) strpos( $html, 'Create the webhook yourself at your Git provider with these values. Use a unique generated secret for each repository.' );
+		$payload   = (int) strpos( $html, 'Payload URL' );
+		self::assertTrue( $receiver > 0 && $receiver < $tabs && $tabs < $auto && $auto < $auto_line && $auto_line < $select && $select < $manual && $manual < $man_line && $man_line < $payload );
+		self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $html );
+		// The receiver sentence sits outside both tabpanels, and its Learn more link is the external operations guide.
+		self::assertSame( 2, preg_match_all( '~<div id="ran-booster-receiver-panel-[^"]*"[^>]*role="tabpanel"~', $html ) );
+		self::assertMatchesRegularExpression( '~<p class="ran-booster-section__description">Keep this URL reachable: do not cache, challenge or transform its requests\. <a href="[^"]+" target="_blank" rel="noopener noreferrer">Learn more<span class="screen-reader-text"> about keeping the webhook receiver URL reachable</span> <span aria-hidden="true">~', $html );
+		self::assertMatchesRegularExpression( '~<div id="ran-booster-receiver-panel-manual"[^>]*>\s*<p class="ran-booster-section__description">Create the webhook yourself~', $html );
+		self::assertMatchesRegularExpression( '~data-ran-booster-receiver-panel="automated">\s*<p class="ran-booster-section__description">Choose a repository and Booster sets up its webhook for Push-to-Deploy\.</p>\s*<form~', $html );
+		// Standing guidance is plain description text, never a notice.
+		if ( preg_match_all( '~<div class="notice [^"]*ran-wp-ui-notice[^"]*".*?</div>\s*(?:<svg.*?</svg>\s*)?</div>~s', $html, $notices ) ) {
+			foreach ( $notices[0] as $notice_html ) {
+				self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $notice_html );
+				self::assertStringNotContainsString( 'do not cache, challenge or transform', $notice_html );
+			}
+		}
 		self::assertStringContainsString( 'This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories.', $html );
 
 		$empty = $this->render_provider_panels( $ready, array() )['setup'];
@@ -3165,7 +3182,9 @@ final class TroubleshootingViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
 			$html = (string) ob_get_clean();
-			self::assertMatchesRegularExpression( '~<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info">\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p><strong>Webhook signatures authorize deployment; they do not protect your host from traffic\.</strong> Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback\.</p>\s*</div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>(?:<path [^>]*></path>)+</svg>\s*</div>~', $html );
+			self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $html );
+			self::assertStringNotContainsString( 'notice-info', $html );
+			self::assertSame( 1, substr_count( $html, 'Keep this URL reachable: do not cache, challenge or transform its requests.' ) );
 			self::assertStringNotContainsString( 'notice-warning', $html );
 			// The troubleshooting sentence and the operations guide moved into the manual setup disclosure (inline when the provider has no setup metadata).
 			$guidance = 1 === preg_match( '~<details.*?</details>~s', $html, $disclosure ) ? $disclosure[0] : $html;
@@ -3584,7 +3603,8 @@ final class TroubleshootingViewTest extends TestCase {
 				self::assertSame( '', $xpath->evaluate( 'normalize-space(//button[@data-webhook-url-copy])' ) );
 				self::assertSame( 2.0, $xpath->evaluate( 'count(//button[@data-webhook-url-copy]/svg[@aria-hidden="true"][@focusable="false"])' ) );
 				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-webhook-url-status][@role="status"][@aria-live="polite"][@aria-atomic="true"])' ) );
-				self::assertStringContainsString( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', $html );
+				self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $html );
+				self::assertStringContainsString( 'Keep this URL reachable: do not cache, challenge or transform its requests.', $html );
 			}
 		}
 	}

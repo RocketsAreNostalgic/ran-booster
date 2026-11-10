@@ -612,6 +612,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								</div>
 							</div>
 								<?php $render_webhook_delivery_notice(); ?>
+								<p class="ran-booster-section__description"><?php esc_html_e( 'Keep this URL reachable: do not cache, challenge or transform its requests.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Learn more', 'ran-booster' ); ?><span class="screen-reader-text"> <?php esc_html_e( 'about keeping the webhook receiver URL reachable', 'ran-booster' ); ?></span> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 								<?php
 								$receiver_rows = array_values(
 									array_filter(
@@ -633,6 +634,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 									</ul>
 								</div>
 								<div id="ran-booster-receiver-panel-automated" class="ran-booster-provider-receiver__panel" role="tabpanel" aria-labelledby="ran-booster-receiver-tab-automated" data-ran-booster-receiver-panel="automated">
+									<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a repository and Booster sets up its webhook for Push-to-Deploy.', 'ran-booster' ); ?></p>
 									<form class="ran-booster-provider-receiver__form" method="get" action="<?php echo esc_url( (string) strtok( $overview_url, '?' ) ); ?>">
 										<?php foreach ( $receiver_form as $receiver_field => $receiver_value ) { ?>
 											<?php if ( is_scalar( $receiver_value ) ) { ?>
@@ -674,12 +676,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								</div>
 								<?php } ?>
 								<div<?php echo $receiver_tabs ? ' id="ran-booster-receiver-panel-manual" class="ran-booster-provider-receiver__panel hide-if-js" role="tabpanel" aria-labelledby="ran-booster-receiver-tab-manual" data-ran-booster-receiver-panel="manual"' : ' class="ran-booster-provider-receiver__panel"'; ?>>
-							<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info">
-								<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-									<p><strong><?php esc_html_e( 'Webhook signatures authorize deployment; they do not protect your host from traffic.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Use a unique generated repository secret, rotate or disable a suspected secret, and do not cache, challenge or transform this callback.', 'ran-booster' ); ?></p>
-								</div>
-								<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?>
-							</div>
+							<p class="ran-booster-section__description"><?php esc_html_e( 'Create the webhook yourself at your Git provider with these values. Use a unique generated secret for each repository.', 'ran-booster' ); ?></p>
 							<dl class="ran-booster-webhook-endpoint ran-booster-summary-grid">
 								<div>
 									<dt id="ran-booster-webhook-url-label"><?php esc_html_e( 'Payload URL', 'ran-booster' ); ?></dt>

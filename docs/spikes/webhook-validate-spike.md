@@ -80,7 +80,7 @@ The controller adds one redirect argument, `webhook_management_ping` (for exampl
 
 ## 3. Tests (all new tests pass)
 
-`tests/Admin/WebhookManagement/WebhookValidateSpikeTest.php` (19 tests, 123 assertions) plus one facade test in `tests/AddOn/WebhookAssistance/AssistedWebhookFacadeTest.php`.
+`tests/Admin/WebhookManagement/WebhookValidateSpikeTest.php` (20 tests) plus one facade test in `tests/AddOn/WebhookAssistance/AssistedWebhookFacadeTest.php`.
 
 | Case | Result asserted |
 |---|---|
@@ -95,6 +95,7 @@ The controller adds one redirect argument, `webhook_management_ping` (for exampl
 | ping step lacks permission (`repository_identity_unconfirmed`) | partial: configuration confirmed, ping failed |
 | provider throws on the ping step | `operation_failed`, configuration confirmed, ping `unknown` |
 | record changed between steps | `record_conflict`, ping skipped (`record_changed`) |
+| site not ready at the start (no target) | `invalid_request`, no provider calls (same as Check and Test today) |
 | credential missing | `invalid_token`, no provider calls, no `validation` key |
 | Activity, ping requested | exactly one insert; one terminal update, `succeeded`, `configuration_confirmed+ping_requested` |
 | Activity, skipped | one insert; terminal `failed` with the skip facts |
@@ -105,7 +106,7 @@ The controller adds one redirect argument, `webhook_management_ping` (for exampl
 | characterization: clean Check | `successful` false, `inline_safe` false (existing) |
 | facade: Validate nonce | accepted for `check` and `test`; rejected for `reconfigure` and `remove` |
 
-Gates: see the commit log and the report. Full `tests/Admin`, `tests/AddOn`, `tests/WordPress/ManagedReleaseRuntimeTest.php`: 1838 tests pass. `tests/Webhook`, `tests/RepositoryProvider`, `tests/Activity`, `tests/Troubleshooting`, `tests/Quality`: 5 failures, identical on an untouched `integration/beta.44` worktree (environmental: `StandardsCoverageTest`, two `ProductionAnalysisCoverageTest`, `GitHubExternalExtensionParityTest`, `GitHubReplacementFixtureGuardTest`).
+Gates: phpcs zero errors and warnings on changed files; PHPStan (`scripts/analyze-development.php`) 0 `[ERROR]`, final `[OK] No errors`, exit 0. Full `tests/Admin`, `tests/AddOn`, `tests/WordPress/ManagedReleaseRuntimeTest.php`: 1838 tests pass. `tests/Webhook`, `tests/RepositoryProvider`, `tests/Activity`, `tests/Troubleshooting`, `tests/Quality`: 5 failures, identical on an untouched `integration/beta.44` worktree (environmental: `StandardsCoverageTest`, two `ProductionAnalysisCoverageTest`, `GitHubExternalExtensionParityTest`, `GitHubReplacementFixtureGuardTest`).
 
 ## 4. Size
 

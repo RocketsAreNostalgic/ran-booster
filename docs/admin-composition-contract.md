@@ -152,6 +152,18 @@ gutters. Do not add a universal white outer wrapper. Keep each group's wording,
 controls, statuses, help, disclosures, internal borders, columns and arrangement
 intact; outer separation does not authorize an interior redesign.
 
+Edit Plugin/Theme shows the saved Git provider and repository read-only,
+because both are fixed once a package is installed. The repository name links
+to the repository on its Git provider when the stored provider supplies a
+repository URL base, and stays plain text otherwise; the repository picker is
+not offered. Hidden inputs carry the saved values so a save still validates
+them. Credential, branch, subdirectory and update settings stay editable, and
+release-managed packages keep their existing locks. Install Plugin/Theme keeps
+both fields editable. To use a different provider or repository, choose
+**Stop managing** in the Danger zone, then install or adopt the package again.
+A save that still names a different provider or repository is refused with
+HTTP 409 and a notice saying the same.
+
 Overview, Troubleshooting, Documentation and Transporter place their page
 heading and description on the grey background. Overview uses separate task
 and credential-storage panels; Troubleshooting may retain a single white surface

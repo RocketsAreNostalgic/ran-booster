@@ -370,6 +370,96 @@
 		);
 	}
 
+	// A control can belong to a form through its form attribute without
+	// being a descendant, so fall back to the form's elements collection.
+	function findFormControl(form, selector) {
+		if (!form) {
+			return null;
+		}
+
+		const descendant = form.querySelector(selector);
+		if (descendant) {
+			return descendant;
+		}
+
+		return (
+			Array.from(form.elements || []).find(function (element) {
+				return (
+					typeof element.matches === 'function' &&
+					element.matches(selector)
+				);
+			}) || null
+		);
+	}
+
+	function repositorySelectionControls(form) {
+		const controls = {
+			repository: findFormControl(form, '.ran-booster-repository-input'),
+			branch: findFormControl(form, '.ran-booster-branch-input'),
+			credential: findFormControl(form, '.ran-booster-credential-input'),
+			provider: findFormControl(form, '.ran-booster-provider-input'),
+			providerRepositoryId: findFormControl(
+				form,
+				'.ran-booster-provider-repository-id-input'
+			),
+			identitySource: findFormControl(
+				form,
+				'.ran-booster-provider-repository-identity-source-input'
+			),
+			publicLookupProfile: findFormControl(
+				form,
+				'.ran-booster-public-lookup-profile-input'
+			),
+		};
+
+		return controls.repository && controls.branch ? controls : null;
+	}
+
+	// Every required control is found before the first write, so a missing
+	// control leaves the form unchanged. Returns the repository input, or
+	// null when nothing was applied.
+	function applyRepositorySelection(form, repository, selection) {
+		const controls = repositorySelectionControls(form);
+
+		if (!controls) {
+			return null;
+		}
+
+		let credentialInput = controls.credential;
+		if (!credentialInput) {
+			credentialInput = form.ownerDocument.createElement('input');
+			credentialInput.type = 'hidden';
+			credentialInput.name = 'ran_booster[credential_id]';
+			credentialInput.className = 'ran-booster-credential-input';
+			form.appendChild(credentialInput);
+		}
+
+		controls.repository.value = repository.locator || '';
+		if (controls.provider) {
+			controls.provider.value = repository.provider;
+			selection.updateProviderForm(form);
+		}
+		if (controls.providerRepositoryId) {
+			controls.providerRepositoryId.value =
+				repository.provider_repository_id || '';
+		}
+		if (controls.identitySource) {
+			controls.identitySource.value = 'picker';
+		}
+		if (controls.publicLookupProfile) {
+			controls.publicLookupProfile.value =
+				selection.publicLookupProfileId || '';
+		}
+		controls.branch.value = repository.default_branch || '';
+		selection.selectCredential(
+			credentialInput,
+			repository.provider,
+			selection.credentialId || ''
+		);
+
+		return controls.repository;
+	}
+
 	function initRepositoryPicker() {
 		cleanupPicker();
 		const listeners = new AbortController();
@@ -1066,7 +1156,7 @@
 				);
 			});
 			const formCredential = activeForm
-				? activeForm.querySelector('.ran-booster-credential-input')
+				? findFormControl(activeForm, '.ran-booster-credential-input')
 				: null;
 			if (
 				formCredential &&
@@ -1480,62 +1570,30 @@
 				return;
 			}
 
-			const repositoryInput = activeForm.querySelector(
-				'.ran-booster-repository-input'
-			);
-			const branchInput = activeForm.querySelector(
-				'.ran-booster-branch-input'
-			);
-			let credentialInput = activeForm.querySelector(
-				'.ran-booster-credential-input'
-			);
-			const providerInput = activeForm.querySelector(
-				'.ran-booster-provider-input'
-			);
-			const providerRepositoryIdInput = activeForm.querySelector(
-				'.ran-booster-provider-repository-id-input'
-			);
-			const providerRepositoryIdentitySourceInput =
-				activeForm.querySelector(
-					'.ran-booster-provider-repository-identity-source-input'
-				);
-			const publicLookupProfileInput = activeForm.querySelector(
-				'.ran-booster-public-lookup-profile-input'
+			const repositoryInput = applyRepositorySelection(
+				activeForm,
+				repository,
+				{
+					publicLookupProfileId:
+						activeMode === 'public'
+							? loadedPublicLookupProfileId
+							: '',
+					credentialId:
+						activeMode === 'accessible'
+							? repository.credential_id ||
+								credentialSelect.value ||
+								''
+							: '',
+					updateProviderForm(form) {
+						updateProviderForm(form, false);
+					},
+					selectCredential,
+				}
 			);
 
-			if (!credentialInput) {
-				credentialInput = document.createElement('input');
-				credentialInput.type = 'hidden';
-				credentialInput.name = 'ran_booster[credential_id]';
-				credentialInput.className = 'ran-booster-credential-input';
-				activeForm.appendChild(credentialInput);
+			if (repositoryInput) {
+				dispatchRepositoryContextChanged(activeForm, 'picker');
 			}
-
-			repositoryInput.value = repository.locator || '';
-			if (providerInput) {
-				providerInput.value = repository.provider;
-				updateProviderForm(activeForm, false);
-			}
-			if (providerRepositoryIdInput) {
-				providerRepositoryIdInput.value =
-					repository.provider_repository_id || '';
-			}
-			if (providerRepositoryIdentitySourceInput) {
-				providerRepositoryIdentitySourceInput.value = 'picker';
-			}
-			if (publicLookupProfileInput) {
-				publicLookupProfileInput.value =
-					activeMode === 'public' ? loadedPublicLookupProfileId : '';
-			}
-			branchInput.value = repository.default_branch || '';
-			selectCredential(
-				credentialInput,
-				repository.provider,
-				activeMode === 'accessible'
-					? repository.credential_id || credentialSelect.value || ''
-					: ''
-			);
-			dispatchRepositoryContextChanged(activeForm, 'picker');
 			closePicker(repositoryInput);
 		}
 
@@ -1642,7 +1700,7 @@
 				return null;
 			}
 
-			const input = form.querySelector('.ran-booster-provider-input');
+			const input = findFormControl(form, '.ran-booster-provider-input');
 			const code = input
 				? input.value
 				: settings.defaultProvider ||
@@ -1652,10 +1710,12 @@
 
 		function updateProviderForm(form, clearSelection) {
 			const provider = getFormProvider(form);
-			const credentialInput = form.querySelector(
+			const credentialInput = findFormControl(
+				form,
 				'.ran-booster-credential-input'
 			);
-			const publicLookupProfileInput = form.querySelector(
+			const publicLookupProfileInput = findFormControl(
+				form,
 				'.ran-booster-public-lookup-profile-input'
 			);
 			const repositoryLink = form.parentElement
@@ -1692,7 +1752,8 @@
 			updateDeploymentPolicyAvailability(form, provider);
 
 			if (repositoryLink && provider) {
-				const repositoryInput = form.querySelector(
+				const repositoryInput = findFormControl(
+					form,
 					'.ran-booster-repository-input'
 				);
 				const repository = repositoryInput ? repositoryInput.value : '';
@@ -1706,10 +1767,12 @@
 			}
 
 			if (clearSelection) {
-				const providerRepositoryIdInput = form.querySelector(
+				const providerRepositoryIdInput = findFormControl(
+					form,
 					'.ran-booster-provider-repository-id-input'
 				);
-				const identitySourceInput = form.querySelector(
+				const identitySourceInput = findFormControl(
+					form,
 					'.ran-booster-provider-repository-identity-source-input'
 				);
 

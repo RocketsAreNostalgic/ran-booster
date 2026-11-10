@@ -608,16 +608,71 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-repository-detail__packages th:nth-child(1) {
-	inline-size: 46%;
+/* Auto layout: headings and short values keep whole words; only the package
+   identifier (long path) breaks, so narrow containers scroll instead of wrapping mid-word. */
+.ran-booster-admin .ran-booster-repository-detail__packages {
+	table-layout: auto;
 }
 
-.ran-booster-admin .ran-booster-repository-detail__packages th:nth-child(2) {
-	inline-size: 22%;
+.ran-booster-admin .ran-booster-repository-detail__packages th,
+.ran-booster-admin .ran-booster-repository-detail__packages td:not(:first-child) {
+	overflow-wrap: normal;
+	word-break: normal;
 }
 
-.ran-booster-admin .ran-booster-repository-detail__packages th:nth-child(3) {
-	inline-size: 14%;
+.ran-booster-admin .ran-booster-repository-detail__packages th {
+	white-space: nowrap;
+}
+
+.ran-booster-admin .ran-booster-repository-detail__packages td:first-child {
+	min-inline-size: 12rem;
+}
+
+/* Narrow containers stack each package vertically with labelled values. */
+.ran-booster-admin .ran-booster-repository-detail .ran-booster-data-table-wrap {
+	container-type: inline-size;
+}
+
+@container (max-width: 36rem) {
+	.ran-booster-admin .ran-booster-repository-detail__packages thead {
+		display: none;
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__packages,
+	.ran-booster-admin .ran-booster-repository-detail__packages tbody,
+	.ran-booster-admin .ran-booster-repository-detail__packages tr {
+		display: block;
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__packages td {
+		display: grid;
+		grid-template-columns: minmax(5rem, 28%) minmax(0, 1fr);
+		gap: var(--ran-booster-space-12);
+		min-inline-size: 0;
+		border: 0;
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__packages td:first-child {
+		display: block;
+		min-inline-size: 0;
+		overflow-wrap: anywhere;
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__packages td:first-child[data-label]::before {
+		display: none;
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__packages td[data-label]::before {
+		display: block;
+		color: var(--ran-booster-text-subtle);
+		font-size: var(--ran-booster-font-size-sm);
+		font-weight: 600;
+		line-height: 1.5;
+	}
+
+	.ran-booster-admin .ran-booster-repository-detail__packages tr + tr {
+		border-block-start: 1px solid var(--ran-booster-divider);
+	}
 }
 
 /* Repository detail headings keep the shared heading gap to what they introduce. */

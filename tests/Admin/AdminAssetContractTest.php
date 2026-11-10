@@ -605,6 +605,15 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( "StatusBadge::print_intent( __( 'Active', 'ran-booster' ), 'stable', array( 'class' => 'ran-booster-source-choice__current-source' ) );", $this->source( 'views/packages/source-choices.php' ) );
 	}
 
+	public function test_source_tab_strip_keeps_the_same_gap_above_every_pane(): void {
+		$css = $this->asset( 'ran-booster/65-package-settings.css' );
+		// Hidden inactive panes sit between the strip and the visible pane, so the rule must use the general sibling combinator.
+		self::assertStringNotContainsString( '--navigation\n\t+ .ran-booster-package-source-pane', $css );
+		self::assertMatchesRegularExpression( '/--navigation\s*~ \.ran-booster-package-source-pane \{\s*margin-block-start: 0;/', $css );
+		self::assertMatchesRegularExpression( '/--navigation\s*~ \.ran-booster-release-pane \{\s*padding-block-start: 0;/', $css );
+		self::assertMatchesRegularExpression( '/--navigation\s*~ \.ran-booster-release-pane\s*> \.ran-booster-package-source-pane__description \{\s*margin-block-start: var\(--ran-booster-space-16\);/', $css );
+	}
+
 	public function test_package_source_repository_guidance_is_a_shared_static_notice(): void {
 		$view     = $this->source( 'views/packages/source-choices.php' );
 		$settings = $this->asset( 'ran-booster/65-package-settings.css' );

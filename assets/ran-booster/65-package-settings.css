@@ -223,11 +223,29 @@
 	white-space: normal;
 }
 
+/*
+ * Inactive panes stay in the DOM as hidden siblings, so the visible pane is not
+ * always adjacent to the tab strip. A general sibling selector keeps the gap
+ * between the strip and its pane the same in every source view.
+ */
 .ran-booster-admin
 	.ran-booster-package-source--navigation
-	+ .ran-booster-package-source-pane {
+	~ .ran-booster-package-source-pane {
 	margin-block-start: 0;
 	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin
+	.ran-booster-package-source--navigation
+	~ .ran-booster-release-pane {
+	padding-block-start: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-package-source--navigation
+	~ .ran-booster-release-pane
+	> .ran-booster-package-source-pane__description {
+	margin-block-start: var(--ran-booster-space-16);
 }
 
 .ran-booster-source-choice__radio {

@@ -1327,6 +1327,10 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-task-panel {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-task-progress {', $css );
+		self::assertStringContainsString( 'ran-booster-provider-automated-setup', $view );
+		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-automated-setup ul {', $css );
+		self::assertStringContainsString( '.ran-booster-provider-task-panel .ran-booster-provider-automated-setup {', $css );
+		self::assertStringNotContainsString( 'ran-booster-provider-task-actions', $css );
 		self::assertStringContainsString( "document.addEventListener('htmx:afterSwap'", $script );
 		self::assertStringContainsString( "'ran-booster:provider-tasks-ready'", $script );
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-push-deploy__summary {', $css );

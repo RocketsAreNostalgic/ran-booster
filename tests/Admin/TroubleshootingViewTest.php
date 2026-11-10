@@ -2306,7 +2306,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 2, substr_count( $list[1], '<li>' ) );
 		self::assertSame( 1, substr_count( $list[1], 'Set up webhook' ) );
 		self::assertMatchesRegularExpression( '~<strong>owner/branch-repo</strong> <span class="description">Branch</span>\s*<a href="[^"]*repository=branch-1&(?:amp;)?repository_view=branch">Set up webhook<span class="screen-reader-text"> owner/branch-repo</span></a>~', $list[1] );
-		self::assertMatchesRegularExpression( '~<strong>owner/release-repo</strong> <span class="description">Releases</span>\s*Pushes are ignored\.~', $list[1] );
+		self::assertMatchesRegularExpression( '~<strong>owner/release-repo</strong> <span class="description">Releases</span>\s*<br>Pushes are ignored\.~', $list[1] );
 		self::assertStringNotContainsString( 'repository=release-1', $list[1] );
 		// Order: automated list, manual heading, security notice, then the Payload URL block.
 		$automated = (int) strpos( $html, 'Automated setup</h5>' );

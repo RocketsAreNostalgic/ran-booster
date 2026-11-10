@@ -626,7 +626,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 										?>
 								<li><strong><?php echo esc_html( $automated_name ); ?></strong> <span class="description"><?php echo esc_html( $automated_src ); ?></span>
 										<?php if ( '' !== $automated_note ) { ?>
-											<?php echo esc_html( $automated_note ); ?>
+											<br><?php echo esc_html( $automated_note ); ?>
 									<?php } elseif ( '' !== $automated_url && empty( $automated_row['historical'] ) ) { ?>
 										<a href="<?php echo esc_url( add_query_arg( 'repository_view', 'branch', $automated_url ) ); ?>"><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?><span class="screen-reader-text"> <?php echo esc_html( $automated_name ); ?></span></a>
 									<?php } ?>

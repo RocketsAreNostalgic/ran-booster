@@ -214,12 +214,12 @@ final class WebhookDisplayModelTest extends TestCase {
 		$keys   = static fn ( array $operations ): array => array_column( $operations, 'key' );
 		$off    = static fn ( array $operations ): array => array_column( $operations, 'disabled' );
 
-		$none = $method->invoke( $this->display(), array(), 'gh', 'GitHub', '1', false );
+		$none = $method->invoke( $this->display(), array(), 'gh', 'GitHub', '1', false, array() );
 		self::assertSame( array( 'Set up', 'Validate settings', 'Test ping', 'Remove' ), $labels( $none ) );
 		self::assertSame( array( 'setup', 'check', 'test', 'remove' ), $keys( $none ) );
 		self::assertSame( array( true, true, true, true ), $off( $none ) );
 
-		$setup = $method->invoke( $this->display(), array( 'setup' => true ), 'gh', 'GitHub', '1', false );
+		$setup = $method->invoke( $this->display(), array( 'setup' => true ), 'gh', 'GitHub', '1', false, array() );
 		self::assertSame( array( false, true, true, true ), $off( $setup ) );
 		self::assertTrue( $setup[0]['primary'] );
 
@@ -229,7 +229,7 @@ final class WebhookDisplayModelTest extends TestCase {
 			'test'        => true,
 			'remove'      => true,
 		);
-		$repair = $method->invoke( $this->display(), $all, 'gh', 'GitHub', '1', true );
+		$repair = $method->invoke( $this->display(), $all, 'gh', 'GitHub', '1', true, array() );
 		self::assertSame( array( 'Repair', 'Validate settings', 'Test ping', 'Remove' ), $labels( $repair ) );
 		self::assertSame( array( 'reconfigure', 'check', 'test', 'remove' ), $keys( $repair ) );
 		self::assertSame( array( false, false, false, false ), $off( $repair ) );
@@ -237,7 +237,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame( array( false, false, false, true ), array_column( $repair, 'destructive' ) );
 
 		unset( $all['reconfigure'] );
-		$in_sync = $method->invoke( $this->display(), $all, 'gh', 'GitHub', '1', true );
+		$in_sync = $method->invoke( $this->display(), $all, 'gh', 'GitHub', '1', true, array() );
 		self::assertSame( 'Repair', $in_sync[0]['label'] );
 		self::assertSame( array( true, false, false, false ), $off( $in_sync ) );
 

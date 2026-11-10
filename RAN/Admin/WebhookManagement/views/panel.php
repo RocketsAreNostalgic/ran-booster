@@ -65,12 +65,6 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 						<span class="description"><?php esc_html_e( 'Choose an applicable saved signing secret, or create one only for this repository.', 'ran-booster' ); ?></span>
 					</div>
 
-				<?php
-				$any_disabled = false;
-				foreach ( $model['operations'] as $operation ) {
-					$any_disabled = $any_disabled || $disabled || true === ( $operation['disabled'] ?? false );
-				}
-				?>
 				<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
 					<p class="ran-booster-public-lookup-profile__label" id="repository-webhook-management-actions-label"><?php esc_html_e( 'Webhook', 'ran-booster' ); ?></p>
 					<div class="ran-booster-action-row ran-booster-repository-webhook-management__actions" role="group" aria-labelledby="repository-webhook-management-actions-label">
@@ -78,7 +72,9 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 							<?php
 							$operation_disabled = $disabled || true === ( $operation['disabled'] ?? false );
 							$description_id     = 'repository-webhook-management-description-' . $operation['key'];
-							$describedby        = $description_id . ( $operation_disabled ? ' repository-webhook-management-disabled-reason' : '' );
+							$reason             = $operation_disabled && is_string( $operation['disabled_reason'] ?? null ) ? $operation['disabled_reason'] : '';
+							$reason_id          = 'repository-webhook-management-disabled-reason-' . $operation['key'];
+							$describedby        = $description_id . ( '' !== $reason ? ' ' . $reason_id : '' );
 							if ( $operation['primary'] ) {
 								$button_classes = \RAN\Admin\Component\ButtonClasses::primary();
 							} elseif ( $operation['destructive'] ) {
@@ -87,17 +83,17 @@ $profile_disabled = $disabled || true === ( $model['webhook_profile_disabled'] ?
 								$button_classes = \RAN\Admin\Component\ButtonClasses::secondary();
 							}
 							$button_title = $operation['description'];
-							if ( $operation_disabled ) {
-								$button_title .= ' ' . __( 'Set up the webhook to enable these actions.', 'ran-booster' );
+							if ( '' !== $reason ) {
+								$button_title .= ' ' . $reason;
 							}
 							?>
 							<button type="submit" class="<?php echo esc_attr( $button_classes ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>" title="<?php echo esc_attr( $button_title ); ?>" aria-describedby="<?php echo esc_attr( $describedby ); ?>"<?php echo is_string( $operation['confirm'] ) ? ' data-confirm="' . esc_attr( $operation['confirm'] ) . '"' : ''; ?><?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
 							<span class="screen-reader-text" id="<?php echo esc_attr( $description_id ); ?>"><?php echo esc_html( $operation['description'] ); ?></span>
+							<?php if ( '' !== $reason ) : ?>
+								<span class="screen-reader-text" id="<?php echo esc_attr( $reason_id ); ?>"><?php echo esc_html( $reason ); ?></span>
+							<?php endif; ?>
 						<?php endforeach; ?>
 					</div>
-					<?php if ( $any_disabled ) : ?>
-						<span class="screen-reader-text" id="repository-webhook-management-disabled-reason"><?php esc_html_e( 'Set up the webhook to enable these actions.', 'ran-booster' ); ?></span>
-					<?php endif; ?>
 				</div>
 				<?php if ( is_string( $model['action_help'] ) ) : ?>
 					<p class="description ran-booster-repository-webhook-management__action-help"><?php echo esc_html( $model['action_help'] ); ?></p>

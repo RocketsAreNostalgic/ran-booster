@@ -338,8 +338,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//p[contains(@class,"__action-help")])' ) );
 		self::assertStringNotContainsString( 'Test webhook is disabled until', $html );
 		$reason = 'Set up the webhook to enable these actions.';
-		self::assertSame( 1, substr_count( $html, '>' . $reason . '</span>' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//span[@id="repository-webhook-management-disabled-reason"][contains(@class,"screen-reader-text")])' ) );
+		self::assertSame( 3, substr_count( $html, '>' . $reason . '</span>' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="repository-webhook-management-disabled-reason"])' ) );
+		self::assertSame( 3.0, $xpath->evaluate( 'count(//span[starts-with(@id,"repository-webhook-management-disabled-reason-")][contains(@class,"screen-reader-text")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//p[normalize-space(.)="' . $reason . '"])' ) );
 		$group = $xpath->query( '//*[@role="group"][@aria-labelledby="repository-webhook-management-actions-label"]' );
 		self::assertNotFalse( $group );
@@ -363,7 +364,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			}
 			// Disabled buttons are not focusable, so the reason is also the hover text.
 			self::assertTrue( $button->hasAttribute( 'disabled' ) );
-			self::assertContains( 'repository-webhook-management-disabled-reason', $describedby );
+			self::assertContains( 'repository-webhook-management-disabled-reason-' . $value, $describedby );
 			self::assertStringContainsString( $reason, $button->getAttribute( 'title' ) );
 		}
 		$remove = $xpath->query( '//button[@value="remove"]' );
@@ -815,7 +816,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$controls->render_repository_webhook_setup( 'fixture-provider', '1315521150', 'https://example.test/repository' );
 		$html = (string) ob_get_clean();
 
-		self::assertSame( 1, substr_count( $html, 'Webhook setup is unavailable because Booster database storage is unavailable.' ) );
+		self::assertSame( 1, substr_count( $html, '<p>Webhook setup is unavailable because Booster database storage is unavailable.</p>' ) );
 		self::assertStringContainsString( 'ran-booster-repository-webhook-management__notices', $html );
 		// An availability notice is not an operation result: the receiver step is not ok, so setup stays collapsed.
 		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup"[^>]*ran-booster-disclosure">/', $html ) );
@@ -932,8 +933,19 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 
 		foreach ( $states as $state => $model ) {
 			$html = (string) $method->invoke( $this->controls(), $model );
-			// The reason text exists only while some button is disabled.
-			self::assertSame( 'all_available' === $state ? 0 : 1, substr_count( $html, 'id="repository-webhook-management-disabled-reason"' ), $state );
+			// Each disabled button carries its own reason; no shared reason text remains.
+			$disabled_keys = array();
+			foreach ( $model['operations'] as $operation ) {
+				if ( $model['disabled'] || $operation['disabled'] ) {
+					$disabled_keys[] = $operation['key'];
+				}
+			}
+			self::assertSame( count( $disabled_keys ), substr_count( $html, 'id="repository-webhook-management-disabled-reason-' ), $state );
+			self::assertSame( 0, substr_count( $html, 'id="repository-webhook-management-disabled-reason"' ), $state );
+			foreach ( $disabled_keys as $key ) {
+				self::assertStringContainsString( 'aria-describedby="repository-webhook-management-description-' . $key . ' repository-webhook-management-disabled-reason-' . $key . '"', $html, $state );
+				self::assertStringContainsString( 'id="repository-webhook-management-disabled-reason-' . $key . '">Reason for ' . $key . '.</span>', $html, $state );
+			}
 			self::assertStringNotContainsString( 'Test webhook is disabled until', $html, $state );
 			self::assertSame( 1, substr_count( $html, 'name="booster_credential_id"' ), $state );
 			self::assertSame( 1, substr_count( $html, 'name="webhook_profile_id"' ), $state );
@@ -965,7 +977,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'Webhook readiness', $html );
 		self::assertStringContainsString( 'Webhook setup', $html );
 		// Step 1 states the missing public HTTPS URL, so the amber notice does not repeat it.
-		self::assertStringNotContainsString( 'This site needs a public HTTPS URL before a Git provider can deliver webhooks.', $html );
+		// The long receiver sentence is not repeated as a visible notice; only the hidden per-button reasons carry it.
+		self::assertStringNotContainsString( '<p>This site needs a public HTTPS URL before a Git provider can deliver webhooks.</p>', $html );
 		self::assertSame( 1, substr_count( $html, 'This site needs a public HTTPS URL to receive webhooks.' ) );
 		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__notices', $html );
 		// With the receiver step not ok, setup starts collapsed.
@@ -1154,14 +1167,15 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		);
 		foreach ( $labels as $key => $label ) {
 			$operations[] = array(
-				'key'         => $key,
-				'label'       => $label,
-				'description' => 'Describes ' . $key . ' on Fixture Forge.',
-				'url'         => 'https://example.test/' . $key,
-				'primary'     => $first === $key,
-				'destructive' => 'remove' === $key,
-				'confirm'     => 'remove' === $key ? 'Remove this webhook from the repository? Booster will delete the webhook on Fixture Forge and clear its local record.' : null,
-				'disabled'    => ! ( $enabled_operations[ $key ] ?? true ),
+				'key'             => $key,
+				'label'           => $label,
+				'description'     => 'Describes ' . $key . ' on Fixture Forge.',
+				'url'             => 'https://example.test/' . $key,
+				'primary'         => $first === $key,
+				'destructive'     => 'remove' === $key,
+				'confirm'         => 'remove' === $key ? 'Remove this webhook from the repository? Booster will delete the webhook on Fixture Forge and clear its local record.' : null,
+				'disabled'        => ! ( $enabled_operations[ $key ] ?? true ),
+				'disabled_reason' => ( $disabled || ! ( $enabled_operations[ $key ] ?? true ) ) ? 'Reason for ' . $key . '.' : '',
 			);
 		}
 

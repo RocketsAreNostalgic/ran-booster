@@ -182,6 +182,142 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'Review the bounded operation result.', $html );
 	}
 
+	/** @return array<string,array{0:string,1:array<string,string>}> */
+	public static function disabled_reason_states(): array {
+		$setup  = 'Set up the webhook to enable these actions.';
+		$choose = 'Choose a saved credential';
+		$manual = 'Managed operations are disabled for this repository. Do not retry Setup until both sides are reconciled.';
+
+		return array(
+			'inactive panel'          => array(
+				'inactive',
+				array(
+					'setup'  => 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.',
+					'check'  => 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.',
+					'test'   => 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.',
+					'remove' => 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.',
+				),
+			),
+			'no credential'           => array(
+				'no_credential',
+				array(
+					'setup'  => $choose,
+					'check'  => $choose,
+					'test'   => $choose,
+					'remove' => $choose,
+				),
+			),
+			'no hook recorded'        => array(
+				'no_hook',
+				array(
+					'check'  => $setup,
+					'test'   => $setup,
+					'remove' => $setup,
+				),
+			),
+			'recovery view'           => array(
+				'recovery_view',
+				array(
+					'setup'  => 'Manual webhook recovery required',
+					'check'  => 'Manual webhook recovery required',
+					'test'   => 'Manual webhook recovery required',
+					'remove' => 'Manual webhook recovery required',
+				),
+			),
+			'identification required' => array(
+				'identification_required',
+				array(
+					'setup'  => $manual,
+					'check'  => $manual,
+					'test'   => $manual,
+					'remove' => $manual,
+				),
+			),
+			'already matches'         => array(
+				'in_sync',
+				array( 'reconfigure' => 'Nothing to repair.' ),
+			),
+			'remote hook missing'     => array(
+				'remote_missing',
+				array(
+					'reconfigure' => 'Nothing to repair.',
+					'remove'      => 'The webhook is already missing from GitHub.',
+				),
+			),
+			'removal pending'         => array(
+				'removal_pending',
+				array(
+					'reconfigure' => 'Nothing to repair.',
+					'remove'      => 'Removal is already pending.',
+				),
+			),
+			'secret unavailable'      => array(
+				'local_profile_missing',
+				array( 'remove' => 'Recorded signing secret is unavailable' ),
+			),
+		);
+	}
+
+	/** @param array<string,string> $expected Reason per disabled operation key; every other button must be enabled and carry none. */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'disabled_reason_states' )]
+	public function test_each_disabled_button_carries_the_reason_that_is_true_for_it( string $state, array $expected ): void {
+		$gateway = $this->gateway();
+		$store   = new OperationStoreFixture();
+		$display = $this->display( $gateway, $store );
+		if ( 'inactive' === $state ) {
+			$model = $display->unavailable_panel( 'gh', 'GitHub', '1234', 'owner/repository', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', $expected['setup'] );
+		} else {
+			$store->record = match ( $state ) {
+				'no_credential', 'recovery_view', 'no_hook' => null,
+				'identification_required' => new InstallationRecord( 'gh', '1234', 'owner/repository', InstallationRecord::unknown_hook_id(), 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' ),
+				'remote_missing', 'removal_pending' => $this->record( $state ),
+				default => $this->record(),
+			};
+			$gateway->credentials_available = 'no_credential' !== $state;
+			$gateway->profile_absent        = 'local_profile_missing' === $state;
+			$recovery                       = 'recovery_view' === $state ? array(
+				'hook_id'    => '88',
+				'profile_id' => 'wh_0123456789abcdef01234567',
+			) : null;
+			$model                          = $display->panel( 'gh', 'GitHub', '1234', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', null, $recovery, true );
+		}
+		self::assertIsArray( $model );
+		$form_attributes = '';
+		ob_start();
+		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
+		$html = (string) ob_get_clean();
+
+		$document = new \DOMDocument();
+		libxml_use_internal_errors( true );
+		$document->loadHTML( '<?xml encoding="utf-8"?>' . $html );
+		libxml_clear_errors();
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 4.0, $xpath->evaluate( 'count(//button[@name="repository_webhook_management_operation"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="repository-webhook-management-disabled-reason"])' ) );
+		$buttons = $xpath->query( '//button[@name="repository_webhook_management_operation"]' );
+		self::assertNotFalse( $buttons );
+		foreach ( $buttons as $button ) {
+			self::assertInstanceOf( \DOMElement::class, $button );
+			$key         = $button->getAttribute( 'value' );
+			$ids         = explode( ' ', $button->getAttribute( 'aria-describedby' ) );
+			$description = $xpath->evaluate( 'string(//*[@id="repository-webhook-management-description-' . $key . '"])' );
+			self::assertSame( 'repository-webhook-management-description-' . $key, $ids[0], $state . ' ' . $key );
+			if ( ! isset( $expected[ $key ] ) ) {
+				self::assertFalse( $button->hasAttribute( 'disabled' ), $state . ' ' . $key . ' must be enabled' );
+				self::assertCount( 1, $ids, $state . ' ' . $key );
+				self::assertSame( $description, $button->getAttribute( 'title' ), $state . ' ' . $key );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="repository-webhook-management-disabled-reason-' . $key . '"])' ), $state . ' ' . $key );
+				continue;
+			}
+			self::assertTrue( $button->hasAttribute( 'disabled' ), $state . ' ' . $key . ' must be disabled' );
+			self::assertSame( array( 'repository-webhook-management-description-' . $key, 'repository-webhook-management-disabled-reason-' . $key ), $ids, $state . ' ' . $key );
+			self::assertSame( $expected[ $key ], $xpath->evaluate( 'string(//*[@id="repository-webhook-management-disabled-reason-' . $key . '"])' ), $state . ' ' . $key );
+			self::assertSame( $description . ' ' . $expected[ $key ], $button->getAttribute( 'title' ), $state . ' ' . $key );
+		}
+		// The no-hook sentence is true only where nothing is recorded yet.
+		self::assertSame( 'no_hook' === $state ? 6 : 0, substr_count( $html, 'Set up the webhook to enable these actions.' ), $state );
+	}
+
 	public function test_remote_exception_leaves_activity_incomplete_without_unwind_reporting(): void {
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
 		$connection                              = new \RAN\Tests\Activity\ActivityConnection();

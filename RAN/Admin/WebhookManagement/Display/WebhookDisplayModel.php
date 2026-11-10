@@ -35,7 +35,7 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
  *   management_credential_id:?string,
  *   credential_choices:list<array{id:string,label:string}>,
  *   webhook_profile_choices:list<array{id:string,label:string,scope:string}>,
- *   operations:list<array{key:string,label:string,description:string,url:string,primary:bool,destructive:bool,confirm:?string,disabled:bool}>,
+ *   operations:list<array{key:string,label:string,description:string,url:string,primary:bool,destructive:bool,confirm:?string,disabled:bool,disabled_reason:string}>,
  *   action_help:?string
  * }
  */
@@ -172,7 +172,7 @@ final class WebhookDisplayModel {
 		$status                   = null === $record ? null : $this->projected_status( $record );
 		$credentials              = $this->credential_choices( $provider_code );
 		$operations               = null === $recovery ? $this->available_operations( $target, $record, $status, array() !== $credentials ) : array();
-		$operation_models         = $this->operation_models( $operations, $provider_code, $provider_label, $repository_id, null !== $record && ! $record->requires_hook_identification() );
+		$operation_models         = $this->operation_models( $operations, $provider_code, $provider_label, $repository_id, null !== $record && ! $record->requires_hook_identification(), $this->disabled_reasons( $record, $status, array() !== $credentials, null !== $recovery, $provider_label ) );
 
 		$help = null;
 		if ( null !== $record && 'local_profile_missing' === $status ) {
@@ -248,9 +248,10 @@ final class WebhookDisplayModel {
 	 * both map to server operations that are never available together.
 	 *
 	 * @param array<string,true> $available
-	 * @return list<array{key:string,label:string,description:string,url:string,primary:bool,destructive:bool,confirm:?string,disabled:bool}>
+	 * @param array<string,string> $reasons Why each operation is disabled, keyed by operation.
+	 * @return list<array{key:string,label:string,description:string,url:string,primary:bool,destructive:bool,confirm:?string,disabled:bool,disabled_reason:string}>
 	 */
-	private function operation_models( array $available, string $provider_code, string $provider_label, string $repository_id, bool $recorded ): array {
+	private function operation_models( array $available, string $provider_code, string $provider_label, string $repository_id, bool $recorded, array $reasons ): array {
 		$first = ( $recorded || isset( $available['reconfigure'] ) ) ? 'reconfigure' : 'setup';
 		/* translators: %s: repository provider name. */
 		$setup_description = sprintf( __( 'Create the webhook on %s.', 'ran-booster' ), $provider_label );
@@ -274,14 +275,15 @@ final class WebhookDisplayModel {
 		foreach ( $slots as $index => $slot ) {
 			list( $operation, $label, $description ) = $slot;
 			$operations[]                            = array(
-				'key'         => $operation,
-				'label'       => $label,
-				'description' => $description,
-				'url'         => $this->operation_url( $operation, $provider_code, $repository_id ),
-				'primary'     => 0 === $index,
-				'destructive' => 'remove' === $operation,
-				'confirm'     => 'remove' === $operation ? $remove_confirm : null,
-				'disabled'    => ! isset( $available[ $operation ] ),
+				'key'             => $operation,
+				'label'           => $label,
+				'description'     => $description,
+				'url'             => $this->operation_url( $operation, $provider_code, $repository_id ),
+				'primary'         => 0 === $index,
+				'destructive'     => 'remove' === $operation,
+				'confirm'         => 'remove' === $operation ? $remove_confirm : null,
+				'disabled'        => ! isset( $available[ $operation ] ),
+				'disabled_reason' => isset( $available[ $operation ] ) ? '' : ( $reasons[ $operation ] ?? '' ),
 			);
 		}
 
@@ -313,7 +315,7 @@ final class WebhookDisplayModel {
 			'recovery_warning'            => null,
 			'credential_choices'          => $this->credential_choices( $provider_code ),
 			'webhook_profile_choices'     => array(),
-			'operations'                  => $this->operation_models( array(), $provider_code, $provider_label, $repository_id, false ),
+			'operations'                  => $this->operation_models( array(), $provider_code, $provider_label, $repository_id, false, array_fill_keys( array( 'setup', 'reconfigure', 'check', 'test', 'remove' ), $reason ) ),
 			'action_help'                 => null,
 		);
 	}
@@ -727,6 +729,48 @@ final class WebhookDisplayModel {
 				'value'    => $record->checked_at(),
 				'datetime' => $record->checked_at(),
 			),
+		);
+	}
+
+	/**
+	 * The true reason each unavailable operation is disabled in this state.
+	 *
+	 * @return array<string,string>
+	 */
+	private function disabled_reasons( ?InstallationRecord $record, ?string $status, bool $has_credential, bool $recovery_view, string $provider_label ): array {
+		$keys = array( 'setup', 'reconfigure', 'check', 'test', 'remove' );
+		if ( $recovery_view ) {
+			return array_fill_keys( $keys, __( 'Manual webhook recovery required', 'ran-booster' ) );
+		}
+		if ( null !== $record && $record->requires_hook_identification() ) {
+			return array_fill_keys( $keys, __( 'Managed operations are disabled for this repository. Do not retry Setup until both sides are reconciled.', 'ran-booster' ) );
+		}
+		if ( ! $has_credential ) {
+			return array_fill_keys( $keys, __( 'Choose a saved credential', 'ran-booster' ) );
+		}
+		if ( null === $record ) {
+			$needs_setup = __( 'Set up the webhook to enable these actions.', 'ran-booster' );
+
+			return array(
+				'check'  => $needs_setup,
+				'test'   => $needs_setup,
+				'remove' => $needs_setup,
+			);
+		}
+		$remove = match ( $status ) {
+			'remote_missing'        => sprintf(
+				/* translators: %s: repository provider name. */
+				__( 'The webhook is already missing from %s.', 'ran-booster' ),
+				$provider_label
+			),
+			'removal_pending'       => __( 'Removal is already pending.', 'ran-booster' ),
+			'local_profile_missing' => __( 'Recorded signing secret is unavailable', 'ran-booster' ),
+			default                 => '',
+		};
+
+		return array(
+			'reconfigure' => __( 'Nothing to repair.', 'ran-booster' ),
+			'remove'      => $remove,
 		);
 	}
 

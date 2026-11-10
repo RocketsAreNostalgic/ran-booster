@@ -205,6 +205,24 @@ test('form controls resolve through the form attribute association', () => {
 	);
 });
 
+test('a locked Edit form with a readonly repository input still takes a selection', () => {
+	const readonly = control('ran-booster-repository-input', 'acme/fixed');
+	readonly.readOnly = true;
+	const hiddenProvider = control('ran-booster-provider-input', 'gh');
+	const branch = control('ran-booster-branch-input', 'main');
+	const form = {
+		querySelector: (selector) =>
+			[readonly, hiddenProvider, branch].find((item) =>
+				item.matches(selector)
+			) ?? null,
+		elements: [],
+	};
+
+	const controls = repositorySelectionControls(form);
+	assert.equal(controls?.provider, hiddenProvider);
+	assert.equal(controls?.repository, readonly);
+});
+
 test('the picker closes and announces the change only after a full selection', () => {
 	const start = source.indexOf('\t\tfunction selectRepository(');
 	const end = source.indexOf('\t\tfunction closePicker(', start);

@@ -72,6 +72,7 @@ function pickerFixture() {
 		disabled: false,
 		hidden: false,
 		title: '',
+		hasAttribute: () => false,
 	};
 	const form = {
 		querySelector(selector) {

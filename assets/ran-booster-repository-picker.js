@@ -64,7 +64,11 @@
 			'.ran-booster-open-repository-picker'
 		);
 
-		if (!button) {
+		// An installed package keeps its repository, so its picker stays locked.
+		if (
+			!button ||
+			button.hasAttribute('data-ran-booster-repository-locked')
+		) {
 			return;
 		}
 

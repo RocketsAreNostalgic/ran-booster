@@ -60,6 +60,10 @@ const restoreRepositoryPickerProvider = loadFunction(
 	'restoreRepositoryPickerProvider'
 );
 const autoOpenRepositoryPicker = loadFunction('autoOpenRepositoryPicker');
+const updateRepositoryPickerAvailability = loadFunction(
+	'updateRepositoryPickerAvailability',
+	{ pickerComponentsAvailable: true, __: (text) => text }
+);
 const repositoryPickerPublicProfileValue = loadFunction(
 	'repositoryPickerPublicProfileValue'
 );
@@ -305,6 +309,26 @@ test('a fixed Edit provider is a hidden input without options and never throws',
 		false
 	);
 	assert.equal(edit.input.value, 'gh');
+});
+
+test('a locked Edit picker button stays disabled whatever the provider supports', () => {
+	const attributes = new Set(['data-ran-booster-repository-locked']);
+	const button = {
+		disabled: true,
+		hidden: false,
+		title: '',
+		hasAttribute: (name) => attributes.has(name),
+	};
+	const form = { querySelector: () => button };
+
+	updateRepositoryPickerAvailability(form, { browse: true });
+	assert.equal(button.disabled, true);
+	assert.equal(button.hidden, false);
+	assert.equal(button.title, '');
+
+	attributes.clear();
+	updateRepositoryPickerAvailability(form, { browse: true });
+	assert.equal(button.disabled, false);
 });
 
 test('picker auto-opens only from a safe create-form marker', () => {

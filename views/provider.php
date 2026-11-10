@@ -416,7 +416,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 				null !== $webhook_management && $webhook_management->has_management_capability( $provider['code'] )
 					? static function () use ( $webhook_management, $provider, $requested_repository_id, $provider_return_url, $repository_view_urls, $has_branch_consumer, $selected_repository_row ): bool|string {
 						$return_url = is_string( $repository_view_urls['branch'] ?? null ) ? $repository_view_urls['branch'] : $provider_return_url;
-						return $webhook_management->render_repository_webhook_setup( $provider['code'], $requested_repository_id, $return_url, $has_branch_consumer, (string) ( $selected_repository_row['repository'] ?? '' ) ) ?? true;
+						return $webhook_management->render_repository_webhook_setup( $provider['code'], $requested_repository_id, $return_url, $has_branch_consumer, (string) ( $selected_repository_row['repository'] ?? '' ), $selected_repository_row ) ?? true;
 					}
 					: null,
 				static function () use ( $selected_repository_row, $provider_return_url, $repository_view_urls ): void {
@@ -662,7 +662,7 @@ $provider_is_card     = in_array( $provider_view, array( 'credentials', 'secrets
 										null !== $webhook_management && $webhook_management->supports_provider( $provider['code'] )
 										? static function () use ( $webhook_management, $provider, $requested_repository_id, $provider_return_url, $repository_view_urls, $has_branch_consumer, $selected_repository_row ): bool|string {
 											$return_url = is_string( $repository_view_urls['branch'] ?? null ) ? $repository_view_urls['branch'] : $provider_return_url;
-											return $webhook_management->render_repository_webhook_setup( $provider['code'], $requested_repository_id, $return_url, $has_branch_consumer, (string) ( $selected_repository_row['repository'] ?? '' ) ) ?? true;
+											return $webhook_management->render_repository_webhook_setup( $provider['code'], $requested_repository_id, $return_url, $has_branch_consumer, (string) ( $selected_repository_row['repository'] ?? '' ), $selected_repository_row ) ?? true;
 										}
 											: null,
 										static function () use ( $selected_repository_row, $provider_return_url, $repository_view_urls ): void {

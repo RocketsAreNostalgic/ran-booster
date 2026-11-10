@@ -266,7 +266,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( '&lt;script&gt;Repository access&lt;/script&gt;', $html );
 		self::assertStringNotContainsString( '<script>Repository access</script>', $html );
 
-		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Push-to-deploy</h3>', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-repository-webhook-heading">Branch publishing</h3>', $html );
+		self::assertStringContainsString( 'ran-booster-repository-publishing__subheading">Push-to-deploy', $html );
 		self::assertStringContainsString( 'Webhook setup', $html );
 		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider"', $html );
 		self::assertSame( 1, substr_count( $html, 'class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider"' ) );
@@ -274,7 +275,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, '<div data-ran-booster-ui-disclosure="repository-webhook-setup" data-ran-booster-ui-disclosure-density="compact">' ) );
 		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-webhook-setup ran-booster-disclosure" open>\s*<summary>Webhook setup<\/summary>\s*<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-webhook-setup__body ran-booster-disclosure__body">\s*<p>Sets up this repository’s webhook\. Automatic updates remain configured separately for each package\.<\/p>/', $html ) );
 		self::assertStringNotContainsString( 'ran-booster-readiness-panel', $html );
-		self::assertStringNotContainsString( '<h4', $html );
+		// The only sub-heading is the Push-to-deploy tier title.
+		self::assertSame( 1, substr_count( $html, '<h4' ) );
 		self::assertStringNotContainsString( 'What this changes', $html );
 		self::assertStringNotContainsString( 'Booster checks the repository before making changes and never adopts or deletes an unverified webhook.', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup__content"', $html );
@@ -637,6 +639,107 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-repository-webhook-setup ran-booster-disclosure is-inactive', $blocked );
 	}
 
+	/**
+	 * @param list<string> $states Demand, signing profile, receiver, remote hook states.
+	 * @return list<array{label:string,message:string,state:string}>
+	 */
+	private function branch_items( array $states ): array {
+		$items = array();
+		foreach ( array( 'Branch demand', 'Signing profile', 'Git provider receiver', 'Remote hook' ) as $index => $label ) {
+			$items[] = array(
+				'label'   => $label,
+				'message' => $label . ' text',
+				'state'   => $states[ $index ],
+			);
+		}
+
+		return $items;
+	}
+
+	/** @param array<array-key,mixed> $row */
+	private function render_branch_section( array $states, bool $in_use, array $row ): string {
+		$method = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_section' );
+		ob_start();
+		$method->invoke( $this->controls(), $this->branch_items( $states ), '<div>panel</div>', $in_use, array(), true, false, $row );
+
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * Delivery badge: Active when a package uses Branch. Automation badge, from the step states
+	 * (demand, signing, receiver, hook): not in use is neutral Not in use; receiver or signing not ok, or a
+	 * warning hook, is amber Not ready; hook and automatic packages ok is green Active; otherwise neutral Ready.
+	 */
+	public function test_branch_header_and_push_to_deploy_tier_badges_follow_usage_and_step_states(): void {
+		$row   = array(
+			'package_summaries' => array(
+				array(
+					'source'       => 'branch',
+					'type'         => 'plugin',
+					'settings_url' => 'https://example.test/plugin?a=1&b=2',
+				),
+			),
+		);
+		$cases = array(
+			'receiver warning'  => array( array( 'is-ok', 'is-ok', 'is-warning', 'is-ok' ), 'Not ready', 'medium' ),
+			'receiver pending'  => array( array( 'is-ok', 'is-ok', 'is-pending', 'is-ok' ), 'Not ready', 'medium' ),
+			'signing pending'   => array( array( 'is-ok', 'is-pending', 'is-ok', 'is-ok' ), 'Not ready', 'medium' ),
+			'hook warning'      => array( array( 'is-ok', 'is-ok', 'is-ok', 'is-warning' ), 'Not ready', 'medium' ),
+			'hook pending'      => array( array( 'is-pending', 'is-ok', 'is-ok', 'is-pending' ), 'Ready', 'none' ),
+			'packages pending'  => array( array( 'is-pending', 'is-ok', 'is-ok', 'is-ok' ), 'Ready', 'none' ),
+			'hook and packages' => array( array( 'is-ok', 'is-ok', 'is-ok', 'is-ok' ), 'Active', 'stable' ),
+		);
+		foreach ( $cases as $name => $case ) {
+			$html = $this->render_branch_section( $case[0], true, $row );
+			if ( 1 !== preg_match( '/<h3 id="ran-booster-repository-webhook-heading">Branch publishing<\/h3>(<span[^>]*>[^<]*<\/span>)<\/div><a href="([^"]+)">Plugin settings<\/a><\/header>/', $html, $m ) ) {
+				self::fail( $name . ': header must be title, delivery badge, then the settings link.' );
+			}
+			self::assertStringContainsString( 'is-stable-intent', $m[1], $name );
+			self::assertStringContainsString( 'Active', $m[1], $name );
+			self::assertSame( 'https://example.test/plugin?a=1&amp;b=2', $m[2], $name );
+			self::assertStringContainsString( 'Manual updates work without setup.', $html, $name );
+			if ( 1 !== preg_match( '/<h4 id="ran-booster-repository-webhook-automation-heading"[^>]*>Push-to-deploy<span[^>]*class="[^"]*is-' . $case[2] . '-intent[^"]*"[^>]*>' . $case[1] . '<\/span><\/h4>/', $html ) ) {
+				self::fail( $name . ': automation badge must read ' . $case[1] . ' (' . $case[2] . ').' );
+			}
+			self::assertLessThan( strpos( $html, 'ran-booster-webhook-steps' ), strpos( $html, 'ran-booster-repository-publishing__subheading' ), $name );
+			self::assertLessThan( strpos( $html, 'ran-booster-repository-publishing__subheading' ), strpos( $html, 'Manual updates work without setup.' ), $name );
+			self::assertStringNotContainsString( 'is-neutral"', (string) strstr( $html, '<ol' ), $name );
+		}
+
+		// Not in use: neutral delivery and automation badges, neutral steps with their text, no manual-update line, no settings link for several packages.
+		$many = $this->render_branch_section( array( 'is-pending', 'is-warning', 'is-warning', 'is-pending' ), false, array( 'package_summaries' => array( array( 'source' => 'release_asset' ), array( 'source' => 'release_asset' ) ) ) );
+		self::assertSame( 1, preg_match( '/Branch publishing<\/h3><span[^>]*is-none-intent[^>]*>Not in use<\/span>/', $many ) );
+		self::assertSame( 1, preg_match( '/Push-to-deploy<span[^>]*is-none-intent[^>]*>Not in use<\/span><\/h4>/', $many ) );
+		self::assertStringNotContainsString( 'Manual updates work without setup.', $many );
+		self::assertStringNotContainsString( 'Plugin settings', $many );
+		self::assertStringNotContainsString( 'Theme settings', $many );
+		self::assertSame( 4, substr_count( $many, 'ran-booster-webhook-step is-neutral' ) );
+		self::assertSame( 0, preg_match( '/ran-booster-webhook-step is-(?:ok|warning|pending)/', $many ) );
+		self::assertStringContainsString( 'Git provider receiver text', $many );
+	}
+
+	public function test_branch_in_use_follows_package_summaries_and_the_theme_link_is_labelled(): void {
+		$theme = $this->render_branch_section(
+			array( 'is-ok', 'is-ok', 'is-ok', 'is-ok' ),
+			false,
+			array(
+				'package_summaries' => array(
+					array(
+						'source'       => 'branch',
+						'type'         => 'theme',
+						'settings_url' => 'https://example.test/theme',
+					),
+				),
+			)
+		);
+		// Summaries win over the flag; one package with a settings URL gets its link, labelled by type.
+		self::assertSame( 1, preg_match( '/Branch publishing<\/h3><span[^>]*is-stable-intent[^>]*>Active<\/span><\/div><a href="https:\/\/example.test\/theme">Theme settings<\/a>/', $theme ) );
+		// Mixed repository: a Branch package keeps Branch Active beside a Release package.
+		$mixed = $this->render_branch_section( array( 'is-ok', 'is-ok', 'is-ok', 'is-ok' ), true, array( 'package_summaries' => array( array( 'source' => 'branch' ), array( 'source' => 'release_asset' ) ) ) );
+		self::assertSame( 1, preg_match( '/Branch publishing<\/h3><span[^>]*is-stable-intent[^>]*>Active<\/span>/', $mixed ) );
+		self::assertStringNotContainsString( 'Plugin settings', $mixed );
+	}
+
 	public function test_a_different_unavailable_reason_still_gets_its_notice_beside_the_receiver_step(): void {
 		$GLOBALS['ran_booster_repository_webhook_management_capabilities']['manage_options'] = true;
 		$facade = $this->createMock( WebhookAssistanceFacade::class );
@@ -803,7 +906,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringContainsString( 'Webhook setup', $html );
 		// Step 1 states the missing public HTTPS URL, so the amber notice does not repeat it.
 		self::assertStringNotContainsString( 'This site needs a public HTTPS URL before a Git provider can deliver webhooks.', $html );
-		self::assertSame( 1, substr_count( $html, 'This site needs a public HTTPS URL to receive webhooks. Manual updates still work.' ) );
+		self::assertSame( 1, substr_count( $html, 'This site needs a public HTTPS URL to receive webhooks.' ) );
 		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__notices', $html );
 		// With the receiver step not ok, setup starts collapsed.
 		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup"[^>]*ran-booster-disclosure">/', $html ) );

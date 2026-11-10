@@ -6,6 +6,8 @@ namespace RAN\Admin\WebhookManagement;
 
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\Admin\Component\NoticeIcon;
+use RAN\Admin\Component\RepositoryPublishing;
+use RAN\Admin\Component\StatusBadge;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\ManagedPackageWebhookAuthorityResolver;
 use RAN\Admin\WebhookManagement\Display\WebhookDisplayModel;
@@ -184,8 +186,12 @@ final class RepositoryWebhookManagementControls {
 		return (string) ob_get_clean();
 	}
 
-	/** Render the existing webhook setup disclosure on its repository-owned page. */
-	public function render_repository_webhook_setup( string $provider_code, string $repository_id, string $return_url, bool $has_branch_consumer = true, string $repository = '' ): ?string {
+	/**
+	 * Render the Branch publishing card on its repository-owned page.
+	 *
+	 * @param array<array-key, mixed> $row Repository row; its package summaries decide whether Branch is in use.
+	 */
+	public function render_repository_webhook_setup( string $provider_code, string $repository_id, string $return_url, bool $has_branch_consumer = true, string $repository = '', array $row = array() ): ?string {
 		$claimed_metadata = $this->claimed_provider_metadata( $provider_code );
 		if ( ! $this->supports_provider( $provider_code ) && $claimed_metadata instanceof ProviderMetadata ) {
 			$this->render_repository_webhook_section(
@@ -199,7 +205,9 @@ final class RepositoryWebhookManagementControls {
 						'message' => sprintf( __( '%s webhook configuration is incomplete. Webhook setup is unavailable until the Git provider supplies its complete management capability.', 'ran-booster' ), $claimed_metadata->label ),
 					),
 				),
-				false
+				false,
+				false,
+				$row
 			);
 
 			return null;
@@ -244,7 +252,7 @@ final class RepositoryWebhookManagementControls {
 			$model['recovery_warning'] = null;
 		}
 
-		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $has_branch_consumer, $notices, true, $operation_notice );
+		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $has_branch_consumer, $notices, true, $operation_notice, $row );
 		return $model['webhooks_url'] ?? null;
 	}
 
@@ -319,16 +327,22 @@ final class RepositoryWebhookManagementControls {
 	 * @param list<array{label:string,message:string,state:string}> $items
 	 * @param list<array{class:string,message:string,heading?:string,details?:list<string>}> $notices
 	 */
-	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true, bool $operation_notice = false ): void {
+	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true, bool $operation_notice = false, array $row = array() ): void {
+		$usage    = RepositoryPublishing::usage( $row );
+		$in_use   = is_array( $row['package_summaries'] ?? null ) && array() !== $row['package_summaries'] ? 0 < $usage['branch'] : $has_branch_consumer;
+		$link     = RepositoryPublishing::settings_link( $row );
 		$inactive = ! $has_branch_consumer || ! $setup_available;
 		// Setup opens once the receiver can accept deliveries, and always for an operation result or validation error.
 		$open = 'is-ok' === ( $items[2]['state'] ?? '' ) || $operation_notice;
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
-			<header class="ran-booster-settings-section__header">
-				<h3 id="ran-booster-repository-webhook-heading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?></h3>
-			</header>
+				<?php echo RepositoryPublishing::header( __( 'Branch publishing', 'ran-booster' ), 'ran-booster-repository-webhook-heading', $in_use, $link['url'], $link['label'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Shared header escapes its parts. ?>
 			<div class="ran-booster-settings-section__body">
+				<?php if ( $in_use ) { ?>
+				<p class="ran-booster-repository-publishing__line"><?php esc_html_e( 'Manual updates work without setup.', 'ran-booster' ); ?></p>
+				<?php } ?>
+				<div class="ran-booster-repository-publishing__tier">
+				<h4 id="ran-booster-repository-webhook-automation-heading" class="ran-booster-repository-publishing__subheading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?><?php echo $this->automation_badge( $items, $in_use ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes its label. ?></h4>
 				<?php if ( array() !== $notices ) { ?>
 				<div class="ran-booster-repository-webhook-management__notices">
 					<?php foreach ( $notices as $notice ) { ?>
@@ -346,7 +360,7 @@ final class RepositoryWebhookManagementControls {
 					<?php } ?>
 				</div>
 				<?php } ?>
-				<?php $this->render_repository_webhook_lifecycle( $items, $inactive ); ?>
+				<?php $this->render_repository_webhook_lifecycle( $in_use ? $items : $this->neutral_items( $items ), $inactive ); ?>
 				<?php if ( '' !== $panel ) { ?>
 				<div data-ran-booster-ui-disclosure="repository-webhook-setup" data-ran-booster-ui-disclosure-density="compact">
 				<details id="ran-booster-repository-webhook-setup" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-webhook-setup ran-booster-disclosure<?php echo $inactive ? ' is-inactive' : ''; ?>"<?php echo $open ? ' open' : ''; ?>>
@@ -357,9 +371,44 @@ final class RepositoryWebhookManagementControls {
 					</div>
 				</details></div>
 				<?php } ?>
+				</div>
 			</div>
 		</div></div></section>
 		<?php
+	}
+
+	/**
+	 * Automation badge for the Push-to-deploy tier, from the existing step states.
+	 *
+	 * Items are demand [0], secret [1], receiver [2], hook [3]. Not in use: neutral Not in use.
+	 * Receiver or secret not ok, or hook a warning: amber Not ready. Hook and automatic packages ok: green Active.
+	 * Otherwise (receiver and secret ok, hook or automatic packages not yet): neutral Ready.
+	 *
+	 * @param list<array{label:string,message:string,state:string}> $items
+	 */
+	private function automation_badge( array $items, bool $in_use ): string {
+		if ( ! $in_use ) {
+			return StatusBadge::for_intent( __( 'Not in use', 'ran-booster' ), 'none' );
+		}
+		$state = static fn ( int $index ): string => $items[ $index ]['state'] ?? 'is-pending';
+		if ( 'is-ok' !== $state( 2 ) || 'is-ok' !== $state( 1 ) || 'is-warning' === $state( 3 ) ) {
+			return StatusBadge::for_intent( __( 'Not ready', 'ran-booster' ), 'medium' );
+		}
+		if ( 'is-ok' === $state( 3 ) && 'is-ok' === $state( 0 ) ) {
+			return StatusBadge::for_intent( __( 'Active', 'ran-booster' ), 'stable' );
+		}
+
+		return StatusBadge::for_intent( __( 'Ready', 'ran-booster' ), 'none' );
+	}
+
+	/**
+	 * Steps keep their text but never warn for a method nobody uses.
+	 *
+	 * @param list<array{label:string,message:string,state:string}> $items
+	 * @return list<array{label:string,message:string,state:string}>
+	 */
+	private function neutral_items( array $items ): array {
+		return array_map( static fn ( array $item ): array => array_merge( $item, array( 'state' => 'is-neutral' ) ), $items );
 	}
 
 	/** @return list<array{label:string,message:string,state:string}> */
@@ -465,7 +514,7 @@ final class RepositoryWebhookManagementControls {
 				'label'   => __( 'Git provider receiver', 'ran-booster' ),
 				'message' => $receiver_ready
 					? __( 'This site can receive webhook deliveries.', 'ran-booster' )
-					: __( 'This site needs a public HTTPS URL to receive webhooks. Manual updates still work.', 'ran-booster' ),
+					: __( 'This site needs a public HTTPS URL to receive webhooks.', 'ran-booster' ),
 				'state'   => $receiver_ready ? 'is-ok' : ( null === $site ? 'is-pending' : 'is-warning' ),
 			),
 			array(

@@ -114,6 +114,28 @@
 	gap: var(--ran-booster-space-12);
 }
 
+.ran-booster-admin .ran-booster-repository-publishing__heading {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8);
+	min-inline-size: 0;
+}
+
+/* The delivery line sits under the header and one card gap above the next tier or the steps. */
+.ran-booster-admin .ran-booster-repository-publishing__line {
+	margin: 0 0 var(--ran-booster-card-gap);
+}
+
+.ran-booster-admin .ran-booster-repository-publishing__subheading {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8);
+	margin: 0 0 var(--ran-booster-space-8);
+	font-size: var(--ran-booster-font-size-lg);
+}
+
 .ran-booster-admin .ran-booster-repository-webhook-management__notices {
 	display: grid;
 	gap: var(--ran-booster-space-12);

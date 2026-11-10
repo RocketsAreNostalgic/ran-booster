@@ -59,6 +59,39 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Published release lifecycle', $html );
 	}
 
+	public function test_release_header_carries_delivery_badge_settings_link_and_the_not_in_use_line(): void {
+		$display = new ReleaseWorkflowDisplay();
+		$active  = $display->repository_section( $this->release_projection() );
+		self::assertSame( 1, preg_match( '/<h3 id="ran-booster-repository-release-heading">Release publishing<\/h3><span[^>]*is-stable-intent[^>]*>Active<\/span><\/div><a href="https:\/\/example.test\/settings">Plugin settings<\/a><\/header>/', $active ) );
+		self::assertStringNotContainsString( 'No package on this repository tracks releases.', $active );
+		// The release workflow is the second tier through its own disclosure; no step card and no extra sub-heading.
+		self::assertStringNotContainsString( 'Release workflow — optional', $active );
+		self::assertSame( 2, substr_count( $active, 'class="ran-booster-webhook-step ' ) );
+		self::assertSame( 1, substr_count( $active, 'Release workflow' ) );
+		self::assertStringNotContainsString( '<h4', $active );
+
+		$idle              = $this->release_projection();
+		$idle['in_use']    = false;
+		$idle['lifecycle'] = array(
+			array(
+				'label'   => 'Prepare package',
+				'message' => 'Prepare message.',
+				'state'   => 'is-neutral',
+			),
+			array(
+				'label'   => 'Track releases',
+				'message' => 'Track message.',
+				'state'   => 'is-neutral',
+			),
+		);
+		$html              = $display->repository_section( $idle );
+		self::assertSame( 1, preg_match( '/Release publishing<\/h3><span[^>]*is-none-intent[^>]*>Not in use<\/span>/', $html ) );
+		self::assertStringContainsString( '<p class="ran-booster-repository-publishing__line">No package on this repository tracks releases.</p>', $html );
+		self::assertSame( 2, substr_count( $html, 'ran-booster-webhook-step is-neutral' ) );
+		self::assertStringContainsString( 'Prepare message.', $html );
+		self::assertStringContainsString( 'id="ran-booster-repository-release-workflow"', $html );
+	}
+
 	/** @return array<string,mixed> */
 	private function release_projection( bool $package_eligible = true, bool $tracking = true, bool $with_package = true ): array {
 		return array(
@@ -75,12 +108,8 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 					'message' => 'Track message.',
 					'state'   => $tracking ? 'is-ok' : 'is-pending',
 				),
-				array(
-					'label'   => 'Release workflow — optional',
-					'message' => 'Workflow message.',
-					'state'   => 'is-neutral',
-				),
 			),
+			'in_use'             => true,
 			'ineligible_message' => $package_eligible ? '' : 'The installed package does not declare the required Update URI.',
 			'readiness'          => array(
 				'repository'         => 'owner/repo',
@@ -131,8 +160,8 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 
 		self::assertFalse( $this->release_disclosure_open( $xpath, 'ran-booster-repository-release-readiness' ) );
 		self::assertFalse( $this->release_disclosure_open( $xpath, 'ran-booster-repository-release-workflow' ) );
-		self::assertSame( 3.0, $xpath->evaluate( 'count(//ol[contains(@class,"ran-booster-webhook-steps")]/li)' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//ol/li[contains(@class,"is-neutral")])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//ol[contains(@class,"ran-booster-webhook-steps")]/li)' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//ol/li[contains(@class,"is-neutral")])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-repository-release-readiness"]/summary[normalize-space()="Release readiness"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-repository-release-workflow"]/summary[starts-with(normalize-space(), "Release workflow")])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@data-ran-booster-ui-disclosure="repository-release-readiness"][@data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback]/div[@data-ran-booster-ui-disclosure-content])' ) );

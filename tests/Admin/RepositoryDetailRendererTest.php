@@ -190,7 +190,8 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertSame( 3, substr_count( $html, 'ran-booster-provider-task-tab ran-section-navigation__link' ) );
 		self::assertSame( 3, substr_count( $html, '<a class="ran-wp-ui-box-sizing ran-wp-ui-reset-a ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-link is-unstyled ran-booster-provider-task-tab ' ) );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-provider-task-tab__source-indicator' ) );
-		self::assertSame( 2, substr_count( $html, 'Active for one or more packages in this repository.' ) );
+		self::assertSame( 2, substr_count( $html, '<span class="screen-reader-text">In use</span>' ) );
+		self::assertSame( 2, substr_count( $html, 'title="In use"' ) );
 		self::assertStringContainsString( 'data-ran-booster-repository-view="status" aria-controls="ran-booster-provider-profile-region" aria-current="page"', $html );
 		self::assertStringNotContainsString( 'Status is configured for this repository.', $html );
 		self::assertStringContainsString( '1 package uses Branch', $html );
@@ -220,6 +221,69 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Provider access', $html );
 		self::assertLessThan( strpos( $html, 'Provider access' ), strpos( $html, 'Repository details' ) );
 		self::assertStringNotContainsString( 'name="repository_webhook_management_operation"', $html );
+	}
+
+	/**
+	 * The tab dot shows only for a method that is in use, counted from the same package summaries as the
+	 * Status view, and carries its meaning as hover text and screen-reader text.
+	 */
+	public function test_tab_dot_appears_only_for_the_method_in_use_with_an_accessible_name(): void {
+		$cases = array(
+			'branch only'  => array( array( 'branch' ), array( 'Branch' ) ),
+			'release only' => array( array( 'release_asset' ), array( 'Releases' ) ),
+			'mixed'        => array( array( 'branch', 'release_asset' ), array( 'Branch', 'Releases' ) ),
+			'no summaries' => array( array(), array( 'Branch', 'Releases' ) ), // Falls back to the row's source_key.
+		);
+		foreach ( $cases as $name => $case ) {
+			$summaries = array();
+			foreach ( $case[0] as $source ) {
+				$summaries[] = array(
+					'type'            => 'plugin',
+					'identifier'      => $source . '/plugin.php',
+					'display_name'    => 'Plugin ' . $source,
+					'settings_url'    => 'https://example.test/' . $source,
+					'source'          => $source,
+					'source_revision' => 1,
+					'branch'          => 'branch' === $source ? 'main' : '',
+					'subdirectory'    => '',
+				);
+			}
+			ob_start();
+			( new RepositoryDetailRenderer() )->render(
+				array(
+					'repository'        => 'owner/dot',
+					'source_label'      => 'Branch',
+					// A stale source_key must not decide: the package summaries do.
+					'source_key'        => 'mixed',
+					'package_summaries' => $summaries,
+					'details'           => array(),
+					'actions'           => array(),
+				),
+				'GitHub',
+				'https://example.test/repositories',
+				'https://example.test/activity',
+				true,
+				'Receiver ready.',
+				'status',
+				$this->view_urls(),
+				$this->view_request_urls(),
+				null,
+				null
+			);
+			$html = (string) ob_get_clean();
+
+			$tabs_with_dot = array();
+			if ( 0 < preg_match_all( '/<a [^>]*data-ran-booster-repository-view="[a-z]+"[^>]*>(Status|Branch|Releases)(?:\s*<span class="ran-booster-provider-task-tab__source-indicator" title="In use" aria-hidden="true"><\/span><span class="screen-reader-text">In use<\/span>)?/', $html, $matches, PREG_SET_ORDER ) ) {
+				foreach ( $matches as $match ) {
+					if ( str_contains( $match[0], 'source-indicator' ) ) {
+						$tabs_with_dot[] = $match[1];
+					}
+				}
+			}
+			self::assertSame( $case[1], $tabs_with_dot, $name );
+			self::assertSame( count( $case[1] ), substr_count( $html, 'title="In use"' ), $name );
+			self::assertSame( count( $case[1] ), substr_count( $html, '<span class="screen-reader-text">In use</span>' ), $name );
+		}
 	}
 
 	public function test_status_keeps_exact_source_counts_for_complete_package_inventory(): void {

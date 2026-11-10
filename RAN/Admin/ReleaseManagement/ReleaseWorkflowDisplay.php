@@ -24,14 +24,14 @@ final class ReleaseWorkflowDisplay {
 
 	public function repository_section( array $projection ): string {
 		$settings_url = is_string( $projection['settings_url'] ?? null ) ? $projection['settings_url'] : '';
+		$in_use       = true === ( $projection['in_use'] ?? false );
 		$html         = '<section class="ran-booster-settings-section ran-booster-repository-release-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-release-heading">'
 			. '<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">'
-			. '<header class="ran-booster-settings-section__header ran-booster-repository-release-section__header">'
-			. '<h3 id="ran-booster-repository-release-heading">' . esc_html__( 'Release publishing', 'ran-booster' ) . '</h3>';
-		if ( '' !== $settings_url ) {
-			$html .= '<a href="' . esc_url( $settings_url ) . '">' . esc_html( (string) ( $projection['settings_label'] ?? '' ) ) . '</a>';
+			. \RAN\Admin\Component\RepositoryPublishing::header( __( 'Release publishing', 'ran-booster' ), 'ran-booster-repository-release-heading', $in_use, $settings_url, (string) ( $projection['settings_label'] ?? '' ) )
+			. '<div class="ran-booster-settings-section__body">';
+		if ( ! $in_use ) {
+			$html .= '<p class="ran-booster-repository-publishing__line">' . esc_html__( 'No package on this repository tracks releases.', 'ran-booster' ) . '</p>';
 		}
-		$html .= '</header><div class="ran-booster-settings-section__body">';
 
 		if ( true === ( $projection['shared'] ?? false ) ) {
 			$html .= '<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>'

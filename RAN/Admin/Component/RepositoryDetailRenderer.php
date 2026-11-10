@@ -35,6 +35,9 @@ final class RepositoryDetailRenderer {
 		$packages              = $this->packages( $row );
 		$omitted               = max( 0, (int) ( $row['package_summaries_omitted'] ?? 0 ) );
 		$active_view           = in_array( $active_view, array( 'status', 'branch', 'releases' ), true ) ? $active_view : 'status';
+		$usage                 = RepositoryPublishing::usage( $row );
+		$branch_in_use         = array() !== $packages ? 0 < $usage['branch'] : in_array( $source_key, array( 'branch', 'mixed' ), true );
+		$releases_in_use       = array() !== $packages ? 0 < $usage['releases'] : in_array( $source_key, array( 'release_asset', 'mixed' ), true );
 		$rendered_webhooks_url = null;
 		$webhook_panel         = 'branch' === $active_view ? $this->capture_webhook_panel( $render_webhook_panel, $rendered_webhooks_url ) : '';
 		?>
@@ -60,11 +63,10 @@ final class RepositoryDetailRenderer {
 				) as $view => $label ) {
 					$url         = is_string( $view_urls[ $view ] ?? null ) ? $view_urls[ $view ] : $list_url;
 					$request_url = is_string( $view_request_urls[ $view ] ?? null ) ? $view_request_urls[ $view ] : $url;
-					$has_source  = ( 'branch' === $view && in_array( $source_key, array( 'branch', 'mixed' ), true ) )
-						|| ( 'releases' === $view && in_array( $source_key, array( 'release_asset', 'mixed' ), true ) );
+					$has_source  = 'branch' === $view ? $branch_in_use : ( 'releases' === $view && $releases_in_use );
 					?>
 					<li><a class="ran-wp-ui-box-sizing ran-wp-ui-reset-a ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-link is-unstyled ran-booster-provider-task-tab ran-section-navigation__link<?php echo $active_view === $view ? ' current' : ''; ?>" href="<?php echo esc_url( $url ); ?>" hx-get="<?php echo esc_url( $request_url ); ?>" data-ran-booster-repository-view="<?php echo esc_attr( $view ); ?>" aria-controls="ran-booster-provider-profile-region" <?php echo $active_view === $view ? 'aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?><?php if ( $has_source ) { ?>
-						<span class="ran-booster-provider-task-tab__source-indicator" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Active for one or more packages in this repository.', 'ran-booster' ); ?></span>
+						<span class="ran-booster-provider-task-tab__source-indicator" title="<?php esc_attr_e( 'In use', 'ran-booster' ); ?>" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'In use', 'ran-booster' ); ?></span>
 					<?php } ?></a></li>
 				<?php } ?>
 				</ul>

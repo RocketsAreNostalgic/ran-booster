@@ -194,7 +194,9 @@ final class ManagementHistoryDetailsTest extends TestCase {
 			}
 		}
 		self::assertSame( 1, preg_match( '/\.ran-booster-admin \.ran-booster-repository-detail__record \{\n\tcontainer-type: inline-size;\n\}/', $css ), 'The record card must be an inline-size container.' );
-		self::assertSame( 1, preg_match( '/@container \(min-width: 400px\) \{\n\t\.ran-booster-admin\n\t\t\.ran-booster-repository-detail__record\n\t\t\.ran-booster-repository-detail__facts\n\t\t> div \{([^}]*)\}/', $css, $inline ) );
+		if ( 1 !== preg_match( '/@container \(min-width: 400px\) \{\n\t\.ran-booster-admin\n\t\t\.ran-booster-repository-detail__record\n\t\t\.ran-booster-repository-detail__facts\n\t\t> div \{([^}]*)\}/', $css, $inline ) ) {
+			self::fail( 'The container rule for record card facts is missing.' );
+		}
 		self::assertStringContainsString( 'grid-template-columns: minmax(140px, 0.4fr) minmax(0, 1fr);', $inline[1] );
 		self::assertStringContainsString( 'align-items: center;', $inline[1] );
 		self::assertStringNotContainsString( 'repository-detail__summary', $css );

@@ -18,12 +18,12 @@ final class ExternalLinkMarkerTest extends TestCase {
 	public function test_every_new_tab_text_link_in_admin_sources_ends_with_exactly_one_marker(): void {
 		$root  = dirname( __DIR__, 2 );
 		$files = array_merge(
-			(array) glob( $root . '/views/*.php' ),
-			(array) glob( $root . '/views/*/*.php' ),
-			(array) glob( $root . '/views/*/*/*.php' ),
-			(array) glob( $root . '/RAN/Admin/*.php' ),
-			(array) glob( $root . '/RAN/Admin/*/*.php' ),
-			(array) glob( $root . '/RAN/Admin/*/views/*.php' )
+			self::files( $root . '/views/*.php' ),
+			self::files( $root . '/views/*/*.php' ),
+			self::files( $root . '/views/*/*/*.php' ),
+			self::files( $root . '/RAN/Admin/*.php' ),
+			self::files( $root . '/RAN/Admin/*/*.php' ),
+			self::files( $root . '/RAN/Admin/*/views/*.php' )
 		);
 		self::assertNotEmpty( $files );
 		$checked = 0;
@@ -67,5 +67,12 @@ final class ExternalLinkMarkerTest extends TestCase {
 		}
 		self::assertSame( 1, substr_count( $m[1], '↗' ) );
 		self::assertSame( 1, substr_count( $m[1], '(opens in a new tab)' ) );
+	}
+
+	/** @return list<string> */
+	private static function files( string $pattern ): array {
+		$found = glob( $pattern );
+
+		return false === $found ? array() : $found;
 	}
 }

@@ -30,11 +30,7 @@ const buttonCss = fs.readFileSync(
 	'utf8'
 );
 
-function loadFunction(name, dependencies = {}) {
-	const localizedDependencies = {
-		wp: { i18n: { __: (text) => text } },
-		...dependencies,
-	};
+function extractFunction(name) {
 	const signature = `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
@@ -60,9 +56,19 @@ function loadFunction(name, dependencies = {}) {
 
 	assert.notEqual(end, -1, `The ${name} function must be complete.`);
 
+	return source.slice(start, end);
+}
+
+function loadFunction(name, dependencies = {}) {
+	const localizedDependencies = {
+		wp: { i18n: { __: (text) => text } },
+		...dependencies,
+	};
+
+	// The shared busy-label helpers live beside, not inside, the loaded function.
 	return Function(
 		...Object.keys(localizedDependencies),
-		`"use strict"; return (${source.slice(start, end)});`
+		`"use strict"; ${extractFunction('showBusyLabel')}\n${extractFunction('restoreBusyLabel')}\nreturn (${extractFunction(name)});`
 	)(...Object.values(localizedDependencies));
 }
 

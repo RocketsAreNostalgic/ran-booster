@@ -520,6 +520,42 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'Use published releases', $html );
 	}
 
+	public function test_managed_release_track_form_opts_into_the_shared_submit_busy_state(): void {
+		$tracking = new ReleaseTrackingFacadeDouble(
+			ReleaseManagementFixture::status( 'release_asset', channel: 'stable' )
+		);
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+
+		self::assertSame( 1, preg_match( '/<form id="ran-booster-release-track-form"[^>]*data-ran-booster-submit-busy/', $html ) );
+		if ( 1 !== preg_match( '/<button type="submit" class="button ran-booster-release-track-option" name="release_channel" value="prerelease"[^>]*>\s*<span>Preview<\/span>\s*<\/button>/', $html, $button ) ) {
+			self::fail( 'The alternative track must render as a submit button wrapping its label in a span.' );
+		}
+		self::assertStringContainsString( 'data-ran-booster-busy-label="Switching…"', $button[0] );
+		self::assertStringContainsString( 'data-ran-booster-busy-message="Switching the release track. This can take a few seconds."', $button[0] );
+		self::assertStringContainsString( 'aria-label="Switch to Preview releases"', $button[0] );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-busy-label=' ), 'The current track is a non-interactive span and carries no busy label.' );
+		self::assertSame( 1, preg_match( '/<\/div>\s*<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status><\/span>\s*<p id="ran-booster-release-track-description"/', $html ) );
+	}
+
+	public function test_branch_release_track_radios_do_not_opt_into_the_submit_busy_state(): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection();
+
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+
+		self::assertSame( 1, preg_match( '/<form id="ran-booster-release-track-form"/', $html ) );
+		self::assertSame( 0, preg_match( '/<form id="ran-booster-release-track-form"[^>]*data-ran-booster-submit-busy/', $html ) );
+		self::assertStringNotContainsString( 'data-ran-booster-submit-busy-status', $html );
+	}
+
 	public function test_missing_managed_status_keeps_the_known_release_shell_disabled_without_inventing_versions(): void {
 		$tracking                  = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$tracking->throw_on_status = true;

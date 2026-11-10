@@ -16,6 +16,57 @@
 	initSubmitBusy();
 
 	/**
+	 * Swap a submitter's content for its data-ran-booster-busy-label and announce
+	 * its data-ran-booster-busy-message. Shared by plain POST forms and HTMX
+	 * package mutations. Returns what restoreBusyLabel needs, or null when the
+	 * submitter has no busy label.
+	 */
+	function showBusyLabel(form, submitter) {
+		const busyLabel = submitter?.getAttribute?.(
+			'data-ran-booster-busy-label'
+		);
+		if (!busyLabel) {
+			return null;
+		}
+		const saved = {
+			nodes: Array.from(submitter.childNodes),
+			minInlineSize: submitter.style.minInlineSize,
+		};
+		// Pin the width first so a shorter label does not shrink the button.
+		const width = submitter.getBoundingClientRect().width;
+		if (width > 0) {
+			submitter.style.minInlineSize = `${Math.ceil(width)}px`;
+		}
+		const label = document.createElement('span');
+		label.setAttribute('data-ran-booster-submit-busy-label', '');
+		label.textContent = busyLabel;
+		submitter.replaceChildren(label);
+		const status = form.querySelector(
+			'[data-ran-booster-submit-busy-status]'
+		);
+		if (status) {
+			status.textContent =
+				submitter.getAttribute('data-ran-booster-busy-message') ||
+				busyLabel;
+		}
+		return saved;
+	}
+
+	function restoreBusyLabel(form, submitter, saved) {
+		if (!saved) {
+			return;
+		}
+		submitter.replaceChildren(...saved.nodes);
+		submitter.style.minInlineSize = saved.minInlineSize;
+		const status = form.querySelector(
+			'[data-ran-booster-submit-busy-status]'
+		);
+		if (status) {
+			status.textContent = '';
+		}
+	}
+
+	/**
 	 * Plain POST + redirect forms opt in with data-ran-booster-submit-busy. The
 	 * pressed button must stay enabled so its name and value still submit; the
 	 * browser builds the entry list after the submit event, so only the other
@@ -29,10 +80,6 @@
 
 		const formSelector = 'form[data-ran-booster-submit-busy]';
 		const states = new WeakMap();
-
-		function statusRegion(form) {
-			return form.querySelector('[data-ran-booster-submit-busy-status]');
-		}
 
 		function resetSubmitBusy(form) {
 			const state = states.get(form);
@@ -52,8 +99,7 @@
 				}
 			});
 			const submitter = state.submitter;
-			submitter.textContent = state.label;
-			submitter.style.minInlineSize = state.minInlineSize;
+			restoreBusyLabel(form, submitter, state.saved);
 			submitter.removeAttribute('aria-busy');
 			submitter.classList.remove(
 				'ran-booster-enhanced-mutation__submitter--busy',
@@ -61,10 +107,6 @@
 			);
 			form.removeAttribute('aria-busy');
 			form.classList.remove('ran-booster-enhanced-mutation-is-busy');
-			const status = statusRegion(form);
-			if (status) {
-				status.textContent = '';
-			}
 		}
 
 		function startSubmitBusy(event) {
@@ -78,10 +120,10 @@
 				return;
 			}
 			const submitter = event.submitter;
-			const busyLabel = submitter?.getAttribute?.(
-				'data-ran-booster-busy-label'
-			);
-			if (!busyLabel || !form.contains(submitter)) {
+			if (
+				!submitter?.getAttribute?.('data-ran-booster-busy-label') ||
+				!form.contains(submitter)
+			) {
 				return;
 			}
 
@@ -101,13 +143,8 @@
 			states.set(form, {
 				submitter,
 				others,
-				label: submitter.textContent,
-				minInlineSize: submitter.style.minInlineSize,
+				saved: showBusyLabel(form, submitter),
 			});
-			const width = submitter.getBoundingClientRect().width;
-			if (width > 0) {
-				submitter.style.minInlineSize = `${Math.ceil(width)}px`;
-			}
 			form.setAttribute('aria-busy', 'true');
 			form.classList.add('ran-booster-enhanced-mutation-is-busy');
 			others.forEach(function (other) {
@@ -119,17 +156,6 @@
 				'ran-booster-enhanced-mutation__submitter--busy',
 				'ran-booster-update-is-active'
 			);
-			const label = document.createElement('span');
-			label.setAttribute('data-ran-booster-submit-busy-label', '');
-			label.textContent = busyLabel;
-			submitter.textContent = '';
-			submitter.append(label);
-			const status = statusRegion(form);
-			if (status) {
-				status.textContent =
-					submitter.getAttribute('data-ran-booster-busy-message') ||
-					busyLabel;
-			}
 		}
 
 		document.addEventListener('submit', startSubmitBusy);
@@ -570,6 +596,8 @@
 				controls,
 				submitter,
 				submitterAriaBusy: submitter.getAttribute('aria-busy'),
+				// Only submitters carrying data-ran-booster-busy-label opt in.
+				savedLabel: switchScope ? null : showBusyLabel(form, submitter),
 			});
 			form.setAttribute('aria-busy', 'true');
 			if (!switchScope) {
@@ -620,6 +648,7 @@
 					'ran-booster-enhanced-mutation__submitter--busy'
 				);
 				submitter.classList.remove('ran-booster-update-is-active');
+				restoreBusyLabel(form, submitter, state.savedLabel);
 				busyStates.delete(form);
 			}
 

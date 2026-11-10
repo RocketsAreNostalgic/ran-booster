@@ -524,7 +524,7 @@ final class ReleaseManagementDisplay {
 	private function render_release_track_settings( string $mode, bool $disabled, ?string $selected_channel, PackageDisplayProjection $package, ?string $nonce_action, string $form_id ): void {
 		$has_mutation = ! $disabled && null !== $nonce_action;
 		?>
-		<form id="<?php echo esc_attr( $form_id ); ?>" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="<?php echo esc_attr( 'branch' === $mode ? 'ran-booster-release-switch-form' : 'ran-booster-release-channel-form' ); ?>"<?php echo 'branch' === $mode ? ' data-ran-booster-source-transition' : ''; ?><?php echo $has_mutation ? ' data-ran-booster-package-mutation' : ''; ?>>
+		<form id="<?php echo esc_attr( $form_id ); ?>" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="<?php echo esc_attr( 'branch' === $mode ? 'ran-booster-release-switch-form' : 'ran-booster-release-channel-form' ); ?>"<?php echo 'branch' === $mode ? ' data-ran-booster-source-transition' : ''; ?><?php echo $has_mutation ? ' data-ran-booster-package-mutation' : ''; ?><?php echo 'managed' === $mode ? ' data-ran-booster-submit-busy' : ''; ?>>
 			<?php if ( $has_mutation ) { ?>
 				<?php $this->admin_post_fields( 'branch' === $mode ? 'enable' : 'change_channel', $package, $nonce_action ); ?>
 			<?php } ?>
@@ -556,7 +556,7 @@ final class ReleaseManagementDisplay {
 						</span>
 					<?php } elseif ( $managed ) { ?>
 						<?php /* translators: %s is the destination release track, Stable or Preview. */ ?>
-						<button type="submit" class="button ran-booster-release-track-option" name="release_channel" value="<?php echo esc_attr( $next_channel ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Switch to %s releases', 'ran-booster' ), $this->release_track_label( $next_channel ) ) ); ?>">
+						<button type="submit" class="button ran-booster-release-track-option" name="release_channel" value="<?php echo esc_attr( $next_channel ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Switch to %s releases', 'ran-booster' ), $this->release_track_label( $next_channel ) ) ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Switching…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Switching the release track. This can take a few seconds.', 'ran-booster' ) ); ?>">
 							<span><?php echo esc_html( $this->release_track_label( $channel ) ); ?></span>
 						</button>
 					<?php } else { ?>
@@ -567,6 +567,9 @@ final class ReleaseManagementDisplay {
 					<?php } ?>
 				<?php } ?>
 			</div>
+			<?php if ( $managed ) { ?>
+				<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
+			<?php } ?>
 			<p id="<?php echo esc_attr( $description_id ); ?>" class="description"><?php echo esc_html( $description ); ?></p>
 		</fieldset>
 		<?php

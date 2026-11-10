@@ -49,6 +49,17 @@ function element(attributes = {}, text = '') {
 		append(child) {
 			this.children.push(child);
 		},
+		get childNodes() {
+			return this.children.length
+				? [...this.children]
+				: this._text
+					? [element({}, this._text)]
+					: [];
+		},
+		replaceChildren(...nodes) {
+			this._text = '';
+			this.children = nodes;
+		},
 		getAttribute: (name) => (attrs.has(name) ? attrs.get(name) : null),
 		hasAttribute: (name) => attrs.has(name),
 		setAttribute: (name, value) => attrs.set(name, String(value)),
@@ -218,5 +229,48 @@ test('the shared busy styling covers the opt-in form and its busy label', () => 
 	assert.match(
 		buttonCss,
 		/\.ran-booster-update-is-active\s*\[data-ran-booster-submit-busy-label\]\s*\{\s*position: relative;\s*z-index: 1;/
+	);
+});
+
+const trackView = fs.readFileSync(
+	new URL(
+		'../../RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php',
+		import.meta.url
+	),
+	'utf8'
+);
+
+test('the release track form reuses the shared busy helper through data attributes', () => {
+	assert.match(
+		trackView,
+		/data-ran-booster-submit-busy' : ''; \?>>/,
+		'The managed track form opts in.'
+	);
+	assert.ok(trackView.includes("__( 'Switching…', 'ran-booster' )"));
+	assert.ok(trackView.includes('data-ran-booster-busy-label="<?php'));
+	assert.ok(trackView.includes('data-ran-booster-busy-message="<?php'));
+	assert.match(trackView, /data-ran-booster-submit-busy-status><\/span>/);
+});
+
+test('a busy label swap restores nested markup and the pinned width', () => {
+	const { buttons, submit, listeners, status } = setup();
+	const inner = element({}, 'Set up');
+	buttons[0].replaceChildren(inner);
+
+	submit(buttons[0]);
+	assert.equal(buttons[0].textContent, 'Setting up…');
+	assert.equal(status.textContent, 'Creating the webhook.');
+
+	listeners.window.pageshow({ persisted: true });
+	assert.strictEqual(buttons[0].childNodes[0], inner);
+	assert.equal(buttons[0].textContent, 'Set up');
+	assert.equal(buttons[0].style.minInlineSize, '');
+});
+
+test('the HTMX mutation path applies the same busy label and restores it', () => {
+	assert.match(source, /savedLabel: switchScope/);
+	assert.match(
+		source,
+		/restoreBusyLabel\(form, submitter, state\.savedLabel\)/
 	);
 });

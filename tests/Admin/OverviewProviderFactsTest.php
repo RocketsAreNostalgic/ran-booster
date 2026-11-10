@@ -81,10 +81,11 @@ final class OverviewProviderFactsTest extends TestCase {
 		$presenter = new ProviderSettingsPresenter( $registry, $secrets, new CredentialUsageReader(), github_selection: $selection );
 		self::assertSame(
 			array(
-				'admitted'    => true,
-				'selection'   => 'available',
-				'source_kind' => 'bundled',
-				'source_name' => null,
+				'admitted'             => true,
+				'selection'            => 'available',
+				'source_kind'          => 'bundled',
+				'source_name'          => null,
+				'replacement_detected' => false,
 			),
 			$presenter->overview_provider_facts()['gh']
 		);
@@ -121,10 +122,11 @@ final class OverviewProviderFactsTest extends TestCase {
 		$unadmitted = new ProviderSettingsPresenter( new ProviderRegistry(), $secrets, new CredentialUsageReader(), github_selection: $selection );
 		self::assertSame(
 			array(
-				'admitted'    => false,
-				'selection'   => 'storage_unavailable',
-				'source_kind' => null,
-				'source_name' => null,
+				'admitted'             => false,
+				'selection'            => 'storage_unavailable',
+				'source_kind'          => null,
+				'source_name'          => null,
+				'replacement_detected' => false,
 			),
 			$unadmitted->overview_provider_facts()['gh']
 		);

@@ -196,7 +196,7 @@ final readonly class ProviderSettingsPresenter {
 	 * Local admission and passive selected implementation.
 	 *
 	 * @phpstan-impure
-	 * @return array<string, array{admitted:bool,selection:?string,source_kind:?string,source_name:?string}>
+	 * @return array<string, array{admitted:bool,selection:?string,source_kind:?string,source_name:?string,replacement_detected?:bool}>
 	 */
 	public function overview_provider_facts(): array {
 		$metadata = $this->providers->metadata();
@@ -225,10 +225,12 @@ final readonly class ProviderSettingsPresenter {
 			$selected    = isset( $metadata['gh'] ) && true === ( $selection['available'] ?? false ) ? ( $current['selected'] ?? null ) : null;
 			$name        = $current['declaration']['display_name'] ?? null;
 			$facts['gh'] = array(
-				'admitted'    => isset( $metadata['gh'] ),
-				'selection'   => is_string( $selection['state'] ?? null ) ? $selection['state'] : null,
-				'source_kind' => in_array( $selected, array( 'bundled', 'replacement' ), true ) ? $selected : null,
-				'source_name' => 'replacement' === $selected && is_string( $name ) && '' !== trim( $name ) ? $name : null,
+				'admitted'             => isset( $metadata['gh'] ),
+				'selection'            => is_string( $selection['state'] ?? null ) ? $selection['state'] : null,
+				'source_kind'          => in_array( $selected, array( 'bundled', 'replacement' ), true ) ? $selected : null,
+				'source_name'          => 'replacement' === $selected && is_string( $name ) && '' !== trim( $name ) ? $name : null,
+				// A compatible replacement is active and awaiting approval, not missing, conflicting or incompatible.
+				'replacement_detected' => 'decision_required' === ( $selection['state'] ?? null ) && array() !== ( $selection['candidates'] ?? array() ) && ! in_array( null, $selection['candidates'], true ),
 			);
 		}
 		return $facts;

@@ -1002,6 +1002,28 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'style="text-align: center;', $base );
 	}
 
+	public function test_booster_footer_stays_in_normal_flow_beside_the_wordpress_footer(): void {
+		$cards = $this->asset( 'ran-booster/30-provider-cards.css' );
+		if ( 1 !== preg_match( '/\.ran-booster-admin \.ran-booster-footer \{([^}]*)\}/', $cards, $rule ) ) {
+			self::fail( 'The Booster footer rule is missing.' );
+		}
+		// The footer is an in-flow block of the page wrapper: no offsets or removal from flow.
+		self::assertStringContainsString( 'position: relative;', $rule[1] );
+		self::assertStringContainsString( 'margin-inline: 0;', $rule[1] );
+		self::assertSame( 0, preg_match( '/position:\s*(?:absolute|fixed|sticky)|(?:inset|top|bottom|left|right|transform|display:\s*none)/', $rule[1] ) );
+		// Nothing outside print styles repositions or hides WordPress's own footer.
+		$sources = glob( dirname( __DIR__, 2 ) . '/assets/ran-booster/*.css' );
+		self::assertIsArray( $sources );
+		foreach ( $sources as $file ) {
+			self::assertDoesNotMatchRegularExpression( '/#wpfooter\s*[,{]/', $this->raw_asset( 'ran-booster/' . basename( $file ) ), basename( $file ) );
+		}
+		// The footer is the last block inside the page wrapper, so a view that leaves a container open or closed cannot detach it.
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Tests inspect local source views without HTTP.
+		$base = file_get_contents( dirname( __DIR__, 2 ) . '/views/base.php' );
+		self::assertIsString( $base );
+		self::assertSame( 1, preg_match( '/<div class="ran-booster-footer">.*<\/p>\s*<\/div>\s*<\/div>\s*<\?php/s', $base ) );
+	}
+
 	public function test_documentation_chapters_outrank_their_disclosures_and_articles(): void {
 		$documentation = $this->asset( 'ran-booster-documentation.css' );
 

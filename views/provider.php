@@ -357,11 +357,11 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 							<?php } ?></ul>
 						<?php } ?>
 						<?php if ( ! $github_selection['available'] ) { ?>
-							<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available and Bitbucket is unaffected.', 'ran-booster' ); ?></p>
+							<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', 'ran-booster' ); ?></p>
 						<?php } ?>
 					</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 				<?php } elseif ( ! $github_selection['available'] ) { ?>
-					<p><?php esc_html_e( 'GitHub operations are paused. Local records remain available and Bitbucket is unaffected.', 'ran-booster' ); ?></p>
+					<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-provider-paused-notice><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 				<?php } ?>
 				<?php if ( '' !== $github_selection['error'] && ! in_array( $selection_status['state'], array( 'conflict', 'incompatible', 'storage_unavailable' ), true ) ) { ?>
 					<p role="status"><?php echo esc_html( $github_selection['error'] ); ?></p>
@@ -369,7 +369,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 				<?php $adoption_review = $github_selection['review']; ?>
 				<?php if ( is_array( $adoption_review ) ) { ?>
 					<div data-ran-booster-ui-disclosure="provider-adoption-review" data-ran-booster-ui-disclosure-density="compact">
-					<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure"><summary><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Review return to bundled GitHub', 'ran-booster' ) : __( 'Review GitHub provider', 'ran-booster' ) ); ?></summary>
+					<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure"><summary><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Review return to bundled GitHub', 'ran-booster' ) : __( 'Review and approve GitHub provider', 'ran-booster' ) ); ?></summary>
 					<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 					<?php
 					$review_target = $selection_status['candidates'][ $adoption_review['target']['plugin_basename'] ] ?? null;
@@ -402,16 +402,19 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 							<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php echo esc_html( 'bundled' === $adoption_review['selected'] ? __( 'Return to bundled GitHub', 'ran-booster' ) : __( 'Approve GitHub provider', 'ran-booster' ) ); ?></button>
 						</form>
 					<?php } ?>
+					<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
 					</div>
 					</details></div>
+				<?php } else { ?>
+				<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
 				<?php } ?>
 			<?php } ?>
-			<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
 			<?php
 			if ( $healthy_replacement ) {
 				?>
+				<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=installation#ran-booster-github-provider-diagnostics' ) ); ?>"><?php esc_html_e( 'GitHub provider details', 'ran-booster' ); ?></a></p>
 				</div>
-				</details><?php } ?></div>
+				</details></div><?php } ?>
 		</section>
 	<?php } ?>
 

@@ -33,7 +33,20 @@ $provider_selection_labels = array(
 	'decision_required'   => __( 'Provider selection needs a decision', 'ran-booster' ),
 	'storage_unavailable' => __( 'Provider selection storage is unavailable', 'ran-booster' ),
 );
-$provider_attention        = array_filter(
+// A detected replacement awaiting approval names the remaining step; every other
+// selection problem keeps its own wording, and only an unexplained refusal is
+// reported as not admitted.
+$provider_attention_message = static function ( array $provider ) use ( $provider_selection_labels ): string {
+	$selection = $provider['selection'];
+	if ( 'decision_required' === $selection && true === ( $provider['replacement_detected'] ?? false ) ) {
+		return __( 'A custom GitHub provider was detected. Review and approve it to enable GitHub operations.', 'ran-booster' );
+	}
+	if ( is_string( $selection ) && 'available' !== $selection && isset( $provider_selection_labels[ $selection ] ) ) {
+		return $provider_selection_labels[ $selection ];
+	}
+	return __( 'Provider is not admitted.', 'ran-booster' );
+};
+$provider_attention         = array_filter(
 	$provider_summaries,
 	static fn( array $provider ): bool => false === $provider['admitted']
 		|| ( 'gh' === $provider['code'] && in_array( $provider['selection'], array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'storage_unavailable' ), true ) )
@@ -124,7 +137,7 @@ $provider_attention        = array_filter(
 				<?php } ?>
 			<?php } ?>
 			<?php foreach ( $provider_attention as $provider ) { ?>
-				<p><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>: <?php echo esc_html( false === $provider['admitted'] ? __( 'Provider is not admitted.', 'ran-booster' ) : $provider_selection_labels[ $provider['selection'] ] ); ?></p>
+				<p><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>: <?php echo esc_html( $provider_attention_message( $provider ) ); ?></p>
 			<?php } ?>
 			<?php if ( $overview_inventory_incomplete ) { ?>
 				<p><?php esc_html_e( 'The managed package inventory is incomplete or unavailable.', 'ran-booster' ); ?></p>

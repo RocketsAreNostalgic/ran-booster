@@ -65,7 +65,7 @@ final readonly class OnboardingPresenter {
 	/**
 	 * @param list<array{key: string, label: string, url: string, active: bool, provider: bool}> $tabs Allowlisted admin navigation.
 	 * @param array<string, mixed>|null $storage_summary Previously inspected storage state.
-	 * @param array<string, array{admitted:bool,selection:?string,source_kind?:?string,source_name?:?string}> $provider_facts Local admission and selection facts.
+	 * @param array<string, array{admitted:bool,selection:?string,source_kind?:?string,source_name?:?string,replacement_detected?:bool}> $provider_facts Local admission and selection facts.
 	 * @return array<string, mixed>
 	 */
 	public function build_overview( array $tabs, string $install_plugin_url, string $install_theme_url, PluginRepository $plugins, ThemeRepository $themes, ?ActivityStore $activity, ?array $storage_summary = null, array $provider_facts = array() ): array {
@@ -136,13 +136,14 @@ final readonly class OnboardingPresenter {
 			}
 			$fact                             = $provider_facts[ $tab['key'] ] ?? null;
 			$overview['provider_summaries'][] = array(
-				'code'        => $tab['key'],
-				'label'       => $tab['label'],
-				'url'         => $tab['url'],
-				'admitted'    => $fact['admitted'] ?? null,
-				'selection'   => $fact['selection'] ?? null,
-				'source_kind' => $fact['source_kind'] ?? null,
-				'source_name' => $fact['source_name'] ?? null,
+				'code'                 => $tab['key'],
+				'label'                => $tab['label'],
+				'url'                  => $tab['url'],
+				'admitted'             => $fact['admitted'] ?? null,
+				'selection'            => $fact['selection'] ?? null,
+				'source_kind'          => $fact['source_kind'] ?? null,
+				'source_name'          => $fact['source_name'] ?? null,
+				'replacement_detected' => $fact['replacement_detected'] ?? false,
 			);
 		}
 		$overview['storage_summary'] = $storage_summary;

@@ -129,6 +129,10 @@ final class GitHubProviderSelectionTest extends TestCase {
 		self::assertSame( 'Claimed provider', $status['candidates']['replacement.php']['display_name'] );
 		self::assertSame( '2.3', $status['candidates']['replacement.php']['display_version'] );
 		self::assertIsArray( $status['current'] );
+		// The Overview names this detected-but-unapproved state; it is not a missing, conflicting or incompatible provider.
+		$detected_presenter = new \RAN\Admin\ProviderSettingsPresenter( $registry, $this->createMock( SecretsFile::class ), new \RAN\Storage\CredentialUsageReader( new \RAN\Tests\Support\CredentialUsageDatabase(), 'wp_packages' ), github_selection: $context );
+		self::assertTrue( $detected_presenter->overview_provider_facts()['gh']['replacement_detected'] );
+		self::assertSame( 'decision_required', $detected_presenter->overview_provider_facts()['gh']['selection'] );
 		self::assertSame( array( 'selection_generation', 'selected', 'declaration', 'approval' ), array_keys( $status['current'] ) );
 	}
 

@@ -758,6 +758,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 		self::assertStringContainsString( 'GitHub provider details', $html );
 		self::assertStringContainsString( 'panel=installation#ran-booster-github-provider-diagnostics', $html );
+		self::assertSame( 1, substr_count( $html, 'GitHub provider details</a>' ) );
+		$this->assert_provider_markup_is_balanced( $html );
 		foreach ( array( 'private-path', 'vendor/internal-implementation', 'internal-revision', 'internal-credential-format', '<Replacement>' ) as $private_detail ) {
 			self::assertStringNotContainsString( $private_detail, $html );
 		}
@@ -767,7 +769,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertStringNotContainsString( 'Affected GitHub packages:', $html );
 			self::assertStringNotContainsString( 'GitHub operations are paused.', $html );
 		} else {
-			self::assertStringContainsString( 'GitHub operations are paused.', $html );
+			self::assertStringContainsString( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', $html );
+			self::assertStringNotContainsString( 'Bitbucket is unaffected', $html );
+		}
+		if ( 'decision_required' === $state ) {
+			// The paused explanation is the shared informational Notice, not plain text.
+			self::assertMatchesRegularExpression( '/<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-provider-paused-notice><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>GitHub operations are paused\. [^<]+<\/p><\/div><svg /', $html );
 		}
 		$headings = array(
 			'conflict'            => 'Multiple GitHub providers are active',
@@ -814,8 +821,28 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[confirmed]" value="1" required', $html );
 		self::assertStringContainsString( 'name="ran_booster[reuse_existing]" value="1" required', $html );
 		self::assertStringContainsString( 'ran-booster-adopt-github-' . str_repeat( 'c', 64 ), $html );
-		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review GitHub provider</summary>', $html );
+		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review and approve GitHub provider</summary>', $html );
 		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub provider: &lt;Replacement&gt;', $html );
+		// The details link is enclosed by the review disclosure and still leads to the Installation diagnostics.
+		if ( 1 === preg_match( '/<details [^>]*>\s*<summary>[^<]+<\/summary>(.*?)<\/details>/s', $html, $disclosure ) ) {
+			self::assertSame( 1, substr_count( $disclosure[1], '<a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=installation#ran-booster-github-provider-diagnostics">GitHub provider details</a>' ) );
+		} else {
+			self::fail( 'The review disclosure was not rendered.' );
+		}
+	}
+
+	/** Every element the provider view opens is closed inside it, so the shell footer stays outside the page content. */
+	private function assert_provider_markup_is_balanced( string $html ): void {
+		$depth = 0;
+		$count = preg_match_all( '#<(/?)(div|section|details)\b[^>]*>#i', $html, $tags, PREG_SET_ORDER );
+		self::assertGreaterThan( 0, $count );
+		foreach ( $tags as $tag ) {
+			$depth += '' === $tag[1] ? 1 : -1;
+			if ( $depth < 0 ) {
+				self::fail( 'The provider view closes a container it did not open.' );
+			}
+		}
+		self::assertSame( 0, $depth, 'The provider view leaves a container open.' );
 	}
 
 	/** @return iterable<string,array{string}> */

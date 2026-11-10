@@ -916,7 +916,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-repository-picker',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-repository-picker.js',
-			array( 'ran-booster-js', 'ran-booster-announce', 'wp-i18n' ),
+			array( 'ran-booster-js', 'ran-booster-announce', 'ran-booster-notice', 'wp-i18n' ),
 			$repository_picker_script_version,
 			true
 		);

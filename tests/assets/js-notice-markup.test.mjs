@@ -35,3 +35,24 @@ test('the release candidate warning is created as a static Notice', () => {
 	assert.doesNotMatch(source, handBuilt);
 	assert.doesNotMatch(source, /ui-notice-update/);
 });
+
+test('the picker public-limit notice is created as a static Notice', () => {
+	const source = read('ran-booster-repository-picker.js');
+	assert.match(
+		source,
+		/window\.ranBoosterNotice\.create\('info', \{\s*className: 'ran-booster-repository-picker__public-limit-notice',\s*scope: 'global',\s*\}\)/
+	);
+	assert.doesNotMatch(source, handBuilt);
+	assert.doesNotMatch(source, /ui-notice-update/);
+});
+
+test('every script that builds a notice loads the notice helper first', () => {
+	const booster = fs.readFileSync(
+		new URL('../../RAN/Booster.php', import.meta.url),
+		'utf8'
+	);
+	const picker = booster.match(
+		/'assets\/ran-booster-repository-picker\.js',\s*array\(([^)]*)\)/
+	);
+	assert.ok(picker && picker[1].includes("'ran-booster-notice'"));
+});

@@ -770,14 +770,6 @@
 									ref(node) {
 										if (node && modal.parentNode !== node) {
 											node.appendChild(modal);
-											publicLimitNotice.dispatchEvent(
-												new window.CustomEvent(
-													'ran-booster:ui-notice-update',
-													{
-														bubbles: true,
-													}
-												)
-											);
 										}
 									},
 								}),
@@ -829,11 +821,6 @@
 			listeners.abort();
 			requestSequence += 1;
 			isOpen = false;
-			publicLimitNotice.dispatchEvent(
-				new window.CustomEvent('ran-booster:ui-notice-update', {
-					bubbles: true,
-				})
-			);
 			flushSync(function () {
 				root.unmount();
 			});
@@ -1005,9 +992,7 @@
 				'<label for="ran-booster-repository-picker-public-profile"></label>' +
 				'<select id="ran-booster-repository-picker-public-profile" class="ran-booster-repository-picker__public-profile"></select>' +
 				'</div>' +
-				'<div class="notice notice-info inline ran-booster-repository-picker__public-limit-notice" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-ui-notice-scope="global" hidden><div data-ran-booster-ui-notice-content>' +
-				'<p><span></span> <a class="ran-booster-repository-picker__public-limit-link" href="#"></a></p>' +
-				'</div></div>' +
+				'<div data-ran-booster-picker-limit-slot></div>' +
 				'<label for="ran-booster-repository-picker-owner" class="ran-booster-repository-picker__owner-label"></label>' +
 				'<div class="ran-booster-repository-picker__public-search-fields">' +
 				'<input id="ran-booster-repository-picker-owner" class="regular-text ran-booster-repository-picker__owner" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">' +
@@ -1019,6 +1004,18 @@
 				'<p class="ran-booster-repository-picker__status"></p>' +
 				'<div class="ran-booster-repository-picker__list"></div>' +
 				'</div>';
+			// The public-limit notice is the shared static Notice, built by the
+			// helper and put where the slot stands.
+			const limitNotice = window.ranBoosterNotice.create('info', {
+				className: 'ran-booster-repository-picker__public-limit-notice',
+				scope: 'global',
+			});
+			limitNotice.host.hidden = true;
+			limitNotice.content.innerHTML =
+				'<p><span></span> <a class="ran-booster-repository-picker__public-limit-link" href="#"></a></p>';
+			overlay
+				.querySelector('[data-ran-booster-picker-limit-slot]')
+				.replaceWith(limitNotice.host);
 			const modeOptions = overlay.querySelectorAll(
 				'.ran-booster-repository-picker__mode'
 			);
@@ -1236,11 +1233,6 @@
 			if (showCredentialsNotice) {
 				publicLimitLink.href = credentialsUrl || '#';
 			}
-			publicLimitNotice.dispatchEvent(
-				new window.CustomEvent('ran-booster:ui-notice-update', {
-					bubbles: true,
-				})
-			);
 			publicProfileSelect.value = repositoryPickerPublicProfileValue(
 				lookup,
 				savedLookup,

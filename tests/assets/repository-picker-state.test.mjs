@@ -481,7 +481,7 @@ test('picker lifecycle re-fetches restored context and persists empty filters', 
 	assert.doesNotMatch(source, /window\.localStorage|localStorage\./);
 });
 
-test('picker teardown schedules Notice cleanup before the public root unmounts', () => {
+test('picker teardown unmounts the public root without asking a Notice to redraw', () => {
 	const events = [];
 	let connected = true;
 	const start = source.indexOf(
@@ -489,32 +489,19 @@ test('picker teardown schedules Notice cleanup before the public root unmounts',
 	);
 	const end = source.indexOf('\n\t\tpickerButtons.forEach', start);
 	assert.ok(start >= 0 && end > start);
+	// The public-limit notice is static, so teardown has no Notice to touch:
+	// the context offers no publicLimitNotice and no CustomEvent to dispatch.
 	vm.runInNewContext(
 		'let cleanupPicker; let requestSequence = 0; let isOpen = true;' +
 			source.slice(start, end) +
 			'cleanupPicker();',
 		{
 			listeners: { abort() {} },
-			publicLimitNotice: {
-				dispatchEvent(event) {
-					events.push({
-						type: event.type,
-						bubbles: event.bubbles,
-						connected,
-					});
-				},
-			},
-			window: {
-				CustomEvent: class {
-					constructor(type, options) {
-						this.type = type;
-						this.bubbles = options.bubbles;
-					}
-				},
-			},
+			window: {},
 			flushSync: (callback) => callback(),
 			root: {
 				unmount() {
+					events.push('unmount');
 					connected = false;
 				},
 			},
@@ -523,14 +510,22 @@ test('picker teardown schedules Notice cleanup before the public root unmounts',
 			document: { body: { classList: { remove() {} } } },
 		}
 	);
-	assert.deepEqual(events, [
-		{
-			type: 'ran-booster:ui-notice-update',
-			bubbles: true,
-			connected: true,
-		},
-	]);
+	assert.deepEqual(events, ['unmount']);
 	assert.equal(connected, false);
+});
+
+test('the public-limit notice is created as a static Notice and shown by hidden alone', () => {
+	assert.match(
+		source,
+		/window\.ranBoosterNotice\.create\('info', \{\s*className: 'ran-booster-repository-picker__public-limit-notice',\s*scope: 'global',\s*\}\)/
+	);
+	assert.doesNotMatch(source, /ui-notice-update/);
+	assert.doesNotMatch(source, /notice notice-info inline/);
+	assert.doesNotMatch(source, /data-ran-booster-ui-notice/);
+	assert.match(
+		source,
+		/publicLimitNotice\.toggleAttribute\('hidden', !showCredentialsNotice\)/
+	);
 });
 
 test('picker status speaks only while open and on change, errors assertively', () => {

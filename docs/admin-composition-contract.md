@@ -308,16 +308,23 @@ can scroll, so its wrapper is not a focusable region. The Activity heading sits
 
 The provider Credentials and Webhook secrets tables, drawn for every provider
 by `ProviderManagementTableRenderer`, use the same collection frame:
-`.ran-booster-data-table-wrap` around a `.ran-booster-data-table` with the
-`--rows` modifier for one record per row, without the core `widefat striped`
-classes. Headers are 13px/600 on the Card surface, records alternate the
-subtle surface with a divider between rows, and the wrapper takes the inset
-radius. Cells carry `data-label` and stack through the shared data-table rules
-at 782px and below; only the actions cell stays out of the label grid, with
-its Buttons in an inner `.ran-booster-actions` row so the cell remains a real
-table cell. Column widths stay on the `--access` and `--webhook` modifiers, and
-their cells are vertically centred like Activity; other data tables keep the
-shared top alignment.
+`.ran-booster-data-table-wrap` around a `.ran-booster-data-table`, without the
+`--rows` modifier or the core `widefat striped` classes. Like Activity, each
+record is its own `tbody`: the summary row, then, for a credential that can be
+validated, a `__result` row whose single `colspan` cell holds the validation
+result Notice at full width. The result row is `hidden` until a result exists;
+the Validate response swaps the result host inside it and replaces the Health
+cell's short label out of band, and the enhanced-mutation script shows the row
+while its Notice is visible. Webhook secrets print no result row. Headers are
+13px/600 on the Card surface, record groups alternate the subtle surface with
+one divider between groups, so a hidden result row never shifts the stripe,
+and the wrapper takes the inset radius. Cells carry `data-label` and stack
+through the shared data-table rules at 782px and below, with the result cell a
+full-width block under the stacked fields; only the actions cell stays out of
+the label grid, with its Buttons in an inner `.ran-booster-actions` row so the
+cell remains a real table cell. Column widths stay on the `--access` and
+`--webhook` modifiers, and their cells are vertically centred like Activity;
+other data tables keep the shared top alignment.
 
 The Repository detail "Packages using this repository" table and the
 Troubleshooting diagnostics table use the same frame and the `--rows`

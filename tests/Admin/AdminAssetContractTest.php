@@ -758,14 +758,37 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'ran-booster-readiness-panel', $controls );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-webhook-management__manage-link {', $webhook_management );
 
-		self::assertStringContainsString(
-			".ran-booster-repository-webhook-setup\n\t.ran-booster-repository-webhook-management__layout {\n\tdisplay: grid;\n\tgrid-template-columns: minmax(0, 1fr);",
+		// The Disclosure replaces the native details element, so the layout must not depend on its class.
+		self::assertStringNotContainsString( '.ran-booster-repository-webhook-setup\n', $webhook_management );
+		self::assertMatchesRegularExpression(
+			'/\.ran-booster-repository-webhook-management\s+\.ran-booster-repository-webhook-management__layout \{\s*display: block;\s*padding: 0;\s*border-block-start: 0;\s*\}/',
 			$webhook_management
 		);
-		self::assertStringContainsString(
-			".ran-booster-repository-webhook-setup\n\t.ran-booster-repository-webhook-management__form {\n\tpadding: 0;",
+		self::assertMatchesRegularExpression(
+			'/\.ran-booster-repository-webhook-management\s+\.ran-booster-repository-webhook-management__form \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\);\s*gap: var\(--ran-booster-space-20\);\s*padding: 0;\s*\}/',
 			$webhook_management
 		);
+		// An empty error slot is a grid item and must not add a gap above the first field.
+		self::assertMatchesRegularExpression( '/> #repository-webhook-management-error:empty \{\s*display: none;/', $webhook_management );
+		self::assertStringContainsString( 'id="repository-webhook-management-error"', $this->source( 'RAN/Admin/WebhookManagement/views/panel.php' ) );
+		// The select fills the row beside its button; help text spans the body; label, control and help sit on the 8px token.
+		self::assertMatchesRegularExpression( '/__select-action\s+select \{\s*flex: 1 1 0;\s*min-inline-size: 0;\s*inline-size: auto;\s*max-inline-size: none;/', $webhook_management );
+		self::assertMatchesRegularExpression( '/__select-action\s+\.ran-wp-ui-button \{\s*flex: 0 0 auto;\s*white-space: nowrap;/', $webhook_management );
+		self::assertMatchesRegularExpression( '/__field\s+\.description \{\s*display: block;\s*max-inline-size: none;\s*margin-block: var\(--ran-booster-space-8\) 0;/', $webhook_management );
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management\s+\.ran-booster-public-lookup-profile__label \{\s*margin-block-end: var\(--ran-booster-space-8\);/', $webhook_management );
+		// Every shared public-lookup-profile override is scoped under the management root.
+		preg_match_all( '/[^{}]*public-lookup-profile[^{}]*\{/', $webhook_management, $selectors );
+		self::assertNotEmpty( $selectors[0] );
+		foreach ( $selectors[0] as $selector ) {
+			self::assertStringContainsString( '.ran-booster-repository-webhook-management', $selector );
+		}
+		// The other screen's shared rules are untouched and unaware of the management screen.
+		$cards = $this->asset( 'ran-booster/30-provider-cards.css' );
+		self::assertStringNotContainsString( 'repository-webhook-management', $cards );
+		self::assertStringContainsString( ".ran-booster-public-lookup-profile__label {\n\tdisplay: block;\n\tmargin-block-end: var(--ran-booster-space-7);", $cards );
+		self::assertStringContainsString( ".ran-booster-public-lookup-profile__form,\n.ran-booster-admin .ran-booster-public-lookup-profile__guidance {\n\tmin-inline-size: 0;\n\tpadding-block: var(--ran-booster-space-16);\n\tpadding-inline: var(--ran-booster-space-20);", $cards );
+		self::assertStringContainsString( ".ran-booster-public-lookup-profile__layout {\n\tdisplay: grid;\n\tgrid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);", $cards );
+		self::assertStringNotContainsString( 'repository-webhook-management', $this->asset( 'ran-booster/80-responsive.css' ) );
 		self::assertStringNotContainsString( 'ran-booster-public-lookup-profile__guidance', $webhook_management );
 		self::assertStringNotContainsString(
 			'.ran-booster-public-lookup-profile__layout {\n\tgrid-template-columns: minmax(0, 1fr);',

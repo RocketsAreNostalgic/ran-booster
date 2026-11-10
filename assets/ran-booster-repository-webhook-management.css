@@ -1,21 +1,38 @@
-.ran-booster-admin .ran-booster-repository-webhook-management__form {
-	display: grid;
-	gap: var(--ran-booster-space-20);
-}
-
+/*
+ * The shared public-lookup-profile layout is a form/guidance split with its
+ * own padding; the setup form has no guidance column, so it fills the
+ * disclosure body edge to edge. Scoped to the management root so the lookup
+ * profile screen keeps its own layout. The Disclosure replaces the native
+ * <details>, so nothing here may depend on the details element's class.
+ */
 .ran-booster-admin
-	.ran-booster-repository-webhook-setup
+	.ran-booster-repository-webhook-management
 	.ran-booster-repository-webhook-management__layout {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr);
-	gap: var(--ran-booster-space-20);
+	display: block;
+	padding: 0;
 	border-block-start: 0;
 }
 
 .ran-booster-admin
-	.ran-booster-repository-webhook-setup
+	.ran-booster-repository-webhook-management
 	.ran-booster-repository-webhook-management__form {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--ran-booster-space-20);
 	padding: 0;
+}
+
+/* The error slot is a grid item, so while it is empty it would add a whole gap above the first field. */
+.ran-booster-admin
+	.ran-booster-repository-webhook-management__form
+	> #repository-webhook-management-error:empty {
+	display: none;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-management
+	.ran-booster-public-lookup-profile__label {
+	margin-block-end: var(--ran-booster-space-8);
 }
 
 .ran-booster-admin .ran-booster-repository-webhook-management__field input {
@@ -32,21 +49,25 @@
 .ran-booster-admin
 	.ran-booster-repository-webhook-management__select-action
 	select {
-	flex: 1 1 auto;
+	flex: 1 1 0;
 	min-inline-size: 0;
+	inline-size: auto;
+	max-inline-size: none;
 }
 
 .ran-booster-admin
 	.ran-booster-repository-webhook-management__select-action
 	.ran-wp-ui-button {
 	flex: 0 0 auto;
+	white-space: nowrap;
 }
 
 .ran-booster-admin
 	.ran-booster-repository-webhook-management__field
 	.description {
 	display: block;
-	margin-top: 6px;
+	max-inline-size: none;
+	margin-block: var(--ran-booster-space-8) 0;
 }
 
 .ran-booster-admin .ran-booster-repository-webhook-management__action-help {
@@ -293,6 +314,12 @@
 		.ran-booster-repository-webhook-management__select-action {
 		align-items: stretch;
 		flex-direction: column;
+	}
+
+	.ran-booster-admin
+		.ran-booster-repository-webhook-management__select-action
+		select {
+		flex: 0 0 auto;
 	}
 
 	.ran-booster-admin

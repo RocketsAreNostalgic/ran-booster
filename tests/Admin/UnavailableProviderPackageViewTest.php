@@ -699,6 +699,86 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'Editing this package’s files on this site? Choose Disabled.', $html );
 	}
 
+	/**
+	 * Renders the Updates field in the Package operation card layout.
+	 *
+	 * @return array{0: string, 1: string} The field HTML and the captured action markup.
+	 */
+	private function render_operation_policy( bool $with_action, bool $with_notice, string $source ): array {
+		$deployment_policy                = DeploymentPolicy::MANUAL->value;
+		$provider_webhook_available       = true;
+		$provider_code                    = 'gh';
+		$package_automation_source        = $source;
+		$development_environment_detected = $with_notice;
+		$package_operation_layout         = true;
+		$package_operation_actions_html   = $with_action
+			? '<div class="ran-booster-package-operation-settings__actions" role="group"><a class="ran-wp-ui-button" href="#activate">Activate plugin</a></div>'
+			: '';
+		$package_operation_guidance_html  = '';
+		$package_field_layout             = 'grid';
+		$package_field_form               = 'ran-booster-package-edit-form';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
+		return array( (string) ob_get_clean(), $package_operation_actions_html );
+	}
+
+	public function test_operation_layout_orders_label_row_description_then_notice(): void {
+		list( $html, $actions ) = $this->render_operation_policy( true, true, 'release_asset' );
+
+		$positions = array();
+		foreach ( array(
+			'label'       => '<label for="ran-booster-deployment-policy">',
+			'row'         => 'class="ran-booster-deployment-policy-row ran-booster-deployment-policy-row--with-action"',
+			'select'      => 'name="ran_booster[deployment_policy]"',
+			'action'      => 'class="ran-booster-package-operation-settings__actions"',
+			'description' => 'Manual waits for an administrator',
+			'notice'      => 'data-ran-booster-local-development-warning',
+		) as $name => $needle ) {
+			$position = strpos( $html, $needle );
+			if ( false === $position ) {
+				self::fail( 'Missing ' . $name . ' in the operation layout.' );
+			}
+			$positions[ $name ] = $position;
+		}
+		self::assertMatchesRegularExpression( '/' . preg_quote( $actions, '/' ) . '\s*<\/div>\s*<p class="description">/', $html );
+		self::assertLessThan( $positions['row'], $positions['label'] );
+		self::assertLessThan( $positions['select'], $positions['row'] );
+		self::assertLessThan( $positions['action'], $positions['select'] );
+		self::assertLessThan( $positions['description'], $positions['action'] );
+		self::assertLessThan( $positions['notice'], $positions['description'] );
+		// The notice is a direct child of the field, outside the label/row/description group.
+		self::assertMatchesRegularExpression( '/<\/p>\s*<\/div>\s*<div class="notice notice-warning inline ran-wp-ui-notice/', $html );
+		self::assertSame( 1, substr_count( $html, 'ran-booster-deployment-policy-group' ) );
+	}
+
+	public function test_operation_layout_without_action_renders_select_alone_in_the_row(): void {
+		list( $html ) = $this->render_operation_policy( false, true, 'release_asset' );
+
+		self::assertStringContainsString( 'class="ran-booster-deployment-policy-row"', $html );
+		self::assertStringNotContainsString( 'ran-booster-deployment-policy-row--with-action', $html );
+		self::assertStringNotContainsString( 'ran-booster-package-operation-settings__actions', $html );
+		self::assertLessThan( (int) strpos( $html, 'class="description"' ), (int) strpos( $html, '<select' ) );
+		self::assertLessThan( (int) strpos( $html, 'data-ran-booster-local-development-warning' ), (int) strpos( $html, 'class="description"' ) );
+	}
+
+	public function test_operation_layout_without_notice_ends_after_the_description(): void {
+		list( $html ) = $this->render_operation_policy( true, false, 'release_asset' );
+
+		self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
+		self::assertStringNotContainsString( 'class="notice', $html );
+		self::assertStringContainsString( 'class="ran-booster-deployment-policy-row ran-booster-deployment-policy-row--with-action"', $html );
+		self::assertMatchesRegularExpression( '/Manual waits for an administrator[^<]*<\/p>\s*<\/div>\s*<\/div>\s*$/', $html );
+	}
+
+	public function test_operation_layout_without_description_or_notice_keeps_the_control_row_alone(): void {
+		list( $html ) = $this->render_operation_policy( true, true, 'branch' );
+
+		// A webhook provider with the development notice shows the Push-to-Deploy links in the notice only.
+		self::assertStringNotContainsString( 'class="description"', $html );
+		self::assertLessThan( (int) strpos( $html, 'data-ran-booster-local-development-warning' ), (int) strpos( $html, 'ran-booster-package-operation-settings__actions' ) );
+	}
+
 	public function test_deployment_policy_offers_automatic_word_press_updates_for_published_releases(): void {
 		$deployment_policy                = DeploymentPolicy::AUTOMATIC->value;
 		$provider_webhook_available       = false;

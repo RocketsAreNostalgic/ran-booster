@@ -566,11 +566,17 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertIsInt( $automation_position );
 			$operation_position = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card"' );
 			self::assertIsInt( $operation_position );
-			$actions_position = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $operation_position );
+			$row_position = strpos( $html, 'class="ran-booster-deployment-policy-row ran-booster-deployment-policy-row--with-action"', $operation_position );
+			self::assertIsInt( $row_position );
+			$select_position = strpos( $html, 'name="ran_booster[deployment_policy]"', $row_position );
+			self::assertIsInt( $select_position );
+			$actions_position = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $select_position );
 			self::assertIsInt( $actions_position );
 			$reinstall_position = strpos( $html, 'data-ran-booster-settings-reinstall', $actions_position );
 			self::assertIsInt( $reinstall_position );
-			$notice_position = strpos( $html, 'data-ran-booster-local-development-warning', $reinstall_position );
+			$row_end_position = strpos( $html, 'data-ran-booster-reinstall-guidance', $reinstall_position );
+			self::assertIsInt( $row_end_position );
+			$notice_position = strpos( $html, 'data-ran-booster-local-development-warning', $row_end_position );
 			self::assertIsInt( $notice_position );
 			$operation_end = strpos( $html, '</section>', $operation_position );
 			self::assertIsInt( $operation_end );
@@ -579,9 +585,13 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertLessThan( $automation_position, $advanced_position );
 			self::assertTrue( $advanced_position < $readiness_position );
 			self::assertTrue( $readiness_position < $advanced_end );
-			self::assertTrue( $operation_position < $actions_position );
+			self::assertTrue( $operation_position < $row_position );
+			self::assertTrue( $row_position < $select_position );
+			self::assertTrue( $select_position < $actions_position );
 			self::assertTrue( $actions_position < $reinstall_position );
-			self::assertTrue( $reinstall_position < $notice_position );
+			// The Reinstall guidance follows the control row and the notice follows it.
+			self::assertTrue( $reinstall_position < $row_end_position );
+			self::assertTrue( $row_end_position < $notice_position );
 			self::assertTrue( $notice_position < $operation_end );
 			self::assertTrue( $reinstall_position < $operation_end );
 			self::assertTrue( $operation_end < $save_actions_position );

@@ -692,6 +692,49 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'var(--ran-booster-status-ok-background)', $settings );
 	}
 
+	public function test_package_operation_card_lays_out_updates_row_description_and_notice(): void {
+		$css  = $this->asset( 'ran-booster/65-package-settings.css' );
+		$rule = static function ( string $css, string $selector ): string {
+			if ( 1 !== preg_match( '/' . str_replace( ' ', '\s+', $selector ) . '\s*\{([^}]*)\}/', $css, $m ) ) {
+				self::fail( 'Missing CSS rule ' . stripslashes( $selector ) );
+			}
+			return $m[1];
+		};
+
+		// The card body is the query container for the narrow wrap.
+		self::assertStringContainsString( 'container-type: inline-size;', $rule( $css, '\.ran-booster-admin \.ran-booster-package-operation-settings \.ran-booster-settings-section__body' ) );
+
+		// Group (label, row, description) and the notice are 12px apart; the notice adds no margin of its own.
+		$field = $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-field--operation' );
+		self::assertStringContainsString( 'display: grid;', $field );
+		self::assertStringContainsString( 'gap: var(--ran-booster-space-12);', $field );
+		self::assertStringContainsString( 'margin: 0;', $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-field--operation > \.notice' ) );
+
+		// The description sits 4px under the row and spans the full group width.
+		$description = $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-group > \.description' );
+		self::assertStringContainsString( 'margin-block: var(--ran-booster-space-4) 0;', $description );
+		self::assertStringContainsString( 'max-inline-size: none;', $description );
+		self::assertStringNotContainsString( 'inline-size:', str_replace( 'max-inline-size', '', $description ) );
+
+		// Select takes the remaining width, the action keeps its natural width at the same 40px height, 8px apart.
+		$row = $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-row' );
+		self::assertStringContainsString( 'align-items: end;', $row );
+		self::assertStringContainsString( 'gap: var(--ran-booster-space-8);', $row );
+		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) auto;', $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-row--with-action' ) );
+		self::assertStringContainsString( 'min-block-size: 40px;', $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-row > select' ) );
+		self::assertStringContainsString( 'min-block-size: 40px;', $rule( $css, '\.ran-booster-admin\n\t\.ran-booster-package-operation-settings__actions\n\t\.ran-wp-ui-button' ) );
+
+		// Narrow card: the action wraps under the select at full width.
+		if ( 1 !== preg_match( '/@container \(max-width: 36rem\) \{(.*?)\n\}/s', $css, $narrow ) ) {
+			self::fail( 'The Package operation narrow container query is missing.' );
+		}
+		self::assertMatchesRegularExpression( '/\.ran-booster-deployment-policy-row--with-action \{\s*grid-template-columns: minmax\(0, 1fr\);/', $narrow[1] );
+		self::assertMatchesRegularExpression( '/\.ran-wp-ui-button \{\s*flex: 1 1 0;/', $narrow[1] );
+
+		// The old two-column body and actions grid are gone.
+		self::assertStringNotContainsString( 'package-operation-settings__body--split', $css );
+	}
+
 	public function test_first_settings_group_keeps_its_divider_and_padding(): void {
 		$css = $this->asset( 'ran-booster/65-package-settings.css' );
 		if ( 1 !== preg_match( '/\n\t\.ran-booster-settings__group:first-of-type \{([^}]*)\}/', $css, $m ) ) {

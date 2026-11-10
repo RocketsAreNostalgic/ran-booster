@@ -37,4 +37,3 @@ $reinstall_available = $package_mutation_available
 	hx-sync="this:drop"
 	hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"
 ><span data-ran-booster-update-label><?php esc_html_e( 'Reinstall', 'ran-booster' ); ?></span></button>
-<p class="description" data-ran-booster-reinstall-guidance <?php echo $reinstall_available ? 'hidden' : ''; ?>><?php esc_html_e( 'Set Updates to Manual or Automatic before reinstalling.', 'ran-booster' ); ?></p>

@@ -312,17 +312,16 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 					<h3 id="ran-booster-package-operation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Package operation', 'ran-booster' ); ?></h3>
 					<p class="ran-booster-section__description"><?php esc_html_e( 'Choose when Booster may update this package.', 'ran-booster' ); ?></p>
 				</header>
-				<div class="ran-booster-settings-section__body<?php echo $show_package_operation_actions ? ' ran-booster-package-operation-settings__body--split' : ''; ?>">
-					<div class="ran-booster-settings-fields">
-						<?php $package_field_form = 'ran-booster-package-edit-form'; ?>
-						<?php $package_automation_source = $package_current_source; ?>
-						<?php $defer_development_safety_notice = true; ?>
-						<?php require __DIR__ . '/fields/deployment-policy.php'; ?>
-						<?php /** @var \Closure(): void $render_development_safety_notice */ ?>
-						<?php unset( $defer_development_safety_notice ); ?>
-						<?php unset( $package_field_form ); ?>
-					</div>
-					<?php if ( $show_package_operation_actions ) { ?>
+				<div class="ran-booster-settings-section__body">
+					<?php
+					$package_field_form              = 'ran-booster-package-edit-form';
+					$package_automation_source       = $package_current_source;
+					$package_operation_layout        = true;
+					$package_operation_actions_html  = '';
+					$package_operation_guidance_html = '';
+					if ( $show_package_operation_actions ) {
+						ob_start();
+						?>
 					<div class="ran-booster-package-operation-settings__actions" role="group" aria-label="<?php esc_attr_e( 'Package operations', 'ran-booster' ); ?>">
 						<?php if ( is_string( $word_press_action_url ) && is_string( $word_press_action_label ) ) { ?>
 							<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $word_press_action_url ); ?>"><?php echo esc_html( $word_press_action_label ); ?></a>
@@ -331,8 +330,17 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 							<?php require __DIR__ . '/reinstall.php'; ?>
 						<?php } ?>
 					</div>
-					<?php } ?>
-					<?php $render_development_safety_notice(); ?>
+						<?php
+						$package_operation_actions_html = (string) ob_get_clean();
+						if ( $show_branch_operations ) {
+							ob_start();
+							require __DIR__ . '/reinstall-guidance.php';
+							$package_operation_guidance_html = (string) ob_get_clean();
+						}
+					}
+					require __DIR__ . '/fields/deployment-policy.php';
+					unset( $package_field_form, $package_operation_layout, $package_operation_actions_html, $package_operation_guidance_html );
+					?>
 				</div>
 			</div></div></section>
 

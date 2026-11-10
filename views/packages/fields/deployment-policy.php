@@ -18,6 +18,13 @@ $package_field_grid               = isset( $package_field_layout ) && 'grid' ===
 $package_field_form               = isset( $package_field_form ) && is_string( $package_field_form )
 	? $package_field_form
 	: '';
+$operation_layout                 = ! empty( $package_operation_layout );
+$operation_actions_html           = isset( $package_operation_actions_html ) && is_string( $package_operation_actions_html )
+	? $package_operation_actions_html
+	: '';
+$operation_guidance_html          = isset( $package_operation_guidance_html ) && is_string( $package_operation_guidance_html )
+	? $package_operation_guidance_html
+	: '';
 $show_development_safety_notice   = ! empty( $development_environment_detected );
 $hide_development_safety_notice   = \RAN\Deployment\DeploymentPolicy::DISABLED->value === $deployment_policy;
 
@@ -39,25 +46,20 @@ $render_development_safety_notice = static function () use ( $show_development_s
 		<?php
 	}
 };
-?>
-<?php if ( $package_field_grid ) { ?>
-	<div class="ran-booster-settings-field ran-booster-settings-field--wide ran-booster-deployment-policy-field">
-		<label for="ran-booster-deployment-policy"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></label>
-<?php } else { ?>
-	<tr class="ran-booster-deployment-policy-field">
-		<th scope="row"><label for="ran-booster-deployment-policy"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></label></th>
-		<td>
-<?php } ?>
+
+$render_policy_select = static function () use ( $deployment_policy, $automatic_available, $release_automation, $package_field_form ): void {
+	?>
 		<select name="ran_booster[deployment_policy]" id="ran-booster-deployment-policy" class="ran-booster-deployment-policy-input"<?php echo '' !== $package_field_form ? ' form="' . esc_attr( $package_field_form ) . '"' : ''; ?>>
 			<option value="<?php echo esc_attr( \RAN\Deployment\DeploymentPolicy::DISABLED->value ); ?>" <?php selected( $deployment_policy, \RAN\Deployment\DeploymentPolicy::DISABLED->value ); ?>><?php esc_html_e( 'Disabled — do not let Booster update this package', 'ran-booster' ); ?></option>
 			<option value="<?php echo esc_attr( \RAN\Deployment\DeploymentPolicy::MANUAL->value ); ?>" <?php selected( $deployment_policy, \RAN\Deployment\DeploymentPolicy::MANUAL->value ); ?>><?php esc_html_e( 'Manual — update only when requested', 'ran-booster' ); ?></option>
 			<option value="<?php echo esc_attr( \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value ); ?>" <?php selected( $deployment_policy, \RAN\Deployment\DeploymentPolicy::AUTOMATIC->value ); ?> <?php disabled( ! $automatic_available ); ?>><?php echo esc_html( $release_automation ? __( 'Automatic — install validated releases through WordPress Updates', 'ran-booster' ) : __( 'Automatic — deploy signed repository pushes', 'ran-booster' ) ); ?></option>
 		</select>
-		<?php
-		if ( empty( $defer_development_safety_notice ) ) {
-			$render_development_safety_notice(); }
+	<?php
+};
+
+$render_policy_description = static function () use ( $release_automation, $provider_webhook_available, $show_development_safety_notice, $push_to_deploy_documentation_url, $push_to_deploy_provider_url ): void {
+	if ( $release_automation ) {
 		?>
-		<?php if ( $release_automation ) { ?>
 			<p class="description"><?php esc_html_e( 'Manual waits for an administrator; Automatic lets WordPress install validated published updates.', 'ran-booster' ); ?></p>
 		<?php } elseif ( ! $provider_webhook_available ) { ?>
 			<p class="description">
@@ -66,10 +68,39 @@ $render_development_safety_notice = static function () use ( $show_development_s
 			</p>
 		<?php } elseif ( ! $show_development_safety_notice ) { ?>
 			<p class="description"><a href="<?php echo esc_url( $push_to_deploy_provider_url ); ?>"><?php esc_html_e( 'Push-to-Deploy setting', 'ran-booster' ); ?></a> | <a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Docs', 'ran-booster' ); ?></a></p>
-		<?php } ?>
-<?php if ( $package_field_grid ) { ?>
+			<?php
+		}
+};
+?>
+<?php if ( $operation_layout ) { ?>
+	<div class="ran-booster-settings-field ran-booster-settings-field--wide ran-booster-deployment-policy-field ran-booster-deployment-policy-field--operation">
+		<div class="ran-booster-deployment-policy-group">
+			<label for="ran-booster-deployment-policy"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></label>
+			<div class="ran-booster-deployment-policy-row<?php echo '' !== $operation_actions_html ? ' ran-booster-deployment-policy-row--with-action' : ''; ?>">
+				<?php $render_policy_select(); ?>
+				<?php echo $operation_actions_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured from escaped package templates in the including view. ?>
+			</div>
+			<?php $render_policy_description(); ?>
+			<?php echo $operation_guidance_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured from an escaped package template in the including view. ?>
+		</div>
+		<?php $render_development_safety_notice(); ?>
+	</div>
+<?php } else { ?>
+	<?php if ( $package_field_grid ) { ?>
+	<div class="ran-booster-settings-field ran-booster-settings-field--wide ran-booster-deployment-policy-field">
+		<label for="ran-booster-deployment-policy"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></label>
+<?php } else { ?>
+	<tr class="ran-booster-deployment-policy-field">
+		<th scope="row"><label for="ran-booster-deployment-policy"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></label></th>
+		<td>
+<?php } ?>
+		<?php $render_policy_select(); ?>
+		<?php $render_development_safety_notice(); ?>
+		<?php $render_policy_description(); ?>
+	<?php if ( $package_field_grid ) { ?>
 	</div>
 <?php } else { ?>
 		</td>
 	</tr>
+<?php } ?>
 <?php } ?>

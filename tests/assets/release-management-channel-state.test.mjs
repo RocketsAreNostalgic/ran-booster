@@ -911,7 +911,7 @@ for (const enhanced of [true, false]) {
 			'window',
 			'wp',
 			'request',
-			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{}, setStatus=()=>{}, showError=()=>{}; const candidates=null; ${declaration('list')} return list;`
+			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null; ${declaration('list')} return list;`
 		)(
 			candidateList,
 			window,

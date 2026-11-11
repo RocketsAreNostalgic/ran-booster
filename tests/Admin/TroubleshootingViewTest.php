@@ -1784,7 +1784,7 @@ final class TroubleshootingViewTest extends TestCase {
 		$subline = $xpath->query( '//div[@data-ran-booster-ui-disclosure="troubleshooting-credential-check"]/details/summary/span[@data-ran-booster-ui-disclosure-heading]/span[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__entry-description ")]' );
 		self::assertInstanceOf( \DOMNodeList::class, $subline );
 		self::assertCount( 1, $subline );
-		self::assertSame( 'Checks credential and repository access only.', trim( (string) $subline->item( 0 )?->textContent ) );
+		self::assertSame( 'Checks credential and repository access only.', trim( (string) $xpath->evaluate( 'string(.)', $subline->item( 0 ) ) ) );
 		self::assertStringContainsString( 'placeholder="owner/repository (GitHub) or workspace/repository (Bitbucket)"', $html );
 		self::assertStringContainsString( 'class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap"', $html );
 		self::assertStringContainsString( '<table class="ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table">', $html );

@@ -597,7 +597,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 							<?php if ( ! empty( $repository_integration_summary['release_workflows_inventory_incomplete'] ) ) { ?>
 								<p><?php esc_html_e( 'Release workflow observations are incomplete because some package details are omitted.', 'ran-booster' ); ?></p>
 							<?php } ?>
-							<p><a href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View Activity', 'ran-booster' ); ?></a></p>
+							<p class="ran-booster-standalone-link-row"><a href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View Activity', 'ran-booster' ); ?></a></p>
 					</section>
 				<?php } elseif ( 'setup' === $provider_task ) { ?>
 					<section id="ran-booster-provider-task-panel" class="ran-booster-provider-task-panel" data-ran-booster-provider-task="setup" aria-labelledby="ran-booster-webhook-instructions-heading">

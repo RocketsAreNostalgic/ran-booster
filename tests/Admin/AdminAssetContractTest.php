@@ -200,6 +200,37 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'flex: 1 1 100%;', $narrow_rules[2] );
 	}
 
+	public function test_standalone_text_links_keep_a_24px_target(): void {
+		$css = $this->asset( 'ran-booster.css' );
+
+		self::assertSame(
+			1,
+			preg_match( '/\.ran-booster-standalone-link-row,[\s\S]*?\)\s*> a,[\s\S]*?\{([^}]*)\}/', $css, $inline_rule )
+		);
+		self::assertStringContainsString( 'display: inline-flex;', $inline_rule[1] );
+		self::assertStringContainsString( 'min-block-size: var(--ran-booster-space-24);', $inline_rule[1] );
+		self::assertSame(
+			1,
+			preg_match( '/\.ran-booster-overview-package-links,[\s\S]*?\.ran-booster-overview-provider-link,[\s\S]*?\{([^}]*)\}/', $css, $block_rule )
+		);
+		self::assertStringContainsString( 'min-block-size: var(--ran-booster-space-24);', $block_rule[1] );
+		self::assertStringNotContainsString( 'display:', $block_rule[1] );
+
+		// Rows that hold only a link carry the row class; links inside sentences do not.
+		foreach (
+			array(
+				'views/base.php',
+				'views/onboarding.php',
+				'views/provider.php',
+				'views/troubleshooting-installation.php',
+				'RAN/Admin/Component/RepositoryDetailRenderer.php',
+				'RAN/Admin/WebhookManagement/views/panel.php',
+			) as $file
+		) {
+			self::assertStringContainsString( '<p class="ran-booster-standalone-link-row"><a href=', (string) file_get_contents( dirname( __DIR__, 2 ) . '/' . $file ), $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+		}
+	}
+
 	public function test_status_pills_are_badges_and_the_legacy_tile_utilities_are_gone(): void {
 		$debug      = $this->view( 'debug-capture.php' );
 		$packages   = $this->view( 'packages/index.php' );

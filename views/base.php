@@ -163,7 +163,7 @@ require __DIR__ . '/generated/ran-admin-shell.php';
 			if ( isset( $core_self_update_development_notice ) ) {
 				$core_self_update_development_notice->render_local_fact(); }
 			?>
-			<p><a href="<?php echo esc_url( $admin_url . '?page=ran-booster&tab=documentation#ran-booster-file-protection' ); ?>"><?php esc_html_e( 'Learn about local development', 'ran-booster' ); ?></a></p>
+			<p class="ran-booster-standalone-link-row"><a href="<?php echo esc_url( $admin_url . '?page=ran-booster&tab=documentation#ran-booster-file-protection' ); ?>"><?php esc_html_e( 'Learn about local development', 'ran-booster' ); ?></a></p>
 		</div>
 		<button type="button" class="notice-dismiss" hidden style="display:none"><span class="screen-reader-text"><?php esc_html_e( 'Dismiss this notice.', 'ran-booster' ); ?></span></button>
 		<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?>

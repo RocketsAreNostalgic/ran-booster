@@ -1197,3 +1197,38 @@
 .ran-booster-admin .nav-tab {
 	font-size: var(--ran-booster-font-size-md);
 }
+
+/*
+ * WCAG 2.2 target size (2.5.8): a text link that stands alone on its row needs
+ * a 24px target. Links inside running text are exempt and keep their inline
+ * flow, so only rows that hold nothing but the link are listed here.
+ */
+
+.ran-booster-admin
+	:is(
+		.ran-booster-standalone-link-row,
+		.ran-booster-overview-card-note,
+		.ran-booster-onboarding__storage-documentation
+	)
+	> a,
+.ran-booster-admin .ran-booster-extensions__grid .name h3 > a {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-overview-package-links,
+		.ran-booster-repository-detail__header,
+		.ran-booster-repository-publishing__row,
+		.ran-booster-readiness-actions,
+		.ran-booster-readiness-actions__links,
+		.ran-booster-package-summary__meta,
+		.ran-booster-package-row__activity-summary
+	)
+	> a,
+.ran-booster-admin .ran-booster-overview-provider-link,
+.ran-booster-admin .ran-booster-repository-detail td > a:only-child {
+	min-block-size: var(--ran-booster-space-24);
+}

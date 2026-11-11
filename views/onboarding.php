@@ -175,7 +175,7 @@ $provider_attention         = array_filter(
 				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Set up default storage', 'ran-booster' ); ?></button>
 			</form>
 		<?php } ?>
-		<p><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>
+		<p class="ran-booster-standalone-link-row"><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>
 	</div></div></section>
 
 

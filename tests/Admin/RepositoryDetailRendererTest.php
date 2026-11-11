@@ -154,7 +154,7 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertSame( 4, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		$integration = (string) strstr( $html, 'ran-booster-repository-integration-summary-heading' );
 		$integration = substr( $integration, 0, (int) strpos( $integration, '</section>' ) );
-		self::assertStringContainsString( '<p><a href="https://example.test/secrets">Review shared owner secret</a></p>', preg_replace( '/\s+/', ' ', str_replace( array( "\n", "\t" ), '', $integration ) ) ?? '' );
+		self::assertStringContainsString( '<p class="ran-booster-standalone-link-row"><a href="https://example.test/secrets">Review shared owner secret</a></p>', preg_replace( '/\s+/', ' ', str_replace( array( "\n", "\t" ), '', $integration ) ) ?? '' );
 		self::assertStringNotContainsString( 'repository-detail__status-links', $html );
 		self::assertSame( 2, preg_match_all( '#<dt class="ran-booster-repository-detail__fact-label">([^<]+)</dt>#', $integration, $integration_labels ) );
 		self::assertSame( array( 'Branch demand', 'Recorded release usage' ), $integration_labels[1] );

@@ -115,7 +115,7 @@ if ( array() === $result_notices && is_array( $model['manual_notice'] ?? null ) 
 				<?php endif; ?>
 				<?php if ( is_string( $model['webhooks_url'] ?? null ) && '' !== $model['webhooks_url'] ) : ?>
 					<?php /* translators: %s: repository provider name. */ ?>
-					<p><a href="<?php echo esc_url( $model['webhooks_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( __( 'Manage repo webhooks on %s', 'ran-booster' ), 'GitHub' === $model['provider_label'] ? 'Github' : $model['provider_label'] ) ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
+					<p class="ran-booster-standalone-link-row"><a href="<?php echo esc_url( $model['webhooks_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( sprintf( __( 'Manage repo webhooks on %s', 'ran-booster' ), 'GitHub' === $model['provider_label'] ? 'Github' : $model['provider_label'] ) ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 				<?php endif; ?>
 			</form>
 

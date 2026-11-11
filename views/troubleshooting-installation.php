@@ -94,7 +94,7 @@ ob_start();
 		<?php } else { ?>
 			<p><?php esc_html_e( 'Storage details are unavailable for this request.', 'ran-booster' ); ?></p>
 		<?php } ?>
-		<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ) ); ?>"><?php esc_html_e( 'Open secure credential storage settings', 'ran-booster' ); ?></a></p>
+		<p class="ran-booster-standalone-link-row"><a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-settings#ran-booster-storage' ) ); ?>"><?php esc_html_e( 'Open secure credential storage settings', 'ran-booster' ); ?></a></p>
 <?php
 $entry_body  = (string) ob_get_clean();
 $entry_title = esc_html__( 'Secure credential storage', 'ran-booster' );

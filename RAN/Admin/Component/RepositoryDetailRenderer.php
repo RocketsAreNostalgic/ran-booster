@@ -356,7 +356,7 @@ final class RepositoryDetailRenderer {
 					<?php $this->render_facts( $releases, __( 'Release workflow', 'ran-booster' ), __( 'Status', 'ran-booster' ) ); ?>
 				</div>
 			<?php } ?>
-			<p><a href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View repository activity', 'ran-booster' ); ?></a></p>
+			<p class="ran-booster-standalone-link-row"><a href="<?php echo esc_url( $activity_url ); ?>"><?php esc_html_e( 'View repository activity', 'ran-booster' ); ?></a></p>
 			</div>
 		</div></div></section>
 		<?php
@@ -526,7 +526,7 @@ final class RepositoryDetailRenderer {
 			return;
 		}
 		?>
-		<p>
+		<p class="ran-booster-standalone-link-row">
 		<?php foreach ( $links as $index => $link ) { ?>
 			<?php
 			if ( 0 < $index ) {

@@ -2675,7 +2675,7 @@ final class TroubleshootingViewTest extends TestCase {
 		}
 		self::assertStringNotContainsString( 'ran-wp-ui-button', $after_rows[0] );
 		// View Activity is one plain text link after the summary rows.
-		self::assertMatchesRegularExpression( '~</dl>\s*<p><a href="[^"]*">View Activity</a></p>~', $html );
+		self::assertMatchesRegularExpression( '~</dl>\s*<p class="ran-booster-standalone-link-row"><a href="[^"]*">View Activity</a></p>~', $html );
 		// Review WordPress URLs lives only inside the notice.
 		self::assertSame( 1, substr_count( $html, 'Review WordPress URLs' ) );
 		if ( 1 !== preg_match( '~data-ran-booster-assistance-site-notice.*?</svg>\s*</div>~s', $html, $notice ) ) {
@@ -2695,7 +2695,7 @@ final class TroubleshootingViewTest extends TestCase {
 		)['status'];
 		self::assertStringNotContainsString( 'Review WordPress URLs', $ready_html );
 		self::assertStringNotContainsString( 'data-ran-booster-assistance-site-notice', $ready_html );
-		self::assertMatchesRegularExpression( '~</dl>\s*<p><a href="[^"]*">View Activity</a></p>~', $ready_html );
+		self::assertMatchesRegularExpression( '~</dl>\s*<p class="ran-booster-standalone-link-row"><a href="[^"]*">View Activity</a></p>~', $ready_html );
 	}
 
 	public function test_provider_settings_explains_blocked_local_assisted_hook_setup(): void {

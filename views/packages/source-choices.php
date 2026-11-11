@@ -29,16 +29,10 @@ if ( ! is_array( $package_source_choices ) || array() === $package_source_choice
 <div class="ran-booster-package-source<?php echo 'edit' === $source_choice_mode ? ' ran-booster-package-source--navigation' : ''; ?>">
 	<div class="ran-booster-package-source__header">
 		<h3 id="ran-booster-package-source-heading" class="ran-booster-section__title"><?php esc_html_e( 'Update source', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description">
-			<?php
-			echo esc_html(
-				'edit' === $source_choice_mode
-					? __( 'Viewing settings does not change the update source.', 'ran-booster' )
-					: __( 'Selecting it does not install the package.', 'ran-booster' )
-			);
-			?>
-		</p>
-		<div class="notice notice-info inline ran-booster-package-source__guidance ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-source-repository-guidance <?php echo ! empty( $package_repository_ready ) ? 'hidden' : ''; ?>><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Choose a repository before configuring its update source.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
+		<?php if ( 'edit' !== $source_choice_mode ) { ?>
+		<p class="ran-booster-section__description"><?php esc_html_e( 'Selecting it does not install the package.', 'ran-booster' ); ?></p>
+		<?php } ?>
+		<div class="notice notice-info inline ran-booster-package-source__guidance ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-source-repository-guidance <?php echo ! empty( $package_repository_ready ) ? 'hidden' : ''; ?>><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Choose a repository first.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 	</div>
 	<div class="ran-booster-source-choices<?php echo 'edit' === $source_choice_mode ? esc_attr( ' ran-booster-source-choices--navigation ' . \RAN\Admin\Component\SectionTabs::STRIP_CLASS ) : ''; ?>"<?php echo 'edit' === $source_choice_mode ? ' role="navigation" aria-label="' . esc_attr( __( 'Update source settings', 'ran-booster' ) ) . '"' : ''; ?>>
 		<?php if ( 'edit' === $source_choice_mode ) { ?>

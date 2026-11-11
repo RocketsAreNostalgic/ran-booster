@@ -90,7 +90,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Install published releases through WordPress.', $html );
+		self::assertStringNotContainsString( 'Install published releases through WordPress.', $html );
+		self::assertStringNotContainsString( 'Install published releases.', $html );
+		self::assertSame( 0, substr_count( $html, 'ran-booster-package-source-pane__description' ), 'The release pane no longer repeats the card sub-line.' );
 		self::assertStringContainsString( 'action="https://example.test/wp-admin/admin-post.php"', $html );
 		self::assertStringContainsString( 'name="action" value="ran_booster_release_enable"', $html );
 		self::assertStringContainsString( 'name="expected_type" value="plugin"', $html );
@@ -233,7 +235,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'page=ran-booster-themes&amp;package=companion-theme', $html );
 		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Repository shared</h4>', $html );
 		self::assertStringNotContainsString( '<h4 id="ran-booster-release-readiness-status">Ready</h4>', $html );
-		self::assertStringContainsString( 'The installed package identity and Update URI match the configured repository.', $html );
+		self::assertStringContainsString( 'Package identity and Update URI match the repository.', $html );
 		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Use releases<\/button>/', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser-disabled="true"', $html );
 		self::assertStringNotContainsString( 'Published release status needs attention.', $html );
@@ -515,7 +517,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Current release track', $html );
 		self::assertStringContainsString( 'name="release_channel" value="prerelease"', $html );
 		self::assertStringContainsString( 'aria-label="Switch to Preview releases"', $html );
-		self::assertStringContainsString( 'Preview includes published alpha, beta, release-candidate, and stable releases; switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade.', $html );
+		self::assertStringContainsString( 'Preview also includes alpha, beta and release-candidate builds. Switching affects future eligibility only and resets Automatic updates to Manual.', $html );
+		self::assertStringNotContainsString( 'does not install or downgrade', $html );
 		self::assertStringNotContainsString( 'type="hidden" name="release_channel"', $html );
 		self::assertStringNotContainsString( 'Use published releases', $html );
 	}

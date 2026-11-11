@@ -1105,7 +1105,7 @@ final class AdminAssetContractTest extends TestCase {
 			$view = $this->view( $path );
 			self::assertStringContainsString( 'ran-booster-page-heading__title', $view, $path );
 			self::assertStringNotContainsString( 'ran-booster-page-shell', $view, $path );
-			if ( 'packages/edit.php' !== $path ) {
+			if ( ! in_array( $path, array( 'packages/create.php', 'packages/edit.php' ), true ) ) {
 				self::assertStringContainsString( 'ran-booster-page-heading__description', $view, $path );
 			}
 		}

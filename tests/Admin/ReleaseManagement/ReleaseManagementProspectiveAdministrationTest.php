@@ -175,6 +175,31 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( '`${outcomeMessage} Refresh releases before installing.`', $script );
 	}
 
+	public function test_prospective_pane_uses_trimmed_copy_for_plugins_and_themes(): void {
+		foreach ( array( 'plugin', 'theme' ) as $type ) {
+			$controls = ReleaseManagementFixture::controls();
+			ob_start();
+			$controls->render_advanced_source_section(
+				'create',
+				$type,
+				'release_asset',
+				null,
+				'https://example.test/wp-admin/admin.php?page=ran-booster-' . $type . 's-create'
+			);
+			$html = (string) ob_get_clean();
+
+			self::assertStringContainsString( 'Preview also includes alpha, beta and release-candidate builds. Drafts remain excluded.', $html, $type );
+			self::assertStringContainsString( 'Choose a repository, then select Releases.', $html, $type );
+			self::assertStringContainsString( 'Checked. Nothing is installed yet.', $html, $type );
+			self::assertStringContainsString( 'Release candidates appear here', $html, $type );
+			self::assertStringNotContainsString( 'as well as stable releases', $html, $type );
+			self::assertStringNotContainsString( 'Choose one exact release, inspect it', $html, $type );
+			self::assertStringNotContainsString( 'Choose a repository above, then select Releases', $html, $type );
+			self::assertStringNotContainsString( 'The exact published release was checked', $html, $type );
+			self::assertStringNotContainsString( 'Check the saved release track for eligible candidates.', $html, $type );
+		}
+	}
+
 	public function test_invalid_authority_does_not_traverse_credential_bearing_repository_fields(): void {
 		$prospective                               = new ProspectiveReleaseFacadeDouble();
 		$controls                                  = ReleaseManagementFixture::controls( prospective: $prospective );

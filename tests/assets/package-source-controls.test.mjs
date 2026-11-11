@@ -359,8 +359,7 @@ function sourceUnsavedGuardFixture() {
 	};
 	const notice = {
 		hidden: true,
-		textContent:
-			'Save or revert your package settings before changing source.',
+		textContent: 'Save or revert changes before switching source.',
 	};
 	const navigation = {
 		dataset: {},
@@ -458,7 +457,7 @@ test('dirty ordinary settings block source navigation and external source submit
 		assert.equal(state.notice.hidden, false);
 		assert.equal(
 			state.notice.textContent,
-			'Save or revert your package settings before changing source.'
+			'Save or revert changes before switching source.'
 		);
 	} finally {
 		delete globalThis.document;

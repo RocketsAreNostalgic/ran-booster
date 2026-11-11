@@ -268,7 +268,10 @@ final class RepeatPackageViewTest extends TestCase {
 			'<h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading ran-booster-page-heading__title">Install New ' . $package_view->get_singular_label() . '</h2>',
 			$html
 		);
-		self::assertStringContainsString( 'class="ran-booster-package-settings__intro ran-booster-page-heading__description"', $html );
+		self::assertStringNotContainsString( 'ran-booster-package-settings__intro', $html );
+		self::assertStringNotContainsString( 'Identify the repository Booster should manage', $html );
+		self::assertStringNotContainsString( 'Choose the repository and access Booster should use', $html );
+		self::assertStringNotContainsString( 'Choose when Booster may update this package.', $html );
 		self::assertStringContainsString( 'ran-booster-package-settings--create', $html );
 		self::assertStringContainsString( 'ran-booster-settings-section', $html );
 		self::assertStringContainsString( '>Repository configuration</h3>', $html );
@@ -303,10 +306,17 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertIsInt( $actions_position );
 		self::assertTrue( $link_position < $actions_position, 'The link choice sits directly above the action group.' );
 		self::assertMatchesRegularExpression( '/<fieldset class="ran-booster-package-link-choice"/', $html );
-		self::assertMatchesRegularExpression( '/name="ran_booster\[dry-run\]" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help"/', $html );
+		self::assertMatchesRegularExpression( '/name="ran_booster\[dry-run\]" aria-describedby="ran-booster-link-installed-help"/', $html );
 		self::assertStringContainsString( 'id="ran-booster-link-installed-help"', $html );
-		self::assertStringContainsString( 'id="ran-booster-link-installed-folder-help"', $html );
-		self::assertMatchesRegularExpression( '/class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help"/', $html );
+		self::assertStringNotContainsString( 'ran-booster-link-installed-folder-help', $html );
+		self::assertStringContainsString( 'without deploying it; its folder name must match the repository.', $html );
+		self::assertStringNotContainsString( 'Let Booster manage an already installed', $html );
+		self::assertStringNotContainsString( 'The installed folder name must match the repository package name.', $html );
+		self::assertStringContainsString( 'Leave blank for the repository root.', $html );
+		self::assertStringNotContainsString( 'lives below the repository root', $html );
+		self::assertStringContainsString( 'Blank uses the default branch.', $html );
+		self::assertStringNotContainsString( 'Leave blank to use the repository', $html );
+		self::assertMatchesRegularExpression( '/class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" aria-describedby="ran-booster-link-installed-help"/', $html );
 		self::assertSame(
 			array( 'Repository configuration', 'Advanced settings', 'Update source', 'Package operation' ),
 			$this->h3_headings( $html ),
@@ -334,7 +344,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'id="ran-booster-advanced-source-settings"', $form );
 		self::assertStringContainsString( 'id="ran-booster-package-operation-heading"', $form );
 		self::assertMatchesRegularExpression( '/<button[^>]*data-ran-booster-source-choice="branch"/', $form );
-		self::assertStringContainsString( 'Choose a repository before configuring its update source.', $html );
+		self::assertStringContainsString( 'Choose a repository first.', $html );
 		self::assertStringContainsString( 'Selecting it does not install the package.', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[check_repository_branch_after_save]"', $html );
 		self::assertStringNotContainsString( 'Save settings and check', $html );
@@ -413,7 +423,7 @@ final class RepeatPackageViewTest extends TestCase {
 			. '&amp;package=' . $managed_package_identifier;
 
 		self::assertStringContainsString(
-			'<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" aria-describedby="ran-booster-link-installed-help ran-booster-link-installed-folder-help" href="' . $manage_url . '">Manage ' . $package_view->get_type() . '</a>',
+			'<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" aria-describedby="ran-booster-link-installed-help" href="' . $manage_url . '">Manage ' . $package_view->get_type() . '</a>',
 			$form
 		);
 		self::assertMatchesRegularExpression(
@@ -602,7 +612,7 @@ final class RepeatPackageViewTest extends TestCase {
 			);
 			self::assertStringNotContainsString( 'id="ran-booster-package-reinstall-heading"', $html );
 			self::assertStringContainsString( 'id="ran-booster-advanced-source-settings"', $html );
-			self::assertStringContainsString( 'Deploy the saved branch manually or on a signed push.', $html );
+			self::assertStringContainsString( 'Deploy the saved branch, manually or on push.', $html );
 			self::assertStringContainsString(
 				'id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation',
 				$html
@@ -828,7 +838,7 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'repository-link', $edit_form );
 			self::assertStringNotContainsString( 'target="_blank"', $this->fieldset_html( $edit_form ), 'The card no longer links the repository.' );
 
-			$notice = '<div id="ran-booster-repository-fixed-description" class="notice notice-info inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>The Git provider and repository cannot change once a package is installed.</p></div><svg class="ran-wp-ui-notice__icon"';
+			$notice = '<div id="ran-booster-repository-fixed-description" class="notice notice-info inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>Provider and repository can&#039;t change after install.</p></div><svg class="ran-wp-ui-notice__icon"';
 			self::assertSame( 1, substr_count( $edit_form, $notice ), 'The fixed-repository info Notice renders once.' );
 			self::assertSame( 1, substr_count( $edit_form, 'id="ran-booster-repository-fixed-description"' ) );
 			$fieldset = $this->fieldset_html( $edit_form );
@@ -920,7 +930,8 @@ final class RepeatPackageViewTest extends TestCase {
 				self::assertStringNotContainsString( 'nav-tab', $html, $package_view->get_type() );
 				self::assertSame( 1, substr_count( $html, ' current"' ), $package_view->get_type() );
 				self::assertStringContainsString( 'role="navigation" aria-label="Update source settings"', $html, $package_view->get_type() );
-				self::assertStringContainsString( 'Viewing settings does not change the update source.', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( 'Viewing settings does not change the update source.', $html, $package_view->get_type() );
+				self::assertStringNotContainsString( 'Selecting it does not install the package.', $html, $package_view->get_type() );
 				self::assertStringNotContainsString( 'aria-controls=', $html, $package_view->get_type() );
 				// The method in use gets the shared dot with its hidden label and no text badge.
 				self::assertStringNotContainsString( 'ran-booster-source-choice__current-source', $html, $package_view->get_type() );
@@ -1093,6 +1104,14 @@ final class RepeatPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( '>Releases</strong>', $html );
+		self::assertStringNotContainsString( 'signed push', $html );
+		self::assertStringNotContainsString( 'through WordPress', $html );
+		if ( 'create' === $mode ) {
+			self::assertStringContainsString( 'Deploy the saved branch, manually or on push.', $html );
+			if ( ! $fallback ) {
+				self::assertStringContainsString( 'Install published releases.', $html );
+			}
+		}
 		self::assertStringNotContainsString( 'data-ran-booster-source-meta', $html );
 		self::assertStringNotContainsString( 'ran-booster-source-choice__meta', $html );
 		self::assertStringNotContainsString( 'Legacy meta text', $html );

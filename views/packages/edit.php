@@ -301,7 +301,6 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 							<input type="hidden" name="ran_booster[subdirectory]" value="<?php echo esc_attr( $subdirectory_value ); ?>">
 						<?php } ?>
 						<?php $package_field_layout = 'grid'; ?>
-						<?php $package_repository_description = __( 'The saved repository and access used by this package.', 'ran-booster' ); ?>
 						<?php require __DIR__ . '/repository-configuration.php'; ?>
 						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 			</form>
@@ -311,7 +310,6 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 			<section class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card" data-ran-booster-card="package-edit" aria-labelledby="ran-booster-package-operation-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-package-operation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Package operation', 'ran-booster' ); ?></h3>
-					<p class="ran-booster-section__description"><?php esc_html_e( 'Choose when Booster may update this package.', 'ran-booster' ); ?></p>
 				</header>
 				<div class="ran-booster-settings-section__body">
 					<?php

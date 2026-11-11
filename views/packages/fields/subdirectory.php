@@ -25,8 +25,7 @@ $package_field_form = isset( $package_field_form ) && is_string( $package_field_
 		<td>
 <?php } ?>
 		<input id="ran-booster-repository-subdirectory" name="ran_booster[subdirectory]" type="text" class="regular-text" placeholder="example/plugin" value="<?php echo esc_attr( $subdirectory_value ); ?>"<?php echo '' !== $package_field_form ? ' form="' . esc_attr( $package_field_form ) . '"' : ''; ?> <?php disabled( $branch_read_only ); ?>>
-		<?php /* translators: %s: package type, such as plugin or theme. */ ?>
-		<p class="description"><?php printf( esc_html__( 'Only when the %s lives below the repository root.', 'ran-booster' ), esc_html( $package_view->get_type() ) ); ?></p>
+		<p class="description"><?php esc_html_e( 'Leave blank for the repository root.', 'ran-booster' ); ?></p>
 <?php if ( $package_field_grid ) { ?>
 	</div>
 <?php } else { ?>

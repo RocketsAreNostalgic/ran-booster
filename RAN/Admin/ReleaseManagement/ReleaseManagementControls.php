@@ -123,9 +123,7 @@ final class ReleaseManagementControls {
 			$choices['release_asset'],
 			array(
 				'heading'           => __( 'Releases', 'ran-booster' ),
-				'description'       => 'create' === $mode
-					? __( 'Choose a repository, then view its eligible published releases.', 'ran-booster' )
-					: __( 'Install published releases through WordPress.', 'ran-booster' ),
+				'description'       => __( 'Install published releases.', 'ran-booster' ),
 				'url'               => 'edit' === $mode ? add_query_arg( 'source_view', 'release_asset', $page_url ) : '',
 				'disabled'          => 'create' === $mode,
 				'hydrated'          => true,
@@ -176,7 +174,6 @@ final class ReleaseManagementControls {
 				aria-labelledby="ran-booster-source-tab-release_asset"
 				data-ran-booster-source-pane="release_asset"
 			>
-				<p class="ran-booster-package-source-pane__description"><?php esc_html_e( 'Install published releases through WordPress.', 'ran-booster' ); ?></p>
 			<?php
 		}
 

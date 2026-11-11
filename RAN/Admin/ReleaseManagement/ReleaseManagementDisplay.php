@@ -175,7 +175,7 @@ final class ReleaseManagementDisplay {
 					<li class="ran-booster-readiness-item <?php echo $status_available && ! $subdirectory_incompatible && $update_uri_ready ? 'is-ok' : 'is-warning'; ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 						<strong><?php esc_html_e( 'Installed identity and Update URI', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( $subdirectory_incompatible ? __( 'This package uses a repository subdirectory. Published releases require the repository root.', 'ran-booster' ) : ( $update_uri_ready ? __( 'The installed package identity and Update URI match the configured repository.', 'ran-booster' ) : $this->update_uri_readiness_message( $eligibility_code ) ) ) ); ?></span>
+						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( $subdirectory_incompatible ? __( 'This package uses a repository subdirectory. Published releases require the repository root.', 'ran-booster' ) : ( $update_uri_ready ? __( 'Package identity and Update URI match the repository.', 'ran-booster' ) : $this->update_uri_readiness_message( $eligibility_code ) ) ) ); ?></span>
 					</li>
 					<li class="ran-booster-readiness-item <?php echo $status_available && 'release_asset' === $source && '' === $status->failure_code() ? ( $release_unchecked ? 'is-neutral' : 'is-ok' ) : ( $status_available && 'branch' === $source && ! $repository_blocked ? 'is-neutral' : 'is-warning' ); ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
@@ -320,7 +320,7 @@ final class ReleaseManagementDisplay {
 			</fieldset>
 			<div class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-managed-release-status>
 				<h4 data-ran-booster-managed-release-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
-				<p data-ran-booster-managed-release-message><?php echo esc_html( $enabled ? __( 'Check the saved release track for eligible candidates.', 'ran-booster' ) : __( 'Published release browsing is unavailable until the current package status and controls are available.', 'ran-booster' ) ); ?></p>
+				<p data-ran-booster-managed-release-message></p>
 			</div>
 			<div class="ran-booster-managed-release-browser__footer">
 				<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) . ' disabled ran-booster-managed-release-native-update' ); ?>" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update><?php esc_html_e( 'Update now', 'ran-booster' ); ?></a>
@@ -546,7 +546,7 @@ final class ReleaseManagementDisplay {
 		$preview      = 'prerelease' === $selected_channel;
 		$next_channel = $preview ? 'stable' : 'prerelease';
 		$description  = $custom_description ?? ( $managed
-			? __( 'Preview includes published alpha, beta, release-candidate, and stable releases; switching affects future eligibility only, resets Automatic to Manual, and does not install or downgrade.', 'ran-booster' )
+			? __( 'Preview also includes alpha, beta and release-candidate builds. Switching affects future eligibility only and resets Automatic updates to Manual.', 'ran-booster' )
 			: ( 'branch' === $mode
 				? __( 'Stable follows final published releases. Preview also includes eligible alpha, beta and release-candidate builds. Drafts remain excluded.', 'ran-booster' )
 					: __( 'Stable follows final published releases. Preview also includes prereleases.', 'ran-booster' ) ) );
@@ -619,12 +619,11 @@ final class ReleaseManagementDisplay {
 				'branch',
 				false,
 				'ran-booster-release-channel-description-' . $type,
-				__( 'Preview includes eligible alpha, beta and release-candidate builds as well as stable releases. Drafts remain excluded.', 'ran-booster' )
+				__( 'Preview also includes alpha, beta and release-candidate builds. Drafts remain excluded.', 'ran-booster' )
 			);
 			?>
 			<header>
 				<h3><?php esc_html_e( 'Published release selection', 'ran-booster' ); ?></h3>
-				<p><?php esc_html_e( 'Choose one exact release, inspect it, then install the reviewed package.', 'ran-booster' ); ?></p>
 			</header>
 			<fieldset class="ran-booster-release-candidates" data-ran-booster-release-candidates hidden>
 				<legend><strong><?php esc_html_e( 'Choose a published release', 'ran-booster' ); ?></strong></legend>
@@ -634,7 +633,7 @@ final class ReleaseManagementDisplay {
 				<div>
 					<h4 data-ran-booster-release-status-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
 					<p>
-						<span data-ran-booster-release-status-message><?php esc_html_e( 'Choose a repository above, then select Releases to load eligible stable releases.', 'ran-booster' ); ?></span>
+						<span data-ran-booster-release-status-message><?php esc_html_e( 'Choose a repository, then select Releases.', 'ran-booster' ); ?></span>
 						<button type="button" class="button-link" data-ran-booster-release-switch-branch hidden><?php esc_html_e( 'Use branch', 'ran-booster' ); ?></button>
 					</p>
 				</div>
@@ -649,7 +648,7 @@ final class ReleaseManagementDisplay {
 				<div class="ran-booster-readiness-panel__top">
 					<div>
 						<h4 id="ran-booster-release-preflight-heading-<?php echo esc_attr( $type ); ?>"><?php esc_html_e( 'Published release inspected', 'ran-booster' ); ?></h4>
-						<p><?php esc_html_e( 'The exact published release was checked. Its ZIP was downloaded, validated for repository identity, digest, headers and package identity, then discarded. Installation will freshly acquire and verify it again before WordPress changes files.', 'ran-booster' ); ?></p>
+						<p><?php esc_html_e( 'Checked. Nothing is installed yet.', 'ran-booster' ); ?></p>
 					</div>
 				</div>
 				<ul class="ran-booster-readiness-list">

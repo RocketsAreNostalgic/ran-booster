@@ -9,16 +9,12 @@
 
 defined( 'WPINC' ) || die;
 
-$package_repository_description = isset( $package_repository_description ) && is_string( $package_repository_description )
-	? $package_repository_description
-	: '';
-$repository_read_only           = isset( $repository_read_only ) && true === $repository_read_only;
+$repository_read_only = isset( $repository_read_only ) && true === $repository_read_only;
 
 ?>
 <section class="ran-booster-settings-section" aria-labelledby="ran-booster-package-configuration-heading">
 	<header class="ran-booster-settings-section__header">
 		<h3 id="ran-booster-package-configuration-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository configuration', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php echo esc_html( $package_repository_description ); ?></p>
 	</header>
 	<div class="ran-booster-settings-section__body">
 		<fieldset <?php disabled( ! $package_mutation_available ); ?>>
@@ -30,7 +26,7 @@ $repository_read_only           = isset( $repository_read_only ) && true === $re
 				<?php } ?>
 				<?php require __DIR__ . '/fields/repository.php'; ?>
 				<?php if ( $repository_read_only ) { ?>
-					<div id="ran-booster-repository-fixed-description" class="notice notice-info inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The Git provider and repository cannot change once a package is installed.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
+					<div id="ran-booster-repository-fixed-description" class="notice notice-info inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Provider and repository can\'t change after install.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 				<?php } ?>
 			</div>
 		</fieldset>

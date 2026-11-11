@@ -751,7 +751,7 @@ final class AdminAssetContractTest extends TestCase {
 		// The documented exception list: option labels, table row names and screen reader labels only.
 		self::assertSame(
 			array( '.screen-reader-text', '.ran-booster-portability__credential-selection', 'td > label', ':has(input[type="checkbox"], input[type="radio"])' ),
-			array_map( 'trim', (array) preg_split( '/,(?![^()]*\))/', $m[1] ) )
+			array_map( static fn ( string $part ): string => trim( $part ), (array) preg_split( '/,(?![^()]*\))/', $m[1] ) )
 		);
 	}
 
@@ -805,7 +805,7 @@ final class AdminAssetContractTest extends TestCase {
 					continue;
 				}
 				++$checked;
-				self::fail( basename( $file ) . ' restyles a label font outside the shared label rule: ' . $selector );
+				self::fail( basename( (string) $file ) . ' restyles a label font outside the shared label rule: ' . $selector );
 			}
 		}
 		self::assertSame( 0, $checked );

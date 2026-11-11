@@ -1164,7 +1164,7 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 	}
 
-	/** @return list<array{PackagePagePresenter, PackageSource, bool, bool, bool}> */
+	/** @return list<array{PackagePagePresenter, PackageSource, bool}> */
 	public static function operation_card_matrix(): array {
 		$rows = array();
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $view ) {

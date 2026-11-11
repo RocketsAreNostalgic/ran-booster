@@ -1406,8 +1406,8 @@ msgid "An add-on guide is temporarily unavailable. Check plugin compatibility an
 msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
-#: assets/ran-booster-enhanced-mutations.js:1313
-#: assets/ran-booster-enhanced-mutations.js:1504
+#: assets/ran-booster-enhanced-mutations.js:1316
+#: assets/ran-booster-enhanced-mutations.js:1507
 msgid "We could not complete that request. Please try again."
 msgstr ""
 

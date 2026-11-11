@@ -14,6 +14,7 @@
 
 	onDomReady(initEnhancedMutationFeedback);
 	initSubmitBusy();
+	initReasonTooltip();
 
 	/**
 	 * Swap a submitter's content for its data-ran-booster-busy-label and announce
@@ -72,6 +73,106 @@
 		if (status) {
 			status.textContent = '';
 		}
+	}
+
+	/**
+	 * Reason tooltip for a visible control that is inactive (aria-disabled, so it
+	 * stays focusable). The wrapper carries data-ran-booster-reason-tooltip and
+	 * holds the control (aria-describedby) and its role="tooltip" bubble. Shown on
+	 * hover and keyboard focus, hidden on leave, blur, Escape and scroll.
+	 * Activation of the aria-disabled control is ignored. Kept small and generic
+	 * so the Popover API component planned in issue 783 can replace it.
+	 */
+	function initReasonTooltip() {
+		if (window.ranBoosterReasonTooltipInitialized) {
+			return;
+		}
+		window.ranBoosterReasonTooltipInitialized = true;
+
+		const wrapperSelector = '[data-ran-booster-reason-tooltip]';
+		let visible = null;
+
+		function hide() {
+			if (visible) {
+				visible.hidden = true;
+				visible = null;
+			}
+		}
+
+		function show(wrapper) {
+			const bubble = wrapper.querySelector('[role="tooltip"]');
+			if (!bubble) {
+				return;
+			}
+			if (visible && visible !== bubble) {
+				hide();
+			}
+			bubble.hidden = false;
+			visible = bubble;
+			const anchor = wrapper.getBoundingClientRect();
+			const margin = 8;
+			const left = Math.min(
+				anchor.left,
+				document.documentElement.clientWidth -
+					bubble.offsetWidth -
+					margin
+			);
+			let top = anchor.bottom + 6;
+			if (top + bubble.offsetHeight > window.innerHeight - margin) {
+				top = Math.max(margin, anchor.top - bubble.offsetHeight - 6);
+			}
+			bubble.style.left = `${Math.max(margin, left)}px`;
+			bubble.style.top = `${top}px`;
+		}
+
+		function wrapperOf(node) {
+			return node?.closest?.(wrapperSelector) || null;
+		}
+
+		function leaving(event) {
+			const wrapper = wrapperOf(event.target);
+			if (wrapper && !wrapper.contains(event.relatedTarget)) {
+				hide();
+			}
+		}
+
+		document.addEventListener('mouseover', function (event) {
+			const wrapper = wrapperOf(event.target);
+			if (wrapper) {
+				show(wrapper);
+			}
+		});
+		document.addEventListener('focusin', function (event) {
+			const wrapper = wrapperOf(event.target);
+			if (wrapper) {
+				show(wrapper);
+			}
+		});
+		document.addEventListener('mouseout', leaving);
+		document.addEventListener('focusout', leaving);
+		document.addEventListener('keydown', function (event) {
+			if (event.key === 'Escape') {
+				hide();
+			}
+		});
+		document.addEventListener('scroll', hide, true);
+		// Capture phase: ignore activation (click, Enter, Space) while inactive,
+		// and show the reason so a tap on touch screens explains it.
+		document.addEventListener(
+			'click',
+			function (event) {
+				const wrapper = wrapperOf(event.target);
+				const control = event.target?.closest?.(
+					'[aria-disabled="true"]'
+				);
+				if (wrapper && control && wrapper.contains(control)) {
+					event.preventDefault();
+					event.stopPropagation();
+					show(wrapper);
+				}
+			},
+			true
+		);
 	}
 
 	/**

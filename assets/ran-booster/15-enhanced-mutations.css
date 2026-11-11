@@ -67,3 +67,32 @@
 		);
 	}
 }
+
+/*
+ * Reason tooltip for a control that stays visible but inactive. The bubble is
+ * fixed-positioned by ran-booster-enhanced-mutations.js so no card overflow
+ * clips it. Small and generic on purpose: the Popover API component planned in
+ * issue 783 replaces it.
+ */
+.ran-booster-admin .ran-booster-reason-tooltip {
+	display: inline-flex;
+}
+
+.ran-booster-admin .ran-booster-reason-tooltip__bubble {
+	position: fixed;
+	z-index: var(--ran-booster-layer-modal);
+	box-sizing: border-box;
+	max-inline-size: min(20rem, calc(100vw - 16px));
+	padding-block: var(--ran-booster-space-6);
+	padding-inline: var(--ran-booster-space-10, 10px);
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-text);
+	color: var(--ran-booster-surface);
+	font-size: var(--ran-booster-font-size-sm);
+	line-height: 1.4;
+	pointer-events: none;
+}
+
+.ran-booster-admin .ran-booster-reason-tooltip__bubble[hidden] {
+	display: none;
+}

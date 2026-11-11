@@ -160,7 +160,7 @@ final class TroubleshootingViewTest extends TestCase {
 				),
 			),
 			'installation_details' => array(
-				'GitHub provider'      => array(
+				'GitHub provider'    => array(
 					'Name'                     => '<Untrusted plugin>',
 					'Version'                  => '1.0',
 					'Source'                   => 'External plugin',
@@ -172,11 +172,11 @@ final class TroubleshootingViewTest extends TestCase {
 					'Declared capabilities'    => '<capability>',
 					'Credential formats'       => '<format>',
 				),
-				'GitHub candidate 1'   => array(
+				'GitHub candidate 1' => array(
 					'Name'        => '<candidate>',
 					'Declaration' => 'Unavailable',
 				),
-				'Core updates' => array(
+				'Core updates'       => array(
 					'Marker commit' => '<commit>',
 				),
 			),

@@ -364,7 +364,7 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//input[@type="checkbox" and @name="ran_booster[preferences][self_update_discovery]" and @id="ran-booster-self-update-discovery"])' ) );
 		foreach ( array(
 			'Appearance'      => array( 'RAN_BOOSTER_HIDE_GITHUB_UI' ),
-			'Core updates' => array( 'RAN_BOOSTER_SELF_UPDATE_MODE' ),
+			'Core updates'    => array( 'RAN_BOOSTER_SELF_UPDATE_MODE' ),
 			'History'         => array( 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS' ),
 			'Download limits' => array( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ),
 		) as $legend => $constants ) {

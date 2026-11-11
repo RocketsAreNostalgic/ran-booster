@@ -3,8 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 
+// A Card whose last block is a footer band adds the --footed modifier to its content.
 const frame =
-	'<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">';
+	/^<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content(?: ran-booster-card__content--footed)?">/;
 
 function files(directory) {
 	return fs
@@ -44,7 +45,7 @@ test('every page Card host renders the static public Card frame', () => {
 				.slice(found.index + found[0].length)
 				.trimStart();
 			assert.ok(
-				rest.startsWith(frame),
+				frame.test(rest),
 				`${file}: Card host without the static frame: ${found[0]}`
 			);
 		}

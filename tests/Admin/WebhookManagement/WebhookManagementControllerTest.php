@@ -279,6 +279,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertIsArray( $model );
 		$form_attributes = '';
 		ob_start();
+		$panel_part = 'form';
+		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
+		$panel_part = 'actions';
 		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
 		$html = (string) ob_get_clean();
 
@@ -2082,6 +2085,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertIsArray( $model );
 		$form_attributes = '';
 		ob_start();
+		$panel_part = 'form';
+		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
+		$panel_part = 'actions';
 		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
 
 		return (string) ob_get_clean();

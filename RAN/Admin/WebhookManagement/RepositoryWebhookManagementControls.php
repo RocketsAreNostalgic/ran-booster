@@ -29,7 +29,6 @@ final class RepositoryWebhookManagementControls {
 	private readonly WebhookDisplayModel $display;
 	private readonly WordPressInstallationStore $installation_store;
 	private readonly WebhookAssistanceFacade $assistance;
-	private readonly ManagedPackageWebhookAuthorityResolver $authorities;
 	private bool $enabled = false;
 
 	public function __construct(
@@ -43,7 +42,6 @@ final class RepositoryWebhookManagementControls {
 		?\Closure $verified_deliveries = null
 	) {
 		$this->assistance         = $facade;
-		$this->authorities        = $authorities;
 		$store                    = new WordPressInstallationStore();
 		$this->installation_store = $store;
 		$this->display            = new WebhookDisplayModel( $facade, $store, $verified_deliveries );
@@ -73,61 +71,15 @@ final class RepositoryWebhookManagementControls {
 		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'render_package_webhook_setup' ), 30, 5 );
 	}
 
-	/** Render the Core webhook control on its Branch package source pane. */
+	/**
+	 * Intentional no-op on `ran_booster_admin_package_advanced_source_sections`.
+	 *
+	 * The Edit-page Webhook setup disclosure was removed in beta.44; webhook management lives on the repository page.
+	 *
+	 * @todo beta.45: review this hook (kept after the Edit-page Webhook setup disclosure was removed in beta.44) and either remove it or resolve it, see #772
+	 */
 	public function render_package_webhook_setup( string $mode, string $type, string $selected_source, ?\RAN\Admin\AdminPackageProjection $package, string $return_url ): void {
-		if ( 'edit' !== $mode || 'branch' !== $selected_source || null === $package || 'branch' !== $package->source() ) {
-			return;
-		}
-
-		$authority = $this->authorities->for_package( $type, $package->identifier() );
-		if ( null === $authority || ! $this->supports_provider( $authority['provider_code'] ) ) {
-			$this->render_unavailable_package_webhook_setup(
-				null === $authority
-					? __( 'A stable repository identity and a Git provider with assisted webhook management are required before setup can begin.', 'ran-booster' )
-					: __( 'This Git provider does not offer the complete assisted webhook-management capability required by Booster.', 'ran-booster' )
-			);
-			return;
-		}
-
-		$metadata = $this->controller->provider_metadata( $authority['provider_code'] );
-		if ( ! $metadata instanceof ProviderMetadata || ! current_user_can( 'manage_options' ) ) {
-			$this->render_unavailable_package_webhook_setup( __( 'You are not permitted to manage this package webhook.', 'ran-booster' ) );
-			return;
-		}
-
-		$context = $this->controller->panel_context();
-		$model   = $this->display->panel( $authority['provider_code'], $metadata->label, $authority['repository_id'], $return_url, $context['result'], $context['recovery'], true, $context['remediation'], null, $context['ping'] );
-		if ( null === $model ) {
-			$this->render_unavailable_package_webhook_setup( $this->repository_webhook_unavailable_reason( $authority['provider_code'], $authority['repository_id'], $package->identifier() ) );
-			return;
-		}
-
-		$form_attributes = '';
-		$open            = null !== $context['result'] || null !== $context['recovery'] || null !== $context['remediation'];
-		?>
-		<div data-ran-booster-ui-disclosure="package-webhook-setup" data-ran-booster-ui-disclosure-density="compact">
-		<details data-ran-booster-ui-disclosure-fallback class="ran-booster-package-disclosure ran-booster-package-webhook-setup ran-booster-disclosure" data-ran-booster-package-webhook-setup<?php echo $open ? ' open' : ''; ?>>
-			<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong></summary>
-			<div data-ran-booster-ui-disclosure-content class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body ran-booster-disclosure__body">
-				<p><?php esc_html_e( 'Set up or check this repository webhook. This does not enable Automatic updates; choose that separately in Package operation. Enhanced operations return to these package settings.', 'ran-booster' ); ?></p>
-				<?php require __DIR__ . '/views/panel.php'; ?>
-			</div>
-		</details></div>
-		<?php
-	}
-
-
-	private function render_unavailable_package_webhook_setup( string $reason ): void {
-		?>
-		<div data-ran-booster-ui-disclosure="package-webhook-setup" data-ran-booster-ui-disclosure-density="compact">
-		<details data-ran-booster-ui-disclosure-fallback class="ran-booster-package-disclosure ran-booster-package-webhook-setup ran-booster-disclosure" data-ran-booster-package-webhook-setup>
-			<summary><strong><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></strong></summary>
-			<div data-ran-booster-ui-disclosure-content class="ran-booster-package-disclosure__body ran-booster-package-webhook-setup__body ran-booster-disclosure__body">
-				<p><?php echo esc_html( $reason ); ?></p>
-				<p><button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" disabled><?php esc_html_e( 'Set up webhook', 'ran-booster' ); ?></button></p>
-			</div>
-		</details></div>
-		<?php
+		unset( $mode, $type, $selected_source, $package, $return_url );
 	}
 
 	public function supports_provider( string $provider_code ): bool {
@@ -153,17 +105,6 @@ final class RepositoryWebhookManagementControls {
 		return $this->display->enrich_rows( $rows, $provider_code, $metadata->label, $metadata->repository_url_base, $repository_projections, $return_url );
 	}
 
-	public function render_repository_panel( string $provider_code, string $repository_id, string $return_url ): bool {
-		$model = $this->repository_webhook_panel_model( $provider_code, $repository_id, $return_url );
-		if ( null === $model ) {
-			return false;
-		}
-		$model['webhooks_url'] = $this->repository_webhook_settings_url( $provider_code, $model['repository'] );
-		echo $this->render_repository_webhook_panel_model( $model ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Fixed Core panel template escapes the normalized model.
-
-		return true;
-	}
-
 	/** @return WebhookPanel|null */
 	private function repository_webhook_panel_model( string $provider_code, string $repository_id, string $return_url ): ?array {
 		$metadata = $this->supports_provider( $provider_code ) ? $this->controller->provider_metadata( $provider_code ) : null;
@@ -177,7 +118,7 @@ final class RepositoryWebhookManagementControls {
 
 	/** @param array<string,mixed> $model */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The included panel view reads $panel_part as a local template variable.
-	private function render_repository_webhook_panel_model( array $model, string $panel_part = 'all' ): string {
+	private function render_repository_webhook_panel_model( array $model, string $panel_part ): string {
 		ob_start();
 		if ( null !== ( $model['interaction_request'] ?? null ) ) {
 			$this->admin_interaction->render_form_attributes( $model['interaction_request'] );
@@ -281,7 +222,7 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** Explain a failed local readiness projection without probing a provider. */
-	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id, ?string $package_identifier = null ): string {
+	private function repository_webhook_unavailable_reason( string $provider_code, string $repository_id ): string {
 		$messages = array(
 			'callback_requires_public_https'  => $this->receiver_unavailable_message(),
 			'database_unavailable'            => __( 'Webhook setup is unavailable because Booster database storage is unavailable.', 'ran-booster' ),
@@ -298,8 +239,7 @@ final class RepositoryWebhookManagementControls {
 				if ( ! is_array( $repository ) ) {
 					continue;
 				}
-				$references = is_array( $repository['package_references'] ?? null ) ? $repository['package_references'] : array();
-				if ( ( $repository['repository_id'] ?? null ) === $repository_id || ( null !== $package_identifier && in_array( $package_identifier, $references, true ) ) ) {
+				if ( ( $repository['repository_id'] ?? null ) === $repository_id ) {
 					$codes = array_merge( $codes, is_array( $repository['reason_codes'] ?? null ) ? $repository['reason_codes'] : array() );
 				}
 			}

@@ -270,6 +270,12 @@
 	margin-block-start: var(--ran-booster-space-16);
 }
 
+.ran-booster-admin
+	.ran-booster-package-source-pane[data-ran-booster-source-pane="branch"]
+	> .ran-booster-package-source-pane__description {
+	margin-block-end: var(--ran-booster-space-16);
+}
+
 .ran-booster-source-choice__radio {
 	display: grid;
 	inline-size: 18px;
@@ -952,10 +958,6 @@
 
 .ran-booster-admin .ran-booster-package-disclosure {
 	margin-block: var(--ran-booster-space-16) 0;
-}
-
-.ran-booster-admin .ran-booster-package-webhook-setup {
-	margin-block-end: var(--ran-booster-space-16);
 }
 
 @media screen and (max-width: 960px) {

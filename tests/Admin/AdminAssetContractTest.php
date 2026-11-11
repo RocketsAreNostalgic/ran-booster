@@ -641,7 +641,7 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_disclosure_hosts_own_their_margins_and_prominent_rules_stay_scoped(): void {
 		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
 		self::assertStringContainsString( '> details[data-ran-booster-ui-disclosure-fallback] {' . "\n\t" . 'margin: 0;', $css );
-		foreach ( array( 'troubleshooting-logging', 'troubleshooting-evidence', 'package-webhook-setup', 'provider-webhook-setup', 'package-advanced-settings', 'package-release-track', 'package-danger-zone', 'repository-webhook-setup', 'repository-release-readiness', 'repository-release-workflow' ) as $kind ) {
+		foreach ( array( 'troubleshooting-logging', 'troubleshooting-evidence', 'provider-webhook-setup', 'package-advanced-settings', 'package-release-track', 'package-danger-zone', 'repository-webhook-setup', 'repository-release-readiness', 'repository-release-workflow' ) as $kind ) {
 			self::assertStringContainsString( 'data-ran-booster-ui-disclosure="' . $kind . '"', $css, $kind );
 		}
 		// A prominent header rule must name the host's own disclosure, never every nested one.
@@ -1285,6 +1285,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/--navigation\s*~ \.ran-booster-package-source-pane \{\s*margin-block-start: 0;/', $css );
 		self::assertMatchesRegularExpression( '/--navigation\s*~ \.ran-booster-release-pane \{\s*padding-block-start: 0;/', $css );
 		self::assertMatchesRegularExpression( '/--navigation\s*~ \.ran-booster-release-pane\s*> \.ran-booster-package-source-pane__description \{\s*margin-block-start: var\(--ran-booster-space-16\);/', $css );
+		// The Branch description owns the standard gap above the fields; no Webhook setup disclosure margin remains.
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-source-pane="branch"\]\s*> \.ran-booster-package-source-pane__description \{\s*margin-block-end: var\(--ran-booster-space-16\);/', $css );
+		self::assertStringNotContainsString( 'package-webhook-setup', $css );
 	}
 
 	public function test_package_source_repository_guidance_is_a_shared_static_notice(): void {

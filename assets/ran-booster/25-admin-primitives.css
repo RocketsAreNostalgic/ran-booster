@@ -1273,10 +1273,6 @@
 	margin-block-start: var(--ran-booster-space-16);
 }
 
-.ran-booster-admin [data-ran-booster-ui-disclosure="package-webhook-setup"] {
-	margin-block: var(--ran-booster-space-16);
-}
-
 .ran-booster-admin [data-ran-booster-ui-disclosure="provider-webhook-setup"] {
 	margin-block-start: var(--ran-booster-space-10);
 }

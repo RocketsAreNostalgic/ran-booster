@@ -1108,6 +1108,99 @@ test('unknown outcome retains original token and requires explicit retry', () =>
 	assert.equal(t.submissions[1].token, 'original');
 });
 
+test('an unconfirmed save opens its collapsed Card so the error is never hidden', () => {
+	const h = harness();
+	const t = h.toggle;
+	// The fixture form stands in for the Card: its header toggle is the collapsed Card's trigger.
+	let opened = 0;
+	const lookup = t.querySelector.bind(t);
+	t.querySelector = (selector) =>
+		selector === '[role="button"]'
+			? { getAttribute: () => 'false', click: () => opened++ }
+			: lookup(selector);
+	t.toggle.checked = true;
+	h.doc('change', { target: t.toggle });
+	const xhr = start(h, t);
+	assert.equal(opened, 0);
+	h.doc('htmx:afterRequest', { detail: { xhr } });
+	assert.match(t.error.textContent, /unconfirmed/i);
+	assert.equal(opened, 1);
+});
+
+test('an invalid field or a deep link opens a collapsed Settings Card, an open one and a Card header are left alone', () => {
+	const h = harness();
+	const card = (expanded, native = false) => {
+		const host = {
+			parentElement: null,
+			opened: 0,
+			details: { open: false },
+			querySelector(selector) {
+				if (selector === '[role="button"]') {
+					return native
+						? null
+						: {
+								getAttribute: () => String(expanded),
+								click: () => {
+									host.opened++;
+								},
+							};
+				}
+				return native ? host.details : null;
+			},
+		};
+		host.control = { closest: () => host };
+		return host;
+	};
+	// Mounted and collapsed: the invalid control's Card header toggle is activated once.
+	const collapsed = card(false);
+	h.doc('invalid', { target: collapsed.control });
+	assert.equal(collapsed.opened, 1);
+	// Mounted and open: nothing happens.
+	const open = card(true);
+	h.doc('invalid', { target: open.control });
+	assert.equal(open.opened, 0);
+	// Before the public Disclosure mounts, the native details opens.
+	const native = card(false, true);
+	h.doc('invalid', { target: native.control });
+	assert.equal(native.details.open, true);
+	// A Card's own header is always visible: an element that is the Card does not open it.
+	const own = card(false);
+	h.doc('invalid', { target: own });
+	assert.equal(own.opened, 0);
+	// A control outside any Card, and an event without a target, are ignored.
+	h.doc('invalid', { target: { closest: () => null } });
+	h.doc('invalid', {});
+	// A deep link into a collapsed Card opens it and scrolls to the target.
+	const linked = card(false);
+	let scrolled = 0;
+	linked.control.scrollIntoView = () => {
+		scrolled++;
+	};
+	h.window.location = { hash: '#ran-booster-general-numeric' };
+	h.document.getElementById = (id) =>
+		id === 'ran-booster-general-numeric' ? linked.control : null;
+	h.win('hashchange', {});
+	assert.equal(linked.opened, 1);
+	assert.equal(scrolled, 1);
+	// A fragment that is not an element, or is malformed, changes nothing.
+	h.window.location = { hash: '#missing' };
+	h.win('hashchange', {});
+	h.window.location = { hash: '#%E0%A4%A' };
+	h.win('hashchange', {});
+	assert.equal(linked.opened, 1);
+});
+
+test('pending numeric edits keep the leave protection and their value whatever state the Card is in', () => {
+	const h = harness();
+	h.numeric.value = '3000';
+	h.doc('input', { target: h.numeric.numeric });
+	// The protection reads the form's state, never the Card: it is the same with no Card, open or collapsed.
+	assert.equal(h.win('beforeunload', {}).defaultPrevented, true);
+	assert.equal(pending(h.numeric), true);
+	assert.equal(h.numeric.value, '3000');
+	assert.equal(h.numeric.status.textContent, 'Unsaved numeric changes.');
+});
+
 test('history restore of an idle form shows persisted state and no warning, and initialization registers listeners once', () => {
 	const h = harness();
 	h.initializeAgain();

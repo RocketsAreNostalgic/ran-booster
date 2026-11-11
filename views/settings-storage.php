@@ -57,20 +57,18 @@ $storage_can_reset            = null !== $storage_recovery && true === ( $storag
 $storage_discarded_candidates = null === $secrets_storage || ! is_array( $secrets_storage['discarded_candidates'] ?? null )
 	? array()
 	: $secrets_storage['discarded_candidates'];
-$storage_details_open         = 'storage_needs_attention' === $storage_status;
 $shows_storage_override       = in_array( $storage_status, array( 'storage_needs_attention', 'manual_required' ), true )
 	&& null === ( $secrets_storage['config_alternatives'] ?? null );
 $has_storage_details          = in_array( $storage_status, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true );
+// The Card rests closed only while storage is healthy and nothing needs a decision; every other state, and any recovery route, opens it.
+$storage_card_open = 'storage_healthy' !== $storage_status || null !== $storage_recovery;
 
 ?>
-	<?php if ( null !== $secrets_storage ) { ?>
-		<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="settings" aria-labelledby="ran-booster-storage" data-ran-booster-storage-reason="<?php echo esc_attr( $storage_reason_code ); ?>"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
-			<div class="ran-booster-onboarding__storage-heading">
-				<h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3>
-				<?php $storage_status_label = $storage_status_labels[ $storage_status ] ?? __( 'Status unknown', 'ran-booster' ); ?>
-				<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $storage_status_label, (string) ( $storage_status_intents[ $storage_status ] ?? 'none' ), array( 'data-ran-booster-storage-status' => (string) $storage_status ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
-			</div>
-			<p><?php echo esc_html( $secrets_storage['message'] ); ?></p>
+	<?php
+	if ( null !== $secrets_storage ) {
+		$storage_status_label = $storage_status_labels[ $storage_status ] ?? __( 'Status unknown', 'ran-booster' );
+		ob_start();
+		?>
 			<?php if ( '' !== $storage_reason_code && in_array( $storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true ) ) { ?>
 				<p class="description"><strong><?php esc_html_e( 'Diagnostic code:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $storage_reason_code ); ?></code></p>
 			<?php } ?>
@@ -238,72 +236,75 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 			<?php } ?>
 
 			<?php if ( $has_storage_details ) { ?>
-				<div class="ran-booster-onboarding__storage-details" data-ran-booster-ui-disclosure="settings-storage" data-ran-booster-ui-disclosure-density="compact">
-				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-onboarding__storage-details ran-booster-disclosure"<?php echo $storage_details_open ? ' open' : ''; ?>>
-					<summary><?php esc_html_e( 'Storage details', 'ran-booster' ); ?></summary>
-					<div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>
-						<dl class="ran-booster-onboarding__storage-facts">
-							<div><dt><?php esc_html_e( 'Configuration constant', 'ran-booster' ); ?></dt><dd>
-							<?php
-							if ( null !== $storage_constant ) {
-								?>
-								<code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_constant ); ?></code>
-								<?php
-							} else {
-								?>
-								<code class="ran-booster-onboarding__storage-inline"><?php esc_html_e( 'Not configured', 'ran-booster' ); ?></code>
-								<?php
-							}
-							?>
-							</dd></div>
-							<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
-								<?php if ( is_string( $storage_path_source ) && isset( $storage_path_source_labels[ $storage_path_source ] ) ) { ?>
-									<div>
-										<dt><?php esc_html_e( 'Path selection', 'ran-booster' ); ?></dt>
-										<dd><code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_path_source_labels[ $storage_path_source ] ); ?></code></dd>
-									</div>
-								<?php } ?>
-								<?php if ( null !== $storage_directory ) { ?>
-									<div>
-										<dt><?php esc_html_e( 'Storage directory', 'ran-booster' ); ?></dt>
-										<dd>
-										<?php
-										$copy_value = $storage_directory;
-										$copy_label = __( 'Copy storage directory', 'ran-booster' );
-										include __DIR__ . '/copy-displayed-value.php';
-										?>
-										</dd>
-									</div>
-								<?php } ?>
-								<div>
-									<dt><?php esc_html_e( 'Storage file', 'ran-booster' ); ?></dt>
-									<dd>
-									<?php
-									$copy_value = $secrets_storage['candidate_path'];
-									$copy_label = __( 'Copy storage file', 'ran-booster' );
-									include __DIR__ . '/copy-displayed-value.php';
-									?>
-									</dd>
-								</div>
-
-							<?php } ?>
-						</dl>
-						<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
-							<?php if ( 'path_configured' === $storage_status ) { ?>
-								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'The encrypted file and its separate database key are created when you save the first credential.', 'ran-booster' ); ?></p>
-							<?php } elseif ( 'storage_healthy' === $storage_status ) { ?>
-								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'Credentials are encrypted in this file. WordPress stores the encryption key separately.', 'ran-booster' ); ?></p>
-							<?php } ?>
+				<dl class="ran-booster-onboarding__storage-facts">
+					<div><dt><?php esc_html_e( 'Configuration constant', 'ran-booster' ); ?></dt><dd>
+					<?php
+					if ( null !== $storage_constant ) {
+						?>
+						<code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_constant ); ?></code>
+						<?php
+					} else {
+						?>
+						<code class="ran-booster-onboarding__storage-inline"><?php esc_html_e( 'Not configured', 'ran-booster' ); ?></code>
+						<?php
+					}
+					?>
+					</dd></div>
+					<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
+						<?php if ( is_string( $storage_path_source ) && isset( $storage_path_source_labels[ $storage_path_source ] ) ) { ?>
+							<div>
+								<dt><?php esc_html_e( 'Path selection', 'ran-booster' ); ?></dt>
+								<dd><code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_path_source_labels[ $storage_path_source ] ); ?></code></dd>
+							</div>
 						<?php } ?>
+						<?php if ( null !== $storage_directory ) { ?>
+							<div>
+								<dt><?php esc_html_e( 'Storage directory', 'ran-booster' ); ?></dt>
+								<dd>
+								<?php
+								$copy_value = $storage_directory;
+								$copy_label = __( 'Copy storage directory', 'ran-booster' );
+								include __DIR__ . '/copy-displayed-value.php';
+								?>
+								</dd>
+							</div>
+						<?php } ?>
+						<div>
+							<dt><?php esc_html_e( 'Storage file', 'ran-booster' ); ?></dt>
+							<dd>
+							<?php
+							$copy_value = $secrets_storage['candidate_path'];
+							$copy_label = __( 'Copy storage file', 'ran-booster' );
+							include __DIR__ . '/copy-displayed-value.php';
+							?>
+							</dd>
+						</div>
 
-
-					</div>
-				</details>
-				</div>
+					<?php } ?>
+				</dl>
+				<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
+					<?php if ( 'path_configured' === $storage_status ) { ?>
+						<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'The encrypted file and its separate database key are created when you save the first credential.', 'ran-booster' ); ?></p>
+					<?php } elseif ( 'storage_healthy' === $storage_status ) { ?>
+						<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'Credentials are encrypted in this file. WordPress stores the encryption key separately.', 'ran-booster' ); ?></p>
+					<?php } ?>
+				<?php } ?>
 			<?php } ?>
 			<p class="ran-booster-onboarding__storage-documentation">
 				<a href="<?php echo esc_url( $credential_storage_documentation_url ); ?>"><?php esc_html_e( 'Learn how Booster manages credentials and keys', 'ran-booster' ); ?></a>
 					<span aria-hidden="true"> · </span><a href="<?php echo esc_url( str_replace( '#ran-booster-credential-storage', '#ran-booster-manual-storage-override', $credential_storage_documentation_url ) ); ?>"><?php esc_html_e( 'Manual storage override', 'ran-booster' ); ?></a>
 			</p>
-		</div></div></section>
-	<?php } ?>
+		<?php
+		$card_body        = (string) ob_get_clean();
+		$card_id          = 'ran-booster-storage';
+		$card_modifier    = 'ran-booster-settings__card--storage';
+		$card_title       = esc_html__( 'Secure credential storage', 'ran-booster' );
+		$card_description = esc_html( $secrets_storage['message'] );
+		$card_badge       = \RAN\Admin\Component\StatusBadge::for_intent( (string) $storage_status_label, (string) ( $storage_status_intents[ $storage_status ] ?? 'none' ), array( 'data-ran-booster-storage-status' => (string) $storage_status ) );
+		$card_label       = __( 'Secure credential storage', 'ran-booster' );
+		$card_open        = $storage_card_open;
+		$card_body_class  = '';
+		$card_attributes  = array( 'data-ran-booster-storage-reason' => $storage_reason_code );
+		require __DIR__ . '/settings-card.php';
+	}
+	?>

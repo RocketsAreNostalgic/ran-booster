@@ -159,9 +159,9 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( '<dt>Configuration constant</dt>', $html );
 		self::assertStringContainsString( 'Booster checks a private location', $html );
 		$xpath = $this->storage_xpath( $html );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]//form[input[@name="ran_booster[action]" and @value="create-secure-storage"] and not(ancestor::details)])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]]//ol/li)' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]//div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]]/ancestor::details)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]//form[input[@name="ran_booster[action]" and @value="create-secure-storage"] and not(ancestor::details[not(parent::div[@data-ran-booster-ui-disclosure="settings-card"])])])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]]//ol/li)' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]//div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]]/ancestor::details[not(parent::div[@data-ran-booster-ui-disclosure="settings-card"])])' ) );
 		self::assertStringContainsString( 'Custom setup instructions', $html );
 		self::assertStringContainsString( 'absolute private directory outside the public web root on durable local storage', $html );
 		self::assertStringContainsString( 'owned by PHP, readable and writable by PHP, and mode 0700', $html );
@@ -205,7 +205,8 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Path selection', $html );
 		self::assertStringContainsString( 'Booster default', $html );
 		self::assertStringContainsString( 'created when you save the first credential.', $html );
-		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details ran-booster-disclosure">', $html );
+		self::assertStringNotContainsString( 'Storage details', $html );
+		self::assertStringNotContainsString( 'ran-booster-onboarding__storage-details', $html );
 		self::assertStringNotContainsString( 'Set up default storage', $html );
 		self::assertStringNotContainsString( 'Manual setup instructions', $html );
 	}
@@ -238,7 +239,7 @@ final class OnboardingViewTest extends TestCase {
 
 		self::assertStringContainsString( 'Existing Booster storage found', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="adopt-secure-storage"', $html );
-		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]//form[input[@value="adopt-secure-storage"] and not(ancestor::details)])' ) );
+		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//div[@id="ran-booster-storage"]//form[input[@value="adopt-secure-storage"] and not(ancestor::details[not(parent::div[@data-ran-booster-ui-disclosure="settings-card"])])])' ) );
 		self::assertStringContainsString( 'value="ran-booster-adopt-secure-storage"', $html );
 		self::assertStringContainsString( 'name="ran_booster[recovery_token]" value="' . $token . '"', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[candidate_path]"', $html );
@@ -280,7 +281,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'never contains webhook secrets', $html );
 		self::assertStringContainsString( 'Reset credential storage', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="reset-empty-storage"', $html );
-		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]//form[input[@value="reset-empty-storage"] and not(ancestor::details)])' ) );
+		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//div[@id="ran-booster-storage"]//form[input[@value="reset-empty-storage"] and not(ancestor::details[not(parent::div[@data-ran-booster-ui-disclosure="settings-card"])])])' ) );
 		self::assertStringContainsString( 'value="ran-booster-reset-empty-storage"', $html );
 		self::assertStringContainsString( 'name="ran_booster[reset_confirmation]"', $html );
 		self::assertStringContainsString( 'pattern="RESET STORAGE"', $html );
@@ -331,26 +332,31 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Custom wp-config.php path', $healthy );
 		self::assertMatchesRegularExpression( '/<dt>Configuration constant<\/dt><dd>\s*<code class="ran-booster-onboarding__storage-inline">Not configured<\/code>\s*<\/dd>/', $healthy );
 		self::assertStringContainsString( 'WordPress stores the encryption key separately.', $healthy );
-		self::assertSame( 1.0, $this->storage_xpath( $healthy )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/div[@class="ran-booster-onboarding__storage-details" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open) and summary="Storage details"]/div[@data-ran-booster-ui-disclosure-content])' ) );
-		self::assertMatchesRegularExpression(
-			'/<h3 id="ran-booster-storage">Secure credential storage<\/h3>.*>Storage healthy<\/span>.*?<\/div>\s*<p>Encrypted secrets storage is configured and authenticated\.<\/p>\s*<div class="ran-booster-onboarding__storage-details" data-ran-booster-ui-disclosure="settings-storage" data-ran-booster-ui-disclosure-density="compact">\s*<details data-ran-booster-ui-disclosure-fallback class="ran-booster-onboarding__storage-details ran-booster-disclosure">/s',
-			$healthy
-		);
-		$details = strpos( $healthy, 'class="ran-booster-onboarding__storage-details ran-booster-disclosure"' );
+		// The facts sit directly in the Card body, with no inner disclosure, followed by the links.
+		$healthy_xpath = $this->storage_xpath( $healthy );
+		self::assertSame( 1.0, $healthy_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details[not(@open)]/div[@data-ran-booster-ui-disclosure-content]/dl[@class="ran-booster-onboarding__storage-facts"])' ) );
+		self::assertSame( 1.0, $healthy_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/dl/following-sibling::p[contains(@class,"storage-facts-note")]/following-sibling::p[@class="ran-booster-onboarding__storage-documentation"])' ) );
+		self::assertSame( 0.0, $healthy_xpath->evaluate( 'count(//details//details)' ) );
+		self::assertStringNotContainsString( 'Storage details', $healthy );
+		self::assertStringNotContainsString( 'ran-booster-onboarding__storage-details', $healthy );
+		self::assertSame( 1, substr_count( $healthy, 'Encrypted secrets storage is configured and authenticated.' ), 'The state sentence appears only in the header.' );
+		self::assertSame( 1.0, $healthy_xpath->evaluate( 'count(//summary/span[@data-ran-booster-ui-disclosure-heading="h3"]/span[@class="ran-booster-troubleshooting__entry-description" and .="Encrypted secrets storage is configured and authenticated."])' ) );
+		self::assertSame( 1.0, $healthy_xpath->evaluate( 'count(//summary/span[@data-ran-booster-ui-disclosure-meta]/span[@data-ran-booster-storage-status="storage_healthy" and .="Storage healthy"])' ) );
+		self::assertSame( 0.0, $healthy_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]//*[contains(text(),"Encrypted secrets storage is configured")])' ) );
 		$path    = strpos( $healthy, 'Storage file' );
 		$source  = strpos( $healthy, 'Path selection' );
 		$storage = strpos( $healthy, 'Secure credential storage' );
-		self::assertIsInt( $details );
 		self::assertIsInt( $path );
 		self::assertIsInt( $source );
 		self::assertIsInt( $storage );
-		self::assertLessThan( $path, $details );
-		self::assertLessThan( $source, $details );
+		self::assertLessThan( $source, $storage );
 
 		$broken = $this->render_storage_status( 'storage_needs_attention', 'manual' );
 		self::assertStringContainsString( '>Storage needs attention</span>', $broken );
-		self::assertSame( 2.0, $this->storage_xpath( $broken )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/div[@data-ran-booster-ui-disclosure="settings-storage"]/details[@data-ran-booster-ui-disclosure-fallback and @open]/div[@data-ran-booster-ui-disclosure-content])' ) );
-		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-details ran-booster-disclosure" open', $broken );
+		$broken_xpath = $this->storage_xpath( $broken );
+		self::assertSame( 1.0, $broken_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details[@open]/div[@data-ran-booster-ui-disclosure-content]/dl[@class="ran-booster-onboarding__storage-facts"])' ) );
+		self::assertSame( 1.0, $broken_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/div[@data-ran-booster-ui-disclosure="settings-storage"]/details[@open and contains(@class,"storage-manual")])' ) );
+		self::assertStringNotContainsString( 'Storage details', $broken );
 		self::assertStringNotContainsString( 'WordPress stores the encryption key separately.', $broken );
 		self::assertStringContainsString( 'Use a different storage location', $broken );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $broken );
@@ -365,6 +371,103 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'getenv', $broken );
 		self::assertStringContainsString( 'data-ran-booster-storage-reason="storage_needs_attention"', $broken );
 		self::assertStringContainsString( '<strong>Diagnostic code:</strong> <code>storage_needs_attention</code>', $broken );
+	}
+
+	/**
+	 * The Settings storage Card rests closed only while storage is healthy and
+	 * nothing needs a decision. Every other state, and any recovery route, opens
+	 * it, and each shows its state sentence once, in the header, with the status
+	 * badge in the header and no inner "Storage details" disclosure.
+	 */
+	public function test_storage_card_default_state_covers_every_storage_state(): void {
+		$expected = array(
+			'storage_healthy'         => array( false, 'Storage healthy' ),
+			'path_configured'         => array( true, 'Path configured' ),
+			'storage_needs_attention' => array( true, 'Storage needs attention' ),
+			'setup_available'         => array( true, 'Setup available' ),
+			'manual_required'         => array( true, 'Needs attention' ),
+			'unsupported'             => array( true, 'Unavailable' ),
+			'pending_verification'    => array( true, 'Verification pending' ),
+			'an_unknown_state'        => array( true, 'Status unknown' ),
+		);
+		foreach ( $expected as $status => $row ) {
+			$message = 'Strapline for ' . $status . '.';
+			$html    = $this->render_storage_status( $status, 'automatic', $message );
+			$xpath   = $this->storage_xpath( $html );
+			self::assertSame( $row[0] ? 1.0 : 0.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details[@open])' ), $status . ' default state' );
+			self::assertSame( 1, substr_count( $html, $message ), $status . ' strapline appears once' );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/summary/span[@data-ran-booster-ui-disclosure-heading="h3"]/span[@class="ran-booster-troubleshooting__entry-description" and .=' . "'" . $message . "'" . '])' ), $status . ' strapline in the header' );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/summary/span[@data-ran-booster-ui-disclosure-meta]/span[@data-ran-booster-storage-status="' . $status . '" and .="' . $row[1] . '"])' ), $status . ' badge in the header' );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"][@data-ran-booster-ui-disclosure="settings-card" and @data-ran-booster-ui-disclosure-density="prominent"])' ), $status );
+			self::assertStringNotContainsString( 'Storage details', $html, $status );
+			// Only the manual-location route keeps its own disclosure; the plain facts are flattened.
+			self::assertSame( in_array( $status, array( 'storage_needs_attention', 'manual_required' ), true ) ? 1.0 : 0.0, $xpath->evaluate( 'count(//details//details)' ), $status . ' nested disclosures' );
+			self::assertSame( 2.0, $xpath->evaluate( 'count(//div[@data-ran-booster-ui-disclosure-content]/p[@class="ran-booster-onboarding__storage-documentation"]/a)' ), $status . ' links stay in the body' );
+			self::assertSame( in_array( $status, array( 'path_configured', 'storage_healthy', 'storage_needs_attention' ), true ) ? 1.0 : 0.0, $xpath->evaluate( 'count(//div[@data-ran-booster-ui-disclosure-content]/dl[@class="ran-booster-onboarding__storage-facts"])' ), $status . ' facts in the body' );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(//dl[ancestor::details[2]])' ), $status );
+		}
+	}
+
+	public function test_storage_card_opens_for_any_recovery_route_even_when_healthy(): void {
+		foreach (
+			array(
+				'can_adopt' => 'adopt-secure-storage',
+				'can_reset' => 'reset-empty-storage',
+			) as $route => $action
+		) {
+			$recovery = array(
+				'state'               => 'available',
+				'message'             => 'Recovery route.',
+				'candidate_path'      => '/private/.ran-booster/abcdef0123456789/ran-booster-store.json',
+				'candidate_directory' => '/private/.ran-booster/abcdef0123456789',
+				'token'               => str_repeat( 'c', 64 ),
+				'can_adopt'           => 'can_adopt' === $route,
+				'can_reset'           => 'can_reset' === $route,
+				'reset_confirmation'  => 'RESET',
+			);
+			$html     = $this->render_view(
+				null,
+				array(
+					'status'              => 'storage_healthy',
+					'message'             => 'Healthy with a recovery route.',
+					'candidate_path'      => '/private/canary/ran-booster-store.json',
+					'path_source'         => 'automatic',
+					'can_provision'       => false,
+					'action_url'          => '/admin',
+					'manual_preflight'    => null,
+					'directory_commands'  => array(),
+					'config_alternatives' => null,
+					'recovery'            => $recovery,
+				)
+			);
+			$xpath    = $this->storage_xpath( $html );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details[@open])' ), $route );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]//form[input[@value="' . $action . '"]])' ), $route . ' keeps its form, nonce and fields' );
+			self::assertStringContainsString( 'name="_wpnonce"', $html );
+		}
+	}
+
+	public function test_storage_card_keeps_setup_and_manual_routes_reachable_in_the_body(): void {
+		$html  = $this->render_view(
+			null,
+			array(
+				'status'              => 'setup_available',
+				'message'             => 'Booster can create secure encrypted secrets storage.',
+				'candidate_path'      => '/private/canary/ran-booster-store.json',
+				'path_source'         => 'automatic',
+				'can_provision'       => true,
+				'action_url'          => 'https://example.test/wp-admin/admin.php?page=ran-booster-settings',
+				'manual_preflight'    => 'Verify that existing components are not symbolic links.',
+				'directory_commands'  => array( "mkdir -p -- '/private/canary'" ),
+				'config_alternatives' => array(
+					'define' => "define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', '/private/canary' );",
+					'wp_cli' => '',
+				),
+			)
+		);
+		$xpath = $this->storage_xpath( $html );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details[@open]/div[@data-ran-booster-ui-disclosure-content]/form[input[@value="create-secure-storage"]]/button[@type="submit"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/div[@data-ran-booster-ui-disclosure="settings-storage"]/details[contains(@class,"storage-manual") and not(@open)]/summary[.="Custom setup instructions"])' ) );
 	}
 
 	public function test_manual_required_storage_opens_its_instructions(): void {
@@ -391,7 +494,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringNotContainsString( '<dt>Storage directory</dt>', $html );
 		self::assertStringNotContainsString( '<dt>Storage file</dt>', $html );
 		self::assertStringContainsString( 'class="ran-booster-onboarding__storage-manual ran-booster-disclosure" open', $html );
-		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and @open and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]])' ) );
+		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/div[@class="ran-booster-onboarding__storage-manual" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and @open and contains(@class,"storage-manual") and div[@data-ran-booster-ui-disclosure-content]])' ) );
 		self::assertStringContainsString( 'Manual setup instructions', $html );
 	}
 
@@ -423,7 +526,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( 'Booster could not determine a safe private storage location.', $html );
 		self::assertStringContainsString( 'location_unavailable', $html );
 		self::assertStringContainsString( 'Set a storage location manually', $html );
-		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//section[@aria-labelledby="ran-booster-storage"]/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/div[@class="ran-booster-onboarding__storage-discarded" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and div[@data-ran-booster-ui-disclosure-content] and summary[normalize-space(.)="Why automatic setup is unavailable"] and not(@open)])' ) );
+		self::assertSame( 1.0, $this->storage_xpath( $html )->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/div[@class="ran-booster-onboarding__storage-discarded" and @data-ran-booster-ui-disclosure="settings-storage" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and div[@data-ran-booster-ui-disclosure-content] and summary[normalize-space(.)="Why automatic setup is unavailable"] and not(@open)])' ) );
 		self::assertStringNotContainsString( 'ran-booster-onboarding__storage-details', $html );
 		self::assertStringContainsString( '/var/www/&lt;account&gt;/.ran-booster/0123456789abcdef', $html );
 		self::assertStringContainsString( 'php_accessible_group_writable_ancestor', $html );

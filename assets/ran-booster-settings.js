@@ -44,6 +44,31 @@
 				? state.toggle.checked !== state.confirmed
 				: fingerprint(state.form) !== state.initial)
 		);
+	// A failed or unconfirmed save, an invalid field or a deep link must never
+	// sit inside a collapsed Card. Opening goes through the Card's own trigger
+	// (or its native details before the public Disclosure mounts), so the
+	// shared Disclosure keeps owning the open state. A Card's header is always
+	// visible, so an element that is itself a Card does not open it.
+	const hostSelector = '[data-ran-booster-ui-disclosure="settings-card"]';
+	const reveal = (element) => {
+		let opened = false;
+		let host = element?.closest?.(hostSelector);
+		if (host === element) {
+			host = null;
+		}
+		for (; host; host = host.parentElement?.closest?.(hostSelector)) {
+			const trigger = host.querySelector('[role="button"]');
+			const details = host.querySelector(':scope > details:not([open])');
+			if (trigger?.getAttribute('aria-expanded') === 'false') {
+				trigger.click();
+				opened = true;
+			} else if (!trigger && details) {
+				details.open = true;
+				opened = true;
+			}
+		}
+		return opened;
+	};
 	const showError = (state, message) => {
 		const error = state.form.querySelector(
 			'[data-ran-booster-admin-mutation-error]'
@@ -66,6 +91,7 @@
 		}
 		error.hidden = false;
 		error.setAttribute('tabindex', '-1');
+		reveal(error);
 		window.ranBoosterAnnounce(message, 'assertive', error);
 	};
 	const update = (state) => {
@@ -591,6 +617,9 @@
 				preventScroll: true,
 			});
 		}
+		if (!saved) {
+			reveal(region);
+		}
 		if (!saved && restoreFocus) {
 			region
 				.querySelector(
@@ -629,6 +658,23 @@
 			queueMicrotask(() => submit(next));
 		}
 	});
+	// `invalid` does not bubble; capturing it opens a collapsed Card before the
+	// browser tries to focus the invalid control inside it.
+	document.addEventListener('invalid', (event) => reveal(event.target), true);
+	const revealHash = () => {
+		try {
+			const target = document.getElementById(
+				decodeURIComponent(window.location.hash.slice(1))
+			);
+			if (target && reveal(target)) {
+				target.scrollIntoView();
+			}
+		} catch {
+			// No usable fragment.
+		}
+	};
+	window.addEventListener('hashchange', revealHash);
+	revealHash();
 	window.addEventListener('beforeunload', (event) => {
 		const submitting = nativeSubmitting;
 		nativeSubmitting = null;

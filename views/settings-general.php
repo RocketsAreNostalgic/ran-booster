@@ -41,6 +41,12 @@ $value               = static function ( string $key ) use ( $general_attempted,
 	$attempted = $general_attempted[ $key ] ?? null;
 	return is_string( $attempted ) ? $attempted : (string) $field( $key )['value'];
 };
+$group_titles        = array(
+	'hide_github'           => __( 'Appearance', 'ran-booster' ),
+	'self_update_discovery' => __( 'Booster updates', 'ran-booster' ),
+	'history'               => __( 'History', 'ran-booster' ),
+	'download'              => __( 'Download limits', 'ran-booster' ),
+);
 $source_labels       = array(
 	'default' => __( 'Booster default', 'ran-booster' ),
 	'saved'   => __( 'Saved for this site', 'ran-booster' ),
@@ -167,8 +173,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 ?>
 <?php if ( 'all' === $general_scope ) { ?>
 	<div id="ran-booster-general-region" class="ran-booster-settings__general"<?php echo ! empty( $general_save_succeeded ) ? ' data-ran-booster-general-saved' : ''; ?>>
-	<section class="ran-booster-panel ran-booster-card ran-booster-settings__preferences" data-ran-booster-card="settings" aria-labelledby="ran-booster-general-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
-		<h3 id="ran-booster-general-heading" class="ran-booster-section__title"><?php esc_html_e( 'General preferences', 'ran-booster' ); ?></h3>
+	<?php ob_start(); ?>
 		<?php if ( null !== $general_feedback && in_array( $general_failed_scope, array( null, 'all' ), true ) ) { ?>
 		<div id="ran-booster-general-error" class="notice notice-info inline<?php echo $general_error_notice ? ' ran-wp-ui-notice ran-wp-ui-box-sizing is-error' : ''; ?>" data-ran-booster-admin-mutation-error<?php echo $general_error_notice ? ' data-ran-booster-ui-notice role="alert" tabindex="-1"' : ''; ?>><div<?php echo $general_error_notice ? ' class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"' : ''; ?> data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo esc_html( $general_feedback ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( $general_error_notice ? 'error' : 'neutral' ); ?></div>
 		<?php } ?>
@@ -177,7 +182,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 <?php if ( 'all' === $general_scope || 'hide_github' === $general_scope ) { ?>
 	<?php $open_scope( 'hide_github' ); ?>
 			<fieldset class="ran-booster-settings__group">
-				<legend><?php esc_html_e( 'Appearance', 'ran-booster' ); ?></legend>
+				<legend><?php echo esc_html( $group_titles['hide_github'] ); ?></legend>
 				<?php
 				if ( ! $hide_locked ) {
 					?>
@@ -224,7 +229,7 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 
 	<?php $open_scope( 'self_update_discovery' ); ?>
 			<fieldset class="ran-booster-settings__group">
-				<legend><?php esc_html_e( 'Booster updates', 'ran-booster' ); ?></legend>
+				<legend><?php echo esc_html( $group_titles['self_update_discovery'] ); ?></legend>
 				<?php
 				if ( ! $discovery['locked'] ) {
 					?>
@@ -278,15 +283,26 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 </div>
 </form></div>
 <?php } ?>
-<?php if ( 'all' === $general_scope ) { ?>
-	</div></div></section>
-	<section class="ran-booster-panel ran-booster-card ran-booster-settings__limits" data-ran-booster-card="settings" aria-labelledby="ran-booster-limits-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
-		<h3 id="ran-booster-limits-heading" class="ran-booster-section__title"><?php esc_html_e( 'History and download limits', 'ran-booster' ); ?></h3>
-<?php } ?>
+<?php
+if ( 'all' === $general_scope ) {
+	$card_body        = (string) ob_get_clean();
+	$card_id          = 'ran-booster-general-heading';
+	$card_modifier    = 'ran-booster-settings__preferences';
+	$card_title       = esc_html__( 'General preferences', 'ran-booster' );
+	$card_description = esc_html( implode( ' · ', array( $group_titles['hide_github'], $group_titles['self_update_discovery'] ) ) );
+	$card_badge       = '';
+	$card_label       = __( 'General preferences', 'ran-booster' );
+	$card_open        = true;
+	$card_body_class  = '';
+	$card_attributes  = array();
+	require __DIR__ . '/settings-card.php';
+	ob_start();
+}
+?>
 <?php if ( 'all' === $general_scope || 'numeric' === $general_scope ) { ?>
 	<?php $open_scope( 'numeric' ); ?>
 			<fieldset class="ran-booster-settings__group">
-				<legend><?php esc_html_e( 'History', 'ran-booster' ); ?></legend>
+				<legend><?php echo esc_html( $group_titles['history'] ); ?></legend>
 				<div class="ran-booster-settings__history-fields">
 					<div>
 				<p><label for="ran-booster-history-rows"><?php esc_html_e( 'Maximum records', 'ran-booster' ); ?></label><br><input id="ran-booster-history-rows" type="number" min="200" max="100000" step="1" name="ran_booster[preferences][history_rows]" value="<?php echo esc_attr( $value( 'history_rows' ) ); ?>"<?php disabled( $field( 'history_rows' )['locked'] ); ?><?php echo null === $field_error( 'history_rows' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-history-rows-error"'; ?>></p>
@@ -306,16 +322,28 @@ $open_scope = static function ( string $scope ) use ( $general_tokens, $general_
 				?>
 			</fieldset>
 			<fieldset class="ran-booster-settings__group">
-				<legend><?php esc_html_e( 'Download limits', 'ran-booster' ); ?></legend>
+				<legend><?php echo esc_html( $group_titles['download'] ); ?></legend>
 					<p><label for="ran-booster-max-download-mib"><?php esc_html_e( 'Maximum repository ZIP download (MiB)', 'ran-booster' ); ?></label><br><input id="ran-booster-max-download-mib" type="number" min="1" max="511.99999904632568359375" step="any" inputmode="decimal" name="ran_booster[preferences][max_download_mib]" value="<?php echo esc_attr( $download_mib_value ); ?>"<?php disabled( $field( 'max_download_bytes' )['locked'] ); ?><?php echo null === $field_error( 'max_download_bytes' ) ? '' : ' aria-invalid="true" aria-describedby="ran-booster-max-download-mib-error"'; ?>></p>
 						<p class="description"><?php esc_html_e( 'Limits the compressed repository ZIP.', 'ran-booster' ); ?></p>
 					<p class="description"><?php /* translators: 1: derived branch expansion ceiling in MiB, 2: exact ceiling in bytes. */ ?><?php echo esc_html( null === $branch_ceiling ? __( 'The derived branch expansion ceiling cannot be calculated on this host.', 'ran-booster' ) : sprintf( __( 'Branch packages have a separate expanded-content ceiling of %1$s MiB (%2$s bytes; 4× the download limit).', 'ran-booster' ), $branch_ceiling_mib, number_format_i18n( $branch_ceiling ) ) ); ?></p>
 				<?php $render_configuration( array( 'max_download_bytes' => 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ) ); ?>
-			</fieldset><div class="ran-booster-settings__save-actions"><button id="ran-booster-save-numeric-bottom" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button><span class="screen-reader-text" data-ran-booster-unsaved><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span></div>
+			</fieldset><div class="ran-booster-settings__save-actions ran-booster-settings__card-footer" data-ran-booster-card-footer><button id="ran-booster-save-numeric-bottom" type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"<?php disabled( array() === $numeric_baseline ); ?>><?php esc_html_e( 'Save changes', 'ran-booster' ); ?></button><span class="screen-reader-text" data-ran-booster-unsaved><?php esc_html_e( 'No pending numeric changes.', 'ran-booster' ); ?></span></div>
 </form></div>
 <?php } ?>
 <?php
 if ( 'all' === $general_scope ) {
+	$card_body        = (string) ob_get_clean();
+	$card_id          = 'ran-booster-limits-heading';
+	$card_modifier    = 'ran-booster-settings__limits';
+	$card_title       = esc_html__( 'History and download limits', 'ran-booster' );
+	$card_description = esc_html( implode( ' · ', array( $group_titles['history'], $group_titles['download'] ) ) );
+	$card_badge       = '';
+	$card_label       = __( 'History and download limits', 'ran-booster' );
+	$card_open        = true;
+	$card_body_class  = 'ran-booster-settings__card-body--footed';
+	$card_attributes  = array();
+	require __DIR__ . '/settings-card.php';
 	?>
-	</div></div></section>
-	</div><?php } ?>
+	</div>
+	<?php
+}

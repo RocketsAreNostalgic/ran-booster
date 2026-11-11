@@ -537,8 +537,8 @@ final class AdminAssetContractTest extends TestCase {
 		// The header warning uses the existing warning status colour and no new colour.
 		self::assertMatchesRegularExpression( '/__entry-warning \{[^}]*color: var\(--ran-booster-status-warning\);/', $activity );
 		self::assertDoesNotMatchRegularExpression( '/__entry-warning \{[^}]*#[0-9a-f]{3,6}/i', $activity );
-		// The static h4 title resets the WordPress heading margin and size.
-		self::assertMatchesRegularExpression( '/h4\.ran-booster-troubleshooting__entry-title \{[^}]*margin: 0;[^}]*font: inherit;/', $activity );
+		// The static h3 or h4 title resets the WordPress heading margin and size.
+		self::assertMatchesRegularExpression( '/:is\(h3, h4\)\.ran-booster-troubleshooting__entry-title \{[^}]*margin: 0;[^}]*font: inherit;/', $activity );
 		// The spacing above and below the Providers heading is unchanged.
 		self::assertStringContainsString( 'var(--ran-booster-card-gap) + var(--ran-booster-space-8)', $activity );
 		self::assertStringContainsString( 'margin-block-start: var(--ran-booster-card-heading-gap);', $activity );
@@ -547,7 +547,7 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_installation_header_padding_is_constant_and_the_divider_sits_below_the_warning_row(): void {
 		$activity = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
 		// The toggle row and the native summary keep 16px vertical padding closed and open, scoped to Installation sections.
-		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="installation-section"\]\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\],[^{]*> summary \{\s*padding-block: 16px;\s*\}/', $activity );
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure="installation-section"\],\s*\[data-ran-booster-ui-disclosure="settings-card"\]\s*\)\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\],[^{]*> summary \{\s*padding-block: 16px;\s*\}/', $activity );
 		// The warning row carries 16px bottom padding and sits outside the toggle.
 		self::assertMatchesRegularExpression( '/__entry-warning \{[^}]*display: block;[^}]*padding: 0 16px 16px;/', $activity );
 		// With a warning the open header drops its shadow and the warning row carries the divider; no border adds height.
@@ -573,7 +573,7 @@ final class AdminAssetContractTest extends TestCase {
 			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin \.ran-booster-portability__import-fields \+ \.notice \{', 'margin-block-start: var(--ran-booster-space-16);' ),
 			array( 'ran-booster-onboarding.css', '\n\.ran-booster-admin\n\t\[data-ran-booster-ui-disclosure="transporter-blueprint-requirements"\] \{', 'margin-block-end: var(--ran-booster-space-16);' ),
 			array( 'ran-booster/25-admin-primitives.css', '\n\t\+ noscript\n\t> p:first-child \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
-			array( 'ran-booster/65-package-settings.css', '\n\t\.ran-booster-settings__group:first-of-type \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
+			array( 'ran-booster/65-package-settings.css', '\n\.ran-booster-admin \.ran-booster-settings__card \{', 'margin-block: 0 var(--ran-booster-card-gap);' ),
 			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\+ \.ran-booster-troubleshooting__installation-entry \{', 'margin-block-start: var(--ran-booster-card-heading-gap);' ),
 			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\t\.ran-booster-troubleshooting__installation-entry\n\t\+ \.ran-booster-troubleshooting__installation-entry \{', 'margin-block-start: var(--ran-booster-card-gap);' ),
 			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\.ran-booster-admin \[aria-labelledby="ran-booster-components-heading"\] \{', 'var(--ran-booster-card-gap) + var(--ran-booster-space-8)' ),
@@ -594,8 +594,6 @@ final class AdminAssetContractTest extends TestCase {
 
 		// Bare Card headings take the shared title role, so the WordPress h3 margin never applies.
 		foreach ( array(
-			'settings.php'                     => array( 'ran-booster-storage' ),
-			'settings-general.php'             => array( 'ran-booster-general-heading', 'ran-booster-limits-heading' ),
 			'troubleshooting-installation.php' => array( 'ran-booster-installation-heading', 'ran-booster-components-heading' ),
 			'debug-capture.php'                => array( 'ran-booster-debug-capture-heading' ),
 			'portability.php'                  => array( 'ran-booster-portability-mode-heading' ),
@@ -740,9 +738,41 @@ final class AdminAssetContractTest extends TestCase {
 		if ( 1 !== preg_match( '/\n\t\.ran-booster-settings__group:first-of-type \{([^}]*)\}/', $css, $m ) ) {
 			self::fail( 'The first settings group rule is missing.' );
 		}
-		self::assertStringContainsString( 'margin-block-start: var(--ran-booster-card-heading-gap);', $m[1] );
+		// The Card header carries the title now, so the first group sits flush with the body inset.
+		self::assertStringContainsString( 'margin-block-start: 0;', $m[1] );
 		self::assertStringNotContainsString( 'border-block-start', $m[1] );
 		self::assertStringNotContainsString( 'padding-block-start', $m[1] );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body\s*> \[data-ran-booster-general-scope\]:nth-child\(/', $css );
+	}
+
+	public function test_settings_cards_reuse_the_disclosure_header_divider_and_own_a_footer_band(): void {
+		$settings   = $this->asset( 'ran-booster/65-package-settings.css' );
+		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		// Header: the prominent shared Disclosure header, 16px padding closed and open (see the Installation contract above).
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-ui-disclosure-density="prominent"\]\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\] \{\s*padding: 12px 16px;/', $primitives );
+		// Divider under the header only while open, from the shared rule for every Disclosure (no Settings copy).
+		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $primitives );
+		self::assertStringNotContainsString( 'settings-card', $primitives );
+		// Body inset and the Card gap.
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card \{\s*margin-block: 0 var\(--ran-booster-card-gap\);/', $settings );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body\.ran-booster-disclosure__body \{\s*padding: var\(--ran-booster-space-16\) var\(--ran-booster-space-24\);/', $settings );
+		// Footer: full-width band, 1px divider above, 16px 24px padding, action at the end; it bleeds through the body inset
+		// and the footed body drops its bottom padding so the band meets the Card edge.
+		if ( 1 !== preg_match( '/\.ran-booster-settings__save-actions\.ran-booster-settings__card-footer \{([^}]*)\}/', $settings, $footer ) ) {
+			self::fail( 'The Settings Card footer rule is missing.' );
+		}
+		self::assertStringContainsString( 'display: flex;', $footer[1] );
+		self::assertStringContainsString( 'justify-content: flex-end;', $footer[1] );
+		self::assertStringContainsString( 'margin-inline: calc(-1 * var(--ran-booster-space-24));', $footer[1] );
+		self::assertStringContainsString( 'padding: var(--ran-booster-space-16) var(--ran-booster-space-24);', $footer[1] );
+		self::assertStringContainsString( 'border-block-start: 1px solid var(--ran-booster-divider);', $footer[1] );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body--footed \{\s*padding-block-end: 0;/', $settings );
+		// The footer lives in the body, so a collapsed Card hides it: no rule may force it visible or take it out of the panel.
+		self::assertStringNotContainsString( 'card-footer[hidden]', $settings );
+		self::assertDoesNotMatchRegularExpression( '/card-footer[^{]*\{[^}]*(position: (fixed|sticky)|display: contents)/', $settings );
+		// Native fallback: the same body and footer sit inside the details element, which hides them when closed.
+		$view = $this->view( 'settings-general.php' );
+		self::assertMatchesRegularExpression( '/<\/fieldset><div class="ran-booster-settings__save-actions ran-booster-settings__card-footer" data-ran-booster-card-footer><button id="ran-booster-save-numeric-bottom"/', $view );
 	}
 
 	public function test_source_tab_strip_keeps_the_same_gap_above_every_pane(): void {

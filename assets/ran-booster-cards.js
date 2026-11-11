@@ -652,7 +652,6 @@
 		const meta = summary?.querySelector(
 			':scope > [data-ran-booster-ui-disclosure-meta]'
 		);
-		// An optional heading slot (title and description) fills the header.
 		const heading = summary?.querySelector(
 			':scope > [data-ran-booster-ui-disclosure-heading]'
 		);
@@ -731,7 +730,11 @@
 				className: 'ran-booster-ui-disclosure__header',
 			};
 			if (heading) {
-				headerProps.render = h('h4');
+				headerProps.render = h(
+					heading.getAttribute(
+						'data-ran-booster-ui-disclosure-heading'
+					) || 'h4'
+				);
 			}
 			let updateOpen;
 			function Disclosure() {

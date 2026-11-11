@@ -1035,14 +1035,52 @@
 	border-block-start: 1px solid var(--ran-booster-divider);
 }
 
-/* The first group in a Settings Card sits the heading gap below its heading and keeps its divider. */
+/*
+ * Settings Cards are collapsible Disclosure Cards (see settings-card.php): the
+ * header carries the title and summary, so the body begins at its own inset
+ * and the first group sits flush with it and keeps its divider.
+ */
+.ran-booster-admin .ran-booster-settings__card {
+	margin-block: 0 var(--ran-booster-card-gap);
+}
+
 .ran-booster-admin
-	.ran-booster-card__content
+	.ran-booster-settings__card-body.ran-booster-disclosure__body {
+	padding: var(--ran-booster-space-16) var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	.ran-booster-settings__card-body
 	> [data-ran-booster-general-scope]:nth-child(
 		1 of [data-ran-booster-general-scope]
 	)
 	.ran-booster-settings__group:first-of-type {
-	margin-block-start: var(--ran-booster-card-heading-gap);
+	margin-block-start: 0;
+}
+
+/*
+ * The History Card's Save changes lives in a footer: a full-width band at the
+ * bottom of the Card with a divider above it and the action at the end. It
+ * sits inside the form (so the button, its status text and the enhanced save
+ * keep working) and inside the body, so it is hidden whenever the Card is
+ * collapsed and visible when it is open.
+ */
+.ran-booster-admin
+	.ran-booster-settings__card-body.ran-booster-settings__card-body--footed {
+	padding-block-end: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-settings__save-actions.ran-booster-settings__card-footer {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	min-block-size: 0;
+	margin-block: 0;
+	margin-inline: calc(-1 * var(--ran-booster-space-24));
+	padding: var(--ran-booster-space-16) var(--ran-booster-space-24);
+	border-block-start: 1px solid var(--ran-booster-divider);
 }
 
 .ran-booster-admin .ran-booster-settings__group legend {
@@ -1058,7 +1096,8 @@
 
 .ran-booster-admin
 	.ran-booster-settings
-	[aria-labelledby="ran-booster-general-heading"]
+	.ran-booster-settings__preferences
+	.ran-booster-settings__card-body
 	> .notice-info {
 	background: var(--ran-booster-surface-info);
 }

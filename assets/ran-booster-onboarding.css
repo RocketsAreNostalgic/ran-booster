@@ -131,8 +131,7 @@
 }
 
 /* Match the card title size used by the other Overview cards. */
-.ran-booster-admin #ran-booster-onboarding-storage-heading,
-.ran-booster-admin #ran-booster-storage {
+.ran-booster-admin #ran-booster-onboarding-storage-heading {
 	font-size: var(--ran-booster-font-size-lg);
 	font-weight: var(--ran-booster-font-weight-heading);
 	line-height: inherit;
@@ -175,6 +174,7 @@
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage code,
+.ran-booster-admin .ran-booster-settings__card--storage code,
 .ran-booster-admin .ran-booster-onboarding__storage-facts code {
 	display: block;
 	padding-block: var(--ran-booster-space-6);
@@ -187,7 +187,7 @@
 }
 
 .ran-booster-admin
-	.ran-booster-onboarding__storage
+	:is(.ran-booster-onboarding__storage, .ran-booster-settings__card--storage)
 	code.ran-booster-onboarding__storage-inline,
 .ran-booster-admin
 	.ran-booster-onboarding__storage-facts
@@ -199,7 +199,9 @@
 	background: var(--ran-booster-surface-subtle);
 }
 
-.ran-booster-admin .ran-booster-onboarding__storage .description {
+.ran-booster-admin
+	:is(.ran-booster-onboarding__storage, .ran-booster-settings__card--storage)
+	.description {
 	color: var(--ran-booster-text-subtle);
 	font-size: var(--ran-booster-font-size-sm);
 }

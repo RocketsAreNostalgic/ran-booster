@@ -286,8 +286,9 @@ final class SettingsPageTest extends TestCase {
 		$xpath = new \DOMXPath( $dom );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-autosave-description])' ) );
 		self::assertStringNotContainsString( 'Changes save automatically.', $html );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")])' ) );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[@data-ran-booster-card="settings" and contains(@class, "ran-booster-card")]/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"])' ) );
+		// Both preference Cards are collapsible Disclosure Cards (the Installation pattern), not static panels.
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/div[@data-ran-booster-ui-disclosure="settings-card" and @data-ran-booster-ui-disclosure-density="prominent"]/details[@data-ran-booster-ui-disclosure-fallback and @open]/div[contains(@class, "ran-booster-settings__card-body") and @data-ran-booster-ui-disclosure-content])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]//*[@data-ran-booster-card or contains(@class, "ran-booster-panel")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region" and @data-ran-booster-card])' ) );
 		self::assertSame( 3.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope]/div[@data-ran-booster-ui-notice and @data-ran-booster-admin-mutation-error]/div[@data-ran-booster-ui-notice-content][p[@data-ran-booster-ui-notice-primary] and p[@data-ran-booster-ui-notice-detail]])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-notice-mount])' ) );
@@ -298,11 +299,11 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]/div[not(@role) and not(@data-ran-booster-general-failed)]//p[@id="ran-booster-hide-github-error" and @data-ran-booster-ui-notice-field and @data-ran-booster-ui-notice-request-field and text()="Hide GitHub UI: Invalid selection."])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="hide_github"]//*[@role="alert"])' ) );
 
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="General preferences"]//*[@id="ran-booster-general-hide_github"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="General preferences"]//*[@id="ran-booster-general-self_update_discovery"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="History and download limits"]//*[@id="ran-booster-general-numeric"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="History and download limits"]//button[@id="ran-booster-save-numeric-bottom"])' ) );
-		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/section[div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/h3="General preferences"]//button[@type="submit" and not(@data-ran-booster-toggle-save) and not(@form)])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/div[@id="ran-booster-general-heading"]/details/div[@data-ran-booster-ui-disclosure-content]//*[@id="ran-booster-general-hide_github"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/div[@id="ran-booster-general-heading"]/details/div[@data-ran-booster-ui-disclosure-content]//*[@id="ran-booster-general-self_update_discovery"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/div[@id="ran-booster-limits-heading"]/details/div[@data-ran-booster-ui-disclosure-content]//*[@id="ran-booster-general-numeric"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/div[@id="ran-booster-limits-heading"]/details/div[@data-ran-booster-ui-disclosure-content]//button[@id="ran-booster-save-numeric-bottom"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-general-region"]/div[@id="ran-booster-general-heading"]/details/div[@data-ran-booster-ui-disclosure-content]//button[@type="submit" and not(@data-ran-booster-toggle-save) and not(@form)])' ) );
 
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Appearance"]//label[@for="ran-booster-hide-github"]//input[@type="checkbox" and @role="switch" and @checked and @aria-invalid="true" and @aria-describedby="ran-booster-hide-github-help ran-booster-hide-github-error"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-help"])' ) );
@@ -440,6 +441,127 @@ final class SettingsPageTest extends TestCase {
 		$fallback = (string) ob_get_clean();
 		self::assertStringContainsString( 'Settings saved.', $fallback );
 		self::assertStringNotContainsString( 'data-ran-booster-admin-mutation-error role="alert" tabindex="-1"', $fallback );
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	public function test_preference_cards_are_open_collapsible_cards_with_group_name_summaries_and_a_history_footer(): void {
+		$secrets_storage    = null;
+		$general_settings   = array(
+			'hide_github'           => array(
+				'value'  => false,
+				'source' => 'default',
+				'locked' => false,
+				'error'  => null,
+			),
+			'self_update_discovery' => array(
+				'value'  => true,
+				'source' => 'saved',
+				'locked' => false,
+				'error'  => null,
+			),
+			'history_rows'          => array(
+				'value'  => 2000,
+				'source' => 'default',
+				'locked' => false,
+				'error'  => null,
+			),
+			'history_days'          => array(
+				'value'  => 30,
+				'source' => 'default',
+				'locked' => false,
+				'error'  => null,
+			),
+			'max_download_bytes'    => array(
+				'value'  => 52428800,
+				'source' => 'default',
+				'locked' => false,
+				'error'  => null,
+			),
+		);
+		$general_token      = 'token';
+		$general_feedback   = null;
+		$general_errors     = array();
+		$general_attempted  = array();
+		$github_visibility  = array(
+			'eligible' => true,
+			'hidden'   => false,
+			'reason'   => '',
+		);
+		$core_update_status = array();
+		$check_available    = false;
+		$native_update_url  = null;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/settings.php';
+		$html            = (string) ob_get_clean();
+		$dom             = new \DOMDocument();
+		$previous_errors = libxml_use_internal_errors( true );
+		$dom->loadHTML( '<?xml encoding="UTF-8">' . $html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous_errors );
+		$xpath = new \DOMXPath( $dom );
+
+		// Heading semantics: the page outline stays h2 Settings, then one h3 title per Card.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//h2)' ) );
+		self::assertSame( 3.0, $xpath->evaluate( 'count(//div[@data-ran-booster-ui-disclosure="settings-card" or contains(@class, "ran-booster-settings__card")]//*[self::h3 or @data-ran-booster-ui-disclosure-heading="h3"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//h4)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//h3[@class="ran-booster-troubleshooting__entry-title" and .="Secure credential storage"])' ), 'The unavailable storage Card keeps a real h3 title and no disclosure.' );
+		self::assertSame( 1, substr_count( $html, 'Storage status is unavailable. No setup or recovery action has been performed.' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//div[@id="ran-booster-storage"]//details)' ) );
+
+		// General preferences: open by default, summary from the group legends, no badge in the header.
+		$general = '//div[@id="ran-booster-general-heading"]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $general . '/details[@open]/summary[@aria-label="General preferences"]/span[@data-ran-booster-ui-disclosure-heading="h3"]/span[@class="ran-booster-troubleshooting__entry-title" and .="General preferences"])' ) );
+		self::assertSame( 'Appearance · Booster updates', trim( (string) $xpath->evaluate( 'string(' . $general . '/details/summary//span[@class="ran-booster-troubleshooting__entry-description"])' ) ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $general . '/details/summary//*[@data-ran-booster-ui-disclosure-meta or @data-ran-booster-badge])' ) );
+		$legends = array();
+		$count   = (int) $xpath->evaluate( 'count(' . $general . '//fieldset/legend)' );
+		for ( $index = 1; $index <= $count; ++$index ) {
+			$legends[] = trim( (string) $xpath->evaluate( 'string((' . $general . '//fieldset/legend)[' . $index . '])' ) );
+		}
+		self::assertSame( 'Appearance · Booster updates', implode( ' · ', $legends ), 'The summary is built from the group legends.' );
+		// Switch badges stay in the body next to their switches.
+		self::assertSame( 2.0, $xpath->evaluate( 'count(' . $general . '/details/div[@data-ran-booster-ui-disclosure-content]//span[@data-ran-booster-toggle-status])' ) );
+
+		// History and download limits: open by default, summary from group legends, no badge.
+		$limits = '//div[@id="ran-booster-limits-heading"]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $limits . '/details[@open]/summary[@aria-label="History and download limits"]/span[@data-ran-booster-ui-disclosure-heading="h3"])' ) );
+		self::assertSame( 'History · Download limits', trim( (string) $xpath->evaluate( 'string(' . $limits . '/details/summary//span[@class="ran-booster-troubleshooting__entry-description"])' ) ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $limits . '/details/summary//*[@data-ran-booster-ui-disclosure-meta or @data-ran-booster-badge])' ) );
+		$legends = array();
+		$count   = (int) $xpath->evaluate( 'count(' . $limits . '//fieldset/legend)' );
+		for ( $index = 1; $index <= $count; ++$index ) {
+			$legends[] = trim( (string) $xpath->evaluate( 'string((' . $limits . '//fieldset/legend)[' . $index . '])' ) );
+		}
+		self::assertSame( 'History · Download limits', implode( ' · ', $legends ) );
+
+		// The Save changes footer: a band inside the form and the Card body (so a collapsed Card hides it), after the
+		// last group, with the button and its screen-reader status unchanged.
+		$form = $limits . '/details/div[@data-ran-booster-ui-disclosure-content]//form[@data-ran-booster-settings-scope="numeric"]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form . '/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-settings__card-footer ") and contains(concat(" ", normalize-space(@class), " "), " ran-booster-settings__save-actions ") and @data-ran-booster-card-footer])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form . '/fieldset[legend="Download limits"]/following-sibling::*[1][@data-ran-booster-card-footer])' ), 'The footer follows the last group.' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form . '/*[last()][@data-ran-booster-card-footer])' ), 'The footer is the last element of the form.' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form . '/div[@data-ran-booster-card-footer]/button[@id="ran-booster-save-numeric-bottom" and @type="submit" and not(@form) and not(@disabled)])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form . '/div[@data-ran-booster-card-footer]/button[1]/following-sibling::span[@data-ran-booster-unsaved and contains(concat(" ", normalize-space(@class), " "), " screen-reader-text ") and .="No pending numeric changes."])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $limits . '/details/div[contains(@class, "ran-booster-settings__card-body--footed")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-card-footer])' ), 'Only the History Card has a footer.' );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//button[@id="ran-booster-save-numeric-bottom"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $general . '//*[@data-ran-booster-card-footer])' ) );
+
+		// Without JavaScript the native details keep every control reachable, open.
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//div[@data-ran-booster-ui-disclosure="settings-card"]/details[@open])' ) );
+	}
+
+	public function test_settings_card_is_one_shared_mechanism_with_the_installation_cards(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local view contract inspection.
+		$card = (string) file_get_contents( dirname( __DIR__, 2 ) . '/views/settings-card.php' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Local view contract inspection.
+		$entry = (string) file_get_contents( dirname( __DIR__, 2 ) . '/views/troubleshooting-installation-entry.php' );
+		foreach ( array( 'data-ran-booster-ui-disclosure-density="prominent"', 'data-ran-booster-ui-disclosure-fallback', 'data-ran-booster-ui-disclosure-heading', 'data-ran-booster-ui-disclosure-meta', 'data-ran-booster-ui-disclosure-content', 'ran-booster-troubleshooting__entry-heading', 'ran-booster-troubleshooting__entry-description' ) as $hook ) {
+			self::assertStringContainsString( $hook, $card, $hook );
+			self::assertStringContainsString( $hook, $entry, $hook );
+		}
+		self::assertStringContainsString( 'data-ran-booster-ui-disclosure="settings-card"', $card );
+		self::assertStringContainsString( 'data-ran-booster-ui-disclosure-heading="h3"', $card );
 	}
 
 	public function test_enhanced_general_save_reports_only_full_success(): void {

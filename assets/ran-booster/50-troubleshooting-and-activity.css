@@ -60,13 +60,19 @@
  * nothing shifts on toggle.
  */
 .ran-booster-admin
-	[data-ran-booster-ui-disclosure="installation-section"]
+	:is(
+		[data-ran-booster-ui-disclosure="installation-section"],
+		[data-ran-booster-ui-disclosure="settings-card"]
+	)
 	> *
 	> .ran-booster-ui-disclosure
 	> .ran-booster-ui-disclosure__header
 	> [role="button"],
 .ran-booster-admin
-	[data-ran-booster-ui-disclosure="installation-section"]
+	:is(
+		[data-ran-booster-ui-disclosure="installation-section"],
+		[data-ran-booster-ui-disclosure="settings-card"]
+	)
 	> details[data-ran-booster-ui-disclosure-fallback]
 	> summary {
 	padding-block: 16px;
@@ -123,8 +129,8 @@
 	}
 }
 
-/* The title is the real h4 of an entry with nothing to expand. */
-.ran-booster-admin h4.ran-booster-troubleshooting__entry-title {
+/* The title is the real heading of an entry with nothing to expand. */
+.ran-booster-admin :is(h3, h4).ran-booster-troubleshooting__entry-title {
 	margin: 0;
 	padding: 0;
 	color: inherit;

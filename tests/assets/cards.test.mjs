@@ -878,6 +878,61 @@ test('Disclosure heading slot fills the header, keeps one accessible name and re
 	assert.equal(details.children[1], body);
 });
 
+test('Settings Card heading slot names its tag, the footer rides in the body and the form stays connected collapsed', () => {
+	const build = (level, open) => {
+		const f = fixture({ disclosureRuntime: true });
+		const host = new f.Node('div'),
+			details = new f.Node('details'),
+			summary = new f.Node('summary'),
+			heading = new f.Node('span'),
+			body = new f.Node('div'),
+			form = new f.Node('form'),
+			field = new f.Node('input'),
+			footer = new f.Node('div');
+		host.setAttribute('data-ran-booster-ui-disclosure', 'settings-card');
+		details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+		summary.setAttribute('aria-label', 'History and download limits');
+		heading.setAttribute('data-ran-booster-ui-disclosure-heading', level);
+		footer.setAttribute('data-ran-booster-card-footer', '');
+		body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+		form.appendChild(field);
+		form.appendChild(footer);
+		body.appendChild(form);
+		summary.appendChild(heading);
+		details.appendChild(summary);
+		details.appendChild(body);
+		host.appendChild(details);
+		f.doc.body.appendChild(host);
+		details.open = open;
+		f.run();
+		f.flush();
+		return { f, host, details, body, form, field, footer };
+	};
+	// The slot's value is the heading tag: h3 for Settings, and an empty slot keeps the Installation h4.
+	assert.equal(
+		build('h3', true).f.tree().children[0].props.render.type,
+		'h3'
+	);
+	assert.equal(build('', true).f.tree().children[0].props.render.type, 'h4');
+	// Collapsed, the body (and so the footer, which sits inside the form inside the body) is the panel content that the
+	// Disclosure hides; the form and its field are never detached, so a pending value and its leave check survive.
+	const closed = build('h3', false);
+	const slot = closed.host.querySelector('[data-disclosure-slot]');
+	assert.equal(slot.firstChild, closed.body);
+	assert.equal(closed.body.firstChild, closed.form);
+	assert.equal(closed.form.childNodes[1], closed.footer);
+	assert.equal(closed.f.tree().props.open, false);
+	assert.equal(closed.form.isConnected, true);
+	assert.equal(closed.field.isConnected, true);
+	closed.f.tree().props.onOpenChange(true);
+	assert.equal(closed.details.open, true);
+	assert.equal(closed.footer.isConnected, true);
+	// History restores the native details with the same body and footer.
+	closed.f.emit('htmx:beforeHistorySave');
+	assert.equal(closed.details.children[1], closed.body);
+	assert.equal(closed.body.firstChild, closed.form);
+});
+
 test('Disclosure warning row mounts between header and content, outside the heading, and restores in place', () => {
 	const build = (withHeading, withWarning) => {
 		const f = fixture({ disclosureRuntime: true });

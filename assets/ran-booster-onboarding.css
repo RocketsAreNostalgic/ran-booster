@@ -1406,12 +1406,27 @@
 		border-block-end: 0;
 	}
 
+	/* The checkbox keeps its own column beside the stacked package and type. */
+	.ran-booster-admin .ran-booster-portability__export-table > tbody > tr {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+	}
+
 	.ran-booster-admin
 		.ran-booster-portability__export-table
 		> tbody
 		> tr
 		> .check-column {
-		padding-block-end: 0;
+		grid-column: 1;
+		grid-row: 1 / span 2;
+	}
+
+	.ran-booster-admin
+		.ran-booster-portability__export-table
+		> tbody
+		> tr
+		> td {
+		grid-column: 2;
 	}
 }
 

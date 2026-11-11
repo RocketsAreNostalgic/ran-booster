@@ -180,7 +180,7 @@ $repository_placeholder = array() === $locator_examples
 				<p>
 					<label for="ran-booster-troubleshooting-repository"><?php esc_html_e( 'Repository', 'ran-booster' ); ?> <span class="description"><?php esc_html_e( '(optional)', 'ran-booster' ); ?></span></label>
 						<input id="ran-booster-troubleshooting-repository" type="text" name="ran_booster[repository]" value="<?php echo esc_attr( $repository ); ?>" maxlength="512" placeholder="<?php echo esc_attr( $repository_placeholder ); ?>">
-					<span class="description"><?php esc_html_e( 'Without a credential, Booster can only check publicly available repos.', 'ran-booster' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Without a credential, Booster only checks public repos.', 'ran-booster' ); ?></span>
 				</p>
 			</div>
 		</details></div>

@@ -1753,7 +1753,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/<summary aria-label="Check credential or repository access \(optional\)"><span class="ran-booster-troubleshooting__entry-heading" data-ran-booster-ui-disclosure-heading><span class="ran-booster-troubleshooting__entry-title">[^<]+<\/span>\s*<span class="ran-booster-troubleshooting__entry-description">Checks credential and repository access only\.<\/span><\/span><\/summary>/', $html );
 		self::assertMatchesRegularExpression( '/<div class="ran-booster-troubleshooting__specific" data-ran-booster-ui-disclosure="troubleshooting-credential-check" data-ran-booster-ui-disclosure-density="compact">\s*<details data-ran-booster-ui-disclosure-fallback class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open>/', $html );
 		self::assertStringContainsString( '>Required for private repositories.</span>', $html );
-		self::assertStringContainsString( '>Without a credential, Booster can only check publicly available repos.</span>', $html );
+		self::assertStringContainsString( '>Without a credential, Booster only checks public repos.</span>', $html );
 		foreach ( array(
 			'Run full diagnostics',
 			'Results below describe only this diagnostic run',

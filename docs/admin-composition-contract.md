@@ -599,13 +599,23 @@ they apply to, and keeps Save and Apply in one predictable place.
    follow the collection frame contract, not this rule.
 5. A button never stretches to fill its action group on wide screens. At 782px
    and below a group may stack and its buttons may fill the width.
+6. A danger action (Delete capture, Remove webhook) comes last in the
+   start-aligned row, in its danger outline style.
+7. A single-field Card whose Save sits beside its field (Public repository
+   lookup) has no band: an action that belongs to a field stays beside it.
+8. State-dependent actions stay outside the band standard: Settings Secure
+   credential storage setup, adopt and reset, and the Activity remediation
+   forms. The Extensions card Activate stays beside the description, the
+   WordPress plugin-card pattern.
 
 | Surface | Screen | Placement |
 | --- | --- | --- |
 | Card footer | Edit plugin and theme, Save plugin settings and Install another | Start, primary first |
 | Card footer band | Settings, History Save changes | Start, in the footer band |
 | Card footer band | Transporter Open and Create | Start, in the footer band |
-| Page form | Install plugin and theme | Start, below the form |
+| Card footer band | Install plugin and theme, Package operation | Start, primary first; shown only for a Branch source |
+| Card footer band | Troubleshooting Logging capture actions | Start, Delete capture last |
+| Card footer band | Repository Webhook management, shown with Webhook setup open | Start, Remove last |
 | Heading row | Managed Plugins and Themes, Install another | End of the heading row |
 | Heading row | Overview, Return to onboarding | End of the heading row |
 | Dialog | Add credential, Add webhook secret, Delete confirmation | End, the exception |

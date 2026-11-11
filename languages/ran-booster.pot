@@ -2516,7 +2516,7 @@ msgid "Recovery and support"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:298
-msgid "Installed but unmanaged means a package now exists but Booster did not adopt it. Verify its installed version and activation state before using Link installed or retrying. An uncertain state or cleanup failure does not claim installation success: inspect installed packages and Booster management before retrying."
+msgid "Installed but unmanaged means a package now exists but Booster did not adopt it. Verify its installed version and activation state before using Link an already installed plugin (or theme) or retrying. An uncertain state or cleanup failure does not claim installation success: inspect installed packages and Booster management before retrying."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementControls.php:299
@@ -2878,7 +2878,7 @@ msgid "Installation outcome needs review"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:905
-msgid "Inspect the installed version, activation state and Booster management before using Link installed or retrying."
+msgid "Inspect the installed version, activation state and Booster management before using Link an already installed plugin (or theme) or retrying."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:923

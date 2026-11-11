@@ -1,7 +1,3 @@
-.ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {
-	background: var(--ran-booster-surface-info);
-}
-
 /*
  * Each Installation section is one non-compact Card: the heading gap sits below
  * a section heading and one Card gap between Cards. Providers and extensions is
@@ -680,21 +676,6 @@
 	padding: 0;
 	border: 0;
 	background: transparent;
-}
-
-.ran-booster-admin .ran-booster-package-activity {
-	margin-block-start: var(--ran-booster-space-10);
-}
-
-.ran-booster-admin .ran-booster-package-activity ul {
-	margin: 0;
-	padding-block: var(--ran-booster-space-10) var(--ran-booster-space-10);
-	padding-inline: var(--ran-booster-space-30) var(--ran-booster-space-12);
-	list-style: disc;
-}
-
-.ran-booster-admin .ran-booster-package-activity li:last-child {
-	margin-block-end: 0;
 }
 
 .ran-booster-admin .ran-booster-setup-snippet textarea {

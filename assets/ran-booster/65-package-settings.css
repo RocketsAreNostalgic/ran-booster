@@ -8,10 +8,6 @@
 	margin-block-start: var(--ran-booster-card-gap);
 }
 
-.ran-booster-admin .ran-booster-package-settings__intro {
-	margin-block-end: var(--ran-booster-card-gap);
-}
-
 .ran-booster-admin .ran-booster-package-recovery {
 	min-inline-size: 0;
 	max-inline-size: 790px;
@@ -323,10 +319,6 @@
 	gap: var(--ran-booster-space-16) var(--ran-booster-space-18);
 }
 
-.ran-booster-admin .ran-booster-settings-fields--primary-controls {
-	margin-block-start: var(--ran-booster-space-18);
-}
-
 .ran-booster-admin .ran-booster-package-operation-settings {
 	margin-block-start: var(--ran-booster-card-gap);
 }
@@ -482,10 +474,6 @@
 	border-color: var(--ran-booster-strong-divider);
 	background: var(--ran-booster-color-neutral-200);
 	color: var(--ran-booster-text-muted);
-}
-
-.ran-booster-admin .ran-booster-release-track-notice {
-	margin-block: var(--ran-booster-space-14) 0;
 }
 
 .ran-booster-admin .ran-booster-settings-field .ran-booster-repository-field {
@@ -872,10 +860,6 @@
 .ran-booster-admin .ran-booster-release-switch-form > .notice:first-of-type,
 .ran-booster-admin .ran-booster-release-return-form > .notice {
 	margin-block: var(--ran-booster-space-16) 0;
-}
-
-.ran-booster-admin .ran-booster-package-settings__install-another {
-	margin-block: 0;
 }
 
 .ran-booster-admin .ran-booster-package-danger-zone {
@@ -1448,12 +1432,6 @@
 
 .ran-booster-admin .ran-booster-settings__configuration p {
 	margin-block: var(--ran-booster-space-8);
-}
-
-.ran-booster-admin .ran-booster-settings__save-divider {
-	margin-block: var(--ran-booster-space-20);
-	border: 0;
-	border-block-start: 1px solid var(--ran-booster-divider);
 }
 
 .ran-booster-admin .ran-booster-settings__save-actions,

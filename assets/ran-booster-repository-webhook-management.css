@@ -77,10 +77,6 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-repository-webhook-management__manage-link {
-	margin: var(--ran-booster-space-10) 0 0;
-}
-
 .ran-booster-admin .ran-booster-repository-webhook-setup.is-inactive {
 	background: var(--ran-booster-surface-subtle);
 	opacity: 0.58;

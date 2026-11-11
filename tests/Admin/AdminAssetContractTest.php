@@ -19,7 +19,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-credential-modal', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-secondary-nav', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-activity__details', $css );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-package-activity', $css );
+		self::assertStringNotContainsString( 'ran-booster-package-activity', $css );
 		self::assertStringContainsString(
 			'border: 1px solid var(--ran-booster-border);',
 			$css
@@ -331,8 +331,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-portability__credential-reason\s*\{[^}]*font-size:\s*var\(--ran-booster-font-size-md\)/', $onboarding );
 		// Controls on the grey panel use the stronger neutral so their borders reach 3:1.
 		self::assertMatchesRegularExpression( '/\.ran-booster-portability__mode\s*\{[^}]*border:\s*1px solid var\(--ran-booster-color-neutral-450\)/', $onboarding );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-troubleshooting__core-updates.notice-info {', $troubleshooting );
-		self::assertStringContainsString( 'background: var(--ran-booster-surface-info);', $troubleshooting );
+		self::assertStringNotContainsString( 'ran-booster-troubleshooting__core-updates', $troubleshooting );
 	}
 
 	public function test_admin_primitives_own_shared_panel_and_action_row_contracts(): void {
@@ -405,7 +404,6 @@ final class AdminAssetContractTest extends TestCase {
 			'ran-booster-summary-grid'        => 'Summary grid declares its own radius.',
 			'ran-booster-ui-disclosure'       => 'Public Disclosure fallback uses the WordPress UI radius.',
 			'ran-booster-provider-section'    => 'Provider sections are Cards with their own profile.',
-			'ran-booster-provider__footer'    => 'Overview footer is a Card region.',
 			'ran-booster-onboarding__storage' => 'Declared with the panel profile.',
 			'ran-booster-portability__flow'   => 'Declared with the panel profile.',
 		);
@@ -454,8 +452,7 @@ final class AdminAssetContractTest extends TestCase {
 			'ran-booster-notice-compat.css' => 'Loads only where the design-system tokens are absent, so it restates the Card radius as a length.',
 		);
 		$allowed_selectors = array(
-			'ran-booster-status-dot'          => 'Status dot circle, owned by the status indicator rules.',
-			'ran-booster-webhook-setup__tile' => 'Legacy rule with no rendered consumer; retire it with the rule.',
+			'ran-booster-status-dot' => 'Status dot circle, owned by the status indicator rules.',
 		);
 		$token_pattern     = '/var\(--ran-booster-radius-(?:card|inset|control|circle|pill)\)|var\(--wpds-border-radius-[a-z0-9]+\)|\b0\b|revert-layer|inherit/';
 
@@ -672,7 +669,6 @@ final class AdminAssetContractTest extends TestCase {
 			array( 'ran-booster/25-admin-primitives.css', '\n\.ran-booster-admin \.ran-booster-page-shell__header \{', 'padding-block: 0 var(--ran-booster-card-gap);' ),
 			array( 'ran-booster/25-admin-primitives.css', '\n\t> \.ran-booster-page-shell__header \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
 			array( 'ran-booster/60-packages.css', '(?:^|\n)\.ran-booster-admin \.ran-booster-package-intro \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
-			array( 'ran-booster/65-package-settings.css', '\n\.ran-booster-admin \.ran-booster-package-settings__intro \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
 			array( 'ran-booster/65-package-settings.css', '\n\t\+ \.ran-booster-package-settings \{', 'margin-block-start: var(--ran-booster-card-gap);' ),
 			array( 'ran-booster/50-troubleshooting-and-activity.css', '\n\.ran-booster-admin \.ran-booster-secondary-nav \{', 'margin-block: var(--ran-booster-space-18) var(--ran-booster-card-gap);' ),
 			array( 'ran-booster/30-provider-cards.css', '\n\.ran-booster-admin \.ran-booster-provider-management__header \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
@@ -1212,7 +1208,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-setup ran-booster-disclosure', $controls );
 		self::assertStringContainsString( 'ran-booster-repository-webhook-setup__body ran-booster-disclosure__body', $controls );
 		self::assertStringNotContainsString( 'ran-booster-readiness-panel', $controls );
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-webhook-management__manage-link {', $webhook_management );
+		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__manage-link', $webhook_management );
 
 		// The Disclosure replaces the native details element, so the layout must not depend on its class.
 		self::assertStringNotContainsString( '.ran-booster-repository-webhook-setup\n', $webhook_management );
@@ -1624,11 +1620,10 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-delete-credential-package-list {', $css );
 		self::assertStringContainsString( 'max-block-size: 160px;', $css );
 		self::assertStringContainsString( 'overflow-y: auto;', $css );
-		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-admin \\.ran-booster-credential-row__label \\{[\\s\\S]+display: flex;[\\s\\S]+min-inline-size: 0;/',
-			$css
-		);
-		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-empty-state {', $css );
+		// Retired provider-page classes with no rendered consumer keep no rules.
+		foreach ( array( 'ran-booster-credential-row__label', 'ran-booster-provider-empty-state', 'ran-booster-provider-management__back' ) as $retired ) {
+			self::assertStringNotContainsString( $retired, $css );
+		}
 		self::assertStringContainsString( '.ran-booster-provider-management-table--access', $css );
 		self::assertStringContainsString( '.ran-booster-provider-management-table--webhook', $css );
 		// The provider tables use the shared data-table frame; the retired
@@ -1647,10 +1642,6 @@ final class AdminAssetContractTest extends TestCase {
 			$css
 		);
 		self::assertStringContainsString( 'inline-size: auto !important;', $css );
-		self::assertMatchesRegularExpression(
-			'/\\.ran-booster-provider-management__back \\{[^}]+padding-inline: 0;/',
-			$css
-		);
 		self::assertMatchesRegularExpression(
 			'/\\.ran-booster-admin \\.ran-booster-data-table > thead > tr > th \\{\\s+border-block-end: 1px solid var\\(--ran-booster-border\\);\\s+background: transparent;\\s+color: var\\(--ran-booster-text\\);\\s+font-size: var\\(--ran-booster-font-size-md\\);\\s+font-weight: 600;\\s+text-align: start;\\s+\\}/',
 			$css

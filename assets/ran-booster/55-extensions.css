@@ -49,11 +49,6 @@
 	gap: var(--ran-booster-space-6);
 }
 
-.ran-booster-extensions__note {
-	clear: both;
-	margin-block-start: var(--ran-booster-space-16);
-}
-
 /*
  * More Details. Without JavaScript, :target reveals the hidden section in
  * place: banner, title, summary, then the content beside its sidebar. With

@@ -116,20 +116,6 @@
 	background: transparent;
 }
 
-.ran-booster-admin
-	.ran-booster-data-table
-	> tbody
-	> :is(
-		.ran-booster-data-table__group-heading,
-		.ran-booster-repository-record__heading
-	)
-	> * {
-	padding-block-start: var(--ran-booster-space-12);
-	padding-block-end: var(--ran-booster-space-8);
-	border-block-end: 1px solid var(--ran-booster-divider);
-	background: inherit;
-}
-
 .ran-booster-admin .ran-booster-data-table [data-label]::before {
 	display: none;
 	content: attr(data-label);
@@ -286,10 +272,4 @@
 
 .ran-booster-admin .ran-booster-inline-form input[type="hidden"] {
 	display: none;
-}
-
-.ran-booster-admin .ran-booster-secrets-location {
-	max-inline-size: 1120px;
-	padding-block-start: var(--ran-booster-space-14);
-	border-block-start: 1px solid var(--ran-booster-divider);
 }

@@ -169,7 +169,6 @@
 	.ran-booster-admin .ran-booster-provider-list-controls,
 	.ran-booster-admin .ran-booster-provider-list-controls > div,
 	.ran-booster-admin .ran-booster-provider-table-navigation,
-	.ran-booster-admin .ran-booster-provider-next-step,
 	.ran-booster-admin .ran-booster-provider-task-panel__heading,
 	.ran-booster-admin .ran-booster-provider-repository-tools {
 		align-items: stretch;
@@ -210,7 +209,6 @@
 	.ran-booster-admin
 		:is(
 			.ran-booster-status-summary__actions,
-			.ran-booster-provider-next-step,
 			.ran-booster-provider-task-panel__heading,
 			.ran-booster-provider-repository-tools,
 			.ran-booster-repository-record__action-group,
@@ -226,33 +224,13 @@
 		text-align: center;
 	}
 
-	.ran-booster-admin .ran-booster-credential-section {
-		padding: var(--ran-booster-space-18);
-	}
-
 	.ran-booster-admin .ran-booster-provider__notice {
 		margin-inline-end: var(--ran-booster-space-18);
 		margin-inline-start: var(--ran-booster-space-18);
 	}
 
-	.ran-booster-admin .ran-booster-provider__footer {
-		padding-block: var(--ran-booster-space-12);
-		padding-inline: var(--ran-booster-space-18);
-	}
-
 	.ran-booster-admin .ran-booster-provider-table-navigation {
 		padding-inline: var(--ran-booster-space-18);
-	}
-
-	.ran-booster-admin .ran-booster-webhook-setup__settings {
-		flex-direction: column;
-	}
-
-	.ran-booster-admin
-		.ran-booster-webhook-setup__settings
-		> .ran-booster-webhook-setup__url {
-		flex: 0 1 auto;
-		grid-template-columns: minmax(0, 1fr);
 	}
 
 	.ran-booster-admin .ran-booster-public-lookup-profile__layout {
@@ -274,12 +252,6 @@
 		border-block-end: 0;
 	}
 
-	.ran-booster-admin .ran-booster-secondary-nav__link,
-	.ran-booster-admin .ran-booster-secondary-nav__link.is-current {
-		margin-block-end: 0;
-		border-color: var(--ran-booster-border);
-	}
-
 	.ran-booster-admin .ran-booster-troubleshooting__fields,
 	.ran-booster-admin
 		.ran-booster-troubleshooting__specific
@@ -295,8 +267,7 @@
 		overflow-x: visible;
 	}
 
-	.ran-booster-admin .ran-booster-repository-detail__header,
-	.ran-booster-admin .ran-booster-repository-detail__receiver {
+	.ran-booster-admin .ran-booster-repository-detail__header {
 		align-items: stretch;
 		flex-direction: column;
 	}
@@ -411,17 +382,6 @@
 		align-items: flex-start;
 		flex-direction: column;
 		gap: var(--ran-booster-space-3);
-	}
-
-	.ran-booster-admin .ran-booster-credential-section__header {
-		align-items: stretch;
-		flex-direction: column;
-	}
-
-	.ran-booster-admin
-		.ran-booster-credential-section__header
-		.ran-wp-ui-button {
-		align-self: flex-start;
 	}
 }
 

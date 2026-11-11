@@ -69,10 +69,16 @@
 	background: var(--ran-booster-surface-info);
 }
 
+/* A disabled candidate is de-emphasised with a subtler text colour; element opacity fell below 4.5:1. */
 .ran-booster-admin .ran-booster-release-candidate:has(input:disabled) {
-	color: var(--ran-booster-text-muted);
+	color: var(--ran-booster-text-subtle);
 	cursor: not-allowed;
-	opacity: 0.7;
+}
+
+.ran-booster-admin
+	.ran-booster-release-candidate:has(input:disabled)
+	.ran-booster-release-candidate__outcome {
+	color: var(--ran-booster-text-subtle);
 }
 
 .ran-booster-admin .ran-booster-release-candidate__outcome {

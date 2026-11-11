@@ -267,7 +267,22 @@
 	content: "–";
 }
 
-.ran-booster-admin .ran-booster-repository-webhook-lifecycle.is-inactive {
+/*
+ * An inactive lifecycle is de-emphasised with subtler text colours, not
+ * whole-element opacity, which dropped step text below 4.5:1. Only the
+ * decorative step markers are dimmed.
+ */
+.ran-booster-admin
+	.ran-booster-repository-webhook-lifecycle.is-inactive
+	.ran-booster-webhook-step
+	:is(strong, p) {
+	color: var(--ran-booster-text-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-lifecycle.is-inactive
+	.ran-booster-webhook-step
+	> span {
 	opacity: 0.62;
 }
 

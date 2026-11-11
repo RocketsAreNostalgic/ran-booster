@@ -2397,6 +2397,19 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-branch-settings\.is-inactive\s*\.ran-booster-readiness-icon \{\s*opacity: 0\.58;/', $settings );
 	}
 
+	public function test_de_emphasised_text_uses_a_colour_token_not_element_opacity(): void {
+		$release = $this->asset( 'ran-booster-release-management.css' );
+		$webhook = $this->asset( 'ran-booster-repository-webhook-management.css' );
+
+		self::assertSame( 1, preg_match( '/\.ran-booster-release-candidate:has\(input:disabled\)\s*\{([^}]*)\}/', $release, $disabled ) ? 1 : 0 );
+		self::assertStringNotContainsString( 'opacity', $disabled[1] ?? '' );
+		self::assertStringContainsString( 'color: var(--ran-booster-text-subtle)', $disabled[1] ?? '' );
+
+		// The lifecycle container itself carries no opacity (it dimmed every step's text); only the decorative markers do.
+		self::assertSame( 0, preg_match( '/\.ran-booster-repository-webhook-lifecycle\.is-inactive\s*\{[^}]*opacity/', $webhook ) );
+		self::assertSame( 1, preg_match( '/\.is-inactive\s+\.ran-booster-webhook-step\s+:is\(strong, p\)\s*\{\s*color: var\(--ran-booster-text-subtle\);/', $webhook ) );
+	}
+
 	private function asset( string $file ): string {
 		if ( 'ran-booster.css' !== $file ) {
 			return $this->raw_asset( $file );

@@ -1868,6 +1868,27 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr);', $css );
 	}
 
+	public function test_package_heading_action_reuses_the_provider_heading_row(): void {
+		$view = $this->view( 'packages/index.php' );
+		$css  = $this->asset( 'ran-booster.css' );
+		$pkg  = $this->asset( 'ran-booster/60-packages.css' );
+
+		// Markup: one header row holding the h2 first and the action link second.
+		self::assertSame( 1, preg_match( '/<header class="ran-booster-action-row ran-booster-provider-management__header ran-booster-package-heading-row">\s*<h2 class="wp-heading-inline ran-booster-package-heading[^"]*">.*?<\/h2>\s*<\?php if \( \$package_list_total > 0 \) \{ \?>\s*<a class="page-title-action" href="<\?php echo esc_url\( \$install_another_url \); \?>">.*?<\/a>\s*<\?php \} \?>\s*<\/header>/s', $view ) );
+
+		// The shared provider row owns the end alignment and the narrow stacking.
+		self::assertMatchesRegularExpression( '/\.ran-booster-provider-management__header \{[^}]*justify-content: space-between;/', $css );
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 782px\)[\s\S]+\.ran-booster-provider-management__header,[\s\S]+?flex-direction: column;/', $css );
+
+		// The package row only centres the line and drops the row margin; the action's core offsets are neutralised.
+		self::assertMatchesRegularExpression( '/\.ran-booster-package-heading-row \{\s+align-items: center;\s+margin-block-end: 0;\s+\}/', $pkg );
+		self::assertMatchesRegularExpression( '/\.ran-booster-package-heading-row \.page-title-action \{\s+position: static;\s+margin: 0;\s+\}/', $pkg );
+
+		// The old inline placement rules are gone.
+		self::assertStringNotContainsString( '.ran-booster-package-heading + .page-title-action', $css );
+		self::assertDoesNotMatchRegularExpression( '/h2\.ran-booster-package-heading \{/', $css );
+	}
+
 	public function test_managed_package_table_controls_desktop_widths_and_allows_package_identity_to_wrap(): void {
 		$css         = $this->asset( 'ran-booster.css' );
 		$package_css = $this->asset( 'ran-booster/60-packages.css' );

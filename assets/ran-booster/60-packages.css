@@ -11,9 +11,22 @@
 	margin: 0;
 }
 
-.ran-booster-admin h2.ran-booster-package-heading {
-	display: inline-block;
-	margin-inline-end: var(--ran-booster-space-8);
+/*
+ * The Managed Plugins and Managed Themes heading row reuses the provider
+ * management header (action pinned to the inline end, stacked on narrow
+ * screens). The title carries its own subtitle spacing below, so the row adds no
+ * bottom margin, and the heading and action centre on one line. WordPress core
+ * nudges .page-title-action with a physical margin and top offset; neutralise
+ * both so the action sits on the row's centre line in either direction.
+ */
+.ran-booster-admin .ran-booster-package-heading-row {
+	align-items: center;
+	margin-block-end: 0;
+}
+
+.ran-booster-admin .ran-booster-package-heading-row .page-title-action {
+	position: static;
+	margin: 0;
 }
 
 .ran-booster-admin .ran-booster-package-list-controls {
@@ -452,21 +465,16 @@
 }
 
 @media screen and (max-width: 782px) {
+	.ran-booster-admin .ran-booster-package-heading-row {
+		gap: var(--ran-booster-space-8);
+	}
+
 	.ran-booster-admin .ran-booster-package-list-controls,
 	.ran-booster-admin .ran-booster-package-list-filters,
 	.ran-booster-admin .ran-booster-package-list-search .search-box,
 	.ran-booster-admin .ran-booster-bulk-actions {
 		align-items: stretch;
 		flex-direction: column;
-	}
-
-	.ran-booster-admin h2.ran-booster-package-heading {
-		display: block;
-		margin-block-end: var(--ran-booster-space-8);
-	}
-
-	.ran-booster-admin .ran-booster-package-heading + .page-title-action {
-		margin: 0;
 	}
 
 	.ran-booster-admin .ran-booster-package-list-filters,

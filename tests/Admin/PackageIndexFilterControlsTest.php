@@ -68,10 +68,13 @@ final class PackageIndexFilterControlsTest extends TestCase {
 		);
 		$this->assert_collection_structure( $html, $type, true );
 
+		self::assertStringContainsString( '<header class="ran-booster-action-row ran-booster-provider-management__header ran-booster-package-heading-row">', $html );
 		self::assertStringContainsString(
 			'<h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title">Managed ' . ucfirst( $plural ) . '</h2>',
 			$html
 		);
+		// Reading order: the heading precedes the action link, inside the one row.
+		self::assertLessThan( (int) strpos( $html, 'class="page-title-action"' ), (int) strpos( $html, 'ran-booster-package-heading ran-booster-page-heading__title' ) );
 		self::assertStringContainsString(
 			'class="page-title-action" href="https://example.test/wp-admin/admin.php?page=' . $page_slug . '-create"',
 			$html

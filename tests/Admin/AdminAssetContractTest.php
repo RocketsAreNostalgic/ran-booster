@@ -203,16 +203,14 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_standalone_text_links_keep_a_24px_target(): void {
 		$css = $this->asset( 'ran-booster.css' );
 
-		self::assertSame(
-			1,
-			preg_match( '/\.ran-booster-standalone-link-row,[\s\S]*?\)\s*> a,[\s\S]*?\{([^}]*)\}/', $css, $inline_rule )
-		);
+		if ( 1 !== preg_match( '/\.ran-booster-standalone-link-row,[\s\S]*?\)\s*> a,[\s\S]*?\{([^}]*)\}/', $css, $inline_rule ) ) {
+			self::fail( 'Standalone link rows need a target size rule.' );
+		}
 		self::assertStringContainsString( 'display: inline-flex;', $inline_rule[1] );
 		self::assertStringContainsString( 'min-block-size: var(--ran-booster-space-24);', $inline_rule[1] );
-		self::assertSame(
-			1,
-			preg_match( '/\.ran-booster-overview-package-links,[\s\S]*?\.ran-booster-overview-provider-link,[\s\S]*?\{([^}]*)\}/', $css, $block_rule )
-		);
+		if ( 1 !== preg_match( '/\.ran-booster-overview-package-links,[\s\S]*?\.ran-booster-overview-provider-link,[\s\S]*?\{([^}]*)\}/', $css, $block_rule ) ) {
+			self::fail( 'Block link containers need a target size rule.' );
+		}
 		self::assertStringContainsString( 'min-block-size: var(--ran-booster-space-24);', $block_rule[1] );
 		self::assertStringNotContainsString( 'display:', $block_rule[1] );
 

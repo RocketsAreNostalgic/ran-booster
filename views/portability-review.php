@@ -264,8 +264,8 @@ $has_credential_decisions         = array() !== array_filter(
 				str_replace(
 					'%d',
 					'<strong>' . number_format_i18n( $portability_review_count ) . '</strong>',
-					/* translators: %d: number of packages in the review. */
-					_n( '%d package', '%d packages', $portability_review_count, 'ran-booster' )
+					/* translators: %d: number of packages in the table. */
+					_nx( '%d package', '%d packages', $portability_review_count, 'Packages in a Transporter table', 'ran-booster' )
 				)
 			);
 			?>

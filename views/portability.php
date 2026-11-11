@@ -239,8 +239,8 @@ $render_portability_extension      = static function ( string $hook, string $ste
 							str_replace(
 								'%d',
 								'<strong>' . number_format_i18n( $portability_export_package_count ) . '</strong>',
-								/* translators: %d: number of managed packages available for export. */
-								_n( '%d package', '%d packages', $portability_export_package_count, 'ran-booster' )
+								/* translators: %d: number of packages in the table. */
+								_nx( '%d package', '%d packages', $portability_export_package_count, 'Packages in a Transporter table', 'ran-booster' )
 							)
 						);
 						?>

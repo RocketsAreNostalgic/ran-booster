@@ -387,6 +387,14 @@
 		background: transparent;
 	}
 
+	.ran-booster-admin
+		[data-ran-booster-card="documentation"]
+		.ran-booster-card__surface {
+		border: 0;
+		box-shadow: none;
+		background: transparent;
+	}
+
 	.ran-booster-admin .ran-booster-documentation__index {
 		display: block;
 		grid-area: auto;

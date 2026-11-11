@@ -597,15 +597,12 @@ msgid "In use"
 msgstr ""
 
 #: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:48
-msgid "Booster’s own updates are disabled to protect this source checkout."
+#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:87
+msgid "Core updates are disabled to protect this source checkout."
 msgstr ""
 
 #: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:86
 msgid "RAN Booster development detected:"
-msgstr ""
-
-#: RAN/Admin/CoreSelfUpdateDevelopmentNotice.php:87
-msgid "Core updates are disabled to protect this source checkout."
 msgstr ""
 
 #: RAN/Admin/CredentialExpiryNotice.php:125
@@ -4972,11 +4969,11 @@ msgid "Settings were not saved. Check the fields or reload the page and try agai
 msgstr ""
 
 #: RAN/Dashboard.php:708
-msgid "The Booster update check completed."
+msgid "The Core updates check completed."
 msgstr ""
 
 #: RAN/Dashboard.php:709
-msgid "The Booster update check did not complete successfully. Review the check status below."
+msgid "The Core updates check did not complete successfully. Review the check status below."
 msgstr ""
 
 #: RAN/Dashboard.php:722
@@ -5930,10 +5927,11 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:283
 #: RAN/Troubleshooting/TroubleshootingService.php:287
 #: RAN/Troubleshooting/TroubleshootingService.php:288
+#: views/settings-general.php:46
 #: views/troubleshooting-installation.php:131
 #: views/troubleshooting-installation.php:142
 #: views/troubleshooting-installation.php:143
-msgid "Booster Core updates"
+msgid "Core updates"
 msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:272
@@ -6557,57 +6555,58 @@ msgstr ""
 msgid "Delete capture"
 msgstr ""
 
-#: views/debug-capture.php:135
+#: views/debug-capture.php:131
+#: views/debug-capture.php:155
+msgid "Starting a new capture replaces any retained capture."
+msgstr ""
+
+#: views/debug-capture.php:138
 msgid "Logging details"
 msgstr ""
 
 #. translators: %s: configured temporary Booster capture path.
-#: views/debug-capture.php:141
+#: views/debug-capture.php:144
 #, php-format
 msgid "Booster capture location: %s."
 msgstr ""
 
-#: views/debug-capture.php:145
+#: views/debug-capture.php:148
 msgid "Booster capture location is unavailable."
 msgstr ""
 
 #. translators: 1: WP_DEBUG constant, 2: WP_DEBUG_LOG constant.
-#: views/debug-capture.php:149
+#: views/debug-capture.php:152
 #, php-format
 msgid "Booster events also go to PHP’s error log when %1$s and %2$s are enabled. The capture holds Booster events only, not PHP errors."
 msgstr ""
 
-#: views/debug-capture.php:152
-msgid "Starting a new capture replaces any retained capture."
-msgstr ""
-
-#: views/debug-capture.php:153
+#: views/debug-capture.php:156
 msgid "For PHP, WordPress, theme and plugin errors, add these to wp-config.php before the “stop editing” line:"
 msgstr ""
 
-#: views/debug-capture.php:156
+#: views/debug-capture.php:159
 msgid "Example wp-config.php lines"
 msgstr ""
 
-#: views/debug-capture.php:157
+#: views/debug-capture.php:160
 msgid "Copy example wp-config.php lines"
 msgstr ""
 
-#: views/debug-capture.php:163
+#: views/debug-capture.php:166
 msgid "A custom log destination is configured. Review wp-config.php for its location."
 msgstr ""
 
 #. translators: %s: WordPress debug log path.
-#: views/debug-capture.php:167
+#: views/debug-capture.php:170
 #, php-format
 msgid "Log location when enabled: %s."
 msgstr ""
 
-#: views/debug-capture.php:171
+#: views/debug-capture.php:174
 msgid "Turn off debugging when done. Review the log privately before sharing it."
 msgstr ""
 
-#: views/debug-capture.php:172
+#: views/debug-capture.php:175
 msgid "WordPress debugging documentation"
 msgstr ""
 
@@ -10063,10 +10062,6 @@ msgstr ""
 msgid "Appearance"
 msgstr ""
 
-#: views/settings-general.php:46
-msgid "Booster updates"
-msgstr ""
-
 #: views/settings-general.php:47
 msgid "History"
 msgstr ""
@@ -10133,7 +10128,7 @@ msgid "GitHub remains visible until provider availability is known."
 msgstr ""
 
 #: views/settings-general.php:109
-msgid "This development copy cannot receive Booster updates."
+msgid "This development copy cannot receive Core updates."
 msgstr ""
 
 #: views/settings-general.php:110
@@ -10141,15 +10136,15 @@ msgid "This installation cannot verify its release information."
 msgstr ""
 
 #: views/settings-general.php:111
-msgid "Your site configuration has turned update checks off. This setting cannot be changed here."
+msgid "Your site configuration has turned Core updates off. This setting cannot be changed here."
 msgstr ""
 
 #: views/settings-general.php:112
-msgid "Your site’s update configuration is invalid. Correct it before checking."
+msgid "Your site’s Core updates configuration is invalid. Correct it before checking."
 msgstr ""
 
 #: views/settings-general.php:113
-msgid "Update checks are turned off. Enable the switch to turn them on."
+msgid "Core updates are turned off. Enable the switch to turn them on."
 msgstr ""
 
 #: views/settings-general.php:136
@@ -10159,7 +10154,7 @@ msgstr ""
 
 #: views/settings-general.php:137
 #: views/settings-general.php:238
-msgid "Check for Booster updates"
+msgid "Check for Core updates"
 msgstr ""
 
 #: views/settings-general.php:139
@@ -10205,11 +10200,11 @@ msgid "Save setting"
 msgstr ""
 
 #: views/settings-general.php:252
-msgid "Booster update checks are enabled."
+msgid "Core updates are enabled."
 msgstr ""
 
 #: views/settings-general.php:252
-msgid "Booster update checks are currently unavailable."
+msgid "Core updates are currently unavailable."
 msgstr ""
 
 #: views/settings-general.php:256
@@ -10237,7 +10232,7 @@ msgid "Checking is unavailable for this site or your account."
 msgstr ""
 
 #: views/settings-general.php:268
-msgid "Last successful Booster check"
+msgid "Last successful check"
 msgstr ""
 
 #: views/settings-general.php:271
@@ -10539,7 +10534,7 @@ msgstr ""
 
 #: views/troubleshooting-installation.php:111
 #: views/troubleshooting-installation.php:125
-msgid "Core update status is unavailable."
+msgid "Core updates status is unavailable."
 msgstr ""
 
 #: views/troubleshooting-installation.php:113
@@ -10547,19 +10542,19 @@ msgid "Turned off programmatically in site configuration."
 msgstr ""
 
 #: views/troubleshooting-installation.php:115
-msgid "Booster update checks are turned off in Settings."
+msgid "Core updates are turned off in Settings."
 msgstr ""
 
 #: views/troubleshooting-installation.php:117
-msgid "RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
+msgid "Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically."
 msgstr ""
 
 #: views/troubleshooting-installation.php:119
-msgid "Booster can check for updates. Installing an update remains a manual action."
+msgid "Booster can check for Core updates. Installing an update remains a manual action."
 msgstr ""
 
 #: views/troubleshooting-installation.php:121
-msgid "Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself."
+msgid "Core updates are off because this installation has an invalid Core updates configuration. Booster will not check for or replace itself."
 msgstr ""
 
 #: views/troubleshooting-installation.php:123

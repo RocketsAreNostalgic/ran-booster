@@ -224,6 +224,22 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'flex: 1 1 100%;', $narrow_rules[2] );
 	}
 
+	public function test_activity_header_keeps_the_shared_card_gap_above_the_collection_frame(): void {
+		$activity = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+
+		if ( 1 !== preg_match( '/\n\.ran-booster-admin \.ran-booster-activity__header \{([^}]*)\}/', $activity, $header_rule ) ) {
+			self::fail( 'The Activity header rule is missing.' );
+		}
+		self::assertStringContainsString( 'margin-block-end: var(--ran-booster-card-gap);', $header_rule[1] );
+		self::assertStringNotContainsString( 'px', $header_rule[1] );
+
+		// The heading-to-description gap stays the shared heading gap.
+		if ( 1 !== preg_match( '/\n\.ran-booster-admin \.ran-booster-activity__header p \{([^}]*)\}/', $activity, $paragraph_rule ) ) {
+			self::fail( 'The Activity header description rule is missing.' );
+		}
+		self::assertStringContainsString( 'margin-block-start: var(--ran-booster-card-heading-gap);', $paragraph_rule[1] );
+	}
+
 	public function test_link_target_size_rule_leaves_button_styled_anchors_to_the_button_minimum(): void {
 		$css = $this->asset( 'ran-booster.css' );
 

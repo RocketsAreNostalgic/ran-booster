@@ -610,6 +610,13 @@ they apply to, and keeps Save and Apply in one predictable place.
    credential storage setup, adopt and reset, and the Activity remediation
    forms. The Extensions card Activate stays beside the description, the
    WordPress plugin-card pattern.
+9. Onboarding step actions stay in their step: they are navigation links to
+   other screens, not a form that finishes the Card, and a band would add
+   visual weight to a guidance list.
+10. Release workflow forms (Assess, Open draft pull request, Check pull request
+    outcome) stay in their disclosure body: each button belongs to the
+    credential field in its own form, several forms can show at once, and there
+    is no single primary action to finish the disclosure.
 
 | Surface | Screen | Placement |
 | --- | --- | --- |
@@ -618,6 +625,7 @@ they apply to, and keeps Save and Apply in one predictable place.
 | Card footer band | Transporter Open and Create | Start, in the footer band |
 | Card footer band | Install plugin and theme, Package operation | Start, primary first; shown only for a Branch source |
 | Card footer band | Troubleshooting Logging capture actions | Start, Delete capture last |
+| Card footer band | Troubleshooting Diagnostics and Support report | Start, primary first |
 | Disclosure footer band | Repository Webhook management, inside the Webhook setup disclosure | Start, Remove last |
 | Heading row | Managed Plugins and Themes, Install another | End of the heading row |
 | Heading row | Overview, Return to onboarding | End of the heading row |

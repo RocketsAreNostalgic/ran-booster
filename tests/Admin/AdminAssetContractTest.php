@@ -1786,6 +1786,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-repository-list {', $css );
 		self::assertStringContainsString( '.ran-booster-repository-record__overview', $css );
 		self::assertStringContainsString( '.ran-booster-repository-record__action-group {', $css );
+		// Repository row actions keep the shared Button height; no 44px override.
+		self::assertDoesNotMatchRegularExpression( '/repository-record__action-group :is\(a, button\) \{[^}]*min-block-size/', $css );
 		self::assertStringContainsString( '.ran-booster-repository-record__actions {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-provider-management__header {', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-webhook-endpoint > div:first-child {', $css );

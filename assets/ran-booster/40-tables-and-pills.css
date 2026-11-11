@@ -230,7 +230,6 @@
 
 .ran-booster-admin .ran-booster-repository-record__action-group :is(a, button) {
 	flex: 0 0 auto;
-	min-block-size: 44px;
 	white-space: nowrap;
 }
 

@@ -84,7 +84,7 @@
 			}
 			if (selectedCount) {
 				selectedCount.textContent = sprintf(
-					/* translators: %d: number of selected packages. */ __(
+					/* translators: %d: number of selected items. */ __(
 						'%d selected',
 						'ran-booster'
 					),
@@ -623,7 +623,7 @@
 
 			if (selectedCount) {
 				selectedCount.textContent = sprintf(
-					/* translators: %d: number of selected changes. */ __(
+					/* translators: %d: number of selected items. */ __(
 						'%d selected',
 						'ran-booster'
 					),

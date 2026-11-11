@@ -270,7 +270,7 @@ $has_credential_decisions         = array() !== array_filter(
 			);
 			?>
 			<span aria-hidden="true">&middot;</span>
-			<span data-portability-selected-count><?php echo esc_html( sprintf( /* translators: %d: number of selected changes. */ __( '%d selected', 'ran-booster' ), $portability_review_selected ) ); ?></span>
+			<span data-portability-selected-count><?php echo esc_html( sprintf( /* translators: %d: number of selected items. */ __( '%d selected', 'ran-booster' ), $portability_review_selected ) ); ?></span>
 		</p>
 		<label class="ran-booster-portability__toolbar-select"><input type="checkbox" data-portability-select-all aria-label="<?php esc_attr_e( 'Select all actionable changes', 'ran-booster' ); ?>"<?php checked( $has_actionable_rows ); ?><?php disabled( ! $has_actionable_rows ); ?>> <?php esc_html_e( 'Select all actionable changes', 'ran-booster' ); ?></label>
 	</div>

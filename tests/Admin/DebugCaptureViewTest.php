@@ -22,7 +22,12 @@ final class DebugCaptureViewTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( '<p>Temporarily records Booster events.</p>', $html );
+		self::assertStringNotContainsString( 'Temporarily records Booster events.', $html );
+		self::assertStringContainsString( 'Booster events also go to PHP’s error log when <code>WP_DEBUG</code> and <code>WP_DEBUG_LOG</code> are enabled. The capture holds Booster events only, not PHP errors.', $html );
+		self::assertStringNotContainsString( 'guard helps prevent direct access', $html );
+		self::assertStringContainsString( 'For PHP, WordPress, theme and plugin errors, add these to wp-config.php before the “stop editing” line:', $html );
+		self::assertStringContainsString( 'Turn off debugging when done. Review the log privately before sharing it.', $html );
+		self::assertStringContainsString( 'Starting a new capture replaces any retained capture.', $html );
 		self::assertStringNotContainsString( 'This temporary capture records Booster events only.', $html );
 		self::assertStringNotContainsString( 'excludes PHP, WordPress, theme, and other-plugin messages', $html );
 		self::assertStringContainsString( '<summary>Logging details</summary>', $html );
@@ -226,7 +231,7 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringContainsString( '<code>/private/&lt;site&gt;/ran-booster-debug.php</code>', $html );
 		self::assertStringNotContainsString( '/private/<site>/', $html );
 		self::assertStringContainsString( '<code>WP_DEBUG</code> and <code>WP_DEBUG_LOG</code>', $html );
-		self::assertStringContainsString( '<code>.php</code> guard', $html );
+		self::assertStringNotContainsString( '<code>.php</code> guard', $html );
 	}
 
 	public function test_mutation_error_stays_visible_and_escaped(): void {

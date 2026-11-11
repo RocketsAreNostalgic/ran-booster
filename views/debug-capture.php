@@ -88,7 +88,6 @@ if ( 'active' === $capture_state && '' !== $capture_until ) {
 
 	<div class="ran-booster-debug-capture__panel ran-booster-panel">
 		<div class="ran-booster-debug-capture__body">
-			<p><?php esc_html_e( 'Temporarily records Booster events.', 'ran-booster' ); ?></p>
 			<div class="ran-booster-debug-capture__events">
 				<div class="ran-booster-debug-capture__events-header">
 					<h4 id="ran-booster-debug-capture-events-heading"><?php esc_html_e( 'Captured Booster events', 'ran-booster' ); ?></h4>
@@ -146,12 +145,12 @@ if ( 'active' === $capture_state && '' !== $capture_until ) {
 				<?php esc_html_e( 'Booster capture location is unavailable.', 'ran-booster' ); ?><?php } ?></p>
 			<p>
 				<?php
-				/* translators: 1: WP_DEBUG constant, 2: WP_DEBUG_LOG constant, 3: capture file extension. */
-				printf( esc_html__( 'Booster events can also go to PHP’s error log when %1$s and %2$s are enabled. The temporary capture records Booster events only, not PHP errors. Its %3$s guard helps prevent direct access to the capture file.', 'ran-booster' ), '<code>WP_DEBUG</code>', '<code>WP_DEBUG_LOG</code>', '<code>.php</code>' );
+				/* translators: 1: WP_DEBUG constant, 2: WP_DEBUG_LOG constant. */
+				printf( esc_html__( 'Booster events also go to PHP’s error log when %1$s and %2$s are enabled. The capture holds Booster events only, not PHP errors.', 'ran-booster' ), '<code>WP_DEBUG</code>', '<code>WP_DEBUG_LOG</code>' );
 				?>
 			</p>
 			<p><?php esc_html_e( 'Starting a new capture replaces any retained capture.', 'ran-booster' ); ?></p>
-			<p><?php esc_html_e( 'For broader PHP, WordPress, theme, and plugin error logging, add or update these definitions in wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'For PHP, WordPress, theme and plugin errors, add these to wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
 			<?php
 			$snippet_value      = "define( 'WP_DEBUG', true );\n" . $wp_debug_log_example . "\ndefine( 'WP_DEBUG_DISPLAY', false );";
 			$snippet_label      = __( 'Example wp-config.php lines', 'ran-booster' );
@@ -169,7 +168,7 @@ if ( 'active' === $capture_state && '' !== $capture_until ) {
 					?>
 				<?php } ?>
 			</p>
-			<p><?php esc_html_e( 'Turn off debugging after reproducing the issue, and review the log privately before sharing it.', 'ran-booster' ); ?></p>
+			<p><?php esc_html_e( 'Turn off debugging when done. Review the log privately before sharing it.', 'ran-booster' ); ?></p>
 			<p><a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/"><?php esc_html_e( 'WordPress debugging documentation', 'ran-booster' ); ?></a></p>
 		</div>
 	</details></div>

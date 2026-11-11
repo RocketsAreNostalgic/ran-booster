@@ -802,6 +802,28 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertSame( 2, substr_count( $this->view( 'settings-storage.php' ), 'ran-booster-onboarding__storage-fact--inline' ) );
 	}
 
+	public function test_narrow_card_headers_give_the_strapline_the_full_header_width(): void {
+		$css = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+		self::assertMatchesRegularExpression( '/\.ran-booster-troubleshooting__installation-entry \{\s*container-type: inline-size;/', $css );
+		if ( 1 !== preg_match( '/@container \(max-width: 40rem\) \{(.*?)\n\}\n/s', $css, $narrow ) ) {
+			self::fail( 'The narrow Card header container query is missing.' );
+		}
+		$narrow = $narrow[1];
+		// The mounted button, the native summary and the body-less row become one grid.
+		self::assertMatchesRegularExpression( '/\[role="button"\],[^{]*> summary,[^{]*__entry-row \{[^}]*display: grid;[^}]*grid-template-columns: minmax\(0, 1fr\) auto auto;/', $narrow );
+		// The wrappers stop generating boxes so title, badge, chevron and strapline are the grid items.
+		self::assertMatchesRegularExpression( '/:first-child,[^{]*> \[aria-hidden="true"\],[^{]*__entry-heading \{\s*display: contents;/', $narrow );
+		self::assertMatchesRegularExpression( '/__entry-title \{\s*grid-row: 1;\s*grid-column: 1;/', $narrow );
+		self::assertMatchesRegularExpression( '/__entry-meta\s*\) \{\s*grid-row: 1;\s*grid-column: 2;/', $narrow );
+		self::assertMatchesRegularExpression( '/> :last-child \{\s*grid-row: 1;\s*grid-column: 3;/', $narrow );
+		// The strapline spans every column on its own row under the title, badge and chevron.
+		self::assertMatchesRegularExpression( '/__entry-description \{\s*grid-row: 2;\s*grid-column: 1 \/ -1;/', $narrow );
+		// The padding belongs to the header rules (16px Installation, 24px Settings), never to the narrow rule.
+		self::assertStringNotContainsString( 'padding', $narrow );
+		// The wide layout and the markup stay as they were: no viewport media query carries these rules.
+		self::assertDoesNotMatchRegularExpression( '/@media[^{]*\{[^@]*display: contents/', $css );
+	}
+
 	public function test_settings_cards_leave_no_orphaned_panel_card_or_storage_details_rules(): void {
 		$settings   = $this->asset( 'ran-booster/65-package-settings.css' );
 		$onboarding = $this->asset( 'ran-booster-onboarding.css' );

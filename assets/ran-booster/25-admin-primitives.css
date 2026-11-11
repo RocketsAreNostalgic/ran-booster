@@ -740,6 +740,34 @@
 	margin-block-end: 0;
 }
 
+/*
+ * A disclosure lays out the same before and after the UI runtime mounts it.
+ * The mounted Disclosure root carries the wp-ui box-sizing utility: the root
+ * is border-box and every descendant inherits it. The server-rendered
+ * fallback <details> gets the same rule, in the same wp-ui utilities layer,
+ * so its summary and body lay out as they will inside the mounted root,
+ * whenever the mount happens (it waits for the runtime, and for focus to
+ * leave the fallback). Inside the layer, component and Booster rules that
+ * set box-sizing still win, as they do once mounted; the one extra class of
+ * specificity only outranks a static Card's ran-wp-ui-box-sizing descendant
+ * rule, which the mounted root outranks by source order. The summary and
+ * body are set directly, not inherited: a browser that wraps the details
+ * content in its own ::details-content box would hand them its content-box.
+ */
+
+@layer wp-ui.utilities {
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback] *,
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback] ::before,
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback] ::after {
+		box-sizing: inherit;
+	}
+
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback],
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback] > * {
+		box-sizing: border-box;
+	}
+}
+
 .ran-booster-admin h2.ran-booster-page-heading__title {
 	margin: 0;
 	padding: 0;

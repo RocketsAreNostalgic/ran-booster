@@ -199,18 +199,14 @@
 	syntax: "<length>";
 	inherits: false;
 
-	/* A registered <length> needs the unit. */
-	/* stylelint-disable-next-line length-zero-no-unit */
-	initial-value: 0px;
+	initial-value: 0px; /* stylelint-disable-line length-zero-no-unit */
 }
 
 @property --ran-booster-nav-fade-end {
 	syntax: "<length>";
 	inherits: false;
 
-	/* A registered <length> needs the unit. */
-	/* stylelint-disable-next-line length-zero-no-unit */
-	initial-value: 0px;
+	initial-value: 0px; /* stylelint-disable-line length-zero-no-unit */
 }
 
 @keyframes ran-booster-nav-fade-start {

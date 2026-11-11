@@ -906,7 +906,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		$presenter = $this->presenter( tracking: $tracking );
 		$rows      = $presenter->enrich_repository_rows(
 			array(
-				array(
+				'row' => array(
 					'provider_code'     => 'fixture',
 					'repository_id'     => '101',
 					'repository'        => 'example/example',
@@ -926,9 +926,11 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			'https://example.test/return'
 		);
 		$values    = array();
-		foreach ( $rows[0]['details'] as $detail ) {
-			if ( 'release_workflow' === ( $detail['category'] ?? '' ) ) {
-				$values[] = $detail['value'];
+		foreach ( $rows as $row ) {
+			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
+				if ( is_array( $detail ) && 'release_workflow' === ( $detail['category'] ?? '' ) ) {
+					$values[] = $detail['value'] ?? '';
+				}
 			}
 		}
 		self::assertSame( array( 'Not assessed' ), $values );

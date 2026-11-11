@@ -475,7 +475,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		);
 	}
 
-	/** @dataProvider inactive_recheck_states */
+	#[DataProvider( 'inactive_recheck_states' )]
 	public function test_inactive_recheck_stays_visible_focusable_and_explained( string $source, string $type, string $reason ): void {
 		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( $source, $type ) ) );
 		$package  = new PackageProjection( $source, $type );

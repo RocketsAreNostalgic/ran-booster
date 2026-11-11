@@ -906,8 +906,40 @@
 }
 
 .ran-booster-admin .ran-booster-portability__package-details h6 {
-	margin-block: var(--ran-booster-space-10) var(--ran-booster-space-4);
+	margin-block: var(--ran-booster-space-12)
+		var(--ran-booster-card-heading-gap);
 	font-size: inherit;
+}
+
+.ran-booster-admin .ran-booster-portability__package-details h6 + :is(p, ul) {
+	margin-block-start: 0;
+}
+
+/* A list follows its lead-in paragraph at the same distance in every details body. */
+.ran-booster-admin .ran-booster-portability__details-body p:has(+ ul) {
+	margin-block-end: 0;
+}
+
+.ran-booster-admin .ran-booster-portability__details-body p + ul {
+	margin-block-start: var(--ran-booster-card-heading-gap);
+}
+
+/* The body padding owns the edges: no heading or paragraph adds a gap above the first or below the last block. */
+.ran-booster-admin
+	.ran-booster-portability__details-body
+	> :first-child:is(h6, p),
+.ran-booster-admin
+	.ran-booster-portability__details-body
+	> section:first-child
+	> :first-child {
+	margin-block-start: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__details-body
+	> section:last-child
+	> :last-child {
+	margin-block-end: 0;
 }
 
 .ran-booster-admin .ran-booster-portability__review-table td > code {

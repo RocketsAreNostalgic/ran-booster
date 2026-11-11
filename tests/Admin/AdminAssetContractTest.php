@@ -1639,6 +1639,20 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'selectMode(requestedMode);', $script );
 	}
 
+	public function test_portability_details_bodies_use_one_compact_heading_rhythm(): void {
+		$onboarding = $this->asset( 'ran-booster-onboarding.css' );
+		$gap        = '[^}]*';
+
+		// Headings sit one section gap below prior content and the shared heading gap above their content; no core h6 margins.
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__package-details h6 \{' . $gap . 'margin-block:\s*var\(--ran-booster-space-12\)\s*var\(--ran-booster-card-heading-gap\);/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__package-details h6 \+ :is\(p, ul\) \{\s*margin-block-start:\s*0;/', $onboarding );
+		self::assertMatchesRegularExpression( '/p:has\(\+ ul\) \{\s*margin-block-end:\s*0;/', $onboarding );
+		self::assertMatchesRegularExpression( '/__details-body p \+ ul \{\s*margin-block-start:\s*var\(--ran-booster-card-heading-gap\);/', $onboarding );
+		// The 16px body padding owns the first and last edges.
+		self::assertMatchesRegularExpression( '/__details-body\s*>\s*:first-child:is\(h6, p\),[^{]*__details-body\s*>\s*section:first-child\s*>\s*:first-child\s*\{\s*margin-block-start:\s*0;/', $onboarding );
+		self::assertMatchesRegularExpression( '/__details-body\s*>\s*section:last-child\s*>\s*:last-child\s*\{\s*margin-block-end:\s*0;/', $onboarding );
+	}
+
 	public function test_credential_table_shapes_own_their_desktop_column_widths(): void {
 		$css        = $this->asset( 'ran-booster.css' );
 		$view       = $this->view( 'provider.php' );

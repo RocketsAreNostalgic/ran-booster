@@ -144,44 +144,22 @@ export async function assertPackageSettingsContainment(tab) {
 				assertInside(label, `Danger label ${label.textContent.trim()}`);
 		});
 
-		const guidance = main.querySelector(
-			'[data-ran-booster-reinstall-guidance]'
+		const reinstall = main.querySelector(
+			'[data-ran-booster-settings-reinstall]'
 		);
-		if (guidance && visible(guidance)) {
-			const guidanceStyle = getComputedStyle(guidance);
-			const action = main.querySelector(
-				'[data-ran-booster-settings-reinstall]'
-			);
-			const policyDescription = main.querySelector(
-				'.ran-booster-deployment-policy-field .description'
-			);
-			const guidanceRect = guidance.getBoundingClientRect();
-			assert(
-				guidanceStyle.position === 'static',
-				'Reinstall guidance must remain in normal flow.'
+		if (reinstall && reinstall.getAttribute('aria-disabled') === 'true') {
+			const reason = document.getElementById(
+				reinstall.getAttribute('aria-describedby') || ''
 			);
 			assert(
-				guidanceStyle.whiteSpace === 'normal',
-				'Reinstall guidance must wrap normally.'
+				reason?.getAttribute('role') === 'tooltip',
+				'A disabled Reinstall must describe itself with a reason tooltip.'
 			);
-			if (action && visible(action)) {
-				assert(
-					guidanceRect.top >=
-						action.getBoundingClientRect().bottom - 1,
-					'Reinstall guidance must follow its action button.'
-				);
-			}
-			if (policyDescription && visible(policyDescription)) {
-				const policyRect = policyDescription.getBoundingClientRect();
-				assert(
-					guidanceRect.right <= policyRect.left ||
-						guidanceRect.left >= policyRect.right ||
-						guidanceRect.bottom <= policyRect.top ||
-						guidanceRect.top >= policyRect.bottom,
-					'Reinstall guidance intersects the policy description.'
-				);
-			}
 		}
+		assert(
+			!main.querySelector('[data-ran-booster-reinstall-guidance]'),
+			'The inline Reinstall guidance line is removed.'
+		);
 
 		return { mainWidth: mainRect.width, viewportWidth: window.innerWidth };
 	});

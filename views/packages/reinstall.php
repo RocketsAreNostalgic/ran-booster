@@ -14,13 +14,15 @@ $reinstall_available = $package_mutation_available
 	&& \RAN\Deployment\DeploymentPolicy::DISABLED->value !== $deployment_policy;
 
 ?>
+<span class="ran-booster-reason-tooltip"<?php echo $reinstall_available ? '' : ' data-ran-booster-reason-tooltip'; ?>>
 <button
 	type="submit"
 	name="ran_booster[reinstall_after_save]"
 	value="1"
 	form="ran-booster-package-edit-form"
 	class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' button-update-package' ); ?>"
-	<?php disabled( ! $reinstall_available ); ?>
+	aria-disabled="<?php echo $reinstall_available ? 'false' : 'true'; ?>"
+	<?php echo $reinstall_available ? '' : 'aria-describedby="ran-booster-reinstall-reason"'; ?>
 	data-ran-booster-update-button
 	data-ran-booster-settings-reinstall
 	data-ran-booster-reinstall-capable="<?php echo esc_attr( $package_mutation_available ? '1' : '0' ); ?>"
@@ -37,3 +39,5 @@ $reinstall_available = $package_mutation_available
 	hx-sync="this:drop"
 	hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"
 ><span data-ran-booster-update-label><?php esc_html_e( 'Reinstall', 'ran-booster' ); ?></span></button>
+<span id="ran-booster-reinstall-reason" class="ran-booster-reason-tooltip__bubble" role="tooltip" hidden><?php esc_html_e( 'Set Updates to Manual or Automatic before reinstalling.', 'ran-booster' ); ?></span>
+</span>

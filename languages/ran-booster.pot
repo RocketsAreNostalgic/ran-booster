@@ -278,10 +278,10 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:155
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:307
-#: views/packages/edit.php:386
-#: views/packages/fields/deployment-policy.php:93
-#: views/packages/fields/deployment-policy.php:106
-#: views/packages/fields/deployment-policy.php:109
+#: views/packages/edit.php:380
+#: views/packages/fields/deployment-policy.php:90
+#: views/packages/fields/deployment-policy.php:102
+#: views/packages/fields/deployment-policy.php:105
 #: views/packages/index.php:493
 msgid "Updates"
 msgstr ""
@@ -1406,8 +1406,8 @@ msgid "An add-on guide is temporarily unavailable. Check plugin compatibility an
 msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
-#: assets/ran-booster-enhanced-mutations.js:1316
-#: assets/ran-booster-enhanced-mutations.js:1507
+#: assets/ran-booster-enhanced-mutations.js:1318
+#: assets/ran-booster-enhanced-mutations.js:1509
 msgid "We could not complete that request. Please try again."
 msgstr ""
 
@@ -6882,7 +6882,7 @@ msgid "Incoming branch-deployment webhooks are generally unavailable on local or
 msgstr ""
 
 #: views/documentation.php:352
-#: views/packages/fields/deployment-policy.php:70
+#: views/packages/fields/deployment-policy.php:67
 msgid "Read the Push-to-Deploy guide."
 msgstr ""
 
@@ -7945,7 +7945,7 @@ msgstr ""
 #. translators: %s is plugin or theme.
 #: views/packages/create.php:182
 #: views/packages/edit.php:276
-#: views/packages/edit.php:359
+#: views/packages/edit.php:353
 #: views/packages/index.php:117
 #, php-format
 msgid "Install another %s"
@@ -8095,44 +8095,44 @@ msgid "Booster will not reinterpret this package as a branch deployment. Restore
 msgstr ""
 
 #: views/packages/edit.php:275
-#: views/packages/edit.php:357
+#: views/packages/edit.php:351
 msgid "Package settings actions"
 msgstr ""
 
-#: views/packages/edit.php:333
+#: views/packages/edit.php:332
 msgid "Package operations"
 msgstr ""
 
-#: views/packages/edit.php:358
+#: views/packages/edit.php:352
 #: assets/ran-booster-settings.js:122
 msgid "Saving…"
 msgstr ""
 
-#: views/packages/edit.php:358
+#: views/packages/edit.php:352
 msgid "Saving package settings. This can take a few seconds."
 msgstr ""
 
-#: views/packages/edit.php:373
+#: views/packages/edit.php:367
 msgid "Package summary"
 msgstr ""
 
-#: views/packages/edit.php:375
+#: views/packages/edit.php:369
 msgid "Current source"
 msgstr ""
 
-#: views/packages/edit.php:381
+#: views/packages/edit.php:375
 msgid "Open repository"
 msgstr ""
 
-#: views/packages/edit.php:388
+#: views/packages/edit.php:382
 msgid "Source changes reset Automatic to Manual"
 msgstr ""
 
-#: views/packages/edit.php:391
+#: views/packages/edit.php:385
 msgid "WordPress state"
 msgstr ""
 
-#: views/packages/edit.php:393
+#: views/packages/edit.php:387
 msgid "Independent of package source"
 msgstr ""
 
@@ -8164,52 +8164,52 @@ msgstr ""
 msgid "Private repos require a PAT with appropriate access."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:29
+#: views/packages/fields/deployment-policy.php:26
 msgid "Manual waits for an administrator. Automatic deploys on push."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:39
+#: views/packages/fields/deployment-policy.php:36
 msgid "Editing this package’s files here? Choose Disabled."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:40
+#: views/packages/fields/deployment-policy.php:37
 msgid "Manual and Automatic can overwrite local changes when an update or reinstall runs."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:42
-#: views/packages/fields/deployment-policy.php:76
-#: views/packages/fields/deployment-policy.php:80
+#: views/packages/fields/deployment-policy.php:39
+#: views/packages/fields/deployment-policy.php:73
+#: views/packages/fields/deployment-policy.php:77
 msgid "Push-to-Deploy setting"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:42
-#: views/packages/fields/deployment-policy.php:76
-#: views/packages/fields/deployment-policy.php:80
+#: views/packages/fields/deployment-policy.php:39
+#: views/packages/fields/deployment-policy.php:73
+#: views/packages/fields/deployment-policy.php:77
 msgid "Docs"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:55
+#: views/packages/fields/deployment-policy.php:52
 msgid "Disabled — do not let Booster update this package"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:56
+#: views/packages/fields/deployment-policy.php:53
 msgid "Manual — update only when requested"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:57
+#: views/packages/fields/deployment-policy.php:54
 msgid "Automatic — install validated releases through WordPress Updates"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:57
+#: views/packages/fields/deployment-policy.php:54
 msgid "Automatic — deploy signed repository pushes"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:66
-#: views/packages/fields/deployment-policy.php:85
+#: views/packages/fields/deployment-policy.php:63
+#: views/packages/fields/deployment-policy.php:82
 msgid "Manual waits for an administrator. Automatic installs validated releases."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:69
+#: views/packages/fields/deployment-policy.php:66
 msgid "Automatic deployment is unavailable because this Git provider does not support signed webhooks."
 msgstr ""
 
@@ -8349,7 +8349,7 @@ msgstr ""
 
 #. translators: %s is plugins or themes.
 #: views/packages/index.php:230
-#: assets/ran-booster-packages.js:652
+#: assets/ran-booster-packages.js:673
 #, php-format,js-format
 msgid "0 %s selected"
 msgstr ""
@@ -8408,8 +8408,8 @@ msgstr ""
 
 #: views/packages/index.php:346
 #: views/packages/index.php:528
-#: views/packages/reinstall.php:30
-#: views/packages/reinstall.php:39
+#: views/packages/reinstall.php:32
+#: views/packages/reinstall.php:41
 msgid "Reinstall"
 msgstr ""
 
@@ -8502,7 +8502,7 @@ msgid "WordPress"
 msgstr ""
 
 #: views/packages/index.php:527
-#: views/packages/reinstall.php:32
+#: views/packages/reinstall.php:34
 msgid "Reinstall from the saved branch and overwrite local changes?"
 msgstr ""
 
@@ -8600,7 +8600,7 @@ msgstr ""
 msgid "No management changes have been made. Booster will not disconnect a package whose management identity or operation state cannot be verified."
 msgstr ""
 
-#: views/packages/reinstall-guidance.php:16
+#: views/packages/reinstall.php:42
 msgid "Set Updates to Manual or Automatic before reinstalling."
 msgstr ""
 
@@ -10900,16 +10900,16 @@ msgctxt "plugin"
 msgid "%s update failed."
 msgstr ""
 
-#: assets/ran-booster-packages.js:638
+#: assets/ran-booster-packages.js:659
 msgid "package"
 msgstr ""
 
-#: assets/ran-booster-packages.js:641
+#: assets/ran-booster-packages.js:662
 msgid "packages"
 msgstr ""
 
 #. translators: 1: number of selected packages, 2: package type label.
-#: assets/ran-booster-packages.js:679
+#: assets/ran-booster-packages.js:700
 #, js-format
 msgid "%1$d %2$s selected"
 msgid_plural "%1$d %2$s selected"
@@ -10917,27 +10917,27 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: selected-package summary, 2: number eligible for branch reinstall.
-#: assets/ran-booster-packages.js:693
+#: assets/ran-booster-packages.js:714
 #, js-format
 msgid "%1$s. %2$d eligible for branch Reinstall."
 msgstr ""
 
 #. translators: %s: package type label.
-#: assets/ran-booster-packages.js:728
+#: assets/ran-booster-packages.js:749
 #, js-format
 msgid "Select at least one %s."
 msgstr ""
 
-#: assets/ran-booster-packages.js:738
+#: assets/ran-booster-packages.js:759
 msgid "Select at least one branch package eligible for Reinstall."
 msgstr ""
 
-#: assets/ran-booster-packages.js:754
+#: assets/ran-booster-packages.js:775
 msgid "Reinstall cancelled."
 msgstr ""
 
 #. translators: %s: deployment state label.
-#: assets/ran-booster-packages.js:921
+#: assets/ran-booster-packages.js:942
 #, js-format
 msgid "Deployment: %s"
 msgstr ""

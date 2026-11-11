@@ -49,17 +49,36 @@ function fixture(policy, capable = true, deferred = false, standalone = false) {
 		},
 	};
 	const notice = { hidden: false };
-	const guidance = { hidden: false };
+	const reason = { hidden: false, id: 'ran-booster-reinstall-reason' };
+	const wrapperAttributes = new Map([
+		['data-ran-booster-reason-tooltip', ''],
+	]);
+	const wrapper = {
+		setAttribute(name, value) {
+			wrapperAttributes.set(name, value);
+		},
+		removeAttribute(name) {
+			wrapperAttributes.delete(name);
+		},
+		querySelector(selector) {
+			return selector === '[role="tooltip"]' ? reason : null;
+		},
+	};
 	const attributes = new Map([
 		['data-ran-booster-reinstall-capable', capable ? '1' : '0'],
 	]);
 	const reinstall = {
-		disabled: false,
 		getAttribute(name) {
 			return attributes.get(name) ?? null;
 		},
 		setAttribute(name, value) {
 			attributes.set(name, value);
+		},
+		removeAttribute(name) {
+			attributes.delete(name);
+		},
+		closest(selector) {
+			return selector === '.ran-booster-reason-tooltip' ? wrapper : null;
 		},
 	};
 	const operation = {
@@ -69,9 +88,6 @@ function fixture(policy, capable = true, deferred = false, standalone = false) {
 			}
 			if (selector === '[data-ran-booster-settings-reinstall]') {
 				return reinstall;
-			}
-			if (selector === '[data-ran-booster-reinstall-guidance]') {
-				return guidance;
 			}
 			return null;
 		},
@@ -103,7 +119,15 @@ function fixture(policy, capable = true, deferred = false, standalone = false) {
 		},
 	};
 
-	return { attributes, guidance, listeners, notice, reinstall, select };
+	return {
+		attributes,
+		listeners,
+		notice,
+		reason,
+		reinstall,
+		select,
+		wrapperAttributes,
+	};
 }
 
 test('disabled automation hides the local overwrite warning', () => {
@@ -155,19 +179,31 @@ test('choosing an enabled policy makes a capable reinstall actionable', () => {
 
 	try {
 		loadInitializer()();
-		assert.equal(state.reinstall.disabled, true);
-		assert.equal(state.guidance.hidden, false);
+		assert.equal(state.attributes.get('aria-disabled'), 'true');
+		assert.equal(state.attributes.get('aria-describedby'), state.reason.id);
+		assert.equal(
+			state.wrapperAttributes.has('data-ran-booster-reason-tooltip'),
+			true
+		);
 
 		state.select.value = 'manual';
 		state.listeners.get('change')();
-		assert.equal(state.reinstall.disabled, false);
-		assert.equal(state.guidance.hidden, true);
+		assert.equal(state.attributes.get('aria-disabled'), 'false');
+		assert.equal(state.attributes.has('aria-describedby'), false);
+		assert.equal(
+			state.wrapperAttributes.has('data-ran-booster-reason-tooltip'),
+			false
+		);
+		assert.equal(state.reason.hidden, true);
 		assert.equal(state.attributes.get('data-update-can-run'), '1');
 
 		state.select.value = 'disabled';
 		state.listeners.get('change')();
-		assert.equal(state.reinstall.disabled, true);
-		assert.equal(state.guidance.hidden, false);
+		assert.equal(state.attributes.get('aria-disabled'), 'true');
+		assert.equal(
+			state.wrapperAttributes.has('data-ran-booster-reason-tooltip'),
+			true
+		);
 		assert.equal(state.attributes.get('data-update-can-run'), '0');
 	} finally {
 		delete globalThis.document;
@@ -179,8 +215,11 @@ test('an unavailable mutation route stays disabled for enabled policies', () => 
 
 	try {
 		loadInitializer()();
-		assert.equal(state.reinstall.disabled, true);
-		assert.equal(state.guidance.hidden, false);
+		assert.equal(state.attributes.get('aria-disabled'), 'true');
+		assert.equal(
+			state.wrapperAttributes.has('data-ran-booster-reason-tooltip'),
+			true
+		);
 		assert.equal(state.attributes.get('data-update-can-run'), '0');
 	} finally {
 		delete globalThis.document;

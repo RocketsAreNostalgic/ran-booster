@@ -714,7 +714,6 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$package_operation_actions_html   = $with_action
 			? '<div class="ran-booster-package-operation-settings__actions" role="group"><a class="ran-wp-ui-button" href="#activate">Activate plugin</a></div>'
 			: '';
-		$package_operation_guidance_html  = '<p class="description" data-ran-booster-reinstall-guidance hidden>Set Updates to Manual or Automatic before reinstalling.</p>';
 		$package_field_layout             = 'grid';
 		$package_field_form               = 'ran-booster-package-edit-form';
 
@@ -742,7 +741,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		return $positions;
 	}
 
-	public function test_operation_layout_orders_label_select_description_notice_guidance_then_actions_for_releases(): void {
+	public function test_operation_layout_orders_label_select_description_notice_then_actions_for_releases(): void {
 		$html = $this->render_operation_policy( true, true, 'release_asset' );
 
 		$this->positions_in_order(
@@ -752,15 +751,14 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 				'select'      => 'name="ran_booster[deployment_policy]"',
 				'description' => 'Manual waits for an administrator. Automatic installs validated releases.',
 				'notice'      => 'data-ran-booster-local-development-warning',
-				'guidance'    => 'data-ran-booster-reinstall-guidance',
 				'actions'     => 'class="ran-booster-package-operation-settings__actions"',
 			)
 		);
-		// The description stays in the label/select group; the notice, guidance and actions are siblings after it.
+		// The description stays in the label/select group; the notice and actions are siblings after it.
 		self::assertMatchesRegularExpression( '/<\/select>\s*<\/div>\s*<p class="description">[^<]*<\/p>\s*<\/div>\s*<div class="notice notice-warning inline ran-wp-ui-notice/', $html );
 		self::assertSame( 1, substr_count( $html, 'ran-booster-deployment-policy-group' ) );
 		self::assertStringNotContainsString( 'deployment-policy-row--with-action', $html );
-		self::assertMatchesRegularExpression( '/<\/p>\s*<div class="ran-booster-package-operation-settings__actions" role="group">.*<\/div>\s*<\/div>\s*$/s', $html );
+		self::assertMatchesRegularExpression( '/<\/div>\s*<div class="ran-booster-package-operation-settings__actions" role="group">.*<\/div>\s*<\/div>\s*$/s', $html );
 	}
 
 	public function test_operation_layout_shows_the_branch_description_under_the_select(): void {
@@ -773,7 +771,6 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 				'select'      => 'name="ran_booster[deployment_policy]"',
 				'description' => 'Manual waits for an administrator. Automatic deploys on push.',
 				'notice'      => 'data-ran-booster-local-development-warning',
-				'guidance'    => 'data-ran-booster-reinstall-guidance',
 				'actions'     => 'class="ran-booster-package-operation-settings__actions"',
 			)
 		);
@@ -827,7 +824,6 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 			$html,
 			array(
 				'description' => 'Manual waits for an administrator',
-				'guidance'    => 'data-ran-booster-reinstall-guidance',
 				'actions'     => 'class="ran-booster-package-operation-settings__actions"',
 			)
 		);

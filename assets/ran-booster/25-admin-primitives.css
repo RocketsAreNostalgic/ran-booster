@@ -1227,7 +1227,7 @@
 		.ran-booster-package-summary__meta,
 		.ran-booster-package-row__activity-summary
 	)
-	> a,
+	> a:not(.ran-wp-ui-button),
 .ran-booster-admin .ran-booster-overview-provider-link,
 .ran-booster-admin .ran-booster-repository-detail td > a:only-child {
 	min-block-size: var(--ran-booster-space-24);

@@ -476,6 +476,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$actions_end   = false === $actions_start ? false : strpos( $html, '</div>', $actions_start );
 		self::assertIsInt( $actions_start );
 		self::assertIsInt( $link_position );
+		self::assertMatchesRegularExpression( '~<span class="ran-booster-readiness-actions__links">\s*<a href="[^"]*" target="_blank" rel="noopener noreferrer">Open repository[\s\S]*?</a>\s*<a href="https://example.test/repository-releases">Manage release automation</a>\s*</span>~', $html, 'The repository link and the add-on link share one trailing group.' );
+		self::assertSame( 1, substr_count( $html, 'ran-booster-readiness-actions__links' ) );
 		self::assertIsInt( $actions_end );
 		self::assertTrue( $actions_start < $link_position );
 		self::assertTrue( $link_position < $actions_end );

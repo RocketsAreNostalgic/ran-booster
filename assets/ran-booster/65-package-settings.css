@@ -824,8 +824,19 @@
 
 .ran-booster-admin .ran-booster-readiness-actions__links {
 	display: inline-flex;
-	gap: var(--ran-booster-space-8);
+	flex-wrap: wrap;
+	align-items: center;
+	column-gap: var(--ran-booster-space-16);
+	row-gap: var(--ran-booster-space-4);
+}
+
+.ran-booster-admin .ran-booster-readiness-actions__links > a {
 	white-space: nowrap;
+}
+
+.ran-booster-admin .ran-booster-readiness-actions__links > .notice {
+	flex-basis: 100%;
+	margin: 0;
 }
 
 .ran-booster-admin .ran-booster-release-switch-form,
@@ -995,9 +1006,7 @@
 	}
 
 	.ran-booster-admin .ran-booster-readiness-actions__links {
-		align-items: flex-start;
-		flex-direction: column;
-		white-space: normal;
+		flex-basis: 100%;
 	}
 }
 

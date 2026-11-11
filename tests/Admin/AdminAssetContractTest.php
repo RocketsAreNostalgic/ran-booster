@@ -200,6 +200,17 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'flex: 1 1 100%;', $narrow_rules[2] );
 	}
 
+	public function test_link_target_size_rule_leaves_button_styled_anchors_to_the_button_minimum(): void {
+		$css = $this->asset( 'ran-booster.css' );
+
+		if ( 1 !== preg_match( '/\.ran-booster-readiness-actions__links,[\s\S]*?\)\s*> a(:not\(\.ran-wp-ui-button\))?,[\s\S]*?\{([^}]*)\}/', $css, $rule ) ) {
+			self::fail( 'The container link target size rule is missing.' );
+		}
+		self::assertSame( ':not(.ran-wp-ui-button)', $rule[1], 'Button-styled anchors keep the Button minimum height.' );
+		self::assertStringContainsString( 'min-block-size: var(--ran-booster-space-24);', $rule[2] );
+		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-readiness-actions,[\s\S]*?\)\s*> a,/', $css );
+	}
+
 	public function test_standalone_text_links_keep_a_24px_target(): void {
 		$css = $this->asset( 'ran-booster.css' );
 

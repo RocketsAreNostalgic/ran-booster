@@ -538,7 +538,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-busy-label="Switching…"', $button[0] );
 		self::assertStringContainsString( 'data-ran-booster-busy-message="Switching the release track. This can take a few seconds."', $button[0] );
 		self::assertStringContainsString( 'aria-label="Switch to Preview releases"', $button[0] );
-		self::assertSame( 1, preg_match( '/<span class="button button-primary ran-booster-release-track-option is-current"[^>]*>/', $html, $current ) );
+		if ( 1 !== preg_match( '/<span class="button button-primary ran-booster-release-track-option is-current"[^>]*>/', $html, $current ) ) {
+			self::fail( 'Expected the current track span.' );
+		}
 		self::assertStringNotContainsString( 'data-ran-booster-busy-label', $current[0], 'The current track is a non-interactive span and carries no busy label.' );
 		self::assertSame( 1, preg_match( '/<\/div>\s*<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status><\/span>\s*<p id="ran-booster-release-track-description"/', $html ) );
 	}

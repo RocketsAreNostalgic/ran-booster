@@ -302,8 +302,44 @@
 }
 
 .ran-booster-admin .ran-booster-card__content {
+	--ran-booster-card-inset-inline: var(--ran-booster-space-24);
+
 	box-sizing: content-box;
 	min-inline-size: 0;
+}
+
+/*
+ * Actions that finish a Card sit in a footer band: a full-width band at the
+ * bottom of the Card with a divider above it and the actions at the start.
+ * The band bleeds through the Card content's inline inset
+ * (--ran-booster-card-inset-inline, which the Card's own padding must use) and
+ * the --footed Card content drops its bottom padding, so the band ends flush
+ * with the Card's bottom edge.
+ */
+
+.ran-booster-admin
+	.ran-booster-card__content.ran-booster-card__content--footed {
+	padding-block-end: 0;
+}
+
+.ran-booster-admin .ran-booster-card-footer {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	gap: var(--ran-booster-space-12);
+	margin-block: 0;
+	margin-inline: calc(-1 * var(--ran-booster-card-inset-inline));
+	padding: var(--ran-booster-space-16) var(--ran-booster-card-inset-inline);
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-card-footer > :is(p, div) {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-card-footer > :is(p, div):empty {
+	display: none;
 }
 
 /*

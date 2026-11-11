@@ -1147,6 +1147,25 @@ final class AdminAssetContractTest extends TestCase {
 		}
 	}
 
+	public function test_shared_card_footer_band_is_a_flush_start_aligned_band(): void {
+		$css = $this->asset( 'ran-booster/25-admin-primitives.css' );
+
+		if ( 1 !== preg_match( '/\.ran-booster-admin \.ran-booster-card-footer \{([^}]*)\}/', $css, $footer ) ) {
+			self::fail( 'The shared Card footer band rule is missing.' );
+		}
+		self::assertStringContainsString( 'display: flex;', $footer[1] );
+		self::assertStringContainsString( 'flex-wrap: wrap;', $footer[1] );
+		self::assertStringContainsString( 'justify-content: flex-start;', $footer[1] );
+		self::assertStringContainsString( 'gap: var(--ran-booster-space-12);', $footer[1] );
+		self::assertStringContainsString( 'margin-block: 0;', $footer[1] );
+		self::assertStringContainsString( 'margin-inline: calc(-1 * var(--ran-booster-card-inset-inline));', $footer[1] );
+		self::assertStringContainsString( 'padding: var(--ran-booster-space-16) var(--ran-booster-card-inset-inline);', $footer[1] );
+		self::assertStringContainsString( 'border-block-start: 1px solid var(--ran-booster-divider);', $footer[1] );
+		self::assertDoesNotMatchRegularExpression( '/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(|\b(left|right)\b/', $footer[1] );
+		self::assertMatchesRegularExpression( '/\.ran-booster-card__content\.ran-booster-card__content--footed \{\s*padding-block-end: 0;/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-admin \.ran-booster-card__content \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-space-24\);/', $css );
+	}
+
 	public function test_source_tab_strip_keeps_the_same_gap_above_every_pane(): void {
 		$css = $this->asset( 'ran-booster/65-package-settings.css' );
 		// Hidden inactive panes sit between the strip and the visible pane, so the rule must use the general sibling combinator.

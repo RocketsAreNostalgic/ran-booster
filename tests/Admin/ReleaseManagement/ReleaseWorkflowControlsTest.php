@@ -925,7 +925,7 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			array(),
 			'https://example.test/return'
 		);
-		$values = array();
+		$values    = array();
 		foreach ( $rows[0]['details'] as $detail ) {
 			if ( 'release_workflow' === ( $detail['category'] ?? '' ) ) {
 				$values[] = $detail['value'];

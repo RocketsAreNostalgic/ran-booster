@@ -43,7 +43,7 @@ $render_result_notices = static function () use ( $result_notices ): void {
 };
 
 // 'all' renders the form with its actions (package settings); 'form' and 'actions' render the same management form and its footer band as two parts
-// so the band can finish the Card outside the form; the band's buttons then name the form with form=.
+// so the band can finish the Webhook setup disclosure outside the form and span its body; the band's buttons then name the form with form=.
 $panel_part = isset( $panel_part ) && in_array( $panel_part, array( 'form', 'actions' ), true ) ? $panel_part : 'all';
 $form_id    = 'repository-webhook-management-form';
 

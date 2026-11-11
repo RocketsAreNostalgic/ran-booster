@@ -251,7 +251,7 @@ final class RepositoryWebhookManagementControls {
 			$operation_notice = is_array( $model['result'] ?? null ) || is_array( $model['recovery_warning'] ?? null );
 		}
 
-		// The Branch publishing Card finishes with the webhook actions as its footer band, outside the management form.
+		// The webhook actions are the footer band of the Webhook setup disclosure, after the management form, so they span the disclosure body.
 		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model, 'form' ) : '', $has_branch_consumer, $notices, true, $operation_notice, $row, null !== $manual_at, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model, 'actions' ) : '' );
 		return $model['webhooks_url'] ?? null;
 	}
@@ -315,10 +315,11 @@ final class RepositoryWebhookManagementControls {
 		return __( 'Webhook setup is unavailable until Booster can confirm this managed repository.', 'ran-booster' );
 	}
 
-	private function render_repository_webhook_setup_region( string $panel ): void {
+	private function render_repository_webhook_setup_region( string $panel, string $actions = '' ): void {
 		?>
 		<div class="ran-booster-repository-webhook-setup__content">
 			<?php echo $panel; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured output is rendered and escaped by the fixed Core panel view. ?>
+			<?php echo $actions; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured output is rendered and escaped by the fixed Core panel view. ?>
 		</div>
 		<?php
 	}
@@ -337,7 +338,7 @@ final class RepositoryWebhookManagementControls {
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<?php echo RepositoryPublishing::header( __( 'Branch publishing', 'ran-booster' ), 'ran-booster-repository-webhook-heading', $in_use, $link['url'], $link['label'], $in_use ? __( 'Manual updates work without setting up Push-to-deploy.', 'ran-booster' ) : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Shared header escapes its parts. ?>
-			<div class="ran-booster-settings-section__body<?php echo '' !== $actions ? ' ran-booster-settings-section__body--footed' : ''; ?>">
+			<div class="ran-booster-settings-section__body">
 				<div class="ran-booster-repository-publishing__tier">
 				<h4 id="ran-booster-repository-webhook-automation-heading" class="ran-booster-repository-publishing__subheading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?><?php echo $this->automation_badge( $items, $in_use, $manual ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes its label. ?></h4>
 				<p class="ran-booster-section__description ran-booster-repository-publishing__strapline"><?php esc_html_e( 'Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p>
@@ -364,11 +365,10 @@ final class RepositoryWebhookManagementControls {
 				<details id="ran-booster-repository-webhook-setup" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-webhook-setup ran-booster-disclosure<?php echo $inactive ? ' is-inactive' : ''; ?>"<?php echo $open ? ' open' : ''; ?>>
 					<summary><?php esc_html_e( 'Webhook setup', 'ran-booster' ); ?></summary>
 					<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-webhook-setup__body ran-booster-disclosure__body"<?php echo $inactive ? ' aria-disabled="true"' : ''; ?>>
-						<?php $this->render_repository_webhook_setup_region( $panel ); ?>
+						<?php $this->render_repository_webhook_setup_region( $panel, $actions ); ?>
 					</div>
 				</details></div>
 				<?php } ?>
-				<?php echo $actions; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured output is rendered and escaped by the fixed Core panel view. ?>
 				</div>
 			</div>
 		</div></div></section>

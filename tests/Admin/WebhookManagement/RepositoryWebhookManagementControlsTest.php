@@ -290,7 +290,8 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'class="ran-booster-repository-webhook-setup__content"' ), strpos( $html, 'data-ran-booster-ui-disclosure-content' ) );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-management__panel"', $html );
 		self::assertStringNotContainsString( 'ran-booster-panel ran-booster-push-deploy__panel', $html );
-		self::assertStringContainsString( 'class="ran-booster-settings-section__body ran-booster-settings-section__body--footed"', $html );
+		self::assertStringContainsString( 'class="ran-booster-settings-section__body"', $html );
+		self::assertStringNotContainsString( '--footed', $html );
 		self::assertSame( 1, substr_count( $html, '<details' ) );
 		$this->assert_webhook_actions_are_the_card_footer_band( $html );
 		self::assertStringContainsString( 'name="action" value="ran_booster_repository_webhook_management_operation"', $html );
@@ -332,7 +333,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$link = $links->item( 0 );
 		self::assertInstanceOf( \DOMElement::class, $link );
 		self::assertSame( $url, $rendered_url );
-		// The link row ends the form; the footer band comes after it, and no visible reason paragraph sits between them.
+		// The link row ends the form; the footer band comes after it inside the disclosure, and no visible reason paragraph sits between them.
 		self::assertSame( 1.0, $xpath->evaluate( 'count(../parent::form[contains(@class,"ran-booster-repository-webhook-management__form")])', $link ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(ancestor::form/following::div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card-footer ")][1])', $link ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(ancestor::div[contains(@class,"__actions")])', $link ) );
@@ -505,21 +506,24 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 'is-pending|Booster has not set up a webhook for this repository.', $step( $render( array( '9999' => '2026-08-21 09:30:15' ) ) ) );
 	}
 
-	/** The webhook actions finish the Card as a band outside the management form and name that form with form=. */
+	/** The webhook actions are the last child of the Webhook setup disclosure content, outside the management form, and name that form with form=. */
 	private function assert_webhook_actions_are_the_card_footer_band( string $html ): void {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
-		$xpath = new \DOMXPath( $document );
-		$band  = '//div[contains(@class,"ran-booster-repository-publishing__tier")]/*[last()][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card-footer ")][contains(@class,"ran-booster-repository-webhook-management__actions")][@role="group"]';
+		$xpath   = new \DOMXPath( $document );
+		$content = '//div[@data-ran-booster-ui-disclosure-content]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-repository-webhook-setup__content ")]';
+		$band    = $content . '/*[last()][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card-footer ")][contains(@class,"ran-booster-repository-webhook-management__actions")][@role="group"][@aria-label="Webhook"]';
 
-		// The band is the last child of the Card body content, below the disclosure, and is not the old action-row inside the form.
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $band . ')' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $band . '/preceding-sibling::div[@data-ran-booster-ui-disclosure="repository-webhook-setup"])' ) );
+		// It follows the management root (and so the form and the link row) inside the disclosure content element.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $band . '/preceding-sibling::div[contains(@class,"ran-booster-repository-webhook-management")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $band . '/ancestor::details[@id="ran-booster-repository-webhook-setup"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//form//*[contains(@class,"ran-booster-repository-webhook-management__actions")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//form//button[@name="repository_webhook_management_operation"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $band . '/ancestor::form)' ) );
-		// The Card body is footed and the band does not leave the Card body.
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $band . '/ancestor::div[contains(@class,"ran-booster-settings-section__body--footed")])' ) );
+		// The Card body is not footed, and the band is not a child of the Push-to-deploy tier.
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[contains(@class,"--footed")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//div[contains(@class,"ran-booster-repository-publishing__tier")]/*[contains(@class,"ran-booster-card-footer")])' ) );
 
 		$form_id = $xpath->evaluate( 'string(//form[contains(@class,"ran-booster-repository-webhook-management__form")]/@id)' );
 		self::assertSame( 'repository-webhook-management-form', $form_id );
@@ -540,6 +544,16 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			$labels[] = trim( (string) $xpath->evaluate( 'string(.)', $button ) );
 		}
 		self::assertSame( 'Set up', $labels[0], 'The primary action comes first.' );
+		self::assertSame( 'Remove', $labels[ count( $labels ) - 1 ], 'The danger action comes last.' );
+		$nodes = $xpath->query( '//*[@aria-describedby]' );
+		self::assertNotFalse( $nodes );
+		$described = array();
+		foreach ( $nodes as $node ) {
+			if ( $node instanceof \DOMElement ) {
+				array_push( $described, ...explode( ' ', $node->getAttribute( 'aria-describedby' ) ) );
+			}
+		}
+		self::assertSame( count( $described ), count( array_unique( $described ) ), 'Described-by ids are unique across the panel.' );
 		// The management form keeps its hidden inputs and the busy status; the htmx attributes stay on the form.
 		foreach ( array( 'action', 'provider_code', 'repository_id', 'return_url' ) as $field ) {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@id="' . $form_id . '"]//input[@type="hidden"][@name="' . $field . '"])' ), $field );

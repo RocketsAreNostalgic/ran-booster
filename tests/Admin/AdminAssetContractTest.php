@@ -1195,16 +1195,18 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'class="ran-booster-debug-capture__footer"', $view );
 	}
 
-	public function test_webhook_management_band_exists_only_while_setup_is_open_and_is_flush_with_the_card(): void {
+	public function test_webhook_management_band_is_the_flush_footer_of_the_setup_disclosure(): void {
 		$css = $this->asset( 'ran-booster-repository-webhook-management.css' );
 
-		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-section\s*\.ran-booster-settings-section__body \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-space-24\);/', $css );
-		// Hidden by default, shown only with the open disclosure (Base UI open state or the native fallback).
-		self::assertMatchesRegularExpression( '/> \.ran-booster-card-footer\.ran-booster-repository-webhook-management__actions \{\s*display: none;\s*margin-block-start: var\(--ran-booster-card-gap\);/', $css );
-		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*\),\s*:has\(details#ran-booster-repository-webhook-setup\[open\]\)\s*\)\s*> \.ran-booster-card-footer\.ran-booster-repository-webhook-management__actions \{\s*display: flex;/', $css );
-		// The footed body drops its bottom padding only in the same open state.
-		self::assertMatchesRegularExpression( '/\.ran-booster-settings-section__body--footed:has\(\s*:is\(.*?\[data-open\].*?details#ran-booster-repository-webhook-setup\[open\].*?\)\s*\) \{\s*padding-block-end: 0;/s', $css );
-		self::assertMatchesRegularExpression( '/max-width: 782px\) \{.*?--ran-booster-card-inset-inline: var\(--ran-booster-space-18\);.*?__actions \{\s*align-items: stretch;\s*flex-direction: column;/s', $css );
+		// The disclosure body supplies the 16px inset the band bleeds through and drops its bottom padding so the band meets the border.
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-setup__body\.ran-booster-disclosure__body \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-space-16\);\s*padding-block-end: 0;/', $css );
+		// 16px content-to-band gap. The band declares no radius: the disclosure root clips its content to its own rounded corners.
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-setup__content\s*> \.ran-booster-card-footer\.ran-booster-repository-webhook-management__actions \{\s*margin-block-start: var\(--ran-booster-space-16\);\s*\}/', $css );
+		self::assertDoesNotMatchRegularExpression( '/__actions \{[^}]*radius/', $css );
+		// The band is no longer a Card-level footer: no open-state :has() rules and no footed Card body for this surface.
+		self::assertStringNotContainsString( 'settings-section__body--footed', $css );
+		self::assertStringNotContainsString( ':has(', $css );
+		self::assertMatchesRegularExpression( '/max-width: 782px\) \{\s*\.ran-booster-admin \.ran-booster-repository-webhook-management__actions \{\s*align-items: stretch;\s*flex-direction: column;/', $css );
 		self::assertDoesNotMatchRegularExpression( '/__actions \{[^}]*(justify-content:\s*(?!flex-start)[a-z-]+|margin-inline-start:\s*auto)/', $css );
 	}
 

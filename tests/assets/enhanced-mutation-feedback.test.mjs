@@ -68,7 +68,7 @@ function loadFunction(name, dependencies = {}) {
 	// The shared busy-label helpers live beside, not inside, the loaded function.
 	return Function(
 		...Object.keys(localizedDependencies),
-		`"use strict"; ${extractFunction('showBusyLabel')}\n${extractFunction('restoreBusyLabel')}\nreturn (${extractFunction(name)});`
+		`"use strict"; ${extractFunction('busyStatus')}\n${extractFunction('showBusyLabel')}\n${extractFunction('restoreBusyLabel')}\nreturn (${extractFunction(name)});`
 	)(...Object.values(localizedDependencies));
 }
 

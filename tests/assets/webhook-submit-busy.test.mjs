@@ -158,7 +158,7 @@ test('the pressed button gets the shared busy pattern without being disabled', (
 		buttons[1].children[0].attrs.has('data-ran-booster-submit-busy-label'),
 		true
 	);
-	assert.equal(buttons[1].style.minInlineSize, '97px');
+	assert.equal(buttons[1].style.minInlineSize, '96.4px');
 	assert.equal(form.getAttribute('aria-busy'), 'true');
 	assert.ok(form.classList.contains('ran-booster-enhanced-mutation-is-busy'));
 	assert.equal(status.textContent, 'Comparing the webhook.');
@@ -273,4 +273,61 @@ test('the HTMX mutation path applies the same busy label and restores it', () =>
 		source,
 		/restoreBusyLabel\(form, submitter, state\.savedLabel\)/
 	);
+});
+
+function helperFunction(name) {
+	const start = source.indexOf(`\tfunction ${name}(`);
+	assert.notEqual(start, -1, `${name} must exist.`);
+	const end = source.indexOf('\n\t}\n', start);
+	return source.slice(start, end + 4);
+}
+
+const busyHelpers = Function(
+	'document',
+	`"use strict";
+${helperFunction('showBusyLabel')}
+${helperFunction('busyStatus')}
+${helperFunction('restoreBusyLabel')}
+return { showBusyLabel, restoreBusyLabel };`
+);
+
+test('the busy label opt-in is generic for a plain form submitter and a button-owned HTMX request', () => {
+	const helpers = busyHelpers({ createElement: () => element() });
+	const status = element({ 'data-ran-booster-submit-busy-status': '' });
+	const owner = element();
+	owner.querySelector = (selector) =>
+		selector === '[data-ran-booster-submit-busy-status]' ? status : null;
+
+	// A plain POST form: the form contains the status.
+	const plain = element(
+		{
+			'data-ran-booster-busy-label': 'Stopping…',
+			'data-ran-booster-busy-message': 'Stopping management.',
+		},
+		'Stop managing'
+	);
+	const saved = helpers.showBusyLabel(owner, plain);
+	assert.equal(plain.textContent, 'Stopping…');
+	assert.equal(status.textContent, 'Stopping management.');
+	helpers.restoreBusyLabel(owner, plain, saved);
+	assert.equal(plain.textContent, 'Stop managing');
+	assert.equal(status.textContent, '');
+
+	// An HTMX request owned by the button itself: the status sits in the
+	// form the button is associated with through its form attribute.
+	const button = element(
+		{ 'data-ran-booster-busy-label': 'Saving…' },
+		'Save settings'
+	);
+	button.querySelector = () => null;
+	button.form = owner;
+	const buttonSaved = helpers.showBusyLabel(button, button);
+	assert.equal(button.textContent, 'Saving…');
+	assert.equal(status.textContent, 'Saving…', 'The label is the fallback.');
+	helpers.restoreBusyLabel(button, button, buttonSaved);
+	assert.equal(button.textContent, 'Save settings');
+	assert.equal(status.textContent, '');
+
+	// Without a busy label nothing changes.
+	assert.equal(helpers.showBusyLabel(owner, element({}, 'Plain')), null);
 });

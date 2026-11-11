@@ -221,7 +221,8 @@ $policy_labels = array(
 					<option value="deactivate-plugins"><?php esc_html_e( 'Disable in WordPress', 'ran-booster' ); ?></option>
 				<?php } ?>
 			</select>
-			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( true ) . ' action' ); ?>" data-ran-booster-bulk-apply disabled><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
+			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( true ) . ' action' ); ?>" data-ran-booster-bulk-apply data-ran-booster-busy-label="<?php echo esc_attr( __( 'Applying…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Applying the bulk action. This can take a few seconds.', 'ran-booster' ) ); ?>" disabled><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
+			<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 			<span class="ran-booster-bulk-actions__status" aria-live="polite" data-ran-booster-selection-status><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( '0 %s selected', 'ran-booster' ), $bulk_type_label ) ); ?></span>
 		</form>
 		<?php } ?>

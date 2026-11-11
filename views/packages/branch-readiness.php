@@ -290,6 +290,8 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					hx-push-url="<?php echo esc_url( wp_make_link_relative( (string) $check_return_url ) ); ?>"
 					hx-sync="this:drop"
 					hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"
+					data-ran-booster-busy-label="<?php echo esc_attr( __( 'Saving and checking…', 'ran-booster' ) ); ?>"
+					data-ran-booster-busy-message="<?php echo esc_attr( __( 'Saving settings and checking the branch. This can take a few seconds.', 'ran-booster' ) ); ?>"
 					<?php disabled( isset( $package_mutation_available ) && false === $package_mutation_available ); ?>
 					><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
 				<?php } ?>

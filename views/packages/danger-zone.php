@@ -23,7 +23,7 @@ $delete_description = 'plugin' === $package_view->get_type()
 <details id="ran-booster-package-danger-zone" class="ran-booster-settings-disclosure ran-booster-package-danger-zone ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure <?php echo $package_danger_open ? 'open' : ''; ?> aria-labelledby="ran-booster-package-danger-zone-heading">
 	<summary><h3 id="ran-booster-package-danger-zone-heading" class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Danger zone', 'ran-booster' ); ?></h3></summary>
 	<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-package-danger-zone__actions ran-booster-disclosure__body">
-		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit>
+		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit data-ran-booster-submit-busy>
 			<?php wp_nonce_field( $package_view->get_action( 'unlink' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'unlink' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $package_view->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $identifier_value ); ?>">
@@ -34,12 +34,13 @@ $delete_description = 'plugin' === $package_view->get_type()
 				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'I understand Booster will stop managing this %s.', 'ran-booster' ), $package_type_label ) ); ?>
 			</label>
 			<p class="description"><?php esc_html_e( 'The installed files and WordPress activation state are unchanged.', 'ran-booster' ); ?></p>
-			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' ) ); ?>" disabled data-ran-booster-package-removal-submit>
+			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' ) ); ?>" disabled data-ran-booster-package-removal-submit data-ran-booster-busy-label="<?php echo esc_attr( __( 'Stopping…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Stopping management. This can take a few seconds.', 'ran-booster' ) ); ?>">
 				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Stop managing %s', 'ran-booster' ), $package_type_label ) ); ?>
 			</button>
+			<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 		</form>
 
-		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit>
+		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit data-ran-booster-submit-busy>
 			<?php wp_nonce_field( $package_view->get_action( 'unlink-delete' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'unlink-delete' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $package_view->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $identifier_value ); ?>">
@@ -52,9 +53,10 @@ $delete_description = 'plugin' === $package_view->get_type()
 			<p class="description">
 				<?php echo esc_html( $delete_description ); ?>
 			</p>
-			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'solid' ) ); ?>" disabled data-ran-booster-package-removal-submit>
+			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'solid' ) ); ?>" disabled data-ran-booster-package-removal-submit data-ran-booster-busy-label="<?php echo esc_attr( __( 'Deleting…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Removing the package. This can take a few seconds.', 'ran-booster' ) ); ?>">
 				<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Stop managing and delete %s', 'ran-booster' ), $package_type_label ) ); ?>
 			</button>
+			<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 		</form>
 	</div>
 </details></div>

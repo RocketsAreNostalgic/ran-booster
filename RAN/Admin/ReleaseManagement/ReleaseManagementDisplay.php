@@ -222,14 +222,16 @@ final class ReleaseManagementDisplay {
 								<input type="hidden" name="<?php echo esc_attr( (string) $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
 							<?php } ?>
 						<?php } ?>
-						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"<?php disabled( ! $recheck_enabled ); ?> aria-disabled="<?php echo $recheck_enabled ? 'false' : 'true'; ?>"><?php esc_html_e( 'Recheck eligibility', 'ran-booster' ); ?></button>
+						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"<?php disabled( ! $recheck_enabled ); ?> aria-disabled="<?php echo $recheck_enabled ? 'false' : 'true'; ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Rechecking…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Rechecking eligibility. This can take a few seconds.', 'ran-booster' ) ); ?>"><?php esc_html_e( 'Recheck eligibility', 'ran-booster' ); ?></button>
+						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 					</form>
 					<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post"<?php echo $refresh_enabled ? ' data-ran-booster-package-mutation' : ''; ?>>
 						<?php if ( $refresh_enabled ) { ?>
 							<?php $this->admin_post_fields( 'refresh', $package, $refresh_nonce_action ); ?>
 							<input type="hidden" name="return_to_settings" value="1">
 						<?php } ?>
-						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"<?php disabled( ! $refresh_enabled ); ?> aria-disabled="<?php echo $refresh_enabled ? 'false' : 'true'; ?>"><?php esc_html_e( 'Check releases', 'ran-booster' ); ?></button>
+						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"<?php disabled( ! $refresh_enabled ); ?> aria-disabled="<?php echo $refresh_enabled ? 'false' : 'true'; ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Checking…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Checking for published releases. This can take a few seconds.', 'ran-booster' ) ); ?>"><?php esc_html_e( 'Check releases', 'ran-booster' ); ?></button>
+						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 					</form>
 					<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) . ( $updates_enabled ? '' : ' disabled' ) ); ?>"<?php echo $updates_enabled ? ' href="' . esc_url( admin_url( 'update-core.php' ) ) . '"' : ' aria-disabled="true" tabindex="-1"'; ?>><?php esc_html_e( 'Open WordPress updates', 'ran-booster' ); ?></a>
 					<?php if ( '' !== $expected_update_uri ) { ?>
@@ -264,7 +266,7 @@ final class ReleaseManagementDisplay {
 			?>
 			<div class="ran-booster-release-switch-actions">
 				<span class="ran-booster-release-switch-actions__summary" data-ran-booster-use-releases-summary="<?php echo esc_attr( $switch_track_template ); ?>"><?php echo esc_html( sprintf( $switch_track_template, $release_track_summary ) ); ?></span>
-				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" form="<?php echo esc_attr( $track_form_id ); ?>" data-ran-booster-use-releases data-ran-booster-use-releases-ready="<?php echo $track_disabled ? 'false' : 'true'; ?>"<?php disabled( $track_disabled ); ?> aria-disabled="<?php echo $track_disabled ? 'true' : 'false'; ?>"<?php echo $track_disabled ? ' aria-describedby="ran-booster-release-readiness-status"' : ''; ?>><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Switching…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Switching to published releases. This can take a few seconds.', 'ran-booster' ) ); ?>" form="<?php echo esc_attr( $track_form_id ); ?>" data-ran-booster-use-releases data-ran-booster-use-releases-ready="<?php echo $track_disabled ? 'false' : 'true'; ?>"<?php disabled( $track_disabled ); ?> aria-disabled="<?php echo $track_disabled ? 'true' : 'false'; ?>"<?php echo $track_disabled ? ' aria-describedby="ran-booster-release-readiness-status"' : ''; ?>><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
 			</div>
 		<?php } ?>
 		<?php
@@ -532,6 +534,10 @@ final class ReleaseManagementDisplay {
 		<?php
 		$this->render_release_track( $selected_channel, $mode, $disabled, 'ran-booster-release-track-description', null, $form_id );
 
+		if ( 'branch' === $mode ) {
+			echo '<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>';
+		}
+
 		echo '</form>';
 	}
 
@@ -659,7 +665,7 @@ final class ReleaseManagementDisplay {
 					</li>
 				</ul>
 				<div class="ran-booster-action-row ran-booster-readiness-actions">
-					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" formaction="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" formmethod="post" name="action" value="ran_booster_release_install" data-ran-booster-release-install hidden><?php echo esc_html( 'plugin' === $type ? __( 'Install published plugin', 'ran-booster' ) : __( 'Install published theme', 'ran-booster' ) ); ?></button>
+					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" formaction="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" formmethod="post" name="action" value="ran_booster_release_install" data-ran-booster-release-install data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing the published release. This can take a few seconds.', 'ran-booster' ) ); ?>" hidden><?php echo esc_html( 'plugin' === $type ? __( 'Install published plugin', 'ran-booster' ) : __( 'Install published theme', 'ran-booster' ) ); ?></button>
 				</div>
 			</section>
 		</div>

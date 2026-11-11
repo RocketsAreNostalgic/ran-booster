@@ -51,7 +51,7 @@ $troubleshooting_url  = add_query_arg(
 		<?php } elseif ( 'damaged' === $recovery_state && null !== $recovery_confirmation ) { ?>
 			<p><?php esc_html_e( 'The problem is in Booster’s saved management settings. This does not establish that the installed package or its data is damaged. Booster cannot use these invalid settings to manage updates.', 'ran-booster' ); ?></p>
 			<p><?php esc_html_e( 'You can stop Booster managing this package and then link it again using verified repository settings. Stopping management keeps its installed files, WordPress activation state, package data, shared credentials and deployment history.', 'ran-booster' ); ?></p>
-			<form method="post" action="<?php echo esc_url( $recovery_url ); ?>">
+			<form method="post" action="<?php echo esc_url( $recovery_url ); ?>" data-ran-booster-submit-busy>
 				<?php wp_nonce_field( \RAN\Admin\PackageAdminController::recovery_action( $recovery_type, $recovery_identifier, $recovery_confirmation['adoption_token'], $recovery_confirmation['digest'], $recovery_confirmation['installed_digest'] ) ); ?>
 				<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( 'recover-' . $recovery_type ); ?>">
 				<input type="hidden" name="ran_booster[identifier]" value="<?php echo esc_attr( $recovery_identifier ); ?>">
@@ -59,7 +59,8 @@ $troubleshooting_url  = add_query_arg(
 					<input type="hidden" name="ran_booster[<?php echo esc_attr( $confirmation_field ); ?>]" value="<?php echo esc_attr( $recovery_confirmation[ $confirmation_field ] ); ?>">
 				<?php } ?>
 				<p><label><input type="checkbox" name="ran_booster[confirm_package_removal]" value="1" required> <?php echo esc_html( sprintf( /* translators: %s is the installed package name. */ __( 'Stop managing %s and retain its installed files.', 'ran-booster' ), $recovery_name ) ); ?></label></p>
-				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php echo esc_html( sprintf( /* translators: %s is the installed package name. */ _x( 'Stop managing %s', 'installed package name', 'ran-booster' ), $recovery_name ) ); ?></button>
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Stopping…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Stopping management. This can take a few seconds.', 'ran-booster' ) ); ?>"><?php echo esc_html( sprintf( /* translators: %s is the installed package name. */ _x( 'Stop managing %s', 'installed package name', 'ran-booster' ), $recovery_name ) ); ?></button>
+				<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 			</form>
 		<?php } else { ?>
 			<?php if ( null !== $recovery_blocker ) { ?>

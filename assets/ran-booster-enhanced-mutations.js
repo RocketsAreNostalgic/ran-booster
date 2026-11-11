@@ -32,18 +32,17 @@
 			nodes: Array.from(submitter.childNodes),
 			minInlineSize: submitter.style.minInlineSize,
 		};
-		// Pin the width first so a shorter label does not shrink the button.
+		// Pin the exact width first so a shorter label does not shrink the
+		// button. Rounding up would push a grown flex button onto a new line.
 		const width = submitter.getBoundingClientRect().width;
 		if (width > 0) {
-			submitter.style.minInlineSize = `${Math.ceil(width)}px`;
+			submitter.style.minInlineSize = `${width}px`;
 		}
 		const label = document.createElement('span');
 		label.setAttribute('data-ran-booster-submit-busy-label', '');
 		label.textContent = busyLabel;
 		submitter.replaceChildren(label);
-		const status = form.querySelector(
-			'[data-ran-booster-submit-busy-status]'
-		);
+		const status = busyStatus(form, submitter);
 		if (status) {
 			status.textContent =
 				submitter.getAttribute('data-ran-booster-busy-message') ||
@@ -52,15 +51,24 @@
 		return saved;
 	}
 
+	// A button that is its own enhanced element announces through the status
+	// inside the form it belongs to.
+	function busyStatus(form, submitter) {
+		const selector = '[data-ran-booster-submit-busy-status]';
+		return (
+			form.querySelector?.(selector) ||
+			submitter.form?.querySelector?.(selector) ||
+			null
+		);
+	}
+
 	function restoreBusyLabel(form, submitter, saved) {
 		if (!saved) {
 			return;
 		}
 		submitter.replaceChildren(...saved.nodes);
 		submitter.style.minInlineSize = saved.minInlineSize;
-		const status = form.querySelector(
-			'[data-ran-booster-submit-busy-status]'
-		);
+		const status = busyStatus(form, submitter);
 		if (status) {
 			status.textContent = '';
 		}

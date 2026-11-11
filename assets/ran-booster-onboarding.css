@@ -198,6 +198,7 @@
 .ran-booster-admin .ran-booster-settings__card--storage code,
 .ran-booster-admin .ran-booster-onboarding__storage-facts code {
 	display: block;
+	margin-inline: 0;
 	padding-block: var(--ran-booster-space-6);
 	padding-inline: var(
 		--ran-booster-storage-field-padding-inline,

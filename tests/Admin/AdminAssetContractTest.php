@@ -791,6 +791,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/--ran-booster-storage-field-inset: calc\(\s*var\(--ran-booster-storage-field-padding-inline\) \+\s*var\(--ran-booster-storage-field-border\)\s*\);/', $css );
 		self::assertMatchesRegularExpression( '/padding-inline: var\(\s*--ran-booster-storage-field-padding-inline,/', $css );
 		self::assertStringContainsString( 'border: var(--ran-booster-storage-field-border, 1px) solid', $css );
+		// WordPress core gives code a 1px inline margin; the field resets it so the note's inset is exactly padding plus border.
+		self::assertMatchesRegularExpression( '/__storage-facts code \{\s*display: block;\s*margin-inline: 0;/', $css );
 		if ( 1 !== preg_match( '/__storage-facts-note \{([^}]*)\}/', $css, $note ) ) {
 			self::fail( 'The storage facts note rule is missing.' );
 		}

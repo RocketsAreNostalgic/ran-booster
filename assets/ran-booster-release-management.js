@@ -657,8 +657,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		}
 	};
 
-	if (typeof MutationObserver === 'function') {
-		new MutationObserver(syncUseReleasesState).observe(
+	if (typeof window.MutationObserver === 'function') {
+		new window.MutationObserver(syncUseReleasesState).observe(
 			document.documentElement,
 			{
 				attributes: true,

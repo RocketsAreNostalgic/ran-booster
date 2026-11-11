@@ -5,6 +5,7 @@
  * profile screen keeps its own layout. The Disclosure replaces the native
  * <details>, so nothing here may depend on the details element's class.
  */
+
 .ran-booster-admin
 	.ran-booster-repository-webhook-management
 	.ran-booster-repository-webhook-management__layout {
@@ -87,6 +88,7 @@
  * whole process in as few rows as it divides into evenly, so a laptop-width
  * body never wraps to a lone orphan step.
  */
+
 .ran-booster-admin
 	:is(
 		.ran-booster-repository-webhook-section,
@@ -177,6 +179,7 @@
  * content to its own rounded corners, so the band follows them without radii of
  * its own. The Card body keeps its normal padding.
  */
+
 .ran-booster-admin
 	.ran-booster-repository-webhook-setup__body.ran-booster-disclosure__body {
 	--ran-booster-card-inset-inline: var(--ran-booster-space-16);
@@ -293,6 +296,7 @@
  * whole-element opacity, which dropped step text below 4.5:1. Only the
  * decorative step markers are dimmed.
  */
+
 .ran-booster-admin
 	.ran-booster-repository-webhook-lifecycle.is-inactive
 	.ran-booster-webhook-step

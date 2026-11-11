@@ -275,9 +275,6 @@
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-12);
-}
-
-.ran-booster-admin .ran-booster-repository-detail__header {
 	margin-block-end: var(--ran-booster-card-gap);
 }
 
@@ -344,6 +341,7 @@
 
 /* Auto layout: headings and short values keep whole words; only the package
    identifier (long path) breaks, so narrow containers scroll instead of wrapping mid-word. */
+
 .ran-booster-admin
 	.ran-booster-data-table.ran-booster-repository-detail__packages {
 	table-layout: auto;
@@ -551,7 +549,7 @@
 	.ran-booster-repository-detail__fact-label {
 	color: var(--ran-booster-text-muted);
 	font-size: var(--ran-booster-font-size-md);
-	font-weight: normal;
+	font-weight: 400;
 }
 
 /* Record cards: a value sits beside its label when the card is wide enough, and wraps beneath it when narrow. */

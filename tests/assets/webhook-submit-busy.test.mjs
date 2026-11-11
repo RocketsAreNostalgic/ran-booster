@@ -50,11 +50,10 @@ function element(attributes = {}, text = '') {
 			this.children.push(child);
 		},
 		get childNodes() {
-			return this.children.length
-				? [...this.children]
-				: this._text
-					? [element({}, this._text)]
-					: [];
+			if (this.children.length) {
+				return [...this.children];
+			}
+			return this._text ? [element({}, this._text)] : [];
 		},
 		replaceChildren(...nodes) {
 			this._text = '';

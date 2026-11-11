@@ -129,6 +129,7 @@
  * not active (Branch while Releases is active, and the reverse). Message at
  * the start, one action at the end; it wraps on narrow widths.
  */
+
 .ran-booster-admin .ran-booster-source-switch-bar {
 	display: flex;
 	align-items: center;
@@ -158,6 +159,7 @@
  * muted text colour instead of whole-card opacity, which dropped its text and
  * links below 4.5:1. Only the decorative status icons are dimmed.
  */
+
 .ran-booster-admin
 	.ran-booster-branch-settings.is-inactive
 	:is(label, h4, strong) {
@@ -250,6 +252,7 @@
  * always adjacent to the tab strip. A general sibling selector keeps the gap
  * between the strip and its pane the same in every source view.
  */
+
 .ran-booster-admin
 	.ran-booster-package-source--navigation
 	~ .ran-booster-package-source-pane {
@@ -418,6 +421,7 @@
  * hidden and the body keeps its normal bottom padding, so no gap or second
  * divider remains.
  */
+
 .ran-booster-admin
 	.ran-booster-package-operation-settings
 	.ran-booster-settings-section__body.ran-booster-settings-section__body--footed:not(
@@ -579,6 +583,7 @@
 	min-inline-size: 0;
 	min-block-size: 40px;
 	margin: 0;
+
 	/* The chevron keeps its core room at the end; the start gap is trimmed so the longest selected label fits a phone. */
 	padding-inline-start: var(--ran-booster-space-8);
 	text-overflow: ellipsis;
@@ -1061,6 +1066,7 @@
  * body ends on the shared Card block-end inset.
  * The Installation Cards keep their own 16px header padding.
  */
+
 .ran-booster-admin .ran-booster-settings__card {
 	--ran-booster-settings-card-inset: var(--ran-booster-space-24);
 
@@ -1095,6 +1101,7 @@
  * group's own bottom margin would stack on it, so it goes; the footed body
  * ends in its footer band instead.
  */
+
 .ran-booster-admin
 	.ran-booster-settings__card-body:not(
 		.ran-booster-settings__card-body--footed
@@ -1110,6 +1117,7 @@
  * later groups keep theirs. Scoped to the Settings Card body, never to other
  * Cards.
  */
+
 .ran-booster-admin
 	.ran-booster-settings__card-body
 	> [data-ran-booster-general-scope]:nth-child(
@@ -1128,6 +1136,7 @@
  * keep working) and inside the body, so it is hidden whenever the Card is
  * collapsed and visible when it is open.
  */
+
 .ran-booster-admin
 	.ran-booster-settings__card-body.ran-booster-settings__card-body--footed {
 	padding-block-end: 0;

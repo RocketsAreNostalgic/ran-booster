@@ -41,6 +41,7 @@
  * The warning is an ordinary row directly beneath the header, outside the
  * heading and the toggle, so it can hold a link. It is visible closed and open.
  */
+
 .ran-booster-admin .ran-booster-troubleshooting__entry-warning {
 	display: block;
 	margin: 0;
@@ -55,6 +56,7 @@
  * Every Installation header keeps 16px of vertical padding closed and open, so
  * nothing shifts on toggle.
  */
+
 .ran-booster-admin
 	:is(
 		[data-ran-booster-ui-disclosure="installation-section"],
@@ -78,6 +80,7 @@
  * The native fallback keeps the warning inside the summary, on its own row
  * below the title row, so the shared summary divider already sits below it.
  */
+
 .ran-booster-admin
 	[data-ran-booster-ui-disclosure-warned]
 	> details[data-ran-booster-ui-disclosure-fallback]
@@ -179,6 +182,7 @@
  * name are unchanged. Wide Cards keep the stacked title and strapline at the
  * start with the badge and chevron at the end.
  */
+
 .ran-booster-admin .ran-booster-troubleshooting__installation-entry {
 	container-type: inline-size;
 }
@@ -487,6 +491,7 @@
 
 /* Keep the provider, subject and Filter controls on one row at desktop widths;
    a long subject label truncates instead of pushing Filter onto its own row. */
+
 .ran-booster-admin .ran-booster-activity .ran-booster-package-list-filters {
 	flex: 1 1 auto;
 	flex-wrap: nowrap;
@@ -817,6 +822,7 @@
  * Card content drops its bottom padding here and the footer band ends flush
  * with the Card edge.
  */
+
 .ran-booster-admin
 	[data-ran-booster-card="troubleshooting"].ran-booster-card
 	.ran-booster-card__content.ran-booster-card__content--footed {

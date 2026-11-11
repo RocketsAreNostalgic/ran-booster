@@ -548,6 +548,7 @@
  * focus keeps the core focus stroke. Component rules do not set their own
  * control border colours; the AdminAssetContractTest enforces that.
  */
+
 .ran-booster-admin
 	:is(
 		select,

@@ -36,12 +36,11 @@ function setup() {
 			selector === '[role="tooltip"]' ? bubble : null,
 		getBoundingClientRect: () => ({ left: 300, top: 100, bottom: 130 }),
 	};
-	control.closest = (selector) =>
-		selector === '[data-ran-booster-reason-tooltip]'
-			? wrapper
-			: selector === '[aria-disabled="true"]'
-				? control
-				: null;
+	const closestTargets = {
+		'[data-ran-booster-reason-tooltip]': wrapper,
+		'[aria-disabled="true"]': control,
+	};
+	control.closest = (selector) => closestTargets[selector] ?? null;
 	const document = {
 		readyState: 'loading',
 		documentElement: { clientWidth: 375 },

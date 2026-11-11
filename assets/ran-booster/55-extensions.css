@@ -30,6 +30,7 @@
  * ring takes its radius from this element, so the ring hugs the logo's corners.
  * Ring colour and width stay with the core focus rule.
  */
+
 .ran-booster-admin .ran-booster-extensions__grid .plugin-icon {
 	border-radius: var(--ran-booster-radius-card);
 }

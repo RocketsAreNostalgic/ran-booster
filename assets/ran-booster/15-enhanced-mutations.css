@@ -74,6 +74,7 @@
  * clips it. Small and generic on purpose: the Popover API component planned in
  * issue 783 replaces it.
  */
+
 .ran-booster-admin .ran-booster-reason-tooltip {
 	display: inline-flex;
 }

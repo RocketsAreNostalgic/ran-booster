@@ -21,6 +21,9 @@
 	 * its data-ran-booster-busy-message. Shared by plain POST forms and HTMX
 	 * package mutations. Returns what restoreBusyLabel needs, or null when the
 	 * submitter has no busy label.
+	 *
+	 * @param {HTMLFormElement} form      The submitted form.
+	 * @param {HTMLElement}     submitter The submitting control.
 	 */
 	function showBusyLabel(form, submitter) {
 		const busyLabel = submitter?.getAttribute?.(

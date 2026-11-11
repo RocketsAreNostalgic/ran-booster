@@ -1041,14 +1041,11 @@ test('the Use releases message follows the selected release track radio', () => 
 	)(
 		{
 			querySelector: (selector) =>
-				selector === '[data-ran-booster-use-releases]'
-					? bar.button
-					: selector === '[data-ran-booster-use-releases-summary]'
-						? bar.summary
-						: selector ===
-							  '[data-ran-booster-release-track-summary]'
-							? bar.badge
-							: null,
+				({
+					'[data-ran-booster-use-releases]': bar.button,
+					'[data-ran-booster-use-releases-summary]': bar.summary,
+					'[data-ran-booster-release-track-summary]': bar.badge,
+				})[selector] ?? null,
 		},
 		{ target }
 	);

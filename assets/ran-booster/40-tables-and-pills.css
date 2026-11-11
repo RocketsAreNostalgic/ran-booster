@@ -9,6 +9,7 @@
  * One frame holds a collection: a toolbar with its search, filters and count,
  * the table or list, then its footer. The frame draws the only outer border.
  */
+
 .ran-booster-admin .ran-booster-collection {
 	min-inline-size: 0;
 	border: 1px solid var(--ran-booster-border);

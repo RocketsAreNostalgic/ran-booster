@@ -1865,3 +1865,94 @@ test('startup cancellation outside the form settles on the next task', () => {
 	assert.equal(h.toggle.retry.hidden, true);
 	assert.equal(h.toggle.submissions.length, 0);
 });
+
+// HTMX 2 fires `htmx:afterRequest` and then `htmx:timeout` when a configured
+// request timeout elapses; the settings runtime handles the former.
+const timeOut = (h, xhr, elt) => {
+	h.doc('htmx:afterRequest', { detail: { xhr, elt, successful: false } });
+	h.doc('htmx:timeout', { detail: { xhr, elt } });
+};
+
+test('a switch save that times out ends unconfirmed with retry and no success', () => {
+	const h = harness();
+	const t = h.toggle;
+	t.toggle.checked = true;
+	h.doc('change', { target: t.toggle });
+	const xhr = start(h, t);
+	h.window.announcements.length = 0;
+	timeOut(h, xhr, t);
+
+	assert.match(t.error.textContent, /save unconfirmed/i);
+	assert.equal(t.error.hidden, false);
+	assertSpokenError(h, t.error);
+	assert.equal(t.retry.hidden, false);
+	assert.equal(t.status.textContent, 'Disabled');
+	assert.equal(t.status.events.at(-1).intent, 'none');
+	assert.equal(
+		h.window.announcements.filter(({ message }) => /saved/i.test(message))
+			.length,
+		0
+	);
+	// The timeout released the request: a second timeout is idempotent and the
+	// fenced token still requires an explicit retry.
+	timeOut(h, xhr, t);
+	assert.equal(t.submissions.length, 1);
+	t.requestSubmit();
+	assert.equal(t.submissions[1].token, 'original');
+});
+
+test('a numeric save that times out keeps the draft, shows unconfirmed and unblocks the form', () => {
+	const h = harness();
+	const form = h.numeric;
+	form.value = '2700';
+	h.doc('input', { target: form.numeric });
+	const xhr = start(h, form);
+	timeOut(h, xhr, form);
+
+	assert.equal(form.value, '2700');
+	assert.match(form.error.primary.textContent, /unconfirmed/i);
+	assert.equal(form.error.hidden, false);
+	assertSpokenError(h, form.error);
+	assert.equal(form.status.textContent, 'Unsaved numeric changes.');
+	assert.equal(form.numeric.disabled, false);
+	assert.equal(form.token, 'original');
+	// Retry is available and sends the original token.
+	form.requestSubmit();
+	assert.equal(form.submissions.at(-1).token, 'original');
+});
+
+test('a late response after a timeout cannot turn the unconfirmed save into success', () => {
+	const h = harness();
+	const t = h.toggle;
+	t.toggle.checked = true;
+	h.doc('change', { target: t.toggle });
+	const xhr = start(h, t);
+	timeOut(h, xhr, t);
+	h.window.announcements.length = 0;
+
+	const late = h.doc('htmx:beforeOnLoad', { detail: { xhr } });
+	assert.equal(late.defaultPrevented, true);
+	assert.match(t.error.textContent, /save unconfirmed/i);
+	assert.equal(t.error.hidden, false);
+	assert.equal(t.status.textContent, 'Disabled');
+	assert.equal(t.retry.hidden, false);
+	assert.equal(h.window.announcements.length, 0);
+});
+
+test('a timeout on a queued scope releases the queue instead of leaving it busy', () => {
+	const h = harness();
+	const t = h.toggle;
+	t.toggle.checked = true;
+	h.doc('change', { target: t.toggle });
+	const xhr = start(h, t);
+	const numeric = h.numeric;
+	numeric.value = '2800';
+	h.doc('input', { target: numeric.numeric });
+	numeric.requestSubmit();
+	timeOut(h, xhr, t);
+	h.flush();
+
+	assert.match(t.error.textContent, /unconfirmed/i);
+	assert.match(numeric.error.textContent, /unconfirmed/i);
+	assert.equal(numeric.numeric.disabled, false);
+});

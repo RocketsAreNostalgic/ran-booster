@@ -1558,6 +1558,28 @@ test('enhanced mutation transport failures reset busy state and keep an error lo
 	}
 });
 
+test('a settings scope timeout releases busy and leaves the unconfirmed message to the settings runtime', () => {
+	const state = fixture();
+	state.form.dataset.ranBoosterSettingsScope = 'numeric';
+	state.window.ranBoosterSettingsInitialized = true;
+	loadFunction('initEnhancedMutationFeedback', {
+		document: state.document,
+		window: state.window,
+	})();
+	state.listeners.get('htmx:beforeRequest')({
+		detail: { elt: state.form },
+	});
+	state.listeners.get('htmx:timeout')({
+		detail: { elt: state.form, xhr: { status: 0 } },
+	});
+
+	assert.equal(state.formAttributes.has('aria-busy'), false);
+	assert.equal(state.button.disabled, false);
+	// No competing generic failure and no success announcement.
+	assert.deepEqual(state.announcements, []);
+	assert.equal(state.error.hidden, true);
+});
+
 test('a package mutation retains its success notice and cleans its result URL', () => {
 	const state = fixture();
 	state.window.location.href =

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
@@ -164,9 +165,7 @@ final class DebugCaptureViewTest extends TestCase {
 		);
 	}
 
-	/**
-	 * @dataProvider states_without_a_retained_capture
-	 */
+	#[DataProvider( 'states_without_a_retained_capture' )]
 	public function test_replacement_consequence_is_absent_next_to_the_button_without_a_retained_capture( string $state ): void {
 		$html    = $this->render_view(
 			array(

@@ -1078,13 +1078,13 @@ final class AdminAssetContractTest extends TestCase {
 		// An open body keeps 16px above its content, the shared 32px Card block-end inset below it and 24px at the sides.
 		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body\.ran-booster-disclosure__body \{\s*padding-block: var\(--ran-booster-space-16\)\s*var\(--ran-booster-card-inset-block-end\);\s*padding-inline: var\(--ran-booster-settings-card-inset\);/', $settings );
 		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body:not\(\s*\.ran-booster-settings__card-body--footed\s*\)\s*> :last-child\s*\.ran-booster-settings__group:last-of-type \{\s*margin-block-end: 0;/', $settings );
-		// Footer: full-width band, 1px divider above, 16px 24px padding, action at the end; it bleeds through the body inset
+		// Footer: full-width band, 1px divider above, 16px 24px padding, action at the start; it bleeds through the body inset
 		// and the footed body drops its bottom padding so the band meets the Card edge.
 		if ( 1 !== preg_match( '/\.ran-booster-settings__save-actions\.ran-booster-settings__card-footer \{([^}]*)\}/', $settings, $footer ) ) {
 			self::fail( 'The Settings Card footer rule is missing.' );
 		}
 		self::assertStringContainsString( 'display: flex;', $footer[1] );
-		self::assertStringContainsString( 'justify-content: flex-end;', $footer[1] );
+		self::assertStringContainsString( 'justify-content: flex-start;', $footer[1] );
 		self::assertStringContainsString( 'margin-inline: calc(-1 * var(--ran-booster-settings-card-inset));', $footer[1] );
 		self::assertStringContainsString( 'padding: var(--ran-booster-space-16) var(--ran-booster-settings-card-inset);', $footer[1] );
 		self::assertStringContainsString( 'border-block-start: 1px solid var(--ran-booster-divider);', $footer[1] );
@@ -1095,6 +1095,48 @@ final class AdminAssetContractTest extends TestCase {
 		// Native fallback: the same body and footer sit inside the details element, which hides them when closed.
 		$view = $this->view( 'settings-general.php' );
 		self::assertMatchesRegularExpression( '/<\/fieldset><div class="ran-booster-settings__save-actions ran-booster-settings__card-footer" data-ran-booster-card-footer><button id="ran-booster-save-numeric-bottom"/', $view );
+	}
+
+	/**
+	 * Page and Card action groups finish their surface at the start edge (action placement standard in the
+	 * composition contract). Dialog footers, table row groups and toolbars are deliberately not listed here.
+	 */
+	public function test_page_and_card_action_groups_are_start_aligned(): void {
+		$groups = array(
+			'ran-booster-settings__card-footer',
+		);
+
+		$css         = '';
+		$stylesheets = glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE );
+		foreach ( false === $stylesheets ? array() : $stylesheets as $file ) {
+			if ( str_contains( $file, 'portability' ) ) {
+				continue;
+			}
+			$css .= "\n" . (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+		}
+		$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
+		preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER );
+
+		foreach ( $groups as $group ) {
+			$declared_start = false;
+			foreach ( $rules as $rule ) {
+				$targets_group = false;
+				foreach ( explode( ',', $rule[1] ) as $part ) {
+					if ( 1 === preg_match( '/\.' . preg_quote( $group, '/' ) . '(?:\.[\w-]+)*\s*$/', $part ) ) {
+						$targets_group = true;
+					}
+				}
+				if ( ! $targets_group ) {
+					continue;
+				}
+				if ( str_contains( $rule[2], 'justify-content: flex-start;' ) ) {
+					$declared_start = true;
+				}
+				self::assertDoesNotMatchRegularExpression( '/justify-content:\s*(?!flex-start)[a-z-]+;/', $rule[2], $group . ' must not re-align its actions away from the start.' );
+				self::assertDoesNotMatchRegularExpression( '/(float:\s*(right|inline-end)|text-align:\s*(right|end)|margin-(left|inline-start):\s*auto)/', $rule[2], $group . ' must not push its actions to the end.' );
+			}
+			self::assertTrue( $declared_start, $group . ' must declare justify-content: flex-start.' );
+		}
 	}
 
 	public function test_source_tab_strip_keeps_the_same_gap_above_every_pane(): void {

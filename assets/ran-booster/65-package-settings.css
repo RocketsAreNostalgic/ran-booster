@@ -1099,7 +1099,7 @@
 
 /*
  * The History Card's Save changes lives in a footer: a full-width band at the
- * bottom of the Card with a divider above it and the action at the end. It
+ * bottom of the Card with a divider above it and the action at the start. It
  * sits inside the form (so the button, its status text and the enhanced save
  * keep working) and inside the body, so it is hidden whenever the Card is
  * collapsed and visible when it is open.
@@ -1114,7 +1114,7 @@
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
-	justify-content: flex-end;
+	justify-content: flex-start;
 	min-block-size: 0;
 	margin-block: 0;
 	margin-inline: calc(-1 * var(--ran-booster-settings-card-inset));

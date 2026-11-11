@@ -324,7 +324,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ob_start();
 		$display->render_operation_notice( $code, false );
 		$html   = (string) ob_get_clean();
-		$action = 'Inspect the installed version, activation state and Booster management before using Link installed or retrying.';
+		$action = 'Inspect the installed version, activation state and Booster management before using Link an already installed plugin (or theme) or retrying.';
 
 		self::assertStringContainsString( 'notice-warning', $html );
 		self::assertStringContainsString( '<strong>' . $heading . '</strong>', $html );

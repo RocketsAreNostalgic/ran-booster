@@ -902,7 +902,7 @@ final class ReleaseManagementDisplay {
 			<?php } ?>
 			<p><?php echo esc_html( $message ); ?></p>
 			<?php if ( $review ) { ?>
-				<p><?php esc_html_e( 'Inspect the installed version, activation state and Booster management before using Link installed or retrying.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Inspect the installed version, activation state and Booster management before using Link an already installed plugin (or theme) or retrying.', 'ran-booster' ); ?></p>
 			<?php } ?>
 		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( substr( $tone, 7 ) ); ?>
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>

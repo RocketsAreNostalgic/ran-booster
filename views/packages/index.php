@@ -109,6 +109,8 @@ $policy_labels = array(
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
 );
 
+$package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 && empty( $package_list_unavailable );
+
 ?><h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></h2>
 <?php if ( $package_list_total > 0 ) { ?>
 	<a class="page-title-action" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
@@ -234,6 +236,13 @@ $policy_labels = array(
 	</div>
 <?php } ?>
 
+<?php if ( $package_show_empty_state ) { ?>
+	<div class="ran-booster-package-empty-state">
+		<h3><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></h3>
+		<p><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No %s are managed by RAN Booster yet.', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?></p>
+		<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
+	</div>
+<?php } else { ?>
 <div class="ran-booster-data-table-wrap ran-booster-package-table-wrap">
 <table class="wp-list-table widefat plugins ran-booster-package-table" data-package-type="<?php echo esc_attr( $package_view->get_type() ); ?>">
 	<caption class="screen-reader-text"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></caption>
@@ -262,12 +271,6 @@ $policy_labels = array(
 					<td></td>
 					<td colspan="3">
 						<?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No managed %s match the current filters.', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?>
-					</td>
-				<?php } else { ?>
-					<td colspan="4" class="ran-booster-package-empty-state">
-						<h3><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></h3>
-						<p><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No %s are managed by RAN Booster yet.', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?></p>
-						<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 					</td>
 				<?php } ?>
 			</tr>
@@ -620,4 +623,5 @@ $policy_labels = array(
 	</tbody>
 </table>
 </div>
+<?php } ?>
 </div></div></div>

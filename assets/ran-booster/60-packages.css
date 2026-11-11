@@ -101,8 +101,10 @@
 	table-layout: fixed;
 }
 
+/* The first-run empty state replaces the table, so it is a centred block in the Card. */
 .ran-booster-admin .ran-booster-package-empty-state {
-	padding-block: var(--ran-booster-space-30);
+	padding-block: 40px;
+	padding-inline: var(--ran-booster-space-24);
 	text-align: center;
 }
 
@@ -645,18 +647,4 @@
 	.ran-booster-package-table-wrap {
 	margin-block-start: var(--ran-booster-space-16);
 	margin-inline: var(--ran-booster-space-16);
-}
-
-/* The first-run empty state is not a collection yet, so it keeps the bare Card. */
-.ran-booster-admin
-	.ran-booster-package-collection
-	.ran-booster-card__content:has(.ran-booster-package-empty-state) {
-	padding-block-end: 0;
-}
-
-.ran-booster-admin
-	.ran-booster-package-collection
-	.ran-booster-package-table-wrap:has(.ran-booster-package-empty-state) {
-	margin: 0;
-	border-width: 0;
 }

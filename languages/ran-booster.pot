@@ -8814,7 +8814,7 @@ msgid "Local status could not be resolved"
 msgstr ""
 
 #: views/portability-review.php:91
-msgid "Blueprint requirements"
+msgid "Minimum requirements"
 msgstr ""
 
 #: views/portability-review.php:93

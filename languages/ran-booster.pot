@@ -180,7 +180,7 @@ msgid "Booster could not load that repository view. The current view is unchange
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:56
-#: views/provider.php:540
+#: views/provider.php:537
 msgid "Repository integration views"
 msgstr ""
 
@@ -188,8 +188,8 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:356
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:41
 #: views/extensions.php:235
-#: views/provider.php:544
-#: views/provider.php:565
+#: views/provider.php:541
+#: views/provider.php:562
 #: views/troubleshooting.php:205
 #: views/troubleshooting.php:239
 msgid "Status"
@@ -304,7 +304,7 @@ msgstr ""
 
 #. translators: %d is the number of recorded release packages.
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:196
-#: views/provider.php:587
+#: views/provider.php:584
 #, php-format
 msgid "%d package"
 msgid_plural "%d packages"
@@ -351,7 +351,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:227
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:561
-#: views/provider.php:676
+#: views/provider.php:673
 msgid "Manage webhook"
 msgstr ""
 
@@ -411,7 +411,7 @@ msgstr ""
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:110
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:124
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:363
-#: views/provider.php:634
+#: views/provider.php:631
 msgid "Webhook setup"
 msgstr ""
 
@@ -2224,7 +2224,7 @@ msgid "Encrypted credential storage must be healthy before Push-to-Deploy can ve
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:988
-msgid "This site uses a local URL, so Git providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy."
+msgid "This site uses a local URL, so Git providers cannot reach it. Set a public HTTPS site URL before using Push-to-Deploy."
 msgstr ""
 
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:988
@@ -2340,7 +2340,7 @@ msgstr ""
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
 #: views/packages/index.php:348
-#: views/provider.php:836
+#: views/provider.php:833
 #: views/settings-storage.php:25
 #: views/troubleshooting-installation.php:18
 #: views/troubleshooting-installation.php:172
@@ -2388,17 +2388,12 @@ msgstr ""
 msgid "Add a credential when repository access requires one."
 msgstr ""
 
-#. translators: %d is the number of saved credentials.
-#: RAN/Admin/ProviderSettingsPresenter.php:1787
-msgid "Open credential management to review saved credentials and their usage."
-msgstr ""
-
 #: RAN/Admin/ProviderSettingsPresenter.php:1791
 msgid "No secret saved"
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1791
-#: views/provider.php:836
+#: views/provider.php:833
 msgid "Ready locally"
 msgstr ""
 
@@ -2425,8 +2420,8 @@ msgstr ""
 #. translators: %d is the number of local secrets that can verify signed deliveries.
 #: RAN/Admin/ProviderSettingsPresenter.php:1793
 #, php-format
-msgid "%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists."
-msgid_plural "%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist."
+msgid "%d local secret can verify signed deliveries. It does not prove a remote webhook exists."
+msgid_plural "%d local secrets can verify signed deliveries. They do not prove a remote webhook exists."
 msgstr[0] ""
 msgstr[1] ""
 
@@ -6362,7 +6357,7 @@ msgstr ""
 
 #: views/attempts/index.php:151
 #: views/portability-review.php:30
-#: views/provider.php:650
+#: views/provider.php:647
 #: views/troubleshooting.php:181
 msgid "Repository"
 msgstr ""
@@ -6466,7 +6461,7 @@ msgid "Manage Webhook Secrets"
 msgstr ""
 
 #: views/base.php:137
-#: views/provider.php:545
+#: views/provider.php:542
 msgid "Repositories"
 msgstr ""
 
@@ -6772,7 +6767,7 @@ msgstr ""
 #: views/documentation.php:406
 #: views/onboarding.php:207
 #: views/overview-dashboard.php:77
-#: views/provider.php:774
+#: views/provider.php:771
 msgid "Install a plugin"
 msgstr ""
 
@@ -7085,7 +7080,7 @@ msgstr ""
 #: views/documentation.php:407
 #: views/onboarding.php:208
 #: views/overview-dashboard.php:84
-#: views/provider.php:775
+#: views/provider.php:772
 msgid "Install a theme"
 msgstr ""
 
@@ -7200,17 +7195,17 @@ msgid "Git provider location"
 msgstr ""
 
 #: views/documentation.php:471
-#: views/provider.php:685
+#: views/provider.php:682
 msgid "Payload URL"
 msgstr ""
 
 #: views/documentation.php:473
-#: views/provider.php:688
+#: views/provider.php:685
 msgid "Content type"
 msgstr ""
 
 #: views/documentation.php:475
-#: views/provider.php:692
+#: views/provider.php:689
 msgid "Event"
 msgstr ""
 
@@ -7219,7 +7214,7 @@ msgid "Webhook setup instructions"
 msgstr ""
 
 #: views/documentation.php:481
-#: views/provider.php:705
+#: views/provider.php:702
 msgid "Delivery troubleshooting"
 msgstr ""
 
@@ -7712,7 +7707,7 @@ msgid "No recent activity."
 msgstr ""
 
 #: views/overview-dashboard.php:58
-#: views/provider.php:603
+#: views/provider.php:600
 msgid "View Activity"
 msgstr ""
 
@@ -8373,8 +8368,8 @@ msgid "Search managed %s"
 msgstr ""
 
 #: views/packages/index.php:189
-#: views/provider.php:808
-#: views/provider.php:836
+#: views/provider.php:805
+#: views/provider.php:833
 #: assets/ran-booster-repository-picker.js:1103
 msgid "Search"
 msgstr ""
@@ -9411,7 +9406,7 @@ msgid "Public repository lookup"
 msgstr ""
 
 #: views/provider-public-lookup-profile.php:31
-msgid "Choose Anonymous, or use a dedicated saved credential to reduce Git provider rate-limit interruptions."
+msgid "Choose Anonymous, or use a saved credential to reduce rate-limit interruptions."
 msgstr ""
 
 #: views/provider-public-lookup-profile.php:41
@@ -9432,7 +9427,7 @@ msgid "Credential guidance"
 msgstr ""
 
 #: views/provider-public-lookup-profile.php:59
-msgid "Prefer a dedicated, expiring, least-privilege credential kept separate from credentials that can access private repositories or deployments."
+msgid "Use a dedicated, expiring, least-privilege credential, separate from any that can access private repositories or deployments."
 msgstr ""
 
 #: views/provider-public-lookup-profile.php:63
@@ -9473,7 +9468,7 @@ msgid "Add webhook secret"
 msgstr ""
 
 #: views/provider.php:274
-msgid "Manage repository access, integrations and the packages connected to this site."
+msgid "Repository access, integrations and connected packages."
 msgstr ""
 
 #: views/provider.php:285
@@ -9700,17 +9695,17 @@ msgid "Saved credentials are unavailable."
 msgstr ""
 
 #: views/provider.php:437
-#: views/provider.php:738
+#: views/provider.php:735
 msgid "This site can receive Git provider webhook deliveries."
 msgstr ""
 
 #: views/provider.php:454
-#: views/provider.php:755
+#: views/provider.php:752
 msgid "That managed repository is no longer available. Return to the repository list and choose a current repository."
 msgstr ""
 
 #: views/provider.php:461
-msgid "Saved credentials can be used for repository access."
+msgid "Saved credentials are used for repository access."
 msgstr ""
 
 #: views/provider.php:494
@@ -9725,238 +9720,234 @@ msgstr ""
 msgid "Repository integrations"
 msgstr ""
 
-#: views/provider.php:526
-msgid "Review managed repositories and available integrations."
-msgstr ""
-
-#: views/provider.php:546
-#: views/provider.php:608
-#: views/provider.php:613
+#: views/provider.php:543
+#: views/provider.php:605
+#: views/provider.php:610
 msgid "Webhook receiver"
 msgstr ""
 
-#: views/provider.php:554
+#: views/provider.php:551
 msgid "Loading Git provider details…"
 msgstr ""
 
-#: views/provider.php:558
+#: views/provider.php:555
 msgid "Booster could not load that Git provider view. The current view is unchanged; choose the task again to retry."
 msgstr ""
 
-#: views/provider.php:574
+#: views/provider.php:571
 msgid "Repository inventory is unavailable; shown records may be incomplete."
 msgstr ""
 
-#: views/provider.php:578
+#: views/provider.php:575
 msgid "Site webhook delivery"
 msgstr ""
 
-#: views/provider.php:578
+#: views/provider.php:575
 msgid "Readiness not assessed"
 msgstr ""
 
-#: views/provider.php:578
+#: views/provider.php:575
 msgid "Ready for public HTTPS delivery"
 msgstr ""
 
-#: views/provider.php:578
+#: views/provider.php:575
 msgid "Not ready for Git provider delivery"
 msgstr ""
 
-#: views/provider.php:582
+#: views/provider.php:579
 msgid "Signing profiles"
 msgstr ""
 
 #. translators: %d is the number of locally ready signing profiles.
-#: views/provider.php:582
+#: views/provider.php:579
 #, php-format
 msgid "%d ready locally"
 msgid_plural "%d ready locally"
 msgstr[0] ""
 msgstr[1] ""
 
-#: views/provider.php:585
+#: views/provider.php:582
 msgid "Release packages recorded"
 msgstr ""
 
 #. translators: %s is the lower-bound package count.
-#: views/provider.php:590
+#: views/provider.php:587
 #, php-format
 msgid "At least %s; exact totals unavailable."
 msgstr ""
 
-#: views/provider.php:597
+#: views/provider.php:594
 msgid "Release workflow observations"
 msgstr ""
 
 #. translators: %d is the number of observations needing review.
-#: views/provider.php:597
+#: views/provider.php:594
 #, php-format
 msgid "%d observation shown needs review; coverage may be incomplete."
 msgid_plural "%d observations shown need review; coverage may be incomplete."
 msgstr[0] ""
 msgstr[1] ""
 
-#: views/provider.php:601
+#: views/provider.php:598
 msgid "Release workflow observations are incomplete because some package details are omitted."
 msgstr ""
 
-#: views/provider.php:609
+#: views/provider.php:606
 msgid "Webhook receiver guidance is unavailable for this provider."
 msgstr ""
 
-#: views/provider.php:614
+#: views/provider.php:611
 msgid "This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories."
 msgstr ""
 
-#: views/provider.php:618
+#: views/provider.php:615
 msgid "Keep this URL reachable: do not cache, challenge or transform its requests."
 msgstr ""
 
-#: views/provider.php:618
+#: views/provider.php:615
 msgid "Learn more"
 msgstr ""
 
-#: views/provider.php:618
+#: views/provider.php:615
 msgid "about keeping the webhook receiver URL reachable"
 msgstr ""
 
-#: views/provider.php:635
+#: views/provider.php:632
 msgid "Automated setup"
 msgstr ""
 
-#: views/provider.php:636
+#: views/provider.php:633
 msgid "Manual setup"
 msgstr ""
 
-#: views/provider.php:640
+#: views/provider.php:637
 msgid "Booster can set up a Push-to-Deploy webhook for you. Choose a repository below to get started."
 msgstr ""
 
-#: views/provider.php:652
+#: views/provider.php:649
 msgid "Choose a repository"
 msgstr ""
 
 #. translators: %s: repository name.
-#: views/provider.php:669
+#: views/provider.php:666
 #, php-format
 msgid "🟢 %s — webhook set up"
 msgstr ""
 
-#: views/provider.php:682
+#: views/provider.php:679
 msgid "Generate a webhook for Push-to-Deploy manually using these values. Use a unique generated secret for each repository."
 msgstr ""
 
-#: views/provider.php:686
+#: views/provider.php:683
 msgid "Copy payload URL"
 msgstr ""
 
-#: views/provider.php:686
+#: views/provider.php:683
 msgid "URL copied"
 msgstr ""
 
-#: views/provider.php:686
+#: views/provider.php:683
 msgid "Payload URL copied to the clipboard."
 msgstr ""
 
-#: views/provider.php:686
+#: views/provider.php:683
 msgid "Clipboard access failed. The payload URL is selected; use your browser copy command."
 msgstr ""
 
-#: views/provider.php:697
+#: views/provider.php:694
 msgid "Detailed manual setup and troubleshooting"
 msgstr ""
 
-#: views/provider.php:700
+#: views/provider.php:697
 msgid "Paste the payload URL and a matching signing secret."
 msgstr ""
 
-#: views/provider.php:700
+#: views/provider.php:697
 msgid "Keep SSL verification enabled and select the push event."
 msgstr ""
 
-#: views/provider.php:700
+#: views/provider.php:697
 msgid "Trigger a delivery and confirm the Git provider records a successful response."
 msgstr ""
 
-#: views/provider.php:701
-#: views/provider.php:710
+#: views/provider.php:698
+#: views/provider.php:707
 msgid "For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity."
 msgstr ""
 
-#: views/provider.php:702
-#: views/provider.php:711
+#: views/provider.php:699
+#: views/provider.php:708
 msgid "Read the webhook operations guide"
 msgstr ""
 
-#: views/provider.php:712
+#: views/provider.php:709
 msgid "Manage repositories"
 msgstr ""
 
-#: views/provider.php:723
+#: views/provider.php:720
 #: views/provider/modals.php:174
 msgid "Managed repositories"
 msgstr ""
 
-#: views/provider.php:760
+#: views/provider.php:757
 msgid "Filter managed repositories"
 msgstr ""
 
-#: views/provider.php:761
+#: views/provider.php:758
 msgid "Filter managed repositories…"
 msgstr ""
 
-#: views/provider.php:778
+#: views/provider.php:775
 msgid "Managed repository status is temporarily unavailable."
 msgstr ""
 
-#: views/provider.php:795
+#: views/provider.php:792
 msgid "Filter by credential type"
 msgstr ""
 
-#: views/provider.php:796
+#: views/provider.php:793
 msgid "All credential types"
 msgstr ""
 
-#: views/provider.php:801
-#: views/provider.php:832
+#: views/provider.php:798
+#: views/provider.php:829
 msgid "Filter by scope"
 msgstr ""
 
-#: views/provider.php:802
-#: views/provider.php:832
+#: views/provider.php:799
+#: views/provider.php:829
 msgid "All scopes"
 msgstr ""
 
-#: views/provider.php:808
+#: views/provider.php:805
 msgid "Search credentials"
 msgstr ""
 
-#: views/provider.php:808
+#: views/provider.php:805
 msgid "Search credentials…"
 msgstr ""
 
-#: views/provider.php:817
+#: views/provider.php:814
 msgid "No credentials match the current filters."
 msgstr ""
 
-#: views/provider.php:836
+#: views/provider.php:833
 msgid "Filter by status"
 msgstr ""
 
-#: views/provider.php:836
+#: views/provider.php:833
 msgid "All statuses"
 msgstr ""
 
-#: views/provider.php:836
+#: views/provider.php:833
 msgid "Search webhook secrets"
 msgstr ""
 
-#: views/provider.php:836
+#: views/provider.php:833
 msgid "Search secrets…"
 msgstr ""
 
-#: views/provider.php:844
+#: views/provider.php:841
 msgid "No webhook secrets match the current filters."
 msgstr ""
 

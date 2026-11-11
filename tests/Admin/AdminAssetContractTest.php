@@ -166,6 +166,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/outline|box-shadow|color/', $icon_rule[1], 'The logo rule sets radius only; ring colour and width stay with the core focus rule.' );
 
 		$logos = glob( dirname( __DIR__, 2 ) . '/assets/extensions/*.svg' );
+		self::assertIsArray( $logos );
 		self::assertNotEmpty( $logos );
 		foreach ( $logos as $logo ) {
 			$svg = $this->asset( 'extensions/' . basename( $logo ) );

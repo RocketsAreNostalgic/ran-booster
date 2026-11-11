@@ -1287,6 +1287,33 @@ final class AdminAssetContractTest extends TestCase {
 		);
 	}
 
+	public function test_release_readiness_guidance_uses_the_shared_compact_rhythm(): void {
+		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
+
+		if ( 1 !== preg_match( '/\.ran-booster-readiness-panel\s+\.ran-booster-release-remediation \{([^}]*)\}/', $settings, $guidance ) ) {
+			self::fail( 'The Release readiness guidance block needs its own spacing rule.' );
+		}
+		self::assertStringContainsString( 'padding-block: var(--ran-booster-space-16);', $guidance[1] );
+		self::assertStringContainsString( 'padding-inline: var(--ran-booster-space-18);', $guidance[1] );
+		self::assertDoesNotMatchRegularExpression( '/\d+px/', $guidance[1] );
+
+		if ( 1 !== preg_match( '/\.ran-booster-release-remediation\s+> p \{([^}]*)\}/', $settings, $paragraph ) ) {
+			self::fail( 'The guidance paragraph needs its own margin rule.' );
+		}
+		self::assertStringContainsString( 'margin: 0;', $paragraph[1] );
+
+		if ( 1 !== preg_match( '/\.ran-booster-release-remediation\s+> \.ran-booster-release-code \{([^}]*)\}/', $settings, $code ) ) {
+			self::fail( 'The guidance code box needs its own margin rule.' );
+		}
+		self::assertStringContainsString( 'margin-block: var(--ran-booster-card-heading-gap) 0;', $code[1] );
+		self::assertDoesNotMatchRegularExpression( '/\d+px/', $code[1] );
+
+		if ( 1 !== preg_match( '/\.ran-booster-admin \.ran-booster-readiness-actions \{([^}]*)\}/', $settings, $actions ) ) {
+			self::fail( 'The readiness actions row needs its own rule.' );
+		}
+		self::assertStringContainsString( 'border-block-start: 1px solid var(--ran-booster-border);', $actions[1] );
+	}
+
 	public function test_repository_status_markers_keep_the_shared_checklist_footprint(): void {
 		$foundations        = $this->asset( 'ran-booster/00-foundations.css' );
 		$package_settings   = $this->asset( 'ran-booster/65-package-settings.css' );

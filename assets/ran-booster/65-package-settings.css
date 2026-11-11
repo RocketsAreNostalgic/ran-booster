@@ -864,6 +864,27 @@
 	border-block-start: 1px solid var(--ran-booster-border);
 }
 
+.ran-booster-admin
+	.ran-booster-readiness-panel
+	.ran-booster-release-remediation {
+	padding-block: var(--ran-booster-space-16);
+	padding-inline: var(--ran-booster-space-18);
+}
+
+.ran-booster-admin
+	.ran-booster-readiness-panel
+	.ran-booster-release-remediation
+	> p {
+	margin: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-readiness-panel
+	.ran-booster-release-remediation
+	> .ran-booster-release-code {
+	margin-block: var(--ran-booster-card-heading-gap) 0;
+}
+
 .ran-booster-admin .ran-booster-release-switch-form > .notice:first-of-type,
 .ran-booster-admin .ran-booster-release-return-form > .notice {
 	margin-block: var(--ran-booster-space-16) 0;

@@ -2357,6 +2357,31 @@ final class AdminAssetContractTest extends TestCase {
 		return $found;
 	}
 
+	/**
+	 * The Advanced settings summary stacks on narrow screens through the shared
+	 * prominent Disclosure header: it wraps, then the status line takes its own
+	 * start-aligned row while the chevron stays on the title row.
+	 */
+	public function test_advanced_settings_summary_stacks_on_narrow_screens(): void {
+		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
+
+		if ( 1 !== preg_match( '/prominent"\]\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*> \[role="button"\]\s*> :first-child \{([^}]*)\}/', $primitives, $header ) ) {
+			self::fail( 'The prominent Disclosure header content rule is missing.' );
+		}
+		self::assertStringContainsString( 'flex-wrap: wrap;', $header[1] );
+
+		if ( 1 !== preg_match( '/@media screen and \(max-width: 480px\) \{\s*\.ran-booster-admin\s*\[data-ran-booster-ui-disclosure="package-advanced-settings"\]\s*> \*\s*> \.ran-booster-ui-disclosure\s*> \.ran-booster-ui-disclosure__header\s*\.ran-booster-ui-disclosure__meta \{([^}]*)\}(.*?)\n\}/s', $primitives, $narrow ) ) {
+			self::fail( 'The narrow Advanced settings summary rule is missing.' );
+		}
+		self::assertStringContainsString( 'flex: 1 1 100%;', $narrow[1] );
+		self::assertStringContainsString( 'margin-inline: 0;', $narrow[1] );
+		// The native fallback keeps its chevron on the title row with a two-column grid.
+		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) auto;', $narrow[2] );
+		self::assertStringContainsString( 'grid-column: 1 / -1;', $narrow[2] );
+		self::assertStringContainsString( 'grid-row: 1;', $narrow[2] );
+		self::assertDoesNotMatchRegularExpression( '/margin-(?:left|right)\s*:/', $narrow[0] );
+	}
+
 	private function asset( string $file ): string {
 		if ( 'ran-booster.css' !== $file ) {
 			return $this->raw_asset( $file );

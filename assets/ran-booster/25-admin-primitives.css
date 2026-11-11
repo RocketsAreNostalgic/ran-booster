@@ -1002,8 +1002,9 @@
 	> [role="button"]
 	> :first-child {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
-	gap: var(--ran-booster-space-12);
+	gap: var(--ran-booster-space-4) var(--ran-booster-space-12);
 }
 
 .ran-booster-admin
@@ -1018,6 +1019,51 @@
 	color: var(--ran-booster-text-subtle);
 	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 400;
+}
+
+/*
+ * A multi-part summary (title, then a status line of badges) stacks on narrow
+ * screens: the title keeps its row with the chevron and the status line takes
+ * the next row, start-aligned. The native fallback summary does the same with a
+ * two-column grid so its chevron stays on the title row.
+ */
+@media screen and (max-width: 480px) {
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> *
+		> .ran-booster-ui-disclosure
+		> .ran-booster-ui-disclosure__header
+		.ran-booster-ui-disclosure__meta {
+		flex: 1 1 100%;
+		margin-inline: 0;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: start;
+		row-gap: var(--ran-booster-space-4);
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary::after {
+		grid-column: 2;
+		grid-row: 1;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary
+		> [data-ran-booster-ui-disclosure-meta] {
+		grid-column: 1 / -1;
+		margin-inline: 0;
+	}
 }
 
 .ran-booster-admin

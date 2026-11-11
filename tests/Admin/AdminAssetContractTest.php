@@ -168,7 +168,7 @@ final class AdminAssetContractTest extends TestCase {
 		$logos = glob( dirname( __DIR__, 2 ) . '/assets/extensions/*.svg' );
 		self::assertNotEmpty( $logos );
 		foreach ( $logos as $logo ) {
-			$svg = (string) file_get_contents( $logo );
+			$svg = $this->asset( 'extensions/' . basename( $logo ) );
 			self::assertStringContainsString( 'viewBox="0 0 128 128"', $svg, $logo );
 			self::assertMatchesRegularExpression( '/<rect width="128" height="128" rx="8"/', $svg, $logo . ' corner radius must stay 8px at 128px.' );
 		}

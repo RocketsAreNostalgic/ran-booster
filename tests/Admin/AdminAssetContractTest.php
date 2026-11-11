@@ -757,7 +757,6 @@ final class AdminAssetContractTest extends TestCase {
 			array( '.screen-reader-text', '.ran-booster-portability__credential-selection', 'td > label', ':has(input[type="checkbox"], input[type="radio"])' ),
 			array_map( 'trim', $exceptions )
 		);
-
 	}
 
 	public function test_every_form_field_label_shares_one_weight_and_size_rule(): void {

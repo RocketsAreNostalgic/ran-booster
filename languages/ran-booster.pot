@@ -192,8 +192,8 @@ msgstr ""
 #: views/extensions.php:232
 #: views/provider.php:541
 #: views/provider.php:562
-#: views/troubleshooting.php:228
-#: views/troubleshooting.php:262
+#: views/troubleshooting.php:233
+#: views/troubleshooting.php:267
 msgid "Status"
 msgstr ""
 
@@ -279,9 +279,9 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:155
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:307
 #: views/packages/edit.php:388
-#: views/packages/fields/deployment-policy.php:86
-#: views/packages/fields/deployment-policy.php:99
-#: views/packages/fields/deployment-policy.php:102
+#: views/packages/fields/deployment-policy.php:93
+#: views/packages/fields/deployment-policy.php:106
+#: views/packages/fields/deployment-policy.php:109
 #: views/packages/index.php:493
 msgid "Updates"
 msgstr ""
@@ -326,8 +326,8 @@ msgid "None"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:204
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:417
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:491
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:420
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:494
 msgid "Branch demand"
 msgstr ""
 
@@ -378,7 +378,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:246
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:260
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:275
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:340
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:342
 #: views/documentation.php:123
 #: views/documentation.php:442
 msgid "Push-to-deploy"
@@ -402,8 +402,8 @@ msgid "Assisted webhook management is unavailable in this view. Receiver readine
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:271
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:420
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:493
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:423
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:496
 msgid "Published-release packages ignore pushes; no Branch package currently uses this repository webhook."
 msgstr ""
 
@@ -414,7 +414,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:279
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:110
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:124
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:363
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:365
 #: views/provider.php:630
 msgid "Webhook setup"
 msgstr ""
@@ -478,7 +478,8 @@ msgid "Repository-scoped records. This is local history, not live Git provider s
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:350
-#: RAN/Admin/WebhookManagement/views/panel.php:58
+#: RAN/Admin/WebhookManagement/views/panel.php:83
+#: RAN/Admin/WebhookManagement/views/panel.php:130
 msgid "Webhook"
 msgstr ""
 
@@ -556,7 +557,7 @@ msgstr ""
 
 #. translators: %s: repository provider name.
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:571
-#: RAN/Admin/WebhookManagement/views/panel.php:118
+#: RAN/Admin/WebhookManagement/views/panel.php:151
 #, php-format
 msgid "Manage repo webhooks on %s"
 msgstr ""
@@ -566,7 +567,7 @@ msgstr ""
 #: RAN/Admin/PackagePagePresenter.php:462
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:541
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:552
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:397
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:400
 #: views/extensions.php:16
 #: views/extensions.php:91
 #: views/troubleshooting-installation.php:172
@@ -575,7 +576,7 @@ msgid "Active"
 msgstr ""
 
 #: RAN/Admin/Component/RepositoryPublishing.php:48
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:387
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:390
 msgid "Not in use"
 msgstr ""
 
@@ -1060,7 +1061,7 @@ msgstr ""
 #: views/troubleshooting-installation.php:72
 #: views/troubleshooting-installation.php:164
 #: views/troubleshooting-installation.php:172
-#: views/troubleshooting.php:257
+#: views/troubleshooting.php:262
 #: assets/ran-booster-portability.js:785
 msgid "Unknown"
 msgstr ""
@@ -1408,8 +1409,8 @@ msgid "An add-on guide is temporarily unavailable. Check plugin compatibility an
 msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
-#: assets/ran-booster-enhanced-mutations.js:1305
-#: assets/ran-booster-enhanced-mutations.js:1496
+#: assets/ran-booster-enhanced-mutations.js:1313
+#: assets/ran-booster-enhanced-mutations.js:1504
 msgid "We could not complete that request. Please try again."
 msgstr ""
 
@@ -2344,7 +2345,7 @@ msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1785
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:187
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:400
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:403
 msgid "Ready"
 msgstr ""
 
@@ -2591,7 +2592,7 @@ msgid "Release readiness"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:187
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:394
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:397
 msgid "Not ready"
 msgstr ""
 
@@ -2830,9 +2831,9 @@ msgstr ""
 #. translators: %s is plugin or theme.
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:709
 #: views/extensions.php:109
-#: views/packages/create.php:175
-#: views/packages/create.php:177
-#: views/packages/create.php:178
+#: views/packages/create.php:182
+#: views/packages/create.php:184
+#: views/packages/create.php:185
 msgid "Installing…"
 msgstr ""
 
@@ -3364,14 +3365,14 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:380
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:916
-#: RAN/Admin/WebhookManagement/views/panel.php:32
+#: RAN/Admin/WebhookManagement/views/panel.php:103
 #: views/portability-review.php:222
 #: views/portability-review.php:348
 msgid "Choose a saved credential"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowDisplay.php:388
-#: RAN/Admin/WebhookManagement/views/panel.php:37
+#: RAN/Admin/WebhookManagement/views/panel.php:108
 #: views/provider.php:476
 #: assets/ran-booster-repository-picker.js:1086
 msgid "Manage credentials"
@@ -4399,7 +4400,7 @@ msgstr ""
 
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:839
 #: RAN/Admin/WebhookManagement/Display/WebhookDisplayModel.php:877
-#: RAN/Admin/WebhookManagement/views/panel.php:29
+#: RAN/Admin/WebhookManagement/views/panel.php:100
 msgid "Management credential"
 msgstr ""
 
@@ -4526,191 +4527,191 @@ msgid "Set up webhook"
 msgstr ""
 
 #. translators: %s: provider name.
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:206
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:207
 #, php-format
 msgid "%s webhook configuration is incomplete. Webhook setup is unavailable until the Git provider supplies its complete management capability."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:222
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:223
 msgid "Webhook operations are unavailable while no eligible Branch package uses this repository."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:278
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:517
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:280
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:520
 msgid "This site needs a public HTTPS URL to receive webhooks."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:285
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:287
 msgid "Webhook setup is unavailable because Booster database storage is unavailable."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:286
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:288
 msgid "Webhook setup is unavailable because encrypted signing-secret storage is unavailable."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:287
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:289
 msgid "Webhook setup is unavailable because Booster could not read managed packages."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:288
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:290
 msgid "Webhook setup is unavailable because this repository has no stable Git provider identity."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:289
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:291
 msgid "Webhook setup is unavailable because managed packages disagree about this repository identity."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:290
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:292
 msgid "Webhook setup is unavailable because the saved repository address is invalid."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:310
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:313
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:312
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:315
 msgid "Webhook setup is unavailable until Booster can confirm this managed repository."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:337
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:339
 msgid "Branch publishing"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:337
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:339
 msgid "Manual updates work without setting up Push-to-deploy."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:341
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:343
 msgid "Automatic updates remain configured separately for each package."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:419
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:422
 msgid "Branch packages can still be updated manually while webhook setup is unavailable."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:424
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:504
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:427
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:507
 msgid "Signing profile"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:425
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:428
 msgid "Git provider configuration is incomplete, so Booster did not inspect signing-secret availability."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:429
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:514
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:432
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:517
 msgid "Git provider receiver"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:430
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:433
 msgid "Git provider configuration is incomplete, so Booster did not inspect receiver readiness."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:434
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:521
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:437
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:524
 msgid "Remote hook"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:435
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:438
 msgid "Git provider configuration is incomplete, so Booster did not inspect remote webhook state."
 msgstr ""
 
 #. translators: %d: number of Automatic Branch packages using the repository webhook.
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:497
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:500
 #, php-format
 msgid "%d Automatic Branch package uses this repository webhook."
 msgid_plural "%d Automatic Branch packages use this repository webhook."
 msgstr[0] ""
 msgstr[1] ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:500
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:503
 msgid "No package uses this webhook yet. You can set it up before turning on Automatic updates."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:506
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:509
 msgid "A signing secret is ready for this repository."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:507
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:510
 msgid "A signing secret was available when Booster last checked."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:508
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:511
 msgid "This repository needs a signing secret."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:509
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:512
 msgid "Booster could not confirm the signing secret."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:516
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:519
 msgid "This site can receive webhook deliveries."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:524
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:527
 msgid "Booster has not set up a webhook for this repository."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:525
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:528
 msgid "Set up outside Booster."
 msgstr ""
 
 #. translators: %s: UTC timestamp of the last recorded webhook check.
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:529
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:532
 #, php-format
 msgid "Configured at the last recorded check on %s. Run Check to confirm current Git provider state."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:532
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:535
 msgid "The recorded remote webhook needs review. Run Check or inspect it at the Git provider."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:542
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:545
 msgid "Site receiver"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:546
-#: RAN/Admin/WebhookManagement/views/panel.php:43
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:549
+#: RAN/Admin/WebhookManagement/views/panel.php:114
 #: views/packages/branch-readiness.php:228
 msgid "Signing secret"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:550
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:553
 #: views/attempts/detail.php:57
 #: views/attempts/index.php:66
 msgid "Repository webhook"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:554
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:557
 msgid "Automatic packages"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:559
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:562
 msgid "Repository webhook lifecycle"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:568
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:571
 msgid "Booster could not confirm this step."
 msgstr ""
 
 #. translators: %s: repository provider name.
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:584
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:587
 #, php-format
 msgid "%s webhook management"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/views/panel.php:39
+#: RAN/Admin/WebhookManagement/views/panel.php:110
 msgid "Choose the saved credential used to manage this repository webhook. A current selection does not prove Git provider authority until the operation checks it."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/views/panel.php:47
+#: RAN/Admin/WebhookManagement/views/panel.php:118
 msgid "Create a repository signing secret"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/views/panel.php:52
+#: RAN/Admin/WebhookManagement/views/panel.php:123
 #: views/packages/branch-readiness.php:232
 #: views/provider.php:510
 msgid "Manage signing secrets"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/views/panel.php:54
+#: RAN/Admin/WebhookManagement/views/panel.php:125
 msgid "Choose an applicable saved signing secret, or create one only for this repository."
 msgstr ""
 
@@ -5851,7 +5852,7 @@ msgstr ""
 #: views/packages/fields/provider.php:22
 #: views/packages/index.php:548
 #: views/portability-review.php:28
-#: views/troubleshooting.php:142
+#: views/troubleshooting.php:147
 #: assets/ran-booster-repository-picker.js:504
 msgid "Git provider"
 msgstr ""
@@ -6317,7 +6318,7 @@ msgstr ""
 #: views/attempts/index.php:151
 #: views/portability-review.php:30
 #: views/provider.php:646
-#: views/troubleshooting.php:181
+#: views/troubleshooting.php:186
 msgid "Repository"
 msgstr ""
 
@@ -6412,7 +6413,7 @@ msgstr ""
 
 #. translators: %s is plugin or theme.
 #: views/base.php:103
-#: views/packages/create.php:177
+#: views/packages/create.php:184
 #, php-format
 msgid "Install %s"
 msgstr ""
@@ -6544,82 +6545,82 @@ msgid "Temporary logging capture is unavailable because Booster cannot safely us
 msgstr ""
 
 #: views/debug-capture.php:111
-msgid "Logging capture actions"
-msgstr ""
-
-#: views/debug-capture.php:116
-msgid "Refresh"
-msgstr ""
-
-#: views/debug-capture.php:117
-msgid "Stop capture"
-msgstr ""
-
-#: views/debug-capture.php:119
-msgid "Start new capture"
-msgstr ""
-
-#: views/debug-capture.php:119
-msgid "Start 60-minute capture"
-msgstr ""
-
-#: views/debug-capture.php:126
-msgid "Delete capture"
-msgstr ""
-
-#: views/debug-capture.php:131
-#: views/debug-capture.php:155
-msgid "Starting a new capture replaces any retained capture."
-msgstr ""
-
-#: views/debug-capture.php:138
 msgid "Logging details"
 msgstr ""
 
 #. translators: %s: configured temporary Booster capture path.
-#: views/debug-capture.php:144
+#: views/debug-capture.php:117
 #, php-format
 msgid "Booster capture location: %s."
 msgstr ""
 
-#: views/debug-capture.php:148
+#: views/debug-capture.php:121
 msgid "Booster capture location is unavailable."
 msgstr ""
 
 #. translators: 1: WP_DEBUG constant, 2: WP_DEBUG_LOG constant.
-#: views/debug-capture.php:152
+#: views/debug-capture.php:125
 #, php-format
 msgid "Booster events also go to PHP’s error log when %1$s and %2$s are enabled. The capture holds Booster events only, not PHP errors."
 msgstr ""
 
-#: views/debug-capture.php:156
+#: views/debug-capture.php:128
+#: views/debug-capture.php:152
+msgid "Starting a new capture replaces any retained capture."
+msgstr ""
+
+#: views/debug-capture.php:129
 msgid "For PHP, WordPress, theme and plugin errors, add these to wp-config.php before the “stop editing” line:"
 msgstr ""
 
-#: views/debug-capture.php:159
+#: views/debug-capture.php:132
 msgid "Example wp-config.php lines"
 msgstr ""
 
-#: views/debug-capture.php:160
+#: views/debug-capture.php:133
 msgid "Copy example wp-config.php lines"
 msgstr ""
 
-#: views/debug-capture.php:166
+#: views/debug-capture.php:139
 msgid "A custom log destination is configured. Review wp-config.php for its location."
 msgstr ""
 
 #. translators: %s: WordPress debug log path.
-#: views/debug-capture.php:170
+#: views/debug-capture.php:143
 #, php-format
 msgid "Log location when enabled: %s."
 msgstr ""
 
-#: views/debug-capture.php:174
+#: views/debug-capture.php:147
 msgid "Turn off debugging when done. Review the log privately before sharing it."
 msgstr ""
 
-#: views/debug-capture.php:175
+#: views/debug-capture.php:148
 msgid "WordPress debugging documentation"
+msgstr ""
+
+#: views/debug-capture.php:156
+msgid "Logging capture actions"
+msgstr ""
+
+#: views/debug-capture.php:161
+msgid "Refresh"
+msgstr ""
+
+#: views/debug-capture.php:162
+msgid "Stop capture"
+msgstr ""
+
+#: views/debug-capture.php:164
+msgid "Start new capture"
+msgstr ""
+
+#: views/debug-capture.php:164
+msgid "Start 60-minute capture"
+msgstr ""
+
+#: views/debug-capture.php:171
+msgid "Delete capture"
 msgstr ""
 
 #: views/documentation.php:48
@@ -6907,7 +6908,7 @@ msgid "Incoming branch-deployment webhooks are generally unavailable on local or
 msgstr ""
 
 #: views/documentation.php:352
-#: views/packages/fields/deployment-policy.php:68
+#: views/packages/fields/deployment-policy.php:70
 msgid "Read the Push-to-Deploy guide."
 msgstr ""
 
@@ -7456,8 +7457,8 @@ msgid "with your version of Booster"
 msgstr ""
 
 #: views/extensions.php:167
-#: views/troubleshooting.php:230
-#: views/troubleshooting.php:279
+#: views/troubleshooting.php:235
+#: views/troubleshooting.php:284
 msgid "Details"
 msgstr ""
 
@@ -7940,35 +7941,35 @@ msgid "Package operation"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:166
+#: views/packages/create.php:172
 #, php-format
 msgid "Link an already installed %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:168
+#: views/packages/create.php:174
 #, php-format
 msgid "Manage an installed %s without deploying it; its folder name must match the repository."
 msgstr ""
 
-#: views/packages/create.php:172
+#: views/packages/create.php:179
 msgid "Installation actions"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:174
+#: views/packages/create.php:181
 #, php-format
 msgid "Manage %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:175
-#: views/packages/create.php:177
+#: views/packages/create.php:182
+#: views/packages/create.php:184
 msgid "Installing. This can take a few seconds."
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:175
+#: views/packages/create.php:182
 #: views/packages/edit.php:276
 #: views/packages/edit.php:361
 #: views/packages/index.php:117
@@ -7977,12 +7978,12 @@ msgid "Install another %s"
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:178
+#: views/packages/create.php:185
 msgid "Installing and preparing another. This can take a few seconds."
 msgstr ""
 
 #. translators: %s is plugin or theme.
-#: views/packages/create.php:178
+#: views/packages/create.php:185
 msgid "Install and add another"
 msgstr ""
 
@@ -8177,7 +8178,7 @@ msgstr ""
 #: views/packages/fields/credential.php:21
 #: views/packages/fields/credential.php:24
 #: views/provider.php:460
-#: views/troubleshooting.php:274
+#: views/troubleshooting.php:279
 msgid "Repository access"
 msgstr ""
 
@@ -8189,51 +8190,52 @@ msgstr ""
 msgid "Private repos require a PAT with appropriate access."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:28
+#: views/packages/fields/deployment-policy.php:29
 msgid "Manual waits for an administrator. Automatic deploys on push."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:38
+#: views/packages/fields/deployment-policy.php:39
 msgid "Editing this package’s files here? Choose Disabled."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:39
+#: views/packages/fields/deployment-policy.php:40
 msgid "Manual and Automatic can overwrite local changes when an update or reinstall runs."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:41
-#: views/packages/fields/deployment-policy.php:74
-#: views/packages/fields/deployment-policy.php:78
+#: views/packages/fields/deployment-policy.php:42
+#: views/packages/fields/deployment-policy.php:76
+#: views/packages/fields/deployment-policy.php:80
 msgid "Push-to-Deploy setting"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:41
-#: views/packages/fields/deployment-policy.php:74
-#: views/packages/fields/deployment-policy.php:78
+#: views/packages/fields/deployment-policy.php:42
+#: views/packages/fields/deployment-policy.php:76
+#: views/packages/fields/deployment-policy.php:80
 msgid "Docs"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:54
+#: views/packages/fields/deployment-policy.php:55
 msgid "Disabled — do not let Booster update this package"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:55
+#: views/packages/fields/deployment-policy.php:56
 msgid "Manual — update only when requested"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:56
+#: views/packages/fields/deployment-policy.php:57
 msgid "Automatic — install validated releases through WordPress Updates"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:56
+#: views/packages/fields/deployment-policy.php:57
 msgid "Automatic — deploy signed repository pushes"
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:64
+#: views/packages/fields/deployment-policy.php:66
+#: views/packages/fields/deployment-policy.php:85
 msgid "Manual waits for an administrator. Automatic installs validated releases."
 msgstr ""
 
-#: views/packages/fields/deployment-policy.php:67
+#: views/packages/fields/deployment-policy.php:69
 msgid "Automatic deployment is unavailable because this Git provider does not support signed webhooks."
 msgstr ""
 
@@ -8373,7 +8375,7 @@ msgstr ""
 
 #. translators: %s is plugins or themes.
 #: views/packages/index.php:230
-#: assets/ran-booster-packages.js:639
+#: assets/ran-booster-packages.js:652
 #, php-format,js-format
 msgid "0 %s selected"
 msgstr ""
@@ -8913,7 +8915,7 @@ msgstr ""
 
 #: views/portability-review.php:220
 #: views/portability-review.php:345
-#: views/troubleshooting.php:157
+#: views/troubleshooting.php:162
 msgid "Saved credential"
 msgstr ""
 
@@ -10810,103 +10812,103 @@ msgstr ""
 msgid "Troubleshooting views"
 msgstr ""
 
-#: views/troubleshooting.php:132
-#: views/troubleshooting.php:188
+#: views/troubleshooting.php:137
+#: views/troubleshooting.php:193
 msgid "Run diagnostics"
 msgstr ""
 
-#: views/troubleshooting.php:133
+#: views/troubleshooting.php:138
 msgid "Choose a Git provider and run a health check."
 msgstr ""
 
-#: views/troubleshooting.php:153
+#: views/troubleshooting.php:158
 msgid "Check credential or repository access (optional)"
 msgstr ""
 
-#: views/troubleshooting.php:154
+#: views/troubleshooting.php:159
 msgid "Checks credential and repository access only."
 msgstr ""
 
-#: views/troubleshooting.php:157
-#: views/troubleshooting.php:181
+#: views/troubleshooting.php:162
+#: views/troubleshooting.php:186
 msgid "(optional)"
 msgstr ""
 
-#: views/troubleshooting.php:159
+#: views/troubleshooting.php:164
 msgid "No saved credential (check public access)"
 msgstr ""
 
-#: views/troubleshooting.php:178
+#: views/troubleshooting.php:183
 msgid "Required for private repositories."
 msgstr ""
 
-#: views/troubleshooting.php:183
+#: views/troubleshooting.php:188
 msgid "Without a credential, Booster only checks public repos."
 msgstr ""
 
-#: views/troubleshooting.php:201
+#: views/troubleshooting.php:206
 msgid "These results remain available below, but could not be retained for a later support report."
 msgstr ""
 
-#: views/troubleshooting.php:204
+#: views/troubleshooting.php:209
 msgid "Diagnostic results"
 msgstr ""
 
 #. translators: 1: number of diagnostic checks, 2: Git provider name.
-#: views/troubleshooting.php:211
+#: views/troubleshooting.php:216
 #, php-format
 msgid "%1$d check run for %2$s."
 msgid_plural "%1$d checks run for %2$s."
 msgstr[0] ""
 msgstr[1] ""
 
-#: views/troubleshooting.php:220
+#: views/troubleshooting.php:225
 msgid "Diagnostics finished with partial results."
 msgstr ""
 
-#: views/troubleshooting.php:226
+#: views/troubleshooting.php:231
 msgid "RAN Booster diagnostic results"
 msgstr ""
 
-#: views/troubleshooting.php:229
-#: views/troubleshooting.php:263
+#: views/troubleshooting.php:234
+#: views/troubleshooting.php:268
 msgid "Check"
 msgstr ""
 
-#: views/troubleshooting.php:231
-#: views/troubleshooting.php:280
+#: views/troubleshooting.php:236
+#: views/troubleshooting.php:285
 msgid "Action"
 msgstr ""
 
-#: views/troubleshooting.php:267
+#: views/troubleshooting.php:272
 msgid "WordPress runtime"
 msgstr ""
 
-#: views/troubleshooting.php:268
+#: views/troubleshooting.php:273
 msgid "Database storage"
 msgstr ""
 
-#: views/troubleshooting.php:269
+#: views/troubleshooting.php:274
 msgid "Filesystem access"
 msgstr ""
 
-#: views/troubleshooting.php:270
+#: views/troubleshooting.php:275
 msgid "Package destinations"
 msgstr ""
 
-#: views/troubleshooting.php:271
+#: views/troubleshooting.php:276
 msgid "Deployment history"
 msgstr ""
 
-#: views/troubleshooting.php:272
+#: views/troubleshooting.php:277
 msgid "Deployment worker"
 msgstr ""
 
-#: views/troubleshooting.php:273
+#: views/troubleshooting.php:278
 msgid "Credential access"
 msgstr ""
 
-#: views/troubleshooting.php:276
+#: views/troubleshooting.php:281
 msgid "Git provider check"
 msgstr ""
 
@@ -10923,16 +10925,16 @@ msgctxt "plugin"
 msgid "%s update failed."
 msgstr ""
 
-#: assets/ran-booster-packages.js:625
+#: assets/ran-booster-packages.js:638
 msgid "package"
 msgstr ""
 
-#: assets/ran-booster-packages.js:628
+#: assets/ran-booster-packages.js:641
 msgid "packages"
 msgstr ""
 
 #. translators: 1: number of selected packages, 2: package type label.
-#: assets/ran-booster-packages.js:666
+#: assets/ran-booster-packages.js:679
 #, js-format
 msgid "%1$d %2$s selected"
 msgid_plural "%1$d %2$s selected"
@@ -10940,27 +10942,27 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: selected-package summary, 2: number eligible for branch reinstall.
-#: assets/ran-booster-packages.js:680
+#: assets/ran-booster-packages.js:693
 #, js-format
 msgid "%1$s. %2$d eligible for branch Reinstall."
 msgstr ""
 
 #. translators: %s: package type label.
-#: assets/ran-booster-packages.js:715
+#: assets/ran-booster-packages.js:728
 #, js-format
 msgid "Select at least one %s."
 msgstr ""
 
-#: assets/ran-booster-packages.js:725
+#: assets/ran-booster-packages.js:738
 msgid "Select at least one branch package eligible for Reinstall."
 msgstr ""
 
-#: assets/ran-booster-packages.js:741
+#: assets/ran-booster-packages.js:754
 msgid "Reinstall cancelled."
 msgstr ""
 
 #. translators: %s: deployment state label.
-#: assets/ran-booster-packages.js:908
+#: assets/ran-booster-packages.js:921
 #, js-format
 msgid "Deployment: %s"
 msgstr ""

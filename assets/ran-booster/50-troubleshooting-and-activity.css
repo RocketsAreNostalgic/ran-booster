@@ -477,9 +477,12 @@
 /* Keep the provider, subject and Filter controls on one row at desktop widths;
    a long subject label truncates instead of pushing Filter onto its own row. */
 .ran-booster-admin .ran-booster-activity .ran-booster-package-list-filters {
+	flex: 1 1 auto;
 	flex-wrap: nowrap;
 	align-items: center;
 	gap: var(--ran-booster-space-8);
+	min-inline-size: 0;
+	max-inline-size: 100%;
 }
 
 .ran-booster-admin

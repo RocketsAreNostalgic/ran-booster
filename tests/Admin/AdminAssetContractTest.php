@@ -179,6 +179,10 @@ final class AdminAssetContractTest extends TestCase {
 		}
 		self::assertStringContainsString( 'flex-wrap: nowrap;', $row_rule[1] );
 		self::assertStringContainsString( 'gap: var(--ran-booster-space-8);', $row_rule[1] );
+		// Inside the collection toolbar the form must be allowed to shrink, or a long subject pushes the row past the frame.
+		self::assertStringContainsString( 'flex: 1 1 auto;', $row_rule[1] );
+		self::assertStringContainsString( 'min-inline-size: 0;', $row_rule[1] );
+		self::assertStringContainsString( 'max-inline-size: 100%;', $row_rule[1] );
 
 		$subject = '/\n\.ran-booster-admin\s+\.ran-booster-activity\s+\.ran-booster-package-list-filters\s+#ran-booster-activity-package \{([^}]*)\}/';
 		if ( 1 !== preg_match( $subject, $activity, $subject_rule ) ) {

@@ -355,7 +355,6 @@
 
 .ran-booster-admin .ran-booster-troubleshooting__fields label {
 	display: block;
-	font-weight: 600;
 	margin-block-end: var(--ran-booster-space-6);
 }
 

@@ -214,7 +214,8 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_link_choice_label_keeps_the_field_label_weight(): void {
 		$css = $this->asset( 'ran-booster.css' );
 
-		self::assertMatchesRegularExpression( '/\.ran-booster-settings-field\s*> label \{[^}]*font-weight: 600;/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings-field\s*> label,[^{]*\{[^}]*color: var\(--ran-booster-text\);/', $css );
+		$this->assert_general_field_label_rule( $css );
 		self::assertDoesNotMatchRegularExpression( '/ran-booster-package-link-choice\s+\.ran-booster-settings-field\s*> label/', $css, 'The link choice label inherits the bold field label weight.' );
 	}
 
@@ -741,7 +742,75 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'var(--ran-booster-status-ok-background)', $settings );
 	}
 
-	public function test_package_operation_card_lays_out_updates_row_description_and_notice(): void {
+	private function assert_general_field_label_rule( string $css ): void {
+		if ( 1 !== preg_match( '/:is\(\.ran-booster-admin, \.ran-booster-repository-picker-portal\)\s+:is\(\s*label:not\(([^{]*?)\),\s*\.ran-booster-settings-field > label,\s*\.ran-booster-credential-modal__form label\s*\)\s*\{([^}]*)\}/', $css, $m ) ) {
+			self::fail( 'The shared form field label rule is missing.' );
+		}
+		self::assertStringContainsString( 'font-weight: var(--ran-booster-font-weight-semibold);', $m[2] );
+		self::assertStringContainsString( 'font-size: var(--ran-booster-font-size-md);', $m[2] );
+		// The documented exception list: option labels, table row names and screen reader labels only.
+		self::assertSame(
+			array( '.screen-reader-text', '.ran-booster-portability__credential-selection', 'td > label', ':has(input[type="checkbox"], input[type="radio"])' ),
+			array_map( 'trim', preg_split( '/,(?![^()]*\))/', $m[1] ) ?: array() )
+		);
+	}
+
+	public function test_every_form_field_label_shares_one_weight_and_size_rule(): void {
+		$css = $this->asset( 'ran-booster.css' );
+		$this->assert_general_field_label_rule( $css );
+
+		// Per-label rules add layout only; none re-declares the label weight.
+		foreach ( array(
+			'ran-booster/65-package-settings.css'  => '/\.ran-booster-settings-field > label,[^{]*\{([^}]*)\}/',
+			'ran-booster/20-repository-picker.css' => '/\.ran-booster-repository-picker__public-search > label,[^{]*\{([^}]*)\}/',
+			'ran-booster/30-provider-cards.css'    => '/\.ran-booster-provider-receiver__field > label \{([^}]*)\}/',
+			'ran-booster/50-troubleshooting-and-activity.css' => '/\.ran-booster-troubleshooting__fields label \{([^}]*)\}/',
+			'ran-booster/70-credential-dialog.css' => '/\.ran-booster-credential-modal__form label \{([^}]*)\}/',
+		) as $file => $pattern ) {
+			if ( 1 !== preg_match( $pattern, $this->asset( $file ), $rule ) ) {
+				self::fail( 'Missing label layout rule in ' . $file );
+			}
+			self::assertStringNotContainsString( 'font-weight', $rule[1], $file );
+		}
+	}
+
+	public function test_no_component_restyles_a_form_label_outside_the_shared_rule(): void {
+		// Selectors that style a label element or a label-named field class may add layout only.
+		$allowed = array(
+			// Option and toggle labels keep their own deliberate weight.
+			'.ran-booster-admin .ran-booster-package-danger-zone__actions label',
+			'.ran-booster-admin .ran-booster-settings__switch-label',
+			// Paragraph (not a label element) that names a button group.
+			'.ran-booster-admin .ran-booster-repository-webhook-management p.ran-booster-public-lookup-profile__label',
+		);
+		$files   = glob( dirname( __DIR__, 2 ) . '/assets/*.css' );
+		$files   = array_merge( false === $files ? array() : $files, glob( dirname( __DIR__, 2 ) . '/assets/ran-booster/*.css' ) ?: array() );
+		$checked = 0;
+		foreach ( $files as $file ) {
+			$css = (string) file_get_contents( $file );
+			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
+			if ( 1 > preg_match_all( '/([^{}@;]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {
+				continue;
+			}
+			foreach ( $rules as $rule ) {
+				$selector = (string) preg_replace( '/\s+/', ' ', trim( $rule[1] ) );
+				if ( 1 !== preg_match( '/(?<![\w.#-])label(?![\w-])|(?:public-lookup-profile|field|form)__label/', $selector ) ) {
+					continue;
+				}
+				if ( 1 !== preg_match( '/(?:^|;|\s)(font-weight|font-size)\s*:/', $rule[2] ) ) {
+					continue;
+				}
+				if ( str_contains( $selector, ':is( label:not(' ) || in_array( $selector, $allowed, true ) ) {
+					continue;
+				}
+				++$checked;
+				self::fail( basename( $file ) . ' restyles a label font outside the shared label rule: ' . $selector );
+			}
+		}
+		self::assertSame( 0, $checked );
+	}
+
+	public function test_package_operation_card_stacks_select_description_notice_guidance_then_actions(): void {
 		$css  = $this->asset( 'ran-booster/65-package-settings.css' );
 		$rule = static function ( string $css, string $selector ): string {
 			if ( 1 !== preg_match( '/' . str_replace( ' ', '\s+', $selector ) . '\s*\{([^}]*)\}/', $css, $m ) ) {
@@ -753,35 +822,48 @@ final class AdminAssetContractTest extends TestCase {
 		// The card body is the query container for the narrow wrap.
 		self::assertStringContainsString( 'container-type: inline-size;', $rule( $css, '\.ran-booster-admin \.ran-booster-package-operation-settings \.ran-booster-settings-section__body' ) );
 
-		// Group (label, row, description) and the notice are 12px apart; the notice adds no margin of its own.
+		// The Updates label shares the field label layout; its weight comes from the one shared label rule.
+		if ( 1 !== preg_match( '/\.ran-booster-settings-field > label,\s*\.ran-booster-admin \.ran-booster-deployment-policy-group > label \{([^}]*)\}/', $css, $label ) ) {
+			self::fail( 'The Updates label must share the field label rule.' );
+		}
+		self::assertStringNotContainsString( 'font-weight', $label[1] );
+
+		// Group, notice, guidance and actions are 12px apart; the notice adds no margin of its own.
 		$field = $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-field--operation' );
 		self::assertStringContainsString( 'display: grid;', $field );
 		self::assertStringContainsString( 'gap: var(--ran-booster-space-12);', $field );
 		self::assertStringContainsString( 'margin: 0;', $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-field--operation > \.notice' ) );
+		self::assertStringContainsString( 'margin: 0;', $rule( $css, '\.ran-booster-admin\n\t\.ran-booster-deployment-policy-field--operation\n\t> \.description' ) );
 
-		// The description sits 4px under the row and spans the full group width.
+		// The description is tucked 4px under the select and spans the full group width.
 		$description = $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-group > \.description' );
 		self::assertStringContainsString( 'margin-block: var(--ran-booster-space-4) 0;', $description );
 		self::assertStringContainsString( 'max-inline-size: none;', $description );
-		self::assertStringNotContainsString( 'inline-size:', str_replace( 'max-inline-size', '', $description ) );
 
-		// Select takes the remaining width, the action keeps its natural width at the same 40px height, 8px apart.
-		$row = $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-row' );
-		self::assertStringContainsString( 'align-items: end;', $row );
-		self::assertStringContainsString( 'gap: var(--ran-booster-space-8);', $row );
-		self::assertStringContainsString( 'grid-template-columns: minmax(0, 1fr) auto;', $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-row--with-action' ) );
+		// The select owns its row at 40px; the old select-plus-action row is gone.
 		self::assertStringContainsString( 'min-block-size: 40px;', $rule( $css, '\.ran-booster-admin \.ran-booster-deployment-policy-row > select' ) );
-		self::assertStringContainsString( 'min-block-size: 40px;', $rule( $css, '\.ran-booster-admin\n\t\.ran-booster-package-operation-settings__actions\n\t\.ran-wp-ui-button' ) );
+		self::assertStringNotContainsString( 'deployment-policy-row--with-action', $css );
+		self::assertStringNotContainsString( 'package-operation-settings__body--split', $css );
 
-		// Narrow card: the action wraps under the select at full width.
+		// Buttons sit side by side at equal widths, 8px apart.
+		$actions = $rule( $css, '\.ran-booster-admin \.ran-booster-package-operation-settings__actions' );
+		self::assertStringContainsString( 'display: flex;', $actions );
+		self::assertStringContainsString( 'flex-wrap: nowrap;', $actions );
+		self::assertStringContainsString( 'gap: var(--ran-booster-space-8);', $actions );
+		self::assertStringNotContainsString( 'justify-content: flex-end', $actions );
+		$button = $rule( $css, '\.ran-booster-admin\n\t\.ran-booster-package-operation-settings__actions\n\t\.ran-wp-ui-button' );
+		self::assertStringContainsString( 'flex: 1 1 0;', $button );
+		self::assertStringContainsString( 'min-block-size: 40px;', $button );
+
+		// Narrow card: the buttons stack at full width.
 		if ( 1 !== preg_match( '/@container \(max-width: 36rem\) \{(.*?)\n\}/s', $css, $narrow ) ) {
 			self::fail( 'The Package operation narrow container query is missing.' );
 		}
-		self::assertMatchesRegularExpression( '/\.ran-booster-deployment-policy-row--with-action \{\s*grid-template-columns: minmax\(0, 1fr\);/', $narrow[1] );
-		self::assertMatchesRegularExpression( '/\.ran-wp-ui-button \{\s*flex: 1 1 0;/', $narrow[1] );
+		self::assertMatchesRegularExpression( '/__actions \{\s*flex-direction: column;/', $narrow[1] );
+		self::assertMatchesRegularExpression( '/\.ran-wp-ui-button \{\s*flex: 0 0 auto;\s*inline-size: 100%;/', $narrow[1] );
 
-		// The old two-column body and actions grid are gone.
-		self::assertStringNotContainsString( 'package-operation-settings__body--split', $css );
+		// The Release track card no longer carries a footer wrapper for Update now.
+		self::assertStringNotContainsString( 'managed-release-browser__footer', $this->asset( 'ran-booster-release-management.css' ) );
 	}
 
 	public function test_first_settings_group_drops_only_its_divider_inside_the_settings_card_body(): void {
@@ -1093,11 +1175,11 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/__select-action\s+select \{\s*flex: 1 1 0;\s*min-inline-size: 0;\s*inline-size: auto;\s*max-inline-size: none;/', $webhook_management );
 		self::assertMatchesRegularExpression( '/__select-action\s+\.ran-wp-ui-button \{\s*flex: 0 0 auto;\s*white-space: nowrap;/', $webhook_management );
 		self::assertMatchesRegularExpression( '/__field\s+\.description \{\s*display: block;\s*max-inline-size: none;\s*margin-block: var\(--ran-booster-space-8\) 0;/', $webhook_management );
-		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management\s+\.ran-booster-public-lookup-profile__label \{\s*margin-block-end: var\(--ran-booster-space-8\);/', $webhook_management );
-		// The management labels (and the Webhook group label) match the Edit screen field labels: text colour token, weight 600.
-		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management\s+\.ran-booster-public-lookup-profile__label \{\s*margin-block-start: 0;\s*color: var\(--ran-booster-text\);\s*font-weight: 600;\s*\}/', $webhook_management );
+		// The management field labels use the shared label rule and gap; only the Webhook group paragraph restates the label look.
+		self::assertDoesNotMatchRegularExpression( '/[^p]\.ran-booster-public-lookup-profile__label \{[^}]*(margin-block-end|font-weight)/', $webhook_management );
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-management\s+p\.ran-booster-public-lookup-profile__label \{\s*margin-block-start: 0;\s*color: var\(--ran-booster-text\);\s*font-weight: 600;\s*\}/', $webhook_management );
 		$edit_label = $this->asset( 'ran-booster/65-package-settings.css' );
-		self::assertMatchesRegularExpression( '/\.ran-booster-settings-field > label \{[^}]*color: var\(--ran-booster-text\);\s*font-weight: 600;/', $edit_label );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings-field > label,[^{]*\{[^}]*color: var\(--ran-booster-text\);/', $edit_label );
 		// Every shared public-lookup-profile override is scoped under the management root.
 		preg_match_all( '/[^{}]*public-lookup-profile[^{}]*\{/', $webhook_management, $selectors );
 		self::assertNotEmpty( $selectors[0] );
@@ -1107,7 +1189,7 @@ final class AdminAssetContractTest extends TestCase {
 		// The other screen's shared rules are untouched and unaware of the management screen.
 		$cards = $this->asset( 'ran-booster/30-provider-cards.css' );
 		self::assertStringNotContainsString( 'repository-webhook-management', $cards );
-		self::assertStringContainsString( ".ran-booster-public-lookup-profile__label {\n\tdisplay: block;\n\tmargin-block-end: var(--ran-booster-space-7);", $cards );
+		self::assertStringContainsString( ".ran-booster-public-lookup-profile__label {\n\tdisplay: block;\n\tmargin-block-end: var(--ran-booster-field-label-gap);", $cards );
 		self::assertStringContainsString( ".ran-booster-public-lookup-profile__form,\n.ran-booster-admin .ran-booster-public-lookup-profile__guidance {\n\tmin-inline-size: 0;\n\tpadding-block: var(--ran-booster-space-16);\n\tpadding-inline: var(--ran-booster-space-20);", $cards );
 		self::assertStringContainsString( ".ran-booster-public-lookup-profile__layout {\n\tdisplay: grid;\n\tgrid-template-columns: minmax(0, 1fr) minmax(280px, 0.8fr);", $cards );
 		self::assertStringNotContainsString( 'repository-webhook-management', $this->asset( 'ran-booster/80-responsive.css' ) );

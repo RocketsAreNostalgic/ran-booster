@@ -64,7 +64,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const retry = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-retry]'
 	);
-	const nativeUpdate = managedBrowser.querySelector(
+	// Lives in the Package operations group, outside the release browser.
+	const nativeUpdate = document.querySelector(
 		'[data-ran-booster-managed-release-native-update]'
 	);
 	const errorNotice = managedBrowser.querySelector(

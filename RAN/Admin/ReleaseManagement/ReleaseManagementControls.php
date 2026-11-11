@@ -54,6 +54,7 @@ final class ReleaseManagementControls {
 		add_filter( 'ran_booster_admin_package_advanced_source_summary_projection', array( $this, 'filter_advanced_source_summary_projection' ), 10, 5 );
 		add_filter( 'ran_booster_documentation_sections_before_about', array( $this, 'filter_documentation_sections' ), 10, 3 );
 		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'render_advanced_source_section' ), 10, 5 );
+		add_action( 'ran_booster_admin_package_operation_actions', array( $this, 'render_package_operation_actions' ), 10, 2 );
 		add_action( 'admin_notices', array( $this, 'render_operation_notice' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_prospective_assets' ) );
 
@@ -148,6 +149,12 @@ final class ReleaseManagementControls {
 		return $choices;
 	}
 
+
+	public function render_package_operation_actions( string $current_source, string $selected_source ): void {
+		if ( 'release_asset' === $current_source && 'release_asset' === $selected_source ) {
+			$this->request_boundary( fn () => $this->display->render_native_update_action(), null );
+		}
+	}
 
 	public function render_advanced_source_section(
 		string $mode,

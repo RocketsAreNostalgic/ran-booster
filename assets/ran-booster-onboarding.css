@@ -885,7 +885,11 @@
 	max-inline-size: none;
 }
 
-.ran-booster-admin .ran-booster-portability__import-fields label,
+.ran-booster-admin .ran-booster-portability__import-fields label {
+	display: block;
+	margin-block-end: var(--ran-booster-field-label-gap);
+}
+
 .ran-booster-admin .ran-booster-portability__import-fields .description {
 	display: block;
 	margin-block-end: var(--ran-booster-space-7);
@@ -1186,10 +1190,6 @@
 	gap: var(--ran-booster-space-6);
 	margin-block-start: var(--ran-booster-space-10);
 	padding-inline-start: calc(16px + var(--ran-booster-space-10));
-}
-
-.ran-booster-admin .ran-booster-portability__credential-target label {
-	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
 .ran-booster-admin .ran-booster-portability__credential-target select {

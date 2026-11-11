@@ -40,7 +40,6 @@ body.ran-booster-repository-picker-open {
 .ran-booster-repository-picker__profile-options label {
 	display: block;
 	margin-block-end: var(--ran-booster-space-6);
-	font-weight: 600;
 }
 
 .ran-booster-repository-picker__profile-options {

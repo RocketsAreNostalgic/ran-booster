@@ -332,10 +332,17 @@ final class ReleaseManagementDisplay {
 				<h4 data-ran-booster-managed-release-heading><?php esc_html_e( 'Release candidates appear here', 'ran-booster' ); ?></h4>
 				<p data-ran-booster-managed-release-message></p>
 			</div>
-			<div class="ran-booster-managed-release-browser__footer">
-				<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) . ' disabled ran-booster-managed-release-native-update' ); ?>" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update><?php esc_html_e( 'Update now', 'ran-booster' ); ?></a>
-			</div>
 		</div>
+		<?php
+	}
+
+	/**
+	 * Renders the disabled Update now anchor for the Package operations group.
+	 * The managed release browser script finds it by its data attribute and enables it.
+	 */
+	public function render_native_update_action(): void {
+		?>
+		<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) . ' disabled ran-booster-managed-release-native-update' ); ?>" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update><?php esc_html_e( 'Update now', 'ran-booster' ); ?></a>
 		<?php
 	}
 

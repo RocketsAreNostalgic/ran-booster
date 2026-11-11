@@ -42,6 +42,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertSame(
 			array(
 				'ran_booster_admin_package_advanced_source_sections',
+				'ran_booster_admin_package_operation_actions',
 				'admin_notices',
 				'admin_enqueue_scripts',
 				'admin_post_ran_booster_release_enable',

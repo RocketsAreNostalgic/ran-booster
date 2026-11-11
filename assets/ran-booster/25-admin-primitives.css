@@ -13,6 +13,40 @@
 }
 
 /*
+ * Form field labels: one rule gives every visible field label the same weight
+ * and size. Feature styles add layout (display, margin) only, never weight.
+ * The repository picker portal sits outside .ran-booster-admin, so it is
+ * scoped here too.
+ *
+ * Exceptions, which keep whatever their feature styles set:
+ *  - option labels: a label that wraps a checkbox or radio, and the sibling
+ *    label of a checkbox row (.ran-booster-portability__credential-selection);
+ *  - row names inside tables (td > label), which name a record, not a field;
+ *  - .screen-reader-text labels.
+ * The link choice label (.ran-booster-settings-field > label wrapping a
+ * checkbox) and the credential dialog's labels are bold on purpose and are
+ * listed explicitly.
+ *
+ * Label-to-control gap: --ran-booster-field-label-gap, used by every
+ * block label (field, lookup profile, import fields).
+ */
+
+:is(.ran-booster-admin, .ran-booster-repository-picker-portal)
+	:is(
+		label:not(
+			.screen-reader-text,
+			.ran-booster-portability__credential-selection,
+			td > label,
+			:has(input[type="checkbox"], input[type="radio"])
+		),
+		.ran-booster-settings-field > label,
+		.ran-booster-credential-modal__form label
+	) {
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+/*
  * A page Card is a plain host around a server-rendered static Card
  * (ran-booster-wp-ui-static.css): .ran-wp-ui-card.ran-booster-card__surface
  * draws the frame, .ran-booster-card__content holds the inset. The host draws
@@ -513,7 +547,7 @@
 .ran-booster-admin .ran-booster-summary-grid__label {
 	margin: 0 0 var(--ran-booster-space-4);
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 	font-weight: var(--ran-booster-font-weight-semibold);
 }
 

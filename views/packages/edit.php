@@ -318,7 +318,18 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 					$package_operation_layout        = true;
 					$package_operation_actions_html  = '';
 					$package_operation_guidance_html = '';
-					if ( $show_package_operation_actions ) {
+					ob_start();
+					if ( $release_managed ) {
+						/**
+						 * Lets an add-on append source-specific buttons to the Package operations group.
+						 *
+						 * @param string $package_current_source Current package update source.
+						 * @param string $package_source_view    Update source selected for this view.
+						 */
+						do_action( 'ran_booster_admin_package_operation_actions', $package_current_source, $package_source_view );
+					}
+					$package_add_on_operation_actions = trim( (string) ob_get_clean() );
+					if ( $show_package_operation_actions || '' !== $package_add_on_operation_actions ) {
 						ob_start();
 						?>
 					<div class="ran-booster-package-operation-settings__actions" role="group" aria-label="<?php esc_attr_e( 'Package operations', 'ran-booster' ); ?>">
@@ -328,6 +339,7 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 						<?php if ( $show_branch_operations ) { ?>
 							<?php require __DIR__ . '/reinstall.php'; ?>
 						<?php } ?>
+						<?php echo $package_add_on_operation_actions; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Add-on hook output is rendered as-is, like other package hooks. ?>
 					</div>
 						<?php
 						$package_operation_actions_html = (string) ob_get_clean();
@@ -338,7 +350,7 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 						}
 					}
 					require __DIR__ . '/fields/deployment-policy.php';
-					unset( $package_field_form, $package_operation_layout, $package_operation_actions_html, $package_operation_guidance_html );
+					unset( $package_field_form, $package_operation_layout, $package_operation_actions_html, $package_operation_guidance_html, $package_add_on_operation_actions );
 					?>
 				</div>
 			</div></div></section>

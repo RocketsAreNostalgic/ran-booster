@@ -578,18 +578,20 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertIsInt( $automation_position );
 			$operation_position = strpos( $html, 'class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card"' );
 			self::assertIsInt( $operation_position );
-			$row_position = strpos( $html, 'class="ran-booster-deployment-policy-row ran-booster-deployment-policy-row--with-action"', $operation_position );
-			self::assertIsInt( $row_position );
-			$select_position = strpos( $html, 'name="ran_booster[deployment_policy]"', $row_position );
+			$label_position = strpos( $html, '<label for="ran-booster-deployment-policy">', $operation_position );
+			self::assertIsInt( $label_position );
+			$select_position = strpos( $html, 'name="ran_booster[deployment_policy]"', $label_position );
 			self::assertIsInt( $select_position );
-			$actions_position = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $select_position );
+			$description_position = strpos( $html, 'Manual waits for an administrator. Automatic deploys on push.', $select_position );
+			self::assertIsInt( $description_position );
+			$notice_position = strpos( $html, 'data-ran-booster-local-development-warning', $description_position );
+			self::assertIsInt( $notice_position );
+			$guidance_position = strpos( $html, 'data-ran-booster-reinstall-guidance', $notice_position );
+			self::assertIsInt( $guidance_position );
+			$actions_position = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $guidance_position );
 			self::assertIsInt( $actions_position );
 			$reinstall_position = strpos( $html, 'data-ran-booster-settings-reinstall', $actions_position );
 			self::assertIsInt( $reinstall_position );
-			$row_end_position = strpos( $html, 'data-ran-booster-reinstall-guidance', $reinstall_position );
-			self::assertIsInt( $row_end_position );
-			$notice_position = strpos( $html, 'data-ran-booster-local-development-warning', $row_end_position );
-			self::assertIsInt( $notice_position );
 			$operation_end = strpos( $html, '</section>', $operation_position );
 			self::assertIsInt( $operation_end );
 			$save_actions_position = strpos( $html, 'class="ran-wp-ui-card__content ran-booster-package-settings__save-actions"', $operation_end );
@@ -597,14 +599,14 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertLessThan( $automation_position, $advanced_position );
 			self::assertTrue( $advanced_position < $readiness_position );
 			self::assertTrue( $readiness_position < $advanced_end );
-			self::assertTrue( $operation_position < $row_position );
-			self::assertTrue( $row_position < $select_position );
-			self::assertTrue( $select_position < $actions_position );
+			// Label, select, description, notice, guidance, then the action group last.
+			self::assertTrue( $operation_position < $label_position );
+			self::assertTrue( $label_position < $select_position );
+			self::assertTrue( $select_position < $description_position );
+			self::assertTrue( $description_position < $notice_position );
+			self::assertTrue( $notice_position < $guidance_position );
+			self::assertTrue( $guidance_position < $actions_position );
 			self::assertTrue( $actions_position < $reinstall_position );
-			// The Reinstall guidance follows the control row and the notice follows it.
-			self::assertTrue( $reinstall_position < $row_end_position );
-			self::assertTrue( $row_end_position < $notice_position );
-			self::assertTrue( $notice_position < $operation_end );
 			self::assertTrue( $reinstall_position < $operation_end );
 			self::assertTrue( $operation_end < $save_actions_position );
 			self::assertStringContainsString(
@@ -1160,6 +1162,114 @@ final class RepeatPackageViewTest extends TestCase {
 				$package_view->get_type()
 			);
 		}
+	}
+
+	/** @return list<array{PackagePagePresenter, PackageSource, bool, bool, bool}> */
+	public static function operation_card_matrix(): array {
+		$rows = array();
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $view ) {
+			foreach ( array( PackageSource::BRANCH, PackageSource::RELEASE_ASSET ) as $source ) {
+				foreach ( 'plugin' === $view->get_type() ? array( true, false ) : array( false ) as $active ) {
+					$rows[] = array( $view, $source, $active );
+				}
+			}
+		}
+
+		return $rows;
+	}
+
+	#[DataProvider( 'operation_card_matrix' )]
+	public function test_package_operation_card_is_symmetrical_across_sources(
+		PackagePagePresenter $package_view,
+		PackageSource $current_source,
+		bool $already_active
+	): void {
+		$package = $this->package( $package_view );
+		$package->set_source( $current_source, 2 );
+		$package_provider_settings                = $this->provider_settings( true );
+		$package_source                           = array(
+			'current'           => $current_source->value,
+			'selected'          => $current_source->value,
+			'unavailable'       => false,
+			'advanced_sections' => array(),
+		);
+		$development_environment_detected         = true;
+		$GLOBALS['ran_booster_bulk_active_plugins'] = $already_active && 'plugin' === $package_view->get_type() ? array( 'example/example.php' ) : array();
+		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_operation_actions'] = array(
+			static function ( string $current, string $selected ): void {
+				if ( 'release_asset' === $current && 'release_asset' === $selected ) {
+					echo '<a class="disabled" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update>Update now</a>';
+				}
+			},
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+		unset( $GLOBALS['ran_booster_bulk_active_plugins'], $GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_operation_actions'] );
+
+		$operation_start = strpos( $html, 'ran-booster-package-operation-settings ran-booster-card' );
+		self::assertIsInt( $operation_start );
+		$operation_end = strpos( $html, '</section>', $operation_start );
+		self::assertIsInt( $operation_end );
+		$card = substr( $html, $operation_start, $operation_end - $operation_start );
+
+		$branch  = PackageSource::BRANCH === $current_source;
+		$buttons = array();
+		if ( ! $already_active ) {
+			$buttons[] = 'plugin' === $package_view->get_type() ? '>Activate plugin</a>' : '>Activate theme</a>';
+		}
+		$buttons[] = $branch ? 'data-ran-booster-settings-reinstall' : 'data-ran-booster-managed-release-native-update';
+
+		$needles = array(
+			'<label for="ran-booster-deployment-policy">',
+			'name="ran_booster[deployment_policy]"',
+			$branch ? 'Automatic deploys on push.' : 'Automatic installs validated releases.',
+			'data-ran-booster-local-development-warning',
+		);
+		if ( $branch ) {
+			$needles[] = 'data-ran-booster-reinstall-guidance';
+		}
+		$needles[] = 'class="ran-booster-package-operation-settings__actions" role="group" aria-label="Package operations"';
+		$previous  = -1;
+		foreach ( array_merge( $needles, $buttons ) as $needle ) {
+			$position = strpos( $card, $needle );
+			if ( false === $position ) {
+				self::fail( 'Missing in Package operation card: ' . $needle );
+			}
+			self::assertGreaterThan( $previous, $position, $needle );
+			$previous = $position;
+		}
+		self::assertSame( 1, substr_count( $card, 'ran-booster-package-operation-settings__actions' ) );
+		self::assertSame( count( $buttons ), preg_match_all( '/<(?:a|button)\b/', (string) preg_replace( '/^.*?class="ran-booster-package-operation-settings__actions".*?>/s', '', $card, 1 ) ) );
+		// The action group closes the card body; nothing follows it inside the Updates field.
+		self::assertMatchesRegularExpression( '/<\/(?:a|button)>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/div>\s*$/', $card );
+		// Branch packages keep Reinstall out of the Releases card and vice versa.
+		self::assertSame( $branch, str_contains( $card, 'data-ran-booster-settings-reinstall' ) );
+		self::assertSame( ! $branch, str_contains( $card, 'data-ran-booster-managed-release-native-update' ) );
+	}
+
+	public function test_package_operation_card_renders_no_empty_action_group(): void {
+		$package_view = PackagePagePresenter::plugin();
+		$package      = $this->package( $package_view );
+		$package->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$package_provider_settings                  = $this->provider_settings( true );
+		$package_source                             = array(
+			'current'           => 'release_asset',
+			'selected'          => 'release_asset',
+			'unavailable'       => false,
+			'advanced_sections' => array(),
+		);
+		$GLOBALS['ran_booster_bulk_active_plugins'] = array( 'example/example.php' );
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+		unset( $GLOBALS['ran_booster_bulk_active_plugins'] );
+
+		// Plugin already active and no add-on action: no group wrapper at all.
+		self::assertStringContainsString( 'name="ran_booster[deployment_policy]"', $html );
+		self::assertStringNotContainsString( 'ran-booster-package-operation-settings__actions', $html );
 	}
 
 	/** @return list<array{PackagePagePresenter, PackageSource, bool}> */

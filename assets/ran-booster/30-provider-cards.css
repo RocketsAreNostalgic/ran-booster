@@ -225,7 +225,7 @@
 
 .ran-booster-admin .ran-booster-public-lookup-profile__label {
 	display: block;
-	margin-block-end: var(--ran-booster-space-7);
+	margin-block-end: var(--ran-booster-field-label-gap);
 }
 
 .ran-booster-admin .ran-booster-public-lookup-profile__controls {
@@ -1285,7 +1285,6 @@
 
 .ran-booster-admin .ran-booster-provider-receiver__field > label {
 	flex: 1 0 100%;
-	font-weight: 600;
 }
 
 .ran-booster-admin .ran-booster-provider-receiver__field > select {

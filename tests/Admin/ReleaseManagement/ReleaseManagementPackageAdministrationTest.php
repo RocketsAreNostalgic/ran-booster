@@ -787,17 +787,34 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Update now</a>', $html );
 		self::assertStringNotContainsString( '>Install now</a>', $html );
-		self::assertMatchesRegularExpression( '/<div class="ran-booster-managed-release-browser__footer">\s*<a [^>]*ran-booster-managed-release-native-update[^>]*>Update now<\/a>\s*<\/div>/', $html );
-		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update', $html );
+		// The browser keeps the offer data; the Update now button moved to the Package operations group.
+		self::assertStringNotContainsString( '>Update now</a>', $html );
+		self::assertStringNotContainsString( 'ran-booster-managed-release-browser__footer', $html );
+		self::assertStringNotContainsString( 'data-ran-booster-managed-release-native-update>', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-version="1.2.0"', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-release-id=""', $html );
-		self::assertStringContainsString( 'ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid disabled ran-booster-managed-release-native-update', $html );
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		self::assertStringContainsString( 'action=upgrade-plugin', $html );
 		self::assertStringContainsString( 'plugin=example%2Fexample.php', $html );
 		self::assertStringContainsString( '_wpnonce=nonce-for-upgrade-plugin_example%2Fexample.php', $html );
+	}
+
+	public function test_package_operation_actions_render_a_disabled_secondary_update_now_for_release_packages_only(): void {
+		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) ) );
+
+		ob_start();
+		$controls->render_package_operation_actions( 'release_asset', 'release_asset' );
+		$html = trim( (string) ob_get_clean() );
+
+		self::assertMatchesRegularExpression( '/^<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline disabled ran-booster-managed-release-native-update" aria-disabled="true" tabindex="-1" data-ran-booster-managed-release-native-update>Update now<\/a>$/', $html );
+		self::assertStringNotContainsString( 'href=', $html );
+
+		foreach ( array( array( 'branch', 'branch' ), array( 'branch', 'release_asset' ), array( 'release_asset', 'branch' ) ) as $sources ) {
+			ob_start();
+			$controls->render_package_operation_actions( $sources[0], $sources[1] );
+			self::assertSame( '', trim( (string) ob_get_clean() ), implode( '/', $sources ) );
+		}
 	}
 
 	public function test_managed_theme_browser_uses_the_native_theme_upgrade_route(): void {

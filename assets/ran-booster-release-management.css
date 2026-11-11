@@ -89,12 +89,6 @@
 	margin-block-start: var(--ran-booster-space-5);
 }
 
-.ran-booster-admin .ran-booster-managed-release-browser__footer {
-	display: flex;
-	justify-content: flex-end;
-	margin-block-start: var(--ran-booster-space-8);
-}
-
 .ran-booster-admin .ran-booster-release-candidates--pending {
 	margin-block: var(--ran-booster-space-16) 0;
 }

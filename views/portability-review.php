@@ -88,7 +88,7 @@ $has_credential_decisions         = array() !== array_filter(
 <?php if ( ! empty( $portability_requirements_summary ) ) : ?>
 	<div data-ran-booster-ui-disclosure="transporter-blueprint-requirements" data-ran-booster-ui-disclosure-density="compact">
 	<details data-ran-booster-ui-disclosure-fallback class="ran-booster-portability__package-details ran-booster-portability__blueprint-requirements ran-booster-disclosure">
-		<summary><?php esc_html_e( 'Blueprint requirements', 'ran-booster' ); ?></summary>
+		<summary><?php esc_html_e( 'Minimum requirements', 'ran-booster' ); ?></summary>
 		<div data-ran-booster-ui-disclosure-content class="ran-booster-portability__details-body ran-booster-disclosure__body">
 		<p><?php esc_html_e( 'Minimum versions reported for all packages in this Blueprint, including packages you have not selected. These reports do not guarantee compatibility.', 'ran-booster' ); ?></p>
 		<ul>

@@ -280,7 +280,7 @@ final class PortabilityControllerTest extends TestCase {
 			)
 		);
 		self::assertStringContainsString( 'Minimum versions reported for all packages in this Blueprint', $html );
-		self::assertStringContainsString( '<summary>Blueprint requirements</summary>', $html );
+		self::assertStringContainsString( '<summary>Minimum requirements</summary>', $html );
 		self::assertStringContainsString( '<strong>PHP minimum</strong>: <code>99.0</code>.', $html );
 		self::assertStringContainsString( 'missing observations: 1', $html );
 		self::assertStringContainsString( 'Declared minimum not met', $html );

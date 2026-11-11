@@ -9253,10 +9253,6 @@ msgid "Packages"
 msgstr ""
 
 #: views/portability.php:250
-msgid "Select all managed packages"
-msgstr ""
-
-#: views/portability.php:250
 msgid "Select all packages"
 msgstr ""
 

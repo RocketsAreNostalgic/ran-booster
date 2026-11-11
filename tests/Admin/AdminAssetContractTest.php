@@ -2015,7 +2015,7 @@ final class AdminAssetContractTest extends TestCase {
 		$packages   = $this->asset( 'ran-booster/60-packages.css' );
 		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
 
-		if ( 1 !== preg_match( '#<div class="ran-booster-data-table-wrap ran-booster-package-table-wrap">\n(<table class="wp-list-table widefat plugins ran-booster-package-table"[\s\S]*?</table>)\n</div>\n</div></div></div>#', $view, $m ) ) {
+		if ( 1 !== preg_match( '#<div class="ran-booster-data-table-wrap ran-booster-package-table-wrap">\n(<table class="wp-list-table widefat plugins ran-booster-package-table"[\s\S]*?</table>)\n</div>\n<\?php \} \?>\n</div></div></div>#', $view, $m ) ) {
 			self::fail( 'The package table must sit directly inside one shared data-table wrapper that closes with the table.' );
 		}
 		$table = $m[1];

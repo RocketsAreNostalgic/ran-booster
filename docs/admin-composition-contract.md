@@ -615,6 +615,29 @@ Exceptions are deliberate and small: dialogs end-align their actions, and row
 actions stay in the Actions column. A new screen that needs another exception
 changes this section first.
 
+#### Source switch bar (state row)
+
+The Update source tabs on Edit plugin and theme use one state row to move
+between Branch and Releases (`.ran-booster-source-switch-bar`). The message
+sits at the start of the row and one action at the end. It is a state row, an
+intentional exception to start-aligned action placement, because it reports a
+state rather than finishing a form. It wraps on narrow widths.
+
+- The bar shows only on the tab of the source that is not active, directly
+  under the pane description. The active source's tab never shows it; the green
+  dot on the active tab label is the active signal.
+- Success makes the target source active, so the bar is gone and the success
+  notice takes its place at the top of the pane. An error keeps the bar, with
+  the notice above it.
+- An unavailable action stays visible, `aria-disabled="true"` (never the native
+  `disabled` attribute, so it stays focusable), with a reason message in the
+  row and the reason tooltip on hover and keyboard focus. It is never hidden.
+
+A disabled or unavailable brand solid button draws as a white fill with a 1px
+`--ran-booster-control-border` stroke (3:1 or more against white and the grey
+surface), muted text at 4.5:1 or more on the fill, `cursor: not-allowed`, no
+opacity and no hover change. Meaning never rests on a grey fill or opacity.
+
 ## Add-on generation and service delivery
 
 An administration add-on must check the exact Add-on API generation before

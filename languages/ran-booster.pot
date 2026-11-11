@@ -351,7 +351,7 @@ msgstr ""
 
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:227
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:561
-#: views/provider.php:673
+#: views/provider.php:672
 msgid "Manage webhook"
 msgstr ""
 
@@ -411,7 +411,7 @@ msgstr ""
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:110
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:124
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:363
-#: views/provider.php:631
+#: views/provider.php:630
 msgid "Webhook setup"
 msgstr ""
 
@@ -2339,7 +2339,7 @@ msgstr ""
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
 #: views/packages/index.php:351
-#: views/provider.php:833
+#: views/provider.php:834
 #: views/settings-storage.php:25
 #: views/troubleshooting-installation.php:18
 #: views/troubleshooting-installation.php:172
@@ -2392,7 +2392,7 @@ msgid "No secret saved"
 msgstr ""
 
 #: RAN/Admin/ProviderSettingsPresenter.php:1791
-#: views/provider.php:833
+#: views/provider.php:834
 msgid "Ready locally"
 msgstr ""
 
@@ -6352,7 +6352,7 @@ msgstr ""
 
 #: views/attempts/index.php:151
 #: views/portability-review.php:30
-#: views/provider.php:647
+#: views/provider.php:646
 #: views/troubleshooting.php:181
 msgid "Repository"
 msgstr ""
@@ -6768,7 +6768,7 @@ msgstr ""
 #: views/documentation.php:406
 #: views/onboarding.php:207
 #: views/overview-dashboard.php:77
-#: views/provider.php:771
+#: views/provider.php:772
 msgid "Install a plugin"
 msgstr ""
 
@@ -7089,7 +7089,7 @@ msgstr ""
 #: views/documentation.php:407
 #: views/onboarding.php:208
 #: views/overview-dashboard.php:84
-#: views/provider.php:772
+#: views/provider.php:773
 msgid "Install a theme"
 msgstr ""
 
@@ -7208,17 +7208,17 @@ msgid "Git provider location"
 msgstr ""
 
 #: views/documentation.php:471
-#: views/provider.php:682
+#: views/provider.php:681
 msgid "Payload URL"
 msgstr ""
 
 #: views/documentation.php:473
-#: views/provider.php:685
+#: views/provider.php:684
 msgid "Content type"
 msgstr ""
 
 #: views/documentation.php:475
-#: views/provider.php:689
+#: views/provider.php:688
 msgid "Event"
 msgstr ""
 
@@ -8366,8 +8366,8 @@ msgid "Search managed %s"
 msgstr ""
 
 #: views/packages/index.php:191
-#: views/provider.php:805
-#: views/provider.php:833
+#: views/provider.php:806
+#: views/provider.php:834
 #: assets/ran-booster-repository-picker.js:1103
 msgid "Search"
 msgstr ""
@@ -9689,12 +9689,12 @@ msgid "Saved credentials are unavailable."
 msgstr ""
 
 #: views/provider.php:437
-#: views/provider.php:735
+#: views/provider.php:736
 msgid "This site can receive Git provider webhook deliveries."
 msgstr ""
 
 #: views/provider.php:454
-#: views/provider.php:752
+#: views/provider.php:753
 msgid "That managed repository is no longer available. Return to the repository list and choose a current repository."
 msgstr ""
 
@@ -9794,154 +9794,147 @@ msgstr ""
 msgid "This Git provider uses one shared receiver on this site. Configure and check each repository from Repositories."
 msgstr ""
 
-#: views/provider.php:615
-msgid "Keep this URL reachable: do not cache, challenge or transform its requests."
-msgstr ""
-
-#: views/provider.php:615
-msgid "Learn more"
-msgstr ""
-
-#: views/provider.php:615
-msgid "about keeping the webhook receiver URL reachable"
-msgstr ""
-
-#: views/provider.php:632
+#: views/provider.php:631
 msgid "Automated setup"
 msgstr ""
 
-#: views/provider.php:633
+#: views/provider.php:632
 msgid "Manual setup"
 msgstr ""
 
-#: views/provider.php:637
+#: views/provider.php:636
 msgid "Booster can set up a Push-to-Deploy webhook for you. Choose a repository below to get started."
 msgstr ""
 
-#: views/provider.php:649
+#: views/provider.php:648
 msgid "Choose a repository"
 msgstr ""
 
 #. translators: %s: repository name.
-#: views/provider.php:666
+#: views/provider.php:665
 #, php-format
 msgid "🟢 %s — webhook set up"
 msgstr ""
 
-#: views/provider.php:679
+#: views/provider.php:678
 msgid "Generate a webhook for Push-to-Deploy manually using these values. Use a unique generated secret for each repository."
 msgstr ""
 
-#: views/provider.php:683
+#: views/provider.php:682
 msgid "Copy payload URL"
 msgstr ""
 
-#: views/provider.php:683
+#: views/provider.php:682
 msgid "URL copied"
 msgstr ""
 
-#: views/provider.php:683
+#: views/provider.php:682
 msgid "Payload URL copied to the clipboard."
 msgstr ""
 
-#: views/provider.php:683
+#: views/provider.php:682
 msgid "Clipboard access failed. The payload URL is selected; use your browser copy command."
 msgstr ""
 
-#: views/provider.php:694
+#: views/provider.php:693
 msgid "Detailed manual setup and troubleshooting"
 msgstr ""
 
-#: views/provider.php:697
+#: views/provider.php:696
 msgid "Paste the payload URL and a matching signing secret."
 msgstr ""
 
-#: views/provider.php:697
+#: views/provider.php:696
 msgid "Keep SSL verification enabled and select the push event."
 msgstr ""
 
-#: views/provider.php:697
+#: views/provider.php:696
 msgid "Trigger a delivery and confirm the Git provider records a successful response."
 msgstr ""
 
-#: views/provider.php:698
+#: views/provider.php:697
 #: views/provider.php:707
+msgid "Keep the webhook receiver URL reachable: do not cache, challenge or transform its requests on this route."
+msgstr ""
+
+#: views/provider.php:698
+#: views/provider.php:708
 msgid "For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity."
 msgstr ""
 
 #: views/provider.php:699
-#: views/provider.php:708
+#: views/provider.php:709
 msgid "Read the webhook operations guide"
 msgstr ""
 
-#: views/provider.php:709
+#: views/provider.php:710
 msgid "Manage repositories"
 msgstr ""
 
-#: views/provider.php:720
+#: views/provider.php:721
 #: views/provider/modals.php:174
 msgid "Managed repositories"
 msgstr ""
 
-#: views/provider.php:757
+#: views/provider.php:758
 msgid "Filter managed repositories"
 msgstr ""
 
-#: views/provider.php:758
+#: views/provider.php:759
 msgid "Filter managed repositories…"
 msgstr ""
 
-#: views/provider.php:775
+#: views/provider.php:776
 msgid "Managed repository status is temporarily unavailable."
 msgstr ""
 
-#: views/provider.php:792
+#: views/provider.php:793
 msgid "Filter by credential type"
 msgstr ""
 
-#: views/provider.php:793
+#: views/provider.php:794
 msgid "All credential types"
 msgstr ""
 
-#: views/provider.php:798
-#: views/provider.php:829
+#: views/provider.php:799
+#: views/provider.php:830
 msgid "Filter by scope"
 msgstr ""
 
-#: views/provider.php:799
-#: views/provider.php:829
+#: views/provider.php:800
+#: views/provider.php:830
 msgid "All scopes"
 msgstr ""
 
-#: views/provider.php:805
+#: views/provider.php:806
 msgid "Search credentials"
 msgstr ""
 
-#: views/provider.php:805
+#: views/provider.php:806
 msgid "Search credentials…"
 msgstr ""
 
-#: views/provider.php:814
+#: views/provider.php:815
 msgid "No credentials match the current filters."
 msgstr ""
 
-#: views/provider.php:833
+#: views/provider.php:834
 msgid "Filter by status"
 msgstr ""
 
-#: views/provider.php:833
+#: views/provider.php:834
 msgid "All statuses"
 msgstr ""
 
-#: views/provider.php:833
+#: views/provider.php:834
 msgid "Search webhook secrets"
 msgstr ""
 
-#: views/provider.php:833
+#: views/provider.php:834
 msgid "Search secrets…"
 msgstr ""
 
-#: views/provider.php:841
+#: views/provider.php:842
 msgid "No webhook secrets match the current filters."
 msgstr ""
 

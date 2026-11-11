@@ -96,7 +96,7 @@ function fixture() {
 	const replacedUrls = [];
 	const scrollCalls = [];
 	let packageDisclosures = [
-		{ id: 'ran-booster-advanced-source-settings', open: false },
+		{ id: 'ran-booster-advanced-source-settings-disclosure', open: false },
 		{ id: 'ran-booster-package-danger-zone', open: false },
 	];
 	let renderedBranchCheckErrors = [];
@@ -507,7 +507,7 @@ test('enhanced mutations preserve viewport and package disclosure states', () =>
 			window: state.window,
 		});
 		const ids = [
-			'ran-booster-advanced-source-settings',
+			'ran-booster-advanced-source-settings-disclosure',
 			'ran-booster-release-track-settings',
 			'ran-booster-package-danger-zone',
 		];
@@ -581,11 +581,11 @@ test('enhanced disclosure restoration is keyed by stable IDs and ignores absent 
 	});
 	const reversedReplacement = [
 		{ id: 'ran-booster-package-danger-zone', open: false },
-		{ id: 'ran-booster-advanced-source-settings', open: true },
+		{ id: 'ran-booster-advanced-source-settings-disclosure', open: true },
 	];
 
 	state.setPackageDisclosures([
-		{ id: 'ran-booster-advanced-source-settings', open: false },
+		{ id: 'ran-booster-advanced-source-settings-disclosure', open: false },
 		{ id: 'ran-booster-package-danger-zone', open: true },
 	]);
 	init();

@@ -331,7 +331,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertTrue( $credential_position < $trust_position, 'The trust Notice follows the access field.' );
 		self::assertTrue( $trust_position < $locator_position, 'The trust Notice precedes the repository locator.' );
 		$repository_position = strpos( $html, 'id="ran-booster-package-configuration-heading"' );
-		$advanced_position   = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure"' );
+		$advanced_position   = strpos( $html, '<details id="ran-booster-advanced-source-settings-disclosure" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure"' );
 		$operation_position  = strpos( $html, 'id="ran-booster-package-operation-heading"' );
 		$automation_position = strpos( $html, 'name="ran_booster[deployment_policy]"' );
 		$link_position       = strpos( $html, 'name="ran_booster[dry-run]"' );
@@ -367,7 +367,7 @@ final class RepeatPackageViewTest extends TestCase {
 			$package_view->get_type()
 		);
 		self::assertStringNotContainsString(
-			'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
+			'<details id="ran-booster-advanced-source-settings-disclosure" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 			$html
 		);
 		self::assertStringContainsString( 'Branch · repository default', $html );
@@ -683,7 +683,7 @@ final class RepeatPackageViewTest extends TestCase {
 				$html,
 				'The visible link text is Open repository; the repository name stays in the accessible name.'
 			);
-			$advanced_position = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure"' );
+			$advanced_position = strpos( $html, '<details id="ran-booster-advanced-source-settings-disclosure" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure"' );
 			self::assertIsInt( $advanced_position );
 			$advanced_end = strpos( $html, '</details>', $advanced_position );
 			self::assertIsInt( $advanced_end );
@@ -861,11 +861,33 @@ final class RepeatPackageViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 
 			self::assertStringContainsString(
-				'<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
+				'<details id="ran-booster-advanced-source-settings-disclosure" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings open',
 				$html,
 				$package_view->get_type()
 			);
 		}
+	}
+
+	public function test_advanced_settings_anchor_is_on_the_disclosure_host_that_survives_mounting(): void {
+		$package_view              = PackagePagePresenter::plugin();
+		$package                   = $this->package( $package_view );
+		$package_provider_settings = $this->provider_settings( true );
+		$package_source            = array( 'advanced_open' => true );
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		$document = new \DOMDocument();
+		$document->loadHTML( '<?xml encoding="UTF-8">' . $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+
+		// The public anchor is unique and on the runtime Disclosure host, not on the fallback the runtime replaces.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-advanced-source-settings"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-advanced-source-settings"][@data-ran-booster-ui-disclosure="package-advanced-settings"])' ) );
+		// The fallback keeps a distinct ID for its own open-state tracking, directly inside the host.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-advanced-source-settings-disclosure"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@id="ran-booster-advanced-source-settings"]/details[@id="ran-booster-advanced-source-settings-disclosure"][@data-ran-booster-ui-disclosure-fallback][@data-ran-booster-package-disclosure][@open])' ) );
 	}
 
 	public function test_edit_and_reinstall_snapshots_stay_authoritative_while_attempted_values_are_retained(): void {

@@ -1045,6 +1045,65 @@ test('Mounted disclosures report open state by id and honour remembered state wh
 	assert.equal(next.details.open, true);
 });
 
+test('Mounting a disclosure keeps the public anchor on its host and the fallback ID for state', () => {
+	const f = fixture({ disclosureRuntime: true });
+	const host = new f.Node('div'),
+		details = new f.Node('details'),
+		summary = new f.Node('summary'),
+		body = new f.Node('div'),
+		link = new f.Node('a');
+	host.setAttribute('id', 'ran-booster-advanced-source-settings');
+	host.setAttribute(
+		'data-ran-booster-ui-disclosure',
+		'package-advanced-settings'
+	);
+	details.setAttribute(
+		'id',
+		'ran-booster-advanced-source-settings-disclosure'
+	);
+	details.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+	summary.textContent = 'Advanced settings';
+	body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+	body.appendChild(link);
+	details.appendChild(summary);
+	details.appendChild(body);
+	host.appendChild(details);
+	f.doc.body.appendChild(host);
+	details.open = true;
+	assert.equal(
+		f.doc.getElementById('ran-booster-advanced-source-settings'),
+		host
+	);
+
+	f.run();
+	f.flush();
+
+	assert.equal(host.hasAttribute('data-ran-booster-ui-mounted'), true);
+	assert.equal(
+		details.isConnected,
+		false,
+		'The runtime replaced the fallback.'
+	);
+	assert.equal(
+		f.doc.getElementById('ran-booster-advanced-source-settings'),
+		host,
+		'Source links, release returns and htmx show targets still resolve.'
+	);
+	assert.equal(host.contains(link), true);
+	assert.equal(
+		f.doc
+			.querySelectorAll('*')
+			.filter(
+				(node) => node.id === 'ran-booster-advanced-source-settings'
+			).length,
+		1
+	);
+	assert.deepEqual(
+		{ ...f.window.ranBoosterUI.disclosureOpenStates() },
+		{ 'ran-booster-advanced-source-settings-disclosure': true }
+	);
+});
+
 test('Disclosure render failure leaves the original native body untouched', () => {
 	const f = fixture({ disclosureRuntime: true, disclosureFail: true });
 	const host = new f.Node('div'),

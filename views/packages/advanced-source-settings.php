@@ -35,9 +35,11 @@ if ( '' === $package_advanced_summary_projection_heading
 	$package_advanced_summary_projection = null;
 }
 
+// The public anchor (source links, release returns, htmx show targets) sits on the host, which survives the
+// runtime Disclosure replacing the fallback <details>; the fallback keeps its own ID for open-state tracking.
 ?>
-<div data-ran-booster-ui-disclosure="package-advanced-settings" data-ran-booster-ui-disclosure-density="prominent">
-<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings <?php echo $package_advanced_open ? 'open' : ''; ?>>
+<div id="ran-booster-advanced-source-settings" data-ran-booster-ui-disclosure="package-advanced-settings" data-ran-booster-ui-disclosure-density="prominent">
+<details id="ran-booster-advanced-source-settings-disclosure" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure data-ran-booster-advanced-source-settings <?php echo $package_advanced_open ? 'open' : ''; ?>>
 	<summary>
 		<h3 class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Advanced settings', 'ran-booster' ); ?></h3>
 		<small class="ran-booster-advanced-source-summary" data-ran-booster-advanced-source-summary data-ran-booster-ui-disclosure-meta>

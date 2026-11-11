@@ -162,6 +162,13 @@ $origin_labels = array(
 					'workflow.assessment' => __( 'Workflow assessment', 'ran-booster' ),
 					default => ucfirst( str_replace( array( '.', '_' ), ' ', (string) ( $item['operation'] ?? '' ) ) ),
 				};
+				$details_label = sprintf(
+					/* translators: 1: activity subject, 2: activity name, 3: recorded time. Gives each row's disclosure a distinct accessible name. */
+					__( 'View details: %1$s, %2$s, %3$s', 'ran-booster' ),
+					$subject_label,
+					$activity_label,
+					(string) ( $item['created_at'] ?? '' )
+				);
 				?>
 				<tbody class="ran-booster-attempt-row" data-ran-booster-activity-row="<?php echo esc_attr( (string) ( $item['activity_record_id'] ?? '' ) ); ?>">
 					<tr class="ran-booster-attempt-row__summary">
@@ -185,7 +192,7 @@ $origin_labels = array(
 						<td colspan="5" class="ran-booster-attempt-row__details-cell">
 							<div class="ran-booster-attempt-row__details" data-ran-booster-ui-disclosure="activity-details" data-ran-booster-ui-disclosure-density="compact">
 							<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure">
-								<summary><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>
+								<summary aria-label="<?php echo esc_attr( $details_label ); ?>"><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>
 								<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 								<?php if ( $recorded_check ) { ?>
 									<dl class="ran-booster-activity__details">

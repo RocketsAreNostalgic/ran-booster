@@ -1342,6 +1342,64 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure">', $record[1] );
 	}
 
+	/**
+	 * Every row's disclosure is a separate control, so each needs its own
+	 * accessible name carrying the row's subject, activity and time while the
+	 * visible label stays "View details".
+	 */
+	public function test_activity_disclosures_have_distinct_accessible_names_with_row_context(): void {
+		$deployment_activity  = array(
+			'items' => array(
+				array(
+					'record_source'      => 'activity',
+					'activity_record_id' => '7',
+					'created_at'         => '2026-11-10 22:51:20',
+					'state'              => 'skipped',
+					'provider_label'     => 'GitHub',
+					'package_type'       => 'provider',
+					'subject_identity'   => 'github',
+					'operation'          => 'diagnostics.run',
+				),
+				array(
+					'record_source'      => 'activity',
+					'activity_record_id' => '8',
+					'created_at'         => '2026-11-10 22:49:02',
+					'state'              => 'succeeded',
+					'provider_label'     => 'GitHub',
+					'package_type'       => 'provider',
+					'subject_identity'   => 'github',
+					'operation'          => 'diagnostics.run',
+				),
+				array(
+					'record_source'      => 'deployment',
+					'activity_record_id' => '6',
+					'id'                 => 6,
+					'created_at'         => '2026-11-09 08:00:00',
+					'state'              => 'failed',
+					'outcome_code'       => 'provider_unavailable',
+					'package_slug'       => 'example',
+					'package_type'       => 'plugin',
+					'subject_identity'   => 'example/example.php',
+					'operation'          => 'install',
+				),
+			),
+		);
+		$troubleshooting_base = 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=troubleshooting';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
+		$html = (string) ob_get_clean();
+
+		$count = preg_match_all( '/<summary aria-label="([^"]*)">View details<\/summary>/', $html, $matches );
+		self::assertSame( 3, $count );
+		$names = $matches[1];
+		self::assertCount( 3, array_unique( $names ) );
+		self::assertSame( 'View details: GitHub, Diagnostics run, 2026-11-10 22:51:20', $names[0] );
+		self::assertSame( 'View details: GitHub, Diagnostics run, 2026-11-10 22:49:02', $names[1] );
+		self::assertSame( 'View details: Plugin: example/example.php, Install, 2026-11-09 08:00:00', $names[2] );
+		self::assertSame( 3, substr_count( $html, '>View details</summary>' ) );
+	}
+
 	public function test_activity_subjects_keep_provider_and_repository_records_distinct(): void {
 		$deployment_activity  = array(
 			'items'       => array(

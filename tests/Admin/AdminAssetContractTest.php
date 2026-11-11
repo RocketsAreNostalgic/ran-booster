@@ -1933,7 +1933,7 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-activity__details', $view );
 		self::assertStringContainsString( 'DeploymentOutcomeMessage::for_code', $view );
 		self::assertStringContainsString( 'DeploymentOutcomeMessage::for_code', $detail );
-		self::assertStringContainsString( "<summary><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>", $view );
+		self::assertStringContainsString( "<summary aria-label=\"<?php echo esc_attr( \$details_label ); ?>\"><?php esc_html_e( 'View details', 'ran-booster' ); ?></summary>", $view );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-attempt-row__details', $css );
 		self::assertStringContainsString( '.ran-booster-admin .ran-booster-attempt-list > tbody:nth-of-type(odd) > tr > *', $css );
 		self::assertStringContainsString( '--ran-booster-table-cell-padding:', $css );

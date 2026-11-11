@@ -568,6 +568,11 @@ final class RepeatPackageViewTest extends TestCase {
 				'<a href="https://github.com/owner/example" class="ran-booster-repository-link"',
 				$html
 			);
+			self::assertMatchesRegularExpression(
+				'~<a href="https://github.com/owner/example" class="ran-booster-repository-link"[^>]*>Open repository<span class="screen-reader-text"> owner/example</span> <span aria-hidden="true">↗</span><span class="screen-reader-text"> \(opens in a new tab\)</span></a>~',
+				$html,
+				'The visible link text is Open repository; the repository name stays in the accessible name.'
+			);
 			$advanced_position = strpos( $html, '<details id="ran-booster-advanced-source-settings" class="ran-booster-settings-disclosure ran-booster-advanced-source-settings ran-booster-disclosure"' );
 			self::assertIsInt( $advanced_position );
 			$advanced_end = strpos( $html, '</details>', $advanced_position );

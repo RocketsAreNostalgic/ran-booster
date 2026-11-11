@@ -380,7 +380,7 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 					<?php if ( $provider_unavailable ) { ?>
 						<code><?php echo esc_html( (string) $package->repository ); ?></code>
 					<?php } else { ?>
-						<a href="<?php echo esc_url( $repository_url ); ?>" class="ran-booster-repository-link" data-repository-base="<?php echo esc_attr( $stored_repository_url_base ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) $package->repository ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
+						<a href="<?php echo esc_url( $repository_url ); ?>" class="ran-booster-repository-link" data-repository-base="<?php echo esc_attr( $stored_repository_url_base ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open repository', 'ran-booster' ); ?><span class="screen-reader-text"> <?php echo esc_html( (string) $package->repository ); ?></span> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
 					<?php } ?>
 				</p>
 		</div>

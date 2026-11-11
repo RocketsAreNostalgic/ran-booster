@@ -108,27 +108,27 @@ require __DIR__ . '/troubleshooting-installation-entry.php';
 			$self_update_reason = $core_self_update['reason'] ?? 'release_marker_missing_or_invalid';
 			$updater_state      = $core_self_update['updater_state'] ?? null;
 			if ( array() === $core_self_update ) {
-				$self_update_message = __( 'Core update status is unavailable.', 'ran-booster' );
+				$self_update_message = __( 'Core updates status is unavailable.', 'ran-booster' );
 			} elseif ( 'configuration_disabled' === $self_update_reason ) {
 				$self_update_message = __( 'Turned off programmatically in site configuration.', 'ran-booster' );
 			} elseif ( 'preference_disabled' === $self_update_reason ) {
-				$self_update_message = __( 'Booster update checks are turned off in Settings.', 'ran-booster' );
+				$self_update_message = __( 'Core updates are turned off in Settings.', 'ran-booster' );
 			} elseif ( 'enabled' === $self_update_mode && in_array( $updater_state, array( 'unavailable', 'blocked' ), true ) ) {
-				$self_update_message = __( 'RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically.', 'ran-booster' );
+				$self_update_message = __( 'Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically.', 'ran-booster' );
 			} elseif ( 'enabled' === $self_update_mode ) {
-				$self_update_message = __( 'Booster can check for updates. Installing an update remains a manual action.', 'ran-booster' );
+				$self_update_message = __( 'Booster can check for Core updates. Installing an update remains a manual action.', 'ran-booster' );
 			} elseif ( 'configuration_invalid' === $self_update_reason ) {
-				$self_update_message = __( 'Core updates are off because this installation has an invalid self-update setting. Booster will not check for or replace itself.', 'ran-booster' );
+				$self_update_message = __( 'Core updates are off because this installation has an invalid Core updates configuration. Booster will not check for or replace itself.', 'ran-booster' );
 			} elseif ( 'disabled' === $self_update_mode ) {
 				$self_update_message = __( 'Core updates are off for this source installation. Booster will not check for or replace itself.', 'ran-booster' );
 			} else {
-				$self_update_message = __( 'Core update status is unavailable.', 'ran-booster' );
+				$self_update_message = __( 'Core updates status is unavailable.', 'ran-booster' );
 			}
 			$self_update_label = match ( $self_update_mode ) {
 				'enabled' => __( 'Checks enabled', 'ran-booster' ),
 				'disabled' => __( 'Checks disabled', 'ran-booster' ),
 				default => __( 'Status unavailable', 'ran-booster' ) };
-			$core_fields = $installation[ __( 'Booster Core updates', 'ran-booster' ) ] ?? array();
+			$core_fields = $installation[ __( 'Core updates', 'ran-booster' ) ] ?? array();
 			ob_start();
 			if ( ! empty( $core_fields ) ) {
 				?>
@@ -139,8 +139,8 @@ require __DIR__ . '/troubleshooting-installation-entry.php';
 				<?php
 			}
 			$entry_body        = (string) ob_get_clean();
-			$entry_title       = esc_html__( 'Booster Core updates', 'ran-booster' );
-			$entry_label       = __( 'Booster Core updates', 'ran-booster' );
+			$entry_title       = esc_html__( 'Core updates', 'ran-booster' );
+			$entry_label       = __( 'Core updates', 'ran-booster' );
 			$entry_description = esc_html( $self_update_message );
 			$entry_badge       = \RAN\Admin\Component\StatusBadge::for_intent( (string) $self_update_label, 'enabled' === $self_update_mode ? 'stable' : 'none' );
 			$entry_id          = '';

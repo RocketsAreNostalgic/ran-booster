@@ -212,7 +212,7 @@ final class AdminIndexViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-notice-state="local-development-v2"', $overview );
 		// The dismiss button is the notice's own grid item, after the description and before the icon.
 		self::assertMatchesRegularExpression( '~</p>\s*</div>\s*<button type="button" class="notice-dismiss" hidden style="display:none"><span class="screen-reader-text">[^<]+</span></button>\s*<svg class="ran-wp-ui-notice__icon"~', $overview );
-		self::assertStringContainsString( 'Booster’s own updates are disabled to protect this source checkout.', $overview );
+		self::assertStringContainsString( 'Core updates are disabled to protect this source checkout.', $overview );
 		self::assertStringNotContainsString( 'data-ran-booster-core-development-notice>', $overview );
 		self::assertStringContainsString( 'tab=documentation#ran-booster-file-protection', $overview );
 		$development_safety_notice = false;

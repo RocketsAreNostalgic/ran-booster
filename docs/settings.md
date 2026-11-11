@@ -3,7 +3,7 @@
 Open **Booster → Settings** after Extensions. It remains available with skipped
 onboarding or unavailable credential storage. It is not a horizontal shell tab.
 
-Settings groups Appearance and Booster updates under General preferences, and
+Settings groups Appearance and Core updates under General preferences, and
 keeps History and Download limits together. With JavaScript, each switch saves
 only its own preference automatically. History and Download limits retain
 explicit **Save changes**. One bottom action area keeps a

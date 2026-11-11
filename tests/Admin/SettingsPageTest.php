@@ -308,13 +308,13 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Appearance"]//label[@for="ran-booster-hide-github"]//input[@type="checkbox" and @role="switch" and @checked and @aria-invalid="true" and @aria-describedby="ran-booster-hide-github-help ran-booster-hide-github-error"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-hide-github-error"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//label[@for="ran-booster-self-update-discovery"]//input[@role="switch" and @disabled and not(@checked) and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Core updates"]//label[@for="ran-booster-self-update-discovery"]//input[@role="switch" and @disabled and not(@checked) and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-self-update-discovery-help"])' ) );
 		// Each switch explanation is a static public Notice that stays the switch's description: informational for an
 		// explanation, caution when update checks are unavailable for an unrecognised reason. Nothing announces it.
 		foreach ( array(
 			'ran-booster-hide-github-help'           => array( 'info', 'Saved for this site. GitHub navigation remains available.' ),
-			'ran-booster-self-update-discovery-help' => array( 'warning', 'Booster update checks are currently unavailable.' ),
+			'ran-booster-self-update-discovery-help' => array( 'warning', 'Core updates are currently unavailable.' ),
 		) as $help_id => $expected ) {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset/div[@id="' . $help_id . '" and @class="notice notice-' . $expected[0] . ' inline ran-booster-settings__reason ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $expected[0] . '" and @data-ran-booster-ui-notice and @data-ran-booster-ui-notice-intent="' . $expected[0] . '" and not(@role) and not(@aria-live)][count(*)=2]/*[1][self::div and @class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" and @data-ran-booster-ui-notice-content and p="' . $expected[1] . '"]/following-sibling::*[1][local-name()="svg" and @aria-hidden="true"])' ), $help_id );
 		}
@@ -364,7 +364,7 @@ final class SettingsPageTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@data-ran-booster-settings-scope="self_update_discovery"]//input[@type="checkbox" and @name="ran_booster[preferences][self_update_discovery]" and @id="ran-booster-self-update-discovery"])' ) );
 		foreach ( array(
 			'Appearance'      => array( 'RAN_BOOSTER_HIDE_GITHUB_UI' ),
-			'Booster updates' => array( 'RAN_BOOSTER_SELF_UPDATE_MODE' ),
+			'Core updates' => array( 'RAN_BOOSTER_SELF_UPDATE_MODE' ),
 			'History'         => array( 'RAN_BOOSTER_HISTORY_ROWS', 'RAN_BOOSTER_HISTORY_DAYS' ),
 			'Download limits' => array( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES' ),
 		) as $legend => $constants ) {
@@ -374,7 +374,7 @@ final class SettingsPageTest extends TestCase {
 			}
 		}
 		self::assertSame( 4.0, $xpath->evaluate( 'count(//div[@class="ran-booster-settings__configuration" and @data-ran-booster-ui-disclosure="settings-configuration" and @data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open) and summary="Configuration constants" and div[@data-ran-booster-ui-disclosure-content]])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Booster updates"]//button[@form="ran-booster-check-core-updates" and @disabled and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//fieldset[legend="Core updates"]//button[@form="ran-booster-check-core-updates" and @disabled and @aria-describedby="ran-booster-self-update-discovery-help"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@id="ran-booster-check-core-updates"]//input[@name="ran_booster[action]" and @value="check-core-updates"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-check-updates-unavailable"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(@class, "ran-booster-settings__update-summary")][./dl[contains(@class, "ran-booster-settings__update-facts")]/div/dt[text()="Latest check result"] and ./dl/following-sibling::button[1][text()="Check for updates"]])' ) );
@@ -511,14 +511,14 @@ final class SettingsPageTest extends TestCase {
 		// General preferences: open by default, summary from the group legends, no badge in the header.
 		$general = '//div[@id="ran-booster-general-heading"]';
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $general . '/details[@open]/summary[@aria-label="General preferences"]/span[@data-ran-booster-ui-disclosure-heading="h3"]/span[@class="ran-booster-troubleshooting__entry-title" and .="General preferences"])' ) );
-		self::assertSame( 'Appearance · Booster updates', trim( (string) $xpath->evaluate( 'string(' . $general . '/details/summary//span[@class="ran-booster-troubleshooting__entry-description"])' ) ) );
+		self::assertSame( 'Appearance · Core updates', trim( (string) $xpath->evaluate( 'string(' . $general . '/details/summary//span[@class="ran-booster-troubleshooting__entry-description"])' ) ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $general . '/details/summary//*[@data-ran-booster-ui-disclosure-meta or @data-ran-booster-badge])' ) );
 		$legends = array();
 		$count   = (int) $xpath->evaluate( 'count(' . $general . '//fieldset/legend)' );
 		for ( $index = 1; $index <= $count; ++$index ) {
 			$legends[] = trim( (string) $xpath->evaluate( 'string((' . $general . '//fieldset/legend)[' . $index . '])' ) );
 		}
-		self::assertSame( 'Appearance · Booster updates', implode( ' · ', $legends ), 'The summary is built from the group legends.' );
+		self::assertSame( 'Appearance · Core updates', implode( ' · ', $legends ), 'The summary is built from the group legends.' );
 		// Switch badges stay in the body next to their switches.
 		self::assertSame( 2.0, $xpath->evaluate( 'count(' . $general . '/details/div[@data-ran-booster-ui-disclosure-content]//span[@data-ran-booster-toggle-status])' ) );
 

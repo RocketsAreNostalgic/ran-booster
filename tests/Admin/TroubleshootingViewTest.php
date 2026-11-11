@@ -176,7 +176,7 @@ final class TroubleshootingViewTest extends TestCase {
 					'Name'        => '<candidate>',
 					'Declaration' => 'Unavailable',
 				),
-				'Booster Core updates' => array(
+				'Core updates' => array(
 					'Marker commit' => '<commit>',
 				),
 			),
@@ -609,7 +609,7 @@ final class TroubleshootingViewTest extends TestCase {
 					'Version'   => '1.0',
 				),
 			),
-			'installation_details' => array( 'Booster Core updates' => array( 'Updater code' => '<update>' ) ),
+			'installation_details' => array( 'Core updates' => array( 'Updater code' => '<update>' ) ),
 		);
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
@@ -623,7 +623,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 3.0, $xpath->evaluate( 'count(//section[@id="ran-booster-installation-details"]/div[' . $entry . '])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]/div[' . $entry . '])' ) );
 		self::assertSame( 3.0, $xpath->evaluate( 'count(//section[@id="ran-booster-installation-details"]/div[' . $entry . ' and @data-ran-booster-ui-disclosure="installation-section" and @data-ran-booster-ui-disclosure-density="prominent"]/details[@data-ran-booster-ui-disclosure-fallback and not(@open)]/div[@data-ran-booster-ui-disclosure-content])' ) );
-		foreach ( array( 'Environment', 'Secure credential storage', 'Booster Core updates' ) as $title ) {
+		foreach ( array( 'Environment', 'Secure credential storage', 'Core updates' ) as $title ) {
 			$summary = '//div[' . $entry . ']/details/summary[@aria-label="' . $title . '" and .//span[' . $class( 'entry-title' ) . ' and normalize-space(.)="' . $title . '"]]';
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/span[@data-ran-booster-ui-disclosure-heading]/span[' . $class( 'entry-description' ) . '])' ), $title );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $summary . '/following-sibling::div[@data-ran-booster-ui-disclosure-content])' ), $title );
@@ -632,13 +632,13 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Environment"]//span[' . $class( 'entry-description' ) . ']/code[text()="7.1"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Environment"]//span[' . $class( 'entry-description' ) . ']/code[text()="8.4"])' ) );
 		// Badges sit in the header meta slot, and the body holds the details and the settings link.
-		foreach ( array( 'Secure credential storage', 'Booster Core updates' ) as $title ) {
+		foreach ( array( 'Secure credential storage', 'Core updates' ) as $title ) {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="' . $title . '"]/span[@data-ran-booster-ui-disclosure-meta]/span[@data-ran-booster-badge])' ), $title );
 		}
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Environment"]/following-sibling::div[@data-ran-booster-ui-disclosure-content]//dt[text()="Database"]/following-sibling::dd/code[text()="<database>"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Secure credential storage"]/following-sibling::div[@data-ran-booster-ui-disclosure-content]//p[text()="Storage details are unavailable for this request."])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Secure credential storage"]/following-sibling::div[@data-ran-booster-ui-disclosure-content]//a[contains(@href, "ran-booster-settings#ran-booster-storage") and text()="Open secure credential storage settings"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Booster Core updates"]/following-sibling::div[@data-ran-booster-ui-disclosure-content]//dt[text()="Updater code"]/following-sibling::dd/code[text()="<update>"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//summary[@aria-label="Core updates"]/following-sibling::div[@data-ran-booster-ui-disclosure-content]//dt[text()="Updater code"]/following-sibling::dd/code[text()="<update>"])' ) );
 		// No nested Card, no compact installation disclosures and no removed disclosure labels remain.
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[contains(@class, "ran-booster-troubleshooting__installation-card")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@id="ran-booster-installation-details"]//*[@data-ran-booster-ui-disclosure="installation-component" or @data-ran-booster-ui-disclosure-density="compact"])' ) );
@@ -704,7 +704,7 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertStringContainsString( '<summary aria-label="Environment">', $html );
 			self::assertStringContainsString( '<details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback>' . "\n" . '<summary aria-label="Environment">', $html );
 			self::assertStringNotContainsString( 'data-ran-booster-ui-disclosure-fallback open>', $html );
-			$labels    = array( 'entry-title">Environment</', 'entry-title">Secure credential storage</', 'entry-title">Booster Core updates</', '>Providers and extensions</h3>' );
+			$labels    = array( 'entry-title">Environment</', 'entry-title">Secure credential storage</', 'entry-title">Core updates</', '>Providers and extensions</h3>' );
 			$positions = array_map( static fn ( $label ) => strpos( $html, $label ), $labels );
 			foreach ( $positions as $position ) {
 				self::assertIsInt( $position ); }
@@ -937,18 +937,18 @@ final class TroubleshootingViewTest extends TestCase {
 			),
 		);
 
-		$troubleshooting['installation_details'] = array( 'Booster Core updates' => array( 'Updater code' => 'native_discovery_disabled' ) );
+		$troubleshooting['installation_details'] = array( 'Core updates' => array( 'Updater code' => 'native_discovery_disabled' ) );
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<span class="ran-booster-troubleshooting__entry-title">Booster Core updates</span>', $html );
+		self::assertStringContainsString( '<span class="ran-booster-troubleshooting__entry-title">Core updates</span>', $html );
 		self::assertStringContainsString(
 			'Core updates are off for this source installation. Booster will not check for or replace itself.',
 			$html
 		);
-		self::assertStringContainsString( '<summary aria-label="Booster Core updates">', $html );
+		self::assertStringContainsString( '<summary aria-label="Core updates">', $html );
 		self::assertStringContainsString( '<code>native_discovery_disabled</code>', $html );
 		self::assertStringNotContainsString( 'cannot reach its configured GitHub release feed', $html );
 		$troubleshooting['core_self_update']['requested_mode'] = 'disabled';
@@ -966,7 +966,7 @@ final class TroubleshootingViewTest extends TestCase {
 			ob_start();
 			require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 			$html = (string) ob_get_clean();
-			self::assertStringContainsString( 'Booster update checks are turned off in Settings.', $html );
+			self::assertStringContainsString( 'Core updates are turned off in Settings.', $html );
 			self::assertStringNotContainsString( 'Core updates are off for this source installation.', $html );
 			self::assertStringNotContainsString( 'retry automatically', $html );
 		}
@@ -999,14 +999,14 @@ final class TroubleshootingViewTest extends TestCase {
 			),
 		);
 
-		$troubleshooting['installation_details'] = array( 'Booster Core updates' => array( 'Updater code' => 'github_updater_github_http_error' ) );
+		$troubleshooting['installation_details'] = array( 'Core updates' => array( 'Updater code' => 'github_updater_github_http_error' ) );
 
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString(
-			'RAN Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically.',
+			'Booster could not check for Core updates. The installed version will keep working, and Booster will retry automatically.',
 			$html
 		);
 		self::assertStringContainsString( '<code>github_updater_github_http_error</code>', $html );

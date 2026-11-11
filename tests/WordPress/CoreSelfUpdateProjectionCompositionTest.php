@@ -98,8 +98,8 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 		foreach ( $details as $key => $value ) {
 			self::assertSame( $value, $payload['core_self_update'][ $key ] );
 		}
-		self::assertSame( gmdate( 'c', 1000 ), $payload['installation_details']['Booster Core updates']['Last successful operator check (UTC)'] );
-		self::assertSame( 'unknown', $payload['installation_details']['Booster Core updates']['Last operator check outcome'] );
+		self::assertSame( gmdate( 'c', 1000 ), $payload['installation_details']['Core updates']['Last successful operator check (UTC)'] );
+		self::assertSame( 'unknown', $payload['installation_details']['Core updates']['Last operator check outcome'] );
 		self::assertSame( gmdate( 'c', 1700000000 ), json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_check'] );
 		self::assertSame( gmdate( 'c', 1700000900 ), json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['next_check'] );
 		self::assertSame( gmdate( 'c', 1000 ), json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_successful_check'] );
@@ -165,8 +165,8 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 		[$payload, $report] = $this->projections( $status );
 		self::assertSame( 'failed', $payload['core_self_update']['last_check_outcome'] );
 		self::assertSame( 'bounded_unreviewed_code', $payload['core_self_update']['last_check_code'] );
-		self::assertSame( gmdate( 'c', 1700001900 ), $payload['installation_details']['Booster Core updates']['Next check (UTC)'] );
-		self::assertSame( 'bounded_unreviewed_code', $payload['installation_details']['Booster Core updates']['Last operator check code'] );
+		self::assertSame( gmdate( 'c', 1700001900 ), $payload['installation_details']['Core updates']['Next check (UTC)'] );
+		self::assertSame( 'bounded_unreviewed_code', $payload['installation_details']['Core updates']['Last operator check code'] );
 		self::assertSame( gmdate( 'c', 1700001900 ), json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['next_check'] );
 		self::assertSame( 'Unknown', json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update']['last_check_code'] );
 	}
@@ -229,7 +229,7 @@ final class CoreSelfUpdateProjectionCompositionTest extends TestCase {
 		foreach ( array( 'last_successful_check', 'last_check_outcome', 'last_check_code', 'check_cooldown_until' ) as $key ) {
 			self::assertNull( $payload['core_self_update'][ $key ] );
 		}
-		self::assertSame( gmdate( 'c', $target_next_check ), $payload['installation_details']['Booster Core updates']['Next check (UTC)'] );
+		self::assertSame( gmdate( 'c', $target_next_check ), $payload['installation_details']['Core updates']['Next check (UTC)'] );
 		foreach ( array( 'last_successful_check', 'last_check_outcome', 'last_check_code', 'check_cooldown_until' ) as $key ) {
 			self::assertSame( 'Unknown', json_decode( $report, true, 512, JSON_THROW_ON_ERROR )['sections']['installation']['data']['update'][ $key ] );
 		}

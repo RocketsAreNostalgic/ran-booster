@@ -45,7 +45,7 @@ final class CoreSelfUpdateDevelopmentNotice {
 	public function render_local_fact(): void {
 		if ( ! $this->rendered && $this->should_render() ) {
 			$this->rendered = true;
-			echo '<p>' . esc_html__( 'Booster’s own updates are disabled to protect this source checkout.', 'ran-booster' ) . '</p>';
+			echo '<p>' . esc_html__( 'Core updates are disabled to protect this source checkout.', 'ran-booster' ) . '</p>';
 		}
 	}
 

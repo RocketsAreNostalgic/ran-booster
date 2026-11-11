@@ -156,7 +156,7 @@ test('only an explicit copy action writes the current multiline report after rep
 	assert.deepEqual(copied, []);
 	for (let run = 0; run < 4; run += 1) {
 		const current = report(
-			`GitHub provider\nsource: bundled\n\nBooster Core updates\nmode: off\nresults: ${run}\n`
+			`GitHub provider\nsource: bundled\n\nCore updates\nmode: off\nresults: ${run}\n`
 		);
 		await click(current.event);
 		assert.equal(copied[run], current.input.value);
@@ -246,15 +246,12 @@ test('unavailable, denied and synchronously failing clipboard select the unchang
 		},
 	]) {
 		const click = fixture(clipboard);
-		const current = report('GitHub provider\nBooster Core updates\n');
+		const current = report('GitHub provider\nCore updates\n');
 		await click(current.event);
 		assert.equal(current.input.focused, true);
 		assert.equal(current.input.selected, true);
 		assert.equal(current.statusClasses.has('screen-reader-text'), false);
-		assert.equal(
-			current.input.value,
-			'GitHub provider\nBooster Core updates\n'
-		);
+		assert.equal(current.input.value, 'GitHub provider\nCore updates\n');
 		assert.equal(
 			current.status.textContent,
 			current.status.dataset.copyFailedMessage

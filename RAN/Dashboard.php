@@ -705,8 +705,8 @@ class Dashboard {
 			'code'    => 'unavailable',
 		);
 		$this->general_feedback = 'success' === $result['outcome']
-			? __( 'The Booster update check completed.', 'ran-booster' )
-			: __( 'The Booster update check did not complete successfully. Review the check status below.', 'ran-booster' );
+			? __( 'The Core updates check completed.', 'ran-booster' )
+			: __( 'The Core updates check did not complete successfully. Review the check status below.', 'ran-booster' );
 	}
 
 	private function storage_status( bool $log_diagnostics = true ): ?SecretsStorageProvisioningResult {

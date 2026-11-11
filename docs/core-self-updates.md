@@ -182,7 +182,7 @@ without being mislabeled as a development checkout.
 The passive state is available to qualified administrators at:
 
 ```text
-RAN Booster → Troubleshooting → Installation → Booster Core updates
+RAN Booster → Troubleshooting → Installation → Core updates
 ```
 
 The ordinary message explains whether Core updates are available or safely off.

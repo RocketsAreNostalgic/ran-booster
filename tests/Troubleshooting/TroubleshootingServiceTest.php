@@ -70,7 +70,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( $form['core_self_update'], $payload['core_self_update'] );
 		self::assertSame( 'Bundled with Booster', $payload['installation_details']['GitHub provider']['Source'] );
 		self::assertSame( '15', $payload['installation_details']['GitHub provider']['Provider API'] );
-		self::assertSame( '1970-01-01T00:00:00+00:00', $payload['installation_details']['Booster Core updates']['Last check (UTC)'] );
+		self::assertSame( '1970-01-01T00:00:00+00:00', $payload['installation_details']['Core updates']['Last check (UTC)'] );
 		foreach ( $payload['installation_details'] as $heading => $rows ) {
 			self::assertStringContainsString( "\n" . $heading . "\n", $payload['report'] );
 			foreach ( $rows as $label => $value ) {
@@ -102,7 +102,7 @@ final class TroubleshootingServiceTest extends TestCase {
 			'check_cooldown_until'  => 1700000300,
 			'next_check'            => 1700001000,
 		);
-		$rows                     = $service->with_installation_context( $form, null )['installation_details']['Booster Core updates'];
+		$rows                     = $service->with_installation_context( $form, null )['installation_details']['Core updates'];
 		self::assertSame( gmdate( 'c', 1699999000 ), $rows['Last successful operator check (UTC)'] );
 		self::assertSame( 'failed', $rows['Last operator check outcome'] );
 		self::assertSame( 'check_failed', $rows['Last operator check code'] );
@@ -110,7 +110,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		self::assertSame( gmdate( 'c', 1700001000 ), $rows['Next check (UTC)'] );
 		foreach ( array( 'success', 'skipped', 'unknown', 'rejected' ) as $outcome ) {
 			$form['core_self_update']['last_check_outcome'] = $outcome;
-			self::assertSame( $outcome, $service->with_installation_context( $form, null )['installation_details']['Booster Core updates']['Last operator check outcome'] );
+			self::assertSame( $outcome, $service->with_installation_context( $form, null )['installation_details']['Core updates']['Last operator check outcome'] );
 		}
 		$form['core_self_update'] = array(
 			'last_successful_check' => 0,
@@ -120,7 +120,7 @@ final class TroubleshootingServiceTest extends TestCase {
 		);
 		$payload                  = $service->with_installation_context( $form, null );
 		foreach ( array( 'Last successful operator check (UTC)', 'Operator check cooldown until (UTC)', 'Last operator check outcome', 'Last operator check code' ) as $label ) {
-			self::assertSame( 'Unavailable', $payload['installation_details']['Booster Core updates'][ $label ] );
+			self::assertSame( 'Unavailable', $payload['installation_details']['Core updates'][ $label ] );
 		}
 		self::assertStringNotContainsString( '/private/path', $payload['report'] );
 		self::assertSame( 0, $provider->runs );
@@ -167,7 +167,7 @@ final class TroubleshootingServiceTest extends TestCase {
 			self::assertSame( 'Unavailable', $payload['installation_details']['GitHub provider']['Name'] );
 			self::assertSame( 'Unavailable', $payload['installation_details']['GitHub provider']['Provider API'] );
 			self::assertSame( 'Unknown', $payload['installation_details']['GitHub provider']['Operational availability'] );
-			self::assertSame( 'Unavailable', $payload['installation_details']['Booster Core updates']['Policy reason'] );
+			self::assertSame( 'Unavailable', $payload['installation_details']['Core updates']['Policy reason'] );
 			self::assertStringNotContainsString( 'canary', $payload['report'] );
 			self::assertStringNotContainsString( 'private-owner/private-repository', $payload['report'] );
 			self::assertSame( $payload['report'], $service->with_installation_context( $payload, $selection )['report'] );

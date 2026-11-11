@@ -3604,6 +3604,7 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:325
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:371
+#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:497
 msgid "Not assessed"
 msgstr ""
 
@@ -3736,10 +3737,6 @@ msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:393
 msgid "The saved package or repository relationship needs attention."
-msgstr ""
-
-#: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:497
-msgid "Published releases working"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseWorkflowPresenter.php:505

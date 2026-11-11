@@ -107,7 +107,7 @@ $repository_placeholder = array() === $locator_examples
 		<?php } ?>
 		</nav>
 
-		<div class="ran-booster-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
+		<div class="ran-booster-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content<?php echo 'diagnostics' === $troubleshooting_panel ? ' ran-booster-card__content--footed' : ''; ?>">
 	<?php if ( 'installation' === $troubleshooting_panel ) { ?>
 		<?php require __DIR__ . '/troubleshooting-installation.php'; ?>
 	<?php } elseif ( 'support-report' === $troubleshooting_panel ) { ?>
@@ -185,19 +185,42 @@ $repository_placeholder = array() === $locator_examples
 			</div>
 		</details></div>
 
-		<p><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></button></p>
+		<div class="ran-booster-card-footer"><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></button></div>
 	</form>
 
-		<?php if ( ! empty( $troubleshooting['ran'] ) ) { ?>
+	<?php } ?>
+		</div></div></div>
+
+		<?php if ( 'diagnostics' === $troubleshooting_panel && ! empty( $troubleshooting['ran'] ) ) { ?>
+			<?php
+			$results_provider_label = is_string( $troubleshooting['providers'][ $selected_provider ] ?? null ) ? $troubleshooting['providers'][ $selected_provider ] : '';
+			$results_count          = count( $results );
+			?>
+		<div class="ran-booster-card ran-booster-troubleshooting__results-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<?php if ( isset( $troubleshooting['retention_available'] ) && ! $troubleshooting['retention_available'] ) { ?>
 			<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'These results remain available below, but could not be retained for a later support report.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
-		<?php } ?>
-		<div id="ran-booster-troubleshooting-results" class="ran-booster-troubleshooting__results" aria-live="polite">
-			<h4 class="ran-booster-section__title"><?php esc_html_e( 'Diagnostic results', 'ran-booster' ); ?></h4>
+			<?php } ?>
+			<div id="ran-booster-troubleshooting-results" class="ran-booster-troubleshooting__results" aria-live="polite">
+				<h3 class="ran-booster-section__title"><?php esc_html_e( 'Diagnostic results', 'ran-booster' ); ?></h3>
+				<?php if ( '' !== $results_provider_label ) { ?>
+				<p class="ran-booster-section__description">
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: 1: number of diagnostic checks, 2: Git provider name. */
+							_n( '%1$d check run for %2$s.', '%1$d checks run for %2$s.', $results_count, 'ran-booster' ),
+							$results_count,
+							$results_provider_label
+						)
+					);
+					?>
+				</p>
+				<?php } ?>
 			<?php if ( ! empty( $troubleshooting['partial'] ) ) { ?>
 				<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $partial_messages[ $troubleshooting['partial_reason'] ?? '' ] ?? __( 'Diagnostics finished with partial results.', 'ran-booster' ) ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 			<?php } ?>
 
+			<div class="ran-booster-collection">
 			<div class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap">
 				<table class="ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table">
 					<caption class="screen-reader-text"><?php esc_html_e( 'RAN Booster diagnostic results', 'ran-booster' ); ?></caption>
@@ -261,12 +284,10 @@ $repository_placeholder = array() === $locator_examples
 					<?php } ?>
 				</table>
 			</div>
-
+			</div>
 
 		</div>
-	<?php } ?>
-
-	<?php } ?>
 		</div></div></div>
+		<?php } ?>
 	</div>
 </section>

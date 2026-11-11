@@ -361,6 +361,17 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-admin .ran-booster-deployment-state {', $activity );
 	}
 
+	public function test_troubleshooting_card_footed_content_overrides_the_card_padding(): void {
+		$css = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+
+		// The Card padding (four classes) must not beat the shared footed modifier on the Diagnostics Card.
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-card="troubleshooting"\]\.ran-booster-card\s*\.ran-booster-card__content\.ran-booster-card__content--footed \{\s*padding-block-end: 0;/', $css );
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 782px\) \{[^@]*\.ran-booster-card__content\.ran-booster-card__content--footed \{\s*padding-block-end: 0;/', $css );
+		// The band bleeds by the same inline inset the Card pads with, narrow or wide.
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 782px\) \{[^@]*--ran-booster-card-inset-inline: var\(--ran-booster-space-18\);/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-troubleshooting__results-card \{\s*margin-block-start: var\(--ran-booster-card-gap\);/', $css );
+	}
+
 	public function test_callout_tones_use_semantic_backgrounds(): void {
 		$onboarding      = $this->asset( 'ran-booster-onboarding.css' );
 		$troubleshooting = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );

@@ -397,6 +397,18 @@
 	margin-block-start: var(--ran-booster-space-16);
 }
 
+.ran-booster-admin
+	.ran-booster-collection
+	> .ran-booster-troubleshooting__table-wrap {
+	margin-block-start: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__results
+	> .ran-booster-collection {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-troubleshooting__table th,
 .ran-booster-admin .ran-booster-troubleshooting__table td {
 	line-height: 1.45;
@@ -803,12 +815,36 @@
 		var(--ran-booster-space-24) var(--ran-booster-card-inset-block-end);
 }
 
+/*
+ * The Card padding above out-ranks the shared footed modifier, so the footed
+ * Card content drops its bottom padding here and the footer band ends flush
+ * with the Card edge.
+ */
+.ran-booster-admin
+	[data-ran-booster-card="troubleshooting"].ran-booster-card
+	.ran-booster-card__content.ran-booster-card__content--footed {
+	padding-block-end: 0;
+}
+
+/* The results Card follows the form Card at the shared Card gap. */
+.ran-booster-admin .ran-booster-troubleshooting__results-card {
+	margin-block-start: var(--ran-booster-card-gap);
+}
+
 @media screen and (max-width: 782px) {
 	.ran-booster-admin
 		[data-ran-booster-card="troubleshooting"].ran-booster-card
 		.ran-booster-card__content {
+		--ran-booster-card-inset-inline: var(--ran-booster-space-18);
+
 		padding-block: var(--ran-booster-card-inset-block-start)
 			var(--ran-booster-card-inset-block-end);
 		padding-inline: var(--ran-booster-space-18);
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-card="troubleshooting"].ran-booster-card
+		.ran-booster-card__content.ran-booster-card__content--footed {
+		padding-block-end: 0;
 	}
 }

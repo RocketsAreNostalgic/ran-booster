@@ -1742,6 +1742,30 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'No activity has been recorded yet.', $html );
 	}
 
+	public function test_diagnostics_without_results_render_only_the_form_card_with_a_footer_band(): void {
+		$troubleshooting_panel = 'diagnostics';
+		$troubleshooting       = array(
+			'providers'         => array( 'gh' => 'GitHub' ),
+			'credentials'       => array(),
+			'selected_provider' => 'gh',
+			'credential_id'     => '',
+			'repository'        => '',
+			'ran'               => false,
+			'results'           => array(),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html     = (string) ob_get_clean();
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-troubleshooting-diagnostics-region"]//*[@data-ran-booster-card="troubleshooting"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="ran-booster-troubleshooting-results"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__results-card ")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card__content--footed ")]/form/div[last()][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card-footer ")]/button[@type="submit"])' ) );
+	}
+
 	public function test_renders_protected_provider_form_accessible_results_and_whitelist_report(): void {
 		$troubleshooting_panel = 'diagnostics';
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Exercise a deterministic frozen JSON fixture with strict encoding errors.
@@ -1877,6 +1901,20 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>local.runtime.ready</code>', $html );
 		self::assertStringNotContainsString( '<textarea', $html );
 		self::assertStringNotContainsString( 'id="ran-booster-installation-details"', $html );
+
+		// The form Card ends in the footer band and the results sit in their own sibling Card inside the same region.
+		$region_cards = '//*[@id="ran-booster-troubleshooting-diagnostics-region"]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-page-shell__body ")]/div[@data-ran-booster-card="troubleshooting"]';
+		self::assertSame( 2.0, $xpath->evaluate( 'count(' . $region_cards . ')' ) );
+		$form_content = '(' . $region_cards . ')[1]/div/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card__content--footed ")]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form_content . '/form[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__form ")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $form_content . '/form/div[last()][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card-footer ")]/button[@type="submit"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $form_content . '/form//p[button])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $form_content . '//*[@id="ran-booster-troubleshooting-results"])' ) );
+		$results_content = '(' . $region_cards . ')[2][contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__results-card ")]/div/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card__content ")]';
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $results_content . '[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card__content--footed ")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $results_content . '/div[@id="ran-booster-troubleshooting-results"][@aria-live="polite"]/h3[normalize-space(.)="Diagnostic results"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $results_content . '//div[@class="ran-booster-collection"]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-data-table-wrap ")]/table)' ) );
+		self::assertStringContainsString( '2 checks run for Bitbucket.', $html );
 
 		$troubleshooting_panel               = 'support-report';
 		$troubleshooting['report_generated'] = true;

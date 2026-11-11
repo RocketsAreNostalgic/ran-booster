@@ -2324,6 +2324,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"]' )->length );
 		self::assertSame( 0, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details" or @id="ran-booster-troubleshooting-report"]' )->length );
 		self::assertSame( null === $submission ? 0 : 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->length );
+		self::assertSame( null === $submission ? 1 : 2, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-diagnostics-region"]//*[@data-ran-booster-card="troubleshooting"]' )->length );
+		self::assertSame( null === $submission ? 0 : 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-diagnostics-region"]//div[contains(@class, "ran-booster-troubleshooting__results-card")]//*[@id="ran-booster-troubleshooting-results"]' )->length );
 		if ( null !== $submission ) {
 			$results = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->item( 0 );
 			self::assertInstanceOf( \DOMElement::class, $results );

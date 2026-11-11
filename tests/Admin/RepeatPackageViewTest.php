@@ -1310,6 +1310,14 @@ final class RepeatPackageViewTest extends TestCase {
 		);
 		$development_environment_detected           = true;
 		$GLOBALS['ran_booster_bulk_active_plugins'] = $already_active && 'plugin' === $package_view->get_type() ? array( 'example/example.php' ) : array();
+		// The activation link is capability-gated; grant it explicitly instead of relying on whichever capability double loaded first.
+		$had_capabilities                         = array_key_exists( 'ran_booster_test_capabilities', $GLOBALS );
+		$previous_capabilities                    = $GLOBALS['ran_booster_test_capabilities'] ?? null;
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'activate_plugins'      => true,
+			'switch_themes'         => true,
+			'manage_network_themes' => true,
+		);
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_operation_actions'] = array(
 			static function ( string $current, string $selected ): void {
 				if ( 'release_asset' === $current && 'release_asset' === $selected ) {
@@ -1319,9 +1327,17 @@ final class RepeatPackageViewTest extends TestCase {
 		);
 
 		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
-		$html = (string) ob_get_clean();
-		unset( $GLOBALS['ran_booster_bulk_active_plugins'], $GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_operation_actions'] );
+		try {
+			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		} finally {
+			$html = (string) ob_get_clean();
+			unset( $GLOBALS['ran_booster_bulk_active_plugins'], $GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_operation_actions'] );
+			if ( $had_capabilities ) {
+				$GLOBALS['ran_booster_test_capabilities'] = $previous_capabilities;
+			} else {
+				unset( $GLOBALS['ran_booster_test_capabilities'] );
+			}
+		}
 
 		$operation_start = strpos( $html, 'ran-booster-package-operation-settings ran-booster-card' );
 		self::assertIsInt( $operation_start );

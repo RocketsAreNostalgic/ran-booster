@@ -5,6 +5,51 @@
 	background: var(--ran-booster-surface);
 }
 
+/*
+ * One frame holds a collection: a toolbar with its search, filters and count,
+ * the table or list, then its footer. The frame draws the only outer border.
+ */
+.ran-booster-admin .ran-booster-collection {
+	min-inline-size: 0;
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-inset);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-collection > .ran-booster-collection__toolbar {
+	margin: 0;
+	padding: var(--ran-booster-space-12) var(--ran-booster-space-16);
+	border-block-end: 1px solid var(--ran-booster-border);
+	border-start-start-radius: var(--ran-booster-radius-inset);
+	border-start-end-radius: var(--ran-booster-radius-inset);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-collection
+	> .ran-booster-collection__toolbar
+	> .ran-booster-provider-list-controls {
+	margin: 0;
+}
+
+.ran-booster-admin.ran-booster-admin
+	.ran-booster-collection
+	> :is(.ran-booster-data-table-wrap, .ran-booster-repository-list) {
+	border: 0;
+	border-radius: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-collection
+	> .ran-booster-provider-table-navigation {
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-collection > .ran-booster-collection__empty {
+	margin: 0;
+	padding: var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-data-table {
 	inline-size: 100%;
 	border: 1px solid var(--ran-booster-border);

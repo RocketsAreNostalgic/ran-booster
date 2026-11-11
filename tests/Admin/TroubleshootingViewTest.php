@@ -1314,6 +1314,9 @@ final class TroubleshootingViewTest extends TestCase {
 		$markup = $table[1];
 
 		self::assertStringContainsString( '<div class="ran-booster-data-table-wrap ran-booster-attempt-table">', $html );
+		if ( 1 !== preg_match( '/<div class="ran-booster-collection">\s*<div class="ran-booster-package-list-controls ran-booster-collection__toolbar">[\s\S]*?<\/form>\s*<\/div>\s*<div class="ran-booster-data-table-wrap ran-booster-attempt-table">/', $html ) ) {
+			self::fail( 'The Activity filters must sit in the toolbar of the same frame as the Activity table.' );
+		}
 		self::assertStringContainsString( '<caption class="screen-reader-text">Recorded checks and deployments</caption>', $markup );
 		self::assertSame( 1, substr_count( $markup, '<thead>' ) );
 		self::assertSame( 5, substr_count( $markup, '<th scope="col"' ) );
@@ -1666,7 +1669,7 @@ final class TroubleshootingViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/attempts/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<p data-ran-booster-activity-exhausted>No older activity is available.</p>', $html );
+		self::assertStringContainsString( '<p class="ran-booster-collection__empty" data-ran-booster-activity-exhausted>No older activity is available.</p>', $html );
 		self::assertSame( 1, substr_count( $html, '>View latest activity</a>' ) );
 		self::assertStringContainsString( '>View latest activity</a>', $html );
 		self::assertStringContainsString( 'panel=activity', $html );
@@ -2085,6 +2088,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-provider-repository', $html );
 		self::assertStringContainsString( '<label class="screen-reader-text" for="ran-booster-provider-repository-search">Filter managed repositories</label>', $html );
 		self::assertStringContainsString( 'placeholder="Filter managed repositories…" data-ran-booster-provider-repository-filter', $html );
+		if ( 1 !== preg_match( '/<div class="ran-booster-collection">\s*<div class="ran-booster-provider-repository-tools ran-booster-collection__toolbar">[\s\S]*?data-ran-booster-provider-repository-count[\s\S]*?<\/div>\s*<div class="ran-booster-repository-list"/', $html ) ) {
+			self::fail( 'The repository filter and count must sit in the toolbar of the same frame as the repository list.' );
+		}
 		self::assertStringNotContainsString( 'Search managed repositories', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-record__summary"', $html );
 		self::assertStringContainsString( 'class="ran-booster-repository-record__identity"', $html );
@@ -3933,7 +3939,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header[contains(@class,"ran-booster-action-row")]/div/h2[@id="ran-booster-provider-heading"][@tabindex="-1"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//h2[@id="ran-booster-provider-heading"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/preceding-sibling::header/button[@data-modal])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/form[@class="ran-booster-provider-list-controls"]/following-sibling::div[@class="ran-booster-data-table-wrap"]/table[contains(concat(" ", @class, " ")," ran-booster-provider-management-table ")][not(contains(@class,"--rows"))])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/div[@class="ran-booster-collection"]/div[@class="ran-booster-collection__toolbar"]/form[@class="ran-booster-provider-list-controls"]/ancestor::div[@class="ran-booster-collection"]/div[@class="ran-booster-data-table-wrap"]/table[contains(concat(" ", @class, " ")," ran-booster-provider-management-table ")][not(contains(@class,"--rows"))])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '//table[contains(@class,"widefat") or contains(@class,"striped")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $section . '/div[@class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"]/div[@class="ran-booster-card__content"]/footer)' ) );
 		self::assertStringNotContainsString( 'Saved credentials use Booster encrypted local storage', $html );

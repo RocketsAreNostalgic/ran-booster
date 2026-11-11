@@ -42,6 +42,8 @@ final class ProviderManagementTableRenderer {
 	 *        Whether a record has a result row: null prints none, false
 	 *        prints it hidden and true prints it visible. Its content comes
 	 *        from $render_cell with the 'result' key.
+	 * @param (Closure(): void)|null $render_toolbar Prints the collection's
+	 *        search and filter controls into the frame's toolbar.
 	 */
 	public function render(
 		string $type,
@@ -50,10 +52,15 @@ final class ProviderManagementTableRenderer {
 		Closure $render_cell,
 		array $sort_urls,
 		array $pagination,
-		?Closure $result_visibility = null
+		?Closure $result_visibility = null,
+		?Closure $render_toolbar = null
 	): void {
 		$columns = $this->columns( $type );
 		?>
+		<div class="ran-booster-collection">
+		<?php if ( null !== $render_toolbar ) { ?>
+			<div class="ran-booster-collection__toolbar"><?php $render_toolbar(); ?></div>
+		<?php } ?>
 		<div class="ran-booster-data-table-wrap">
 		<table class="ran-booster-data-table ran-booster-provider-management-table ran-booster-provider-management-table--<?php echo esc_attr( $type ); ?>">
 			<caption class="screen-reader-text"><?php echo esc_html( self::ACCESS === $type ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></caption>
@@ -96,6 +103,9 @@ final class ProviderManagementTableRenderer {
 		</div>
 		<?php
 		$this->render_pagination( $type, $pagination );
+		?>
+		</div>
+		<?php
 	}
 
 	/**

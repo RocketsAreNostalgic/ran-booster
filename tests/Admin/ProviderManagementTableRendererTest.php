@@ -72,8 +72,8 @@ final class ProviderManagementTableRendererTest extends TestCase {
 				}
 			);
 
-			if ( 1 !== preg_match( '/^\s*<div class="ran-booster-data-table-wrap">\s*<table class="([^"]+)">([\s\S]*)<\/table>\s*<\/div>\s*<div class="ran-booster-provider-table-navigation">/', $html, $m ) ) {
-				self::fail( 'The ' . $type . ' table must be the only child of the shared data-table wrapper, followed by its pagination.' );
+			if ( 1 !== preg_match( '/^\s*<div class="ran-booster-collection">\s*<div class="ran-booster-data-table-wrap">\s*<table class="([^"]+)">([\s\S]*)<\/table>\s*<\/div>\s*<div class="ran-booster-provider-table-navigation">[\s\S]*<\/div>\s*<\/div>\s*$/', $html, $m ) ) {
+				self::fail( 'The ' . $type . ' table must sit in the shared data-table wrapper, followed by its pagination, all inside one collection frame.' );
 			}
 
 			$table = $m[2];
@@ -95,6 +95,38 @@ final class ProviderManagementTableRendererTest extends TestCase {
 			self::assertSame( 2 * $column_count, preg_match_all( '/<td[^>]* data-label="[^"]+"/', $table ) );
 			self::assertSame( 2, substr_count( $table, '<td class="ran-booster-provider-management-table__actions" data-label="Actions"><div class="ran-booster-actions">' ) );
 		}
+	}
+
+	public function test_the_toolbar_controls_render_inside_the_collection_frame_before_the_table(): void {
+		ob_start();
+		( new ProviderManagementTableRenderer() )->render(
+			ProviderManagementTableRenderer::ACCESS,
+			array( array( 'value' => 'Row' ) ),
+			'Nothing found.',
+			static function (): void {},
+			array(),
+			array(
+				'item_count_label' => '1 item',
+				'page_label'       => 'Page 1 of 1',
+				'current'          => 1,
+				'pages'            => 1,
+				'per_page'         => 20,
+				'action_url'       => 'https://example.test/wp-admin/admin.php',
+				'hidden_fields'    => array(),
+				'previous_url'     => 'https://example.test/list?paged=1',
+				'next_url'         => 'https://example.test/list?paged=1',
+			),
+			null,
+			static function (): void {
+				echo '<form data-test-toolbar></form>';
+			}
+		);
+		$html = (string) ob_get_clean();
+
+		if ( 1 !== preg_match( '/^\s*<div class="ran-booster-collection">\s*<div class="ran-booster-collection__toolbar"><form data-test-toolbar><\/form><\/div>\s*<div class="ran-booster-data-table-wrap">/', $html ) ) {
+			self::fail( 'The toolbar must be the first child of the collection frame, before the table wrapper.' );
+		}
+		self::assertSame( 1, substr_count( $html, 'ran-booster-collection__toolbar' ) );
 	}
 
 	public function test_each_record_is_a_row_group_with_an_optional_full_width_result_row(): void {

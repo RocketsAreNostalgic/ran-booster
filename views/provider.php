@@ -755,7 +755,8 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 									<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That managed repository is no longer available. Return to the repository list and choose a current repository.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 								<?php } ?>
 							<?php } elseif ( array() !== $repository_table_rows ) { ?>
-								<div class="ran-booster-provider-repository-tools">
+								<div class="ran-booster-collection">
+								<div class="ran-booster-provider-repository-tools ran-booster-collection__toolbar">
 									<label class="screen-reader-text" for="ran-booster-provider-repository-search"><?php esc_html_e( 'Filter managed repositories', 'ran-booster' ); ?></label>
 									<input id="ran-booster-provider-repository-search" type="search" placeholder="<?php esc_attr_e( 'Filter managed repositories…', 'ran-booster' ); ?>" data-ran-booster-provider-repository-filter>
 									<span
@@ -766,6 +767,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 									</span>
 								</div>
 								<?php $repository_table_renderer->render( 'ran-booster-managed-webhook-repositories-heading', $repository_table_rows ); ?>
+								</div>
 							<?php } elseif ( $repository_inventory_available ) { ?>
 								<div class="ran-booster-provider-empty-actions">
 									<p><?php echo esc_html( $empty_repository_description ); ?></p>
@@ -783,6 +785,9 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 		<?php } ?>
 	<?php } elseif ( 'credentials' === $provider_view ) { ?>
 		<?php if ( $has_credential_settings ) { ?>
+			<?php
+			$render_credential_toolbar = static function () use ( $provider, $provider_list_action_url, $provider_list_state, $credential_scopes ): void {
+				?>
 			<form class="ran-booster-provider-list-controls" method="get" action="<?php echo esc_url( $provider_list_action_url ); ?>">
 				<input type="hidden" name="page" value="ran-booster"><input type="hidden" name="tab" value="<?php echo esc_attr( $provider['code'] ); ?>"><input type="hidden" name="view" value="credentials">
 				<input type="hidden" name="orderby" value="<?php echo esc_attr( $provider_list_state['orderby'] ); ?>"><input type="hidden" name="order" value="<?php echo esc_attr( $provider_list_state['order'] ); ?>"><input type="hidden" name="per_page" value="<?php echo esc_attr( (string) $provider_list_state['per_page'] ); ?>">
@@ -802,6 +807,9 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 				</div>
 				<div><label class="screen-reader-text" for="ran-booster-credential-search"><?php esc_html_e( 'Search credentials', 'ran-booster' ); ?></label><input id="ran-booster-credential-search" type="search" name="s" value="<?php echo esc_attr( $provider_list_state['search'] ); ?>" placeholder="<?php esc_attr_e( 'Search credentials…', 'ran-booster' ); ?>"><button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button></div>
 			</form>
+				<?php
+			};
+	?>
 			<?php
 				$provider_management_table_renderer->render(
 					\RAN\Admin\Component\ProviderManagementTableRenderer::ACCESS,
@@ -810,18 +818,25 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 					$render_credential_cell,
 					$credential_sort_urls,
 					$credential_pagination,
-					$credential_result_visibility
+					$credential_result_visibility,
+					$render_credential_toolbar
 				);
 			?>
 		<?php } ?>
 	<?php } elseif ( 'secrets' === $provider_view ) { ?>
 		<?php if ( $has_webhook_settings ) { ?>
 			<div id="ran-booster-delete-webhook-profile-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
-			<form class="ran-booster-provider-list-controls" method="get" action="<?php echo esc_url( $provider_list_action_url ); ?>"><input type="hidden" name="page" value="ran-booster"><input type="hidden" name="tab" value="<?php echo esc_attr( $provider['code'] ); ?>"><input type="hidden" name="view" value="secrets"><input type="hidden" name="orderby" value="<?php echo esc_attr( $provider_list_state['orderby'] ); ?>"><input type="hidden" name="order" value="<?php echo esc_attr( $provider_list_state['order'] ); ?>"><input type="hidden" name="per_page" value="<?php echo esc_attr( (string) $provider_list_state['per_page'] ); ?>"><div><label class="screen-reader-text" for="ran-booster-secret-scope-filter"><?php esc_html_e( 'Filter by scope', 'ran-booster' ); ?></label><select id="ran-booster-secret-scope-filter" name="scope"><option value=""><?php esc_html_e( 'All scopes', 'ran-booster' ); ?></option>
 			<?php
-			foreach ( $provider['webhook_scopes'] as $scope ) {
+			$render_secret_toolbar = static function () use ( $provider, $provider_list_action_url, $provider_list_state ): void {
 				?>
+			<form class="ran-booster-provider-list-controls" method="get" action="<?php echo esc_url( $provider_list_action_url ); ?>"><input type="hidden" name="page" value="ran-booster"><input type="hidden" name="tab" value="<?php echo esc_attr( $provider['code'] ); ?>"><input type="hidden" name="view" value="secrets"><input type="hidden" name="orderby" value="<?php echo esc_attr( $provider_list_state['orderby'] ); ?>"><input type="hidden" name="order" value="<?php echo esc_attr( $provider_list_state['order'] ); ?>"><input type="hidden" name="per_page" value="<?php echo esc_attr( (string) $provider_list_state['per_page'] ); ?>"><div><label class="screen-reader-text" for="ran-booster-secret-scope-filter"><?php esc_html_e( 'Filter by scope', 'ran-booster' ); ?></label><select id="ran-booster-secret-scope-filter" name="scope"><option value=""><?php esc_html_e( 'All scopes', 'ran-booster' ); ?></option>
+				<?php
+				foreach ( $provider['webhook_scopes'] as $scope ) {
+					?>
 				<option value="<?php echo esc_attr( $scope['code'] ); ?>" <?php selected( $scope['code'], $provider_list_state['scope'] ); ?>><?php echo esc_html( $scope['label'] ); ?></option><?php } ?></select><label class="screen-reader-text" for="ran-booster-secret-status-filter"><?php esc_html_e( 'Filter by status', 'ran-booster' ); ?></label><select id="ran-booster-secret-status-filter" name="status"><option value=""><?php esc_html_e( 'All statuses', 'ran-booster' ); ?></option><option value="ready" <?php selected( 'ready', $provider_list_state['status'] ); ?>><?php esc_html_e( 'Ready locally', 'ran-booster' ); ?></option><option value="attention" <?php selected( 'attention', $provider_list_state['status'] ); ?>><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></option></select></div><div><label class="screen-reader-text" for="ran-booster-secret-search"><?php esc_html_e( 'Search webhook secrets', 'ran-booster' ); ?></label><input id="ran-booster-secret-search" type="search" name="s" value="<?php echo esc_attr( $provider_list_state['search'] ); ?>" placeholder="<?php esc_attr_e( 'Search secrets…', 'ran-booster' ); ?>"><button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button></div></form>
+				<?php
+			};
+	?>
 			<?php
 			$provider_management_table_renderer->render(
 				\RAN\Admin\Component\ProviderManagementTableRenderer::WEBHOOK,
@@ -829,7 +844,9 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 				__( 'No webhook secrets match the current filters.', 'ran-booster' ),
 				$render_webhook_cell,
 				$webhook_sort_urls,
-				$webhook_pagination
+				$webhook_pagination,
+				null,
+				$render_secret_toolbar
 			);
 			?>
 		<?php } ?>

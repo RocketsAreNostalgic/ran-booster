@@ -71,7 +71,19 @@ $origin_labels = array(
 		<h3 id="ran-booster-activity-heading"><?php esc_html_e( 'Activity', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Review recorded checks and deployments. Activity is recorded independently of diagnostic logging.', 'ran-booster' ); ?></p>
 	</header>
-	<div class="ran-booster-package-list-controls">
+	<?php
+	if ( is_string( $deployment_activity['filter_notice'] ?? null ) ) {
+		?>
+		<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $deployment_activity['filter_notice'] ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div><?php } ?>
+	<?php if ( $has_queued ) { ?>
+		<form method="post" data-ran-booster-activity-runner>
+			<?php wp_nonce_field( 'ran-booster-request-deployment-runner' ); ?>
+			<input type="hidden" name="ran_booster[action]" value="request-deployment-runner">
+			<button type="submit" name="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Request deployment runner', 'ran-booster' ); ?></button>
+		</form>
+	<?php } ?>
+	<div class="ran-booster-collection">
+	<div class="ran-booster-package-list-controls ran-booster-collection__toolbar">
 		<form class="ran-booster-package-list-filters" method="get">
 			<input type="hidden" name="page" value="ran-booster">
 			<input type="hidden" name="tab" value="troubleshooting">
@@ -100,25 +112,14 @@ $origin_labels = array(
 			<?php } ?>
 		</form>
 	</div>
-	<?php
-	if ( is_string( $deployment_activity['filter_notice'] ?? null ) ) {
-		?>
-		<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $deployment_activity['filter_notice'] ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div><?php } ?>
-	<?php if ( $has_queued ) { ?>
-		<form method="post" data-ran-booster-activity-runner>
-			<?php wp_nonce_field( 'ran-booster-request-deployment-runner' ); ?>
-			<input type="hidden" name="ran_booster[action]" value="request-deployment-runner">
-			<button type="submit" name="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Request deployment runner', 'ran-booster' ); ?></button>
-		</form>
-	<?php } ?>
 	<?php if ( $unavailable ) { ?>
 		<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Activity is temporarily unavailable.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 	<?php } elseif ( array() === $items && $has_cursor ) { ?>
-		<p data-ran-booster-activity-exhausted><?php esc_html_e( 'No older activity is available.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-collection__empty" data-ran-booster-activity-exhausted><?php esc_html_e( 'No older activity is available.', 'ran-booster' ); ?></p>
 	<?php } elseif ( array() === $items && ( '' !== $selected_provider || '' !== $selected_package ) ) { ?>
-		<p><?php esc_html_e( 'No activity matches these filters.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-collection__empty"><?php esc_html_e( 'No activity matches these filters.', 'ran-booster' ); ?></p>
 	<?php } elseif ( array() === $items ) { ?>
-		<p><?php esc_html_e( 'No activity has been recorded yet.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-collection__empty"><?php esc_html_e( 'No activity has been recorded yet.', 'ran-booster' ); ?></p>
 	<?php } else { ?>
 		<div class="ran-booster-data-table-wrap ran-booster-attempt-table">
 			<table class="ran-booster-data-table ran-booster-attempt-list" data-ran-booster-activity-list>
@@ -241,6 +242,7 @@ $origin_labels = array(
 			</table>
 		</div>
 	<?php } ?>
+	</div>
 	<?php if ( ! $unavailable && $has_cursor ) { ?>
 		<p><a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $base_url ); ?>"><?php esc_html_e( 'View latest activity', 'ran-booster' ); ?></a></p>
 	<?php } ?>

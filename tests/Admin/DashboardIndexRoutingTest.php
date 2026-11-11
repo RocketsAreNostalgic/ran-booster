@@ -1121,6 +1121,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 			require dirname( __DIR__, 2 ) . '/views/provider.php';
 			$rendered = (string) ob_get_clean();
 			self::assertSame( $expected ? 1 : 0, preg_match( '/<section class="ran-booster-page-shell ran-booster-provider[^>]*data-ran-booster-card="provider"/', $rendered ) );
+			if ( in_array( $view, array( 'credentials', 'secrets' ), true ) ) {
+				if ( 1 !== preg_match( '/<div class="ran-booster-collection">\s*<div class="ran-booster-collection__toolbar">\s*<form class="ran-booster-provider-list-controls" method="get"[\s\S]*?<\/form>\s*<\/div>\s*<div class="ran-booster-data-table-wrap">\s*<table [\s\S]*?<\/table>\s*<\/div>\s*<div class="ran-booster-provider-table-navigation">/', $rendered ) ) {
+					self::fail( 'The ' . $view . ' filters, table and pagination must share one collection frame.' );
+				}
+			}
 			if ( 'credentials' === $view ) {
 				self::assertStringContainsString( '<form class="ran-booster-provider-list-controls" method="get"', $rendered );
 				self::assertStringContainsString( '<th scope="col">', $rendered );

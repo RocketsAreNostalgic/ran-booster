@@ -1946,6 +1946,15 @@ final class AdminAssetContractTest extends TestCase {
 	 * stripes per package rather than per row, and an accent bar instead of a
 	 * full-row tint for packages that are active in WordPress.
 	 */
+	public function test_collection_frame_encloses_toolbar_table_and_footer_with_one_border(): void {
+		$css = (string) preg_replace( '/\s+/', ' ', $this->asset( 'ran-booster/40-tables-and-pills.css' ) );
+
+		self::assertMatchesRegularExpression( '/\.ran-booster-admin \.ran-booster-collection \{[^}]*border: 1px solid var\(--ran-booster-border\);[^}]*border-radius: var\(--ran-booster-radius-inset\);/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-collection > \.ran-booster-collection__toolbar \{[^}]*padding: var\(--ran-booster-space-12\) var\(--ran-booster-space-16\);[^}]*border-block-end: 1px solid var\(--ran-booster-border\);[^}]*background: var\(--ran-booster-surface-subtle\);/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-admin\.ran-booster-admin \.ran-booster-collection > :is\(\.ran-booster-data-table-wrap, \.ran-booster-repository-list\) \{ border: 0; border-radius: 0; \}/', $css );
+		self::assertStringNotContainsString( 'overflow: hidden', (string) preg_replace( '/.*\.ran-booster-collection \{([^}]*)\}.*/', '$1', $css ) );
+	}
+
 	public function test_package_table_sits_in_the_shared_collection_frame_and_keeps_its_structure(): void {
 		$view       = $this->view( 'packages/index.php' );
 		$packages   = $this->asset( 'ran-booster/60-packages.css' );

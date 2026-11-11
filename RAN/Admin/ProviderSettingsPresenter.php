@@ -1544,7 +1544,7 @@ final readonly class ProviderSettingsPresenter {
 				}
 			}
 		}
-		$credential_projection = $this->credential_rows( $credentials, $kind_labels, $field_labels, $owner_label );
+		$credential_projection = $this->credential_rows( $credentials, $kind_labels, $kind_full, $field_labels, $owner_label );
 		$webhook_rows          = $this->webhook_rows( $webhooks, $scope_labels );
 		$credential_list       = $this->filter_and_page( $credential_projection['rows'], 'credentials', $state, is_string( $data['replace_credential'] ?? null ) ? $data['replace_credential'] : '' );
 		$webhook_list          = $this->filter_and_page( $webhook_rows, 'secrets', $state );
@@ -1610,11 +1610,12 @@ final readonly class ProviderSettingsPresenter {
 
 	/**
 	 * @param array<array-key, mixed> $profiles Profile entries; non-array entries are skipped.
-	 * @param array<string,string> $kind_labels
+	 * @param array<string,string> $kind_labels Short credential kind labels shown in the table.
+	 * @param array<string,string> $kind_full   Full credential kind names that the table search still matches.
 	 * @param array<string,string> $field_labels
 	 * @return array{rows:list<array<string,mixed>>,scopes:array<string,string>}
 	 */
-	private function credential_rows( array $profiles, array $kind_labels, array $field_labels, string $owner_label ): array {
+	private function credential_rows( array $profiles, array $kind_labels, array $kind_full, array $field_labels, string $owner_label ): array {
 		$rows   = array();
 		$scopes = array();
 		foreach ( $profiles as $profile_index => $profile ) {

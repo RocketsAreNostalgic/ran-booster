@@ -117,6 +117,55 @@ final class TroubleshootingViewTest extends TestCase {
 		);
 	}
 
+	public function test_credential_search_matches_the_full_kind_name_behind_the_short_label(): void {
+		foreach ( array(
+			'personal access token' => 1,
+			'classic pat'           => 1,
+			'unrelated'             => 0,
+		) as $search => $expected ) {
+			$data = $this->provider_view_data(
+				array(
+					'provider'            => array(
+						'code'             => 'gh',
+						'label'            => 'GitHub',
+						'credential_kinds' => array(
+							array(
+								'code'        => 'pat',
+								'label'       => 'Personal access token (classic)',
+								'short_label' => 'Classic PAT',
+								'fields'      => array(),
+							),
+						),
+					),
+					'provider_view'       => 'credentials',
+					'credential_profiles' => array(
+						array(
+							'id'         => 'deploy',
+							'label'      => 'Deploy',
+							'kind'       => 'pat',
+							'configured' => true,
+						),
+					),
+					'provider_list_state' => array(
+						'search'   => $search,
+						'kind'     => '',
+						'scope'    => '',
+						'status'   => '',
+						'orderby'  => 'name',
+						'order'    => 'asc',
+						'paged'    => 1,
+						'per_page' => 20,
+					),
+				)
+			);
+			self::assertIsArray( $data['credential_list'] );
+			self::assertSame( $expected, $data['credential_list']['total'], $search );
+			if ( 1 === $expected ) {
+				self::assertSame( 'Classic PAT', $data['credential_list']['rows'][0]['kind_label'] ?? null );
+			}
+		}
+	}
+
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function setUp(): void {
 		$GLOBALS['ran_booster_admin_view_filters']      = array();

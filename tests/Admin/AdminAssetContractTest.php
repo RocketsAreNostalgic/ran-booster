@@ -248,6 +248,28 @@ final class AdminAssetContractTest extends TestCase {
 		}
 	}
 
+	public function test_section_navigation_shows_a_css_only_scroll_affordance_where_it_overflows(): void {
+		$css   = $this->asset( 'ran-booster/00-foundations.css' );
+		$shell = $this->asset( 'ran-admin-shell.css' );
+
+		// The Shell stylesheet is vendored and generated: the hint must not live there.
+		self::assertStringNotContainsString( 'mask-image', $shell );
+		self::assertStringNotContainsString( 'animation-timeline', $shell );
+
+		self::assertStringContainsString( '@supports (animation-timeline: scroll()) {', $css );
+		self::assertMatchesRegularExpression( '/@property --ran-booster-nav-fade-start \{\s*syntax: "<length>";\s*inherits: false;\s*initial-value: 0px;/', $css );
+		self::assertMatchesRegularExpression( '/@property --ran-booster-nav-fade-end \{\s*syntax: "<length>";\s*inherits: false;\s*initial-value: 0px;/', $css, 'No overflow means no timeline and a zero-width fade.' );
+		self::assertStringContainsString( 'animation-timeline: scroll(self inline), scroll(self inline);', $css );
+		self::assertMatchesRegularExpression( '/animation-range:\s*0 24px,\s*calc\(100% - 24px\) 100%;/', $css );
+		// Dimmed, never hidden: the partly visible item stays readable, and the hint takes no layout.
+		self::assertMatchesRegularExpression( '/mask-image: linear-gradient\(\s*to right,\s*color-mix\(in srgb, black 35%, transparent\) 0,/', $css );
+		self::assertMatchesRegularExpression( '/color-mix\(in srgb, black 35%, transparent\) 100%/', $css );
+		self::assertStringNotContainsString( 'transition: mask', $css );
+		// The scroll origin follows the writing direction.
+		self::assertMatchesRegularExpression( '/\.ran-section-navigation:dir\(rtl\) \{\s*--ran-booster-nav-fade-left: var\(--ran-booster-nav-fade-end\);\s*--ran-booster-nav-fade-right: var\(--ran-booster-nav-fade-start\);/', $css );
+		self::assertMatchesRegularExpression( '/@media \(forced-colors: active\) \{\s*\.ran-admin-shell__navigation\.ran-section-navigation \{\s*mask-image: none;/', $css );
+	}
+
 	public function test_status_pills_are_badges_and_the_legacy_tile_utilities_are_gone(): void {
 		$debug      = $this->view( 'debug-capture.php' );
 		$packages   = $this->view( 'packages/index.php' );

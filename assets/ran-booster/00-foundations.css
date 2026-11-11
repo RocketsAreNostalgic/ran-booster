@@ -183,6 +183,75 @@
 	border-block-end-width: 3px;
 }
 
+/*
+ * Scroll affordance for a section navigation that overflows (a phone). The
+ * vendored Shell stylesheet is generated, so the hint lives here. Each edge
+ * dims only while there is more to scroll toward it; the fade is driven by the
+ * container's own scroll position, needs no script, and leaves the bar
+ * untouched where nothing overflows. Dimmed, never hidden: a partly visible
+ * item stays readable. The scroll origin follows the writing direction, so the
+ * fade sizes are named by inline edge and mapped to the physical mask below.
+ */
+@property --ran-booster-nav-fade-start {
+	syntax: "<length>";
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --ran-booster-nav-fade-end {
+	syntax: "<length>";
+	inherits: false;
+	initial-value: 0px;
+}
+
+@keyframes ran-booster-nav-fade-start {
+	to {
+		--ran-booster-nav-fade-start: 24px;
+	}
+}
+
+@keyframes ran-booster-nav-fade-end {
+	from {
+		--ran-booster-nav-fade-end: 24px;
+	}
+
+	to {
+		--ran-booster-nav-fade-end: 0px;
+	}
+}
+
+@supports (animation-timeline: scroll()) {
+	.ran-admin-shell__navigation.ran-section-navigation {
+		--ran-booster-nav-fade-left: var(--ran-booster-nav-fade-start);
+		--ran-booster-nav-fade-right: var(--ran-booster-nav-fade-end);
+		animation:
+			ran-booster-nav-fade-start linear both,
+			ran-booster-nav-fade-end linear both;
+		animation-timeline: scroll(self inline), scroll(self inline);
+		animation-range:
+			0 24px,
+			calc(100% - 24px) 100%;
+		mask-image: linear-gradient(
+			to right,
+			color-mix(in srgb, black 35%, transparent) 0,
+			black var(--ran-booster-nav-fade-left),
+			black calc(100% - var(--ran-booster-nav-fade-right)),
+			color-mix(in srgb, black 35%, transparent) 100%
+		);
+	}
+
+	.ran-admin-shell__navigation.ran-section-navigation:dir(rtl) {
+		--ran-booster-nav-fade-left: var(--ran-booster-nav-fade-end);
+		--ran-booster-nav-fade-right: var(--ran-booster-nav-fade-start);
+	}
+
+	@media (forced-colors: active) {
+		.ran-admin-shell__navigation.ran-section-navigation {
+			mask-image: none;
+		}
+	}
+}
+
 body:has(.ran-admin-shell) #screen-meta-links {
 	position: relative;
 	z-index: 11;

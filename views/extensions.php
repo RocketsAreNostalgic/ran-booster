@@ -195,26 +195,24 @@ else :
 					<div class="ran-booster-extension-details__main">
 					<?php foreach ( $details_sections as $details_section ) : ?>
 						<div id="<?php echo esc_attr( $details_id . '-section-' . $details_section['id'] ); ?>" class="ran-booster-extension-details__section" data-ran-booster-dialog-section-label="<?php echo esc_attr( $details_section['label'] ); ?>">
-						<?php if ( 'details' === $details_section['id'] ) : ?>
-							<?php if ( '' !== $extension['details'] ) : ?>
-								<h3><?php esc_html_e( 'About this extension', 'ran-booster' ); ?></h3>
-								<p><?php echo esc_html( $extension['details'] ); ?></p>
-							<?php endif; ?>
-							<?php if ( array() !== $extension['features'] ) : ?>
-								<h3><?php esc_html_e( 'What it adds', 'ran-booster' ); ?></h3>
-								<ul>
-								<?php foreach ( $extension['features'] as $feature ) : ?>
-									<li><?php echo esc_html( $feature ); ?></li>
-								<?php endforeach; ?>
-								</ul>
-							<?php endif; ?>
-							<h3><?php esc_html_e( 'Requirements', 'ran-booster' ); ?></h3>
+						<?php if ( '' !== $extension['details'] ) : ?>
+							<h3><?php esc_html_e( 'About this extension', 'ran-booster' ); ?></h3>
+							<p><?php echo esc_html( $extension['details'] ); ?></p>
+						<?php endif; ?>
+						<?php if ( array() !== $extension['features'] ) : ?>
+							<h3><?php esc_html_e( 'What it adds', 'ran-booster' ); ?></h3>
 							<ul>
-							<?php foreach ( $extension['requirements'] as $requirement ) : ?>
-								<li><?php echo esc_html( $requirement ); ?></li>
+							<?php foreach ( $extension['features'] as $feature ) : ?>
+								<li><?php echo esc_html( $feature ); ?></li>
 							<?php endforeach; ?>
 							</ul>
 						<?php endif; ?>
+						<h3><?php esc_html_e( 'Requirements', 'ran-booster' ); ?></h3>
+						<ul>
+						<?php foreach ( $extension['requirements'] as $requirement ) : ?>
+							<li><?php echo esc_html( $requirement ); ?></li>
+						<?php endforeach; ?>
+						</ul>
 						</div>
 					<?php endforeach; ?>
 					</div>

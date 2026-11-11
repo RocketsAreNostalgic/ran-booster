@@ -43,7 +43,7 @@ final class AdminActionRenderer {
 			return;
 		}
 		?>
-		<a class="<?php echo esc_attr( $primary ? ButtonClasses::primary( false, true ) : ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $action['url'] ); ?>"<?php echo true === $action['external'] ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>>
+		<a class="<?php echo esc_attr( $primary ? ButtonClasses::primary( false, true ) : ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $action['url'] ); ?>">
 			<?php echo esc_html( $action['label'] ); ?>
 			<?php if ( '' !== $action['screen_reader'] ) { ?>
 				<span class="screen-reader-text">: <?php echo esc_html( $action['screen_reader'] ); ?></span>

@@ -50,7 +50,9 @@ final class AdminStatusSummaryRenderer {
 		<div class="ran-booster-status-summary ran-booster-status-summary--<?php echo esc_attr( $state ); ?>">
 			<div class="ran-booster-status-summary__status">
 				<p class="ran-booster-status-summary__heading"><strong><?php echo esc_html( $heading ); ?></strong> <?php StatusBadge::print_intent( $status_label, self::INTENTS[ $state ] ); ?></p>
+				<?php if ( '' !== $description ) { ?>
 				<p class="ran-booster-status-summary__description"><?php echo esc_html( $description ); ?></p>
+				<?php } ?>
 			</div>
 			<div class="ran-booster-status-summary__actions">
 				<?php $render_actions(); ?>

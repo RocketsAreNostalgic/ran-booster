@@ -28,7 +28,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 <section id="ran-booster-public-lookup-profile-region" class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" data-ran-booster-admin-mutation-region="public-lookup-profile" aria-labelledby="ran-booster-public-lookup-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 	<header class="ran-booster-provider-section__header">
 		<h3 id="ran-booster-public-lookup-heading" class="ran-booster-section__title"><?php esc_html_e( 'Public repository lookup', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose Anonymous, or use a dedicated saved credential to reduce Git provider rate-limit interruptions.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose Anonymous, or use a saved credential to reduce rate-limit interruptions.', 'ran-booster' ); ?></p>
 	</header>
 	<div class="ran-booster-provider-section__body">
 		<div class="ran-booster-public-lookup-profile__panel ran-booster-panel">
@@ -56,7 +56,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 				</form>
 				<div class="ran-booster-public-lookup-profile__guidance">
 					<strong><?php esc_html_e( 'Credential guidance', 'ran-booster' ); ?></strong>
-					<p><?php esc_html_e( 'Prefer a dedicated, expiring, least-privilege credential kept separate from credentials that can access private repositories or deployments.', 'ran-booster' ); ?></p>
+					<p><?php esc_html_e( 'Use a dedicated, expiring, least-privilege credential, separate from any that can access private repositories or deployments.', 'ran-booster' ); ?></p>
 				</div>
 			</div>
 			<?php if ( $public_lookup_profile['stale'] ) { ?>

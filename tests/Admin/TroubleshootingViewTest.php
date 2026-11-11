@@ -1940,7 +1940,8 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( 'ran-booster-provider__header', $html );
 		self::assertStringNotContainsString( '>Repository provider</p>', $html );
-		self::assertStringContainsString( 'Manage repository access, integrations and the packages connected to this site.', $html );
+		self::assertStringContainsString( 'Repository access, integrations and connected packages.', $html );
+		self::assertStringNotContainsString( 'Manage repository access, integrations and the packages connected to this site.', $html );
 		self::assertStringNotContainsString( 'id="ran-booster-access-tokens-heading"', $html );
 		self::assertStringNotContainsString( '>Add credential</button>', $html );
 		self::assertStringNotContainsString( 'data-credential-modal="access"', $html );
@@ -2064,7 +2065,9 @@ final class TroubleshootingViewTest extends TestCase {
 			self::assertStringContainsString( 'id="ran-booster-provider-task-panel"', $rendered );
 		}
 		self::assertStringContainsString( 'Repository access', $html );
-		self::assertStringContainsString( 'Saved credentials can be used for repository access.', $html );
+		self::assertStringContainsString( 'Saved credentials are used for repository access.', $html );
+		self::assertStringNotContainsString( 'Saved credentials can be used for repository access.', $html );
+		self::assertStringNotContainsString( 'Open credential management to review saved credentials and their usage.', $html );
 		self::assertStringContainsString( '>Add credential</button>', $html );
 		self::assertStringContainsString( 'data-credential-modal="access"', $html );
 		self::assertStringNotContainsString( 'ran-booster-provider-management-table--access', $html );
@@ -2074,7 +2077,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'id="ran-booster-repository-integrations-heading"' ), strpos( $html, 'id="ran-booster-webhook-secrets-heading"' ) );
 		self::assertSame( 0, substr_count( $html, 'Manage signing secrets' ) );
 		self::assertStringContainsString( 'id="ran-booster-repository-integrations-heading" class="ran-booster-section__title">Repository integrations</h3>', $html );
-		self::assertStringContainsString( 'Review managed repositories and available integrations.', $html );
+		self::assertStringNotContainsString( 'Review managed repositories and available integrations.', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-status-summary--pending' ) );
 		self::assertStringContainsString( '<strong>Webhook signing</strong> <span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">No secret saved</span>', $html );
 		self::assertStringContainsString( '<strong>No credential saved</strong> <span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">Not set up</span>', $html );
@@ -2312,7 +2315,7 @@ final class TroubleshootingViewTest extends TestCase {
 			array( array( 'database_unavailable' ), 'https://example.test/hook', 'warning', 'Booster database storage must be healthy before Push-to-Deploy can run.' ),
 			array( array( 'secrets_storage_unavailable' ), 'https://example.test/hook', 'warning', 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.' ),
 			array( array( 'managed_packages_unavailable' ), 'https://example.test/hook', 'warning', 'Booster could not read the managed package inventory needed for Push-to-Deploy.' ),
-			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'info', 'This site uses a local URL, so Git providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy.' ),
+			array( array( 'callback_requires_public_https' ), 'http://localhost/hook', 'info', 'This site uses a local URL, so Git providers cannot reach it. Set a public HTTPS site URL before using Push-to-Deploy.' ),
 			array( array( 'callback_requires_public_https' ), 'http://example.test/hook', 'info', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it.' ),
 			array( array( 'unknown-canary' ), 'https://example.test/hook', 'info', '' ),
 			array( array( 'callback_requires_public_https', 'database_unavailable' ), 'http://example.test/hook', 'warning', 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it. Booster database storage must be healthy before Push-to-Deploy can run.' ),
@@ -3039,18 +3042,20 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'hx-target="#ran-booster-public-lookup-profile-region"', $html );
 		self::assertStringContainsString( 'hx-swap="outerHTML transition:true show:none"', $html );
 		self::assertStringContainsString( 'id="ran-booster-public-lookup-profile-error"', $html );
-		self::assertStringContainsString( 'reduce Git provider rate-limit interruptions', $html );
+		self::assertStringNotContainsString( 'reduce Git provider rate-limit interruptions', $html );
 		self::assertStringContainsString( 'Lookup credential', $html );
 		self::assertStringContainsString( '>Anonymous</option>', $html );
 		self::assertStringContainsString( 'Public lookup (public_lookup)', $html );
-		self::assertStringContainsString( 'dedicated, expiring, least-privilege credential', $html );
+		self::assertStringContainsString( 'Use a dedicated, expiring, least-privilege credential, separate from any that can access private repositories or deployments.', $html );
+		self::assertStringNotContainsString( 'Prefer a dedicated, expiring', $html );
+		self::assertStringNotContainsString( 'dedicated saved credential', $html );
 		self::assertStringContainsString( 'Credential guidance', $html );
 		self::assertStringNotContainsString( 'The active Git provider can read every credential saved under its Git provider code', $html );
 		self::assertStringContainsString( 'Deleting it returns Fixture public lookup to Anonymous', $html );
 		self::assertStringContainsString( 'ran-booster-credential-self-destruct', $html );
 		self::assertStringNotContainsString( 'ran-booster-provider-disclosure ran-booster-public-lookup-profile', $html );
 
-		$explanation_position = strpos( $html, 'Choose Anonymous, or use a dedicated saved credential' );
+		$explanation_position = strpos( $html, 'Choose Anonymous, or use a saved credential to reduce rate-limit interruptions.' );
 		$controls_position    = strpos( $html, 'ran-booster-public-lookup-profile__controls' );
 		$guidance_position    = strpos( $html, '<div class="ran-booster-public-lookup-profile__guidance">' );
 		self::assertIsInt( $explanation_position );

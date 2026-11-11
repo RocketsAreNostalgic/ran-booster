@@ -271,7 +271,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 	<?php if ( 'overview' === $provider_view && ! $is_repository_detail ) { ?>
 		<header class="ran-booster-page-shell__header ran-booster-provider__header">
 			<h2 id="ran-booster-provider-heading" class="ran-booster-page-heading__title" data-ran-booster-provider-profile-focus tabindex="-1"><?php echo esc_html( $provider['label'] ); ?></h2>
-			<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Manage repository access, integrations and the packages connected to this site.', 'ran-booster' ); ?></p>
+			<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Repository access, integrations and connected packages.', 'ran-booster' ); ?></p>
 		</header>
 	<?php } ?>
 
@@ -458,7 +458,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 		<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-access-tokens-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-access-tokens-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository access', 'ran-booster' ); ?></h3>
-					<p class="ran-booster-section__description"><?php echo esc_html( __( 'Saved credentials can be used for repository access.', 'ran-booster' ) ); ?></p>
+					<p class="ran-booster-section__description"><?php echo esc_html( __( 'Saved credentials are used for repository access.', 'ran-booster' ) ); ?></p>
 				</header>
 			<div class="ran-booster-provider-section__body">
 				<?php
@@ -522,9 +522,6 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 			<section class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-integrations-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-provider-section__header">
 					<h3 id="ran-booster-repository-integrations-heading" class="ran-booster-section__title"><?php esc_html_e( 'Repository integrations', 'ran-booster' ); ?></h3>
-				<p class="ran-booster-section__description">
-						<?php esc_html_e( 'Review managed repositories and available integrations.', 'ran-booster' ); ?>
-					</p>
 				</header>
 				<div class="ran-booster-provider-section__body">
 					<div

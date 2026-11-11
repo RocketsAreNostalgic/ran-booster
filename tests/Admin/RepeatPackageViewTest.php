@@ -1186,14 +1186,14 @@ final class RepeatPackageViewTest extends TestCase {
 	): void {
 		$package = $this->package( $package_view );
 		$package->set_source( $current_source, 2 );
-		$package_provider_settings                = $this->provider_settings( true );
-		$package_source                           = array(
+		$package_provider_settings                  = $this->provider_settings( true );
+		$package_source                             = array(
 			'current'           => $current_source->value,
 			'selected'          => $current_source->value,
 			'unavailable'       => false,
 			'advanced_sections' => array(),
 		);
-		$development_environment_detected         = true;
+		$development_environment_detected           = true;
 		$GLOBALS['ran_booster_bulk_active_plugins'] = $already_active && 'plugin' === $package_view->get_type() ? array( 'example/example.php' ) : array();
 		$GLOBALS['ran_booster_admin_view_actions']['ran_booster_admin_package_operation_actions'] = array(
 			static function ( string $current, string $selected ): void {

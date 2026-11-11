@@ -751,7 +751,7 @@ final class AdminAssetContractTest extends TestCase {
 		// The documented exception list: option labels, table row names and screen reader labels only.
 		self::assertSame(
 			array( '.screen-reader-text', '.ran-booster-portability__credential-selection', 'td > label', ':has(input[type="checkbox"], input[type="radio"])' ),
-			array_map( 'trim', preg_split( '/,(?![^()]*\))/', $m[1] ) ?: array() )
+			array_map( 'trim', (array) preg_split( '/,(?![^()]*\))/', $m[1] ) )
 		);
 	}
 
@@ -783,12 +783,13 @@ final class AdminAssetContractTest extends TestCase {
 			// Paragraph (not a label element) that names a button group.
 			'.ran-booster-admin .ran-booster-repository-webhook-management p.ran-booster-public-lookup-profile__label',
 		);
-		$files   = glob( dirname( __DIR__, 2 ) . '/assets/*.css' );
-		$files   = array_merge( false === $files ? array() : $files, glob( dirname( __DIR__, 2 ) . '/assets/ran-booster/*.css' ) ?: array() );
+		$files   = array_merge(
+			(array) glob( dirname( __DIR__, 2 ) . '/assets/*.css' ),
+			(array) glob( dirname( __DIR__, 2 ) . '/assets/ran-booster/*.css' )
+		);
 		$checked = 0;
 		foreach ( $files as $file ) {
-			$css = (string) file_get_contents( $file );
-			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
+			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $this->raw_asset( str_replace( dirname( __DIR__, 2 ) . '/assets/', '', (string) $file ) ) );
 			if ( 1 > preg_match_all( '/([^{}@;]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {
 				continue;
 			}

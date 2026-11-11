@@ -131,6 +131,63 @@ final class DebugCaptureViewTest extends TestCase {
 	}
 
 
+	public function test_retained_state_repeats_the_replacement_consequence_under_the_action_group(): void {
+		$html    = $this->render_view(
+			array(
+				'state'        => 'retained',
+				'filename'     => 'ran-booster-debug.php',
+				'delete_after' => '24 July',
+				'content'      => '[ran-booster] event',
+			)
+		);
+		$message = 'Starting a new capture replaces any retained capture.';
+		$parts   = explode( 'data-ran-booster-ui-disclosure="troubleshooting-logging"', $html, 2 );
+
+		if ( 2 !== count( $parts ) ) {
+			self::fail( 'The Logging details disclosure is missing.' );
+		}
+
+		self::assertSame( 1, preg_match( '#</form>\s*</div>\s*<p class="description">' . preg_quote( $message, '#' ) . '</p>#', $parts[0] ), 'The note follows the action group directly.' );
+		self::assertSame( 1, substr_count( $parts[0], $message ) );
+		self::assertSame( 1, substr_count( $parts[1], '<p>' . $message . '</p>' ), 'The disclosure copy is unchanged.' );
+	}
+
+	/**
+	 * @return array<string, array{0: string}>
+	 */
+	public static function states_without_a_retained_capture(): array {
+		return array(
+			'none'        => array( 'inactive' ),
+			'active'      => array( 'active' ),
+			'unavailable' => array( 'unavailable' ),
+			'malformed'   => array( 'malformed' ),
+		);
+	}
+
+	/**
+	 * @dataProvider states_without_a_retained_capture
+	 */
+	public function test_replacement_consequence_is_absent_next_to_the_button_without_a_retained_capture( string $state ): void {
+		$html    = $this->render_view(
+			array(
+				'state'         => $state,
+				'filename'      => 'ran-booster-debug.php',
+				'capture_until' => '24 July',
+				'content'       => '[ran-booster] event',
+			)
+		);
+		$message = 'Starting a new capture replaces any retained capture.';
+		$parts   = explode( 'data-ran-booster-ui-disclosure="troubleshooting-logging"', $html, 2 );
+
+		if ( 2 !== count( $parts ) ) {
+			self::fail( 'The Logging details disclosure is missing.' );
+		}
+
+		self::assertStringNotContainsString( $message, $parts[0] );
+		self::assertStringNotContainsString( 'class="description"', $parts[0] );
+		self::assertSame( 1, substr_count( $parts[1], '<p>' . $message . '</p>' ), 'The disclosure copy stays in every state.' );
+	}
+
 	public function test_empty_active_and_retained_captures_do_not_offer_copy_controls(): void {
 		foreach ( array( 'active', 'retained' ) as $state ) {
 			$html = $this->render_view(

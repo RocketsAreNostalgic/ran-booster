@@ -127,6 +127,9 @@ if ( 'active' === $capture_state && '' !== $capture_until ) {
 				</form>
 				<?php } ?>
 			</div>
+			<?php if ( 'retained' === $capture_state ) { ?>
+				<p class="description"><?php esc_html_e( 'Starting a new capture replaces any retained capture.', 'ran-booster' ); ?></p>
+			<?php } ?>
 		<?php } ?>
 	</div>
 

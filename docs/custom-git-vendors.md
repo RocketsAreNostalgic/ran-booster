@@ -401,7 +401,7 @@ The main types you will usually touch while adding a new vendor are:
 For a deeper discussion of the provider contract itself, see the
 [provider extension contract](provider-extension-contract.md).
 
-The first-party GitHub implementation is maintained and released independently
+The GitHub implementation is maintained and released independently by RAN
 as the Composer package `ran/booster-github-provider`, while Booster pins and
 bundles an immutable released version as part of its distribution. Bundled
 status is a distribution choice, not a privileged provider architecture: the

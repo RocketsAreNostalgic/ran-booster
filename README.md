@@ -285,4 +285,4 @@ of the upstream package's `GPLv2` declaration. Source provenance is recorded in
 [NOTICE.md](NOTICE.md) and [license.txt](license.txt); released changes are in
 [CHANGELOG.md](CHANGELOG.md).
 
-[^direct-connection]: This direct-connection claim covers Booster Core and RAN first-party provider integrations. Your or your provider's hosting, proxy, CDN, and network services may still be in the path. Third-party extensions may have their own dependencies and policies.
+[^direct-connection]: This direct-connection claim covers Booster Core and RAN-maintained provider integrations. Your or your provider's hosting, proxy, CDN, and network services may still be in the path. Third-party extensions may have their own dependencies and policies.

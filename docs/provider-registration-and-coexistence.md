@@ -148,7 +148,7 @@ coordinate two implementations pointed at the same remote repository.
 
 The `gh` implementation is no longer Core-owned source. It is the independently
 maintained `ran/booster-github-provider` package, pinned and bundled by Booster
-as its first-party distribution. That packaging choice does not grant hidden
+as part of its distribution. That packaging choice does not grant hidden
 provider authority: the aggregate is registered through the same public
 provider registry semantics used by external implementations, and the
 maintained Phase 5 external-wrapper fixture proves the released package can be
@@ -159,9 +159,9 @@ it does not displace an already registered `gh`, approve reuse of retained
 credentials, or qualify switching between implementations.
 
 Booster always registers its bundled GitHub package as `gh`. There is no
-current preference to hide or disable that first-party distribution.
+current preference to hide or disable that bundled package.
 
-Several first-party surfaces still know explicitly about `gh`, but repository
+Several Core-owned surfaces still know explicitly about `gh`, but repository
 webhook-management placement no longer does. Core places its fixed controls for
 any provider whose registered aggregate implements both exact webhook facets.
 This does not transfer `gh` credentials or package identity to another code;

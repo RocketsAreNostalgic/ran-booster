@@ -586,7 +586,10 @@ they apply to, and keeps Save and Apply in one predictable place.
    full-width footer band: a divider above, 16px of block padding, the Card's
    inline inset, and no bottom padding on the content area, so the band ends
    flush with the Card's bottom edge. The primary action comes first, then the
-   secondary actions, 12px apart.
+   secondary actions, 12px apart. Actions that belong to a disclosure are that
+   disclosure's footer band: the last child of its body, using the body's 16px
+   inset and ending flush with the disclosure border, so they open and close
+   with it.
 2. A heading-row action sits at the end of the heading row, vertically centred
    on the heading block (title and description together) and aligned to the
    content column's end edge. Where the row holds only a title, as on Managed
@@ -615,7 +618,7 @@ they apply to, and keeps Save and Apply in one predictable place.
 | Card footer band | Transporter Open and Create | Start, in the footer band |
 | Card footer band | Install plugin and theme, Package operation | Start, primary first; shown only for a Branch source |
 | Card footer band | Troubleshooting Logging capture actions | Start, Delete capture last |
-| Card footer band | Repository Webhook management, shown with Webhook setup open | Start, Remove last |
+| Disclosure footer band | Repository Webhook management, inside the Webhook setup disclosure | Start, Remove last |
 | Heading row | Managed Plugins and Themes, Install another | End of the heading row |
 | Heading row | Overview, Return to onboarding | End of the heading row |
 | Dialog | Add credential, Add webhook secret, Delete confirmation | End, the exception |

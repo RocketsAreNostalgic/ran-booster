@@ -279,7 +279,7 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 			</section>
 		<?php } else { ?>
 			<form id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation <?php echo $submitted_action === $package_view->get_action( 'edit' ) ? 'data-ran-booster-attempted' : ''; ?>>
-						<?php wp_nonce_field( $package_view->get_action( 'edit' ) ); ?>
+						<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'edit' ) ); ?>
 						<?php if ( $show_branch_operations ) { ?>
 							<input type="hidden" name="_ran_booster_reinstall_nonce" value="<?php echo esc_attr( wp_create_nonce( $package_view->get_action( 'update' ) ) ); ?>">
 						<?php } ?>

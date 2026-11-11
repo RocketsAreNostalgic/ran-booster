@@ -338,7 +338,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 						</div></details></div>
 								<?php if ( current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
-									<?php wp_nonce_field( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
+									<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-recover-github-' . $native_recovery['digest'] ); ?>
 								<input type="hidden" name="ran_booster[action]" value="recover-github-native">
 								<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $native_recovery['digest'] ); ?>">
 								<p><label><input type="checkbox" name="ran_booster[confirmed_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the interrupted installation or update process has stopped.', 'ran-booster' ); ?></label></p>
@@ -388,7 +388,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 					<h4><?php esc_html_e( 'Approval', 'ran-booster' ); ?></h4>
 					<?php if ( ! $github_selection['available'] && current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' ) ) { ?>
 						<form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>" data-hx-boost="false">
-							<?php wp_nonce_field( 'ran-booster-adopt-github-' . $adoption_review['digest'] ); ?>
+							<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-adopt-github-' . $adoption_review['digest'] ); ?>
 							<input type="hidden" name="ran_booster[action]" value="adopt-github">
 							<input type="hidden" name="ran_booster[review_digest]" value="<?php echo esc_attr( $adoption_review['digest'] ); ?>">
 							<p><label><input type="checkbox" name="ran_booster[confirmed]" value="1" required> <?php esc_html_e( 'I approve this provider and future setup of credentials it supports.', 'ran-booster' ); ?></label></p>

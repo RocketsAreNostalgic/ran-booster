@@ -11,7 +11,7 @@ $report_generated = ! empty( $troubleshooting['report_generated'] );
 <h3 class="ran-booster-section__title"><?php esc_html_e( 'Support report', 'ran-booster' ); ?></h3>
 <p><?php esc_html_e( 'Generate a local, sanitized report. The report is not transmitted or logged; suitably authorised administrators also receive fresh basic diagnostics, which may contact admitted providers without selecting credentials or repositories.', 'ran-booster' ); ?></p>
 <form method="post" action="<?php echo esc_url( $troubleshooting_base . '&panel=support-report' ); ?>">
-	<?php wp_nonce_field( 'ran-booster-generate-support-report' ); ?>
+	<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-generate-support-report' ); ?>
 	<input type="hidden" name="ran_booster[action]" value="generate-support-report">
 	<p><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Generate support report', 'ran-booster' ); ?></button></p>
 </form>

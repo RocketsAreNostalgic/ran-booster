@@ -133,7 +133,7 @@ $repository_placeholder = array() === $locator_examples
 		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a Git provider and run a health check.', 'ran-booster' ); ?></p>
 
 	<form method="post" action="" class="ran-booster-troubleshooting__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-troubleshooting-diagnostics-error" hx-post="" hx-target="#ran-booster-troubleshooting-diagnostics-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
-		<?php wp_nonce_field( 'ran-booster-run-troubleshooting' ); ?>
+		<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-run-troubleshooting' ); ?>
 		<input type="hidden" name="ran_booster[action]" value="run-troubleshooting">
 		<div id="ran-booster-troubleshooting-diagnostics-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 

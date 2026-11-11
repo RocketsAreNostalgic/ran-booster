@@ -131,7 +131,7 @@ $managed_package_url        = '' === $managed_package_identifier
 			data-ran-booster-open-picker="<?php echo esc_attr( $open_repository_picker ? '1' : '0' ); ?>"
 			data-ran-booster-package-mutation-available="<?php echo esc_attr( $package_mutation_available ? '1' : '0' ); ?>"
 		>
-			<?php wp_nonce_field( $package_view->get_action( 'install' ) ); ?>
+			<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'install' ) ); ?>
 			<?php if ( '' !== $recovery_identifier ) { ?>
 				<p><?php esc_html_e( 'Link this exact installed target. To restore published-release management, first link it, then enable release tracking in its settings.', 'ran-booster' ); ?> <code><?php echo esc_html( $recovery_identifier ); ?></code></p>
 				<input type="hidden" name="ran_booster[exact_identifier]" value="1">

@@ -68,7 +68,7 @@ $provider_attention         = array_filter(
 		<?php } ?>
 		<?php if ( current_user_can( 'manage_options' ) ) { ?>
 			<form method="post" action="<?php echo esc_url( $overview_url ); ?>">
-				<?php wp_nonce_field( 'ran-booster-overview-presentation' ); ?>
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-overview-presentation' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="overview-presentation">
 				<input type="hidden" name="ran_booster[presentation]" value="<?php echo 'onboarding' === $overview_view ? 'dashboard' : 'onboarding'; ?>">
 				<span data-ran-booster-ui-button="overview-presentation">
@@ -170,7 +170,7 @@ $provider_attention         = array_filter(
 		<p><?php echo esc_html( $overview_storage_summary['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
 		<?php if ( 'onboarding' === $overview_view && ! empty( $overview_storage_summary['can_provision'] ) ) { ?>
 			<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( (string) ( $overview_storage_summary['action_url'] ?? admin_url( 'admin.php?page=ran-booster&tab=overview' ) ) ); ?>">
-				<?php wp_nonce_field( 'ran-booster-create-secure-storage' ); ?>
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-create-secure-storage' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="create-secure-storage">
 				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Set up default storage', 'ran-booster' ); ?></button>
 			</form>

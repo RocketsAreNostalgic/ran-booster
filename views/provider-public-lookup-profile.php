@@ -35,7 +35,7 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 			<div id="ran-booster-public-lookup-profile-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $public_lookup_profile_error ? 'hidden' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo null === $public_lookup_profile_error ? '' : esc_html( $public_lookup_profile_error ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 			<div class="ran-booster-public-lookup-profile__layout">
 				<form method="post" action="" class="ran-booster-public-lookup-profile__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-public-lookup-profile-error" hx-post="" hx-target="#ran-booster-public-lookup-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
-					<?php wp_nonce_field( 'ran-booster-save-public-lookup-profile' ); ?>
+					<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-save-public-lookup-profile' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="save-public-lookup-profile">
 					<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
 					<label class="ran-booster-public-lookup-profile__label" for="ran-booster-public-lookup-profile"><?php esc_html_e( 'Lookup credential', 'ran-booster' ); ?></label>

@@ -24,7 +24,7 @@ $delete_description = 'plugin' === $package_view->get_type()
 	<summary><h3 id="ran-booster-package-danger-zone-heading" class="ran-booster-section__title ran-booster-settings-disclosure__label"><?php esc_html_e( 'Danger zone', 'ran-booster' ); ?></h3></summary>
 	<div data-ran-booster-ui-disclosure-content class="ran-booster-settings-disclosure__body ran-booster-package-danger-zone__actions ran-booster-disclosure__body">
 		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit data-ran-booster-submit-busy>
-			<?php wp_nonce_field( $package_view->get_action( 'unlink' ) ); ?>
+			<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'unlink' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'unlink' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $package_view->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $identifier_value ); ?>">
 			<input type="hidden" name="ran_booster[expected_adoption_token]" value="<?php echo esc_attr( (string) \RAN\AdoptionIdentity::of( $package ) ); ?>">
@@ -41,7 +41,7 @@ $delete_description = 'plugin' === $package_view->get_type()
 		</form>
 
 		<form action="" method="POST" data-ran-booster-confirmed-package-removal data-ran-booster-package-mutation data-ran-booster-native-submit data-ran-booster-submit-busy>
-			<?php wp_nonce_field( $package_view->get_action( 'unlink-delete' ) ); ?>
+			<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'unlink-delete' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'unlink-delete' ) ); ?>">
 			<input type="hidden" name="ran_booster[<?php echo esc_attr( $package_view->get_identifier_field() ); ?>]" value="<?php echo esc_attr( $identifier_value ); ?>">
 			<input type="hidden" name="ran_booster[expected_adoption_token]" value="<?php echo esc_attr( (string) \RAN\AdoptionIdentity::of( $package ) ); ?>">

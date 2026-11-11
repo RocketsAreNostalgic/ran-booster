@@ -207,7 +207,7 @@ $policy_labels = array(
 			data-reinstall-confirm-singular="<?php esc_attr_e( 'Reinstall the selected branch and overwrite local changes?', 'ran-booster' ); ?>"
 			data-reinstall-confirm-plural="<?php esc_attr_e( 'Reinstall {count} selected branches and overwrite local changes?', 'ran-booster' ); ?>"
 		>
-			<?php wp_nonce_field( $package_view->get_action( 'bulk' ) ); ?>
+			<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'bulk' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'bulk' ) ); ?>">
 			<label class="screen-reader-text" for="<?php echo esc_attr( $bulk_action_id ); ?>"><?php esc_html_e( 'Select bulk action', 'ran-booster' ); ?></label>
 			<select id="<?php echo esc_attr( $bulk_action_id ); ?>" name="ran_booster[bulk_action]" required>
@@ -514,7 +514,7 @@ $policy_labels = array(
 						<?php $extension_action_renderer->render( $package_actions, true ); ?>
 					<?php } else { ?>
 						<form action="" method="POST" class="ran-booster-package-row__update-form" data-ran-booster-package-mutation>
-							<?php wp_nonce_field( $package_view->get_action( 'update' ) ); ?>
+							<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'update' ) ); ?>
 							<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'update' ) ); ?>">
 							<input type="hidden" name="ran_booster[repository]" value="<?php echo esc_attr( (string) $package->repository ); ?>">
 							<input type="hidden" name="ran_booster[<?php echo esc_attr( $package_view->get_identifier_field() ); ?>]" value="<?php echo esc_attr( (string) $package->get_identifier() ); ?>">

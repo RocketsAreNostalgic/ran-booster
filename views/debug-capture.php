@@ -111,7 +111,7 @@ if ( 'active' === $capture_state && '' !== $capture_until ) {
 		<?php if ( in_array( $capture_state, array( 'inactive', 'active', 'retained' ), true ) ) { ?>
 			<div class="ran-booster-debug-capture__footer" role="group" aria-label="<?php esc_attr_e( 'Logging capture actions', 'ran-booster' ); ?>" data-ran-booster-success-feedback>
 				<form class="ran-booster-debug-capture__primary-actions" method="post" action="" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-debug-capture-error" hx-post="" hx-target="#ran-booster-debug-capture-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
-					<?php wp_nonce_field( 'ran-booster-manage-debug-capture' ); ?>
+					<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-manage-debug-capture' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="manage-debug-capture">
 					<?php if ( 'active' === $capture_state ) { ?>
 						<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $refresh_url ); ?>"><?php esc_html_e( 'Refresh', 'ran-booster' ); ?></a>
@@ -122,7 +122,7 @@ if ( 'active' === $capture_state && '' !== $capture_until ) {
 				</form>
 				<?php if ( in_array( $capture_state, array( 'active', 'retained' ), true ) ) { ?>
 				<form class="ran-booster-debug-capture__delete" method="post" action="">
-					<?php wp_nonce_field( 'ran-booster-manage-debug-capture' ); ?>
+					<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-manage-debug-capture' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="manage-debug-capture">
 					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' ) ); ?>" name="ran_booster[operation]" value="delete"><?php esc_html_e( 'Delete capture', 'ran-booster' ); ?></button>
 				</form>

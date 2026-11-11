@@ -76,7 +76,7 @@ $storage_card_open = 'storage_healthy' !== $storage_status || null !== $storage_
 			<?php if ( $secrets_storage['can_provision'] ) { ?>
 				<p class="description"><?php esc_html_e( 'Booster checks a private location and, if it is safe, updates wp-config.php. The encrypted file and its separate database key are created when you save the first credential.', 'ran-booster' ); ?></p>
 				<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secrets_storage['action_url'] ); ?>">
-					<?php wp_nonce_field( 'ran-booster-create-secure-storage' ); ?>
+					<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-create-secure-storage' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="create-secure-storage">
 					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Set up default storage', 'ran-booster' ); ?></button>
 				</form>
@@ -92,7 +92,7 @@ $storage_card_open = 'storage_healthy' !== $storage_status || null !== $storage_
 							<?php } ?>
 							<p class="description"><?php esc_html_e( 'This proves decryption, canonical storage and the current registered Git provider credential shape. It does not contact a Git provider or prove that a credential is still active. Adoption changes only Booster’s owned wp-config.php pointer; it does not move or delete files.', 'ran-booster' ); ?></p>
 							<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secrets_storage['action_url'] ); ?>">
-								<?php wp_nonce_field( 'ran-booster-adopt-secure-storage' ); ?>
+								<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-adopt-secure-storage' ); ?>
 								<input type="hidden" name="ran_booster[action]" value="adopt-secure-storage">
 								<input type="hidden" name="ran_booster[recovery_token]" value="<?php echo esc_attr( $storage_recovery['token'] ); ?>">
 								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Adopt existing storage', 'ran-booster' ); ?></button>
@@ -101,7 +101,7 @@ $storage_card_open = 'storage_healthy' !== $storage_status || null !== $storage_
 							<p><strong><?php esc_html_e( 'Permanent reset:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'Restore the matching ran-booster-store.json and database key from the same backup first if they are available. Resetting abandons every repository credential and webhook secret that cannot be recovered from that matching pair.', 'ran-booster' ); ?></p>
 							<p class="description"><?php esc_html_e( 'A Transporter Blueprint is not a complete credential backup. It may transfer selected repository credentials for applicable package rows, including explicit credential-only recovery for an already-managed package, but it never contains webhook secrets.', 'ran-booster' ); ?></p>
 							<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( $secrets_storage['action_url'] ); ?>">
-								<?php wp_nonce_field( 'ran-booster-reset-empty-storage' ); ?>
+								<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-reset-empty-storage' ); ?>
 								<input type="hidden" name="ran_booster[action]" value="reset-empty-storage">
 								<label for="ran-booster-reset-confirmation">
 									<?php

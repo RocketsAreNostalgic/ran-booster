@@ -115,7 +115,7 @@ $package_settings_label = 'theme' === $package_type
 		</dl>
 		<?php if ( $attempt->requires_operator_resolution() ) { ?>
 			<form method="post" action="<?php echo esc_url( $package_settings_url ); ?>">
-				<?php wp_nonce_field( 'ran-booster-resolve-needs-attention' ); ?>
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-resolve-needs-attention' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="resolve-needs-attention">
 				<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
 				<input type="hidden" name="ran_booster[correlation_id]" value="<?php echo esc_attr( (string) $item['correlation_id'] ); ?>">
@@ -135,7 +135,7 @@ $package_settings_label = 'theme' === $package_type
 		<?php } ?>
 		<?php if ( 'running' === $item['state'] ) { ?>
 			<form method="post" action="">
-				<?php wp_nonce_field( 'ran-booster-reconcile-deployment-worker' ); ?>
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-reconcile-deployment-worker' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="reconcile-deployment-worker">
 				<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
 				<input type="hidden" name="ran_booster[correlation_id]" value="<?php echo esc_attr( (string) $item['correlation_id'] ); ?>">

@@ -52,7 +52,7 @@ $troubleshooting_url  = add_query_arg(
 			<p><?php esc_html_e( 'The problem is in Booster’s saved management settings. This does not establish that the installed package or its data is damaged. Booster cannot use these invalid settings to manage updates.', 'ran-booster' ); ?></p>
 			<p><?php esc_html_e( 'You can stop Booster managing this package and then link it again using verified repository settings. Stopping management keeps its installed files, WordPress activation state, package data, shared credentials and deployment history.', 'ran-booster' ); ?></p>
 			<form method="post" action="<?php echo esc_url( $recovery_url ); ?>" data-ran-booster-submit-busy>
-				<?php wp_nonce_field( \RAN\Admin\PackageAdminController::recovery_action( $recovery_type, $recovery_identifier, $recovery_confirmation['adoption_token'], $recovery_confirmation['digest'], $recovery_confirmation['installed_digest'] ) ); ?>
+				<?php \RAN\Admin\Component\NonceField::print( \RAN\Admin\PackageAdminController::recovery_action( $recovery_type, $recovery_identifier, $recovery_confirmation['adoption_token'], $recovery_confirmation['digest'], $recovery_confirmation['installed_digest'] ) ); ?>
 				<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( 'recover-' . $recovery_type ); ?>">
 				<input type="hidden" name="ran_booster[identifier]" value="<?php echo esc_attr( $recovery_identifier ); ?>">
 				<?php foreach ( array( 'adoption_token', 'digest', 'installed_digest' ) as $confirmation_field ) { ?>

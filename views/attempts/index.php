@@ -77,7 +77,7 @@ $origin_labels = array(
 		<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $deployment_activity['filter_notice'] ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div><?php } ?>
 	<?php if ( $has_queued ) { ?>
 		<form method="post" data-ran-booster-activity-runner>
-			<?php wp_nonce_field( 'ran-booster-request-deployment-runner' ); ?>
+			<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-request-deployment-runner' ); ?>
 			<input type="hidden" name="ran_booster[action]" value="request-deployment-runner">
 			<button type="submit" name="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Request deployment runner', 'ran-booster' ); ?></button>
 		</form>
@@ -231,7 +231,7 @@ $origin_labels = array(
 								</dl>
 									<?php if ( 'running' === $state ) { ?>
 									<form method="post" action="">
-										<?php wp_nonce_field( 'ran-booster-reconcile-deployment-worker' ); ?>
+										<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-reconcile-deployment-worker' ); ?>
 										<input type="hidden" name="ran_booster[action]" value="reconcile-deployment-worker">
 										<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
 										<input type="hidden" name="ran_booster[correlation_id]" value="<?php echo esc_attr( (string) ( $item['correlation_id'] ?? '' ) ); ?>">

@@ -548,8 +548,24 @@
 }
 
 .ran-booster-admin .ran-booster-deployment-policy-row > select {
+	inline-size: 100%;
+	min-inline-size: 0;
 	min-block-size: 40px;
 	margin: 0;
+	/* The chevron keeps its core room at the end; the start gap is trimmed so the longest selected label fits a phone. */
+	padding-inline-start: var(--ran-booster-space-8);
+	text-overflow: ellipsis;
+}
+
+@media screen and (max-width: 480px) {
+	.ran-booster-admin
+		.ran-booster-package-operation-settings
+		:is(
+			.ran-booster-settings-section__header,
+			.ran-booster-settings-section__body
+		) {
+		padding-inline: var(--ran-booster-space-16);
+	}
 }
 
 .ran-booster-admin .ran-booster-package-operation-settings__actions {

@@ -248,6 +248,22 @@ final class AdminAssetContractTest extends TestCase {
 		}
 	}
 
+	public function test_package_operation_updates_select_fits_the_container_on_a_phone(): void {
+		$css = $this->asset( 'ran-booster/65-package-settings.css' );
+
+		if ( 1 !== preg_match( '/\.ran-booster-deployment-policy-row > select \{([^}]*)\}/', $css, $rule ) ) {
+			self::fail( 'The Updates select needs its own rule.' );
+		}
+		self::assertStringContainsString( 'inline-size: 100%;', $rule[1] );
+		self::assertStringContainsString( 'min-inline-size: 0;', $rule[1] );
+		self::assertStringContainsString( 'padding-inline-start: var(--ran-booster-space-8);', $rule[1] );
+		self::assertStringContainsString( 'text-overflow: ellipsis;', $rule[1], 'Ellipsis is the last resort for labels no phone can fit.' );
+		self::assertStringNotContainsString( 'overflow: hidden', $rule[1] );
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 480px\) \{\s*\.ran-booster-admin\s+\.ran-booster-package-operation-settings\s+:is\(\s*\.ran-booster-settings-section__header,\s*\.ran-booster-settings-section__body\s*\) \{\s*padding-inline: var\(--ran-booster-space-16\);/', $css );
+		// The option labels are product copy and are not shortened for the control.
+		self::assertStringContainsString( "'Manual — update only when requested'", $this->view( 'packages/fields/deployment-policy.php' ) );
+	}
+
 	public function test_section_navigation_shows_a_css_only_scroll_affordance_where_it_overflows(): void {
 		$css   = $this->asset( 'ran-booster/00-foundations.css' );
 		$shell = $this->asset( 'ran-admin-shell.css' );

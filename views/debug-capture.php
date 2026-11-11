@@ -106,73 +106,72 @@ if ( 'active' === $capture_state && '' !== $capture_until ) {
 			<?php } elseif ( 'unavailable' === $capture_state ) { ?>
 				<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Temporary logging capture is unavailable because Booster cannot safely use its capture file location.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 			<?php } ?>
-		</div>
-		<?php if ( in_array( $capture_state, array( 'inactive', 'active', 'retained' ), true ) ) { ?>
-			<div class="ran-booster-debug-capture__footer" role="group" aria-label="<?php esc_attr_e( 'Logging capture actions', 'ran-booster' ); ?>" data-ran-booster-success-feedback>
-				<form class="ran-booster-debug-capture__primary-actions" method="post" action="" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-debug-capture-error" hx-post="" hx-target="#ran-booster-debug-capture-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
-					<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-manage-debug-capture' ); ?>
-					<input type="hidden" name="ran_booster[action]" value="manage-debug-capture">
-					<?php if ( 'active' === $capture_state ) { ?>
-						<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $refresh_url ); ?>"><?php esc_html_e( 'Refresh', 'ran-booster' ); ?></a>
-						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" name="ran_booster[operation]" value="stop"><?php esc_html_e( 'Stop capture', 'ran-booster' ); ?></button>
-					<?php } else { ?>
-						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" name="ran_booster[operation]" value="start"><?php echo esc_html( 'retained' === $capture_state ? __( 'Start new capture', 'ran-booster' ) : __( 'Start 60-minute capture', 'ran-booster' ) ); ?></button>
-					<?php } ?>
-				</form>
-				<?php if ( in_array( $capture_state, array( 'active', 'retained' ), true ) ) { ?>
-				<form class="ran-booster-debug-capture__delete" method="post" action="">
-					<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-manage-debug-capture' ); ?>
-					<input type="hidden" name="ran_booster[action]" value="manage-debug-capture">
-					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' ) ); ?>" name="ran_booster[operation]" value="delete"><?php esc_html_e( 'Delete capture', 'ran-booster' ); ?></button>
-				</form>
-				<?php } ?>
-			</div>
+			<div data-ran-booster-ui-disclosure="troubleshooting-logging" data-ran-booster-ui-disclosure-density="compact">
+			<details data-ran-booster-ui-disclosure-fallback id="ran-booster-logging-details" data-ran-booster-logging-disclosure class="ran-booster-debug-capture__wordpress-help ran-booster-troubleshooting__disclosure ran-booster-disclosure">
+				<summary><?php esc_html_e( 'Logging details', 'ran-booster' ); ?></summary>
+				<div data-ran-booster-ui-disclosure-content class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
+					<p>
+					<?php
+					if ( null !== $configured_path ) {
+						?>
+						<?php /* translators: %s: configured temporary Booster capture path. */ ?><?php printf( esc_html__( 'Booster capture location: %s.', 'ran-booster' ), '<code>' . esc_html( $configured_path ) . '</code>' ); ?>
+						<?php
+					} else {
+						?>
+						<?php esc_html_e( 'Booster capture location is unavailable.', 'ran-booster' ); ?><?php } ?></p>
+					<p>
+						<?php
+						/* translators: 1: WP_DEBUG constant, 2: WP_DEBUG_LOG constant. */
+						printf( esc_html__( 'Booster events also go to PHP’s error log when %1$s and %2$s are enabled. The capture holds Booster events only, not PHP errors.', 'ran-booster' ), '<code>WP_DEBUG</code>', '<code>WP_DEBUG_LOG</code>' );
+						?>
+					</p>
+					<p><?php esc_html_e( 'Starting a new capture replaces any retained capture.', 'ran-booster' ); ?></p>
+					<p><?php esc_html_e( 'For PHP, WordPress, theme and plugin errors, add these to wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
+					<?php
+					$snippet_value      = "define( 'WP_DEBUG', true );\n" . $wp_debug_log_example . "\ndefine( 'WP_DEBUG_DISPLAY', false );";
+					$snippet_label      = __( 'Example wp-config.php lines', 'ran-booster' );
+					$snippet_copy_label = __( 'Copy example wp-config.php lines', 'ran-booster' );
+					$snippet_rows       = 3;
+					require __DIR__ . '/copy-setup-snippet.php';
+					?>
+					<p>
+						<?php if ( $wp_debug_log_hidden ) { ?>
+							<?php esc_html_e( 'A custom log destination is configured. Review wp-config.php for its location.', 'ran-booster' ); ?>
+						<?php } else { ?>
+							<?php
+							/* translators: %s: WordPress debug log path. */
+							printf( esc_html__( 'Log location when enabled: %s.', 'ran-booster' ), '<code>' . esc_html( $wp_debug_log_path ) . '</code>' );
+							?>
+						<?php } ?>
+					</p>
+					<p><?php esc_html_e( 'Turn off debugging when done. Review the log privately before sharing it.', 'ran-booster' ); ?></p>
+					<p><a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/"><?php esc_html_e( 'WordPress debugging documentation', 'ran-booster' ); ?></a></p>
+				</div>
+			</details></div>
 			<?php if ( 'retained' === $capture_state ) { ?>
 				<p class="description"><?php esc_html_e( 'Starting a new capture replaces any retained capture.', 'ran-booster' ); ?></p>
 			<?php } ?>
+		</div>
+		<?php if ( in_array( $capture_state, array( 'inactive', 'active', 'retained' ), true ) ) { ?>
+		<div class="ran-booster-card-footer ran-booster-debug-capture__footer" role="group" aria-label="<?php esc_attr_e( 'Logging capture actions', 'ran-booster' ); ?>" data-ran-booster-success-feedback>
+			<form class="ran-booster-debug-capture__primary-actions" method="post" action="" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-debug-capture-error" hx-post="" hx-target="#ran-booster-debug-capture-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-manage-debug-capture' ); ?>
+				<input type="hidden" name="ran_booster[action]" value="manage-debug-capture">
+				<?php if ( 'active' === $capture_state ) { ?>
+					<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $refresh_url ); ?>"><?php esc_html_e( 'Refresh', 'ran-booster' ); ?></a>
+					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" name="ran_booster[operation]" value="stop"><?php esc_html_e( 'Stop capture', 'ran-booster' ); ?></button>
+				<?php } else { ?>
+					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" name="ran_booster[operation]" value="start"><?php echo esc_html( 'retained' === $capture_state ? __( 'Start new capture', 'ran-booster' ) : __( 'Start 60-minute capture', 'ran-booster' ) ); ?></button>
+				<?php } ?>
+			</form>
+			<?php if ( in_array( $capture_state, array( 'active', 'retained' ), true ) ) { ?>
+			<form class="ran-booster-debug-capture__delete" method="post" action="">
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-manage-debug-capture' ); ?>
+				<input type="hidden" name="ran_booster[action]" value="manage-debug-capture">
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' ) ); ?>" name="ran_booster[operation]" value="delete"><?php esc_html_e( 'Delete capture', 'ran-booster' ); ?></button>
+			</form>
+			<?php } ?>
+		</div>
 		<?php } ?>
 	</div>
-
-	<div data-ran-booster-ui-disclosure="troubleshooting-logging" data-ran-booster-ui-disclosure-density="compact">
-	<details data-ran-booster-ui-disclosure-fallback id="ran-booster-logging-details" data-ran-booster-logging-disclosure class="ran-booster-debug-capture__wordpress-help ran-booster-troubleshooting__disclosure ran-booster-disclosure">
-		<summary><?php esc_html_e( 'Logging details', 'ran-booster' ); ?></summary>
-		<div data-ran-booster-ui-disclosure-content class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
-			<p>
-			<?php
-			if ( null !== $configured_path ) {
-				?>
-				<?php /* translators: %s: configured temporary Booster capture path. */ ?><?php printf( esc_html__( 'Booster capture location: %s.', 'ran-booster' ), '<code>' . esc_html( $configured_path ) . '</code>' ); ?>
-				<?php
-			} else {
-				?>
-				<?php esc_html_e( 'Booster capture location is unavailable.', 'ran-booster' ); ?><?php } ?></p>
-			<p>
-				<?php
-				/* translators: 1: WP_DEBUG constant, 2: WP_DEBUG_LOG constant. */
-				printf( esc_html__( 'Booster events also go to PHP’s error log when %1$s and %2$s are enabled. The capture holds Booster events only, not PHP errors.', 'ran-booster' ), '<code>WP_DEBUG</code>', '<code>WP_DEBUG_LOG</code>' );
-				?>
-			</p>
-			<p><?php esc_html_e( 'Starting a new capture replaces any retained capture.', 'ran-booster' ); ?></p>
-			<p><?php esc_html_e( 'For PHP, WordPress, theme and plugin errors, add these to wp-config.php before the “stop editing” line:', 'ran-booster' ); ?></p>
-			<?php
-			$snippet_value      = "define( 'WP_DEBUG', true );\n" . $wp_debug_log_example . "\ndefine( 'WP_DEBUG_DISPLAY', false );";
-			$snippet_label      = __( 'Example wp-config.php lines', 'ran-booster' );
-			$snippet_copy_label = __( 'Copy example wp-config.php lines', 'ran-booster' );
-			$snippet_rows       = 3;
-			require __DIR__ . '/copy-setup-snippet.php';
-			?>
-			<p>
-				<?php if ( $wp_debug_log_hidden ) { ?>
-					<?php esc_html_e( 'A custom log destination is configured. Review wp-config.php for its location.', 'ran-booster' ); ?>
-				<?php } else { ?>
-					<?php
-					/* translators: %s: WordPress debug log path. */
-					printf( esc_html__( 'Log location when enabled: %s.', 'ran-booster' ), '<code>' . esc_html( $wp_debug_log_path ) . '</code>' );
-					?>
-				<?php } ?>
-			</p>
-			<p><?php esc_html_e( 'Turn off debugging when done. Review the log privately before sharing it.', 'ran-booster' ); ?></p>
-			<p><a href="https://developer.wordpress.org/advanced-administration/debug/debug-wordpress/"><?php esc_html_e( 'WordPress debugging documentation', 'ran-booster' ); ?></a></p>
-		</div>
-	</details></div>
 </section>

@@ -799,14 +799,6 @@
 	padding: 0;
 }
 
-/* The Card owns the inline inset; the capture panel's own 20px would double it. */
-.ran-booster-admin
-	[data-ran-booster-card="troubleshooting"]
-	.ran-booster-debug-capture__panel
-	:is(.ran-booster-debug-capture__body, .ran-booster-debug-capture__footer) {
-	padding-inline: 0;
-}
-
 /* The selected Troubleshooting Card owns its content inset. */
 .ran-booster-admin
 	[data-ran-booster-card="troubleshooting"].ran-booster-card

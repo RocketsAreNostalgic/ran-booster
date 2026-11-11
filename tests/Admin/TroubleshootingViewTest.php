@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\Component\AdminStatusSummaryRenderer;
 use RAN\Admin\Component\ProviderManagementTableRenderer;
@@ -146,6 +147,43 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringNotContainsString( '>Diagnostic traduit</p>', $html );
 		self::assertStringContainsString( 'panel=diagnostics" aria-current="page"', $html );
+	}
+
+	/** @return array<string, array{string, bool}> */
+	public static function logging_states_and_footer_bands(): array {
+		return array(
+			'inactive'    => array( 'inactive', true ),
+			'active'      => array( 'active', true ),
+			'retained'    => array( 'retained', true ),
+			'unavailable' => array( 'unavailable', false ),
+			'malformed'   => array( 'malformed', false ),
+		);
+	}
+
+	#[DataProvider( 'logging_states_and_footer_bands' )]
+	public function test_logging_card_is_footed_only_when_the_capture_band_renders( string $state, bool $has_band ): void {
+		$troubleshooting_panel = 'debug-capture';
+		$troubleshooting       = array( 'providers' => array() );
+		$debug_capture         = array(
+			'state'           => $state,
+			'filename'        => 'ran-booster-debug.php',
+			'content'         => "[ran-booster] event one\n[ran-booster] event two",
+			'capture_until'   => '2026-11-11 15:00 UTC',
+			'delete_after'    => '2026-11-12 15:00 UTC',
+			'configured_path' => '/var/www/wp-content/ran-booster-debug.php',
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html     = (string) ob_get_clean();
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath  = new \DOMXPath( $document );
+		$footed = 'contains(concat(" ", normalize-space(@class), " "), " ran-booster-card__content--footed ")';
+
+		self::assertSame( $has_band ? 1.0 : 0.0, $xpath->evaluate( 'count(//div[' . $footed . '])' ) );
+		self::assertSame( $has_band ? 1.0 : 0.0, $xpath->evaluate( 'count(//div[' . $footed . ']//section[@id="ran-booster-debug-capture-region"]/div[contains(@class,"ran-booster-debug-capture__panel")]/div[last()][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card-footer ")])' ) );
+		self::assertSame( $has_band ? 0.0 : 1.0, $xpath->evaluate( 'count(//div[contains(@class,"ran-booster-card__content") and not(' . $footed . ')]//section[@id="ran-booster-debug-capture-region"])' ) );
 	}
 
 	public function test_installation_details_escape_local_claims_without_provider_actions(): void {

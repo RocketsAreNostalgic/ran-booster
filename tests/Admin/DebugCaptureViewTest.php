@@ -132,7 +132,7 @@ final class DebugCaptureViewTest extends TestCase {
 	}
 
 
-	public function test_retained_state_repeats_the_replacement_consequence_under_the_action_group(): void {
+	public function test_retained_state_repeats_the_replacement_consequence_above_the_footer_band(): void {
 		$html    = $this->render_view(
 			array(
 				'state'        => 'retained',
@@ -142,15 +142,16 @@ final class DebugCaptureViewTest extends TestCase {
 			)
 		);
 		$message = 'Starting a new capture replaces any retained capture.';
-		$parts   = explode( 'data-ran-booster-ui-disclosure="troubleshooting-logging"', $html, 2 );
+		$note    = strpos( $html, '<p class="description">' . $message . '</p>' );
+		$details = strpos( $html, 'id="ran-booster-logging-details"' );
+		$footer  = strpos( $html, 'ran-booster-card-footer ran-booster-debug-capture__footer' );
 
-		if ( 2 !== count( $parts ) ) {
-			self::fail( 'The Logging details disclosure is missing.' );
-		}
-
-		self::assertSame( 1, preg_match( '#</form>\s*</div>\s*<p class="description">' . preg_quote( $message, '#' ) . '</p>#', $parts[0] ), 'The note follows the action group directly.' );
-		self::assertSame( 1, substr_count( $parts[0], $message ) );
-		self::assertSame( 1, substr_count( $parts[1], '<p>' . $message . '</p>' ), 'The disclosure copy is unchanged.' );
+		self::assertIsInt( $note );
+		self::assertIsInt( $details );
+		self::assertIsInt( $footer );
+		self::assertTrue( $details < $note && $note < $footer, 'The note follows the details disclosure and precedes the band.' );
+		self::assertSame( 1, substr_count( $html, '<p class="description">' . $message . '</p>' ) );
+		self::assertSame( 1, substr_count( $html, '<p>' . $message . '</p>' ), 'The disclosure copy is unchanged.' );
 	}
 
 	/**
@@ -176,15 +177,10 @@ final class DebugCaptureViewTest extends TestCase {
 			)
 		);
 		$message = 'Starting a new capture replaces any retained capture.';
-		$parts   = explode( 'data-ran-booster-ui-disclosure="troubleshooting-logging"', $html, 2 );
 
-		if ( 2 !== count( $parts ) ) {
-			self::fail( 'The Logging details disclosure is missing.' );
-		}
-
-		self::assertStringNotContainsString( $message, $parts[0] );
-		self::assertStringNotContainsString( 'class="description"', $parts[0] );
-		self::assertSame( 1, substr_count( $parts[1], '<p>' . $message . '</p>' ), 'The disclosure copy stays in every state.' );
+		self::assertStringNotContainsString( '<p class="description">' . $message . '</p>', $html );
+		self::assertStringNotContainsString( 'class="description"', $html );
+		self::assertSame( 1, substr_count( $html, '<p>' . $message . '</p>' ), 'The disclosure copy stays in every state.' );
 	}
 
 	public function test_empty_active_and_retained_captures_do_not_offer_copy_controls(): void {
@@ -274,7 +270,17 @@ final class DebugCaptureViewTest extends TestCase {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer")]//button[@name="ran_booster[operation]" and @value="' . $operation . '"])' ) );
 		}
 		self::assertSame( count( $operations ), substr_count( $html, 'name="_wpnonce" value="ran-booster-manage-debug-capture"' ) );
-		self::assertLessThan( strpos( $html, 'ran-booster-debug-capture__wordpress-help' ), strpos( $html, 'ran-booster-debug-capture__footer' ) );
+		// The disclosure renders above the band, so the band is the last element of the Card.
+		self::assertLessThan( strpos( $html, 'ran-booster-debug-capture__footer' ), strpos( $html, 'ran-booster-debug-capture__wordpress-help' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(@class,"ran-booster-debug-capture__panel")]/div[contains(concat(" ",normalize-space(@class)," ")," ran-booster-card-footer ")][position()=last()])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(@class,"ran-booster-debug-capture__body")]//details[@id="ran-booster-logging-details"])' ), 'Logging details sit in the body above the band.' );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@id="ran-booster-debug-capture-region"]/*[last()][not(contains(@class,"ran-booster-debug-capture__panel"))])' ), 'Nothing follows the panel in the section.' );
+		// The two forms are siblings inside the band: the htmx primary actions and the native Delete form.
+		self::assertSame( count( $operations ) > 1 && in_array( 'delete', $operations, true ) ? 2.0 : 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer")]/form)' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//form//form)' ) );
+		if ( in_array( 'delete', $operations, true ) ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer")]/form[last()][contains(@class,"ran-booster-debug-capture__delete")])' ), 'Delete capture is last.' );
+		}
 	}
 
 	public function test_logging_details_escape_configured_capture_path(): void {

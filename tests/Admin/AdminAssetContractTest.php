@@ -1177,6 +1177,24 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-admin \.ran-booster-card__content \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-space-24\);/', $css );
 	}
 
+	public function test_logging_capture_actions_use_the_shared_footer_band_without_local_chrome(): void {
+		$onboarding      = $this->asset( 'ran-booster-onboarding.css' );
+		$troubleshooting = $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' );
+		$view            = $this->view( 'debug-capture.php' );
+
+		// The old local footer padding, border and inline-inset rules are gone; only the band spacing remains.
+		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-debug-capture__footer \{[^}]*(padding|border-(block|inline|top|bottom))/', $onboarding );
+		self::assertStringNotContainsString( '.ran-booster-debug-capture__footer) {', $troubleshooting );
+		self::assertMatchesRegularExpression( '/\.ran-booster-card-footer\.ran-booster-debug-capture__footer \{\s*margin-block-start: var\(--ran-booster-card-gap\);/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-debug-capture__body \{\s*padding: 0;/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-debug-capture__events textarea \{\s*display: block;/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-debug-capture__primary-actions \{[^}]*gap: var\(--ran-booster-space-12\);/', $onboarding );
+		// The footed Card content overrides the Card padding for the Logging panel as it does for Diagnostics.
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-card="troubleshooting"\]\.ran-booster-card\s*\.ran-booster-card__content\.ran-booster-card__content--footed \{\s*padding-block-end: 0;/', $troubleshooting );
+		self::assertStringContainsString( 'class="ran-booster-card-footer ran-booster-debug-capture__footer"', $view );
+		self::assertStringNotContainsString( 'class="ran-booster-debug-capture__footer"', $view );
+	}
+
 	public function test_install_package_operation_card_uses_the_footer_band_and_one_updates_field_rhythm(): void {
 		$css = $this->asset( 'ran-booster/65-package-settings.css' );
 

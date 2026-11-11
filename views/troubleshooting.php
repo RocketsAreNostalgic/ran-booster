@@ -107,7 +107,12 @@ $repository_placeholder = array() === $locator_examples
 		<?php } ?>
 		</nav>
 
-		<div class="ran-booster-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content<?php echo 'diagnostics' === $troubleshooting_panel ? ' ran-booster-card__content--footed' : ''; ?>">
+		<?php
+		// The Diagnostics form and the Logging capture actions finish the Card with a footer band; Logging has none when the capture is unavailable or unreadable.
+		$troubleshooting_footed = 'diagnostics' === $troubleshooting_panel
+			|| ( 'debug-capture' === $troubleshooting_panel && is_array( $debug_capture ?? null ) && in_array( $debug_capture['state'] ?? null, array( 'inactive', 'active', 'retained' ), true ) );
+		?>
+		<div class="ran-booster-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content<?php echo $troubleshooting_footed ? ' ran-booster-card__content--footed' : ''; ?>">
 	<?php if ( 'installation' === $troubleshooting_panel ) { ?>
 		<?php require __DIR__ . '/troubleshooting-installation.php'; ?>
 	<?php } elseif ( 'support-report' === $troubleshooting_panel ) { ?>

@@ -1373,7 +1373,7 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 		$buttons[] = $branch ? 'data-ran-booster-settings-reinstall' : 'data-ran-booster-managed-release-native-update';
 
-		$needles = array(
+		$needles   = array(
 			'<label for="ran-booster-deployment-policy">',
 			'name="ran_booster[deployment_policy]"',
 			$branch ? 'Automatic deploys on push.' : 'Automatic installs validated releases.',

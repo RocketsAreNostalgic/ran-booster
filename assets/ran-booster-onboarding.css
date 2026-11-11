@@ -393,7 +393,6 @@
 	max-inline-size: none;
 	block-size: 15rem;
 	padding: var(--ran-booster-space-12);
-	border-color: var(--ran-booster-strong-divider);
 	background: var(--ran-booster-surface-subtle);
 	line-height: 1.55;
 	resize: vertical;
@@ -813,13 +812,8 @@
 
 .ran-booster-admin
 	.ran-booster-portability__flow
-	:is(
-		input[type="text"],
-		input[type="password"],
-		input[type="file"],
-		select
-	):not(:focus) {
-	border-color: var(--ran-booster-color-neutral-450);
+	input[type="file"]:not(:focus) {
+	border-color: var(--ran-booster-control-border);
 }
 
 .ran-booster-admin .ran-booster-portability__password-fields input,
@@ -846,7 +840,7 @@
 	min-height: 40px;
 	padding-block: var(--ran-booster-space-5);
 	padding-inline: var(--ran-booster-space-8);
-	border: 1px solid var(--ran-booster-strong-divider);
+	border: 1px solid var(--ran-booster-control-border);
 	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-surface);
 	line-height: 28px;

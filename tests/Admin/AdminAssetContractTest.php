@@ -2410,6 +2410,40 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertSame( 1, preg_match( '/\.is-inactive\s+\.ran-booster-webhook-step\s+:is\(strong, p\)\s*\{\s*color: var\(--ran-booster-text-subtle\);/', $webhook ) );
 	}
 
+	public function test_form_controls_share_one_border_token_and_components_do_not_override_it(): void {
+		$foundations = $this->raw_asset( 'ran-booster/00-foundations.css' );
+		self::assertSame( 1, preg_match( '/--ran-booster-control-border:\s*var\(--ran-booster-color-neutral-450\);/', $foundations ), 'The control border token must resolve to #767676 (4.5:1 on white, 4:1 on the grey page).' );
+		self::assertStringContainsString( '--ran-booster-color-neutral-450: #767676;', $foundations );
+
+		$primitives = $this->raw_asset( 'ran-booster/25-admin-primitives.css' );
+		self::assertSame( 1, preg_match( '/\.ran-booster-admin\s*:is\(\s*select,\s*textarea,\s*input:is\([^)]*\[type="text"\][^)]*\[type="search"\][^)]*\)\s*\):not\(:disabled, :focus\)\s*\{\s*border-color: var\(--ran-booster-control-border\);\s*\}/', $primitives ), 'The shared control border rule is missing.' );
+
+		$offenders   = array();
+		$stylesheets = glob( dirname( __DIR__, 2 ) . '/assets/{ran-booster/*.css,*.css}', GLOB_BRACE );
+		foreach ( false === $stylesheets ? array() : $stylesheets as $file ) {
+			if ( str_ends_with( $file, '25-admin-primitives.css' ) || str_ends_with( $file, '00-foundations.css' ) || str_ends_with( $file, 'ran-booster-notice-compat.css' ) ) {
+				continue;
+			}
+			$css = (string) file_get_contents( $file ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+			$css = (string) preg_replace( '#/\*.*?\*/#s', '', $css );
+			if ( ! preg_match_all( '/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER ) ) {
+				continue;
+			}
+			foreach ( $rules as $rule ) {
+				$selector = (string) preg_replace( '/\s+/', ' ', trim( $rule[1] ) );
+				// Native text controls only: checkbox, radio and switch rules, ::file-selector-button, and :has() wrappers are not text-control borders.
+				if ( 1 !== preg_match( '/(?:^|[\s,>])(?:select|textarea|input\[type="(?:text|search|password|url|email|number)"\])(?=[\s,:{]|$)/', $selector ) || str_contains( $selector, ':has(' ) || str_contains( $selector, 'switch' ) ) {
+					continue;
+				}
+				if ( 1 === preg_match( '/(?:^|;|\s)border(?:-color)?:\s*(?!0\b|none)[^;]*;?/', $rule[2], $border ) && ! str_contains( $border[0], 'var(--ran-booster-control-border)' ) && 1 !== preg_match( '/var\(--wpds-color-stroke-(?:interactive-neutral-(?:active|disabled)|focus)\)/', $border[0] ) ) {
+					$offenders[] = basename( $file ) . ': ' . $selector . ' => ' . trim( $border[0] );
+				}
+			}
+		}
+
+		self::assertSame( array(), $offenders, 'Text controls take their border colour from the shared --ran-booster-control-border rule, not from per-component overrides.' );
+	}
+
 	private function asset( string $file ): string {
 		if ( 'ran-booster.css' !== $file ) {
 			return $this->raw_asset( $file );

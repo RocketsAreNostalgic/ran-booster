@@ -56,6 +56,9 @@
 	--ran-booster-border: var(--ran-booster-color-neutral-300);
 	--ran-booster-divider: var(--ran-booster-color-neutral-300);
 	--ran-booster-strong-divider: var(--ran-booster-color-neutral-400);
+
+	/* Form control boundary: at least 3:1 on white and on the grey page surface. */
+	--ran-booster-control-border: var(--ran-booster-color-neutral-450);
 	--ran-booster-surface: var(--ran-booster-color-neutral-0);
 	--ran-booster-surface-subtle: var(--ran-booster-color-neutral-100);
 	--ran-booster-text: var(--ran-booster-color-neutral-700);

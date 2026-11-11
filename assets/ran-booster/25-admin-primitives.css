@@ -508,6 +508,29 @@
 /* surface-radius:end */
 
 /*
+ * Form control boundaries: one shared border colour for native selects, text
+ * inputs and textareas so each reaches 3:1 (WCAG 1.4.11) on both white and the
+ * grey page surface. Disabled controls keep the core disabled stroke and
+ * focus keeps the core focus stroke. Component rules do not set their own
+ * control border colours; the AdminAssetContractTest enforces that.
+ */
+.ran-booster-admin
+	:is(
+		select,
+		textarea,
+		input:is(
+			[type="text"],
+			[type="search"],
+			[type="password"],
+			[type="url"],
+			[type="email"],
+			[type="number"]
+		)
+	):not(:disabled, :focus) {
+	border-color: var(--ran-booster-control-border);
+}
+
+/*
  * Summary grid: one framed set of label/value cells. The 1px gap shows the
  * frame colour between cells, so dividers stay continuous however the cells
  * wrap and the outer corners clip cleanly to the radius.

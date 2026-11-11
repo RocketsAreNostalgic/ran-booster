@@ -4527,7 +4527,8 @@ msgid "Webhook operations are unavailable while no eligible Branch package uses 
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:278
-msgid "This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely."
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:517
+msgid "This site needs a public HTTPS URL to receive webhooks."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:285
@@ -4632,10 +4633,6 @@ msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:516
 msgid "This site can receive webhook deliveries."
-msgstr ""
-
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:517
-msgid "This site needs a public HTTPS URL to receive webhooks."
 msgstr ""
 
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:524

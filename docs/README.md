@@ -31,7 +31,8 @@ reconciliation, Abilities and whole-site V3 remain outside this delivery.
 ## Technical references
 
 - [Administration composition contract](admin-composition-contract.md) covers
-  Admin Shell continuity, page-local navigation and supported extension surfaces.
+  Admin Shell continuity, page-local navigation, supported extension surfaces
+  and [action placement](admin-composition-contract.md#action-placement).
 - [Translating RAN Booster](translating.md) explains how to create, build, test,
   and submit PHP and JavaScript translations.
 - [Runtime dependency packaging policy](runtime-packaging-policy.md) records the

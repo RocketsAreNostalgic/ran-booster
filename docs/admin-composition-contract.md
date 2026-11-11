@@ -572,6 +572,47 @@ WordPress core's `.button`. Markup takes its classes from
   release track options, and the no-JS fallback for the mounted Skip onboarding
   button. `button-link` is Link, not Button, and is out of scope.
 
+#### Action placement
+
+Where an action group sits follows the surface it finishes. All positions use
+logical properties (`justify-content: flex-start`, `margin-inline-*`,
+`text-align: start`), so the layout mirrors in right-to-left languages. This
+matches the WordPress admin form convention of the primary submit button under
+the form at the start edge, keeps actions on the reading path under the content
+they apply to, and keeps Save and Apply in one predictable place.
+
+1. Actions that finish a page, form or Card are start-aligned and sit below the
+   content they apply to. Where the surface is a Card, the actions live in a
+   full-width footer band: a divider above, 16px of block padding, the Card's
+   inline inset, and no bottom padding on the content area, so the band ends
+   flush with the Card's bottom edge. The primary action comes first, then the
+   secondary actions, 12px apart.
+2. A heading-row action sits at the end of the heading row, vertically centred
+   with the title and aligned to the content column's end edge. At 782px and
+   below it stacks under the title, start-aligned.
+3. Dialog and modal footers keep end-aligned actions, as the WordPress Modal and
+   platform dialogs do. This is the only end-aligned page-level exception.
+4. Table row actions stay in the table's Actions column at the end of the row.
+   Toolbar controls (filters, search, bulk actions, item count and pager)
+   follow the collection frame contract, not this rule.
+5. A button never stretches to fill its action group on wide screens. At 782px
+   and below a group may stack and its buttons may fill the width.
+
+| Surface | Screen | Placement |
+| --- | --- | --- |
+| Card footer | Edit plugin and theme, Save plugin settings and Install another | Start, primary first |
+| Card footer band | Settings, History Save changes | Start, in the footer band |
+| Card footer band | Transporter Open and Create | Start, in the footer band |
+| Page form | Install plugin and theme | Start, below the form |
+| Heading row | Managed Plugins and Themes, Install another | End of the heading row |
+| Heading row | Overview, Return to onboarding | End of the heading row |
+| Dialog | Add credential, Add webhook secret, Delete confirmation | End, the exception |
+| Table row | Managed packages and provider credentials | Actions column, end of row |
+
+Exceptions are deliberate and small: dialogs end-align their actions, and row
+actions stay in the Actions column. A new screen that needs another exception
+changes this section first.
+
 ## Add-on generation and service delivery
 
 An administration add-on must check the exact Add-on API generation before

@@ -1894,6 +1894,11 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1, json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['schema_version'] );
 		self::assertSame( '<tag> & \"quoted\"', json_decode( $preview, true, 512, JSON_THROW_ON_ERROR )['sections']['environment']['data']['example'] );
 		self::assertStringContainsString( '<summary>Evidence and recovery guidance</summary>', $html );
+		self::assertStringContainsString( 'Diagnostic runs from the last hour are included automatically.', $html );
+		self::assertStringContainsString( 'Logging captures Booster events only. If evidence is missing, start Logging, reproduce the problem, then generate another report. Earlier events cannot be recovered.', $html );
+		self::assertStringContainsString( 'If administration cannot load, use WordPress recovery mode or your host’s support. External server logs are not collected.', $html );
+		self::assertStringNotContainsString( 'Available diagnostic runs from the last hour', $html );
+		self::assertStringNotContainsString( 'hosting support route', $html );
 	}
 
 	public function test_escapes_every_submitted_and_result_field(): void {

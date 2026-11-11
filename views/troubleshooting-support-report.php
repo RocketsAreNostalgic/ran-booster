@@ -31,8 +31,8 @@ $report_generated = ! empty( $troubleshooting['report_generated'] );
 <details data-ran-booster-ui-disclosure-fallback class="ran-booster-troubleshooting__disclosure ran-booster-disclosure">
 	<summary><?php esc_html_e( 'Evidence and recovery guidance', 'ran-booster' ); ?></summary>
 	<div data-ran-booster-ui-disclosure-content class="ran-booster-troubleshooting__disclosure-body ran-booster-disclosure__body">
-		<p><?php esc_html_e( 'Available diagnostic runs from the last hour for your administrator account and this site are included automatically.', 'ran-booster' ); ?></p>
-		<p><?php esc_html_e( 'Logging captures Booster events only. When evidence is missing, explicitly start Logging, reproduce the problem, then generate another report. Events from before capture cannot be recovered.', 'ran-booster' ); ?></p>
-		<p><?php esc_html_e( 'If Booster or WordPress administration cannot load, use WordPress recovery mode or your hosting support route. External server logs are not collected here.', 'ran-booster' ); ?></p>
+		<p><?php esc_html_e( 'Diagnostic runs from the last hour are included automatically.', 'ran-booster' ); ?></p>
+		<p><?php esc_html_e( 'Logging captures Booster events only. If evidence is missing, start Logging, reproduce the problem, then generate another report. Earlier events cannot be recovered.', 'ran-booster' ); ?></p>
+		<p><?php esc_html_e( 'If administration cannot load, use WordPress recovery mode or your host’s support. External server logs are not collected.', 'ran-booster' ); ?></p>
 	</div>
 </details></div>

@@ -19,6 +19,7 @@
  * nudges .page-title-action with a physical margin and top offset; neutralise
  * both so the action sits on the row's centre line in either direction.
  */
+
 .ran-booster-admin .ran-booster-package-heading-row {
 	align-items: center;
 	margin-block-end: 0;

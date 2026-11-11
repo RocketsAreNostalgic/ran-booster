@@ -378,7 +378,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:246
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:260
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:275
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:342
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:343
 #: views/documentation.php:123
 #: views/documentation.php:442
 msgid "Push-to-deploy"
@@ -414,7 +414,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:279
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:110
 #: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:124
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:365
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:366
 #: views/provider.php:630
 msgid "Webhook setup"
 msgstr ""
@@ -4570,15 +4570,15 @@ msgstr ""
 msgid "Webhook setup is unavailable until Booster can confirm this managed repository."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:339
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:340
 msgid "Branch publishing"
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:339
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:340
 msgid "Manual updates work without setting up Push-to-deploy."
 msgstr ""
 
-#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:343
+#: RAN/Admin/WebhookManagement/RepositoryWebhookManagementControls.php:344
 msgid "Automatic updates remain configured separately for each package."
 msgstr ""
 

@@ -612,7 +612,7 @@ final class RepeatPackageViewTest extends TestCase {
 			);
 			self::assertStringNotContainsString( 'id="ran-booster-package-reinstall-heading"', $html );
 			self::assertStringContainsString( 'id="ran-booster-advanced-source-settings"', $html );
-			self::assertStringContainsString( 'Deploy the saved branch, manually or on push.', $html );
+			self::assertStringContainsString( 'Deploy the saved branch, manually or on Push-to-Deploy.', $html );
 			self::assertStringContainsString(
 				'id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation',
 				$html
@@ -1109,7 +1109,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'signed push', $html );
 		self::assertStringNotContainsString( 'through WordPress', $html );
 		if ( 'create' === $mode ) {
-			self::assertStringContainsString( 'Deploy the saved branch, manually or on push.', $html );
+			self::assertStringContainsString( 'Deploy the saved branch, manually or on Push-to-Deploy.', $html );
 			if ( ! $fallback ) {
 				self::assertStringContainsString( 'Install published releases.', $html );
 			}

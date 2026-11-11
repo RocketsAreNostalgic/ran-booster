@@ -275,7 +275,7 @@ final class PackagePagePresenter {
 			'branch'        => array(
 				'key'               => 'branch',
 				'heading'           => __( 'Branch', 'ran-booster' ),
-				'description'       => __( 'Deploy the saved branch, manually or on push.', 'ran-booster' ),
+				'description'       => __( 'Deploy the saved branch, manually or on Push-to-Deploy.', 'ran-booster' ),
 				'url'               => add_query_arg( 'source_view', 'branch', $page_url ),
 				'disabled'          => false,
 				'hydrated'          => true,

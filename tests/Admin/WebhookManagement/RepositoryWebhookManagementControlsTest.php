@@ -537,7 +537,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 			foreach ( explode( ' ', $button->getAttribute( 'aria-describedby' ) ) as $describedby ) {
 				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="' . $describedby . '"])' ), 'Described-by ids stay unique and in the document.' );
 			}
-			$labels[] = trim( (string) $button->nodeValue );
+			$labels[] = trim( (string) $xpath->evaluate( 'string(.)', $button ) );
 		}
 		self::assertSame( 'Set up', $labels[0], 'The primary action comes first.' );
 		// The management form keeps its hidden inputs and the busy status; the htmx attributes stay on the form.

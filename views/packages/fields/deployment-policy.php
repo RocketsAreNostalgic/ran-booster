@@ -80,11 +80,11 @@ $render_policy_description = static function () use ( $operation_layout, $policy
 			<p class="description"><a href="<?php echo esc_url( $push_to_deploy_provider_url ); ?>"><?php esc_html_e( 'Push-to-Deploy setting', 'ran-booster' ); ?></a> | <a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Docs', 'ran-booster' ); ?></a></p>
 			<?php
 		}
-	if ( $policy_source_toggle ) {
-		?>
+		if ( $policy_source_toggle ) {
+			?>
 			<p class="description" data-ran-booster-policy-source="release_asset" hidden><?php esc_html_e( 'Manual waits for an administrator. Automatic installs validated releases.', 'ran-booster' ); ?></p>
-		<?php
-	}
+			<?php
+		}
 };
 ?>
 <?php if ( $operation_layout ) { ?>

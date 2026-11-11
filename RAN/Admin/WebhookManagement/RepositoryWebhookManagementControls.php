@@ -176,6 +176,7 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** @param array<string,mixed> $model */
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- The included panel view reads $panel_part as a local template variable.
 	private function render_repository_webhook_panel_model( array $model, string $panel_part = 'all' ): string {
 		ob_start();
 		if ( null !== ( $model['interaction_request'] ?? null ) ) {

@@ -278,7 +278,7 @@
 }
 
 .ran-booster-admin .ran-booster-repository-detail__header {
-	margin-block-end: var(--ran-booster-space-18);
+	margin-block-end: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-repository-detail__tabs {

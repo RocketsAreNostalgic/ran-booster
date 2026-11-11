@@ -897,6 +897,49 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 	}
 
+	/**
+	 * The sidebar and the disclosure must tell one story: available releases do not prove the
+	 * publishing workflow works, so the sidebar says "Not assessed" like the disclosure badge.
+	 */
+	public function test_release_workflow_sidebar_value_matches_the_not_assessed_disclosure_for_published_releases(): void {
+		$tracking  = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$presenter = $this->presenter( tracking: $tracking );
+		$rows      = $presenter->enrich_repository_rows(
+			array(
+				array(
+					'provider_code'     => 'fixture',
+					'repository_id'     => '101',
+					'repository'        => 'example/example',
+					'details'           => array(),
+					'package_summaries' => array(
+						array(
+							'type'            => 'plugin',
+							'identifier'      => 'example/example.php',
+							'source'          => 'release_asset',
+							'source_revision' => 3,
+						),
+					),
+				),
+			),
+			'fixture',
+			array(),
+			'https://example.test/return'
+		);
+		$values = array();
+		foreach ( $rows[0]['details'] as $detail ) {
+			if ( 'release_workflow' === ( $detail['category'] ?? '' ) ) {
+				$values[] = $detail['value'];
+			}
+		}
+		self::assertSame( array( 'Not assessed' ), $values );
+
+		$state_method = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'repository_release_automation_state' );
+		$state        = $state_method->invoke( ( new \ReflectionClass( ReleaseWorkflowPresenter::class ) )->newInstanceWithoutConstructor(), '', false, true, false, 'unassessed' );
+		self::assertIsArray( $state );
+		self::assertSame( 'Not assessed', $state['label'] );
+		self::assertSame( 'Releases are available; their publishing method has not been assessed.', $state['message'] );
+	}
+
 	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null ): ReleaseWorkflowRequestController {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
 		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( provider_code: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $source_guard ?? $this->source_guard() );

@@ -494,8 +494,8 @@ final class ReleaseWorkflowPresenter {
 				$value = __( 'Compatible workflow verified', 'ran-booster' );
 				$tone  = 'ok';
 			} elseif ( $this->published_releases_working( $status ) ) {
-				$value = __( 'Published releases working', 'ran-booster' );
-				$tone  = 'ok';
+				$value = __( 'Not assessed', 'ran-booster' );
+				$tone  = 'info';
 			} elseif ( in_array( $status->failure_code(), array( 'release_repository_conflict', 'repository_release_owner_exists' ), true ) ) {
 				$value = __( 'Blocked', 'ran-booster' );
 				$tone  = 'warning';

@@ -22,16 +22,16 @@ $result = isset( $_GET['ran_booster_extension_result'] ) && is_string( $_GET['ra
 // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The ID is matched against the fixed catalogue before use.
 $result_id        = isset( $_GET['ran_booster_extension_id'] ) && is_string( $_GET['ran_booster_extension_id'] ) ? wp_unslash( $_GET['ran_booster_extension_id'] ) : '';
 $result_messages  = array(
-	'installed'                   => __( 'Extension installed. Activate it when you are ready.', 'ran-booster' ),
+	'installed'                   => __( 'Extension installed.', 'ran-booster' ),
 	'activated'                   => __( 'Extension activated.', 'ran-booster' ),
-	'plugin_php_incompatible'     => __( 'This plugin requires a different PHP version. Review its requirements in Plugins.', 'ran-booster' ),
-	'plugin_wp_incompatible'      => __( 'This plugin requires a different WordPress version. Review its requirements in Plugins.', 'ran-booster' ),
-	'plugin_wp_php_incompatible'  => __( 'This plugin requires different WordPress and PHP versions. Review its requirements in Plugins.', 'ran-booster' ),
-	'plugin_missing_dependencies' => __( 'This plugin requires other plugins to be installed and active. Review its dependencies in Plugins.', 'ran-booster' ),
-	'activation_failed'           => __( 'Activation could not be confirmed. Check the extension status and try again or manage it in Plugins.', 'ran-booster' ),
+	'plugin_php_incompatible'     => __( 'Requires a different PHP version. Review in Plugins.', 'ran-booster' ),
+	'plugin_wp_incompatible'      => __( 'Requires a different WordPress version. Review in Plugins.', 'ran-booster' ),
+	'plugin_wp_php_incompatible'  => __( 'Requires different WordPress and PHP versions. Review in Plugins.', 'ran-booster' ),
+	'plugin_missing_dependencies' => __( 'Requires other plugins to be installed and active. Review in Plugins.', 'ran-booster' ),
+	'activation_failed'           => __( 'Activation could not be confirmed. Check its status in Plugins and try again.', 'ran-booster' ),
 	'already_installed'           => __( 'The extension or its destination already exists. Review Plugins and the plugin folder before trying again.', 'ran-booster' ),
 	'incompatible'                => __( 'This extension is not compatible with this version of Booster.', 'ran-booster' ),
-	'failed'                      => __( 'The extension could not be installed. Please try again or review its release page.', 'ran-booster' ),
+	'failed'                      => __( 'The extension could not be installed. Try again or use its release page.', 'ran-booster' ),
 	'uncertain'                   => __( 'The installation result could not be confirmed. Check Plugins before trying again.', 'ran-booster' ),
 );
 $result_extension = null;
@@ -110,12 +110,10 @@ if ( 'installed' === $result && ( null === $result_extension || 'Installed, inac
 									</form>
 								<?php elseif ( $extension['compatible'] && '' !== $manual_install_url ) : ?>
 									<span class="description"><?php esc_html_e( 'You do not have permission to install plugins.', 'ran-booster' ); ?></span>
-								<?php else : ?>
-									<span class="description"><?php echo esc_html( $compatibility_label ); ?></span>
 								<?php endif; ?>
 								</div></li>
 								<li>
-									<a class="ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-ran-booster-extension-details="<?php echo esc_attr( $extension['id'] ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>"><?php esc_html_e( 'More Details', 'ran-booster' ); ?></a>
+									<a class="ran-booster-extension-details-link" href="<?php echo esc_url( $details_url ); ?>" data-ran-booster-extension-details="<?php echo esc_attr( $extension['id'] ); ?>" data-title="<?php echo esc_attr( $extension['name'] ); ?>" aria-label="<?php echo esc_attr( $more_details_label ); ?>"><?php esc_html_e( 'More details', 'ran-booster' ); ?></a>
 								<?php if ( $extension['installed'] ) : ?>
 									<br><a href="<?php echo esc_url( add_query_arg( 's', $extension['installed_name'], $plugins_url ) ); ?>"><?php esc_html_e( 'Manage plugin', 'ran-booster' ); ?></a>
 								<?php endif; ?>
@@ -174,7 +172,6 @@ else :
 			<?php
 			$details_id          = 'ran-booster-extension-details-' . $extension['id'];
 			$details_title_id    = $details_id . '-title';
-			$availability_label  = $extension['availability'];
 			$state_label         = $extension_state_labels[ $extension['state'] ] ?? $extension['state'];
 			$compatibility_label = $extension['compatibility_label'];
 			$banner_url          = is_string( $extension['banner_url'] ?? null ) ? $extension['banner_url'] : '';
@@ -199,15 +196,19 @@ else :
 					<?php foreach ( $details_sections as $details_section ) : ?>
 						<div id="<?php echo esc_attr( $details_id . '-section-' . $details_section['id'] ); ?>" class="ran-booster-extension-details__section" data-ran-booster-dialog-section-label="<?php echo esc_attr( $details_section['label'] ); ?>">
 						<?php if ( 'details' === $details_section['id'] ) : ?>
-							<h3><?php esc_html_e( 'About this extension', 'ran-booster' ); ?></h3>
-							<p><?php echo esc_html( $extension['details'] ); ?></p>
-							<h3><?php esc_html_e( 'What it adds', 'ran-booster' ); ?></h3>
-							<ul>
-							<?php foreach ( $extension['features'] as $feature ) : ?>
-								<li><?php echo esc_html( $feature ); ?></li>
-							<?php endforeach; ?>
-							</ul>
-							<h3><?php esc_html_e( 'Before you install', 'ran-booster' ); ?></h3>
+							<?php if ( '' !== $extension['details'] ) : ?>
+								<h3><?php esc_html_e( 'About this extension', 'ran-booster' ); ?></h3>
+								<p><?php echo esc_html( $extension['details'] ); ?></p>
+							<?php endif; ?>
+							<?php if ( array() !== $extension['features'] ) : ?>
+								<h3><?php esc_html_e( 'What it adds', 'ran-booster' ); ?></h3>
+								<ul>
+								<?php foreach ( $extension['features'] as $feature ) : ?>
+									<li><?php echo esc_html( $feature ); ?></li>
+								<?php endforeach; ?>
+								</ul>
+							<?php endif; ?>
+							<h3><?php esc_html_e( 'Requirements', 'ran-booster' ); ?></h3>
 							<ul>
 							<?php foreach ( $extension['requirements'] as $requirement ) : ?>
 								<li><?php echo esc_html( $requirement ); ?></li>
@@ -228,10 +229,6 @@ else :
 							<dt><?php esc_html_e( 'Installed version', 'ran-booster' ); ?></dt>
 							<dd><?php echo esc_html( $installed_version ); ?></dd>
 						<?php endif; ?>
-							<dt><?php esc_html_e( 'Availability', 'ran-booster' ); ?></dt>
-							<dd><?php echo esc_html( $availability_label ); ?></dd>
-							<dt><?php esc_html_e( 'Maturity', 'ran-booster' ); ?></dt>
-							<dd><?php esc_html_e( 'Beta', 'ran-booster' ); ?></dd>
 							<dt><?php esc_html_e( 'Status', 'ran-booster' ); ?></dt>
 							<dd><?php echo esc_html( $state_label ); ?></dd>
 							<dt><?php esc_html_e( 'Compatibility', 'ran-booster' ); ?></dt>

@@ -298,7 +298,9 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'class="ran-booster-page-heading__title">Extensions</h2>', $output );
 		self::assertStringContainsString( 'class="ran-booster-page-heading__description">Add focused capabilities', $output );
 		self::assertStringNotContainsString( '<h1', $output );
-		self::assertSame( 4, substr_count( $output, '>Free<' ) );
+		self::assertSame( 2, substr_count( $output, '>Free<' ) );
+		self::assertStringNotContainsString( '>Availability<', $output );
+		self::assertStringNotContainsString( '>Maturity<', $output );
 		self::assert_badge( $output, 'Free', 'none', 2 );
 		self::assert_badge( $output, 'Beta', 'none', 2 );
 		self::assert_badge( $output, 'Not installed', 'none', 2 );
@@ -306,7 +308,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'Subscriber', $output );
 		self::assertStringNotContainsString( 'Get access', $output );
 		self::assertStringNotContainsString( 'Sponsor packages', $output );
-		self::assertSame( 4, substr_count( $output, '>Beta<' ) );
+		self::assertSame( 2, substr_count( $output, '>Beta<' ) );
 		self::assertSame( 2, substr_count( $output, '>Install</button>' ) );
 		self::assertSame( 2, substr_count( $output, 'name="action" value="ran_booster_extension_install"' ) );
 		self::assertStringContainsString( 'name="extension_id" value="ran-booster-bitbucket"', $output );
@@ -323,14 +325,19 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 2, substr_count( $output, 'Compatible with your version of Booster' ) );
 		self::assertSame( 2, substr_count( $output, 'class="compatibility-compatible"' ) );
 		self::assertSame( 4, substr_count( $output, 'with your version of Booster' ) );
-		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
+		self::assertSame( 2, substr_count( $output, '>More details</a>' ) );
 		self::assertSame( 2, substr_count( $output, '<ul class="plugin-action-buttons">' ) );
 		self::assertSame( 4, substr_count( $output, '<a class="ran-booster-extension-details-link" href="#ran-booster-extension-details-ran-booster-' ) );
 		self::assertSame( 2, substr_count( $output, 'href="#ran-booster-extension-details-ran-booster-bitbucket" data-ran-booster-extension-details="ran-booster-bitbucket" data-title="Bitbucket Cloud"' ) );
 		self::assertSame( 4, substr_count( $output, 'aria-label="More details about ' ) );
 		self::assertSame( 2, substr_count( $output, 'class="ran-booster-extension-details"' ) );
 		self::assertStringContainsString( '<div id="ran-booster-extension-details-ran-booster-bitbucket-content" class="ran-booster-extension-details">', $output );
-		self::assertSame( 2, substr_count( $output, '>About this extension<' ) );
+		self::assertSame( 1, substr_count( $output, '>About this extension<' ) );
+		self::assertSame( 1, substr_count( $output, '>What it adds<' ) );
+		self::assertSame( 2, substr_count( $output, '>Requirements<' ) );
+		self::assertStringNotContainsString( 'Before you install', $output );
+		self::assertStringNotContainsString( 'compatible with this extension', $output );
+		self::assertSame( 2, substr_count( $output, 'WordPress 7.0 or later and PHP 8.2 or later.' ) );
 		self::assertSame( 1, substr_count( $output, '<section id="ran-booster-extension-details-ran-booster-bitbucket" class="ran-booster-extension-details-host" aria-labelledby="ran-booster-extension-details-ran-booster-bitbucket-title" data-ran-booster-dialog-sections="details" hidden>' ) );
 		self::assertSame( 2, substr_count( $output, 'data-ran-booster-dialog-sections="details" hidden>' ) );
 		self::assertSame( 2, substr_count( $output, 'class="ran-booster-extension-details__section" data-ran-booster-dialog-section-label="Details">' ) );
@@ -355,8 +362,10 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringNotContainsString( 'class="hidden"', $output );
 		self::assertStringNotContainsString( 'ran-booster-extension-details__tabs', $output );
 		self::assertStringNotContainsString( 'ran-booster-assisted-hooks', $output );
-		self::assertStringContainsString( 'Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them.', $output );
-		self::assertStringContainsString( 'enabling deployment remains an explicit decision', $output );
+		self::assertStringContainsString( 'Move WP Pusher packages into Booster without reinstalling.', $output );
+		self::assertStringContainsString( 'Deploy from Bitbucket Cloud repositories.', $output );
+		self::assertStringContainsString( 'Adopted packages start with deployments disabled.', $output );
+		self::assertStringContainsString( 'Migrator removes each WP Pusher entry only after Booster verifies the adopted package with deployments disabled.', $output );
 		self::assertStringContainsString( '/assets/extensions/bitbucket-cloud.svg', $output );
 		self::assertStringNotContainsString( 'Release Deployments', $output );
 		self::assertStringNotContainsString( '/assets/extensions/release-deployments.svg', $output );
@@ -385,14 +394,14 @@ final class ExtensionsPageTest extends TestCase {
 		$this->define_apis_compatible_with_existing_extension_catalogue();
 		$_GET['ran_booster_extension_result'] = 'installed';
 		$_GET['ran_booster_extension_id']     = 'ran-booster-bitbucket';
-		self::assertStringNotContainsString( 'Extension installed. Activate it', $this->render() );
+		self::assertStringNotContainsString( 'Extension installed.', $this->render() );
 		$GLOBALS['ran_booster_extensions_plugins']['ran-booster-bitbucket/ran-booster-bitbucket.php'] = array( 'Version' => '0.1.0-beta.17' );
 		$output = $this->render();
-		self::assertStringContainsString( 'Extension installed. Activate it', $output );
+		self::assertStringContainsString( 'Extension installed.', $output );
 		self::assertStringContainsString( 'class="notice inline notice-success ran-wp-ui-notice ran-wp-ui-box-sizing is-success"', $output );
 		$_GET['ran_booster_extension_id'] = '<script>alert(1)</script>';
 		$output                           = $this->render();
-		self::assertStringNotContainsString( 'Extension installed. Activate it', $output );
+		self::assertStringNotContainsString( 'Extension installed.', $output );
 		self::assertStringNotContainsString( '<script>alert(1)</script>', $output );
 	}
 
@@ -416,11 +425,9 @@ final class ExtensionsPageTest extends TestCase {
 	#[RunInSeparateProcess]
 	#[PreserveGlobalState( false )]
 	public function test_renders_translated_catalogue_copy_and_not_installed_state_without_changing_product_data(): void {
-		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Connect Booster to Bitbucket Cloud repositories for managed deployments.'] = 'Connectez Booster aux dépôts Bitbucket Cloud pour des déploiements gérés.';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Deploy from Bitbucket Cloud repositories.'] = 'Déployez depuis les dépôts Bitbucket Cloud.';
 
-		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Add Bitbucket Cloud support through a RAN-maintained provider extension while Booster continues to own credentials, webhook verification, and deployment policy.'] = 'Ajoutez Bitbucket Cloud comme fournisseur de dépôts intégré.';
-
-		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Connect and configure Bitbucket Cloud repositories in Booster.'] = 'Connectez et configurez les dépôts Bitbucket Cloud dans Booster.';
+		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['Adopted packages start with deployments disabled.'] = 'Les paquets adoptés démarrent avec les déploiements désactivés.';
 
 		$GLOBALS['ran_booster_admin_test_translations']['ran-booster']['WordPress 7.0 or later and PHP 8.2 or later.'] = 'WordPress 7.0 ou version ultérieure et PHP 8.2 ou version ultérieure.';
 
@@ -431,11 +438,10 @@ final class ExtensionsPageTest extends TestCase {
 
 		$output = $this->render();
 
-		self::assertStringContainsString( 'Connectez Booster aux dépôts Bitbucket Cloud', $output );
-		self::assertStringContainsString( 'Ajoutez Bitbucket Cloud comme fournisseur de dépôts intégré.', $output );
-		self::assertStringContainsString( 'Connectez et configurez les dépôts Bitbucket Cloud dans Booster.', $output );
+		self::assertStringContainsString( 'Déployez depuis les dépôts Bitbucket Cloud.', $output );
+		self::assertStringContainsString( 'Les paquets adoptés démarrent avec les déploiements désactivés.', $output );
 		self::assertStringContainsString( 'WordPress 7.0 ou version ultérieure et PHP 8.2 ou version ultérieure.', $output );
-		self::assertSame( 4, substr_count( $output, '>Gratuit<' ) );
+		self::assertSame( 2, substr_count( $output, '>Gratuit<' ) );
 		self::assert_badge( $output, 'Bêta & "test"', 'none', 2 );
 		self::assertStringContainsString( '>Bêta &amp; &quot;test&quot;</span>', $output );
 		self::assertSame( 4, substr_count( $output, '>Non installé<' ) );
@@ -462,7 +468,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertSame( 0, substr_count( $output, '>Inactive<' ) );
 		self::assertSame( 0, substr_count( $output, '>Installed, inactive<' ) );
 		self::assertSame( 1, substr_count( $output, 'https://example.test/wp-admin/plugins.php' ) );
-		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
+		self::assertSame( 2, substr_count( $output, '>More details</a>' ) );
 	}
 
 	#[RunInSeparateProcess]
@@ -552,6 +558,8 @@ final class ExtensionsPageTest extends TestCase {
 		self::assert_badge( $output, 'Incompatible', 'high', 1 );
 		self::assertStringContainsString( 'requires a different version of Booster. Review its documentation before installing or updating.', $output );
 		self::assertStringNotContainsString( '>Active<', $output );
+		// Once in the card footer and once in the dialog per card; never also in the action area.
+		self::assertSame( 4, substr_count( $output, 'requires a different version of Booster. Review its documentation before installing or updating.' ) );
 	}
 
 	#[RunInSeparateProcess]
@@ -618,7 +626,7 @@ final class ExtensionsPageTest extends TestCase {
 		self::assertStringContainsString( 'name="action" value="ran_booster_extension_activate"', $output );
 		self::assertStringContainsString( 'nonce-for-activate-plugin_ran-booster-bitbucket/ran-booster-bitbucket.php', $output );
 		self::assert_plugin_search_link( $output, 'RAN Booster Bitbucket Cloud' );
-		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
+		self::assertSame( 2, substr_count( $output, '>More details</a>' ) );
 		self::assertSame( 1, substr_count( $output, '>Installed version</dt>' ) );
 		if ( 1 !== preg_match( '/<div id="ran-booster-extension-action-ran-booster-bitbucket" class="ran-booster-extension-card__action">(.*?)<\/div><\/li>/s', $output, $m ) ) {
 			self::fail( 'The Bitbucket card action wrapper is missing.' );
@@ -672,7 +680,7 @@ final class ExtensionsPageTest extends TestCase {
 
 		self::assertSame( 2, substr_count( $output, 'disabled aria-disabled="true">Active</button>' ) );
 		self::assertSame( 2, substr_count( $output, '>Manage plugin</a>' ) );
-		self::assertSame( 2, substr_count( $output, '>More Details</a>' ) );
+		self::assertSame( 2, substr_count( $output, '>More details</a>' ) );
 		self::assert_plugin_search_link( $output, 'RAN Booster Bitbucket Cloud' );
 		self::assert_plugin_search_link( $output, 'RAN Booster WP Pusher Migrator' );
 		self::assertStringNotContainsString( 'name="action" value="ran_booster_extension_install"', $output );
@@ -693,6 +701,25 @@ final class ExtensionsPageTest extends TestCase {
 		$output = $this->render();
 		self::assertStringContainsString( 'Extension activated.', $output );
 		self::assertStringContainsString( 'class="notice inline notice-success ran-wp-ui-notice ran-wp-ui-box-sizing is-success"', $output );
+	}
+
+	#[RunInSeparateProcess]
+	#[PreserveGlobalState( false )]
+	public function test_result_notices_use_the_trimmed_copy(): void {
+		$this->define_apis_compatible_with_existing_extension_catalogue();
+		$_GET['ran_booster_extension_id'] = 'ran-booster-bitbucket';
+		$expected                         = array(
+			'plugin_php_incompatible'     => 'Requires a different PHP version. Review in Plugins.',
+			'plugin_wp_incompatible'      => 'Requires a different WordPress version. Review in Plugins.',
+			'plugin_wp_php_incompatible'  => 'Requires different WordPress and PHP versions. Review in Plugins.',
+			'plugin_missing_dependencies' => 'Requires other plugins to be installed and active. Review in Plugins.',
+			'activation_failed'           => 'Activation could not be confirmed. Check its status in Plugins and try again.',
+			'failed'                      => 'The extension could not be installed. Try again or use its release page.',
+		);
+		foreach ( $expected as $code => $message ) {
+			$_GET['ran_booster_extension_result'] = $code;
+			self::assertStringContainsString( '<p>' . $message . '</p>', $this->render() );
+		}
 	}
 
 	public function test_denied_request_renders_nothing(): void {

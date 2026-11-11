@@ -409,16 +409,11 @@ class Booster {
 				'provider_code'           => 'bb',
 				'provider_implementation' => 'RAN\\Booster\\Bitbucket\\BitbucketProvider',
 				'name'                    => 'Bitbucket Cloud',
-				'description'             => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
-				'details'                 => __( 'Add Bitbucket Cloud support through a RAN-maintained provider extension while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
-				'features'                => array(
-					__( 'Connect and configure Bitbucket Cloud repositories in Booster.', 'ran-booster' ),
-					__( 'Use package and credential guidance for your Git provider.', 'ran-booster' ),
-					__( 'Carry eligible file-stored credentials through Transporter for explicit import on the target site.', 'ran-booster' ),
-				),
+				'description'             => __( 'Deploy from Bitbucket Cloud repositories.', 'ran-booster' ),
+				'details'                 => '',
+				'features'                => array(),
 				'requirements'            => array(
 					__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
-					__( 'A version of Booster compatible with this extension.', 'ran-booster' ),
 					__( 'Manual Bitbucket webhook setup for Push-to-Deploy.', 'ran-booster' ),
 				),
 				'plugin'                  => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
@@ -441,15 +436,13 @@ class Booster {
 			array(
 				'id'                   => 'ran-booster-wp-pusher-migrator',
 				'name'                 => 'WP Pusher Migrator',
-				'description'          => __( 'Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them.', 'ran-booster' ),
-				'details'              => __( 'Review and adopt supported packages from an inactive WP Pusher installation. Adopted packages start with deployments disabled, so enabling deployment remains an explicit decision.', 'ran-booster' ),
+				'description'          => __( 'Move WP Pusher packages into Booster without reinstalling.', 'ran-booster' ),
+				'details'              => __( 'Adopted packages start with deployments disabled.', 'ran-booster' ),
 				'features'             => array(
-					__( 'Review retained WP Pusher package records before migration.', 'ran-booster' ),
-					__( 'Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter.', 'ran-booster' ),
 					__( 'Migrator removes each WP Pusher entry only after Booster verifies the adopted package with deployments disabled.', 'ran-booster' ),
 				),
 				'requirements'         => array(
-					__( 'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.', 'ran-booster' ),
+					__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
 					__( 'A single site with a supported WP Pusher installation that is inactive.', 'ran-booster' ),
 					__( 'Existing Booster credentials for private repositories; GitLab packages are not supported.', 'ran-booster' ),
 				),

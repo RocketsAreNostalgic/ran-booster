@@ -124,7 +124,12 @@
 	color: var(--ran-booster-text-muted);
 }
 
-.ran-booster-admin .ran-booster-source-transition {
+/*
+ * Source switch bar: the state row shown only on the tab of the source that is
+ * not active (Branch while Releases is active, and the reverse). Message at
+ * the start, one action at the end; it wraps on narrow widths.
+ */
+.ran-booster-admin .ran-booster-source-switch-bar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -136,7 +141,7 @@
 	background: var(--ran-booster-surface-subtle);
 }
 
-.ran-booster-admin .ran-booster-source-transition > p {
+.ran-booster-admin .ran-booster-source-switch-bar > p {
 	margin: 0;
 	min-inline-size: 0;
 	color: var(--ran-booster-text-muted);
@@ -785,26 +790,6 @@
 	.ran-booster-readiness-item.is-neutral
 	.ran-booster-readiness-icon::after {
 	content: "–";
-}
-
-.ran-booster-admin .ran-booster-release-switch-actions {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	justify-content: space-between;
-	gap: var(--ran-booster-space-8) var(--ran-booster-space-12);
-	margin-block-start: var(--ran-booster-space-24);
-}
-
-.ran-booster-admin
-	.ran-booster-release-switch-actions
-	> [data-ran-booster-use-releases] {
-	margin-inline: auto calc(var(--ran-booster-space-16) + 1px);
-}
-
-.ran-booster-admin .ran-booster-release-switch-actions__summary {
-	min-inline-size: 0;
-	color: var(--ran-booster-text-muted);
 }
 
 .ran-booster-admin .ran-booster-readiness-actions {

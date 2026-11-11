@@ -103,7 +103,7 @@ test('selected release track maps to the stored release channel', () => {
 
 test('branch release track selection updates only its local disclosure summary', () => {
 	const updateReleaseTrackSummary = Function(
-		`"use strict"; ${declaration('updateReleaseTrackSummary')} return updateReleaseTrackSummary;`
+		`"use strict"; ${declaration('syncUseReleasesState')} ${declaration('updateReleaseTrackSummary')} return updateReleaseTrackSummary;`
 	)();
 	globalThis.document = { querySelector: () => null };
 	const badge = { textContent: 'Stable' };
@@ -923,38 +923,145 @@ for (const enhanced of [true, false]) {
 	});
 }
 
-test('the Use releases sentence follows the selected release track radio', () => {
+const eligibleMessage =
+	'Branch currently active. Switch to releases using the %s track.';
+const notReadyMessage =
+	'Releases aren’t ready. Fix the readiness checks below.';
+
+function switchBarHarness({ ready, track = 'Stable', disabled = false }) {
+	const attributes = new Map();
+	const wrapperAttributes = new Map([
+		...(ready ? [] : [['data-ran-booster-reason-tooltip', '']]),
+	]);
+	const reason = { id: 'reason-id', hidden: !ready };
+	const wrapper = {
+		removeAttribute: (name) => wrapperAttributes.delete(name),
+		setAttribute: (name, value) => wrapperAttributes.set(name, value),
+		querySelector: () => reason,
+	};
+	const button = {
+		disabled,
+		dataset: { ranBoosterUseReleasesReady: ready ? 'true' : 'false' },
+		closest: () => wrapper,
+		getAttribute: (name) => attributes.get(name) ?? null,
+		setAttribute: (name, value) => attributes.set(name, value),
+		removeAttribute: (name) => attributes.delete(name),
+	};
 	const summary = {
-		textContent: 'Switch to releases using the Stable track.',
+		textContent: '',
 		dataset: {
-			ranBoosterUseReleasesSummary:
-				'Switch to releases using the %s track.',
+			ranBoosterUseReleasesSummary: eligibleMessage,
+			ranBoosterUseReleasesSummaryUnavailable: notReadyMessage,
 		},
 	};
-	const badge = { textContent: 'Stable' };
+	const badge = { textContent: track };
+	const document = {
+		querySelector: (selector) =>
+			({
+				'[data-ran-booster-use-releases]': button,
+				'[data-ran-booster-use-releases-summary]': summary,
+				'[data-ran-booster-release-track-summary]': badge,
+			})[selector] ?? null,
+	};
+	const sync = new Function(
+		'document',
+		`${declaration('syncUseReleasesState')}\nreturn syncUseReleasesState;`
+	)(document);
+	return {
+		sync,
+		button,
+		summary,
+		badge,
+		attributes,
+		wrapperAttributes,
+		reason,
+	};
+}
+
+test('the source switch bar message follows the selected release track when releases are ready', () => {
+	const bar = switchBarHarness({ ready: true, track: 'Preview' });
+	bar.sync();
+	assert.equal(
+		bar.summary.textContent,
+		'Branch currently active. Switch to releases using the Preview track.'
+	);
+	assert.equal(bar.attributes.get('aria-disabled'), 'false');
+	assert.equal(
+		bar.wrapperAttributes.has('data-ran-booster-reason-tooltip'),
+		false
+	);
+});
+
+test('the source switch bar switches to the not-ready message and tooltip when readiness is lost', () => {
+	const bar = switchBarHarness({ ready: true });
+	bar.sync();
+	bar.button.dataset.ranBoosterUseReleasesReady = 'false';
+	bar.sync();
+	assert.equal(bar.summary.textContent, notReadyMessage);
+	assert.equal(bar.attributes.get('aria-disabled'), 'true');
+	assert.equal(bar.attributes.get('aria-describedby'), 'reason-id');
+	assert.equal(
+		bar.wrapperAttributes.has('data-ran-booster-reason-tooltip'),
+		true
+	);
+	bar.badge.textContent = 'Preview';
+	bar.sync();
+	assert.equal(bar.summary.textContent, notReadyMessage);
+});
+
+test('the source switch bar returns to the eligible message with the current track when readiness is gained', () => {
+	const bar = switchBarHarness({ ready: false });
+	bar.sync();
+	assert.equal(bar.summary.textContent, notReadyMessage);
+	bar.button.dataset.ranBoosterUseReleasesReady = 'true';
+	bar.badge.textContent = 'Preview';
+	bar.sync();
+	assert.equal(
+		bar.summary.textContent,
+		'Branch currently active. Switch to releases using the Preview track.'
+	);
+	assert.equal(bar.attributes.get('aria-disabled'), 'false');
+	assert.equal(bar.attributes.has('aria-describedby'), false);
+	assert.equal(bar.reason.hidden, true);
+});
+
+test('the Use releases message follows the selected release track radio', () => {
+	const bar = switchBarHarness({ ready: true });
 	const target = {
 		matches: () => true,
 		closest: (selector) =>
 			selector === 'label'
 				? { querySelector: () => ({ textContent: 'Preview' }) }
-				: { querySelector: () => badge },
+				: { querySelector: () => bar.badge },
 	};
-	const document = {
-		querySelector: (selector) =>
-			selector === '[data-ran-booster-use-releases-summary]'
-				? summary
-				: null,
-	};
-
 	new Function(
 		'document',
 		'event',
-		`${declaration('updateReleaseTrackSummary')}\nupdateReleaseTrackSummary(event);`
-	)(document, { target });
-
-	assert.equal(badge.textContent, 'Preview');
+		`${declaration('syncUseReleasesState')}\n${declaration('updateReleaseTrackSummary')}\nupdateReleaseTrackSummary(event);`
+	)(
+		{
+			querySelector: (selector) =>
+				selector === '[data-ran-booster-use-releases]'
+					? bar.button
+					: selector === '[data-ran-booster-use-releases-summary]'
+						? bar.summary
+						: selector ===
+							  '[data-ran-booster-release-track-summary]'
+							? bar.badge
+							: null,
+		},
+		{ target }
+	);
+	assert.equal(bar.badge.textContent, 'Preview');
 	assert.equal(
-		summary.textContent,
-		'Switch to releases using the Preview track.'
+		bar.summary.textContent,
+		'Branch currently active. Switch to releases using the Preview track.'
+	);
+});
+
+test('the script watches the ready flag so readiness changes reach the switch bar', () => {
+	assert.match(
+		source,
+		/attributeFilter: \['data-ran-booster-use-releases-ready'\]/
 	);
 });

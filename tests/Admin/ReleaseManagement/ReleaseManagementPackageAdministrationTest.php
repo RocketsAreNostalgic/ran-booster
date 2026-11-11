@@ -114,7 +114,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'Ready for releases', $html );
 		self::assertSame( 1, substr_count( $html, '<h3 id="ran-booster-release-management-heading">Release readiness</h3>' ), 'Release readiness is the title of the readiness table.' );
 		self::assertSame( 1, substr_count( $html, 'Release readiness' ) );
-		self::assertStringNotContainsString( '<header class="ran-booster-package-source-pane__header">', $html, 'No standalone heading header renders without notices.' );
+		self::assertSame( 1, preg_match( '/<header class="ran-booster-package-source-pane__header">\s*<div class="ran-booster-source-switch-bar[^"]*"[^>]*>.*?<\/div>\s*<\/header>/s', $html ), 'Without notices the pane header holds only the source switch bar.' );
 		self::assertStringNotContainsString( '<h4 id="ran-booster-release-readiness-status"', $html );
 		self::assertMatchesRegularExpression( '~<div class="ran-booster-readiness-panel__top">\s*<div>\s*<h3 id="ran-booster-release-management-heading">Release readiness</h3>\s*</div>\s*<span id="ran-booster-release-readiness-status">~', $html );
 		self::assertStringContainsString( 'Branch is active; releases are not tracked.', $html );
@@ -217,7 +217,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );
 		self::assertStringNotContainsString( '<select', $html );
-		self::assertStringContainsString( 'form="ran-booster-release-track-form" data-ran-booster-use-releases data-ran-booster-use-releases-ready="false" disabled="disabled" aria-disabled="true" aria-describedby="ran-booster-release-readiness-status">Use releases', $html );
+		self::assertStringContainsString( 'form="ran-booster-release-track-form" data-ran-booster-use-releases data-ran-booster-use-releases-ready="false" aria-disabled="true" aria-describedby="ran-booster-release-use-releases-reason">Use releases', $html );
 		self::assertStringContainsString( 'id="ran-booster-release-readiness-status"', $html );
 	}
 
@@ -289,7 +289,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'form="ran-booster-release-track-form" data-ran-booster-use-releases data-ran-booster-use-releases-ready="false" disabled="disabled" aria-disabled="true" aria-describedby="ran-booster-release-readiness-status">Use releases</button>', $html );
+		self::assertStringContainsString( 'form="ran-booster-release-track-form" data-ran-booster-use-releases data-ran-booster-use-releases-ready="false" aria-disabled="true" aria-describedby="ran-booster-release-use-releases-reason">Use releases</button>', $html );
 	}
 
 	public function test_conflict_remains_blocked_when_list_is_unavailable_and_does_not_duplicate_the_result(): void {
@@ -447,12 +447,12 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		);
 	}
 
-	private function set_conflict_result( string $code ): void {
-		$payload = \RAN\Admin\ReleaseManagement\wp_json_encode( array( $code, false, 'plugin', 'example/example.php', 'stable' ) );
+	private function set_conflict_result( string $code, bool $successful = false ): void {
+		$payload = \RAN\Admin\ReleaseManagement\wp_json_encode( array( $code, $successful, 'plugin', 'example/example.php', 'stable' ) );
 		self::assertIsString( $payload );
 		$_GET = array(
 			'ran_booster_release_result'       => $code,
-			'ran_booster_release_success'      => '0',
+			'ran_booster_release_success'      => $successful ? '1' : '0',
 			'ran_booster_release_type'         => 'plugin',
 			'ran_booster_release_package'      => 'example/example.php',
 			'ran_booster_release_channel'      => 'stable',
@@ -1101,9 +1101,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Use releases<\\/button>/', $html );
 		self::assertIsInt( $use_releases_position );
 		self::assertIsInt( $checklist_position );
-		self::assertTrue( $use_releases_position > $checklist_position );
+		self::assertTrue( $use_releases_position < $checklist_position );
 		self::assertDoesNotMatchRegularExpression( '/class="[^"]*\\bran-booster-source-transition\\b/', $html );
-		self::assertStringNotContainsString( 'Branch currently active.', $html );
+		self::assertStringNotContainsString( '>Branch currently active.', $html );
 		self::assertStringNotContainsString( 'Use branch', $html );
 		self::assertStringNotContainsString( 'Releases currently active.', $html );
 		self::assertStringNotContainsString( 'Branch cannot be selected', $html );
@@ -1144,7 +1144,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	#[DataProvider( 'update_uri_remediation_cases' )]
-	public function test_update_uri_gate_appears_once_before_the_action_and_checklist_for_plugins_and_themes( string $type, string $eligibility_code, string $readiness_message ): void {
+	public function test_update_uri_gate_appears_once_after_the_action_and_before_the_checklist_for_plugins_and_themes( string $type, string $eligibility_code, string $readiness_message ): void {
 		$tracking = new ReleaseTrackingFacadeDouble(
 			ReleaseManagementFixture::status( 'branch', $type, $eligibility_code )
 		);
@@ -1166,8 +1166,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertIsInt( $checklist_position );
 		self::assertTrue( $gate_position < $heading_position );
 		self::assertTrue( $heading_position < $checklist_position );
-		self::assertTrue( $checklist_position < $component_position );
-		self::assertStringNotContainsString( 'Branch currently active.', $html );
+		self::assertTrue( $component_position < $gate_position );
+		self::assertTrue( $gate_position < $heading_position );
+		self::assertStringNotContainsString( '>Branch currently active.', $html );
 		self::assertStringContainsString( 'Published releases require an Update URI matching this repository. Use the header shown below, then recheck eligibility.', $html );
 		self::assertStringContainsString( $readiness_message, $html );
 		self::assertStringContainsString( 'Update URI: https://github.com/example/example', $html );
@@ -1259,7 +1260,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$disclosure_position = strpos( $html, 'id="ran-booster-release-track-settings"' );
 		$track_form_position = strpos( $html, '<form id="ran-booster-release-track-form"' );
 		$track_position      = strpos( $html, 'data-ran-booster-release-channel-control' );
-		$action_position     = strpos( $html, 'Use releases' );
+		$action_position     = strpos( $html, '>Use releases<' );
 		self::assertIsInt( $heading_position );
 		self::assertIsInt( $checklist_position );
 		self::assertIsInt( $disclosure_position );
@@ -1270,21 +1271,23 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertTrue( $checklist_position < $disclosure_position );
 		self::assertTrue( $disclosure_position < $track_form_position );
 		self::assertTrue( $track_form_position < $track_position );
-		self::assertTrue( $track_position < $action_position );
-		self::assertStringContainsString( '</details></div>', substr( $html, 0, $action_position ) );
+		self::assertTrue( $action_position < $heading_position );
+		self::assertStringNotContainsString( '</details></div>', substr( $html, 0, $action_position ) );
 		self::assertStringContainsString( 'data-ran-booster-source-transition', $html );
 		self::assertStringContainsString( 'form="ran-booster-release-track-form" data-ran-booster-use-releases data-ran-booster-use-releases-ready="true" aria-disabled="false">Use releases', $html );
 		self::assertStringNotContainsString( 'form="ran-booster-release-track-form" disabled', $html );
-		self::assertStringNotContainsString( 'aria-describedby="ran-booster-release-readiness-status"', $html );
+		self::assertStringNotContainsString( 'aria-describedby', substr( $html, (int) strpos( $html, 'data-ran-booster-use-releases ' ), 200 ) );
 		self::assertDoesNotMatchRegularExpression( '/class="[^"]*\\bran-booster-source-transition\\b/', $html );
-		self::assertStringNotContainsString( 'Branch currently active.', $html );
+		self::assertStringContainsString( 'class="ran-booster-source-switch-bar ran-booster-release-switch-actions"', $html );
+		self::assertStringContainsString( 'Branch currently active.', $html );
 		self::assertStringNotContainsString( 'Initial release track', $html );
 		self::assertStringNotContainsString( '<select', $html );
 		self::assertStringNotContainsString( 'Activate Releases to change the release track.', $html );
 		self::assertStringNotContainsString( 'Uses saved package settings. Save any edits before switching.', $html );
 		self::assertStringNotContainsString( 'Automatic resets to Manual.', $html );
 		self::assertSame( 1, substr_count( $html, '>Use releases<' ) );
-		self::assertStringContainsString( '<span class="ran-booster-release-switch-actions__summary" data-ran-booster-use-releases-summary="Switch to releases using the %s track.">Switch to releases using the Stable track.</span>', $html );
+		self::assertStringContainsString( 'data-ran-booster-use-releases-summary="Branch currently active. Switch to releases using the %s track." data-ran-booster-use-releases-summary-unavailable="Releases aren’t ready. Fix the readiness checks below.">Branch currently active. Switch to releases using the Stable track.</p>', $html );
+		self::assertSame( 1, preg_match( '/<span class="ran-booster-reason-tooltip">\s*<button[^>]*data-ran-booster-use-releases /', $html ), 'A ready action carries no reason tooltip hook.' );
 		self::assertTrue( strpos( $html, 'data-ran-booster-use-releases-summary' ) < $action_position );
 	}
 
@@ -1294,7 +1297,145 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, ReleaseManagementFixture::status(), $package->settings_url(), 'prerelease', array( 'enable' => 'nonce' ) );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '>Switch to releases using the Preview track.</span>', $html );
+		self::assertStringContainsString( '>Branch currently active. Switch to releases using the Preview track.</p>', $html );
+	}
+
+	public function test_not_ready_switch_bar_stays_visible_aria_disabled_with_a_reason_tooltip(): void {
+		$package = new PackageProjection();
+		$status  = ReleaseManagementFixture::status( eligibility_code: 'missing_update_uri' );
+		ob_start();
+		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, $status, $package->settings_url(), 'stable', array() );
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '>Releases aren’t ready. Fix the readiness checks below.</p>', $html );
+		self::assertStringNotContainsString( 'Branch currently active.', preg_replace( '/data-ran-booster-use-releases-summary="[^"]*"/', '', $html ) ?? '' );
+		if ( 1 !== preg_match( '/<button[^>]*data-ran-booster-use-releases [^>]*>Use releases<\/button>/', $html, $button ) ) {
+			self::fail( 'The Use releases button must stay visible.' );
+		}
+		self::assertStringContainsString( 'aria-disabled="true"', $button[0] );
+		self::assertStringContainsString( 'form="ran-booster-release-track-form"', $button[0] );
+		self::assertStringContainsString( 'aria-describedby="ran-booster-release-use-releases-reason"', $button[0] );
+		self::assertDoesNotMatchRegularExpression( '/\sdisabled(=|\s|>)/', $button[0] );
+		self::assertStringContainsString( '<span class="ran-booster-reason-tooltip" data-ran-booster-reason-tooltip>', $html );
+		self::assertStringContainsString( 'id="ran-booster-release-use-releases-reason" class="ran-booster-reason-tooltip__bubble" role="tooltip" data-ran-booster-use-releases-reason hidden>Available once the readiness checks pass.</span>', $html );
+	}
+
+	public function test_switch_bar_appears_only_on_the_tab_of_the_inactive_source(): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'stable' ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+
+		// Releases active: its own tab has no bar, the Branch tab has the bar.
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$releases_tab = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'ran-booster-source-switch-bar', $releases_tab );
+		self::assertStringNotContainsString( 'Use releases', $releases_tab );
+
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'branch', $package, $package->settings_url() );
+		$branch_tab = (string) ob_get_clean();
+		self::assertSame( 1, preg_match_all( '/class="ran-booster-source-switch-bar ran-booster-release-return-form ran-booster-source-transition"/', $branch_tab ) );
+		self::assertStringContainsString( 'Releases currently active.', $branch_tab );
+
+		// Branch active: the Branch tab has no bar, the Releases tab has the bar.
+		$branch_package  = new PackageProjection();
+		$branch_tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$branch_controls = ReleaseManagementFixture::controls( $branch_tracking );
+		ob_start();
+		$branch_controls->render_advanced_source_section( 'edit', 'plugin', 'branch', $branch_package, $branch_package->settings_url() );
+		$branch_active_branch_tab = (string) ob_get_clean();
+		self::assertStringNotContainsString( 'ran-booster-source-switch-bar', $branch_active_branch_tab );
+		self::assertStringNotContainsString( 'Use branch', $branch_active_branch_tab );
+
+		ob_start();
+		$branch_controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $branch_package, $branch_package->settings_url() );
+		$branch_active_releases_tab = (string) ob_get_clean();
+		self::assertSame( 1, substr_count( $branch_active_releases_tab, 'data-ran-booster-source-switch-bar="branch"' ) );
+		self::assertStringNotContainsString( 'Releases currently active.', $branch_active_releases_tab );
+	}
+
+	public function test_switch_bar_sits_at_the_top_of_the_releases_pane_under_its_description(): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection();
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+
+		$description = strpos( $html, 'ran-booster-package-source-pane__description' );
+		$bar         = strpos( $html, 'data-ran-booster-source-switch-bar="branch"' );
+		$readiness   = strpos( $html, 'class="ran-booster-readiness-panel"' );
+		self::assertIsInt( $description );
+		self::assertIsInt( $bar );
+		self::assertIsInt( $readiness );
+		self::assertTrue( $description < $bar );
+		self::assertTrue( $bar < $readiness );
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-use-releases ' ) );
+	}
+
+	public function test_error_result_keeps_the_switch_bar_with_the_notice_above_it(): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection();
+		$this->set_conflict_result( 'source_changed' );
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+
+		$notices = strpos( $html, 'data-ran-booster-release-notices' );
+		$notice  = strpos( $html, 'Package settings changed after this browser page was opened.' );
+		$bar     = strpos( $html, 'data-ran-booster-source-switch-bar="branch"' );
+		self::assertIsInt( $notices );
+		self::assertIsInt( $notice );
+		self::assertIsInt( $bar );
+		self::assertTrue( $notices < $notice );
+		self::assertTrue( $notice < $bar );
+		self::assertStringContainsString( '>Use releases<', $html );
+	}
+
+	public function test_error_result_on_the_branch_tab_keeps_the_return_bar_below_the_notice(): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'stable' ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+		$this->set_conflict_result( 'source_changed' );
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'branch', $package, $package->settings_url() );
+		$html = (string) ob_get_clean();
+
+		$notices = strpos( $html, 'data-ran-booster-release-notices' );
+		$bar     = strpos( $html, 'class="ran-booster-source-switch-bar ran-booster-release-return-form' );
+		self::assertIsInt( $notices );
+		self::assertIsInt( $bar );
+		self::assertTrue( $notices < $bar );
+		self::assertStringContainsString( 'Package settings changed after this browser page was opened.', $html );
+		self::assertStringContainsString( '>Use branch<', $html );
+	}
+
+	public function test_success_result_shows_the_notice_and_no_switch_bar_on_the_now_active_source(): void {
+		// Use releases succeeded: Releases is active, so its tab has the notice and no bar.
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', channel: 'stable' ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$package  = new PackageProjection( 'release_asset' );
+		$this->set_conflict_result( 'release_enabled', true );
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+		$releases_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Release tracking enabled.', $releases_html );
+		self::assertStringNotContainsString( 'ran-booster-source-switch-bar', $releases_html );
+		self::assertStringNotContainsString( 'Use releases', $releases_html );
+
+		// Use branch succeeded: Branch is active, so its tab has the notice and no bar.
+		$branch_tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$branch_controls = ReleaseManagementFixture::controls( $branch_tracking );
+		$branch_package  = new PackageProjection();
+		$this->set_conflict_result( 'branch_restored', true );
+		ob_start();
+		$branch_controls->render_advanced_source_section( 'edit', 'plugin', 'branch', $branch_package, $branch_package->settings_url() );
+		$branch_html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Branch-based package management is restored.', $branch_html );
+		self::assertStringNotContainsString( 'ran-booster-source-switch-bar', $branch_html );
+		self::assertStringNotContainsString( 'Use branch', $branch_html );
 	}
 
 	public function test_branch_release_status_row_is_neutral_only_while_releases_are_not_tracked(): void {
@@ -1461,7 +1602,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Use releases', $html );
-		self::assertStringContainsString( 'form="ran-booster-release-track-form" data-ran-booster-use-releases data-ran-booster-use-releases-ready="false" disabled="disabled" aria-disabled="true" aria-describedby="ran-booster-release-readiness-status"', $html );
+		self::assertStringContainsString( 'form="ran-booster-release-track-form" data-ran-booster-use-releases data-ran-booster-use-releases-ready="false" aria-disabled="true" aria-describedby="ran-booster-release-use-releases-reason"', $html );
 		self::assertStringNotContainsString( '<select', $html );
 		self::assertStringContainsString( 'Published releases cannot be selected because source transition controls are temporarily unavailable.', $html );
 		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );

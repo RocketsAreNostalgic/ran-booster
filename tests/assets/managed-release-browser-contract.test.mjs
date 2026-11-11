@@ -1262,15 +1262,20 @@ test('managed browser has no footer wrapper and the helper copy is gone', () => 
 	);
 });
 
-test('use releases row keeps the summary left and right-aligns the button, including when wrapped', () => {
+test('the source switch bar is one shared state row with the message at the start and the action at the end', () => {
 	assert.match(
 		packageStyles,
-		/\.ran-booster-release-switch-actions \{[^}]*display: flex;[^}]*flex-wrap: wrap;[^}]*justify-content: space-between/
+		/\.ran-booster-source-switch-bar \{[^}]*display: flex;[^}]*justify-content: space-between;[^}]*flex-wrap: wrap;[^}]*border: 1px solid var\(--ran-booster-border\);[^}]*background: var\(--ran-booster-surface-subtle\)/
 	);
 	assert.match(
 		packageStyles,
-		/\.ran-booster-release-switch-actions\s+> \[data-ran-booster-use-releases\] \{[^}]*margin-inline: auto calc\(var\(--ran-booster-space-16\) \+ 1px\)/
+		/\.ran-booster-source-switch-bar > p \{[^}]*margin: 0;[^}]*min-inline-size: 0/
 	);
+	assert.doesNotMatch(
+		packageStyles,
+		/\.ran-booster-release-switch-actions \{/
+	);
+	assert.doesNotMatch(packageStyles, /\.ran-booster-source-transition \{/);
 });
 
 test('the Update now button outside the browser is found, enabled, relabelled and reset', async () => {

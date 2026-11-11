@@ -117,9 +117,11 @@ final class ReleaseManagementDisplay {
 						: ( 'branch' === $source && $track_disabled
 							? __( 'Published releases cannot be selected because source transition controls are temporarily unavailable.', 'ran-booster' )
 							: '' ) ) ) );
+		$release_track_summary = null === $selected_channel ? __( 'Unknown', 'ran-booster' ) : $this->release_track_label( $selected_channel );
 		?>
 		<section class="ran-booster-release-management" aria-labelledby="ran-booster-release-management-heading">
 			<?php ob_start(); ?>
+				<?php ob_start(); ?>
 				<?php if ( '' !== $gate_notice ) { ?>
 					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-release-gate-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $gate_notice ); ?></p>
 					<?php
@@ -137,6 +139,10 @@ final class ReleaseManagementDisplay {
 								?>
 							(<?php echo esc_html( (string) ( $other['type'] ?? '' ) ); ?>)<?php } ?></li><?php } ?></ul><?php } ?></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 				<?php } ?>
+				<?php $gate_notice_html = trim( (string) ob_get_clean() ); ?>
+				<?php if ( 'branch' !== $source ) { ?>
+					<?php echo $gate_notice_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured markup rendered by this class. ?>
+				<?php } ?>
 				<?php if ( '' !== $operation_notice_html || $status_notice_visible ) { ?>
 					<div class="ran-booster-release-notices" data-ran-booster-release-notices>
 						<?php // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Retain the public named-parameter contract. Captured trusted admin operation notice. ?>
@@ -151,11 +157,13 @@ final class ReleaseManagementDisplay {
 					</div>
 				<?php } ?>
 				<?php if ( 'branch' === $source ) { ?>
+					<?php $this->render_use_releases_bar( $track_disabled, $release_track_summary, $track_form_id ); ?>
 					<?php if ( $automatic_policy ) { ?>
 						<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 							<p><?php esc_html_e( 'Switching resets Automatic to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
 						</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 					<?php } ?>
+					<?php echo $gate_notice_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured markup rendered by this class. ?>
 				<?php } elseif ( $status_available && 'release_asset' === $source && $subdirectory_incompatible ) { ?>
 					<?php $this->render_return_to_branch( $package, $nonce_actions['return_to_branch'] ?? null, '', $automatic_policy ); ?>
 				<?php } ?>
@@ -262,7 +270,6 @@ final class ReleaseManagementDisplay {
 				</div>
 			</div>
 		</section>
-		<?php $release_track_summary = null === $selected_channel ? __( 'Unknown', 'ran-booster' ) : $this->release_track_label( $selected_channel ); ?>
 		<div data-ran-booster-ui-disclosure="package-release-track" data-ran-booster-ui-disclosure-density="prominent">
 		<details id="ran-booster-release-track-settings" class="ran-booster-settings-disclosure ran-booster-release-track-section ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback data-ran-booster-package-disclosure>
 			<summary>
@@ -276,16 +283,27 @@ final class ReleaseManagementDisplay {
 				<?php $this->render_managed_candidate_browser( $status, $nonce_actions, $browser_enabled ); ?>
 			</div>
 		</details></div>
-		<?php if ( 'branch' === $source ) { ?>
-			<?php
-			/* translators: %s is the selected release track, Stable or Preview. */
-			$switch_track_template = __( 'Switch to releases using the %s track.', 'ran-booster' );
-			?>
-			<div class="ran-booster-release-switch-actions">
-				<span class="ran-booster-release-switch-actions__summary" data-ran-booster-use-releases-summary="<?php echo esc_attr( $switch_track_template ); ?>"><?php echo esc_html( sprintf( $switch_track_template, $release_track_summary ) ); ?></span>
-				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Switching…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Switching to published releases. This can take a few seconds.', 'ran-booster' ) ); ?>" form="<?php echo esc_attr( $track_form_id ); ?>" data-ran-booster-use-releases data-ran-booster-use-releases-ready="<?php echo $track_disabled ? 'false' : 'true'; ?>"<?php disabled( $track_disabled ); ?> aria-disabled="<?php echo $track_disabled ? 'true' : 'false'; ?>"<?php echo $track_disabled ? ' aria-describedby="ran-booster-release-readiness-status"' : ''; ?>><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
-			</div>
-		<?php } ?>
+		<?php
+	}
+
+	/**
+	 * Source switch bar for the Releases pane while Branch is active: the state
+	 * on the left, one action at the end. The action keeps its association with
+	 * the release track form, which lives further down the pane.
+	 */
+	private function render_use_releases_bar( bool $unavailable, string $track_label, string $track_form_id ): void {
+		/* translators: %s is the selected release track, Stable or Preview. */
+		$eligible_template   = __( 'Branch currently active. Switch to releases using the %s track.', 'ran-booster' );
+		$unavailable_message = __( 'Releases aren’t ready. Fix the readiness checks below.', 'ran-booster' );
+		$reason_id           = 'ran-booster-release-use-releases-reason';
+		?>
+		<div class="ran-booster-source-switch-bar ran-booster-release-switch-actions" data-ran-booster-source-switch-bar="branch">
+			<p class="ran-booster-release-switch-actions__summary" data-ran-booster-use-releases-summary="<?php echo esc_attr( $eligible_template ); ?>" data-ran-booster-use-releases-summary-unavailable="<?php echo esc_attr( $unavailable_message ); ?>"><?php echo esc_html( $unavailable ? $unavailable_message : sprintf( $eligible_template, $track_label ) ); ?></p>
+			<span class="ran-booster-reason-tooltip"<?php echo $unavailable ? ' data-ran-booster-reason-tooltip' : ''; ?>>
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Switching…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Switching to published releases. This can take a few seconds.', 'ran-booster' ) ); ?>" form="<?php echo esc_attr( $track_form_id ); ?>" data-ran-booster-use-releases data-ran-booster-use-releases-ready="<?php echo $unavailable ? 'false' : 'true'; ?>" aria-disabled="<?php echo $unavailable ? 'true' : 'false'; ?>"<?php echo $unavailable ? ' aria-describedby="' . esc_attr( $reason_id ) . '"' : ''; ?>><?php esc_html_e( 'Use releases', 'ran-booster' ); ?></button>
+				<span id="<?php echo esc_attr( $reason_id ); ?>" class="ran-booster-reason-tooltip__bubble" role="tooltip" data-ran-booster-use-releases-reason hidden><?php esc_html_e( 'Available once the readiness checks pass.', 'ran-booster' ); ?></span>
+			</span>
+		</div>
 		<?php
 	}
 
@@ -453,7 +471,7 @@ final class ReleaseManagementDisplay {
 					<p><?php esc_html_e( 'Returning resets Automatic to Manual. Existing repository webhook configuration is unchanged.', 'ran-booster' ); ?></p>
 				</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 			<?php } ?>
-			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="ran-booster-release-return-form ran-booster-source-transition" data-ran-booster-source-transition<?php echo $enabled ? ' data-ran-booster-package-mutation' : ''; ?>>
+			<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" class="ran-booster-source-switch-bar ran-booster-release-return-form ran-booster-source-transition" data-ran-booster-source-transition<?php echo $enabled ? ' data-ran-booster-package-mutation' : ''; ?>>
 				<?php if ( $enabled ) { ?>
 					<?php $this->admin_post_fields( 'return_to_branch', $package, $nonce_action ); ?>
 				<?php } ?>

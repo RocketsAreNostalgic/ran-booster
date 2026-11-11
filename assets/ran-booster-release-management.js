@@ -607,6 +607,67 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 (() => {
 	'use strict';
 
+	// The source switch bar message follows the track radios and readiness.
+	// Readiness is the ready flag on the Use releases button; the not-ready
+	// message and tooltip are server-rendered so each is one translatable string.
+	const syncUseReleasesState = () => {
+		const button = document.querySelector(
+			'[data-ran-booster-use-releases]'
+		);
+		const summary = document.querySelector(
+			'[data-ran-booster-use-releases-summary]'
+		);
+		if (!button || !summary) {
+			return;
+		}
+		const ready = button.dataset.ranBoosterUseReleasesReady === 'true';
+		const template = summary.dataset.ranBoosterUseReleasesSummary;
+		const unavailable =
+			summary.dataset.ranBoosterUseReleasesSummaryUnavailable;
+		const track = document
+			.querySelector('[data-ran-booster-release-track-summary]')
+			?.textContent?.trim();
+		if (ready && template && track) {
+			summary.textContent = template.replace('%s', track);
+		} else if (!ready && unavailable) {
+			summary.textContent = unavailable;
+		}
+		const wrapper = button.closest('.ran-booster-reason-tooltip');
+		const reason = wrapper?.querySelector('[role="tooltip"]');
+		if (ready) {
+			wrapper?.removeAttribute('data-ran-booster-reason-tooltip');
+			if (reason) {
+				reason.hidden = true;
+			}
+			if (!button.disabled) {
+				button.setAttribute('aria-disabled', 'false');
+				if (
+					reason &&
+					button.getAttribute('aria-describedby') === reason.id
+				) {
+					button.removeAttribute('aria-describedby');
+				}
+			}
+		} else {
+			wrapper?.setAttribute('data-ran-booster-reason-tooltip', '');
+			button.setAttribute('aria-disabled', 'true');
+			if (reason) {
+				button.setAttribute('aria-describedby', reason.id);
+			}
+		}
+	};
+
+	if (typeof MutationObserver === 'function') {
+		new MutationObserver(syncUseReleasesState).observe(
+			document.documentElement,
+			{
+				attributes: true,
+				attributeFilter: ['data-ran-booster-use-releases-ready'],
+				subtree: true,
+			}
+		);
+	}
+
 	const updateReleaseTrackSummary = (event) => {
 		if (!event.target?.matches('[data-ran-booster-release-channel]')) {
 			return;
@@ -622,19 +683,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		if (summary && labelText) {
 			summary.textContent = labelText.textContent;
 		}
-		const switchSummary = document.querySelector(
-			'[data-ran-booster-use-releases-summary]'
-		);
-		const template = switchSummary?.dataset.ranBoosterUseReleasesSummary;
-		if (switchSummary && template && labelText) {
-			switchSummary.textContent = template.replace(
-				'%s',
-				labelText.textContent
-			);
-		}
+		syncUseReleasesState();
 	};
 
 	document.addEventListener('change', updateReleaseTrackSummary);
+	syncUseReleasesState();
 
 	const initializeManagedReleaseBrowserAfterSwap = (event) => {
 		if (event.detail?.target?.id !== 'wpbody-content') {

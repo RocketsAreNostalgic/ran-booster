@@ -612,7 +612,6 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 								</div>
 							</div>
 								<?php $render_webhook_delivery_notice(); ?>
-								<p class="ran-booster-section__description"><?php esc_html_e( 'Keep this URL reachable: do not cache, challenge or transform its requests.', 'ran-booster' ); ?> <a href="<?php echo esc_url( $webhook_operations_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Learn more', 'ran-booster' ); ?><span class="screen-reader-text"> <?php esc_html_e( 'about keeping the webhook receiver URL reachable', 'ran-booster' ); ?></span> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 								<?php
 								$receiver_rows = array_values(
 									array_filter(
@@ -695,6 +694,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 									<div data-ran-booster-ui-disclosure-content class="ran-booster-provider-disclosure__body ran-booster-disclosure__body">
 										<p><?php echo esc_html( $manual_setup_description ); ?></p>
 										<ol><li><?php esc_html_e( 'Paste the payload URL and a matching signing secret.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Keep SSL verification enabled and select the push event.', 'ran-booster' ); ?></li><li><?php esc_html_e( 'Trigger a delivery and confirm the Git provider records a successful response.', 'ran-booster' ); ?></li></ol>
+										<p><?php esc_html_e( 'Keep the webhook receiver URL reachable: do not cache, challenge or transform its requests on this route.', 'ran-booster' ); ?></p>
 										<p><?php esc_html_e( 'For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?></p>
 										<p><a href="<?php echo esc_url( $webhook_operations_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 										<p><a href="<?php echo esc_url( $webhook_setup['documentation_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $provider_instructions_label ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
@@ -704,6 +704,7 @@ $render_webhook_delivery_notice = static function () use ( $webhook_assistance_p
 									</div>
 								</details></div>
 							<?php } else { ?>
+								<p><?php esc_html_e( 'Keep the webhook receiver URL reachable: do not cache, challenge or transform its requests on this route.', 'ran-booster' ); ?></p>
 								<p><?php esc_html_e( 'For timeouts and failed responses, compare Git provider delivery history with the Git provider request ID in Booster Activity.', 'ran-booster' ); ?></p>
 								<p><a href="<?php echo esc_url( $webhook_operations_url ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Read the webhook operations guide', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 								<p><a href="<?php echo esc_url( $task_urls['repositories'] ); ?>" hx-get="<?php echo esc_url( $task_request_urls['repositories'] ); ?>" hx-boost="true"><?php esc_html_e( 'Manage repositories', 'ran-booster' ); ?></a></p>

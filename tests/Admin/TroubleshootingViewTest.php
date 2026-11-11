@@ -2206,7 +2206,8 @@ final class TroubleshootingViewTest extends TestCase {
 		$provider_task = 'repositories';
 
 		self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $setup_html );
-		self::assertStringContainsString( 'Keep this URL reachable: do not cache, challenge or transform its requests.', $setup_html );
+		self::assertStringContainsString( 'Keep the webhook receiver URL reachable: do not cache, challenge or transform its requests on this route.', $setup_html );
+		self::assertStringNotContainsString( 'Keep this URL reachable: do not cache, challenge or transform its requests.', $setup_html );
 		self::assertStringContainsString( 'Use a unique generated secret for each repository.', $setup_html );
 		self::assertStringContainsString( 'Git provider request ID in Booster Activity', $setup_html );
 		self::assertStringContainsString( 'tab=documentation#ran-booster-push-to-deploy', html_entity_decode( $setup_html ) );
@@ -2582,8 +2583,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '~<button type="submit" [^>]*data-ran-booster-receiver-submit>Manage webhook</button>~', $form[1] );
 		self::assertStringNotContainsString( 'Pushes are ignored', $html );
 
-		// Order: the receiver sentence, the tabs, the automated panel (line before the select), then the manual panel (line first) and Payload URL.
-		$receiver  = (int) strpos( $html, 'Keep this URL reachable: do not cache, challenge or transform its requests.' );
+		// Order: the tabs, the automated panel (line before the select), then the manual panel (line first) and Payload URL.
 		$tabs      = (int) strpos( $html, 'role="tablist"' );
 		$auto      = (int) strpos( $html, 'data-ran-booster-receiver-panel="automated"' );
 		$auto_line = (int) strpos( $html, 'Booster can set up a Push-to-Deploy webhook for you. Choose a repository below to get started.' );
@@ -2591,11 +2591,23 @@ final class TroubleshootingViewTest extends TestCase {
 		$manual    = (int) strpos( $html, 'data-ran-booster-receiver-panel="manual"' );
 		$man_line  = (int) strpos( $html, 'Generate a webhook for Push-to-Deploy manually using these values. Use a unique generated secret for each repository.' );
 		$payload   = (int) strpos( $html, 'Payload URL' );
-		self::assertTrue( $receiver > 0 && $receiver < $tabs && $tabs < $auto && $auto < $auto_line && $auto_line < $select && $select < $manual && $manual < $man_line && $man_line < $payload );
+		self::assertTrue( $tabs > 0 && $tabs < $auto && $auto < $auto_line && $auto_line < $select && $select < $manual && $manual < $man_line && $man_line < $payload );
 		self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $html );
-		// The receiver sentence sits outside both tabpanels, and its Learn more link is the external operations guide.
+		// Both tabpanels are present.
 		self::assertSame( 2, preg_match_all( '~<div id="ran-booster-receiver-panel-[^"]*"[^>]*role="tabpanel"~', $html ) );
-		self::assertMatchesRegularExpression( '~<p class="ran-booster-section__description">Keep this URL reachable: do not cache, challenge or transform its requests\. <a href="[^"]+" target="_blank" rel="noopener noreferrer">Learn more<span class="screen-reader-text"> about keeping the webhook receiver URL reachable</span> <span aria-hidden="true">~', $html );
+		// The reachability sentence is a plain paragraph in the manual disclosure body: after the provider steps list, before the timeouts paragraph, never a list item; the orphan line and its Learn more link are gone from the panel top.
+		self::assertStringNotContainsString( 'Keep this URL reachable', $html );
+		self::assertStringNotContainsString( 'about keeping the webhook receiver URL reachable', $html );
+		if ( 1 !== preg_match( '~<details[^>]*>.*?</details>~s', $html, $disclosure ) ) {
+			self::fail( 'The manual setup disclosure was not rendered.' );
+		}
+		$sentence = 'Keep the webhook receiver URL reachable: do not cache, challenge or transform its requests on this route.';
+		self::assertSame( 1, substr_count( $html, $sentence ) );
+		self::assertSame( 1, substr_count( $disclosure[0], $sentence ) );
+		self::assertStringContainsString( 'ran-booster-provider-disclosure__body', $disclosure[0] );
+		self::assertSame( 1, preg_match( '~</ol>\s*<p>' . preg_quote( $sentence, '~' ) . '</p>\s*<p>For timeouts and failed responses~', $disclosure[0] ) );
+		self::assertSame( 0, preg_match( '~<li>[^<]*Keep the webhook receiver URL reachable~', $html ) );
+		self::assertGreaterThan( (int) strpos( $html, 'data-ran-booster-receiver-panel="manual"' ), (int) strpos( $html, $sentence ) );
 		self::assertMatchesRegularExpression( '~<div id="ran-booster-receiver-panel-manual"[^>]*>\s*<p class="ran-booster-section__description">Generate a webhook for Push-to-Deploy manually using these values\.~', $html );
 		self::assertMatchesRegularExpression( '~data-ran-booster-receiver-panel="automated">\s*<p class="ran-booster-section__description">Booster can set up a Push-to-Deploy webhook for you\. Choose a repository below to get started\.</p>\s*<form~', $html );
 		// Standing guidance is plain description text, never a notice.
@@ -3432,7 +3444,9 @@ final class TroubleshootingViewTest extends TestCase {
 			$html = (string) ob_get_clean();
 			self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $html );
 			self::assertStringNotContainsString( 'notice-info', $html );
-			self::assertSame( 1, substr_count( $html, 'Keep this URL reachable: do not cache, challenge or transform its requests.' ) );
+			self::assertSame( 1, substr_count( $html, 'Keep the webhook receiver URL reachable: do not cache, challenge or transform its requests on this route.' ) );
+			self::assertStringNotContainsString( 'Keep this URL reachable: do not cache, challenge or transform its requests.', $html );
+			self::assertStringNotContainsString( 'about keeping the webhook receiver URL reachable', $html );
 			self::assertStringNotContainsString( 'notice-warning', $html );
 			// The troubleshooting sentence and the operations guide moved into the manual setup disclosure (inline when the provider has no setup metadata).
 			$guidance = 1 === preg_match( '~<details.*?</details>~s', $html, $disclosure ) ? $disclosure[0] : $html;
@@ -3852,7 +3866,8 @@ final class TroubleshootingViewTest extends TestCase {
 				self::assertSame( 2.0, $xpath->evaluate( 'count(//button[@data-webhook-url-copy]/svg[@aria-hidden="true"][@focusable="false"])' ) );
 				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-webhook-url-status][@role="status"][@aria-live="polite"][@aria-atomic="true"])' ) );
 				self::assertStringNotContainsString( 'Webhook signatures authorize deployment', $html );
-				self::assertStringContainsString( 'Keep this URL reachable: do not cache, challenge or transform its requests.', $html );
+				self::assertStringContainsString( 'Keep the webhook receiver URL reachable: do not cache, challenge or transform its requests on this route.', $html );
+				self::assertStringNotContainsString( 'Keep this URL reachable: do not cache, challenge or transform its requests.', $html );
 			}
 		}
 	}

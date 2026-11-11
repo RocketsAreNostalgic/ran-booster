@@ -195,7 +195,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 				$html
 			);
 		}
-		self::assertStringContainsString( '>Edit settings</a>', $html );
+		self::assertStringContainsString( '>Edit settings<span class="screen-reader-text">: ', $html );
 		self::assertStringNotContainsString( '>Unlink plugin</button>', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="unlink-plugin"', $html );
 		self::assertStringContainsString( 'data-ran-booster-bulk-form', $html );
@@ -317,7 +317,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-update-label>Reinstall</span>', $html );
 		self::assertStringContainsString( 'button-update-package"  disabled="disabled"', $html );
 		self::assertStringContainsString( 'data-update-can-run="0"', $html );
-		self::assertStringContainsString( '>Edit settings</a>', $html );
+		self::assertStringContainsString( '>Edit settings<span class="screen-reader-text">: ', $html );
 		self::assertMatchesRegularExpression(
 			'/data-ran-booster-package-checkbox(?![^>]*disabled="disabled")[^>]*>/',
 			$html

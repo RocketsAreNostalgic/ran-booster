@@ -1,29 +1,42 @@
-.ran-booster-admin .ran-booster-repository-webhook-management__form {
-	display: grid;
-	gap: var(--ran-booster-space-20);
-}
-
-.ran-booster-admin .ran-booster-repository-webhook-setup {
-	margin-block-start: var(--ran-booster-space-20);
-}
-
-.ran-booster-admin .ran-booster-repository-webhook-setup__body {
-	padding: var(--ran-booster-space-20);
-}
+/*
+ * The shared public-lookup-profile layout is a form/guidance split with its
+ * own padding; the setup form has no guidance column, so it fills the
+ * disclosure body edge to edge. Scoped to the management root so the lookup
+ * profile screen keeps its own layout. The Disclosure replaces the native
+ * <details>, so nothing here may depend on the details element's class.
+ */
 
 .ran-booster-admin
-	.ran-booster-repository-webhook-setup
+	.ran-booster-repository-webhook-management
 	.ran-booster-repository-webhook-management__layout {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr);
-	gap: var(--ran-booster-space-20);
+	display: block;
+	padding: 0;
 	border-block-start: 0;
 }
 
 .ran-booster-admin
-	.ran-booster-repository-webhook-setup
+	.ran-booster-repository-webhook-management
 	.ran-booster-repository-webhook-management__form {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: var(--ran-booster-space-20);
 	padding: 0;
+}
+
+/* The error slot is a grid item, so while it is empty it would add a whole gap above the first field. */
+.ran-booster-admin
+	.ran-booster-repository-webhook-management__form
+	> #repository-webhook-management-error:empty {
+	display: none;
+}
+
+/* The field labels use the shared label rule; the group label is a paragraph, so it restates the label look and drops the paragraph's top margin. */
+.ran-booster-admin
+	.ran-booster-repository-webhook-management
+	p.ran-booster-public-lookup-profile__label {
+	margin-block-start: 0;
+	color: var(--ran-booster-text);
+	font-weight: 600;
 }
 
 .ran-booster-admin .ran-booster-repository-webhook-management__field input {
@@ -40,34 +53,29 @@
 .ran-booster-admin
 	.ran-booster-repository-webhook-management__select-action
 	select {
-	flex: 1 1 auto;
+	flex: 1 1 0;
 	min-inline-size: 0;
+	inline-size: auto;
+	max-inline-size: none;
 }
 
 .ran-booster-admin
 	.ran-booster-repository-webhook-management__select-action
-	.button {
+	.ran-wp-ui-button {
 	flex: 0 0 auto;
+	white-space: nowrap;
 }
 
 .ran-booster-admin
 	.ran-booster-repository-webhook-management__field
 	.description {
 	display: block;
-	margin-top: 6px;
+	max-inline-size: none;
+	margin-block: var(--ran-booster-space-8) 0;
 }
 
 .ran-booster-admin .ran-booster-repository-webhook-management__action-help {
 	margin: 0;
-}
-
-.ran-booster-admin .ran-booster-repository-webhook-management__manage-link {
-	margin: var(--ran-booster-space-10) 0 0;
-}
-
-.ran-booster-admin .ran-booster-repository-webhook-readiness.is-inactive {
-	background: var(--ran-booster-surface-subtle);
-	opacity: 0.62;
 }
 
 .ran-booster-admin .ran-booster-repository-webhook-setup.is-inactive {
@@ -75,24 +83,125 @@
 	opacity: 0.58;
 }
 
+/*
+ * Steps reflow by the Card body's own width: one column when narrow, then the
+ * whole process in as few rows as it divides into evenly, so a laptop-width
+ * body never wraps to a lone orphan step.
+ */
+
+.ran-booster-admin
+	:is(
+		.ran-booster-repository-webhook-section,
+		.ran-booster-repository-release-section
+	)
+	> .ran-wp-ui-card
+	.ran-booster-settings-section__body {
+	container-type: inline-size;
+}
+
 .ran-booster-admin .ran-booster-webhook-steps {
 	display: grid;
-	grid-template-columns: repeat(4, minmax(0, 1fr));
+	grid-template-columns: minmax(0, 1fr);
 	gap: var(--ran-booster-space-12);
-	margin: 0 0 var(--ran-booster-space-18);
+	margin: 0 0 var(--ran-booster-card-gap);
 	padding: 0;
 	list-style: none;
 }
 
-.ran-booster-admin .ran-booster-repository-release-lifecycle {
-	grid-template-columns: repeat(3, minmax(0, 1fr));
+@container (min-width: 440px) {
+	.ran-booster-admin .ran-booster-webhook-steps {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+
+	.ran-booster-admin .ran-booster-repository-release-lifecycle {
+		grid-auto-flow: column;
+		grid-template-columns: none;
+		grid-auto-columns: minmax(0, 1fr);
+	}
 }
 
-.ran-booster-admin .ran-booster-repository-release-section__header {
+@container (min-width: 868px) {
+	.ran-booster-admin
+		.ran-booster-webhook-steps:not(
+			.ran-booster-repository-release-lifecycle
+		) {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+}
+
+/* The header row carries the title, the delivery badge and the settings link; an optional strapline sits under it. */
+.ran-booster-admin .ran-booster-repository-publishing__row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin .ran-booster-repository-publishing__heading {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8);
+	min-inline-size: 0;
+}
+
+.ran-booster-admin .ran-booster-repository-publishing__subheading {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-8);
+	margin: 0 0 var(--ran-booster-space-8);
+	font-size: var(--ran-booster-font-size-lg);
+}
+
+/* The strapline sits one heading gap under the sub-heading row (which carries that gap itself) and a section gap above the steps. */
+.ran-booster-admin
+	.ran-booster-repository-publishing__tier
+	> .ran-booster-repository-publishing__strapline {
+	margin-block: 0 var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-management__notices {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+	margin-block: 0 var(--ran-booster-space-16);
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-management__notices .notice {
+	margin: 0;
+}
+
+/*
+ * The webhook actions are the footer band of the 'Webhook setup' disclosure:
+ * the last child of its body, so they open and close with it. The band bleeds
+ * through the body's 16px inline padding, the body drops its bottom padding so
+ * the band ends flush with the disclosure border. The disclosure root clips its
+ * content to its own rounded corners, so the band follows them without radii of
+ * its own. The Card body keeps its normal padding.
+ */
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-setup__body.ran-booster-disclosure__body {
+	--ran-booster-card-inset-inline: var(--ran-booster-space-16);
+
+	padding-block-end: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-setup__content
+	> .ran-booster-card-footer.ran-booster-repository-webhook-management__actions {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+/* The operation result sits one section gap under the Webhook button group. */
+.ran-booster-admin .ran-booster-repository-webhook-management__result {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+	margin-block: var(--ran-booster-space-16) 0;
+}
+
+.ran-booster-admin .ran-booster-repository-webhook-management__result .notice {
+	margin: 0;
 }
 
 .ran-booster-admin .ran-booster-webhook-step {
@@ -104,7 +213,14 @@
 		)
 		minmax(0, 1fr);
 	column-gap: var(--ran-booster-space-10);
+
+	/* Rows pack under the heading; spare height from taller neighbours stays below the text. */
+	grid-template-rows: auto 1fr;
+	align-content: start;
 	min-inline-size: 0;
+
+	/* WordPress adds a 6px bottom margin to every li, which shortens all but the last step in a row. */
+	margin: 0;
 	padding: var(--ran-booster-space-12);
 	border: 1px solid var(--ran-booster-divider);
 	background: var(--ran-booster-surface-subtle);
@@ -133,6 +249,7 @@
 
 .ran-booster-admin .ran-booster-webhook-step strong {
 	display: block;
+	overflow-wrap: break-word;
 	color: var(--ran-booster-text);
 }
 
@@ -145,37 +262,76 @@
 	color: var(--ran-booster-status-ok);
 }
 
+.ran-booster-admin .ran-booster-webhook-step.is-ok > span::after {
+	content: "✓";
+}
+
 .ran-booster-admin .ran-booster-webhook-step.is-warning > span {
 	color: var(--ran-booster-status-warning);
+}
+
+.ran-booster-admin .ran-booster-webhook-step.is-warning > span::after {
+	content: "!";
 }
 
 .ran-booster-admin .ran-booster-webhook-step.is-pending > span {
 	color: var(--ran-booster-status-warning);
 }
 
-.ran-booster-admin .ran-booster-repository-webhook-lifecycle.is-inactive {
+.ran-booster-admin .ran-booster-webhook-step.is-pending > span::after {
+	content: "?";
+}
+
+/* An optional step that was never set up is neutral, not a problem. */
+.ran-booster-admin .ran-booster-webhook-step.is-neutral > span {
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-webhook-step.is-neutral > span::after {
+	content: "–";
+}
+
+/*
+ * An inactive lifecycle is de-emphasised with subtler text colours, not
+ * whole-element opacity, which dropped step text below 4.5:1. Only the
+ * decorative step markers are dimmed.
+ */
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-lifecycle.is-inactive
+	.ran-booster-webhook-step
+	:is(strong, p) {
+	color: var(--ran-booster-text-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-lifecycle.is-inactive
+	.ran-booster-webhook-step
+	> span {
 	opacity: 0.62;
 }
 
 /* Repository detail inherits the provider card reset; preserve the shared marker footprint. */
-.ran-booster-admin
-	.ran-booster-repository-webhook-readiness
-	.ran-booster-readiness-icon,
 .ran-booster-admin
 	.ran-booster-repository-release-readiness
 	.ran-booster-readiness-icon {
 	box-sizing: content-box;
 }
 
-.ran-booster-admin .ran-booster-repository-release-automation {
-	margin-block-start: var(--ran-booster-space-20);
+.ran-booster-admin .ran-booster-repository-release-readiness__body {
+	padding-block: var(--ran-booster-space-12) 0;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-release-readiness__body
+	.ran-booster-readiness-item {
+	padding-inline: 0;
 }
 
 .ran-booster-admin .ran-booster-repository-release-automation__notices {
 	display: grid;
 	gap: var(--ran-booster-space-12);
-	padding: var(--ran-booster-space-16) var(--ran-booster-space-18);
-	border-block-end: 1px solid var(--ran-booster-border);
+	margin-block-end: var(--ran-booster-space-12);
 }
 
 .ran-booster-admin .ran-booster-repository-release-automation__notices .notice {
@@ -188,52 +344,17 @@
 	background: var(--ran-booster-surface-info);
 }
 
-.ran-booster-admin .ran-booster-repository-release-automation__summary {
-	padding: var(--ran-booster-space-16) var(--ran-booster-space-18) 0;
-}
-
-.ran-booster-admin .ran-booster-repository-release-automation__summary p {
-	margin: 0;
-}
-
-.ran-booster-admin .ran-booster-repository-release-automation__summary p + p {
-	margin-block-start: var(--ran-booster-space-8);
-}
-
-.ran-booster-admin .ran-booster-release-automation-heading {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--ran-booster-space-8);
-}
-
-.ran-booster-admin .ran-booster-repository-release-package {
-	border: 0;
-	background: transparent;
-}
-
-.ran-booster-admin .ran-booster-repository-release-package__body {
-	padding: var(--ran-booster-space-16) var(--ran-booster-space-18);
+.ran-booster-admin .ran-booster-repository-release-automation__provenance {
+	margin-block: 0 var(--ran-booster-space-12);
 }
 
 .ran-booster-admin
-	.ran-booster-repository-release-package
-	.ran-booster-readiness-panel__top {
-	background: var(--ran-booster-surface-subtle);
-}
-
-.ran-booster-admin
-	.ran-booster-repository-release-package
-	+ .ran-booster-repository-release-package
-	> .ran-booster-readiness-panel__top {
-	border-block-start: 1px solid var(--ran-booster-border);
+	.ran-booster-repository-release-automation
+	.ran-booster-release-workflow__body {
+	padding: 0;
 }
 
 @media screen and (max-width: 782px) {
-	.ran-booster-admin .ran-booster-webhook-steps {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
 	.ran-booster-admin .ran-booster-repository-webhook-management__actions {
 		align-items: stretch;
 		flex-direction: column;
@@ -241,7 +362,7 @@
 
 	.ran-booster-admin
 		.ran-booster-repository-webhook-management__actions
-		.button {
+		.ran-wp-ui-button {
 		width: 100%;
 		text-align: center;
 	}
@@ -254,7 +375,13 @@
 
 	.ran-booster-admin
 		.ran-booster-repository-webhook-management__select-action
-		.button {
+		select {
+		flex: 0 0 auto;
+	}
+
+	.ran-booster-admin
+		.ran-booster-repository-webhook-management__select-action
+		.ran-wp-ui-button {
 		width: 100%;
 		text-align: center;
 	}

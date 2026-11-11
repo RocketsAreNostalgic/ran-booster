@@ -8,6 +8,7 @@ require_once __DIR__ . '/Support/PackageOperationWordPressFunctions.php';
 require_once __DIR__ . '/Support/PackageOperationGlobalWordPressFunctions.php';
 require_once __DIR__ . '/Support/WPError.php';
 require_once __DIR__ . '/Support/ProviderProfileAdminControllerWordPressFunctions.php';
+require_once __DIR__ . '/Deployment/AttemptRepositoryDatabase.php';
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -23,6 +24,7 @@ use RAN\ManagedRepository;
 use RAN\Package;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
+use RAN\PackageRepositoryChangeRejected;
 use RAN\PackageRemoval\PackageRemovalGateway;
 use RAN\PackageRemoval\PackageRemovalService;
 use RAN\PackageSource;
@@ -160,6 +162,85 @@ final class PackageOperationServiceTest extends TestCase {
 				PackageAdminController::repository_branch_check_action( $package, 'plugin' )
 			)
 		);
+	}
+
+	public function test_successful_package_operations_preserve_bounded_return_context(): void {
+		$cases = array(
+			array( 'install-plugin', array(), 'ran-booster-plugins-create', false ),
+			array( 'install-plugin', array( 'install_another' => '1' ), 'ran-booster-plugins-create', false ),
+			array( 'edit-plugin', array(), 'ran-booster-plugins', true ),
+			array( 'edit-plugin', array( 'check_repository_branch_after_save' => '1' ), 'ran-booster-plugins', true ),
+			array( 'update-plugin', array(), 'ran-booster-plugins', true ),
+		);
+		foreach ( $cases as [$action, $overrides, $page, $settings] ) {
+			$_GET = array(
+				'page'            => $page,
+				'return_type'     => 'plugin',
+				'return_s'        => ' filtered ',
+				'return_provider' => 'bb',
+				'return_source'   => 'branch',
+				'return_policy'   => 'manual',
+				'provider'        => 'gh',
+				'return_url'      => 'https://evil.test/',
+			);
+			if ( $settings ) {
+				$_GET['package'] = 'example/example.php';
+			}
+			$dashboard = $this->dashboard( new OperationCoordinator() );
+			$redirect  = $dashboard->post_package_operation( $action, $this->input( $action, $overrides ) );
+			self::assertIsString( $redirect, $action );
+			$query = $this->redirect_query( $redirect );
+			self::assertSame( 'plugin', $query['return_type'], $action );
+			self::assertSame( 'filtered', $query['return_s'], $action );
+			self::assertSame( 'bb', $query['return_provider'], $action );
+			self::assertSame( 'branch', $query['return_source'], $action );
+			self::assertSame( 'manual', $query['return_policy'], $action );
+			self::assertArrayNotHasKey( 'return_url', $query );
+			if ( isset( $overrides['install_another'] ) ) {
+				self::assertSame( 'gh', $query['provider'] );
+				self::assertSame( '1', $query['open_picker'] );
+			}
+			if ( isset( $overrides['check_repository_branch_after_save'] ) ) {
+				self::assertSame( '1', $query['ran_booster_repository_branch_check'] );
+			}
+		}
+		$_GET = array();
+	}
+
+	public function test_direct_and_invalid_return_context_fall_back_to_unfiltered_parent(): void {
+		foreach ( array(
+			array(),
+			array(
+				'return_type'     => 'theme',
+				'return_s'        => 'wrong type',
+				'return_provider' => 'bb',
+			),
+			array(
+				'return_type'   => 'plugin',
+				'return_s'      => array( 'invalid' ),
+				'return_source' => 'bogus',
+				'return_policy' => 'bogus',
+				'return_url'    => 'https://evil.test/',
+			),
+		) as $context ) {
+			$_GET      = array_merge(
+				array(
+					'page'    => 'ran-booster-plugins',
+					'package' => 'example/example.php',
+				),
+				$context
+			);
+			$dashboard = $this->dashboard( new OperationCoordinator() );
+			$redirect  = $dashboard->post_package_operation( 'edit-plugin', $this->input( 'edit-plugin' ) );
+			self::assertIsString( $redirect );
+			$query = $this->redirect_query( $redirect );
+			self::assertSame( 'ran-booster-plugins', $query['page'] );
+			self::assertSame( 'plugin', $query['return_type'] );
+			foreach ( array( 'return_s', 'return_provider', 'return_source', 'return_policy', 'return_url' ) as $key ) {
+				self::assertArrayNotHasKey( $key, $query );
+			}
+		}
+		$_GET = array();
 	}
 
 	public function test_failed_save_never_produces_arepository_branch_check_redirect(): void {
@@ -384,7 +465,12 @@ final class PackageOperationServiceTest extends TestCase {
 	public function test_repository_replacement_requires_a_new_adoption_before_any_write(): void {
 		$plugins = new OperationPluginRepository( $this->plugin() );
 		$service = $this->service( $plugins, new OperationThemeRepository( new OperationTheme( 'example' ) ), new OperationCoordinator() );
-		foreach ( array( array( 'gh', 'R_other' ), array( 'bb', 'R_example' ) ) as [$provider, $repository_id] ) {
+		foreach (
+			array(
+				'different repository id' => array( 'gh', 'R_other' ),
+				'different provider'      => array( 'bb', 'R_example' ),
+			) as $case => [$provider, $repository_id]
+		) {
 			try {
 				$service->execute(
 					PackageOperation::from_input(
@@ -398,12 +484,73 @@ final class PackageOperationServiceTest extends TestCase {
 						)
 					)
 				);
-				self::fail( 'A repository replacement must not edit the current adoption.' );
-			} catch ( \RuntimeException $failure ) {
-				self::assertStringContainsString( 'Stop managing', $failure->getMessage() );
-				self::assertSame( array(), $plugins->edited );
+				self::fail( 'A repository replacement must not edit the current adoption: ' . $case );
+			} catch ( PackageRepositoryChangeRejected $failure ) {
+				self::assertStringContainsString( 'Stop managing', $failure->getMessage(), $case );
+				self::assertSame( array(), $plugins->edited, $case );
 			}
 		}
+	}
+
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_dashboard_explains_a_rejected_repository_change_without_a_generic_reference(): void {
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound -- The notice view only renders inside WordPress; this isolated process stands in for it.
+		define( 'WPINC', 'wp-includes' );
+		foreach (
+			array(
+				'different repository id' => array( 'gh', 'R_other' ),
+				'different provider'      => array( 'bb', 'R_example' ),
+			) as $case => [$provider, $repository_id]
+		) {
+			$dashboard = $this->dashboard( new OperationCoordinator() );
+			$input     = $this->input(
+				'edit-plugin',
+				array(
+					'provider'               => $provider,
+					'provider_repository_id' => $repository_id,
+				)
+			);
+
+			self::assertFalse( $dashboard->post_package_operation( 'edit-plugin', $input ), $case );
+			self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'], $case );
+			self::assertCount( 1, $dashboard->messages, $case );
+			self::assertSame( 'error', $dashboard->messages[0]['type'], $case );
+			self::assertSame( 'ran_booster_package_repository_change_rejected', $dashboard->messages[0]['code'], $case );
+			self::assertSame( 'To use a different Git provider or repository, stop managing this package and adopt it again.', $dashboard->messages[0]['message'], $case );
+			self::assertStringNotContainsString( 'Reference:', $dashboard->messages[0]['message'], $case );
+			unset( $GLOBALS['ran_booster_test_status_header'] );
+
+			$messages = $dashboard->messages;
+			require_once __DIR__ . '/Admin/AdminViewWordPressFunctions.php';
+			ob_start();
+			require dirname( __DIR__ ) . '/views/notices.php';
+			$html = (string) ob_get_clean();
+			self::assertStringContainsString( '<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error"', $html, $case );
+			self::assertStringContainsString( '<p>To use a different Git provider or repository, stop managing this package and adopt it again.</p>', $html, $case );
+		}
+	}
+
+	public function test_other_edit_failures_keep_the_generic_reference_notice(): void {
+		$plugin = $this->plugin();
+		$plugin->set_source( PackageSource::RELEASE_ASSET, 2 );
+		$plugin->set_subdirectory( 'packages/example' );
+		$dashboard = $this->dashboard( new OperationCoordinator(), $plugin );
+		$input     = $this->input(
+			'edit-plugin',
+			array(
+				'expected_source'          => PackageSource::RELEASE_ASSET->value,
+				'expected_source_revision' => '2',
+				'expected_subdirectory'    => 'packages/example',
+			)
+		);
+
+		self::assertFalse( $dashboard->post_package_operation( 'edit-plugin', $input ) );
+		self::assertSame( 400, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( 'ran_booster_manual_action_failed', $dashboard->messages[0]['code'] );
+		self::assertStringContainsString( 'Reference: ran_booster_manual_action_failed.', $dashboard->messages[0]['message'] );
+		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
 	/** @return list<array{string}> */

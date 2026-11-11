@@ -117,8 +117,8 @@ $repository_branch_check_message  = match ( $repository_branch_check_outcome ?? 
 	'subdirectory_unverified'  => __( 'The saved branch is accessible, but Booster could not check the configured subdirectory. Try again later.', 'ran-booster' ),
 	default                => null,
 };
-$repository_branch_check_notice_class = null !== $repository_branch_check_message ? 'notice-warning' : 'notice-error';
-$repository_state_class               = match ( true ) {
+$repository_branch_check_intent = null !== $repository_branch_check_message ? 'warning' : 'error';
+$repository_state_class         = match ( true ) {
 	! $identity_ready                         => 'is-warning',
 	$repository_branch_verified                => 'is-ok',
 	$saved_identity_ready                      => 'is-ok',
@@ -197,7 +197,8 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					<h4 id="ran-booster-branch-readiness-heading"><?php esc_html_e( 'Branch readiness', 'ran-booster' ); ?></h4>
 				</div>
 				<?php if ( $needs_attention ) { ?>
-					<span class="ran-booster-badge ran-booster-badge--error"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></span>
+					<?php $needs_attention_label = __( 'Needs attention', 'ran-booster' ); ?>
+					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $needs_attention_label, 'high' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<?php } ?>
 			</div>
 			<ul class="ran-booster-readiness-list">
@@ -257,7 +258,9 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 			<div class="ran-booster-readiness-actions">
 				<div
 					id="ran-booster-repository-branch-check-error"
-					class="notice <?php echo esc_attr( $repository_branch_check_notice_class ); ?> inline"
+					class="notice notice-<?php echo esc_attr( $repository_branch_check_intent ); ?> inline ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $repository_branch_check_intent ); ?>"
+					data-ran-booster-ui-notice
+					data-ran-booster-ui-notice-intent="<?php echo esc_attr( $repository_branch_check_intent ); ?>"
 					role="alert"
 					tabindex="-1"
 					<?php if ( null !== $repository_branch_check_message ) { ?>
@@ -265,14 +268,18 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					<?php } else { ?>
 						hidden
 					<?php } ?>
-				><p><?php echo esc_html( $repository_branch_check_message ?? '' ); ?></p></div>
+				><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+						<p data-ran-booster-ui-notice-primary><?php echo esc_html( $repository_branch_check_message ?? '' ); ?></p>
+					</div>
+					<?php \RAN\Admin\Component\NoticeIcon::print_intent( $repository_branch_check_intent ); ?>
+				</div>
 				<?php if ( $is_package_edit ) { ?>
 					<button
 					type="submit"
 					name="ran_booster[check_repository_branch_after_save]"
 					value="1"
 					form="ran-booster-package-edit-form"
-					class="button button-primary ran-booster-branch-readiness-check-form"
+					class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' ran-booster-branch-readiness-check-form' ); ?>"
 					data-ran-booster-enhanced-mutation
 					data-ran-booster-error-target="#ran-booster-repository-branch-check-error"
 					data-ran-booster-relocate-rendered-error
@@ -283,13 +290,15 @@ $webhook_action_label = __( 'Manage webhooks', 'ran-booster' );
 					hx-push-url="<?php echo esc_url( wp_make_link_relative( (string) $check_return_url ) ); ?>"
 					hx-sync="this:drop"
 					hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]"
+					data-ran-booster-busy-label="<?php echo esc_attr( __( 'Saving and checking…', 'ran-booster' ) ); ?>"
+					data-ran-booster-busy-message="<?php echo esc_attr( __( 'Saving settings and checking the branch. This can take a few seconds.', 'ran-booster' ) ); ?>"
 					<?php disabled( isset( $package_mutation_available ) && false === $package_mutation_available ); ?>
 					><?php esc_html_e( 'Save settings and check', 'ran-booster' ); ?></button>
 				<?php } ?>
 				<?php if ( $repository_detail_available ) { ?>
-					<a class="button" href="<?php echo esc_url( $provider_settings_url ); ?>"><?php echo esc_html( $webhook_action_label ); ?></a>
+					<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $provider_settings_url ); ?>"><?php echo esc_html( $webhook_action_label ); ?></a>
 				<?php } else { ?>
-					<button type="button" class="button" disabled aria-disabled="true"><?php echo esc_html( $webhook_action_label ); ?></button>
+					<button type="button" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"><?php echo esc_html( $webhook_action_label ); ?></button>
 				<?php } ?>
 			</div>
 		</div>

@@ -1,5 +1,32 @@
 const managedReleaseBrowsers = new WeakSet();
 
+const earlierReleasesDisclosure = (summaryText) => {
+	const host = document.createElement('div');
+	host.setAttribute(
+		'data-ran-booster-ui-disclosure',
+		'release-earlier-releases'
+	);
+	host.setAttribute('data-ran-booster-ui-disclosure-density', 'compact');
+	host.className = 'ran-booster-release-settings-disclosure';
+	const disclosure = document.createElement('details');
+	disclosure.className = 'ran-booster-disclosure';
+	disclosure.setAttribute('data-ran-booster-ui-disclosure-fallback', '');
+	const summary = document.createElement('summary');
+	summary.textContent = summaryText;
+	const body = document.createElement('div');
+	body.className = 'ran-booster-disclosure__body';
+	body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+	disclosure.append(summary, body);
+	host.append(disclosure);
+	return { host, body };
+};
+const mountDisclosure = (host) =>
+	host.dispatchEvent(
+		new CustomEvent('ran-booster:ui-disclosure-update', {
+			bubbles: true,
+		})
+	);
+
 const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const { __, sprintf } = wp.i18n;
 	if (
@@ -20,6 +47,14 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const candidateList = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-candidate-list]'
 	);
+	const placeholder = managedBrowser.querySelector(
+		'[data-ran-booster-managed-release-placeholder]'
+	);
+	const showPlaceholder = (visible) => {
+		if (placeholder) {
+			placeholder.hidden = !visible;
+		}
+	};
 	const heading = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-heading]'
 	);
@@ -29,7 +64,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const retry = managedBrowser.querySelector(
 		'[data-ran-booster-managed-release-retry]'
 	);
-	const nativeUpdate = managedBrowser.querySelector(
+	// Lives in the Package operations group, outside the release browser.
+	const nativeUpdate = document.querySelector(
 		'[data-ran-booster-managed-release-native-update]'
 	);
 	const errorNotice = managedBrowser.querySelector(
@@ -82,7 +118,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		nativeUpdate.setAttribute('aria-disabled', 'true');
 		nativeUpdate.setAttribute('tabindex', '-1');
 		nativeUpdate.classList.add('disabled');
-		nativeUpdate.textContent = __('Install now', 'ran-booster');
+		nativeUpdate.textContent = __('Update now', 'ran-booster');
 	};
 	const enableNativeUpdate = (version) => {
 		const url =
@@ -97,7 +133,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		/* translators: %s: release version. */
 		nativeUpdate.textContent = sprintf(
 			/* translators: %s: release version. */
-			__('Install %s now', 'ran-booster'),
+			__('Update to %s', 'ran-booster'),
 			version
 		);
 		return true;
@@ -292,11 +328,22 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		setListBusy(true);
 		disableNativeUpdate();
 		if (candidateList) {
-			candidateList.replaceChildren();
+			if (window.htmx?.swap) {
+				window.htmx.swap(candidateList, '', {
+					swapStyle: 'innerHTML',
+					swapDelay: 0,
+					settleDelay: 0,
+					transition: false,
+					ignoreTitle: true,
+				});
+			} else {
+				candidateList.replaceChildren();
+			}
 		}
 		if (candidates) {
 			candidates.hidden = true;
 		}
+		showPlaceholder(true);
 		setStatus(
 			wp.i18n.__('Checking published releases…', 'ran-booster'),
 			wp.i18n.__(
@@ -321,7 +368,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			) {
 				throw new Error('no_releases');
 			}
-			candidateList.replaceChildren();
 			if (response.code === 'no_releases') {
 				const empty = document.createElement('p');
 				empty.className = 'ran-booster-release-candidate';
@@ -339,6 +385,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				candidateList.append(empty);
 				if (candidates) {
 					candidates.hidden = false;
+					showPlaceholder(false);
 				}
 				setStatus(
 					wp.i18n.__('No published releases found', 'ran-booster'),
@@ -437,24 +484,18 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				candidateList.append(installed);
 			}
 			if (earlier.length > 0) {
-				const disclosure = document.createElement('details');
-				disclosure.className =
-					'ran-booster-release-settings-disclosure ran-booster-disclosure';
-				const summary = document.createElement('summary');
-				summary.textContent = wp.i18n.sprintf(
-					/* translators: %d: number of earlier releases. */
-					wp.i18n._n(
-						'Show %d earlier release',
-						'Show %d earlier releases',
-						earlier.length,
-						'ran-booster'
-					),
-					earlier.length
+				const { host: disclosure, body } = earlierReleasesDisclosure(
+					wp.i18n.sprintf(
+						/* translators: %d: number of earlier releases. */
+						wp.i18n._n(
+							'Show %d earlier release',
+							'Show %d earlier releases',
+							earlier.length,
+							'ran-booster'
+						),
+						earlier.length
+					)
 				);
-				disclosure.append(summary);
-				const body = document.createElement('div');
-				body.className = 'ran-booster-disclosure__body';
-				disclosure.append(body);
 				if (
 					earlier.some(
 						(candidate) =>
@@ -472,9 +513,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					appendCandidate(candidate, body)
 				);
 				candidateList.append(disclosure);
+				mountDisclosure(disclosure);
 			}
 			if (candidates) {
 				candidates.hidden = false;
+				showPlaceholder(false);
 			}
 			if (inspectable.length > 0) {
 				setStatus(
@@ -503,13 +546,17 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					managedBrowser.dataset.ranBoosterManagedReleaseChannel ===
 					'prerelease'
 				) {
-					const warning = document.createElement('p');
-					warning.className =
-						'notice notice-warning inline ran-booster-release-candidate__warning';
-					warning.textContent = wp.i18n.__(
+					const { host: warning, content } =
+						window.ranBoosterNotice.create('warning', {
+							className: 'ran-booster-release-candidate__warning',
+							scope: 'global',
+						});
+					const text = document.createElement('p');
+					text.textContent = wp.i18n.__(
 						'Preview track currently offers only versions older than installed. WordPress Updates will not downgrade this package.',
 						'ran-booster'
 					);
+					content.append(text);
 					candidateList.append(warning);
 				}
 				setStatus(
@@ -525,6 +572,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			}
 		} catch {
 			if (current === sequence) {
+				showPlaceholder(false);
 				showError(
 					wp.i18n.__(
 						'Booster could not load published releases. The Git provider may be temporarily unavailable or rate-limited. Try again later.',
@@ -559,12 +607,73 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 (() => {
 	'use strict';
 
+	// The source switch bar message follows the track radios and readiness.
+	// Readiness is the ready flag on the Use releases button; the not-ready
+	// message and tooltip are server-rendered so each is one translatable string.
+	const syncUseReleasesState = () => {
+		const button = document.querySelector(
+			'[data-ran-booster-use-releases]'
+		);
+		const summary = document.querySelector(
+			'[data-ran-booster-use-releases-summary]'
+		);
+		if (!button || !summary) {
+			return;
+		}
+		const ready = button.dataset.ranBoosterUseReleasesReady === 'true';
+		const template = summary.dataset.ranBoosterUseReleasesSummary;
+		const unavailable =
+			summary.dataset.ranBoosterUseReleasesSummaryUnavailable;
+		const track = document
+			.querySelector('[data-ran-booster-release-track-summary]')
+			?.textContent?.trim();
+		if (ready && template && track) {
+			summary.textContent = template.replace('%s', track);
+		} else if (!ready && unavailable) {
+			summary.textContent = unavailable;
+		}
+		const wrapper = button.closest('.ran-booster-reason-tooltip');
+		const reason = wrapper?.querySelector('[role="tooltip"]');
+		if (ready) {
+			wrapper?.removeAttribute('data-ran-booster-reason-tooltip');
+			if (reason) {
+				reason.hidden = true;
+			}
+			if (!button.disabled) {
+				button.setAttribute('aria-disabled', 'false');
+				if (
+					reason &&
+					button.getAttribute('aria-describedby') === reason.id
+				) {
+					button.removeAttribute('aria-describedby');
+				}
+			}
+		} else {
+			wrapper?.setAttribute('data-ran-booster-reason-tooltip', '');
+			button.setAttribute('aria-disabled', 'true');
+			if (reason) {
+				button.setAttribute('aria-describedby', reason.id);
+			}
+		}
+	};
+
+	if (typeof window.MutationObserver === 'function') {
+		new window.MutationObserver(syncUseReleasesState).observe(
+			document.documentElement,
+			{
+				attributes: true,
+				attributeFilter: ['data-ran-booster-use-releases-ready'],
+				subtree: true,
+			}
+		);
+	}
+
 	const updateReleaseTrackSummary = (event) => {
 		if (!event.target?.matches('[data-ran-booster-release-channel]')) {
 			return;
 		}
 		const disclosure = event.target.closest(
-			'#ran-booster-release-track-settings'
+			'#ran-booster-release-track-settings, [data-ran-booster-ui-disclosure="package-release-track"]'
 		);
 		const summary = disclosure?.querySelector(
 			'[data-ran-booster-release-track-summary]'
@@ -574,9 +683,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		if (summary && labelText) {
 			summary.textContent = labelText.textContent;
 		}
+		syncUseReleasesState();
 	};
 
 	document.addEventListener('change', updateReleaseTrackSummary);
+	syncUseReleasesState();
 
 	const initializeManagedReleaseBrowserAfterSwap = (event) => {
 		if (event.detail?.target?.id !== 'wpbody-content') {
@@ -664,15 +775,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const choiceDescription = releaseChoice.querySelector(
 		'[data-ran-booster-source-description]'
 	);
-	const choiceHeading = releaseChoice.querySelector(
-		'[data-ran-booster-source-heading]'
-	);
-	const choiceMeta = releaseChoice.querySelector(
-		'[data-ran-booster-source-meta]'
-	);
+	const staticDescription = choiceDescription?.textContent ?? '';
 	const channelControl = setup.querySelector(
 		'[data-ran-booster-release-channel-control]'
 	);
+
 	const advancedSummary = document.querySelector(
 		'[data-ran-booster-advanced-source-summary]'
 	);
@@ -764,7 +871,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		setHidden(switchBranch, options.switchBranch !== true);
 	};
 
-	const setChoiceState = (state, description, meta) => {
+	const setChoiceState = (state) => {
 		const disabled =
 			state === 'waiting' ||
 			state === 'unsupported' ||
@@ -796,14 +903,14 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			'aria-disabled',
 			disabled ? 'true' : 'false'
 		);
-		releaseChoice.setAttribute('title', disabled ? description : '');
+		releaseChoice.setAttribute('title', disabled ? staticDescription : '');
 		releaseChoice.setAttribute(
 			'aria-label',
 			disabled
 				? wp.i18n.sprintf(
 						/* translators: %s: release availability description. */
 						wp.i18n.__('Releases unavailable: %s', 'ran-booster'),
-						description
+						staticDescription
 					)
 				: wp.i18n.__('Releases', 'ran-booster')
 		);
@@ -811,21 +918,11 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			'aria-busy',
 			state === 'checking' ? 'true' : 'false'
 		);
-		setText(choiceHeading, wp.i18n.__('Releases', 'ran-booster'));
-		setText(choiceDescription, description);
-		setText(choiceMeta, meta);
 	};
 
 	const showIdle = () => {
 		selectedRelease = null;
-		setChoiceState(
-			'available',
-			wp.i18n.__(
-				'View eligible published releases from this repository.',
-				'ran-booster'
-			),
-			wp.i18n.__('Stable by default', 'ran-booster')
-		);
+		setChoiceState('available');
 		setStatus(
 			wp.i18n.__('Release candidates appear here', 'ran-booster'),
 			includesPrereleases()
@@ -848,14 +945,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 
 	const showWaitingForRepository = () => {
 		selectedRelease = null;
-		setChoiceState(
-			'waiting',
-			wp.i18n.__(
-				'Choose a repository before selecting this source.',
-				'ran-booster'
-			),
-			wp.i18n.__('Choose repository first', 'ran-booster')
-		);
+		setChoiceState('waiting');
 		setStatus(
 			wp.i18n.__('Release candidates appear here', 'ran-booster'),
 			wp.i18n.__(
@@ -874,14 +964,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const showUnsupportedProvider = () => {
 		selectedRelease = null;
 		releaseSelected = false;
-		setChoiceState(
-			'unsupported',
-			wp.i18n.__(
-				'Published releases are not available for this Git provider.',
-				'ran-booster'
-			),
-			wp.i18n.__('Git provider capability unavailable', 'ran-booster')
-		);
+		setChoiceState('unsupported');
 		setStatus(
 			wp.i18n.__('Published releases are unavailable', 'ran-booster'),
 			wp.i18n.__(
@@ -901,14 +984,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 	const showSubdirectoryUnsupported = () => {
 		selectedRelease = null;
 		releaseSelected = false;
-		setChoiceState(
-			'subdirectory',
-			wp.i18n.__(
-				'Published releases require the repository root. Branch supports the configured subdirectory.',
-				'ran-booster'
-			),
-			wp.i18n.__('Repository root required', 'ran-booster')
-		);
+		setChoiceState('subdirectory');
 		setStatus(
 			wp.i18n.__('Published releases are unavailable', 'ran-booster'),
 			wp.i18n.__(
@@ -949,19 +1025,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 
 	const setChecking = (checking, phase = 'discover') => {
 		if (checking) {
-			setChoiceState(
-				'checking',
-				includesPrereleases()
-					? wp.i18n.__(
-							'Checking the selected repository for stable releases and prereleases…',
-							'ran-booster'
-						)
-					: wp.i18n.__(
-							'Checking the selected repository for a stable published release…',
-							'ran-booster'
-						),
-				wp.i18n.__('Checking repository…', 'ran-booster')
-			);
+			setChoiceState('checking');
 			const inspecting = phase === 'inspect';
 			setStatus(
 				inspecting
@@ -1025,10 +1089,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			'Repository access or the Git provider may be temporarily unavailable.',
 			'ran-booster'
 		);
-		let choiceMessage = wp.i18n.__(
-			'Booster could not confirm release availability.',
-			'ran-booster'
-		);
 		if (noRelease && includesPrereleases()) {
 			statusHeading = wp.i18n.__(
 				'No eligible stable release or prerelease found',
@@ -1036,10 +1096,6 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			);
 			statusMessage = wp.i18n.__(
 				'This repository does not publish an eligible stable or preview release.',
-				'ran-booster'
-			);
-			choiceMessage = wp.i18n.__(
-				'No eligible stable release or prerelease is currently available.',
 				'ran-booster'
 			);
 		} else if (noRelease) {
@@ -1051,19 +1107,9 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 				'This repository does not publish an eligible stable release.',
 				'ran-booster'
 			);
-			choiceMessage = wp.i18n.__(
-				'No eligible stable published release is currently available.',
-				'ran-booster'
-			);
 		}
 		selectedRelease = null;
-		setChoiceState(
-			'unavailable',
-			choiceMessage,
-			noRelease
-				? wp.i18n.__('Branch only', 'ran-booster')
-				: wp.i18n.__('Check failed', 'ran-booster')
-		);
+		setChoiceState('unavailable');
 		setStatus(statusHeading, statusMessage, {
 			retry: !noRelease,
 			switchBranch: true,
@@ -1075,19 +1121,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 
 	const showCandidateUnavailable = (code) => {
 		selectedRelease = null;
-		setChoiceState(
-			'unavailable',
-			code === 'release_invalid'
-				? wp.i18n.__(
-						'The selected release is not an eligible WordPress package. Choose another release.',
-						'ran-booster'
-					)
-				: wp.i18n.__(
-						'The selected release could not be checked. Choose another release or retry.',
-						'ran-booster'
-					),
-			wp.i18n.__('Choose another', 'ran-booster')
-		);
+		setChoiceState('unavailable');
 		setStatus(
 			wp.i18n.__('Published release could not be used', 'ran-booster'),
 			code === 'release_invalid'
@@ -1153,51 +1187,24 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		};
 		appendCandidate(releases[0], candidateList);
 		if (releases.length > 1) {
-			const disclosure = document.createElement('details');
-			disclosure.className =
-				'ran-booster-release-settings-disclosure ran-booster-disclosure';
-			const summary = document.createElement('summary');
 			const earlier = releases.slice(1);
-			summary.textContent = wp.i18n.sprintf(
-				/* translators: %d: number of earlier releases. */
-				wp.i18n._n(
-					'Show %d earlier release',
-					'Show %d earlier releases',
-					earlier.length,
-					'ran-booster'
-				),
-				earlier.length
+			const { host: disclosure, body } = earlierReleasesDisclosure(
+				wp.i18n.sprintf(
+					/* translators: %d: number of earlier releases. */
+					wp.i18n._n(
+						'Show %d earlier release',
+						'Show %d earlier releases',
+						earlier.length,
+						'ran-booster'
+					),
+					earlier.length
+				)
 			);
-			disclosure.append(summary);
-			const body = document.createElement('div');
-			body.className = 'ran-booster-disclosure__body';
-			disclosure.append(body);
 			earlier.forEach((candidate) => appendCandidate(candidate, body));
 			candidateList.append(disclosure);
+			mountDisclosure(disclosure);
 		}
-		setChoiceState(
-			'available',
-			wp.i18n.sprintf(
-				/* translators: %d: number of eligible published releases. */
-				wp.i18n._n(
-					'%d eligible published release found.',
-					'%d eligible published releases found.',
-					releases.length,
-					'ran-booster'
-				),
-				releases.length
-			),
-			wp.i18n.sprintf(
-				/* translators: %d: number of available releases. */
-				wp.i18n._n(
-					'%d available',
-					'%d available',
-					releases.length,
-					'ran-booster'
-				),
-				releases.length
-			)
-		);
+		setChoiceState('available');
 		setStatus(
 			wp.i18n.__('Release candidates loaded', 'ran-booster'),
 			wp.i18n.sprintf(
@@ -1281,18 +1288,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		selectedRelease.fingerprint = data.fingerprint;
 		selectedRelease.providerExpectation = data.provider_expectation;
 		selectedRelease.installNonce = data.install_nonce;
-		setChoiceState(
-			'available',
-			wp.i18n.sprintf(
-				/* translators: %s: inspected release version. */
-				wp.i18n.__(
-					'Release %s was inspected and is ready for final acquisition.',
-					'ran-booster'
-				),
-				data.version
-			),
-			wp.i18n.__('Inspected', 'ran-booster')
-		);
+		setChoiceState('available');
 		setStatus(
 			wp.i18n.__('Published release inspected', 'ran-booster'),
 			wp.i18n.__(

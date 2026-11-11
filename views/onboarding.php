@@ -33,7 +33,20 @@ $provider_selection_labels = array(
 	'decision_required'   => __( 'Provider selection needs a decision', 'ran-booster' ),
 	'storage_unavailable' => __( 'Provider selection storage is unavailable', 'ran-booster' ),
 );
-$provider_attention        = array_filter(
+// A detected replacement awaiting approval names the remaining step; every other
+// selection problem keeps its own wording, and only an unexplained refusal is
+// reported as not admitted.
+$provider_attention_message = static function ( array $provider ) use ( $provider_selection_labels ): string {
+	$selection = $provider['selection'];
+	if ( 'decision_required' === $selection && true === ( $provider['replacement_detected'] ?? false ) ) {
+		return __( 'A custom GitHub provider was detected. Review and approve it to enable GitHub operations.', 'ran-booster' );
+	}
+	if ( is_string( $selection ) && 'available' !== $selection && isset( $provider_selection_labels[ $selection ] ) ) {
+		return $provider_selection_labels[ $selection ];
+	}
+	return __( 'Provider is not admitted.', 'ran-booster' );
+};
+$provider_attention         = array_filter(
 	$provider_summaries,
 	static fn( array $provider ): bool => false === $provider['admitted']
 		|| ( 'gh' === $provider['code'] && in_array( $provider['selection'], array( 'conflict', 'incompatible', 'missing', 'recovery_required', 'decision_required', 'storage_unavailable' ), true ) )
@@ -48,14 +61,20 @@ $provider_attention        = array_filter(
 				<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Public repositories do not need credentials or webhooks.', 'ran-booster' ); ?></p>
 			</div>
 		<?php } else { ?>
-			<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Overview', 'ran-booster' ); ?></h2>
+			<div>
+				<h2 id="ran-booster-onboarding-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Overview', 'ran-booster' ); ?></h2>
+				<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Review recent activity, managed packages and your site’s configuration.', 'ran-booster' ); ?></p>
+			</div>
 		<?php } ?>
-		<?php if ( 'onboarding' === $overview_view && current_user_can( 'manage_options' ) ) { ?>
+		<?php if ( current_user_can( 'manage_options' ) ) { ?>
 			<form method="post" action="<?php echo esc_url( $overview_url ); ?>">
-				<?php wp_nonce_field( 'ran-booster-overview-presentation' ); ?>
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-overview-presentation' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="overview-presentation">
-				<input type="hidden" name="ran_booster[presentation]" value="dashboard">
-				<button type="submit" class="button"><?php esc_html_e( 'Skip onboarding', 'ran-booster' ); ?></button>
+				<input type="hidden" name="ran_booster[presentation]" value="<?php echo 'onboarding' === $overview_view ? 'dashboard' : 'onboarding'; ?>">
+				<span data-ran-booster-ui-button="overview-presentation">
+					<button type="submit" class="button" data-ran-booster-ui-button-fallback><?php echo esc_html( 'onboarding' === $overview_view ? __( 'Skip onboarding', 'ran-booster' ) : __( 'Return to onboarding', 'ran-booster' ) ); ?></button>
+					<span data-ran-booster-ui-button-mount></span>
+				</span>
 			</form>
 		<?php } ?>
 	</header>
@@ -83,20 +102,29 @@ $provider_attention        = array_filter(
 		'path_configured'         => 'neutral',
 		'storage_healthy'         => 'ok',
 		'storage_needs_attention' => 'warning',
-		'setup_available'         => 'neutral',
+		'setup_available'         => 'warning',
 		'manual_required'         => 'warning',
 		'unsupported'             => 'error',
 		'pending_verification'    => 'pending',
+	);
+	$overview_storage_intents      = array(
+		'path_configured'         => 'none',
+		'storage_healthy'         => 'stable',
+		'storage_needs_attention' => 'medium',
+		'setup_available'         => 'medium',
+		'manual_required'         => 'medium',
+		'unsupported'             => 'high',
+		'pending_verification'    => 'informational',
 	);
 	$overview_storage_unknown      = '' === $overview_storage_status;
 	$overview_storage_problem      = in_array( $overview_storage_status, array( 'storage_needs_attention', 'manual_required', 'unsupported' ), true );
 	?>
 	<?php if ( $overview_inventory_incomplete || $overview_storage_unknown || $overview_storage_problem || array() !== $provider_attention || 'unavailable' === $credential_expiry['status'] || ( 'captured' === $credential_expiry['status'] && array() !== $credential_expiry['items'] ) ) { ?>
-		<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-overview-attention">
+		<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-overview-attention"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<h3 id="ran-booster-overview-attention"><?php esc_html_e( 'Needs attention', 'ran-booster' ); ?></h3>
 			<?php if ( 'captured' === $credential_expiry['status'] ) { ?>
 				<?php foreach ( $credential_expiry['items'] as $expiry_item ) { ?>
-					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> <span class="ran-booster-pill ran-booster-pill--<?php echo esc_attr( in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'error' : 'warning' ); ?>"><?php echo esc_html( $expiry_item['badge_label'] ); ?></span></p>
+					<p><a href="<?php echo esc_url( $expiry_item['url'] ); ?>"><?php echo esc_html( $expiry_item['provider_label'] ); ?>: <?php echo esc_html( $expiry_item['label'] ); ?></a> <?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $expiry_item['badge_label'], in_array( $expiry_item['stage'], array( 'expired', 'urgent' ), true ) ? 'high' : 'medium' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></p>
 				<?php } ?>
 				<?php if ( null !== $credential_expiry['total'] && $credential_expiry['total'] > count( $credential_expiry['items'] ) ) { ?>
 					<?php // translators: 1: displayed reminders, 2: total actionable reminders. ?>
@@ -109,7 +137,7 @@ $provider_attention        = array_filter(
 				<?php } ?>
 			<?php } ?>
 			<?php foreach ( $provider_attention as $provider ) { ?>
-				<p><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>: <?php echo esc_html( false === $provider['admitted'] ? __( 'Provider is not admitted.', 'ran-booster' ) : $provider_selection_labels[ $provider['selection'] ] ); ?></p>
+				<p><a href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>: <?php echo esc_html( $provider_attention_message( $provider ) ); ?></p>
 			<?php } ?>
 			<?php if ( $overview_inventory_incomplete ) { ?>
 				<p><?php esc_html_e( 'The managed package inventory is incomplete or unavailable.', 'ran-booster' ); ?></p>
@@ -119,7 +147,7 @@ $provider_attention        = array_filter(
 			<?php } elseif ( $overview_storage_problem ) { ?>
 				<p><?php echo esc_html( $overview_storage_summary['message'] ?? '' ); ?> <a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review storage', 'ran-booster' ); ?></a></p>
 			<?php } ?>
-		</section>
+		</div></div></section>
 	<?php } ?>
 
 	<div class="ran-booster-overview-grid">
@@ -133,45 +161,53 @@ $provider_attention        = array_filter(
 		<?php unset( $overview_dashboard_activity ); ?>
 		<?php require __DIR__ . '/overview-dashboard.php'; ?>
 	<?php } ?>
-	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-storage-heading">
+	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-storage-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<div class="ran-booster-onboarding__storage-heading">
 			<h3 id="ran-booster-onboarding-storage-heading"><?php echo esc_html( 'onboarding' === $overview_view ? __( '1. Secure credential storage', 'ran-booster' ) : __( 'Secure credential storage', 'ran-booster' ) ); ?></h3>
-			<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $overview_storage_classes[ $overview_storage_status ] ?? 'neutral' ); ?>" data-ran-booster-storage-status="<?php echo esc_attr( $overview_storage_status ); ?>"><?php echo esc_html( $overview_storage_labels[ $overview_storage_status ] ?? __( 'Status unknown', 'ran-booster' ) ); ?></span>
+			<?php $overview_storage_label = $overview_storage_labels[ $overview_storage_status ] ?? __( 'Status unknown', 'ran-booster' ); ?>
+			<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $overview_storage_label, (string) ( $overview_storage_intents[ $overview_storage_status ] ?? 'none' ), array( 'data-ran-booster-storage-status' => (string) $overview_storage_status ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 		</div>
 		<p><?php echo esc_html( $overview_storage_summary['message'] ?? __( 'Storage status is unavailable.', 'ran-booster' ) ); ?></p>
-		<p><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>
-	</section>
+		<?php if ( 'onboarding' === $overview_view && ! empty( $overview_storage_summary['can_provision'] ) ) { ?>
+			<form class="ran-booster-onboarding__storage-actions" method="post" action="<?php echo esc_url( (string) ( $overview_storage_summary['action_url'] ?? admin_url( 'admin.php?page=ran-booster&tab=overview' ) ) ); ?>">
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-create-secure-storage' ); ?>
+				<input type="hidden" name="ran_booster[action]" value="create-secure-storage">
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Set up default storage', 'ran-booster' ); ?></button>
+			</form>
+		<?php } ?>
+		<p class="ran-booster-standalone-link-row"><a href="<?php echo esc_url( $overview_storage_url ); ?>"><?php esc_html_e( 'Review secure credential storage', 'ran-booster' ); ?></a></p>
+	</div></div></section>
 
 
 
 	<?php if ( 'onboarding' === $overview_view ) { ?>
 
-	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-connect-heading">
+	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-connect-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3 id="ran-booster-onboarding-connect-heading"><?php esc_html_e( '2. Choose a Git provider', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Add credentials on the provider’s page if needed.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
 			<?php foreach ( $provider_summaries as $provider ) { ?>
-				<a class="button" href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>
+				<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $provider['url'] ); ?>"><?php echo esc_html( $provider['label'] ); ?></a>
 			<?php } ?>
-			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Install another provider', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Install another provider', 'ran-booster' ); ?></a>
 		</p>
-	</section>
-	<section class="ran-booster-panel ran-booster-onboarding__storage" aria-labelledby="ran-booster-onboarding-next-heading">
+	</div></div></section>
+	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview" aria-labelledby="ran-booster-onboarding-next-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3 id="ran-booster-onboarding-next-heading"><?php esc_html_e( '3. Import or migrate (optional)', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Import a Booster Blueprint with Transporter. To migrate from another tool, browse the available extensions.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
-			<a class="button" href="<?php echo esc_url( $onboarding['portability_url'] ); ?>"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></a>
-			<a class="button" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Browse extensions', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $onboarding['portability_url'] ); ?>"><?php esc_html_e( 'Transporter', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster-extensions' ) ); ?>"><?php esc_html_e( 'Browse extensions', 'ran-booster' ); ?></a>
 		</p>
-	</section>
-	<section class="ran-booster-panel ran-booster-onboarding__storage">
+	</div></div></section>
+	<section class="ran-booster-panel ran-booster-onboarding__storage ran-booster-card" data-ran-booster-card="overview"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 		<h3><?php esc_html_e( '4. Install and manage packages', 'ran-booster' ); ?></h3>
 		<p><?php esc_html_e( 'Install a plugin or theme from a Git repository, or link one already installed on this site.', 'ran-booster' ); ?></p>
 		<p class="ran-booster-onboarding__actions">
-			<a class="button button-primary" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
-			<a class="button" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" href="<?php echo esc_url( $onboarding['install_plugin_url'] ); ?>"><?php esc_html_e( 'Install a plugin', 'ran-booster' ); ?></a>
+			<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $onboarding['install_theme_url'] ); ?>"><?php esc_html_e( 'Install a theme', 'ran-booster' ); ?></a>
 		</p>
-	</section>
+	</div></div></section>
 
 	<?php } ?>
 	</div>
@@ -192,12 +228,4 @@ $provider_attention        = array_filter(
 	}
 	?>
 
-	<?php if ( 'dashboard' === $overview_view && current_user_can( 'manage_options' ) ) { ?>
-		<form class="ran-booster-onboarding__presentation-control" method="post" action="<?php echo esc_url( $overview_url ); ?>">
-			<?php wp_nonce_field( 'ran-booster-overview-presentation' ); ?>
-			<input type="hidden" name="ran_booster[action]" value="overview-presentation">
-			<input type="hidden" name="ran_booster[presentation]" value="onboarding">
-			<button type="submit" class="button"><?php esc_html_e( 'Return to onboarding', 'ran-booster' ); ?></button>
-		</form>
-	<?php } ?>
 </section>

@@ -33,7 +33,8 @@ final class GitHubProviderSelection {
 	public function __construct(
 		private GitHubSelectionStore $store,
 		private string $plugin_root,
-		private GitHubReplacementDeclaration $bundled
+		private GitHubReplacementDeclaration $bundled,
+		private InstalledPackageVersion $package_versions = new InstalledPackageVersion()
 	) {
 		try {
 			$state      = $this->store->read( true );
@@ -280,6 +281,11 @@ final class GitHubProviderSelection {
 					$display[ $key ] = trim( preg_replace( '/\s*(?:\*\/|\?>).*/', '', $match[1] ) ?? '' );
 				}
 			}
+		}
+		if ( $declaration->plugin_basename === $this->bundled->plugin_basename ) {
+			// The bundled provider is a Composer package versioned independently of Core, and its
+			// plugin header is Core's own. Never show Core's version for it.
+			$display['display_version'] = $this->package_versions->for_package( $declaration->implementation_id ) ?? 'Unknown';
 		}
 		return $display;
 	}

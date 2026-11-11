@@ -34,8 +34,8 @@ msgstr "L’application du paquet a échoué."
 
 #: assets/ran-booster-release-management.js
 #. translators: %s: release version.
-msgid "Install %s now"
-msgstr "Installer %s maintenant"
+msgid "Update to %s"
+msgstr "Mettre à jour vers %s"
 
 #: assets/ran-booster-repository-picker.js
 msgid "Close repository picker"

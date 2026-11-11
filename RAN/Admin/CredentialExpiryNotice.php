@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\Admin\Component\NoticeIcon;
 use RAN\Secrets\SecretsStorageUnavailable;
 
 /**
@@ -119,7 +120,7 @@ final class CredentialExpiryNotice {
 			$providers[ $status['provider'] ] = $status['provider_label'];
 		}
 		?>
-		<div class="notice <?php echo esc_attr( $class ); ?><?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-credential-expiry-notice data-ran-booster-notice-preference="expiry" data-ran-booster-notice-state="<?php echo esc_attr( $state ); ?>" data-ran-booster-notice-scope="<?php echo esc_attr( $scope ); ?>">
+		<div class="notice <?php echo esc_attr( $class ); ?><?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( substr( $class, 7 ) ); ?>" data-ran-booster-credential-expiry-notice data-ran-booster-notice-preference="expiry" data-ran-booster-notice-state="<?php echo esc_attr( $state ); ?>" data-ran-booster-notice-scope="<?php echo esc_attr( $scope ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( substr( $class, 7 ) ); ?>" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<p>
 				<strong><?php esc_html_e( 'Credential expiry reminder:', 'ran-booster' ); ?></strong>
 				<?php
@@ -158,7 +159,7 @@ final class CredentialExpiryNotice {
 					<?php } ?>
 					<button type="button" class="button" data-ran-booster-notice-preference-mode="dismiss"><?php esc_html_e( 'Dismiss this reminder', 'ran-booster' ); ?></button>
 				</p>
-		</div>
+		</div><?php NoticeIcon::print_intent( substr( $class, 7 ) ); ?></div>
 		<?php
 	}
 
@@ -194,7 +195,7 @@ final class CredentialExpiryNotice {
 			? network_admin_url( 'admin.php' )
 			: admin_url( 'admin.php' );
 		?>
-		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-secrets-storage-notice>
+		<div class="notice notice-error<?php echo BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-secrets-storage-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<p>
 				<strong><?php esc_html_e( 'Booster cannot read saved credentials.', 'ran-booster' ); ?></strong>
 				<?php esc_html_e( 'Credential-backed operations remain paused.', 'ran-booster' ); ?>
@@ -202,7 +203,7 @@ final class CredentialExpiryNotice {
 			<p>
 				<a href="<?php echo esc_url( $base_url . '?page=ran-booster-settings#ran-booster-storage' ); ?>"><?php esc_html_e( 'Review Secure credential storage in Settings', 'ran-booster' ); ?></a>
 			</p>
-		</div>
+		</div><?php NoticeIcon::print_intent( 'error' ); ?></div>
 		<?php
 	}
 }

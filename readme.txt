@@ -20,7 +20,7 @@ public provider contract and retain their own credential and webhook guidance.
 It does not use a licence service, vendor updater, cloud OAuth flow, or external
 repository picker service.
 
-The Core-owned Extensions page lists first-party beta extensions using only
+The Core-owned Extensions page lists RAN-maintained beta extensions using only
 local WordPress plugin state and release-bundled artwork. Free extensions are
 distributed through their own public repositories and releases. Core stores no
 sponsor or entitlement state.
@@ -72,12 +72,15 @@ repository ID; the exact repository secret takes precedence.
 Each Git provider tab shows the callback URL, required event, repository context,
 and manual setup links beside the saved local secrets. Every repository still
 needs its own remote webhook; a saved local secret alone is not a ready hook.
-Bundled GitHub webhook management can set up, check, reconfigure and remove
+Bundled GitHub webhook management can set up, validate, repair and remove
 GitHub repository webhooks using an applicable saved Core credential. Setup can
 reuse an applicable saved signing secret or create one only for the repository.
-Reconfigure sends the recorded Core secret and callback settings to the
+Repair sends the recorded Core secret and callback settings to the
 identified remote hook; it does not replace the secret. Saved profiles remain
 under the site's credential custody and are referenced by ID.
+Validate checks the settings, then requests a ping; an accepted ping request is
+not proof of signed delivery. A webhook created by hand at the Git provider is
+not recorded and cannot be validated, repaired or removed by Booster.
 Webhook management never enables Automatic deployment; deployment policy
 remains a separate administrator decision.
 

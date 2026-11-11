@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
 
 const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-repository-picker.js', import.meta.url),
@@ -59,6 +60,10 @@ const restoreRepositoryPickerProvider = loadFunction(
 	'restoreRepositoryPickerProvider'
 );
 const autoOpenRepositoryPicker = loadFunction('autoOpenRepositoryPicker');
+const updateRepositoryPickerAvailability = loadFunction(
+	'updateRepositoryPickerAvailability',
+	{ pickerComponentsAvailable: true, __: (text) => text }
+);
 const repositoryPickerPublicProfileValue = loadFunction(
 	'repositoryPickerPublicProfileValue'
 );
@@ -291,6 +296,41 @@ test('remembered provider restores only on unpinned create forms', () => {
 	assert.equal(removed.input.value, 'gh');
 });
 
+test('a fixed Edit provider is a hidden input without options and never throws', () => {
+	const edit = formFixture({});
+	delete edit.input.options;
+
+	assert.equal(
+		restoreRepositoryPickerProvider(
+			edit.form,
+			{ lastProvider: 'bb' },
+			{ bb: { browse: true } }
+		),
+		false
+	);
+	assert.equal(edit.input.value, 'gh');
+});
+
+test('a locked Edit picker button stays disabled whatever the provider supports', () => {
+	const attributes = new Set(['data-ran-booster-repository-locked']);
+	const button = {
+		disabled: true,
+		hidden: false,
+		title: '',
+		hasAttribute: (name) => attributes.has(name),
+	};
+	const form = { querySelector: () => button };
+
+	updateRepositoryPickerAvailability(form, { browse: true });
+	assert.equal(button.disabled, true);
+	assert.equal(button.hidden, false);
+	assert.equal(button.title, '');
+
+	attributes.clear();
+	updateRepositoryPickerAvailability(form, { browse: true });
+	assert.equal(button.disabled, false);
+});
+
 test('picker auto-opens only from a safe create-form marker', () => {
 	const repeat = formFixture({
 		'data-ran-booster-package-create': '1',
@@ -451,7 +491,7 @@ test('picker lifecycle re-fetches restored context and persists empty filters', 
 	);
 	assert.match(
 		source,
-		/currentProviderState\(\)\[activeMode\]\.filter = search\.value/
+		/currentProviderState\(\)\[\s*activeMode\s*\]\.filter = value/
 	);
 	assert.match(source, /search\.value = providerState\[activeMode\]\.filter/);
 	assert.match(
@@ -463,4 +503,111 @@ test('picker lifecycle re-fetches restored context and persists empty filters', 
 		/function showAccessibleRepositories\(\)[\s\S]*loadRepositories\('accessible'/
 	);
 	assert.doesNotMatch(source, /window\.localStorage|localStorage\./);
+});
+
+test('picker teardown unmounts the public root without asking a Notice to redraw', () => {
+	const events = [];
+	let connected = true;
+	const start = source.indexOf(
+		'\t\tcleanupPicker = function () {\n\t\t\tcleanupPicker = function () {};'
+	);
+	const end = source.indexOf('\n\t\tpickerButtons.forEach', start);
+	assert.ok(start >= 0 && end > start);
+	// The public-limit notice is static, so teardown has no Notice to touch:
+	// the context offers no publicLimitNotice and no CustomEvent to dispatch.
+	vm.runInNewContext(
+		'let cleanupPicker; let requestSequence = 0; let isOpen = true;' +
+			source.slice(start, end) +
+			'cleanupPicker();',
+		{
+			listeners: { abort() {} },
+			window: {},
+			flushSync: (callback) => callback(),
+			root: {
+				unmount() {
+					events.push('unmount');
+					connected = false;
+				},
+			},
+			host: { remove() {} },
+			portalContainer: { remove() {} },
+			document: { body: { classList: { remove() {} } } },
+		}
+	);
+	assert.deepEqual(events, ['unmount']);
+	assert.equal(connected, false);
+});
+
+test('the public-limit notice is created as a static Notice and shown by hidden alone', () => {
+	assert.match(
+		source,
+		/window\.ranBoosterNotice\.create\('info', \{\s*className: 'ran-booster-repository-picker__public-limit-notice',\s*scope: 'global',\s*\}\)/
+	);
+	assert.doesNotMatch(source, /ui-notice-update/);
+	assert.doesNotMatch(source, /notice notice-info inline/);
+	assert.doesNotMatch(source, /data-ran-booster-ui-notice/);
+	assert.match(
+		source,
+		/publicLimitNotice\.toggleAttribute\('hidden', !showCredentialsNotice\)/
+	);
+});
+
+test('picker status speaks only while open and on change, errors assertively', () => {
+	const announceSource = fs.readFileSync(
+		new URL('../../assets/ran-booster-announce.js', import.meta.url),
+		'utf8'
+	);
+	const start = source.indexOf('\t\t// The status line is announced');
+	const end = source.indexOf('\t\tfunction resetPublicResults', start);
+	assert.ok(start >= 0 && end > start);
+	assert.doesNotMatch(source, /picker__status"[^>]*(role|aria-live)=/);
+	const spoken = [];
+	const classes = new Set();
+	const status = {
+		textContent: '',
+		classList: {
+			add: (name) => classes.add(name),
+			remove: (name) => classes.delete(name),
+		},
+	};
+	const window = {
+		wp: {
+			a11y: {
+				speak: (message, politeness) =>
+					spoken.push({ message, politeness }),
+			},
+		},
+	};
+	vm.runInNewContext(announceSource, { window });
+	const context = {
+		window,
+		status,
+		list: { replaceChildren() {} },
+		search: {},
+		setRepositoryPickerLoading() {},
+		__: (text) => text,
+		isOpen: false,
+	};
+	vm.runInNewContext(
+		'let loadedRepositories, loadedPublicLookupProfileId, partialResultMessage;' +
+			source.slice(start, end) +
+			'this.setStatus = setStatus; this.showError = showError;',
+		context
+	);
+	context.setStatus('Loading repositories…');
+	assert.deepEqual(spoken, []);
+	vm.runInNewContext('isOpen = true', context);
+	context.setStatus('Loading repositories…');
+	context.setStatus('3 repositories found.');
+	context.setStatus('3 repositories found.');
+	context.showError('');
+	assert.equal(status.textContent, 'Repositories could not be loaded.');
+	assert.ok(classes.has('ran-booster-repository-picker__status--error'));
+	assert.deepEqual(spoken, [
+		{ message: '3 repositories found.', politeness: 'polite' },
+		{
+			message: 'Repositories could not be loaded.',
+			politeness: 'assertive',
+		},
+	]);
 });

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Tests\Admin;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 require_once __DIR__ . '/AdminViewWordPressFunctions.php';
@@ -22,12 +23,22 @@ final class DebugCaptureViewTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'This temporary capture records Booster events only. It does not require or enable <code>WP_DEBUG_LOG</code> and excludes PHP, WordPress, theme, and other-plugin messages.', $html );
+		self::assertStringNotContainsString( 'Temporarily records Booster events.', $html );
+		self::assertStringContainsString( 'Booster events also go to PHP’s error log when <code>WP_DEBUG</code> and <code>WP_DEBUG_LOG</code> are enabled. The capture holds Booster events only, not PHP errors.', $html );
+		self::assertStringNotContainsString( 'guard helps prevent direct access', $html );
+		self::assertStringContainsString( 'For PHP, WordPress, theme and plugin errors, add these to wp-config.php before the “stop editing” line:', $html );
+		self::assertStringContainsString( 'Turn off debugging when done. Review the log privately before sharing it.', $html );
+		self::assertStringContainsString( 'Starting a new capture replaces any retained capture.', $html );
+		self::assertStringNotContainsString( 'This temporary capture records Booster events only.', $html );
+		self::assertStringNotContainsString( 'excludes PHP, WordPress, theme, and other-plugin messages', $html );
 		self::assertStringContainsString( '<summary>Logging details</summary>', $html );
 		self::assertStringContainsString( 'define( &#039;WP_DEBUG_DISPLAY&#039;, false );', $html );
+		$this->assert_logging_details_snippet( $html );
 		self::assertStringNotContainsString( 'notice-warning', $html );
-		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading">Logging</h3>', $html );
-		self::assertStringContainsString( 'Booster event capture', $html );
+		self::assertStringContainsString( '<h3 id="ran-booster-debug-capture-heading" class="ran-booster-section__title">Logging</h3>', $html );
+		self::assertStringNotContainsString( 'Booster event capture', $html );
+		self::assertSame( 0, preg_match( '/<h4[^>]*>\s*Booster event capture/', $html ) );
+		$this->assert_heading_row( $html, 'Inactive', false );
 		self::assertStringNotContainsString( 'Configured capture file:', $html );
 		self::assertStringNotContainsString( 'No temporary logging capture is active.', $html );
 		self::assertStringContainsString( 'name="ran_booster[action]" value="manage-debug-capture"', $html );
@@ -60,6 +71,7 @@ final class DebugCaptureViewTest extends TestCase {
 
 		self::assertStringContainsString( '>Capture active</span>', $html );
 		self::assertStringContainsString( 'until 23 July &lt;18:30&gt;.', $html );
+		$this->assert_heading_row( $html, 'Capture active', true );
 		self::assertStringContainsString( 'for="ran-booster-debug-capture-content"', $html );
 		self::assertStringContainsString( 'id="ran-booster-debug-capture-content"', $html );
 		self::assertStringContainsString( 'readonly', $html );
@@ -105,7 +117,8 @@ final class DebugCaptureViewTest extends TestCase {
 		);
 
 		self::assertStringContainsString( '>Capture retained</span>', $html );
-		self::assertStringContainsString( 'until 24 July &lt;18:30&gt;.', $html );
+		self::assertStringContainsString( 'retained until 24 July &lt;18:30&gt;.', $html );
+		$this->assert_heading_row( $html, 'Capture retained', true );
 		self::assertStringContainsString( '[ran-booster] first &lt;event&gt;', $html );
 		self::assertStringContainsString( '[ran-booster] second &amp; event', $html );
 		self::assertStringContainsString( 'data-support-report-copy aria-label="Copy captured events"', $html );
@@ -118,6 +131,57 @@ final class DebugCaptureViewTest extends TestCase {
 		$this->assert_capture_footer( $html, array( 'start', 'delete' ) );
 	}
 
+
+	public function test_retained_state_repeats_the_replacement_consequence_above_the_footer_band(): void {
+		$html    = $this->render_view(
+			array(
+				'state'        => 'retained',
+				'filename'     => 'ran-booster-debug.php',
+				'delete_after' => '24 July',
+				'content'      => '[ran-booster] event',
+			)
+		);
+		$message = 'Starting a new capture replaces any retained capture.';
+		$note    = strpos( $html, '<p class="description">' . $message . '</p>' );
+		$details = strpos( $html, 'id="ran-booster-logging-details"' );
+		$footer  = strpos( $html, 'ran-booster-card-footer ran-booster-debug-capture__footer' );
+
+		self::assertIsInt( $note );
+		self::assertIsInt( $details );
+		self::assertIsInt( $footer );
+		self::assertTrue( $details < $note && $note < $footer, 'The note follows the details disclosure and precedes the band.' );
+		self::assertSame( 1, substr_count( $html, '<p class="description">' . $message . '</p>' ) );
+		self::assertSame( 1, substr_count( $html, '<p>' . $message . '</p>' ), 'The disclosure copy is unchanged.' );
+	}
+
+	/**
+	 * @return array<string, array{0: string}>
+	 */
+	public static function states_without_a_retained_capture(): array {
+		return array(
+			'none'        => array( 'inactive' ),
+			'active'      => array( 'active' ),
+			'unavailable' => array( 'unavailable' ),
+			'malformed'   => array( 'malformed' ),
+		);
+	}
+
+	#[DataProvider( 'states_without_a_retained_capture' )]
+	public function test_replacement_consequence_is_absent_next_to_the_button_without_a_retained_capture( string $state ): void {
+		$html    = $this->render_view(
+			array(
+				'state'         => $state,
+				'filename'      => 'ran-booster-debug.php',
+				'capture_until' => '24 July',
+				'content'       => '[ran-booster] event',
+			)
+		);
+		$message = 'Starting a new capture replaces any retained capture.';
+
+		self::assertStringNotContainsString( '<p class="description">' . $message . '</p>', $html );
+		self::assertStringNotContainsString( 'class="description"', $html );
+		self::assertSame( 1, substr_count( $html, '<p>' . $message . '</p>' ), 'The disclosure copy stays in every state.' );
+	}
 
 	public function test_empty_active_and_retained_captures_do_not_offer_copy_controls(): void {
 		foreach ( array( 'active', 'retained' ) as $state ) {
@@ -163,6 +227,29 @@ final class DebugCaptureViewTest extends TestCase {
 		}
 	}
 
+	private function assert_heading_row( string $html, string $badge, bool $has_deadline ): void {
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$row   = '//section[@aria-labelledby="ran-booster-debug-capture-heading"]/div[contains(@class,"ran-booster-debug-capture__header")]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $row . '/h3[@id="ran-booster-debug-capture-heading"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $row . '/h3/following-sibling::*[1][@data-ran-booster-badge][normalize-space()="' . $badge . '"])' ) );
+		self::assertSame( $has_deadline ? 1.0 : 0.0, $xpath->evaluate( 'count(' . $row . '/*[@data-ran-booster-badge]/following-sibling::span[contains(@class,"ran-booster-debug-capture__deadline")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//h4[normalize-space()="Booster event capture"])' ) );
+	}
+
+	private function assert_logging_details_snippet( string $html ): void {
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath   = new \DOMXPath( $document );
+		$details = '//details[@id="ran-booster-logging-details"]';
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $details . '//pre)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//div[@data-support-report-tools]//textarea[@readonly and @rows="3" and @aria-label="Example wp-config.php lines"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $details . '//div[@data-support-report-tools]//button[@data-support-report-copy and @aria-label="Copy example wp-config.php lines"])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//*[@data-support-report-tools])' ) );
+		self::assertSame( "define( 'WP_DEBUG', true );\ndefine( 'WP_DEBUG_LOG', true );\ndefine( 'WP_DEBUG_DISPLAY', false );", trim( (string) $xpath->evaluate( 'string(' . $details . '//textarea)' ) ) );
+	}
+
 	private function assert_empty_capture_field( string $html ): void {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
@@ -178,11 +265,22 @@ final class DebugCaptureViewTest extends TestCase {
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__header")]//form)' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer") and @role="group"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer")][@data-ran-booster-success-feedback])' ), 'The capture confirmation is anchored beside the actions.' );
 		foreach ( $operations as $operation ) {
 			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer")]//button[@name="ran_booster[operation]" and @value="' . $operation . '"])' ) );
 		}
 		self::assertSame( count( $operations ), substr_count( $html, 'name="_wpnonce" value="ran-booster-manage-debug-capture"' ) );
-		self::assertLessThan( strpos( $html, 'ran-booster-debug-capture__wordpress-help' ), strpos( $html, 'ran-booster-debug-capture__footer' ) );
+		// The disclosure renders above the band, so the band is the last element of the Card.
+		self::assertLessThan( strpos( $html, 'ran-booster-debug-capture__footer' ), strpos( $html, 'ran-booster-debug-capture__wordpress-help' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(@class,"ran-booster-debug-capture__panel")]/div[contains(concat(" ",normalize-space(@class)," ")," ran-booster-card-footer ")][position()=last()])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(@class,"ran-booster-debug-capture__body")]//details[@id="ran-booster-logging-details"])' ), 'Logging details sit in the body above the band.' );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@id="ran-booster-debug-capture-region"]/*[last()][not(contains(@class,"ran-booster-debug-capture__panel"))])' ), 'Nothing follows the panel in the section.' );
+		// The two forms are siblings inside the band: the htmx primary actions and the native Delete form.
+		self::assertSame( count( $operations ) > 1 && in_array( 'delete', $operations, true ) ? 2.0 : 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer")]/form)' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//form//form)' ) );
+		if ( in_array( 'delete', $operations, true ) ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//*[contains(@class,"ran-booster-debug-capture__footer")]/form[last()][contains(@class,"ran-booster-debug-capture__delete")])' ), 'Delete capture is last.' );
+		}
 	}
 
 	public function test_logging_details_escape_configured_capture_path(): void {
@@ -195,7 +293,7 @@ final class DebugCaptureViewTest extends TestCase {
 		self::assertStringContainsString( '<code>/private/&lt;site&gt;/ran-booster-debug.php</code>', $html );
 		self::assertStringNotContainsString( '/private/<site>/', $html );
 		self::assertStringContainsString( '<code>WP_DEBUG</code> and <code>WP_DEBUG_LOG</code>', $html );
-		self::assertStringContainsString( '<code>.php</code> guard', $html );
+		self::assertStringNotContainsString( '<code>.php</code> guard', $html );
 	}
 
 	public function test_mutation_error_stays_visible_and_escaped(): void {

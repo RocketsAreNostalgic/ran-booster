@@ -7,9 +7,26 @@ const source = fs.readFileSync(
 	new URL('../../assets/notice-preference.js', import.meta.url),
 	'utf8'
 );
-function setup(kind, fetch) {
+const announceSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-announce.js', import.meta.url),
+	'utf8'
+);
+// Load the real shared helper over a recording wp.a11y.speak.
+function withAnnounce(window, announcements = []) {
+	window.wp = {
+		a11y: {
+			speak: (message, politeness) =>
+				announcements.push({ message, politeness }),
+		},
+	};
+	vm.runInNewContext(announceSource, { window });
+	return announcements;
+}
+function setup(kind, fetch, mounted = false) {
 	let handler;
 	const errors = [];
+	const lifecycle = [];
+	const content = { append: (node) => errors.push(node) };
 	const buttons = [{ disabled: false }, { disabled: true }];
 	const notice = {
 		dataset: {
@@ -31,8 +48,18 @@ function setup(kind, fetch) {
 		remove() {
 			this.removed = true;
 		},
-		querySelector() {
+		querySelector(selector) {
+			if (selector === '[data-ran-booster-ui-notice-content]') {
+				return mounted ? content : null;
+			}
 			return errors[0];
+		},
+		dispatchEvent(event) {
+			lifecycle.push({
+				type: event.type,
+				bubbles: event.bubbles,
+				connected: !this.removed,
+			});
 		},
 		append(node) {
 			errors.push(node);
@@ -46,19 +73,36 @@ function setup(kind, fetch) {
 	};
 	const document = {
 		addEventListener(type, callback, capture) {
-			assert.equal(capture, true);
-			handler = callback;
+			if (type === 'click') {
+				assert.equal(capture, true);
+				handler = callback;
+			}
+		},
+		querySelectorAll() {
+			return [];
 		},
 		createElement() {
-			return { dataset: {}, setAttribute() {} };
+			return {
+				dataset: {},
+				setAttribute(name, value) {
+					this[name] = value;
+				},
+			};
 		},
 	};
 	const window = {
 		fetch,
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options.bubbles;
+			}
+		},
 		ranBoosterCredentialExpiryNotice: config,
 		ranBoosterBackgroundFailureNotice: config,
 		ranBoosterDevelopmentSafetyNotice: config,
 	};
+	const announcements = withAnnounce(window);
 	vm.runInNewContext(source, {
 		window,
 		document,
@@ -68,6 +112,11 @@ function setup(kind, fetch) {
 	});
 	function click(mode) {
 		const button = {
+			getAttribute() {
+				return null;
+			},
+			setAttribute() {},
+			removeAttribute() {},
 			dataset: mode ? { ranBoosterNoticePreferenceMode: mode } : {},
 			closest(selector) {
 				return selector.includes(kind) ? notice : null;
@@ -84,7 +133,15 @@ function setup(kind, fetch) {
 		};
 		handler(event);
 	}
-	return { click, notice, errors, buttons };
+	return {
+		click,
+		notice,
+		errors,
+		buttons,
+		content,
+		lifecycle,
+		announcements,
+	};
 }
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 for (const [kind, mode, expected] of [
@@ -196,3 +253,307 @@ for (const [name, fetch] of [
 		assert.equal(calls, 2);
 	});
 }
+
+function developmentLifecycle(fetch) {
+	const handlers = {};
+	let current;
+	const heading = {
+		attributes: {},
+		setAttribute(name, value) {
+			this.attributes[name] = value;
+		},
+		focus() {
+			this.ownerDocument.activeElement = this;
+		},
+	};
+	const document = {
+		activeElement: null,
+		addEventListener(type, callback) {
+			(handlers[type] ||= []).push(callback);
+		},
+		querySelectorAll() {
+			return current && !current.removed ? [current] : [];
+		},
+		getElementById() {
+			return heading;
+		},
+		createElement() {
+			return {
+				dataset: {},
+				setAttribute(name, value) {
+					this[name] = value;
+				},
+			};
+		},
+	};
+	heading.ownerDocument = document;
+	const window = {
+		fetch,
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options.bubbles;
+			}
+		},
+		ranBoosterDevelopmentSafetyNotice: {
+			ajaxUrl: '/ajax',
+			action: 'acknowledge',
+			nonce: 'nonce',
+			errorMessage: 'Retry',
+		},
+	};
+	withAnnounce(window);
+	const context = { window, document, URLSearchParams, WeakSet, Error };
+	function mount(version = 'local-development-v2') {
+		const button = {
+			attributes: {},
+			getAttribute(name) {
+				return this.attributes[name] ?? null;
+			},
+			setAttribute(name, value) {
+				this.attributes[name] = value;
+			},
+			removeAttribute(name) {
+				delete this.attributes[name];
+			},
+			hidden: true,
+			style: { display: 'none' },
+			ownerDocument: document,
+			_disabled: false,
+			get disabled() {
+				return this._disabled;
+			},
+			set disabled(value) {
+				this._disabled = value;
+				if (value && this.ownerDocument.activeElement === this) {
+					this.ownerDocument.activeElement = null;
+				}
+			},
+			dataset: {},
+			closest: () => current,
+		};
+		const notice = {
+			ownerDocument: document,
+			dataset: { ranBoosterNoticeState: version },
+			removed: false,
+			error: null,
+			setAttribute() {},
+			removeAttribute() {},
+			querySelectorAll() {
+				return [button];
+			},
+			querySelector(selector) {
+				return selector === '.notice-dismiss' ? button : this.error;
+			},
+			append(error) {
+				this.error = error;
+			},
+			contains(element) {
+				return element === button;
+			},
+			remove() {
+				this.removed = true;
+			},
+			dispatchEvent() {},
+		};
+		button.closest = (selector) =>
+			selector.includes('development-safety') ? notice : null;
+		current = notice;
+		return { notice, button };
+	}
+	function fire(type) {
+		for (const handler of handlers[type] || []) {
+			handler({});
+		}
+	}
+	function click(button) {
+		for (const handler of handlers.click || []) {
+			handler({
+				target: { closest: () => button },
+				preventDefault() {},
+				stopImmediatePropagation() {},
+			});
+		}
+	}
+	function init() {
+		vm.runInNewContext(source, context);
+	}
+	return { mount, fire, click, init, document, heading, handlers };
+}
+
+test('development initialization is once per document and reveals the existing button', () => {
+	const state = developmentLifecycle(() => {});
+	const { button } = state.mount();
+	state.init();
+	state.init();
+	assert.equal(button.hidden, false);
+	assert.equal(button.style.display, '');
+	assert.equal(state.handlers.click.length, 1);
+	assert.equal(state.handlers['htmx:load'].length, 1);
+});
+
+test('confirmed development acknowledgement restores focus and suppresses cached same event', async () => {
+	const state = developmentLifecycle(async () => ({
+		ok: true,
+		json: async () => ({ success: true }),
+	}));
+	const first = state.mount();
+	state.init();
+	state.document.activeElement = first.button;
+	state.click(first.button);
+	await flush();
+	assert.equal(first.notice.removed, true);
+	assert.equal(state.document.activeElement, state.heading);
+	assert.equal(state.heading.attributes.tabindex, '-1');
+	const restored = state.mount();
+	state.fire('htmx:historyRestore');
+	assert.equal(restored.notice.removed, true);
+	const newer = state.mount('local-development-v3');
+	state.fire('htmx:load');
+	assert.equal(newer.notice.removed, false);
+	assert.equal(newer.button.hidden, false);
+});
+
+test('delayed success affects its original event and does not steal focus', async () => {
+	let resolve;
+	const state = developmentLifecycle(
+		() =>
+			new Promise((done) => {
+				resolve = done;
+			})
+	);
+	const first = state.mount();
+	state.init();
+	state.click(first.button);
+	const newer = state.mount('local-development-v3');
+	const elsewhere = {};
+	state.document.activeElement = elsewhere;
+	resolve({ ok: true, json: async () => ({ success: true }) });
+	await flush();
+	assert.equal(first.notice.removed, true);
+	assert.equal(newer.notice.removed, false);
+	assert.equal(state.document.activeElement, elsewhere);
+	state.fire('htmx:historyRestore');
+	assert.equal(newer.notice.removed, false);
+});
+
+test('failed development acknowledgement remains retryable and is not remembered', async () => {
+	let calls = 0;
+	const state = developmentLifecycle(async () => ({
+		ok: ++calls > 1,
+		json: async () => ({ success: calls > 1 }),
+	}));
+	const first = state.mount();
+	state.init();
+	state.click(first.button);
+	await flush();
+	assert.equal(first.notice.removed, false);
+	assert.equal(first.notice.error.textContent, 'Retry');
+	assert.equal(first.button.disabled, false);
+	const restored = state.mount();
+	state.fire('htmx:historyRestore');
+	assert.equal(restored.notice.removed, false);
+	state.click(restored.button);
+	await flush();
+	assert.equal(restored.notice.removed, true);
+});
+
+test('delayed success removes a mounted restore of the same event and restores its focus', async () => {
+	let resolve;
+	const state = developmentLifecycle(
+		() =>
+			new Promise((done) => {
+				resolve = done;
+			})
+	);
+	const first = state.mount();
+	state.init();
+	state.click(first.button);
+	const restored = state.mount();
+	state.fire('htmx:historyRestore');
+	state.document.activeElement = restored.button;
+	resolve({ ok: true, json: async () => ({ success: true }) });
+	await flush();
+	assert.equal(first.notice.removed, true);
+	assert.equal(restored.notice.removed, true);
+	assert.equal(state.document.activeElement, state.heading);
+});
+
+test('pending development dismissal retains focus and blocks duplicate activation', async () => {
+	let resolve;
+	let calls = 0;
+	const state = developmentLifecycle(() => {
+		calls++;
+		return new Promise((done) => {
+			resolve = done;
+		});
+	});
+	const { notice, button } = state.mount();
+	state.init();
+	state.document.activeElement = button;
+	state.click(button);
+	state.click(button);
+	assert.equal(calls, 1);
+	assert.equal(button.disabled, false);
+	assert.equal(button.getAttribute('aria-disabled'), 'true');
+	assert.equal(state.document.activeElement, button);
+	resolve({ ok: true, json: async () => ({ success: true }) });
+	await flush();
+	assert.equal(notice.removed, true);
+	assert.equal(state.document.activeElement, state.heading);
+	assert.equal(button.getAttribute('aria-disabled'), null);
+});
+
+test('owned dismissal schedules Notice cleanup while the host remains connected', async () => {
+	const state = setup(
+		'credential-expiry',
+		async () => ({
+			ok: true,
+			json: async () => ({ success: true }),
+		}),
+		true
+	);
+	state.click();
+	await flush();
+	assert.deepEqual(state.lifecycle, [
+		{
+			type: 'ran-booster:ui-notice-update',
+			bubbles: true,
+			connected: true,
+		},
+	]);
+	assert.equal(state.notice.removed, true);
+});
+
+test('dismissal failures remain in the retained Notice content and reuse the same message on retry', async () => {
+	const state = setup(
+		'credential-expiry',
+		async () => ({
+			ok: false,
+			json: async () => ({
+				success: false,
+				data: { message: 'Try again' },
+			}),
+		}),
+		true
+	);
+	state.notice.append = () => {
+		throw new Error('Do not append outside the mounted content.');
+	};
+	state.click();
+	await flush();
+	const original = state.errors[0];
+	assert.equal(original.textContent, 'Try again');
+	assert.equal(original.role, undefined);
+	state.click();
+	await flush();
+	assert.equal(state.errors.length, 1);
+	assert.equal(state.errors[0], original);
+	// Each failure is spoken once, assertively, through the shared helper.
+	assert.deepEqual(state.announcements, [
+		{ message: 'Try again', politeness: 'assertive' },
+		{ message: 'Try again', politeness: 'assertive' },
+	]);
+	assert.equal(state.notice.removed, false);
+	assert.deepEqual(state.lifecycle, []);
+});

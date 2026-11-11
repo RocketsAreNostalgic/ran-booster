@@ -69,10 +69,16 @@
 	background: var(--ran-booster-surface-info);
 }
 
+/* A disabled candidate is de-emphasised with a subtler text colour; element opacity fell below 4.5:1. */
 .ran-booster-admin .ran-booster-release-candidate:has(input:disabled) {
-	color: var(--ran-booster-text-muted);
+	color: var(--ran-booster-text-subtle);
 	cursor: not-allowed;
-	opacity: 0.7;
+}
+
+.ran-booster-admin
+	.ran-booster-release-candidate:has(input:disabled)
+	.ran-booster-release-candidate__outcome {
+	color: var(--ran-booster-text-subtle);
 }
 
 .ran-booster-admin .ran-booster-release-candidate__outcome {
@@ -83,14 +89,32 @@
 	color: var(--ran-booster-text-muted);
 }
 
-.ran-booster-admin .ran-booster-release-candidate > .button {
+.ran-booster-admin .ran-booster-release-candidate > .ran-wp-ui-button {
 	grid-column: 2;
 	justify-self: start;
 	margin-block-start: var(--ran-booster-space-5);
 }
 
-.ran-booster-admin .ran-booster-managed-release-native-update {
-	margin-block-start: var(--ran-booster-space-8);
+.ran-booster-admin .ran-booster-release-candidates--pending {
+	margin-block: var(--ran-booster-space-16) 0;
+}
+
+.ran-booster-admin .ran-booster-release-candidates__heading {
+	margin: 0 0 var(--ran-booster-space-8);
+	font-weight: 600;
+}
+
+.ran-booster-admin .ran-booster-release-candidates__note {
+	margin: var(--ran-booster-space-8) 0 0;
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin .ran-booster-release-candidate__skeleton {
+	display: block;
+	block-size: 12px;
+	inline-size: 55%;
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-border);
 }
 
 .ran-booster-admin .ran-booster-release-candidate__warning {
@@ -117,15 +141,8 @@
 	justify-content: space-between;
 }
 
-.ran-booster-admin .ran-booster-managed-release-browser__header h4,
-.ran-booster-admin .ran-booster-managed-release-browser__header p {
+.ran-booster-admin .ran-booster-managed-release-browser__header h4 {
 	margin: 0;
-}
-
-.ran-booster-admin .ran-booster-managed-release-browser__header p {
-	max-inline-size: 42rem;
-	margin-block-start: var(--ran-booster-space-5);
-	color: var(--ran-booster-text-muted);
 }
 
 .ran-booster-admin .ran-booster-managed-release-browser__notice {
@@ -142,8 +159,10 @@
 		flex-direction: column;
 	}
 
-	.ran-booster-admin .ran-booster-managed-release-browser__header .button {
-		align-self: start;
+	.ran-booster-admin
+		.ran-booster-managed-release-browser__header
+		.ran-wp-ui-button {
+		align-self: flex-end;
 	}
 }
 
@@ -162,16 +181,4 @@
 .ran-booster-admin
 	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-available {
 	opacity: 1;
-}
-
-.ran-booster-admin
-	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-available
-	.ran-booster-source-choice__meta {
-	color: var(--ran-booster-status-ok);
-}
-
-.ran-booster-admin
-	.ran-booster-source-choice[data-ran-booster-source-choice="release_asset"].is-unavailable
-	.ran-booster-source-choice__meta {
-	color: var(--ran-booster-status-warning);
 }

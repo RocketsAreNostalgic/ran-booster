@@ -4,42 +4,38 @@ declare(strict_types=1);
 
 namespace RAN\Admin\ReleaseManagement;
 
+use RAN\Admin\Component\ExternalLinkMarker;
+use RAN\Admin\Component\NoticeIcon;
+
 /** @internal Fixed Core presentation for optional provider release workflows. */
 final class ReleaseWorkflowDisplay {
 	/** @param array{result_view:?array<string,mixed>,url:string} $projection */
 
 	public function package_automation( array $projection ): string {
-		$result = is_array( $projection['result_view'] ?? null ) ? $this->result_notice( $projection['result_view'] ) : '';
-		$url    = is_string( $projection['url'] ?? null ) ? $projection['url'] : '';
-
-		return $result . ( '' === $url
-			? ''
-			: '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Manage release workflow', 'ran-booster' ) . '</a>' );
+		return is_array( $projection['result_view'] ?? null ) ? $this->result_notice( $projection['result_view'] ) : '';
 	}
 
 	/** @param array{lifecycle?:list<array{label:string,message:string,state:string}>,...<string,mixed>} $projection */
 
 	public function repository_section( array $projection ): string {
 		$settings_url = is_string( $projection['settings_url'] ?? null ) ? $projection['settings_url'] : '';
-		$html         = '<section class="ran-booster-settings-section ran-booster-repository-release-section" aria-labelledby="ran-booster-repository-release-heading">'
-			. '<header class="ran-booster-settings-section__header ran-booster-repository-release-section__header">'
-			. '<h3 id="ran-booster-repository-release-heading">' . esc_html__( 'Release publishing', 'ran-booster' ) . '</h3>';
-		if ( '' !== $settings_url ) {
-			$html .= '<a href="' . esc_url( $settings_url ) . '">' . esc_html( (string) ( $projection['settings_label'] ?? '' ) ) . '</a>';
-		}
-		$html .= '</header><div class="ran-booster-settings-section__body">';
+		$in_use       = true === ( $projection['in_use'] ?? false );
+		$html         = '<section class="ran-booster-settings-section ran-booster-repository-release-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-release-heading">'
+			. '<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">'
+			. \RAN\Admin\Component\RepositoryPublishing::header( __( 'Release publishing', 'ran-booster' ), 'ran-booster-repository-release-heading', $in_use, $settings_url, (string) ( $projection['settings_label'] ?? '' ), $in_use ? '' : __( 'No package on this repository tracks releases.', 'ran-booster' ) )
+			. '<div class="ran-booster-settings-section__body">';
 
 		if ( true === ( $projection['shared'] ?? false ) ) {
-			$html .= '<div class="notice notice-info inline"><p>'
+			$html .= '<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>'
 				. esc_html(
 					sprintf(
 					/* translators: %d is the number of managed packages using this repository. */
 						__( 'Releases require a repository used by only one managed package. This repository is shared by %d packages.', 'ran-booster' ),
 						(int) ( $projection['relationship_count'] ?? 0 )
 					)
-				) . ' <a href="' . esc_url( (string) ( $projection['return_url'] ?? '' ) ) . '">' . esc_html__( 'Status', 'ran-booster' ) . '</a></p></div>';
+				) . ' <a href="' . esc_url( (string) ( $projection['return_url'] ?? '' ) ) . '">' . esc_html__( 'Status', 'ran-booster' ) . '</a></p></div>' . NoticeIcon::markup( 'info' ) . '</div>';
 		} elseif ( true === ( $projection['conflicted'] ?? false ) ) {
-			$html .= '<div class="notice notice-warning inline"><p>' . esc_html__( 'Release workflow is unavailable until this repository uses one allowed package source.', 'ran-booster' );
+			$html .= '<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>' . esc_html__( 'Release workflow is unavailable until this repository uses one allowed package source.', 'ran-booster' );
 			foreach ( (array) ( $projection['conflict_packages'] ?? array() ) as $package ) {
 				if ( is_array( $package ) && '' !== ( $package['settings_url'] ?? '' ) ) {
 					$name  = (string) ( $package['display_name'] ?? $package['identifier'] ?? '' );
@@ -52,10 +48,10 @@ final class ReleaseWorkflowDisplay {
 					) . '</a>';
 				}
 			}
-			$html .= '</p></div>';
-		} elseif ( '' !== ( $projection['ineligible_message'] ?? '' ) ) {
-			$html .= '<div class="notice notice-warning inline ran-booster-repository-release-section__notice"><p>'
-				. esc_html( (string) $projection['ineligible_message'] ) . '</p></div>';
+			$html .= '</p></div>' . NoticeIcon::markup( 'warning' ) . '</div>';
+		} elseif ( '' !== ( $projection['ineligible_message'] ?? '' ) && ! $this->readiness_states( (array) ( $projection['readiness'] ?? array() ), (string) $projection['ineligible_message'] ) ) {
+			$html .= '<div class="notice notice-warning inline ran-booster-repository-release-section__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>'
+				. esc_html( (string) $projection['ineligible_message'] ) . '</p></div>' . NoticeIcon::markup( 'warning' ) . '</div>';
 		}
 
 		$html .= $this->repository_lifecycle( (array) ( $projection['lifecycle'] ?? array() ) );
@@ -63,46 +59,72 @@ final class ReleaseWorkflowDisplay {
 		if ( true === ( $projection['show_automation'] ?? false ) ) {
 			$state  = (array) ( $projection['automation'] ?? array() );
 			$view   = (array) ( $projection['workflow_view'] ?? array() );
+			$intent = array(
+				'ran-booster-badge--neutral' => 'none',
+				'ran-booster-badge--pending' => 'none',
+				'ran-booster-badge--ok'      => 'stable',
+				'ran-booster-badge--success' => 'stable',
+				'ran-booster-badge--warning' => 'medium',
+				'ran-booster-badge--error'   => 'high',
+				'ran-booster-badge--info'    => 'informational',
+			)[ (string) ( $state['tone'] ?? '' ) ] ?? '';
 			$notice = '';
 			if ( true === ( $projection['automation_notice'] ?? false ) ) {
 				if ( true === ( $projection['automation_unavailable'] ?? false ) ) {
 					$notice = $this->state_notice( $view );
 				} else {
-					$notice       = '<div class="notice ' . esc_attr( (string) ( $state['notice_tone'] ?? '' ) ) . ' inline"><p>'
+					$notice_intent = substr( (string) ( $state['notice_tone'] ?? '' ), 7 );
+					$notice        = '<div class="notice ' . esc_attr( (string) ( $state['notice_tone'] ?? '' ) ) . ' inline ran-wp-ui-notice ran-wp-ui-box-sizing is-' . esc_attr( $notice_intent ) . '" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( $notice_intent ) . '"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>'
 						. esc_html( (string) ( $state['message'] ?? '' ) ) . '</p>';
-					$workflow_url = is_string( $projection['provider_workflow_url'] ?? null ) ? $projection['provider_workflow_url'] : '';
+					$workflow_url  = is_string( $projection['provider_workflow_url'] ?? null ) ? $projection['provider_workflow_url'] : '';
 					if ( '' !== $workflow_url ) {
 						$notice .= '<p><a href="' . esc_url( $workflow_url ) . '" target="_blank" rel="noopener noreferrer">'
-							. esc_html__( 'Review existing workflow', 'ran-booster' ) . '</a></p>';
+							. esc_html__( 'Review existing workflow', 'ran-booster' ) . ' ' . ExternalLinkMarker::markup() . '</a></p>';
 					}
-					$notice .= '</div>';
+					$notice .= '</div>' . NoticeIcon::markup( $notice_intent ) . '</div>';
 				}
 			}
 			$result_notice = true === ( $projection['show_result_notice'] ?? false ) ? $this->result_notice( $view ) : '';
-			$html         .= '<section class="ran-booster-readiness-panel ran-booster-repository-release-automation" aria-labelledby="ran-booster-repository-release-automation-heading">'
-				. '<header class="ran-booster-readiness-panel__top ran-booster-repository-release-automation__header"><div><div class="ran-booster-release-automation-heading">'
-				. '<h4 id="ran-booster-repository-release-automation-heading">' . esc_html__( 'Release workflow', 'ran-booster' ) . '</h4>'
-				. '<span class="ran-booster-badge ' . esc_attr( (string) ( $state['tone'] ?? '' ) ) . '">' . esc_html( (string) ( $state['label'] ?? '' ) ) . '</span></div>'
-				. '<p class="description">' . esc_html( (string) ( $state['provenance'] ?? '' ) ) . '</p></div></header>';
+			// The package's readiness row already states why the workflow is unavailable; do not say it again here.
+			if ( true === ( $projection['automation_unavailable'] ?? false ) && true === ( $projection['automation_redundant'] ?? false ) ) {
+				$notice = '';
+			}
+			// Open for a result, an assessment under way, or a state that needs the person to act.
+			$open  = '' !== $result_notice
+				|| is_array( $view['preview'] ?? null ) || is_array( $view['record'] ?? null ) || is_array( $view['legacy'] ?? null )
+				|| ( '' !== $notice && true === ( $projection['automation_unavailable'] ?? false ) && '' !== (string) ( $view['unavailable_reason'] ?? '' ) )
+				|| ( '' !== $notice && in_array( (string) ( $state['notice_tone'] ?? '' ), array( 'notice-warning', 'notice-error' ), true ) );
+			$html .= '<div data-ran-booster-ui-disclosure="repository-release-workflow" data-ran-booster-ui-disclosure-density="compact">'
+				. '<details id="ran-booster-repository-release-workflow" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-release-automation ran-booster-disclosure"' . ( $open ? ' open' : '' ) . '>'
+				. '<summary>' . esc_html__( 'Release workflow', 'ran-booster' )
+				. ' <small class="ran-booster-advanced-source-summary" data-ran-booster-ui-disclosure-meta>' . \RAN\Admin\Component\StatusBadge::for_intent( (string) ( $state['label'] ?? '' ), $intent ) . '</small></summary>'
+				. '<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-release-automation__body ran-booster-disclosure__body">'
+				. '<p class="description ran-booster-repository-release-automation__provenance">' . esc_html( (string) ( $state['provenance'] ?? '' ) ) . '</p>';
 			if ( '' !== $notice || '' !== $result_notice ) {
 				$html .= '<div class="ran-booster-repository-release-automation__notices">' . $notice . $result_notice . '</div>';
 			}
-			$html .= '<div class="ran-booster-repository-release-automation__body">' . $this->workflow( $view, false ) . '</div></section>';
+			$html .= $this->workflow( $view, false ) . '</div></details></div>';
 		}
 
-		return $html . '</div></section>';
+		return $html . '</div></div></div></section>';
 	}
 
 	/** @param list<array{label:string,message:string,state:string}> $items */
 	private function repository_lifecycle( array $items ): string {
 		$html = '<ol class="ran-booster-webhook-steps ran-booster-repository-webhook-lifecycle ran-booster-repository-release-lifecycle" aria-label="'
 			. esc_attr( __( 'Published release lifecycle', 'ran-booster' ) ) . '">';
-		foreach ( $items as $number => $item ) {
-			$html .= '<li class="ran-booster-webhook-step ' . esc_attr( $item['state'] ) . '"><span aria-hidden="true">'
-				. esc_html( (string) ( $number + 1 ) ) . '</span><strong>' . esc_html( $item['label'] ) . '</strong><p>'
+		foreach ( $items as $item ) {
+			$html .= '<li class="ran-booster-webhook-step ' . esc_attr( $item['state'] ) . '"><span aria-hidden="true"></span><strong>' . esc_html( $item['label'] ) . '</strong><p>'
 				. esc_html( $item['message'] ) . '</p></li>';
 		}
 		return $html . '</ol>';
+	}
+
+	/** @param array<string,mixed> $model */
+	private function readiness_states( array $model, string $message ): bool {
+		$package = $model['package'] ?? null;
+
+		return is_array( $package ) && ( $package['message'] ?? null ) === $message;
 	}
 
 	/** @param array<string,mixed> $model */
@@ -122,33 +144,39 @@ final class ReleaseWorkflowDisplay {
 			$relationship_msg = sprintf( $format, $relationships, $repository );
 		}
 		$provider_ok = true === ( $model['provider_supported'] ?? false );
-		$html        = '<section class="ran-booster-readiness-panel ran-booster-repository-release-readiness" aria-labelledby="ran-booster-repository-release-readiness-heading">'
-			. '<div class="ran-booster-readiness-panel__top"><div><h4 id="ran-booster-repository-release-readiness-heading">' . esc_html__( 'Release readiness', 'ran-booster' ) . '</h4>'
-			. '<p>' . esc_html__( 'Saved repository facts; no live Git provider check.', 'ran-booster' ) . '</p></div></div><div class="ran-booster-repository-release-readiness__body"><ul class="ran-booster-readiness-list">'
-			. '<li class="ran-booster-readiness-item ' . ( $provider_ok ? 'is-ok' : 'is-pending' ) . '"><span class="ran-booster-readiness-icon" aria-hidden="true"></span><strong>'
+		$all_ok      = $provider_ok && $relationship_ok;
+		$rows        = '<li class="ran-booster-readiness-item ' . ( $provider_ok ? 'is-ok' : 'is-pending' ) . '"><span class="ran-booster-readiness-icon" aria-hidden="true"></span><strong>'
 			. esc_html__( 'Git provider capability', 'ran-booster' ) . '</strong><span>' . esc_html( $provider_ok ? __( 'This Git provider supports published releases.', 'ran-booster' ) : __( 'This Git provider does not implement all required release capabilities.', 'ran-booster' ) ) . '</span></li>'
 			. '<li class="ran-booster-readiness-item ' . ( $relationship_ok ? 'is-ok' : 'is-warning' ) . '"><span class="ran-booster-readiness-icon" aria-hidden="true"></span><strong>'
 			. esc_html__( 'Repository relationship', 'ran-booster' ) . '</strong><span>' . esc_html( $relationship_msg ) . '</span></li>';
 		$package     = $model['package'] ?? null;
 		if ( is_array( $package ) ) {
+			$all_ok          = $all_ok && $package['eligible'] && $package['tracking'];
 			$type_label      = 'plugin' === $package['type'] ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' );
 			$readiness_label = sprintf( /* translators: 1: package type, 2: package display name. */ __( '%1$s readiness — %2$s', 'ran-booster' ), $type_label, $package['name'] );
 			$source_label    = sprintf( /* translators: 1: package type, 2: package display name. */ __( '%1$s source — %2$s', 'ran-booster' ), $type_label, $package['name'] );
 			$track_label     = 'prerelease' === $package['channel'] ? __( 'Preview', 'ran-booster' ) : __( 'Stable', 'ran-booster' );
 			$source_message  = $package['tracking'] ? sprintf( /* translators: %s: Stable or Preview release track. */ __( 'Releases · %s track.', 'ran-booster' ), $track_label ) : __( 'Branch. Change source and track in package settings.', 'ran-booster' );
-			$html           .= '<li class="ran-booster-readiness-item ' . ( $package['eligible'] ? 'is-ok' : 'is-warning' ) . '"><span class="ran-booster-readiness-icon" aria-hidden="true"></span><strong>'
+			$rows           .= '<li class="ran-booster-readiness-item ' . ( $package['eligible'] ? 'is-ok' : 'is-warning' ) . '"><span class="ran-booster-readiness-icon" aria-hidden="true"></span><strong>'
 				. esc_html( $readiness_label ) . '</strong><span>' . esc_html( $package['message'] );
 			if ( ! $package['eligible'] && '' !== $package['settings_url'] ) {
-				$html .= ' <a href="' . esc_url( $package['settings_url'] ) . '">' . esc_html__( 'Review package settings', 'ran-booster' ) . '</a>';
+				$rows .= ' <a href="' . esc_url( $package['settings_url'] ) . '">' . esc_html__( 'Review package settings', 'ran-booster' ) . '</a>';
 			}
-			$html .= '</span></li><li class="ran-booster-readiness-item ' . ( $package['tracking'] ? 'is-ok' : 'is-pending' ) . '"><span class="ran-booster-readiness-icon" aria-hidden="true"></span><strong>'
+			$rows .= '</span></li><li class="ran-booster-readiness-item ' . ( $package['tracking'] ? 'is-ok' : 'is-pending' ) . '"><span class="ran-booster-readiness-icon" aria-hidden="true"></span><strong>'
 				. esc_html( $source_label ) . '</strong><span>' . esc_html( $source_message );
 			if ( ! $package['tracking'] && '' !== $package['settings_url'] ) {
-				$html .= ' <a href="' . esc_url( $package['settings_url'] ) . '">' . esc_html__( 'Open package source settings', 'ran-booster' ) . '</a>';
+				$rows .= ' <a href="' . esc_url( $package['settings_url'] ) . '">' . esc_html__( 'Open package source settings', 'ran-booster' ) . '</a>';
 			}
-			$html .= '</span></li>';
+			$rows .= '</span></li>';
 		}
-		return $html . '</ul></div></section>';
+
+		// Evidence stays closed while every fact is fine; any warning or pending fact opens it.
+		return '<div data-ran-booster-ui-disclosure="repository-release-readiness" data-ran-booster-ui-disclosure-density="compact">'
+			. '<details id="ran-booster-repository-release-readiness" data-ran-booster-ui-disclosure-fallback class="ran-booster-repository-release-readiness ran-booster-disclosure"' . ( $all_ok ? '' : ' open' ) . '>'
+			. '<summary>' . esc_html__( 'Release readiness', 'ran-booster' ) . '</summary>'
+			. '<div data-ran-booster-ui-disclosure-content class="ran-booster-repository-release-readiness__body ran-booster-disclosure__body">'
+			. '<p class="description">' . esc_html__( 'Saved repository facts; no live Git provider check.', 'ran-booster' ) . '</p>'
+			. '<ul class="ran-booster-readiness-list">' . $rows . '</ul></div></details></div>';
 	}
 
 
@@ -168,7 +196,7 @@ final class ReleaseWorkflowDisplay {
 		$html .= '<hr><p><a href="' . esc_url( $this->documentation_url() ) . '">'
 			. esc_html__( 'Booster Releases docs', 'ran-booster' ) . '</a>';
 		foreach ( $view['documentation_links'] ?? array() as $link ) {
-			$html .= ' · <a href="' . esc_url( $link['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $link['label'] ) . '</a>';
+			$html .= ' · <a href="' . esc_url( $link['url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html( $link['label'] ) . ' ' . ExternalLinkMarker::markup() . '</a>';
 		}
 		$html .= '</p>';
 
@@ -197,7 +225,7 @@ final class ReleaseWorkflowDisplay {
 		} elseif ( null !== $record ) {
 			$detail = '<hr>';
 			if ( is_string( $record['pull_request_url'] ?? null ) && '' !== $record['pull_request_url'] ) {
-				$detail .= '<p><a href="' . esc_url( $record['pull_request_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review recorded setup pull request', 'ran-booster' ) . '</a></p>';
+				$detail .= '<p><a href="' . esc_url( $record['pull_request_url'] ) . '" target="_blank" rel="noopener noreferrer">' . esc_html__( 'Review recorded setup pull request', 'ran-booster' ) . ' ' . ExternalLinkMarker::markup() . '</a></p>';
 			}
 			$detail .= $this->form( is_array( $forms['outcome'] ?? null ) ? $forms['outcome'] : array() );
 		} elseif ( null !== $legacy ) {
@@ -223,7 +251,7 @@ final class ReleaseWorkflowDisplay {
 		$unavailable = true === ( $view['unavailable'] ?? false );
 		$reason      = is_string( $view['unavailable_reason'] ?? null ) ? $view['unavailable_reason'] : '';
 		if ( $unavailable && '' !== $reason ) {
-			return '<div class="notice notice-warning inline"><p>' . esc_html( $reason ) . '</p></div>';
+			return '<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>' . esc_html( $reason ) . '</p></div>' . NoticeIcon::markup( 'warning' ) . '</div>';
 		}
 
 		return $this->result_notice( $view );
@@ -249,24 +277,25 @@ final class ReleaseWorkflowDisplay {
 			'workflow_rate_limited'                => 'notice-warning',
 			default                                => $successful ? 'notice-success' : 'notice-error',
 		};
-		$html        = '<div class="notice ' . esc_attr( $notice_tone ) . ' inline"'
+		$intent      = substr( $notice_tone, 7 );
+		$html        = '<div class="notice ' . esc_attr( $notice_tone ) . ' inline ran-wp-ui-notice ran-wp-ui-box-sizing is-' . esc_attr( $intent ) . '"'
 			. ( $successful ? ' data-ran-booster-package-success' : '' )
-			. ' data-ran-booster-release-workflow-result><p>' . esc_html(
+			. ' data-ran-booster-release-workflow-result data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="' . esc_attr( $intent ) . '"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>' . esc_html(
 				is_string( $view['result_message'] ?? null ) && '' !== $view['result_message']
 				? $view['result_message']
 				: $this->workflow_message( $code )
-			) . '</p>';
+			) . '</p></div>' . NoticeIcon::markup( $intent );
 		$observation = in_array( $code, array( 'workflow_release_automation_conflict', 'workflow_release_automation_present', 'workflow_inspected' ), true );
 		if ( ! $successful && ! $observation && in_array( $stage, array( 'request_validation', 'credential_authorisation', 'release_preflight', 'repository_snapshot', 'template_pack', 'preview_storage', 'repository_mutation', 'local_persistence', 'unexpected' ), true ) ) {
 			$remediation = is_string( $view['result_remediation'] ?? null ) && '' !== $view['result_remediation'] ? $view['result_remediation'] : $this->failure_diagnostic_message( $diagnostic, $stage );
-			$html       .= '<details class="ran-booster-disclosure"><summary>' . esc_html__( 'Failure details', 'ran-booster' ) . '</summary><div class="ran-booster-disclosure__body"><p>' . esc_html( $remediation ) . '</p>';
+			$html       .= '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>' . esc_html__( 'Failure details', 'ran-booster' ) . '</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content><p>' . esc_html( $remediation ) . '</p>';
 			if ( $this->valid_diagnostic_code( $diagnostic ) ) {
 				$html .= '<p>' . esc_html__( 'Diagnostic code:', 'ran-booster' ) . ' <code>' . esc_html( $diagnostic ) . '</code></p>';
 			}
 			if ( $diagnostic_available && 1 === preg_match( '/\A[a-f0-9]{32}\z/D', $reference ) ) {
 				$html .= '<p>' . esc_html__( 'Failure reference:', 'ran-booster' ) . ' <code>' . esc_html( $reference ) . '</code></p>';
 			}
-			$html .= '</div></details>';
+			$html .= '</div></details></div>';
 		}
 
 		return $html . '</div>';
@@ -356,7 +385,7 @@ final class ReleaseWorkflowDisplay {
 		}
 		$html .= '</select></label>';
 		if ( '' !== $credentials_url ) {
-			$html .= ' <a class="button" href="' . esc_url( $credentials_url ) . '">' . esc_html__( 'Manage credentials', 'ran-booster' ) . '</a>';
+			$html .= ' <a class="' . esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ) . '" href="' . esc_url( $credentials_url ) . '">' . esc_html__( 'Manage credentials', 'ran-booster' ) . '</a>';
 		}
 		$html .= '</p>';
 		$html .= '<p class="description">' . esc_html(
@@ -367,7 +396,7 @@ final class ReleaseWorkflowDisplay {
 				: __( 'Private repository inspection needs a saved credential.', 'ran-booster' ) )
 		) . '</p>';
 
-		return $html . '<p><button type="submit" class="button' . ( $write ? ' button-primary' : '' ) . '"' . ( $disabled ? ' disabled aria-disabled="true"' : '' ) . '>'
+		return $html . '<p><button type="submit" class="' . esc_attr( $write ? \RAN\Admin\Component\ButtonClasses::primary() : \RAN\Admin\Component\ButtonClasses::secondary() ) . '"' . ( $disabled ? ' disabled aria-disabled="true"' : '' ) . '>'
 			. esc_html( $buttons[ $operation ] ) . '</button></p></form>';
 	}
 

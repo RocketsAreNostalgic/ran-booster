@@ -32,6 +32,7 @@ class Node {
 		this.children = [];
 		this.dataset = {};
 		this.listeners = {};
+		this.dispatchedEvents = [];
 		this.attributes = new Map();
 		this.classes = new Set();
 		this.classList = {
@@ -79,7 +80,30 @@ class Node {
 			this.listeners[type]?.map((listener) => listener()) || []
 		);
 	}
+	dispatchEvent(event) {
+		this.dispatchedEvents.push(event);
+		for (const listener of this.listeners[event.type] || []) {
+			listener(event);
+		}
+		return true;
+	}
 	querySelector(selector) {
+		if (
+			selector ===
+			'.ran-booster-release-candidate__warning[data-ran-booster-ui-notice]'
+		) {
+			return (
+				descendants(this).find(
+					(node) =>
+						node.className
+							?.split(/\s+/)
+							.includes(
+								'ran-booster-release-candidate__warning'
+							) &&
+						node.attributes.has('data-ran-booster-ui-notice')
+				) || null
+			);
+		}
 		if (!/^input\[data-release-id="[^"]*"\]$/.test(selector)) {
 			throw new SyntaxError('Invalid CSS selector');
 		}
@@ -134,6 +158,7 @@ const createHarness = (
 	};
 	for (const name of [
 		'candidates',
+		'placeholder',
 		'candidate-list',
 		'heading',
 		'message',
@@ -150,10 +175,13 @@ const createHarness = (
 	nodes.get('candidates').hidden = true;
 	nodes.get('error').hidden = true;
 	nodes.get('native-update').setAttribute('aria-disabled', 'true');
-	nodes.get('native-update').textContent = 'Install now';
+	nodes.get('native-update').textContent = 'Update now';
 	nodes.get('retry').textContent = 'Refresh releases';
 	browser.querySelector = (selector) =>
-		nodes.get(selector.match(/managed-release-([a-z-]+)/)?.[1]) || null;
+		'[data-ran-booster-managed-release-native-update]' === selector
+			? null
+			: nodes.get(selector.match(/managed-release-([a-z-]+)/)?.[1]) ||
+				null;
 	const requests = [];
 	const requestedUrls = [];
 	class FormData {
@@ -165,8 +193,15 @@ const createHarness = (
 		}
 	}
 	const documentListeners = new Map();
+	const noticeCalls = [];
 	let swappedBrowser = null;
 	const context = {
+		CustomEvent: class {
+			constructor(type, options) {
+				this.type = type;
+				this.bubbles = options?.bubbles;
+			}
+		},
 		Date,
 		FormData,
 		URL,
@@ -190,10 +225,16 @@ const createHarness = (
 			},
 		},
 		document: {
-			querySelector: (selector) =>
-				selector === '[data-ran-booster-managed-release-browser]'
-					? swappedBrowser
-					: null,
+			querySelector: (selector) => {
+				if (selector === '[data-ran-booster-managed-release-browser]') {
+					return swappedBrowser;
+				}
+				// Update now sits in the Package operations group, outside the browser.
+				return selector ===
+					'[data-ran-booster-managed-release-native-update]'
+					? nodes.get('native-update')
+					: null;
+			},
 			addEventListener: (type, listener) => {
 				documentListeners.set(type, listener);
 			},
@@ -205,6 +246,24 @@ const createHarness = (
 			}),
 		},
 		window: {
+			ranBoosterNotice: {
+				// Records how the warning is built; the helper's own markup
+				// is covered by notice.test.mjs.
+				create(intent, notice) {
+					const host = new Node('div');
+					const content = new Node('div');
+					host.append(content);
+					noticeCalls.push({ intent, ...notice });
+					return { host, content };
+				},
+			},
+			CustomEvent: class {
+				constructor(type, options) {
+					this.type = type;
+					this.bubbles = options.bubbles;
+					this.detail = options.detail;
+				}
+			},
 			fetch: async (url, options) => {
 				requestedUrls.push(url);
 				requests.push(options.body.values);
@@ -220,6 +279,7 @@ const createHarness = (
 	return {
 		browser,
 		nodes,
+		noticeCalls,
 		requests,
 		requestedUrls,
 		initialize: context.initialize,
@@ -325,7 +385,7 @@ test('managed browser selects and inspects the newest current candidate, preserv
 		harness.nodes.get('native-update').classList.contains('disabled'),
 		true
 	);
-	assert.equal(harness.nodes.get('native-update').textContent, 'Install now');
+	assert.equal(harness.nodes.get('native-update').textContent, 'Update now');
 	assert.equal(harness.nodes.get('retry').disabled, false);
 	assert.equal(
 		harness.nodes
@@ -630,7 +690,11 @@ test('managed browser enables the native Core update only for its exact newer in
 	);
 	assert.equal(
 		harness.nodes.get('native-update').textContent,
-		'Install 3.0.0 now'
+		'Update to 3.0.0'
+	);
+	assert.doesNotMatch(
+		harness.nodes.get('native-update').textContent,
+		/Install .* now/
 	);
 	assert.equal(
 		harness.nodes.get('native-update').getAttribute('href'),
@@ -733,7 +797,7 @@ test('managed browser leaves the native Core update disabled for a newer release
 		'true'
 	);
 	assert.equal(harness.nodes.get('native-update').getAttribute('href'), null);
-	assert.equal(harness.nodes.get('native-update').textContent, 'Install now');
+	assert.equal(harness.nodes.get('native-update').textContent, 'Update now');
 });
 
 test('managed browser leaves the native Core update disabled when a same-version release has a different identity', async () => {
@@ -846,6 +910,18 @@ test('managed browser shows an explicit no-downgrade warning when Preview offers
 			.join(' '),
 		/Preview track currently offers only versions older than installed\. WordPress Updates will not downgrade this package\./
 	);
+	// The warning is the shared static Notice, placed in the candidate list
+	// with no event asking anything to redraw it.
+	assert.deepEqual(harness.noticeCalls, [
+		{
+			intent: 'warning',
+			className: 'ran-booster-release-candidate__warning',
+			scope: 'global',
+		},
+	]);
+	const warning = harness.nodes.get('candidate-list').children.at(-1);
+	assert.equal(warning.children[0].children[0].tagName, 'p');
+	assert.deepEqual(warning.dispatchedEvents, []);
 });
 
 test('managed browser keeps provider failures visible beside Refresh releases', async () => {
@@ -1074,7 +1150,7 @@ test('managed browser removes stale candidates while Refresh releases is pending
 test('release automation and webhook setup use the shared native disclosure shell', () => {
 	assert.match(
 		primitiveStyles,
-		/\.ran-booster-disclosure \{[\s\S]*border-radius: var\(--ran-booster-radius-surface\)/
+		/:is\(\.ran-booster-settings-section, \.ran-booster-disclosure\),[\s\S]*?\{\s*border-radius: var\(--ran-booster-radius-card\)/
 	);
 	assert.match(
 		primitiveStyles,
@@ -1093,4 +1169,182 @@ test('release automation and webhook setup use the shared native disclosure shel
 		/ran-booster-package-disclosure > summary::before/
 	);
 	assert.doesNotMatch(styles, /ran-booster-release-workflow \{/);
+});
+
+test('managed browser hides the pending placeholder once real rows render', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate('old', '1.0.0', 'older', '2026-08-02T00:00:00Z'),
+				],
+			},
+		},
+		{
+			successful: true,
+			code: 'release_ready',
+			data: {
+				version: '1.0.0',
+				tag: 'v1.0.0',
+				installed_version: '2.0.0',
+				version_relationship: 'older',
+			},
+		},
+	]);
+	harness.nodes.get('placeholder').hidden = false;
+	harness.initialize(harness.browser);
+	assert.equal(harness.nodes.get('placeholder').hidden, false);
+	assert.equal(harness.nodes.get('candidates').hidden, true);
+	await flush();
+	await flush();
+	assert.equal(harness.nodes.get('candidates').hidden, false);
+	assert.equal(harness.nodes.get('placeholder').hidden, true);
+});
+
+test('managed browser hides the pending placeholder beside an empty or failed list', async () => {
+	const empty = createHarness([
+		{
+			successful: true,
+			code: 'no_releases',
+			data: { installed_version: '2.0.0', candidates: [] },
+		},
+	]);
+	empty.nodes.get('placeholder').hidden = false;
+	empty.initialize(empty.browser);
+	await flush();
+	assert.equal(empty.nodes.get('placeholder').hidden, true);
+
+	const failed = createHarness([
+		{ successful: false, code: 'provider_error', data: {} },
+	]);
+	failed.nodes.get('placeholder').hidden = false;
+	failed.initialize(failed.browser);
+	await flush();
+	assert.equal(failed.nodes.get('placeholder').hidden, true);
+});
+
+test('managed browser shows the pending placeholder again while Refresh releases reads', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'no_releases',
+			data: { installed_version: '2.0.0', candidates: [] },
+		},
+		{
+			successful: true,
+			code: 'no_releases',
+			data: { installed_version: '2.0.0', candidates: [] },
+		},
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	assert.equal(harness.nodes.get('placeholder').hidden, true);
+	harness.nodes.get('retry').listeners.click[0]();
+	assert.equal(harness.nodes.get('placeholder').hidden, false);
+	await flush();
+	assert.equal(harness.nodes.get('placeholder').hidden, true);
+});
+
+test('managed browser has no footer wrapper and the helper copy is gone', () => {
+	assert.doesNotMatch(styles, /managed-release-browser__footer/);
+	assert.doesNotMatch(styles, /browser__header p/);
+	assert.match(
+		styles,
+		/\.ran-booster-release-candidate__skeleton \{[^}]*block-size: 12px;[^}]*inline-size: 55%/
+	);
+	assert.doesNotMatch(styles, /animation/);
+	assert.match(
+		styles,
+		/@media \(max-width: 782px\)[\s\S]*?\.ran-wp-ui-button \{\s*align-self: flex-end;/
+	);
+});
+
+test('the source switch bar is one shared state row with the message at the start and the action at the end', () => {
+	assert.match(
+		packageStyles,
+		/\.ran-booster-source-switch-bar \{[^}]*display: flex;[^}]*justify-content: space-between;[^}]*flex-wrap: wrap;[^}]*border: 1px solid var\(--ran-booster-border\);[^}]*background: var\(--ran-booster-surface-subtle\)/
+	);
+	assert.match(
+		packageStyles,
+		/\.ran-booster-source-switch-bar > p \{[^}]*margin: 0;[^}]*min-inline-size: 0/
+	);
+	assert.doesNotMatch(
+		packageStyles,
+		/\.ran-booster-release-switch-actions \{/
+	);
+	assert.doesNotMatch(packageStyles, /\.ran-booster-source-transition \{/);
+});
+
+test('the Update now button outside the browser is found, enabled, relabelled and reset', async () => {
+	const harness = createHarness(
+		[
+			{
+				successful: true,
+				code: 'release_candidates_available',
+				data: {
+					installed_version: '2.0.0',
+					candidates: [
+						candidate(
+							'new',
+							'3.0.0',
+							'newer',
+							'2026-08-03T00:00:00Z'
+						),
+					],
+				},
+			},
+			{
+				successful: true,
+				code: 'release_ready',
+				data: {
+					version: '3.0.0',
+					tag: 'v3.0.0',
+					installed_version: '2.0.0',
+					version_relationship: 'newer',
+					native_offer: {
+						available: true,
+						release_id: 'new',
+						version: '3.0.0',
+					},
+				},
+			},
+			{
+				successful: true,
+				code: 'no_releases',
+				data: { installed_version: '2.0.0', candidates: [] },
+			},
+		],
+		'new'
+	);
+	const button = harness.nodes.get('native-update');
+	// The browser subtree does not contain the button.
+	assert.equal(
+		harness.browser.querySelector(
+			'[data-ran-booster-managed-release-native-update]'
+		),
+		null
+	);
+
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.equal(button.getAttribute('aria-disabled'), 'false');
+	assert.equal(button.getAttribute('tabindex'), null);
+	assert.equal(button.classList.contains('disabled'), false);
+	assert.match(button.getAttribute('href'), /upgrade-plugin/);
+	assert.equal(button.textContent, 'Update to 3.0.0');
+
+	await harness.nodes.get('retry').dispatch('click');
+	await flush();
+	await flush();
+
+	assert.equal(button.getAttribute('aria-disabled'), 'true');
+	assert.equal(button.getAttribute('tabindex'), '-1');
+	assert.equal(button.classList.contains('disabled'), true);
+	assert.equal(button.getAttribute('href'), null);
+	assert.equal(button.textContent, 'Update now');
 });

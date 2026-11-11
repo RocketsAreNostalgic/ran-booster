@@ -76,6 +76,9 @@ function element(initialAttributes = {}) {
 		disabled: true,
 		hidden: false,
 		textContent: '',
+		hasAttribute(name) {
+			return attributes.has(name);
+		},
 		getAttribute(name) {
 			return attributes.get(name) ?? null;
 		},
@@ -96,14 +99,33 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 		'data-attempt-state': state,
 		'data-package-source': packageSource,
 	});
-	const badge = element();
+	function badgeHost(className = '') {
+		const host = element({ 'data-ran-booster-badge': '' });
+		host.className = className;
+		return host;
+	}
+	const badge = badgeHost();
 	const button = element({
 		'data-idle-label': 'Reinstall plugin',
 		'data-update-can-run': '1',
 	});
 	const label = element();
-	const message = element();
-	const activityState = element();
+	const message = element({
+		'aria-live': 'polite',
+		'data-ran-booster-update-message': '',
+	});
+	const messageUpdates = [];
+	let messageText = '';
+	Object.defineProperty(message, 'textContent', {
+		get: () => messageText,
+		set(value) {
+			messageText = value;
+			messageUpdates.push(value);
+		},
+	});
+	const activityState = badgeHost(
+		'ran-booster-deployment-state ran-booster-deployment-state--queued'
+	);
 	const children = new Map([
 		['[data-ran-booster-activity-badge]', badge],
 		['[data-ran-booster-update-button]', button],
@@ -126,6 +148,7 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 		button,
 		label,
 		message,
+		messageUpdates,
 		reference,
 		row,
 	};
@@ -134,6 +157,7 @@ function rowFixture(id, state = 'queued', packageSource = 'branch') {
 function environment(rows, responses) {
 	const timers = [];
 	const events = [];
+	const speech = [];
 	const requests = [];
 	let request = 0;
 	const summary = element({
@@ -141,6 +165,15 @@ function environment(rows, responses) {
 		'data-skipped': '0',
 	});
 	const summaryMessage = element();
+	const noticeUpdates = [];
+	const intents = [];
+	summary.dispatchEvent = (event) =>
+		noticeUpdates.push({
+			type: event.type,
+			bubbles: event.bubbles,
+			intent: summary.getAttribute('data-ran-booster-ui-notice-intent'),
+			text: summaryMessage.textContent,
+		});
 	summary.querySelector = (selector) =>
 		selector === '[data-ran-booster-update-summary-message]'
 			? summaryMessage
@@ -201,13 +234,40 @@ function environment(rows, responses) {
 		},
 	};
 	const window = {
+		wp: { a11y: { speak: (...args) => speech.push(args) } },
 		CustomEvent: class {
 			constructor(type, options) {
 				this.detail = options.detail;
+				this.bubbles = options.bubbles;
 				this.type = type;
 			}
 		},
 		URLSearchParams,
+		ranBoosterBadge: {
+			update(badge, label, intent) {
+				if (typeof label === 'string') {
+					badge.textContent = label;
+				}
+				badge.setAttribute('data-ran-booster-badge-intent', intent);
+				badge.updates = (badge.updates ?? 0) + 1;
+			},
+		},
+		ranBoosterNotice: {
+			setIntent(host, intent) {
+				host.classList.remove(
+					'notice-error',
+					'notice-success',
+					'notice-warning'
+				);
+				host.classList.add('notice-' + intent);
+				host.setAttribute('data-ran-booster-ui-notice-intent', intent);
+				intents.push({
+					intent,
+					text: summaryMessage.textContent,
+				});
+				return true;
+			},
+		},
 		ranBoosterPackageProgress: settings,
 		setTimeout(callback) {
 			timers.push(callback);
@@ -249,13 +309,75 @@ function environment(rows, responses) {
 	return {
 		document,
 		events,
+		speech,
 		requests,
+		noticeUpdates,
+		intents,
 		summary,
 		summaryMessage,
 		timers,
 		window,
 	};
 }
+
+test('only a correlated terminal success updates the native live region once', async () => {
+	const template = fs.readFileSync(
+		new URL('../../views/packages/index.php', import.meta.url),
+		'utf8'
+	);
+	assert.match(
+		template,
+		/<span class="screen-reader-text" aria-live="polite" data-ran-booster-update-message><\/span>/
+	);
+	const success = rowFixture(81);
+	const failure = rowFixture(82);
+	const response = (reference, successState, failureState) => ({
+		ok: true,
+		async json() {
+			return {
+				success: true,
+				data: {
+					items: {
+						81: { attempt_id: 81, reference, state: successState },
+						82: {
+							attempt_id: 82,
+							reference: failure.reference,
+							state: failureState,
+						},
+					},
+				},
+			};
+		},
+	});
+	const fixture = environment(
+		[success, failure],
+		[
+			() => response('0'.repeat(32), 'succeeded', 'running'),
+			() => response(success.reference, 'succeeded', 'running'),
+			() => response(success.reference, 'succeeded', 'failed'),
+		]
+	);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		assert.deepEqual(fixture.speech, []);
+		assert.deepEqual(success.messageUpdates, []);
+		assert.equal(success.message.getAttribute('aria-live'), 'polite');
+		await runTimer(fixture.timers);
+		assert.deepEqual(success.messageUpdates, ['Package reinstalled.']);
+		await runTimer(fixture.timers);
+		assert.deepEqual(fixture.speech, []);
+		assert.deepEqual(success.messageUpdates, ['Package reinstalled.']);
+		assert.equal(success.message.textContent, 'Package reinstalled.');
+		assert.equal(failure.message.textContent, 'Reinstall failed.');
+		assert.equal(fixture.events.length, 1);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
 
 async function runTimer(timers) {
 	const callback = timers.shift();
@@ -315,8 +437,8 @@ test('running update becomes a visible success and restores its button', async (
 		);
 		assert.equal(row.label.textContent, 'Reinstall plugin');
 		assert.equal(
-			row.badge.className,
-			'ran-booster-badge ran-booster-badge--ok'
+			row.badge.getAttribute('data-ran-booster-badge-intent'),
+			'stable'
 		);
 		assert.equal(row.badge.textContent, 'Deployment: Succeeded');
 		assert.equal(row.message.textContent, 'Package reinstalled.');
@@ -337,6 +459,79 @@ test('running update becomes a visible success and restores its button', async (
 		assert.deepEqual(fixture.events[0].detail, {
 			message: 'Package reinstalled.',
 		});
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('unknown poll state leaves badge and attempt unchanged', async () => {
+	const row = rowFixture(70);
+	const fixture = environment([row], ['unknown']);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		assert.equal(row.row.getAttribute('data-attempt-state'), 'queued');
+		assert.equal(row.badge.updates, undefined);
+		assert.equal(row.activityState.updates, undefined);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('updates change the badges in place across repeated states', async () => {
+	const row = rowFixture(71);
+	const fixture = environment([row], ['running', 'running', 'failed']);
+	row.badge.hidden = true;
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		await runTimer(fixture.timers);
+		assert.equal(row.badge.hidden, false);
+		assert.equal(
+			row.badge.getAttribute('data-ran-booster-badge-intent'),
+			'informational'
+		);
+		assert.equal(row.badge.textContent, 'Deployment: Running');
+		assert.equal(row.badge.updates, 2);
+		await runTimer(fixture.timers);
+		assert.equal(row.activityState.textContent, 'Failed');
+		assert.equal(
+			row.activityState.className,
+			'ran-booster-deployment-state ran-booster-deployment-state--failed'
+		);
+		assert.equal(
+			row.activityState.getAttribute('data-ran-booster-badge-intent'),
+			'high'
+		);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('higher-priority status without activity hook remains untouched', async () => {
+	const row = rowFixture(72);
+	const originalQuery = row.row.querySelector;
+	row.row.querySelector = (selector) =>
+		selector === '[data-ran-booster-activity-badge]'
+			? null
+			: originalQuery(selector);
+	row.badge.textContent = 'Git provider unavailable';
+	const fixture = environment([row], ['failed']);
+	globalThis.document = fixture.document;
+	globalThis.window = fixture.window;
+	try {
+		loadFunction('initPackageUpdateProgress')();
+		await runTimer(fixture.timers);
+		assert.equal(row.badge.textContent, 'Git provider unavailable');
+		assert.equal(row.badge.updates, undefined);
+		assert.equal(row.activityState.textContent, 'Failed');
 	} finally {
 		delete globalThis.document;
 		delete globalThis.window;
@@ -646,3 +841,46 @@ test('chunk responses cannot complete a row with a different correlation referen
 		delete globalThis.window;
 	}
 });
+
+for (const [terminal, skipped, intent] of [
+	['succeeded', 0, 'success'],
+	['succeeded', 1, 'warning'],
+	['failed', 0, 'warning'],
+	['needs_attention', 0, 'warning'],
+]) {
+	test(`progress Notice publishes ${intent} for ${terminal} with ${skipped} skipped`, async () => {
+		const row = rowFixture(91);
+		const fixture = environment([row], [terminal]);
+		fixture.summary.setAttribute('data-skipped', String(skipped));
+		Object.defineProperty(fixture.summary, 'textContent', {
+			set() {
+				throw new Error('Retain the Notice content.');
+			},
+		});
+		globalThis.document = fixture.document;
+		globalThis.window = fixture.window;
+		try {
+			loadFunction('initPackageUpdateProgress')();
+			assert.equal(fixture.intents.at(-1).intent, 'warning');
+			await runTimer(fixture.timers);
+			// The helper redraws the static Notice before the text changes.
+			assert.equal(fixture.intents.at(-1).intent, intent);
+			assert.equal(
+				fixture.summaryMessage.textContent,
+				`Booster reinstalls have finished. Skipped: ${skipped}.`
+			);
+			assert.deepEqual(fixture.noticeUpdates, []);
+			assert.equal(
+				fixture.summary.classList.contains('notice-' + intent),
+				true
+			);
+			assert.equal(
+				fixture.events.length,
+				terminal === 'succeeded' ? 1 : 0
+			);
+		} finally {
+			delete globalThis.document;
+			delete globalThis.window;
+		}
+	});
+}

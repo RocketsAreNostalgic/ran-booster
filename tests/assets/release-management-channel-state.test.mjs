@@ -7,6 +7,11 @@ const source = fs.readFileSync(
 	'utf8'
 );
 
+const earlierDisclosureHelpers = source.slice(
+	source.indexOf('const earlierReleasesDisclosure ='),
+	source.indexOf('const initializeManagedReleaseBrowser =')
+);
+
 function declaration(name) {
 	const start = source.indexOf(`\tconst ${name} = `);
 	assert.notEqual(start, -1, `The ${name} declaration must exist.`);
@@ -48,13 +53,16 @@ async function flush() {
 }
 
 test('client hydration normalizes the release source label', () => {
-	assert.match(
-		source,
-		/const choiceHeading = releaseChoice\.querySelector\(\s*'\[data-ran-booster-source-heading\]'\s*\);/
-	);
+	// The card keeps its server-rendered heading, description and meta-free layout.
+	assert.doesNotMatch(source, /choiceHeading|choiceMeta|source-meta/);
+	assert.doesNotMatch(source, /setText\(choiceDescription/);
 	assert.match(
 		declaration('setChoiceState'),
-		/setText\(choiceHeading, wp\.i18n\.__\(\'Releases\', \'ran-booster\'\)\);/
+		/^\s*const setChoiceState = \(state\) =>/
+	);
+	assert.doesNotMatch(
+		source,
+		/Choose repository first|Stable by default|Choose another'|Branch only|Check failed|Checking repository…|Inspected'|Repository root required|Git provider capability unavailable|%d available/
 	);
 	assert.ok(
 		declaration('setChoiceState').includes(
@@ -95,8 +103,9 @@ test('selected release track maps to the stored release channel', () => {
 
 test('branch release track selection updates only its local disclosure summary', () => {
 	const updateReleaseTrackSummary = Function(
-		`"use strict"; ${declaration('updateReleaseTrackSummary')} return updateReleaseTrackSummary;`
+		`"use strict"; ${declaration('syncUseReleasesState')} ${declaration('updateReleaseTrackSummary')} return updateReleaseTrackSummary;`
 	)();
+	globalThis.document = { querySelector: () => null };
 	const badge = { textContent: 'Stable' };
 	const disclosure = {
 		querySelector(selector) {
@@ -110,7 +119,10 @@ test('branch release track selection updates only its local disclosure summary',
 			return selector === '[data-ran-booster-release-channel]';
 		},
 		closest(selector) {
-			if (selector === '#ran-booster-release-track-settings') {
+			if (
+				selector ===
+				'#ran-booster-release-track-settings, [data-ran-booster-ui-disclosure="package-release-track"]'
+			) {
 				return trackDisclosure;
 			}
 			return selector === 'label' ? label : null;
@@ -129,6 +141,7 @@ test('branch release track selection updates only its local disclosure summary',
 	updateReleaseTrackSummary({ target: { matches: () => false } });
 	updateReleaseTrackSummary({ target: radio(label('Preview'), null) });
 	assert.equal(badge.textContent, 'Stable');
+	delete globalThis.document;
 });
 
 test('prospective client contains no managed release track dirty-state behavior', () => {
@@ -201,6 +214,13 @@ test('loading candidates preserves provider order and uses the shared disclosure
 			}
 			return {
 				children: [],
+				attributes: {},
+				setAttribute(name, value) {
+					this.attributes[name] = value;
+				},
+				dispatchEvent(event) {
+					this.dispatched = event;
+				},
 				append(...nodes) {
 					this.children.push(...nodes);
 				},
@@ -223,6 +243,7 @@ test('loading candidates preserves provider order and uses the shared disclosure
 		`"use strict";
 		let requestSequence = 0;
 		let selectedRelease = null;
+		${earlierDisclosureHelpers}
 		${declaration('showCandidates')}
 		return {
 			showCandidates,
@@ -286,13 +307,25 @@ test('loading candidates preserves provider order and uses the shared disclosure
 	assert.equal(harness.state().selectedRelease.channel, 'stable');
 	assert.equal(candidateList.children.length, 2);
 	assert.equal(candidateList.children[0].children[0].checked, true);
+	const host = candidateList.children[1];
+	assert.equal(host.className, 'ran-booster-release-settings-disclosure');
 	assert.equal(
-		candidateList.children[1].className,
-		'ran-booster-release-settings-disclosure ran-booster-disclosure'
+		host.attributes['data-ran-booster-ui-disclosure'],
+		'release-earlier-releases'
 	);
+	assert.equal(host.dispatched.type, 'ran-booster:ui-disclosure-update');
+	const details = host.children[0];
+	assert.equal(details.className, 'ran-booster-disclosure');
 	assert.equal(
-		candidateList.children[1].children[1].className,
-		'ran-booster-disclosure__body'
+		details.attributes['data-ran-booster-ui-disclosure-fallback'],
+		''
+	);
+	assert.equal(details.children[1].className, 'ran-booster-disclosure__body');
+	assert.equal(
+		details.children[1].attributes[
+			'data-ran-booster-ui-disclosure-content'
+		],
+		''
 	);
 });
 
@@ -369,7 +402,7 @@ test('a configured subdirectory makes Published releases unavailable and keeps B
 	);
 	assert.match(
 		declaration('setChoiceState'),
-		/releaseChoice\.setAttribute\('title', disabled \? description : ''\)/
+		/releaseChoice\.setAttribute\('title', disabled \? staticDescription : ''\)/
 	);
 	assert.match(
 		declaration('chooseRelease'),
@@ -838,4 +871,194 @@ test('a stale in-flight inspection cannot restore install authority after source
 	await inspection;
 	assert.equal(ready, 0);
 	assert.equal(harness.selected(), null);
+});
+
+test('managed release failures show the static warning Notice without a redraw event', () => {
+	const errorMessage = { textContent: '' };
+	const errorNotice = { hidden: true };
+	const showError = Function(
+		'errorMessage',
+		'errorNotice',
+		`${declaration('showError')} return showError;`
+	)(errorMessage, errorNotice);
+	// The PHP-rendered Notice has no dispatchEvent here: calling one throws.
+	showError('Could not load releases.');
+	assert.equal(errorMessage.textContent, 'Could not load releases.');
+	assert.equal(errorNotice.hidden, false);
+});
+
+for (const enhanced of [true, false]) {
+	test(`managed candidate refresh uses ${enhanced ? 'HTMX swap' : 'native removal'}`, async () => {
+		const order = [];
+		const candidateList = {
+			replaceChildren: () => order.push('native-clear'),
+		};
+		const window = { CustomEvent: class {} };
+		if (enhanced) {
+			window.htmx = {
+				swap: (target, html, spec) => {
+					assert.equal(target, candidateList);
+					assert.equal(html, '');
+					assert.equal(spec.swapStyle, 'innerHTML');
+					assert.equal(spec.swapDelay, 0);
+					assert.equal(spec.settleDelay, 0);
+					order.push('htmx-swap');
+				},
+			};
+		}
+		const list = Function(
+			'candidateList',
+			'window',
+			'wp',
+			'request',
+			`let sequence = 0, selected = null; const clearError=()=>{}, setListBusy=()=>{}, disableNativeUpdate=()=>{}, setStatus=()=>{}, showError=()=>{}, showPlaceholder=()=>{}; const candidates=null; ${declaration('list')} return list;`
+		)(
+			candidateList,
+			window,
+			{ i18n: { __: (text) => text } },
+			async () => ({ successful: false })
+		);
+		await list();
+		assert.deepEqual(order, [enhanced ? 'htmx-swap' : 'native-clear']);
+	});
+}
+
+const eligibleMessage =
+	'Branch currently active. Switch to releases using the %s track.';
+const notReadyMessage =
+	'Releases aren’t ready. Fix the readiness checks below.';
+
+function switchBarHarness({ ready, track = 'Stable', disabled = false }) {
+	const attributes = new Map();
+	const wrapperAttributes = new Map([
+		...(ready ? [] : [['data-ran-booster-reason-tooltip', '']]),
+	]);
+	const reason = { id: 'reason-id', hidden: !ready };
+	const wrapper = {
+		removeAttribute: (name) => wrapperAttributes.delete(name),
+		setAttribute: (name, value) => wrapperAttributes.set(name, value),
+		querySelector: () => reason,
+	};
+	const button = {
+		disabled,
+		dataset: { ranBoosterUseReleasesReady: ready ? 'true' : 'false' },
+		closest: () => wrapper,
+		getAttribute: (name) => attributes.get(name) ?? null,
+		setAttribute: (name, value) => attributes.set(name, value),
+		removeAttribute: (name) => attributes.delete(name),
+	};
+	const summary = {
+		textContent: '',
+		dataset: {
+			ranBoosterUseReleasesSummary: eligibleMessage,
+			ranBoosterUseReleasesSummaryUnavailable: notReadyMessage,
+		},
+	};
+	const badge = { textContent: track };
+	const document = {
+		querySelector: (selector) =>
+			({
+				'[data-ran-booster-use-releases]': button,
+				'[data-ran-booster-use-releases-summary]': summary,
+				'[data-ran-booster-release-track-summary]': badge,
+			})[selector] ?? null,
+	};
+	const sync = new Function(
+		'document',
+		`${declaration('syncUseReleasesState')}\nreturn syncUseReleasesState;`
+	)(document);
+	return {
+		sync,
+		button,
+		summary,
+		badge,
+		attributes,
+		wrapperAttributes,
+		reason,
+	};
+}
+
+test('the source switch bar message follows the selected release track when releases are ready', () => {
+	const bar = switchBarHarness({ ready: true, track: 'Preview' });
+	bar.sync();
+	assert.equal(
+		bar.summary.textContent,
+		'Branch currently active. Switch to releases using the Preview track.'
+	);
+	assert.equal(bar.attributes.get('aria-disabled'), 'false');
+	assert.equal(
+		bar.wrapperAttributes.has('data-ran-booster-reason-tooltip'),
+		false
+	);
+});
+
+test('the source switch bar switches to the not-ready message and tooltip when readiness is lost', () => {
+	const bar = switchBarHarness({ ready: true });
+	bar.sync();
+	bar.button.dataset.ranBoosterUseReleasesReady = 'false';
+	bar.sync();
+	assert.equal(bar.summary.textContent, notReadyMessage);
+	assert.equal(bar.attributes.get('aria-disabled'), 'true');
+	assert.equal(bar.attributes.get('aria-describedby'), 'reason-id');
+	assert.equal(
+		bar.wrapperAttributes.has('data-ran-booster-reason-tooltip'),
+		true
+	);
+	bar.badge.textContent = 'Preview';
+	bar.sync();
+	assert.equal(bar.summary.textContent, notReadyMessage);
+});
+
+test('the source switch bar returns to the eligible message with the current track when readiness is gained', () => {
+	const bar = switchBarHarness({ ready: false });
+	bar.sync();
+	assert.equal(bar.summary.textContent, notReadyMessage);
+	bar.button.dataset.ranBoosterUseReleasesReady = 'true';
+	bar.badge.textContent = 'Preview';
+	bar.sync();
+	assert.equal(
+		bar.summary.textContent,
+		'Branch currently active. Switch to releases using the Preview track.'
+	);
+	assert.equal(bar.attributes.get('aria-disabled'), 'false');
+	assert.equal(bar.attributes.has('aria-describedby'), false);
+	assert.equal(bar.reason.hidden, true);
+});
+
+test('the Use releases message follows the selected release track radio', () => {
+	const bar = switchBarHarness({ ready: true });
+	const target = {
+		matches: () => true,
+		closest: (selector) =>
+			selector === 'label'
+				? { querySelector: () => ({ textContent: 'Preview' }) }
+				: { querySelector: () => bar.badge },
+	};
+	new Function(
+		'document',
+		'event',
+		`${declaration('syncUseReleasesState')}\n${declaration('updateReleaseTrackSummary')}\nupdateReleaseTrackSummary(event);`
+	)(
+		{
+			querySelector: (selector) =>
+				({
+					'[data-ran-booster-use-releases]': bar.button,
+					'[data-ran-booster-use-releases-summary]': bar.summary,
+					'[data-ran-booster-release-track-summary]': bar.badge,
+				})[selector] ?? null,
+		},
+		{ target }
+	);
+	assert.equal(bar.badge.textContent, 'Preview');
+	assert.equal(
+		bar.summary.textContent,
+		'Branch currently active. Switch to releases using the Preview track.'
+	);
+});
+
+test('the script watches the ready flag so readiness changes reach the switch bar', () => {
+	assert.match(
+		source,
+		/attributeFilter: \['data-ran-booster-use-releases-ready'\]/
+	);
 });

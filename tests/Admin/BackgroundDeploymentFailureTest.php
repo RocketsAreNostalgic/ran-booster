@@ -221,6 +221,9 @@ final class BackgroundDeploymentFailureTest extends TestCase {
 
 		self::assertStringContainsString( 'plugin-update-tr', $html );
 		self::assertStringContainsString( 'notice-error', $html );
+		self::assertStringContainsString( 'class="update-message notice inline notice-error notice-alt" data-ran-booster-ui-notice', $html );
+		self::assertStringContainsString( 'data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"', $html );
+		self::assertStringContainsString( '<div data-ran-booster-ui-notice-content>', $html );
 		self::assertStringContainsString( 'Git provider rejected', $html );
 		self::assertStringContainsString( 'Replace credential', $html );
 		self::assertStringContainsString( 'tab=gh&amp;view=credentials&amp;replace_credential=profile_123', $html );

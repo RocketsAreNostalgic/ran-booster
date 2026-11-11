@@ -85,6 +85,38 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		);
 	}
 
+	/**
+	 * The step list holds only the delivery steps. A method nobody uses renders them neutral; amber is
+	 * reserved for a method that is in use. The release workflow state lives in its disclosure badge.
+	 */
+	public function test_release_steps_are_two_delivery_steps_and_neutral_when_the_method_is_not_in_use(): void {
+		$method = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'repository_lifecycle_projection' );
+		$steps  = static function ( bool $package, bool $tracking, bool $in_use ) use ( $method ): array {
+			$items = $method->invoke( ( new \ReflectionClass( ReleaseWorkflowPresenter::class ) )->newInstanceWithoutConstructor(), $package, $tracking, $in_use );
+			self::assertIsArray( $items );
+			self::assertCount( 2, $items );
+
+			return array_map( static fn ( mixed $item ): string => is_array( $item ) ? (string) $item['label'] . ':' . (string) $item['state'] : '', $items );
+		};
+		self::assertSame( array( 'Prepare package:is-ok', 'Track releases:is-ok' ), $steps( true, true, true ) );
+		self::assertSame( array( 'Prepare package:is-warning', 'Track releases:is-pending' ), $steps( false, false, true ) );
+		self::assertSame( array( 'Prepare package:is-neutral', 'Track releases:is-neutral' ), $steps( false, false, false ) );
+		self::assertSame( array( 'Prepare package:is-neutral', 'Track releases:is-neutral' ), $steps( true, true, false ) );
+
+		// The badge keeps its never-configured/blocked tones.
+		$state_method = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'repository_release_automation_state' );
+		$presenter    = ( new \ReflectionClass( ReleaseWorkflowPresenter::class ) )->newInstanceWithoutConstructor();
+		$never        = $state_method->invoke( $presenter, '', false, false, false, 'unassessed' );
+		self::assertIsArray( $never );
+		self::assertSame( 'Not assessed', $never['label'] );
+		self::assertSame( 'ran-booster-badge--neutral', $never['tone'] );
+		self::assertSame( 'notice-info', $never['notice_tone'] );
+		$blocked = $state_method->invoke( $presenter, '', false, false, true, 'unassessed' );
+		self::assertIsArray( $blocked );
+		self::assertSame( 'Blocked', $blocked['label'] );
+		self::assertSame( 'ran-booster-badge--error', $blocked['tone'] );
+	}
+
 	public function test_registered_workflow_provider_without_metadata_leaves_repository_rows_untouched_without_warning_or_output(): void {
 		$provider = new RepositoryReleaseWorkflowProviderDouble();
 		$rows     = array(
@@ -286,7 +318,33 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 
 		self::assertStringContainsString( '>Unavailable<', $html );
 		self::assertStringNotContainsString( 'Ready to assess', $html );
-		self::assertStringContainsString( 'button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
+		// A Branch-only repository does not use Releases: neutral delivery badge and line, neutral steps, no warnings.
+		self::assertSame( 1, preg_match( '/Release publishing<\/h3><span[^>]*is-none-intent[^>]*>Not in use<\/span>/', $html ) );
+		self::assertStringContainsString( 'No package on this repository tracks releases.', $html );
+		self::assertSame( 2, substr_count( $html, 'ran-booster-webhook-step is-neutral' ) );
+		self::assertSame( 0, preg_match( '/ran-booster-webhook-step is-(?:ok|warning|pending)/', $html ) );
+		self::assertStringNotContainsString( 'Release workflow — optional', $html );
+
+		// A package that tracks Releases makes the method Active, including beside a Branch package (mixed use).
+		foreach ( array( array( 'release_asset' ), array( 'branch', 'release_asset' ) ) as $sources ) {
+			$used                      = $row;
+			$used['package_summaries'] = array();
+			foreach ( $sources as $source ) {
+				$used['package_summaries'][] = array(
+					'type'            => 'plugin',
+					'identifier'      => 'example/example.php',
+					'source'          => $source,
+					'source_revision' => 3,
+				);
+			}
+			ob_start();
+			$controls->render_repository_release_sections( $used, 'https://example.test/repositories' );
+			$active = (string) ob_get_clean();
+			self::assertSame( 1, preg_match( '/Release publishing<\/h3><span[^>]*is-stable-intent[^>]*>Active<\/span>/', $active ), implode( '+', $sources ) );
+			self::assertStringNotContainsString( 'No package on this repository tracks releases.', $active );
+			self::assertSame( 0, substr_count( $active, 'ran-booster-webhook-step is-neutral' ), implode( '+', $sources ) );
+		}
+		self::assertStringContainsString( 'button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
 	}
 
 	public function test_passive_repository_render_reads_only_status_and_opaque_preview_without_a_workflow_mutation(): void {
@@ -837,6 +895,51 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 			'Choose a saved credential that can manage release workflows and open pull requests. Its secret is never stored with this setup.',
 			$view['forms']['inspect']['write_guidance']
 		);
+	}
+
+	/**
+	 * The sidebar and the disclosure must tell one story: available releases do not prove the
+	 * publishing workflow works, so the sidebar says "Not assessed" like the disclosure badge.
+	 */
+	public function test_release_workflow_sidebar_value_matches_the_not_assessed_disclosure_for_published_releases(): void {
+		$tracking  = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$presenter = $this->presenter( tracking: $tracking );
+		$rows      = $presenter->enrich_repository_rows(
+			array(
+				'row' => array(
+					'provider_code'     => 'fixture',
+					'repository_id'     => '101',
+					'repository'        => 'example/example',
+					'details'           => array(),
+					'package_summaries' => array(
+						array(
+							'type'            => 'plugin',
+							'identifier'      => 'example/example.php',
+							'source'          => 'release_asset',
+							'source_revision' => 3,
+						),
+					),
+				),
+			),
+			'fixture',
+			array(),
+			'https://example.test/return'
+		);
+		$values    = array();
+		foreach ( $rows as $row ) {
+			foreach ( is_array( $row['details'] ?? null ) ? $row['details'] : array() as $detail ) {
+				if ( is_array( $detail ) && 'release_workflow' === ( $detail['category'] ?? '' ) ) {
+					$values[] = $detail['value'] ?? '';
+				}
+			}
+		}
+		self::assertSame( array( 'Not assessed' ), $values );
+
+		$state_method = new \ReflectionMethod( ReleaseWorkflowPresenter::class, 'repository_release_automation_state' );
+		$state        = $state_method->invoke( ( new \ReflectionClass( ReleaseWorkflowPresenter::class ) )->newInstanceWithoutConstructor(), '', false, true, false, 'unassessed' );
+		self::assertIsArray( $state );
+		self::assertSame( 'Not assessed', $state['label'] );
+		self::assertSame( 'Releases are available; their publishing method has not been assessed.', $state['message'] );
 	}
 
 	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null ): ReleaseWorkflowRequestController {

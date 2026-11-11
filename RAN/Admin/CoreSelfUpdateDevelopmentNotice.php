@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\Admin\Component\NoticeIcon;
 use RAN\WordPress\CoreSelfUpdatePolicy;
 
 /**
@@ -26,7 +27,7 @@ final class CoreSelfUpdateDevelopmentNotice {
 	}
 
 	public function enqueue_style(): void {
-		if ( $this->should_render() ) {
+		if ( $this->should_render() || ( BoosterNoticeScope::is_booster_screen( $this->screen_id ) && $this->authorized() ) ) {
 			wp_add_inline_style( 'common', '[data-ran-booster-core-development-notice] { background-color: #e5f3ff; }' );
 		}
 	}
@@ -34,13 +35,22 @@ final class CoreSelfUpdateDevelopmentNotice {
 	public function should_render(): bool {
 		$diagnostics = $this->policy->diagnostics();
 
-		return (
-			current_user_can( 'manage_options' )
-			|| current_user_can( 'manage_network_plugins' )
-		)
+		return $this->authorized()
 			&& BoosterNoticeScope::allows( $this->screen_id )
 			&& 'disabled' === ( $diagnostics['effective_mode'] ?? null )
 			&& 'source_checkout' === ( $diagnostics['reason'] ?? null );
+	}
+
+	/** Render the source-policy fact within the local-development guidance. */
+	public function render_local_fact(): void {
+		if ( ! $this->rendered && $this->should_render() ) {
+			$this->rendered = true;
+			echo '<p>' . esc_html__( 'Core updates are disabled to protect this source checkout.', 'ran-booster' ) . '</p>';
+		}
+	}
+
+	private function authorized(): bool {
+		return current_user_can( 'manage_options' ) || current_user_can( 'manage_network_plugins' );
 	}
 
 	/** Render on non-Booster admin screens through WordPress's notice region. */
@@ -71,12 +81,12 @@ final class CoreSelfUpdateDevelopmentNotice {
 		}
 		$this->rendered = true;
 		?>
-		<div class="notice notice-info<?php echo $inline ? ' inline' : ''; ?>" data-ran-booster-core-development-notice>
+		<div class="notice notice-info<?php echo $inline ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-core-development-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster development detected:', 'ran-booster' ); ?></strong>
 				<?php esc_html_e( 'Core updates are disabled to protect this source checkout.', 'ran-booster' ); ?>
 			</p>
-		</div>
+		</div><?php NoticeIcon::print_intent( 'info' ); ?></div>
 		<?php
 	}
 }

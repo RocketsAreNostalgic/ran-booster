@@ -4,7 +4,7 @@
 
 	const accessSecretToolResets = new WeakMap();
 	const webhookSecretToolResets = new WeakMap();
-	const supportReportCopyResets = new WeakMap();
+	const clipboardStates = new WeakMap();
 	let activeCredentialButton = null;
 	let credentialRequestHandled = false;
 
@@ -41,7 +41,22 @@
 	);
 
 	document.addEventListener('htmx:afterSwap', handleProviderProfileSwap);
+	document.addEventListener('click', confirmDelegatedSubmit);
+	document.addEventListener('input', function (event) {
+		const input = event.target.closest?.(
+			'[data-support-report-tools] textarea'
+		);
+		const button = input
+			?.closest('[data-support-report-tools]')
+			?.querySelector('[data-support-report-copy]');
+		if (button) {
+			resetClipboard(button);
+		}
+	});
 	document.addEventListener('click', function (event) {
+		if (event.target.closest?.('[data-copy-value-button]')) {
+			return copyDisplayedValue(event);
+		}
 		if (event.target.closest?.('[data-support-report-download]')) {
 			downloadSupportReport(event);
 		} else {
@@ -53,51 +68,196 @@
 		handleProviderProfileSuccess
 	);
 
-	async function copySupportReport(event) {
-		const copy = event.target.closest?.('[data-support-report-copy]');
-		if (!copy || copy.disabled) {
+	/*
+	 * Submit buttons with data-confirm that the initial binding below never saw,
+	 * such as controls inside a panel that an HTMX swap replaced, still confirm.
+	 * Buttons the binding already owns are skipped so they confirm once.
+	 */
+	function confirmDelegatedSubmit(event) {
+		const button = event.target.closest?.(
+			'button[type="submit"][data-confirm]'
+		);
+		if (
+			!button ||
+			button.dataset.ranBoosterConfirmBound === 'true' ||
+			button.disabled
+		) {
 			return;
 		}
-		const root = copy.closest('[data-support-report-tools]');
-		const input = root?.querySelector('textarea');
-		const status = root?.querySelector('[data-support-report-status]');
-		const icon = copy.querySelector('.dashicons');
-		if (!input || !status || !icon) {
+
+		// eslint-disable-next-line no-alert -- Native confirmation is intentional for destructive admin actions.
+		if (!window.confirm(button.getAttribute('data-confirm'))) {
+			event.preventDefault();
+		}
+	}
+
+	function resetClipboard(button) {
+		const state = clipboardStates.get(button);
+		if (!state) {
 			return;
 		}
-		window.clearTimeout(supportReportCopyResets.get(copy));
-		icon.classList.replace('dashicons-yes', 'dashicons-clipboard');
-		copy.disabled = true;
+		state.generation += 1;
+		state.pending = false;
+		window.clearTimeout(state.timer);
+		state.observer?.disconnect();
+		state.observer = null;
+		state.render(false);
+		state.status.textContent = '';
+		state.status.classList.remove('screen-reader-text');
+		if (state.label === null) {
+			button.removeAttribute('aria-label');
+		} else {
+			button.setAttribute('aria-label', state.label);
+		}
+		if (state.title === null) {
+			button.removeAttribute('title');
+		} else {
+			button.setAttribute('title', state.title);
+		}
+	}
+
+	async function copyToClipboard(options) {
+		const { button, value, status, read, select, render, observe } =
+			options;
+		let state = clipboardStates.get(button);
+		if (state?.pending || !read()) {
+			return;
+		}
+		if (state) {
+			resetClipboard(button);
+		} else {
+			state = {
+				generation: 0,
+				label: button.getAttribute('aria-label'),
+				title: button.getAttribute('title'),
+				pending: false,
+				timer: null,
+				observer: null,
+				status,
+				render,
+			};
+			clipboardStates.set(button, state);
+		}
+		state.status = status;
+		state.render = render;
+		render(false);
 		status.textContent = '';
+		status.classList.remove('screen-reader-text');
+		state.pending = true;
+		const generation = ++state.generation;
+		const text = read();
+		const current = () =>
+			state.generation === generation &&
+			button.isConnected !== false &&
+			value.isConnected !== false &&
+			status.isConnected !== false &&
+			read() === text;
+		if (observe) {
+			state.observer = new window.MutationObserver(() =>
+				resetClipboard(button)
+			);
+			state.observer.observe(value, {
+				childList: true,
+				characterData: true,
+				subtree: true,
+			});
+		}
 		try {
 			if (typeof window.navigator?.clipboard?.writeText !== 'function') {
 				throw new Error();
 			}
-			await window.navigator.clipboard.writeText(input.value);
-			if (!input.isConnected) {
+			await window.navigator.clipboard.writeText(text);
+			if (!current()) {
+				if (state.generation === generation) {
+					resetClipboard(button);
+				}
 				return;
 			}
-			icon.classList.replace('dashicons-clipboard', 'dashicons-yes');
+			state.pending = false;
+			render(true);
+			button.setAttribute('aria-label', status.dataset.copiedMessage);
+			button.setAttribute('title', status.dataset.copiedMessage);
+			status.classList.add('screen-reader-text');
 			status.textContent = status.dataset.copiedMessage;
-			supportReportCopyResets.set(
-				copy,
-				window.setTimeout(() => {
-					icon.classList.replace(
-						'dashicons-yes',
-						'dashicons-clipboard'
-					);
-					supportReportCopyResets.delete(copy);
-				}, 2000)
-			);
+			state.timer = window.setTimeout(() => resetClipboard(button), 2000);
 		} catch {
-			if (input.isConnected) {
-				input.focus();
-				input.select();
-				status.textContent = status.dataset.copyFailedMessage;
+			if (!current()) {
+				if (state.generation === generation) {
+					resetClipboard(button);
+				}
+				return;
 			}
-		} finally {
-			copy.disabled = false;
+			state.pending = false;
+			state.observer?.disconnect();
+			state.observer = null;
+			let message = status.dataset.copyFailedMessage;
+			try {
+				select();
+			} catch {
+				message = __(
+					'Clipboard access failed. Select the value and use your browser copy command.',
+					'ran-booster'
+				);
+			}
+			status.classList.remove('screen-reader-text');
+			status.textContent = message;
 		}
+	}
+
+	function copyDisplayedValue(event) {
+		const button = event.target.closest?.('[data-copy-value-button]');
+		const root = button?.closest('[data-copy-value-tools]');
+		const value = root?.querySelector('[data-copy-value]');
+		const status = root?.querySelector('[data-copy-value-status]');
+		if (!value || !status) {
+			return;
+		}
+		return copyToClipboard({
+			button,
+			value,
+			status,
+			read: () => value.textContent,
+			select() {
+				const selection =
+					value.ownerDocument.defaultView.getSelection();
+				const range = value.ownerDocument.createRange();
+				range.selectNodeContents(value);
+				selection.removeAllRanges();
+				selection.addRange(range);
+			},
+			render: (success) => button.classList.toggle('is-copied', success),
+			observe: true,
+		});
+	}
+
+	function copySupportReport(event) {
+		const button = event.target.closest?.('[data-support-report-copy]');
+		if (!button || button.disabled) {
+			return;
+		}
+		const root = button.closest('[data-support-report-tools]');
+		const value = root?.querySelector('textarea');
+		const status = root?.querySelector('[data-support-report-status]');
+		const icon = button.querySelector('.dashicons');
+		if (!value || !status || !icon) {
+			return;
+		}
+		return copyToClipboard({
+			button,
+			value,
+			status,
+			read: () => value.value,
+			select() {
+				value.focus();
+				value.select();
+			},
+			render(success) {
+				icon.classList.replace(
+					success ? 'dashicons-clipboard' : 'dashicons-yes',
+					success ? 'dashicons-yes' : 'dashicons-clipboard'
+				);
+			},
+		});
 	}
 
 	function downloadSupportReport(event) {
@@ -111,6 +271,11 @@
 		if (!input || !status) {
 			return;
 		}
+		const copy = root.querySelector('[data-support-report-copy]');
+		if (copy) {
+			resetClipboard(copy);
+		}
+		status.classList.remove('screen-reader-text');
 		let url;
 		let link;
 		status.textContent = '';
@@ -287,6 +452,7 @@
 		);
 
 		function reset() {
+			resetClipboard(copy);
 			visibilityTools.reset();
 			updateCopyState();
 			resetCopyFeedback();
@@ -294,6 +460,8 @@
 		}
 
 		generate.addEventListener('click', function () {
+			resetClipboard(copy);
+			resetCopyFeedback();
 			try {
 				const generated = generateSecureBase64Url(byteLength);
 				input.value = generated;
@@ -308,7 +476,7 @@
 			}
 		});
 
-		copy.addEventListener('click', async function () {
+		copy.addEventListener('click', function () {
 			const value = normalizeValue
 				? normalizeValue(input.value)
 				: input.value;
@@ -316,32 +484,30 @@
 				updateCopyState();
 				return;
 			}
-
-			try {
-				resetCopyFeedback();
-				input.value = value;
-				if (
-					!window.navigator?.clipboard ||
-					typeof window.navigator.clipboard.writeText !== 'function'
-				) {
-					throw new Error();
-				}
-
-				await window.navigator.clipboard.writeText(value);
-				copy.setAttribute('aria-label', copy.dataset.copiedLabel);
-				copy.setAttribute('title', copy.dataset.copiedLabel);
-				copyIcon.setAttribute('hidden', '');
-				copySuccessIcon.removeAttribute('hidden');
-				showStatus(status.dataset.copiedMessage, true);
-			} catch {
-				resetCopyFeedback();
-				input.focus();
-				input.select();
-				showStatus(status.dataset.copyFailedMessage);
-			}
+			input.value = value;
+			return copyToClipboard({
+				button: copy,
+				value: input,
+				status,
+				read: () =>
+					normalizeValue ? normalizeValue(input.value) : input.value,
+				select() {
+					input.focus();
+					input.select();
+				},
+				render(success) {
+					if (success) {
+						copyIcon.setAttribute('hidden', '');
+						copySuccessIcon.removeAttribute('hidden');
+					} else {
+						resetCopyFeedback();
+					}
+				},
+			});
 		});
 
 		input.addEventListener('input', function () {
+			resetClipboard(copy);
 			if (onInput) {
 				onInput();
 			}
@@ -680,27 +846,23 @@
 					return;
 				}
 				toolRoot.dataset.ranBoosterWebhookUrlCopyBound = 'true';
-
-				copy.addEventListener('click', async function () {
-					try {
-						if (
-							!window.navigator?.clipboard ||
-							typeof window.navigator.clipboard.writeText !==
-								'function'
-						) {
-							throw new Error();
-						}
-						await window.navigator.clipboard.writeText(input.value);
-						copy.textContent = copy.dataset.copiedLabel;
-						status.textContent = status.dataset.copiedMessage;
-						status.classList.add('screen-reader-text');
-					} catch {
-						copy.textContent = copy.dataset.copyLabel;
-						input.focus();
-						input.select();
-						status.textContent = status.dataset.copyFailedMessage;
-						status.classList.remove('screen-reader-text');
-					}
+				input.addEventListener('input', function () {
+					resetClipboard(copy);
+				});
+				copy.addEventListener('click', function () {
+					return copyToClipboard({
+						button: copy,
+						value: input,
+						status,
+						read: () => input.value,
+						select() {
+							input.focus();
+							input.select();
+						},
+						render(success) {
+							copy.classList.toggle('is-copied', success);
+						},
+					});
 				});
 			}
 		);

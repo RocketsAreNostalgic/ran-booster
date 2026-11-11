@@ -18,25 +18,41 @@ final class AdminStatusSummaryRenderer {
 	public const ATTENTION = 'attention';
 
 	/**
+	 * Public Badge intent for each summary state.
+	 *
+	 * @var array<string,string>
+	 */
+	private const INTENTS = array(
+		self::NEUTRAL   => 'none',
+		self::PENDING   => 'none',
+		self::READY     => 'stable',
+		self::ATTENTION => 'medium',
+	);
+
+	/**
 	 * @param Closure(): void $render_actions
+	 * @param string          $status_label Short state label drawn as the Badge beside the heading.
 	 */
 	public function render(
 		string $state,
 		string $heading,
 		string $description,
-		Closure $render_actions
+		Closure $render_actions,
+		string $status_label
 	): void {
-		if ( ! in_array( $state, array( self::NEUTRAL, self::PENDING, self::READY, self::ATTENTION ), true ) ) {
+		if ( ! isset( self::INTENTS[ $state ] ) ) {
 			throw new InvalidArgumentException( 'Administration status summaries require a supported state.' );
+		}
+		if ( '' === trim( $status_label ) ) {
+			throw new InvalidArgumentException( 'Administration status summaries require a status label.' );
 		}
 		?>
 		<div class="ran-booster-status-summary ran-booster-status-summary--<?php echo esc_attr( $state ); ?>">
 			<div class="ran-booster-status-summary__status">
-				<span class="ran-booster-status-dot is-<?php echo esc_attr( $state ); ?>" aria-hidden="true"></span>
-				<div>
-					<strong><?php echo esc_html( $heading ); ?></strong>
-					<p><?php echo esc_html( $description ); ?></p>
-				</div>
+				<p class="ran-booster-status-summary__heading"><strong><?php echo esc_html( $heading ); ?></strong> <?php StatusBadge::print_intent( $status_label, self::INTENTS[ $state ] ); ?></p>
+				<?php if ( '' !== $description ) { ?>
+				<p class="ran-booster-status-summary__description"><?php echo esc_html( $description ); ?></p>
+				<?php } ?>
 			</div>
 			<div class="ran-booster-status-summary__actions">
 				<?php $render_actions(); ?>

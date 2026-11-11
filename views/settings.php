@@ -23,8 +23,20 @@ if ( ! defined( 'WPINC' ) ) {
 		<h2 id="ran-booster-settings-heading" class="ran-booster-page-heading__title"><?php esc_html_e( 'Settings', 'ran-booster' ); ?></h2>
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Site-wide Booster preferences and secure credential storage.', 'ran-booster' ); ?></p>
 	</header>
-		<?php if ( null === $secrets_storage ) { ?>
-			<section class="ran-booster-panel" aria-labelledby="ran-booster-storage"><h3 id="ran-booster-storage"><?php esc_html_e( 'Secure credential storage', 'ran-booster' ); ?></h3><p><?php esc_html_e( 'Storage status is unavailable. No setup or recovery action has been performed.', 'ran-booster' ); ?></p></section>
+		<?php
+		if ( null === $secrets_storage ) {
+			$card_id          = 'ran-booster-storage';
+			$card_modifier    = 'ran-booster-settings__card--storage';
+			$card_title       = esc_html__( 'Secure credential storage', 'ran-booster' );
+			$card_description = esc_html__( 'Storage status is unavailable. No setup or recovery action has been performed.', 'ran-booster' );
+			$card_badge       = '';
+			$card_label       = __( 'Secure credential storage', 'ran-booster' );
+			$card_open        = true;
+			$card_body        = '';
+			$card_body_class  = '';
+			$card_attributes  = array();
+			require __DIR__ . '/settings-card.php';
+			?>
 		<?php } else { ?>
 			<?php require __DIR__ . '/settings-storage.php'; ?>
 		<?php } ?>

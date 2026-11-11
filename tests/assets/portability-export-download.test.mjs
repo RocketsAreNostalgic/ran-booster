@@ -6,6 +6,10 @@ const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-portability.js', import.meta.url),
 	'utf8'
 );
+const announceSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-announce.js', import.meta.url),
+	'utf8'
+);
 
 function loadFunction(name, translations = {}) {
 	const signature = `\tfunction ${name}()`;
@@ -68,6 +72,17 @@ function fixture(fetch) {
 	const message = control();
 	message.hidden = true;
 	const messageText = { textContent: '' };
+	const noticeUpdates = [];
+	const intents = [];
+	message.dispatchEvent = (event) => {
+		noticeUpdates.push({
+			type: event.type,
+			bubbles: event.bubbles,
+			intent: message.getAttribute('data-ran-booster-ui-notice-intent'),
+			text: messageText.textContent,
+			hidden: message.hidden,
+		});
+	};
 	const root = {
 		querySelector(selector) {
 			return (
@@ -86,6 +101,8 @@ function fixture(fetch) {
 			: null;
 	const links = [];
 	const events = [];
+	const spoken = [];
+	const politeness = [];
 
 	globalThis.document = {
 		dispatchEvent(event) {
@@ -119,9 +136,18 @@ function fixture(fetch) {
 		}
 	};
 	globalThis.window = {
+		wp: {
+			a11y: {
+				speak(text, level) {
+					spoken.push(text);
+					politeness.push(level);
+				},
+			},
+		},
 		CustomEvent: class {
 			constructor(type, options) {
 				this.detail = options.detail;
+				this.bubbles = options.bubbles;
 				this.type = type;
 			}
 		},
@@ -129,6 +155,13 @@ function fixture(fetch) {
 		fetch,
 		ranBoosterPortability: {
 			ajaxUrl: 'https://example.test/wp-admin/admin-ajax.php',
+		},
+		ranBoosterNotice: {
+			setIntent(host, intent) {
+				intents.push({ host, intent });
+				host.setAttribute('data-ran-booster-ui-notice-intent', intent);
+				return true;
+			},
 		},
 		URL: {
 			createObjectURL() {
@@ -138,7 +171,20 @@ function fixture(fetch) {
 		},
 	};
 
-	return { events, form, links, message, messageText, submit };
+	Function('window', announceSource)(globalThis.window);
+
+	return {
+		events,
+		form,
+		links,
+		message,
+		messageText,
+		noticeUpdates,
+		intents,
+		politeness,
+		spoken,
+		submit,
+	};
 }
 
 function submitEvent(defaultPrevented = false) {
@@ -250,9 +296,58 @@ test('a successful export downloads the Blueprint without leaving the Portabilit
 		);
 		assert.deepEqual(state.events[0].detail, {
 			message:
-				'Transporter Blueprint download started. Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction.',
+				'Blueprint download started. Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction.',
 		});
+		assert.deepEqual(state.intents.at(-1), {
+			host: state.message,
+			intent: 'warning',
+		});
+		assert.equal(
+			state.messageText.textContent,
+			state.events[0].detail.message
+		);
+		assert.deepEqual(state.spoken, [state.messageText.textContent]);
+		assert.deepEqual(state.politeness, ['polite']);
+		assert.equal(state.message.getAttribute('role'), null);
+		assert.equal(state.message.getAttribute('aria-live'), null);
 		assert.equal(state.submit.disabled, false);
+	} finally {
+		cleanup();
+	}
+});
+
+test('export status and errors use one spoken path without live-region attributes', async () => {
+	let calls = 0;
+	const state = fixture(async () =>
+		++calls === 1
+			? {
+					blob: async () => new Blob(['zip']),
+					headers: new Headers({ 'content-type': 'application/zip' }),
+					ok: true,
+				}
+			: {
+					headers: new Headers({
+						'content-type': 'application/json',
+					}),
+					ok: false,
+					json: async () => ({ data: { message: 'Export failed.' } }),
+				}
+	);
+	try {
+		loadFunction('initPortabilityExportDownload')();
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.message.hidden, false);
+		assert.deepEqual(state.spoken, ['Blueprint download started.']);
+		assert.deepEqual(state.politeness, ['polite']);
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.messageText.textContent, 'Export failed.');
+		assert.deepEqual(state.spoken, [
+			'Blueprint download started.',
+			'Export failed.',
+		]);
+		assert.deepEqual(state.politeness, ['polite', 'assertive']);
+		assert.equal(state.message.getAttribute('role'), null);
+		assert.equal(state.message.getAttribute('aria-live'), null);
 	} finally {
 		cleanup();
 	}
@@ -417,16 +512,81 @@ for (const count of [
 			await state.form.listeners.get('submit')(submitEvent());
 			assert.equal(state.links.length, 1);
 			assert.equal(state.links[0].clicks, 1);
-			assert.equal(state.message.hidden, !expectedWarning);
-			assert.equal(state.messageText.textContent, expectedWarning);
+			assert.equal(state.message.hidden, false);
+			assert.deepEqual(state.intents.at(-1), {
+				host: state.message,
+				intent: expectedWarning ? 'warning' : 'success',
+			});
 			assert.equal(
 				state.events[0].detail.message,
-				'Transporter Blueprint download started.' +
+				'Blueprint download started.' +
 					(expectedWarning ? ' ' + expectedWarning : '')
 			);
+			assert.equal(
+				state.messageText.textContent,
+				state.events[0].detail.message
+			);
+			assert.deepEqual(state.spoken, [state.messageText.textContent]);
 			assert.equal(state.submit.disabled, false);
 		} finally {
 			cleanup();
 		}
 	});
 }
+
+test('export Notice intent updates keep the content node and announcement owner', async () => {
+	let calls = 0;
+	const state = fixture(async () =>
+		++calls === 1
+			? {
+					blob: async () => new Blob(['zip']),
+					headers: new Headers({
+						'content-type': 'application/zip',
+						'X-RAN-Blueprint-Requirement-Warnings': '1',
+					}),
+					ok: true,
+				}
+			: {
+					headers: new Headers({
+						'content-type': 'application/json',
+					}),
+					ok: false,
+					json: async () => ({ data: { message: 'Export failed.' } }),
+				}
+	);
+	const originalText = state.messageText;
+	Object.defineProperty(state.message, 'textContent', {
+		set() {
+			throw new Error('The Notice content node must remain intact.');
+		},
+	});
+	try {
+		loadFunction('initPortabilityExportDownload')();
+		await state.form.listeners.get('submit')(submitEvent());
+		assert.equal(state.messageText, originalText);
+		assert.equal(
+			state.message.getAttribute('data-ran-booster-ui-notice-intent'),
+			'warning'
+		);
+		assert.equal(state.message.hidden, false);
+		assert.equal(state.message.getAttribute('aria-live'), null);
+		assert.equal(state.spoken.length, 1);
+		await state.form.listeners.get('submit')(submitEvent());
+		// The static Notice redraws through the helper; nothing remounts it.
+		assert.deepEqual(state.noticeUpdates, []);
+		assert.deepEqual(state.intents.at(-1), {
+			host: state.message,
+			intent: 'error',
+		});
+		assert.equal(originalText.textContent, 'Export failed.');
+		assert.equal(state.message.hidden, false);
+		assert.equal(state.message.getAttribute('role'), null);
+		assert.equal(state.message.getAttribute('aria-live'), null);
+		assert.deepEqual(state.politeness, ['polite', 'assertive']);
+		assert.equal(state.spoken.at(-1), 'Export failed.');
+		assert.equal(state.links.length, 1);
+		assert.equal(state.submit.disabled, false);
+	} finally {
+		cleanup();
+	}
+});

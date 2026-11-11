@@ -1,11 +1,7 @@
-.ran-booster-admin--packages {
-	max-inline-size: 1400px;
-}
-
 .ran-booster-admin .ran-booster-package-intro {
 	display: grid;
 	gap: var(--ran-booster-space-16);
-	margin-block-end: var(--ran-booster-space-20);
+	margin-block-end: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-package-intro > .description,
@@ -15,10 +11,23 @@
 	margin: 0;
 }
 
-.ran-booster-admin h2.ran-booster-package-heading {
-	display: inline-block;
-	margin-block-start: var(--ran-booster-space-16);
-	margin-inline-end: var(--ran-booster-space-8);
+/*
+ * The Managed Plugins and Managed Themes heading row reuses the provider
+ * management header (action pinned to the inline end, stacked on narrow
+ * screens). The title carries its own subtitle spacing below, so the row adds no
+ * bottom margin, and the heading and action centre on one line. WordPress core
+ * nudges .page-title-action with a physical margin and top offset; neutralise
+ * both so the action sits on the row's centre line in either direction.
+ */
+
+.ran-booster-admin .ran-booster-package-heading-row {
+	align-items: center;
+	margin-block-end: 0;
+}
+
+.ran-booster-admin .ran-booster-package-heading-row .page-title-action {
+	position: static;
+	margin: 0;
 }
 
 .ran-booster-admin .ran-booster-package-list-controls {
@@ -37,9 +46,10 @@
 	margin: 0;
 }
 
+/* Size each filter to its longest option so the selected value never clips. */
 .ran-booster-admin .ran-booster-package-list-filters select {
-	inline-size: 130px;
-	max-inline-size: 130px;
+	inline-size: auto;
+	max-inline-size: 100%;
 }
 
 .ran-booster-admin .ran-booster-package-list-filters__clear {
@@ -59,23 +69,11 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-package-list-search label {
-	white-space: nowrap;
-}
-
 .ran-booster-admin .ran-booster-package-list-search input[type="search"] {
 	flex: 1 1 200px;
 	inline-size: min(240px, 100%);
 	min-inline-size: 0;
-}
-
-.ran-booster-admin .ran-booster-package-list-search input[type="search"],
-.ran-booster-admin .ran-booster-package-list-search .button {
 	min-block-size: 40px;
-}
-
-.ran-booster-admin .ran-booster-package-list-search .button {
-	line-height: 38px;
 }
 
 .ran-booster-admin .ran-booster-package-toolbar.tablenav {
@@ -110,15 +108,17 @@
 .ran-booster-admin .ran-booster-bulk-actions__status {
 	min-block-size: 1.5em;
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-sm);
+	font-size: var(--ran-booster-font-size-md);
 }
 
 .ran-booster-admin .ran-booster-package-table {
 	table-layout: fixed;
 }
 
+/* The first-run empty state replaces the table, so it is a centred block in the Card. */
 .ran-booster-admin .ran-booster-package-empty-state {
-	padding-block: var(--ran-booster-space-30);
+	padding-block: 40px;
+	padding-inline: var(--ran-booster-space-24);
 	text-align: center;
 }
 
@@ -141,6 +141,16 @@
 	.ran-booster-package-table__actions-header {
 	inline-size: 420px;
 	text-align: end;
+}
+
+.ran-booster-admin .ran-booster-package-table > thead > tr > th {
+	padding-block: var(--ran-booster-space-8);
+	padding-inline: var(--ran-booster-space-16);
+	border-block-end: 1px solid var(--ran-booster-border);
+	background: transparent;
+	color: var(--ran-booster-text);
+	font-weight: 600;
+	text-align: start;
 }
 
 .ran-booster-admin
@@ -176,7 +186,7 @@
 
 .ran-booster-admin .ran-booster-package-row__title {
 	margin: 0;
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 	line-height: var(--ran-booster-line-height-heading);
 }
 
@@ -188,13 +198,13 @@
 
 .ran-booster-admin .ran-booster-package-row__name {
 	color: var(--ran-booster-text);
-	font-weight: 700;
+	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
 .ran-booster-admin .ran-booster-package-row__repo {
 	margin-block-start: var(--ran-booster-space-2);
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 400;
 }
 
@@ -210,7 +220,7 @@
 	gap: var(--ran-booster-space-6);
 	margin: 0;
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 600;
 }
 
@@ -218,47 +228,14 @@
 	min-inline-size: 72px;
 }
 
-.ran-booster-admin .ran-booster-package-row__state-value {
-	display: flex;
-	align-items: center;
-	gap: var(--ran-booster-space-6);
-}
-
-.ran-booster-admin .ran-booster-package-row__state-value::before {
-	inline-size: 7px;
-	block-size: 7px;
-	flex: 0 0 7px;
-	border-radius: var(--ran-booster-radius-circle);
-	background: var(
-		--ran-booster-package-state-indicator,
-		var(--ran-booster-text-subtle)
-	);
-	content: "";
-}
-
-.ran-booster-admin .ran-booster-package-row__wordpress-state.is-enabled,
-.ran-booster-admin .ran-booster-package-row__update-state.is-automatic {
-	--ran-booster-package-state-indicator: var(
-		--ran-booster-status-ok-indicator
-	);
-}
-
-.ran-booster-admin .ran-booster-package-row__update-state.is-manual {
-	--ran-booster-package-state-indicator: var(--wp-admin-theme-color);
-}
-
 .ran-booster-admin .ran-booster-package-row__summary {
 	min-inline-size: 0;
 }
 
-.ran-booster-admin .ran-booster-package-row__summary > .ran-booster-badge {
-	margin-block-end: var(--ran-booster-space-7);
-}
-
 .ran-booster-admin
 	.ran-booster-package-row__summary
-	> .ran-booster-badge[hidden] {
-	display: none;
+	> [data-ran-booster-badge] {
+	margin-block-end: var(--ran-booster-space-7);
 }
 
 .ran-booster-admin .ran-booster-package-row__management {
@@ -271,6 +248,41 @@
 	max-inline-size: 580px;
 	margin-block: var(--ran-booster-space-7) 0;
 	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin
+	.ran-booster-package-table[data-package-type="plugin"]
+	:is(
+		.ran-booster-package-row__management,
+		.ran-booster-package-row__status-line
+	) {
+	overflow-wrap: anywhere;
+}
+
+@media screen and (min-width: 783px) {
+	.ran-booster-admin
+		.ran-booster-package-table[data-package-type="plugin"]
+		:is(
+			.ran-booster-package-row__identity,
+			.ran-booster-package-row__summary,
+			.ran-booster-package-row__actions
+		) {
+		padding-block: var(--ran-booster-space-12);
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-table[data-package-type="plugin"]
+		.ran-booster-package-row
+		> .check-column {
+		padding-block-start: var(--ran-booster-space-14);
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-table
+		.ran-booster-package-row--primary
+		> .check-column {
+		border-block-end: 1px solid var(--ran-booster-divider);
+	}
 }
 
 .ran-booster-admin .ran-booster-package-row__action-group {
@@ -286,7 +298,9 @@
 	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-package-row__action-group :is(.button, button) {
+.ran-booster-admin
+	.ran-booster-package-row__action-group
+	:is(.ran-wp-ui-button, button) {
 	min-inline-size: 112px;
 	text-align: center;
 }
@@ -301,12 +315,8 @@
 .ran-booster-admin .ran-booster-package-row__details {
 	padding-block: 0 var(--ran-booster-space-14);
 	padding-inline: var(--ran-booster-space-16);
-	border-block-end: 1px solid var(--ran-booster-border);
+	border-block-end: 1px solid var(--ran-booster-divider);
 	background: var(--ran-booster-surface);
-}
-
-.ran-booster-admin .ran-booster-package-row__details summary {
-	color: var(--ran-booster-brand);
 }
 
 .ran-booster-admin .ran-booster-package-row__details-grid {
@@ -336,7 +346,7 @@
 .ran-booster-admin .ran-booster-package-row__details-grid dt {
 	margin-block-end: var(--ran-booster-space-3);
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 600;
 }
 
@@ -344,7 +354,7 @@
 	margin: 0;
 	overflow-wrap: anywhere;
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-package-row__activity-summary {
@@ -365,13 +375,34 @@
 	margin-block-end: var(--ran-booster-space-8);
 }
 
+/*
+ * Each package is a summary row and its details row, so the stripe alternates
+ * per package and the last package drops the divider above the frame edge.
+ * The rows take the stripe too, so no seam shows between fractional cells.
+ */
+
 .ran-booster-admin
 	.ran-booster-package-table
-	.ran-booster-package-row--primary:hover
+	.ran-booster-package-row--primary:nth-child(
+		odd of .ran-booster-package-row--primary
+	),
+.ran-booster-admin
+	.ran-booster-package-table
+	.ran-booster-package-row--primary:nth-child(
+		odd of .ran-booster-package-row--primary
+	)
 	> *,
 .ran-booster-admin
 	.ran-booster-package-table
-	.ran-booster-package-row--primary:hover
+	.ran-booster-package-row--primary:nth-child(
+		odd of .ran-booster-package-row--primary
+	)
+	+ .ran-booster-package-row--details,
+.ran-booster-admin
+	.ran-booster-package-table
+	.ran-booster-package-row--primary:nth-child(
+		odd of .ran-booster-package-row--primary
+	)
 	+ .ran-booster-package-row--details
 	> * {
 	background: var(--ran-booster-surface-subtle);
@@ -379,32 +410,22 @@
 
 .ran-booster-admin
 	.ran-booster-package-table
-	.ran-booster-package-row--wordpress-active
+	.ran-booster-package-row--primary:nth-last-child(2)
 	> .check-column,
 .ran-booster-admin
 	.ran-booster-package-table
-	.ran-booster-package-row--wordpress-active
-	> * {
-	background-color: rgba(var(--wp-admin-theme-color--rgb), 0.08);
+	.ran-booster-package-row--details:last-child
+	> .ran-booster-package-row__details {
+	border-block-end: 0;
 }
 
+/* WordPress-active packages keep an accent bar instead of a full-row tint. */
 .ran-booster-admin
 	.ran-booster-package-table
 	.ran-booster-package-row--primary.ran-booster-package-row--wordpress-active
 	> .check-column {
-	border-inline-start: 4px solid var(--wp-admin-theme-color);
-}
-
-.ran-booster-admin
-	.ran-booster-package-table
-	.ran-booster-package-row--primary.ran-booster-package-row--wordpress-active:hover
-	> *,
-.ran-booster-admin
-	.ran-booster-package-table
-	.ran-booster-package-row--primary.ran-booster-package-row--wordpress-active:hover
-	+ .ran-booster-package-row--details
-	> * {
-	background-color: rgba(var(--wp-admin-theme-color--rgb), 0.12);
+	padding-inline-start: var(--ran-booster-space-5);
+	border-inline-start: 3px solid var(--wpds-color-stroke-interactive-brand);
 }
 
 @media screen and (min-width: 783px) and (max-width: 1200px) {
@@ -422,7 +443,7 @@
 	.ran-booster-admin .ran-booster-package-row__action-group > *,
 	.ran-booster-admin
 		.ran-booster-package-row__action-group
-		:is(.button, button) {
+		:is(.ran-wp-ui-button, button) {
 		inline-size: 100%;
 	}
 }
@@ -445,21 +466,16 @@
 }
 
 @media screen and (max-width: 782px) {
+	.ran-booster-admin .ran-booster-package-heading-row {
+		gap: var(--ran-booster-space-8);
+	}
+
 	.ran-booster-admin .ran-booster-package-list-controls,
 	.ran-booster-admin .ran-booster-package-list-filters,
 	.ran-booster-admin .ran-booster-package-list-search .search-box,
 	.ran-booster-admin .ran-booster-bulk-actions {
 		align-items: stretch;
 		flex-direction: column;
-	}
-
-	.ran-booster-admin h2.ran-booster-package-heading {
-		display: block;
-		margin-block-end: var(--ran-booster-space-8);
-	}
-
-	.ran-booster-admin .ran-booster-package-heading + .page-title-action {
-		margin: 0;
 	}
 
 	.ran-booster-admin .ran-booster-package-list-filters,
@@ -476,9 +492,9 @@
 		max-inline-size: none;
 	}
 
-	.ran-booster-admin .ran-booster-package-list-filters .button,
-	.ran-booster-admin .ran-booster-package-list-search .button,
-	.ran-booster-admin .ran-booster-bulk-actions .button,
+	.ran-booster-admin .ran-booster-package-list-filters .ran-wp-ui-button,
+	.ran-booster-admin .ran-booster-package-list-search .ran-wp-ui-button,
+	.ran-booster-admin .ran-booster-bulk-actions .ran-wp-ui-button,
 	.ran-booster-admin .ran-booster-bulk-actions select {
 		inline-size: 100%;
 	}
@@ -531,7 +547,8 @@
 		.ran-booster-package-table
 		.ran-booster-package-row--wordpress-active {
 		box-sizing: border-box;
-		border-inline-start: 4px solid var(--wp-admin-theme-color);
+		border-inline-start: 3px solid
+			var(--wpds-color-stroke-interactive-brand);
 	}
 
 	.ran-booster-admin
@@ -546,6 +563,7 @@
 		.ran-booster-package-table
 		.ran-booster-package-row--primary.ran-booster-package-row--wordpress-active
 		> .check-column {
+		padding-inline-start: var(--ran-booster-space-8);
 		border-inline-start: 0;
 	}
 
@@ -574,7 +592,9 @@
 		flex-direction: column;
 	}
 
-	.ran-booster-admin .ran-booster-package-row__action-group .button {
+	.ran-booster-admin
+		.ran-booster-package-row__action-group
+		.ran-wp-ui-button {
 		inline-size: 100%;
 	}
 
@@ -594,4 +614,46 @@
 	.ran-booster-admin .ran-booster-package-row__details-grid {
 		grid-template-columns: minmax(0, 1fr);
 	}
+}
+
+/* Keep the native collection inside the shared Card without clipping focus. */
+.ran-booster-admin .ran-booster-package-collection {
+	min-inline-size: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-collection__toolbar {
+	display: grid;
+	gap: var(--ran-booster-space-12);
+	padding: var(--ran-booster-space-16);
+	border-block-end: 1px solid var(--ran-booster-border);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-list-controls,
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-toolbar.tablenav {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-package-collection .ran-booster-package-table {
+	margin: 0;
+	border: 0;
+	box-shadow: none;
+}
+
+/* The framed table sits inside the Card with the toolbar's inset. */
+.ran-booster-admin .ran-booster-package-collection .ran-booster-card__content {
+	padding-block-end: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-package-collection
+	.ran-booster-package-table-wrap {
+	margin-block-start: var(--ran-booster-space-16);
+	margin-inline: var(--ran-booster-space-16);
 }

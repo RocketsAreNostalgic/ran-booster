@@ -13,6 +13,10 @@ use InvalidArgumentException;
  * The renderer owns only the bounded table schema and pagination chrome.
  * Callers retain responsibility for each cell's escaped semantic content,
  * actions, forms and nonces.
+ *
+ * Each record is its own row group: the summary row and, when the caller
+ * reports one, a full-width result row. Striping and dividers follow the
+ * groups, so a hidden result row never shifts them.
  */
 final class ProviderManagementTableRenderer {
 
@@ -34,6 +38,12 @@ final class ProviderManagementTableRenderer {
 	 *     previous_url: string,
 	 *     next_url: string
 	 * } $pagination
+	 * @param (Closure(array<string, mixed>): ?bool)|null $result_visibility
+	 *        Whether a record has a result row: null prints none, false
+	 *        prints it hidden and true prints it visible. Its content comes
+	 *        from $render_cell with the 'result' key.
+	 * @param (Closure(): void)|null $render_toolbar Prints the collection's
+	 *        search and filter controls into the frame's toolbar.
 	 */
 	public function render(
 		string $type,
@@ -41,11 +51,19 @@ final class ProviderManagementTableRenderer {
 		string $empty_message,
 		Closure $render_cell,
 		array $sort_urls,
-		array $pagination
+		array $pagination,
+		?Closure $result_visibility = null,
+		?Closure $render_toolbar = null
 	): void {
 		$columns = $this->columns( $type );
 		?>
-		<table class="widefat striped ran-booster-data-table ran-booster-credential-table ran-booster-credential-table--<?php echo esc_attr( $type ); ?> ran-booster-provider-management-table">
+		<div class="ran-booster-collection">
+		<?php if ( null !== $render_toolbar ) { ?>
+			<div class="ran-booster-collection__toolbar"><?php $render_toolbar(); ?></div>
+		<?php } ?>
+		<div class="ran-booster-data-table-wrap">
+		<table class="ran-booster-data-table ran-booster-provider-management-table ran-booster-provider-management-table--<?php echo esc_attr( $type ); ?>">
+			<caption class="screen-reader-text"><?php echo esc_html( self::ACCESS === $type ? __( 'Credentials', 'ran-booster' ) : __( 'Webhook secrets', 'ran-booster' ) ); ?></caption>
 			<thead>
 				<tr>
 					<?php foreach ( $columns as $column ) { ?>
@@ -59,21 +77,35 @@ final class ProviderManagementTableRenderer {
 					<?php } ?>
 				</tr>
 			</thead>
-			<tbody>
-				<?php if ( array() === $rows ) { ?>
+			<?php if ( array() === $rows ) { ?>
+				<tbody>
 					<tr><td colspan="<?php echo esc_attr( (string) count( $columns ) ); ?>"><?php echo esc_html( $empty_message ); ?></td></tr>
-				<?php } ?>
-				<?php foreach ( $rows as $row ) { ?>
+				</tbody>
+			<?php } ?>
+			<?php foreach ( $rows as $row ) { ?>
+				<?php $result_visible = null === $result_visibility ? null : $result_visibility( $row ); ?>
+				<tbody>
 					<tr>
 						<?php foreach ( $columns as $column ) { ?>
-							<td<?php echo $column['actions'] ? ' class="ran-booster-actions"' : ''; ?> data-label="<?php echo esc_attr( $column['label'] ); ?>"><?php $render_cell( $row, $column['key'] ); ?></td>
+							<?php if ( $column['actions'] ) { ?>
+								<td class="ran-booster-provider-management-table__actions" data-label="<?php echo esc_attr( $column['label'] ); ?>"><div class="ran-booster-actions"><?php $render_cell( $row, $column['key'] ); ?></div></td>
+							<?php } else { ?>
+								<td data-label="<?php echo esc_attr( $column['label'] ); ?>"><?php $render_cell( $row, $column['key'] ); ?></td>
+							<?php } ?>
 						<?php } ?>
 					</tr>
-				<?php } ?>
-			</tbody>
+					<?php if ( null !== $result_visible ) { ?>
+						<tr class="ran-booster-provider-management-table__result"<?php echo $result_visible ? '' : ' hidden'; ?>><td colspan="<?php echo esc_attr( (string) count( $columns ) ); ?>" class="ran-booster-provider-management-table__result-cell"><?php $render_cell( $row, 'result' ); ?></td></tr>
+					<?php } ?>
+				</tbody>
+			<?php } ?>
 		</table>
+		</div>
 		<?php
 		$this->render_pagination( $type, $pagination );
+		?>
+		</div>
+		<?php
 	}
 
 	/**
@@ -90,7 +122,7 @@ final class ProviderManagementTableRenderer {
 				),
 				array(
 					'key'     => 'kind',
-					'label'   => __( 'Credential type', 'ran-booster' ),
+					'label'   => __( 'Type', 'ran-booster' ),
 					'sort'    => 'kind',
 					'actions' => false,
 				),
@@ -187,14 +219,15 @@ final class ProviderManagementTableRenderer {
 					<?php foreach ( $pagination['hidden_fields'] as $name => $value ) { ?>
 						<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
 					<?php } ?>
-					<select id="<?php echo esc_attr( $page_size_id ); ?>" name="per_page" onchange="this.form.submit()">
+					<select id="<?php echo esc_attr( $page_size_id ); ?>" name="per_page" data-ran-booster-auto-submit>
 						<option value="20" <?php selected( 20, $pagination['per_page'] ); ?>>20</option>
 						<option value="50" <?php selected( 50, $pagination['per_page'] ); ?>>50</option>
 					</select>
+					<button type="submit" class="<?php echo esc_attr( ButtonClasses::secondary( true ) . ' screen-reader-text' ); ?>"><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
 				</form>
-				<a class="button <?php echo 1 >= $current ? 'disabled' : ''; ?>" href="<?php echo esc_url( $pagination['previous_url'] ); ?>" aria-disabled="<?php echo 1 >= $current ? 'true' : 'false'; ?>" <?php echo 1 >= $current ? 'tabindex="-1"' : ''; ?>>&lsaquo;</a>
+				<a class="<?php echo esc_attr( ButtonClasses::secondary( true, true ) . ( 1 >= $current ? ' disabled' : '' ) ); ?>" href="<?php echo esc_url( $pagination['previous_url'] ); ?>" aria-disabled="<?php echo 1 >= $current ? 'true' : 'false'; ?>" <?php echo 1 >= $current ? 'tabindex="-1"' : ''; ?>>&lsaquo;</a>
 				<span><?php echo esc_html( $pagination['page_label'] ); ?></span>
-				<a class="button <?php echo $current >= $pages ? 'disabled' : ''; ?>" href="<?php echo esc_url( $pagination['next_url'] ); ?>" aria-disabled="<?php echo $current >= $pages ? 'true' : 'false'; ?>" <?php echo $current >= $pages ? 'tabindex="-1"' : ''; ?>>&rsaquo;</a>
+				<a class="<?php echo esc_attr( ButtonClasses::secondary( true, true ) . ( $current >= $pages ? ' disabled' : '' ) ); ?>" href="<?php echo esc_url( $pagination['next_url'] ); ?>" aria-disabled="<?php echo $current >= $pages ? 'true' : 'false'; ?>" <?php echo $current >= $pages ? 'tabindex="-1"' : ''; ?>>&rsaquo;</a>
 			</div>
 		</div>
 		<?php

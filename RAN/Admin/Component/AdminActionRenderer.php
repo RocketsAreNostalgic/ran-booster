@@ -26,12 +26,24 @@ final class AdminActionRenderer {
 	private function render_link( array $action, bool $primary ): void {
 		if ( true === $action['disabled'] || '' === $action['url'] ) {
 			?>
-			<button type="button" class="button" disabled aria-disabled="true"<?php echo '' === $action['described_by'] ? '' : ' aria-describedby="' . esc_attr( $action['described_by'] ) . '"'; ?>><?php echo esc_html( $action['label'] ); ?></button>
+			<button type="button" class="<?php echo esc_attr( ButtonClasses::secondary() ); ?>" disabled aria-disabled="true"<?php echo '' === $action['described_by'] ? '' : ' aria-describedby="' . esc_attr( $action['described_by'] ) . '"'; ?>><?php echo esc_html( $action['label'] ); ?></button>
+			<?php
+			return;
+		}
+		if ( true === $action['external'] ) {
+			?>
+			<a href="<?php echo esc_url( $action['url'] ); ?>" target="_blank" rel="noopener noreferrer">
+				<?php echo esc_html( $action['label'] ); ?>
+				<?php if ( '' !== $action['screen_reader'] ) { ?>
+					<span class="screen-reader-text">: <?php echo esc_html( $action['screen_reader'] ); ?></span>
+				<?php } ?>
+				<?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?>
+			</a>
 			<?php
 			return;
 		}
 		?>
-		<a class="button<?php echo $primary ? ' button-primary' : ''; ?>" href="<?php echo esc_url( $action['url'] ); ?>"<?php echo true === $action['external'] ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>>
+		<a class="<?php echo esc_attr( $primary ? ButtonClasses::primary( false, true ) : ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $action['url'] ); ?>">
 			<?php echo esc_html( $action['label'] ); ?>
 			<?php if ( '' !== $action['screen_reader'] ) { ?>
 				<span class="screen-reader-text">: <?php echo esc_html( $action['screen_reader'] ); ?></span>
@@ -52,7 +64,7 @@ final class AdminActionRenderer {
 			<?php } ?>
 			<button
 				type="submit"
-				class="button<?php echo $primary ? ' button-primary' : ''; ?><?php echo $has_busy_state ? ' button-update-package' : ''; ?>"
+				class="<?php echo esc_attr( ( $primary ? ButtonClasses::primary() : ButtonClasses::secondary() ) . ( $has_busy_state ? ' button-update-package' : '' ) ); ?>"
 				<?php disabled( true === $action['disabled'] ); ?>
 				<?php echo '' === $action['described_by'] ? '' : ' aria-describedby="' . esc_attr( $action['described_by'] ) . '"'; ?>
 				<?php if ( $has_busy_state ) { ?>

@@ -1,6 +1,8 @@
 (function () {
 	'use strict';
 	const { __, _n, sprintf } = wp.i18n;
+	let packageLeaveState;
+	let packageLeaveForm;
 
 	function onDomReady(callback) {
 		if (document.readyState === 'loading') {
@@ -33,6 +35,19 @@
 		}
 	});
 
+	// History restores replace the form with a clone whose data attributes survive, but listeners do not.
+	document.addEventListener('htmx:historyRestore', function () {
+		const form = document.querySelector(
+			'#ran-booster-package-edit-form, #ran-booster-package-create-form'
+		);
+		if (form && form !== packageLeaveForm) {
+			delete form.dataset.ranBoosterLeaveGuardBound;
+			delete form.dataset.ranBoosterSourceUnsavedGuardBound;
+			initPackageSourceUnsavedGuard();
+		}
+		initPackageLeaveGuard();
+	});
+
 	function consumeAdvancedSettingsOpenRequest() {
 		const url = new URL(window.location.href);
 		if (!url.searchParams.has('ran_booster_open_advanced')) {
@@ -48,6 +63,7 @@
 		initPackageOperationControls();
 		initPackageSourceControls();
 		initPackageSourceUnsavedGuard();
+		initPackageLeaveGuard();
 
 		document
 			.querySelectorAll('.button-update-package')
@@ -73,6 +89,73 @@
 		initConfirmedPackageRemovals();
 		initPackageUpdateProgress();
 	}
+
+	function initPackageLeaveGuard() {
+		const form = document.querySelector(
+			'#ran-booster-package-edit-form, #ran-booster-package-create-form'
+		);
+		if (!form) {
+			packageLeaveForm = undefined;
+			packageLeaveState = undefined;
+			return;
+		}
+		if (form.dataset.ranBoosterLeaveGuardBound === 'true') {
+			return;
+		}
+		form.dataset.ranBoosterLeaveGuardBound = 'true';
+		packageLeaveForm = form;
+		const fingerprint = () =>
+			JSON.stringify(
+				Array.from(form.elements)
+					.filter(
+						(control) =>
+							!control.disabled &&
+							control.name?.startsWith('ran_booster[') &&
+							![
+								'hidden',
+								'button',
+								'submit',
+								'reset',
+								'image',
+							].includes(control.type)
+					)
+					.map((control) => [
+						control.name,
+						['checkbox', 'radio'].includes(control.type)
+							? control.checked
+							: control.value,
+					])
+			);
+		const initial = fingerprint();
+		const attempted = form.hasAttribute('data-ran-booster-attempted');
+		packageLeaveState = {
+			dirty: () => attempted || fingerprint() !== initial,
+			submitting: false,
+		};
+		const state = packageLeaveState;
+		form.addEventListener('submit', (event) => {
+			queueMicrotask(() => {
+				state.submitting = !event.defaultPrevented;
+			});
+		});
+	}
+
+	window.addEventListener('pageshow', () => {
+		if (packageLeaveState) {
+			packageLeaveState.submitting = false;
+		}
+	});
+
+	window.addEventListener('beforeunload', (event) => {
+		if (
+			packageLeaveState &&
+			!packageLeaveState.submitting &&
+			packageLeaveState.dirty()
+		) {
+			event.preventDefault();
+			event.returnValue = '';
+		}
+	});
 
 	function initPackageSourceControls() {
 		document
@@ -194,6 +277,19 @@
 					if (branchActions) {
 						branchActions.hidden = source !== 'branch';
 					}
+					if (typeof form?.querySelectorAll === 'function') {
+						form.querySelectorAll(
+							'[data-ran-booster-policy-source]'
+						).forEach(function (hint) {
+							hint.hidden =
+								hint.getAttribute(
+									'data-ran-booster-policy-source'
+								) !==
+								(source === 'branch'
+									? 'branch'
+									: 'release_asset');
+						});
+					}
 					if (
 						typeof sourceControls.dispatchEvent === 'function' &&
 						typeof window !== 'undefined' &&
@@ -261,9 +357,12 @@
 			})
 		);
 		const isDirty = function () {
-			return controls.some(function (control) {
-				return baseline.get(control) !== settingValue(control);
-			});
+			return (
+				settingsForm.hasAttribute('data-ran-booster-attempted') ||
+				controls.some(function (control) {
+					return baseline.get(control) !== settingValue(control);
+				})
+			);
 		};
 		function settingValue(control) {
 			return ['checkbox', 'radio'].includes(control.type)
@@ -273,10 +372,31 @@
 		const notice = sourceShell.querySelector(
 			'[data-ran-booster-source-unsaved-notice]'
 		);
+		const useReleases = document.querySelector(
+			'[data-ran-booster-use-releases]'
+		);
+		const syncUseReleases = function () {
+			if (
+				!useReleases ||
+				useReleases.dataset.ranBoosterUseReleasesReady !== 'true'
+			) {
+				return;
+			}
+			const dirty = isDirty();
+			useReleases.disabled = dirty;
+			useReleases.setAttribute('aria-disabled', dirty ? 'true' : 'false');
+			if (dirty && notice) {
+				notice.hidden = false;
+				useReleases.setAttribute('aria-describedby', notice.id);
+			} else {
+				useReleases.removeAttribute('aria-describedby');
+			}
+		};
 		const hideNoticeIfClean = function () {
 			if (!isDirty() && notice) {
 				notice.hidden = true;
 			}
+			syncUseReleases();
 		};
 		const blockIfDirty = function (event) {
 			if (!isDirty()) {
@@ -295,6 +415,7 @@
 			control.addEventListener('input', hideNoticeIfClean);
 			control.addEventListener('change', hideNoticeIfClean);
 		});
+		syncUseReleases();
 
 		sourceShell
 			.querySelectorAll('[data-ran-booster-source-choice]')
@@ -719,26 +840,17 @@
 				}
 			});
 
-			summary.classList.remove(
-				'notice-error',
-				'notice-success',
-				'notice-warning'
-			);
-			if (tracked.size) {
-				summary.classList.add('notice-warning');
-				summaryMessage.textContent = summaryText(
-					settings.labels.summaryActive,
-					{ queued, running, skipped }
-				);
-				return;
-			}
-
-			summary.classList.add(
-				observedFailure || skipped ? 'notice-warning' : 'notice-success'
+			window.ranBoosterNotice.setIntent(
+				summary,
+				tracked.size || observedFailure || skipped
+					? 'warning'
+					: 'success'
 			);
 			summaryMessage.textContent = summaryText(
-				settings.labels.summaryFinished,
-				{ skipped }
+				tracked.size
+					? settings.labels.summaryActive
+					: settings.labels.summaryFinished,
+				tracked.size ? { queued, running, skipped } : { skipped }
 			);
 		}
 
@@ -791,29 +903,40 @@
 				return false;
 			}
 
+			let intent = 'high';
+			if (variants[state] === 'pending') {
+				intent = 'informational';
+			} else if (variants[state] === 'ok') {
+				intent = 'stable';
+			}
+
 			row.setAttribute('data-attempt-state', state);
 			const badge = row.querySelector(
 				'[data-ran-booster-activity-badge]'
 			);
 			if (badge) {
 				badge.hidden = false;
-				badge.className =
-					'ran-booster-badge ran-booster-badge--' + variants[state];
-				badge.textContent = sprintf(
+				const label = sprintf(
 					/* translators: %s: deployment state label. */
 					__('Deployment: %s', 'ran-booster'),
 					stateLabels[state]
 				);
+				window.ranBoosterBadge?.update(badge, label, intent);
 			}
 
 			const activityState = row.nextElementSibling?.querySelector(
 				'[data-ran-booster-activity-state]'
 			);
 			if (activityState) {
-				activityState.className =
-					'ran-booster-deployment-state ran-booster-deployment-state--' +
-					state;
-				activityState.textContent = stateLabels[state];
+				window.ranBoosterBadge?.update(
+					activityState,
+					stateLabels[state],
+					intent
+				);
+				activityState.className = activityState.className.replace(
+					/\bran-booster-deployment-state--\S+/,
+					'ran-booster-deployment-state--' + state
+				);
 			}
 
 			const button = row.querySelector(

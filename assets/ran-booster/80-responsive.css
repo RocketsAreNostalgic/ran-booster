@@ -28,74 +28,6 @@
 		inline-size: auto;
 	}
 
-	.ran-booster-admin .ran-booster-provider-management-table,
-	.ran-booster-admin .ran-booster-provider-management-table tbody {
-		display: block;
-		inline-size: 100% !important;
-	}
-
-	.ran-booster-admin .ran-booster-provider-management-table thead {
-		display: none;
-	}
-
-	.ran-booster-admin .ran-booster-provider-management-table tr {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		padding: 0;
-		border-block-end: 1px solid var(--ran-booster-divider);
-	}
-
-	.ran-booster-admin .ran-booster-provider-management-table tr:last-child {
-		border-block-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-provider-management-table td {
-		display: block;
-		min-inline-size: 0;
-		inline-size: auto !important;
-		padding: var(--ran-booster-space-14) var(--ran-booster-space-16);
-		overflow-wrap: anywhere;
-	}
-
-	.ran-booster-admin
-		.ran-booster-data-table.ran-booster-provider-management-table
-		td[data-label]::before {
-		content: attr(data-label);
-		display: block;
-		margin-block-end: var(--ran-booster-space-4);
-		color: var(--ran-booster-text-muted);
-		font-size: var(--ran-booster-font-size-xs);
-		font-weight: var(--ran-booster-font-weight-semibold);
-	}
-
-	.ran-booster-admin .ran-booster-provider-management-table td[colspan] {
-		grid-column: 1 / -1;
-	}
-
-	.ran-booster-admin
-		.ran-booster-data-table.ran-booster-provider-management-table
-		td[colspan]::before {
-		content: none;
-	}
-
-	.ran-booster-admin
-		.ran-booster-provider-management-table
-		td.ran-booster-actions {
-		display: flex;
-		grid-column: 1 / -1;
-		flex-wrap: wrap;
-		justify-content: flex-start;
-		padding-block-start: var(--ran-booster-space-12);
-		border-block-start: 1px solid var(--ran-booster-divider);
-		white-space: normal;
-	}
-
-	.ran-booster-admin
-		.ran-booster-data-table.ran-booster-provider-management-table
-		td.ran-booster-actions::before {
-		flex: 0 0 100%;
-	}
-
 	.ran-booster-admin .ran-booster-repository-record__summary {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -107,30 +39,115 @@
 	.ran-booster-admin .ran-booster-repository-record__action-group {
 		justify-content: flex-start;
 	}
+}
 
-	.ran-booster-admin .ran-booster-repository-integration-status {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+/*
+ * Between the stacking breakpoint and the full-width table the Credentials
+ * table keeps its real columns: tighter cell padding, a flatter column split
+ * that gives the type and health text room, and word-boundary wrapping so the
+ * narrower cells do not split words mid-letter.
+ */
+@media screen and (min-width: 783px) and (max-width: 1100px) {
+	.ran-booster-admin
+		.ran-booster-provider-management-table--access
+		th:nth-child(1) {
+		inline-size: 12%;
+	}
+
+	.ran-booster-admin
+		.ran-booster-provider-management-table--access
+		th:nth-child(2) {
+		inline-size: 18%;
+	}
+
+	.ran-booster-admin
+		.ran-booster-provider-management-table--access
+		th:nth-child(3) {
+		inline-size: 12%;
+	}
+
+	.ran-booster-admin
+		.ran-booster-provider-management-table--access
+		th:nth-child(4) {
+		inline-size: 14%;
+	}
+
+	.ran-booster-admin
+		.ran-booster-provider-management-table--access
+		th:nth-child(5) {
+		inline-size: 16%;
+	}
+
+	.ran-booster-admin
+		.ran-booster-provider-management-table--access
+		th:nth-child(6) {
+		inline-size: 28%;
+	}
+
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-provider-management-table
+		> tbody
+		> tr
+		> td,
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-provider-management-table
+		> thead
+		> tr
+		> th {
+		padding-inline: var(--ran-booster-space-8);
+		overflow-wrap: break-word;
+	}
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-provider-management-table
+		> tbody
+		> tr
+		> .ran-booster-provider-management-table__actions {
+		display: block;
+	}
+
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-provider-management-table
+		> tbody
+		> tr
+		> .ran-booster-provider-management-table__actions::before {
+		content: none;
+	}
+
+	.ran-booster-admin
+		.ran-booster-provider-management-table__actions
+		> .ran-booster-actions {
+		flex-wrap: wrap;
+		justify-content: flex-start;
+		white-space: normal;
+	}
+
+	/* Stacked records keep one divider per group, as on wide screens. */
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-provider-management-table
+		> tbody
+		+ tbody {
+		border-block-start: 0;
+	}
+
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-provider-management-table
+		> tbody
+		> tr {
+		border-block-end: 0;
+	}
+
+	/* A block cell keeps the Notice's margin on the record's surface. */
+	.ran-booster-admin
+		.ran-booster-data-table
+		.ran-booster-provider-management-table__result-cell {
+		display: flow-root;
 	}
 }
 
 @media screen and (max-width: 960px) {
-	.ran-booster-admin .ran-booster-webhook-endpoint {
-		grid-template-columns: minmax(0, 1fr) 190px;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:first-child {
-		grid-row: span 2;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:nth-child(2) {
-		border-block-end: 1px solid var(--ran-booster-divider);
-		border-inline-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:last-child {
-		border-inline-end: 0;
-	}
-
 	.ran-booster-admin .ran-booster-repository-detail__layout {
 		grid-template-columns: minmax(0, 1fr);
 	}
@@ -152,7 +169,6 @@
 	.ran-booster-admin .ran-booster-provider-list-controls,
 	.ran-booster-admin .ran-booster-provider-list-controls > div,
 	.ran-booster-admin .ran-booster-provider-table-navigation,
-	.ran-booster-admin .ran-booster-provider-next-step,
 	.ran-booster-admin .ran-booster-provider-task-panel__heading,
 	.ran-booster-admin .ran-booster-provider-repository-tools {
 		align-items: stretch;
@@ -187,16 +203,14 @@
 	}
 
 	.ran-booster-admin .ran-booster-repository-detail__tabs {
-		margin-block-end: var(--ran-booster-space-16);
+		margin-block-end: var(--ran-booster-card-gap);
 	}
 
 	.ran-booster-admin
 		:is(
 			.ran-booster-status-summary__actions,
-			.ran-booster-provider-next-step,
 			.ran-booster-provider-task-panel__heading,
 			.ran-booster-provider-repository-tools,
-			.ran-booster-webhook-url,
 			.ran-booster-repository-record__action-group,
 			.ran-booster-provider-management__header,
 			.ran-booster-public-lookup-profile__controls
@@ -204,60 +218,10 @@
 		align-items: flex-start;
 	}
 
-	.ran-booster-admin .ran-booster-provider .button {
+	.ran-booster-admin .ran-booster-provider :is(.button, .ran-wp-ui-button) {
 		inline-size: auto;
 		align-self: flex-start;
 		text-align: center;
-	}
-
-	.ran-booster-admin .ran-booster-readiness-overview,
-	.ran-booster-admin .ran-booster-repository-integration-status {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.ran-booster-admin .ran-booster-readiness-overview article {
-		min-block-size: auto;
-		border-block-end: 1px solid var(--ran-booster-divider);
-		border-inline-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-readiness-overview article:last-child {
-		border-block-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-repository-integration-status > div {
-		border-block-end: 1px solid var(--ran-booster-divider);
-		border-inline-end: 0;
-	}
-
-	.ran-booster-admin
-		.ran-booster-repository-integration-status
-		> div:last-child {
-		border-block-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div {
-		min-block-size: auto;
-		border-block-end: 0;
-		border-inline-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:first-child {
-		grid-column: 1 / -1;
-		grid-row: auto;
-		border-block-end: 1px solid var(--ran-booster-divider);
-	}
-
-	.ran-booster-admin .ran-booster-webhook-endpoint > div:nth-child(2) {
-		border-inline-end: 1px solid var(--ran-booster-divider);
-	}
-
-	.ran-booster-admin .ran-booster-credential-section {
-		padding: var(--ran-booster-space-18);
 	}
 
 	.ran-booster-admin .ran-booster-provider__notice {
@@ -265,34 +229,8 @@
 		margin-inline-start: var(--ran-booster-space-18);
 	}
 
-	.ran-booster-admin .ran-booster-provider__footer {
-		padding-block: var(--ran-booster-space-12);
-		padding-inline: var(--ran-booster-space-18);
-	}
-
 	.ran-booster-admin .ran-booster-provider-table-navigation {
 		padding-inline: var(--ran-booster-space-18);
-	}
-
-	.ran-booster-admin .ran-booster-webhook-setup__settings {
-		flex-direction: column;
-	}
-
-	.ran-booster-admin
-		.ran-booster-webhook-setup__settings
-		> .ran-booster-webhook-setup__url {
-		flex: 0 1 auto;
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.ran-booster-admin .ran-booster-webhook-url {
-		align-items: stretch;
-		flex-direction: column;
-	}
-
-	.ran-booster-admin .ran-booster-webhook-url input {
-		flex: 0 1 auto;
-		inline-size: 100%;
 	}
 
 	.ran-booster-admin .ran-booster-public-lookup-profile__layout {
@@ -308,31 +246,10 @@
 		inline-size: 100%;
 	}
 
-	.ran-booster-admin
-		.wp-list-table.plugins
-		td.ran-booster-package-row__content,
-	.ran-booster-admin
-		.wp-list-table.plugins
-		td.ran-booster-package-row__secondary {
-		box-sizing: border-box;
-		clear: none;
-		padding-inline-end: var(--ran-booster-space-10);
-
-		/* stylelint-disable-next-line declaration-no-important -- Preserve the table rowspan while core stacks list-table cells. */
-		display: table-cell !important;
-		inline-size: auto !important;
-	}
-
 	.ran-booster-admin .ran-booster-secondary-nav {
 		align-items: stretch;
 		flex-direction: column;
 		border-block-end: 0;
-	}
-
-	.ran-booster-admin .ran-booster-secondary-nav__link,
-	.ran-booster-admin .ran-booster-secondary-nav__link.is-current {
-		margin-block-end: 0;
-		border-color: var(--ran-booster-border);
 	}
 
 	.ran-booster-admin .ran-booster-troubleshooting__fields,
@@ -350,8 +267,7 @@
 		overflow-x: visible;
 	}
 
-	.ran-booster-admin .ran-booster-repository-detail__header,
-	.ran-booster-admin .ran-booster-repository-detail__receiver {
+	.ran-booster-admin .ran-booster-repository-detail__header {
 		align-items: stretch;
 		flex-direction: column;
 	}
@@ -379,7 +295,8 @@
 		+ tbody
 		> tr:first-child
 		> *,
-	.ran-booster-admin .ran-booster-data-table > tbody > tr > * {
+	.ran-booster-admin .ran-booster-data-table > tbody > tr > *,
+	.ran-booster-admin .ran-booster-data-table--rows > tbody > tr + tr > * {
 		border: 0;
 	}
 
@@ -404,16 +321,20 @@
 		gap: var(--ran-booster-space-12);
 	}
 
+	.ran-booster-admin .ran-booster-data-table > tbody > tr > [data-label] > * {
+		grid-column: 2;
+		justify-self: start;
+	}
+
 	.ran-booster-admin
 		.ran-booster-data-table
 		> tbody
 		> tr
-		> [data-label]::before,
-	.ran-booster-admin .ran-booster-attempt-row__summary [data-label]::before {
+		> [data-label]::before {
 		content: attr(data-label);
 		display: block;
 		color: var(--ran-booster-text-subtle);
-		font-size: 12px;
+		font-size: var(--ran-booster-font-size-sm);
 		font-weight: 600;
 		line-height: 1.5;
 	}
@@ -432,31 +353,16 @@
 		grid-template-columns: 1fr;
 	}
 
-	.ran-booster-admin .ran-booster-attempt-table__head {
-		display: none;
+	.ran-booster-admin .ran-booster-attempt-list > tbody + tbody {
+		border-block-start: 0;
 	}
 
-	.ran-booster-admin .ran-booster-attempt-row {
-		padding: 0;
+	.ran-booster-admin .ran-booster-attempt-list > tbody > tr {
+		border-block-end: 0;
 	}
 
-	.ran-booster-admin .ran-booster-attempt-row__summary {
-		display: block;
-		margin: 0;
-		padding: 0;
-	}
-
-	.ran-booster-admin .ran-booster-attempt-row__summary > [role="cell"] {
-		display: grid;
-		grid-template-columns: minmax(96px, 28%) minmax(0, 1fr);
+	.ran-booster-admin .ran-booster-attempt-row__summary > [data-label] {
 		align-items: start;
-		gap: var(--ran-booster-space-12);
-		padding: var(--ran-booster-table-cell-padding);
-	}
-
-	.ran-booster-admin .ran-booster-attempt-row__details {
-		margin-inline-end: var(--ran-booster-table-cell-padding-inline);
-		margin-inline-start: var(--ran-booster-table-cell-padding-inline);
 	}
 
 	.ran-booster-admin .ran-booster-repository-field .regular-text {
@@ -476,61 +382,6 @@
 		align-items: flex-start;
 		flex-direction: column;
 		gap: var(--ran-booster-space-3);
-	}
-
-	.ran-booster-admin .ran-booster-credential-section__header {
-		align-items: stretch;
-		flex-direction: column;
-	}
-
-	.ran-booster-admin .ran-booster-credential-section__header .button {
-		align-self: flex-start;
-	}
-
-	.ran-booster-admin .ran-booster-credential-table,
-	.ran-booster-admin .ran-booster-credential-table tbody,
-	.ran-booster-admin .ran-booster-credential-table tr,
-	.ran-booster-admin .ran-booster-credential-table th,
-	.ran-booster-admin .ran-booster-credential-table td {
-		display: block;
-		inline-size: auto !important;
-	}
-
-	.ran-booster-admin .ran-booster-credential-table thead {
-		display: none;
-	}
-
-	.ran-booster-admin .ran-booster-credential-table tr {
-		padding-block: var(--ran-booster-space-10);
-		padding-inline: 0;
-	}
-
-	.ran-booster-admin .ran-booster-credential-table th,
-	.ran-booster-admin .ran-booster-credential-table td {
-		padding-block: var(--ran-booster-space-5);
-		padding-inline: var(--ran-booster-space-12);
-	}
-
-	.ran-booster-admin .ran-booster-credential-table td.ran-booster-actions {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-start;
-		padding-block-start: var(--ran-booster-space-10);
-		border-block-start: 1px solid var(--ran-booster-divider);
-		white-space: normal;
-	}
-
-	.ran-booster-admin
-		.ran-booster-data-table.ran-booster-provider-management-table
-		> tbody
-		> tr
-		> td.ran-booster-actions {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: flex-start;
-		padding-block-start: var(--ran-booster-space-10);
-		border-block-start: 1px solid var(--ran-booster-divider);
-		white-space: normal;
 	}
 }
 

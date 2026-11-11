@@ -19,7 +19,10 @@ function loadFunction(name, dependencies = {}) {
 		},
 		...dependencies,
 	};
-	const signature = `\tfunction ${name}(`;
+	const signature =
+		name === 'copyToClipboard'
+			? `\tasync function ${name}(`
+			: `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
 	assert.notEqual(start, -1, `The ${name} function must exist.`);
@@ -171,6 +174,8 @@ function fixture({ clipboard, crypto, secretValue = '' } = {}) {
 		},
 	};
 	globalThis.window = {
+		setTimeout: () => 1,
+		clearTimeout: () => {},
 		btoa(binary) {
 			return Buffer.from(binary, 'binary').toString('base64');
 		},
@@ -192,11 +197,19 @@ function fixture({ clipboard, crypto, secretValue = '' } = {}) {
 	};
 }
 
+const clipboardStates = new WeakMap();
+const resetClipboard = loadFunction('resetClipboard', { clipboardStates });
+const copyToClipboard = loadFunction('copyToClipboard', {
+	clipboardStates,
+	resetClipboard,
+});
 const generateSecureBase64Url = loadFunction('generateSecureBase64Url');
 const initSecretVisibility = loadFunction('initSecretVisibility');
 const initGeneratedSecretTools = loadFunction('initGeneratedSecretTools', {
 	generateSecureBase64Url,
 	initSecretVisibility,
+	resetClipboard,
+	copyToClipboard,
 });
 const accessSecretToolResets = new WeakMap();
 const webhookSecretToolResets = new WeakMap();
@@ -213,7 +226,10 @@ const initWebhookSecretTools = loadFunction('initWebhookSecretTools', {
 });
 const ensureWebhookTargetOption = loadFunction('ensureWebhookTargetOption');
 const updateWebhookFields = loadFunction('updateWebhookFields');
-const initWebhookUrlCopy = loadFunction('initWebhookUrlCopy');
+const initWebhookUrlCopy = loadFunction('initWebhookUrlCopy', {
+	resetClipboard,
+	copyToClipboard,
+});
 
 function initialize(options) {
 	const state = fixture(options);
@@ -283,7 +299,7 @@ test('copy and submission match the server-normalized secret', async () => {
 		assert.deepEqual(copied, ['exact-manual-webhook-secret-value']);
 		assert.equal(state.secret.value, 'exact-manual-webhook-secret-value');
 		assert.equal(state.status.textContent, 'Secret copied.');
-		assert.equal(state.copy.getAttribute('aria-label'), 'Secret copied');
+		assert.equal(state.copy.getAttribute('aria-label'), 'Secret copied.');
 		assert.equal(state.copyIcon.getAttribute('hidden'), '');
 		assert.equal(state.copySuccessIcon.getAttribute('hidden'), null);
 		assert.doesNotMatch(state.status.textContent, /exact-manual/);
@@ -836,12 +852,16 @@ test('add and edit modal population clear stale generated secret state', () => {
 
 test('payload URL copy uses the exact displayed endpoint', async () => {
 	const copied = [];
+	let reset;
 	const input = control(
-		'https://example.test/wp-json/ran-booster/v1/webhooks/gh'
+		'https://example.test/wp-json/ran-booster/v1/webhooks/gh?full=' +
+			'long-value%2F'.repeat(40) +
+			'&literal=a+b#complete'
 	);
 	const copy = control();
-	copy.dataset = { copiedLabel: 'URL copied', copyLabel: 'Copy URL' };
-	copy.textContent = 'Copy URL';
+	copy.textContent = '';
+	copy.setAttribute('aria-label', 'Copy payload URL');
+	copy.setAttribute('title', 'Copy payload URL');
 	const status = control();
 	status.dataset = {
 		copiedMessage: 'Payload URL copied.',
@@ -865,6 +885,11 @@ test('payload URL copy uses the exact displayed endpoint', async () => {
 		},
 	};
 	globalThis.window = {
+		setTimeout(callback) {
+			reset = callback;
+			return 1;
+		},
+		clearTimeout: () => {},
 		navigator: {
 			clipboard: {
 				async writeText(value) {
@@ -878,9 +903,19 @@ test('payload URL copy uses the exact displayed endpoint', async () => {
 		initWebhookUrlCopy();
 		await copy.listeners.get('click')();
 		assert.deepEqual(copied, [input.value]);
-		assert.equal(copy.textContent, 'URL copied');
+		assert.equal(copy.textContent, '');
+		assert.equal(copy.getAttribute('aria-label'), 'Payload URL copied.');
+		assert.equal(copy.getAttribute('title'), 'Payload URL copied.');
+		assert.equal(input.focusCount, 0);
+		assert.equal(copy.focusCount, 0);
+		assert.equal(copy.classList.contains('is-copied'), true);
 		assert.equal(status.textContent, 'Payload URL copied.');
 		assert.equal(status.classList.contains('screen-reader-text'), true);
+		reset();
+		assert.equal(copy.classList.contains('is-copied'), false);
+		assert.equal(copy.getAttribute('aria-label'), 'Copy payload URL');
+		assert.equal(copy.getAttribute('title'), 'Copy payload URL');
+		assert.equal(status.textContent, '');
 	} finally {
 		cleanup();
 	}
@@ -912,7 +947,11 @@ test('payload URL copy failure selects the URL for manual copying', async () => 
 			return selector === '[data-webhook-url-tools]' ? [root] : [];
 		},
 	};
-	globalThis.window = { navigator: {} };
+	globalThis.window = {
+		navigator: {},
+		setTimeout: () => 1,
+		clearTimeout: () => {},
+	};
 
 	try {
 		initWebhookUrlCopy();
@@ -925,5 +964,83 @@ test('payload URL copy failure selects the URL for manual copying', async () => 
 		);
 	} finally {
 		cleanup();
+	}
+});
+
+test('pending URL outcomes cannot overwrite changed, detached or newer state', async () => {
+	for (const scenario of [
+		'changed',
+		'rejected',
+		'detached',
+		'same-input',
+		'repeat',
+	]) {
+		const input = control('https://example.test/old');
+		const copy = control();
+		copy.dataset = { copiedLabel: 'URL copied', copyLabel: 'Copy URL' };
+		const status = control();
+		status.dataset = {
+			copiedMessage: 'URL copied.',
+			copyFailedMessage: 'Copy failed.',
+		};
+		const root = {
+			dataset: {},
+			querySelector: (selector) =>
+				({
+					'[data-webhook-url]': input,
+					'[data-webhook-url-copy]': copy,
+					'[data-webhook-url-status]': status,
+				})[selector],
+		};
+		const pending = [];
+		globalThis.document = { querySelectorAll: () => [root] };
+		globalThis.window = {
+			setTimeout: () => 1,
+			clearTimeout: () => {},
+			navigator: {
+				clipboard: {
+					writeText: () =>
+						new Promise((resolve, reject) =>
+							pending.push({ resolve, reject })
+						),
+				},
+			},
+		};
+		try {
+			initWebhookUrlCopy();
+			const first = copy.listeners.get('click')();
+			if (scenario === 'detached') {
+				input.isConnected = false;
+			}
+			if (scenario === 'changed' || scenario === 'rejected') {
+				input.value = 'https://example.test/new';
+			}
+			if (scenario === 'same-input') {
+				input.listeners.get('input')();
+			}
+			let second;
+			if (scenario === 'repeat') {
+				second = copy.listeners.get('click')();
+				assert.equal(pending.length, 1);
+			}
+			if (scenario === 'rejected') {
+				pending[0].reject(new Error('denied'));
+			} else {
+				pending[0].resolve();
+			}
+			await first;
+			assert.equal(
+				status.textContent,
+				scenario === 'repeat' ? 'URL copied.' : '',
+				scenario
+			);
+			assert.equal(input.focusCount, 0, scenario);
+			if (second) {
+				await second;
+				assert.equal(status.textContent, 'URL copied.');
+			}
+		} finally {
+			cleanup();
+		}
 	}
 });

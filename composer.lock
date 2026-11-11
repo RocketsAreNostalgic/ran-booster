@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e5c4abda472a6f7685d7ff28743bdb3e",
+    "content-hash": "3ec8e27978d737f05a5f1b68bf316a2d",
     "packages": [
         {
             "name": "ran/booster-github-provider",
@@ -1721,16 +1721,16 @@
         },
         {
             "name": "ran/admin-shell",
-            "version": "v1.0.0",
+            "version": "v2.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/RocketsAreNostalgic/ran-admin-shell.git",
-                "reference": "350909995871d11a7f8495bb2c5bfd041190b648"
+                "reference": "c5f57782b24301474133b7b25e11bd50477da683"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/350909995871d11a7f8495bb2c5bfd041190b648",
-                "reference": "350909995871d11a7f8495bb2c5bfd041190b648",
+                "url": "https://api.github.com/repos/RocketsAreNostalgic/ran-admin-shell/zipball/c5f57782b24301474133b7b25e11bd50477da683",
+                "reference": "c5f57782b24301474133b7b25e11bd50477da683",
                 "shasum": ""
             },
             "require": {
@@ -1786,10 +1786,10 @@
             ],
             "description": "Build-time admin-shell resources for Rockets Are Nostalgic WordPress plugins.",
             "support": {
-                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/v1.0.0",
+                "source": "https://github.com/RocketsAreNostalgic/ran-admin-shell/tree/v2.1.1",
                 "issues": "https://github.com/RocketsAreNostalgic/ran-admin-shell/issues"
             },
-            "time": "2026-11-01T11:11:49+00:00"
+            "time": "2026-11-08T16:56:23+00:00"
         },
         {
             "name": "ran/coding-standards",
@@ -3172,5 +3172,5 @@
     "platform-overrides": {
         "php": "8.2.0"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }

@@ -185,6 +185,7 @@ final class WebhookOperationCoordinator {
 			'check' => 'succeeded' === $state && (
 				( 'verified' === $outcome['code'] && 'verified' === $delivery )
 				|| ( 'configured_pending_delivery' === $outcome['code'] && 'configured_pending_delivery' === $delivery )
+				|| 'configuration_confirmed' === $outcome['code']
 			),
 			'reconfigure' => 'succeeded' === $state && $this->successful_code( $outcome['code'] ),
 			'remove' => $result->confirms_absence() && 'removed' === $outcome['code'],

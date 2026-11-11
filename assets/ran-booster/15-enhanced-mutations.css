@@ -4,41 +4,96 @@
 }
 
 .ran-booster-admin
-	[data-ran-booster-enhanced-mutation].ran-booster-enhanced-mutation-is-busy,
+	:is(
+		[data-ran-booster-enhanced-mutation],
+		[data-ran-booster-submit-busy]
+	).ran-booster-enhanced-mutation-is-busy,
 .ran-booster-admin
-	[data-ran-booster-enhanced-mutation].ran-booster-enhanced-mutation-is-busy
+	:is(
+		[data-ran-booster-enhanced-mutation],
+		[data-ran-booster-submit-busy]
+	).ran-booster-enhanced-mutation-is-busy
 	[type="submit"] {
 	cursor: progress;
 	pointer-events: none;
 }
 
-.ran-booster-feedback-toast {
-	inset-block-end: var(--ran-booster-space-20);
-	border-inline-start: 0;
-	box-sizing: border-box;
-	box-shadow: var(--ran-booster-shadow-toast);
-	margin: 0;
-	opacity: 0;
-	padding: var(--ran-booster-space-8) var(--ran-booster-space-12);
+/* Keep confirmed saves in the viewport without moving their forms. */
+.ran-booster-general-snackbar .components-snackbar-list {
 	position: fixed;
-	left: 50%;
-	transform: translateY(calc(100% + var(--ran-booster-space-20)));
-	translate: -50% 0;
-	inline-size: min(360px, calc(100vw - 40px));
-	will-change: opacity, transform;
 	z-index: 100;
+	right: auto;
+	inset-block-end: max(80px, calc(env(safe-area-inset-bottom) + 24px));
+	--ran-booster-snackbar-gutter: max(
+		16px,
+		env(safe-area-inset-left),
+		env(safe-area-inset-right)
+	);
+	inline-size: min(
+		360px,
+		calc(100vw - 2 * var(--ran-booster-snackbar-gutter))
+	);
+	left: clamp(
+		var(--ran-booster-snackbar-gutter),
+		calc(
+			var(--ran-booster-snackbar-center, 50vw) -
+				min(180px, 50vw - var(--ran-booster-snackbar-gutter))
+		),
+		calc(
+			100vw - var(--ran-booster-snackbar-gutter) -
+				min(360px, 100vw - 2 * var(--ran-booster-snackbar-gutter))
+		)
+	);
+	max-block-size: calc(100vh - 140px);
+	overflow-y: auto;
+	pointer-events: none;
 }
 
-.ran-booster-feedback-toast p {
-	margin: var(--ran-booster-space-8) 0;
-	padding: 0;
-	color: var(--ran-booster-text);
+.ran-booster-general-snackbar .components-snackbar-list__notice-container {
+	display: flex;
+	justify-content: center;
+}
+
+.ran-booster-general-snackbar .components-snackbar {
+	pointer-events: auto;
+}
+
+@media (min-width: 783px) {
+	.ran-booster-general-snackbar .components-snackbar-list {
+		--ran-booster-snackbar-gutter: max(
+			24px,
+			env(safe-area-inset-left),
+			env(safe-area-inset-right)
+		);
+	}
+}
+
+/*
+ * Reason tooltip for a control that stays visible but inactive. The bubble is
+ * fixed-positioned by ran-booster-enhanced-mutations.js so no card overflow
+ * clips it. Small and generic on purpose: the Popover API component planned in
+ * issue 783 replaces it.
+ */
+
+.ran-booster-admin .ran-booster-reason-tooltip {
+	display: inline-flex;
+}
+
+.ran-booster-admin .ran-booster-reason-tooltip__bubble {
+	position: fixed;
+	z-index: var(--ran-booster-layer-modal);
+	box-sizing: border-box;
+	max-inline-size: min(20rem, calc(100vw - 16px));
+	padding-block: var(--ran-booster-space-6);
+	padding-inline: var(--ran-booster-space-10, 10px);
+	border-radius: var(--ran-booster-radius-control);
+	background: var(--ran-booster-text);
+	color: var(--ran-booster-surface);
 	font-size: var(--ran-booster-font-size-sm);
-	line-height: 1.54;
-	text-align: center;
+	line-height: 1.4;
+	pointer-events: none;
 }
 
-.ran-booster-feedback-toast.is-visible {
-	opacity: 1;
-	transform: translateY(0);
+.ran-booster-admin .ran-booster-reason-tooltip__bubble[hidden] {
+	display: none;
 }

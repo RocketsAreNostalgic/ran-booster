@@ -13,6 +13,10 @@
  */
 
 :root {
+	--ran-booster-width-standard: 1050px;
+	--ran-booster-width-wide: 1400px;
+	--ran-booster-shell-gradient-start: #10364e;
+	--ran-booster-shell-gradient-end: #1e4d6b;
 	--ran-booster-color-neutral-0: #fff;
 	--ran-booster-color-neutral-100: #f0f0f1;
 	--ran-booster-color-neutral-200: #dcdcde;
@@ -32,6 +36,7 @@
 	--ran-booster-color-green-200: #68de7c;
 	--ran-booster-color-green-300: #00a32a;
 	--ran-booster-color-green-400: #008a20;
+	--ran-booster-color-green-500: #007c1d;
 	--ran-booster-color-amber-100: #fcf3e3;
 	--ran-booster-color-amber-200: #dba617;
 	--ran-booster-color-amber-300: #996800;
@@ -51,6 +56,9 @@
 	--ran-booster-border: var(--ran-booster-color-neutral-300);
 	--ran-booster-divider: var(--ran-booster-color-neutral-300);
 	--ran-booster-strong-divider: var(--ran-booster-color-neutral-400);
+
+	/* Form control boundary: at least 3:1 on white and on the grey page surface. */
+	--ran-booster-control-border: var(--ran-booster-color-neutral-450);
 	--ran-booster-surface: var(--ran-booster-color-neutral-0);
 	--ran-booster-surface-subtle: var(--ran-booster-color-neutral-100);
 	--ran-booster-text: var(--ran-booster-color-neutral-700);
@@ -82,6 +90,7 @@
 	--ran-booster-space-5: 5px;
 	--ran-booster-space-6: 6px;
 	--ran-booster-space-7: 7px;
+	--ran-booster-field-label-gap: var(--ran-booster-space-6);
 	--ran-booster-space-8: 8px;
 	--ran-booster-space-9: 9px;
 	--ran-booster-space-10: 10px;
@@ -99,16 +108,33 @@
 			--ran-booster-table-cell-padding-block
 		)
 		var(--ran-booster-table-cell-padding-inline);
-	--ran-booster-font-size-xs: 12px;
-	--ran-booster-font-size-sm: 13px;
-	--ran-booster-font-size-base: 14px;
-	--ran-booster-font-weight-semibold: 600;
+
+	/* WordPress design-system type scale, shared with Jetpack Boost: 20 / 15 / 13 / 12. */
+	--ran-booster-font-size-xl: var(--wpds-typography-font-size-xl);
+	--ran-booster-font-size-lg: var(--wpds-typography-font-size-lg);
+	--ran-booster-font-size-md: var(--wpds-typography-font-size-md);
+	--ran-booster-font-size-sm: var(--wpds-typography-font-size-sm);
+	--ran-booster-font-weight-heading: var(
+		--wpds-typography-font-weight-emphasis
+	);
+	--ran-booster-font-weight-medium: 500;
+	--ran-booster-font-weight-semibold: var(
+		--wpds-typography-font-weight-emphasis
+	);
 	--ran-booster-line-height-tight: 1.3;
 	--ran-booster-line-height-heading: 1.4;
 	--ran-booster-line-height-base: 1.5;
 	--ran-booster-line-height-relaxed: 1.6;
+	--ran-booster-card-inset-block-start: var(--ran-booster-space-24);
+	--ran-booster-card-inset-block-end: calc(
+		var(--ran-booster-space-24) + var(--ran-booster-space-8)
+	);
+	--ran-booster-card-heading-gap: var(--ran-booster-space-8);
+	--ran-booster-card-gap: var(--ran-booster-space-24);
 	--ran-booster-radius-control: 2px;
 	--ran-booster-radius-surface: 3px;
+	--ran-booster-radius-card: var(--wpds-border-radius-lg);
+	--ran-booster-radius-inset: var(--wpds-border-radius-md);
 	--ran-booster-radius-badge: 10px;
 	--ran-booster-radius-circle: 50%;
 	--ran-booster-radius-pill: 999px;
@@ -128,17 +154,120 @@
 	--ran-booster-shadow-overlay: var(--ran-booster-color-black-a40);
 	--ran-booster-shadow-surface: 0 1px 1px var(--ran-booster-color-black-a04);
 	--ran-booster-shadow-modal: 0 3px 30px var(--ran-booster-shadow-overlay);
-	--ran-booster-shadow-toast: 0 3px 5px var(--ran-booster-shadow-overlay);
 	--ran-booster-shadow-delete-button:
 		inset 0 1px 0 var(--ran-booster-color-coral-100),
 		0 1px 0 var(--ran-booster-color-black-a15);
+	--ran-booster-shadow-switch-knob:
+		0 1px 1px rgb(0 0 0 / 3%), 0 1px 2px rgb(0 0 0 / 2%),
+		0 3px 3px rgb(0 0 0 / 2%), 0 4px 4px rgb(0 0 0 / 1%);
 }
 
 .ran-booster-admin {
-	max-inline-size: 1050px;
+	max-inline-size: var(--ran-booster-width-standard);
 }
 
-#screen-meta-links {
+.ran-booster-admin--wide-collection {
+	max-inline-size: var(--ran-booster-width-wide);
+}
+
+.ran-admin-shell {
+	background: linear-gradient(
+		135deg,
+		var(--ran-booster-shell-gradient-start) 0%,
+		var(--ran-booster-shell-gradient-end) 100%
+	);
+}
+
+.ran-admin-shell__inner:has(+ .ran-admin-shell__navigation) {
+	padding-block-end: 0;
+}
+
+.ran-admin-shell__navigation > a {
+	border-block-end-width: 3px;
+}
+
+/*
+ * Scroll affordance for a section navigation that overflows (a phone). The
+ * vendored Shell stylesheet is generated, so the hint lives here. Each edge
+ * dims only while there is more to scroll toward it; the fade is driven by the
+ * container's own scroll position, needs no script, and leaves the bar
+ * untouched where nothing overflows. Dimmed, never hidden: a partly visible
+ * item stays readable. The scroll origin follows the writing direction, so the
+ * fade sizes are named by inline edge and mapped to the physical mask below.
+ */
+@property --ran-booster-nav-fade-start {
+	syntax: "<length>";
+	inherits: false;
+
+	initial-value: 0px; /* stylelint-disable-line length-zero-no-unit */
+}
+
+@property --ran-booster-nav-fade-end {
+	syntax: "<length>";
+	inherits: false;
+
+	initial-value: 0px; /* stylelint-disable-line length-zero-no-unit */
+}
+
+@keyframes ran-booster-nav-fade-start {
+	to {
+		--ran-booster-nav-fade-start: 24px;
+	}
+}
+
+@keyframes ran-booster-nav-fade-end {
+	from {
+		--ran-booster-nav-fade-end: 24px;
+	}
+
+	to {
+		--ran-booster-nav-fade-end: 0px;
+	}
+}
+
+@supports (animation-timeline: scroll()) {
+	.ran-admin-shell__navigation.ran-section-navigation {
+		--ran-booster-nav-fade-left: var(--ran-booster-nav-fade-start);
+		--ran-booster-nav-fade-right: var(--ran-booster-nav-fade-end);
+		animation:
+			ran-booster-nav-fade-start linear both,
+			ran-booster-nav-fade-end linear both;
+		animation-timeline: scroll(self inline), scroll(self inline);
+		animation-range:
+			0 24px,
+			calc(100% - 24px) 100%;
+
+		/* The mask uses alpha only, so the colour is irrelevant. */
+		/* stylelint-disable color-named */
+		mask-image: linear-gradient(
+			to right,
+			color-mix(in srgb, black 35%, transparent) 0,
+			black var(--ran-booster-nav-fade-left),
+			black calc(100% - var(--ran-booster-nav-fade-right)),
+			color-mix(in srgb, black 35%, transparent) 100%
+		);
+		/* stylelint-enable color-named */
+	}
+
+	.ran-admin-shell__navigation.ran-section-navigation:dir(rtl) {
+		--ran-booster-nav-fade-left: var(--ran-booster-nav-fade-end);
+		--ran-booster-nav-fade-right: var(--ran-booster-nav-fade-start);
+	}
+
+	@media (forced-colors: active) {
+		.ran-admin-shell__navigation.ran-section-navigation {
+			mask-image: none;
+		}
+	}
+}
+
+body:has(.ran-admin-shell) #screen-meta-links {
 	position: relative;
-	z-index: 2;
+	z-index: 11;
+}
+
+@media (forced-colors: active) {
+	.ran-admin-shell {
+		background: Canvas;
+	}
 }

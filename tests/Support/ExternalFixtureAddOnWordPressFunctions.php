@@ -28,6 +28,11 @@ if ( ! function_exists( 'add_filter' ) ) {
 if ( ! function_exists( 'current_user_can' ) ) {
 	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress function double must retain the host-owned name.
 	function current_user_can( string $capability ): bool {
+		// Whichever capability double loads first serves the whole suite, so explicit grants from the shared test contract win.
+		if ( isset( $GLOBALS['ran_booster_test_capabilities'][ $capability ] ) ) {
+			return true === $GLOBALS['ran_booster_test_capabilities'][ $capability ];
+		}
+
 		return 'manage_options' === $capability && ( $GLOBALS['ran_booster_external_fixture_addon_admin'] ?? false );
 	}
 }

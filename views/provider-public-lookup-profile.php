@@ -25,17 +25,17 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 		'stale'         => false,
 	);
 ?>
-<section id="ran-booster-public-lookup-profile-region" class="ran-booster-provider-section" data-ran-booster-admin-mutation-region="public-lookup-profile" aria-labelledby="ran-booster-public-lookup-heading">
+<section id="ran-booster-public-lookup-profile-region" class="ran-booster-provider-section ran-booster-card" data-ran-booster-card="provider" data-ran-booster-admin-mutation-region="public-lookup-profile" aria-labelledby="ran-booster-public-lookup-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 	<header class="ran-booster-provider-section__header">
 		<h3 id="ran-booster-public-lookup-heading" class="ran-booster-section__title"><?php esc_html_e( 'Public repository lookup', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose Anonymous, or use a dedicated saved credential to reduce Git provider rate-limit interruptions.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose Anonymous, or use a saved credential to reduce rate-limit interruptions.', 'ran-booster' ); ?></p>
 	</header>
 	<div class="ran-booster-provider-section__body">
 		<div class="ran-booster-public-lookup-profile__panel ran-booster-panel">
-			<div id="ran-booster-public-lookup-profile-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $public_lookup_profile_error ? 'hidden' : ''; ?>><p><?php echo null === $public_lookup_profile_error ? '' : esc_html( $public_lookup_profile_error ); ?></p></div>
+			<div id="ran-booster-public-lookup-profile-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" <?php echo null === $public_lookup_profile_error ? 'hidden' : ''; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary><?php echo null === $public_lookup_profile_error ? '' : esc_html( $public_lookup_profile_error ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 			<div class="ran-booster-public-lookup-profile__layout">
-				<form method="post" action="" class="ran-booster-public-lookup-profile__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-public-lookup-profile-error" hx-post="" hx-target="#ran-booster-public-lookup-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
-					<?php wp_nonce_field( 'ran-booster-save-public-lookup-profile' ); ?>
+				<form method="post" action="" class="ran-booster-public-lookup-profile__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-public-lookup-profile-error" hx-post="" hx-target="#ran-booster-public-lookup-profile-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop" hx-request='{"timeout":30000}'>
+					<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-save-public-lookup-profile' ); ?>
 					<input type="hidden" name="ran_booster[action]" value="save-public-lookup-profile">
 					<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider['code'] ); ?>">
 					<label class="ran-booster-public-lookup-profile__label" for="ran-booster-public-lookup-profile"><?php esc_html_e( 'Lookup credential', 'ran-booster' ); ?></label>
@@ -51,17 +51,17 @@ $public_lookup_profile       = isset( $public_lookup_profile ) && is_array( $pub
 								<option value="<?php echo esc_attr( $public_lookup_profile['configured_id'] ); ?>" selected><?php echo esc_html( 'Missing profile (' . $public_lookup_profile['configured_id'] . ')' ); ?></option>
 							<?php } ?>
 						</select>
-						<button type="submit" class="button"><?php esc_html_e( 'Save', 'ran-booster' ); ?></button>
+						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Save', 'ran-booster' ); ?></button>
 					</div>
 				</form>
-				<aside class="ran-booster-public-lookup-profile__guidance">
+				<div class="ran-booster-public-lookup-profile__guidance">
 					<strong><?php esc_html_e( 'Credential guidance', 'ran-booster' ); ?></strong>
-					<p><?php esc_html_e( 'Prefer a dedicated, expiring, least-privilege credential kept separate from credentials that can access private repositories or deployments.', 'ran-booster' ); ?></p>
-				</aside>
+					<p><?php esc_html_e( 'Use a dedicated, expiring, least-privilege credential, separate from any that can access private repositories or deployments.', 'ran-booster' ); ?></p>
+				</div>
 			</div>
 			<?php if ( $public_lookup_profile['stale'] ) { ?>
-				<div class="notice notice-warning inline"><p><?php esc_html_e( 'The configured public lookup profile is missing. Choose Anonymous or another saved profile, then save the preference.', 'ran-booster' ); ?></p></div>
+				<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The configured public lookup profile is missing. Choose Anonymous or another saved profile, then save the preference.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 			<?php } ?>
 		</div>
 	</div>
-</section>
+</div></div></section>

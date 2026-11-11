@@ -5,6 +5,52 @@
 	background: var(--ran-booster-surface);
 }
 
+/*
+ * One frame holds a collection: a toolbar with its search, filters and count,
+ * the table or list, then its footer. The frame draws the only outer border.
+ */
+
+.ran-booster-admin .ran-booster-collection {
+	min-inline-size: 0;
+	border: 1px solid var(--ran-booster-border);
+	border-radius: var(--ran-booster-radius-inset);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-collection > .ran-booster-collection__toolbar {
+	margin: 0;
+	padding: var(--ran-booster-space-12) var(--ran-booster-space-16);
+	border-block-end: 1px solid var(--ran-booster-border);
+	border-start-start-radius: var(--ran-booster-radius-inset);
+	border-start-end-radius: var(--ran-booster-radius-inset);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-collection
+	> .ran-booster-collection__toolbar
+	> .ran-booster-provider-list-controls {
+	margin: 0;
+}
+
+.ran-booster-admin.ran-booster-admin
+	.ran-booster-collection
+	> :is(.ran-booster-data-table-wrap, .ran-booster-repository-list) {
+	border: 0;
+	border-radius: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-collection
+	> .ran-booster-provider-table-navigation {
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-collection > .ran-booster-collection__empty {
+	margin: 0;
+	padding: var(--ran-booster-space-16);
+}
+
 .ran-booster-admin .ran-booster-data-table {
 	inline-size: 100%;
 	border: 1px solid var(--ran-booster-border);
@@ -26,8 +72,16 @@
 
 .ran-booster-admin .ran-booster-data-table > thead > tr > th {
 	border-block-end: 1px solid var(--ran-booster-border);
-	background: var(--ran-booster-surface-subtle);
+	background: transparent;
 	color: var(--ran-booster-text);
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: 600;
+	text-align: start;
+}
+
+.ran-booster-admin .ran-booster-data-table > tbody > tr > th {
+	font-weight: inherit;
+	text-align: start;
 }
 
 .ran-booster-admin
@@ -56,17 +110,11 @@
 }
 
 .ran-booster-admin
-	.ran-booster-data-table
-	> tbody
-	> :is(
-		.ran-booster-data-table__group-heading,
-		.ran-booster-repository-record__heading
-	)
+	.ran-booster-data-table--rows
+	> tbody:nth-of-type(even)
+	> tr:nth-child(even)
 	> * {
-	padding-block-start: var(--ran-booster-space-12);
-	padding-block-end: var(--ran-booster-space-8);
-	border-block-end: 1px solid var(--ran-booster-divider);
-	background: inherit;
+	background: transparent;
 }
 
 .ran-booster-admin .ran-booster-data-table [data-label]::before {
@@ -75,6 +123,7 @@
 }
 
 .ran-booster-admin .ran-booster-repository-list {
+	overflow: hidden;
 	border: 1px solid var(--ran-booster-border);
 	background: var(--ran-booster-surface);
 }
@@ -121,6 +170,10 @@
 	overflow-wrap: anywhere;
 }
 
+.ran-booster-admin a.ran-booster-repository-record__name {
+	min-block-size: var(--ran-booster-space-24);
+}
+
 .ran-booster-admin strong.ran-booster-repository-record__name {
 	color: var(--ran-booster-text);
 }
@@ -129,7 +182,7 @@
 	display: block;
 	margin-block-start: var(--ran-booster-space-4);
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 }
 
 .ran-booster-admin .ran-booster-repository-record__overview > strong {
@@ -168,7 +221,6 @@
 
 .ran-booster-admin .ran-booster-repository-record__action-group :is(a, button) {
 	flex: 0 0 auto;
-	min-block-size: 44px;
 	white-space: nowrap;
 }
 
@@ -196,24 +248,9 @@
 
 .ran-booster-admin
 	.ran-booster-repository-record__details-layout
-	:is(.ran-booster-pill, .ran-booster-badge) {
+	[data-ran-booster-badge] {
 	inline-size: fit-content;
 	white-space: normal;
-}
-
-.ran-booster-admin .ran-booster-status {
-	font-weight: 600;
-}
-
-.ran-booster-admin .ran-booster-status--ok::before {
-	content: "";
-	display: inline-block;
-	inline-size: 7px;
-	block-size: 7px;
-	margin-inline-end: var(--ran-booster-space-6);
-	border-radius: var(--ran-booster-radius-circle);
-	background: var(--ran-booster-status-ok-indicator);
-	vertical-align: 1px;
 }
 
 .ran-booster-admin .ran-booster-actions {
@@ -225,7 +262,6 @@
 	white-space: nowrap;
 }
 
-.ran-booster-admin .ran-booster-actions > .button,
 .ran-booster-admin .ran-booster-actions > .ran-booster-inline-form {
 	margin-inline-end: 0;
 }
@@ -237,10 +273,4 @@
 
 .ran-booster-admin .ran-booster-inline-form input[type="hidden"] {
 	display: none;
-}
-
-.ran-booster-admin .ran-booster-secrets-location {
-	max-inline-size: 1120px;
-	padding-block-start: var(--ran-booster-space-14);
-	border-block-start: 1px solid var(--ran-booster-divider);
 }

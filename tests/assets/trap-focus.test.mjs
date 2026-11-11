@@ -7,14 +7,11 @@ const sources = {
 		new URL('../../assets/ran-booster-secure-inputs.js', import.meta.url),
 		'utf8'
 	),
-	repositoryPicker: fs.readFileSync(
-		new URL(
-			'../../assets/ran-booster-repository-picker.js',
-			import.meta.url
-		),
-		'utf8'
-	),
 };
+const pickerSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-repository-picker.js', import.meta.url),
+	'utf8'
+);
 
 function loadTrapFocus(source, sourceName) {
 	const signature = '\tfunction trapFocus(event, container) {';
@@ -189,4 +186,14 @@ test('Shift+Tab wraps from the first to the last visible candidate', () => {
 		assert.equal(event.defaultPrevented, true);
 		assert.equal(container.ownerDocument.activeElement, lastVisible);
 	});
+});
+
+test('repository picker delegates focus containment to the public Dialog', () => {
+	assert.doesNotMatch(pickerSource, /function trapFocus\(/);
+	assert.match(pickerSource, /initialFocus\(\)\s*\{/);
+	assert.match(pickerSource, /finalFocus\(\)\s*\{/);
+	assert.match(
+		pickerSource,
+		/onOpenChange\(open\)\s*\{\s*if \(!open\) \{\s*closePicker\(\);/
+	);
 });

@@ -24,6 +24,7 @@ use RAN\Storage\CredentialUsageReader;
 use RAN\WordPress\WordPressUpdaterLock;
 
 class Dispatcher {
+	private string $general_scope = 'all';
 
 	/**
 	 * @var Dashboard
@@ -332,7 +333,11 @@ class Dispatcher {
 			$admin_url = is_multisite()
 				? network_admin_url( 'admin.php' )
 				: admin_url( 'admin.php' );
-			$this->redirect_to( $admin_url . '?page=ran-booster-settings#ran-booster-storage' );
+			$this->redirect_to(
+				$this->storage_request_is_from_overview()
+					? $admin_url . '?page=ran-booster&tab=overview'
+					: $admin_url . '?page=ran-booster-settings#ran-booster-storage'
+			);
 		}
 
 		// Keep a failed attempt local to this protected POST response. Paths and
@@ -468,6 +473,12 @@ class Dispatcher {
 		}
 		check_admin_referer( 'save-general-settings' === $action ? 'ran-booster-save-general-settings' : 'ran-booster-check-core-updates' );
 		$keys = 'save-general-settings' === $action ? array( 'action', 'token', 'preferences' ) : array( 'action' );
+		if ( 'save-general-settings' === $action && array_key_exists( 'scope', $request ) ) {
+			if ( ! is_string( $request['scope'] ) || ! in_array( $request['scope'], array( 'hide_github', 'self_update_discovery', 'numeric' ), true ) ) {
+				wp_die( esc_html__( 'Invalid Settings request. Reload Settings and try again.', 'ran-booster' ) );
+			}
+			$keys[] = 'scope';
+		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- The purpose nonce protects the fixed Settings route.
 		if ( 'ran-booster-settings' !== ( $_GET['page'] ?? null ) || array() !== array_diff( array_keys( $request ), $keys ) || count( $request ) !== count( $keys ) ) {
 			wp_die( esc_html__( 'Invalid Settings request. Reload Settings and try again.', 'ran-booster' ) );
@@ -475,7 +486,8 @@ class Dispatcher {
 		if ( 'check-core-updates' === $action ) {
 			$this->dashboard->post_check_core_updates();
 		} else {
-			$saved = $this->dashboard->post_save_general_settings( wp_unslash( $request ) );
+			$this->general_scope = $request['scope'] ?? 'all';
+			$saved               = $this->dashboard->post_save_general_settings( wp_unslash( $request ) );
 			if ( $this->is_htmx_request() ) {
 				$this->respond_to_htmx_general_settings( $saved );
 			}
@@ -485,10 +497,17 @@ class Dispatcher {
 		}
 	}
 
+	private function storage_request_is_from_overview(): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Called only after the storage purpose nonce was verified.
+		return 'ran-booster' === ( $_GET['page'] ?? null );
+	}
+
 	/** @param array<string, mixed> $request */
 	private function storage_route_is_current( array $request ): bool {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Each storage action verified its purpose nonce before this route/payload check.
-		$page   = $_GET['page'] ?? null;
+		$page = $_GET['page'] ?? null;
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Same purpose-nonce precondition as the page read above.
+		$tab    = $_GET['tab'] ?? null;
 		$action = $request['action'] ?? null;
 		$fields = match ( $action ) {
 			'create-secure-storage' => array( 'action' ),
@@ -496,7 +515,10 @@ class Dispatcher {
 			'reset-empty-storage' => array( 'action', 'reset_confirmation' ),
 			default => array(),
 		};
-		if ( 'ran-booster-settings' === $page && array() !== $fields
+		// Only create is offered from the Overview onboarding card; adopt and reset stay Settings-only.
+		$route_allowed = 'ran-booster-settings' === $page
+			|| ( 'ran-booster' === $page && 'overview' === $tab && 'create-secure-storage' === $action );
+		if ( $route_allowed && array() !== $fields
 			&& array() === array_diff( array_keys( $request ), $fields )
 			&& count( $request ) === count( array_filter( $request, 'is_string' ) ) ) {
 			return true;
@@ -650,10 +672,11 @@ class Dispatcher {
 	}
 
 	protected function respond_to_htmx_general_settings( bool $saved ): never {
+		$scope = $this->general_scope;
 		if ( $saved ) {
-			header( 'HX-Trigger-After-Swap: ' . wp_json_encode( array( 'ran-booster:admin-mutation-success' => array( 'message' => __( 'Settings saved.', 'ran-booster' ) ) ) ) );
+			header( 'HX-Trigger-After-Swap: ' . wp_json_encode( array( 'ran-booster:admin-mutation-success' => array( 'message' => 'numeric' === $scope ? __( 'Numeric settings saved.', 'ran-booster' ) : ( 'all' === $scope ? __( 'Settings saved.', 'ran-booster' ) : __( 'Setting saved.', 'ran-booster' ) ) ) ) ) );
 		}
-		echo $this->dashboard->render_general_settings_region( $saved ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned escaped view fragment.
+		echo $this->dashboard->render_general_settings_region( $saved, $scope ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-owned escaped view fragment.
 		exit;
 	}
 

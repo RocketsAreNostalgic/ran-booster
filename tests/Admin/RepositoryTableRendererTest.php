@@ -10,6 +10,50 @@ use PHPUnit\Framework\TestCase;
 use RAN\Admin\Component\RepositoryTableRenderer;
 
 final class RepositoryTableRendererTest extends TestCase {
+	public function test_historical_badges_preserve_exact_labels_and_only_map_known_tones(): void {
+		foreach ( array(
+			'neutral' => 'none',
+			'pending' => 'none',
+			'ok'      => 'stable',
+			'success' => 'stable',
+			'warning' => 'medium',
+			'error'   => 'high',
+			'info'    => 'informational',
+			'future'  => '',
+		) as $tone => $intent ) {
+			$html = $this->render(
+				array(
+					'repository' => 'owner/history',
+					'historical' => true,
+					'details'    => array(
+						array(
+							'label' => 'Recorded fact',
+							'value' => 'Exact <status> "quoted"',
+							'tone'  => $tone,
+						),
+					),
+				)
+			);
+			// An unknown tone keeps the exact label and renders as a neutral Badge.
+			$intent = '' === $intent ? 'none' : $intent;
+			self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $intent . '-intent" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '">Exact &lt;status&gt; &quot;quoted&quot;</span>', $html );
+		}
+		// An empty recorded fact never takes the tone's intent; it stays a neutral, empty Badge.
+		$empty = $this->render(
+			array(
+				'historical' => true,
+				'details'    => array(
+					array(
+						'label' => 'Empty recorded fact',
+						'value' => '',
+						'tone'  => 'warning',
+					),
+				),
+			)
+		);
+		self::assertStringNotContainsString( 'is-medium-intent', $empty );
+		self::assertStringContainsString( 'is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none"></span>', $empty );
+	}
 
 	public function test_it_owns_the_complete_common_repository_markup(): void {
 		$html = $this->render(
@@ -88,7 +132,8 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'target="_blank" rel="noopener noreferrer"', $html );
 		self::assertStringContainsString( 'Manage repository', $html );
 		self::assertStringContainsString( 'repository=42', html_entity_decode( $html ) );
-		self::assertSame( 1, substr_count( $html, 'class="button"' ) );
+		self::assertSame( 1, substr_count( $html, 'class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline"' ) );
+		self::assertStringNotContainsString( 'class="button', $html );
 		self::assertStringNotContainsString( 'Manage webhook', $html );
 		self::assertStringNotContainsString( 'Plugin settings', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-record__details', $html );
@@ -135,7 +180,14 @@ final class RepositoryTableRendererTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-repository-record__details', $html );
 		self::assertStringContainsString( 'Assisted hook status', $html );
 		self::assertStringContainsString( 'No assisted hook recorded', $html );
-		self::assertStringContainsString( 'Open GitHub repository', $html );
+		if ( 1 !== preg_match( '/<a href="https:\/\/github\.com\/owner\/repository" target="_blank" rel="noopener noreferrer">(.*?)<\/a>/s', $html, $m ) ) {
+			self::fail( 'The external repository link is missing.' );
+		}
+		// An external destination is a text link marked with a decorative arrow, not a Button.
+		self::assertStringContainsString( 'Open GitHub repository', $m[1] );
+		self::assertStringContainsString( '<span class="screen-reader-text">: owner/repository</span>', $m[1] );
+		self::assertStringContainsString( '<span aria-hidden="true">↗</span><span class="screen-reader-text"> (opens in a new tab)</span>', $m[1] );
+		self::assertStringNotContainsString( 'ran-wp-ui-button', $html );
 		self::assertStringNotContainsString( '<form ', $html );
 		self::assertStringNotContainsString( 'Review record', $html );
 		self::assertStringNotContainsString( 'panel=activity', html_entity_decode( $html ) );

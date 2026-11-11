@@ -63,7 +63,7 @@ final class RepositoryTableRenderer {
 		?>
 		<a class="ran-booster-repository-record__name" href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener noreferrer">
 			<?php echo esc_html( $label ); ?>
-			<span class="screen-reader-text"><?php esc_html_e( ' (opens repository in a new tab)', 'ran-booster' ); ?></span>
+			<?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?>
 		</a>
 		<?php
 	}
@@ -126,7 +126,24 @@ final class RepositoryTableRenderer {
 			<div>
 				<strong><?php echo esc_html( $label ); ?></strong>
 				<?php if ( '' !== $tone ) { ?>
-					<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $tone ); ?>"><?php echo esc_html( $value ); ?></span>
+					<?php
+					$intent = array(
+						'neutral' => 'none',
+						'pending' => 'none',
+						'ok'      => 'stable',
+						'success' => 'stable',
+						'warning' => 'medium',
+						'error'   => 'high',
+						'info'    => 'informational',
+					)[ $tone ] ?? '';
+					if ( '' === $intent || '' === $value ) {
+						?>
+						<?php echo StatusBadge::for_intent( (string) $value, 'none' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
+						<?php
+					} else {
+						?>
+						<?php echo StatusBadge::for_intent( (string) $value, (string) $intent ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
+					<?php } ?>
 				<?php } elseif ( '' !== $datetime ) { ?>
 					<time datetime="<?php echo esc_attr( $datetime ); ?>"><?php echo esc_html( $value ); ?></time>
 				<?php } else { ?>
@@ -145,22 +162,24 @@ final class RepositoryTableRenderer {
 		$external      = true === ( $action['external'] ?? false );
 		$described_by  = is_string( $action['described_by'] ?? null ) ? $action['described_by'] : '';
 		$screen_reader = is_string( $action['screen_reader'] ?? null ) ? $action['screen_reader'] : '';
-		$class_name    = $button ? 'button' : '';
 
 		if ( '' === $label ) {
 			return;
 		}
 		if ( $disabled || '' === $url ) {
 			?>
-			<button type="button" class="<?php echo esc_attr( $class_name ); ?>" disabled aria-disabled="true"<?php echo '' === $described_by ? '' : ' aria-describedby="' . esc_attr( $described_by ) . '"'; ?>><?php echo esc_html( $label ); ?></button>
+			<button type="button"<?php echo $button ? ' class="' . esc_attr( ButtonClasses::secondary() ) . '"' : ''; ?> disabled aria-disabled="true"<?php echo '' === $described_by ? '' : ' aria-describedby="' . esc_attr( $described_by ) . '"'; ?>><?php echo esc_html( $label ); ?></button>
 			<?php
 			return;
 		}
 		?>
-		<a class="<?php echo esc_attr( $class_name ); ?>" href="<?php echo esc_url( $url ); ?>"<?php echo $external ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>>
+		<a<?php echo $button ? ' class="' . esc_attr( ButtonClasses::secondary( false, true ) ) . '"' : ''; ?> href="<?php echo esc_url( $url ); ?>"<?php echo $external ? ' target="_blank" rel="noopener noreferrer"' : ''; ?>>
 			<?php echo esc_html( $label ); ?>
 			<?php if ( '' !== $screen_reader ) { ?>
 				<span class="screen-reader-text">: <?php echo esc_html( $screen_reader ); ?></span>
+			<?php } ?>
+			<?php if ( $external && ! $button ) { ?>
+				<?php ExternalLinkMarker::print(); ?>
 			<?php } ?>
 		</a>
 		<?php

@@ -1,0 +1,107 @@
+/* Native Notice compatibility only when WordPress has no registered wp-theme. Values match the consumed public @wordpress/theme 4.0.0 defaults. */
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):not([data-ran-booster-ui-notice-intent]),
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="error"] {
+	--ran-booster-notice-background: #fff6f5;
+	--ran-booster-notice-border: #e0afa7;
+	--ran-booster-notice-text: #470000;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="warning"] {
+	--ran-booster-notice-background: #fff7e1;
+	--ran-booster-notice-border: #e1bd7c;
+	--ran-booster-notice-text: #2e1900;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="info"] {
+	--ran-booster-notice-background: #f3f9ff;
+	--ran-booster-notice-border: #adc6e2;
+	--ran-booster-notice-text: #001b4f;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="success"] {
+	--ran-booster-notice-background: #ebffed;
+	--ran-booster-notice-border: #92d39d;
+	--ran-booster-notice-text: #002900;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice) {
+	padding: 12px;
+	padding-inline-start: calc(12px + 24px + 4px);
+	border-radius: 8px;
+	font-family:
+		-apple-system, system-ui, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu,
+		Cantarell, "Helvetica Neue", sans-serif;
+	font-size: 13px;
+	font-weight: 400;
+	line-height: 20px;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
+	> [data-ran-booster-ui-notice-content] {
+	min-block-size: 24px;
+	padding-block: calc((24px - 20px) / 2);
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
+	> [data-ran-booster-ui-notice-content]
+	p
+	+ p,
+:is(
+		.ran-booster-admin,
+		:where(
+			[data-ran-booster-ui-notice]
+		)[data-ran-booster-ui-notice-scope="global"]
+	)
+	:is(.ran-booster-ui-notice__description, .ran-wp-ui-notice__description)
+	p
+	+ p {
+	margin-block-start: var(--ran-booster-space-8, 8px);
+}
+
+.ran-booster-admin .notice.ran-wp-ui-notice > .notice-dismiss,
+.notice.ran-wp-ui-notice[data-ran-booster-ui-notice-scope="global"]
+	> .notice-dismiss {
+	margin-inline-start: 4px;
+}

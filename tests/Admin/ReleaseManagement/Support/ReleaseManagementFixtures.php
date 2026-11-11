@@ -39,7 +39,9 @@ final class ReleaseManagementFixture {
 		bool $update_available = false,
 		string $channel = 'stable',
 		string $failure_code = '',
-		string $deployment_policy = 'manual'
+		string $deployment_policy = 'manual',
+		string $last_checked_at = '2026-07-24T20:00:00+00:00',
+		string $preflight_reason = ''
 	): ReleaseTrackingStatus {
 		$identifier = 'theme' === $type ? 'example-theme' : 'example/example.php';
 
@@ -55,17 +57,19 @@ final class ReleaseManagementFixture {
 				'https://github.com/example/example',
 				'example-plugin'
 			),
-			new ReleaseTrackingPreflight(
-				ReleaseTrackingPreflight::READY,
-				'example-plugin',
-				'1.1.0',
-				'https://github.com/example/example/releases/tag/v1.1.0'
-			),
+			'' === $preflight_reason
+				? new ReleaseTrackingPreflight(
+					ReleaseTrackingPreflight::READY,
+					'example-plugin',
+					'1.1.0',
+					'https://github.com/example/example/releases/tag/v1.1.0'
+				)
+				: new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, 'example-plugin', reason_code: $preflight_reason ),
 			'example-plugin',
 			'1.0.0',
 			'1.1.0',
 			$update_available,
-			'2026-07-24T20:00:00+00:00',
+			$last_checked_at,
 			'',
 			$failure_code,
 			$channel

@@ -5,14 +5,609 @@
  * responsible for placement, content, state and interaction hooks.
  */
 
+.ran-booster-admin .ran-booster-card:not([data-ran-booster-card="extensions"]) {
+	color: var(--ran-booster-text);
+	font-family: inherit;
+	font-size: var(--ran-booster-font-size-md);
+	line-height: var(--ran-booster-line-height-base);
+}
+
+/*
+ * Form field labels: one rule gives every visible field label the same weight
+ * and size. Feature styles add layout (display, margin) only, never weight.
+ * The repository picker portal sits outside .ran-booster-admin, so it is
+ * scoped here too.
+ *
+ * Exceptions, which keep whatever their feature styles set:
+ *  - option labels: a label that wraps a checkbox or radio, and the sibling
+ *    label of a checkbox row (.ran-booster-portability__credential-selection);
+ *  - row names inside tables (td > label), which name a record, not a field;
+ *  - .screen-reader-text labels.
+ * The link choice label (.ran-booster-settings-field > label wrapping a
+ * checkbox) and the credential dialog's labels are bold on purpose and are
+ * listed explicitly.
+ *
+ * Label-to-control gap: --ran-booster-field-label-gap, used by every
+ * block label (field, lookup profile, import fields).
+ */
+
+:is(.ran-booster-admin, .ran-booster-repository-picker-portal)
+	:is(
+		label:not(
+			.screen-reader-text,
+			.ran-booster-portability__credential-selection,
+			td > label,
+			:has(input[type="checkbox"], input[type="radio"])
+		),
+		.ran-booster-settings-field > label,
+		.ran-booster-credential-modal__form label
+	) {
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+/*
+ * A page Card is a plain host around a server-rendered static Card
+ * (ran-booster-wp-ui-static.css): .ran-wp-ui-card.ran-booster-card__surface
+ * draws the frame, .ran-booster-card__content holds the inset. The host draws
+ * nothing, so legacy panel and section frames never double the Card's.
+ */
+
+.ran-booster-admin .ran-booster-card[data-ran-booster-card] {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):not([data-ran-booster-ui-notice-intent]),
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="error"] {
+	--ran-booster-notice-background: var(
+		--wpds-color-background-surface-error-weak
+	);
+	--ran-booster-notice-border: var(--wpds-color-stroke-surface-error);
+	--ran-booster-notice-text: var(--wpds-color-foreground-content-error);
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="warning"] {
+	--ran-booster-notice-background: var(
+		--wpds-color-background-surface-warning-weak
+	);
+	--ran-booster-notice-border: var(--wpds-color-stroke-surface-warning);
+	--ran-booster-notice-text: var(--wpds-color-foreground-content-warning);
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="info"] {
+	--ran-booster-notice-background: var(
+		--wpds-color-background-surface-info-weak
+	);
+	--ran-booster-notice-border: var(--wpds-color-stroke-surface-info);
+	--ran-booster-notice-text: var(--wpds-color-foreground-content-info);
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-notice-intent="success"] {
+	--ran-booster-notice-background: var(
+		--wpds-color-background-surface-success-weak
+	);
+	--ran-booster-notice-border: var(--wpds-color-stroke-surface-success);
+	--ran-booster-notice-text: var(--wpds-color-foreground-content-success);
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice) {
+	box-sizing: border-box;
+	padding: var(--wpds-dimension-padding-md);
+	padding-inline-start: calc(
+		var(--wpds-dimension-padding-md) + var(--wpds-dimension-size-sm) +
+			var(--wpds-dimension-gap-xs)
+	);
+	border: 1px solid var(--ran-booster-notice-border);
+	border-radius: var(--wpds-border-radius-lg);
+	box-shadow: none;
+	background-color: var(--ran-booster-notice-background);
+	color: var(--ran-booster-notice-text);
+	font-family: var(--wpds-typography-font-family-body);
+	font-size: var(--wpds-typography-font-size-md);
+	font-weight: var(--wpds-typography-font-weight-default);
+	line-height: var(--wpds-typography-line-height-sm);
+	text-wrap: pretty;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
+	> [data-ran-booster-ui-notice-content] {
+	box-sizing: border-box;
+	min-block-size: var(--wpds-dimension-size-sm);
+	min-inline-size: 0;
+	padding-block: calc(
+		(
+				var(--wpds-dimension-size-sm) -
+					var(--wpds-typography-line-height-sm)
+			) /
+			2
+	);
+	overflow-wrap: anywhere;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	)[data-ran-booster-ui-mounted] {
+	padding: 0;
+	border: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+:is(
+		.ran-booster-admin,
+		:where(
+			[data-ran-booster-ui-notice]
+		)[data-ran-booster-ui-notice-scope="global"]
+	)
+	:is(.ran-booster-ui-notice__description, .ran-wp-ui-notice__description) {
+	min-inline-size: 0;
+	overflow-wrap: anywhere;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
+	> [data-ran-booster-ui-notice-content]
+	p,
+:is(
+		.ran-booster-admin,
+		:where(
+			[data-ran-booster-ui-notice]
+		)[data-ran-booster-ui-notice-scope="global"]
+	)
+	:is(.ran-booster-ui-notice__description, .ran-wp-ui-notice__description)
+	p {
+	margin: 0;
+	padding: 0;
+	font: inherit;
+}
+
+[data-ran-booster-ui-notice]:is(
+		.ran-booster-admin *,
+		[data-ran-booster-ui-notice-scope="global"]
+	):is(
+		:not([data-ran-booster-ui-notice-intent]),
+		[data-ran-booster-ui-notice-intent="error"],
+		[data-ran-booster-ui-notice-intent="warning"],
+		[data-ran-booster-ui-notice-intent="info"],
+		[data-ran-booster-ui-notice-intent="success"]
+	):not([data-ran-booster-ui-mounted], .ran-wp-ui-notice)
+	> [data-ran-booster-ui-notice-content]
+	p
+	+ p,
+:is(
+		.ran-booster-admin,
+		:where(
+			[data-ran-booster-ui-notice]
+		)[data-ran-booster-ui-notice-scope="global"]
+	)
+	:is(.ran-booster-ui-notice__description, .ran-wp-ui-notice__description)
+	p
+	+ p {
+	margin-block-start: var(
+		--ran-booster-space-8,
+		var(--wpds-dimension-gap-sm)
+	);
+}
+
+/*
+ * A disclosure in any notice, whatever its severity, is the notice's own
+ * last child instead of part of the message column. The icon and message keep
+ * the first row; the disclosure takes a second row across the whole inner
+ * width, below the icon column, with the Notice's own action gap above it.
+ * Core's notice padding stays the outer inset.
+ */
+
+.ran-wp-ui-notice > [data-ran-booster-ui-disclosure] {
+	grid-column: 1 / -1;
+	grid-row: 2;
+	min-inline-size: 0;
+	margin-block-start: var(--wpds-dimension-gap-md);
+}
+
+/*
+ * A static notice is drawn with the public Notice's own CSS
+ * (ran-booster-wp-ui-static.css) and is never mounted. It keeps core's
+ * .notice classes, which core relocates and dismisses by, but core's
+ * unlayered .notice frame outranks the wp-ui layer: revert-layer hands each
+ * frame property back to the Notice. Inside a Card, the wp-ui box-sizing
+ * utility makes the root inherit the Card content's content-box, so the
+ * Notice's own border-box is restated. The Notice grid also outranks the
+ * user agent's [hidden] rule, so hiding is restated here. A global notice
+ * can render outside .ran-booster-admin, on core screens or where core
+ * relocates it, so each rule also matches the global scope.
+ */
+
+.ran-booster-admin .notice.ran-wp-ui-notice,
+.notice.ran-wp-ui-notice[data-ran-booster-ui-notice-scope="global"] {
+	box-sizing: border-box;
+	padding: revert-layer;
+	border: revert-layer;
+	border-radius: revert-layer;
+	box-shadow: revert-layer;
+	background: revert-layer;
+}
+
+.ran-booster-admin .ran-wp-ui-notice[hidden],
+.ran-wp-ui-notice[data-ran-booster-ui-notice-scope="global"][hidden] {
+	display: none;
+}
+
+/*
+ * A dismissible static notice puts core's dismiss button, its own or the one
+ * common.js appends, in the Notice's close-icon slot: the third grid column
+ * of the first row, where Notice.CloseIconButton sits, instead of core's
+ * absolute position over the end of the text.
+ */
+
+.ran-booster-admin .notice.ran-wp-ui-notice > .notice-dismiss,
+.notice.ran-wp-ui-notice[data-ran-booster-ui-notice-scope="global"]
+	> .notice-dismiss {
+	position: static;
+	grid-column: 3;
+	grid-row: 1;
+	margin-inline-start: var(--wpds-dimension-gap-xs);
+}
+
+[data-ran-booster-background-failure-row]
+	.update-message[data-ran-booster-ui-notice][data-ran-booster-ui-notice-scope="global"][data-ran-booster-ui-mounted]
+	[data-ran-booster-ui-notice-content]
+	p::before {
+	content: none;
+}
+
+.ran-booster-admin .ran-booster-card__content {
+	--ran-booster-card-inset-inline: var(--ran-booster-space-24);
+
+	box-sizing: content-box;
+	min-inline-size: 0;
+}
+
+/*
+ * Actions that finish a Card sit in a footer band: a full-width band at the
+ * bottom of the Card with a divider above it and the actions at the start.
+ * The band bleeds through the Card content's inline inset
+ * (--ran-booster-card-inset-inline, which the Card's own padding must use) and
+ * the --footed Card content drops its bottom padding, so the band ends flush
+ * with the Card's bottom edge.
+ */
+
+.ran-booster-admin
+	.ran-booster-card__content.ran-booster-card__content--footed {
+	padding-block-end: 0;
+}
+
+.ran-booster-admin .ran-booster-card-footer {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	gap: var(--ran-booster-space-12);
+	margin-block: 0;
+	margin-inline: calc(-1 * var(--ran-booster-card-inset-inline));
+	padding: var(--ran-booster-space-16) var(--ran-booster-card-inset-inline);
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin .ran-booster-card-footer > :is(p, div) {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-card-footer > :is(p, div):empty {
+	display: none;
+}
+
+/*
+ * The Card's bottom inset is the only space below its last visible block, at
+ * any depth, so a trailing group's own margin cannot add to it.
+ */
+
+.ran-booster-admin
+	.ran-booster-card__content
+	:nth-last-child(
+		1
+			of
+			:not(
+				[hidden],
+				input[type="hidden"],
+				script,
+				style,
+				template,
+				:has(> [hidden]:only-child)
+			)
+	):not(.ran-booster-provider__footer) {
+	margin-block-end: 0;
+}
+
+/*
+ * Badges are static markup drawn with the public Badge's own CSS
+ * (ran-booster-wp-ui-static.css). Only layout in narrow containers lives here.
+ */
+
+.ran-booster-admin [data-ran-booster-badge][hidden] {
+	display: none;
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-repository-detail,
+		.ran-booster-repository-list,
+		.ran-booster-repository-release-section,
+		.ran-booster-release-management,
+		.ran-booster-onboarding__storage-heading
+	)
+	[data-ran-booster-badge]:not([hidden]) {
+	box-sizing: border-box;
+	display: inline-block;
+	min-inline-size: 0;
+	max-inline-size: 100%;
+	overflow-wrap: anywhere;
+	vertical-align: middle;
+	white-space: normal;
+}
+
+.ran-booster-admin .ran-booster-repository-list [data-ran-booster-badge] {
+	inline-size: fit-content;
+}
+
+/* Match the existing public neutral/outline Overview submitter before enhancement. */
+.ran-booster-admin
+	[data-ran-booster-ui-button="overview-presentation"]
+	> [data-ran-booster-ui-button-fallback] {
+	appearance: none;
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: var(--wpds-dimension-gap-sm);
+	position: relative;
+	min-block-size: var(--wpds-dimension-size-lg);
+	min-inline-size: calc(4ch + 2 * var(--wpds-dimension-padding-md));
+	max-inline-size: 100%;
+	margin: 0;
+	padding: var(--wpds-dimension-padding-xs) var(--wpds-dimension-padding-md);
+	border: 1px solid var(--wpds-color-stroke-interactive-neutral);
+	border-radius: var(--wpds-border-radius-sm);
+	box-shadow: none;
+	background-color: var(--wpds-color-background-interactive-neutral-weak);
+	color: var(--wpds-color-foreground-interactive-neutral);
+	font-family: var(--wpds-typography-font-family-body);
+	font-size: var(--wpds-typography-font-size-md);
+	font-weight: var(--wpds-typography-font-weight-emphasis);
+	line-height: var(--wpds-typography-line-height-sm);
+	text-align: center;
+	text-decoration: none;
+	vertical-align: baseline;
+	white-space: normal;
+	overflow-wrap: anywhere;
+	transform: none;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-button="overview-presentation"]
+	> [data-ran-booster-ui-button-fallback]:not(:disabled):is(
+		:hover,
+		:active,
+		:focus
+	) {
+	background-color: var(
+		--wpds-color-background-interactive-neutral-weak-active
+	);
+	border-color: var(--wpds-color-stroke-interactive-neutral-active);
+	color: var(--wpds-color-foreground-interactive-neutral-active);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-button="overview-presentation"]
+	> [data-ran-booster-ui-button-fallback]:focus:not(:active) {
+	outline: solid;
+	outline-width: var(--wpds-border-width-focus);
+	outline-color: var(--wpds-color-stroke-focus);
+	outline-offset: var(--wpds-border-width-focus);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-button="overview-presentation"]
+	> [data-ran-booster-ui-button-fallback]:active {
+	outline: none;
+}
+
 .ran-booster-admin .ran-booster-panel,
 .ran-booster-admin .ran-booster-onboarding > .ran-booster-onboarding__storage,
 .ran-booster-admin .ran-booster-portability > .ran-booster-portability__flow {
 	overflow: hidden;
 	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-surface);
+	border-radius: var(--ran-booster-radius-card);
 	box-shadow: var(--ran-booster-shadow-surface);
 	background: var(--ran-booster-surface);
+}
+
+/* surface-radius:start */
+
+/*
+ * One corner profile for every framed surface, defined here and nowhere else.
+ * A component that draws a full border joins one of these groups instead of
+ * declaring its own radius: top-level frames and dialogs take the Card radius,
+ * frames nested inside a Card take the inset radius. Controls keep the control
+ * radius on their own rules. The AdminAssetContractTest fails on any other
+ * full-border rule that is not listed here or explicitly allowed, and on any
+ * raw radius length outside its allowlist.
+ */
+
+.ran-booster-admin :is(.ran-booster-settings-section, .ran-booster-disclosure),
+:is(.ran-booster-repository-picker-modal, .ran-booster-dialog__surface) {
+	border-radius: var(--ran-booster-radius-card);
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-status-summary,
+		.ran-booster-webhook-step,
+		.ran-booster-readiness-panel,
+		.ran-booster-provider-empty-actions,
+		.ran-booster-provider-task-panel,
+		.ran-booster-repository-list,
+		.ran-booster-data-table-wrap,
+		.ran-booster-activity__details,
+		.ran-booster-troubleshooting__form,
+		.ran-booster-portability__credential-guidance,
+		.ran-booster-portability__credential-details,
+		.ran-booster-portability__credential-card,
+		.ran-booster-repository-picker__list,
+		.ran-booster-source-switch-bar,
+		.ran-booster-release-code,
+		.ran-booster-public-lookup-profile__panel,
+		.ran-booster-documentation__search-hint,
+		.ran-booster-package-danger-zone__actions > form
+	) {
+	border-radius: var(--ran-booster-radius-inset);
+}
+
+.ran-booster-repository-picker__list {
+	border-radius: var(--ran-booster-radius-inset);
+}
+
+/*
+ * Framed surfaces draw the same stroke as the public Card. The doubled wrapper
+ * class lifts this above each component's own legacy border colour.
+ */
+
+.ran-booster-admin.ran-booster-admin
+	:is(
+		.ran-booster-settings-section,
+		.ran-booster-status-summary,
+		.ran-booster-webhook-step,
+		.ran-booster-readiness-panel,
+		.ran-booster-provider-empty-actions,
+		.ran-booster-provider-task-panel,
+		.ran-booster-repository-list,
+		.ran-booster-data-table-wrap,
+		.ran-booster-activity__details,
+		.ran-booster-troubleshooting__form,
+		.ran-booster-portability__credential-guidance,
+		.ran-booster-repository-picker__list,
+		.ran-booster-source-switch-bar,
+		.ran-booster-release-code,
+		.ran-booster-public-lookup-profile__panel,
+		.ran-booster-package-danger-zone__actions > form
+	) {
+	border-color: var(--wpds-color-stroke-surface-neutral);
+}
+
+/* surface-radius:end */
+
+/*
+ * Form control boundaries: one shared border colour for native selects, text
+ * inputs and textareas so each reaches 3:1 (WCAG 1.4.11) on both white and the
+ * grey page surface. Disabled controls keep the core disabled stroke and
+ * focus keeps the core focus stroke. Component rules do not set their own
+ * control border colours; the AdminAssetContractTest enforces that.
+ */
+
+.ran-booster-admin
+	:is(
+		select,
+		textarea,
+		input:is(
+			[type="text"],
+			[type="search"],
+			[type="password"],
+			[type="url"],
+			[type="email"],
+			[type="number"]
+		)
+	):not(:disabled, :focus) {
+	border-color: var(--ran-booster-control-border);
+}
+
+/*
+ * Summary grid: one framed set of label/value cells. The 1px gap shows the
+ * frame colour between cells, so dividers stay continuous however the cells
+ * wrap and the outer corners clip cleanly to the radius.
+ */
+
+.ran-booster-admin .ran-booster-summary-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1px;
+	margin: 0;
+	overflow: hidden;
+	border: 1px solid var(--wpds-color-stroke-surface-neutral);
+	border-radius: var(--ran-booster-radius-inset);
+	background: var(--wpds-color-stroke-surface-neutral);
+}
+
+.ran-booster-admin .ran-booster-summary-grid--standalone {
+	border-radius: var(--ran-booster-radius-card);
+}
+
+.ran-booster-admin .ran-booster-summary-grid > div {
+	flex: 1 1 12rem;
+	min-inline-size: 0;
+	padding: var(--ran-booster-space-14);
+	background: var(--ran-booster-surface);
+}
+
+.ran-booster-admin .ran-booster-summary-grid dt,
+.ran-booster-admin .ran-booster-summary-grid__label {
+	margin: 0 0 var(--ran-booster-space-4);
+	color: var(--ran-booster-text-subtle);
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin .ran-booster-summary-grid dd {
+	margin: 0;
+}
+
+.ran-booster-admin .ran-booster-webhook-endpoint > div:first-child {
+	flex-grow: 3;
+	flex-basis: 18rem;
 }
 
 .ran-booster-admin .ran-booster-page-shell {
@@ -22,8 +617,22 @@
 }
 
 .ran-booster-admin .ran-booster-page-shell__header {
-	padding-block: var(--ran-booster-space-22) var(--ran-booster-space-20);
+	padding-block: 0 var(--ran-booster-card-gap);
 	padding-inline: var(--ran-booster-space-24);
+}
+
+/*
+ * Spacing ownership: the page header's bottom padding owns the gap to the first
+ * content block, and a container's inset owns the space above its first
+ * heading. Neither may be doubled by the content's own top margin.
+ */
+
+.ran-booster-admin .ran-booster-page-shell__header + * {
+	margin-block-start: 0;
+}
+
+.ran-booster-admin :is(h2, h3, h4):first-child {
+	margin-block-start: 0;
 }
 
 .ran-booster-admin .ran-booster-page-shell__body {
@@ -45,14 +654,47 @@
 .ran-booster-admin .ran-booster-section__title {
 	margin: 0;
 	color: var(--ran-booster-text);
-	font-size: 16px;
+	font-size: var(--ran-booster-font-size-lg);
+	font-weight: var(--ran-booster-font-weight-heading);
 	line-height: 1.5;
 }
 
+/*
+ * A ruled section heading runs the Settings group divider (same colour,
+ * thickness and 8px gap as the group legend) from the end of the text to the
+ * edge of the row. The heading stays a real heading element.
+ */
+
+.ran-booster-admin .ran-booster-section__title--ruled {
+	display: flex;
+	align-items: center;
+	gap: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin .ran-booster-section__title--ruled::after {
+	content: "";
+	flex: 1 1 auto;
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
 .ran-booster-admin .ran-booster-section__description {
-	margin-block: var(--ran-booster-space-4) 0;
+	margin-block: var(--ran-booster-card-heading-gap) 0;
 	margin-inline: 0;
 	color: var(--ran-booster-text-muted);
+}
+
+/*
+ * A plain paragraph after a Card heading keeps the same heading gap, including
+ * the no-JS note a Card shows in place of its enhanced controls.
+ */
+
+.ran-booster-admin .ran-booster-card__content > .ran-booster-section__title + p,
+.ran-booster-admin
+	.ran-booster-card__content
+	> .ran-booster-section__title
+	+ noscript
+	> p:first-child {
+	margin-block-start: var(--ran-booster-card-heading-gap);
 }
 
 /*
@@ -62,7 +704,6 @@
 
 .ran-booster-admin .ran-booster-disclosure {
 	border: 1px solid var(--ran-booster-divider);
-	border-radius: var(--ran-booster-radius-surface);
 	background: var(--ran-booster-surface);
 }
 
@@ -71,7 +712,7 @@
 	padding-block: var(--ran-booster-space-12);
 	padding-inline: var(--ran-booster-space-16);
 	cursor: pointer;
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
@@ -100,11 +741,39 @@
 	margin-block-end: 0;
 }
 
+/*
+ * A disclosure lays out the same before and after the UI runtime mounts it.
+ * The mounted Disclosure root carries the wp-ui box-sizing utility: the root
+ * is border-box and every descendant inherits it. The server-rendered
+ * fallback <details> gets the same rule, in the same wp-ui utilities layer,
+ * so its summary and body lay out as they will inside the mounted root,
+ * whenever the mount happens (it waits for the runtime, and for focus to
+ * leave the fallback). Inside the layer, component and Booster rules that
+ * set box-sizing still win, as they do once mounted; the one extra class of
+ * specificity only outranks a static Card's ran-wp-ui-box-sizing descendant
+ * rule, which the mounted root outranks by source order. The summary and
+ * body are set directly, not inherited: a browser that wraps the details
+ * content in its own ::details-content box would hand them its content-box.
+ */
+
+@layer wp-ui.utilities {
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback] *,
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback] ::before,
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback] ::after {
+		box-sizing: inherit;
+	}
+
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback],
+	.ran-booster-admin [data-ran-booster-ui-disclosure-fallback] > * {
+		box-sizing: border-box;
+	}
+}
+
 .ran-booster-admin h2.ran-booster-page-heading__title {
 	margin: 0;
 	padding: 0;
 	color: var(--ran-booster-text);
-	font-size: 23px;
+	font-size: var(--ran-booster-font-size-xl);
 	font-weight: var(--ran-booster-font-weight-semibold);
 	line-height: 1.3;
 }
@@ -114,7 +783,7 @@
 	margin-block: var(--ran-booster-space-6) 0;
 	margin-inline: 0;
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-base);
+	font-size: var(--ran-booster-font-size-md);
 	line-height: 1.5;
 }
 
@@ -127,32 +796,13 @@
 
 .ran-booster-admin .ran-booster-advanced-source-summary__heading {
 	color: var(--ran-booster-text-muted);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 400;
-}
-
-.ran-booster-admin .ran-booster-advanced-source-summary__badge {
-	display: inline-flex;
-	align-items: center;
-	padding-block: var(--ran-booster-space-2);
-	padding-inline: var(--ran-booster-space-6);
-	border: 1px solid var(--ran-booster-border);
-	border-radius: var(--ran-booster-radius-control);
-	background: var(--ran-booster-surface-subtle);
-	color: var(--ran-booster-text);
-	font-size: var(--ran-booster-font-size-xs);
-	font-weight: 400;
-	line-height: 1.2;
-	white-space: nowrap;
-}
-
-.ran-booster-admin .ran-booster-advanced-source-summary__badge::before {
-	content: none;
 }
 
 .ran-booster-admin .ran-booster-advanced-source-summary__status {
 	color: var(--ran-booster-text-subtle);
-	font-size: var(--ran-booster-font-size-xs);
+	font-size: var(--ran-booster-font-size-sm);
 	font-weight: 400;
 }
 
@@ -173,7 +823,19 @@
 	)
 	> .ran-booster-page-shell__header {
 	padding: 0;
-	margin-block-end: var(--ran-booster-space-20);
+	margin-block-end: var(--ran-booster-card-gap);
+}
+
+/*
+ * One page frame: a top-level page's header and body share the wrap's left
+ * edge, so titles, tabs and cards align on every Booster page. The inline
+ * inset only applies when a page shell is nested inside a Card or panel.
+ */
+
+.ran-booster-admin
+	> .ran-booster-page-shell
+	> :is(.ran-booster-page-shell__header, .ran-booster-page-shell__body) {
+	padding-inline: 0;
 }
 
 /*
@@ -181,6 +843,131 @@
  * cover the WordPress admin chrome. Dialog primitives therefore own their
  * namespaced scope rather than relying on the Booster page wrapper.
  */
+
+/* Shared WordPress UI Dialog portals cover the admin bar and menu. */
+.ran-booster-ui-dialog-portal {
+	position: relative;
+	z-index: var(--ran-booster-layer-modal);
+	isolation: isolate;
+	--wp-ui-dialog-z-index: var(--ran-booster-layer-modal);
+}
+
+/*
+ * Optional regions of ranBoosterOpenDialog. A banner header lets the moved
+ * banner fill the header, sets the title on a dark bar over its lower edge
+ * and keeps the close button at the top end. The popup clips the banner to
+ * its own corners.
+ */
+
+.ran-booster-ui-dialog__banner {
+	position: relative;
+	display: block;
+	flex: none;
+	padding: 0;
+}
+
+/* Two classes outrank the public UI's own heading color and size. */
+.ran-booster-ui-dialog__banner .ran-booster-ui-dialog__banner-title {
+	position: absolute;
+	inset-block-end: var(--ran-booster-space-16);
+	inset-inline-start: var(--ran-booster-space-16);
+	box-sizing: border-box;
+	max-inline-size: calc(100% - 2 * var(--ran-booster-space-16));
+	margin: 0;
+	padding: var(--ran-booster-space-6) var(--ran-booster-space-16);
+	border-radius: var(--ran-booster-radius-inset);
+	background: var(--ran-booster-color-black-a60);
+	color: var(--ran-booster-color-neutral-0);
+	font-size: var(--ran-booster-font-size-xl);
+	line-height: var(--ran-booster-line-height-heading);
+}
+
+.ran-booster-ui-dialog__banner [data-wp-ui-dialog-close-icon] {
+	position: absolute;
+	inset-block-start: var(--ran-booster-space-12);
+	inset-inline-end: var(--ran-booster-space-12);
+	background-color: var(--ran-booster-surface);
+}
+
+.ran-booster-ui-dialog__banner [data-wp-ui-dialog-close-icon]:hover {
+	background-color: var(--ran-booster-surface-subtle);
+}
+
+/*
+ * Sections render as public WordPress UI Tabs: the tab row stays above the
+ * scrolling content on a subtle strip, and the selected tab joins the
+ * content surface across the strip's baseline.
+ */
+
+.ran-booster-ui-dialog__tabs {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	min-block-size: 0;
+}
+
+.ran-booster-ui-dialog__tablist {
+	flex: 0 0 auto;
+	inline-size: auto;
+	padding-block-start: var(--ran-booster-space-8);
+	padding-inline: var(--ran-booster-space-16);
+	border-block-end: 1px solid var(--ran-booster-divider);
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-ui-dialog__tablist > [role="presentation"] {
+	display: none;
+}
+
+.ran-booster-ui-dialog__tablist > [role="tab"] {
+	flex: 0 0 auto;
+	margin-block-end: -1px;
+	border: 1px solid transparent;
+	border-block-end: 0;
+	border-start-start-radius: var(--ran-booster-radius-inset);
+	border-start-end-radius: var(--ran-booster-radius-inset);
+}
+
+.ran-booster-ui-dialog__tablist > [role="tab"][aria-selected="true"] {
+	border-color: var(--ran-booster-divider);
+	background: var(--ran-booster-surface);
+	color: var(--ran-booster-text);
+}
+
+/* Two classes outrank the public UI's own paragraph spacing. */
+.ran-booster-ui-dialog-portal .ran-booster-ui-dialog__description {
+	margin-block: 0 var(--ran-booster-space-16);
+}
+
+/* An aside sits beside the body and stacks under it on narrow screens. */
+.ran-booster-ui-dialog__layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 240px);
+	gap: var(--ran-booster-space-24);
+}
+
+.ran-booster-ui-dialog__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: var(--ran-booster-space-8);
+}
+
+@media screen and (max-width: 782px) {
+	.ran-booster-ui-dialog__layout {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+@media screen and (max-width: 600px) {
+	.ran-booster-ui-dialog__banner .ran-booster-ui-dialog__banner-title {
+		inset-block-end: var(--ran-booster-space-8);
+		inset-inline-start: var(--ran-booster-space-8);
+		max-inline-size: calc(100% - 2 * var(--ran-booster-space-8));
+		font-size: var(--ran-booster-font-size-lg);
+	}
+}
 
 .ran-booster-dialog[hidden] {
 	display: none;
@@ -201,7 +988,6 @@
 .ran-booster-dialog__surface {
 	overflow: hidden;
 	border: 1px solid var(--ran-booster-strong-divider);
-	border-radius: var(--ran-booster-radius-control);
 	box-shadow: var(--ran-booster-shadow-modal);
 	background: var(--ran-booster-surface);
 }
@@ -217,7 +1003,7 @@
 .ran-booster-dialog__title {
 	margin: 0;
 	flex: 1;
-	font-size: 20px;
+	font-size: var(--ran-booster-font-size-lg);
 	line-height: 1.3;
 }
 
@@ -253,4 +1039,351 @@
 	.ran-booster-dialog__surface {
 		max-block-size: calc(100vh - 20px);
 	}
+}
+
+.ran-booster-admin
+	.ran-booster-portability
+	> .ran-booster-portability__flow[data-ran-booster-card="transporter"].ran-booster-card {
+	overflow: visible;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
+/*
+ * Prominent disclosures keep the public Disclosure's behaviour, radius, chevron
+ * and motion, with a larger title and a live status slot in the header.
+ */
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	> *
+	> .ran-booster-ui-disclosure
+	> .ran-booster-ui-disclosure__header
+	> [role="button"] {
+	padding: 12px 16px;
+	font-size: var(--ran-booster-font-size-lg);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: 24px;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"][data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	padding: 12px 16px;
+	font-size: var(--ran-booster-font-size-lg);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	line-height: 24px;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	> *
+	> .ran-booster-ui-disclosure
+	> .ran-booster-ui-disclosure__header
+	> [role="button"]
+	> :first-child {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-4) var(--ran-booster-space-12);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	.ran-booster-ui-disclosure__meta,
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-density="prominent"]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary
+	> [data-ran-booster-ui-disclosure-meta] {
+	margin-inline: auto 0;
+	color: var(--ran-booster-text-subtle);
+	font-size: var(--ran-booster-font-size-sm);
+	font-weight: 400;
+}
+
+/*
+ * A multi-part summary (title, then a status line of badges) stacks on narrow
+ * screens: the title keeps its row with the chevron and the status line takes
+ * the next row, start-aligned. The native fallback summary does the same with a
+ * two-column grid so its chevron stays on the title row.
+ */
+@media screen and (max-width: 480px) {
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> *
+		> .ran-booster-ui-disclosure
+		> .ran-booster-ui-disclosure__header
+		.ran-booster-ui-disclosure__meta {
+		flex: 1 1 100%;
+		margin-inline: 0;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: start;
+		row-gap: var(--ran-booster-space-4);
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary::after {
+		grid-column: 2;
+		grid-row: 1;
+	}
+
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure="package-advanced-settings"]
+		> details[data-ran-booster-ui-disclosure-fallback]
+		> summary
+		> [data-ran-booster-ui-disclosure-meta] {
+		grid-column: 1 / -1;
+		margin-inline: 0;
+	}
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-tone="danger"]
+	.ran-booster-ui-disclosure,
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure-tone="danger"]
+	> details[data-ran-booster-ui-disclosure-fallback] {
+	border-color: var(--ran-booster-status-error-border);
+}
+
+.ran-booster-admin .ran-booster-ui-disclosure__header > [role="button"] {
+	padding: 8px 16px;
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: var(--ran-booster-font-weight-medium);
+	line-height: 20px;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="settings-configuration"]
+	> details[data-ran-booster-ui-disclosure-fallback],
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="settings-storage"]
+	> details[data-ran-booster-ui-disclosure-fallback] {
+	margin: 0;
+}
+
+/*
+ * The native disclosure fallback mirrors the public Disclosure header
+ * geometry, so the control does not change size or style when it mounts.
+ */
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback] {
+	border: var(--wpds-border-width-xs) solid
+		var(--wpds-color-stroke-surface-neutral);
+	border-radius: var(--wpds-border-radius-lg);
+	background: var(--wpds-color-background-surface-neutral-strong);
+	color: var(--wpds-color-foreground-content-neutral);
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary {
+	display: flex;
+	box-sizing: border-box;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 16px;
+	gap: var(--wpds-dimension-gap-sm);
+	border-block-end: 0;
+	color: inherit;
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: var(--ran-booster-font-weight-medium);
+	line-height: 20px;
+	list-style: none;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary::-webkit-details-marker {
+	display: none;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary::after {
+	flex: none;
+	inline-size: 24px;
+	block-size: 24px;
+	margin-block: -2px;
+	background: currentcolor;
+	content: "";
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17.5 11.6 12 16l-5.5-4.4.9-1.2L12 14l4.5-3.6 1 1.2z'/%3E%3C/svg%3E")
+		center / 24px 24px no-repeat;
+}
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]:not(
+		[data-ran-booster-ui-disclosure="documentation"]
+	)
+	> details[data-ran-booster-ui-disclosure-fallback][open]
+	> summary::after {
+	transform: rotate(180deg);
+}
+
+/*
+ * The host owns every disclosure's outer margin. The native fallback sits flush
+ * inside it, so the control keeps its position when the public Disclosure
+ * replaces the fallback.
+ */
+
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure]
+	> details[data-ran-booster-ui-disclosure-fallback] {
+	margin: 0;
+}
+
+/*
+ * A Troubleshooting disclosure after an action row owns the gap above it: the
+ * Card's trailing-block reset zeroes the margin of the action's paragraph when
+ * it is the last child of its form.
+ */
+
+.ran-booster-admin
+	:is(
+		[data-ran-booster-ui-disclosure="troubleshooting-logging"],
+		[data-ran-booster-ui-disclosure="troubleshooting-evidence"]
+	) {
+	margin-block-start: var(--ran-booster-space-16);
+}
+
+.ran-booster-admin [data-ran-booster-ui-disclosure="provider-webhook-setup"] {
+	margin-block-start: var(--ran-booster-space-10);
+}
+
+.ran-booster-admin
+	:is(
+		[data-ran-booster-ui-disclosure="package-advanced-settings"],
+		[data-ran-booster-ui-disclosure="package-release-track"]
+	) {
+	margin-block-start: var(--ran-booster-card-gap);
+}
+
+/*
+ * Repository detail disclosures follow the step list, which owns the Card gap
+ * above the first; each later one sits one Card gap below the one before.
+ */
+
+.ran-booster-admin
+	:is(
+		[data-ran-booster-ui-disclosure="repository-webhook-setup"],
+		[data-ran-booster-ui-disclosure="repository-release-readiness"],
+		[data-ran-booster-ui-disclosure="repository-release-workflow"]
+	)
+	+ [data-ran-booster-ui-disclosure] {
+	margin-block-start: var(--ran-booster-card-gap);
+}
+
+/* A compact disclosure title is followed by its status badge; keep the heading gap between them. */
+.ran-booster-admin
+	[data-ran-booster-ui-disclosure="repository-release-workflow"]
+	.ran-booster-ui-disclosure__meta {
+	margin-inline-start: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin [data-ran-booster-ui-disclosure="package-danger-zone"] {
+	margin-block-end: var(--ran-booster-space-18);
+}
+
+/*
+ * Every public Disclosure shares the approved Documentation open-state header
+ * divider. A shadow sits outside the box model, so opening adds no height and
+ * the native fallback matches the mounted header with no layout shift.
+ */
+@media screen {
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure]
+		.ran-booster-ui-disclosure[data-open]
+		> .ran-booster-ui-disclosure__header,
+	.ran-booster-admin
+		[data-ran-booster-ui-disclosure]
+		> details[data-ran-booster-ui-disclosure-fallback][open]
+		> summary {
+		box-shadow: 0 1px 0 var(--ran-booster-divider);
+	}
+}
+
+/*
+ * Type scale for markup that carries no component class. WordPress core sizes
+ * bare headings at 1.3em and table and tab headers at 14px; inside Booster they
+ * follow the design-system scale: titles 15/600, sub-headings and table headers 13.
+ */
+
+.ran-booster-admin :is(h2, h3) {
+	font-size: var(--ran-booster-font-size-lg);
+	font-weight: var(--ran-booster-font-weight-heading);
+}
+
+.ran-booster-admin :is(h4, h5, h6) {
+	font-size: var(--ran-booster-font-size-md);
+	font-weight: var(--ran-booster-font-weight-semibold);
+}
+
+.ran-booster-admin :is(.widefat, .wp-list-table) :is(thead, tfoot) :is(th, td),
+.ran-booster-admin :is(.widefat, .wp-list-table) :is(thead, tfoot) th a,
+.ran-booster-admin .nav-tab {
+	font-size: var(--ran-booster-font-size-md);
+}
+
+/*
+ * WCAG 2.2 target size (2.5.8): a text link that stands alone on its row needs
+ * a 24px target. Links inside running text are exempt and keep their inline
+ * flow, so only rows that hold nothing but the link are listed here.
+ */
+
+.ran-booster-admin
+	:is(
+		.ran-booster-standalone-link-row,
+		.ran-booster-overview-card-note,
+		.ran-booster-onboarding__storage-documentation
+	)
+	> a,
+.ran-booster-admin .ran-booster-extensions__grid .name h3 > a,
+.ran-booster-admin .ran-booster-data-table > thead > tr > th > a {
+	display: inline-flex;
+	align-items: center;
+	min-block-size: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	:is(
+		.ran-booster-overview-package-links,
+		.ran-booster-repository-detail__header,
+		.ran-booster-repository-publishing__row,
+		.ran-booster-readiness-actions,
+		.ran-booster-readiness-actions__links,
+		.ran-booster-package-summary__meta,
+		.ran-booster-package-row__activity-summary
+	)
+	> a:not(.ran-wp-ui-button),
+.ran-booster-admin .ran-booster-overview-provider-link,
+.ran-booster-admin .ran-booster-repository-detail td > a:only-child {
+	min-block-size: var(--ran-booster-space-24);
 }

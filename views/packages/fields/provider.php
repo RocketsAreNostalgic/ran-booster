@@ -22,13 +22,13 @@ $repository_read_only = isset( $repository_read_only ) && true === $repository_r
 		<th scope="row"><label for="ran-booster-provider"><?php esc_html_e( 'Git provider', 'ran-booster' ); ?></label></th>
 		<td>
 <?php } ?>
-		<select id="ran-booster-provider" name="ran_booster[provider]" class="ran-booster-provider-input" <?php disabled( ! $package_mutation_available || $repository_read_only ); ?>>
+		<?php // An installed package keeps its Git provider: the select stays visible but locked, and the hidden provider input carries the value. ?>
+		<select id="ran-booster-provider" name="ran_booster[provider]"<?php echo $repository_read_only ? ' aria-describedby="ran-booster-repository-fixed-description"' : ' class="ran-booster-provider-input"'; ?> <?php disabled( $repository_read_only || ! $package_mutation_available ); ?>>
 			<?php foreach ( $provider_options as $provider_option ) { ?>
 				<?php $provider_status = ! $provider_option['available'] ? __( ' — Git provider unavailable', 'ran-booster' ) : ( $provider_option['deploy'] ? '' : __( ' — integration unavailable', 'ran-booster' ) ); ?>
 				<option value="<?php echo esc_attr( $provider_option['code'] ); ?>" data-label="<?php echo esc_attr( $provider_option['label'] ); ?>" data-browse="<?php echo $provider_option['browse'] ? '1' : '0'; ?>" data-deploy="<?php echo $provider_option['deploy'] ? '1' : '0'; ?>" data-webhooks="<?php echo $provider_option['webhooks'] ? '1' : '0'; ?>" data-repository-url-base="<?php echo esc_attr( $provider_option['repository_url_base'] ); ?>" <?php selected( $provider_code, $provider_option['code'] ); ?> <?php disabled( ! $provider_option['deploy'] && $provider_code !== $provider_option['code'] ); ?>><?php echo esc_html( $provider_option['label'] . $provider_status ); ?></option>
 			<?php } ?>
 		</select>
-		<p class="description ran-booster-provider-description"><?php esc_html_e( 'Choose the Git service.', 'ran-booster' ); ?></p>
 <?php if ( $package_field_grid ) { ?>
 	</div>
 <?php } else { ?>

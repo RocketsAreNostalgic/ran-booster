@@ -46,6 +46,9 @@
 		const submit = document.querySelector(
 			'[data-portability-export-submit]'
 		);
+		const selectedCount = document.querySelector(
+			'[data-portability-export-selected-count]'
+		);
 
 		function updateMaster() {
 			const selected = choices.filter((choice) => choice.checked);
@@ -78,6 +81,15 @@
 			master.indeterminate = selected.length > 0 && !master.checked;
 			if (submit) {
 				submit.disabled = selected.length === 0;
+			}
+			if (selectedCount) {
+				selectedCount.textContent = sprintf(
+					/* translators: %d: number of selected items. */ __(
+						'%d selected',
+						'ran-booster'
+					),
+					selected.length
+				);
 			}
 			const credentialCount = credentialChoices.filter(
 				(choice) => choice.checked && !choice.disabled
@@ -132,6 +144,7 @@
 
 	function initPortabilityExportDownload() {
 		function announceSuccess(text) {
+			window.ranBoosterAnnounce(text);
 			if (typeof window.CustomEvent !== 'function') {
 				return;
 			}
@@ -168,9 +181,13 @@
 			return;
 		}
 
-		function showMessage(text) {
+		function showMessage(text, type = 'error') {
+			window.ranBoosterNotice.setIntent(message, type);
 			message.hidden = !text;
 			messageText.textContent = text || '';
+			if (type === 'error') {
+				window.ranBoosterAnnounce(text, 'assertive');
+			}
 		}
 
 		form.addEventListener('submit', async function (event) {
@@ -229,13 +246,11 @@
 								'ran-booster'
 							)
 						: '';
-				showMessage(warning);
-				announceSuccess(
-					__(
-						'Transporter Blueprint download started.',
-						'ran-booster'
-					) + (warning ? ' ' + warning : '')
-				);
+				const completion =
+					__('Blueprint download started.', 'ran-booster') +
+					(warning ? ' ' + warning : '');
+				showMessage(completion, warning ? 'warning' : 'success');
+				announceSuccess(completion);
 			} catch (error) {
 				showMessage(
 					error instanceof Error
@@ -337,6 +352,7 @@
 
 	function initPortabilityPreview() {
 		function announceSuccess(text) {
+			window.ranBoosterAnnounce(text);
 			if (typeof window.CustomEvent !== 'function') {
 				return;
 			}
@@ -482,12 +498,43 @@
 		}
 
 		function showMessage(text, type) {
+			const notice =
+				message.closest('[data-ran-booster-ui-notice]') || message;
 			message.hidden = !text;
-			message.className = text ? 'notice inline notice-' + type : '';
+			notice.hidden = !text;
 			message.textContent = text || '';
+			if (text && notice !== message) {
+				window.ranBoosterNotice.setIntent(notice, type);
+			}
+			// Success is announced with its completion event.
+			if (type !== 'success') {
+				window.ranBoosterAnnounce(
+					text,
+					type === 'error' ? 'assertive' : 'polite'
+				);
+			}
+		}
+
+		function clearApplyResults() {
+			if (window.htmx?.swap) {
+				window.htmx.swap(results, '', {
+					swapStyle: 'innerHTML',
+					swapDelay: 0,
+					settleDelay: 0,
+					transition: false,
+					ignoreTitle: true,
+				});
+			} else {
+				results.replaceChildren();
+			}
 		}
 
 		function resetReview(clearResults = true) {
+			++previewGeneration;
+			const supersededRefresh = credentialRefreshXhr;
+			credentialRefreshXhr = null;
+			supersededRefresh?.abort();
+			setPreviewBusy(false);
 			reviewConfirmed = false;
 			review.innerHTML = emptyReview;
 			review.removeAttribute('aria-busy');
@@ -496,8 +543,12 @@
 				apply.disabled = true;
 			}
 			showReviewError(false);
-			if (clearResults && results) {
-				results.replaceChildren();
+			if (
+				clearResults &&
+				results &&
+				apply?.getAttribute('aria-busy') !== 'true'
+			) {
+				clearApplyResults();
 			}
 		}
 
@@ -566,7 +617,19 @@
 			const master = review.querySelector(
 				'[data-portability-select-all]'
 			);
+			const selectedCount = review.querySelector(
+				'[data-portability-selected-count]'
+			);
 
+			if (selectedCount) {
+				selectedCount.textContent = sprintf(
+					/* translators: %d: number of selected items. */ __(
+						'%d selected',
+						'ran-booster'
+					),
+					selected
+				);
+			}
 			if (master) {
 				master.checked =
 					choices.length > 0 && selected === choices.length;
@@ -613,6 +676,8 @@
 						) !== 'true'
 				).length;
 				if (!selected) {
+					// Empty state: announced to assistive tech, not shown.
+					applySummary.classList.add('screen-reader-text');
 					applySummary.textContent = __(
 						'No changes selected.',
 						'ran-booster'
@@ -656,6 +721,7 @@
 		}
 
 		function setApplySummary(lines) {
+			applySummary.classList.remove('screen-reader-text');
 			applySummary.replaceChildren(
 				...lines.map(function (line) {
 					const fact = document.createElement('span');
@@ -700,8 +766,14 @@
 			} else if (result.status === 'pending') {
 				resultType = 'info';
 			}
-			const item = rendered?.item || document.createElement('div');
 			const text = rendered?.text || document.createElement('p');
+			const created = rendered
+				? null
+				: window.ranBoosterNotice.create(resultType, {
+						className: 'ran-booster-portability__apply-result',
+					});
+			const item = rendered?.item || created.host;
+			const content = rendered ? text.parentNode : created.content;
 			const credentialText =
 				rendered?.credentialText || document.createElement('p');
 			const type =
@@ -726,10 +798,9 @@
 				result.message ||
 				__('Package result unavailable.', 'ran-booster');
 
-			item.className =
-				'notice inline notice-' +
-				resultType +
-				' ran-booster-portability__apply-result';
+			if (rendered) {
+				window.ranBoosterNotice.setIntent(item, resultType);
+			}
 			const credentialMessages = {
 				transferred_available: __(
 					'Transferred credential is available on this site.',
@@ -744,22 +815,35 @@
 					'ran-booster'
 				),
 			};
+			const previousCredential = rendered
+				? credentialText.textContent
+				: '';
 			credentialText.textContent =
 				credentialMessages[result.credential_state] || '';
 			credentialText.hidden = !credentialText.textContent;
 			text.textContent = label + ' — ' + resultMessage;
 			if (!rendered) {
-				item.appendChild(text);
+				content.appendChild(text);
 				if (credentialText.textContent) {
-					item.appendChild(credentialText);
+					content.appendChild(credentialText);
 				}
 				results.appendChild(item);
 			} else if (
 				credentialText.textContent &&
 				!credentialText.parentNode
 			) {
-				item.appendChild(credentialText);
+				content.appendChild(credentialText);
 			}
+			window.ranBoosterAnnounce(
+				[
+					text.textContent,
+					credentialText.textContent !== previousCredential
+						? credentialText.textContent
+						: '',
+				]
+					.filter(Boolean)
+					.join(' ')
+			);
 
 			return { item, text, credentialText };
 		}
@@ -777,14 +861,11 @@
 			rememberSelections();
 			const data = new FormData(form);
 			appendCredentialDecisions(data);
-			const supersededRefresh = credentialRefreshXhr;
-			credentialRefreshXhr = null;
-			supersededRefresh?.abort();
-			const generation = ++previewGeneration;
+			resetReview(clearResults);
+			const generation = previewGeneration;
 			if (showButtonBusy) {
 				setPreviewBusy(true);
 			}
-			resetReview(clearResults);
 			showMessage(__('Reviewing blueprint…', 'ran-booster'), 'info');
 
 			try {
@@ -835,11 +916,12 @@
 					}
 				}
 				showReviewError(false);
-				showMessage('', 'info');
 				if (announceCompletion) {
-					announceSuccess(
-						__('Transporter Blueprint reviewed.', 'ran-booster')
-					);
+					const completion = __('Blueprint reviewed.', 'ran-booster');
+					showMessage(completion, 'success');
+					announceSuccess(completion);
+				} else {
+					showMessage('', 'info');
 				}
 			} catch (error) {
 				if (generation !== previewGeneration) {
@@ -888,8 +970,8 @@
 			}
 			prepareCredentialRefresh();
 			reviewConfirmed = true;
-			if (results) {
-				results.replaceChildren();
+			if (results && apply?.getAttribute('aria-busy') !== 'true') {
+				clearApplyResults();
 			}
 			showReviewError(false);
 			showMessage('', 'info');
@@ -1071,14 +1153,18 @@
 					],
 				])
 			);
+			const generation = previewGeneration;
 			setApplyBusy(true);
 			try {
 				let appliedEverySelection = true;
 				if (results) {
-					results.replaceChildren();
+					clearApplyResults();
 				}
 
 				for (const row of rows) {
+					if (generation !== previewGeneration) {
+						break;
+					}
 					const rendered = renderResult(
 						{
 							status: 'pending',
@@ -1162,14 +1248,24 @@
 					}
 				}
 
+				if (generation !== previewGeneration) {
+					return;
+				}
 				await preview(false, false);
-				if (appliedEverySelection) {
-					announceSuccess(
-						__(
-							'All selected Transporter Blueprint changes were applied.',
-							'ran-booster'
-						)
+				if (
+					appliedEverySelection &&
+					generation + 1 === previewGeneration
+				) {
+					const completion = __(
+						'All selected changes were applied.',
+						'ran-booster'
 					);
+					if (results) {
+						const item = document.createElement('p');
+						item.textContent = completion;
+						results.appendChild(item);
+					}
+					announceSuccess(completion);
 				}
 			} finally {
 				setApplyBusy(false);

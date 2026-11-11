@@ -98,7 +98,6 @@ $package_repository_ready   = '' !== trim( $repository_value )
 	&& strlen( $repository_value ) <= 512
 	&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $repository_value );
 $admin_url                  = $package_view->get_admin_url();
-$back_url                   = add_query_arg( 'page', $package_view->get_page_slug(), $admin_url );
 $managed_package_identifier = isset( $managed_package_identifier ) && is_string( $managed_package_identifier )
 	? trim( $managed_package_identifier )
 	: '';
@@ -108,14 +107,12 @@ $managed_package_url        = '' === $managed_package_identifier
 		array(
 			'page'    => $package_view->get_page_slug(),
 			'package' => $managed_package_identifier,
-		),
+		) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 		$admin_url
 	);
 
 ?>
-<p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a></p>
 <h2 id="ran-booster-package-create-heading" class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is Plugin or Theme. */ __( 'Install New %s', 'ran-booster' ), $package_view->get_singular_label() ) ); ?></h2>
-<p class="ran-booster-package-settings__intro ran-booster-page-heading__description"><?php esc_html_e( 'Identify the repository Booster should manage, then adjust source-specific settings when needed.', 'ran-booster' ); ?></p>
 
 <div class="ran-booster-package-settings ran-booster-package-settings--create">
 	<div class="ran-booster-package-settings__main">
@@ -125,12 +122,15 @@ $managed_package_url        = '' === $managed_package_identifier
 			method="POST"
 			data-ran-booster-package-mutation
 			data-ran-booster-native-submit
+			data-ran-booster-submit-busy
+			<?php // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The dispatcher verifies the action nonce before failed form repopulation. ?>
+			<?php echo isset( $_POST['ran_booster']['action'] ) && $_POST['ran_booster']['action'] === $package_view->get_action( 'install' ) ? 'data-ran-booster-attempted' : ''; ?>
 			data-ran-booster-package-create="1"
 			data-ran-booster-explicit-provider="<?php echo esc_attr( $explicit_provider ? '1' : '0' ); ?>"
 			data-ran-booster-open-picker="<?php echo esc_attr( $open_repository_picker ? '1' : '0' ); ?>"
 			data-ran-booster-package-mutation-available="<?php echo esc_attr( $package_mutation_available ? '1' : '0' ); ?>"
 		>
-			<?php wp_nonce_field( $package_view->get_action( 'install' ) ); ?>
+			<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'install' ) ); ?>
 			<?php if ( '' !== $recovery_identifier ) { ?>
 				<p><?php esc_html_e( 'Link this exact installed target. To restore published-release management, first link it, then enable release tracking in its settings.', 'ran-booster' ); ?> <code><?php echo esc_html( $recovery_identifier ); ?></code></p>
 				<input type="hidden" name="ran_booster[exact_identifier]" value="1">
@@ -143,7 +143,6 @@ $managed_package_url        = '' === $managed_package_identifier
 			<input type="hidden" name="ran_booster[public_lookup_profile_id]" class="ran-booster-public-lookup-profile-input" value="<?php echo esc_attr( $public_lookup_profile_id ); ?>">
 			<?php $package_field_layout = 'grid'; ?>
 
-			<?php $package_repository_description = __( 'Choose the repository and access Booster should use for this package.', 'ran-booster' ); ?>
 			<?php require __DIR__ . '/repository-configuration.php'; ?>
 
 			<?php require __DIR__ . '/source-settings.php'; ?>
@@ -151,34 +150,39 @@ $managed_package_url        = '' === $managed_package_identifier
 			<section class="ran-booster-settings-section ran-booster-package-operation-settings" aria-labelledby="ran-booster-package-operation-heading">
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-package-operation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Package operation', 'ran-booster' ); ?></h3>
-					<p class="ran-booster-section__description"><?php esc_html_e( 'Choose when Booster may update this package.', 'ran-booster' ); ?></p>
 				</header>
-				<div class="ran-booster-settings-section__body">
+				<div class="ran-booster-settings-section__body ran-booster-settings-section__body--footed">
 					<fieldset <?php disabled( ! $package_mutation_available ); ?>>
 						<div class="ran-booster-settings-fields">
-							<?php require __DIR__ . '/fields/deployment-policy.php'; ?>
+							<?php
+							// The Updates field uses the same layout as the Edit Package operation card; the hint follows the active source.
+							$package_operation_layout     = true;
+							$package_policy_source_toggle = true;
+							require __DIR__ . '/fields/deployment-policy.php';
+							unset( $package_operation_layout, $package_policy_source_toggle );
+							?>
 						</div>
 					</fieldset>
 					<div data-ran-booster-branch-install-actions>
-						<fieldset <?php disabled( ! $package_mutation_available ); ?>>
+						<fieldset class="ran-booster-package-link-choice" <?php disabled( ! $package_mutation_available ); ?>>
 							<div class="ran-booster-settings-fields">
 								<div class="ran-booster-settings-field ran-booster-settings-field--wide">
 									<label>
-										<input type="checkbox" name="ran_booster[dry-run]" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( '' !== $recovery_identifier || isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
-										<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Link installed %s', 'ran-booster' ), $package_view->get_type() ) ); ?>
+										<input type="checkbox" name="ran_booster[dry-run]" aria-describedby="ran-booster-link-installed-help" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( '' !== $recovery_identifier || isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
+										<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Link an already installed %s', 'ran-booster' ), $package_view->get_type() ) ); ?>
 									</label>
-									<p class="description"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Let Booster manage an already installed %s instead of deploying it now.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>
-									<p class="description"><?php esc_html_e( 'The installed folder name must match the repository package name.', 'ran-booster' ); ?></p>
+									<p class="description" id="ran-booster-link-installed-help"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage an installed %s without deploying it; its folder name must match the repository.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>
 								</div>
 							</div>
 						</fieldset>
-						<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Installation actions', 'ran-booster' ); ?>">
+						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
+						<div class="ran-booster-card-footer ran-booster-package-install-actions" role="group" aria-label="<?php esc_attr_e( 'Installation actions', 'ran-booster' ); ?>">
 							<?php if ( '' !== $managed_package_url ) { ?>
-								<a class="button button-primary" href="<?php echo esc_url( $managed_package_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
-								<button type="submit" class="button" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
+								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" aria-describedby="ran-booster-link-installed-help" href="<?php echo esc_url( $managed_package_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing. This can take a few seconds.', 'ran-booster' ) ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
 							<?php } else { ?>
-								<button type="submit" class="button button-primary" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
-								<button type="submit" class="button" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php esc_html_e( 'Install and add another', 'ran-booster' ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" aria-describedby="ran-booster-link-installed-help" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing. This can take a few seconds.', 'ran-booster' ) ); ?>" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing and preparing another. This can take a few seconds.', 'ran-booster' ) ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php esc_html_e( 'Install and add another', 'ran-booster' ); ?></button>
 							<?php } ?>
 						</div>
 					</div>

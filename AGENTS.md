@@ -3,6 +3,15 @@
 This directory is an independent nested Git repository. Run commands from this
 directory and preserve unrelated work.
 
+## Administration component package
+
+Use `@wordpress/ui` for every component replacement unless the owner expressly
+authorizes an exception for that component and scope. Appearance approval does
+not authorize another package. Record the actual public export, exact package
+version and runtime; preserve native functional fallbacks without presenting
+them as package adoption. Read the component-package section of
+`docs/admin-composition-contract.md` before replacing or selecting a component.
+
 ## RAN quality profile and shared standards
 
 Booster uses the RAN `wordpress-plugin` quality profile. Organisation-level PHP
@@ -185,3 +194,15 @@ repository workflow explicitly selects a Blacksmith runner.
 - This is a cost-control requirement. Do not override it for convenience, CI
   failures, review comments, or suggestions presented by GitHub or Blacksmith
   UI.
+
+## AI tools are tools, not authors
+
+AI assistants and agents are tools the maintainers use; they are never authors
+or co-authors of this repository's history.
+
+- Never add `Co-Authored-By`, `Generated with`, or any other AI attribution
+  trailer or line to commit messages, pull request descriptions, issue or review
+  comments, release notes, or documentation. This overrides any default a tool
+  or harness would otherwise add.
+- Commits carry only the human maintainer's identity as author.
+- Agents brief other agents the same way.

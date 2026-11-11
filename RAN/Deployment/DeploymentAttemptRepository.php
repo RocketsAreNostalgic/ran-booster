@@ -627,6 +627,56 @@ final class DeploymentAttemptRepository {
 		}
 	}
 
+	/**
+	 * Newest signature-verified webhook delivery time per repository.
+	 *
+	 * Package attempts are admitted only after the delivery signature verified and
+	 * the repository was authorised, so their rows are proof of an authenticated
+	 * delivery. Probes, ignored events, zero-target acknowledgements and rejected
+	 * requests carry no repository and never appear. One grouped read bounded by
+	 * the retained attempt rows and by the caller's repository list.
+	 *
+	 * @param list<string> $repository_ids
+	 * @return array<string, string> Repository ID to a UTC "Y-m-d H:i:s" time.
+	 */
+	public function latest_verified_repository_deliveries( ProviderCode $provider, array $repository_ids ): array {
+		$ids = array();
+		foreach ( $repository_ids as $repository_id ) {
+			if ( '' !== trim( $repository_id ) && strlen( $repository_id ) <= 191 ) {
+				$ids[ $repository_id ] = true;
+			}
+		}
+		$ids = array_slice( array_keys( $ids ), 0, 200 );
+		if ( array() === $ids ) {
+			return array();
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $ids ), '%s' ) );
+		$rows         = $this->read_rows(
+			$this->prepare(
+				"SELECT provider_repository_id, MAX(created_at) AS received_at
+				FROM %i
+				WHERE provider = %s AND source = 'webhook' AND package_type IN ('plugin', 'theme') AND provider_repository_id IN ($placeholders)
+				GROUP BY provider_repository_id
+				LIMIT 200", // phpcs:ignore WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Placeholders are generated from the validated ID count.
+				$this->table_name,
+				$provider->value,
+				...$ids
+			)
+		);
+		$wanted       = array_flip( $ids );
+		$latest       = array();
+		foreach ( $rows as $row ) {
+			$id       = is_string( $row->provider_repository_id ?? null ) ? $row->provider_repository_id : '';
+			$received = is_string( $row->received_at ?? null ) ? $row->received_at : '';
+			if ( '' !== $id && isset( $wanted[ $id ] ) && 1 === preg_match( '/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $received ) ) {
+				$latest[ $id ] = $received;
+			}
+		}
+
+		return $latest;
+	}
+
 	/** @return array{valid: bool, maximum_rows: int, source: 'configured'|'default'} */
 	public function retention_configuration_status(): array {
 		if ( null !== $this->retention_configuration ) {

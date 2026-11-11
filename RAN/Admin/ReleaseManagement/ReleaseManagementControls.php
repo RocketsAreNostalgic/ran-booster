@@ -54,6 +54,7 @@ final class ReleaseManagementControls {
 		add_filter( 'ran_booster_admin_package_advanced_source_summary_projection', array( $this, 'filter_advanced_source_summary_projection' ), 10, 5 );
 		add_filter( 'ran_booster_documentation_sections_before_about', array( $this, 'filter_documentation_sections' ), 10, 3 );
 		add_action( 'ran_booster_admin_package_advanced_source_sections', array( $this, 'render_advanced_source_section' ), 10, 5 );
+		add_action( 'ran_booster_admin_package_operation_actions', array( $this, 'render_package_operation_actions' ), 10, 2 );
 		add_action( 'admin_notices', array( $this, 'render_operation_notice' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_prospective_assets' ) );
 
@@ -123,13 +124,7 @@ final class ReleaseManagementControls {
 			$choices['release_asset'],
 			array(
 				'heading'           => __( 'Releases', 'ran-booster' ),
-				'description'       => 'create' === $mode
-					? __( 'Choose a repository, then view its eligible published releases.', 'ran-booster' )
-					: __( 'Install published releases through WordPress.', 'ran-booster' ),
-				'meta'              => 'create' === $mode
-					? __( 'Choose repository first', 'ran-booster' )
-					: __( 'Releases', 'ran-booster' ),
-
+				'description'       => __( 'Deploy published releases.', 'ran-booster' ),
 				'url'               => 'edit' === $mode ? add_query_arg( 'source_view', 'release_asset', $page_url ) : '',
 				'disabled'          => 'create' === $mode,
 				'hydrated'          => true,
@@ -137,19 +132,16 @@ final class ReleaseManagementControls {
 			)
 		);
 		if ( 'edit' === $mode && null !== $package ) {
-			$status                           = $this->package_status( $package );
-			$choices['release_asset']['meta'] = $this->request_boundary( fn (): string => $this->display->release_track_meta( $choices['release_asset']['meta'], $package, $status ), $choices['release_asset']['meta'] );
-			$release_source_is_current        = is_callable( array( $package, 'source' ) )
+			$status                    = $this->package_status( $package );
+			$release_source_is_current = is_callable( array( $package, 'source' ) )
 				&& 'release_asset' === $package->source();
 			if ( ! $release_source_is_current
 				&& ReleaseTrackingEligibility::SUBDIRECTORY_NOT_SUPPORTED === $status?->eligibility()->code() ) {
 				$choices['release_asset']['description'] = __( 'Published releases require this plugin or theme to be at the repository root. This package uses a repository subdirectory, so continue using Branch deployments.', 'ran-booster' );
-				$choices['release_asset']['meta']        = __( 'Repository subdirectory not supported', 'ran-booster' );
 				$choices['release_asset']['disabled']    = true;
 			} elseif ( ! $release_source_is_current
 				&& false === $this->display->release_provider_supported( $package, $status ) ) {
 				$choices['release_asset']['description'] = __( 'Published releases are not available for this Git provider.', 'ran-booster' );
-				$choices['release_asset']['meta']        = __( 'Git provider capability unavailable', 'ran-booster' );
 				$choices['release_asset']['disabled']    = true;
 			}
 		}
@@ -157,6 +149,12 @@ final class ReleaseManagementControls {
 		return $choices;
 	}
 
+
+	public function render_package_operation_actions( string $current_source, string $selected_source ): void {
+		if ( 'release_asset' === $current_source && 'release_asset' === $selected_source ) {
+			$this->request_boundary( fn () => $this->display->render_native_update_action(), null );
+		}
+	}
 
 	public function render_advanced_source_section(
 		string $mode,
@@ -183,7 +181,7 @@ final class ReleaseManagementControls {
 				aria-labelledby="ran-booster-source-tab-release_asset"
 				data-ran-booster-source-pane="release_asset"
 			>
-				<p class="ran-booster-package-source-pane__description"><?php esc_html_e( 'Install published releases through WordPress.', 'ran-booster' ); ?></p>
+				<p class="ran-booster-package-source-pane__description"><?php esc_html_e( 'Deploy when new packages are released.', 'ran-booster' ); ?></p>
 			<?php
 		}
 
@@ -297,9 +295,9 @@ final class ReleaseManagementControls {
 				<p><?php esc_html_e( 'Switching either source preserves Disabled and Manual automation, resets Automatic to Manual, and leaves repository webhook configuration unchanged.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'Use Check releases on the managed Plugins or Themes screen to refresh release metadata. Booster validates the candidate, but WordPress remains the installer. Open WordPress updates to use the administrator’s normal WordPress update workflow.', 'ran-booster' ); ?></p>
 				<h3><?php esc_html_e( 'Recovery and support', 'ran-booster' ); ?></h3>
-				<p><?php esc_html_e( 'Installed but unmanaged means a package now exists but Booster did not adopt it. Verify its installed version and activation state before using Link installed or retrying. An uncertain state or cleanup failure does not claim installation success: inspect installed packages and Booster management before retrying.', 'ran-booster' ); ?></p>
+				<p><?php esc_html_e( 'Installed but unmanaged means a package now exists but Booster did not adopt it. Verify its installed version and activation state before using Link an already installed plugin (or theme) or retrying. An uncertain state or cleanup failure does not claim installation success: inspect installed packages and Booster management before retrying.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'If a release is blocked, publish a corrected release rather than editing installed metadata. You can return the package to branch management from its settings. If the selected Git provider capability becomes unavailable, Booster preserves package source state while suppressing release offers, downloads and mutations.', 'ran-booster' ); ?></p>
-				<p><a href="<?php echo esc_url( 'https://github.com/RocketsAreNostalgic/ran-booster/blob/main/docs/package-update-orchestration.md' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Package update orchestration guide', 'ran-booster' ); ?><span class="screen-reader-text"><?php esc_html_e( ' (opens in a new tab)', 'ran-booster' ); ?></span></a></p>
+				<p><a href="<?php echo esc_url( 'https://github.com/RocketsAreNostalgic/ran-booster/blob/main/docs/package-update-orchestration.md' ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Package update orchestration guide', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a></p>
 		<?php
 	}
 

@@ -8,6 +8,15 @@ const source = fs.readFileSync(
 );
 
 function loadFunction(name, dependencies = {}) {
+	dependencies = {
+		window: {
+			location: new URL(
+				'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh'
+			),
+			addEventListener() {},
+		},
+		...dependencies,
+	};
 	const signature = `\tfunction ${name}(`;
 	const start = source.indexOf(signature);
 
@@ -159,6 +168,163 @@ class TestCustomEvent {
 	}
 }
 
+test('history misses reload only when provider navigation is present', () => {
+	const state = fixture();
+	const htmx = { config: { refreshOnHistoryMiss: false } };
+	const init = loadFunction('initProviderTaskNavigation', {
+		document: state.document,
+		htmx,
+	});
+	init();
+	assert.equal(htmx.config.refreshOnHistoryMiss, true);
+
+	htmx.config.refreshOnHistoryMiss = false;
+	const detail = loadFunction('initProviderTaskNavigation', {
+		document: {
+			...state.document,
+			getElementById: (id) =>
+				id === 'ran-booster-provider-profile-region'
+					? { querySelector: () => ({}) }
+					: null,
+		},
+		htmx,
+	});
+	detail();
+	assert.equal(htmx.config.refreshOnHistoryMiss, true);
+
+	htmx.config.refreshOnHistoryMiss = false;
+	const absent = loadFunction('initProviderTaskNavigation', {
+		document: { getElementById: () => null },
+		htmx,
+	});
+	absent();
+	assert.equal(htmx.config.refreshOnHistoryMiss, false);
+});
+
+test('provider task modifiers preserve native defaults without bypassing same-node cancellation', () => {
+	for (const modifier of ['ctrlKey', 'metaKey', 'shiftKey']) {
+		const state = fixture();
+		const init = loadFunction('initProviderTaskNavigation', {
+			document: state.document,
+			window: {
+				location: new URL('https://example.test/'),
+				addEventListener() {},
+				htmx: { process() {} },
+			},
+		});
+		init();
+		const calls = [];
+		const event = {
+			[modifier]: true,
+			target: {
+				closest(selector) {
+					assert.equal(
+						selector,
+						'.ran-booster-provider-task-tabs[data-ran-booster-ui-navigation="thin"] a[href][hx-get][data-ran-booster-provider-task]'
+					);
+					return {};
+				},
+			},
+			defaultPrevented: false,
+			stopPropagation() {
+				calls.push('stop');
+			},
+			stopImmediatePropagation() {
+				calls.push('immediate');
+			},
+			preventDefault() {
+				this.defaultPrevented = true;
+			},
+		};
+		state.listeners.get('click')(event);
+		assert.deepEqual(calls, ['stop']);
+		assert.equal(event.defaultPrevented, false);
+		// A later listener on the same node may still cancel its native action.
+		event.preventDefault();
+		assert.equal(event.defaultPrevented, true);
+	}
+});
+
+test('ordinary, unrelated and no-HTMX provider clicks keep their existing path', () => {
+	for (const scenario of [
+		{ shifted: false, marked: true, htmx: true },
+		{ shifted: true, marked: false, htmx: true },
+		{ shifted: true, marked: true, htmx: false },
+	]) {
+		const state = fixture();
+		const init = loadFunction('initProviderTaskNavigation', {
+			document: state.document,
+			window: {
+				location: new URL('https://example.test/'),
+				addEventListener() {},
+				htmx: scenario.htmx ? { process() {} } : undefined,
+			},
+		});
+		init();
+		let stopped = false;
+		state.listeners.get('click')({
+			shiftKey: scenario.shifted,
+			target: { closest: () => (scenario.marked ? {} : null) },
+			stopPropagation() {
+				stopped = true;
+			},
+		});
+		assert.equal(stopped, false);
+	}
+});
+
+test('repeated provider traversal reloads an unmarked destination only when the rendered provider view differs', () => {
+	const state = fixture();
+	let reloads = 0;
+	const listeners = new Map();
+	const location = {
+		href: 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=gh&panel=status',
+		reload() {
+			reloads++;
+		},
+	};
+	const init = loadFunction('initProviderTaskNavigation', {
+		document: state.document,
+		htmx: { config: {} },
+		window: {
+			location,
+			addEventListener: (name, fn) => listeners.set(name, fn),
+		},
+		CustomEvent: TestCustomEvent,
+		initProviderRepositoryFilter() {},
+	});
+	init();
+	const pop = (entry) => listeners.get('popstate')({ state: entry });
+	location.href += '#same-panel';
+	pop(null);
+	assert.equal(reloads, 0);
+	location.href = location.href.replace('panel=status', 'panel=repositories');
+	pop({ htmx: true });
+	assert.equal(reloads, 0);
+	const detail = { target: state.panel, xhr: {} };
+	state.listeners.get('htmx:beforeRequest')({ detail });
+	state.listeners.get('htmx:afterSwap')({ detail });
+	pop({ idx: 0 });
+	assert.equal(reloads, 0);
+	location.href = location.href.replace('panel=repositories', 'panel=status');
+	pop({ idx: 0 });
+	assert.equal(reloads, 1);
+	location.href = location.href.replace('tab=gh', 'tab=overview');
+	pop(null);
+	assert.equal(reloads, 1);
+});
+
+test('provider navigation initializes without htmx or its config', () => {
+	const state = fixture();
+	for (const htmx of [undefined, {}]) {
+		const init = loadFunction('initProviderTaskNavigation', {
+			document: state.document,
+			htmx,
+		});
+		assert.doesNotThrow(init);
+	}
+});
+
 test('provider task requests expose progress and notify swapped controls', () => {
 	const state = fixture();
 	const calls = [];
@@ -189,6 +355,51 @@ test('provider task requests expose progress and notify swapped controls', () =>
 	assert.equal(state.dispatched[0].type, 'ran-booster:provider-tasks-ready');
 	assert.equal(state.dispatched[0].detail.panel, state.panel);
 	assert.equal(state.dispatched[0].detail.root, state.region);
+});
+
+test('committed navigation delegates to the shared navigation owner before focus without a second writer', () => {
+	for (const handled of [true, false]) {
+		const state = fixture();
+		const focused = [];
+		const live = { focus: () => focused.push('focus') };
+		let nativeWrites = 0;
+		state.region.querySelectorAll = () => {
+			nativeWrites++;
+			return [];
+		};
+		const calls = [];
+		const init = loadFunction('initProviderTaskNavigation', {
+			CustomEvent: TestCustomEvent,
+			document: state.document,
+			initProviderRepositoryFilter() {},
+			window: {
+				location: new URL('https://example.test/?panel=repositories'),
+				addEventListener() {},
+				ranBoosterUI: {
+					setNavigationCurrent(region, task) {
+						calls.push([region, task]);
+						focused.push('commit');
+						return handled ? live : null;
+					},
+				},
+			},
+		});
+		init();
+		const oldRequest = { target: state.panel, xhr: {} };
+		const detail = { target: state.panel, xhr: {} };
+		state.listeners.get('htmx:beforeRequest')({ detail: oldRequest });
+		state.listeners.get('htmx:beforeRequest')({ detail });
+		state.listeners.get('htmx:afterSwap')({ detail: oldRequest });
+		assert.equal(calls.length, 0);
+		state.listeners.get('htmx:afterSwap')({ detail });
+		assert.deepEqual(calls, [[state.region, 'repositories']]);
+		assert.equal(nativeWrites, 0);
+		assert.deepEqual(focused, handled ? ['commit', 'focus'] : ['commit']);
+		assert.equal(
+			state.dispatched[0].type,
+			'ran-booster:provider-tasks-ready'
+		);
+	}
 });
 
 test('repository task swaps restore focus when HTMX reports the swapped region as elt', () => {

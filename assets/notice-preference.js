@@ -1,6 +1,50 @@
 (function () {
 	'use strict';
 
+	if (window.ranBoosterNoticePreferenceInitialized) {
+		return;
+	}
+	window.ranBoosterNoticePreferenceInitialized = true;
+	let acknowledgedDevelopmentState = '';
+	function removeDevelopmentNotice(notice) {
+		if (notice.contains(notice.ownerDocument.activeElement)) {
+			const heading = document.getElementById(
+				'ran-booster-onboarding-heading'
+			);
+			if (heading) {
+				heading.setAttribute('tabindex', '-1');
+				heading.focus();
+			}
+		}
+		notice.dispatchEvent(
+			new window.CustomEvent('ran-booster:ui-notice-update', {
+				bubbles: true,
+			})
+		);
+		notice.remove();
+	}
+	function initDevelopmentNotice() {
+		document
+			.querySelectorAll('[data-ran-booster-development-safety]')
+			.forEach(function (notice) {
+				if (
+					acknowledgedDevelopmentState &&
+					notice.dataset.ranBoosterNoticeState ===
+						acknowledgedDevelopmentState
+				) {
+					removeDevelopmentNotice(notice);
+					return;
+				}
+				const button = notice.querySelector('.notice-dismiss');
+				if (button) {
+					button.style.display = '';
+					button.hidden = false;
+				}
+			});
+	}
+	initDevelopmentNotice();
+	document.addEventListener('htmx:load', initDevelopmentNotice);
+	document.addEventListener('htmx:historyRestore', initDevelopmentNotice);
 	const notices = [
 		{
 			selector: '[data-ran-booster-credential-expiry-notice]',
@@ -55,11 +99,20 @@
 					'[data-ran-booster-notice-preference-mode], .notice-dismiss'
 				)
 			);
+			const isDevelopment =
+				entry.config === 'ranBoosterDevelopmentSafetyNotice';
+			const ariaDisabled = isDevelopment
+				? button.getAttribute('aria-disabled')
+				: null;
 			const disabled = buttons.map(function (item) {
 				return item.disabled;
 			});
 			buttons.forEach(function (item) {
-				item.disabled = true;
+				if (isDevelopment && item === button) {
+					item.setAttribute('aria-disabled', 'true');
+				} else {
+					item.disabled = true;
+				}
 			});
 			const previousError = notice.querySelector(
 				'[data-ran-booster-notice-preference-error]'
@@ -67,6 +120,9 @@
 			if (previousError) {
 				previousError.textContent = '';
 			}
+			const developmentState = isDevelopment
+				? notice.dataset.ranBoosterNoticeState
+				: '';
 			const body = new URLSearchParams({
 				action: config.action,
 				nonce: config.nonce,
@@ -104,7 +160,28 @@
 									: config.errorMessage;
 							throw error;
 						}
-						notice.remove();
+						if (
+							developmentState &&
+							notice.dataset.ranBoosterNoticeState !==
+								developmentState
+						) {
+							return;
+						}
+						if (developmentState) {
+							acknowledgedDevelopmentState = developmentState;
+							removeDevelopmentNotice(notice);
+							initDevelopmentNotice();
+						} else {
+							notice.dispatchEvent(
+								new window.CustomEvent(
+									'ran-booster:ui-notice-update',
+									{
+										bubbles: true,
+									}
+								)
+							);
+							notice.remove();
+						}
 					});
 				})
 				.catch(function (error) {
@@ -115,15 +192,26 @@
 						message = document.createElement('p');
 						message.dataset.ranBoosterNoticePreferenceError =
 							'true';
-						message.setAttribute('role', 'alert');
-						notice.append(message);
+						(
+							notice.querySelector(
+								'[data-ran-booster-ui-notice-content]'
+							) || notice
+						).append(message);
 					}
 					message.textContent =
 						error.noticeMessage || config.errorMessage;
+					window.ranBoosterAnnounce(message.textContent, 'assertive');
 				})
 				.finally(function () {
 					pending.delete(notice);
 					notice.removeAttribute('aria-busy');
+					if (isDevelopment) {
+						if (ariaDisabled === null) {
+							button.removeAttribute('aria-disabled');
+						} else {
+							button.setAttribute('aria-disabled', ariaDisabled);
+						}
+					}
 					buttons.forEach(function (item, index) {
 						item.disabled = disabled[index];
 					});

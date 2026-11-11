@@ -46,19 +46,25 @@ $secondary_navigation  = array(
 	),
 );
 
-$status_labels      = array(
+$status_labels        = array(
 	'pass'           => __( 'Passed', 'ran-booster' ),
 	'warning'        => __( 'Warning', 'ran-booster' ),
 	'fail'           => __( 'Failed', 'ran-booster' ),
 	'not_configured' => __( 'Not configured', 'ran-booster' ),
 );
-$status_badge_tones = array(
+$status_badge_tones   = array(
 	'pass'           => 'ok',
 	'warning'        => 'warning',
 	'fail'           => 'error',
 	'not_configured' => 'warning',
 );
-$partial_messages   = array(
+$status_badge_intents = array(
+	'pass'           => 'stable',
+	'warning'        => 'medium',
+	'fail'           => 'high',
+	'not_configured' => 'medium',
+);
+$partial_messages     = array(
 	'local_incomplete'         => __( 'Local checks could not finish, so Git provider checks were not started.', 'ran-booster' ),
 	'deadline_exhausted'       => __( 'The ten-second diagnostic deadline was reached. Completed checks are shown below.', 'ran-booster' ),
 	'remote_calls_exhausted'   => __( 'The five-request Git provider budget was reached. Completed checks are shown below.', 'ran-booster' ),
@@ -66,17 +72,17 @@ $partial_messages   = array(
 	'provider_results_invalid' => __( 'The Git provider returned an unsafe or invalid diagnostic result, which Booster omitted.', 'ran-booster' ),
 	'result_limit_exhausted'   => __( 'The eight-result limit was reached. Earlier results are shown below.', 'ran-booster' ),
 );
-$selected_provider  = $troubleshooting['selected_provider'] ?? '';
-$results            = is_array( $troubleshooting['results'] ?? null ) ? $troubleshooting['results'] : array();
-$credentials        = is_array( $troubleshooting['credentials'] ?? null ) ? $troubleshooting['credentials'] : array();
-$credential_id      = is_string( $troubleshooting['credential_id'] ?? null ) ? $troubleshooting['credential_id'] : '';
-$repository         = is_string( $troubleshooting['repository'] ?? null ) ? $troubleshooting['repository'] : '';
-$show_specific_form = '' !== $credential_id || '' !== $repository;
-$core_self_update   = is_array( $troubleshooting['core_self_update'] ?? null )
+$selected_provider    = $troubleshooting['selected_provider'] ?? '';
+$results              = is_array( $troubleshooting['results'] ?? null ) ? $troubleshooting['results'] : array();
+$credentials          = is_array( $troubleshooting['credentials'] ?? null ) ? $troubleshooting['credentials'] : array();
+$credential_id        = is_string( $troubleshooting['credential_id'] ?? null ) ? $troubleshooting['credential_id'] : '';
+$repository           = is_string( $troubleshooting['repository'] ?? null ) ? $troubleshooting['repository'] : '';
+$show_specific_form   = '' !== $credential_id || '' !== $repository;
+$core_self_update     = is_array( $troubleshooting['core_self_update'] ?? null )
 	? $troubleshooting['core_self_update']
 	: array();
-$locator_hints      = is_array( $troubleshooting['provider_locator_hints'] ?? null ) ? $troubleshooting['provider_locator_hints'] : array();
-$locator_examples   = array();
+$locator_hints        = is_array( $troubleshooting['provider_locator_hints'] ?? null ) ? $troubleshooting['provider_locator_hints'] : array();
+$locator_examples     = array();
 foreach ( $troubleshooting['providers'] ?? array() as $provider_code => $provider_label ) {
 	$hint = $locator_hints[ $provider_code ] ?? '';
 	if ( is_string( $hint ) && is_string( $provider_label ) && '' !== $hint ) {
@@ -94,13 +100,19 @@ $repository_placeholder = array() === $locator_examples
 		<p class="ran-booster-page-heading__description"><?php esc_html_e( 'Run protected checks, temporarily capture Booster events, or review recent update activity.', 'ran-booster' ); ?></p>
 	</header>
 
-	<div class="ran-booster-page-shell__body ran-booster-panel">
+	<div class="ran-booster-page-shell__body">
 		<nav class="ran-booster-secondary-nav nav-tab-wrapper wp-clearfix" aria-label="<?php echo esc_attr( __( 'Troubleshooting views', 'ran-booster' ) ); ?>">
 		<?php foreach ( $secondary_navigation as $secondary_item ) { ?>
 			<a class="nav-tab<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' nav-tab-active' : ''; ?>" href="<?php echo esc_url( $secondary_item['url'] ); ?>"<?php echo $troubleshooting_panel === $secondary_item['key'] ? ' aria-current="page"' : ''; ?>><?php echo esc_html( $secondary_item['label'] ); ?></a>
 		<?php } ?>
 		</nav>
 
+		<?php
+		// The Diagnostics form, the Support report form and the Logging capture actions finish the Card with a footer band; Logging has none when the capture is unavailable or unreadable.
+		$troubleshooting_footed = in_array( $troubleshooting_panel, array( 'diagnostics', 'support-report' ), true )
+			|| ( 'debug-capture' === $troubleshooting_panel && is_array( $debug_capture ?? null ) && in_array( $debug_capture['state'] ?? null, array( 'inactive', 'active', 'retained' ), true ) );
+		?>
+		<div class="ran-booster-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content<?php echo $troubleshooting_footed ? ' ran-booster-card__content--footed' : ''; ?>">
 	<?php if ( 'installation' === $troubleshooting_panel ) { ?>
 		<?php require __DIR__ . '/troubleshooting-installation.php'; ?>
 	<?php } elseif ( 'support-report' === $troubleshooting_panel ) { ?>
@@ -123,12 +135,12 @@ $repository_placeholder = array() === $locator_examples
 		?>
 	<?php } else { ?>
 		<h3 class="ran-booster-section__title" id="ran-booster-run-diagnostics-heading"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a Git provider and run checks. Results below describe only this diagnostic run.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a Git provider and run a health check.', 'ran-booster' ); ?></p>
 
 	<form method="post" action="" class="ran-booster-troubleshooting__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-troubleshooting-diagnostics-error" hx-post="" hx-target="#ran-booster-troubleshooting-diagnostics-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
-		<?php wp_nonce_field( 'ran-booster-run-troubleshooting' ); ?>
+		<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-run-troubleshooting' ); ?>
 		<input type="hidden" name="ran_booster[action]" value="run-troubleshooting">
-		<div id="ran-booster-troubleshooting-diagnostics-error" class="notice notice-error inline" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden><p></p></div>
+		<div id="ran-booster-troubleshooting-diagnostics-error" class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-admin-mutation-error role="alert" tabindex="-1" hidden data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p data-ran-booster-ui-notice-primary></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 
 		<div class="ran-booster-troubleshooting__fields ran-booster-troubleshooting__provider-field">
 			<p>
@@ -140,11 +152,12 @@ $repository_placeholder = array() === $locator_examples
 				</select>
 			</p>
 		</div>
-		<p class="description"><?php esc_html_e( 'Start with a Git provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results.', 'ran-booster' ); ?></p>
 
-		<details class="ran-booster-troubleshooting__specific ran-booster-troubleshooting__disclosure ran-booster-disclosure"<?php echo $show_specific_form ? ' open' : ''; ?>>
-			<summary><?php esc_html_e( 'Check credential or repository access (optional)', 'ran-booster' ); ?></summary>
-			<div class="ran-booster-troubleshooting__disclosure-body ran-booster-troubleshooting__fields ran-booster-disclosure__body">
+		<div class="ran-booster-troubleshooting__specific" data-ran-booster-ui-disclosure="troubleshooting-credential-check" data-ran-booster-ui-disclosure-density="compact">
+		<details data-ran-booster-ui-disclosure-fallback class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"<?php echo $show_specific_form ? ' open' : ''; ?>>
+			<summary aria-label="<?php esc_attr_e( 'Check credential or repository access (optional)', 'ran-booster' ); ?>"><span class="ran-booster-troubleshooting__entry-heading" data-ran-booster-ui-disclosure-heading><span class="ran-booster-troubleshooting__entry-title"><?php esc_html_e( 'Check credential or repository access (optional)', 'ran-booster' ); ?></span>
+				<span class="ran-booster-troubleshooting__entry-description"><?php esc_html_e( 'Checks credential and repository access only.', 'ran-booster' ); ?></span></span></summary>
+			<div data-ran-booster-ui-disclosure-content class="ran-booster-troubleshooting__disclosure-body ran-booster-troubleshooting__fields ran-booster-disclosure__body">
 				<p>
 					<label for="ran-booster-troubleshooting-credential"><?php esc_html_e( 'Saved credential', 'ran-booster' ); ?> <span class="description"><?php esc_html_e( '(optional)', 'ran-booster' ); ?></span></label>
 					<select id="ran-booster-troubleshooting-credential" class="ran-booster-troubleshooting__credential" name="ran_booster[credential_id]">
@@ -167,33 +180,55 @@ $repository_placeholder = array() === $locator_examples
 						}
 						?>
 					</select>
-					<span class="description"><?php esc_html_e( 'Choose a saved credential only to check private-repository access. This is a credential reference, not the credential secret; Booster never displays the credential secret here.', 'ran-booster' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Required for private repositories.', 'ran-booster' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Only install Git provider integrations you trust: an active Git provider can read its saved credentials. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></span>
 				</p>
 				<p>
 					<label for="ran-booster-troubleshooting-repository"><?php esc_html_e( 'Repository', 'ran-booster' ); ?> <span class="description"><?php esc_html_e( '(optional)', 'ran-booster' ); ?></span></label>
 						<input id="ran-booster-troubleshooting-repository" type="text" name="ran_booster[repository]" value="<?php echo esc_attr( $repository ); ?>" maxlength="512" placeholder="<?php echo esc_attr( $repository_placeholder ); ?>">
-					<span class="description"><?php esc_html_e( 'Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available.', 'ran-booster' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Without a credential, Booster only checks public repos.', 'ran-booster' ); ?></span>
 				</p>
-				<div class="notice notice-info inline ran-booster-troubleshooting__provider-notice"><p><?php esc_html_e( 'The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p></div>
 			</div>
-		</details>
+		</details></div>
 
-		<p class="description"><?php esc_html_e( 'The full check makes temporary local marker files and up to five Git provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report.', 'ran-booster' ); ?></p>
-		<p><button type="submit" class="button button-primary"><?php esc_html_e( 'Run full diagnostics', 'ran-booster' ); ?></button></p>
+		<div class="ran-booster-card-footer"><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></button></div>
 	</form>
 
-		<?php if ( ! empty( $troubleshooting['ran'] ) ) { ?>
+	<?php } ?>
+		</div></div></div>
+
+		<?php if ( 'diagnostics' === $troubleshooting_panel && ! empty( $troubleshooting['ran'] ) ) { ?>
+			<?php
+			$results_provider_label = is_string( $troubleshooting['providers'][ $selected_provider ] ?? null ) ? $troubleshooting['providers'][ $selected_provider ] : '';
+			$results_count          = count( $results );
+			?>
+		<div class="ran-booster-card ran-booster-troubleshooting__results-card" data-ran-booster-card="troubleshooting"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 			<?php if ( isset( $troubleshooting['retention_available'] ) && ! $troubleshooting['retention_available'] ) { ?>
-			<div class="notice notice-warning inline"><p><?php esc_html_e( 'These results remain available below, but could not be retained for a later support report.', 'ran-booster' ); ?></p></div>
-		<?php } ?>
-		<div id="ran-booster-troubleshooting-results" class="ran-booster-troubleshooting__results" aria-live="polite">
-			<h4 class="ran-booster-section__title"><?php esc_html_e( 'Diagnostic results', 'ran-booster' ); ?></h4>
+			<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'These results remain available below, but could not be retained for a later support report.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
+			<?php } ?>
+			<div id="ran-booster-troubleshooting-results" class="ran-booster-troubleshooting__results" aria-live="polite">
+				<h3 class="ran-booster-section__title"><?php esc_html_e( 'Diagnostic results', 'ran-booster' ); ?></h3>
+				<?php if ( '' !== $results_provider_label ) { ?>
+				<p class="ran-booster-section__description">
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: 1: number of diagnostic checks, 2: Git provider name. */
+							_n( '%1$d check run for %2$s.', '%1$d checks run for %2$s.', $results_count, 'ran-booster' ),
+							$results_count,
+							$results_provider_label
+						)
+					);
+					?>
+				</p>
+				<?php } ?>
 			<?php if ( ! empty( $troubleshooting['partial'] ) ) { ?>
-				<div class="notice notice-warning inline"><p><?php echo esc_html( $partial_messages[ $troubleshooting['partial_reason'] ?? '' ] ?? __( 'Diagnostics finished with partial results.', 'ran-booster' ) ); ?></p></div>
+				<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $partial_messages[ $troubleshooting['partial_reason'] ?? '' ] ?? __( 'Diagnostics finished with partial results.', 'ran-booster' ) ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 			<?php } ?>
 
+			<div class="ran-booster-collection">
 			<div class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap">
-				<table class="widefat ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table">
+				<table class="ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table">
 					<caption class="screen-reader-text"><?php esc_html_e( 'RAN Booster diagnostic results', 'ran-booster' ); ?></caption>
 					<thead><tr>
 						<th scope="col"><?php esc_html_e( 'Status', 'ran-booster' ); ?></th>
@@ -222,9 +257,15 @@ $repository_placeholder = array() === $locator_examples
 						?>
 						<tbody class="ran-booster-troubleshooting__<?php echo esc_attr( $result_group ); ?>-results">
 						<?php foreach ( $group_results as $result ) { ?>
-							<?php $status_tone = $status_badge_tones[ $result['status'] ] ?? 'neutral'; ?>
+							<?php
+							$diagnostic_status = $result['status'] ?? '';
+							$diagnostic_status = isset( $status_labels[ $diagnostic_status ] ) ? $diagnostic_status : 'unknown';
+							$status_label      = $status_labels[ $diagnostic_status ] ?? __( 'Unknown', 'ran-booster' );
+							$status_tone       = $status_badge_tones[ $diagnostic_status ] ?? 'neutral';
+							$status_intent     = $status_badge_intents[ $diagnostic_status ] ?? 'none';
+							?>
 						<tr>
-							<td data-label="<?php esc_attr_e( 'Status', 'ran-booster' ); ?>"><span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $status_tone ); ?> ran-booster-diagnostic-status ran-booster-diagnostic-status--<?php echo esc_attr( $result['status'] ); ?>"><?php echo esc_html( $status_labels[ $result['status'] ] ?? __( 'Unknown', 'ran-booster' ) ); ?></span></td>
+							<td data-label="<?php esc_attr_e( 'Status', 'ran-booster' ); ?>"><?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $status_label, (string) $status_intent, array( 'class' => 'ran-booster-diagnostic-status ran-booster-diagnostic-status--' . $diagnostic_status ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></td>
 							<th scope="row" data-label="<?php esc_attr_e( 'Check', 'ran-booster' ); ?>">
 							<?php
 								$check_family = explode( '.', $result['code'] )[1] ?? '';
@@ -249,11 +290,10 @@ $repository_placeholder = array() === $locator_examples
 					<?php } ?>
 				</table>
 			</div>
-
+			</div>
 
 		</div>
-	<?php } ?>
-
-	<?php } ?>
+		</div></div></div>
+		<?php } ?>
 	</div>
 </section>

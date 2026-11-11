@@ -26,7 +26,6 @@ final class AdminPackageSourceChoiceNormalizerTest extends TestCase {
 				'release_asset' => array(
 					'heading'           => 'Published releases',
 					'description'       => 'Install verified releases.',
-					'meta'              => 'Included with Booster',
 					'url'               => '',
 					'disabled'          => true,
 					'hydrated'          => true,
@@ -35,6 +34,8 @@ final class AdminPackageSourceChoiceNormalizerTest extends TestCase {
 			)
 		);
 
+		self::assertSame( array( 'key', 'heading', 'description', 'url', 'disabled', 'hydrated', 'client_hydratable' ), array_keys( $choices['branch'] ) );
+		self::assertSame( array( 'key', 'heading', 'description', 'url', 'disabled', 'hydrated', 'client_hydratable' ), array_keys( $choices['release_asset'] ) );
 		self::assertFalse( $choices['branch']['disabled'] );
 		self::assertTrue( $choices['release_asset']['hydrated'] );
 		self::assertTrue( $choices['release_asset']['client_hydratable'] );

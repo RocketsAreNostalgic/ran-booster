@@ -339,6 +339,27 @@ namespace RAN\Tests\Deployment {
 			if ( str_contains( $query, 'COUNT(*) AS total' ) ) {
 				return array( (object) array( 'total' => count( $this->rows ) ) );
 			}
+			if ( str_contains( $query, 'MAX(created_at) AS received_at' )
+				&& preg_match( "/provider = '([^']+)' AND source = 'webhook' AND package_type IN \\('plugin', 'theme'\\) AND provider_repository_id IN \\((.*)\\)\\s+GROUP BY provider_repository_id/s", $query, $matches ) === 1 ) {
+				preg_match_all( "/'((?:\\\\.|[^'])*)'/", $matches[2], $id_matches );
+				$wanted = array_map( 'stripslashes', $id_matches[1] );
+				$latest = array();
+				foreach ( $this->rows as $row ) {
+					if ( stripslashes( $matches[1] ) !== $row['provider'] || 'webhook' !== $row['source'] || ! in_array( $row['package_type'], array( 'plugin', 'theme' ), true ) || ! in_array( $row['provider_repository_id'], $wanted, true ) ) {
+						continue;
+					}
+					$latest[ $row['provider_repository_id'] ] = max( $latest[ $row['provider_repository_id'] ] ?? '', (string) $row['created_at'] );
+				}
+
+				return array_map(
+					static fn ( string $id, string $received_at ): object => (object) array(
+						'provider_repository_id' => $id,
+						'received_at'            => $received_at,
+					),
+					array_keys( $latest ),
+					array_values( $latest )
+				);
+			}
 			if ( str_contains( $query, 'MAX(latest.id)' )
 				&& preg_match( "/latest\\.package_type = '([^']+)' AND latest\\.package_slug = '([^']+)'/", $query, $matches ) === 1 ) {
 				$rows = array_values(

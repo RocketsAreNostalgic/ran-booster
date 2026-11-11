@@ -1,10 +1,11 @@
 {
     "schema": 1,
     "package": "ran/admin-shell",
-    "version": "v1.0.0",
-    "reference": "350909995871d11a7f8495bb2c5bfd041190b648",
+    "version": "v2.1.1",
+    "reference": "c5f57782b24301474133b7b25e11bd50477da683",
     "files": {
-        "assets/ran-admin-shell.css": "sha256:77db707cd28822a4218eb273122d7e5f66f66b5b9e59544a691a7b3840a4ad0b",
-        "views/generated/ran-admin-shell.php": "sha256:a5ba855de3918a91703177d35275ddececb8e6858c2d5351ee2513275490a5be"
+        "assets/ran-admin-shell.css": "sha256:cc425f7ee640c357a63199bcabdff4c28b4287388b8ae63e66a0d3a9adce5edd",
+        "assets/ran-section-navigation.js": "sha256:9933967eabc8144e781b694dbd950020213a8ee68d9e86d729fc7974db4c39fd",
+        "views/generated/ran-admin-shell.php": "sha256:1f6ff257758bb76aef76bf450216ac5f045558e8c7e954f084e18366d2ba72dc"
     }
 }

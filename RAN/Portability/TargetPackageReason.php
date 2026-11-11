@@ -37,15 +37,15 @@ enum TargetPackageReason: string {
 			self::STALE_MANAGEMENT => __( 'A stale Booster management record exists, so this package is protected.', 'ran-booster' ),
 			self::MALFORMED_MANAGEMENT => __( 'Booster could not safely read existing management, so this package is protected.', 'ran-booster' ),
 			self::CREDENTIAL_REQUIRED => __( 'Repository access needs a target credential.', 'ran-booster' ),
-			self::LOCAL_SECRET_STORE_UNAVAILABLE => __( 'Target encrypted credential storage is unavailable. Configure secure storage before applying this credential-bearing row.', 'ran-booster' ),
+			self::LOCAL_SECRET_STORE_UNAVAILABLE => __( 'Target credential storage is unavailable. Configure secure storage, then review and apply this row again.', 'ran-booster' ),
 			self::REPOSITORY_ACCESS_FAILED => __( 'Booster could not confirm repository access.', 'ran-booster' ),
-			self::REPOSITORY_IDENTITY_MISMATCH => __( 'The repository does not match this Transporter Blueprint.', 'ran-booster' ),
-			self::DESTINATION_CONFLICT => __( 'The destination package conflicts with this Transporter Blueprint.', 'ran-booster' ),
+			self::REPOSITORY_IDENTITY_MISMATCH => __( 'The repository does not match this Blueprint.', 'ran-booster' ),
+			self::DESTINATION_CONFLICT => __( 'The destination package conflicts with this Blueprint.', 'ran-booster' ),
 			self::PROVIDER_SELECTION_CHANGED => __( 'The selected Git provider changed. Review again before applying.', 'ran-booster' ),
 			self::PROVIDER_UNAVAILABLE => __( 'This Git provider is not available on the target.', 'ran-booster' ),
 			self::PROVIDER_TEMPORARILY_UNAVAILABLE => __( 'The Git provider is temporarily unavailable.', 'ran-booster' ),
 			self::RELEASE_UNAVAILABLE => __( 'No eligible published release is available for this package.', 'ran-booster' ),
-			self::RELEASE_REVIEW_CHANGED => __( 'The reviewed release changed. Review the Transporter Blueprint again before applying.', 'ran-booster' ),
+			self::RELEASE_REVIEW_CHANGED => __( 'The reviewed release changed. Review the Blueprint again before applying.', 'ran-booster' ),
 		};
 	}
 }

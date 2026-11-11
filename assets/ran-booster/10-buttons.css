@@ -1,31 +1,120 @@
 /* Buttons */
-.wp-core-ui .ran-booster-admin .button-delete {
-	background-color: var(--ran-booster-danger);
-	border-color: var(--ran-booster-danger-strong);
-	color: var(--ran-booster-surface);
-	-webkit-box-shadow: var(--ran-booster-shadow-delete-button);
-	box-shadow: var(--ran-booster-shadow-delete-button);
+
+/*
+ * The static Button sets display inside the wp-ui layer, which outranks the
+ * user agent's [hidden] rule.
+ */
+
+.ran-wp-ui-button[hidden] {
+	display: none;
 }
 
-.wp-core-ui .ran-booster-admin .button-delete:active,
-.wp-core-ui .ran-booster-admin .button-delete:focus,
-.wp-core-ui .ran-booster-admin .button-delete:hover {
-	background-color: var(--ran-booster-danger-strong);
-	border-color: var(--ran-booster-danger-hover-border);
-	color: var(--ran-booster-surface);
+/*
+ * The label may break anywhere, so a flex row would squeeze the Button until
+ * its label wraps. Keep it at its label's width; max-width still wraps a
+ * label that is wider than the row itself.
+ */
+
+.ran-wp-ui-button {
+	flex-shrink: 0;
 }
 
-.wp-core-ui .ran-booster-admin .button-delete.disabled,
-.wp-core-ui .ran-booster-admin .button-delete:disabled {
-	background-color: var(--ran-booster-surface-subtle);
-	border-color: var(--ran-booster-divider);
-	box-shadow: none;
-	color: var(--ran-booster-danger-muted);
-	cursor: default;
+/*
+ * A compact Button sits with 32px wp-admin controls, which wp-admin grows to
+ * 40px on small screens. Grow with them.
+ */
+
+@media screen and (max-width: 782px) {
+	.ran-wp-ui-button.is-compact {
+		--wp-ui-button-height: var(--wpds-dimension-size-lg);
+	}
+}
+
+/*
+ * wp-admin's unlayered link colour and focus rules outrank the wp-ui layer,
+ * and the anchor reset falls back to an inherited colour and square corners.
+ * Give a static anchor the Button's own colours, corners and box-sizing (the
+ * button reset sets box-sizing for a button; an anchor would inherit it).
+ */
+
+a.ran-wp-ui-button {
+	box-sizing: border-box;
+	border-radius: var(--wpds-border-radius-sm);
+	color: var(--wp-ui-button-foreground-color);
+}
+
+a.ran-wp-ui-button:not([aria-disabled="true"]):is(:hover, :focus, :active) {
+	color: var(--wp-ui-button-foreground-color-active);
+}
+
+a.ran-wp-ui-button[aria-disabled="true"] {
+	color: var(--wp-ui-button-foreground-color-disabled);
+}
+
+/*
+ * A disabled or unavailable brand solid Button is a white Button with a
+ * visible 3:1 stroke and muted text, not a faint grey fill. The static
+ * disabled tokens (a grey fill and 2.66:1 text) vanish on the grey admin
+ * surface and on the source switch bar. The state is drawn by colour and
+ * cursor alone, never by opacity, and hover or focus change nothing.
+ */
+
+.ran-wp-ui-button.is-brand.is-solid:is([disabled], [aria-disabled="true"]):not(
+		.is-loading
+	) {
+	--wp-ui-button-background-color-disabled: var(--ran-booster-surface);
+	--wp-ui-button-border-color-disabled: var(--ran-booster-control-border);
+	--wp-ui-button-foreground-color-disabled: var(--ran-booster-text-muted);
+	cursor: not-allowed;
+	opacity: 1;
+}
+
+/*
+ * Booster's danger tone sets only the Button's colour properties. On brand
+ * solid it is the destructive confirmation; on neutral outline, the step that
+ * arms one. Disabled, both draw as the disabled neutral outline.
+ */
+
+.ran-wp-ui-button.ran-booster-button--danger.is-solid {
+	--wp-ui-button-background-color: var(
+		--wpds-color-background-interactive-error-strong
+	);
+	--wp-ui-button-background-color-active: var(
+		--wpds-color-background-interactive-error-strong-active
+	);
+	--wp-ui-button-background-color-disabled: var(
+		--wpds-color-background-interactive-neutral-weak-disabled
+	);
+	--wp-ui-button-border-color: var(
+		--wpds-color-stroke-interactive-error-strong
+	);
+	--wp-ui-button-border-color-active: var(
+		--wpds-color-stroke-interactive-error-active
+	);
+	--wp-ui-button-border-color-disabled: var(
+		--wpds-color-stroke-interactive-neutral-disabled
+	);
+	--wp-ui-button-foreground-color: var(--ran-booster-surface);
+	--wp-ui-button-foreground-color-active: var(--ran-booster-surface);
+	--wp-ui-button-foreground-color-disabled: var(
+		--wpds-color-foreground-interactive-neutral-disabled
+	);
+}
+
+.ran-wp-ui-button.ran-booster-button--danger.is-outline {
+	--wp-ui-button-border-color: var(--wpds-color-stroke-interactive-error);
+	--wp-ui-button-border-color-active: var(
+		--wpds-color-stroke-interactive-error-active
+	);
+	--wp-ui-button-foreground-color: var(
+		--wpds-color-foreground-interactive-error
+	);
+	--wp-ui-button-foreground-color-active: var(
+		--wpds-color-foreground-interactive-error-active
+	);
 }
 
 .wp-core-ui .ran-booster-admin .button-update-package {
-	min-inline-size: 136px;
 	white-space: nowrap;
 }
 
@@ -115,6 +204,14 @@
 	z-index: 1;
 }
 
+.wp-core-ui
+	.ran-booster-admin
+	.ran-booster-enhanced-mutation__submitter--busy.ran-booster-update-is-active
+	[data-ran-booster-submit-busy-label] {
+	position: relative;
+	z-index: 1;
+}
+
 @keyframes ran-booster-update-stripes {
 	to {
 		background-position: 23px 0;
@@ -148,13 +245,8 @@
 }
 
 .ran-booster-admin .ran-booster-code {
-	font-size: 11px;
+	font-size: var(--ran-booster-font-size-sm);
 	background-color: var(--ran-booster-surface-subtle);
-}
-
-.ran-booster-admin .ran-booster-red {
-	border-color: var(--ran-booster-danger);
-	color: var(--ran-booster-text-danger);
 }
 
 .ran-booster-admin .ran-booster-green {

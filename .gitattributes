@@ -11,6 +11,7 @@
 /release-please-config.json export-ignore
 /.release-please-manifest.json export-ignore
 /scripts             export-ignore
+/tools               export-ignore
 /tests               export-ignore
 /.editorconfig       export-ignore
 /.gitattributes      export-ignore

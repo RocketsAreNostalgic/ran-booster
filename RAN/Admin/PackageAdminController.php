@@ -13,6 +13,7 @@ use RAN\InvalidPackageSubdirectory;
 use RAN\Package;
 use RAN\PackageOperation;
 use RAN\PackageOperationService;
+use RAN\PackageRepositoryChangeRejected;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\{InvalidProviderCode, ProviderRegistry, UnknownProvider, UnsupportedProviderCapability};
 use RAN\Storage\{PackageStorageFailure, PluginRepository, ThemeRepository};
@@ -252,6 +253,16 @@ final class PackageAdminController {
 				? $this->active_deployment( $dashboard, $failure, $action )
 
 				: $this->manual_failure( $dashboard, $add_context_message, $failure, $action );
+		} catch ( PackageRepositoryChangeRejected ) {
+			status_header( 409 );
+			$add_context_message(
+				new WP_Error( 'ran_booster_package_repository_change_rejected', __( 'To use a different Git provider or repository, stop managing this package and adopt it again.', 'ran-booster' ) ),
+				array(
+					'operation' => $action,
+					'step'      => 'package_repository_change',
+				)
+			);
+			return false;
 		} catch ( Throwable $failure ) {
 
 			return $this->manual_failure( $dashboard, $add_context_message, $failure, $action );
@@ -284,7 +295,7 @@ final class PackageAdminController {
 			&& ( $result['package'] ?? null ) instanceof Package
 			&& PackageSource::BRANCH === $result['package']->get_source()
 		) {
-			return $this->repository_branch_check_redirect( $operation, $result['package'] );
+			return $this->repository_branch_check_redirect( $operation, $result['package'], $list_arguments );
 		}
 		if ( in_array( $status, array( 'succeeded', 'edited', 'linked' ), true ) && ( $result['package'] ?? null ) instanceof Package ) {
 
@@ -358,17 +369,20 @@ final class PackageAdminController {
 			'unlink' => __( 'unlinked', 'ran-booster' ),
 			default => __( 'unlinked and deleted', 'ran-booster' ),
 		};
-		$dashboard->add_message(
-			array(
-				'type'    => 'success',
-				'message' => sprintf(
-					/* translators: 1: package type, 2: completed operation. */
-					__( '%1$s was successfully %2$s.', 'ran-booster' ),
-					'plugin' === $type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
-					$completed
-				),
-			)
+		$message = array(
+			'type'    => 'success',
+			'message' => sprintf(
+				/* translators: 1: package type, 2: completed operation. */
+				__( '%1$s was successfully %2$s.', 'ran-booster' ),
+				'plugin' === $type ? __( 'Plugin', 'ran-booster' ) : __( 'Theme', 'ran-booster' ),
+				$completed
+			),
 		);
+		if ( 'edit' === $operation ) {
+			$message['saved_package'] = $identifier;
+			$message['saved_type']    = $type;
+		}
+		$dashboard->add_message( $message );
 
 		return compact( 'operation', 'identifier' );
 	}
@@ -661,27 +675,36 @@ final class PackageAdminController {
 			$args['open_picker'] = '1';
 		} elseif ( in_array( $operation->operation, array( 'install', 'edit' ), true ) || $return_to_settings ) {
 			$args['package'] = $identifier;
-		} elseif ( 'update' === $operation->operation ) {
+		} else {
 			$args = array_merge( $list_arguments, $args );
+		}
+		$args['return_type'] = $type;
+		foreach ( $list_arguments as $key => $value ) {
+			$args[ 'return_' . $key ] = $value;
 		}
 		$admin_url = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 		return $admin_url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 	}
 
-	private function repository_branch_check_redirect( PackageOperation $operation, Package $package ): string {
+	/** @param array<string, string> $list_arguments */
+	private function repository_branch_check_redirect( PackageOperation $operation, Package $package, array $list_arguments ): string {
 		$identifier = $package->get_identifier();
 		if ( ! is_string( $identifier ) || '' === $identifier ) {
 			throw new LogicException( 'The managed package identity is unavailable.' );
 		}
-		$type = $operation->package_type;
-		$args = array(
+		$type                = $operation->package_type;
+		$args                = array(
 			'page'                                 => 'ran-booster-' . $type . 's',
 			'package'                              => $identifier,
 			'source_view'                          => 'branch',
 			'ran_booster_repository_branch_check'  => '1',
 			'_ran_booster_repository_branch_nonce' => wp_create_nonce( self::repository_branch_check_action( $package, $type ) ),
 		);
-		$url  = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
+		$args['return_type'] = $type;
+		foreach ( $list_arguments as $key => $value ) {
+			$args[ 'return_' . $key ] = $value;
+		}
+		$url = is_multisite() ? network_admin_url( 'admin.php' ) : admin_url( 'admin.php' );
 
 		return $url . '?' . http_build_query( $args, '', '&', PHP_QUERY_RFC3986 );
 	}

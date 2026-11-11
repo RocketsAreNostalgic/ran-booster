@@ -12,6 +12,30 @@ use RAN\Admin\ReleaseManagement\ReleaseWorkflowDisplay;
 use ReflectionMethod;
 
 final class ReleaseWorkflowDisplayTest extends TestCase {
+	public function test_workflow_badge_maps_explicit_tones_without_changing_the_status(): void {
+		foreach ( array(
+			'neutral' => 'none',
+			'pending' => 'none',
+			'ok'      => 'stable',
+			'success' => 'stable',
+			'warning' => 'medium',
+			'error'   => 'high',
+			'info'    => 'informational',
+			'future'  => 'none',
+		) as $tone => $intent ) {
+			$html = ( new ReleaseWorkflowDisplay() )->repository_section(
+				array(
+					'show_automation' => true,
+					'automation'      => array(
+						'tone'  => 'ran-booster-badge--' . $tone,
+						'label' => 'Exact <workflow> "quoted"',
+					),
+				)
+			);
+			self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-' . $intent . '-intent" data-ran-booster-badge data-ran-booster-badge-intent="' . $intent . '">Exact &lt;workflow&gt; &quot;quoted&quot;</span>', $html );
+		}
+	}
+
 	public function test_partial_shared_projection_renders_without_offset_warnings(): void {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_set_error_handler -- Convert missing projection offsets into regression failures.
 		set_error_handler(
@@ -29,8 +53,214 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		} finally {
 			restore_error_handler();
 		}
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
+		self::assertStringStartsWith( '<section class="ran-booster-settings-section ran-booster-repository-release-section ran-booster-card" data-ran-booster-card="provider"', $html );
 		self::assertStringContainsString( 'shared by 0 packages', $html );
 		self::assertStringContainsString( 'Published release lifecycle', $html );
+	}
+
+	public function test_release_header_carries_delivery_badge_settings_link_and_the_not_in_use_line(): void {
+		$display = new ReleaseWorkflowDisplay();
+		$active  = $display->repository_section( $this->release_projection() );
+		self::assertSame( 1, preg_match( '/<h3 id="ran-booster-repository-release-heading">Release publishing<\/h3><span[^>]*is-stable-intent[^>]*>Active<\/span><\/div><a href="https:\/\/example.test\/settings">Plugin settings<\/a><\/div><\/header>/', $active ) );
+		self::assertStringNotContainsString( 'No package on this repository tracks releases.', $active );
+		// The release workflow is the second tier through its own disclosure; no step card and no extra sub-heading.
+		self::assertStringNotContainsString( 'Release workflow — optional', $active );
+		self::assertSame( 2, substr_count( $active, 'class="ran-booster-webhook-step ' ) );
+		self::assertSame( 1, substr_count( $active, 'Release workflow' ) );
+		self::assertStringNotContainsString( '<h4', $active );
+
+		$idle              = $this->release_projection();
+		$idle['in_use']    = false;
+		$idle['lifecycle'] = array(
+			array(
+				'label'   => 'Prepare package',
+				'message' => 'Prepare message.',
+				'state'   => 'is-neutral',
+			),
+			array(
+				'label'   => 'Track releases',
+				'message' => 'Track message.',
+				'state'   => 'is-neutral',
+			),
+		);
+		$html              = $display->repository_section( $idle );
+		self::assertSame( 1, preg_match( '/Release publishing<\/h3><span[^>]*is-none-intent[^>]*>Not in use<\/span>/', $html ) );
+		self::assertStringContainsString( '<p class="ran-booster-section__description">No package on this repository tracks releases.</p></header>', $html );
+		self::assertSame( 2, substr_count( $html, 'ran-booster-webhook-step is-neutral' ) );
+		self::assertStringContainsString( 'Prepare message.', $html );
+		self::assertStringContainsString( 'id="ran-booster-repository-release-workflow"', $html );
+	}
+
+	/** @return array<string,mixed> */
+	private function release_projection( bool $package_eligible = true, bool $tracking = true, bool $with_package = true ): array {
+		return array(
+			'settings_url'       => 'https://example.test/settings',
+			'settings_label'     => 'Plugin settings',
+			'lifecycle'          => array(
+				array(
+					'label'   => 'Prepare package',
+					'message' => 'Prepare message.',
+					'state'   => $package_eligible ? 'is-ok' : 'is-warning',
+				),
+				array(
+					'label'   => 'Track releases',
+					'message' => 'Track message.',
+					'state'   => $tracking ? 'is-ok' : 'is-pending',
+				),
+			),
+			'in_use'             => true,
+			'ineligible_message' => $package_eligible ? '' : 'The installed package does not declare the required Update URI.',
+			'readiness'          => array(
+				'repository'         => 'owner/repo',
+				'relationship_count' => 1,
+				'provider_supported' => true,
+				'package'            => $with_package ? array(
+					'name'         => 'Example',
+					'type'         => 'plugin',
+					'eligible'     => $package_eligible,
+					'message'      => $package_eligible ? 'Installed identity and Update URI match the configured repository.' : 'The installed package does not declare the required Update URI.',
+					'tracking'     => $tracking,
+					'channel'      => 'stable',
+					'settings_url' => 'https://example.test/package',
+				) : null,
+			),
+			'show_automation'    => true,
+			'automation'         => array(
+				'tone'        => 'ran-booster-badge--info',
+				'label'       => 'Not assessed',
+				'message'     => 'Releases are available; their publishing method has not been assessed.',
+				'notice_tone' => 'notice-info',
+				'provenance'  => 'Booster setup: Not recorded.',
+			),
+			'automation_notice'  => true,
+			'workflow_view'      => array(),
+		);
+	}
+
+	private function release_xpath( string $html ): \DOMXPath {
+		$document = new \DOMDocument();
+		$previous = libxml_use_internal_errors( true );
+		$document->loadHTML( $html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $previous );
+
+		return new \DOMXPath( $document );
+	}
+
+	private function release_disclosure_open( \DOMXPath $xpath, string $id ): bool {
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="' . $id . '"])' ), $id );
+
+		return 1.0 === (float) $xpath->evaluate( 'count(//details[@id="' . $id . '"][@open])' );
+	}
+
+	public function test_all_ok_release_page_has_closed_readiness_collapsed_workflow_and_no_notices(): void {
+		$html  = ( new ReleaseWorkflowDisplay() )->repository_section( $this->release_projection() );
+		$xpath = $this->release_xpath( $html );
+
+		self::assertFalse( $this->release_disclosure_open( $xpath, 'ran-booster-repository-release-readiness' ) );
+		self::assertFalse( $this->release_disclosure_open( $xpath, 'ran-booster-repository-release-workflow' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//ol[contains(@class,"ran-booster-webhook-steps")]/li)' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//ol/li[contains(@class,"is-neutral")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-repository-release-readiness"]/summary[normalize-space()="Release readiness"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-repository-release-workflow"]/summary[starts-with(normalize-space(), "Release workflow")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@data-ran-booster-ui-disclosure="repository-release-readiness"][@data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback]/div[@data-ran-booster-ui-disclosure-content])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[@data-ran-booster-ui-disclosure="repository-release-workflow"][@data-ran-booster-ui-disclosure-density="compact"]/details[@data-ran-booster-ui-disclosure-fallback]/div[@data-ran-booster-ui-disclosure-content])' ) );
+		// The readiness list keeps its per-package evidence and glyph rows.
+		self::assertSame( 4.0, $xpath->evaluate( 'count(//details[@id="ran-booster-repository-release-readiness"]//li[contains(@class,"ran-booster-readiness-item")])' ) );
+		self::assertSame( 4.0, $xpath->evaluate( 'count(//details[@id="ran-booster-repository-release-readiness"]//li[contains(@class,"is-ok")]/span[@aria-hidden="true"][contains(@class,"ran-booster-readiness-icon")])' ) );
+		// No card-level notice anywhere: the state notice lives inside the collapsed workflow disclosure only.
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//div[contains(@class,"notice")][not(ancestor::details)])' ) );
+		// Old readiness panel and standalone workflow panel markup is gone.
+		self::assertStringNotContainsString( 'ran-booster-readiness-panel', $html );
+		self::assertStringNotContainsString( '<h4', $html );
+	}
+
+	public function test_release_readiness_opens_for_any_warning_or_pending_fact(): void {
+		$display = new ReleaseWorkflowDisplay();
+		foreach ( array(
+			'package warning' => $this->release_projection( false ),
+			'source pending'  => $this->release_projection( true, false ),
+		) as $name => $projection ) {
+			$xpath = $this->release_xpath( $display->repository_section( $projection ) );
+			self::assertTrue( $this->release_disclosure_open( $xpath, 'ran-booster-repository-release-readiness' ), $name );
+		}
+		$unsupported                                    = $this->release_projection();
+		$unsupported['readiness']['provider_supported'] = false;
+		self::assertTrue( $this->release_disclosure_open( $this->release_xpath( $display->repository_section( $unsupported ) ), 'ran-booster-repository-release-readiness' ), 'provider pending' );
+		$no_relationship                                    = $this->release_projection();
+		$no_relationship['readiness']['relationship_count'] = 0;
+		self::assertTrue( $this->release_disclosure_open( $this->release_xpath( $display->repository_section( $no_relationship ) ), 'ran-booster-repository-release-readiness' ), 'relationship warning' );
+		// The per-package links stay in the open evidence.
+		$html = $display->repository_section( $this->release_projection( false, false ) );
+		self::assertStringContainsString( 'Review package settings</a>', $html );
+		self::assertStringContainsString( 'Open package source settings</a>', $html );
+	}
+
+	public function test_update_uri_notice_is_dropped_only_when_the_readiness_row_states_it(): void {
+		$display = new ReleaseWorkflowDisplay();
+		$stated  = $display->repository_section( $this->release_projection( false ) );
+		// The readiness row is the one place the Update URI problem is stated.
+		self::assertSame( 1, substr_count( $stated, 'The installed package does not declare the required Update URI.' ) );
+		self::assertSame( 0.0, $this->release_xpath( $stated )->evaluate( 'count(//div[contains(@class,"ran-booster-repository-release-section__notice")])' ) );
+
+		// Without a package readiness row nothing else says it, so the notice stays.
+		$unstated = $display->repository_section( $this->release_projection( false, true, false ) );
+		self::assertSame( 1, substr_count( $unstated, 'The installed package does not declare the required Update URI.' ) );
+		self::assertSame( 1.0, $this->release_xpath( $unstated )->evaluate( 'count(//div[contains(@class,"ran-booster-repository-release-section__notice")])' ) );
+	}
+
+	public function test_release_workflow_disclosure_opens_for_results_assessments_and_actionable_notices(): void {
+		$display = new ReleaseWorkflowDisplay();
+		$id      = 'ran-booster-repository-release-workflow';
+
+		// Collapsed by default, even though its informational state notice is inside.
+		$base  = $this->release_projection();
+		$xpath = $this->release_xpath( $display->repository_section( $base ) );
+		self::assertFalse( $this->release_disclosure_open( $xpath, $id ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="' . $id . '"]//div[contains(@class,"notice-info")])' ) );
+
+		$result                       = $this->release_projection();
+		$result['show_result_notice'] = true;
+		$result['workflow_view']      = array(
+			'result_code'       => 'workflow_inspected',
+			'result_successful' => true,
+		);
+		self::assertTrue( $this->release_disclosure_open( $this->release_xpath( $display->repository_section( $result ) ), $id ), 'result' );
+
+		foreach ( array( 'preview', 'record', 'legacy' ) as $key ) {
+			$assessing                  = $this->release_projection();
+			$assessing['workflow_view'] = array( $key => array() );
+			self::assertTrue( $this->release_disclosure_open( $this->release_xpath( $display->repository_section( $assessing ) ), $id ), $key );
+		}
+
+		$warning                              = $this->release_projection();
+		$warning['automation']['notice_tone'] = 'notice-warning';
+		$warning['automation']['message']     = 'Needs a person.';
+		self::assertTrue( $this->release_disclosure_open( $this->release_xpath( $display->repository_section( $warning ) ), $id ), 'warning notice' );
+	}
+
+	public function test_workflow_notice_that_repeats_the_readiness_row_is_dropped_and_does_not_force_the_disclosure_open(): void {
+		$display = new ReleaseWorkflowDisplay();
+		$id      = 'ran-booster-repository-release-workflow';
+
+		$duplicate                           = $this->release_projection( false );
+		$duplicate['automation_unavailable'] = true;
+		$duplicate['automation_redundant']   = true;
+		$duplicate['workflow_view']          = array(
+			'unavailable'        => true,
+			'unavailable_reason' => 'Open package settings for the required Update URI, add it to the package header, then deploy the corrected package.',
+		);
+		$html                                = $display->repository_section( $duplicate );
+		self::assertStringNotContainsString( 'Open package settings for the required Update URI', $html );
+		self::assertFalse( $this->release_disclosure_open( $this->release_xpath( $html ), $id ) );
+
+		// An unavailable reason that no readiness row states keeps its notice, and opens the disclosure.
+		$distinct                         = $duplicate;
+		$distinct['automation_redundant'] = false;
+		$html                             = $display->repository_section( $distinct );
+		self::assertStringContainsString( 'Open package settings for the required Update URI', $html );
+		self::assertTrue( $this->release_disclosure_open( $this->release_xpath( $html ), $id ) );
 	}
 
 	public function test_repository_section_escapes_presenter_fields(): void {
@@ -51,10 +281,87 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-card="provider"' ) );
 		self::assertStringContainsString( '&lt;script&gt;settings&lt;/script&gt;', $html );
 		self::assertStringContainsString( '&lt;script&gt;package&lt;/script&gt;', $html );
 		self::assertStringContainsString( 'settings?a=1&amp;b=2', $html );
 		self::assertStringNotContainsString( '<script>', $html );
+	}
+
+	public function test_notice_envelopes_preserve_the_original_intent_and_rich_content(): void {
+		$display = new ReleaseWorkflowDisplay();
+		foreach ( array(
+			array( $display->repository_section( array( 'shared' => true ) ), 'info' ),
+			array( $display->repository_section( array( 'conflicted' => true ) ), 'warning' ),
+			array( $display->repository_section( array( 'ineligible_message' => 'Review <source>' ) ), 'warning' ),
+			array(
+				$display->repository_section(
+					array(
+						'show_automation'       => true,
+						'automation_notice'     => true,
+						'automation'            => array(
+							'notice_tone' => 'notice-info',
+							'message'     => 'Review preserved',
+						),
+						'provider_workflow_url' => 'https://example.test/workflow?a=1&b=2',
+					)
+				),
+				'info',
+			),
+			array(
+				$display->state_notice(
+					array(
+						'unavailable'        => true,
+						'unavailable_reason' => 'Unavailable <provider>',
+					)
+				),
+				'warning',
+			),
+			array(
+				$display->result_notice(
+					array(
+						'result_code'       => 'workflow_inspected',
+						'result_successful' => true,
+					)
+				),
+				'success',
+			),
+			array( $display->result_notice( array( 'result_code' => 'workflow_rate_limited' ) ), 'warning' ),
+			array( $display->result_notice( array( 'result_code' => 'workflow_release_automation_conflict' ) ), 'info' ),
+			array(
+				$display->result_notice(
+					array(
+						'result_code'   => 'workflow_preflight_unavailable',
+						'failure_stage' => 'request_validation',
+					)
+				),
+				'error',
+			),
+		) as list( $html, $intent ) ) {
+			$document = new \DOMDocument();
+			$previous = libxml_use_internal_errors( true );
+			$document->loadHTML( $html );
+			libxml_clear_errors();
+			libxml_use_internal_errors( $previous );
+			$xpath = new \DOMXPath( $document );
+			$hosts = $xpath->query( '//div[contains(concat(" ", normalize-space(@class), " "), " notice ")]' );
+			self::assertNotFalse( $hosts );
+			self::assertCount( 1, $hosts );
+			$host = $hosts->item( 0 );
+			self::assertInstanceOf( \DOMElement::class, $host );
+			self::assertTrue( $host->hasAttribute( 'data-ran-booster-ui-notice' ) );
+			self::assertSame( $intent, $host->getAttribute( 'data-ran-booster-ui-notice-intent' ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./div[@data-ran-booster-ui-notice-content and @class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description"])', $host ) );
+			// A static Notice: the description, then the decorative intent icon.
+			self::assertStringContainsString( ' ran-wp-ui-notice ran-wp-ui-box-sizing is-' . $intent, ' ' . $host->getAttribute( 'class' ) );
+			// A failure carries its disclosure as the notice's own third child, never inside the message column.
+			self::assertSame( 'error' === $intent ? 3.0 : 2.0, $xpath->evaluate( 'count(./*)', $host ) );
+			self::assertSame( 0.0, $xpath->evaluate( 'count(./div[@data-ran-booster-ui-notice-content]//*[@data-ran-booster-ui-disclosure])', $host ) );
+			self::assertSame( 1.0, $xpath->evaluate( 'count(./*[2][local-name()="svg" and @class="ran-wp-ui-notice__icon" and @aria-hidden="true"])', $host ) );
+			self::assertFalse( $host->hasAttribute( 'role' ) );
+			self::assertStringNotContainsString( '<source>', $html );
+			self::assertStringNotContainsString( '<provider>', $html );
+		}
 	}
 
 	public function test_workflow_owners_keep_the_separated_source_boundaries(): void {
@@ -119,7 +426,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 
 		self::assertStringContainsString( 'Booster verified an exact canonical release setup in this repository. No setup pull request is needed.', $html );
 		self::assertStringContainsString( 'name="booster_credential_id"', $html );
-		self::assertStringContainsString( '<button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
 	}
 
 	public function test_existing_release_automation_conflict_is_an_informational_observation(): void {
@@ -132,7 +439,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( '<div class="notice notice-info inline"', $html );
+		self::assertStringContainsString( '<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info"', $html );
 		self::assertStringContainsString( 'An existing release workflow was found. Booster will not overwrite it. Review it before using Booster setup.', $html );
 		self::assertStringNotContainsString( 'Failure details', $html );
 		self::assertStringNotContainsString( 'Diagnostic code:', $html );
@@ -148,7 +455,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( '<div class="notice notice-warning inline"', $html );
+		self::assertStringContainsString( '<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $html );
 		self::assertStringContainsString( 'The Git provider has temporarily rate-limited the release workflow request.', $html );
 		self::assertStringNotContainsString( 'selected saved credential', $html );
 	}
@@ -171,7 +478,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			);
 
 			self::assertStringContainsString( 'Booster stopped before contacting the Git provider because this request no longer matched the current page or package.', $html, $diagnostic );
-			self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html, $diagnostic );
+			self::assertStringContainsString( '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>Failure details</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>', $html, $diagnostic );
 			self::assertStringContainsString( $message, $html, $diagnostic );
 			self::assertStringContainsString( 'Diagnostic code: <code>' . $diagnostic . '</code>', $html, $diagnostic );
 		}
@@ -193,7 +500,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 				)
 			);
 
-			self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html, $diagnostic );
+			self::assertStringContainsString( '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>Failure details</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>', $html, $diagnostic );
 			self::assertStringContainsString( $message, $html, $diagnostic );
 			self::assertStringContainsString( 'Diagnostic code: <code>' . $diagnostic . '</code>', $html, $diagnostic );
 		}
@@ -228,8 +535,8 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		);
 
 		self::assertStringContainsString( 'Booster could not validate the package release before continuing. No draft was opened.', $html );
-		self::assertStringContainsString( '<div class="notice notice-error inline" data-ran-booster-release-workflow-result><p>', $html );
-		self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html );
+		self::assertStringContainsString( '<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-release-workflow-result data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>', $html );
+		self::assertStringContainsString( '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>Failure details</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>', $html );
 		self::assertStringContainsString( 'Booster could not read release data using the package&#039;s saved repository access. The credential selected for workflow setup is used only after this release check.', $html );
 		self::assertStringContainsString( 'Diagnostic code: <code>provider_unavailable</code>', $html );
 		self::assertStringContainsString( 'Failure reference: <code>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</code>', $html );
@@ -259,7 +566,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( '<details class="ran-booster-disclosure"><summary>Failure details</summary><div class="ran-booster-disclosure__body">', $html );
+		self::assertStringContainsString( '<div data-ran-booster-ui-disclosure="release-failure-details" data-ran-booster-ui-disclosure-density="compact"><details class="ran-booster-disclosure" data-ran-booster-ui-disclosure-fallback><summary>Failure details</summary><div class="ran-booster-disclosure__body" data-ran-booster-ui-disclosure-content>', $html );
 		self::assertStringContainsString( 'Diagnostic code: <code>package_compatibility_invalid</code>', $html );
 	}
 
@@ -286,6 +593,24 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( 'Diagnostic code: <code>preflight_contract_unavailable</code>', $html );
 		self::assertStringNotContainsString( 'Earlier workflow record', $html );
 		self::assertStringNotContainsString( 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', $html );
+	}
+
+	public function test_result_notice_disclosure_is_a_direct_row_of_the_notice_after_the_icon(): void {
+		$html = ( new ReleaseWorkflowDisplay() )->result_notice(
+			array(
+				'result_code'       => 'workflow_invalid_request',
+				'result_successful' => false,
+				'failure_stage'     => 'request_validation',
+			)
+		);
+		$dom  = new \DOMDocument();
+		$prev = libxml_use_internal_errors( true );
+		$dom->loadHTML( $html );
+		libxml_clear_errors();
+		libxml_use_internal_errors( $prev );
+		$xpath = new \DOMXPath( $dom );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//div[contains(concat(" ", normalize-space(@class), " "), " ran-wp-ui-notice ")]/div[@data-ran-booster-ui-notice-content]/following-sibling::svg[@class="ran-wp-ui-notice__icon"]/following-sibling::div[@data-ran-booster-ui-disclosure="release-failure-details"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@data-ran-booster-ui-notice-content]//*[@data-ran-booster-ui-disclosure])' ) );
 	}
 
 	public function test_result_notice_uses_provider_messages_only_when_non_empty_and_falls_back_otherwise(): void {
@@ -475,7 +800,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 		self::assertStringContainsString( '<select name="booster_credential_id" disabled aria-disabled="true">', $html );
 		self::assertStringContainsString( '>Manage credentials</a>', $html );
 		self::assertStringContainsString( 'Inspect anonymously, or use a saved credential to avoid anonymous API limits.', $html );
-		self::assertStringContainsString( '<button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
 		self::assertStringNotContainsString( 'Set up release automation', $html );
 		self::assertStringNotContainsString( 'type="password"', $html );
 	}
@@ -561,7 +886,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 				)
 			)
 		);
-		self::assertStringContainsString( '<button type="submit" class="button" disabled aria-disabled="true">Assess release setup</button>', $html );
+		self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline" disabled aria-disabled="true">Assess release setup</button>', $html );
 		self::assertStringNotContainsString( 'Set up release automation', $html );
 	}
 
@@ -647,7 +972,7 @@ final class ReleaseWorkflowDisplayTest extends TestCase {
 			self::assertStringContainsString( '<select name="booster_credential_id" disabled aria-disabled="true">', $html, $operation );
 			self::assertStringContainsString( '>Manage credentials</a>', $html, $operation );
 			self::assertStringContainsString( '>' . $label . '</button>', $html, $operation );
-			self::assertStringContainsString( '<button type="submit" class="button button-primary" disabled aria-disabled="true">', $html, $operation );
+			self::assertStringContainsString( '<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid" disabled aria-disabled="true">', $html, $operation );
 		}
 	}
 

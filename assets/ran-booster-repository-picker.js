@@ -13,19 +13,20 @@
 		callback();
 	}
 
+	let cleanupPicker = function () {};
+	let pickerComponentsAvailable = false;
+
 	onDomReady(initRepositoryPicker);
 
 	document.addEventListener('htmx:beforeSwap', function (event) {
-		if (event.detail?.target?.id !== 'wpbody-content') {
+		if (
+			event.detail?.target?.id !== 'wpbody-content' ||
+			!event.detail.shouldSwap
+		) {
 			return;
 		}
 
-		document
-			.querySelectorAll('.ran-booster-repository-picker')
-			.forEach(function (modal) {
-				modal.remove();
-			});
-		document.body.classList.remove('ran-booster-repository-picker-open');
+		cleanupPicker();
 	});
 
 	document.addEventListener('htmx:afterSwap', function (event) {
@@ -63,11 +64,17 @@
 			'.ran-booster-open-repository-picker'
 		);
 
-		if (!button) {
+		// An installed package keeps its repository, so its picker stays locked.
+		if (
+			!button ||
+			button.hasAttribute('data-ran-booster-repository-locked')
+		) {
 			return;
 		}
 
-		const supported = Boolean(provider && provider.browse);
+		const supported = Boolean(
+			pickerComponentsAvailable && provider && provider.browse
+		);
 
 		button.disabled = !supported;
 		button.hidden = !supported;
@@ -367,7 +374,124 @@
 		);
 	}
 
+	// A control can belong to a form through its form attribute without
+	// being a descendant, so fall back to the form's elements collection.
+	function findFormControl(form, selector) {
+		if (!form) {
+			return null;
+		}
+
+		const descendant = form.querySelector(selector);
+		if (descendant) {
+			return descendant;
+		}
+
+		return (
+			Array.from(form.elements || []).find(function (element) {
+				return (
+					typeof element.matches === 'function' &&
+					element.matches(selector)
+				);
+			}) || null
+		);
+	}
+
+	function repositorySelectionControls(form) {
+		const controls = {
+			repository: findFormControl(form, '.ran-booster-repository-input'),
+			branch: findFormControl(form, '.ran-booster-branch-input'),
+			credential: findFormControl(form, '.ran-booster-credential-input'),
+			provider: findFormControl(form, '.ran-booster-provider-input'),
+			providerRepositoryId: findFormControl(
+				form,
+				'.ran-booster-provider-repository-id-input'
+			),
+			identitySource: findFormControl(
+				form,
+				'.ran-booster-provider-repository-identity-source-input'
+			),
+			publicLookupProfile: findFormControl(
+				form,
+				'.ran-booster-public-lookup-profile-input'
+			),
+		};
+
+		return controls.repository && controls.branch ? controls : null;
+	}
+
+	// Every required control is found before the first write, so a missing
+	// control leaves the form unchanged. Returns the repository input, or
+	// null when nothing was applied.
+	function applyRepositorySelection(form, repository, selection) {
+		const controls = repositorySelectionControls(form);
+
+		if (!controls) {
+			return null;
+		}
+
+		let credentialInput = controls.credential;
+		if (!credentialInput) {
+			credentialInput = form.ownerDocument.createElement('input');
+			credentialInput.type = 'hidden';
+			credentialInput.name = 'ran_booster[credential_id]';
+			credentialInput.className = 'ran-booster-credential-input';
+			form.appendChild(credentialInput);
+		}
+
+		controls.repository.value = repository.locator || '';
+		if (controls.provider) {
+			controls.provider.value = repository.provider;
+			selection.updateProviderForm(form);
+		}
+		if (controls.providerRepositoryId) {
+			controls.providerRepositoryId.value =
+				repository.provider_repository_id || '';
+		}
+		if (controls.identitySource) {
+			controls.identitySource.value = 'picker';
+		}
+		if (controls.publicLookupProfile) {
+			controls.publicLookupProfile.value =
+				selection.publicLookupProfileId || '';
+		}
+		controls.branch.value = repository.default_branch || '';
+		selection.selectCredential(
+			credentialInput,
+			repository.provider,
+			selection.credentialId || ''
+		);
+
+		return controls.repository;
+	}
+
 	function initRepositoryPicker() {
+		cleanupPicker();
+		const listeners = new AbortController();
+		cleanupPicker = function () {
+			listeners.abort();
+		};
+		const ui = window.ranBoosterUI;
+		const dialog = ui?.Dialog;
+		pickerComponentsAvailable = Boolean(
+			ui?.version === '0.26.0' &&
+			ui.Input &&
+			dialog &&
+			[
+				'Root',
+				'Popup',
+				'Header',
+				'Title',
+				'Content',
+				'CloseIconButton',
+				'Portal',
+			].every(function (part) {
+				return dialog[part];
+			}) &&
+			wp.element?.createElement &&
+			wp.element?.createRoot &&
+			wp.element?.createPortal &&
+			wp.element?.flushSync
+		);
 		const settings = window.ranBoosterRepoPicker || {};
 		const providerList = Array.isArray(settings.providers)
 			? settings.providers
@@ -406,15 +530,22 @@
 
 				restoreRepositoryPickerProvider(form, pickerState, providers);
 				updateProviderForm(form, false);
-				providerInput.addEventListener('change', function () {
-					updateProviderForm(form, true);
-					dispatchRepositoryContextChanged(form, 'provider');
-					const provider = getFormProvider(form);
-					if (provider && provider.browse) {
-						pickerState.lastProvider = provider.code;
-						writeRepositoryPickerState(pickerStorage, pickerState);
-					}
-				});
+				providerInput.addEventListener(
+					'change',
+					function () {
+						updateProviderForm(form, true);
+						dispatchRepositoryContextChanged(form, 'provider');
+						const provider = getFormProvider(form);
+						if (provider && provider.browse) {
+							pickerState.lastProvider = provider.code;
+							writeRepositoryPickerState(
+								pickerStorage,
+								pickerState
+							);
+						}
+					},
+					{ signal: listeners.signal }
+				);
 			});
 
 		document
@@ -422,17 +553,76 @@
 				'.ran-booster-credential-input, .ran-booster-branch-input'
 			)
 			.forEach(function (input) {
-				input.addEventListener('change', function () {
-					dispatchRepositoryContextChanged(
-						input.form,
-						input.classList.contains('ran-booster-credential-input')
-							? 'credential'
-							: 'branch'
-					);
-				});
+				input.addEventListener(
+					'change',
+					function () {
+						dispatchRepositoryContextChanged(
+							input.form,
+							input.classList.contains(
+								'ran-booster-credential-input'
+							)
+								? 'credential'
+								: 'branch'
+						);
+					},
+					{ signal: listeners.signal }
+				);
 			});
 
-		if (!pickerButtons.length) {
+		document
+			.querySelectorAll('.ran-booster-repository-input')
+			.forEach(function (input) {
+				input.addEventListener(
+					'input',
+					function () {
+						const form = input.form;
+						const identityInput = form
+							? input.form.querySelector(
+									'.ran-booster-provider-repository-id-input'
+								)
+							: null;
+						const identitySourceInput = form
+							? form.querySelector(
+									'.ran-booster-provider-repository-identity-source-input'
+								)
+							: null;
+						const publicLookupProfileInput = form
+							? form.querySelector(
+									'.ran-booster-public-lookup-profile-input'
+								)
+							: null;
+
+						if (identityInput) {
+							identityInput.value = '';
+						}
+						if (identitySourceInput) {
+							identitySourceInput.value = 'manual';
+						}
+						if (publicLookupProfileInput) {
+							publicLookupProfileInput.value = '';
+						}
+					},
+					{ signal: listeners.signal }
+				);
+				input.addEventListener(
+					'change',
+					function () {
+						dispatchRepositoryContextChanged(
+							input.form,
+							'repository'
+						);
+					},
+					{ signal: listeners.signal }
+				);
+			});
+
+		if (!pickerComponentsAvailable) {
+			pickerButtons.forEach(function (button) {
+				button.disabled = true;
+				button.hidden = true;
+			});
+		}
+		if (!pickerButtons.length || !pickerComponentsAvailable) {
 			return;
 		}
 
@@ -445,12 +635,19 @@
 		let partialResultMessage = '';
 		let loadedPublicLookupProfileId = '';
 		const modal = createPickerModal();
-		const dialog = modal.querySelector(
-			'.ran-booster-repository-picker__dialog'
-		);
-		const title = modal.querySelector(
-			'.ran-booster-repository-picker__title'
-		);
+		const { Input } = ui;
+		const { createElement, createRoot, createPortal, flushSync } =
+			wp.element;
+		const host = document.createElement('div');
+		const portalContainer = document.createElement('div');
+		portalContainer.className = 'ran-booster-repository-picker-portal';
+		document.body.append(host, portalContainer);
+		const root = createRoot(host);
+		let isOpen = false;
+		let finalFocusTarget = null;
+		let title = '';
+		let searchValue = '';
+		let searchDisabled = true;
 		const modeButtons = modal.querySelectorAll(
 			'.ran-booster-repository-picker__mode'
 		);
@@ -478,9 +675,29 @@
 		const ownerInput = modal.querySelector(
 			'.ran-booster-repository-picker__owner'
 		);
-		const search = modal.querySelector(
-			'.ran-booster-repository-picker__search'
+		const filterHost = modal.querySelector(
+			'.ran-booster-repository-picker__filter'
 		);
+		const search = {
+			get value() {
+				return searchValue;
+			},
+			set value(value) {
+				searchValue = value;
+				if (isOpen) {
+					renderPicker();
+				}
+			},
+			get disabled() {
+				return searchDisabled;
+			},
+			set disabled(value) {
+				searchDisabled = value;
+				if (isOpen) {
+					renderPicker();
+				}
+			},
+		};
 		const status = modal.querySelector(
 			'.ran-booster-repository-picker__status'
 		);
@@ -488,174 +705,265 @@
 			'.ran-booster-repository-picker__list'
 		);
 
-		document.body.appendChild(modal);
-
-		document
-			.querySelectorAll('.ran-booster-repository-input')
-			.forEach(function (input) {
-				input.addEventListener('input', function () {
-					const form = input.form;
-					const identityInput = form
-						? input.form.querySelector(
-								'.ran-booster-provider-repository-id-input'
+		function renderPicker() {
+			flushSync(function () {
+				root.render(
+					createElement(
+						dialog.Root,
+						{
+							open: isOpen,
+							onOpenChange(open) {
+								if (!open) {
+									closePicker();
+								}
+							},
+							onOpenChangeComplete(open) {
+								if (!open && !isOpen) {
+									document.body.classList.remove(
+										'ran-booster-repository-picker-open'
+									);
+								}
+							},
+						},
+						createElement(
+							dialog.Popup,
+							{
+								className:
+									'ran-booster-repository-picker-modal',
+								size: 'stretch',
+								portal: createElement(dialog.Portal, {
+									container: portalContainer,
+								}),
+								initialFocus() {
+									return activeMode === 'public'
+										? ownerInput
+										: credentialSelect;
+								},
+								finalFocus() {
+									const focused =
+										portalContainer.ownerDocument
+											.activeElement;
+									if (
+										isOpen ||
+										!finalFocusTarget?.isConnected ||
+										(focused !== document.body &&
+											focused !== finalFocusTarget &&
+											!portalContainer.contains(focused))
+									) {
+										return false;
+									}
+									return finalFocusTarget;
+								},
+							},
+							createElement(
+								dialog.Header,
+								null,
+								createElement(dialog.Title, null, title),
+								createElement(dialog.CloseIconButton, {
+									label: __(
+										'Close repository picker',
+										'ran-booster'
+									),
+								})
+							),
+							createElement(
+								dialog.Content,
+								null,
+								// React owns the container; the existing controller owns the native body.
+								createElement('div', {
+									ref(node) {
+										if (node && modal.parentNode !== node) {
+											node.appendChild(modal);
+										}
+									},
+								}),
+								// Input alone owns the filter host's children.
+								createPortal(
+									createElement(Input, {
+										className:
+											'ran-booster-repository-picker__search',
+										type: 'search',
+										'aria-label': __(
+											'Filter repository results',
+											'ran-booster'
+										),
+										placeholder: __(
+											'Filter repository results…',
+											'ran-booster'
+										),
+										value: searchValue,
+										disabled: searchDisabled,
+										onChange(event) {
+											const value = event.target.value;
+											searchValue = value;
+											if (activeProvider) {
+												currentProviderState()[
+													activeMode
+												].filter = value;
+												persistPickerState();
+											}
+											if (loadedRepositories !== null) {
+												renderRepositories(
+													loadedRepositories,
+													value
+												);
+											}
+											renderPicker();
+										},
+									}),
+									filterHost
+								)
 							)
-						: null;
-					const identitySourceInput = form
-						? form.querySelector(
-								'.ran-booster-provider-repository-identity-source-input'
-							)
-						: null;
-					const publicLookupProfileInput = form
-						? form.querySelector(
-								'.ran-booster-public-lookup-profile-input'
-							)
-						: null;
-
-					if (identityInput) {
-						identityInput.value = '';
-					}
-					if (identitySourceInput) {
-						identitySourceInput.value = 'manual';
-					}
-					if (publicLookupProfileInput) {
-						publicLookupProfileInput.value = '';
-					}
-				});
-				input.addEventListener('change', function () {
-					dispatchRepositoryContextChanged(input.form, 'repository');
-				});
-			});
-
-		pickerButtons.forEach(function (pickerButton) {
-			pickerButton.addEventListener('click', function () {
-				activeButton = this;
-				activeForm = this.form;
-				activeProvider = getFormProvider(activeForm);
-
-				if (!activeProvider || !activeProvider.browse) {
-					return;
-				}
-
-				pickerState.lastProvider = activeProvider.code;
-				writeRepositoryPickerState(pickerStorage, pickerState);
-				configurePicker(activeProvider);
-				title.textContent =
-					this.getAttribute('data-package-type') === 'theme'
-						? sprintf(
-								/* translators: %s: repository provider label. */
-								__(
-									'Pick a theme repository from %s',
-									'ran-booster'
-								),
-								activeProvider.label
-							)
-						: sprintf(
-								/* translators: %s: repository provider label. */
-								__(
-									'Pick a plugin repository from %s',
-									'ran-booster'
-								),
-								activeProvider.label
-							);
-				modal.removeAttribute('hidden');
-				document.body.classList.add(
-					'ran-booster-repository-picker-open'
-				);
-				const providerState = currentProviderState();
-				activeMode =
-					providerState.mode === 'accessible' &&
-					!accessibleModeButton.disabled
-						? 'accessible'
-						: 'public';
-				showMode(activeMode, true);
-			});
-		});
-
-		modeButtons.forEach(function (button) {
-			button.addEventListener('click', function () {
-				showMode(button.getAttribute('data-mode'), true);
-			});
-		});
-
-		credentialSelect.addEventListener('change', function () {
-			currentProviderState().accessible.credentialId =
-				credentialSelect.value;
-			persistPickerState();
-			showAccessibleRepositories();
-		});
-		publicProfileSelect.addEventListener('change', function () {
-			persistPublicLookupSelection();
-			resetPublicResults();
-		});
-		ownerInput.addEventListener('input', function () {
-			if (!activeProvider) {
-				return;
-			}
-			currentProviderState().public.owner = ownerInput.value;
-			persistPickerState();
-		});
-
-		publicSearch.addEventListener('submit', function (event) {
-			event.preventDefault();
-			const owner = ownerInput.value.trim();
-
-			if (!owner) {
-				setRepositoryPickerLoading(list, false);
-				loadedRepositories = null;
-				search.disabled = true;
-				list.replaceChildren();
-				setStatus(
-					sprintf(
-						/* translators: %s: provider-specific repository owner label. */
-						__('Enter the %s to search.', 'ran-booster'),
-						activeProvider.owner_label.toLowerCase()
+						)
 					)
 				);
-				ownerInput.focus();
-				return;
-			}
+			});
+		}
 
-			ownerInput.value = owner;
-			currentProviderState().public.owner = owner;
-			persistPublicLookupSelection();
-			const lookup = publicLookupSelection();
-			loadRepositories(
-				'public',
-				owner,
-				'',
-				lookup.identity,
-				lookup.profileId
+		cleanupPicker = function () {
+			cleanupPicker = function () {};
+			listeners.abort();
+			requestSequence += 1;
+			isOpen = false;
+			flushSync(function () {
+				root.unmount();
+			});
+			host.remove();
+			portalContainer.remove();
+			document.body.classList.remove(
+				'ran-booster-repository-picker-open'
+			);
+		};
+
+		pickerButtons.forEach(function (pickerButton) {
+			pickerButton.addEventListener(
+				'click',
+				function () {
+					activeButton = this;
+					activeForm = this.form;
+					activeProvider = getFormProvider(activeForm);
+
+					if (!activeProvider || !activeProvider.browse) {
+						return;
+					}
+
+					pickerState.lastProvider = activeProvider.code;
+					writeRepositoryPickerState(pickerStorage, pickerState);
+					configurePicker(activeProvider);
+					title =
+						this.getAttribute('data-package-type') === 'theme'
+							? sprintf(
+									/* translators: %s: repository provider label. */
+									__(
+										'Pick a theme repository from %s',
+										'ran-booster'
+									),
+									activeProvider.label
+								)
+							: sprintf(
+									/* translators: %s: repository provider label. */
+									__(
+										'Pick a plugin repository from %s',
+										'ran-booster'
+									),
+									activeProvider.label
+								);
+					const providerState = currentProviderState();
+					activeMode =
+						providerState.mode === 'accessible' &&
+						!accessibleModeButton.disabled
+							? 'accessible'
+							: 'public';
+					showMode(activeMode, false);
+					finalFocusTarget = activeButton;
+					isOpen = true;
+					document.body.classList.add(
+						'ran-booster-repository-picker-open'
+					);
+					renderPicker();
+				},
+				{ signal: listeners.signal }
 			);
 		});
 
-		modal.addEventListener('click', function (event) {
-			if (
-				event.target === modal ||
-				event.target.closest('.ran-booster-repository-picker__close')
-			) {
-				closePicker();
-			}
+		modeButtons.forEach(function (button) {
+			button.addEventListener(
+				'click',
+				function () {
+					showMode(button.getAttribute('data-mode'), true);
+				},
+				{ signal: listeners.signal }
+			);
 		});
 
-		modal.addEventListener('keydown', function (event) {
-			if (event.key === 'Escape') {
-				event.preventDefault();
-				closePicker();
-				return;
-			}
-
-			trapFocus(event, dialog);
-		});
-
-		search.addEventListener('input', function () {
-			if (activeProvider) {
-				currentProviderState()[activeMode].filter = search.value;
+		credentialSelect.addEventListener(
+			'change',
+			function () {
+				currentProviderState().accessible.credentialId =
+					credentialSelect.value;
 				persistPickerState();
-			}
-			if (loadedRepositories !== null) {
-				renderRepositories(loadedRepositories, search.value);
-			}
-		});
+				showAccessibleRepositories();
+			},
+			{ signal: listeners.signal }
+		);
+		publicProfileSelect.addEventListener(
+			'change',
+			function () {
+				persistPublicLookupSelection();
+				resetPublicResults();
+			},
+			{ signal: listeners.signal }
+		);
+		ownerInput.addEventListener(
+			'input',
+			function () {
+				if (!activeProvider) {
+					return;
+				}
+				currentProviderState().public.owner = ownerInput.value;
+				persistPickerState();
+				resetPublicResults();
+			},
+			{ signal: listeners.signal }
+		);
+
+		publicSearch.addEventListener(
+			'submit',
+			function (event) {
+				event.preventDefault();
+				const owner = ownerInput.value.trim();
+
+				if (!owner) {
+					requestSequence += 1;
+					setRepositoryPickerLoading(list, false);
+					loadedRepositories = null;
+					search.disabled = true;
+					list.replaceChildren();
+					setStatus(
+						sprintf(
+							/* translators: %s: provider-specific repository owner label. */
+							__('Enter the %s to search.', 'ran-booster'),
+							activeProvider.owner_label.toLowerCase()
+						)
+					);
+					ownerInput.focus();
+					return;
+				}
+
+				ownerInput.value = owner;
+				currentProviderState().public.owner = owner;
+				persistPublicLookupSelection();
+				const lookup = publicLookupSelection();
+				loadRepositories(
+					'public',
+					owner,
+					'',
+					lookup.identity,
+					lookup.profileId
+				);
+			},
+			{ signal: listeners.signal }
+		);
 
 		document
 			.querySelectorAll(
@@ -666,15 +974,8 @@
 		function createPickerModal() {
 			const overlay = document.createElement('div');
 
-			overlay.className =
-				'ran-booster-repository-picker ran-booster-dialog';
-			overlay.setAttribute('hidden', 'hidden');
+			overlay.className = 'ran-booster-repository-picker';
 			overlay.innerHTML =
-				'<div class="ran-booster-repository-picker__dialog ran-booster-dialog__surface" role="dialog" aria-modal="true" aria-labelledby="ran-booster-repository-picker-title">' +
-				'<div class="ran-booster-repository-picker__header ran-booster-dialog__header">' +
-				'<h2 id="ran-booster-repository-picker-title" class="ran-booster-repository-picker__title ran-booster-dialog__title"></h2>' +
-				'<button type="button" class="ran-booster-repository-picker__close ran-booster-dialog__close"><span aria-hidden="true">&times;</span></button>' +
-				'</div>' +
 				'<div class="ran-booster-repository-picker__body">' +
 				'<div class="ran-booster-repository-picker__modes" role="group">' +
 				'<button type="button" class="ran-booster-source-choice ran-booster-repository-picker__mode" data-mode="public" aria-pressed="false">' +
@@ -695,23 +996,30 @@
 				'<label for="ran-booster-repository-picker-public-profile"></label>' +
 				'<select id="ran-booster-repository-picker-public-profile" class="ran-booster-repository-picker__public-profile"></select>' +
 				'</div>' +
-				'<div class="notice notice-info inline ran-booster-repository-picker__public-limit-notice" hidden>' +
-				'<p><span></span> <a class="ran-booster-repository-picker__public-limit-link" href="#"></a></p>' +
-				'</div>' +
+				'<div data-ran-booster-picker-limit-slot></div>' +
 				'<label for="ran-booster-repository-picker-owner" class="ran-booster-repository-picker__owner-label"></label>' +
 				'<div class="ran-booster-repository-picker__public-search-fields">' +
 				'<input id="ran-booster-repository-picker-owner" class="regular-text ran-booster-repository-picker__owner" type="text" autocomplete="off" autocapitalize="none" spellcheck="false">' +
-				'<button type="submit" class="button button-primary"></button>' +
+				'<button type="submit" class="ran-wp-ui-reset-button ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-brand is-solid"></button>' +
 				'</div>' +
 				'</form>' +
 				'<div class="ran-booster-repository-picker__filter">' +
-				'<label for="ran-booster-repository-picker-search" class="screen-reader-text"></label>' +
-				'<input id="ran-booster-repository-picker-search" class="regular-text ran-booster-repository-picker__search" type="search" autocomplete="off">' +
 				'</div>' +
-				'<p class="ran-booster-repository-picker__status" role="status" aria-live="polite"></p>' +
+				'<p class="ran-booster-repository-picker__status"></p>' +
 				'<div class="ran-booster-repository-picker__list"></div>' +
-				'</div>' +
 				'</div>';
+			// The public-limit notice is the shared static Notice, built by the
+			// helper and put where the slot stands.
+			const limitNotice = window.ranBoosterNotice.create('info', {
+				className: 'ran-booster-repository-picker__public-limit-notice',
+				scope: 'global',
+			});
+			limitNotice.host.hidden = true;
+			limitNotice.content.innerHTML =
+				'<p><span></span> <a class="ran-booster-repository-picker__public-limit-link" href="#"></a></p>';
+			overlay
+				.querySelector('[data-ran-booster-picker-limit-slot]')
+				.replaceWith(limitNotice.host);
 			const modeOptions = overlay.querySelectorAll(
 				'.ran-booster-repository-picker__mode'
 			);
@@ -722,15 +1030,6 @@
 				'.ran-booster-repository-picker__public-limit-link'
 			);
 
-			overlay.querySelector(
-				'.ran-booster-repository-picker__title'
-			).textContent = __('Pick a repository', 'ran-booster');
-			overlay
-				.querySelector('.ran-booster-repository-picker__close')
-				.setAttribute(
-					'aria-label',
-					__('Close repository picker', 'ran-booster')
-				);
 			overlay
 				.querySelector('.ran-booster-repository-picker__modes')
 				.setAttribute(
@@ -802,12 +1101,6 @@
 			overlay.querySelector(
 				'.ran-booster-repository-picker__public-search button'
 			).textContent = __('Search', 'ran-booster');
-			overlay.querySelector(
-				'.ran-booster-repository-picker__filter label'
-			).textContent = __('Filter repository results', 'ran-booster');
-			overlay.querySelector(
-				'.ran-booster-repository-picker__search'
-			).placeholder = __('Filter repository results…', 'ran-booster');
 			return overlay;
 		}
 
@@ -864,7 +1157,7 @@
 				);
 			});
 			const formCredential = activeForm
-				? activeForm.querySelector('.ran-booster-credential-input')
+				? findFormControl(activeForm, '.ran-booster-credential-input')
 				: null;
 			if (
 				formCredential &&
@@ -964,6 +1257,7 @@
 		}
 
 		function showMode(mode, moveFocus) {
+			requestSequence += 1;
 			setRepositoryPickerLoading(list, false);
 			activeMode =
 				mode === 'accessible' && !accessibleModeButton.disabled
@@ -1268,87 +1562,69 @@
 		}
 
 		function selectRepository(repository) {
-			if (!activeForm) {
+			if (!activeForm || !activeForm.isConnected) {
 				return;
 			}
 
-			const repositoryInput = activeForm.querySelector(
-				'.ran-booster-repository-input'
-			);
-			const branchInput = activeForm.querySelector(
-				'.ran-booster-branch-input'
-			);
-			let credentialInput = activeForm.querySelector(
-				'.ran-booster-credential-input'
-			);
-			const providerInput = activeForm.querySelector(
-				'.ran-booster-provider-input'
-			);
-			const providerRepositoryIdInput = activeForm.querySelector(
-				'.ran-booster-provider-repository-id-input'
-			);
-			const providerRepositoryIdentitySourceInput =
-				activeForm.querySelector(
-					'.ran-booster-provider-repository-identity-source-input'
-				);
-			const publicLookupProfileInput = activeForm.querySelector(
-				'.ran-booster-public-lookup-profile-input'
+			const repositoryInput = applyRepositorySelection(
+				activeForm,
+				repository,
+				{
+					publicLookupProfileId:
+						activeMode === 'public'
+							? loadedPublicLookupProfileId
+							: '',
+					credentialId:
+						activeMode === 'accessible'
+							? repository.credential_id ||
+								credentialSelect.value ||
+								''
+							: '',
+					updateProviderForm(form) {
+						updateProviderForm(form, false);
+					},
+					selectCredential,
+				}
 			);
 
-			if (!credentialInput) {
-				credentialInput = document.createElement('input');
-				credentialInput.type = 'hidden';
-				credentialInput.name = 'ran_booster[credential_id]';
-				credentialInput.className = 'ran-booster-credential-input';
-				activeForm.appendChild(credentialInput);
+			if (repositoryInput) {
+				dispatchRepositoryContextChanged(activeForm, 'picker');
 			}
-
-			repositoryInput.value = repository.locator || '';
-			if (providerInput) {
-				providerInput.value = repository.provider;
-				updateProviderForm(activeForm, false);
-			}
-			if (providerRepositoryIdInput) {
-				providerRepositoryIdInput.value =
-					repository.provider_repository_id || '';
-			}
-			if (providerRepositoryIdentitySourceInput) {
-				providerRepositoryIdentitySourceInput.value = 'picker';
-			}
-			if (publicLookupProfileInput) {
-				publicLookupProfileInput.value =
-					activeMode === 'public' ? loadedPublicLookupProfileId : '';
-			}
-			branchInput.value = repository.default_branch || '';
-			selectCredential(
-				credentialInput,
-				repository.provider,
-				activeMode === 'accessible'
-					? repository.credential_id || credentialSelect.value || ''
-					: ''
-			);
-			dispatchRepositoryContextChanged(activeForm, 'picker');
-			closePicker();
-			repositoryInput.focus();
+			closePicker(repositoryInput);
 		}
 
-		function closePicker() {
-			if (modal.hasAttribute('hidden')) {
+		function closePicker(selectionTarget) {
+			if (!isOpen) {
 				return;
 			}
-			setRepositoryPickerLoading(list, false);
-			modal.setAttribute('hidden', 'hidden');
 			requestSequence += 1;
-			document.body.classList.remove(
-				'ran-booster-repository-picker-open'
-			);
-			if (activeButton) {
-				activeButton.focus();
+			isOpen = false;
+			setRepositoryPickerLoading(list, false);
+			finalFocusTarget =
+				selectionTarget ||
+				(activeButton?.isConnected ? activeButton : null);
+			if (!finalFocusTarget && activeForm?.isConnected) {
+				finalFocusTarget =
+					activeForm.querySelector(
+						'.ran-booster-open-repository-picker:not([disabled]):not([hidden])'
+					) ||
+					activeForm.querySelector('.ran-booster-repository-input');
+			}
+			renderPicker();
+		}
+
+		// The status line is announced only while the dialog is open and only
+		// when its text changes. Load errors are assertive.
+		function writeStatus(message, politeness = 'polite') {
+			const changed = status.textContent !== message;
+			status.textContent = message;
+			if (changed && isOpen) {
+				window.ranBoosterAnnounce(message, politeness);
 			}
 		}
 
 		function setStatus(message) {
-			status.textContent = message;
+			writeStatus(message);
 			status.classList.remove(
 				'ran-booster-repository-picker__status--error'
 			);
@@ -1361,15 +1637,18 @@
 			partialResultMessage = '';
 			search.disabled = true;
 			list.replaceChildren();
-			status.textContent =
+			writeStatus(
 				message ||
-				__('Repositories could not be loaded.', 'ran-booster');
+					__('Repositories could not be loaded.', 'ran-booster'),
+				'assertive'
+			);
 			status.classList.add(
 				'ran-booster-repository-picker__status--error'
 			);
 		}
 
 		function resetPublicResults() {
+			requestSequence += 1;
 			setRepositoryPickerLoading(list, false);
 			loadedRepositories = null;
 			loadedPublicLookupProfileId = '';
@@ -1417,7 +1696,7 @@
 				return null;
 			}
 
-			const input = form.querySelector('.ran-booster-provider-input');
+			const input = findFormControl(form, '.ran-booster-provider-input');
 			const code = input
 				? input.value
 				: settings.defaultProvider ||
@@ -1427,10 +1706,12 @@
 
 		function updateProviderForm(form, clearSelection) {
 			const provider = getFormProvider(form);
-			const credentialInput = form.querySelector(
+			const credentialInput = findFormControl(
+				form,
 				'.ran-booster-credential-input'
 			);
-			const publicLookupProfileInput = form.querySelector(
+			const publicLookupProfileInput = findFormControl(
+				form,
 				'.ran-booster-public-lookup-profile-input'
 			);
 			const repositoryLink = form.parentElement
@@ -1467,7 +1748,8 @@
 			updateDeploymentPolicyAvailability(form, provider);
 
 			if (repositoryLink && provider) {
-				const repositoryInput = form.querySelector(
+				const repositoryInput = findFormControl(
+					form,
 					'.ran-booster-repository-input'
 				);
 				const repository = repositoryInput ? repositoryInput.value : '';
@@ -1481,10 +1763,12 @@
 			}
 
 			if (clearSelection) {
-				const providerRepositoryIdInput = form.querySelector(
+				const providerRepositoryIdInput = findFormControl(
+					form,
 					'.ran-booster-provider-repository-id-input'
 				);
-				const identitySourceInput = form.querySelector(
+				const identitySourceInput = findFormControl(
+					form,
 					'.ran-booster-provider-repository-identity-source-input'
 				);
 
@@ -1510,66 +1794,6 @@
 			});
 
 			select.selectedIndex = match ? match.index : 0;
-		}
-	}
-
-	function trapFocus(event, container) {
-		if (event.key !== 'Tab') {
-			return;
-		}
-
-		const focusable = Array.from(
-			container.querySelectorAll(
-				'a[href], button:not(:disabled), input:not(:disabled):not([type="hidden"]), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"]):not([disabled])'
-			)
-		).filter(function (element) {
-			if (
-				('disabled' in element && element.disabled) ||
-				element.tabIndex < 0 ||
-				(element.tagName === 'INPUT' && element.type === 'hidden') ||
-				!element.getClientRects().length
-			) {
-				return false;
-			}
-
-			let current = element;
-			while (current) {
-				if (
-					current.hidden ||
-					current.getAttribute('aria-hidden') === 'true'
-				) {
-					return false;
-				}
-
-				const style =
-					current.ownerDocument.defaultView.getComputedStyle(current);
-				if (
-					style.display === 'none' ||
-					style.visibility === 'hidden' ||
-					style.visibility === 'collapse'
-				) {
-					return false;
-				}
-
-				current = current.parentElement;
-			}
-
-			return true;
-		});
-		const first = focusable[0];
-		const last = focusable[focusable.length - 1];
-		const activeElement = container.ownerDocument.activeElement;
-
-		if (!first || !last) {
-			return;
-		}
-
-		if (event.shiftKey && activeElement === first) {
-			event.preventDefault();
-			last.focus();
-		} else if (!event.shiftKey && activeElement === last) {
-			event.preventDefault();
-			first.focus();
 		}
 	}
 })();

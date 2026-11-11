@@ -1,0 +1,191 @@
+{
+	"source": {
+		"package": "@wordpress/ui",
+		"version": "0.26.0"
+	},
+	"prefix": "ran-wp-ui",
+	"components": {
+		"box-sizing": {
+			"block": "ran-wp-ui-box-sizing",
+			"elements": [
+				"box-sizing"
+			],
+			"states": [],
+			"modifiers": [],
+			"properties": [],
+			"sourceSha256": "aba7dee71f71a1dd84361586a80e1cf73a8015c2d8243935e92b9e5e51bf824a"
+		},
+		"card": {
+			"block": "ran-wp-ui-card",
+			"elements": [
+				"content",
+				"fullbleed",
+				"header"
+			],
+			"states": [],
+			"modifiers": [],
+			"properties": [
+				"--wp-ui-card-header-content-gap",
+				"--wp-ui-card-header-content-margin",
+				"--wp-ui-card-padding"
+			],
+			"sourceSha256": "bd749dbeab3afea2ccfd19ab22b35e68ed1f75f3ff05150edf80c07afa01ed03"
+		},
+		"text": {
+			"block": "ran-wp-ui-text",
+			"elements": [],
+			"states": [
+				"is-body-lg",
+				"is-body-md",
+				"is-body-sm",
+				"is-body-xl",
+				"is-heading-2xl",
+				"is-heading-lg",
+				"is-heading-md",
+				"is-heading-sm",
+				"is-heading-xl"
+			],
+			"modifiers": [],
+			"properties": [],
+			"sourceSha256": "3b21af7530066f80789a8473dc322e9b03023362ac7d6d3320cb28d9f76ad40e"
+		},
+		"badge": {
+			"block": "ran-wp-ui-badge",
+			"elements": [
+				"infotip-icon",
+				"infotip-trigger"
+			],
+			"states": [
+				"is-draft-intent",
+				"is-high-intent",
+				"is-informational-intent",
+				"is-low-intent",
+				"is-medium-intent",
+				"is-none-intent",
+				"is-stable-intent"
+			],
+			"modifiers": [],
+			"properties": [],
+			"sourceSha256": "bc6615fd3adbab4cdf79fa9e495d0d49ec1ffa0574cde758eaa4fd37398937c0"
+		},
+		"link": {
+			"block": "ran-wp-ui-link",
+			"elements": [
+				"contents",
+				"icon",
+				"with-icon"
+			],
+			"states": [
+				"is-brand",
+				"is-neutral",
+				"is-unstyled"
+			],
+			"modifiers": [],
+			"properties": [],
+			"sourceSha256": "f73ab2b63ee269ab3d93c302421f28ef9e84a3d2f3025328a2a456de8463bad8"
+		},
+		"reset-a": {
+			"block": "ran-wp-ui-reset-a",
+			"elements": [],
+			"states": [],
+			"modifiers": [],
+			"properties": [],
+			"sourceSha256": "e096c6d4f7283c7eb224b553b94a28ce548545dd05e367bb218d4d0e03830fca"
+		},
+		"notice": {
+			"block": "ran-wp-ui-notice",
+			"elements": [
+				"action-button",
+				"action-link",
+				"actions",
+				"close-icon",
+				"description",
+				"icon",
+				"title"
+			],
+			"states": [
+				"is-error",
+				"is-info",
+				"is-success",
+				"is-warning"
+			],
+			"modifiers": [],
+			"properties": [
+				"--icon-height",
+				"--text-vertical-padding",
+				"--wp-ui-notice-background-color",
+				"--wp-ui-notice-border-color",
+				"--wp-ui-notice-decorative-icon-color",
+				"--wp-ui-notice-text-color"
+			],
+			"sourceSha256": "1f46d1390d0cde0acffa6bfa0ee79ccdecb9a0009cb9aae85170c2bfbc632914"
+		},
+		"reset-button": {
+			"block": "ran-wp-ui-reset-button",
+			"elements": [],
+			"states": [],
+			"modifiers": [],
+			"properties": [],
+			"sourceSha256": "e096c6d4f7283c7eb224b553b94a28ce548545dd05e367bb218d4d0e03830fca"
+		},
+		"button": {
+			"block": "ran-wp-ui-button",
+			"elements": [
+				"icon",
+				"spinner"
+			],
+			"states": [
+				"is-brand",
+				"is-compact",
+				"is-loading",
+				"is-minimal",
+				"is-neutral",
+				"is-outline",
+				"is-small",
+				"is-solid",
+				"is-unstyled"
+			],
+			"modifiers": [],
+			"properties": [
+				"--wp-ui-button-aspect-ratio",
+				"--wp-ui-button-background-color",
+				"--wp-ui-button-background-color-active",
+				"--wp-ui-button-background-color-disabled",
+				"--wp-ui-button-border-color",
+				"--wp-ui-button-border-color-active",
+				"--wp-ui-button-border-color-disabled",
+				"--wp-ui-button-font-size",
+				"--wp-ui-button-font-weight",
+				"--wp-ui-button-foreground-color",
+				"--wp-ui-button-foreground-color-active",
+				"--wp-ui-button-foreground-color-disabled",
+				"--wp-ui-button-height",
+				"--wp-ui-button-icon-margin",
+				"--wp-ui-button-min-width",
+				"--wp-ui-button-padding-block",
+				"--wp-ui-button-padding-inline"
+			],
+			"bridge": {
+				"[data-disabled]": [
+					":disabled",
+					"[aria-disabled=true]"
+				]
+			},
+			"sourceSha256": "b738f2f6fa22a648b27d5ba54c96b8228f7eb73657c247cf4f261adc048e6125"
+		},
+		"outset-ring": {
+			"block": "ran-wp-ui-outset-ring",
+			"elements": [],
+			"states": [],
+			"modifiers": [
+				"focus",
+				"focus-except-active",
+				"focus-visible",
+				"focus-within",
+				"focus-within-except-active"
+			],
+			"properties": [],
+			"sourceSha256": "f5c6b667170b6f22b58521d4471a294835435d315f17c36e42ec275564abacb7"
+		}
+	}
+}

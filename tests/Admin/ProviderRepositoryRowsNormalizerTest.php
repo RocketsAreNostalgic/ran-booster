@@ -251,6 +251,7 @@ final class ProviderRepositoryRowsNormalizerTest extends TestCase {
 		self::assertStringContainsString( 'repository_view=branch', $action['url'] );
 		self::assertStringEndsWith( '#ran-booster-repository-webhook-setup-heading', $action['url'] );
 		self::assertSame( $row['consequence_id'], $action['described_by'] );
+		self::assertSame( '', $row['consequence'] );
 		self::assertStringStartsWith( 'https://example.test/wp-admin/network/admin.php?', $settings['url'] );
 	}
 

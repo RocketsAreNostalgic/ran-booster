@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 foreach ( $sections as $section ) :
 	if ( null !== $section['heading'] ) :
 		?>
-		<h3><?php echo esc_html( $section['heading'] ); ?></h3>
+		<h4><?php echo esc_html( $section['heading'] ); ?></h4>
 		<?php
 	endif;
 	?>

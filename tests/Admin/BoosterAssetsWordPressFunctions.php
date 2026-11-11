@@ -14,6 +14,10 @@ function trailingslashit( string $value ): string {
 	return rtrim( $value, '/\\' ) . '/';
 }
 
+function wp_style_is( string $handle, string $status = 'enqueued' ): bool {
+	return 'wp-theme' === $handle && 'registered' === $status && ( $GLOBALS['ran_booster_asset_test_theme_registered'] ?? true );
+}
+
 /** @param list<string> $dependencies */
 function wp_register_style( string $handle, string $source, array $dependencies = array(), string|bool|null $version = false ): bool {
 	$GLOBALS['ran_booster_asset_test_registered_styles'][ $handle ] = array(
@@ -82,4 +86,20 @@ if ( ! function_exists( __NAMESPACE__ . '\\wp_create_nonce' ) ) {
 	function wp_create_nonce( string $action ): string {
 		return 'nonce-for-' . $action;
 	}
+}
+
+/** @param array{associative?: bool} $options */
+function wp_json_file_decode( string $filename, array $options = array() ): mixed {
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Test stub reads the local generated or disposable fixture only.
+	$content = file_get_contents( $filename );
+	return false === $content ? null : json_decode( $content, $options['associative'] ?? false );
+}
+
+/** @param list<string> $dependencies */
+function wp_enqueue_script_module( string $id, string $source, array $dependencies = array(), string|false|null $version = false ): void {
+	$GLOBALS['ran_booster_asset_test_enqueued_modules'][ $id ] = array(
+		'source'       => $source,
+		'dependencies' => $dependencies,
+		'version'      => $version,
+	);
 }

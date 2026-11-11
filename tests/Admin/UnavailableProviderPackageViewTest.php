@@ -125,13 +125,31 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'href="https://github.com/owner/exact-repository"', $html );
 		self::assertStringContainsString( 'id="ran-booster-package-edit-form"', $html );
 		self::assertStringContainsString( 'form="ran-booster-package-edit-form"', $html );
-		self::assertStringContainsString( 'ran-booster-settings-actions', $html );
+		self::assertStringContainsString( 'ran-booster-package-settings__save-actions', $html );
 		self::assertStringContainsString( 'ran-booster-package-danger-zone', $html );
 		self::assertStringContainsString( 'value="unlink-plugin"', $html );
 		self::assertStringContainsString( 'value="unlink-delete-plugin"', $html );
 		self::assertSame( 2, substr_count( $html, 'name="ran_booster[confirm_package_removal]" value="1" required' ) );
 		self::assertSame( 3, substr_count( $html, 'name="ran_booster[expected_source_revision]" value="1"' ) );
 		self::assertStringContainsString( 'name="_ran_booster_reinstall_nonce"', $html );
+	}
+
+	public function test_unavailable_provider_notice_escapes_repository_identity(): void {
+		$package = $this->package();
+		$package->set_repository( new ManagedRepository( 'temporarily-offline', 'owner/<script>', 'id<unsafe>', 'release' ) );
+		$package_view              = PackagePagePresenter::plugin();
+		$package_provider_settings = array(
+			'default_provider' => 'temporarily-offline',
+			'providers'        => array( $this->provider_option( 'temporarily-offline', false ) ),
+		);
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( '<code>owner/&lt;script&gt;</code>', $html );
+		self::assertStringContainsString( '<code>id&lt;unsafe&gt;</code>', $html );
+		self::assertStringNotContainsString( '<script>', $html );
 	}
 
 	public function test_list_view_labels_unavailable_provider_and_disables_only_deployment_action(): void {
@@ -153,7 +171,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 		self::assertStringContainsString( 'owner/exact-repository', $html );
 		self::assertStringContainsString( 'temporarily-offline', $html );
-		self::assertStringContainsString( 'ran-booster-badge--error">Git provider unavailable</span>', $html );
+		self::assertStringContainsString( 'data-ran-booster-badge-intent="high">Git provider unavailable</span>', $html );
 		self::assertStringNotContainsString( 'Recover package management', $html );
 		self::assertStringNotContainsString( 'recovery=1', $html );
 		self::assertStringNotContainsString( 'Review management removal', $html );
@@ -177,7 +195,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 				$html
 			);
 		}
-		self::assertStringContainsString( '>Edit settings</a>', $html );
+		self::assertStringContainsString( '>Edit settings<span class="screen-reader-text">: ', $html );
 		self::assertStringNotContainsString( '>Unlink plugin</button>', $html );
 		self::assertStringNotContainsString( 'name="ran_booster[action]" value="unlink-plugin"', $html );
 		self::assertStringContainsString( 'data-ran-booster-bulk-form', $html );
@@ -188,15 +206,18 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'value="deactivate-plugins">Disable in WordPress</option>', $html );
 		self::assertStringContainsString( 'ran-booster-package-row__wordpress-state', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-package-row--wordpress-active' ) );
+		self::assertMatchesRegularExpression( '/ran-booster-package-row__wordpress-state">\\s*<span class="ran-booster-package-row__state-label">WordPress<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent" data-ran-booster-badge data-ran-booster-badge-intent="stable">Enabled<\\/span>/', $html );
 		self::assertStringContainsString( '>WordPress</span>', $html );
 		self::assertStringContainsString( '>Enabled</span>', $html );
-		self::assertStringContainsString( 'ran-booster-package-row__update-state is-automatic', $html );
+		self::assertMatchesRegularExpression( '/ran-booster-package-row__update-state">\\s*<span class="ran-booster-package-row__state-label">Updates<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent" data-ran-booster-badge data-ran-booster-badge-intent="stable">Automatic<\\/span>/', $html );
 		self::assertStringContainsString( '>Automatic</span>', $html );
 		self::assertStringContainsString( 'Branch · release', $html );
 		self::assertStringNotContainsString( 'Branch · release · Push-to-Deploy', $html );
 		self::assertStringContainsString( 'The saved Git provider is unavailable.', $html );
-		self::assertSame( 1, substr_count( $html, '<span class="ran-booster-badge ' ) );
+		self::assertSame( 1, $this->status_badge_count( $html ) );
+		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
 		self::assertStringContainsString( 'Review package health, deploy saved branches', $html );
+		self::assertSame( 1, substr_count( $html, 'Manual deployments run only when an administrator requests one.' ) );
 		self::assertStringContainsString( 'Deployment activity', $html );
 	}
 
@@ -219,8 +240,9 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertMatchesRegularExpression( '/ran-booster-badge--error"[^>]*>Failed<\/span>/', $html );
-		self::assertSame( 2, substr_count( $html, '<span class="ran-booster-badge ' ) );
+		self::assertMatchesRegularExpression( '/data-ran-booster-badge-intent="high"[^>]*>Failed<\/span>/', $html );
+		self::assertSame( 2, $this->status_badge_count( $html ) );
+		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
 		self::assertStringContainsString( 'Last activity', $html );
 		self::assertStringContainsString( '>Failed</span>', $html );
 		self::assertStringNotContainsString( str_repeat( 'a', 40 ), $html );
@@ -242,12 +264,13 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/index.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'ran-booster-badge--error">Credential unavailable</span>', $html );
-		self::assertSame( 1, substr_count( $html, '<span class="ran-booster-badge ' ) );
+		self::assertStringContainsString( 'data-ran-booster-badge-intent="high">Credential unavailable</span>', $html );
+		self::assertSame( 1, $this->status_badge_count( $html ) );
+		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
 		self::assertStringContainsString( 'The saved repository credential is unavailable.', $html );
 		self::assertStringContainsString( 'data-ran-booster-update-label>Reinstall</span>', $html );
 		self::assertStringContainsString( 'button-update-package"  disabled="disabled"', $html );
-		self::assertStringContainsString( 'ran-booster-package-row__wordpress-state is-disabled', $html );
+		self::assertMatchesRegularExpression( '/ran-booster-package-row__wordpress-state">\\s*<span class="ran-booster-package-row__state-label">WordPress<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">Disabled<\\/span>/', $html );
 		self::assertStringContainsString( '>WordPress</span>', $html );
 		self::assertStringContainsString( '>Disabled</span>', $html );
 	}
@@ -276,7 +299,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 		self::assertStringNotContainsString( 'Deployment: Failed', $html );
 		self::assertSame( 2, substr_count( $html, 'ran-booster-package-row--wordpress-active' ) );
-		self::assertStringContainsString( 'ran-booster-package-row__update-state is-disabled', $html );
+		self::assertMatchesRegularExpression( '/ran-booster-package-row__update-state">\\s*<span class="ran-booster-package-row__state-label">Updates<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">Disabled<\\/span>/', $html );
 		self::assertStringContainsString( '>Updates</span>', $html );
 		self::assertStringContainsString( '>Disabled</span>', $html );
 		self::assertStringContainsString( 'Branch · release', $html );
@@ -294,7 +317,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'data-ran-booster-update-label>Reinstall</span>', $html );
 		self::assertStringContainsString( 'button-update-package"  disabled="disabled"', $html );
 		self::assertStringContainsString( 'data-update-can-run="0"', $html );
-		self::assertStringContainsString( '>Edit settings</a>', $html );
+		self::assertStringContainsString( '>Edit settings<span class="screen-reader-text">: ', $html );
 		self::assertMatchesRegularExpression(
 			'/data-ran-booster-package-checkbox(?![^>]*disabled="disabled")[^>]*>/',
 			$html
@@ -319,8 +342,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringNotContainsString( 'ran-booster-package-row--wordpress-active', $html );
-		self::assertStringContainsString( 'ran-booster-package-row__wordpress-state is-disabled', $html );
-		self::assertStringContainsString( 'ran-booster-package-row__update-state is-manual', $html );
+		self::assertMatchesRegularExpression( '/ran-booster-package-row__wordpress-state">\\s*<span class="ran-booster-package-row__state-label">WordPress<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-none-intent" data-ran-booster-badge data-ran-booster-badge-intent="none">Disabled<\\/span>/', $html );
+		self::assertMatchesRegularExpression( '/ran-booster-package-row__update-state">\\s*<span class="ran-booster-package-row__state-label">Updates<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-informational-intent" data-ran-booster-badge data-ran-booster-badge-intent="informational">Manual<\\/span>/', $html );
 		self::assertStringContainsString( '>Manual</span>', $html );
 		self::assertStringContainsString( 'Branch · release', $html );
 		self::assertStringNotContainsString( 'Branch · release · Manual', $html );
@@ -343,7 +366,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'value="deactivate-plugins"', $html );
 		self::assertStringNotContainsString( 'ran-booster-package-row__wordpress-state', $html );
 		self::assertStringNotContainsString( '>WordPress</span>', $html );
-		self::assertStringContainsString( 'ran-booster-package-row__update-state is-automatic', $html );
+		self::assertMatchesRegularExpression( '/ran-booster-package-row__update-state">\\s*<span class="ran-booster-package-row__state-label">Updates<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent" data-ran-booster-badge data-ran-booster-badge-intent="stable">Automatic<\\/span>/', $html );
 		self::assertStringContainsString( '>Updates</span>', $html );
 		self::assertStringContainsString( '>Automatic</span>', $html );
 		self::assertStringNotContainsString( 'ran-booster-package-row--wordpress-active', $html );
@@ -489,7 +512,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringContainsString( 'Filter by update source', $html );
 		self::assertStringContainsString( 'All update sources', $html );
 		self::assertMatchesRegularExpression( '/<option value="release_asset"\s*>Releases<\/option>/', $html );
-		self::assertStringContainsString( 'ran-booster-package-row__update-state is-automatic', $html );
+		self::assertMatchesRegularExpression( '/ran-booster-package-row__update-state">\\s*<span class="ran-booster-package-row__state-label">Updates<\\/span>\\s*<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent" data-ran-booster-badge data-ran-booster-badge-intent="stable">Automatic<\\/span>/', $html );
 		self::assertStringContainsString( '>Automatic</span>', $html );
 		self::assertStringNotContainsString( 'Published releases · WordPress automatic updates', $html );
 		self::assertStringContainsString( 'Release available', $html );
@@ -507,7 +530,8 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'Deployment activity', $html );
 		self::assertStringContainsString( 'Release details', $html );
 		self::assertSame( 0, substr_count( $html, 'button-update-package' ) );
-		self::assertSame( 1, substr_count( $html, '<span class="ran-booster-badge ' ) );
+		self::assertSame( 1, $this->status_badge_count( $html ) );
+		self::assertSame( 0, substr_count( $html, 'data-ran-booster-ui-badge' ) );
 	}
 
 	public function test_list_view_makes_active_and_needs_attention_attempts_explicit(): void {
@@ -566,7 +590,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'button-update-package"  disabled="disabled"', $html );
 	}
 
-	public function test_repository_field_explains_provider_owned_nested_locators(): void {
+	public function test_repository_field_omits_provider_locator_helper_text(): void {
 		$package_view              = PackagePagePresenter::plugin();
 		$repository_value          = 'group/subgroup/example-plugin';
 		$provider_browse_available = false;
@@ -576,7 +600,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		require dirname( __DIR__, 2 ) . '/views/packages/fields/repository.php';
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( 'Repository locator supplied by the selected Git provider.', $html );
+		self::assertStringNotContainsString( 'Repository locator supplied by', $html );
 		self::assertStringNotContainsString( 'Repository account and name', $html );
 		self::assertStringContainsString( 'name="ran_booster[repository]"', $html );
 		self::assertMatchesRegularExpression( '/ran-booster-open-repository-picker"[^>]* hidden\s+disabled="disabled"/', $html );
@@ -597,6 +621,33 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'hidden disabled="disabled"', $html );
 	}
 
+	public function test_development_warning_envelope_and_link_conditions(): void {
+		foreach ( array(
+			array( 'manual', true, true, 'branch', false, true ),
+			array( 'automatic', true, true, 'branch', false, true ),
+			array( 'disabled', true, true, 'branch', true, true ),
+			array( 'manual', true, false, 'branch', false, false ),
+			array( 'automatic', true, true, 'release_asset', false, false ),
+			array( 'manual', false, true, 'branch', false, false ),
+		) as list( $deployment_policy, $development_environment_detected, $provider_webhook_available, $package_automation_source, $hidden, $links ) ) {
+			$provider_code = 'gh';
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
+			$html = (string) ob_get_clean();
+			if ( ! $development_environment_detected ) {
+				self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
+				continue;
+			}
+			self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-local-development-warning' . ( $hidden ? ' hidden' : '' ) . '>\s*<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>\s*<p>.*?Manual and Automatic can overwrite local changes when an update or reinstall runs\..*?<\/p>\s*<\/div>\s*<svg class="ran-wp-ui-notice__icon"[^>]*>.*?<\/svg>\s*<\/div>/s', $html );
+			if ( $links ) {
+				self::assertStringContainsString( 'Push-to-Deploy setting</a> | <a', $html );
+				self::assertStringContainsString( '>Docs</a>', $html );
+			} else {
+				self::assertStringNotContainsString( 'Push-to-Deploy setting</a>', $html );
+			}
+		}
+	}
+
 	public function test_deployment_policy_disables_automatic_without_webhook_support(): void {
 		$deployment_policy                = DeploymentPolicy::AUTOMATIC->value;
 		$provider_webhook_available       = false;
@@ -611,7 +662,7 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/value="automatic"[^>]*disabled="disabled"/', $html );
 		self::assertStringContainsString( 'Automatic deployment is unavailable', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
-		self::assertStringNotContainsString( 'Editing this package’s files on this site? Choose Disabled.', $html );
+		self::assertStringNotContainsString( 'Editing this package’s files here? Choose Disabled.', $html );
 	}
 
 	public function test_deployment_policy_enables_automatic_for_webhook_providers(): void {
@@ -626,9 +677,9 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 
 		self::assertMatchesRegularExpression( '/value="automatic"[^>]*selected="selected"/', $html );
 		self::assertDoesNotMatchRegularExpression( '/value="automatic"[^>]*disabled="disabled"/', $html );
-		self::assertStringContainsString( 'class="notice notice-warning inline"', $html );
+		self::assertStringContainsString( 'class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning"', $html );
 		self::assertStringContainsString( 'data-ran-booster-local-development-warning', $html );
-		self::assertStringContainsString( 'Editing this package’s files on this site? Choose Disabled.', $html );
+		self::assertStringContainsString( 'Editing this package’s files here? Choose Disabled.', $html );
 		self::assertStringContainsString( 'Push-to-Deploy setting', $html );
 		self::assertStringContainsString( 'Manual and Automatic can overwrite local changes when an update or reinstall runs.', $html );
 		self::assertStringContainsString( 'tab=gh#ran-booster-webhook-secrets-heading', $html );
@@ -645,7 +696,157 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'data-ran-booster-local-development-warning hidden', $html );
-		self::assertStringContainsString( 'Editing this package’s files on this site? Choose Disabled.', $html );
+		self::assertStringContainsString( 'Editing this package’s files here? Choose Disabled.', $html );
+	}
+
+	/**
+	 * Renders the Updates field in the Package operation card layout.
+	 *
+	 * @return string The field HTML.
+	 */
+	private function render_operation_policy( bool $with_action, bool $with_notice, string $source, string $policy = DeploymentPolicy::MANUAL->value ): string {
+		$deployment_policy                = $policy;
+		$provider_webhook_available       = true;
+		$provider_code                    = 'gh';
+		$package_automation_source        = $source;
+		$development_environment_detected = $with_notice;
+		$package_operation_layout         = true;
+		$package_operation_actions_html   = $with_action
+			? '<div class="ran-booster-package-operation-settings__actions" role="group"><a class="ran-wp-ui-button" href="#activate">Activate plugin</a></div>'
+			: '';
+		$package_operation_guidance_html  = '<p class="description" data-ran-booster-reinstall-guidance hidden>Set Updates to Manual or Automatic before reinstalling.</p>';
+		$package_field_layout             = 'grid';
+		$package_field_form               = 'ran-booster-package-edit-form';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
+		return (string) ob_get_clean();
+	}
+
+	/**
+	 * @param array<string,string> $needles
+	 * @return array<string,int>
+	 */
+	private function positions_in_order( string $html, array $needles ): array {
+		$positions = array();
+		$previous  = -1;
+		foreach ( $needles as $name => $needle ) {
+			$position = strpos( $html, $needle, max( 0, $previous ) );
+			if ( false === $position ) {
+				self::fail( 'Missing or out of order: ' . $name );
+			}
+			self::assertGreaterThan( $previous, $position, $name );
+			$positions[ $name ] = $position;
+			$previous           = $position;
+		}
+		return $positions;
+	}
+
+	public function test_operation_layout_orders_label_select_description_notice_guidance_then_actions_for_releases(): void {
+		$html = $this->render_operation_policy( true, true, 'release_asset' );
+
+		$this->positions_in_order(
+			$html,
+			array(
+				'label'       => '<label for="ran-booster-deployment-policy">',
+				'select'      => 'name="ran_booster[deployment_policy]"',
+				'description' => 'Manual waits for an administrator. Automatic installs validated releases.',
+				'notice'      => 'data-ran-booster-local-development-warning',
+				'guidance'    => 'data-ran-booster-reinstall-guidance',
+				'actions'     => 'class="ran-booster-package-operation-settings__actions"',
+			)
+		);
+		// The description stays in the label/select group; the notice, guidance and actions are siblings after it.
+		self::assertMatchesRegularExpression( '/<\/select>\s*<\/div>\s*<p class="description">[^<]*<\/p>\s*<\/div>\s*<div class="notice notice-warning inline ran-wp-ui-notice/', $html );
+		self::assertSame( 1, substr_count( $html, 'ran-booster-deployment-policy-group' ) );
+		self::assertStringNotContainsString( 'deployment-policy-row--with-action', $html );
+		self::assertMatchesRegularExpression( '/<\/p>\s*<div class="ran-booster-package-operation-settings__actions" role="group">.*<\/div>\s*<\/div>\s*$/s', $html );
+	}
+
+	public function test_operation_layout_shows_the_branch_description_under_the_select(): void {
+		$html = $this->render_operation_policy( true, true, 'branch' );
+
+		$this->positions_in_order(
+			$html,
+			array(
+				'label'       => '<label for="ran-booster-deployment-policy">',
+				'select'      => 'name="ran_booster[deployment_policy]"',
+				'description' => 'Manual waits for an administrator. Automatic deploys on push.',
+				'notice'      => 'data-ran-booster-local-development-warning',
+				'guidance'    => 'data-ran-booster-reinstall-guidance',
+				'actions'     => 'class="ran-booster-package-operation-settings__actions"',
+			)
+		);
+		// With the notice present its links live in the notice, not the description.
+		self::assertSame( 1, substr_count( $html, 'Push-to-Deploy setting' ) );
+	}
+
+	public function test_operation_layout_branch_description_keeps_push_to_deploy_links_without_the_notice(): void {
+		$html = $this->render_operation_policy( true, false, 'branch' );
+
+		self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
+		self::assertMatchesRegularExpression( '/Automatic deploys on push\.\s*<br\/><a [^>]*>Push-to-Deploy setting<\/a> \| <a [^>]*>Docs<\/a>\s*<\/p>/', $html );
+	}
+
+	public function test_operation_layout_hides_the_notice_when_disabled_and_keeps_the_description_first(): void {
+		$html = $this->render_operation_policy( true, true, 'release_asset', DeploymentPolicy::DISABLED->value );
+
+		self::assertMatchesRegularExpression( '/<div class="notice notice-warning inline[^>]* data-ran-booster-local-development-warning hidden>/', $html );
+		$this->positions_in_order(
+			$html,
+			array(
+				'select'      => 'name="ran_booster[deployment_policy]"',
+				'description' => 'Manual waits for an administrator',
+				'notice'      => 'data-ran-booster-local-development-warning',
+				'actions'     => 'class="ran-booster-package-operation-settings__actions"',
+			)
+		);
+	}
+
+	public function test_operation_layout_without_action_group_renders_no_empty_wrapper(): void {
+		$html = $this->render_operation_policy( false, true, 'release_asset' );
+
+		self::assertStringNotContainsString( 'ran-booster-package-operation-settings__actions', $html );
+		self::assertStringContainsString( 'class="ran-booster-deployment-policy-row"', $html );
+		$this->positions_in_order(
+			$html,
+			array(
+				'select'      => '<select',
+				'description' => 'class="description"',
+				'notice'      => 'data-ran-booster-local-development-warning',
+			)
+		);
+	}
+
+	public function test_operation_layout_without_notice_has_no_notice_markup(): void {
+		$html = $this->render_operation_policy( true, false, 'release_asset' );
+
+		self::assertStringNotContainsString( 'data-ran-booster-local-development-warning', $html );
+		self::assertStringNotContainsString( 'class="notice', $html );
+		$this->positions_in_order(
+			$html,
+			array(
+				'description' => 'Manual waits for an administrator',
+				'guidance'    => 'data-ran-booster-reinstall-guidance',
+				'actions'     => 'class="ran-booster-package-operation-settings__actions"',
+			)
+		);
+	}
+
+	public function test_non_operation_policy_field_has_no_branch_description(): void {
+		$deployment_policy                = DeploymentPolicy::MANUAL->value;
+		$provider_webhook_available       = true;
+		$provider_code                    = 'gh';
+		$package_automation_source        = 'branch';
+		$development_environment_detected = false;
+		$package_field_layout             = 'grid';
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/fields/deployment-policy.php';
+		$html = (string) ob_get_clean();
+
+		self::assertStringNotContainsString( 'Automatic deploys on push.', $html );
+		self::assertStringContainsString( 'Push-to-Deploy setting', $html );
 	}
 
 	public function test_deployment_policy_offers_automatic_word_press_updates_for_published_releases(): void {
@@ -662,7 +863,9 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/value="automatic"[^>]*selected="selected"/', $html );
 		self::assertDoesNotMatchRegularExpression( '/value="automatic"[^>]*disabled="disabled"/', $html );
 		self::assertStringContainsString( 'Automatic — install validated releases through WordPress Updates', $html );
-		self::assertStringContainsString( 'Manual waits for an administrator', $html );
+		self::assertStringContainsString( 'Manual waits for an administrator. Automatic installs validated releases.', $html );
+		self::assertStringNotContainsString( 'Automatic lets WordPress install validated published updates', $html );
+		self::assertStringNotContainsString( 'NOTICE:', $html );
 		self::assertStringNotContainsString( 'Push-to-Deploy setting', $html );
 	}
 
@@ -802,6 +1005,16 @@ final class UnavailableProviderPackageViewTest extends TestCase {
 		$package->set_deployment_policy( DeploymentPolicy::AUTOMATIC );
 
 		return $package;
+	}
+
+	/**
+	 * Counts the status Badges outside each row's state labels, which are Badges
+	 * too and would otherwise inflate every count.
+	 */
+	private function status_badge_count( string $html ): int {
+		$without_states = preg_replace( '/<div class="ran-booster-package-row__states">.*?<\/div>/s', '', $html );
+
+		return substr_count( null === $without_states ? $html : $without_states, 'data-ran-booster-badge data-ran-booster-badge-intent=' );
 	}
 }
 

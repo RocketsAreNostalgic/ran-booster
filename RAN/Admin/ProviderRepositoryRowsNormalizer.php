@@ -267,24 +267,23 @@ final class ProviderRepositoryRowsNormalizer {
 		foreach ( $repositories as $index => $repository ) {
 			if ( ! is_array( $repository ) ) {
 				continue; }
-			$managed_id       = is_string( $repository['repository_id'] ?? null ) ? $repository['repository_id'] : '';
-			$locator          = is_string( $repository['target'] ?? null ) ? $repository['target'] : '';
-			$source           = is_string( $repository['source'] ?? null ) ? $repository['source'] : 'branch';
-			$is_release       = 'release_asset' === $source;
-			$source_conflict  = 'mixed' === $source;
-			$has_branch       = in_array( $source, array( 'branch', 'mixed' ), true );
-			$is_mixed         = 'mixed' === $source;
-			$historical       = ! empty( $repository['historical'] ) || '' === trim( $managed_id );
-			$retained         = $is_release && is_array( $repository['retained_webhook'] ?? null ) ? $repository['retained_webhook'] : array();
-			$branch_consumers = array_values( array_filter( $retained['branch_package_references'] ?? array(), 'is_string' ) );
-			$readiness_row    = ! $is_release && '' !== $managed_id && isset( $readiness['by_id'][ $managed_id ] )
+			$managed_id      = is_string( $repository['repository_id'] ?? null ) ? $repository['repository_id'] : '';
+			$locator         = is_string( $repository['target'] ?? null ) ? $repository['target'] : '';
+			$source          = is_string( $repository['source'] ?? null ) ? $repository['source'] : 'branch';
+			$is_release      = 'release_asset' === $source;
+			$source_conflict = 'mixed' === $source;
+			$has_branch      = in_array( $source, array( 'branch', 'mixed' ), true );
+			$is_mixed        = 'mixed' === $source;
+			$historical      = ! empty( $repository['historical'] ) || '' === trim( $managed_id );
+			$retained        = $is_release && is_array( $repository['retained_webhook'] ?? null ) ? $repository['retained_webhook'] : array();
+			$readiness_row   = ! $is_release && '' !== $managed_id && isset( $readiness['by_id'][ $managed_id ] )
 				? $readiness['by_id'][ $managed_id ]
 				: ( ! $is_release ? ( $readiness['by_repository'][ strtolower( $locator ) ] ?? null ) : null );
-			$repository_id    = $is_release
+			$repository_id   = $is_release
 				? $managed_id
 				: ( is_string( $readiness_row['repository_id'] ?? null ) && '' !== $readiness_row['repository_id'] ? $readiness_row['repository_id'] : $managed_id );
-			$row_key          = '' !== $repository_id ? $repository_id : 'repository:' . hash( 'sha256', $provider_code . '|' . strtolower( $locator ) . '|' . $source );
-			$reason_codes     = is_array( $readiness_row['reason_codes'] ?? null ) ? $readiness_row['reason_codes'] : array();
+			$row_key         = '' !== $repository_id ? $repository_id : 'repository:' . hash( 'sha256', $provider_code . '|' . strtolower( $locator ) . '|' . $source );
+			$reason_codes    = is_array( $readiness_row['reason_codes'] ?? null ) ? $readiness_row['reason_codes'] : array();
 			if ( true === ( $repository['identity_conflict'] ?? false ) && ! in_array( 'repository_identity_conflict', $reason_codes, true ) ) {
 				$reason_codes[] = 'repository_identity_conflict';
 			}
@@ -394,16 +393,8 @@ final class ProviderRepositoryRowsNormalizer {
 			$management_tone = in_array( $coverage, array( 'repository', 'shared' ), true ) ? 'ok' : 'warning';
 			$consequence     = match ( true ) {
 				$source_conflict => __( 'Conflicting sources. Review the package settings before using release workflow.', 'ran-booster' ),
-				$is_release && array() !== $branch_consumers => __( 'This package ignores pushes. Branch-managed packages in this repository still use webhook setup.', 'ran-booster' ),
-				$is_release && in_array( $coverage, array( 'repository', 'shared' ), true ) => __( 'This package ignores pushes. Local signing setup is retained for an easier return to Branch.', 'ran-booster' ),
-				$is_release => __( 'Pushes are ignored.', 'ran-booster' ),
-				1 === count( $non_zero ) && isset( $non_zero['disabled'] ) => __( 'Push-to-Deploy disabled; pushes are ignored.', 'ran-booster' ),
-				'' !== ( $issues[0] ?? '' ) => (string) $issues[0],
-				! $site_ready => __( 'Push-to-Deploy is unavailable until the site-level readiness issue is resolved.', 'ran-booster' ),
-				'none' === $coverage => __( 'Push-to-Deploy is blocked until a signing secret is selected.', 'ran-booster' ),
-				1 === count( $non_zero ) && isset( $non_zero['automatic'] ) => __( 'Push-to-Deploy enabled; signed pushes can queue eligible packages.', 'ran-booster' ),
-				1 === count( $non_zero ) && isset( $non_zero['manual'] ) => __( 'Push-to-Deploy remains off until the package Updates setting is Automatic.', 'ran-booster' ),
-				default => __( 'Only Automatic packages can respond to signed pushes.', 'ran-booster' ),
+				'' !== ( $issues[0] ?? '' ) && ! $is_release => (string) $issues[0],
+				default => '',
 			};
 			if ( $is_release ) {
 				$management_label  = __( 'Releases', 'ran-booster' );
@@ -659,7 +650,7 @@ final class ProviderRepositoryRowsNormalizer {
 			}
 			$this->bounded_string( $detail['datetime'] ?? '', 64, true );
 			$this->bounded_string( $detail['state'] ?? '', 64, true );
-			if ( isset( $detail['recorded'] ) && ! is_bool( $detail['recorded'] ) ) {
+			if ( ( isset( $detail['recorded'] ) && ! is_bool( $detail['recorded'] ) ) || ( isset( $detail['identified'] ) && ! is_bool( $detail['identified'] ) ) ) {
 				throw new LogicException( 'Repository detail recorded flags must be boolean.' );
 			}
 			if ( isset( $detail['review_summary'] ) && ! is_bool( $detail['review_summary'] ) ) {
@@ -947,7 +938,7 @@ final class ProviderRepositoryRowsNormalizer {
 
 	/** @return list<string> */
 	private function tones(): array {
-		return array( 'neutral', 'ok', 'pending', 'warning', 'error' );
+		return array( 'neutral', 'ok', 'pending', 'warning', 'error', 'info' );
 	}
 
 	/** @return array{available:bool,owners:list<mixed>,repositories:list<mixed>} */
@@ -994,7 +985,7 @@ final class ProviderRepositoryRowsNormalizer {
 		$labels   = array(
 			'database_unavailable'           => __( 'Booster database storage must be healthy before Push-to-Deploy can run.', 'ran-booster' ),
 			'secrets_storage_unavailable'    => __( 'Encrypted credential storage must be healthy before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ),
-			'callback_requires_public_https' => $is_local ? __( 'This site uses a local URL, so Git providers cannot deliver webhooks to it. Configure a public HTTPS site URL before using Push-to-Deploy.', 'ran-booster' ) : __( 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it.', 'ran-booster' ),
+			'callback_requires_public_https' => $is_local ? __( 'This site uses a local URL, so Git providers cannot reach it. Set a public HTTPS site URL before using Push-to-Deploy.', 'ran-booster' ) : __( 'The payload URL must use public HTTPS before Git providers can deliver webhooks to it.', 'ran-booster' ),
 			'managed_packages_unavailable'   => __( 'Booster could not read the managed package inventory needed for Push-to-Deploy.', 'ran-booster' ),
 		);
 

@@ -122,17 +122,17 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 	public function test_development_safety_notice_dismissal_is_scoped_to_the_current_administrator(): void {
 		$GLOBALS['ran_booster_dashboard_test_environment_type'] = 'local';
-		$GLOBALS['ran_booster_dashboard_test_user_meta'][7][ DevelopmentSafetyNoticeController::USER_META_KEY ] = '1';
+		$GLOBALS['ran_booster_repository_admin_user_meta'][7][ DevelopmentSafetyNoticeController::USER_META_KEY ] = DevelopmentSafetyNoticeController::NOTICE_STATE;
 		$predicate = new ReflectionMethod( Dashboard::class, 'should_show_development_safety_notice' );
 		$dashboard = $this->dashboard( $this->throwing_secrets() );
 
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/index', true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, false ) );
 
 		$GLOBALS['ran_booster_dashboard_test_user_id'] = 8;
 
-		self::assertTrue( $predicate->invoke( $dashboard, 'packages/index', true ) );
-		self::assertFalse( $predicate->invoke( $dashboard, 'packages/create', true ) );
+		self::assertTrue( $predicate->invoke( $dashboard, true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, false ) );
 	}
 
 	public function test_repository_branch_check_rejects_missing_and_stale_nonce_without_provider_work(): void {
@@ -583,23 +583,25 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $provider->cleanup_calls );
 	}
 
-	/** @return list<array{string, bool, bool}> */
-	public static function development_safety_notice_provider(): array {
-		return array(
-			array( 'packages/index', true, true ),
-			array( 'packages/create', true, false ),
-			array( 'packages/edit', true, false ),
-			array( 'index', true, false ),
-			array( 'index', true, false ),
-			array( 'packages/index', false, false ),
+	public function test_local_guidance_requires_the_canonical_overview_projection(): void {
+		$predicate = new ReflectionMethod( Dashboard::class, 'is_local_development_overview' );
+		$dashboard = $this->dashboard( $this->throwing_secrets() );
+		$overview  = array(
+			'tab'        => 'overview',
+			'onboarding' => array(),
 		);
+		self::assertTrue( $predicate->invoke( $dashboard, 'index', $overview, true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'index', array( 'tab' => 'documentation' ), true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'index', array( 'tab' => 'overview' ), true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'packages/index', $overview, true ) );
+		self::assertFalse( $predicate->invoke( $dashboard, 'index', $overview, false ) );
 	}
 
-	#[DataProvider( 'development_safety_notice_provider' )]
-	public function test_development_safety_notice_uses_detected_environment_only_on_the_package_index( string $view, bool $development_environment_detected, bool $expected ): void {
+	public function test_old_acknowledgement_does_not_suppress_new_notice(): void {
+		$GLOBALS['ran_booster_repository_admin_user_meta'][7][ DevelopmentSafetyNoticeController::USER_META_KEY ] = '1';
 		$predicate = new ReflectionMethod( Dashboard::class, 'should_show_development_safety_notice' );
-
-		self::assertSame( $expected, $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), $view, $development_environment_detected ) );
+		self::assertTrue( $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), true ) );
+		self::assertFalse( $predicate->invoke( $this->dashboard( $this->throwing_secrets() ), false ) );
 	}
 
 	public function test_overview_uses_only_the_same_notice_request_snapshot(): void {
@@ -756,16 +758,23 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 		self::assertStringContainsString( 'GitHub provider details', $html );
 		self::assertStringContainsString( 'panel=installation#ran-booster-github-provider-diagnostics', $html );
+		self::assertSame( 1, substr_count( $html, 'GitHub provider details</a>' ) );
+		$this->assert_provider_markup_is_balanced( $html );
 		foreach ( array( 'private-path', 'vendor/internal-implementation', 'internal-revision', 'internal-credential-format', '<Replacement>' ) as $private_detail ) {
 			self::assertStringNotContainsString( $private_detail, $html );
 		}
 		if ( 'available' === $state ) {
-			self::assertStringContainsString( 'Provided by &lt;Replacement&gt;', $html );
+			self::assertStringContainsString( 'Provider extension: &lt;Replacement&gt;', $html );
 			self::assertStringContainsString( '<summary>Manage GitHub provider</summary>', $html );
 			self::assertStringNotContainsString( 'Affected GitHub packages:', $html );
 			self::assertStringNotContainsString( 'GitHub operations are paused.', $html );
 		} else {
-			self::assertStringContainsString( 'GitHub operations are paused.', $html );
+			self::assertStringContainsString( 'GitHub operations are paused. Local records remain available. This does not pause other Git providers.', $html );
+			self::assertStringNotContainsString( 'Bitbucket is unaffected', $html );
+		}
+		if ( 'decision_required' === $state ) {
+			// The paused explanation is the shared informational Notice, not plain text.
+			self::assertMatchesRegularExpression( '/<div class="notice notice-info inline ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info" data-ran-booster-provider-paused-notice><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>GitHub operations are paused\. [^<]+<\/p><\/div><svg /', $html );
 		}
 		$headings = array(
 			'conflict'            => 'Multiple GitHub providers are active',
@@ -797,7 +806,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 		if ( $switch_replacement ) {
 			self::assertStringContainsString( 'Missing provider: Previous provider A', $html );
-			self::assertStringContainsString( 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
+			self::assertStringContainsString( 'Reviewing GitHub provider: &lt;Replacement&gt;', $html );
 		}
 		self::assertStringContainsString( 'Affected GitHub packages: 2 Branch, 1 Published release.', $html );
 		self::assertStringContainsString( 'Saved GitHub access credentials: 2 compatible, 1 incompatible.', $html );
@@ -812,8 +821,28 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringContainsString( 'name="ran_booster[confirmed]" value="1" required', $html );
 		self::assertStringContainsString( 'name="ran_booster[reuse_existing]" value="1" required', $html );
 		self::assertStringContainsString( 'ran-booster-adopt-github-' . str_repeat( 'c', 64 ), $html );
-		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review GitHub provider</summary>', $html );
-		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub support provided by &lt;Replacement&gt;', $html );
+		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? '<summary>Review return to bundled GitHub</summary>' : '<summary>Review and approve GitHub provider</summary>', $html );
+		self::assertStringContainsString( 'missing' === $state && ! $switch_replacement ? 'Return to bundled GitHub' : 'Reviewing GitHub provider: &lt;Replacement&gt;', $html );
+		// The details link is enclosed by the review disclosure and still leads to the Installation diagnostics.
+		if ( 1 === preg_match( '/<details [^>]*>\s*<summary>[^<]+<\/summary>(.*?)<\/details>/s', $html, $disclosure ) ) {
+			self::assertSame( 1, substr_count( $disclosure[1], '<a href="https://example.test/wp-admin/admin.php?page=ran-booster&amp;tab=troubleshooting&amp;panel=installation#ran-booster-github-provider-diagnostics">GitHub provider details</a>' ) );
+		} else {
+			self::fail( 'The review disclosure was not rendered.' );
+		}
+	}
+
+	/** Every element the provider view opens is closed inside it, so the shell footer stays outside the page content. */
+	private function assert_provider_markup_is_balanced( string $html ): void {
+		$depth = 0;
+		$count = preg_match_all( '#<(/?)(div|section|details)\b[^>]*>#i', $html, $tags, PREG_SET_ORDER );
+		self::assertGreaterThan( 0, $count );
+		foreach ( $tags as $tag ) {
+			$depth += '' === $tag[1] ? 1 : -1;
+			if ( $depth < 0 ) {
+				self::fail( 'The provider view closes a container it did not open.' );
+			}
+		}
+		self::assertSame( 0, $depth, 'The provider view leaves a container open.' );
 	}
 
 	/** @return iterable<string,array{string}> */
@@ -1082,6 +1111,27 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertStringNotContainsString( 'Filtered canary', $html );
 		self::assertStringContainsString( 'paged=2', $html );
 		self::assertStringNotContainsString( 'profile-21', $html );
+		self::assertStringContainsString( 'data-ran-booster-card="provider"', $html );
+
+		// Provider list views use the outer section as a Card host.
+		foreach ( array( array( 'gh', 'credentials', true ), array( 'bb', 'credentials', true ), array( 'gh', 'secrets', true ), array( 'bb', 'secrets', true ), array( 'gh', 'overview', false ), array( 'other', 'credentials', true ) ) as list( $code, $view, $expected ) ) {
+			$provider['code'] = $code;
+			$provider_view    = $view;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/provider.php';
+			$rendered = (string) ob_get_clean();
+			self::assertSame( $expected ? 1 : 0, preg_match( '/<section class="ran-booster-page-shell ran-booster-provider[^>]*data-ran-booster-card="provider"/', $rendered ) );
+			if ( in_array( $view, array( 'credentials', 'secrets' ), true ) ) {
+				if ( 1 !== preg_match( '/<div class="ran-booster-collection">\s*<div class="ran-booster-collection__toolbar">\s*<form class="ran-booster-provider-list-controls" method="get"[\s\S]*?<\/form>\s*<\/div>\s*<div class="ran-booster-data-table-wrap">\s*<table [\s\S]*?<\/table>\s*<\/div>\s*<div class="ran-booster-provider-table-navigation">/', $rendered ) ) {
+					self::fail( 'The ' . $view . ' filters, table and pagination must share one collection frame.' );
+				}
+			}
+			if ( 'credentials' === $view ) {
+				self::assertStringContainsString( '<form class="ran-booster-provider-list-controls" method="get"', $rendered );
+				self::assertStringContainsString( '<th scope="col">', $rendered );
+				self::assertStringContainsString( 'Page 1 of 2', $rendered );
+			}
+		}
 
 		$_GET['replace_credential'] = 'profile-21';
 		$replacement_data           = $this->dashboard( $secrets, provider_credentials: true )->get_index()['data'];
@@ -1153,7 +1203,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertStringContainsString( 'Integration status', $html );
 		self::assertStringContainsString( 'data-ran-booster-repository-view="branch"', $html );
-		self::assertStringContainsString( 'Back to repositories', $html );
+		self::assertStringNotContainsString( 'Back to repositories', $html );
 		self::assertStringContainsString( 'Packages using this repository', $html );
 		self::assertStringContainsString( 'ran-booster-repository-detail__layout', $html );
 		self::assertStringContainsString( 'ran-booster-repository-detail__sidebar', $html );
@@ -1643,6 +1693,23 @@ final class DashboardIndexRoutingTest extends TestCase {
 		}
 	}
 
+	public function test_overview_storage_summary_offers_provisioning_only_when_setup_is_available(): void {
+		$_GET['tab'] = 'overview';
+		foreach ( array(
+			'setup_available' => array( \RAN\Secrets\SecretsStorageProvisioningResult::setup_available( '/private/secrets.json' ), true ),
+			'storage_healthy' => array( \RAN\Secrets\SecretsStorageProvisioningResult::storage_healthy( '/private/secrets.json', 'manual' ), false ),
+			'pending'         => array( \RAN\Secrets\SecretsStorageProvisioningResult::pending_verification( '/private/secrets.json' ), false ),
+		) as $label => list( $result, $expected ) ) {
+			$provisioner = $this->createStub( \RAN\Secrets\SecretsStorageProvisioner::class );
+			$provisioner->method( 'status' )->willReturn( $result );
+			$summary = $this->dashboard( $this->throwing_secrets(), secrets_storage: $provisioner )->get_index()['data']['onboarding']['storage_summary'];
+			self::assertIsArray( $summary, $label );
+			self::assertSame( $expected, $summary['can_provision'], $label );
+			self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster&tab=overview', $summary['action_url'], $label );
+			self::assertStringNotContainsString( 'private', (string) wp_json_encode( $summary ), $label );
+		}
+	}
+
 	/** @return list<array{mixed}> */
 	public static function fallback_tab_provider(): array {
 		return array(
@@ -1753,6 +1820,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET  = array();
 		$index = $dashboard->get_plugins()['data'];
 
+		$settings_reads[0][1] = $this->canonical_query_url( $settings_reads[0][1] );
 		self::assertSame(
 			array(
 				array(
@@ -1769,7 +1837,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 'Latest release: 1.1.0.', $index['package_extension_rows']['plugin/example.php']['status'] );
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
-			$index['package_extension_actions']['plugin/example.php']['fixture:manage']['url']
+			$this->canonical_query_url( $index['package_extension_actions']['plugin/example.php']['fixture:manage']['url'] )
 		);
 	}
 
@@ -1930,8 +1998,11 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$_GET   = array();
 		$index  = $dashboard->get_plugins()['data'];
 
-		$create_url = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create';
-		$edit_url   = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php';
+		$create_url          = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins-create';
+		$edit_url            = 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php';
+		$source_calls[1][3]  = $this->canonical_query_url( $source_calls[1][3] );
+		$section_calls[1][4] = $this->canonical_query_url( $section_calls[1][4] );
+		$action_calls[0][3]  = $this->canonical_query_url( $action_calls[0][3] );
 		self::assertSame(
 			array(
 				array( 'create', 'plugin', null, $create_url ),
@@ -2253,6 +2324,8 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 1, $this->diagnostics_nodes( $xpath, '//form[@hx-target="#ran-booster-troubleshooting-diagnostics-region"]' )->length );
 		self::assertSame( 0, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-installation-details" or @id="ran-booster-troubleshooting-report"]' )->length );
 		self::assertSame( null === $submission ? 0 : 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->length );
+		self::assertSame( null === $submission ? 1 : 2, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-diagnostics-region"]//*[@data-ran-booster-card="troubleshooting"]' )->length );
+		self::assertSame( null === $submission ? 0 : 1, $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-diagnostics-region"]//div[contains(@class, "ran-booster-troubleshooting__results-card")]//*[@id="ran-booster-troubleshooting-results"]' )->length );
 		if ( null !== $submission ) {
 			$results = $this->diagnostics_nodes( $xpath, '//*[@id="ran-booster-troubleshooting-results"]' )->item( 0 );
 			self::assertInstanceOf( \DOMElement::class, $results );
@@ -2552,6 +2625,49 @@ final class DashboardIndexRoutingTest extends TestCase {
 			self::assertSame( 'blocked', $result['data']['recovery_state'] );
 			self::assertCount( 1, $successes );
 			self::assertSame( ucfirst( $type ) . ' was successfully ' . $completed . '.', $successes[0]['message'] );
+			if ( 'edit' === $operation ) {
+				self::assertSame( $identifier, $successes[0]['saved_package'] );
+				self::assertSame( $type, $successes[0]['saved_type'] );
+			} else {
+				self::assertArrayNotHasKey( 'saved_package', $successes[0] );
+				self::assertArrayNotHasKey( 'saved_type', $successes[0] );
+			}
+		}
+	}
+
+	#[DataProvider( 'package_type_provider' )]
+	public function test_only_signed_edit_success_receives_save_metadata( string $type ): void {
+		$identifier = 'plugin' === $type ? 'example/example.php' : 'example-theme';
+		foreach ( array( 'edit', 'install', 'update', 'unlink', 'unlink-and-delete', 'already-managed', 'partialreinstall', 'check' ) as $operation ) {
+			foreach ( array( true, false ) as $valid_nonce ) {
+				$_GET      = array(
+					'ran_booster_result'        => $operation,
+					'ran_booster_package'       => $identifier,
+					'_ran_booster_notice_nonce' => $valid_nonce ? wp_create_nonce( 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) : 'forged',
+				);
+				$dashboard = $this->dashboard( $this->throwing_secrets() );
+				$notice    = ( new \RAN\Admin\PackageAdminController() )->add_success_notice( $dashboard, $type );
+				if ( $valid_nonce && 'edit' === $operation ) {
+					self::assertSame(
+						array(
+							'operation'  => 'edit',
+							'identifier' => $identifier,
+						),
+						$notice
+					);
+					self::assertSame( $identifier, $dashboard->messages[0]['saved_package'] );
+					self::assertSame( $type, $dashboard->messages[0]['saved_type'] );
+				} else {
+					foreach ( $dashboard->messages as $message ) {
+						self::assertArrayNotHasKey( 'saved_package', $message );
+						self::assertArrayNotHasKey( 'saved_type', $message );
+					}
+					if ( ! $valid_nonce || in_array( $operation, array( 'partialreinstall', 'check' ), true ) ) {
+						self::assertNull( $notice );
+						self::assertCount( 0, $dashboard->messages );
+					}
+				}
+			}
 		}
 	}
 
@@ -3321,7 +3437,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=plugin%2Fexample.php',
-			$data['package_settings_urls']['plugin']['example']
+			$this->canonical_query_url( $data['package_settings_urls']['plugin']['example'] )
 		);
 		self::assertSame(
 			'https://example.test/wp-admin/admin.php?page=ran-booster-themes&package=example-theme',
@@ -3553,7 +3669,7 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 42, $page['items'][0]['id'] );
 		self::assertSame( 'example', $page['items'][0]['package_slug'] );
 		self::assertSame( 'example/example.php', $page['items'][0]['subject_identity'] );
-		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php', $page['package_settings_urls']['plugin']['example'] );
+		self::assertSame( 'https://example.test/wp-admin/admin.php?page=ran-booster-plugins&package=example%2Fexample.php', $this->canonical_query_url( $page['package_settings_urls']['plugin']['example'] ) );
 		self::assertSame( 'GitHub · Plugin: Example Plugin (example/example.php)', $page['filter_options']['packages'][0]['label'] );
 		self::assertSame( 'webhook', $page['items'][0]['source'] );
 		self::assertSame( 'running', $page['items'][0]['state'] );
@@ -3890,6 +4006,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertSame( 43, $activity['detail']->get_id() );
 		self::assertSame( $attempt['correlation_id'], $activity['detail']->get_correlation_id() );
 		unset( $GLOBALS['ran_booster_test_status_header'] );
+	}
+
+	private function canonical_query_url( string $url ): string {
+		$parts = wp_parse_url( $url );
+		self::assertIsArray( $parts );
+		$query = array();
+		wp_parse_str( $parts['query'] ?? '', $query );
+		return ( $parts['scheme'] ?? '' ) . '://' . ( $parts['host'] ?? '' ) . ( $parts['path'] ?? '' ) . '?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 );
 	}
 
 	private function set_multisite( bool $multisite ): void {

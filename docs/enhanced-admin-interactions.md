@@ -100,6 +100,45 @@ must still work without JavaScript. Busy state must prevent duplicate submits,
 errors must be announced, focus must move to meaningful refreshed content, and
 the normal POST/redirect/GET path must remain truthful.
 
+Scripts announce status and error messages only through
+`window.ranBoosterAnnounce( message, politeness )` (`ran-booster-announce`),
+which calls WordPress core `wp.a11y.speak`: `assertive` for errors, `polite`
+otherwise. Scripts never add `role="alert"`, `role="status"` or `aria-live` to
+the hosts they update. Pass the host as the third argument when it may sit
+inside server-rendered live markup, so that markup is not announced twice.
+
+The enhanced feedback listeners belong to the document lifetime and initialize
+once, even if history navigation evaluates their script again. React subtrees
+have their own mount and unmount lifecycles independent of these listeners.
+
+General, normal plugin/theme settings and the fixed provider profile saves use the official WordPress
+SnackbarList only for a matching confirmed response and live replacement region.
+Package saves require the nonce-validated edit result, matching package identity
+and current request; a click, HTTP success or generic success event is insufficient.
+If the component or its styles cannot render, the confirmed local result remains
+visible. Style readiness is a conservative presentation check, not a WordPress
+API guarantee.
+Provider access, webhook and public-lookup saves require their exact operation,
+target and matching authoritative response header. Other operations do not gain
+Snackbar presentation from their wording or a `save-` prefix.
+The transient subtree is removed before HTMX serializes history, so restored
+pages do not replay a cached confirmation.
+
+Other completed operations retain their server results or correlated persistent
+local status text. Transporter and package progress keep their own result and
+announcement paths. The old custom toast has no consumers or fallback path.
+Partial work, saved-before-reinstall results, warnings, errors and recovery
+details stay durable. Existing success events remain available to independent
+consumers; emitting one does not opt an operation into Snackbar presentation.
+
+Core's source-checkout guidance remains a native, non-dismissible informational
+notice with no actions. It is shown to authorized administrators when automatic
+Core discovery is disabled for a source checkout, inline below the Booster shell
+and in the native notice region on Plugins screens. General Settings responses
+refresh its fixed shell slot from fresh policy state; an unavailable read leaves
+the existing notice untouched. Global notices and other notice families retain
+their existing behavior and remain outside this scoped refresh.
+
 ## Required tests
 
 Cover at least:
@@ -119,3 +158,14 @@ Cover at least:
 This API is not a generic router, command bus, modal system, notification
 service, credential broker, renderer registry, background transport, or whole
 view replacement mechanism.
+
+General Settings uses three fixed scoped form/target pairs for automatic switch
+saves and explicit numeric saves. The feedback adapter accepts only those targets
+and the retained legacy full-region target. A matching captured response needs
+its success header and newly replaced saved marker; superseded switch intent or
+a concurrently changed confirmed snapshot suppresses its success presentation.
+The settings controller owns their serialized queue, draft baselines and focus;
+these forms do not borrow the other producers' single interaction-state capture.
+Discovery refreshes only its existing source-guidance slot, while Hide GitHub UI
+refreshes server-rendered shell navigation. Unknown policy reads retain the
+existing notice. Detached responses are vetoed before header and OOB processing.

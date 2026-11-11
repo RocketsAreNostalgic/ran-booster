@@ -156,6 +156,166 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( '', $query['args'][2] );
 	}
 
+	public function test_clean_check_records_a_succeeded_activity_entry(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$gateway                                 = $this->gateway();
+		$gateway->result                         = $this->operation_result( 'succeeded', 'configuration_confirmed', '77', delivery: 'unknown' );
+		$store                                   = new OperationStoreFixture();
+		$store->record                           = $this->record();
+		$result                                  = ( new WebhookOperationCoordinator( $gateway, $store, new \RAN\Activity\ActivityStore( $connection ) ) )->execute( 'check', 'gh', '1234', 'credential_1', null, 'valid' );
+		self::assertSame( 'configuration_confirmed', $result['code'] );
+		self::assertSame( 'needs_verification', $store->record->status() );
+		$query = end( $connection->prepared );
+		self::assertIsArray( $query );
+		self::assertSame( 'succeeded', $query['args'][0] );
+		self::assertSame( 'webhook.operation_succeeded', $query['args'][1] );
+	}
+
+	public function test_clean_check_result_is_presented_as_success(): void {
+		$_GET = array( 'webhook_management_result' => 'configuration_confirmed' );
+		$html = $this->render_panel();
+
+		self::assertStringContainsString( 'notice-success', $html );
+		self::assertStringNotContainsString( 'notice-error', $html );
+		self::assertStringContainsString( 'Remote configuration confirmed; signed delivery unverified', $html );
+		self::assertStringNotContainsString( 'Review the bounded operation result.', $html );
+	}
+
+	/** @return array<string,array{0:string,1:array<string,string>}> */
+	public static function disabled_reason_states(): array {
+		$setup  = 'Set up the webhook to enable these actions.';
+		$choose = 'Choose a saved credential';
+		$manual = 'Managed operations are disabled for this repository. Do not retry Setup until both sides are reconciled.';
+
+		return array(
+			'inactive panel'          => array(
+				'inactive',
+				array(
+					'setup'    => 'This site needs a public HTTPS URL to receive webhooks.',
+					'validate' => 'This site needs a public HTTPS URL to receive webhooks.',
+					'remove'   => 'This site needs a public HTTPS URL to receive webhooks.',
+				),
+			),
+			'no credential'           => array(
+				'no_credential',
+				array(
+					'setup'    => $choose,
+					'validate' => $choose,
+					'remove'   => $choose,
+				),
+			),
+			'no hook recorded'        => array(
+				'no_hook',
+				array(
+					'validate' => $setup,
+					'remove'   => $setup,
+				),
+			),
+			'recovery view'           => array(
+				'recovery_view',
+				array(
+					'setup'    => 'Manual webhook recovery required',
+					'validate' => 'Manual webhook recovery required',
+					'remove'   => 'Manual webhook recovery required',
+				),
+			),
+			'identification required' => array(
+				'identification_required',
+				array(
+					'setup'    => $manual,
+					'validate' => $manual,
+					'remove'   => $manual,
+				),
+			),
+			'already matches'         => array(
+				'in_sync',
+				array( 'reconfigure' => 'Nothing to repair.' ),
+			),
+			'remote hook missing'     => array(
+				'remote_missing',
+				array(
+					'reconfigure' => 'Nothing to repair.',
+					'remove'      => 'The webhook is already missing from GitHub.',
+				),
+			),
+			'removal pending'         => array(
+				'removal_pending',
+				array(
+					'reconfigure' => 'Nothing to repair.',
+					'remove'      => 'Removal is already pending.',
+				),
+			),
+			'secret unavailable'      => array(
+				'local_profile_missing',
+				array( 'remove' => 'Recorded signing secret is unavailable' ),
+			),
+		);
+	}
+
+	/** @param array<string,string> $expected Reason per disabled operation key; every other button must be enabled and carry none. */
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'disabled_reason_states' )]
+	public function test_each_disabled_button_carries_the_reason_that_is_true_for_it( string $state, array $expected ): void {
+		$gateway = $this->gateway();
+		$store   = new OperationStoreFixture();
+		$display = $this->display( $gateway, $store );
+		if ( 'inactive' === $state ) {
+			$model = $display->unavailable_panel( 'gh', 'GitHub', '1234', 'owner/repository', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', $expected['setup'] );
+		} else {
+			$store->record = match ( $state ) {
+				'no_credential', 'recovery_view', 'no_hook' => null,
+				'identification_required' => new InstallationRecord( 'gh', '1234', 'owner/repository', InstallationRecord::unknown_hook_id(), 'credential_1', 'wh_0123456789abcdef01234567', 'repository', 1, 'created', 'https://hooks.example.test/webhook', 'needs_verification', '2026-07-23T16:00:00Z', '2026-07-23T17:00:00Z' ),
+				'remote_missing', 'removal_pending' => $this->record( $state ),
+				default => $this->record(),
+			};
+			$gateway->credentials_available = 'no_credential' !== $state;
+			$gateway->profile_absent        = 'local_profile_missing' === $state;
+			$recovery                       = 'recovery_view' === $state ? array(
+				'hook_id'    => '88',
+				'profile_id' => 'wh_0123456789abcdef01234567',
+			) : null;
+			$model                          = $display->panel( 'gh', 'GitHub', '1234', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', null, $recovery, true );
+		}
+		self::assertIsArray( $model );
+		$form_attributes = '';
+		ob_start();
+		$panel_part = 'form';
+		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
+		$panel_part = 'actions';
+		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
+		$html = (string) ob_get_clean();
+
+		$document = new \DOMDocument();
+		libxml_use_internal_errors( true );
+		$document->loadHTML( '<?xml encoding="utf-8"?>' . $html );
+		libxml_clear_errors();
+		$xpath = new \DOMXPath( $document );
+		self::assertSame( 3.0, $xpath->evaluate( 'count(//button[@name="repository_webhook_management_operation"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="repository-webhook-management-disabled-reason"])' ) );
+		$buttons = $xpath->query( '//button[@name="repository_webhook_management_operation"]' );
+		self::assertNotFalse( $buttons );
+		foreach ( $buttons as $button ) {
+			self::assertInstanceOf( \DOMElement::class, $button );
+			$key         = $button->getAttribute( 'value' );
+			$ids         = explode( ' ', $button->getAttribute( 'aria-describedby' ) );
+			$description = $xpath->evaluate( 'string(//*[@id="repository-webhook-management-description-' . $key . '"])' );
+			self::assertSame( 'repository-webhook-management-description-' . $key, $ids[0], $state . ' ' . $key );
+			if ( ! isset( $expected[ $key ] ) ) {
+				self::assertFalse( $button->hasAttribute( 'disabled' ), $state . ' ' . $key . ' must be enabled' );
+				self::assertCount( 1, $ids, $state . ' ' . $key );
+				self::assertSame( $description, $button->getAttribute( 'title' ), $state . ' ' . $key );
+				self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="repository-webhook-management-disabled-reason-' . $key . '"])' ), $state . ' ' . $key );
+				continue;
+			}
+			self::assertTrue( $button->hasAttribute( 'disabled' ), $state . ' ' . $key . ' must be disabled' );
+			self::assertSame( array( 'repository-webhook-management-description-' . $key, 'repository-webhook-management-disabled-reason-' . $key ), $ids, $state . ' ' . $key );
+			self::assertSame( $expected[ $key ], $xpath->evaluate( 'string(//*[@id="repository-webhook-management-disabled-reason-' . $key . '"])' ), $state . ' ' . $key );
+			self::assertSame( $description . ' ' . $expected[ $key ], $button->getAttribute( 'title' ), $state . ' ' . $key );
+		}
+		// The no-hook sentence is true only where nothing is recorded yet.
+		self::assertSame( 'no_hook' === $state ? 4 : 0, substr_count( $html, 'Set up the webhook to enable these actions.' ), $state );
+	}
+
 	public function test_remote_exception_leaves_activity_incomplete_without_unwind_reporting(): void {
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
 		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
@@ -192,6 +352,7 @@ final class WebhookManagementControllerTest extends TestCase {
 				self::assertSame(
 					array(
 						'result'      => null,
+						'ping'        => null,
 						'recovery'    => null,
 						'remediation' => null,
 					),
@@ -204,6 +365,7 @@ final class WebhookManagementControllerTest extends TestCase {
 				self::identicalTo(
 					array(
 						'result'      => null,
+						'ping'        => null,
 						'recovery'    => null,
 						'remediation' => null,
 					)
@@ -542,7 +704,7 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		$html = $this->render_panel( store: $store );
 
-		self::assertStringContainsString( 'value="check"', $html );
+		self::assertStringContainsString( 'value="validate"', $html );
 		self::assertStringContainsString( 'name="booster_credential_id" required>', $html );
 		self::assertStringContainsString( 'value="credential_1" selected="selected"', $html );
 		self::assertStringContainsString( 'name="webhook_profile_id" disabled="disabled"', $html );
@@ -917,7 +1079,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 		self::assertStringContainsString( 'without a stable hook ID', $html );
 		self::assertStringContainsString( 'value="setup"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
 	}
 
 	public function test_setup_save_failure_falls_back_to_durable_orphan_evidence(): void {
@@ -954,7 +1116,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( 1, substr_count( $html, 'Git provider hook reference: 77' ) );
 		self::assertSame( 1, substr_count( $html, 'Core signing profile: wh_0123456789abcdef01234567' ) );
 		self::assertStringContainsString( 'value="setup"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Set up</button>', $html );
 	}
 
 	public function test_core_authoritative_fitness_block_makes_no_remote_mutation_and_leaves_records_unchanged(): void {
@@ -1005,7 +1167,11 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertFalse( $store->record->requires_hook_identification() );
 		self::assertSame( 1, $store->save_attempts );
 		self::assertStringContainsString( 'webhook_management_result=record_conflict', $redirect );
-		self::assertStringContainsString( 'recovery_hook=recovery%3Ahook-identity-unavailable', $redirect );
+		$parts = wp_parse_url( $redirect );
+		self::assertIsArray( $parts );
+		$query = $parts['query'] ?? '';
+		parse_str( $query, $arguments ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_str_parse_str -- Decode the redirect for this assertion.
+		self::assertSame( 'recovery:hook-identity-unavailable', $arguments['recovery_hook'] ?? null );
 		self::assertStringContainsString( 'recovery_profile=wh_0123456789abcdef01234567', $redirect );
 	}
 
@@ -1043,13 +1209,13 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertIsArray( $model );
 		self::assertSame( array(), $model['credential_choices'] );
 		self::assertSame(
-			array( 'setup', 'check', 'reconfigure', 'test', 'remove' ),
+			array( 'reconfigure', 'validate', 'remove' ),
 			array_column( $model['operations'], 'key' )
 		);
-		self::assertSame( array( true, true, true, true, true ), array_column( $model['operations'], 'disabled' ) );
+		self::assertSame( array( true, true, true ), array_column( $model['operations'], 'disabled' ) );
 
 		$html = $this->render_panel( $gateway, $store );
-		foreach ( array( 'Set up webhook', 'Check webhook', 'Update webhook', 'Test webhook', 'Remove webhook' ) as $label ) {
+		foreach ( array( 'Repair', 'Validate', 'Remove' ) as $label ) {
 			self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">' . $label . '</button>', $html );
 		}
 	}
@@ -1192,9 +1358,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'could not confirm whether the remote hook was removed', $html );
-		self::assertStringContainsString( 'value="check"', $html );
+		self::assertStringContainsString( 'value="validate"', $html );
 		self::assertStringContainsString( 'value="remove"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Remove webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Remove</button>', $html );
 	}
 
 	public function test_confirmed_absence_deletes_only_the_local_recovery_record(): void {
@@ -1272,9 +1438,9 @@ final class WebhookManagementControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'notice notice-error inline ran-booster-repository-webhook-management__notice', $html );
 		self::assertStringContainsString( 'Run Check or inspect the hook at the Git provider before retrying an update', $html );
-		self::assertStringContainsString( 'value="check"', $html );
+		self::assertStringContainsString( 'value="validate"', $html );
 		self::assertStringContainsString( 'value="reconfigure"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Update webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Repair</button>', $html );
 	}
 
 	public function test_ambiguous_provider_remediation_survives_only_its_signed_redirect(): void {
@@ -1360,7 +1526,7 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'value="reconfigure"', $html );
-		self::assertStringContainsString( 'value="check"', $html );
+		self::assertStringContainsString( 'value="validate"', $html );
 	}
 
 	public function test_partial_reconfigure_requires_check_before_another_update(): void {
@@ -1383,9 +1549,9 @@ final class WebhookManagementControllerTest extends TestCase {
 		$html = $this->render_panel( $gateway, $store );
 
 		self::assertStringContainsString( 'then run Check before retrying', $html );
-		self::assertStringContainsString( 'value="check"', $html );
+		self::assertStringContainsString( 'value="validate"', $html );
 		self::assertStringContainsString( 'value="reconfigure"', $html );
-		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Update webhook</button>', $html );
+		self::assertStringContainsString( 'disabled="disabled" aria-disabled="true">Repair</button>', $html );
 	}
 
 	public function test_verified_result_copy_does_not_claim_that_check_proved_signed_delivery(): void {
@@ -1475,6 +1641,348 @@ final class WebhookManagementControllerTest extends TestCase {
 	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit lifecycle override requires this method name.
+
+	/**
+	 * @param array<string, RepositoryWebhookOperationResult> $results
+	 * @return array{0:OperationGatewayFixture,1:OperationStoreFixture}
+	 */
+	private function validate_fixtures( array $results, string $status = 'configured' ): array {
+		$gateway                       = $this->gateway();
+		$gateway->results_by_operation = $results;
+		$store                         = new OperationStoreFixture();
+		$store->record                 = $this->record( status: $status );
+
+		return array( $gateway, $store );
+	}
+
+	private function stored_status( OperationStoreFixture $store ): string {
+		if ( null === $store->record ) {
+			self::fail( 'The stored record is missing.' );
+		}
+
+		return $store->record->status();
+	}
+
+	/**
+	 * @param array<string, mixed> $changes
+	 * @return array<string, mixed>
+	 */
+	private function validate_request( array $changes = array() ): array {
+		return $this->request(
+			array_merge(
+				array(
+					'repository_webhook_management_operation' => 'validate',
+					'_wpnonce_test' => 'test_nonce',
+				),
+				$changes
+			)
+		);
+	}
+
+	/** @return array<string, string> */
+	private function redirect_query( string $redirect ): array {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Test parses a local redirect.
+		parse_str( (string) parse_url( $redirect, PHP_URL_QUERY ), $query );
+		$strings = array();
+		foreach ( $query as $key => $value ) {
+			$strings[ (string) $key ] = is_string( $value ) ? $value : '';
+		}
+
+		return $strings;
+	}
+
+	private function confirmed_check(): RepositoryWebhookOperationResult {
+		return $this->operation_result( 'succeeded', 'configuration_confirmed', '77', delivery: 'unknown' );
+	}
+
+	/** @return array<string, array{0:string,1:string,2:bool,3:string,4:string}> */
+	public static function validate_stopped_checks(): array {
+		return array(
+			'hook absent'     => array( 'succeeded', 'hook_absent', false, 'remote_missing', 'remote_missing' ),
+			'drift'           => array( 'succeeded', 'configured_pending_delivery', true, 'configuration_drift', 'configuration_drift' ),
+			'check uncertain' => array( 'failed', 'hook_inventory_unavailable', false, 'hook_inventory_unavailable', 'configured' ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'validate_stopped_checks' )]
+	public function test_validate_does_not_ping_when_the_check_does_not_confirm( string $state, string $provider_code, bool $mismatched, string $code, string $status ): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		$check                                   = $this->operation_result(
+			$state,
+			$provider_code,
+			'77',
+			true,
+			$mismatched ? array(
+				'endpoint'     => 'mismatched',
+				'events'       => 'matched',
+				'content_type' => 'matched',
+				'active'       => 'matched',
+			) : null
+		);
+		list( $gateway, $store )                 = $this->validate_fixtures( array( 'check' => $check ) );
+		$redirect                                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store, activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		self::assertSame( array( 'check' ), array_column( $gateway->mutation_calls, 0 ) );
+		self::assertSame( $code, $redirect['webhook_management_result'] );
+		self::assertSame( 'skipped', $redirect['webhook_management_ping'] );
+		self::assertSame( $status, $this->stored_status( $store ) );
+		self::assertSame( array( 'webhook.check' ), array_column( $connection->inserted, 'operation' ) );
+	}
+
+	/** @return array<string, array{0:string,1:string,2:string}> */
+	public static function validate_successful_checks(): array {
+		return array(
+			'configuration confirmed'     => array( 'configuration_confirmed', 'unknown', 'configuration_confirmed' ),
+			'configured pending delivery' => array( 'configured_pending_delivery', 'configured_pending_delivery', 'configured_pending_delivery' ),
+			'verified'                    => array( 'verified', 'verified', 'verified' ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'validate_successful_checks' )]
+	public function test_validate_pings_after_every_successful_check_outcome( string $provider_code, string $delivery, string $code ): void {
+		list( $gateway, $store ) = $this->validate_fixtures(
+			array(
+				'check' => $this->operation_result( 'succeeded', $provider_code, '77', delivery: $delivery ),
+				'test'  => $this->operation_result( 'succeeded', 'ping_requested' ),
+			)
+		);
+		$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		self::assertSame( array( 'check', 'test' ), array_column( $gateway->mutation_calls, 0 ) );
+		self::assertSame( $code, $redirect['webhook_management_result'] );
+		self::assertSame( 'ping_requested', $redirect['webhook_management_ping'] );
+	}
+
+	public function test_validate_does_not_ping_after_a_failed_check(): void {
+		list( $gateway, $store ) = $this->validate_fixtures( array( 'check' => $this->operation_result( 'failed', 'hook_ownership_mismatch' ) ) );
+		$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		self::assertSame( array( 'check' ), array_column( $gateway->mutation_calls, 0 ) );
+		self::assertSame( 'hook_ownership_mismatch', $redirect['webhook_management_result'] );
+		self::assertSame( 'skipped', $redirect['webhook_management_ping'] );
+	}
+
+	public function test_validate_confirmed_check_then_ping_runs_both_operations_with_their_own_nonces(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		list( $gateway, $store )                 = $this->validate_fixtures(
+			array(
+				'check' => $this->confirmed_check(),
+				'test'  => $this->operation_result( 'succeeded', 'ping_requested' ),
+			)
+		);
+		$redirect                                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store, activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		self::assertSame( array( 'check', 'test' ), array_column( $gateway->mutation_calls, 0 ) );
+		self::assertSame( 'check_nonce', $gateway->mutation_calls[0][5] );
+		self::assertSame( 'test_nonce', $gateway->mutation_calls[1][5] );
+		self::assertSame( 'configuration_confirmed', $redirect['webhook_management_result'] );
+		self::assertSame( 'ping_requested', $redirect['webhook_management_ping'] );
+		self::assertSame( 'needs_verification', $this->stored_status( $store ) );
+		self::assertSame( array( 'webhook.check', 'webhook.test' ), array_column( $connection->inserted, 'operation' ) );
+	}
+
+	public function test_validate_second_operation_reads_the_record_the_first_one_wrote(): void {
+		// A stale read would make the Test write fail its compare-and-swap with record_conflict.
+		list( $gateway, $store ) = $this->validate_fixtures(
+			array(
+				'check' => $this->confirmed_check(),
+				'test'  => $this->operation_result(
+					'succeeded',
+					'ping_requested',
+					'77',
+					true,
+					array(
+						'endpoint'     => 'mismatched',
+						'events'       => 'matched',
+						'content_type' => 'matched',
+						'active'       => 'matched',
+					)
+				),
+			)
+		);
+		$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		self::assertSame( 2, $store->save_attempts );
+		self::assertSame( 'configuration_drift', $redirect['webhook_management_ping'] );
+		self::assertSame( 'configuration_drift', $this->stored_status( $store ) );
+	}
+
+	public function test_validate_failed_ping_keeps_the_settings_line_and_shows_the_worse_intent(): void {
+		list( $gateway, $store ) = $this->validate_fixtures(
+			array(
+				'check' => $this->confirmed_check(),
+				'test'  => $this->operation_result( 'failed', 'ping_delivery_failed' ),
+			)
+		);
+		$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+		self::assertSame( 'configuration_confirmed', $redirect['webhook_management_result'] );
+		self::assertSame( 'ping_delivery_failed', $redirect['webhook_management_ping'] );
+
+		$_GET = $redirect;
+		$html = $this->render_panel( $gateway, $store );
+		self::assertStringContainsString( 'notice-error', $html );
+		self::assertStringNotContainsString( 'notice-success', $html );
+		self::assertStringContainsString( '<strong>Settings:</strong> Remote configuration confirmed; signed delivery unverified', $html );
+		self::assertStringContainsString( '<strong>Ping:</strong> Ping delivery failed', $html );
+	}
+
+	public function test_validate_inline_response_carries_both_lines(): void {
+		list( $gateway, $store ) = $this->validate_fixtures(
+			array(
+				'check' => $this->confirmed_check(),
+				'test'  => $this->operation_result( 'failed', 'ping_delivery_failed' ),
+			)
+		);
+		$interaction             = new CapturingAdminInteractionFacade();
+		try {
+			$this->controller( gateway: $gateway, store: $store, admin_interaction: $interaction )->handle_admin_post( $this->validate_request( array( 'return_url' => 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh&panel=repositories&repository=1234' ) ), 'check_nonce' );
+			self::fail( 'The inline path must respond.' );
+		} catch ( AdminInteractionResponded ) {
+			self::assertInstanceOf( AdminInteractionOutcome::class, $interaction->outcome );
+		}
+		self::assertSame( AdminInteractionOutcome::VALIDATION_FAILURE, $interaction->outcome->kind() );
+		self::assertSame( 'Settings: Remote configuration confirmed; signed delivery unverified Ping: Ping delivery failed', $interaction->outcome->message() );
+	}
+
+	public function test_validate_rejects_a_bad_check_nonce_before_running_anything(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		list( $gateway, $store )                 = $this->validate_fixtures( array( 'check' => $this->confirmed_check() ) );
+		$redirect                                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store, activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post( $this->validate_request(), 'invalid' ) );
+
+		self::assertSame( array(), $gateway->calls );
+		self::assertSame( array(), $connection->inserted );
+		self::assertSame( 'invalid_request', $redirect['webhook_management_result'] );
+		self::assertArrayNotHasKey( 'webhook_management_ping', $redirect );
+		self::assertSame( 'configured', $this->stored_status( $store ) );
+	}
+
+	public function test_validate_rejects_a_bad_test_nonce_before_the_check_runs(): void {
+		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
+		$connection                              = new \RAN\Tests\Activity\ActivityConnection();
+		list( $gateway, $store )                 = $this->validate_fixtures( array( 'check' => $this->confirmed_check() ) );
+		foreach ( array( 'invalid', '', 'check_nonce' ) as $bad ) {
+			$redirect = $this->redirect_query( $this->controller( gateway: $gateway, store: $store, activity: new \RAN\Activity\ActivityStore( $connection ) )->handle_admin_post( $this->validate_request( array( '_wpnonce_test' => $bad ) ), 'check_nonce' ) );
+			self::assertSame( 'invalid_request', $redirect['webhook_management_result'], $bad );
+			self::assertArrayNotHasKey( 'webhook_management_ping', $redirect );
+		}
+
+		self::assertSame( array(), $gateway->calls );
+		self::assertSame( array(), $connection->inserted );
+		self::assertSame( 0, $store->save_attempts );
+	}
+
+	public function test_validate_requires_the_capability_once_up_front(): void {
+		list( $gateway, $store ) = $this->validate_fixtures( array( 'check' => $this->confirmed_check() ) );
+		$controller              = new WebhookManagementController(
+			new WebhookOperationCoordinator( $gateway, $store ),
+			$this->display( $gateway, $store ),
+			new ProviderRegistry( array( new CompleteWebhookManagementCapabilityProvider( 'gh', 'GitHub' ) ) ),
+			$this->package_authorities(),
+			static fn (): bool => false,
+			static fn (): bool => true,
+			static fn ( string $action ): string => $action
+		);
+		$redirect                = $this->redirect_query( $controller->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		self::assertSame( 'forbidden', $redirect['webhook_management_result'] );
+		self::assertSame( array(), $gateway->calls );
+	}
+
+	public function test_validate_without_a_credential_runs_nothing_remote(): void {
+		list( $gateway, $store ) = $this->validate_fixtures( array( 'check' => $this->confirmed_check() ) );
+		$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request( array( 'booster_credential_id' => '' ) ), 'check_nonce' ) );
+
+		self::assertSame( array(), $gateway->calls );
+		self::assertSame( 'invalid_token', $redirect['webhook_management_result'] );
+		self::assertSame( 'skipped', $redirect['webhook_management_ping'] );
+	}
+
+	public function test_check_and_test_still_work_separately_without_a_ping_argument(): void {
+		list( $gateway, $store ) = $this->validate_fixtures(
+			array(
+				'check' => $this->confirmed_check(),
+				'test'  => $this->operation_result( 'succeeded', 'ping_requested' ),
+			)
+		);
+		$controller              = $this->controller( gateway: $gateway, store: $store );
+		$check                   = $this->redirect_query( $controller->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'check' ) ), 'check_nonce' ) );
+		$test                    = $this->redirect_query( $controller->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'test' ) ), 'test_nonce' ) );
+
+		self::assertSame( array( 'check', 'test' ), array_column( $gateway->mutation_calls, 0 ) );
+		self::assertSame( 'configuration_confirmed', $check['webhook_management_result'] );
+		self::assertSame( 'ping_requested', $test['webhook_management_result'] );
+		self::assertArrayNotHasKey( 'webhook_management_ping', $check );
+		self::assertArrayNotHasKey( 'webhook_management_ping', $test );
+		// A Check nonce does not authorize a standalone Test.
+		$wrong = $this->redirect_query( $controller->handle_admin_post( $this->request( array( 'repository_webhook_management_operation' => 'test' ) ), 'check_nonce' ) );
+		self::assertSame( 'invalid_request', $wrong['webhook_management_result'] );
+	}
+
+	/** @return array<string, array{0:string,1:string,2:string,3:string,4:string}> */
+	public static function validate_result_blocks(): array {
+		return array(
+			'matched and ping requested' => array( 'configuration_confirmed', 'ping_requested', 'notice-warning', 'Remote configuration confirmed; signed delivery unverified', 'Ping request accepted; signed delivery unverified' ),
+			'matched and ping failed'    => array( 'configuration_confirmed', 'ping_delivery_failed', 'notice-error', 'Remote configuration confirmed; signed delivery unverified', 'Ping delivery failed' ),
+			'drifted, ping skipped'      => array( 'configuration_drift', 'skipped', 'notice-error', 'could not confirm', 'Skipped because the settings did not match.' ),
+			'hook absent, ping skipped'  => array( 'remote_missing', 'skipped', 'notice-error', 'could not confirm', 'Skipped because the settings were not confirmed.' ),
+			'uncertain, ping skipped'    => array( 'hook_inventory_unavailable', 'skipped', 'notice-error', 'could not establish the current remote hook state', 'Skipped because the settings were not confirmed.' ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'validate_result_blocks' )]
+	public function test_validate_result_block_shows_two_lines_and_never_verifies_a_ping( string $check, string $ping, string $notice_class, string $settings, string $ping_text ): void {
+		$_GET = array(
+			'webhook_management_result' => $check,
+			'webhook_management_ping'   => $ping,
+		);
+		$html = $this->render_panel();
+
+		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-notice ' ), $check );
+		self::assertStringContainsString( 'notice ' . $notice_class . ' inline', $html );
+		if ( 1 !== preg_match( '#<p><strong>Settings:</strong> ([^<]*)</p>#', $html, $settings_line ) ) {
+			self::fail( 'The Settings line is missing.' );
+		}
+		if ( 1 !== preg_match( '#<p><strong>Ping:</strong> ([^<]*)</p>#', $html, $ping_line ) ) {
+			self::fail( 'The Ping line is missing.' );
+		}
+		self::assertStringContainsString( $settings, html_entity_decode( $settings_line[1] ) );
+		self::assertSame( $ping_text, html_entity_decode( $ping_line[1] ) );
+		self::assertSame( 0, preg_match( '/(?<!un)verified/i', $ping_line[1] ), 'A ping request is never verified delivery.' );
+		self::assertStringContainsString( 'repository_webhook_management_operation', $html );
+	}
+
+	public function test_single_operation_result_keeps_its_one_block_rendering(): void {
+		$_GET = array( 'webhook_management_result' => 'ping_requested' );
+		$html = $this->render_panel();
+
+		self::assertStringNotContainsString( '<strong>Settings:</strong>', $html );
+		self::assertStringContainsString( '<p><strong>Ping request accepted; signed delivery unverified</strong></p>', $html );
+		// A ping argument without a result is ignored.
+		$_GET = array( 'webhook_management_ping' => 'ping_requested' );
+		self::assertNull( $this->controller()->panel_context()['ping'] );
+	}
+
+	public function test_panel_carries_the_validate_button_and_its_second_nonce_field(): void {
+		list( $gateway, $store ) = $this->validate_fixtures( array() );
+		$html                    = $this->render_panel( $gateway, $store );
+
+		self::assertSame( 1, preg_match_all( '/name="_wpnonce_test" value="nonce-for-[0-9a-f]{64}"/', $html ) );
+		self::assertSame( 1, substr_count( $html, 'name="_wpnonce_test"' ) );
+		self::assertSame( 1, substr_count( $html, 'name="repository_webhook_management_operation" value="validate"' ) );
+		self::assertSame( 0, substr_count( $html, 'value="test"' ) );
+		self::assertSame( 0, substr_count( $html, 'value="check"' ) );
+		if ( 1 !== preg_match( '/value="validate" formaction="[^"]*_wpnonce=nonce-for-([0-9a-f]{64})"/', $html, $check_nonce ) ) {
+			self::fail( 'The Validate formaction carries no Check nonce.' );
+		}
+		if ( 1 !== preg_match( '/name="_wpnonce_test" value="nonce-for-([0-9a-f]{64})"/', $html, $test_nonce ) ) {
+			self::fail( 'The Test nonce field is missing.' );
+		}
+		self::assertSame( hash( 'sha256', 'ran_booster_repository_webhook_check_gh_1234' ), $check_nonce[1] );
+		self::assertSame( hash( 'sha256', 'ran_booster_repository_webhook_test_gh_1234' ), $test_nonce[1] );
+	}
 
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
@@ -1606,10 +2114,13 @@ final class WebhookManagementControllerTest extends TestCase {
 		$display    = $this->display( $gateway, $store );
 		$controller = $this->controller( $gateway, $store );
 		$context    = $controller->panel_context();
-		$model      = $display->panel( 'gh', 'GitHub', '1234', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', $context['result'], $context['recovery'], true, $context['remediation'] );
+		$model      = $display->panel( 'gh', 'GitHub', '1234', 'https://site.example/wp-admin/admin.php?page=ran-booster&tab=gh', $context['result'], $context['recovery'], true, $context['remediation'], null, $context['ping'] );
 		self::assertIsArray( $model );
 		$form_attributes = '';
 		ob_start();
+		$panel_part = 'form';
+		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
+		$panel_part = 'actions';
 		require dirname( __DIR__, 3 ) . '/RAN/Admin/WebhookManagement/views/panel.php';
 
 		return (string) ob_get_clean();
@@ -1634,7 +2145,9 @@ final class WebhookManagementControllerTest extends TestCase {
 					'ran_booster_repository_webhook_test_' . $provider_code . '_1234',
 				),
 				true
-			) ) || ( str_starts_with( $action, 'ran_booster_repository_webhook_result_' )
+			) ) || ( 'check_nonce' === $nonce && 'ran_booster_repository_webhook_check_' . $provider_code . '_1234' === $action )
+				|| ( 'test_nonce' === $nonce && 'ran_booster_repository_webhook_test_' . $provider_code . '_1234' === $action )
+				|| ( str_starts_with( $action, 'ran_booster_repository_webhook_result_' )
 				&& hash_equals( hash_hmac( 'sha256', $action, 'test-result-nonce' ), $nonce ) ),
 			static fn ( string $action ): string => hash_hmac( 'sha256', $action, 'test-result-nonce' )
 		);
@@ -1765,6 +2278,8 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 	public bool $throw_on_readiness    = false;
 	public bool $profile_absent        = false;
 	public bool $credentials_available = true;
+	/** @var array<string, RepositoryWebhookOperationResult> Per-operation results; `result` answers any other operation. */
+	public array $results_by_operation = array();
 
 	public function __construct(
 		private readonly AssistanceReadiness $readiness_result,
@@ -1929,7 +2444,7 @@ final class OperationGatewayFixture implements WebhookAssistanceFacade {
 		}
 		$this->mutation_calls[] = $call;
 
-		return $this->result;
+		return $this->results_by_operation[ $call[0] ] ?? $this->result;
 	}
 
 	private function fitness_result(): RepositoryWebhookFitnessResult {

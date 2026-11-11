@@ -316,7 +316,7 @@ final readonly class PortabilityApplicationService {
 		$credential_action    = $decision['action'] ?? null;
 		$target_credential_id = $decision['target_id'] ?? ( null === $credential ? $target_credential_id : null );
 		if ( $expected_action !== $item->action->value ) {
-			return $this->result( 'skipped', __( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ) );
+			return $this->result( 'skipped', __( 'This package changed since review. Review the Blueprint again.', 'ran-booster' ) );
 		}
 		if ( null !== $credential && ( null === $credential_action || BlueprintCredentialAction::LEAVE === $credential_action ) ) {
 			return $this->result( 'skipped', __( 'This package was left unchanged by the repository credential decision.', 'ran-booster' ) );
@@ -353,7 +353,7 @@ final readonly class PortabilityApplicationService {
 		if ( $expected_action !== $item->action->value ) {
 			return $this->result(
 				'skipped',
-				__( 'This package changed since review. Review the Transporter Blueprint again.', 'ran-booster' ),
+				__( 'This package changed since review. Review the Blueprint again.', 'ran-booster' ),
 				null !== $credential && in_array( $credential_action, array( BlueprintCredentialAction::IMPORT, BlueprintCredentialAction::TARGET ), true ) ? 'unavailable' : 'none'
 			);
 		}
@@ -361,7 +361,7 @@ final readonly class PortabilityApplicationService {
 			$managed = null;
 			$fresh   = $this->reviewer->review_package( $package, $managed );
 			if ( TargetPackageAction::INSTALL !== $fresh->action ) {
-				return $this->result( 'skipped', __( 'This package appeared on the target during review. Review the Transporter Blueprint again before making any change.', 'ran-booster' ) );
+				return $this->result( 'skipped', __( 'This package appeared on the target during review. Review the Blueprint again before making any change.', 'ran-booster' ) );
 			}
 			if ( BlueprintCredentialAction::IMPORT === $credential_action ) {
 				$this->assert_local_secret_store_ready();
@@ -402,13 +402,13 @@ final readonly class PortabilityApplicationService {
 			} catch ( Throwable ) {
 				return $this->result(
 					'failed',
-					__( 'Booster could not import this repository credential. Review the Transporter Blueprint again and check repository access.', 'ran-booster' ),
+					__( 'Booster could not import this repository credential. Review the Blueprint again and check repository access.', 'ran-booster' ),
 					'unavailable'
 				);
 			}
 		}
 		if ( ! $this->is_actionable( $item ) ) {
-			return $this->result( 'skipped', __( 'This package changed or cannot be applied. Review the Transporter Blueprint again.', 'ran-booster' ) );
+			return $this->result( 'skipped', __( 'This package changed or cannot be applied. Review the Blueprint again.', 'ran-booster' ) );
 		}
 		$credential_state = in_array( $source, array( 'import', 'target' ), true ) ? 'unavailable' : 'none';
 		try {
@@ -436,7 +436,7 @@ final readonly class PortabilityApplicationService {
 			if ( TargetPackageAction::ADOPT === $item->action ) {
 				$this->assert_disabled_result( $result, $item->package, $credential_id, $repository_private );
 				if ( 'uncertain' === ( $result['status'] ?? null ) ) {
-					return $this->result( 'failed', __( 'Booster could not confirm the release adoption outcome. Review the Transporter Blueprint again before making another change.', 'ran-booster' ), $credential_state );
+					return $this->result( 'failed', __( 'Booster could not confirm the release adoption outcome. Review the Blueprint again before making another change.', 'ran-booster' ), $credential_state );
 				}
 
 				return $this->result( 'adopted', __( 'Adopted: deployment disabled', 'ran-booster' ), $credential_state );
@@ -452,7 +452,7 @@ final readonly class PortabilityApplicationService {
 			}
 			return $this->result(
 				'failed',
-				__( 'Booster could not apply this package. Review the Transporter Blueprint again and check repository access.', 'ran-booster' ),
+				__( 'Booster could not apply this package. Review the Blueprint again and check repository access.', 'ran-booster' ),
 				$credential_state
 			);
 		}
@@ -461,12 +461,12 @@ final readonly class PortabilityApplicationService {
 	/** @return array{status:string,message:string,credential_state:string} */
 	private function install_release( BlueprintPlanItem $item, ?string $credential_id, bool $repository_private, string $credential_state ): array {
 		if ( null === $this->prospective_releases || null === $item->release_review ) {
-			return $this->result( 'failed', __( 'Booster could not install the reviewed release. Review the Transporter Blueprint again.', 'ran-booster' ), $credential_state );
+			return $this->result( 'failed', __( 'Booster could not install the reviewed release. Review the Blueprint again.', 'ran-booster' ), $credential_state );
 		}
 		$review  = $item->release_review;
 		$channel = $review['channel'];
 		if ( ! in_array( $channel, array( 'stable', 'prerelease' ), true ) ) {
-			return $this->result( 'failed', __( 'The reviewed release candidate is no longer valid. Review the Transporter Blueprint before making another change.', 'ran-booster' ), $credential_state );
+			return $this->result( 'failed', __( 'The reviewed release candidate is no longer valid. Review the Blueprint before making another change.', 'ran-booster' ), $credential_state );
 		}
 		try {
 			$result = $this->prospective_releases->install(
@@ -482,27 +482,27 @@ final readonly class PortabilityApplicationService {
 				DeploymentPolicy::DISABLED
 			);
 		} catch ( Throwable ) {
-			return $this->result( 'failed', __( 'Booster could not install the reviewed release. Review the Transporter Blueprint again.', 'ran-booster' ), $credential_state );
+			return $this->result( 'failed', __( 'Booster could not install the reviewed release. Review the Blueprint again.', 'ran-booster' ), $credential_state );
 		}
 		if ( ! $result->successful() ) {
 			$message = match ( $result->code() ) {
-				'installed_but_unmanaged' => __( 'The release files may have been installed, but Booster management was not established. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
-				'management_state_uncertain' => __( 'Booster could not determine the release management state. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
-				'installation_cleanup_failed' => __( 'Booster could not confirm cleanup after installing the reviewed release. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
-				'package_already_exists' => __( 'The target package appeared during installation, so Booster refused to manage it. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
-				'release_repository_conflict' => __( 'The target has a conflicting managed package source, so Booster refused installation. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
-				'release_invalid', 'package_identity_mismatch' => __( 'The reviewed release candidate is no longer valid. Review the Transporter Blueprint before making another change.', 'ran-booster' ),
-				default => __( 'Booster could not confirm installation of the reviewed release. Review the Transporter Blueprint again before making another change.', 'ran-booster' ),
+				'installed_but_unmanaged' => __( 'The release files may have been installed, but Booster management was not established. Review the Blueprint before making another change.', 'ran-booster' ),
+				'management_state_uncertain' => __( 'Booster could not determine the release management state. Review the Blueprint before making another change.', 'ran-booster' ),
+				'installation_cleanup_failed' => __( 'Booster could not confirm cleanup after installing the reviewed release. Review the Blueprint before making another change.', 'ran-booster' ),
+				'package_already_exists' => __( 'The target package appeared during installation, so Booster refused to manage it. Review the Blueprint before making another change.', 'ran-booster' ),
+				'release_repository_conflict' => __( 'The target has a conflicting managed package source, so Booster refused installation. Review the Blueprint before making another change.', 'ran-booster' ),
+				'release_invalid', 'package_identity_mismatch' => __( 'The reviewed release candidate is no longer valid. Review the Blueprint before making another change.', 'ran-booster' ),
+				default => __( 'Booster could not confirm installation of the reviewed release. Review the Blueprint again before making another change.', 'ran-booster' ),
 			};
 			return $this->result( 'failed', $message, $credential_state );
 		}
 		if ( null !== $this->verifier->provider_review_refusal( $item->package->provider, $item->provider_expectation ) ) {
-			return $this->result( 'failed', __( 'Booster could not confirm installation of the reviewed release. Review the Transporter Blueprint again before making another change.', 'ran-booster' ), $credential_state );
+			return $this->result( 'failed', __( 'Booster could not confirm installation of the reviewed release. Review the Blueprint again before making another change.', 'ran-booster' ), $credential_state );
 		}
 		$managed = null;
 		$this->reviewer->review_package( $item->package, $managed );
 		if ( ! $managed instanceof Package || ! $this->target_verified( $managed, $item->package, $credential_id, $repository_private ) ) {
-			return $this->result( 'failed', __( 'Booster could not confirm installation of the reviewed release. Review the Transporter Blueprint again before making another change.', 'ran-booster' ), $credential_state );
+			return $this->result( 'failed', __( 'Booster could not confirm installation of the reviewed release. Review the Blueprint again before making another change.', 'ran-booster' ), $credential_state );
 		}
 		return $this->result( 'installed', __( 'Package installed and managed by Booster with deployment disabled. Re-enable deployment deliberately when this site is ready.', 'ran-booster' ), $credential_state );
 	}

@@ -48,7 +48,7 @@ final readonly class PortabilityController {
 		RuntimeSupport::assert_managed_operations_allowed();
 
 		if ( ! $this->is_allowed( self::EXPORT_NONCE_ACTION ) ) {
-			return $this->export_failure( __( 'Your Transporter export session expired. Reload the page and try again.', 'ran-booster' ), 403 );
+			return $this->export_failure( __( 'Your session expired. Reload the page and try again.', 'ran-booster' ), 403 );
 		}
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- isAllowed validates this purpose-specific nonce before reading input.
 		try {
@@ -75,7 +75,7 @@ final readonly class PortabilityController {
 		} catch ( InvalidArgumentException ) {
 			return $this->export_failure( __( 'The selected packages or repository credentials changed or are invalid. Reload this page and try again.', 'ran-booster' ), 400 );
 		} catch ( Throwable ) {
-			return $this->export_failure( __( 'Booster could not read the managed package selection. Please try again.', 'ran-booster' ), 500 );
+			return $this->export_failure( __( 'Booster could not read the managed package selection. Try again.', 'ran-booster' ), 500 );
 		}
 
 		try {
@@ -88,7 +88,7 @@ final readonly class PortabilityController {
 			}
 			$this->archive->write_to( $path, $blueprint, $password );
 		} catch ( Throwable ) {
-			return $this->export_failure( __( 'Booster could not create the Transporter Blueprint ZIP. Please try again.', 'ran-booster' ), 500 );
+			return $this->export_failure( __( 'Booster could not create the Blueprint ZIP. Try again.', 'ran-booster' ), 500 );
 		}
 
 		try {
@@ -100,7 +100,7 @@ final readonly class PortabilityController {
 			header( 'Content-Length: ' . (string) strlen( $bytes ) );
 			echo $bytes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Emits only the fully read, bounded ZIP after validation.
 		} catch ( Throwable ) {
-			return $this->export_failure( __( 'Booster could not read the Transporter Blueprint ZIP. Please try again.', 'ran-booster' ), 500 );
+			return $this->export_failure( __( 'Booster could not read the Blueprint ZIP. Try again.', 'ran-booster' ), 500 );
 		} finally {
 			if ( is_file( $path ) ) {
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Removes only this request's generated ZIP.
@@ -179,13 +179,13 @@ final readonly class PortabilityController {
 		RuntimeSupport::assert_managed_operations_allowed();
 
 		if ( ! $this->is_allowed( self::PREVIEW_NONCE_ACTION ) ) {
-			return wp_send_json_error( array( 'message' => __( 'Your Transporter review session expired. Reload the page and try again.', 'ran-booster' ) ), 403 );
+			return wp_send_json_error( array( 'message' => __( 'Your session expired. Reload the page and try again.', 'ran-booster' ) ), 403 );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- isAllowed validates this purpose-specific nonce before reading the native upload.
 		$upload = $this->uploaded_blueprint();
 		if ( null === $upload ) {
-			return wp_send_json_error( array( 'message' => __( 'Choose a valid Transporter Blueprint ZIP to review.', 'ran-booster' ) ), 400 );
+			return wp_send_json_error( array( 'message' => __( 'Choose a valid Blueprint ZIP.', 'ran-booster' ) ), 400 );
 		}
 
 		try {
@@ -193,13 +193,13 @@ final readonly class PortabilityController {
 			try {
 				$decisions = $this->credential_decisions( $blueprint );
 			} catch ( InvalidArgumentException ) {
-				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Transporter Blueprint again.', 'ran-booster' ) ), 400 );
+				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Blueprint again.', 'ran-booster' ) ), 400 );
 			}
 			return $this->preview_success( $this->review_blueprint( $blueprint, $decisions, $this->target_credential_ids() ) );
 		} catch ( PackageStorageFailure $failure ) {
 			return wp_send_json_error( array( 'message' => $failure->getMessage() ), $failure->is_database_unsupported() ? 503 : 500 );
 		} catch ( Throwable ) {
-			return wp_send_json_error( array( 'message' => __( 'Booster could not read this Transporter Blueprint. If it includes credentials, enter its ZIP password and try again.', 'ran-booster' ) ), 400 );
+			return wp_send_json_error( array( 'message' => __( 'Booster could not read this Blueprint. If it includes credentials, enter its ZIP password and try again.', 'ran-booster' ) ), 400 );
 		}
 	}
 
@@ -207,13 +207,13 @@ final readonly class PortabilityController {
 		RuntimeSupport::assert_managed_operations_allowed();
 
 		if ( ! $this->is_allowed( self::APPLY_NONCE_ACTION ) ) {
-			return wp_send_json_error( array( 'message' => __( 'Your Transporter apply session expired. Reload the page and try again.', 'ran-booster' ) ), 403 );
+			return wp_send_json_error( array( 'message' => __( 'Your session expired. Reload the page and try again.', 'ran-booster' ) ), 403 );
 		}
 
 		$upload = $this->uploaded_blueprint();
 		$row    = $this->requested_row();
 		if ( null === $upload || null === $row ) {
-			return wp_send_json_error( array( 'message' => __( 'Choose the same Transporter Blueprint and package row to apply.', 'ran-booster' ) ), 400 );
+			return wp_send_json_error( array( 'message' => __( 'Choose the same Blueprint and package row to apply.', 'ran-booster' ) ), 400 );
 		}
 
 		try {
@@ -226,7 +226,7 @@ final readonly class PortabilityController {
 					throw new InvalidArgumentException();
 				}
 			} catch ( InvalidArgumentException ) {
-				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Transporter Blueprint again.', 'ran-booster' ) ), 400 );
+				return wp_send_json_error( array( 'message' => __( 'The repository credential decisions are invalid. Review the Blueprint again.', 'ran-booster' ) ), 400 );
 			}
 			$release_review = null;
 			$expectation    = null;
@@ -396,7 +396,7 @@ final readonly class PortabilityController {
 	private function review_again(): array {
 		return array(
 			'status'           => 'skipped',
-			'message'          => __( 'The reviewed release evidence changed or expired. Review the Transporter Blueprint again.', 'ran-booster' ),
+			'message'          => __( 'The reviewed release evidence changed or expired. Review the Blueprint again.', 'ran-booster' ),
 			'credential_state' => 'none',
 		);
 	}
@@ -449,10 +449,10 @@ final readonly class PortabilityController {
 			return null;
 		}
 		if ( null === $password ) {
-			return __( 'Choose a Transporter Blueprint password before exporting credentials.', 'ran-booster' );
+			return __( 'Choose a Blueprint password before exporting credentials.', 'ran-booster' );
 		}
 		if ( $password !== $confirmation ) {
-			return __( 'The Transporter Blueprint passwords do not match. Nothing was exported.', 'ran-booster' );
+			return __( 'The passwords do not match. Nothing was exported.', 'ran-booster' );
 		}
 
 		return null;
@@ -672,7 +672,7 @@ final readonly class PortabilityController {
 			return array(
 				'status'           => 'failed',
 				'category'         => LocalSecretStoreUnavailable::CATEGORY,
-				'message'          => __( 'Target encrypted credential storage is unavailable. Configure secure storage, then review and apply this row again.', 'ran-booster' ),
+				'message'          => __( 'Target credential storage is unavailable. Configure secure storage, then review and apply this row again.', 'ran-booster' ),
 				'credential_state' => 'unavailable',
 			);
 		}
@@ -681,7 +681,7 @@ final readonly class PortabilityController {
 			'status'  => 'failed',
 			'message' => $failure instanceof PackageStorageFailure
 				? $failure->getMessage()
-				: __( 'Booster could not apply this package. Review the Transporter Blueprint again and check repository access.', 'ran-booster' ),
+				: __( 'Booster could not apply this package. Review the Blueprint again and check repository access.', 'ran-booster' ),
 		);
 	}
 

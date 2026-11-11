@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin;
 
+use RAN\Admin\Component\ExternalLinkMarker;
 use RAN\Logging\BoosterLogger;
 use RAN\RepositoryProvider\ProviderMetadata;
 use Throwable;
@@ -115,7 +116,7 @@ final class DocumentationHookRenderer {
 			return null;
 		}
 
-		$content = wp_kses( $content, $this->documentation_content_allowed_html() );
+		$content = ExternalLinkMarker::normalize_html( wp_kses( $content, $this->documentation_content_allowed_html() ) );
 
 		if ( '' === trim( $content ) ) {
 			return null;

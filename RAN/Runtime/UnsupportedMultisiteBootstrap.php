@@ -48,7 +48,7 @@ final class UnsupportedMultisiteBootstrap {
 		}
 		$this->notice_rendered = true;
 		?>
-		<div class="notice notice-warning is-dismissible" data-ran-booster-unsupported-multisite-notice>
+		<div class="notice notice-warning is-dismissible" data-ran-booster-unsupported-multisite-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div data-ran-booster-ui-notice-content>
 			<p>
 				<strong><?php esc_html_e( 'RAN Booster does not support WordPress Multisite in this release.', 'ran-booster' ); ?></strong>
 			</p>
@@ -66,7 +66,7 @@ final class UnsupportedMultisiteBootstrap {
 					<?php esc_html_e( 'Read the version-specific Multisite recovery guide', 'ran-booster' ); ?>
 				</a>
 			</p>
-		</div>
+		</div></div>
 		<?php
 	}
 

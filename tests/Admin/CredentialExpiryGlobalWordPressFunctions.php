@@ -15,3 +15,10 @@ if ( ! function_exists( 'wp_cache_delete' ) ) {
 		return true;
 	}
 }
+
+if ( ! function_exists( 'esc_attr' ) ) {
+	// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound -- WordPress escaping double for the static Notice icon.
+	function esc_attr( mixed $value ): string {
+		return htmlspecialchars( (string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8' );
+	}
+}

@@ -105,6 +105,18 @@ final class ProviderSettingsExpiryProjectionTest extends TestCase {
 		self::assertSame( 'unknown', $second['expiry_status']['stage'] );
 	}
 
+	public function test_profile_summaries_use_the_approved_copy(): void {
+		$presenter = $this->presenter( $this->createStub( SecretsFile::class ), new InMemoryCredentialExpiryObservationStore(), new CredentialUsageDatabase() );
+		$method    = new \ReflectionMethod( $presenter, 'profile_summaries' );
+		$one       = $method->invoke( $presenter, false, false, false, 1, 1, 0 );
+		$many      = $method->invoke( $presenter, false, false, false, 2, 2, 0 );
+		self::assertIsArray( $one );
+		self::assertIsArray( $many );
+		self::assertSame( '', $one['credential']['description'] ?? null );
+		self::assertSame( '1 local secret can verify signed deliveries. It does not prove a remote webhook exists.', $one['webhook']['description'] ?? null );
+		self::assertSame( '2 local secrets can verify signed deliveries. They do not prove a remote webhook exists.', $many['webhook']['description'] ?? null );
+	}
+
 	private function presenter( SecretsFile $secrets, InMemoryCredentialExpiryObservationStore $observations, CredentialUsageDatabase $database ): ProviderSettingsPresenter {
 		return new ProviderSettingsPresenter(
 			new ProviderRegistry( array( new ExternalFixtureProvider( 'fixture' ), new ExternalFixtureProvider( 'second' ) ) ),

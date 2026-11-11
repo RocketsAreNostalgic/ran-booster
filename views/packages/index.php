@@ -71,13 +71,20 @@ $activity_badge_variants      = array(
 	'failed'          => 'error',
 	'needs_attention' => 'error',
 );
+$badge_intents                = array(
+	'neutral' => 'none',
+	'ok'      => 'stable',
+	'pending' => 'informational',
+	'warning' => 'medium',
+	'error'   => 'high',
+);
 $bulk_form_id                 = 'ran-booster-' . $package_view->get_type() . '-bulk-form';
 $bulk_action_id               = 'ran-booster-' . $package_view->get_type() . '-bulk-action';
 $bulk_select_all_id           = 'ran-booster-' . $package_view->get_type() . '-select-all';
 $bulk_type_label              = strtolower( $package_view->get_plural_label() );
 $bulk_type_singular           = strtolower( $package_view->get_singular_label() );
 $is_plugin_list               = 'plugin' === $package_view->get_type();
-$install_another_url          = add_query_arg( 'page', $package_view->get_create_page_slug(), $package_admin_url );
+$install_another_url          = add_query_arg( array( 'page' => $package_view->get_create_page_slug() ) + array_map( 'rawurlencode', $package_return_args ?? array() ), $package_admin_url );
 $clear_filters_url            = add_query_arg( 'page', $package_view->get_page_slug(), $package_admin_url );
 $has_package_list_filters     = array() !== array_filter(
 	$package_list_state,
@@ -102,14 +109,18 @@ $policy_labels = array(
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
 );
 
-?><h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></h2>
-<?php if ( $package_list_total > 0 ) { ?>
-	<a class="page-title-action" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
-<?php } ?>
+$package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 && empty( $package_list_unavailable );
+
+?><header class="ran-booster-action-row ran-booster-provider-management__header ran-booster-package-heading-row">
+	<h2 class="wp-heading-inline ran-booster-package-heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></h2>
+	<?php if ( $package_list_total > 0 ) { ?>
+		<a class="page-title-action" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
+	<?php } ?>
+</header>
 
 <div class="ran-booster-package-intro">
 	<p class="ran-booster-page-heading__description">
-		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress.', 'ran-booster' ); ?>
+		<?php esc_html_e( 'Review package health, deploy saved branches and hand published releases to WordPress. Manual deployments run only when an administrator requests one.', 'ran-booster' ); ?>
 	</p>
 
 	<?php require dirname( __DIR__ ) . '/notices.php'; ?>
@@ -132,7 +143,10 @@ $policy_labels = array(
 	<?php } ?>
 </div>
 
+<div id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-collection" class="ran-booster-card ran-booster-package-collection" data-ran-booster-card="<?php echo esc_attr( $package_view->get_type() . 's' ); ?>"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
+
 <?php if ( $package_list_total > 0 ) { ?>
+	<div class="ran-booster-package-collection__toolbar">
 	<div class="ran-booster-package-list-controls">
 		<form class="ran-booster-package-list-filters" method="get" action="<?php echo esc_url( $package_admin_url ); ?>">
 			<input type="hidden" name="page" value="<?php echo esc_attr( $package_view->get_page_slug() ); ?>">
@@ -159,7 +173,7 @@ $policy_labels = array(
 				<option value="manual" <?php selected( 'manual', $package_list_state['policy'] ); ?>><?php esc_html_e( 'Manual', 'ran-booster' ); ?></option>
 				<option value="disabled" <?php selected( 'disabled', $package_list_state['policy'] ); ?>><?php esc_html_e( 'Disabled', 'ran-booster' ); ?></option>
 			</select>
-			<button class="button" type="submit"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
+			<button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Filter', 'ran-booster' ); ?></button>
 			<?php if ( $has_package_list_filters ) { ?>
 				<a class="ran-booster-package-list-filters__clear" href="<?php echo esc_url( $clear_filters_url ); ?>"><?php esc_html_e( 'Clear filters', 'ran-booster' ); ?></a>
 			<?php } ?>
@@ -173,9 +187,10 @@ $policy_labels = array(
 				<?php } ?>
 			<?php } ?>
 			<p class="search-box">
-				<label for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search"><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'Search managed %s', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?></label>
-				<input id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search" class="wp-filter-search" type="search" name="s" value="<?php echo esc_attr( $package_list_state['search'] ); ?>">
-				<button class="button" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button>
+				<?php $package_search_label = sprintf( /* translators: %s is plugins or themes. */ __( 'Search managed %s', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ); ?>
+				<label class="screen-reader-text" for="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search"><?php echo esc_html( $package_search_label ); ?></label>
+				<input id="ran-booster-<?php echo esc_attr( $package_view->get_type() ); ?>-search" class="wp-filter-search" type="search" name="s" value="<?php echo esc_attr( $package_list_state['search'] ); ?>" placeholder="<?php echo esc_attr( $package_search_label ); ?>">
+				<button class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" type="submit"><?php esc_html_e( 'Search', 'ran-booster' ); ?></button>
 			</p>
 		</form>
 	</div>
@@ -196,7 +211,7 @@ $policy_labels = array(
 			data-reinstall-confirm-singular="<?php esc_attr_e( 'Reinstall the selected branch and overwrite local changes?', 'ran-booster' ); ?>"
 			data-reinstall-confirm-plural="<?php esc_attr_e( 'Reinstall {count} selected branches and overwrite local changes?', 'ran-booster' ); ?>"
 		>
-			<?php wp_nonce_field( $package_view->get_action( 'bulk' ) ); ?>
+			<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'bulk' ) ); ?>
 			<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'bulk' ) ); ?>">
 			<label class="screen-reader-text" for="<?php echo esc_attr( $bulk_action_id ); ?>"><?php esc_html_e( 'Select bulk action', 'ran-booster' ); ?></label>
 			<select id="<?php echo esc_attr( $bulk_action_id ); ?>" name="ran_booster[bulk_action]" required>
@@ -210,7 +225,8 @@ $policy_labels = array(
 					<option value="deactivate-plugins"><?php esc_html_e( 'Disable in WordPress', 'ran-booster' ); ?></option>
 				<?php } ?>
 			</select>
-			<button type="submit" class="button action" data-ran-booster-bulk-apply disabled><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
+			<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( true ) . ' action' ); ?>" data-ran-booster-bulk-apply data-ran-booster-busy-label="<?php echo esc_attr( __( 'Applying…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Applying the bulk action. This can take a few seconds.', 'ran-booster' ) ); ?>" disabled><?php esc_html_e( 'Apply', 'ran-booster' ); ?></button>
+			<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 			<span class="ran-booster-bulk-actions__status" aria-live="polite" data-ran-booster-selection-status><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( '0 %s selected', 'ran-booster' ), $bulk_type_label ) ); ?></span>
 		</form>
 		<?php } ?>
@@ -219,9 +235,19 @@ $policy_labels = array(
 		</div>
 		<br class="clear">
 	</div>
+	</div>
 <?php } ?>
 
-<table class="wp-list-table widefat plugins ran-booster-package-table">
+<?php if ( $package_show_empty_state ) { ?>
+	<div class="ran-booster-package-empty-state">
+		<h3><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></h3>
+		<p><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No %s are managed by RAN Booster yet.', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?></p>
+		<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
+	</div>
+<?php } else { ?>
+<div class="ran-booster-data-table-wrap ran-booster-package-table-wrap">
+<table class="wp-list-table widefat plugins ran-booster-package-table" data-package-type="<?php echo esc_attr( $package_view->get_type() ); ?>">
+	<caption class="screen-reader-text"><?php echo esc_html( sprintf( /* translators: %s: Managed package type plural label, such as Plugins or Themes. */ __( 'Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></caption>
 	<thead>
 	<tr>
 		<th scope="col" class="manage-column column-cb check-column">
@@ -247,12 +273,6 @@ $policy_labels = array(
 					<td></td>
 					<td colspan="3">
 						<?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No managed %s match the current filters.', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?>
-					</td>
-				<?php } else { ?>
-					<td colspan="4" class="ran-booster-package-empty-state">
-						<h3><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></h3>
-						<p><?php echo esc_html( sprintf( /* translators: %s is plugins or themes. */ __( 'No %s are managed by RAN Booster yet.', 'ran-booster' ), strtolower( $package_view->get_plural_label() ) ) ); ?></p>
-						<a class="button button-primary" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Add your first %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 					</td>
 				<?php } ?>
 			</tr>
@@ -396,13 +416,18 @@ $policy_labels = array(
 				array(
 					'page'    => $package_view->get_page_slug(),
 					'package' => $package->get_identifier(),
-				),
+				) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 				$package_admin_url
 			);
 			$automation_state_label = match ( $deployment_policy ) {
 				\RAN\Deployment\DeploymentPolicy::AUTOMATIC => __( 'Automatic', 'ran-booster' ),
 				\RAN\Deployment\DeploymentPolicy::DISABLED => __( 'Disabled', 'ran-booster' ),
 				default => __( 'Manual', 'ran-booster' ),
+			};
+			$automation_state_intent = match ( $deployment_policy ) {
+				\RAN\Deployment\DeploymentPolicy::AUTOMATIC => 'stable',
+				\RAN\Deployment\DeploymentPolicy::DISABLED => 'none',
+				default => 'informational',
 			};
 			$management_line = $release_managed
 				? __( 'Releases', 'ran-booster' )
@@ -430,7 +455,7 @@ $policy_labels = array(
 			} elseif ( \RAN\Deployment\DeploymentPolicy::AUTOMATIC === $deployment_policy ) {
 				$status_line = __( 'Signed repository pushes deploy automatically. Review setup if pushes are not arriving.', 'ran-booster' );
 			} else {
-				$status_line = __( 'Ready. Deployments run only when an administrator requests one.', 'ran-booster' );
+				$status_line = __( 'Ready.', 'ran-booster' );
 			}
 			$details_label = $release_managed
 				? __( 'Release details', 'ran-booster' )
@@ -459,22 +484,31 @@ $policy_labels = array(
 				</h3>
 				<div class="ran-booster-package-row__states">
 					<?php if ( $is_plugin_list ) { ?>
-						<p class="ran-booster-package-row__state ran-booster-package-row__wordpress-state<?php echo $word_press_plugin_active ? ' is-enabled' : ' is-disabled'; ?>">
+						<p class="ran-booster-package-row__state ran-booster-package-row__wordpress-state">
 							<span class="ran-booster-package-row__state-label"><?php esc_html_e( 'WordPress', 'ran-booster' ); ?></span>
-							<span class="ran-booster-package-row__state-value"><?php echo esc_html( $word_press_plugin_active ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ) ); ?></span>
+							<?php \RAN\Admin\Component\StatusBadge::print_intent( $word_press_plugin_active ? __( 'Enabled', 'ran-booster' ) : __( 'Disabled', 'ran-booster' ), $word_press_plugin_active ? 'stable' : 'none' ); ?>
 						</p>
 					<?php } ?>
-					<p class="ran-booster-package-row__state ran-booster-package-row__update-state is-<?php echo esc_attr( $deployment_policy->value ); ?>">
+					<p class="ran-booster-package-row__state ran-booster-package-row__update-state">
 						<span class="ran-booster-package-row__state-label"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></span>
-						<span class="ran-booster-package-row__state-value"><?php echo esc_html( $automation_state_label ); ?></span>
+						<?php \RAN\Admin\Component\StatusBadge::print_intent( $automation_state_label, $automation_state_intent ); ?>
 					</p>
 				</div>
 			</td>
 			<td class="ran-booster-package-row__summary">
 				<?php if ( is_array( $prominent_status ) ) { ?>
-					<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $prominent_status['tone'] ); ?>"<?php echo $prominent_status_activity ? ' data-ran-booster-activity-badge' : ''; ?>><?php echo esc_html( $prominent_status['label'] ); ?></span>
+					<?php echo \RAN\Admin\Component\StatusBadge::for_intent( (string) $prominent_status['label'], (string) ( $badge_intents[ $prominent_status['tone'] ] ?? 'none' ), $prominent_status_activity ? array( 'data-ran-booster-activity-badge' => '' ) : array() ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
 				<?php } elseif ( ! $release_managed ) { ?>
-					<span class="ran-booster-badge ran-booster-badge--neutral" data-ran-booster-activity-badge hidden></span>
+					<?php
+					\RAN\Admin\Component\StatusBadge::print_intent(
+						'',
+						'none',
+						array(
+							'data-ran-booster-activity-badge' => '',
+							'hidden' => '1',
+						)
+					);
+					?>
 				<?php } ?>
 				<p class="ran-booster-package-row__management"><?php echo esc_html( $management_line ); ?></p>
 				<p class="ran-booster-package-row__status-line"><?php echo esc_html( $status_line ); ?></p>
@@ -485,18 +519,18 @@ $policy_labels = array(
 						<?php $extension_action_renderer->render( $package_actions, true ); ?>
 					<?php } else { ?>
 						<form action="" method="POST" class="ran-booster-package-row__update-form" data-ran-booster-package-mutation>
-							<?php wp_nonce_field( $package_view->get_action( 'update' ) ); ?>
+							<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'update' ) ); ?>
 							<input type="hidden" name="ran_booster[action]" value="<?php echo esc_attr( $package_view->get_action( 'update' ) ); ?>">
 							<input type="hidden" name="ran_booster[repository]" value="<?php echo esc_attr( (string) $package->repository ); ?>">
 							<input type="hidden" name="ran_booster[<?php echo esc_attr( $package_view->get_identifier_field() ); ?>]" value="<?php echo esc_attr( (string) $package->get_identifier() ); ?>">
 							<?php require __DIR__ . '/expected-package.php'; ?>
-							<button type="submit" class="button button-primary button-update-package<?php echo $update_in_progress ? ' ran-booster-update-is-active' : ''; ?>" <?php disabled( ! $update_can_run || $update_in_progress || $update_needs_attention ); ?> data-ran-booster-update-button data-idle-label="<?php echo esc_attr( $idle_update_label ); ?>" data-update-can-run="<?php echo esc_attr( $update_can_run ? '1' : '0' ); ?>" data-reinstall-confirm-message="<?php esc_attr_e( 'Reinstall from the saved branch and overwrite local changes?', 'ran-booster' ); ?>"<?php echo $update_in_progress ? ' aria-busy="true"' : ''; ?>>
+							<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() . ' button-update-package' . ( $update_in_progress ? ' ran-booster-update-is-active' : '' ) ); ?>" <?php disabled( ! $update_can_run || $update_in_progress || $update_needs_attention ); ?> data-ran-booster-update-button data-idle-label="<?php echo esc_attr( $idle_update_label ); ?>" data-update-can-run="<?php echo esc_attr( $update_can_run ? '1' : '0' ); ?>" data-reinstall-confirm-message="<?php esc_attr_e( 'Reinstall from the saved branch and overwrite local changes?', 'ran-booster' ); ?>"<?php echo $update_in_progress ? ' aria-busy="true"' : ''; ?>>
 								<span data-ran-booster-update-label><?php esc_html_e( 'Reinstall', 'ran-booster' ); ?></span>
 							</button>
 							<span class="screen-reader-text" aria-live="polite" data-ran-booster-update-message></span>
 						</form>
 					<?php } ?>
-					<a href="<?php echo esc_url( $edit_url ); ?>" class="button"><?php esc_html_e( 'Edit settings', 'ran-booster' ); ?></a>
+					<a href="<?php echo esc_url( $edit_url ); ?>" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>"><?php esc_html_e( 'Edit settings', 'ran-booster' ); ?><span class="screen-reader-text">: <?php echo esc_html( $package->name ); ?></span></a>
 					<?php if ( ! $release_managed ) { ?>
 						<?php $extension_action_renderer->render( $package_actions ); ?>
 					<?php } ?>
@@ -505,9 +539,10 @@ $policy_labels = array(
 		</tr>
 		<tr class="ran-booster-package-row ran-booster-package-row--details<?php echo $word_press_plugin_active ? ' ran-booster-package-row--wordpress-active' : ''; ?>">
 			<td colspan="3" class="ran-booster-package-row__details">
-				<details class="ran-booster-disclosure">
+				<div data-ran-booster-ui-disclosure="package-details" data-ran-booster-ui-disclosure-density="compact">
+				<details data-ran-booster-ui-disclosure-fallback class="ran-booster-disclosure">
 					<summary><?php echo esc_html( $details_label ); ?></summary>
-					<div class="ran-booster-disclosure__body">
+					<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 					<dl class="ran-booster-package-row__details-grid<?php echo $release_managed ? '' : ' ran-booster-package-row__details-grid--branch'; ?>">
 						<div>
 							<dt><?php esc_html_e( 'Git provider', 'ran-booster' ); ?></dt>
@@ -545,7 +580,7 @@ $policy_labels = array(
 										)
 									);
 									?>
-												"><?php esc_html_e( 'View activity', 'ran-booster' ); ?></a>
+												"><?php esc_html_e( 'View activity', 'ran-booster' ); ?><span class="screen-reader-text">: <?php echo esc_html( $package->name ); ?></span></a>
 								</dd>
 							</div>
 							<?php if ( null !== $observed_check && ( $observed_check['id'] ?? null ) !== ( $latest_check['id'] ?? null ) ) { ?>
@@ -560,7 +595,16 @@ $policy_labels = array(
 										<?php esc_html_e( 'Temporarily unavailable', 'ran-booster' ); ?>
 									<?php } elseif ( is_array( $latest_activity ) ) { ?>
 										<?php $active_detail_url = $activity_detail_base_url . '&attempt=' . rawurlencode( (string) $latest_activity['id'] ) . '&reference=' . rawurlencode( (string) $latest_activity['correlation_id'] ); ?>
-										<span class="ran-booster-badge ran-booster-badge--<?php echo esc_attr( $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ); ?> ran-booster-deployment-state ran-booster-deployment-state--<?php echo esc_attr( (string) $latest_activity['state'] ); ?>" data-ran-booster-activity-state><?php echo esc_html( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ); ?></span>
+										<?php
+										\RAN\Admin\Component\StatusBadge::print_intent(
+											(string) ( $activity_state_labels[ $latest_activity['state'] ] ?? (string) $latest_activity['state'] ),
+											(string) $badge_intents[ $activity_badge_variants[ $latest_activity['state'] ] ?? 'neutral' ],
+											array(
+												'data-ran-booster-activity-state' => '',
+												'class' => 'ran-booster-deployment-state ran-booster-deployment-state--' . (string) $latest_activity['state'],
+											)
+										);
+										?>
 										<a href="<?php echo esc_url( $active_detail_url ); ?>"><?php esc_html_e( 'View details', 'ran-booster' ); ?></a>
 									<?php } else { ?>
 										<?php esc_html_e( 'No activity recorded', 'ran-booster' ); ?>
@@ -574,9 +618,12 @@ $policy_labels = array(
 						<?php } ?>
 					</dl>
 					</div>
-				</details>
+				</details></div>
 			</td>
 		</tr>
 		<?php } ?>
 	</tbody>
 </table>
+</div>
+<?php } ?>
+</div></div></div>

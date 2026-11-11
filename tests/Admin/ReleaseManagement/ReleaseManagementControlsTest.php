@@ -42,6 +42,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertSame(
 			array(
 				'ran_booster_admin_package_advanced_source_sections',
+				'ran_booster_admin_package_operation_actions',
 				'admin_notices',
 				'admin_enqueue_scripts',
 				'admin_post_ran_booster_release_enable',
@@ -65,7 +66,6 @@ final class ReleaseManagementControlsTest extends TestCase {
 			'release_asset' => array(
 				'heading'     => 'Unavailable feature',
 				'description' => 'Unavailable.',
-				'meta'        => 'Unavailable',
 				'url'         => '',
 				'disabled'    => true,
 			),
@@ -83,6 +83,7 @@ final class ReleaseManagementControlsTest extends TestCase {
 		self::assertSame( 'Releases', $hydrated['release_asset']['heading'] );
 		self::assertTrue( $hydrated['release_asset']['hydrated'] );
 		self::assertTrue( $hydrated['release_asset']['client_hydratable'] );
+		self::assertFalse( array_key_exists( 'meta', $hydrated['release_asset'] ) );
 		self::assertStringNotContainsString(
 			'Release Deployments',
 			implode( ' ', array_filter( $hydrated['release_asset'], 'is_string' ) )
@@ -293,7 +294,6 @@ final class ReleaseManagementControlsTest extends TestCase {
 		$fallback = file_get_contents( dirname( __DIR__, 3 ) . '/RAN/Admin/PackagePagePresenter.php' );
 		self::assertIsString( $fallback );
 		self::assertStringContainsString( "'heading'           => __( 'Releases', 'ran-booster' )", $fallback );
-		self::assertStringContainsString( 'Git provider capability required', $fallback );
 		self::assertStringNotContainsString( 'Release Deployments add-on', $fallback );
 		self::assertStringNotContainsString( 'Subscriber feature', $fallback );
 	}

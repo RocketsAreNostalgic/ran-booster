@@ -47,9 +47,9 @@ $package_settings_label = 'theme' === $package_type
 	</p>
 	<h3><?php esc_html_e( 'Deployment activity details', 'ran-booster' ); ?></h3>
 	<?php if ( $unavailable ) { ?>
-		<div class="notice notice-error inline"><p><?php esc_html_e( 'Deployment activity is temporarily unavailable.', 'ran-booster' ); ?></p></div>
+		<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Deployment activity is temporarily unavailable.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 	<?php } elseif ( ! $attempt instanceof DeploymentAttempt ) { ?>
-		<div class="notice notice-warning inline"><p><?php esc_html_e( 'That deployment record was not found.', 'ran-booster' ); ?></p></div>
+		<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'That deployment record was not found.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 		<?php
 	} else {
 		$origin_labels = array(
@@ -62,7 +62,8 @@ $package_settings_label = 'theme' === $package_type
 		?>
 		<p><strong><?php echo esc_html( $outcome_label ); ?>:</strong> <?php echo esc_html( null === $item['outcome_code'] ? __( 'This operation has not reached a recorded outcome.', 'ran-booster' ) : DeploymentOutcomeMessage::for_code( (string) $item['outcome_code'] ) ); ?></p>
 		<?php if ( 'restoration_uncertain' === ( $item['outcome_code'] ?? null ) ) { ?>
-			<section class="notice notice-warning inline" aria-labelledby="ran-booster-historical-uncertainty-heading">
+			<section aria-labelledby="ran-booster-historical-uncertainty-heading">
+				<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 				<h4 id="ran-booster-historical-uncertainty-heading"><?php esc_html_e( 'Before you retry', 'ran-booster' ); ?></h4>
 				<p><?php esc_html_e( 'WordPress reported that it changed this package, but Booster could not confirm the final result. The package may already contain the requested update.', 'ran-booster' ); ?></p>
 				<?php if ( $later_verified_attempt instanceof DeploymentAttempt ) { ?>
@@ -72,12 +73,25 @@ $package_settings_label = 'theme' === $package_type
 					<p><?php esc_html_e( 'Check that the package is present, has the expected version and activation state, and that the site is not in maintenance mode.', 'ran-booster' ); ?></p>
 				<?php } ?>
 				<p><?php esc_html_e( 'Checking the box only clears the retry block. It does not change the package or prove what happened before.', 'ran-booster' ); ?></p>
+			</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 			</section>
 		<?php } ?>
 		<dl class="ran-booster-activity__details">
-			<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( (string) $item['correlation_id'] ); ?></code></dd></div>
+			<div><dt><?php esc_html_e( 'Support reference', 'ran-booster' ); ?></dt><dd>
+			<?php
+			$copy_value = (string) $item['correlation_id'];
+			$copy_label = __( 'Copy support reference', 'ran-booster' );
+			include dirname( __DIR__ ) . '/copy-displayed-value.php';
+			?>
+			</dd></div>
 			<?php if ( 'webhook' === $item['source'] && is_string( $item['delivery_id'] ?? null ) && '' !== $item['delivery_id'] ) { ?>
-				<div><dt><?php esc_html_e( 'Git provider request ID', 'ran-booster' ); ?></dt><dd><code><?php echo esc_html( $item['delivery_id'] ); ?></code></dd></div>
+				<div><dt><?php esc_html_e( 'Git provider request ID', 'ran-booster' ); ?></dt><dd>
+				<?php
+				$copy_value = $item['delivery_id'];
+				$copy_label = __( 'Copy Git provider request ID', 'ran-booster' );
+				include dirname( __DIR__ ) . '/copy-displayed-value.php';
+				?>
+				</dd></div>
 			<?php } ?>
 			<div><dt><?php esc_html_e( 'State', 'ran-booster' ); ?></dt><dd><?php echo esc_html( (string) $item['state'] ); ?></dd></div>
 			<div><dt><?php esc_html_e( 'Origin', 'ran-booster' ); ?></dt><dd><?php echo esc_html( $origin_labels[ $item['source'] ] ?? (string) $item['source'] ); ?></dd></div>
@@ -101,12 +115,12 @@ $package_settings_label = 'theme' === $package_type
 		</dl>
 		<?php if ( $attempt->requires_operator_resolution() ) { ?>
 			<form method="post" action="<?php echo esc_url( $package_settings_url ); ?>">
-				<?php wp_nonce_field( 'ran-booster-resolve-needs-attention' ); ?>
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-resolve-needs-attention' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="resolve-needs-attention">
 				<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
 				<input type="hidden" name="ran_booster[correlation_id]" value="<?php echo esc_attr( (string) $item['correlation_id'] ); ?>">
 				<p><label><input type="checkbox" name="ran_booster[confirm_reviewed]" value="1" required> <?php esc_html_e( 'I have checked the package\'s current state and want to allow another deployment.', 'ran-booster' ); ?></label></p>
-				<button type="submit" class="button button-primary">
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>">
 					<?php
 					if ( '' === $package_settings_url ) {
 						esc_html_e( 'Allow retry', 'ran-booster' );
@@ -121,12 +135,12 @@ $package_settings_label = 'theme' === $package_type
 		<?php } ?>
 		<?php if ( 'running' === $item['state'] ) { ?>
 			<form method="post" action="">
-				<?php wp_nonce_field( 'ran-booster-reconcile-deployment-worker' ); ?>
+				<?php \RAN\Admin\Component\NonceField::print( 'ran-booster-reconcile-deployment-worker' ); ?>
 				<input type="hidden" name="ran_booster[action]" value="reconcile-deployment-worker">
 				<input type="hidden" name="ran_booster[attempt_id]" value="<?php echo esc_attr( (string) $item['id'] ); ?>">
 				<input type="hidden" name="ran_booster[correlation_id]" value="<?php echo esc_attr( (string) $item['correlation_id'] ); ?>">
 				<p><label><input type="checkbox" name="ran_booster[confirm_stopped]" value="1" required> <?php esc_html_e( 'I have confirmed that the deployment worker has stopped.', 'ran-booster' ); ?></label></p>
-				<button type="submit" class="button"><?php esc_html_e( 'Reconcile stopped worker', 'ran-booster' ); ?></button>
+				<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>"><?php esc_html_e( 'Reconcile stopped worker', 'ran-booster' ); ?></button>
 			</form>
 		<?php } ?>
 	<?php } ?>

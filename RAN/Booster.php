@@ -48,7 +48,6 @@ class Booster {
 		'20-repository-picker.css',
 		'25-admin-primitives.css',
 		'30-provider-cards.css',
-		'35-status-utilities.css',
 		'40-tables-and-pills.css',
 		'50-troubleshooting-and-activity.css',
 		'55-extensions.css',
@@ -264,6 +263,20 @@ class Booster {
 		add_submenu_page( 'ran-booster', __( 'Transporter', 'ran-booster' ), __( 'Transporter', 'ran-booster' ), 'manage_options', 'ran-booster-transporter', $this->service_callback( 'RAN\Dashboard', 'get_transporter' ) );
 		add_submenu_page( 'ran-booster', __( 'Extensions', 'ran-booster' ), __( 'Extensions', 'ran-booster' ), 'manage_options', 'ran-booster-extensions', array( $this, 'render_extensions_page' ) );
 		add_submenu_page( 'ran-booster', __( 'Settings', 'ran-booster' ), __( 'Settings', 'ran-booster' ), 'manage_options', 'ran-booster-settings', $this->service_callback( 'RAN\Dashboard', 'get_settings' ) );
+		add_submenu_page( 'ran-booster', __( 'Troubleshooting', 'ran-booster' ), __( 'Troubleshooting', 'ran-booster' ), 'manage_options', 'admin.php?page=ran-booster&tab=troubleshooting' );
+		add_filter(
+			'submenu_file',
+			static function ( $submenu_file ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only menu selection does not authorize an action.
+				$page = $_GET['page'] ?? null;
+				// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Match the existing allowlisted tab normalization for menu selection only.
+				$tab = $_GET['tab'] ?? null;
+				if ( 'ran-booster' === $page && is_string( $tab ) && 'troubleshooting' === strtolower( trim( wp_unslash( $tab ) ) ) ) {
+					return 'admin.php?page=ran-booster&tab=troubleshooting';
+				}
+				return $submenu_file;
+			}
+		);
 	}
 
 	/**
@@ -295,7 +308,7 @@ class Booster {
 			?>
 			<div class="wrap ran-booster-admin">
 				<h1><?php esc_html_e( 'RAN Booster Extensions', 'ran-booster' ); ?></h1>
-				<div class="notice notice-error"><p><?php esc_html_e( 'Extensions are temporarily unavailable. Reload the page or check the Booster installation.', 'ran-booster' ); ?></p></div>
+				<div class="notice notice-error ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'Extensions are temporarily unavailable. Reload the page or check the Booster installation.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?></div>
 			</div>
 			<?php
 		}
@@ -396,16 +409,11 @@ class Booster {
 				'provider_code'           => 'bb',
 				'provider_implementation' => 'RAN\\Booster\\Bitbucket\\BitbucketProvider',
 				'name'                    => 'Bitbucket Cloud',
-				'description'             => __( 'Connect Booster to Bitbucket Cloud repositories for managed deployments.', 'ran-booster' ),
-				'details'                 => __( 'Add Bitbucket Cloud as a first-party Git provider while Booster continues to own credentials, webhook verification, and deployment policy.', 'ran-booster' ),
-				'features'                => array(
-					__( 'Connect and configure Bitbucket Cloud repositories in Booster.', 'ran-booster' ),
-					__( 'Use package and credential guidance for your Git provider.', 'ran-booster' ),
-					__( 'Carry eligible file-stored credentials through Transporter for explicit import on the target site.', 'ran-booster' ),
-				),
+				'description'             => __( 'Deploy from Bitbucket Cloud repositories.', 'ran-booster' ),
+				'details'                 => '',
+				'features'                => array(),
 				'requirements'            => array(
 					__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
-					__( 'A version of Booster compatible with this extension.', 'ran-booster' ),
 					__( 'Manual Bitbucket webhook setup for Push-to-Deploy.', 'ran-booster' ),
 				),
 				'plugin'                  => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
@@ -428,15 +436,13 @@ class Booster {
 			array(
 				'id'                   => 'ran-booster-wp-pusher-migrator',
 				'name'                 => 'WP Pusher Migrator',
-				'description'          => __( 'Move existing WP Pusher-managed plugins and themes into Booster without reinstalling them.', 'ran-booster' ),
-				'details'              => __( 'Review and adopt supported packages from an inactive WP Pusher installation. Adopted packages start with deployments disabled, so enabling deployment remains an explicit decision.', 'ran-booster' ),
+				'description'          => __( 'Move WP Pusher packages into Booster without reinstalling.', 'ran-booster' ),
+				'details'              => __( 'Adopted packages start with deployments disabled.', 'ran-booster' ),
 				'features'             => array(
-					__( 'Review retained WP Pusher package records before migration.', 'ran-booster' ),
-					__( 'Adopt supported GitHub and Bitbucket Cloud packages through Booster Transporter.', 'ran-booster' ),
 					__( 'Migrator removes each WP Pusher entry only after Booster verifies the adopted package with deployments disabled.', 'ran-booster' ),
 				),
 				'requirements'         => array(
-					__( 'WordPress 7.0 or later, PHP 8.2 or later, and a compatible version of Booster.', 'ran-booster' ),
+					__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
 					__( 'A single site with a supported WP Pusher installation that is inactive.', 'ran-booster' ),
 					__( 'Existing Booster credentials for private repositories; GitLab packages are not supported.', 'ran-booster' ),
 				),
@@ -488,6 +494,8 @@ class Booster {
 			$extension['installed']                     = $installed;
 			$extension['active']                        = $active;
 			$extension['image_url']                     = trailingslashit( $this->booster_url ?? '' ) . 'assets/extensions/' . $extension['image'];
+			$extension['banner_url']                    = $this->extension_banner_url( $extension['id'], '772x250' );
+			$extension['banner_2x_url']                 = '' === $extension['banner_url'] ? '' : $this->extension_banner_url( $extension['id'], '1544x500' );
 			$extension['compatible']                    = $compatible;
 			$extension['installed_version']             = $installed_version;
 			$extension['installed_release_status']      = $installed_release_status;
@@ -531,20 +539,37 @@ class Booster {
 		return $catalogue;
 	}
 
+	/**
+	 * Optional marketing banner shipped at
+	 * assets/extensions/<id>/banner-<size>.<webp|png|jpg>; empty when absent.
+	 */
+	private function extension_banner_url( string $id, string $size ): string {
+		$relative = 'assets/extensions/' . $id . '/banner-' . $size . '.';
+		foreach ( array( 'webp', 'png', 'jpg' ) as $format ) {
+			if ( is_file( trailingslashit( $this->booster_path ?? '' ) . $relative . $format ) ) {
+				return trailingslashit( $this->booster_url ?? '' ) . $relative . $format;
+			}
+		}
+
+		return '';
+	}
+
 	/** @return string */
 	public function get_name() {
 		return 'RAN Booster';
 	}
 
 	/**
-	 * A monochrome rocket silhouette for the admin menu icon. WordPress renders
-	 * custom SVG menu icons at reduced opacity rather than recoloring them, so a
-	 * solid black fill matches the muted look of the other Dashicons.
+	 * Filled equivalents of assets/nozzle-sm-menu-three-rings.svg. Each ring uses
+	 * its original radius plus/minus half its stroke width; even-odd holes let
+	 * WordPress recolor fills without filling the source's transparent centres.
 	 */
 	private function get_menu_icon(): string {
-		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="black">'
-			. '<path d="M10,2 C11.5,2 13,5 13,8 L13,15 L7,15 L7,8 C7,5 8.5,2 10,2 Z '
-			. 'M7,12 L4,17 L7,15 Z M13,12 L16,17 L13,15 Z M8,15 L10,18.5 L12,15 Z" /></svg>';
+		$svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="36 36 440 440" width="20" height="20">'
+			. '<path fill="#F2EFE5" fill-rule="evenodd" d="M42 256a214 214 0 1 0 428 0a214 214 0 1 0 -428 0M70 256a186 186 0 1 0 372 0a186 186 0 1 0 -372 0"/>'
+			. '<path fill="#F2EFE5" fill-rule="evenodd" d="M112.833333 242.666667a156.5 156.5 0 1 0 313 0a156.5 156.5 0 1 0 -313 0M133.833333 242.666667a135.5 135.5 0 1 0 271 0a135.5 135.5 0 1 0 -271 0"/>'
+			. '<path fill="#F2EFE5" fill-rule="evenodd" d="M183.666667 229.333333a99 99 0 1 0 198 0a99 99 0 1 0 -198 0M197.666667 229.333333a85 85 0 1 0 170 0a85 85 0 1 0 -170 0"/>'
+			. '<circle cx="296" cy="216" r="42" fill="#F2EFE5"/></svg>';
 
 		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Base64 is required for this SVG data URI.
 		return 'data:image/svg+xml;base64,' . base64_encode( $svg );
@@ -720,7 +745,23 @@ class Booster {
 	 * @return void
 	 */
 	public function load_scripts( $hook ) {
-		if ( ! is_string( $hook ) || ! in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) ) {
+		if ( ! is_string( $hook ) ) {
+			return;
+		}
+
+		if ( current_user_can( 'manage_options' ) ) {
+			$menu_style_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-menu.css';
+			wp_register_style(
+				'ran-booster-menu',
+				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-menu.css',
+				array(),
+				$this->asset_version( $menu_style_path )
+			);
+			wp_enqueue_style( 'ran-booster-menu' );
+		}
+
+		if ( ! in_array( $hook, self::ADMIN_PAGE_HOOKS, true ) ) {
+			$this->load_global_notice_assets( $hook );
 			return;
 		}
 
@@ -799,34 +840,42 @@ class Booster {
 			wp_register_style(
 				$style_handle,
 				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster/' . $style_component,
-				$style_dependencies,
+				'ran-booster-styles' === $style_handle ? array_merge( $style_dependencies, array( 'ran-booster-wp-ui-static' ) ) : $style_dependencies,
 				$this->asset_version( $style_component_path )
 			);
 			$style_dependencies = array( $style_handle );
 		}
+		$wp_ui_static_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/lib/ran-booster-wp-ui-static.css';
+		wp_register_style(
+			'ran-booster-wp-ui-static',
+			trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/ran-booster-wp-ui-static.css',
+			array(),
+			$this->asset_version( $wp_ui_static_path )
+		);
 		wp_enqueue_style( 'ran-booster-styles' );
+		wp_enqueue_style( 'wp-components' );
+		$this->load_ui_assets( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) || 'ran-booster_page_ran-booster-extensions' === $hook );
 		if ( 'ran-booster_page_ran-booster-settings' === $hook ) {
-			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array(), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
+			wp_enqueue_script( 'ran-booster-settings', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-settings.js', array( 'wp-i18n', 'ran-booster-cards', 'ran-booster-announce' ), $this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-settings.js' ), true );
+			wp_set_script_translations( 'ran-booster-settings', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
 		}
 
 		if ( 'ran-booster_page_ran-booster-extensions' === $hook ) {
-
-			$extension_details_path    = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extension-details.js';
-			$extension_details_version = $this->asset_version( $extension_details_path );
-
-			wp_enqueue_style( 'thickbox' );
-			wp_enqueue_script( 'thickbox' );
-			wp_register_script(
-				'ran-booster-extension-details',
-				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-extension-details.js',
-				array( 'jquery', 'thickbox' ),
-				$extension_details_version,
+			// More Details opens its server-rendered section in the shared Dialog.
+			$extensions_script_path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-extensions.js';
+			$this->register_announce_script();
+			wp_enqueue_script(
+				'ran-booster-extensions',
+				trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-extensions.js',
+				array( 'ran-booster-dialog', 'ran-booster-announce' ),
+				$this->asset_version( $extensions_script_path ),
 				true
 			);
-			wp_enqueue_script( 'ran-booster-extension-details' );
 			return;
 		}
 
+		$this->register_announce_script();
+		$this->register_notice_script();
 		wp_register_script( 'ran-booster-js', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster.js', array_merge( $script_dependencies, array( 'wp-i18n' ) ), $script_version, true );
 
 		wp_set_script_translations( 'ran-booster-js', 'ran-booster', trailingslashit( $this->booster_path ?? '' ) . 'languages' );
@@ -842,7 +891,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-enhanced-mutations',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-enhanced-mutations.js',
-			array( 'ran-booster-js', 'wp-a11y', 'wp-i18n' ),
+			array( 'ran-booster-js', 'ran-booster-announce', 'ran-booster-notice', 'wp-i18n', 'wp-element', 'wp-components' ),
 			$enhanced_mutation_script_version,
 			true
 		);
@@ -851,7 +900,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-packages',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-packages.js',
-			array( 'ran-booster-enhanced-mutations', 'wp-i18n' ),
+			array( 'ran-booster-enhanced-mutations', 'ran-booster-notice', 'wp-i18n', 'ran-booster-cards' ),
 			$package_script_version,
 			true
 		);
@@ -860,7 +909,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-repository-picker',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-repository-picker.js',
-			array( 'ran-booster-js', 'wp-i18n' ),
+			array( 'ran-booster-js', 'ran-booster-announce', 'ran-booster-notice', 'wp-i18n' ),
 			$repository_picker_script_version,
 			true
 		);
@@ -888,7 +937,7 @@ class Booster {
 				wp_register_script(
 					'ran-booster-portability',
 					trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-portability.js',
-					array( 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'wp-i18n' ),
+					array( 'ran-booster-secure-inputs', 'ran-booster-enhanced-mutations', 'ran-booster-notice', 'wp-i18n' ),
 					$portability_script_version,
 					true
 				);
@@ -905,14 +954,16 @@ class Booster {
 			}
 		}
 
-		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
-			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->build_package_form();
-
+		if ( 'toplevel_page_ran-booster' === $hook ) {
 			$this->load_notice_preference_script(
 				'ranBoosterDevelopmentSafetyNotice',
 				\RAN\Admin\DevelopmentSafetyNoticeController::AJAX_ACTION,
 				\RAN\Admin\DevelopmentSafetyNoticeController::NONCE_ACTION
 			);
+		}
+
+		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
+			$package_settings = $this->service( 'RAN\\Admin\\ProviderSettingsPresenter' )->build_package_form();
 			wp_localize_script(
 				'ran-booster-repository-picker',
 				'ranBoosterRepoPicker',
@@ -964,6 +1015,82 @@ class Booster {
 		if ( in_array( $hook, self::PACKAGE_PAGE_HOOKS, true ) ) {
 			wp_enqueue_script( 'ran-booster-packages' );
 			wp_enqueue_script( 'ran-booster-repository-picker' );
+		}
+	}
+
+	/** Load only the existing Notice profile and runtime for an eligible owned host. */
+	private function load_global_notice_assets( string $hook ): void {
+		if ( ! ( $this->native_update_warning_scope( $hook ) && $this->can_check_native_update_warning() )
+			&& ! $this->service( \RAN\Admin\CredentialExpiryNotice::class )->should_render()
+			&& ! $this->service( \RAN\Admin\DeploymentAdminPresenter::class )->should_render()
+			&& ! $this->service( \RAN\Admin\SecretsRuntimeAvailabilityNotice::class )->should_render()
+			&& ! $this->service( \RAN\Admin\DatabaseCompatibilityNotice::class )->should_render()
+			&& ! $this->service( \RAN\Admin\CoreSelfUpdateDevelopmentNotice::class )->should_render()
+		) {
+			return;
+		}
+
+		if ( wp_style_is( 'wp-theme', 'registered' ) ) {
+			wp_enqueue_style( 'wp-theme' );
+		}
+		// The global notices are static Notices drawn with the public Notice's own CSS.
+		$static_path = 'assets/lib/ran-booster-wp-ui-static.css';
+		wp_register_style(
+			'ran-booster-wp-ui-static',
+			trailingslashit( $this->booster_url ?? '' ) . $static_path,
+			array(),
+			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $static_path )
+		);
+		$path = 'assets/ran-booster/25-admin-primitives.css';
+		wp_register_style(
+			'ran-booster-25-admin-primitives',
+			trailingslashit( $this->booster_url ?? '' ) . $path,
+			wp_style_is( 'wp-theme', 'registered' ) ? array( 'wp-theme', 'ran-booster-wp-ui-static' ) : array( 'ran-booster-wp-ui-static' ),
+			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $path )
+		);
+		wp_enqueue_style( 'ran-booster-25-admin-primitives' );
+		$this->load_ui_assets( false );
+	}
+
+	/** Reuse one public component foundation and the existing footer adapter. */
+	private function load_ui_assets( bool $has_ui_overlay ): void {
+		if ( ! wp_style_is( 'wp-theme', 'registered' ) ) {
+			$path = 'assets/ran-booster-notice-compat.css';
+			wp_register_style(
+				'ran-booster-notice-compat',
+				trailingslashit( $this->booster_url ?? '' ) . $path,
+				array( 'ran-booster-25-admin-primitives' ),
+				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $path )
+			);
+			wp_enqueue_style( 'ran-booster-notice-compat' );
+		}
+
+		$ui_manifest_path = trailingslashit( $this->booster_path ?? dirname( __DIR__ ) ) . 'assets/lib/ran-booster-ui-manifest.json';
+		$ui_manifest      = is_file( $ui_manifest_path ) && is_readable( $ui_manifest_path ) ? wp_json_file_decode( $ui_manifest_path, array( 'associative' => true ) ) : null;
+		if ( is_array( $ui_manifest ) && isset( $ui_manifest['foundation'], $ui_manifest['overlay'] )
+			&& is_string( $ui_manifest['foundation'] ) && is_string( $ui_manifest['overlay'] )
+			&& 1 === preg_match( '/\Aran-booster-ui-foundation-[A-Za-z0-9_-]+\.js\z/', $ui_manifest['foundation'] )
+			&& 1 === preg_match( '/\Aran-booster-ui-overlay-[A-Za-z0-9_-]+\.js\z/', $ui_manifest['overlay'] )
+		) {
+			wp_enqueue_script( 'wp-element' );
+			wp_enqueue_script( 'react-jsx-runtime' );
+			wp_enqueue_script( 'wp-i18n' );
+			wp_enqueue_script( 'wp-a11y' );
+			$ui_url = trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/';
+			wp_enqueue_script_module( 'ran-booster-ui', $ui_url . $ui_manifest['foundation'], array(), null );
+			if ( $has_ui_overlay ) {
+				wp_enqueue_script_module( 'ran-booster-ui-overlay', $ui_url . $ui_manifest['overlay'], array( 'ran-booster-ui' ), null );
+			}
+		}
+		wp_enqueue_script(
+			'ran-booster-cards',
+			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-cards.js',
+			array( 'wp-element', 'react-jsx-runtime', 'wp-i18n', 'wp-a11y' ),
+			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-cards.js' ),
+			true
+		);
+		if ( $has_ui_overlay ) {
+			$this->register_dialog_script();
 		}
 	}
 
@@ -1035,9 +1162,30 @@ class Booster {
 		);
 	}
 
+	/** Register the one announcement path for Booster status and error messages. */
+	private function register_announce_script(): void {
+		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-announce.js';
+		wp_register_script( 'ran-booster-announce', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-announce.js', array( 'wp-a11y' ), $this->asset_version( $path ), true );
+	}
+
+	/** Register the helper that changes a static Notice's intent in place. */
+	private function register_notice_script(): void {
+		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-notice.js';
+		wp_register_script( 'ran-booster-notice', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-notice.js', array(), $this->asset_version( $path ), true );
+	}
+
+	/** Register the shared Dialog helper; it stays inert until the overlay module publishes Dialog. */
+	private function register_dialog_script(): void {
+		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/ran-booster-dialog.js';
+		wp_register_script( 'ran-booster-dialog', trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-dialog.js', array( 'wp-element' ), $this->asset_version( $path ), true );
+	}
+
 	private function load_notice_preference_script( string $object_name, string $action, string $nonce_action ): void {
+		// The dismissal script only loads beside a visible Booster notice, so
+		// its announcement helper loads only there too.
+		$this->register_announce_script();
 		$path = trailingslashit( $this->booster_path ?? '' ) . 'assets/notice-preference.js';
-		wp_register_script( 'ran-booster-notice-preference', trailingslashit( $this->booster_url ?? '' ) . 'assets/notice-preference.js', array(), $this->asset_version( $path ), true );
+		wp_register_script( 'ran-booster-notice-preference', trailingslashit( $this->booster_url ?? '' ) . 'assets/notice-preference.js', array( 'ran-booster-announce' ), $this->asset_version( $path ), true );
 		wp_localize_script(
 			'ran-booster-notice-preference',
 			$object_name,
@@ -1081,14 +1229,14 @@ class Booster {
 		$warning    = $this->native_update_warning_state();
 		$can_manage = current_user_can( 'manage_options' ) && current_user_can( 'activate_plugins' );
 		?>
-		<div class="notice notice-warning<?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?>" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?>><p>
+		<div class="notice notice-warning<?php echo \RAN\Admin\BoosterNoticeScope::is_booster_screen() ? ' inline' : ''; ?> ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-native-update-warning<?php echo true === $warning ? '' : ' hidden'; ?> data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning" data-ran-booster-ui-notice-scope="global"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>
 			<?php esc_html_e( 'A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed.', 'ran-booster' ); ?>
 			<?php if ( $can_manage ) : ?>
 				<a href="<?php echo esc_url( admin_url( 'admin.php?page=ran-booster&tab=gh' ) ); ?>"><?php esc_html_e( 'Review GitHub management.', 'ran-booster' ); ?></a>
 			<?php else : ?>
 				<?php esc_html_e( 'Contact a site administrator.', 'ran-booster' ); ?>
 			<?php endif; ?>
-		</p></div>
+		</p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?></div>
 		<?php
 	}
 

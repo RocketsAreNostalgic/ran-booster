@@ -19,7 +19,116 @@
 		initProviderRepositoryFilter();
 		initProviderTaskNavigation();
 		initActivityHistoryAppend();
+		initAutoSubmitSelects();
+		initReceiverSetup();
 	});
+
+	// The webhook receiver card: Automated/Manual tabs and the repository
+	// chooser. Without JavaScript both panels stay visible and the GET form
+	// still works, so this only adds tab switching and the button state.
+	function selectReceiverTab(tab, focus) {
+		const tabs = Array.from(
+			tab.closest('[role="tablist"]').querySelectorAll('[role="tab"]')
+		);
+		const card = tab.closest('[data-ran-booster-receiver-setup]');
+		tabs.forEach(function (item) {
+			const active = item === tab;
+			item.setAttribute('aria-selected', active ? 'true' : 'false');
+			item.setAttribute('tabindex', active ? '0' : '-1');
+			item.classList.toggle('current', active);
+			const panel = card.querySelector(
+				'#' + item.getAttribute('aria-controls')
+			);
+			if (panel) {
+				panel.classList.remove('hide-if-js');
+				panel.hidden = !active;
+			}
+		});
+		if (focus) {
+			tab.focus();
+		}
+	}
+
+	function syncReceiverSubmit(select) {
+		const form = select.form;
+		const button = form?.querySelector(
+			'[data-ran-booster-receiver-submit]'
+		);
+		if (!button) {
+			return;
+		}
+		button.disabled = !select.value;
+	}
+
+	function initReceiverSetup() {
+		document
+			.querySelectorAll('[data-ran-booster-receiver-repository]')
+			.forEach(syncReceiverSubmit);
+		if (document.ranBoosterReceiverBound) {
+			return;
+		}
+		document.ranBoosterReceiverBound = true;
+		document.addEventListener?.('click', function (event) {
+			const tab = event.target?.closest?.(
+				'[data-ran-booster-receiver-tab]'
+			);
+			if (tab) {
+				selectReceiverTab(tab, false);
+			}
+		});
+		document.addEventListener?.('keydown', function (event) {
+			const tab = event.target?.closest?.(
+				'[data-ran-booster-receiver-tab]'
+			);
+			const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+			if (!tab || !keys.includes(event.key)) {
+				return;
+			}
+			const tabs = Array.from(
+				tab.closest('[role="tablist"]').querySelectorAll('[role="tab"]')
+			);
+			let index = tabs.indexOf(tab);
+			if (event.key === 'Home') {
+				index = 0;
+			} else if (event.key === 'End') {
+				index = tabs.length - 1;
+			} else {
+				index =
+					(index +
+						(event.key === 'ArrowRight' ? 1 : -1) +
+						tabs.length) %
+					tabs.length;
+			}
+			event.preventDefault();
+			selectReceiverTab(tabs[index], true);
+		});
+		document.addEventListener?.('change', function (event) {
+			const select = event.target?.closest?.(
+				'[data-ran-booster-receiver-repository]'
+			);
+			if (select) {
+				syncReceiverSubmit(select);
+			}
+		});
+		document.addEventListener?.('htmx:afterSwap', function () {
+			document
+				.querySelectorAll('[data-ran-booster-receiver-repository]')
+				.forEach(syncReceiverSubmit);
+		});
+	}
+
+	// Selects that carry the marker submit their form on change. Without
+	// JavaScript the form's own Apply button remains the native fallback.
+	function initAutoSubmitSelects() {
+		document.addEventListener?.('change', function (event) {
+			const select = event.target?.closest?.(
+				'select[data-ran-booster-auto-submit]'
+			);
+			if (select?.form) {
+				select.form.requestSubmit();
+			}
+		});
+	}
 
 	function initActivityHistoryAppend() {
 		const root = document.querySelector('[data-ran-booster-activity]');
@@ -310,6 +419,42 @@
 		) {
 			return;
 		}
+		let renderedUrl = new URL(window.location.href);
+		if (typeof htmx !== 'undefined' && htmx.config) {
+			htmx.config.refreshOnHistoryMiss = true;
+			// WordPress clears HTMX's history marker on a full admin page load.
+			window.addEventListener('popstate', function (event) {
+				if (event.state?.htmx) {
+					return;
+				}
+				const destination = new URL(window.location.href);
+				if (
+					destination.pathname === renderedUrl.pathname &&
+					destination.search !== renderedUrl.search &&
+					destination.searchParams.get('page') === 'ran-booster' &&
+					destination.searchParams.get('tab') ===
+						renderedUrl.searchParams.get('tab')
+				) {
+					window.location.reload();
+				}
+			});
+		}
+
+		document.addEventListener(
+			'click',
+			function (event) {
+				if (
+					typeof window.htmx?.process === 'function' &&
+					(event.ctrlKey || event.metaKey || event.shiftKey) &&
+					event.target?.closest?.(
+						'.ran-booster-provider-task-tabs[data-ran-booster-ui-navigation="thin"] a[href][hx-get][data-ran-booster-provider-task]'
+					)
+				) {
+					event.stopPropagation();
+				}
+			},
+			true
+		);
 
 		function currentTaskRegion() {
 			return (
@@ -339,6 +484,7 @@
 		}
 
 		let activeRequest = null;
+		let repositoryNavigation;
 
 		function setBusy(isBusy) {
 			const region = currentTaskRegion();
@@ -388,9 +534,27 @@
 		document.addEventListener('htmx:beforeRequest', function (event) {
 			if (handlesTaskRegion(event)) {
 				activeRequest = event.detail.xhr;
+				repositoryNavigation = undefined;
 				setBusy(true);
 			}
 		});
+
+		document.addEventListener(
+			'htmx:beforeSwap',
+			function (event) {
+				if (
+					handlesTaskRegion(event) &&
+					event.detail.shouldSwap &&
+					event.detail.xhr === activeRequest
+				) {
+					repositoryNavigation =
+						window.ranBoosterUI?.repositoryNavigation?.snapshot(
+							event.detail.target
+						);
+				}
+			},
+			true
+		);
 
 		document.addEventListener('htmx:afterSwap', function (event) {
 			if (!handlesTaskRegion(event)) {
@@ -407,29 +571,40 @@
 				return;
 			}
 
+			window.ranBoosterUI?.repositoryNavigation?.transfer(
+				region,
+				repositoryNavigation
+			);
+			repositoryNavigation = undefined;
+			renderedUrl = new URL(window.location.href);
 			initProviderRepositoryFilter(region);
 			const panel = region.querySelector(
 				'#ran-booster-provider-task-panel'
 			);
 			const currentTask = panel?.dataset.ranBoosterProviderTask || '';
-			let currentTab = null;
-
-			region
-				.querySelectorAll('.ran-booster-provider-task-tab')
-				.forEach(function (tab) {
-					if (!tab.dataset.ranBoosterProviderTask) {
-						return;
-					}
-					const isCurrent =
-						tab.dataset.ranBoosterProviderTask === currentTask;
-					tab.classList.toggle('current', isCurrent);
-					if (isCurrent) {
-						tab.setAttribute('aria-current', 'page');
-						currentTab = tab;
-					} else {
-						tab.removeAttribute('aria-current');
-					}
-				});
+			let currentTab = window.ranBoosterUI?.setNavigationCurrent?.(
+				region,
+				currentTask
+			);
+			if (currentTab === undefined) {
+				currentTab = null;
+				region
+					.querySelectorAll('.ran-booster-provider-task-tab')
+					.forEach(function (tab) {
+						if (!tab.dataset.ranBoosterProviderTask) {
+							return;
+						}
+						const isCurrent =
+							tab.dataset.ranBoosterProviderTask === currentTask;
+						tab.classList.toggle('current', isCurrent);
+						if (isCurrent) {
+							tab.setAttribute('aria-current', 'page');
+							currentTab = tab;
+						} else {
+							tab.removeAttribute('aria-current');
+						}
+					});
+			}
 			const currentRepositoryTab = region.querySelector(
 				'.ran-booster-repository-detail__tabs [aria-current="page"]'
 			);
@@ -473,6 +648,39 @@
 		if (root.dataset.ranBoosterDocumentationDeepLinksBound === 'true') {
 			return;
 		}
+		if (root.hasAttribute?.('data-ran-booster-ui-documentation')) {
+			root.querySelectorAll(
+				'details[data-ran-booster-documentation-section][id]'
+			).forEach(function (details) {
+				const summary = details.querySelector(':scope > summary');
+				const body = details.querySelector(
+					':scope > .ran-booster-documentation__content'
+				);
+				if (!summary || !body) {
+					return;
+				}
+				const wrapper = root.ownerDocument.createElement('div');
+				wrapper.className = 'ran-booster-documentation__section';
+				wrapper.id = details.id;
+				wrapper.setAttribute(
+					'data-ran-booster-ui-disclosure',
+					'documentation'
+				);
+				wrapper.setAttribute(
+					'data-ran-booster-ui-disclosure-density',
+					'compact'
+				);
+				details.setAttribute(
+					'data-ran-booster-ui-disclosure-fallback',
+					''
+				);
+				body.setAttribute('data-ran-booster-ui-disclosure-content', '');
+				details.removeAttribute('id');
+				details.parentNode.insertBefore(wrapper, details);
+				wrapper.appendChild(details);
+			});
+			documentationState(root);
+		}
 		const sections = Array.from(
 			root.querySelectorAll('.ran-booster-documentation__section[id]')
 		);
@@ -496,6 +704,9 @@
 		}
 
 		activateHash(window.location.hash, true);
+		window.addEventListener('popstate', function () {
+			openDetailsForHash(root, window.location.hash);
+		});
 		window.addEventListener('hashchange', function () {
 			activateHash(window.location.hash, false);
 		});
@@ -504,7 +715,7 @@
 				activateHash(link.getAttribute('href') || '', false);
 			});
 		});
-		initDocumentationSectionObserver(root, links, sections);
+		initDocumentationSectionTracking(root, links, sections);
 		initDocumentationPrintDetails(root);
 	}
 
@@ -614,13 +825,36 @@
 		input.addEventListener('input', update);
 	}
 
+	function documentationState(root) {
+		if (root.hasAttribute?.('data-ran-booster-ui-documentation')) {
+			root.dispatchEvent(
+				new window.CustomEvent('ran-booster:documentation-state', {
+					bubbles: true,
+				})
+			);
+		}
+	}
+
+	function documentationDetails(section) {
+		return section.tagName === 'DETAILS'
+			? section
+			: section.querySelector(
+					':scope > details[data-ran-booster-ui-disclosure-fallback]'
+				);
+	}
+
 	function openDetailsForHash(root, hash) {
 		const section = getDocumentationSectionForHash(root, hash);
 		if (!section) {
 			return null;
 		}
 
-		section.open = true;
+		const details = documentationDetails(section);
+		if (!details) {
+			return null;
+		}
+		details.open = true;
+		documentationState(root);
 
 		return section;
 	}
@@ -652,7 +886,10 @@
 			return null;
 		}
 
-		const section = target.closest('.ran-booster-documentation__section');
+		const section =
+			target.closest(
+				'[data-ran-booster-ui-disclosure="documentation"]'
+			) || target.closest('.ran-booster-documentation__section');
 		if (
 			!section ||
 			(typeof root.contains === 'function' && !root.contains(section))
@@ -678,55 +915,99 @@
 		});
 	}
 
-	function initDocumentationSectionObserver(root, links, sections) {
-		if (typeof window.IntersectionObserver !== 'function') {
-			return;
-		}
-
-		const intersecting = new Map();
-		const observer = new window.IntersectionObserver(
-			function (entries) {
-				entries.forEach(function (entry) {
-					intersecting.set(entry.target, entry);
-				});
-				const activeEntries = sections
+	function initDocumentationSectionTracking(root, links, sections) {
+		let queued = false;
+		function schedule(event) {
+			if (
+				root.isConnected &&
+				event?.type === 'hashchange' &&
+				!getDocumentationSectionForHash(root, window.location.hash)
+			) {
+				return;
+			}
+			if (queued) {
+				return;
+			}
+			queued = true;
+			window.requestAnimationFrame(function () {
+				queued = false;
+				if (!root.isConnected) {
+					window.removeEventListener('scroll', schedule);
+					window.removeEventListener('resize', schedule);
+					window.removeEventListener('hashchange', schedule);
+					return;
+				}
+				const target = root.querySelector(':target');
+				const shell = document.querySelector('.ran-admin-shell');
+				const shellBottom = shell
+					? shell.getBoundingClientRect().bottom
+					: 0;
+				const paddingValue = window.getComputedStyle(
+					document.scrollingElement
+				).scrollPaddingTop;
+				const parsedPadding = parseFloat(paddingValue) || 0;
+				const padding = paddingValue.trim().endsWith('%')
+					? (parsedPadding * document.scrollingElement.clientHeight) /
+						100
+					: parsedPadding;
+				const margin = target
+					? parseFloat(
+							window.getComputedStyle(target)
+								.scrollMarginBlockStart
+						) || 0
+					: 0;
+				const visibleTop = Math.min(
+					window.innerHeight,
+					Math.max(0, shellBottom, padding)
+				);
+				const line = Math.min(
+					window.innerHeight,
+					Math.max(visibleTop, padding + margin)
+				);
+				const visible = sections
 					.map(function (section, index) {
 						return {
-							entry: intersecting.get(section),
-							index,
 							section,
+							index,
+							rect: section.getBoundingClientRect(),
 						};
 					})
-					.filter(function (candidate) {
-						return candidate.entry?.isIntersecting;
-					})
-					.sort(function (first, second) {
-						const firstDistance = Math.abs(
-							first.entry.boundingClientRect.top - 70
-						);
-						const secondDistance = Math.abs(
-							second.entry.boundingClientRect.top - 70
-						);
+					.filter(function (item) {
 						return (
-							firstDistance - secondDistance ||
-							first.index - second.index
+							item.rect.bottom > visibleTop &&
+							item.rect.top < window.innerHeight
 						);
 					});
-
-				if (activeEntries.length) {
-					setDocumentationActiveLink(
-						root,
-						links,
-						activeEntries[0].section
+				visible.sort(function (first, second) {
+					const firstSpans =
+						first.rect.top <= line && first.rect.bottom > line;
+					const secondSpans =
+						second.rect.top <= line && second.rect.bottom > line;
+					return (
+						Number(secondSpans) - Number(firstSpans) ||
+						Math.abs(first.rect.top - line) -
+							Math.abs(second.rect.top - line) ||
+						first.index - second.index
 					);
+				});
+				if (visible.length) {
+					setDocumentationActiveLink(root, links, visible[0].section);
 				}
+			});
+		}
+		window.addEventListener('scroll', schedule, { passive: true });
+		window.addEventListener('resize', schedule);
+		window.addEventListener('hashchange', schedule);
+		root.addEventListener(
+			'toggle',
+			function (event) {
+				documentationState(root);
+				schedule(event);
 			},
-			{ rootMargin: '-70px 0px -65% 0px', threshold: 0 }
+			true
 		);
-
-		sections.forEach(function (section) {
-			observer.observe(section);
-		});
+		root.addEventListener('htmx:beforeCleanupElement', schedule);
+		schedule();
 	}
 
 	function initDocumentationPrintDetails(root) {
@@ -756,6 +1037,7 @@
 				detail.removeAttribute('name');
 				detail.open = true;
 			});
+			documentationState(root);
 		});
 		window.addEventListener('afterprint', function () {
 			if (!openStates) {
@@ -771,6 +1053,7 @@
 				}
 			});
 			openStates = null;
+			documentationState(root);
 		});
 	}
 })();

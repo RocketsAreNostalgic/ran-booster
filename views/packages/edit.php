@@ -41,9 +41,7 @@ $selected_credential_id = isset( $_POST['ran_booster']['credential_id'] )
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 	? sanitize_text_field( (string) $_POST['ran_booster']['credential_id'] )
 	: $package->get_credential_id();
-$repository_value            = isset( $submitted_package['repository'] ) && is_scalar( $submitted_package['repository'] )
-	? sanitize_text_field( wp_unslash( (string) $submitted_package['repository'] ) )
-	: (string) $package->repository;
+$repository_value            = (string) $package->repository;
 $branch_value                = isset( $submitted_package['branch'] ) && is_scalar( $submitted_package['branch'] )
 	? sanitize_text_field( wp_unslash( (string) $submitted_package['branch'] ) )
 	: (string) $package->get_branch();
@@ -57,11 +55,8 @@ $submitted_deployment_policy = isset( $submitted_package['deployment_policy'] ) 
 $deployment_policy           = ( $submitted_deployment_policy ?? $package->get_deployment_policy() )->value;
 $identifier_value            = (string) $package->get_identifier();
 $stored_provider_code        = (string) ( $package->get_provider_code() ?? '' );
-// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
-$provider_code = isset( $_POST['ran_booster']['provider'] )
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
-	? sanitize_key( (string) $_POST['ran_booster']['provider'] )
-	: $stored_provider_code;
+// The Git provider and repository are fixed once installed, so a failed save never repopulates them.
+$provider_code = $stored_provider_code;
 // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
 $provider_repository_id = isset( $_POST['ran_booster']['provider_repository_id'] )
 	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification.
@@ -186,20 +181,19 @@ $install_another_url        = add_query_arg(
 		'page'        => $package_view->get_create_page_slug(),
 		'provider'    => $stored_provider_code,
 		'open_picker' => '1',
-	),
+	) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 	$admin_url
 );
 $settings_url               = add_query_arg(
 	array(
 		'page'    => $package_view->get_page_slug(),
 		'package' => $identifier_value,
-	),
+	) + array_map( 'rawurlencode', $package_return_args ?? array() ),
 	$admin_url
 );
-$back_url                   = add_query_arg( 'page', $package_view->get_page_slug(), $admin_url );
 $show_branch_settings       = 'branch' === $package_source_view;
 $show_branch_operations     = $show_branch_settings && ! $release_managed;
-$repository_read_only       = $release_managed;
+$repository_read_only       = true;
 $branch_read_only           = $release_managed;
 $package_mutation_available = $package_mutation_available && ! $package_source_unavailable;
 $word_press_enabled         = 'plugin' === $package_view->get_type()
@@ -240,25 +234,26 @@ $source_summary                 = 'branch' === $package_current_source
 		'' !== (string) $package->get_branch() ? (string) $package->get_branch() : __( 'repository default', 'ran-booster' )
 	)
 	: (string) ( $package_source_choices[ $package_current_source ]['heading'] ?? __( 'Unavailable update source', 'ran-booster' ) );
-$source_summary_meta = (string) ( $package_source_choices[ $package_current_source ]['meta'] ?? __( 'The update source Git provider is unavailable', 'ran-booster' ) );
-$automation_summary  = match ( $package->get_deployment_policy()->value ) {
+$automation_summary = match ( $package->get_deployment_policy()->value ) {
 	\RAN\Deployment\DeploymentPolicy::DISABLED->value => __( 'Disabled', 'ran-booster' ),
 	\RAN\Deployment\DeploymentPolicy::AUTOMATIC->value => __( 'Automatic', 'ran-booster' ),
 	default => __( 'Manual', 'ran-booster' ),
 };
 
 ?>
-<p class="ran-booster-package-settings__back"><a href="<?php echo esc_url( $back_url ); ?>">&larr; <?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a></p>
 <h2 class="ran-booster-package-settings__heading ran-booster-page-heading__title"><?php echo esc_html( sprintf( /* translators: %s is the item being edited. */ __( 'Edit %s', 'ran-booster' ), $package->name ) ); ?></h2>
 
 <?php if ( $provider_unavailable ) { ?>
-	<div class="notice notice-error inline">
+	<div class="notice notice-error inline ran-wp-ui-notice ran-wp-ui-box-sizing is-error" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="error">
+		<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 		<p><strong><?php esc_html_e( 'Git provider unavailable.', 'ran-booster' ); ?></strong> <?php esc_html_e( 'This package remains linked but cannot be edited or deployed until its Git provider is registered again.', 'ran-booster' ); ?></p>
 		<p>
 			<?php esc_html_e( 'Git provider:', 'ran-booster' ); ?> <code><?php echo esc_html( $stored_provider_code ); ?></code><br>
 			<?php esc_html_e( 'Repository:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) $package->repository ); ?></code><br>
 			<?php esc_html_e( 'Git provider repository ID:', 'ran-booster' ); ?> <code><?php echo esc_html( (string) ( $package->get_provider_repository_id() ?? '' ) ); ?></code>
 		</p>
+		</div>
+		<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'error' ); ?>
 	</div>
 <?php } ?>
 
@@ -271,18 +266,20 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 					<p class="ran-booster-section__description"><?php esc_html_e( 'The package remains linked, but its update source controls require an add-on that is not currently available.', 'ran-booster' ); ?></p>
 				</header>
 				<div class="ran-booster-settings-section__body">
-					<div class="notice notice-warning inline">
+					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning">
+						<div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
 						<p><?php esc_html_e( 'Booster will not reinterpret this package as a branch deployment. Restore the update source add-on to manage updates or unlink the package.', 'ran-booster' ); ?></p>
+						</div>
+						<?php \RAN\Admin\Component\NoticeIcon::print_intent( 'warning' ); ?>
 					</div>
 					<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
-						<a class="button" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
-						<a class="button" href="<?php echo esc_url( $back_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a>
+						<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 					</div>
 				</div>
 			</section>
 		<?php } else { ?>
-			<form id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation>
-						<?php wp_nonce_field( $package_view->get_action( 'edit' ) ); ?>
+			<form id="ran-booster-package-edit-form" action="" method="POST" data-ran-booster-package-mutation <?php echo $submitted_action === $package_view->get_action( 'edit' ) ? 'data-ran-booster-attempted' : ''; ?>>
+						<?php \RAN\Admin\Component\NonceField::print( $package_view->get_action( 'edit' ) ); ?>
 						<?php if ( $show_branch_operations ) { ?>
 							<input type="hidden" name="_ran_booster_reinstall_nonce" value="<?php echo esc_attr( wp_create_nonce( $package_view->get_action( 'update' ) ) ); ?>">
 						<?php } ?>
@@ -292,9 +289,9 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 						<input type="hidden" name="ran_booster[provider_repository_id]" class="ran-booster-provider-repository-id-input" value="<?php echo esc_attr( $provider_repository_id ); ?>">
 						<input type="hidden" name="ran_booster[provider_repository_identity_source]" class="ran-booster-provider-repository-identity-source-input" value="<?php echo esc_attr( $provider_repository_identity_source ); ?>">
 						<input type="hidden" name="ran_booster[public_lookup_profile_id]" class="ran-booster-public-lookup-profile-input" value="<?php echo esc_attr( $public_lookup_profile_id ); ?>">
+						<input type="hidden" name="ran_booster[provider]" class="ran-booster-provider-input" value="<?php echo esc_attr( $provider_code ); ?>">
+						<input type="hidden" name="ran_booster[repository]" value="<?php echo esc_attr( $repository_value ); ?>">
 						<?php if ( $release_managed ) { ?>
-							<input type="hidden" name="ran_booster[provider]" value="<?php echo esc_attr( $provider_code ); ?>">
-							<input type="hidden" name="ran_booster[repository]" value="<?php echo esc_attr( $repository_value ); ?>">
 							<input type="hidden" name="ran_booster[branch]" value="<?php echo esc_attr( $branch_value ); ?>">
 							<input type="hidden" name="ran_booster[subdirectory]" value="<?php echo esc_attr( $subdirectory_value ); ?>">
 						<?php } elseif ( ! $show_branch_settings ) { ?>
@@ -302,45 +299,65 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 							<input type="hidden" name="ran_booster[subdirectory]" value="<?php echo esc_attr( $subdirectory_value ); ?>">
 						<?php } ?>
 						<?php $package_field_layout = 'grid'; ?>
-						<?php $package_repository_description = __( 'The saved repository and access used by this package.', 'ran-booster' ); ?>
 						<?php require __DIR__ . '/repository-configuration.php'; ?>
+						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 			</form>
 
 			<?php require __DIR__ . '/source-settings.php'; ?>
 
-			<section class="ran-booster-settings-section ran-booster-package-operation-settings" aria-labelledby="ran-booster-package-operation-heading">
+			<section class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card" data-ran-booster-card="package-edit" aria-labelledby="ran-booster-package-operation-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-package-operation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Package operation', 'ran-booster' ); ?></h3>
-					<p class="ran-booster-section__description"><?php esc_html_e( 'Choose when Booster may update this package.', 'ran-booster' ); ?></p>
 				</header>
-				<div class="ran-booster-settings-section__body<?php echo $show_package_operation_actions ? ' ran-booster-package-operation-settings__body--split' : ''; ?>">
-					<div class="ran-booster-settings-fields">
-						<?php $package_field_form = 'ran-booster-package-edit-form'; ?>
-						<?php $package_automation_source = $package_current_source; ?>
-						<?php $defer_development_safety_notice = true; ?>
-						<?php require __DIR__ . '/fields/deployment-policy.php'; ?>
-						<?php /** @var \Closure(): void $render_development_safety_notice */ ?>
-						<?php unset( $defer_development_safety_notice ); ?>
-						<?php unset( $package_field_form ); ?>
-					</div>
-					<?php if ( $show_package_operation_actions ) { ?>
+				<div class="ran-booster-settings-section__body">
+					<?php
+					$package_field_form              = 'ran-booster-package-edit-form';
+					$package_automation_source       = $package_current_source;
+					$package_operation_layout        = true;
+					$package_operation_actions_html  = '';
+					$package_operation_guidance_html = '';
+					ob_start();
+					if ( $release_managed ) {
+						/**
+						 * Lets an add-on append source-specific buttons to the Package operations group.
+						 *
+						 * @param string $package_current_source Current package update source.
+						 * @param string $package_source_view    Update source selected for this view.
+						 */
+						do_action( 'ran_booster_admin_package_operation_actions', $package_current_source, $package_source_view );
+					}
+					$package_add_on_operation_actions = trim( (string) ob_get_clean() );
+					if ( $show_package_operation_actions || '' !== $package_add_on_operation_actions ) {
+						ob_start();
+						?>
 					<div class="ran-booster-package-operation-settings__actions" role="group" aria-label="<?php esc_attr_e( 'Package operations', 'ran-booster' ); ?>">
 						<?php if ( is_string( $word_press_action_url ) && is_string( $word_press_action_label ) ) { ?>
-							<a class="button" href="<?php echo esc_url( $word_press_action_url ); ?>"><?php echo esc_html( $word_press_action_label ); ?></a>
+							<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $word_press_action_url ); ?>"><?php echo esc_html( $word_press_action_label ); ?></a>
 						<?php } ?>
 						<?php if ( $show_branch_operations ) { ?>
 							<?php require __DIR__ . '/reinstall.php'; ?>
 						<?php } ?>
+						<?php echo $package_add_on_operation_actions; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Add-on hook output is rendered as-is, like other package hooks. ?>
 					</div>
-					<?php } ?>
-					<?php $render_development_safety_notice(); ?>
+						<?php
+						$package_operation_actions_html = (string) ob_get_clean();
+						if ( $show_branch_operations ) {
+							ob_start();
+							require __DIR__ . '/reinstall-guidance.php';
+							$package_operation_guidance_html = (string) ob_get_clean();
+						}
+					}
+					require __DIR__ . '/fields/deployment-policy.php';
+					unset( $package_field_form, $package_operation_layout, $package_operation_actions_html, $package_operation_guidance_html, $package_add_on_operation_actions );
+					?>
 				</div>
-			</section>
+			</div></div></section>
 
-			<div class="ran-booster-settings-actions ran-booster-package-settings__save-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
-				<button type="submit" class="button button-primary" form="ran-booster-package-edit-form" data-ran-booster-package-settings-save data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-package-mutation hx-post="<?php echo esc_url( wp_make_link_relative( $settings_url ) ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop" hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( $package_settings_save_label ); ?></button>
-				<a class="button" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
-				<a class="button" href="<?php echo esc_url( $back_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is Managed Plugins or Managed Themes. */ __( 'Back to Managed %s', 'ran-booster' ), $package_view->get_plural_label() ) ); ?></a>
+			<div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-package-settings__save-card">
+				<div class="ran-wp-ui-card__content ran-booster-package-settings__save-actions" role="group" aria-label="<?php esc_attr_e( 'Package settings actions', 'ran-booster' ); ?>">
+					<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" form="ran-booster-package-edit-form" data-ran-booster-package-settings-save data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-package-mutation-error" data-ran-booster-package-mutation hx-post="<?php echo esc_url( wp_make_link_relative( $settings_url ) ); ?>" hx-target="#wpbody-content" hx-select="#wpbody-content" hx-swap="outerHTML show:none" hx-sync="this:drop" hx-request='{"timeout":30000}' hx-include="#ran-booster-package-edit-form, [form=&quot;ran-booster-package-edit-form&quot;]" <?php disabled( ! $package_mutation_available ); ?> data-ran-booster-busy-label="<?php echo esc_attr( __( 'Saving…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Saving package settings. This can take a few seconds.', 'ran-booster' ) ); ?>"><?php echo esc_html( $package_settings_save_label ); ?></button>
+					<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>" href="<?php echo esc_url( $install_another_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
+				</div>
 			</div>
 		<?php } ?>
 
@@ -353,26 +370,25 @@ $automation_summary  = match ( $package->get_deployment_policy()->value ) {
 		<?php require __DIR__ . '/danger-zone.php'; ?>
 	</div>
 
-	<aside class="ran-booster-package-summary" aria-label="<?php esc_attr_e( 'Package summary', 'ran-booster' ); ?>">
+	<aside class="ran-booster-package-summary ran-booster-summary-grid ran-booster-summary-grid--standalone" aria-label="<?php esc_attr_e( 'Package summary', 'ran-booster' ); ?>">
 			<div>
-				<p><?php esc_html_e( 'Current source', 'ran-booster' ); ?></p>
+				<p class="ran-booster-summary-grid__label"><?php esc_html_e( 'Current source', 'ran-booster' ); ?></p>
 				<p class="ran-booster-package-summary__value"><?php echo esc_html( $source_summary ); ?></p>
 				<p class="ran-booster-package-summary__meta">
 					<?php if ( $provider_unavailable ) { ?>
 						<code><?php echo esc_html( (string) $package->repository ); ?></code>
 					<?php } else { ?>
-						<a href="<?php echo esc_url( $repository_url ); ?>" class="ran-booster-repository-link" data-repository-base="<?php echo esc_attr( $stored_repository_url_base ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) $package->repository ); ?></a>
+						<a href="<?php echo esc_url( $repository_url ); ?>" class="ran-booster-repository-link" data-repository-base="<?php echo esc_attr( $stored_repository_url_base ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open repository', 'ran-booster' ); ?><span class="screen-reader-text"> <?php echo esc_html( (string) $package->repository ); ?></span> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
 					<?php } ?>
 				</p>
-				<p class="ran-booster-package-summary__meta"><?php echo esc_html( $source_summary_meta ); ?></p>
 		</div>
 		<div>
-			<p><?php esc_html_e( 'Updates', 'ran-booster' ); ?></p>
+			<p class="ran-booster-summary-grid__label"><?php esc_html_e( 'Updates', 'ran-booster' ); ?></p>
 			<p class="ran-booster-package-summary__value"><?php echo esc_html( $automation_summary ); ?></p>
 			<p class="ran-booster-package-summary__meta"><?php esc_html_e( 'Source changes reset Automatic to Manual', 'ran-booster' ); ?></p>
 		</div>
 		<div>
-			<p><?php esc_html_e( 'WordPress state', 'ran-booster' ); ?></p>
+			<p class="ran-booster-summary-grid__label"><?php esc_html_e( 'WordPress state', 'ran-booster' ); ?></p>
 			<p class="ran-booster-package-summary__value"><?php echo esc_html( $word_press_state ); ?></p>
 			<p class="ran-booster-package-summary__meta"><?php esc_html_e( 'Independent of package source', 'ran-booster' ); ?></p>
 		</div>

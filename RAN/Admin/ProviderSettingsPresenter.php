@@ -196,17 +196,18 @@ final readonly class ProviderSettingsPresenter {
 	 * Local admission and passive selected implementation.
 	 *
 	 * @phpstan-impure
-	 * @return array<string, array{admitted:bool,selection:?string,source_kind:?string,source_name:?string}>
+	 * @return array<string, array{admitted:bool,selection:?string,source_kind:?string,source_name:?string,replacement_detected:bool}>
 	 */
 	public function overview_provider_facts(): array {
 		$metadata = $this->providers->metadata();
 		$facts    = array();
 		foreach ( $metadata as $code => $provider ) {
 			$facts[ $code ] = array(
-				'admitted'    => true,
-				'selection'   => null,
-				'source_kind' => null,
-				'source_name' => null,
+				'admitted'             => true,
+				'selection'            => null,
+				'source_kind'          => null,
+				'source_name'          => null,
+				'replacement_detected' => false,
 			);
 		}
 		foreach ( \RAN\Booster::extension_declarations() as $extension ) {
@@ -225,10 +226,12 @@ final readonly class ProviderSettingsPresenter {
 			$selected    = isset( $metadata['gh'] ) && true === ( $selection['available'] ?? false ) ? ( $current['selected'] ?? null ) : null;
 			$name        = $current['declaration']['display_name'] ?? null;
 			$facts['gh'] = array(
-				'admitted'    => isset( $metadata['gh'] ),
-				'selection'   => is_string( $selection['state'] ?? null ) ? $selection['state'] : null,
-				'source_kind' => in_array( $selected, array( 'bundled', 'replacement' ), true ) ? $selected : null,
-				'source_name' => 'replacement' === $selected && is_string( $name ) && '' !== trim( $name ) ? $name : null,
+				'admitted'             => isset( $metadata['gh'] ),
+				'selection'            => is_string( $selection['state'] ?? null ) ? $selection['state'] : null,
+				'source_kind'          => in_array( $selected, array( 'bundled', 'replacement' ), true ) ? $selected : null,
+				'source_name'          => 'replacement' === $selected && is_string( $name ) && '' !== trim( $name ) ? $name : null,
+				// A compatible replacement is active and awaiting approval, not missing, conflicting or incompatible.
+				'replacement_detected' => 'decision_required' === ( $selection['state'] ?? null ) && array() !== ( $selection['candidates'] ?? array() ) && ! in_array( null, $selection['candidates'], true ),
 			);
 		}
 		return $facts;
@@ -713,7 +716,7 @@ final readonly class ProviderSettingsPresenter {
 				$credentials[] = array(
 					'id'         => is_array( $profile ) ? $id : '',
 					'label'      => is_array( $profile ) && is_string( $profile['label'] ?? null ) ? $profile['label'] : '',
-					'kind_label' => null !== $kind ? $kind->label : ( is_array( $profile ) ? (string) ( $profile['kind'] ?? '' ) : '' ),
+					'kind_label' => null !== $kind ? $kind->short_label : ( is_array( $profile ) ? (string) ( $profile['kind'] ?? '' ) : '' ),
 					'available'  => '' === $reason && ! empty( $profile['configured'] ),
 					'reason'     => $reason,
 					'destroy_on' => is_array( $profile ) && is_string( $profile['destroy_on'] ?? null ) ? $profile['destroy_on'] : null,
@@ -775,7 +778,7 @@ final readonly class ProviderSettingsPresenter {
 						'id'         => $profile['id'],
 						'label'      => $profile['label'],
 						'kind'       => $profile['kind'],
-						'kind_label' => null !== $kind ? $kind->label : $profile['kind'],
+						'kind_label' => null !== $kind ? $kind->short_label : $profile['kind'],
 						'detail'     => implode( ' · ', $details ),
 						'source'     => $profile['source'],
 						'configured' => $profile['configured'],
@@ -803,7 +806,7 @@ final readonly class ProviderSettingsPresenter {
 				'webhooks'                               => $provider instanceof WebhookNormalizer,
 				'default_credential_id'                  => $this->default_credential_id( $credentials ),
 
-				'credential_kind_labels'                 => null === $admin ? array() : array_column( array_map( $this->credential_kind( ... ), $admin->credential_kinds ), 'label', 'code' ),
+				'credential_kind_labels'                 => null === $admin ? array() : array_column( array_map( $this->credential_kind( ... ), $admin->credential_kinds ), 'short_label', 'code' ),
 				'credential_profiles'                    => $credentials,
 				'public_lookup'                          => $this->package_public_lookup( $provider, $code, $credentials ),
 			);
@@ -1530,7 +1533,8 @@ final readonly class ProviderSettingsPresenter {
 			: __( 'Owner', 'ran-booster' );
 		$base_url       = admin_url( 'admin.php?page=ran-booster&tab=' . rawurlencode( $provider_code ) );
 		$provider_url   = static fn ( array $args = array() ): string => add_query_arg( $args, $base_url );
-		$kind_labels    = array_column( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array(), 'label', 'code' );
+		$kind_labels    = array_column( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array(), 'short_label', 'code' );
+		$kind_full      = array_column( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array(), 'label', 'code' );
 		$scope_labels   = array_column( is_array( $provider['webhook_scopes'] ?? null ) ? $provider['webhook_scopes'] : array(), 'label', 'code' );
 		$field_labels   = array();
 		foreach ( is_array( $provider['credential_kinds'] ?? null ) ? $provider['credential_kinds'] : array() as $kind ) {
@@ -1540,7 +1544,7 @@ final readonly class ProviderSettingsPresenter {
 				}
 			}
 		}
-		$credential_projection = $this->credential_rows( $credentials, $kind_labels, $field_labels, $owner_label );
+		$credential_projection = $this->credential_rows( $credentials, $kind_labels, $kind_full, $field_labels, $owner_label );
 		$webhook_rows          = $this->webhook_rows( $webhooks, $scope_labels );
 		$credential_list       = $this->filter_and_page( $credential_projection['rows'], 'credentials', $state, is_string( $data['replace_credential'] ?? null ) ? $data['replace_credential'] : '' );
 		$webhook_list          = $this->filter_and_page( $webhook_rows, 'secrets', $state );
@@ -1606,11 +1610,12 @@ final readonly class ProviderSettingsPresenter {
 
 	/**
 	 * @param array<array-key, mixed> $profiles Profile entries; non-array entries are skipped.
-	 * @param array<string,string> $kind_labels
+	 * @param array<string,string> $kind_labels Short credential kind labels shown in the table.
+	 * @param array<string,string> $kind_full   Full credential kind names that the table search still matches.
 	 * @param array<string,string> $field_labels
 	 * @return array{rows:list<array<string,mixed>>,scopes:array<string,string>}
 	 */
-	private function credential_rows( array $profiles, array $kind_labels, array $field_labels, string $owner_label ): array {
+	private function credential_rows( array $profiles, array $kind_labels, array $kind_full, array $field_labels, string $owner_label ): array {
 		$rows   = array();
 		$scopes = array();
 		foreach ( $profiles as $profile_index => $profile ) {
@@ -1662,7 +1667,7 @@ final readonly class ProviderSettingsPresenter {
 				'usage_label'         => $usage_label,
 				'health_label'        => $health_label,
 				'status_key'          => $status_key,
-				'search_value'        => strtolower( implode( ' ', array_merge( array( $label, $kind_labels[ $kind ] ?? $kind, $scope_label, $health_label ), array_values( array_filter( $configuration, 'is_string' ) ) ) ) ),
+				'search_value'        => strtolower( implode( ' ', array_merge( array( $label, $kind_labels[ $kind ] ?? $kind, $kind_full[ $kind ] ?? $kind, $scope_label, $health_label ), array_values( array_filter( $configuration, 'is_string' ) ) ) ) ),
 			);
 		}
 
@@ -1770,7 +1775,7 @@ final readonly class ProviderSettingsPresenter {
 		return array() !== array_filter( $rows, static fn ( array $row ): bool => 'attention' === ( $row['status_key'] ?? null ) );
 	}
 
-	/** @return array{credential:array{tone:string,heading:string,description:string},webhook:array{tone:string,heading:string,description:string}} */
+	/** @return array{credential:array{tone:string,status:string,heading:string,description:string},webhook:array{tone:string,status:string,heading:string,description:string}} */
 	private function profile_summaries( bool $storage_unavailable, bool $credential_attention, bool $webhook_attention, int $credential_count, int $webhook_count, int $automatic_count ): array {
 		$credential_problem = $storage_unavailable || $credential_attention;
 		$webhook_problem    = $storage_unavailable || $webhook_attention || ( 0 === $webhook_count && 0 < $automatic_count );
@@ -1778,13 +1783,15 @@ final readonly class ProviderSettingsPresenter {
 		return array(
 			'credential' => array(
 				'tone'        => $credential_problem ? 'attention' : ( 0 < $credential_count ? 'ready' : 'pending' ),
+				'status'      => $credential_problem ? __( 'Needs attention', 'ran-booster' ) : ( 0 < $credential_count ? __( 'Ready', 'ran-booster' ) : __( 'Not set up', 'ran-booster' ) ),
 				'heading'     => $credential_problem ? __( 'Repository access needs attention', 'ran-booster' ) : ( 0 === $credential_count ? __( 'No credential saved', 'ran-booster' ) : sprintf( /* translators: %d is the number of saved credentials. */ _n( '%d credential saved', '%d credentials saved', $credential_count, 'ran-booster' ), $credential_count ) ),
-				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credential_attention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credential_count ? __( 'Add a credential when repository access requires one.', 'ran-booster' ) : __( 'Open credential management to review saved credentials and their usage.', 'ran-booster' ) ) ),
+				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before reviewing or changing saved repository access.', 'ran-booster' ) : ( $credential_attention ? __( 'Review saved credentials that are incomplete, expired, or approaching expiry.', 'ran-booster' ) : ( 0 === $credential_count ? __( 'Add a credential when repository access requires one.', 'ran-booster' ) : '' ) ),
 			),
 			'webhook'    => array(
 				'tone'        => $webhook_problem ? 'attention' : ( 0 < $webhook_count ? 'ready' : 'pending' ),
-				'heading'     => $webhook_problem ? __( 'Webhook signing · Needs attention', 'ran-booster' ) : ( 0 === $webhook_count ? __( 'Webhook signing · No secret saved', 'ran-booster' ) : __( 'Webhook signing · Ready locally', 'ran-booster' ) ),
-				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhook_attention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhook_count ? ( 0 < $automatic_count ? __( 'Automatic branch deployments require local signing material before Git provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a Git provider webhook.', 'ran-booster' ) ) : sprintf( /* translators: %d is the number of local secrets that can verify signed deliveries. */ _n( '%d local secret can verify signed deliveries. This does not prove a matching remote webhook exists.', '%d local secrets can verify signed deliveries. This does not prove matching remote webhooks exist.', $webhook_count, 'ran-booster' ), $webhook_count ) ) ),
+				'status'      => $webhook_problem ? __( 'Needs attention', 'ran-booster' ) : ( 0 === $webhook_count ? __( 'No secret saved', 'ran-booster' ) : __( 'Ready locally', 'ran-booster' ) ),
+				'heading'     => __( 'Webhook signing', 'ran-booster' ),
+				'description' => $storage_unavailable ? __( 'Restore encrypted credential storage before Push-to-Deploy can verify signed deliveries.', 'ran-booster' ) : ( $webhook_attention ? __( 'Review saved signing material whose configuration or managed-package usage could not be confirmed.', 'ran-booster' ) : ( 0 === $webhook_count ? ( 0 < $automatic_count ? __( 'Automatic branch deployments require local signing material before Git provider webhooks can be used safely.', 'ran-booster' ) : __( 'Add local signing material before configuring a Git provider webhook.', 'ran-booster' ) ) : sprintf( /* translators: %d is the number of local secrets that can verify signed deliveries. */ _n( '%d local secret can verify signed deliveries. It does not prove a remote webhook exists.', '%d local secrets can verify signed deliveries. They do not prove a remote webhook exists.', $webhook_count, 'ran-booster' ), $webhook_count ) ) ),
 			),
 		);
 	}
@@ -1875,7 +1882,6 @@ final readonly class ProviderSettingsPresenter {
 	/** @return array<string,string> */
 	private function profile_copy( string $label ): array {
 		return array(
-			'provider_back_label'               => sprintf( /* translators: %s is the repository provider name. */ __( 'Back to %s overview', 'ran-booster' ), $label ),
 			'credential_management_description' => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage saved credentials used for %s repository access.', 'ran-booster' ), $label ),
 			'secret_management_description'     => sprintf( /* translators: %s is the repository provider name. */ __( 'Manage local signing material used to verify %s webhook deliveries.', 'ran-booster' ), $label ),
 		);

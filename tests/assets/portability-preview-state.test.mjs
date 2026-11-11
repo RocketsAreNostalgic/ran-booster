@@ -8,6 +8,10 @@ const source = fs.readFileSync(
 	new URL('../../assets/ran-booster-portability.js', import.meta.url),
 	'utf8'
 );
+const announceSource = fs.readFileSync(
+	new URL('../../assets/ran-booster-announce.js', import.meta.url),
+	'utf8'
+);
 
 function sprintf(format, ...values) {
 	let next = 0;
@@ -146,6 +150,7 @@ function row(
 function exportFixture(states) {
 	const master = checkbox('[data-portability-export-select-all]');
 	const submit = { disabled: false };
+	const count = { textContent: '' };
 	const choices = states.map((checked, index) =>
 		checkbox('[data-portability-export-select]', checked, String(index))
 	);
@@ -156,6 +161,7 @@ function exportFixture(states) {
 				{
 					'[data-portability-export-select-all]': master,
 					'[data-portability-export-submit]': submit,
+					'[data-portability-export-selected-count]': count,
 				}[selector] || null
 			);
 		},
@@ -166,7 +172,7 @@ function exportFixture(states) {
 		},
 	};
 
-	return { choices, master, submit };
+	return { choices, count, master, submit };
 }
 
 function credentialExportFixture() {
@@ -207,14 +213,13 @@ function credentialExportFixture() {
 	};
 	const summary = {
 		dataset: {
-			credentialPlural: '%d selected repository credential profiles',
-			credentialSingular: '1 selected repository credential profile',
-			packageOnlyTemplate:
-				'Create a Transporter Blueprint for %s without repository credentials.',
+			credentialPlural: '%d credentials',
+			credentialSingular: '1 credential',
+			packageOnlyTemplate: '%s, no repository credentials.',
 			packagePlural: '%d packages',
 			packageSingular: '1 package',
 			protectedTemplate:
-				'Create a Transporter Blueprint for %1$s using %2$s. Credential permissions have not been assessed.',
+				'%1$s, %2$s. Credential permissions have not been assessed.',
 		},
 		textContent: '',
 	};
@@ -307,7 +312,7 @@ function renderPackageCredentialReview(
 		'php',
 		[
 			'-r',
-			'require $argv[1]; $portability_review_rows = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR); require $argv[2];',
+			'require $argv[1]; require dirname($argv[2], 2) . "/RAN/Admin/Component/StatusBadge.php"; $portability_review_rows = json_decode(stream_get_contents(STDIN), true, 512, JSON_THROW_ON_ERROR); require $argv[2];',
 			fileURLToPath(
 				new URL(
 					'../Admin/AdminViewWordPressFunctions.php',
@@ -361,7 +366,17 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	);
 	const previewLabel = previewProgress.label;
 	const previewSubmit = previewProgress.button;
-	const message = { className: '', hidden: true, textContent: '' };
+	const message = {
+		closest: () => null,
+		className: '',
+		hidden: true,
+		textContent: '',
+		setAttribute(name, value) {
+			this[name] = value;
+		},
+	};
+	const spoken = [];
+	const announcements = [];
 	const applyProgress = progressButton(
 		'Apply selected changes',
 		'Applying…',
@@ -374,9 +389,22 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 			listeners.set(`apply:${type}`, listener);
 		},
 	};
+	const noticeCalls = [];
 	const results = {
+		setAttribute(name, value) {
+			this[name] = value;
+		},
 		clears: 0,
 		items: [],
+		querySelector(selector) {
+			return selector === '[data-ran-booster-ui-notice]'
+				? this.items.find(
+						(item) =>
+							item.getAttribute('data-ran-booster-ui-notice') !==
+							null
+					) || null
+				: null;
+		},
 		appendChild(item) {
 			this.items.push(item);
 		},
@@ -388,6 +416,10 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	const applySummary = {
 		children: [],
 		textContent: '',
+		classList: {
+			add() {},
+			remove() {},
+		},
 		replaceChildren(...children) {
 			this.children = children;
 			this.textContent = children
@@ -399,6 +431,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	let html = '<table>empty</table>';
 	let currentRows = [];
 	let master = null;
+	const selectedCount = { textContent: '' };
 	const reviewAttributes = new Map();
 	const reviewClasses = new Set();
 	const control = (selectors, value = '') => {
@@ -505,6 +538,9 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		querySelector(selector) {
 			if (selector === '[data-portability-select-all]') {
 				return master;
+			}
+			if (selector === '[data-portability-selected-count]') {
+				return selectedCount;
 			}
 			return selector === '[data-portability-credential-ordinal="0"]'
 				? group
@@ -650,7 +686,10 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 			events.push(event);
 		},
 		createElement() {
+			const attributes = new Map();
 			return {
+				setAttribute: (name, value) => attributes.set(name, value),
+				getAttribute: (name) => attributes.get(name) ?? null,
 				children: [],
 				appendChild(child) {
 					this.children.push(child);
@@ -690,15 +729,42 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		}
 	};
 	globalThis.window = {
+		wp: {
+			a11y: {
+				speak(text, politeness) {
+					spoken.push(text);
+					announcements.push({ text, politeness });
+				},
+			},
+		},
 		CustomEvent: class {
 			constructor(type, eventOptions) {
 				this.detail = eventOptions.detail;
+				this.bubbles = eventOptions.bubbles;
 				this.type = type;
 			}
 		},
 		fetch: (url, requestOptions) => fetchResponse(requestOptions.body),
 		ranBoosterPortability: { ajaxUrl: '/admin-ajax.php' },
+		ranBoosterNotice: {
+			// Records how a notice is built and redrawn: the apply results
+			// must come from the shared static Notice, never hand-set classes.
+			create(intent, notice) {
+				const host = globalThis.document.createElement();
+				const content = globalThis.document.createElement();
+				host.appendChild(content);
+				noticeCalls.push({ call: 'create', intent, ...notice });
+				globalThis.window.ranBoosterNotice.setIntent(host, intent);
+				return { host, content };
+			},
+			setIntent(host, intent) {
+				noticeCalls.push({ call: 'setIntent', intent });
+				host.setAttribute('data-ran-booster-ui-notice-intent', intent);
+				return true;
+			},
+		},
 	};
+	Function('window', announceSource)(globalThis.window);
 	if (options.htmx) {
 		globalThis.window.htmx = {
 			process(scope) {
@@ -720,7 +786,11 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		htmxProcesses,
 		listeners,
 		master: () => master,
+		selectedCount,
+		noticeCalls,
 		message,
+		announcements,
+		spoken,
 		password,
 		applyLabel: applyProgress.label,
 		previewLabel,
@@ -763,11 +833,13 @@ test('export master selection reflects checked, unchecked and mixed rows', () =>
 
 		assert.equal(state.master.checked, false);
 		assert.equal(state.master.indeterminate, true);
+		assert.equal(state.count.textContent, '1 selected');
 
 		state.choices[1].checked = true;
 		state.choices[1].listeners.get('change')();
 		assert.equal(state.master.checked, true);
 		assert.equal(state.master.indeterminate, false);
+		assert.equal(state.count.textContent, '2 selected');
 
 		state.master.checked = false;
 		state.master.listeners.get('change')();
@@ -777,6 +849,7 @@ test('export master selection reflects checked, unchecked and mixed rows', () =>
 		);
 		assert.equal(state.master.indeterminate, false);
 		assert.equal(state.submit.disabled, true);
+		assert.equal(state.count.textContent, '0 selected');
 	} finally {
 		cleanup();
 	}
@@ -789,7 +862,7 @@ test('credential export selection follows package relevance and reports selected
 		loadFunction('initPortabilityExportSelection')();
 		assert.equal(
 			state.summary.textContent,
-			'Create a Transporter Blueprint for 2 packages without repository credentials.'
+			'2 packages, no repository credentials.'
 		);
 		assert.equal(state.rows[2].hidden, false);
 
@@ -797,7 +870,7 @@ test('credential export selection follows package relevance and reports selected
 		state.credentials[0].listeners.get('change')();
 		assert.equal(
 			state.summary.textContent,
-			'Create a Transporter Blueprint for 2 packages using 1 selected repository credential profile. Credential permissions have not been assessed.'
+			'2 packages, 1 credential. Credential permissions have not been assessed.'
 		);
 
 		state.packages[0].checked = false;
@@ -815,7 +888,7 @@ test('credential export selection follows package relevance and reports selected
 		assert.equal(state.credentials[1].checked, true);
 		assert.equal(
 			state.summary.textContent,
-			'Create a Transporter Blueprint for 1 package using 1 selected repository credential profile. Credential permissions have not been assessed.'
+			'1 package, 1 credential. Credential permissions have not been assessed.'
 		);
 	} finally {
 		cleanup();
@@ -873,6 +946,59 @@ test('changing the artifact or password resets saved import choices', async () =
 	}
 });
 
+for (const change of ['file', 'password']) {
+	test(`changing ${change} invalidates a delayed review and credential refresh`, async () => {
+		let finish;
+		let aborted = false;
+		const state = importFixture(
+			() =>
+				new Promise((resolve) => {
+					finish = resolve;
+				}),
+			{
+				'<table>old</table>': [['0', 'install', true]],
+			}
+		);
+		try {
+			loadFunction('initPortabilityPreview')();
+			state.listeners.get('form:submit')({ preventDefault() {} });
+			if (change === 'file') {
+				state.file.files = [{ name: 'new.zip' }];
+				state.listeners.get('form:change')({ target: state.file });
+			} else {
+				state.listeners.get('form:input')({ target: state.password });
+			}
+			finish(success('<table>old</table>'));
+			await tick();
+			assert.equal(state.review.innerHTML, '<table>empty</table>');
+			assert.equal(state.apply.disabled, true);
+			assert.equal(state.previewSubmit.getAttribute('aria-busy'), null);
+			// Only the progress line was spoken; the stale review stays silent.
+			assert.deepEqual(state.announcements, [
+				{ text: 'Reviewing blueprint…', politeness: 'polite' },
+			]);
+			const detail = {
+				requestConfig: { elt: state.credentialActions.import },
+				xhr: {
+					abort() {
+						aborted = true;
+					},
+				},
+			};
+			state.listeners.get('root:htmx:beforeRequest')({ detail });
+			state.listeners.get('form:change')({ target: state.file });
+			state.listeners.get('root:htmx:beforeSwap')({ detail });
+			state.listeners.get('root:htmx:afterSwap')({ detail });
+			assert.equal(aborted, true);
+			assert.equal(detail.shouldSwap, false);
+			assert.equal(state.review.innerHTML, '<table>empty</table>');
+			assert.equal(state.apply.disabled, true);
+		} finally {
+			cleanup();
+		}
+	});
+}
+
 test('preview shows the shared busy state and restores it after success', async () => {
 	let finishFetch;
 	const state = importFixture(
@@ -916,8 +1042,15 @@ test('preview shows the shared busy state and restores it after success', async 
 			'ran-booster:admin-mutation-success'
 		);
 		assert.deepEqual(state.events[0].detail, {
-			message: 'Transporter Blueprint reviewed.',
+			message: 'Blueprint reviewed.',
 		});
+		assert.equal(state.message.textContent, 'Blueprint reviewed.');
+		assert.equal(state.message.hidden, false);
+		assert.equal(state.message['aria-live'], undefined);
+		assert.deepEqual(state.announcements, [
+			{ text: 'Reviewing blueprint…', politeness: 'polite' },
+			{ text: 'Blueprint reviewed.', politeness: 'polite' },
+		]);
 	} finally {
 		cleanup();
 	}
@@ -953,7 +1086,7 @@ test('a failed preview cannot leave an older review actionable', async () => {
 		await tick();
 
 		assert.equal(state.message.textContent, 'Safe blueprint read error.');
-		assert.equal(state.message.className, 'notice inline notice-error');
+		assert.equal(state.message.hidden, false);
 		assert.equal(state.review.innerHTML, '<table>empty</table>');
 		assert.equal(state.apply.disabled, true);
 		assert.equal(state.previewSubmit.disabled, false);
@@ -986,17 +1119,20 @@ test('import master and apply state follow only checked actionable rows', async 
 
 		assert.equal(state.master().checked, true);
 		assert.equal(state.apply.disabled, false);
+		assert.equal(state.selectedCount.textContent, '2 selected');
 
 		state.rows()[0].choice.checked = false;
 		state.listeners.get('root:change')({ target: state.rows()[0].choice });
 		assert.equal(state.master().checked, false);
 		assert.equal(state.master().indeterminate, true);
+		assert.equal(state.selectedCount.textContent, '1 selected');
 
 		state.master().checked = false;
 		state.listeners.get('root:change')({ target: state.master() });
 		assert.equal(state.rows()[1].choice.checked, false);
 		assert.equal(state.master().indeterminate, false);
 		assert.equal(state.apply.disabled, true);
+		assert.equal(state.selectedCount.textContent, '0 selected');
 
 		state.master().checked = true;
 		state.listeners.get('root:change')({ target: state.master() });
@@ -1332,7 +1468,7 @@ test('credential decisions have no default and the same exact choice reaches Pre
 			'import'
 		);
 		assert.equal(
-			state.results.items[0].children[1].textContent,
+			state.results.items[0].children[0].children[1].textContent,
 			'Transferred credential is available on this site.'
 		);
 	} finally {
@@ -1419,11 +1555,13 @@ test('managed credential recovery enables Apply without claiming a package chang
 			'import'
 		);
 		assert.equal(
-			state.results.items[0].className.includes('notice-success'),
-			true
+			state.results.items[0].getAttribute(
+				'data-ran-booster-ui-notice-intent'
+			),
+			'success'
 		);
 		assert.equal(
-			state.results.items[0].children[1].textContent,
+			state.results.items[0].children[0].children[1].textContent,
 			'Transferred credential is available on this site.'
 		);
 	} finally {
@@ -1492,7 +1630,7 @@ test('apply sends only selected rows serially and preserves choices on review', 
 		finishApply();
 		await tick();
 		assert.equal(
-			state.results.items[0].children[0].textContent,
+			state.results.items[0].children[0].children[0].textContent,
 			'Plugin “Package 1” (package-1/package.php) — Applied.'
 		);
 		assert.equal(state.apply.getAttribute('aria-busy'), 'true');
@@ -1517,6 +1655,16 @@ test('apply sends only selected rows serially and preserves choices on review', 
 			false
 		);
 		assert.equal(state.applyLabel.textContent, 'Apply selected changes');
+		assert.equal(
+			state.results.items.at(-1).textContent,
+			'All selected changes were applied.'
+		);
+		assert.equal(state.results['aria-live'], undefined);
+		assert.equal(
+			state.spoken.filter((text) => text.includes('changes were applied'))
+				.length,
+			1
+		);
 	} finally {
 		cleanup();
 	}
@@ -1675,21 +1823,191 @@ test('apply identifies the exact package where a serial chain is pending', async
 		await tick();
 		assert.equal(state.results.items.length, 2);
 		assert.equal(
-			state.results.items[0].children[0].textContent,
+			state.results.items[0].children[0].children[0].textContent,
 			'Plugin “Forms Plugin” (forms/forms.php) — Installed with deployment disabled.'
 		);
 		assert.equal(
-			state.results.items[1].children[0].textContent,
+			state.results.items[1].children[0].children[0].textContent,
 			'Theme “Campaign Theme” (campaign-theme) — Applying…'
 		);
 
 		finishApply();
 		await applying;
-		assert.equal(state.results.items.length, 2);
+		assert.equal(state.results.items.length, 3);
 		assert.equal(
-			state.results.items[1].children[0].textContent,
+			state.results.items[1].children[0].children[0].textContent,
 			'Theme “Campaign Theme” (campaign-theme) — Adopted: deployment disabled'
 		);
+	} finally {
+		cleanup();
+	}
+});
+
+test('changing the draft during apply retains the first result and stops subsequent requests', async () => {
+	let finish;
+	const requests = [];
+	const state = importFixture(
+		(data) => {
+			requests.push(data.get('action'));
+			return data.get('action') === 'ran_booster_apply_blueprint'
+				? new Promise((resolve) => {
+						finish = resolve;
+					})
+				: success();
+		},
+		{
+			'<table>review</table>': [
+				['0', 'install', true],
+				['1', 'install', true],
+			],
+		}
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const applying = state.listeners.get('apply:click')();
+		await tick();
+		state.file.files = [{ name: 'new.zip' }];
+		state.listeners.get('form:change')({ target: state.file });
+		finish(
+			success('', {
+				status: 'installed',
+				message: 'Applied old package.',
+			})
+		);
+		await applying;
+		assert.deepEqual(requests, [
+			'ran_booster_preview_blueprint',
+			'ran_booster_apply_blueprint',
+		]);
+		assert.equal(state.results.items.length, 1);
+		assert.match(
+			state.results.items[0].children[0].children[0].textContent,
+			/Package 0.*Applied old package\./
+		);
+		assert.equal(state.review.innerHTML, '<table>empty</table>');
+		assert.equal(state.apply.disabled, true);
+		assert.equal(state.apply.getAttribute('aria-busy'), null);
+		assert.equal(
+			state.spoken.some((text) => text.includes('changes were applied')),
+			false
+		);
+	} finally {
+		cleanup();
+	}
+});
+
+test('a newer review suppresses completion from an older apply refresh', async () => {
+	let previews = 0;
+	let finishRefresh;
+	const state = importFixture(
+		async (data) => {
+			if (data.get('action') === 'ran_booster_apply_blueprint') {
+				return success('', { status: 'installed' });
+			}
+			return ++previews === 2
+				? new Promise((resolve) => {
+						finishRefresh = resolve;
+					})
+				: success();
+		},
+		{ '<table>review</table>': [['0', 'install', true]] }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const applying = state.listeners.get('apply:click')();
+		await tick();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		finishRefresh(success());
+		await applying;
+		assert.equal(
+			state.spoken.some((text) => text.includes('changes were applied')),
+			false
+		);
+		assert.equal(state.message.textContent, 'Blueprint reviewed.');
+		assert.equal(state.results.items.length, 1);
+	} finally {
+		cleanup();
+	}
+});
+
+test('changing the file during the post-apply refresh suppresses old completion', async () => {
+	let previews = 0;
+	let finishRefresh;
+	const state = importFixture(
+		(data) => {
+			if (data.get('action') === 'ran_booster_apply_blueprint') {
+				return success('', {
+					status: 'installed',
+					message: 'Applied old package.',
+				});
+			}
+			return ++previews === 2
+				? new Promise((resolve) => {
+						finishRefresh = resolve;
+					})
+				: success();
+		},
+		{ '<table>review</table>': [['0', 'install', true]] }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const applying = state.listeners.get('apply:click')();
+		await tick();
+		state.file.files = [{ name: 'new.zip' }];
+		state.listeners.get('form:change')({ target: state.file });
+		finishRefresh(success());
+		await applying;
+		assert.equal(state.review.innerHTML, '<table>empty</table>');
+		assert.match(
+			state.results.items[0].children[0].children[0].textContent,
+			/Applied old package\./
+		);
+		assert.equal(state.results.items.length, 1);
+		assert.equal(
+			state.spoken.some((text) => text.includes('changes were applied')),
+			false
+		);
+		assert.equal(state.apply.disabled, true);
+	} finally {
+		cleanup();
+	}
+});
+
+test('partial apply keeps row feedback without claiming all changes succeeded', async () => {
+	const state = importFixture(
+		async (data) =>
+			data.get('action') === 'ran_booster_apply_blueprint'
+				? success('', { status: 'skipped', message: 'Needs recovery.' })
+				: success(),
+		{ '<table>review</table>': [['0', 'install', true]] }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		await state.listeners.get('apply:click')();
+		assert.match(
+			state.results.items[0].children[0].children[0].textContent,
+			/Needs recovery\./
+		);
+		assert.equal(
+			state.results.items[0].getAttribute(
+				'data-ran-booster-ui-notice-intent'
+			),
+			'warning'
+		);
+		assert.equal(
+			state.spoken.some((text) => text.includes('changes were applied')),
+			false
+		);
+		assert.equal(state.results.items.length, 1);
 	} finally {
 		cleanup();
 	}
@@ -1728,6 +2046,10 @@ test('apply restores a disabled idle state when the final review fails', async (
 		await state.listeners.get('apply:click')();
 
 		assert.equal(state.message.textContent, 'Safe final review failure.');
+		assert.equal(
+			state.results.items.at(-1).textContent,
+			'All selected changes were applied.'
+		);
 		assert.equal(state.apply.disabled, true);
 		assert.equal(state.apply.getAttribute('aria-busy'), null);
 		assert.equal(
@@ -1950,3 +2272,194 @@ for (const failedOlderResponse of [false, true]) {
 		}
 	});
 }
+
+test('preview failure updates only the retained paragraph inside its Notice', async () => {
+	const state = importFixture(async () => ({
+		json: async () => ({
+			success: false,
+			data: { message: 'Safe review error.' },
+		}),
+	}));
+	const updates = [];
+	const notice = {
+		hidden: true,
+		className: '',
+		dispatchEvent(event) {
+			updates.push({ type: event.type });
+		},
+	};
+	Object.defineProperty(notice, 'textContent', {
+		set() {
+			throw new Error('Do not replace the Notice content.');
+		},
+	});
+	state.message.closest = () => notice;
+	const intents = [];
+	globalThis.window.ranBoosterNotice.setIntent = (host, intent) => {
+		intents.push({
+			host,
+			intent,
+			text: state.message.textContent,
+			hidden: host.hidden,
+		});
+		return true;
+	};
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		// The static Notice redraws through the helper; nothing remounts it.
+		assert.deepEqual(
+			intents.map(({ host, intent, text, hidden }) => ({
+				host: host === notice,
+				intent,
+				text,
+				hidden,
+			})),
+			[
+				{
+					host: true,
+					intent: 'info',
+					text: 'Reviewing blueprint…',
+					hidden: false,
+				},
+				{
+					host: true,
+					intent: 'error',
+					text: 'Safe review error.',
+					hidden: false,
+				},
+			]
+		);
+		assert.deepEqual(updates, []);
+		assert.equal(state.message.className, '');
+		assert.equal(state.message['aria-live'], undefined);
+		assert.equal(state.apply.disabled, true);
+		// Progress stays polite; the review failure is assertive.
+		assert.deepEqual(state.announcements, [
+			{ text: 'Reviewing blueprint…', politeness: 'polite' },
+			{ text: 'Safe review error.', politeness: 'assertive' },
+		]);
+	} finally {
+		cleanup();
+	}
+});
+
+test('successful preview and draft clearing preserve the original announcement owner and hide both nodes', async () => {
+	const state = importFixture(async () => success('<table>reviewed</table>'));
+	const notice = {
+		hidden: true,
+		className: '',
+		setAttribute(name, value) {
+			this[name] = value;
+		},
+		dispatchEvent() {},
+	};
+	state.message.closest = () => notice;
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		assert.equal(notice['data-ran-booster-ui-notice-intent'], 'success');
+		assert.equal(notice.hidden, false);
+		assert.equal(state.message['aria-live'], undefined);
+		const spoken = ['Reviewing blueprint…', 'Blueprint reviewed.'];
+		assert.deepEqual(state.spoken, spoken);
+		state.listeners.get('form:change')({ target: state.file });
+		assert.equal(notice.hidden, true);
+		assert.equal(state.message.hidden, true);
+		assert.equal(state.message.textContent, '');
+		assert.equal(state.apply.disabled, true);
+		assert.deepEqual(state.spoken, spoken);
+	} finally {
+		cleanup();
+	}
+});
+
+test('apply result keeps its message, credential and added recovery nodes across intent changes', async () => {
+	let finishApply;
+	const state = importFixture(
+		(data) =>
+			data.get('action') === 'ran_booster_apply_blueprint'
+				? new Promise((resolve) => {
+						finishApply = resolve;
+					})
+				: success('<table>review</table>'),
+		{ '<table>review</table>': [['0', 'install', true]] }
+	);
+	try {
+		loadFunction('initPortabilityPreview')();
+		state.listeners.get('form:submit')({ preventDefault() {} });
+		await tick();
+		const applying = state.listeners.get('apply:click')();
+		const item = state.results.items[0],
+			content = item.children[0],
+			text = content.children[0];
+		const recovery = { textContent: 'Existing recovery link' };
+		content.appendChild(recovery);
+		assert.equal(
+			item.getAttribute('data-ran-booster-ui-notice-intent'),
+			'info'
+		);
+		finishApply(
+			success('', {
+				status: 'installed',
+				message: 'Applied.',
+				credential_state: 'transferred_available',
+			})
+		);
+		await applying;
+		assert.equal(state.results.items[0], item);
+		assert.equal(item.children[0], content);
+		assert.equal(content.children[0], text);
+		assert.equal(content.children[1], recovery);
+		assert.equal(
+			content.children[2].textContent,
+			'Transferred credential is available on this site.'
+		);
+		assert.equal(
+			item.getAttribute('data-ran-booster-ui-notice-intent'),
+			'success'
+		);
+		assert.equal(state.results['aria-live'], undefined);
+		// One static Notice is created per row and only redrawn after that;
+		// the apply result never sets the Notice classes itself.
+		assert.deepEqual(
+			state.noticeCalls.filter(({ call }) => call === 'create'),
+			[
+				{
+					call: 'create',
+					intent: 'info',
+					className: 'ran-booster-portability__apply-result',
+				},
+			]
+		);
+		assert.deepEqual(
+			state.noticeCalls.map(({ call, intent }) => `${call}:${intent}`),
+			['create:info', 'setIntent:info', 'setIntent:success']
+		);
+		assert.equal(item.className, '');
+		// Each row result and the completion are spoken politely, once, in
+		// the order the former polite results region announced them.
+		assert.deepEqual(
+			state.announcements.map((entry) => entry.text),
+			[
+				'Reviewing blueprint…',
+				'Blueprint reviewed.',
+				'Plugin “Package 0” (package-0/package.php) — Applying…',
+				'Plugin “Package 0” (package-0/package.php) — Applied. Transferred credential is available on this site.',
+				'Reviewing blueprint…',
+				'All selected changes were applied.',
+			]
+		);
+		assert.ok(
+			state.announcements.every(
+				({ politeness }) => politeness === 'polite'
+			)
+		);
+		state.listeners.get('form:change')({ target: state.file });
+		assert.equal(state.results.items.length, 0);
+	} finally {
+		cleanup();
+	}
+});

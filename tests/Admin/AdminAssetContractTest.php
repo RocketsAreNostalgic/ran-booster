@@ -749,10 +749,15 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'font-weight: var(--ran-booster-font-weight-semibold);', $m[2] );
 		self::assertStringContainsString( 'font-size: var(--ran-booster-font-size-md);', $m[2] );
 		// The documented exception list: option labels, table row names and screen reader labels only.
+		$exceptions = preg_split( '/,(?![^()]*\))/', $m[1] );
+		if ( false === $exceptions ) {
+			self::fail( 'The label exception list could not be split.' );
+		}
 		self::assertSame(
 			array( '.screen-reader-text', '.ran-booster-portability__credential-selection', 'td > label', ':has(input[type="checkbox"], input[type="radio"])' ),
-			array_map( static fn ( string $part ): string => trim( $part ), (array) preg_split( '/,(?![^()]*\))/', $m[1] ) )
+			array_map( 'trim', $exceptions )
 		);
+
 	}
 
 	public function test_every_form_field_label_shares_one_weight_and_size_rule(): void {

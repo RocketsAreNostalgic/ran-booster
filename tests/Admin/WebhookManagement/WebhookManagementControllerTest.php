@@ -192,9 +192,9 @@ final class WebhookManagementControllerTest extends TestCase {
 			'inactive panel'          => array(
 				'inactive',
 				array(
-					'setup'    => 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.',
-					'validate' => 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.',
-					'remove'   => 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.',
+					'setup'    => 'This site needs a public HTTPS URL to receive webhooks.',
+					'validate' => 'This site needs a public HTTPS URL to receive webhooks.',
+					'remove'   => 'This site needs a public HTTPS URL to receive webhooks.',
 				),
 			),
 			'no credential'           => array(

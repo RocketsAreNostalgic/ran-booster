@@ -275,7 +275,7 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	private function receiver_unavailable_message(): string {
-		return __( 'This site needs a public HTTPS URL before a Git provider can deliver webhooks. Local receivers cannot be reached remotely.', 'ran-booster' );
+		return __( 'This site needs a public HTTPS URL to receive webhooks.', 'ran-booster' );
 	}
 
 	/** Explain a failed local readiness projection without probing a provider. */

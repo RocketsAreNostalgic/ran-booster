@@ -1186,9 +1186,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertStringNotContainsString( 'Webhook readiness', $html );
 		self::assertStringContainsString( 'Webhook setup', $html );
 		// Step 1 states the missing public HTTPS URL, so the amber notice does not repeat it.
-		// The long receiver sentence is not repeated as a visible notice; only the hidden per-button reasons carry it.
-		self::assertStringNotContainsString( '<p>This site needs a public HTTPS URL before a Git provider can deliver webhooks.</p>', $html );
-		self::assertSame( 1, substr_count( $html, 'This site needs a public HTTPS URL to receive webhooks.' ) );
+		// The same sentence is the disabled-button reason (screen-reader text and title), but is visible once.
+		self::assertSame( 1, substr_count( $html, '<p>This site needs a public HTTPS URL to receive webhooks.</p>' ) );
+		self::assertStringContainsString( 'disabled-reason-setup">This site needs a public HTTPS URL to receive webhooks.</span>', $html );
 		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__notices', $html );
 		// With the receiver step not ok, setup starts collapsed.
 		self::assertSame( 1, preg_match( '/<details id="ran-booster-repository-webhook-setup"[^>]*ran-booster-disclosure">/', $html ) );

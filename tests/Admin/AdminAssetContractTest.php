@@ -772,7 +772,7 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_repository_detail_spacing_uses_the_shared_heading_and_card_gaps(): void {
 		$cards = 'ran-booster/30-provider-cards.css';
 		$rows  = array(
-			array( $cards, '\n\.ran-booster-admin \.ran-booster-repository-detail__header \{\n\tmargin-block-end:', ' var(--ran-booster-card-gap);' ),
+			array( $cards, '\n\.ran-booster-admin \.ran-booster-repository-detail__header \{', 'margin-block-end: var(--ran-booster-card-gap);' ),
 			array( $cards, '\n\.ran-booster-admin \.ran-booster-repository-detail__tabs \{', 'margin-block: 0 var(--ran-booster-card-gap);' ),
 			array( $cards, '\n\.ran-booster-admin \.ran-booster-repository-detail__header p \{', 'margin-block: var(--ran-booster-card-heading-gap) 0;' ),
 			array( $cards, '\n\.ran-booster-admin \.ran-booster-repository-detail__layout \{', 'gap: var(--ran-booster-card-gap);' ),

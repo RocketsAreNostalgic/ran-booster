@@ -198,13 +198,19 @@
 @property --ran-booster-nav-fade-start {
 	syntax: "<length>";
 	inherits: false;
-	initial-value: 0;
+
+	/* A registered <length> needs the unit. */
+	/* stylelint-disable-next-line length-zero-no-unit */
+	initial-value: 0px;
 }
 
 @property --ran-booster-nav-fade-end {
 	syntax: "<length>";
 	inherits: false;
-	initial-value: 0;
+
+	/* A registered <length> needs the unit. */
+	/* stylelint-disable-next-line length-zero-no-unit */
+	initial-value: 0px;
 }
 
 @keyframes ran-booster-nav-fade-start {
@@ -234,13 +240,17 @@
 		animation-range:
 			0 24px,
 			calc(100% - 24px) 100%;
+
+		/* The mask uses alpha only, so the colour is irrelevant. */
+		/* stylelint-disable color-named */
 		mask-image: linear-gradient(
 			to right,
-			color-mix(in srgb, #000 35%, transparent) 0,
-			#000 var(--ran-booster-nav-fade-left),
-			#000 calc(100% - var(--ran-booster-nav-fade-right)),
-			color-mix(in srgb, #000 35%, transparent) 100%
+			color-mix(in srgb, black 35%, transparent) 0,
+			black var(--ran-booster-nav-fade-left),
+			black calc(100% - var(--ran-booster-nav-fade-right)),
+			color-mix(in srgb, black 35%, transparent) 100%
 		);
+		/* stylelint-enable color-named */
 	}
 
 	.ran-admin-shell__navigation.ran-section-navigation:dir(rtl) {

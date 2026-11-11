@@ -180,7 +180,7 @@ final class ManagementHistoryDetailsTest extends TestCase {
 		self::assertIsString( $css );
 		$rows = array(
 			'\.ran-booster-repository-detail__group-heading \{' => array( 'font-size: var(--ran-booster-font-size-lg);', 'font-weight: var(--ran-booster-font-weight-semibold);', 'margin-block: 0 var(--ran-booster-card-heading-gap);' ),
-			'\.ran-booster-repository-detail__fact-label \{' => array( 'color: var(--ran-booster-text-muted);', 'font-size: var(--ran-booster-font-size-md);', 'font-weight: normal;' ),
+			'\.ran-booster-repository-detail__fact-label \{' => array( 'color: var(--ran-booster-text-muted);', 'font-size: var(--ran-booster-font-size-md);', 'font-weight: 400;' ),
 			'\.ran-booster-repository-detail__facts \{'    => array( 'gap: var(--ran-booster-space-16);' ),
 			'> div \{'                                     => array( 'gap: var(--ran-booster-space-4);' ),
 			'\+ \.ran-booster-repository-detail__group \{' => array( 'margin-block-start: var(--ran-booster-space-24);', 'padding-block-start: var(--ran-booster-space-24);' ),

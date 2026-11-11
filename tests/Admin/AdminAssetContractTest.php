@@ -151,6 +151,29 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( '.ran-booster-extension-card .plugin-card-bottom', $extensions );
 	}
 
+	/**
+	 * WordPress rings a focused `a:focus .plugin-icon` with a box-shadow that
+	 * follows the icon's own radius, so the icon must carry the radius of the
+	 * bundled logos (rx="8" at the 128px display size) for the ring to hug them.
+	 */
+	public function test_extension_logo_focus_ring_follows_the_logo_corner_radius(): void {
+		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
+
+		if ( 1 !== preg_match( '/\n\.ran-booster-admin \.ran-booster-extensions__grid \.plugin-icon \{([^}]*)\}/', $extensions, $icon_rule ) ) {
+			self::fail( 'The extension logo radius rule is missing.' );
+		}
+		self::assertStringContainsString( 'border-radius: var(--ran-booster-radius-card);', $icon_rule[1] );
+		self::assertDoesNotMatchRegularExpression( '/outline|box-shadow|color/', $icon_rule[1], 'The logo rule sets radius only; ring colour and width stay with the core focus rule.' );
+
+		$logos = glob( dirname( __DIR__, 2 ) . '/assets/extensions/*.svg' );
+		self::assertNotEmpty( $logos );
+		foreach ( $logos as $logo ) {
+			$svg = (string) file_get_contents( $logo );
+			self::assertStringContainsString( 'viewBox="0 0 128 128"', $svg, $logo );
+			self::assertMatchesRegularExpression( '/<rect width="128" height="128" rx="8"/', $svg, $logo . ' corner radius must stay 8px at 128px.' );
+		}
+	}
+
 	public function test_extension_action_text_links_keep_a_minimum_pointer_target(): void {
 		$extensions = $this->asset( 'ran-booster/55-extensions.css' );
 

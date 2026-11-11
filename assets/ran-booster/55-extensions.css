@@ -24,6 +24,16 @@
 	min-block-size: var(--ran-booster-space-24);
 }
 
+/*
+ * The bundled logos are 128px SVGs with an 8px corner (rx="8"), shown at 128px,
+ * so the logo keeps the Card radius. WordPress's own `a:focus .plugin-icon`
+ * ring takes its radius from this element, so the ring hugs the logo's corners.
+ * Ring colour and width stay with the core focus rule.
+ */
+.ran-booster-admin .ran-booster-extensions__grid .plugin-icon {
+	border-radius: var(--ran-booster-radius-card);
+}
+
 .ran-booster-admin .ran-booster-extensions__grid > .plugin-card {
 	float: none;
 	clear: none;

@@ -1245,7 +1245,8 @@
 		.ran-booster-onboarding__storage-documentation
 	)
 	> a,
-.ran-booster-admin .ran-booster-extensions__grid .name h3 > a {
+.ran-booster-admin .ran-booster-extensions__grid .name h3 > a,
+.ran-booster-admin .ran-booster-data-table > thead > tr > th > a {
 	display: inline-flex;
 	align-items: center;
 	min-block-size: var(--ran-booster-space-24);

@@ -248,6 +248,23 @@ final class AdminAssetContractTest extends TestCase {
 		}
 	}
 
+	public function test_table_sort_links_repository_names_and_switches_keep_a_24px_target(): void {
+		$css = $this->asset( 'ran-booster.css' );
+
+		if ( 1 !== preg_match( '/\.ran-booster-data-table > thead > tr > th > a \{[\s\S]*?\}|\.ran-booster-data-table > thead > tr > th > a,[\s\S]*?\{([^}]*)\}/', $css, $sort_rule ) ) {
+			self::fail( 'Column sort links need a target size rule.' );
+		}
+		self::assertStringContainsString( 'display: inline-flex;', $sort_rule[0] );
+		self::assertStringContainsString( 'min-block-size: var(--ran-booster-space-24);', $sort_rule[0] );
+		self::assertMatchesRegularExpression( '/a\.ran-booster-repository-record__name \{\s*min-block-size: var\(--ran-booster-space-24\);/', $css );
+
+		// The General switch keeps its visual size; its hit area is a 32px-tall pseudo-element.
+		if ( 1 !== preg_match( '/button\[role="switch"\]::before \{([^}]*)\}/', $css, $switch_rule ) ) {
+			self::fail( 'The General switch needs a hit area rule.' );
+		}
+		self::assertStringContainsString( 'inset-block: calc(-8px - var(--ran-booster-switch-border-width));', $switch_rule[1] );
+	}
+
 	public function test_package_operation_updates_select_fits_the_container_on_a_phone(): void {
 		$css = $this->asset( 'ran-booster/65-package-settings.css' );
 

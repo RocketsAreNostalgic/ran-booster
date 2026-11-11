@@ -183,6 +183,10 @@
 	overflow-wrap: anywhere;
 }
 
+.ran-booster-admin a.ran-booster-repository-record__name {
+	min-block-size: var(--ran-booster-space-24);
+}
+
 .ran-booster-admin strong.ran-booster-repository-record__name {
 	color: var(--ran-booster-text);
 }

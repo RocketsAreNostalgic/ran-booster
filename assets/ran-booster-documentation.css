@@ -131,6 +131,11 @@
 	line-height: var(--ran-booster-line-height-heading);
 }
 
+.ran-booster-admin .ran-booster-documentation__content pre:focus-visible {
+	outline: 2px solid var(--ran-booster-color-blue-300);
+	outline-offset: 2px;
+}
+
 /* Keep native pre-enhancement geometry equal to the compact public header. */
 @media screen {
 	.ran-booster-admin

@@ -378,10 +378,10 @@ unset( $chapter );
 
 					<h4 id="ran-booster-manual-storage-override"><?php esc_html_e( 'Use a different storage location', 'ran-booster' ); ?></h4>
 				<p><?php esc_html_e( 'Choose a durable directory outside the public web root that is owned by the same PHP process user used by WordPress web, cron and CLI requests. The directory must use mode 0700. Do not add group access as a workaround: Booster deliberately requires owner-only access. Define the preferred directory constant in wp-config.php before WordPress loads plugins; Booster creates and manages ran-booster-store.json and ran-booster-store.json.lock inside it with mode 0600:', 'ran-booster' ); ?></p>
-				<pre><code>define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );</code></pre>
+				<pre tabindex="0" role="region" aria-label="<?php esc_attr_e( 'Code example: storage directory constant', 'ran-booster' ); ?>"><code>define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', dirname( __DIR__ ) . '/private/ran-booster' );</code></pre>
 				<p><?php esc_html_e( 'In wp-config.php, __DIR__ is the directory containing wp-config.php and dirname( __DIR__ ) is its parent. If wp-config.php is in public_html, do not append public_html again: choose a sibling directory outside it. Every existing parent directory must let the PHP process traverse it; on shared hosting that may require a host-managed execute permission or ACL on an ancestor. The final Booster storage directory must still be owned by PHP and mode 0700.', 'ran-booster' ); ?></p>
 				<p><?php esc_html_e( 'To use a hosting environment variable, bridge it to the PHP constant in wp-config.php. An environment variable by itself is not read by Booster:', 'ran-booster' ); ?></p>
-				<pre><code>$ran_booster_secrets_dir = getenv( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' );
+				<pre tabindex="0" role="region" aria-label="<?php esc_attr_e( 'Code example: storage directory from an environment variable', 'ran-booster' ); ?>"><code>$ran_booster_secrets_dir = getenv( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR' );
 if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_secrets_dir ) ) {
 	define( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $ran_booster_secrets_dir );
 }</code></pre>
@@ -433,7 +433,7 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 					<p><strong><?php esc_html_e( 'Archive deployments are currently blocked:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES must be an integer from 1 MiB through 536,870,911 bytes (just under 512 MiB).', 'ran-booster' ); ?></p>
 				<?php } ?>
 				<p><?php esc_html_e( 'Adjust the compressed limit in Booster Settings. A target-local constant overrides and locks that preference:', 'ran-booster' ); ?></p>
-				<pre><code>define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 150 * 1024 * 1024 );</code></pre>
+				<pre tabindex="0" role="region" aria-label="<?php esc_attr_e( 'Code example: download limit constant', 'ran-booster' ); ?>"><code>define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 150 * 1024 * 1024 );</code></pre>
 				<p><?php esc_html_e( 'The value may range from 1 MiB through 536,870,911 bytes (just under 512 MiB). Booster derives a separate expanded-content limit four times as large and still applies entry-count, path, identity and free-space checks. It does not set installed size or History retention. It affects branch-source manual installs and updates, webhook updates, and package installation from a Transporter Blueprint. GitHub release inspection, installation and managed updates also use the compressed limit; the release updater has separate expansion safeguards. Extension downloads and Blueprint file imports have independent bounds.', 'ran-booster' ); ?></p>
 			</div>
 		</details>

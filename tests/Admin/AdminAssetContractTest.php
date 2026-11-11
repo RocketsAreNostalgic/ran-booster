@@ -1254,6 +1254,28 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'ran-booster-documentation__content', $view );
 	}
 
+	public function test_documentation_code_blocks_are_keyboard_reachable_named_regions(): void {
+		$documentation = $this->asset( 'ran-booster-documentation.css' );
+		$view          = $this->view( 'documentation.php' );
+
+		$blocks = preg_match_all( '/<pre\b(.*?\?>")>/', $view, $matches );
+		self::assertGreaterThan( 0, $blocks );
+		$labels = array();
+		foreach ( $matches[1] as $attributes ) {
+			self::assertStringContainsString( 'tabindex="0"', $attributes );
+			self::assertStringContainsString( 'role="region"', $attributes );
+			if ( 1 !== preg_match( '/aria-label="<\?php esc_attr_e\( \'(Code example[^\']*)\', \'ran-booster\' \); \?>"/', $attributes, $label ) ) {
+				self::fail( 'Every documentation code block needs a translatable Code example label.' );
+			}
+			$labels[] = $label[1];
+		}
+		self::assertSame( $labels, array_values( array_unique( $labels ) ) );
+		self::assertMatchesRegularExpression(
+			'/\.ran-booster-documentation__content pre:focus-visible \{\s+outline: 2px solid var\(--ran-booster-color-blue-300\);\s+outline-offset: 2px;/',
+			$documentation
+		);
+	}
+
 	public function test_every_public_disclosure_shares_one_open_header_divider(): void {
 		$css           = $this->asset( 'ran-booster.css' );
 		$documentation = $this->asset( 'ran-booster-documentation.css' );

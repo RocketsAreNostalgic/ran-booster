@@ -148,7 +148,20 @@
 	border: 0;
 }
 
-.ran-booster-admin .ran-booster-branch-settings.is-inactive {
+/*
+ * Inactive Branch settings stay readable: the card is de-emphasised with the
+ * muted text colour instead of whole-card opacity, which dropped its text and
+ * links below 4.5:1. Only the decorative status icons are dimmed.
+ */
+.ran-booster-admin
+	.ran-booster-branch-settings.is-inactive
+	:is(label, h4, strong) {
+	color: var(--ran-booster-text-muted);
+}
+
+.ran-booster-admin
+	.ran-booster-branch-settings.is-inactive
+	.ran-booster-readiness-icon {
 	opacity: 0.58;
 }
 

@@ -2382,6 +2382,21 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/margin-(?:left|right)\s*:/', $narrow[0] );
 	}
 
+	/**
+	 * The inactive Branch settings card is de-emphasised with the muted text
+	 * colour, not whole-card opacity, so its text and links keep 4.5:1.
+	 */
+	public function test_inactive_branch_settings_keep_text_contrast(): void {
+		$settings = $this->asset( 'ran-booster/65-package-settings.css' );
+
+		if ( 1 !== preg_match( '/\.ran-booster-branch-settings\.is-inactive\s*:is\(label, h4, strong\) \{([^}]*)\}/', $settings, $text ) ) {
+			self::fail( 'The inactive Branch settings text rule is missing.' );
+		}
+		self::assertStringContainsString( 'color: var(--ran-booster-text-muted);', $text[1] );
+		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-branch-settings\.is-inactive\s*\{[^}]*opacity/', $settings );
+		self::assertMatchesRegularExpression( '/\.ran-booster-branch-settings\.is-inactive\s*\.ran-booster-readiness-icon \{\s*opacity: 0\.58;/', $settings );
+	}
+
 	private function asset( string $file ): string {
 		if ( 'ran-booster.css' !== $file ) {
 			return $this->raw_asset( $file );

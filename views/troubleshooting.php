@@ -130,7 +130,7 @@ $repository_placeholder = array() === $locator_examples
 		?>
 	<?php } else { ?>
 		<h3 class="ran-booster-section__title" id="ran-booster-run-diagnostics-heading"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></h3>
-		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a Git provider and run checks. Results below describe only this diagnostic run.', 'ran-booster' ); ?></p>
+		<p class="ran-booster-section__description"><?php esc_html_e( 'Choose a Git provider and run a health check.', 'ran-booster' ); ?></p>
 
 	<form method="post" action="" class="ran-booster-troubleshooting__form" data-ran-booster-enhanced-mutation data-ran-booster-error-target="#ran-booster-troubleshooting-diagnostics-error" hx-post="" hx-target="#ran-booster-troubleshooting-diagnostics-region" hx-swap="outerHTML transition:true show:none" hx-sync="this:drop">
 		<?php wp_nonce_field( 'ran-booster-run-troubleshooting' ); ?>
@@ -147,11 +147,11 @@ $repository_placeholder = array() === $locator_examples
 				</select>
 			</p>
 		</div>
-		<p class="description"><?php esc_html_e( 'Start with a Git provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results.', 'ran-booster' ); ?></p>
 
 		<div class="ran-booster-troubleshooting__specific" data-ran-booster-ui-disclosure="troubleshooting-credential-check" data-ran-booster-ui-disclosure-density="compact">
 		<details data-ran-booster-ui-disclosure-fallback class="ran-booster-troubleshooting__disclosure ran-booster-disclosure"<?php echo $show_specific_form ? ' open' : ''; ?>>
-			<summary><?php esc_html_e( 'Check credential or repository access (optional)', 'ran-booster' ); ?></summary>
+			<summary aria-label="<?php esc_attr_e( 'Check credential or repository access (optional)', 'ran-booster' ); ?>"><span class="ran-booster-troubleshooting__entry-heading" data-ran-booster-ui-disclosure-heading><span class="ran-booster-troubleshooting__entry-title"><?php esc_html_e( 'Check credential or repository access (optional)', 'ran-booster' ); ?></span>
+				<span class="ran-booster-troubleshooting__entry-description"><?php esc_html_e( 'Checks credential and repository access only.', 'ran-booster' ); ?></span></span></summary>
 			<div data-ran-booster-ui-disclosure-content class="ran-booster-troubleshooting__disclosure-body ran-booster-troubleshooting__fields ran-booster-disclosure__body">
 				<p>
 					<label for="ran-booster-troubleshooting-credential"><?php esc_html_e( 'Saved credential', 'ran-booster' ); ?> <span class="description"><?php esc_html_e( '(optional)', 'ran-booster' ); ?></span></label>
@@ -175,19 +175,17 @@ $repository_placeholder = array() === $locator_examples
 						}
 						?>
 					</select>
-					<span class="description"><?php esc_html_e( 'Choose a saved credential only to check private-repository access. This is a credential reference, not the credential secret; Booster never displays the credential secret here.', 'ran-booster' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Required for private repositories.', 'ran-booster' ); ?></span>
 				</p>
 				<p>
 					<label for="ran-booster-troubleshooting-repository"><?php esc_html_e( 'Repository', 'ran-booster' ); ?> <span class="description"><?php esc_html_e( '(optional)', 'ran-booster' ); ?></span></label>
 						<input id="ran-booster-troubleshooting-repository" type="text" name="ran_booster[repository]" value="<?php echo esc_attr( $repository ); ?>" maxlength="512" placeholder="<?php echo esc_attr( $repository_placeholder ); ?>">
-					<span class="description"><?php esc_html_e( 'Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available.', 'ran-booster' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Without a credential, Booster can only check publicly available repos.', 'ran-booster' ); ?></span>
 				</p>
-				<div class="notice notice-info inline ran-booster-troubleshooting__provider-notice ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php esc_html_e( 'The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p></div><?php \RAN\Admin\Component\NoticeIcon::print_intent( 'info' ); ?></div>
 			</div>
 		</details></div>
 
-		<p class="description"><?php esc_html_e( 'The full check makes temporary local marker files and up to five Git provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report.', 'ran-booster' ); ?></p>
-		<p><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Run full diagnostics', 'ran-booster' ); ?></button></p>
+		<p><button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"><?php esc_html_e( 'Run diagnostics', 'ran-booster' ); ?></button></p>
 	</form>
 
 		<?php if ( ! empty( $troubleshooting['ran'] ) ) { ?>

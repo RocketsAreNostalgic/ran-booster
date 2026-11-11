@@ -1740,7 +1740,7 @@ final class TroubleshootingViewTest extends TestCase {
 
 		self::assertStringContainsString( 'name="ran_booster[action]" value="run-troubleshooting"', $html );
 		self::assertStringContainsString( 'name="_wpnonce" value="ran-booster-run-troubleshooting"', $html );
-		self::assertStringContainsString( '>Run full diagnostics</button>', $html );
+		self::assertStringContainsString( '>Run diagnostics</button>', $html );
 		self::assertStringContainsString( 'value="bb" selected="selected"', $html );
 		self::assertStringContainsString( 'class="ran-booster-troubleshooting__credential"', $html );
 		self::assertStringNotContainsString( 'type="text" name="ran_booster[credential_id]"', $html );
@@ -1748,11 +1748,25 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '>Bitbucket private access</option>', $html );
 		self::assertStringContainsString( 'data-provider="gh" disabled="disabled" hidden', $html );
 		self::assertStringContainsString( 'maxlength="512"', $html );
-		self::assertStringContainsString( '>Check credential or repository access (optional)</summary>', $html );
+		self::assertStringContainsString( '>Choose a Git provider and run a health check.</p>', $html );
+		self::assertStringContainsString( '<span class="ran-booster-troubleshooting__entry-title">Check credential or repository access (optional)</span>', $html );
+		self::assertMatchesRegularExpression( '/<summary aria-label="Check credential or repository access \(optional\)"><span class="ran-booster-troubleshooting__entry-heading" data-ran-booster-ui-disclosure-heading><span class="ran-booster-troubleshooting__entry-title">[^<]+<\/span>\s*<span class="ran-booster-troubleshooting__entry-description">Checks credential and repository access only\.<\/span><\/span><\/summary>/', $html );
 		self::assertMatchesRegularExpression( '/<div class="ran-booster-troubleshooting__specific" data-ran-booster-ui-disclosure="troubleshooting-credential-check" data-ran-booster-ui-disclosure-density="compact">\s*<details data-ran-booster-ui-disclosure-fallback class="ran-booster-troubleshooting__disclosure ran-booster-disclosure" open>/', $html );
-		self::assertStringContainsString( 'Start with a Git provider to run a general health check.', $html );
-		self::assertStringContainsString( 'check only credential and repository access; they do not scope Push-to-Deploy delivery results.', $html );
-		self::assertStringContainsString( 'This is a credential reference, not the credential secret;', $html );
+		self::assertStringContainsString( '>Required for private repositories.</span>', $html );
+		self::assertStringContainsString( '>Without a credential, Booster can only check publicly available repos.</span>', $html );
+		foreach ( array(
+			'Run full diagnostics',
+			'Results below describe only this diagnostic run',
+			'Start with a Git provider to run a general health check.',
+			'they do not scope Push-to-Deploy delivery results',
+			'This is a credential reference, not the credential secret',
+			'Enter a repository only when diagnosing',
+			'The active Git provider can read every credential',
+			'provider-notice',
+			'The full check makes temporary local marker files',
+		) as $removed ) {
+			self::assertStringNotContainsString( $removed, $html );
+		}
 		$document = new \DOMDocument();
 		$previous = libxml_use_internal_errors( true );
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
@@ -1766,15 +1780,11 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertInstanceOf( \DOMElement::class, $fields_body );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(./p)', $fields_body ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(./p/label/span[contains(concat(" ", normalize-space(@class), " "), " description ")][normalize-space(.)="(optional)"])', $fields_body ) );
-		$notice = $xpath->query( './div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__provider-notice ")]', $fields_body );
-		self::assertInstanceOf( \DOMNodeList::class, $notice );
-		self::assertCount( 1, $notice );
-		$provider_notice = $notice->item( 0 );
-		self::assertInstanceOf( \DOMElement::class, $provider_notice );
-		self::assertSame( 2.0, $xpath->evaluate( 'count(preceding-sibling::p)', $provider_notice ) );
-		$notice_text = $xpath->evaluate( 'string(.)', $provider_notice );
-		self::assertIsString( $notice_text );
-		self::assertSame( 'The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher.', trim( $notice_text ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(./div)', $fields_body ) );
+		$subline = $xpath->query( '//div[@data-ran-booster-ui-disclosure="troubleshooting-credential-check"]/details/summary/span[@data-ran-booster-ui-disclosure-heading]/span[contains(concat(" ", normalize-space(@class), " "), " ran-booster-troubleshooting__entry-description ")]' );
+		self::assertInstanceOf( \DOMNodeList::class, $subline );
+		self::assertCount( 1, $subline );
+		self::assertSame( 'Checks credential and repository access only.', trim( (string) $subline->item( 0 )?->textContent ) );
 		self::assertStringContainsString( 'placeholder="owner/repository (GitHub) or workspace/repository (Bitbucket)"', $html );
 		self::assertStringContainsString( 'class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap"', $html );
 		self::assertStringContainsString( '<table class="ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table">', $html );

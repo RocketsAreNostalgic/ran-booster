@@ -277,6 +277,15 @@
 
 .ran-booster-admin
 	.ran-booster-troubleshooting__specific
+	.ran-booster-troubleshooting__entry-description {
+	margin-block-start: 0;
+	font-size: var(--ran-booster-font-size-sm);
+	font-weight: 400;
+	line-height: 16px;
+}
+
+.ran-booster-admin
+	.ran-booster-troubleshooting__specific
 	.ran-booster-troubleshooting__fields {
 	grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -288,14 +297,6 @@
 	> .description {
 	display: block;
 	margin-block-start: var(--ran-booster-space-6);
-}
-
-.ran-booster-admin .ran-booster-troubleshooting__provider-notice {
-	box-sizing: border-box;
-	grid-column: 1 / -1;
-	inline-size: 100%;
-	margin: 0;
-	background: var(--ran-booster-surface-info);
 }
 
 .ran-booster-admin .ran-booster-troubleshooting__table-wrap {

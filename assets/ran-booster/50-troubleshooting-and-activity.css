@@ -787,6 +787,11 @@
 	display: none;
 }
 
+/* The Support report disclosure sits 16px under the preview status and 24px above the footer band. */
+.ran-booster-admin .ran-booster-troubleshooting__support-disclosure {
+	margin-block: var(--ran-booster-space-16) var(--ran-booster-space-24);
+}
+
 /* The common Card frames the native semantic groups within each panel. */
 .ran-booster-admin
 	[data-ran-booster-card="troubleshooting"]

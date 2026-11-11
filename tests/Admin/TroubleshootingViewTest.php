@@ -2004,12 +2004,28 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $results_content . '//div[@class="ran-booster-collection"]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-data-table-wrap ")]/table)' ) );
 		self::assertStringContainsString( '2 checks run for Bitbucket.', $html );
 
+		// Before a report exists the single Card still renders the empty preview, with Copy and Download unavailable.
 		$troubleshooting_panel               = 'support-report';
+		$troubleshooting['report_generated'] = false;
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$empty_html = (string) ob_get_clean();
+		$empty_doc  = new \DOMDocument();
+		$empty_doc->loadHTML( $empty_html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$empty_xpath = new \DOMXPath( $empty_doc );
+		self::assertSame( 1.0, $empty_xpath->evaluate( 'count(//*[@data-ran-booster-card="troubleshooting"])' ) );
+		self::assertSame( 1.0, $empty_xpath->evaluate( 'count(//textarea[@id="ran-booster-troubleshooting-report"][@readonly][@placeholder="No report generated yet."][normalize-space(.)=""])' ) );
+		self::assertSame( 1.0, $empty_xpath->evaluate( 'count(//button[@data-support-report-copy][@disabled])' ) );
+		self::assertSame( 1.0, $empty_xpath->evaluate( 'count(//button[@data-support-report-download][@disabled])' ) );
+
 		$troubleshooting['report_generated'] = true;
 		$troubleshooting['report_filename']  = 'ran-booster-support-20261031-120000.json';
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
-		$html = (string) ob_get_clean();
+		$html     = (string) ob_get_clean();
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
 		self::assertStringContainsString( '<textarea', $html );
 		self::assertStringContainsString( 'Sanitized JSON preview', $html );
 		self::assertStringContainsString( 'class="ran-booster-troubleshooting__report-field"', $html );
@@ -2018,7 +2034,23 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( 'data-support-report-status role="status" aria-live="polite" aria-atomic="true"', $html );
 		self::assertStringContainsString( 'Download JSON report', $html );
 		self::assertStringContainsString( 'data-support-report-filename="ran-booster-support-20261031-120000.json"', $html );
-		self::assertSame( 1, preg_match( '/<textarea[^>]*readonly>(.*?)<\/textarea>/s', $html, $matches ) );
+
+		// One footed Card: the preview box (label, textarea, Copy icon inside the box, status) precedes the disclosure, which precedes the footer band that ends the Card with Generate then Download.
+		$cls     = static fn( string $name ): string => 'contains(concat(" ", normalize-space(@class), " "), " ' . $name . ' ")';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@data-ran-booster-card="troubleshooting"])' ) );
+		$content = '//*[@data-ran-booster-card="troubleshooting"]/div/div[' . $cls( 'ran-booster-card__content--footed' ) . ']';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $content . '/form[@data-support-report-tools])' ) );
+		$tools = $content . '/form[@data-support-report-tools]';
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/div[last()][' . $cls( 'ran-booster-card-footer' ) . '])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/div[last()]/button[1][@type="submit"][normalize-space(.)="Generate support report"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/div[last()]/button[2][@data-support-report-download][not(@disabled)])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(' . $tools . '/div[last()]/button)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/p/label[@for="ran-booster-troubleshooting-report"]/strong[normalize-space(.)="Sanitized JSON preview"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/div[' . $cls( 'ran-booster-troubleshooting__report-field' ) . ']/textarea[@id="ran-booster-troubleshooting-report"][@readonly]/following-sibling::button[@data-support-report-copy][not(@disabled)])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/p[@data-support-report-status][@role="status"]/following-sibling::div[' . $cls( 'ran-booster-troubleshooting__support-disclosure' ) . ']/following-sibling::div[' . $cls( 'ran-booster-card-footer' ) . '])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $tools . '/div[' . $cls( 'ran-booster-troubleshooting__support-disclosure' ) . ']//summary[normalize-space(.)="Evidence and recovery guidance"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[' . $cls( 'ran-booster-troubleshooting__results-card' ) . '])' ) );
+		self::assertSame( 1, preg_match( '/<textarea[^>]*readonly[^>]*>(.*?)<\/textarea>/s', $html, $matches ) );
 		self::assertArrayHasKey( 1, $matches );
 		if ( ! isset( $matches[1] ) ) {
 			self::fail( 'Report textarea capture is missing.' );

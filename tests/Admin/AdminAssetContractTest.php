@@ -367,6 +367,13 @@ final class AdminAssetContractTest extends TestCase {
 		// The Card padding (four classes) must not beat the shared footed modifier on the Diagnostics Card.
 		self::assertMatchesRegularExpression( '/\[data-ran-booster-card="troubleshooting"\]\.ran-booster-card\s*\.ran-booster-card__content\.ran-booster-card__content--footed \{\s*padding-block-end: 0;/', $css );
 		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 782px\) \{[^@]*\.ran-booster-card__content\.ran-booster-card__content--footed \{\s*padding-block-end: 0;/', $css );
+		// The Support report Card takes the same footed override: its view marks the Card content footed and the disclosure keeps 16px above and 24px below.
+		$view = file_get_contents( dirname( __DIR__, 2 ) . '/views/troubleshooting.php' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+		if ( ! is_string( $view ) ) {
+			self::fail( 'The troubleshooting view is unreadable.' );
+		}
+		self::assertStringContainsString( "array( 'diagnostics', 'support-report' )", $view );
+		self::assertMatchesRegularExpression( '/\.ran-booster-troubleshooting__support-disclosure \{\s*margin-block: var\(--ran-booster-space-16\) var\(--ran-booster-space-24\);/', $css );
 		// The band bleeds by the same inline inset the Card pads with, narrow or wide.
 		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 782px\) \{[^@]*--ran-booster-card-inset-inline: var\(--ran-booster-space-18\);/', $css );
 		self::assertMatchesRegularExpression( '/\.ran-booster-troubleshooting__results-card \{\s*margin-block-start: var\(--ran-booster-card-gap\);/', $css );

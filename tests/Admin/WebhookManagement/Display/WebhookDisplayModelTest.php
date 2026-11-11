@@ -155,8 +155,8 @@ final class WebhookDisplayModelTest extends TestCase {
 		self::assertSame(
 			array(
 				'class'   => 'notice-info',
-				'heading' => 'Manual webhook detected',
-				'message' => 'A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.',
+				'heading' => 'Signed delivery received',
+				'message' => 'Last signed delivery received on 2026-08-21T09:30:15Z. Booster has no webhook record for this repository, so it cannot validate one.',
 			),
 			WebhookDisplayModel::manual_notice( '2026-08-21T09:30:15Z' )
 		);
@@ -168,7 +168,7 @@ final class WebhookDisplayModelTest extends TestCase {
 		$manual  = array_column( $method->invoke( $display, 'not_configured', null, '2026-08-21T09:30:15Z' ), null, 'key' );
 		$plain   = array_column( $method->invoke( $display, 'not_configured', null, null ), null, 'key' );
 
-		self::assertSame( 'Manual webhook', $manual['core:webhook-recorded-status']['value'] );
+		self::assertSame( 'Signed delivery received', $manual['core:webhook-recorded-status']['value'] );
 		self::assertSame( 'ok', $manual['core:webhook-recorded-status']['tone'] );
 		self::assertFalse( $manual['core:webhook-recorded-status']['recorded'] );
 		self::assertFalse( $manual['core:webhook-recorded-status']['identified'] );
@@ -234,7 +234,7 @@ final class WebhookDisplayModelTest extends TestCase {
 
 		self::assertSame( array( array( 'gh', 'repo-7', 'repo-9' ) ), $requested, 'One bounded read covers only repositories without a record.' );
 		self::assertSame( 'Configured at last check', $status( 'repo-42' ) );
-		self::assertSame( 'Manual webhook', $status( 'repo-7' ) );
+		self::assertSame( 'Signed delivery received', $status( 'repo-7' ) );
 		self::assertSame( 'Managed hook not yet set', $status( 'repo-9' ) );
 	}
 
@@ -276,9 +276,127 @@ final class WebhookDisplayModelTest extends TestCase {
 
 		self::assertSame( array_column( $plain, 'disabled' ), array_column( $manual, 'disabled' ) );
 		self::assertSame( array( false, true, true ), array_column( $manual, 'disabled' ) );
-		self::assertSame( 'Booster did not create this webhook.', $manual[1]['disabled_reason'] );
-		self::assertSame( 'Booster did not create this webhook.', $manual[2]['disabled_reason'] );
+		self::assertSame( 'Booster has no record of this webhook.', $manual[1]['disabled_reason'] );
+		self::assertSame( 'Booster has no record of this webhook.', $manual[2]['disabled_reason'] );
 		self::assertSame( 'Set up the webhook to enable these actions.', $plain[1]['disabled_reason'] );
+	}
+
+	public function test_a_webhook_removed_through_booster_is_not_claimed_as_a_manual_webhook(): void {
+		$record     = $this->record();
+		$deliveries = array( 'repo-42' => '2026-08-21 09:30:15' );
+		$display    = $this->lifecycle_display( $record, $deliveries );
+
+		self::assertNull( $display->manual_delivery_time( 'gh', 'repo-42' ), 'A recorded managed hook keeps its own state.' );
+		$managed = $display->panel( 'gh', 'GitHub', 'repo-42', 'https://example.test/settings', null, null, true );
+		self::assertNotNull( $managed );
+		self::assertNull( $managed['manual_notice'] );
+
+		// Remove through Booster: the record is deleted, the earlier delivery stays in the history.
+		$record = null;
+		$panel  = $display->panel( 'gh', 'GitHub', 'repo-42', 'https://example.test/settings', null, null, true );
+		self::assertNotNull( $panel );
+		$shown = array( WebhookDisplayModel::manual_status_label() );
+		array_walk_recursive(
+			$panel,
+			static function ( mixed $value ) use ( &$shown ): void {
+				if ( is_string( $value ) ) {
+					$shown[] = $value;
+				}
+			}
+		);
+		$shown = implode( "\n", $shown );
+
+		self::assertSame( '2026-08-21T09:30:15Z', $display->manual_delivery_time( 'gh', 'repo-42' ) );
+		self::assertSame(
+			array(
+				'class'   => 'notice-info',
+				'heading' => 'Signed delivery received',
+				'message' => 'Last signed delivery received on 2026-08-21T09:30:15Z. Booster has no webhook record for this repository, so it cannot validate one.',
+			),
+			$panel['manual_notice']
+		);
+		self::assertStringNotContainsString( 'Manual webhook', $shown );
+		self::assertStringNotContainsString( 'did not set up', $shown );
+		self::assertStringNotContainsString( 'did not create', $shown );
+	}
+
+	public function test_a_never_managed_repository_with_a_signed_delivery_keeps_the_delivery_evidence_state(): void {
+		$record     = null;
+		$deliveries = array( 'repo-42' => '2026-08-21 09:30:15' );
+		$panel      = $this->lifecycle_display( $record, $deliveries )->panel( 'gh', 'GitHub', 'repo-42', 'https://example.test/settings', null, null, true );
+		self::assertNotNull( $panel );
+
+		self::assertSame( WebhookDisplayModel::manual_notice( '2026-08-21T09:30:15Z' ), $panel['manual_notice'] );
+		self::assertSame( array( false, true, true ), array_column( $panel['operations'], 'disabled' ) );
+		self::assertSame( 'Booster has no record of this webhook.', $panel['operations'][1]['disabled_reason'] );
+	}
+
+	public function test_a_delivery_after_a_booster_removal_shows_the_newer_delivery_evidence(): void {
+		$record     = $this->record();
+		$deliveries = array( 'repo-42' => '2026-08-21 09:30:15' );
+		$display    = $this->lifecycle_display( $record, $deliveries );
+		$record     = null;
+		self::assertSame( '2026-08-21T09:30:15Z', $display->manual_delivery_time( 'gh', 'repo-42' ) );
+
+		// A hook still delivering after the removal is real evidence; the newest delivery is shown.
+		$deliveries = array( 'repo-42' => '2026-09-02 08:00:00' );
+		$panel      = $display->panel( 'gh', 'GitHub', 'repo-42', 'https://example.test/settings', null, null, true );
+		self::assertNotNull( $panel );
+
+		self::assertSame( WebhookDisplayModel::manual_notice( '2026-09-02T08:00:00Z' ), $panel['manual_notice'] );
+	}
+
+	/**
+	 * Store and delivery reader follow the caller's variables, so a test can delete the record or add a delivery.
+	 *
+	 * @param array<string, string> $deliveries
+	 */
+	private function lifecycle_display( ?InstallationRecord &$record, array &$deliveries ): WebhookDisplayModel {
+		$facade = $this->createMock( WebhookAssistanceFacade::class );
+		$facade->method( 'target' )->willReturn(
+			new AssistanceTarget(
+				'gh',
+				'repo-42',
+				'owner/example',
+				'Example',
+				array(),
+				array(
+					'automatic' => 0,
+					'manual'    => 1,
+					'disabled'  => 0,
+				),
+				'https://example.test/webhook'
+			)
+		);
+		$facade->method( 'credential_choices' )->willReturn(
+			array(
+				array(
+					'id'         => 'credential-1',
+					'label'      => 'Saved credential',
+					'kind'       => 'token',
+					'destroy_on' => null,
+				),
+			)
+		);
+		$store = $this->createMock( InstallationStore::class );
+		$store->method( 'find' )->willReturnCallback(
+			static function () use ( &$record ): ?InstallationRecord {
+				return $record;
+			}
+		);
+		$store->method( 'all' )->willReturnCallback(
+			static function () use ( &$record ): array {
+				return null === $record ? array() : array( $record->storage_key() => $record );
+			}
+		);
+
+		return new WebhookDisplayModel(
+			$facade,
+			$store,
+			static function () use ( &$deliveries ): array {
+				return $deliveries;
+			}
+		);
 	}
 
 	public function test_documentation_says_a_hand_made_webhook_cannot_be_validated(): void {

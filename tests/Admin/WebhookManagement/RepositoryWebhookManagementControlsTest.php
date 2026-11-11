@@ -465,7 +465,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		};
 
 		self::assertSame(
-			'is-ok|Set up outside Booster.',
+			'is-ok|Not recorded by Booster; a signed delivery was received.',
 			$step( $render( array( '1234' => '2026-08-21 09:30:15' ) ) )
 		);
 		self::assertSame( 'is-pending|Booster has not set up a webhook for this repository.', $step( $render( array() ) ) );
@@ -530,14 +530,14 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 	public function test_manual_webhook_notice_renders_after_the_busy_status_as_static_info_content(): void {
 		$panel    = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
 		$model    = $this->webhook_panel_model( false, false, array() );
-		$sentence = 'A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.';
+		$sentence = 'Last signed delivery received on 2026-08-21T09:30:15Z. Booster has no webhook record for this repository, so it cannot validate one.';
 
 		$model['manual_notice'] = \RAN\Admin\WebhookManagement\Display\WebhookDisplayModel::manual_notice( '2026-08-21T09:30:15Z' );
 		$html                   = (string) $this->render_panel_parts( $panel, $model );
 		if ( 1 !== preg_match( '/data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-repository-webhook-management__result">\s*(<div class="notice notice-info inline [^"]*is-info"[^>]*data-ran-booster-ui-notice-intent="info">.*?<\/div>\s*<svg.*?<\/svg><\/div>)\s*<\/div>/s', $html, $m ) ) {
-			self::fail( 'The Manual webhook notice must be the info result notice directly after the busy status region.' );
+			self::fail( 'The signed-delivery notice must be the info result notice directly after the busy status region.' );
 		}
-		self::assertStringContainsString( '<p><strong>Manual webhook detected</strong></p>', $m[1] );
+		self::assertStringContainsString( '<p><strong>Signed delivery received</strong></p>', $m[1] );
 		self::assertStringContainsString( '<p>' . $sentence . '</p>', $m[1] );
 		self::assertStringContainsString( 'ran-wp-ui-notice__icon', $m[1] );
 		self::assertSame( 1, substr_count( $html, 'data-ran-booster-ui-notice-content' ) );
@@ -554,18 +554,18 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		);
 		$replaced        = (string) $this->render_panel_parts( $panel, $model );
 		self::assertStringContainsString( 'Operation done.', $replaced );
-		self::assertStringNotContainsString( 'Manual webhook detected', $replaced );
+		self::assertStringNotContainsString( 'Signed delivery received', $replaced );
 		self::assertStringNotContainsString( $sentence, $replaced );
 		$model['result']           = null;
 		$model['recovery_warning'] = array(
 			'class'   => 'notice-warning',
 			'message' => 'Check the provider.',
 		);
-		self::assertStringNotContainsString( 'Manual webhook detected', (string) $this->render_panel_parts( $panel, $model ) );
+		self::assertStringNotContainsString( 'Signed delivery received', (string) $this->render_panel_parts( $panel, $model ) );
 
 		// Not manual: no notice and no result wrapper.
 		$none = (string) $this->render_panel_parts( $panel, $this->webhook_panel_model( false, false, array() ) );
-		self::assertStringNotContainsString( 'Manual webhook detected', $none );
+		self::assertStringNotContainsString( 'Signed delivery received', $none );
 		self::assertStringNotContainsString( 'ran-booster-repository-webhook-management__result', $none );
 	}
 
@@ -591,13 +591,13 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		};
 
 		$manual = $render( array( '1234' => '2026-08-21 09:30:15' ) );
-		self::assertSame( 1, substr_count( $manual, 'Manual webhook detected' ) );
-		self::assertSame( 1, substr_count( $manual, 'A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.' ) );
+		self::assertSame( 1, substr_count( $manual, '<p><strong>Signed delivery received</strong></p>' ) );
+		self::assertSame( 1, substr_count( $manual, 'Last signed delivery received on 2026-08-21T09:30:15Z. Booster has no webhook record for this repository, so it cannot validate one.' ) );
 		self::assertSame( 1, preg_match( '/data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-repository-webhook-management__result">\s*<div class="notice notice-info /s', $manual ) );
 		foreach ( array( array(), array( '9999' => '2026-08-21 09:30:15' ) ) as $deliveries ) {
 			$other = $render( $deliveries );
-			self::assertStringNotContainsString( 'Manual webhook detected', $other );
-			self::assertStringNotContainsString( 'A signed delivery was last received', $other );
+			self::assertStringNotContainsString( 'Signed delivery received', $other );
+			self::assertStringNotContainsString( 'Last signed delivery received', $other );
 		}
 	}
 
@@ -612,7 +612,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		};
 		// Receiver not ok would be Not ready; the manual state takes priority.
 		$states = array( 'is-pending', 'is-ok', 'is-warning', 'is-ok' );
-		self::assertSame( 'Manual webhook|stable', $badge( $this->render_branch_section( $states, true, $in_use, true ) ) );
+		self::assertSame( 'Signed delivery received|stable', $badge( $this->render_branch_section( $states, true, $in_use, true ) ) );
 		self::assertSame( 'Not ready|medium', $badge( $this->render_branch_section( $states, true, $in_use, false ) ) );
 		self::assertSame( 'Active|stable', $badge( $this->render_branch_section( array( 'is-ok', 'is-ok', 'is-ok', 'is-ok' ), true, $in_use, false ) ) );
 		// Releases-only inactive layout keeps Not in use even when a manual delivery exists.
@@ -654,7 +654,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$result = $controls->enrich_repository_rows( $rows, 'fixture-provider', array( '1234' => array( 'repository_id' => '1234' ) ), 'https://example.test/' );
 		$status = array_column( $result['1234']['details'], null, 'key' )['core:webhook-recorded-status'];
 
-		self::assertSame( 'Manual webhook', $status['value'] );
+		self::assertSame( 'Signed delivery received', $status['value'] );
 		self::assertSame( 'ok', $status['tone'] );
 		self::assertFalse( $status['recorded'] );
 	}

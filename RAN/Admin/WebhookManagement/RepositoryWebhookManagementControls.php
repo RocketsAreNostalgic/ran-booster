@@ -183,7 +183,7 @@ final class RepositoryWebhookManagementControls {
 		$manual_at        = $this->display->manual_delivery_time( $provider_code, $repository_id );
 		$operation_notice = false;
 		if ( is_array( $model ) ) {
-			// The unavailable panel is built without the Manual webhook state, so carry its notice here too.
+			// The unavailable panel is built without the delivery-evidence state, so carry its notice here too.
 			if ( null !== $manual_at && ! is_array( $model['manual_notice'] ?? null ) ) {
 				$model['manual_notice'] = WebhookDisplayModel::manual_notice( $manual_at );
 			}
@@ -321,7 +321,7 @@ final class RepositoryWebhookManagementControls {
 	 *
 	 * Items are demand [0], secret [1], receiver [2], hook [3]. Not in use: neutral Not in use.
 	 * Receiver or secret not ok, or hook a warning: amber Not ready. Hook and automatic packages ok: green Active.
-	 * Manual webhook (verified delivery, no Booster record) in use: green Manual webhook, ahead of the readiness badges.
+	 * Delivery evidence (verified delivery, no Booster record) in use: green Signed delivery received, ahead of the readiness badges.
 	 * Otherwise (receiver and secret ok, hook or automatic packages not yet): neutral Ready.
 	 *
 	 * @param list<array{label:string,message:string,state:string}> $items
@@ -466,7 +466,7 @@ final class RepositoryWebhookManagementControls {
 				'message' => null === $record
 					? ( null === $manual_at
 						? __( 'Booster has not set up a webhook for this repository.', 'ran-booster' )
-						: __( 'Set up outside Booster.', 'ran-booster' ) )
+						: __( 'Not recorded by Booster; a signed delivery was received.', 'ran-booster' ) )
 					: ( $record_healthy
 						? sprintf(
 							/* translators: %s: UTC timestamp of the last recorded webhook check. */

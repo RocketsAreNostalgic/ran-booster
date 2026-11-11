@@ -58,6 +58,10 @@ final class WebhookDisplayModel {
 	 * UTC time of the newest verified signed delivery for a repository Booster holds
 	 * no webhook record for, or null. Local evidence only: no record, no evidence or
 	 * an unreadable store all mean the unchanged "not set up" presentation.
+	 *
+	 * The delivery is historical evidence, never proof that a webhook exists now:
+	 * a confirmed Booster removal deletes the record but keeps earlier deliveries,
+	 * and no durable removal marker exists to tell the two cases apart.
 	 */
 	public function manual_delivery_time( string $provider_code, string $repository_id ): ?string {
 		if ( '' === trim( $repository_id ) || null !== $this->records->find( $provider_code, $repository_id ) ) {
@@ -91,16 +95,16 @@ final class WebhookDisplayModel {
 		return $times;
 	}
 
-	/** Shared wording for the Manual webhook state. */
+	/** Shared wording for the delivery-evidence state: what is known, not that a webhook exists. */
 	public static function manual_status_label(): string {
-		return __( 'Manual webhook', 'ran-booster' );
+		return __( 'Signed delivery received', 'ran-booster' );
 	}
 
-	/** @return array{class:string,heading:string,message:string} Static informational notice for the Manual webhook state. */
+	/** @return array{class:string,heading:string,message:string} Static informational notice for the delivery-evidence state. */
 	public static function manual_notice( string $received_at ): array {
 		return array(
 			'class'   => 'notice-info',
-			'heading' => __( 'Manual webhook detected', 'ran-booster' ),
+			'heading' => __( 'Signed delivery received', 'ran-booster' ),
 			'message' => self::manual_step_message( $received_at ),
 		);
 	}
@@ -108,7 +112,7 @@ final class WebhookDisplayModel {
 	public static function manual_step_message( string $received_at ): string {
 		return sprintf(
 			/* translators: %s: UTC timestamp of the last verified signed webhook delivery. */
-			__( 'A signed delivery was last received on %s. Booster did not set up this webhook, so it cannot validate it.', 'ran-booster' ),
+			__( 'Last signed delivery received on %s. Booster has no webhook record for this repository, so it cannot validate one.', 'ran-booster' ),
 			$received_at
 		);
 	}
@@ -921,7 +925,7 @@ final class WebhookDisplayModel {
 		}
 		if ( null === $record ) {
 			$needs_setup = $manual
-				? __( 'Booster did not create this webhook.', 'ran-booster' )
+				? __( 'Booster has no record of this webhook.', 'ran-booster' )
 				: __( 'Set up the webhook to enable these actions.', 'ran-booster' );
 
 			return array(

@@ -233,6 +233,28 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 	}
 
+	public function test_unavailable_reinstall_is_natively_disabled_until_javascript_guards_it(): void {
+		$settings_url = 'https://example.test/wp-admin/admin.php?page=ran-booster';
+		$cases        = array(
+			'disabled policy'     => array( 'disabled', true, false ),
+			'unavailable route'   => array( 'manual', false, false ),
+			'available reinstall' => array( 'manual', true, true ),
+		);
+		foreach ( $cases as $label => $case ) {
+			list( $deployment_policy, $package_mutation_available, $available ) = $case;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/reinstall.php';
+			$html = (string) ob_get_clean();
+			$tag  = preg_match( '/<button\b[^>]*data-ran-booster-settings-reinstall[^>]*>/s', $html, $matches ) ? $matches[0] : '';
+			self::assertNotSame( '', $tag, $label );
+			$native_disabled = 1 === preg_match( '/\sdisabled(\s|>)/', $tag );
+			self::assertSame( ! $available, $native_disabled, $label );
+			self::assertSame( ! $available, str_contains( $tag, 'title="Set Updates to Manual or Automatic before reinstalling."' ), $label );
+			self::assertSame( ! $available, str_contains( $tag, 'aria-describedby="ran-booster-reinstall-reason"' ), $label );
+			self::assertStringContainsString( $available ? 'aria-disabled="false"' : 'aria-disabled="true"', $tag, $label );
+		}
+	}
+
 	public function test_failed_package_submission_marks_form_for_leave_warning(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
 			foreach ( array( 'create', 'edit' ) as $operation ) {

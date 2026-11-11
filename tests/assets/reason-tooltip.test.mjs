@@ -16,6 +16,7 @@ const css = fs.readFileSync(
 
 function setup() {
 	const listeners = {};
+	const dispatched = [];
 	const attrs = new Map([
 		['aria-disabled', 'true'],
 		['aria-describedby', 'reason'],
@@ -48,10 +49,14 @@ function setup() {
 			listeners[type] = handler;
 		},
 		querySelectorAll: () => [],
+		dispatchEvent: (event) => {
+			dispatched.push(event.type);
+			return true;
+		},
 	};
 	const window = { innerHeight: 800, addEventListener() {} };
 	Function('window', 'document', source)(window, document);
-	return { listeners, bubble, control, outside };
+	return { listeners, bubble, control, outside, dispatched };
 }
 
 test('the reason shows on hover and keyboard focus and hides on leave, blur and Escape', () => {
@@ -125,4 +130,10 @@ test('the bubble is fixed-positioned so a card overflow cannot clip it', () => {
 		/\.ran-booster-reason-tooltip__bubble \{[^}]*position: fixed;/
 	);
 	assert.match(css, /\.ran-booster-reason-tooltip__bubble\[hidden\]/);
+});
+
+test('the tooltip announces when its activation guard is installed', () => {
+	const { dispatched } = setup();
+
+	assert.deepEqual(dispatched, ['ran-booster:reason-tooltip-ready']);
 });

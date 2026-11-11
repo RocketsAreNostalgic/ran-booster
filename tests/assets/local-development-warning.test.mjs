@@ -40,8 +40,15 @@ function loadInitializer() {
 	return Function(`"use strict"; return (${source.slice(start, end)});`)();
 }
 
-function fixture(policy, capable = true, deferred = false, standalone = false) {
+function fixture(
+	policy,
+	capable = true,
+	deferred = false,
+	standalone = false,
+	guarded = true
+) {
 	const listeners = new Map();
+	const documentListeners = new Map();
 	const select = {
 		value: policy,
 		addEventListener(type, listener) {
@@ -49,7 +56,11 @@ function fixture(policy, capable = true, deferred = false, standalone = false) {
 		},
 	};
 	const notice = { hidden: false };
-	const reason = { hidden: false, id: 'ran-booster-reinstall-reason' };
+	const reason = {
+		hidden: false,
+		id: 'ran-booster-reinstall-reason',
+		textContent: 'Reason',
+	};
 	const wrapperAttributes = new Map([
 		['data-ran-booster-reason-tooltip', ''],
 	]);
@@ -112,15 +123,20 @@ function fixture(policy, capable = true, deferred = false, standalone = false) {
 	};
 
 	globalThis.document = {
+		addEventListener(type, listener) {
+			documentListeners.set(type, listener);
+		},
 		querySelectorAll(selector) {
 			return selector === '.ran-booster-deployment-policy-field'
 				? [field]
 				: [];
 		},
 	};
+	globalThis.window = { ranBoosterReasonTooltipInitialized: guarded };
 
 	return {
 		attributes,
+		documentListeners,
 		listeners,
 		notice,
 		reason,
@@ -139,6 +155,7 @@ test('disabled automation hides the local overwrite warning', () => {
 		assert.equal(state.notice.hidden, true);
 	} finally {
 		delete globalThis.document;
+		delete globalThis.window;
 	}
 });
 
@@ -152,6 +169,7 @@ test('a standalone policy field still controls its warning', () => {
 		assert.equal(state.notice.hidden, false);
 	} finally {
 		delete globalThis.document;
+		delete globalThis.window;
 	}
 });
 
@@ -171,6 +189,7 @@ test('the warning follows Automation changes without a reload', () => {
 		assert.equal(state.notice.hidden, false);
 	} finally {
 		delete globalThis.document;
+		delete globalThis.window;
 	}
 });
 
@@ -207,6 +226,7 @@ test('choosing an enabled policy makes a capable reinstall actionable', () => {
 		assert.equal(state.attributes.get('data-update-can-run'), '0');
 	} finally {
 		delete globalThis.document;
+		delete globalThis.window;
 	}
 });
 
@@ -223,5 +243,60 @@ test('an unavailable mutation route stays disabled for enabled policies', () => 
 		assert.equal(state.attributes.get('data-update-can-run'), '0');
 	} finally {
 		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('without the activation guard an unavailable reinstall stays natively disabled', () => {
+	const state = fixture('disabled', true, false, false, false);
+
+	try {
+		loadInitializer()();
+		assert.equal(state.reinstall.disabled, true);
+		assert.equal(state.attributes.get('title'), 'Reason');
+		assert.equal(
+			state.documentListeners.has('ran-booster:reason-tooltip-ready'),
+			true
+		);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('once the activation guard is ready the control swaps native disabled for aria-disabled', () => {
+	const state = fixture('disabled', true, false, false, false);
+
+	try {
+		loadInitializer()();
+		assert.equal(state.reinstall.disabled, true);
+
+		globalThis.window.ranBoosterReasonTooltipInitialized = true;
+		state.documentListeners.get('ran-booster:reason-tooltip-ready')();
+		assert.equal(state.reinstall.disabled, false);
+		assert.equal(state.attributes.get('aria-disabled'), 'true');
+		assert.equal(state.attributes.has('title'), false);
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
+	}
+});
+
+test('with the guard installed an unavailable reinstall is focusable and an available one is enabled', () => {
+	const state = fixture('disabled');
+
+	try {
+		loadInitializer()();
+		assert.equal(state.reinstall.disabled, false);
+		assert.equal(state.attributes.get('aria-disabled'), 'true');
+		assert.equal(state.documentListeners.size, 0);
+
+		state.select.value = 'manual';
+		state.listeners.get('change')();
+		assert.equal(state.reinstall.disabled, false);
+		assert.equal(state.attributes.get('aria-disabled'), 'false');
+	} finally {
+		delete globalThis.document;
+		delete globalThis.window;
 	}
 });

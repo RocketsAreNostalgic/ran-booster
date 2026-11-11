@@ -481,6 +481,15 @@
 							reinstall.getAttribute(
 								'data-ran-booster-reinstall-capable'
 							) === '1' && select.value !== 'disabled';
+						// Native disabled blocks the post until the activation guard exists; then aria-disabled keeps it focusable for the tooltip.
+						const guarded =
+							window.ranBoosterReasonTooltipInitialized === true;
+						reinstall.disabled = !available && !guarded;
+						if (guarded || available) {
+							reinstall.removeAttribute('title');
+						} else if (reason) {
+							reinstall.setAttribute('title', reason.textContent);
+						}
 						reinstall.setAttribute(
 							'aria-disabled',
 							available ? 'false' : 'true'
@@ -516,6 +525,13 @@
 					field.dataset.ranBoosterOperationControlsBound = 'true';
 				}
 				select.addEventListener('change', sync);
+				if (window.ranBoosterReasonTooltipInitialized !== true) {
+					document.addEventListener(
+						'ran-booster:reason-tooltip-ready',
+						sync,
+						{ once: true }
+					);
+				}
 				sync();
 			});
 	}

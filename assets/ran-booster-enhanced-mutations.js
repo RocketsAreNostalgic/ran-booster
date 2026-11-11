@@ -178,6 +178,9 @@
 			},
 			true
 		);
+		document.dispatchEvent(
+			new CustomEvent('ran-booster:reason-tooltip-ready')
+		);
 	}
 
 	/**

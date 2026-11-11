@@ -1406,8 +1406,8 @@ msgid "An add-on guide is temporarily unavailable. Check plugin compatibility an
 msgstr ""
 
 #: RAN/Admin/Interaction/AdminInteractionOutcome.php:49
-#: assets/ran-booster-enhanced-mutations.js:1318
-#: assets/ran-booster-enhanced-mutations.js:1509
+#: assets/ran-booster-enhanced-mutations.js:1321
+#: assets/ran-booster-enhanced-mutations.js:1512
 msgid "We could not complete that request. Please try again."
 msgstr ""
 
@@ -8349,7 +8349,7 @@ msgstr ""
 
 #. translators: %s is plugins or themes.
 #: views/packages/index.php:230
-#: assets/ran-booster-packages.js:673
+#: assets/ran-booster-packages.js:689
 #, php-format,js-format
 msgid "0 %s selected"
 msgstr ""
@@ -8408,8 +8408,8 @@ msgstr ""
 
 #: views/packages/index.php:346
 #: views/packages/index.php:528
-#: views/packages/reinstall.php:32
-#: views/packages/reinstall.php:41
+#: views/packages/reinstall.php:36
+#: views/packages/reinstall.php:45
 msgid "Reinstall"
 msgstr ""
 
@@ -8502,7 +8502,7 @@ msgid "WordPress"
 msgstr ""
 
 #: views/packages/index.php:527
-#: views/packages/reinstall.php:34
+#: views/packages/reinstall.php:38
 msgid "Reinstall from the saved branch and overwrite local changes?"
 msgstr ""
 
@@ -8600,7 +8600,8 @@ msgstr ""
 msgid "No management changes have been made. Booster will not disconnect a package whose management identity or operation state cannot be verified."
 msgstr ""
 
-#: views/packages/reinstall.php:42
+#: views/packages/reinstall.php:27
+#: views/packages/reinstall.php:46
 msgid "Set Updates to Manual or Automatic before reinstalling."
 msgstr ""
 
@@ -10900,16 +10901,16 @@ msgctxt "plugin"
 msgid "%s update failed."
 msgstr ""
 
-#: assets/ran-booster-packages.js:659
+#: assets/ran-booster-packages.js:675
 msgid "package"
 msgstr ""
 
-#: assets/ran-booster-packages.js:662
+#: assets/ran-booster-packages.js:678
 msgid "packages"
 msgstr ""
 
 #. translators: 1: number of selected packages, 2: package type label.
-#: assets/ran-booster-packages.js:700
+#: assets/ran-booster-packages.js:716
 #, js-format
 msgid "%1$d %2$s selected"
 msgid_plural "%1$d %2$s selected"
@@ -10917,27 +10918,27 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: 1: selected-package summary, 2: number eligible for branch reinstall.
-#: assets/ran-booster-packages.js:714
+#: assets/ran-booster-packages.js:730
 #, js-format
 msgid "%1$s. %2$d eligible for branch Reinstall."
 msgstr ""
 
 #. translators: %s: package type label.
-#: assets/ran-booster-packages.js:749
+#: assets/ran-booster-packages.js:765
 #, js-format
 msgid "Select at least one %s."
 msgstr ""
 
-#: assets/ran-booster-packages.js:759
+#: assets/ran-booster-packages.js:775
 msgid "Select at least one branch package eligible for Reinstall."
 msgstr ""
 
-#: assets/ran-booster-packages.js:775
+#: assets/ran-booster-packages.js:791
 msgid "Reinstall cancelled."
 msgstr ""
 
 #. translators: %s: deployment state label.
-#: assets/ran-booster-packages.js:942
+#: assets/ran-booster-packages.js:958
 #, js-format
 msgid "Deployment: %s"
 msgstr ""

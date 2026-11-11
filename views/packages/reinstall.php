@@ -22,7 +22,11 @@ $reinstall_available = $package_mutation_available
 	form="ran-booster-package-edit-form"
 	class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() . ' button-update-package' ); ?>"
 	aria-disabled="<?php echo $reinstall_available ? 'false' : 'true'; ?>"
-	<?php echo $reinstall_available ? '' : 'aria-describedby="ran-booster-reinstall-reason"'; ?>
+	<?php if ( ! $reinstall_available ) { ?>
+	disabled
+	title="<?php esc_attr_e( 'Set Updates to Manual or Automatic before reinstalling.', 'ran-booster' ); ?>"
+	aria-describedby="ran-booster-reinstall-reason"
+	<?php } ?>
 	data-ran-booster-update-button
 	data-ran-booster-settings-reinstall
 	data-ran-booster-reinstall-capable="<?php echo esc_attr( $package_mutation_available ? '1' : '0' ); ?>"

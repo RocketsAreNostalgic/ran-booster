@@ -118,10 +118,17 @@ export async function assertPackageSettingsContainment(tab) {
 				rect.height > 0
 			);
 		};
+		const boxedParent = (element) => {
+			let parent = element.parentElement;
+			while (parent && getComputedStyle(parent).display === 'contents') {
+				parent = parent.parentElement;
+			}
+			return parent;
+		};
 		const assertInside = (element, label) => {
 			const rect = element.getBoundingClientRect();
 			const parentRect =
-				element.parentElement?.getBoundingClientRect() || mainRect;
+				boxedParent(element)?.getBoundingClientRect() || mainRect;
 			assert(
 				rect.left >= parentRect.left - 1 &&
 					rect.right <= parentRect.right + 1,

@@ -211,14 +211,13 @@ function credentialExportFixture() {
 	};
 	const summary = {
 		dataset: {
-			credentialPlural: '%d selected repository credential profiles',
-			credentialSingular: '1 selected repository credential profile',
-			packageOnlyTemplate:
-				'Create a Transporter Blueprint for %s without repository credentials.',
+			credentialPlural: '%d credentials',
+			credentialSingular: '1 credential',
+			packageOnlyTemplate: '%s, no repository credentials.',
 			packagePlural: '%d packages',
 			packageSingular: '1 package',
 			protectedTemplate:
-				'Create a Transporter Blueprint for %1$s using %2$s. Credential permissions have not been assessed.',
+				'%1$s, %2$s. Credential permissions have not been assessed.',
 		},
 		textContent: '',
 	};
@@ -853,7 +852,7 @@ test('credential export selection follows package relevance and reports selected
 		loadFunction('initPortabilityExportSelection')();
 		assert.equal(
 			state.summary.textContent,
-			'Create a Transporter Blueprint for 2 packages without repository credentials.'
+			'2 packages, no repository credentials.'
 		);
 		assert.equal(state.rows[2].hidden, false);
 
@@ -861,7 +860,7 @@ test('credential export selection follows package relevance and reports selected
 		state.credentials[0].listeners.get('change')();
 		assert.equal(
 			state.summary.textContent,
-			'Create a Transporter Blueprint for 2 packages using 1 selected repository credential profile. Credential permissions have not been assessed.'
+			'2 packages, 1 credential. Credential permissions have not been assessed.'
 		);
 
 		state.packages[0].checked = false;
@@ -879,7 +878,7 @@ test('credential export selection follows package relevance and reports selected
 		assert.equal(state.credentials[1].checked, true);
 		assert.equal(
 			state.summary.textContent,
-			'Create a Transporter Blueprint for 1 package using 1 selected repository credential profile. Credential permissions have not been assessed.'
+			'1 package, 1 credential. Credential permissions have not been assessed.'
 		);
 	} finally {
 		cleanup();
@@ -1033,17 +1032,14 @@ test('preview shows the shared busy state and restores it after success', async 
 			'ran-booster:admin-mutation-success'
 		);
 		assert.deepEqual(state.events[0].detail, {
-			message: 'Transporter Blueprint reviewed.',
+			message: 'Blueprint reviewed.',
 		});
-		assert.equal(
-			state.message.textContent,
-			'Transporter Blueprint reviewed.'
-		);
+		assert.equal(state.message.textContent, 'Blueprint reviewed.');
 		assert.equal(state.message.hidden, false);
 		assert.equal(state.message['aria-live'], undefined);
 		assert.deepEqual(state.announcements, [
 			{ text: 'Reviewing blueprint…', politeness: 'polite' },
-			{ text: 'Transporter Blueprint reviewed.', politeness: 'polite' },
+			{ text: 'Blueprint reviewed.', politeness: 'polite' },
 		]);
 	} finally {
 		cleanup();
@@ -1648,7 +1644,7 @@ test('apply sends only selected rows serially and preserves choices on review', 
 		assert.equal(state.applyLabel.textContent, 'Apply selected changes');
 		assert.equal(
 			state.results.items.at(-1).textContent,
-			'All selected Transporter Blueprint changes were applied.'
+			'All selected changes were applied.'
 		);
 		assert.equal(state.results['aria-live'], undefined);
 		assert.equal(
@@ -1919,10 +1915,7 @@ test('a newer review suppresses completion from an older apply refresh', async (
 			state.spoken.some((text) => text.includes('changes were applied')),
 			false
 		);
-		assert.equal(
-			state.message.textContent,
-			'Transporter Blueprint reviewed.'
-		);
+		assert.equal(state.message.textContent, 'Blueprint reviewed.');
 		assert.equal(state.results.items.length, 1);
 	} finally {
 		cleanup();
@@ -2042,7 +2035,7 @@ test('apply restores a disabled idle state when the final review fails', async (
 		assert.equal(state.message.textContent, 'Safe final review failure.');
 		assert.equal(
 			state.results.items.at(-1).textContent,
-			'All selected Transporter Blueprint changes were applied.'
+			'All selected changes were applied.'
 		);
 		assert.equal(state.apply.disabled, true);
 		assert.equal(state.apply.getAttribute('aria-busy'), null);
@@ -2357,10 +2350,7 @@ test('successful preview and draft clearing preserve the original announcement o
 		assert.equal(notice['data-ran-booster-ui-notice-intent'], 'success');
 		assert.equal(notice.hidden, false);
 		assert.equal(state.message['aria-live'], undefined);
-		const spoken = [
-			'Reviewing blueprint…',
-			'Transporter Blueprint reviewed.',
-		];
+		const spoken = ['Reviewing blueprint…', 'Blueprint reviewed.'];
 		assert.deepEqual(state.spoken, spoken);
 		state.listeners.get('form:change')({ target: state.file });
 		assert.equal(notice.hidden, true);
@@ -2442,11 +2432,11 @@ test('apply result keeps its message, credential and added recovery nodes across
 			state.announcements.map((entry) => entry.text),
 			[
 				'Reviewing blueprint…',
-				'Transporter Blueprint reviewed.',
+				'Blueprint reviewed.',
 				'Plugin “Package 0” (package-0/package.php) — Applying…',
 				'Plugin “Package 0” (package-0/package.php) — Applied. Transferred credential is available on this site.',
 				'Reviewing blueprint…',
-				'All selected Transporter Blueprint changes were applied.',
+				'All selected changes were applied.',
 			]
 		);
 		assert.ok(

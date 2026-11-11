@@ -296,7 +296,7 @@ test('a successful export downloads the Blueprint without leaving the Portabilit
 		);
 		assert.deepEqual(state.events[0].detail, {
 			message:
-				'Transporter Blueprint download started. Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction.',
+				'Blueprint download started. Some installed requirement declarations could not be read or normalized and were omitted. Review requirements on the destination; this export does not prove exact reproduction.',
 		});
 		assert.deepEqual(state.intents.at(-1), {
 			host: state.message,
@@ -337,14 +337,12 @@ test('export status and errors use one spoken path without live-region attribute
 		loadFunction('initPortabilityExportDownload')();
 		await state.form.listeners.get('submit')(submitEvent());
 		assert.equal(state.message.hidden, false);
-		assert.deepEqual(state.spoken, [
-			'Transporter Blueprint download started.',
-		]);
+		assert.deepEqual(state.spoken, ['Blueprint download started.']);
 		assert.deepEqual(state.politeness, ['polite']);
 		await state.form.listeners.get('submit')(submitEvent());
 		assert.equal(state.messageText.textContent, 'Export failed.');
 		assert.deepEqual(state.spoken, [
-			'Transporter Blueprint download started.',
+			'Blueprint download started.',
 			'Export failed.',
 		]);
 		assert.deepEqual(state.politeness, ['polite', 'assertive']);
@@ -521,7 +519,7 @@ for (const count of [
 			});
 			assert.equal(
 				state.events[0].detail.message,
-				'Transporter Blueprint download started.' +
+				'Blueprint download started.' +
 					(expectedWarning ? ' ' + expectedWarning : '')
 			);
 			assert.equal(

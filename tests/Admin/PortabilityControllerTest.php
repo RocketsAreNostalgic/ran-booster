@@ -134,9 +134,9 @@ final class PortabilityControllerTest extends TestCase {
 		$review   = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
 		$html     = $review->invoke( $this->preview_controller( $secrets, false, 'plugin', $provider ), new PackageBlueprint( array( $this->blueprint_package(), $release ) ), array(), array() );
 
-		self::assertSame( 2, substr_count( $html, 'This package is not installed on this site.' ) );
-		self::assertSame( 2, substr_count( $html, 'The latest branch commit or release available for this package has not been determined.' ) );
-		self::assertSame( 2, substr_count( $html, 'This settings comparison does not inspect package files.' ) );
+		self::assertSame( 2, substr_count( $html, 'Not installed on this site.' ) );
+		self::assertSame( 2, substr_count( $html, 'The Blueprint specifies no exact version or commit; the latest has not been determined.' ) );
+		self::assertStringNotContainsString( 'This settings comparison does not inspect package files.', $html );
 		self::assertStringContainsString( 'data-portability-row="1" data-portability-action="blocked"', $html );
 		self::assertStringContainsString( 'Booster does not check compatibility or installed files. Dependencies are not installed automatically.', $html );
 		self::assertNotNull( $provider );
@@ -169,7 +169,7 @@ final class PortabilityControllerTest extends TestCase {
 		$html     = $review->invoke( $this->preview_controller( $secrets, false, 'plugin', $provider ), new PackageBlueprint( $packages ), array(), array() );
 
 		self::assertSame( 3, substr_count( $html, 'Requested version or commit' ) );
-		self::assertSame( 3, substr_count( $html, 'This settings comparison does not inspect package files.' ) );
+		self::assertStringNotContainsString( 'This settings comparison does not inspect package files.', $html );
 		self::assertSame( 3, substr_count( $html, 'data-portability-action="blocked"' ) );
 		foreach ( array( str_repeat( 'a', 40 ), str_repeat( 'b', 64 ), str_repeat( 'c', 64 ), str_repeat( 'd', 40 ), 'release&lt;id&gt;', 'tag&lt;script&gt;', '1.0.0&lt;version&gt;', 'artifact&lt;id&gt;', '1234' ) as $value ) {
 			self::assertStringContainsString( '<code>' . $value . '</code>', $html );
@@ -202,7 +202,7 @@ final class PortabilityControllerTest extends TestCase {
 		$review     = ( new ReflectionClass( PortabilityController::class ) )->getMethod( 'review_blueprint' );
 		$html       = $review->invoke( $controller, new PackageBlueprint( array( $release ) ), array(), array() );
 
-		self::assertStringContainsString( 'This site’s Booster settings differ from the Blueprint.', $html );
+		self::assertStringContainsString( 'Settings differ from the Blueprint.', $html );
 		self::assertStringContainsString( 'old&lt;branch&gt;', $html );
 		self::assertStringContainsString( 'Release asset', $html );
 		self::assertStringContainsString( 'Release channel', $html );
@@ -238,7 +238,7 @@ final class PortabilityControllerTest extends TestCase {
 			)
 		);
 
-		self::assertStringContainsString( 'This site’s Booster settings differ from the Blueprint.', $html );
+		self::assertStringContainsString( 'Settings differ from the Blueprint.', $html );
 		self::assertStringContainsString( 'Current configuration', $html );
 		self::assertStringContainsString( 'Requested configuration', $html );
 		self::assertStringContainsString( '&lt;script&gt;current&lt;/script&gt;', $html );
@@ -289,7 +289,7 @@ final class PortabilityControllerTest extends TestCase {
 		self::assertStringContainsString( 'Dependencies are not installed automatically.', $html );
 		self::assertStringContainsString( 'requested package may differ', $html );
 		self::assertStringContainsString( 'conflicting sources', $html );
-		self::assertStringContainsString( 'installation and activation are not verified', $html );
+		self::assertStringContainsString( 'Selected; installation and activation not verified.', $html );
 		self::assertStringContainsString( '&lt;script&gt;parent&lt;/script&gt;', $html );
 		self::assertStringNotContainsString( '<script>', $html );
 	}
@@ -363,7 +363,7 @@ final class PortabilityControllerTest extends TestCase {
 
 		self::assertStringContainsString( 'data-portability-release-review="{&quot;release_id&quot;:&quot;366&quot;', $html );
 		self::assertStringContainsString( 'data-portability-release-review-nonce="nonce&lt;review&gt;"', $html );
-		self::assertStringContainsString( 'Reviewed release 1.2.3 (v1.2.3&lt;script&gt;). Booster will install this first candidate preferred by the Git provider only;', $html );
+		self::assertStringContainsString( 'Reviewed release 1.2.3 (v1.2.3&lt;script&gt;). Booster installs the Git provider’s first candidate, which may not be the newest.', $html );
 	}
 
 	public function test_release_review_nonce_accepts_the_previous_wordpress_nonce_tick(): void {
@@ -908,7 +908,7 @@ final class PortabilityControllerTest extends TestCase {
 
 		self::assertFalse( $result['success'] );
 		self::assertSame( 400, $result['status'] );
-		self::assertSame( 'Choose a valid Transporter Blueprint ZIP to review.', $result['data']['message'] );
+		self::assertSame( 'Choose a valid Blueprint ZIP.', $result['data']['message'] );
 	}
 
 	public function test_preview_rejects_an_invalid_nonce_before_reading_an_upload(): void {
@@ -935,7 +935,7 @@ final class PortabilityControllerTest extends TestCase {
 
 		self::assertFalse( $result['success'] );
 		self::assertSame( 400, $result['status'] );
-		self::assertSame( 'Choose the same Transporter Blueprint and package row to apply.', $result['data']['message'] );
+		self::assertSame( 'Choose the same Blueprint and package row to apply.', $result['data']['message'] );
 	}
 
 	public function test_preview_accepts_areal_uploaded_blueprint_archive(): void {
@@ -1241,7 +1241,7 @@ final class PortabilityControllerTest extends TestCase {
 
 		self::assertSame( false, $result['success'] );
 		self::assertSame( 500, $result['status'] );
-		self::assertSame( 'Booster could not read the Transporter Blueprint ZIP. Please try again.', $result['data']['message'] );
+		self::assertSame( 'Booster could not read the Blueprint ZIP. Try again.', $result['data']['message'] );
 		$paths = array_filter( $GLOBALS['ran_booster_repository_admin_temporary_files'] ?? array(), 'is_string' );
 		self::assertNotSame( array(), $paths );
 		foreach ( $paths as $path ) {
@@ -1296,7 +1296,7 @@ final class PortabilityControllerTest extends TestCase {
 		$result = $this->apply_failure( new RuntimeException( 'Sensitive provider failure detail.' ) );
 
 		self::assertSame( 'failed', $result['status'] );
-		self::assertSame( 'Booster could not apply this package. Review the Transporter Blueprint again and check repository access.', $result['message'] );
+		self::assertSame( 'Booster could not apply this package. Review the Blueprint again and check repository access.', $result['message'] );
 	}
 
 	public function test_portability_apply_canary_never_enters_the_json_result_or_debug_capture(): void {
@@ -1342,7 +1342,7 @@ final class PortabilityControllerTest extends TestCase {
 			self::fail( 'Expected the local secret-store failure category.' );
 		}
 		self::assertSame( 'local_secret_store_unavailable', $result['category'] );
-		self::assertStringContainsString( 'encrypted credential storage is unavailable', $result['message'] );
+		self::assertStringContainsString( 'Target credential storage is unavailable', $result['message'] );
 		self::assertStringNotContainsString( 'repository access', $result['message'] );
 	}
 
@@ -1875,8 +1875,8 @@ final class PortabilityControllerTest extends TestCase {
 	/** @return iterable<string, array{bool, ?string, ?string, ?string}> */
 	public static function export_password_error_provider(): iterable {
 		yield 'unprotected' => array( false, null, null, null );
-		yield 'missing' => array( true, null, null, 'Choose a Transporter Blueprint password before exporting credentials.' );
-		yield 'mismatch' => array( true, 'correct-horse-battery-staple', 'different-password-value', 'The Transporter Blueprint passwords do not match. Nothing was exported.' );
+		yield 'missing' => array( true, null, null, 'Choose a Blueprint password before exporting credentials.' );
+		yield 'mismatch' => array( true, 'correct-horse-battery-staple', 'different-password-value', 'The passwords do not match. Nothing was exported.' );
 		yield 'matching' => array( true, 'correct-horse-battery-staple', 'correct-horse-battery-staple', null );
 	}
 

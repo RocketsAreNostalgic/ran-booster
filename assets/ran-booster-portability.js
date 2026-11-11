@@ -235,10 +235,8 @@
 							)
 						: '';
 				const completion =
-					__(
-						'Transporter Blueprint download started.',
-						'ran-booster'
-					) + (warning ? ' ' + warning : '');
+					__('Blueprint download started.', 'ran-booster') +
+					(warning ? ' ' + warning : '');
 				showMessage(completion, warning ? 'warning' : 'success');
 				announceSuccess(completion);
 			} catch (error) {
@@ -895,10 +893,7 @@
 				}
 				showReviewError(false);
 				if (announceCompletion) {
-					const completion = __(
-						'Transporter Blueprint reviewed.',
-						'ran-booster'
-					);
+					const completion = __('Blueprint reviewed.', 'ran-booster');
 					showMessage(completion, 'success');
 					announceSuccess(completion);
 				} else {
@@ -1238,7 +1233,7 @@
 					generation + 1 === previewGeneration
 				) {
 					const completion = __(
-						'All selected Transporter Blueprint changes were applied.',
+						'All selected changes were applied.',
 						'ran-booster'
 					);
 					if (results) {

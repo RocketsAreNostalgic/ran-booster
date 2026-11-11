@@ -18,10 +18,10 @@ $portability_action_pills         = array(
 	'blocked'   => 'error',
 );
 $portability_comparison_labels    = array(
-	'absent'      => __( 'This package is not installed on this site.', 'ran-booster' ),
-	'unmanaged'   => __( 'This package is installed, but Booster does not manage it yet.', 'ran-booster' ),
-	'matching'    => __( 'This site’s Booster settings match the Blueprint.', 'ran-booster' ),
-	'different'   => __( 'This site’s Booster settings differ from the Blueprint.', 'ran-booster' ),
+	'absent'      => __( 'Not installed on this site.', 'ran-booster' ),
+	'unmanaged'   => __( 'Installed; not managed by Booster.', 'ran-booster' ),
+	'matching'    => __( 'Settings match the Blueprint.', 'ran-booster' ),
+	'different'   => __( 'Settings differ from the Blueprint.', 'ran-booster' ),
 	'unavailable' => __( 'Booster could not compare this site’s settings with the Blueprint.', 'ran-booster' ),
 );
 $portability_configuration_labels = array(
@@ -59,9 +59,9 @@ $portability_dependency_states    = array(
 	'active'     => __( 'Installed and active', 'ran-booster' ),
 	'inactive'   => __( 'Installed but inactive', 'ran-booster' ),
 	'present'    => __( 'Parent theme installed', 'ran-booster' ),
-	'selected'   => __( 'Included in the proposed set; installation and activation are not verified', 'ran-booster' ),
+	'selected'   => __( 'Selected; installation and activation not verified.', 'ran-booster' ),
 	'omitted'    => __( 'Outside the selected set', 'ran-booster' ),
-	'missing'    => __( 'Not installed or included in the proposed set', 'ran-booster' ),
+	'missing'    => __( 'Not installed, not selected.', 'ran-booster' ),
 	'unresolved' => __( 'Local status could not be resolved', 'ran-booster' ),
 );
 $portability_review_rows          = is_array( $portability_review_rows ?? null )
@@ -115,7 +115,7 @@ $has_credential_decisions         = array() !== array_filter(
 	<section class="ran-booster-portability__credential-review" aria-labelledby="ran-booster-portability-credentials-heading">
 		<h5 id="ran-booster-portability-credentials-heading" class="ran-booster-portability__subsection-title ran-booster-portability__credentials-title"><?php esc_html_e( 'Repository credentials', 'ran-booster' ); ?></h5>
 		<?php if ( $has_credential_decisions ) : ?>
-			<p class="description"><strong><?php esc_html_e( 'Before you continue:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'For each required repository, Booster checks access using only your choice. Broader credential permissions are unassessed; the active Git provider handles repository access, and Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p>
+			<p class="description"><strong><?php esc_html_e( 'Before you continue:', 'ran-booster' ); ?></strong> <?php esc_html_e( 'For each repository, Booster checks access with the credential you choose only. Broader permissions are unassessed. The Git provider handles repository access; Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></p>
 		<?php else : ?>
 			<p><?php esc_html_e( 'This Blueprint includes repository credentials, but none are needed for package changes on this site.', 'ran-booster' ); ?></p>
 		<?php endif; ?>
@@ -199,14 +199,14 @@ $has_credential_decisions         = array() !== array_filter(
 					<div class="ran-booster-portability__credential-action">
 						<label>
 							<input type="radio" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][action]" value="import" data-portability-credential-action data-portability-credential-refresh aria-describedby="<?php echo esc_attr( $description_id ); ?>" hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled), [data-portability-target-credential]" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress"<?php checked( 'import', $credential_action ); ?>>
-							<span><strong><?php esc_html_e( 'Import this credential', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Add the protected credential from this Blueprint. It does not change an already-managed package’s saved credential selection.', 'ran-booster' ); ?></span></span>
+							<span><strong><?php esc_html_e( 'Import this credential', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Adds the credential from this Blueprint. Already-managed packages keep their saved credential.', 'ran-booster' ); ?></span></span>
 						</label>
 					</div>
 					<?php if ( 0 < $proposed_count ) : ?>
 					<div class="ran-booster-portability__credential-action ran-booster-portability__credential-action--target">
 						<label>
 							<input type="radio" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][action]" value="target" data-portability-credential-action aria-describedby="<?php echo esc_attr( $description_id ); ?>"<?php checked( 'target', $credential_action ); ?><?php disabled( array() === $target_choices ); ?>>
-							<span><strong><?php esc_html_e( 'Use a saved credential', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Connect these packages to a credential already stored on this site.', 'ran-booster' ); ?></span></span>
+							<span><strong><?php esc_html_e( 'Use a saved credential', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Connect these packages to a saved credential on this site.', 'ran-booster' ); ?></span></span>
 						</label>
 						<?php if ( array() !== $target_choices ) : ?>
 							<div class="ran-booster-portability__credential-target">
@@ -228,14 +228,14 @@ $has_credential_decisions         = array() !== array_filter(
 					<div class="ran-booster-portability__credential-action">
 						<label>
 							<input type="radio" name="credential_decisions[<?php echo esc_attr( (string) $ordinal ); ?>][action]" value="leave" data-portability-credential-action data-portability-credential-refresh aria-describedby="<?php echo esc_attr( $description_id ); ?>" hx-trigger="change delay:150ms" hx-include="[data-portability-preview], [data-portability-credential-action]:checked, [data-portability-credential-target]:not(:disabled), [data-portability-target-credential]" hx-encoding="multipart/form-data" hx-target="#ran-booster-portability-package-review" hx-select="#ran-booster-portability-package-review" hx-swap="outerHTML show:none" hx-sync="[data-portability-preview]:replace" hx-indicator="#ran-booster-portability-review-progress"<?php checked( 'leave', $credential_action ); ?>>
-							<span><strong><?php esc_html_e( 'Leave these packages unchanged', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Do not install, adopt or import this repository credential.', 'ran-booster' ); ?></span></span>
+							<span><strong><?php esc_html_e( 'Leave these packages unchanged', 'ran-booster' ); ?></strong><span class="description"><?php esc_html_e( 'Do not install, adopt or import.', 'ran-booster' ); ?></span></span>
 						</label>
 					</div>
 				</div>
 			<?php else : ?>
 				<div class="ran-booster-portability__credential-decision-state">
 					<strong><?php esc_html_e( 'No action needed', 'ran-booster' ); ?></strong>
-					<span class="description"><?php esc_html_e( 'These packages remain unchanged; no credential is imported.', 'ran-booster' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Packages stay unchanged; no credential is imported.', 'ran-booster' ); ?></span>
 				</div>
 			<?php endif; ?>
 
@@ -255,7 +255,7 @@ $has_credential_decisions         = array() !== array_filter(
 		<thead><tr><th scope="col"><?php esc_html_e( 'Package', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Type', 'ran-booster' ); ?></th><th scope="col"><?php esc_html_e( 'Target state', 'ran-booster' ); ?></th><th scope="col"><label><input type="checkbox" data-portability-select-all aria-label="<?php esc_attr_e( 'Select all actionable changes', 'ran-booster' ); ?>"<?php checked( $has_actionable_rows ); ?><?php disabled( ! $has_actionable_rows ); ?>> <?php esc_html_e( 'Apply plan', 'ran-booster' ); ?></label></th></tr></thead>
 		<tbody>
 		<?php if ( array() === $portability_review_rows ) : ?>
-			<tr><td colspan="4"><?php esc_html_e( 'Choose a Transporter Blueprint to review its packages.', 'ran-booster' ); ?></td></tr>
+			<tr><td colspan="4"><?php esc_html_e( 'Choose a Blueprint to review its packages.', 'ran-booster' ); ?></td></tr>
 		<?php else : ?>
 			<?php foreach ( $portability_review_rows as $row_index => $row ) : ?>
 				<?php
@@ -289,7 +289,7 @@ $has_credential_decisions         = array() !== array_filter(
 					<td class="ran-booster-portability__review-state"><?php \RAN\Admin\Component\StatusBadge::print_tone( $portability_action_labels[ $review_action ][0], $portability_action_pills[ $review_action ] ); ?><span class="ran-booster-portability__status-detail"><?php echo esc_html( $row['reason'] ?? '' ); ?></span>
 					<?php if ( null !== $release_review ) : ?>
 						<?php /* translators: 1: reviewed release version, 2: reviewed release tag. */ ?>
-						<p class="description"><?php echo esc_html( sprintf( __( 'Reviewed release %1$s (%2$s). Booster will install this first candidate preferred by the Git provider only; it does not claim the newest eligible release. The package will remain inactive and deployment Disabled.', 'ran-booster' ), (string) ( $release_review['version'] ?? '' ), (string) ( $release_review['tag'] ?? '' ) ) ); ?></p>
+						<p class="description"><?php echo esc_html( sprintf( __( 'Reviewed release %1$s (%2$s). Booster installs the Git provider’s first candidate, which may not be the newest. The package stays inactive with deployment Disabled.', 'ran-booster' ), (string) ( $release_review['version'] ?? '' ), (string) ( $release_review['tag'] ?? '' ) ) ); ?></p>
 					<?php endif; ?>
 					<?php if ( true === ( $row['repository_conflict'] ?? false ) ) : ?>
 						<p><?php esc_html_e( 'This Blueprint proposes conflicting sources for this repository. Select multiple branch packages or one release package, not both.', 'ran-booster' ); ?></p>
@@ -382,7 +382,6 @@ $has_credential_decisions         = array() !== array_filter(
 					<?php if ( is_array( $comparison ) ) : ?>
 						<h6><?php esc_html_e( 'On this site', 'ran-booster' ); ?></h6>
 						<p class="ran-booster-portability__configuration-summary"><?php echo esc_html( $portability_comparison_labels[ $comparison['state'] ] ?? $portability_comparison_labels['unavailable'] ); ?></p>
-						<p><?php echo esc_html( 'absent' === $comparison['state'] ? __( 'This settings comparison does not inspect package files.', 'ran-booster' ) : __( 'Booster has not checked whether the installed files match the Blueprint.', 'ran-booster' ) ); ?></p>
 						<?php if ( is_array( $comparison['requested_selection'] ?? null ) ) : ?>
 							<section>
 								<h6><?php esc_html_e( 'Requested version or commit', 'ran-booster' ); ?></h6>
@@ -396,7 +395,7 @@ $has_credential_decisions         = array() !== array_filter(
 								</ul>
 							</section>
 						<?php else : ?>
-							<p class="description"><?php esc_html_e( 'The Blueprint does not specify an exact version or commit. The latest branch commit or release available for this package has not been determined.', 'ran-booster' ); ?></p>
+							<p class="description"><?php esc_html_e( 'The Blueprint specifies no exact version or commit; the latest has not been determined.', 'ran-booster' ); ?></p>
 						<?php endif; ?>
 						<?php if ( 'different' === $comparison['state'] ) : ?>
 							<section>

@@ -171,6 +171,9 @@ final class RepositoryDetailRendererTest extends TestCase {
 		self::assertStringContainsString( 'Branch · main · packages/plugin', $html );
 		self::assertStringContainsString( '>Releases', $html );
 		self::assertStringContainsString( 'Ignores pushes', $html );
+		if ( 1 !== preg_match_all( '#<td data-label="Source"><div>Releases\s*<br><span class="description">Ignores pushes</span></div></td>#', $html ) ) {
+			self::fail( 'The Releases source value and its description must share one cell child so stacked label/value columns stay aligned.' );
+		}
 		self::assertStringContainsString( 'Plugin settings', $html );
 		self::assertStringContainsString( 'Theme settings', $html );
 		self::assertStringContainsString( 'Integration status', $html );

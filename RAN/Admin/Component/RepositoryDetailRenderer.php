@@ -299,11 +299,11 @@ final class RepositoryDetailRenderer {
 		?>
 		<tr>
 			<td data-label="<?php esc_attr_e( 'Package', 'ran-booster' ); ?>"><strong><?php echo esc_html( $package['display_name'] ); ?></strong><br><code><?php echo esc_html( $package['identifier'] ); ?></code></td>
-			<td data-label="<?php esc_attr_e( 'Source', 'ran-booster' ); ?>"><?php echo esc_html( $source ); ?>
+			<td data-label="<?php esc_attr_e( 'Source', 'ran-booster' ); ?>"><div><?php echo esc_html( $source ); ?>
 			<?php
 			if ( $release ) {
 				?>
-				<br><span class="description"><?php esc_html_e( 'Ignores pushes', 'ran-booster' ); ?></span><?php } ?></td>
+				<br><span class="description"><?php esc_html_e( 'Ignores pushes', 'ran-booster' ); ?></span><?php } ?></div></td>
 			<td data-label="<?php esc_attr_e( 'Updates', 'ran-booster' ); ?>"><?php echo esc_html( $this->policy_label( $package['deployment_policy'] ?? null ) ); ?></td>
 			<td data-label="<?php esc_attr_e( 'Settings', 'ran-booster' ); ?>"><a href="<?php echo esc_url( $package['settings_url'] ); ?>"><?php echo esc_html( 'plugin' === $package['type'] ? __( 'Plugin settings', 'ran-booster' ) : __( 'Theme settings', 'ran-booster' ) ); ?></a></td>
 		</tr>

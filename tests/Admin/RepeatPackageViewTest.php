@@ -838,8 +838,10 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertStringNotContainsString( 'repository-link', $edit_form );
 			self::assertStringNotContainsString( 'target="_blank"', $this->fieldset_html( $edit_form ), 'The card no longer links the repository.' );
 
-			$notice = '<div id="ran-booster-repository-fixed-description" class="notice notice-info inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>Provider and repository can&#039;t change after install.</p></div><svg class="ran-wp-ui-notice__icon"';
+			$notice = '<div id="ran-booster-repository-fixed-description" class="notice notice-info inline ran-booster-settings-fields__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-info" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="info"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p>Provider and repository can&#039;t be changed after install.</p></div><svg class="ran-wp-ui-notice__icon"';
 			self::assertSame( 1, substr_count( $edit_form, $notice ), 'The fixed-repository info Notice renders once.' );
+			self::assertStringNotContainsString( 'can&#039;t change after install', $edit_form );
+			self::assertStringNotContainsString( 'can\'t change after install', $edit_form );
 			self::assertSame( 1, substr_count( $edit_form, 'id="ran-booster-repository-fixed-description"' ) );
 			$fieldset = $this->fieldset_html( $edit_form );
 			self::assertGreaterThan( (int) strpos( $fieldset, 'id="ran-booster-repository-name"' ), (int) strpos( $fieldset, 'id="ran-booster-repository-fixed-description"' ), 'The Notice follows the repository field.' );

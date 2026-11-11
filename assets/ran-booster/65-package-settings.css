@@ -669,7 +669,7 @@
 	border-block-end: 1px solid var(--ran-booster-border);
 }
 
-.ran-booster-admin .ran-booster-readiness-panel__top h4 {
+.ran-booster-admin .ran-booster-readiness-panel__top :is(h3, h4) {
 	margin: 0;
 	color: var(--ran-booster-text);
 	font-size: var(--ran-booster-font-size-md);

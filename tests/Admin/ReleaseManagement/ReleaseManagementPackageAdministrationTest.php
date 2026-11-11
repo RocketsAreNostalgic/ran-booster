@@ -26,7 +26,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		ob_start();
 		( new \RAN\Admin\ReleaseManagement\ReleaseManagementDisplay() )->render_settings( $package, null, $package->settings_url() );
 		$html = (string) ob_get_clean();
-		self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high">Unavailable</span>', $html );
+		self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high">Not ready</span>', $html );
 		self::assertStringContainsString( 'Published release status is temporarily unavailable. Try again.', $html );
 	}
 
@@ -109,8 +109,13 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'name="release_channel" value="prerelease"', $html );
 		self::assertStringNotContainsString( 'ran_booster_release_deployments', $html );
 		self::assertStringContainsString( '<strong>Installed identity and Update URI</strong>', $html );
-		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Ready</h4>', $html );
+		self::assertStringContainsString( 'id="ran-booster-release-readiness-status"><span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent" data-ran-booster-badge data-ran-booster-badge-intent="stable">Ready</span></span>', $html );
 		self::assertStringNotContainsString( 'Ready for releases', $html );
+		self::assertSame( 1, substr_count( $html, '<h3 id="ran-booster-release-management-heading">Release readiness</h3>' ), 'Release readiness is the title of the readiness table.' );
+		self::assertSame( 1, substr_count( $html, 'Release readiness' ) );
+		self::assertStringNotContainsString( '<header class="ran-booster-package-source-pane__header">', $html, 'No standalone heading header renders without notices.' );
+		self::assertStringNotContainsString( '<h4 id="ran-booster-release-readiness-status"', $html );
+		self::assertMatchesRegularExpression( '~<div class="ran-booster-readiness-panel__top">\s*<div>\s*<h3 id="ran-booster-release-management-heading">Release readiness</h3>\s*</div>\s*<span id="ran-booster-release-readiness-status">~', $html );
 		self::assertStringContainsString( 'Branch is active; releases are not tracked.', $html );
 		self::assertStringNotContainsString( '<strong>Provider</strong>', $html );
 		self::assertStringNotContainsString( '<strong>Repository</strong>', $html );
@@ -236,8 +241,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( '<ul class="ul-disc">', $html );
 		self::assertStringContainsString( 'page=ran-booster-plugins&amp;package=nested%2Fnested.php', $html );
 		self::assertStringContainsString( 'page=ran-booster-themes&amp;package=companion-theme', $html );
-		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Repository shared</h4>', $html );
-		self::assertStringNotContainsString( '<h4 id="ran-booster-release-readiness-status">Ready</h4>', $html );
+		self::assertStringContainsString( 'id="ran-booster-release-readiness-status"><span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high">Repository shared</span></span>', $html );
+		self::assertStringNotContainsString( 'id="ran-booster-release-readiness-status"><span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent" data-ran-booster-badge data-ran-booster-badge-intent="stable">Ready</span></span>', $html );
 		self::assertStringContainsString( 'Package identity and Update URI match the repository.', $html );
 		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Use releases<\/button>/', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser-disabled="true"', $html );
@@ -262,7 +267,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
-		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Storage unavailable</h4>', $html );
+		self::assertStringContainsString( 'id="ran-booster-release-readiness-status"><span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high">Storage unavailable</span></span>', $html );
 		self::assertStringContainsString( 'Booster could not safely read this package&#039;s repository storage. Check package storage and retry.', $html );
 		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );
 		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Check releases<\/button>/', $html );
@@ -297,7 +302,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			self::assertSame( 1, substr_count( $html, 'Releases require exclusive use of this repository.' ) );
 			self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Use releases<\/button>/', $html );
 			self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
-			self::assertStringNotContainsString( '<h4 id="ran-booster-release-readiness-status">Ready</h4>', $html );
+			self::assertStringNotContainsString( 'id="ran-booster-release-readiness-status"><span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent" data-ran-booster-badge data-ran-booster-badge-intent="stable">Ready</span></span>', $html );
 		}
 	}
 
@@ -471,13 +476,13 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
+		self::assertMatchesRegularExpression( '~<span class="ran-booster-readiness-actions__links">\s*<a href="[^"]*" target="_blank" rel="noopener noreferrer">Open repository[\s\S]*?</a>\s*<a href="https://example.test/repository-releases">Manage release automation</a>\s*</span>~', $html, 'The repository link and the add-on link share one trailing group.' );
+		self::assertSame( 1, substr_count( $html, 'ran-booster-readiness-actions__links' ) );
 		$actions_start = strpos( $html, '<div class="ran-booster-readiness-actions">' );
 		$link_position = strpos( $html, '>Manage release automation</a>' );
 		$actions_end   = false === $actions_start ? false : strpos( $html, '</div>', $actions_start );
 		self::assertIsInt( $actions_start );
 		self::assertIsInt( $link_position );
-		self::assertMatchesRegularExpression( '~<span class="ran-booster-readiness-actions__links">\s*<a href="[^"]*" target="_blank" rel="noopener noreferrer">Open repository[\s\S]*?</a>\s*<a href="https://example.test/repository-releases">Manage release automation</a>\s*</span>~', $html, 'The repository link and the add-on link share one trailing group.' );
-		self::assertSame( 1, substr_count( $html, 'ran-booster-readiness-actions__links' ) );
 		self::assertIsInt( $actions_end );
 		self::assertTrue( $actions_start < $link_position );
 		self::assertTrue( $link_position < $actions_end );
@@ -499,7 +504,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 2, substr_count( $html, 'class="button ran-booster-release-track-option"' ) );
 		self::assertStringContainsString( 'Stable follows final published releases. Preview also includes eligible alpha, beta and release-candidate builds.', $html );
 		self::assertStringContainsString( 'ran-booster-release-notices', $html );
-		self::assertStringContainsString( '<h4 id="ran-booster-release-readiness-status">Not ready</h4>', $html );
+		self::assertStringContainsString( 'id="ran-booster-release-readiness-status"><span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high">Not ready</span></span>', $html );
 		self::assertStringNotContainsString( 'Not ready for releases', $html );
 		self::assertStringContainsString( 'Published releases require an Update URI matching this repository. Use the header shown below, then recheck eligibility.', $html );
 		self::assertStringNotContainsString( 'This package header does not declare an Update URI for its configured repository.', $html );

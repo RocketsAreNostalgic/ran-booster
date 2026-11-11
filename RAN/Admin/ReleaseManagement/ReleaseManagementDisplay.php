@@ -115,7 +115,7 @@ final class ReleaseManagementDisplay {
 							: '' ) ) ) );
 		?>
 		<section class="ran-booster-release-management" aria-labelledby="ran-booster-release-management-heading">
-			<header class="ran-booster-package-source-pane__header">
+			<?php ob_start(); ?>
 				<?php if ( '' !== $gate_notice ) { ?>
 					<div class="notice notice-warning inline ran-wp-ui-notice ran-wp-ui-box-sizing is-warning" data-ran-booster-release-gate-notice data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="warning"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content><p><?php echo esc_html( $gate_notice ); ?></p>
 					<?php
@@ -155,8 +155,12 @@ final class ReleaseManagementDisplay {
 				<?php } elseif ( $status_available && 'release_asset' === $source && $subdirectory_incompatible ) { ?>
 					<?php $this->render_return_to_branch( $package, $nonce_actions['return_to_branch'] ?? null, '', $automatic_policy ); ?>
 				<?php } ?>
-				<h3 id="ran-booster-release-management-heading"><?php esc_html_e( 'Release readiness', 'ran-booster' ); ?></h3>
-			</header>
+			<?php $pane_header = trim( (string) ob_get_clean() ); ?>
+			<?php if ( '' !== $pane_header ) { ?>
+				<header class="ran-booster-package-source-pane__header">
+					<?php echo $pane_header; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured markup rendered by this class. ?>
+				</header>
+			<?php } ?>
 			<div class="ran-booster-readiness-panel">
 				<?php if ( $eligibility_recheck ) { ?>
 					<div class="notice notice-success inline ran-wp-ui-notice ran-wp-ui-box-sizing is-success" data-ran-booster-package-success data-ran-booster-eligibility-recheck data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="success"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
@@ -165,11 +169,10 @@ final class ReleaseManagementDisplay {
 				<?php } ?>
 				<div class="ran-booster-readiness-panel__top">
 					<div>
-						<h4 id="ran-booster-release-readiness-status"><?php echo esc_html( $repository_blocked ? $repository_status_heading : ( $status_available && $eligibility->eligible() ? __( 'Ready', 'ran-booster' ) : __( 'Not ready', 'ran-booster' ) ) ); ?></h4>
+						<h3 id="ran-booster-release-management-heading"><?php esc_html_e( 'Release readiness', 'ran-booster' ); ?></h3>
 					</div>
-					<?php if ( ! $status_available || ! $eligibility->eligible() || $repository_blocked ) { ?>
-						<?php echo \RAN\Admin\Component\StatusBadge::for_intent( __( 'Unavailable', 'ran-booster' ), 'high' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?>
-					<?php } ?>
+					<?php $readiness_ready = ! $repository_blocked && $status_available && $eligibility->eligible(); ?>
+					<span id="ran-booster-release-readiness-status"><?php echo \RAN\Admin\Component\StatusBadge::for_intent( $repository_blocked ? $repository_status_heading : ( $readiness_ready ? __( 'Ready', 'ran-booster' ) : __( 'Not ready', 'ran-booster' ) ), $readiness_ready ? 'stable' : 'high' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes every value. ?></span>
 				</div>
 				<ul class="ran-booster-readiness-list">
 					<li class="ran-booster-readiness-item <?php echo $status_available && ! $subdirectory_incompatible && $update_uri_ready ? 'is-ok' : 'is-warning'; ?>">

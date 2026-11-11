@@ -1193,6 +1193,13 @@ subdirectory, release track and exact candidate selection. Add-ons may filter
 selected source and projection arguments, but must return one bounded
 plain-text summary.
 
+Core's `RepositoryWebhookManagementControls::render_package_webhook_setup`
+callback remains registered on `ran_booster_admin_package_advanced_source_sections`
+at priority 30 as an intentional no-op. The Edit page no longer renders a
+Webhook setup disclosure (removed in beta.44); webhook management lives on the
+repository page. The callback currently renders nothing and is under review for
+beta.45 (#772).
+
 Add-ons may filter the structured advanced-source summary projection:
 
 ```php

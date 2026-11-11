@@ -46,6 +46,9 @@
 		const submit = document.querySelector(
 			'[data-portability-export-submit]'
 		);
+		const selectedCount = document.querySelector(
+			'[data-portability-export-selected-count]'
+		);
 
 		function updateMaster() {
 			const selected = choices.filter((choice) => choice.checked);
@@ -78,6 +81,15 @@
 			master.indeterminate = selected.length > 0 && !master.checked;
 			if (submit) {
 				submit.disabled = selected.length === 0;
+			}
+			if (selectedCount) {
+				selectedCount.textContent = sprintf(
+					/* translators: %d: number of selected packages. */ __(
+						'%d selected',
+						'ran-booster'
+					),
+					selected.length
+				);
 			}
 			const credentialCount = credentialChoices.filter(
 				(choice) => choice.checked && !choice.disabled
@@ -605,7 +617,19 @@
 			const master = review.querySelector(
 				'[data-portability-select-all]'
 			);
+			const selectedCount = review.querySelector(
+				'[data-portability-selected-count]'
+			);
 
+			if (selectedCount) {
+				selectedCount.textContent = sprintf(
+					/* translators: %d: number of selected changes. */ __(
+						'%d selected',
+						'ran-booster'
+					),
+					selected
+				);
+			}
 			if (master) {
 				master.checked =
 					choices.length > 0 && selected === choices.length;

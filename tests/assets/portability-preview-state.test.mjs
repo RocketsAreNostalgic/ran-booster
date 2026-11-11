@@ -150,6 +150,7 @@ function row(
 function exportFixture(states) {
 	const master = checkbox('[data-portability-export-select-all]');
 	const submit = { disabled: false };
+	const count = { textContent: '' };
 	const choices = states.map((checked, index) =>
 		checkbox('[data-portability-export-select]', checked, String(index))
 	);
@@ -160,6 +161,7 @@ function exportFixture(states) {
 				{
 					'[data-portability-export-select-all]': master,
 					'[data-portability-export-submit]': submit,
+					'[data-portability-export-selected-count]': count,
 				}[selector] || null
 			);
 		},
@@ -170,7 +172,7 @@ function exportFixture(states) {
 		},
 	};
 
-	return { choices, master, submit };
+	return { choices, count, master, submit };
 }
 
 function credentialExportFixture() {
@@ -429,6 +431,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 	let html = '<table>empty</table>';
 	let currentRows = [];
 	let master = null;
+	const selectedCount = { textContent: '' };
 	const reviewAttributes = new Map();
 	const reviewClasses = new Set();
 	const control = (selectors, value = '') => {
@@ -535,6 +538,9 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		querySelector(selector) {
 			if (selector === '[data-portability-select-all]') {
 				return master;
+			}
+			if (selector === '[data-portability-selected-count]') {
+				return selectedCount;
 			}
 			return selector === '[data-portability-credential-ordinal="0"]'
 				? group
@@ -780,6 +786,7 @@ function importFixture(fetchResponse, rowSets = {}, options = {}) {
 		htmxProcesses,
 		listeners,
 		master: () => master,
+		selectedCount,
 		noticeCalls,
 		message,
 		announcements,
@@ -826,11 +833,13 @@ test('export master selection reflects checked, unchecked and mixed rows', () =>
 
 		assert.equal(state.master.checked, false);
 		assert.equal(state.master.indeterminate, true);
+		assert.equal(state.count.textContent, '1 selected');
 
 		state.choices[1].checked = true;
 		state.choices[1].listeners.get('change')();
 		assert.equal(state.master.checked, true);
 		assert.equal(state.master.indeterminate, false);
+		assert.equal(state.count.textContent, '2 selected');
 
 		state.master.checked = false;
 		state.master.listeners.get('change')();
@@ -840,6 +849,7 @@ test('export master selection reflects checked, unchecked and mixed rows', () =>
 		);
 		assert.equal(state.master.indeterminate, false);
 		assert.equal(state.submit.disabled, true);
+		assert.equal(state.count.textContent, '0 selected');
 	} finally {
 		cleanup();
 	}
@@ -1109,17 +1119,20 @@ test('import master and apply state follow only checked actionable rows', async 
 
 		assert.equal(state.master().checked, true);
 		assert.equal(state.apply.disabled, false);
+		assert.equal(state.selectedCount.textContent, '2 selected');
 
 		state.rows()[0].choice.checked = false;
 		state.listeners.get('root:change')({ target: state.rows()[0].choice });
 		assert.equal(state.master().checked, false);
 		assert.equal(state.master().indeterminate, true);
+		assert.equal(state.selectedCount.textContent, '1 selected');
 
 		state.master().checked = false;
 		state.listeners.get('root:change')({ target: state.master() });
 		assert.equal(state.rows()[1].choice.checked, false);
 		assert.equal(state.master().indeterminate, false);
 		assert.equal(state.apply.disabled, true);
+		assert.equal(state.selectedCount.textContent, '0 selected');
 
 		state.master().checked = true;
 		state.listeners.get('root:change')({ target: state.master() });

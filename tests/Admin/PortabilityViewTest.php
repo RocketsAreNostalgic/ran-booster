@@ -69,8 +69,10 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( '<section class="ran-booster-portability__export-packages"', $html );
 		// Apply is a plain action area: no heading, one short sentence, the summary and the button.
 		self::assertStringNotContainsString( 'ran-booster-portability-apply-heading', $html );
-		self::assertStringContainsString( '<div class="ran-booster-portability__apply">', $html );
-		self::assertStringContainsString( '<p>Selected changes apply independently.</p>', $html );
+		self::assertStringContainsString( '<div class="ran-booster-card-footer ran-booster-portability__apply">', $html );
+		self::assertStringNotContainsString( 'Selected changes apply independently.', $html );
+		self::assertStringContainsString( 'ran-booster-card__content ran-booster-card__content--footed', $html );
+		self::assertSame( 2, substr_count( $html, 'ran-booster-card__content--footed' ) );
 		self::assertStringNotContainsString( 'credential-only recovery rows are applied independently', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-export-packages-heading" class="ran-booster-portability__subsection-title ran-booster-portability__packages-title">Packages</h4>', $html );
 		self::assertStringContainsString( 'data-portability-export-select-all', $html );
@@ -145,7 +147,8 @@ final class PortabilityViewTest extends TestCase {
 		self::assertStringContainsString( 'role="region" aria-label="Package list"', $html );
 		self::assertStringContainsString( 'id="ran-booster-portability-review-progress" class="ran-booster-portability__review-progress htmx-indicator" role="status" aria-live="polite"', $html );
 		self::assertStringContainsString( 'data-portability-review-error role="alert" hidden', $html );
-		self::assertStringContainsString( 'id="ran-booster-portability-package-review" class="ran-booster-portability__table-scroll"', $html );
+		self::assertStringContainsString( 'id="ran-booster-portability-package-review" class="ran-booster-collection"', $html );
+		self::assertStringNotContainsString( 'ran-booster-portability__table-scroll', $html );
 		self::assertStringContainsString( 'role="region"', $html );
 		self::assertStringContainsString( 'tabindex="0"', $html );
 		self::assertStringNotContainsString( 'Switch mode', $html );
@@ -422,6 +425,77 @@ final class PortabilityViewTest extends TestCase {
 
 		$row['credential_ordinal'] = 0;
 		self::assertStringNotContainsString( 'No saved credentials are available for this Git provider.', $this->render_view( array( $row ) ) );
+	}
+
+	public function test_review_renders_as_the_shared_collection_frame(): void {
+		$rows     = array(
+			$this->row( 'First', 'first/first.php', 'install', 'Ready' ),
+			$this->row( 'Second', 'second/second.php', 'protected', 'Kept' ) + array( 'comparison' => array( 'state' => 'matching' ) ),
+			$this->row( 'Third', 'third/third.php', 'adopt', 'Adopt' ),
+		);
+		$html     = $this->render_view( $rows );
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$frame = '//*[@id="ran-booster-portability-package-review"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-collection ")]';
+		$wrap  = $frame . '/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-data-table-wrap ")][@role="region"][@aria-label="Package list"][@tabindex="0"]';
+
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . ')' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . '/*[1][contains(concat(" ", normalize-space(@class), " "), " ran-booster-collection__toolbar ")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $wrap . '/table[contains(concat(" ", normalize-space(@class), " "), " ran-booster-data-table ")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $frame . '//table[contains(@class,"widefat")])' ) );
+		self::assertStringNotContainsString( 'package--alternate', $html );
+		self::assertSame( 3.0, $xpath->evaluate( 'count(' . $wrap . '/table/tbody)' ) );
+		self::assertSame( 3.0, $xpath->evaluate( 'count(' . $wrap . '/table/tbody/tr[@data-portability-row])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $wrap . '/table/tbody[tr[@data-portability-row="1"]]/tr[@data-portability-details-for="1"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . '/div[contains(@class,"ran-booster-collection__toolbar")]//*[@data-portability-select-all])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $wrap . '//thead//*[@data-portability-select-all])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . '/div[contains(@class,"ran-booster-collection__toolbar")]//input[@data-portability-select-all][@aria-label="Select all actionable changes"])' ) );
+		self::assertMatchesRegularExpression( '/<label class="ran-booster-portability__toolbar-select"><input [^>]*data-portability-select-all[^>]*> Select all actionable changes<\/label>/', $html );
+		self::assertMatchesRegularExpression( '/<p class="ran-booster-portability__toolbar-count">\s*<strong>3<\/strong> packages\s*<span aria-hidden="true">&middot;<\/span>\s*<span data-portability-selected-count>2 selected<\/span>/', $html );
+		self::assertSame( 'Apply plan', trim( (string) $xpath->evaluate( 'string(' . $wrap . '/table/thead/tr/th[4])' ) ) );
+		foreach ( array( 'Package', 'Type', 'Target state', 'Apply plan' ) as $label ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(' . $wrap . '/table/tbody[1]/tr[@data-portability-row]/td[@data-label="' . $label . '"])' ), $label );
+		}
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $wrap . '/table/tbody/tr[@data-portability-details-for]/td[@data-label])' ) );
+
+		$single = $this->render_view( array( $this->row( 'Only', 'only/only.php', 'install', 'Ready' ) ) );
+		self::assertMatchesRegularExpression( '/<strong>1<\/strong> package\s*<span/', $single );
+		self::assertStringContainsString( '<span data-portability-selected-count>1 selected</span>', $single );
+
+		$empty = $this->render_view();
+		self::assertMatchesRegularExpression( '/<tbody>\s*<tr><td colspan="4">Choose a Blueprint to review its packages\.<\/td><\/tr>\s*<\/tbody>/', $empty );
+		self::assertStringContainsString( '<span data-portability-selected-count>0 selected</span>', $empty );
+	}
+
+	public function test_create_flow_packages_use_the_collection_frame_and_footer_band(): void {
+		$html     = $this->render_view();
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$frame = '//*[@id="ran-booster-portability-export"]//section[contains(@class,"ran-booster-portability__export-packages")]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-collection ")]';
+
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . ')' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . '/div[contains(@class,"ran-booster-collection__toolbar")]//input[@data-portability-export-select-all])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $frame . '//thead//input)' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . '/div[contains(@class,"ran-booster-data-table-wrap")][@role="region"][@aria-label="Package list"][@tabindex="0"]/table[contains(@class,"ran-booster-data-table")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $frame . '//table[contains(@class,"widefat") or contains(@class,"striped")])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . '//tbody/tr/th[@class="check-column"]/input[@id="ran-booster-portability-export-package-0"][@name="packages[plugin][]"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . '//tbody/tr/td[@data-label="Package"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $frame . '//tbody/tr/td[@data-label="Type"])' ) );
+		self::assertMatchesRegularExpression( '/<strong>1<\/strong> package\s*<span aria-hidden="true">&middot;<\/span>\s*<span data-portability-export-selected-count>1 selected<\/span>/', $html );
+		self::assertMatchesRegularExpression( '/<label class="ran-booster-portability__toolbar-select"><input [^>]*data-portability-export-select-all[^>]*> Select all packages<\/label>/', $html );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-portability-export"]//form/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card-footer ")]/button[@data-portability-export-submit])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-portability-export"]//div[contains(@class,"ran-booster-card-footer")]/p[@data-portability-export-summary])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-portability-import"]//div[contains(@class,"ran-booster-card-footer")]/button[@data-portability-apply])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="ran-booster-portability-import"]//div[contains(@class,"ran-booster-card-footer")]/p[@data-portability-apply-summary][contains(@class,"screen-reader-text")])' ) );
+		self::assertSame( 2.0, $xpath->evaluate( 'count(//div[contains(@class,"ran-booster-card__content--footed")])' ) );
+		self::assertStringNotContainsString( 'ran-booster-portability__table-scroll', $html );
+
+		$empty = $this->render_view( array(), array() );
+		self::assertMatchesRegularExpression( '/<strong>0<\/strong> packages/', $empty );
+		self::assertStringContainsString( '<span data-portability-export-selected-count>0 selected</span>', $empty );
+		self::assertStringContainsString( 'data-portability-export-select-all aria-label="Select all managed packages" disabled="disabled"', $empty );
 	}
 
 	public function test_export_shows_empty_and_unavailable_states_without_an_enabled_download(): void {

@@ -733,16 +733,60 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'package-operation-settings__body--split', $css );
 	}
 
-	public function test_first_settings_group_keeps_its_divider_and_padding(): void {
+	public function test_first_settings_group_drops_only_its_divider_inside_the_settings_card_body(): void {
 		$css = $this->asset( 'ran-booster/65-package-settings.css' );
 		if ( 1 !== preg_match( '/\n\t\.ran-booster-settings__group:first-of-type \{([^}]*)\}/', $css, $m ) ) {
 			self::fail( 'The first settings group rule is missing.' );
 		}
-		// The Card header carries the title now, so the first group sits flush with the body inset.
+		// The Card header already draws a divider, so the first group sits flush with the body without its own rule.
 		self::assertStringContainsString( 'margin-block-start: 0;', $m[1] );
-		self::assertStringNotContainsString( 'border-block-start', $m[1] );
-		self::assertStringNotContainsString( 'padding-block-start', $m[1] );
-		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body\s*> \[data-ran-booster-general-scope\]:nth-child\(/', $css );
+		self::assertStringContainsString( 'padding-block-start: 0;', $m[1] );
+		self::assertStringContainsString( 'border-block-start: 0;', $m[1] );
+		self::assertStringNotContainsString( 'display', $m[1] );
+		self::assertStringNotContainsString( 'font', $m[1] );
+		// It is scoped to the Settings Card body, never to every Card (the old content-wide first-of-type rule removed other pages' dividers).
+		self::assertMatchesRegularExpression( '/\.ran-booster-admin\s*\.ran-booster-settings__card-body\s*> \[data-ran-booster-general-scope\]:nth-child\(\s*1 of \[data-ran-booster-general-scope\]\s*\)\s*\.ran-booster-settings__group:first-of-type \{/', $css );
+		self::assertStringNotContainsString( '.ran-booster-card__content > [data-ran-booster-general-scope]', str_replace( array( "\n", "\t" ), ' ', $css ) );
+		// Later groups keep the shared divider rule.
+		if ( 1 !== preg_match( '/\n\.ran-booster-admin \.ran-booster-settings__group \{([^}]*)\}/', $css, $group ) ) {
+			self::fail( 'The shared settings group rule is missing.' );
+		}
+		self::assertStringContainsString( 'border-block-start: 1px solid var(--ran-booster-divider);', $group[1] );
+	}
+
+	public function test_settings_cards_share_one_inline_inset_for_header_body_and_footer(): void {
+		$css = $this->asset( 'ran-booster/65-package-settings.css' );
+		// One declaration owns the value; nothing else in the Settings Card rules spells 24px.
+		self::assertSame( 1, preg_match_all( '/--ran-booster-settings-card-inset: var\(--ran-booster-space-24\);/', $css ) );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card \{\s*--ran-booster-settings-card-inset:/', $css );
+		// Header (mounted button and native summary, plus the body-less header row) use the token as inline padding only.
+		if ( 1 !== preg_match( '/\[role="button"\],[^{]*> summary,[^{]*\.ran-booster-troubleshooting__entry-row \{([^}]*)\}/', $css, $header ) ) {
+			self::fail( 'The Settings Card header inset rule is missing.' );
+		}
+		self::assertStringContainsString( 'padding-inline: var(--ran-booster-settings-card-inset);', $header[1] );
+		self::assertStringNotContainsString( 'padding-block', $header[1] );
+		self::assertDoesNotMatchRegularExpression( '/padding: /', $header[1] );
+		// The Installation Cards keep their own header padding: nothing in the Settings rules targets them.
+		self::assertStringNotContainsString( 'installation-section', $header[0] );
+		// Body and footer use the same token.
+		self::assertStringContainsString( 'padding: var(--ran-booster-space-16) var(--ran-booster-settings-card-inset);', $css );
+		self::assertStringContainsString( 'margin-inline: calc(-1 * var(--ran-booster-settings-card-inset));', $css );
+		if ( 1 !== preg_match( '/\.ran-booster-settings__card-body--footed \{\s*padding-block-end: 0;/', $css ) ) {
+			self::fail( 'The footed body rule is missing.' );
+		}
+		// The vertical header padding is still the shared 16px.
+		self::assertStringContainsString( 'padding-block: 16px;', $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' ) );
+	}
+
+	public function test_settings_cards_leave_no_orphaned_panel_card_or_storage_details_rules(): void {
+		$settings   = $this->asset( 'ran-booster/65-package-settings.css' );
+		$onboarding = $this->asset( 'ran-booster-onboarding.css' );
+		self::assertStringNotContainsString( '.ran-booster-settings > .ran-booster-panel', $settings );
+		self::assertStringNotContainsString( '.ran-booster-settings__general > .ran-booster-panel', $settings );
+		self::assertStringNotContainsString( 'data-ran-booster-card="settings"', $settings );
+		self::assertStringNotContainsString( 'data-ran-booster-card="settings"', $onboarding );
+		self::assertStringNotContainsString( 'ran-booster-onboarding__storage-details', $onboarding );
+		self::assertStringNotContainsString( 'aria-labelledby="ran-booster-storage"', $onboarding );
 	}
 
 	public function test_settings_cards_reuse_the_disclosure_header_divider_and_own_a_footer_band(): void {
@@ -754,8 +798,8 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*> \.ran-booster-ui-disclosure__header,[^{]*> summary \{\s*box-shadow: 0 1px 0 var\(--ran-booster-divider\);/', $primitives );
 		self::assertStringNotContainsString( 'settings-card', $primitives );
 		// Body inset and the Card gap.
-		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card \{\s*margin-block: 0 var\(--ran-booster-card-gap\);/', $settings );
-		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body\.ran-booster-disclosure__body \{\s*padding: var\(--ran-booster-space-16\) var\(--ran-booster-space-24\);/', $settings );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card \{[^}]*margin-block: 0 var\(--ran-booster-card-gap\);/', $settings );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body\.ran-booster-disclosure__body \{\s*padding: var\(--ran-booster-space-16\) var\(--ran-booster-settings-card-inset\);/', $settings );
 		// Footer: full-width band, 1px divider above, 16px 24px padding, action at the end; it bleeds through the body inset
 		// and the footed body drops its bottom padding so the band meets the Card edge.
 		if ( 1 !== preg_match( '/\.ran-booster-settings__save-actions\.ran-booster-settings__card-footer \{([^}]*)\}/', $settings, $footer ) ) {
@@ -763,8 +807,8 @@ final class AdminAssetContractTest extends TestCase {
 		}
 		self::assertStringContainsString( 'display: flex;', $footer[1] );
 		self::assertStringContainsString( 'justify-content: flex-end;', $footer[1] );
-		self::assertStringContainsString( 'margin-inline: calc(-1 * var(--ran-booster-space-24));', $footer[1] );
-		self::assertStringContainsString( 'padding: var(--ran-booster-space-16) var(--ran-booster-space-24);', $footer[1] );
+		self::assertStringContainsString( 'margin-inline: calc(-1 * var(--ran-booster-settings-card-inset));', $footer[1] );
+		self::assertStringContainsString( 'padding: var(--ran-booster-space-16) var(--ran-booster-settings-card-inset);', $footer[1] );
 		self::assertStringContainsString( 'border-block-start: 1px solid var(--ran-booster-divider);', $footer[1] );
 		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body--footed \{\s*padding-block-end: 0;/', $settings );
 		// The footer lives in the body, so a collapsed Card hides it: no rule may force it visible or take it out of the panel.

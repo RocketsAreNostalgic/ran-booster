@@ -1001,27 +1001,6 @@
 	}
 }
 
-.ran-booster-admin .ran-booster-settings > .ran-booster-panel,
-.ran-booster-admin .ran-booster-settings__general > .ran-booster-panel {
-	margin-block: 0 var(--ran-booster-card-gap);
-	padding: var(--ran-booster-card-inset-block-start)
-		var(--ran-booster-space-24) var(--ran-booster-card-inset-block-end);
-}
-
-.ran-booster-admin
-	:is(.ran-booster-settings, .ran-booster-settings__general)
-	> [data-ran-booster-card="settings"].ran-booster-card {
-	padding: 0;
-}
-
-.ran-booster-admin
-	:is(.ran-booster-settings, .ran-booster-settings__general)
-	> [data-ran-booster-card="settings"].ran-booster-card
-	.ran-booster-card__content {
-	padding: var(--ran-booster-card-inset-block-start)
-		var(--ran-booster-space-24) var(--ran-booster-card-inset-block-end);
-}
-
 .ran-booster-admin [data-ran-booster-ui-notice][hidden],
 .ran-booster-admin [data-ran-booster-ui-notice-primary]:empty,
 .ran-booster-admin [data-ran-booster-ui-notice-request-field]:empty {
@@ -1036,19 +1015,45 @@
 }
 
 /*
- * Settings Cards are collapsible Disclosure Cards (see settings-card.php): the
- * header carries the title and summary, so the body begins at its own inset
- * and the first group sits flush with it and keeps its divider.
+ * Settings Cards are collapsible Disclosure Cards (see settings-card.php). The
+ * header, the body and the footer band share one inline inset, so the title,
+ * the content, the badge and chevron and the footer action line up. Block
+ * padding is untouched: the header keeps its 16px (see the Installation rule).
+ * The Installation Cards keep their own 16px header padding.
  */
 .ran-booster-admin .ran-booster-settings__card {
+	--ran-booster-settings-card-inset: var(--ran-booster-space-24);
+
 	margin-block: 0 var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin
-	.ran-booster-settings__card-body.ran-booster-disclosure__body {
-	padding: var(--ran-booster-space-16) var(--ran-booster-space-24);
+	.ran-booster-settings__card[data-ran-booster-ui-disclosure="settings-card"]
+	> *
+	> .ran-booster-ui-disclosure
+	> .ran-booster-ui-disclosure__header
+	> [role="button"],
+.ran-booster-admin
+	.ran-booster-settings__card[data-ran-booster-ui-disclosure="settings-card"]
+	> details[data-ran-booster-ui-disclosure-fallback]
+	> summary,
+.ran-booster-admin
+	.ran-booster-settings__card
+	.ran-booster-troubleshooting__entry-row {
+	padding-inline: var(--ran-booster-settings-card-inset);
 }
 
+.ran-booster-admin
+	.ran-booster-settings__card-body.ran-booster-disclosure__body {
+	padding: var(--ran-booster-space-16) var(--ran-booster-settings-card-inset);
+}
+
+/*
+ * The first group's divider would sit directly under the Card header's own
+ * divider, so only the rule and its padding go; the heading stays and the
+ * later groups keep theirs. Scoped to the Settings Card body, never to other
+ * Cards.
+ */
 .ran-booster-admin
 	.ran-booster-settings__card-body
 	> [data-ran-booster-general-scope]:nth-child(
@@ -1056,6 +1061,8 @@
 	)
 	.ran-booster-settings__group:first-of-type {
 	margin-block-start: 0;
+	padding-block-start: 0;
+	border-block-start: 0;
 }
 
 /*
@@ -1078,8 +1085,8 @@
 	justify-content: flex-end;
 	min-block-size: 0;
 	margin-block: 0;
-	margin-inline: calc(-1 * var(--ran-booster-space-24));
-	padding: var(--ran-booster-space-16) var(--ran-booster-space-24);
+	margin-inline: calc(-1 * var(--ran-booster-settings-card-inset));
+	padding: var(--ran-booster-space-16) var(--ran-booster-settings-card-inset);
 	border-block-start: 1px solid var(--ran-booster-divider);
 }
 

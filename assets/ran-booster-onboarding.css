@@ -143,10 +143,6 @@
 	.ran-booster-card__content
 	> p,
 .ran-booster-admin
-	.ran-booster-onboarding__storage[aria-labelledby="ran-booster-storage"]
-	.ran-booster-card__content
-	> p,
-.ran-booster-admin
 	.ran-booster-onboarding__storage[aria-labelledby="ran-booster-onboarding-storage-heading"]
 	.ran-booster-card__content
 	> p {
@@ -217,10 +213,6 @@
 .ran-booster-admin .ran-booster-onboarding__storage-documentation {
 	margin-block: var(--ran-booster-space-16) 0;
 	margin-inline: 0;
-}
-
-.ran-booster-admin .ran-booster-onboarding__storage-details {
-	margin-block-start: var(--ran-booster-space-14);
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-manual {

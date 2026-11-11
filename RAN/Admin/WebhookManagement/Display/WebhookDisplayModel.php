@@ -554,7 +554,11 @@ final class WebhookDisplayModel {
 		};
 	}
 
-	/** Inline (enhanced) text for a Validate result: both lines in one string. @param array{hook_id: string, profile_id: string}|null $recovery */
+	/**
+	 * Inline (enhanced) text for a Validate result: both lines in one string.
+	 *
+	 * @param array{hook_id: string, profile_id: string}|null $recovery
+	 */
 	public function validation_notice( string $check_code, string $ping_code, ?array $recovery = null, ?string $remediation = null ): string {
 		unset( $recovery );
 

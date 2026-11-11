@@ -267,6 +267,7 @@ final class RepositoryWebhookManagementControls {
 	/**
 	 * @param list<array{label:string,message:string,state:string}> $items
 	 * @param list<array{class:string,message:string,heading?:string,details?:list<string>}> $notices
+	 * @param array<array-key, mixed> $row Repository row carrying package_summaries.
 	 */
 	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true, bool $operation_notice = false, array $row = array(), bool $manual = false, string $actions = '' ): void {
 		$usage    = RepositoryPublishing::usage( $row );

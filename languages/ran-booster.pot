@@ -10694,52 +10694,52 @@ msgid "Generate a local, sanitized report. The report is not transmitted or logg
 msgstr ""
 
 #: views/troubleshooting-support-report.php:16
-msgid "Generate support report"
-msgstr ""
-
-#: views/troubleshooting-support-report.php:20
 msgid "Sanitized JSON preview"
 msgstr ""
 
-#: views/troubleshooting-support-report.php:23
+#: views/troubleshooting-support-report.php:18
+msgid "No report generated yet."
+msgstr ""
+
+#: views/troubleshooting-support-report.php:19
 msgid "Copy JSON report"
 msgstr ""
 
-#: views/troubleshooting-support-report.php:25
-msgid "Download JSON report"
-msgstr ""
-
-#: views/troubleshooting-support-report.php:26
+#: views/troubleshooting-support-report.php:21
 msgid "Support report copied to the clipboard."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:26
+#: views/troubleshooting-support-report.php:21
 msgid "Clipboard access failed. The report is selected; use your browser copy command."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:26
+#: views/troubleshooting-support-report.php:21
 #: assets/ran-booster-secure-inputs.js:302
 msgid "Download failed. Select the report and save it manually."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:27
-msgid "Preview, Copy and Download use this same frozen JSON. To save it manually, select and copy the JSON into a text editor, then save it as a .json file."
-msgstr ""
-
-#: views/troubleshooting-support-report.php:32
+#: views/troubleshooting-support-report.php:24
 msgid "Evidence and recovery guidance"
 msgstr ""
 
-#: views/troubleshooting-support-report.php:34
+#: views/troubleshooting-support-report.php:26
 msgid "Diagnostic runs from the last hour are included automatically."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:35
+#: views/troubleshooting-support-report.php:27
 msgid "Logging captures Booster events only. If evidence is missing, start Logging, reproduce the problem, then generate another report. Earlier events cannot be recovered."
 msgstr ""
 
-#: views/troubleshooting-support-report.php:36
+#: views/troubleshooting-support-report.php:28
 msgid "If administration cannot load, use WordPress recovery mode or your host’s support. External server logs are not collected."
+msgstr ""
+
+#: views/troubleshooting-support-report.php:32
+msgid "Generate support report"
+msgstr ""
+
+#: views/troubleshooting-support-report.php:33
+msgid "Download JSON report"
 msgstr ""
 
 #: views/troubleshooting.php:29

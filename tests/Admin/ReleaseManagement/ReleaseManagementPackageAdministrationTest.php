@@ -92,7 +92,10 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 
 		self::assertStringNotContainsString( 'Install published releases through WordPress.', $html );
 		self::assertStringNotContainsString( 'Install published releases.', $html );
-		self::assertSame( 0, substr_count( $html, 'ran-booster-package-source-pane__description' ), 'The release pane no longer repeats the card sub-line.' );
+		self::assertStringNotContainsString( 'Deploy published releases.', $html, 'The card sub-line text is not repeated in the pane.' );
+		self::assertSame( 1, substr_count( $html, 'ran-booster-package-source-pane__description' ), 'The release pane carries one strapline.' );
+		self::assertStringContainsString( '<p class="ran-booster-package-source-pane__description">Deploy when new packages are released.</p>', $html );
+		self::assertTrue( strpos( $html, 'ran-booster-package-source-pane__description' ) < strpos( $html, 'ran-booster-release-management' ), 'The strapline leads the pane.' );
 		self::assertStringContainsString( 'action="https://example.test/wp-admin/admin-post.php"', $html );
 		self::assertStringContainsString( 'name="action" value="ran_booster_release_enable"', $html );
 		self::assertStringContainsString( 'name="expected_type" value="plugin"', $html );

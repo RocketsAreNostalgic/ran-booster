@@ -286,7 +286,7 @@ final class PackagePagePresenter {
 				'heading'           => __( 'Releases', 'ran-booster' ),
 				'description'       => $fallback
 					? __( 'Install verified packages from a supported Git provider\'s published releases.', 'ran-booster' )
-					: __( 'Install published releases.', 'ran-booster' ),
+					: __( 'Deploy published releases.', 'ran-booster' ),
 				'url'               => '',
 				'disabled'          => true,
 				'hydrated'          => false,

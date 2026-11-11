@@ -1108,10 +1108,11 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringContainsString( '>Releases</strong>', $html );
 		self::assertStringNotContainsString( 'signed push', $html );
 		self::assertStringNotContainsString( 'through WordPress', $html );
+		self::assertStringNotContainsString( 'Deploy when new packages are released.', $html, 'The pane strapline never doubles the card sub-lines.' );
 		if ( 'create' === $mode ) {
 			self::assertStringContainsString( 'Deploy the saved branch, manually or on Push-to-Deploy.', $html );
 			if ( ! $fallback ) {
-				self::assertStringContainsString( 'Install published releases.', $html );
+				self::assertStringContainsString( 'Deploy published releases.', $html );
 			}
 		}
 		self::assertStringNotContainsString( 'data-ran-booster-source-meta', $html );

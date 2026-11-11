@@ -110,7 +110,7 @@ require __DIR__ . '/troubleshooting-installation-entry.php';
 			if ( array() === $core_self_update ) {
 				$self_update_message = __( 'Core update status is unavailable.', 'ran-booster' );
 			} elseif ( 'configuration_disabled' === $self_update_reason ) {
-				$self_update_message = __( 'Site configuration has turned Booster update checks off.', 'ran-booster' );
+				$self_update_message = __( 'Turned off programmatically in site configuration.', 'ran-booster' );
 			} elseif ( 'preference_disabled' === $self_update_reason ) {
 				$self_update_message = __( 'Booster update checks are turned off in Settings.', 'ran-booster' );
 			} elseif ( 'enabled' === $self_update_mode && in_array( $updater_state, array( 'unavailable', 'blocked' ), true ) ) {
@@ -317,7 +317,4 @@ foreach ( $components as $component ) {
 	require __DIR__ . '/troubleshooting-installation-entry.php';
 }
 ?>
-<?php if ( array() !== $components ) { ?>
-<p><?php esc_html_e( 'These are local configuration details. Use Diagnostics to check repository access.', 'ran-booster' ); ?></p>
-<?php } ?>
 </section>

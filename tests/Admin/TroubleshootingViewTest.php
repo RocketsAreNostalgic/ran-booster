@@ -188,7 +188,9 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringNotContainsString( 'GitHub provider details', $html );
 		self::assertStringContainsString( 'GitHub replacement plugins detected', $html );
 		self::assertStringContainsString( 'Needs attention', $html );
-		self::assertSame( 1, substr_count( $html, 'These are local configuration details. Use Diagnostics to check repository access.' ) );
+		self::assertStringNotContainsString( 'These are local configuration details.', $html );
+		self::assertStringContainsString( 'Run protected checks, temporarily capture Booster events, or review recent update activity.', $html );
+		self::assertStringNotContainsString( 'Use Diagnostics to check repository access.', $html );
 		self::assertStringContainsString( '<summary aria-label="GitHub • 1.0"', $html );
 		foreach ( array( '<implementation>', '<revision>', '<candidate>', '<commit>', '<component-implementation>' ) as $claim ) {
 			self::assertStringNotContainsString( $claim, $html );
@@ -649,7 +651,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '&lt;database&gt;', $html );
 		// The Providers and extensions heading follows the Core updates card and the footnote follows the cards.
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@id="ran-booster-installation-details"]/following-sibling::section[@aria-labelledby="ran-booster-components-heading"]/h3[@id="ran-booster-components-heading"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]/div[' . $entry . ']/following-sibling::p[starts-with(normalize-space(.), "These are local configuration details.")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[@aria-labelledby="ran-booster-components-heading"]/p)' ) );
 		$troubleshooting['environment'] = array( 'WordPress' => '7.1' );
 		ob_start();
 		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
@@ -950,6 +952,12 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertStringContainsString( '<code>native_discovery_disabled</code>', $html );
 		self::assertStringNotContainsString( 'cannot reach its configured GitHub release feed', $html );
 		$troubleshooting['core_self_update']['requested_mode'] = 'disabled';
+		$troubleshooting['core_self_update']['reason']         = 'configuration_disabled';
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/troubleshooting.php';
+		$html = (string) ob_get_clean();
+		self::assertStringContainsString( 'Turned off programmatically in site configuration.', $html );
+		self::assertStringNotContainsString( 'Site configuration has turned Booster update checks off.', $html );
 		$troubleshooting['core_self_update']['reason']         = 'preference_disabled';
 		$troubleshooting['core_self_update']['marker_version'] = '1.2.3';
 		$troubleshooting['core_self_update']['marker_commit']  = str_repeat( 'a', 40 );

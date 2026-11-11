@@ -411,6 +411,7 @@ final class WebhookDisplayModel {
 			'interaction_request'         => null,
 			'result'                      => null,
 			'recovery_warning'            => null,
+			'manual_notice'               => null,
 			'credential_choices'          => $this->credential_choices( $provider_code ),
 			'webhook_profile_choices'     => array(),
 			'operations'                  => $this->operation_models( array(), $provider_code, $provider_label, $repository_id, false, array_fill_keys( array( 'setup', 'reconfigure', 'check', 'test', 'remove' ), $reason ) ),

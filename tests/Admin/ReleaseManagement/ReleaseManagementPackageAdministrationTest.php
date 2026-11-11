@@ -1164,10 +1164,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertIsInt( $component_position );
 		self::assertIsInt( $heading_position );
 		self::assertIsInt( $checklist_position );
-		self::assertTrue( $gate_position < $heading_position );
-		self::assertTrue( $heading_position < $checklist_position );
-		self::assertTrue( $component_position < $gate_position );
-		self::assertTrue( $gate_position < $heading_position );
+		self::assertLessThan( $gate_position, $component_position );
+		self::assertLessThan( $heading_position, $gate_position );
+		self::assertLessThan( $checklist_position, $heading_position );
 		self::assertStringNotContainsString( '>Branch currently active.', $html );
 		self::assertStringContainsString( 'Published releases require an Update URI matching this repository. Use the header shown below, then recheck eligibility.', $html );
 		self::assertStringContainsString( $readiness_message, $html );

@@ -482,7 +482,9 @@
 }
 
 .ran-booster-admin .ran-booster-portability__mode:focus-visible,
-.ran-booster-admin .ran-booster-portability__table-scroll:focus-visible {
+.ran-booster-admin
+	.ran-booster-portability
+	.ran-booster-data-table-wrap:focus-visible {
 	outline: 2px solid var(--ran-booster-color-blue-300);
 	outline-offset: 2px;
 }
@@ -529,9 +531,12 @@
 	max-inline-size: 65ch;
 }
 
-.ran-booster-admin .ran-booster-portability__upload,
 .ran-booster-admin .ran-booster-portability__review,
-.ran-booster-admin .ran-booster-portability__export-packages,
+.ran-booster-admin .ran-booster-portability__export-packages {
+	margin-block-start: var(--ran-booster-card-gap);
+}
+
+.ran-booster-admin .ran-booster-portability__upload,
 .ran-booster-admin .ran-booster-portability__credential-option {
 	margin-block-start: var(--ran-booster-card-gap);
 	padding-block: var(--ran-booster-card-inset-block-start)
@@ -542,7 +547,10 @@
 	background: var(--ran-booster-surface);
 }
 
-.ran-booster-admin .ran-booster-portability__apply {
+/* The footer band sits a Card gap below the last block above it. */
+.ran-booster-admin .ran-booster-card-footer.ran-booster-portability__apply,
+.ran-booster-admin
+	.ran-booster-card-footer.ran-booster-portability__export-footer {
 	margin-block-start: var(--ran-booster-card-gap);
 }
 
@@ -860,24 +868,132 @@
 	font-weight: var(--ran-booster-font-weight-semibold);
 }
 
-.ran-booster-admin .ran-booster-portability__table-scroll {
-	overflow-x: auto;
-	border: 1px solid var(--ran-booster-border);
+/*
+ * Both Transporter tables are shared collection frames (toolbar, then the
+ * table wrap). Each package is its own tbody group, like the credential
+ * tables: the group owns the 1px divider and the alternating surface.
+ */
+
+.ran-booster-admin .ran-booster-portability__toolbar {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-8) var(--ran-booster-space-16);
 }
 
-.ran-booster-admin .ran-booster-portability__review-table {
-	min-inline-size: 720px;
+.ran-booster-admin .ran-booster-portability__toolbar-count {
 	margin: 0;
-	border: 0;
 }
 
-.ran-booster-admin .ran-booster-portability__review-table th,
-.ran-booster-admin .ran-booster-portability__review-table td {
-	padding: var(--ran-booster-space-12);
-	vertical-align: top;
+.ran-booster-admin .ran-booster-portability__toolbar-select {
+	display: inline-flex;
+	gap: var(--ran-booster-space-8);
+	align-items: center;
+	margin: 0;
 }
 
-.ran-booster-admin .ran-booster-portability__review-table td > code,
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-portability__table
+	> tbody {
+	border-block-end: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-portability__table
+	> tbody:last-child {
+	border-block-end: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-portability__table
+	> tbody
+	+ tbody
+	> tr:first-child
+	> * {
+	border-block-start: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-portability__table
+	> tbody:nth-of-type(odd)
+	> tr
+	> * {
+	background: var(--ran-booster-surface-subtle);
+}
+
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-portability__table
+	> tbody:nth-of-type(even)
+	> tr
+	> * {
+	background: transparent;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__review-table
+	> thead
+	> tr
+	> th:nth-child(1) {
+	inline-size: 24%;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__review-table
+	> thead
+	> tr
+	> th:nth-child(2) {
+	inline-size: 10%;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__review-table
+	> thead
+	> tr
+	> th:nth-child(4) {
+	inline-size: 22%;
+}
+
+.ran-booster-admin
+	.ran-booster-portability__export-table
+	> thead
+	> tr
+	> .check-column,
+.ran-booster-admin
+	.ran-booster-portability__export-table
+	> tbody
+	> tr
+	> .check-column {
+	box-sizing: border-box;
+	inline-size: 40px;
+	padding-inline: var(--ran-booster-space-8);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__export-table
+	> thead
+	> tr
+	> th:last-child {
+	inline-size: 20%;
+}
+
+/* The disclosure is a strip under the package row, inside its group. */
+.ran-booster-admin
+	.ran-booster-data-table.ran-booster-portability__table
+	> tbody
+	> tr
+	> .ran-booster-portability__details-cell {
+	padding-block: var(--ran-booster-space-8);
+	border-block-start: 1px solid var(--ran-booster-divider);
+}
+
+.ran-booster-admin
+	.ran-booster-portability__details-cell
+	.ran-booster-portability__package-details {
+	margin-block-start: 0;
+}
+
+.ran-booster-admin .ran-booster-portability__table td > code,
 .ran-booster-admin .ran-booster-portability__status-detail {
 	display: block;
 	margin-block-start: var(--ran-booster-space-4);
@@ -942,7 +1058,7 @@
 	margin-block-end: 0;
 }
 
-.ran-booster-admin .ran-booster-portability__review-table td > code {
+.ran-booster-admin .ran-booster-portability__table td > code {
 	padding: 0;
 	background: transparent;
 	font-size: var(--ran-booster-font-size-sm);
@@ -1269,22 +1385,34 @@
 		align-items: flex-start;
 		flex-direction: column;
 	}
-}
 
-.ran-booster-admin
-	.ran-booster-portability__review-table
-	.ran-booster-portability__package--alternate {
-	background: var(--ran-booster-surface-subtle);
-}
+	.ran-booster-admin .ran-booster-portability__toolbar {
+		align-items: flex-start;
+		flex-direction: column;
+	}
 
-.ran-booster-admin
-	.ran-booster-portability__review-table
-	.ran-booster-portability__details-cell {
-	padding-block-start: 0;
-}
+	/* Stacked packages keep one 1px divider per group, as on wide screens. */
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-portability__table
+		> tbody
+		+ tbody {
+		border-block-start: 0;
+	}
 
-.ran-booster-admin .ran-booster-portability__details-cell > details {
-	margin: 0;
+	.ran-booster-admin
+		.ran-booster-data-table.ran-booster-portability__table
+		> tbody
+		> tr {
+		border-block-end: 0;
+	}
+
+	.ran-booster-admin
+		.ran-booster-portability__export-table
+		> tbody
+		> tr
+		> .check-column {
+		padding-block-end: 0;
+	}
 }
 
 .ran-booster-admin .ran-booster-portability__details-body code {
@@ -1506,7 +1634,15 @@
 	.ran-booster-card__content {
 	padding-block: var(--ran-booster-card-inset-block-start)
 		var(--ran-booster-card-inset-block-end);
-	padding-inline: var(--ran-booster-space-24);
+	padding-inline: var(--ran-booster-card-inset-inline);
+}
+
+/* A footed Card ends on its footer band, so it has no bottom padding. */
+.ran-booster-admin
+	.ran-booster-portability
+	> .ran-booster-portability__flow[data-ran-booster-card="transporter"].ran-booster-card
+	.ran-booster-card__content.ran-booster-card__content--footed {
+	padding-block-end: 0;
 }
 
 @media screen and (max-width: 782px) {
@@ -1517,9 +1653,7 @@
 			.ran-booster-portability__flow
 		)[data-ran-booster-card="transporter"].ran-booster-card
 		.ran-booster-card__content {
-		padding-block: var(--ran-booster-card-inset-block-start)
-			var(--ran-booster-card-inset-block-end);
-		padding-inline: var(--ran-booster-space-18);
+		--ran-booster-card-inset-inline: var(--ran-booster-space-18);
 	}
 }
 

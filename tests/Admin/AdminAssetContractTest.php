@@ -1166,6 +1166,55 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-admin \.ran-booster-card__content \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-space-24\);/', $css );
 	}
 
+	public function test_transporter_tables_are_shared_collection_frames_with_one_pixel_dividers(): void {
+		$onboarding = $this->asset( 'ran-booster-onboarding.css' );
+		$responsive = $this->asset( 'ran-booster/80-responsive.css' );
+
+		// The old scroll frame, wide minimum width, alternate stripe and details tweaks are gone.
+		foreach ( array( 'table-scroll', 'package--alternate', 'min-inline-size: 720px', '.ran-booster-portability__details-cell > details' ) as $dead ) {
+			self::assertStringNotContainsString( $dead, $onboarding );
+		}
+		self::assertStringNotContainsString( 'table-scroll', $this->asset( 'ran-booster/25-admin-primitives.css' ) );
+
+		// Groups use the 1px divider, scoped to the Transporter tables, never the shared 2px strong divider.
+		self::assertMatchesRegularExpression( '/\.ran-booster-data-table\.ran-booster-portability__table\s*> tbody \{\s*border-block-end: 1px solid var\(--ran-booster-divider\);/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__table\s*> tbody\s*\+ tbody\s*> tr:first-child\s*> \* \{\s*border-block-start: 0;/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__table\s*> tbody:nth-of-type\(odd\)\s*> tr\s*> \* \{\s*background: var\(--ran-booster-surface-subtle\);/', $onboarding );
+		self::assertStringNotContainsString( 'strong-divider', $onboarding );
+		// Stacked rows keep one divider per group too, so the shared 2px rule at <= 782px is overridden for them.
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__table\s*> tbody\s*\+ tbody \{\s*border-block-start: 0;/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-data-table > tbody \+ tbody \{\s*border-block-start: 2px solid var\(--ran-booster-strong-divider\);/', $responsive );
+
+		// Toolbar: count at the start, select-all at the end, stacked at <= 782px.
+		if ( 1 !== preg_match( '/\.ran-booster-portability__toolbar \{([^}]*)\}/', $onboarding, $toolbar ) ) {
+			self::fail( 'The Transporter toolbar rule is missing.' );
+		}
+		self::assertStringContainsString( 'display: flex;', $toolbar[1] );
+		self::assertStringContainsString( 'justify-content: space-between;', $toolbar[1] );
+		self::assertStringContainsString( 'flex-wrap: wrap;', $toolbar[1] );
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 782px\) \{[\s\S]*\.ran-booster-portability__toolbar \{\s*align-items: flex-start;\s*flex-direction: column;/', $onboarding );
+
+		// The details disclosure is a strip with its own top divider, inside the package group.
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__details-cell \{\s*padding-block: var\(--ran-booster-space-8\);\s*border-block-start: 1px solid var\(--ran-booster-divider\);/', $onboarding );
+
+		// Review and Packages sit directly in the flow Card: only the upload and credential blocks keep nested-card chrome.
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__review,\s*\.ran-booster-admin \.ran-booster-portability__export-packages \{\s*margin-block-start: var\(--ran-booster-card-gap\);\s*\}/', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-portability__upload,\s*\.ran-booster-admin \.ran-booster-portability__credential-option \{[^}]*border: 1px solid/', $onboarding );
+
+		// Footed flow Cards drop the bottom padding, take the inline inset from the shared token, and the band keeps its Card gap above.
+		self::assertMatchesRegularExpression( '/\.ran-booster-card__content\.ran-booster-card__content--footed \{\s*padding-block-end: 0;/', $onboarding );
+		self::assertStringContainsString( 'padding-inline: var(--ran-booster-card-inset-inline);', $onboarding );
+		self::assertStringContainsString( '--ran-booster-card-inset-inline: var(--ran-booster-space-18);', $onboarding );
+		self::assertMatchesRegularExpression( '/\.ran-booster-card-footer\.ran-booster-portability__apply,[^{]*\.ran-booster-card-footer\.ran-booster-portability__export-footer \{\s*margin-block-start: var\(--ran-booster-card-gap\);/', $onboarding );
+
+		// Views use the frame, not widefat or the scroll wrapper.
+		foreach ( array( 'views/portability.php', 'views/portability-review.php' ) as $view ) {
+			$markup = $this->source( $view );
+			self::assertStringNotContainsString( 'widefat', $markup );
+			self::assertStringNotContainsString( 'table-scroll', $markup );
+		}
+	}
+
 	public function test_source_tab_strip_keeps_the_same_gap_above_every_pane(): void {
 		$css = $this->asset( 'ran-booster/65-package-settings.css' );
 		// Hidden inactive panes sit between the strip and the visible pane, so the rule must use the general sibling combinator.

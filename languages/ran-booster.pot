@@ -190,8 +190,8 @@ msgstr ""
 #: views/extensions.php:235
 #: views/provider.php:544
 #: views/provider.php:565
-#: views/troubleshooting.php:207
-#: views/troubleshooting.php:241
+#: views/troubleshooting.php:205
+#: views/troubleshooting.php:239
 msgid "Status"
 msgstr ""
 
@@ -1059,7 +1059,7 @@ msgstr ""
 #: views/troubleshooting-installation.php:72
 #: views/troubleshooting-installation.php:164
 #: views/troubleshooting-installation.php:172
-#: views/troubleshooting.php:236
+#: views/troubleshooting.php:234
 #: assets/ran-booster-portability.js:763
 msgid "Unknown"
 msgstr ""
@@ -7457,8 +7457,8 @@ msgid "with your version of Booster"
 msgstr ""
 
 #: views/extensions.php:169
-#: views/troubleshooting.php:209
-#: views/troubleshooting.php:258
+#: views/troubleshooting.php:207
+#: views/troubleshooting.php:256
 msgid "Details"
 msgstr ""
 
@@ -8159,7 +8159,7 @@ msgstr ""
 #: views/packages/fields/credential.php:21
 #: views/packages/fields/credential.php:24
 #: views/provider.php:460
-#: views/troubleshooting.php:253
+#: views/troubleshooting.php:251
 msgid "Repository access"
 msgstr ""
 
@@ -10818,19 +10818,20 @@ msgid "Troubleshooting views"
 msgstr ""
 
 #: views/troubleshooting.php:132
+#: views/troubleshooting.php:188
 msgid "Run diagnostics"
 msgstr ""
 
 #: views/troubleshooting.php:133
-msgid "Choose a Git provider and run checks. Results below describe only this diagnostic run."
+msgid "Choose a Git provider and run a health check."
 msgstr ""
 
-#: views/troubleshooting.php:150
-msgid "Start with a Git provider to run a general health check. The optional fields below check only credential and repository access; they do not scope Push-to-Deploy delivery results."
+#: views/troubleshooting.php:153
+msgid "Check credential or repository access (optional)"
 msgstr ""
 
 #: views/troubleshooting.php:154
-msgid "Check credential or repository access (optional)"
+msgid "Checks credential and repository access only."
 msgstr ""
 
 #: views/troubleshooting.php:157
@@ -10843,80 +10844,68 @@ msgid "No saved credential (check public access)"
 msgstr ""
 
 #: views/troubleshooting.php:178
-msgid "Choose a saved credential only to check private-repository access. This is a credential reference, not the credential secret; Booster never displays the credential secret here."
+msgid "Required for private repositories."
 msgstr ""
 
 #: views/troubleshooting.php:183
-msgid "Enter a repository only when diagnosing a particular access issue. Without a saved credential, Booster checks whether it is publicly available."
+msgid "Without a credential, Booster only checks public repos."
 msgstr ""
 
-#: views/troubleshooting.php:185
-msgid "The active Git provider can read every credential saved under its Git provider code, not only the selected diagnostic profile. Booster does not authenticate a third-party publisher."
-msgstr ""
-
-#: views/troubleshooting.php:189
-msgid "The full check makes temporary local marker files and up to five Git provider requests. Markers are removed immediately. Booster does not install packages, trigger webhooks or save a report."
-msgstr ""
-
-#: views/troubleshooting.php:190
-msgid "Run full diagnostics"
-msgstr ""
-
-#: views/troubleshooting.php:195
+#: views/troubleshooting.php:193
 msgid "These results remain available below, but could not be retained for a later support report."
 msgstr ""
 
-#: views/troubleshooting.php:198
+#: views/troubleshooting.php:196
 msgid "Diagnostic results"
 msgstr ""
 
-#: views/troubleshooting.php:200
+#: views/troubleshooting.php:198
 msgid "Diagnostics finished with partial results."
 msgstr ""
 
-#: views/troubleshooting.php:205
+#: views/troubleshooting.php:203
 msgid "RAN Booster diagnostic results"
 msgstr ""
 
-#: views/troubleshooting.php:208
-#: views/troubleshooting.php:242
+#: views/troubleshooting.php:206
+#: views/troubleshooting.php:240
 msgid "Check"
 msgstr ""
 
-#: views/troubleshooting.php:210
-#: views/troubleshooting.php:259
+#: views/troubleshooting.php:208
+#: views/troubleshooting.php:257
 msgid "Action"
 msgstr ""
 
-#: views/troubleshooting.php:246
+#: views/troubleshooting.php:244
 msgid "WordPress runtime"
 msgstr ""
 
-#: views/troubleshooting.php:247
+#: views/troubleshooting.php:245
 msgid "Database storage"
 msgstr ""
 
-#: views/troubleshooting.php:248
+#: views/troubleshooting.php:246
 msgid "Filesystem access"
 msgstr ""
 
-#: views/troubleshooting.php:249
+#: views/troubleshooting.php:247
 msgid "Package destinations"
 msgstr ""
 
-#: views/troubleshooting.php:250
+#: views/troubleshooting.php:248
 msgid "Deployment history"
 msgstr ""
 
-#: views/troubleshooting.php:251
+#: views/troubleshooting.php:249
 msgid "Deployment worker"
 msgstr ""
 
-#: views/troubleshooting.php:252
+#: views/troubleshooting.php:250
 msgid "Credential access"
 msgstr ""
 
-#: views/troubleshooting.php:255
+#: views/troubleshooting.php:253
 msgid "Git provider check"
 msgstr ""
 

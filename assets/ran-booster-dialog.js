@@ -116,6 +116,72 @@
 		portal.className = 'ran-booster-ui-dialog-portal';
 		doc.body.append(host, portal);
 		const root = createRoot(host);
+		// Everything else on the page is inert while the dialog is open,
+		// including skip links and other siblings of the admin wrapper that
+		// the library does not cover. Only nodes made inert here are restored.
+		const inerted = Array.from(doc.body.children).filter(function (node) {
+			if (
+				node === host ||
+				node === portal ||
+				node.hasAttribute('inert')
+			) {
+				return false;
+			}
+			node.setAttribute('inert', '');
+			return true;
+		});
+
+		function tabStops() {
+			return Array.from(
+				portal.querySelectorAll(
+					'a[href], button, input, select, textarea, summary, [tabindex]'
+				)
+			).filter(
+				(node) =>
+					!node.disabled &&
+					node.getAttribute('tabindex') !== '-1' &&
+					node.getAttribute('aria-hidden') !== 'true' &&
+					!node.hasAttribute('data-base-ui-focus-guard') &&
+					!node.closest('[hidden], [inert]')
+			);
+		}
+
+		// Tab wraps inside the dialog: the last control goes to the first,
+		// Shift+Tab from the first goes to the last, and focus that has
+		// reached a focus guard or left the portal comes back in.
+		function wrapTab(event) {
+			if (
+				event.key !== 'Tab' ||
+				event.ctrlKey ||
+				event.altKey ||
+				event.metaKey ||
+				!open
+			) {
+				return;
+			}
+
+			const stops = tabStops();
+			const current = doc.activeElement;
+			const index = stops.indexOf(current);
+			const stray =
+				index < 0 &&
+				(!portal.contains(current) ||
+					current.hasAttribute('data-base-ui-focus-guard'));
+			const first = stops[0];
+			const last = stops[stops.length - 1];
+
+			if (!first) {
+				event.preventDefault();
+				return;
+			}
+			if (event.shiftKey ? stray || current === first : false) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && (stray || current === last)) {
+				event.preventDefault();
+				first.focus();
+			}
+		}
 
 		function closeButton() {
 			return (
@@ -249,6 +315,7 @@
 							{
 								className: options.className,
 								size: options.size || 'medium',
+								'aria-modal': 'true',
 								portal: createElement(dialog.Portal, {
 									container: portal,
 								}),
@@ -331,12 +398,17 @@
 				});
 				host.remove();
 				portal.remove();
+				inerted.forEach((node) => node.removeAttribute('inert'));
 				if (active === handle) {
 					active = null;
 				}
 			},
 		};
 
+		doc.addEventListener('keydown', wrapTab, {
+			capture: true,
+			signal: listeners.signal,
+		});
 		window.addEventListener('pagehide', handle.teardown, {
 			signal: listeners.signal,
 		});

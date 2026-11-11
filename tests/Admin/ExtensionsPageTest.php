@@ -722,6 +722,15 @@ final class ExtensionsPageTest extends TestCase {
 		}
 	}
 
+	public function test_details_dialog_is_declared_modal_and_isolates_the_page(): void {
+		$source = file_get_contents( dirname( __DIR__, 2 ) . '/assets/ran-booster-dialog.js' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a contract test.
+		self::assertIsString( $source );
+		self::assertStringContainsString( "'aria-modal': 'true'", $source );
+		self::assertStringContainsString( "setAttribute('inert', '')", $source );
+		self::assertStringContainsString( "removeAttribute('inert')", $source );
+		self::assertStringContainsString( "event.key !== 'Tab'", $source );
+	}
+
 	public function test_denied_request_renders_nothing(): void {
 		$GLOBALS['ran_booster_test_capabilities']['manage_options'] = false;
 

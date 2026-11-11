@@ -71,6 +71,46 @@ function install({ runtime = true, failRender = false, tabs = true } = {}) {
 		setAttribute(name, value) {
 			this.attributes.set(name, String(value));
 		}
+		getAttribute(name) {
+			return this.attributes.has(name) ? this.attributes.get(name) : null;
+		}
+		hasAttribute(name) {
+			return this.attributes.has(name);
+		}
+		removeAttribute(name) {
+			this.attributes.delete(name);
+		}
+		get children() {
+			return this.childNodes.filter((node) => node.nodeType === 1);
+		}
+		closest(selector) {
+			const names = selector
+				.match(/\[([^\]]+)\]/g)
+				.map((m) => m.slice(1, -1));
+			for (let node = this; node?.attributes; node = node.parentNode) {
+				if (names.some((name) => node.attributes.has(name))) {
+					return node;
+				}
+			}
+			return null;
+		}
+		querySelectorAll() {
+			const tabbable = (node) =>
+				[
+					'a',
+					'button',
+					'input',
+					'select',
+					'textarea',
+					'summary',
+				].includes(node.name) || node.attributes.has('tabindex');
+			const walk = (node) =>
+				node.childNodes.flatMap((child) => [
+					...(child.nodeType === 1 && tabbable(child) ? [child] : []),
+					...walk(child),
+				]);
+			return walk(this);
+		}
 		querySelector(selector) {
 			const attribute = selector.match(/^\[([^\]]+)\]$/)?.[1];
 			for (const child of this.childNodes) {
@@ -606,4 +646,98 @@ test('invalid sections or missing Tabs keep native behaviour and move nothing', 
 		null
 	);
 	assert.equal(tabless.regions.first.parentNode, tabless.regions.host);
+});
+
+function keydown(page, shiftKey) {
+	let prevented = false;
+	(page.listeners.document.get('keydown') || []).forEach((fn) =>
+		fn({
+			key: 'Tab',
+			shiftKey,
+			preventDefault() {
+				prevented = true;
+			},
+		})
+	);
+	return prevented;
+}
+
+test('the dialog is modal: aria-modal on the popup and everything else inert until teardown', () => {
+	const page = install();
+	const skip = new page.trigger.constructor('a');
+	page.doc.body.childNodes.unshift(skip);
+	skip.parentNode = page.doc.body;
+	const preset = new page.trigger.constructor('div');
+	preset.setAttribute('inert', '');
+	page.doc.body.append(preset);
+
+	page.open(page.trigger, page.content, { title: 'Details' });
+	assert.equal(page.popup()['aria-modal'], 'true');
+	assert.equal(
+		skip.hasAttribute('inert'),
+		true,
+		'skip link outside the wrapper'
+	);
+	assert.equal(page.trigger.hasAttribute('inert'), true);
+	const portal = page.portals()[0];
+	assert.equal(portal.hasAttribute('inert'), false);
+
+	page.root().props.onOpenChange(false);
+	page.root().props.onOpenChangeComplete(false);
+	assert.equal(skip.hasAttribute('inert'), false);
+	assert.equal(page.trigger.hasAttribute('inert'), false);
+	assert.equal(
+		preset.hasAttribute('inert'),
+		true,
+		'pre-existing inert is left alone'
+	);
+});
+
+test('Tab and Shift+Tab wrap inside the dialog and never reach a focus guard or the page', () => {
+	const page = install();
+	const Node = page.trigger.constructor;
+	page.open(page.trigger, page.content, { title: 'Details' });
+	const portal = page.portals()[0];
+	const guard = new Node('span');
+	guard.setAttribute('tabindex', '0');
+	guard.setAttribute('aria-hidden', 'true');
+	guard.setAttribute('data-base-ui-focus-guard', '');
+	const first = portal.querySelector('[data-wp-ui-dialog-close-icon]');
+	const last = new Node('button');
+	const hidden = new Node('button');
+	hidden.setAttribute('hidden', '');
+	const roving = new Node('button');
+	roving.setAttribute('tabindex', '-1');
+	portal.childNodes.unshift(guard);
+	guard.parentNode = portal;
+	portal.append(roving, last, hidden);
+
+	last.focus();
+	assert.equal(keydown(page, false), true);
+	assert.equal(page.doc.activeElement, first, 'Tab from last goes to first');
+
+	assert.equal(keydown(page, true), true);
+	assert.equal(
+		page.doc.activeElement,
+		last,
+		'Shift+Tab from first goes to last'
+	);
+
+	guard.focus();
+	assert.equal(keydown(page, true), true);
+	assert.equal(page.doc.activeElement, last, 'guard sends Shift+Tab to last');
+	guard.focus();
+	keydown(page, false);
+	assert.equal(page.doc.activeElement, first, 'guard sends Tab to first');
+
+	page.trigger.focus();
+	keydown(page, false);
+	assert.equal(page.doc.activeElement, first, 'focus outside returns inside');
+
+	roving.focus();
+	assert.equal(keydown(page, false), false, 'middle stops keep native order');
+
+	page.root().props.onOpenChange(false);
+	page.root().props.onOpenChangeComplete(false);
+	assert.equal((page.listeners.document.get('keydown') || []).length, 0);
 });

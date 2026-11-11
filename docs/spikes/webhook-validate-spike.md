@@ -173,7 +173,7 @@ Nothing needs to change: Check and Test stay as separate buttons and the coordin
 
 Option C shipped in beta.44: one Validate button that is a thin wrapper over the unchanged Check and Test operations, not the coordinator-level design prototyped in `57fac4e6`.
 
-- `WebhookValidationWrapper` calls `execute('check')` and, only on `configuration_confirmed`, `execute('test')`; each keeps its own authorization, activity entry (`webhook.check`, `webhook.test`) and local record write, and stays callable alone.
+- `WebhookValidationWrapper` calls `execute('check')` and, only when the coordinator reports the Check successful (`configuration_confirmed`, `configured_pending_delivery` or `verified`), `execute('test')`; each keeps its own authorization, activity entry (`webhook.check`, `webhook.test`) and local record write, and stays callable alone.
 - Two nonces: the Check nonce stays in the button's `formaction`, the Test nonce is a hidden `_wpnonce_test` field. The controller verifies both before anything runs.
 - The redirect carries `webhook_management_result` (settings) and `webhook_management_ping` (the test code or `skipped`); the panel shows two lines, Settings and Ping.
 - No coordinator, facade or Core authorization change. The second call re-reads the record the first one wrote, so its compare-and-swap succeeds.

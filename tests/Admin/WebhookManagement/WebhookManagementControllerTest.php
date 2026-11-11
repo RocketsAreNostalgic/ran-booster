@@ -1730,6 +1730,39 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertSame( array( 'webhook.check' ), array_column( $connection->inserted, 'operation' ) );
 	}
 
+	/** @return array<string, array{0:string,1:string,2:string}> */
+	public static function validate_successful_checks(): array {
+		return array(
+			'configuration confirmed'     => array( 'configuration_confirmed', 'unknown', 'configuration_confirmed' ),
+			'configured pending delivery' => array( 'configured_pending_delivery', 'configured_pending_delivery', 'configured_pending_delivery' ),
+			'verified'                    => array( 'verified', 'verified', 'verified' ),
+		);
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider( 'validate_successful_checks' )]
+	public function test_validate_pings_after_every_successful_check_outcome( string $provider_code, string $delivery, string $code ): void {
+		list( $gateway, $store ) = $this->validate_fixtures(
+			array(
+				'check' => $this->operation_result( 'succeeded', $provider_code, '77', delivery: $delivery ),
+				'test'  => $this->operation_result( 'succeeded', 'ping_requested' ),
+			)
+		);
+		$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		self::assertSame( array( 'check', 'test' ), array_column( $gateway->mutation_calls, 0 ) );
+		self::assertSame( $code, $redirect['webhook_management_result'] );
+		self::assertSame( 'ping_requested', $redirect['webhook_management_ping'] );
+	}
+
+	public function test_validate_does_not_ping_after_a_failed_check(): void {
+		list( $gateway, $store ) = $this->validate_fixtures( array( 'check' => $this->operation_result( 'failed', 'hook_ownership_mismatch' ) ) );
+		$redirect                = $this->redirect_query( $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->validate_request(), 'check_nonce' ) );
+
+		self::assertSame( array( 'check' ), array_column( $gateway->mutation_calls, 0 ) );
+		self::assertSame( 'hook_ownership_mismatch', $redirect['webhook_management_result'] );
+		self::assertSame( 'skipped', $redirect['webhook_management_ping'] );
+	}
+
 	public function test_validate_confirmed_check_then_ping_runs_both_operations_with_their_own_nonces(): void {
 		$GLOBALS['ran_booster_activity_options'] = array( \RAN\Activity\ActivityStore::VERSION_OPTION => '1' );
 		$connection                              = new \RAN\Tests\Activity\ActivityConnection();

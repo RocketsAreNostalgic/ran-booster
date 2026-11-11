@@ -290,8 +290,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertLessThan( strpos( $html, 'class="ran-booster-repository-webhook-setup__content"' ), strpos( $html, 'data-ran-booster-ui-disclosure-content' ) );
 		self::assertStringContainsString( 'class="ran-booster-repository-webhook-management__panel"', $html );
 		self::assertStringNotContainsString( 'ran-booster-panel ran-booster-push-deploy__panel', $html );
-		self::assertStringContainsString( 'class="ran-booster-settings-section__body"', $html );
+		self::assertStringContainsString( 'class="ran-booster-settings-section__body ran-booster-settings-section__body--footed"', $html );
 		self::assertSame( 1, substr_count( $html, '<details' ) );
+		$this->assert_webhook_actions_are_the_card_footer_band( $html );
 		self::assertStringContainsString( 'name="action" value="ran_booster_repository_webhook_management_operation"', $html );
 		self::assertStringContainsString( 'name="repository_webhook_management_operation" value="setup"', $html );
 		self::assertStringContainsString( '<a href="https://fixture-provider.example.test/owner%2Fexample/settings/hooks" target="_blank" rel="noopener noreferrer">', $html );
@@ -331,8 +332,9 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$link = $links->item( 0 );
 		self::assertInstanceOf( \DOMElement::class, $link );
 		self::assertSame( $url, $rendered_url );
-		// The link follows the button group's field directly; no visible reason paragraph sits between them.
-		self::assertSame( 1.0, $xpath->evaluate( 'count(../preceding-sibling::*[1][self::div][contains(@class,"__field")][.//*[@role="group"]])', $link ) );
+		// The link row ends the form; the footer band comes after it, and no visible reason paragraph sits between them.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(../parent::form[contains(@class,"ran-booster-repository-webhook-management__form")])', $link ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(ancestor::form/following::div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card-footer ")][1])', $link ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(ancestor::div[contains(@class,"__actions")])', $link ) );
 		self::assertSame( 3.0, $xpath->evaluate( 'count(//button[@name="repository_webhook_management_operation"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//p[contains(@class,"__action-help")])' ) );
@@ -342,11 +344,10 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="repository-webhook-management-disabled-reason"])' ) );
 		self::assertSame( 2.0, $xpath->evaluate( 'count(//span[starts-with(@id,"repository-webhook-management-disabled-reason-")][contains(@class,"screen-reader-text")])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//p[normalize-space(.)="' . $reason . '"])' ) );
-		$group = $xpath->query( '//*[@role="group"][@aria-labelledby="repository-webhook-management-actions-label"]' );
+		$group = $xpath->query( '//*[@role="group"][@aria-label="Webhook"]' );
 		self::assertNotFalse( $group );
 		self::assertCount( 1, $group );
-		self::assertSame( 'Webhook', $xpath->evaluate( 'normalize-space(//*[@id="repository-webhook-management-actions-label"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="repository-webhook-management-actions-label"][contains(@class,"ran-booster-public-lookup-profile__label")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//*[@id="repository-webhook-management-actions-label"])' ), 'The band carries no visible group label.' );
 		self::assertSame( array( 'Set up', 'Validate', 'Remove' ), $this->button_labels( $xpath ) );
 		$operation_buttons = $xpath->query( '//button[@name="repository_webhook_management_operation"]' );
 		self::assertNotFalse( $operation_buttons );
@@ -504,6 +505,48 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		self::assertSame( 'is-pending|Booster has not set up a webhook for this repository.', $step( $render( array( '9999' => '2026-08-21 09:30:15' ) ) ) );
 	}
 
+	/** The webhook actions finish the Card as a band outside the management form and name that form with form=. */
+	private function assert_webhook_actions_are_the_card_footer_band( string $html ): void {
+		$document = new \DOMDocument();
+		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
+		$xpath = new \DOMXPath( $document );
+		$band  = '//div[contains(@class,"ran-booster-repository-publishing__tier")]/*[last()][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card-footer ")][contains(@class,"ran-booster-repository-webhook-management__actions")][@role="group"]';
+
+		// The band is the last child of the Card body content, below the disclosure, and is not the old action-row inside the form.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $band . ')' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $band . '/preceding-sibling::div[@data-ran-booster-ui-disclosure="repository-webhook-setup"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//form//*[contains(@class,"ran-booster-repository-webhook-management__actions")])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(//form//button[@name="repository_webhook_management_operation"])' ) );
+		self::assertSame( 0.0, $xpath->evaluate( 'count(' . $band . '/ancestor::form)' ) );
+		// The Card body is footed and the band does not leave the Card body.
+		self::assertSame( 1.0, $xpath->evaluate( 'count(' . $band . '/ancestor::div[contains(@class,"ran-booster-settings-section__body--footed")])' ) );
+
+		$form_id = $xpath->evaluate( 'string(//form[contains(@class,"ran-booster-repository-webhook-management__form")]/@id)' );
+		self::assertSame( 'repository-webhook-management-form', $form_id );
+		$buttons = $xpath->query( $band . '/button' );
+		self::assertNotFalse( $buttons );
+		self::assertGreaterThan( 0, $buttons->length );
+		$labels = array();
+		foreach ( $buttons as $button ) {
+			if ( ! $button instanceof \DOMElement ) {
+				continue;
+			}
+			self::assertSame( $form_id, $button->getAttribute( 'form' ), 'Each band button names the management form.' );
+			self::assertSame( 'submit', $button->getAttribute( 'type' ) );
+			self::assertNotSame( '', $button->getAttribute( 'formaction' ) );
+			foreach ( explode( ' ', $button->getAttribute( 'aria-describedby' ) ) as $describedby ) {
+				self::assertSame( 1.0, $xpath->evaluate( 'count(//*[@id="' . $describedby . '"])' ), 'Described-by ids stay unique and in the document.' );
+			}
+			$labels[] = trim( (string) $button->nodeValue );
+		}
+		self::assertSame( 'Set up', $labels[0], 'The primary action comes first.' );
+		// The management form keeps its hidden inputs and the busy status; the htmx attributes stay on the form.
+		foreach ( array( 'action', 'provider_code', 'repository_id', 'return_url' ) as $field ) {
+			self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@id="' . $form_id . '"]//input[@type="hidden"][@name="' . $field . '"])' ), $field );
+		}
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//form[@id="' . $form_id . '"]//*[@data-ran-booster-submit-busy-status])' ) );
+	}
+
 	public function test_manual_webhook_notice_renders_under_the_group_as_static_info_content(): void {
 		$panel    = new \ReflectionMethod( $this->controls(), 'render_repository_webhook_panel_model' );
 		$model    = $this->webhook_panel_model( false, false, array() );
@@ -570,7 +613,7 @@ final class RepositoryWebhookManagementControlsTest extends TestCase {
 		$manual = $render( array( '1234' => '2026-08-21 09:30:15' ) );
 		self::assertSame( 1, substr_count( $manual, 'Manual webhook detected' ) );
 		self::assertSame( 1, substr_count( $manual, 'A signed delivery was last received on 2026-08-21T09:30:15Z. Booster did not set up this webhook, so it cannot validate it.' ) );
-		self::assertSame( 1, preg_match( '/role="group".*?data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-repository-webhook-management__result">\s*<div class="notice notice-info /s', $manual ) );
+		self::assertSame( 1, preg_match( '/data-ran-booster-submit-busy-status><\/span>\s*<div class="ran-booster-repository-webhook-management__result">\s*<div class="notice notice-info /s', $manual ) );
 		foreach ( array( array(), array( '9999' => '2026-08-21 09:30:15' ) ) as $deliveries ) {
 			$other = $render( $deliveries );
 			self::assertStringNotContainsString( 'Manual webhook detected', $other );

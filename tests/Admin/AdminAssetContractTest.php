@@ -1195,6 +1195,19 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'class="ran-booster-debug-capture__footer"', $view );
 	}
 
+	public function test_webhook_management_band_exists_only_while_setup_is_open_and_is_flush_with_the_card(): void {
+		$css = $this->asset( 'ran-booster-repository-webhook-management.css' );
+
+		self::assertMatchesRegularExpression( '/\.ran-booster-repository-webhook-section\s*\.ran-booster-settings-section__body \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-space-24\);/', $css );
+		// Hidden by default, shown only with the open disclosure (Base UI open state or the native fallback).
+		self::assertMatchesRegularExpression( '/> \.ran-booster-card-footer\.ran-booster-repository-webhook-management__actions \{\s*display: none;\s*margin-block-start: var\(--ran-booster-card-gap\);/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-ui-disclosure\[data-open\]\s*\),\s*:has\(details#ran-booster-repository-webhook-setup\[open\]\)\s*\)\s*> \.ran-booster-card-footer\.ran-booster-repository-webhook-management__actions \{\s*display: flex;/', $css );
+		// The footed body drops its bottom padding only in the same open state.
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings-section__body--footed:has\(\s*:is\(.*?\[data-open\].*?details#ran-booster-repository-webhook-setup\[open\].*?\)\s*\) \{\s*padding-block-end: 0;/s', $css );
+		self::assertMatchesRegularExpression( '/max-width: 782px\) \{.*?--ran-booster-card-inset-inline: var\(--ran-booster-space-18\);.*?__actions \{\s*align-items: stretch;\s*flex-direction: column;/s', $css );
+		self::assertDoesNotMatchRegularExpression( '/__actions \{[^}]*(justify-content:\s*(?!flex-start)[a-z-]+|margin-inline-start:\s*auto)/', $css );
+	}
+
 	public function test_install_package_operation_card_uses_the_footer_band_and_one_updates_field_rhythm(): void {
 		$css = $this->asset( 'ran-booster/65-package-settings.css' );
 

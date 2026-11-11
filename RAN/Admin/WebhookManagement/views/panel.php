@@ -15,11 +15,82 @@ $result_notices   = array_values( array_filter( array( $model['result'] ?? null,
 if ( array() === $result_notices && is_array( $model['manual_notice'] ?? null ) ) {
 	$result_notices = array( $model['manual_notice'] );
 }
+$render_result_notices = static function () use ( $result_notices ): void {
+	?>
+		<?php if ( array() !== $result_notices ) : ?>
+			<div class="ran-booster-repository-webhook-management__result">
+			<?php foreach ( $result_notices as $notice ) : ?>
+				<?php $intent = substr( (string) $notice['class'], 7 ); ?>
+				<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $intent ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $intent ); ?>"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
+					<?php if ( isset( $notice['heading'] ) ) : ?>
+						<p><strong><?php echo esc_html( $notice['heading'] ); ?></strong></p>
+					<?php endif; ?>
+					<?php if ( isset( $notice['lines'] ) ) : ?>
+						<?php foreach ( $notice['lines'] as $line ) : ?>
+							<p><strong><?php echo esc_html( $line['label'] ); ?>:</strong> <?php echo esc_html( $line['text'] ); ?></p>
+						<?php endforeach; ?>
+					<?php else : ?>
+						<p><?php echo esc_html( $notice['message'] ); ?></p>
+					<?php endif; ?>
+					<?php foreach ( $notice['details'] ?? array() as $detail ) : ?>
+						<p><?php echo esc_html( $detail ); ?></p>
+					<?php endforeach; ?>
+				</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( $intent ); ?></div>
+			<?php endforeach; ?>
+			</div>
+		<?php endif; ?>
+	<?php
+};
+
+// 'all' renders the form with its actions (package settings); 'form' and 'actions' render the same management form and its footer band as two parts
+// so the band can finish the Card outside the form; the band's buttons then name the form with form=.
+$panel_part = isset( $panel_part ) && in_array( $panel_part, array( 'form', 'actions' ), true ) ? $panel_part : 'all';
+$form_id    = 'repository-webhook-management-form';
+
+$render_operation_buttons = static function ( bool $external ) use ( $model, $disabled, $form_id ): void {
+	foreach ( $model['operations'] as $operation ) {
+		$operation_disabled = $disabled || true === ( $operation['disabled'] ?? false );
+		$description_id     = 'repository-webhook-management-description-' . $operation['key'];
+		$reason             = $operation_disabled && is_string( $operation['disabled_reason'] ?? null ) ? $operation['disabled_reason'] : '';
+		$reason_id          = 'repository-webhook-management-disabled-reason-' . $operation['key'];
+		$describedby        = $description_id . ( '' !== $reason ? ' ' . $reason_id : '' );
+		if ( $operation['primary'] ) {
+			$button_classes = \RAN\Admin\Component\ButtonClasses::primary();
+		} elseif ( $operation['destructive'] ) {
+			$button_classes = \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' );
+		} else {
+			$button_classes = \RAN\Admin\Component\ButtonClasses::secondary();
+		}
+		$button_title = $operation['description'];
+		if ( '' !== $reason ) {
+			$button_title .= ' ' . $reason;
+		}
+		?>
+		<button type="submit" class="<?php echo esc_attr( $button_classes ); ?>"<?php echo $external ? ' form="' . esc_attr( $form_id ) . '"' : ''; ?> name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>" title="<?php echo esc_attr( $button_title ); ?>" aria-describedby="<?php echo esc_attr( $describedby ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( $operation['busy_label'] ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( $operation['busy_message'] ); ?>"<?php echo is_string( $operation['confirm'] ) ? ' data-confirm="' . esc_attr( $operation['confirm'] ) . '"' : ''; ?><?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
+		<span class="screen-reader-text" id="<?php echo esc_attr( $description_id ); ?>"><?php echo esc_html( $operation['description'] ); ?></span>
+		<?php if ( ! $external && is_array( $operation['companion_nonce'] ?? null ) ) : ?>
+			<input type="hidden" name="<?php echo esc_attr( $operation['companion_nonce']['name'] ); ?>" value="<?php echo esc_attr( $operation['companion_nonce']['value'] ); ?>">
+		<?php endif; ?>
+		<?php if ( '' !== $reason ) : ?>
+			<span class="screen-reader-text" id="<?php echo esc_attr( $reason_id ); ?>"><?php echo esc_html( $reason ); ?></span>
+		<?php endif; ?>
+		<?php
+	}
+};
+
+if ( 'actions' === $panel_part ) {
+	?>
+<div class="ran-booster-card-footer ran-booster-repository-webhook-management__actions" role="group" aria-label="<?php echo esc_attr( __( 'Webhook', 'ran-booster' ) ); ?>">
+	<?php $render_operation_buttons( true ); ?>
+</div>
+	<?php
+	return;
+}
 ?>
 <div class="ran-booster-repository-webhook-management">
 	<div class="ran-booster-repository-webhook-management__panel">
 		<div class="ran-booster-public-lookup-profile__layout ran-booster-repository-webhook-management__layout">
-			<form method="post" action="<?php echo esc_url( $model['form_action'] ); ?>" class="ran-booster-public-lookup-profile__form ran-booster-repository-webhook-management__form" data-ran-booster-submit-busy<?php echo $form_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Exact Core Admin Interaction facade owns these form attributes. ?>>
+			<form id="<?php echo esc_attr( $form_id ); ?>" method="post" action="<?php echo esc_url( $model['form_action'] ); ?>" class="ran-booster-public-lookup-profile__form ran-booster-repository-webhook-management__form" data-ran-booster-submit-busy<?php echo $form_attributes; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Exact Core Admin Interaction facade owns these form attributes. ?>>
 				<input type="hidden" name="action" value="<?php echo esc_attr( $model['admin_action'] ); ?>">
 				<input type="hidden" name="provider_code" value="<?php echo esc_attr( $model['provider_code'] ); ?>">
 				<input type="hidden" name="repository_id" value="<?php echo esc_attr( $model['repository_id'] ); ?>">
@@ -54,62 +125,24 @@ if ( array() === $result_notices && is_array( $model['manual_notice'] ?? null ) 
 						<span class="description"><?php esc_html_e( 'Choose an applicable saved signing secret, or create one only for this repository.', 'ran-booster' ); ?></span>
 					</div>
 
+				<?php if ( 'all' === $panel_part ) : ?>
 				<div class="ran-booster-repository-webhook-management__field ran-booster-repository-webhook-management__field--wide">
 					<p class="ran-booster-public-lookup-profile__label" id="repository-webhook-management-actions-label"><?php esc_html_e( 'Webhook', 'ran-booster' ); ?></p>
 					<div class="ran-booster-action-row ran-booster-repository-webhook-management__actions" role="group" aria-labelledby="repository-webhook-management-actions-label">
-						<?php foreach ( $model['operations'] as $operation ) : ?>
-							<?php
-							$operation_disabled = $disabled || true === ( $operation['disabled'] ?? false );
-							$description_id     = 'repository-webhook-management-description-' . $operation['key'];
-							$reason             = $operation_disabled && is_string( $operation['disabled_reason'] ?? null ) ? $operation['disabled_reason'] : '';
-							$reason_id          = 'repository-webhook-management-disabled-reason-' . $operation['key'];
-							$describedby        = $description_id . ( '' !== $reason ? ' ' . $reason_id : '' );
-							if ( $operation['primary'] ) {
-								$button_classes = \RAN\Admin\Component\ButtonClasses::primary();
-							} elseif ( $operation['destructive'] ) {
-								$button_classes = \RAN\Admin\Component\ButtonClasses::for( 'danger', 'outline' );
-							} else {
-								$button_classes = \RAN\Admin\Component\ButtonClasses::secondary();
-							}
-							$button_title = $operation['description'];
-							if ( '' !== $reason ) {
-								$button_title .= ' ' . $reason;
-							}
-							?>
-							<button type="submit" class="<?php echo esc_attr( $button_classes ); ?>" name="repository_webhook_management_operation" value="<?php echo esc_attr( $operation['key'] ); ?>" formaction="<?php echo esc_url( $operation['url'] ); ?>" title="<?php echo esc_attr( $button_title ); ?>" aria-describedby="<?php echo esc_attr( $describedby ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( $operation['busy_label'] ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( $operation['busy_message'] ); ?>"<?php echo is_string( $operation['confirm'] ) ? ' data-confirm="' . esc_attr( $operation['confirm'] ) . '"' : ''; ?><?php disabled( $operation_disabled ); ?> aria-disabled="<?php echo $operation_disabled ? 'true' : 'false'; ?>"><?php echo esc_html( $operation['label'] ); ?></button>
-							<span class="screen-reader-text" id="<?php echo esc_attr( $description_id ); ?>"><?php echo esc_html( $operation['description'] ); ?></span>
-							<?php if ( is_array( $operation['companion_nonce'] ?? null ) ) : ?>
-								<input type="hidden" name="<?php echo esc_attr( $operation['companion_nonce']['name'] ); ?>" value="<?php echo esc_attr( $operation['companion_nonce']['value'] ); ?>">
-							<?php endif; ?>
-							<?php if ( '' !== $reason ) : ?>
-								<span class="screen-reader-text" id="<?php echo esc_attr( $reason_id ); ?>"><?php echo esc_html( $reason ); ?></span>
-							<?php endif; ?>
-						<?php endforeach; ?>
+						<?php $render_operation_buttons( false ); ?>
 					</div>
 					<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
-					<?php if ( array() !== $result_notices ) : ?>
-						<div class="ran-booster-repository-webhook-management__result">
-						<?php foreach ( $result_notices as $notice ) : ?>
-							<?php $intent = substr( (string) $notice['class'], 7 ); ?>
-							<div class="notice <?php echo esc_attr( $notice['class'] ); ?> inline ran-booster-repository-webhook-management__notice ran-wp-ui-notice ran-wp-ui-box-sizing is-<?php echo esc_attr( $intent ); ?>" data-ran-booster-ui-notice data-ran-booster-ui-notice-intent="<?php echo esc_attr( $intent ); ?>"><div class="ran-wp-ui-text is-body-md ran-wp-ui-notice__description" data-ran-booster-ui-notice-content>
-								<?php if ( isset( $notice['heading'] ) ) : ?>
-									<p><strong><?php echo esc_html( $notice['heading'] ); ?></strong></p>
-								<?php endif; ?>
-								<?php if ( isset( $notice['lines'] ) ) : ?>
-									<?php foreach ( $notice['lines'] as $line ) : ?>
-										<p><strong><?php echo esc_html( $line['label'] ); ?>:</strong> <?php echo esc_html( $line['text'] ); ?></p>
-									<?php endforeach; ?>
-								<?php else : ?>
-									<p><?php echo esc_html( $notice['message'] ); ?></p>
-								<?php endif; ?>
-								<?php foreach ( $notice['details'] ?? array() as $detail ) : ?>
-									<p><?php echo esc_html( $detail ); ?></p>
-								<?php endforeach; ?>
-							</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( $intent ); ?></div>
-						<?php endforeach; ?>
-						</div>
-					<?php endif; ?>
+					<?php $render_result_notices(); ?>
 				</div>
+				<?php else : ?>
+					<?php foreach ( $model['operations'] as $operation ) : ?>
+						<?php if ( is_array( $operation['companion_nonce'] ?? null ) ) : ?>
+							<input type="hidden" name="<?php echo esc_attr( $operation['companion_nonce']['name'] ); ?>" value="<?php echo esc_attr( $operation['companion_nonce']['value'] ); ?>">
+						<?php endif; ?>
+					<?php endforeach; ?>
+					<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
+					<?php $render_result_notices(); ?>
+				<?php endif; ?>
 				<?php if ( is_string( $model['action_help'] ) ) : ?>
 					<p class="description ran-booster-repository-webhook-management__action-help"><?php echo esc_html( $model['action_help'] ); ?></p>
 				<?php endif; ?>

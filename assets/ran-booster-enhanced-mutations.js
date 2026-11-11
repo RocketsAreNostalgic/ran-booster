@@ -229,15 +229,23 @@
 				return;
 			}
 			const submitter = event.submitter;
+			// A submitter outside the form (a footer band) names it with form=.
 			if (
 				!submitter?.getAttribute?.('data-ran-booster-busy-label') ||
-				!form.contains(submitter)
+				!(form.contains(submitter) || submitter.form === form)
 			) {
 				return;
 			}
 
 			const others = Array.from(
-				form.querySelectorAll('button[type="submit"]')
+				new Set([
+					...form.querySelectorAll('button[type="submit"]'),
+					...Array.from(form.elements || []).filter(
+						function (control) {
+							return control.matches?.('button[type="submit"]');
+						}
+					),
+				])
 			)
 				.filter(function (control) {
 					return control !== submitter;

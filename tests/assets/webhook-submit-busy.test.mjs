@@ -168,6 +168,38 @@ test('the pressed button gets the shared busy pattern without being disabled', (
 	assert.equal(buttons[0].textContent, 'Set up');
 });
 
+test('buttons outside the form that name it with form= get the busy pattern and are disabled with their siblings', () => {
+	const { buttons, form, status, submit } = setup();
+	// The footer band sits outside the form: contains() is false, the form
+	// property and form.elements still reach the buttons.
+	form.contains = () => false;
+	form.querySelectorAll = () => [];
+	form.elements = buttons;
+	buttons.forEach((button) => {
+		button.form = form;
+		button.matches = (selector) => selector === 'button[type="submit"]';
+	});
+	const event = submit(buttons[1]);
+
+	assert.equal(event.defaultPrevented, false);
+	assert.equal(buttons[1].disabled, false, 'Its name and value must submit.');
+	assert.equal(buttons[1].textContent, 'Validating…');
+	assert.equal(status.textContent, 'Comparing the webhook.');
+	assert.equal(buttons[0].disabled, true);
+	assert.equal(form.getAttribute('aria-busy'), 'true');
+
+	const foreign = element(
+		{ 'data-ran-booster-busy-label': 'Other…' },
+		'Other'
+	);
+	foreign.form = element();
+	assert.equal(
+		submit(foreign).defaultPrevented,
+		true,
+		'A second submit is cancelled while busy.'
+	);
+});
+
 test('a second submit while busy is cancelled', () => {
 	const { buttons, submit } = setup();
 	submit(buttons[0]);

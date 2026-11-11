@@ -176,7 +176,7 @@ final class RepositoryWebhookManagementControls {
 	}
 
 	/** @param array<string,mixed> $model */
-	private function render_repository_webhook_panel_model( array $model ): string {
+	private function render_repository_webhook_panel_model( array $model, string $panel_part = 'all' ): string {
 		ob_start();
 		if ( null !== ( $model['interaction_request'] ?? null ) ) {
 			$this->admin_interaction->render_form_attributes( $model['interaction_request'] );
@@ -250,7 +250,8 @@ final class RepositoryWebhookManagementControls {
 			$operation_notice = is_array( $model['result'] ?? null ) || is_array( $model['recovery_warning'] ?? null );
 		}
 
-		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model ) : '', $has_branch_consumer, $notices, true, $operation_notice, $row, null !== $manual_at );
+		// The Branch publishing Card finishes with the webhook actions as its footer band, outside the management form.
+		$this->render_repository_webhook_section( $readiness_items, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model, 'form' ) : '', $has_branch_consumer, $notices, true, $operation_notice, $row, null !== $manual_at, is_array( $model ) ? $this->render_repository_webhook_panel_model( $model, 'actions' ) : '' );
 		return $model['webhooks_url'] ?? null;
 	}
 
@@ -325,7 +326,7 @@ final class RepositoryWebhookManagementControls {
 	 * @param list<array{label:string,message:string,state:string}> $items
 	 * @param list<array{class:string,message:string,heading?:string,details?:list<string>}> $notices
 	 */
-	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true, bool $operation_notice = false, array $row = array(), bool $manual = false ): void {
+	private function render_repository_webhook_section( array $items, string $panel, bool $has_branch_consumer, array $notices, bool $setup_available = true, bool $operation_notice = false, array $row = array(), bool $manual = false, string $actions = '' ): void {
 		$usage    = RepositoryPublishing::usage( $row );
 		$in_use   = is_array( $row['package_summaries'] ?? null ) && array() !== $row['package_summaries'] ? 0 < $usage['branch'] : $has_branch_consumer;
 		$link     = RepositoryPublishing::settings_link( $row );
@@ -335,7 +336,7 @@ final class RepositoryWebhookManagementControls {
 		?>
 		<section class="ran-booster-settings-section ran-booster-repository-webhook-section ran-booster-card" data-ran-booster-card="provider" aria-labelledby="ran-booster-repository-webhook-heading"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">
 				<?php echo RepositoryPublishing::header( __( 'Branch publishing', 'ran-booster' ), 'ran-booster-repository-webhook-heading', $in_use, $link['url'], $link['label'], $in_use ? __( 'Manual updates work without setting up Push-to-deploy.', 'ran-booster' ) : '' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Shared header escapes its parts. ?>
-			<div class="ran-booster-settings-section__body">
+			<div class="ran-booster-settings-section__body<?php echo '' !== $actions ? ' ran-booster-settings-section__body--footed' : ''; ?>">
 				<div class="ran-booster-repository-publishing__tier">
 				<h4 id="ran-booster-repository-webhook-automation-heading" class="ran-booster-repository-publishing__subheading"><?php esc_html_e( 'Push-to-deploy', 'ran-booster' ); ?><?php echo $this->automation_badge( $items, $in_use, $manual ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- StatusBadge escapes its label. ?></h4>
 				<p class="ran-booster-section__description ran-booster-repository-publishing__strapline"><?php esc_html_e( 'Automatic updates remain configured separately for each package.', 'ran-booster' ); ?></p>
@@ -366,6 +367,7 @@ final class RepositoryWebhookManagementControls {
 					</div>
 				</details></div>
 				<?php } ?>
+				<?php echo $actions; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Captured output is rendered and escaped by the fixed Core panel view. ?>
 				</div>
 			</div>
 		</div></div></section>

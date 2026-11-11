@@ -169,6 +169,51 @@
 	margin: 0;
 }
 
+/*
+ * The webhook actions are the Branch publishing Card's footer band, below the
+ * 'Webhook setup' disclosure. The band, and the --footed body that lets it end
+ * flush with the Card edge, exist only while that disclosure is open, so the
+ * collapsed Card keeps its normal bottom padding and shows no band.
+ */
+.ran-booster-admin
+	.ran-booster-repository-webhook-section
+	.ran-booster-settings-section__body {
+	--ran-booster-card-inset-inline: var(--ran-booster-space-24);
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-section
+	.ran-booster-repository-publishing__tier
+	> .ran-booster-card-footer.ran-booster-repository-webhook-management__actions {
+	display: none;
+	margin-block-start: var(--ran-booster-card-gap);
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-section
+	.ran-booster-repository-publishing__tier:is(
+		:has(
+			[data-ran-booster-ui-disclosure="repository-webhook-setup"]
+				.ran-booster-ui-disclosure[data-open]
+		),
+		:has(details#ran-booster-repository-webhook-setup[open])
+	)
+	> .ran-booster-card-footer.ran-booster-repository-webhook-management__actions {
+	display: flex;
+}
+
+.ran-booster-admin
+	.ran-booster-repository-webhook-section
+	.ran-booster-settings-section__body.ran-booster-settings-section__body--footed:has(
+		:is(
+			[data-ran-booster-ui-disclosure="repository-webhook-setup"]
+				.ran-booster-ui-disclosure[data-open],
+			details#ran-booster-repository-webhook-setup[open]
+		)
+	) {
+	padding-block-end: 0;
+}
+
 /* The operation result sits one section gap under the Webhook button group. */
 .ran-booster-admin .ran-booster-repository-webhook-management__result {
 	display: grid;
@@ -330,6 +375,12 @@
 }
 
 @media screen and (max-width: 782px) {
+	.ran-booster-admin
+		.ran-booster-repository-webhook-section
+		.ran-booster-settings-section__body {
+		--ran-booster-card-inset-inline: var(--ran-booster-space-18);
+	}
+
 	.ran-booster-admin .ran-booster-repository-webhook-management__actions {
 		align-items: stretch;
 		flex-direction: column;

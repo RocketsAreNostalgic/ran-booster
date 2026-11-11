@@ -33,6 +33,7 @@ use RAN\Admin\WebhookManagement\Installation\InstallationStore;
  *   interaction_request:AdminInteractionRequest|null,
  *   result:array{class:string,message:string,heading?:string,details?:list<string>,lines?:list<array{label:string,text:string}>}|null,
  *   recovery_warning:array{class:string,message:string,heading?:string,details?:list<string>}|null,
+ *   manual_notice:array{class:string,heading:string,message:string}|null,
  *   management_credential_id:?string,
  *   credential_choices:list<array{id:string,label:string}>,
  *   webhook_profile_choices:list<array{id:string,label:string,scope:string}>,

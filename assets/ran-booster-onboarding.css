@@ -151,8 +151,33 @@
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-facts {
+	/* The field inset is shared by the path fields and the note under them. */
+	--ran-booster-storage-field-padding-inline: var(--ran-booster-space-8);
+	--ran-booster-storage-field-border: 1px;
+	--ran-booster-storage-field-inset: calc(
+		var(--ran-booster-storage-field-padding-inline) +
+			var(--ran-booster-storage-field-border)
+	);
+
 	display: grid;
 	gap: var(--ran-booster-space-16);
+	margin: 0;
+}
+
+/* Short values sit on the label's line; long paths stay stacked. */
+.ran-booster-admin
+	.ran-booster-onboarding__storage-facts
+	> .ran-booster-onboarding__storage-fact--inline {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: var(--ran-booster-space-12);
+}
+
+.ran-booster-admin
+	.ran-booster-onboarding__storage-facts
+	> .ran-booster-onboarding__storage-fact--inline
+	> :is(dt, dd) {
 	margin: 0;
 }
 
@@ -174,8 +199,12 @@
 .ran-booster-admin .ran-booster-onboarding__storage-facts code {
 	display: block;
 	padding-block: var(--ran-booster-space-6);
-	padding-inline: var(--ran-booster-space-8);
-	border: 1px solid var(--ran-booster-divider);
+	padding-inline: var(
+		--ran-booster-storage-field-padding-inline,
+		var(--ran-booster-space-8)
+	);
+	border: var(--ran-booster-storage-field-border, 1px) solid
+		var(--ran-booster-divider);
 	border-radius: var(--ran-booster-radius-control);
 	background: var(--ran-booster-surface);
 	overflow-wrap: anywhere;
@@ -203,7 +232,8 @@
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-facts-note {
-	margin-block-start: var(--ran-booster-space-16);
+	margin-block: var(--ran-booster-space-6) 0;
+	margin-inline: var(--ran-booster-storage-field-inset) 0;
 }
 
 .ran-booster-admin .ran-booster-onboarding__storage-actions {

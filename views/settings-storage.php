@@ -237,7 +237,7 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 
 			<?php if ( $has_storage_details ) { ?>
 				<dl class="ran-booster-onboarding__storage-facts">
-					<div><dt><?php esc_html_e( 'Configuration constant', 'ran-booster' ); ?></dt><dd>
+					<div class="ran-booster-onboarding__storage-fact--inline"><dt><?php esc_html_e( 'Configuration constant', 'ran-booster' ); ?></dt><dd>
 					<?php
 					if ( null !== $storage_constant ) {
 						?>
@@ -252,7 +252,7 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 					</dd></div>
 					<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
 						<?php if ( is_string( $storage_path_source ) && isset( $storage_path_source_labels[ $storage_path_source ] ) ) { ?>
-							<div>
+							<div class="ran-booster-onboarding__storage-fact--inline">
 								<dt><?php esc_html_e( 'Path selection', 'ran-booster' ); ?></dt>
 								<dd><code class="ran-booster-onboarding__storage-inline"><?php echo esc_html( $storage_path_source_labels[ $storage_path_source ] ); ?></code></dd>
 							</div>
@@ -276,19 +276,21 @@ if ( is_string( $ran_booster_secrets_dir ) && \'\' !== trim( $ran_booster_secret
 							$copy_value = $secrets_storage['candidate_path'];
 							$copy_label = __( 'Copy storage file', 'ran-booster' );
 							include __DIR__ . '/copy-displayed-value.php';
+							if ( 'path_configured' === $storage_status ) {
+								?>
+								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'The encrypted file and its separate database key are created when you save the first credential.', 'ran-booster' ); ?></p>
+								<?php
+							} elseif ( 'storage_healthy' === $storage_status ) {
+								?>
+								<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'Credentials are encrypted in this file; the key is stored separately.', 'ran-booster' ); ?></p>
+								<?php
+							}
 							?>
 							</dd>
 						</div>
 
 					<?php } ?>
 				</dl>
-				<?php if ( null !== $secrets_storage['candidate_path'] ) { ?>
-					<?php if ( 'path_configured' === $storage_status ) { ?>
-						<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'The encrypted file and its separate database key are created when you save the first credential.', 'ran-booster' ); ?></p>
-					<?php } elseif ( 'storage_healthy' === $storage_status ) { ?>
-						<p class="description ran-booster-onboarding__storage-facts-note"><?php esc_html_e( 'Credentials are encrypted in this file. WordPress stores the encryption key separately.', 'ran-booster' ); ?></p>
-					<?php } ?>
-				<?php } ?>
 			<?php } ?>
 			<p class="ran-booster-onboarding__storage-documentation">
 				<a href="<?php echo esc_url( $credential_storage_documentation_url ); ?>"><?php esc_html_e( 'Learn how Booster manages credentials and keys', 'ran-booster' ); ?></a>

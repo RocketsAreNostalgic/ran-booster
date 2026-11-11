@@ -331,11 +331,18 @@ final class OnboardingViewTest extends TestCase {
 		self::assertStringContainsString( '<dd><code class="ran-booster-onboarding__storage-inline">Configured path</code></dd>', $healthy );
 		self::assertStringNotContainsString( 'Custom wp-config.php path', $healthy );
 		self::assertMatchesRegularExpression( '/<dt>Configuration constant<\/dt><dd>\s*<code class="ran-booster-onboarding__storage-inline">Not configured<\/code>\s*<\/dd>/', $healthy );
-		self::assertStringContainsString( 'WordPress stores the encryption key separately.', $healthy );
+		self::assertStringContainsString( 'the key is stored separately.', $healthy );
 		// The facts sit directly in the Card body, with no inner disclosure, followed by the links.
 		$healthy_xpath = $this->storage_xpath( $healthy );
 		self::assertSame( 1.0, $healthy_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details[not(@open)]/div[@data-ran-booster-ui-disclosure-content]/dl[@class="ran-booster-onboarding__storage-facts"])' ) );
-		self::assertSame( 1.0, $healthy_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/dl/following-sibling::p[contains(@class,"storage-facts-note")]/following-sibling::p[@class="ran-booster-onboarding__storage-documentation"])' ) );
+		self::assertSame( 1.0, $healthy_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/dl/following-sibling::p[@class="ran-booster-onboarding__storage-documentation"])' ) );
+		// The note is plain muted text inside the Storage file row, directly after the path field; it is not a Notice or a separate paragraph.
+		self::assertSame( 1.0, $healthy_xpath->evaluate( 'count(//dl[@class="ran-booster-onboarding__storage-facts"]/div[dt="Storage file"]/dd/span[contains(@class,"ran-booster-copy-value")]/following-sibling::p[@class="description ran-booster-onboarding__storage-facts-note" and .="Credentials are encrypted in this file; the key is stored separately."])' ) );
+		self::assertSame( 0.0, $healthy_xpath->evaluate( 'count(//dl/following-sibling::p[contains(@class,"storage-facts-note")])' ) );
+		self::assertSame( 0.0, $healthy_xpath->evaluate( 'count(//*[contains(@class,"storage-facts-note")][contains(@class,"notice")])' ) );
+		// Short facts sit inline with their label; the long paths stay stacked.
+		self::assertSame( 1.0, $healthy_xpath->evaluate( 'count(//dl/div[contains(@class,"storage-fact--inline")][dt="Configuration constant"])' ) );
+		self::assertSame( 0.0, $healthy_xpath->evaluate( 'count(//dl/div[contains(@class,"storage-fact--inline")][dt="Storage file" or dt="Storage directory"])' ) );
 		self::assertSame( 0.0, $healthy_xpath->evaluate( 'count(//details//details)' ) );
 		self::assertStringNotContainsString( 'Storage details', $healthy );
 		self::assertStringNotContainsString( 'ran-booster-onboarding__storage-details', $healthy );
@@ -357,7 +364,7 @@ final class OnboardingViewTest extends TestCase {
 		self::assertSame( 1.0, $broken_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details[@open]/div[@data-ran-booster-ui-disclosure-content]/dl[@class="ran-booster-onboarding__storage-facts"])' ) );
 		self::assertSame( 1.0, $broken_xpath->evaluate( 'count(//div[@id="ran-booster-storage"]/details/div[@data-ran-booster-ui-disclosure-content]/div[@data-ran-booster-ui-disclosure="settings-storage"]/details[@open and contains(@class,"storage-manual")])' ) );
 		self::assertStringNotContainsString( 'Storage details', $broken );
-		self::assertStringNotContainsString( 'WordPress stores the encryption key separately.', $broken );
+		self::assertStringNotContainsString( 'the key is stored separately.', $broken );
 		self::assertStringContainsString( 'Use a different storage location', $broken );
 		self::assertStringContainsString( 'RAN_BOOSTER_ENCRYPTED_SECRETS_DIR', $broken );
 		self::assertStringContainsString( 'dirname( __DIR__ ) . &#039;/private/ran-booster&#039;', $broken );

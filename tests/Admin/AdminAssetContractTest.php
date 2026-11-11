@@ -778,6 +778,28 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringContainsString( 'padding-block: 16px;', $this->asset( 'ran-booster/50-troubleshooting-and-activity.css' ) );
 	}
 
+	public function test_storage_facts_inline_short_rows_and_align_the_note_with_the_field_text(): void {
+		$css = $this->asset( 'ran-booster-onboarding.css' );
+		if ( 1 !== preg_match( '/__storage-fact--inline \{([^}]*)\}/', $css, $inline ) ) {
+			self::fail( 'The inline storage fact rule is missing.' );
+		}
+		self::assertStringContainsString( 'display: flex;', $inline[1] );
+		self::assertStringContainsString( 'align-items: baseline;', $inline[1] );
+		self::assertStringContainsString( 'gap: var(--ran-booster-space-12);', $inline[1] );
+		self::assertMatchesRegularExpression( '/__storage-fact--inline\s*> :is\(dt, dd\) \{\s*margin: 0;/', $css );
+		// The note's inset is the field's own padding plus border, from the same custom properties the field uses.
+		self::assertMatchesRegularExpression( '/--ran-booster-storage-field-inset: calc\(\s*var\(--ran-booster-storage-field-padding-inline\) \+\s*var\(--ran-booster-storage-field-border\)\s*\);/', $css );
+		self::assertMatchesRegularExpression( '/padding-inline: var\(\s*--ran-booster-storage-field-padding-inline,/', $css );
+		self::assertStringContainsString( 'border: var(--ran-booster-storage-field-border, 1px) solid', $css );
+		if ( 1 !== preg_match( '/__storage-facts-note \{([^}]*)\}/', $css, $note ) ) {
+			self::fail( 'The storage facts note rule is missing.' );
+		}
+		self::assertStringContainsString( 'margin-block: var(--ran-booster-space-6) 0;', $note[1] );
+		self::assertStringContainsString( 'margin-inline: var(--ran-booster-storage-field-inset) 0;', $note[1] );
+		// Only the path rows stay stacked, so the view marks the short rows rather than the long ones.
+		self::assertSame( 2, substr_count( $this->view( 'settings-storage.php' ), 'ran-booster-onboarding__storage-fact--inline' ) );
+	}
+
 	public function test_settings_cards_leave_no_orphaned_panel_card_or_storage_details_rules(): void {
 		$settings   = $this->asset( 'ran-booster/65-package-settings.css' );
 		$onboarding = $this->asset( 'ran-booster-onboarding.css' );

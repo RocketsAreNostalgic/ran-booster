@@ -500,8 +500,8 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: flex-start;
-	justify-content: flex-end;
-	gap: var(--ran-booster-space-8);
+	justify-content: flex-start;
+	gap: var(--ran-booster-space-12);
 	margin-block-start: var(--ran-booster-space-18);
 	padding-block-start: var(--ran-booster-space-18);
 	border-block-start: 1px solid var(--ran-booster-border);
@@ -617,14 +617,8 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: flex-start;
-	justify-content: flex-end;
-	gap: var(--ran-booster-space-8);
-}
-
-.ran-booster-admin
-	.ran-booster-package-settings__save-actions
-	button[type="submit"] {
-	flex: 1 1 auto;
+	justify-content: flex-start;
+	gap: var(--ran-booster-space-12);
 }
 
 .ran-booster-admin .ran-booster-package-summary {

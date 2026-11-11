@@ -1104,6 +1104,8 @@ final class AdminAssetContractTest extends TestCase {
 	public function test_page_and_card_action_groups_are_start_aligned(): void {
 		$groups = array(
 			'ran-booster-settings__card-footer',
+			'ran-booster-settings-actions',
+			'ran-booster-package-settings__save-actions',
 		);
 
 		$css         = '';
@@ -1136,6 +1138,12 @@ final class AdminAssetContractTest extends TestCase {
 				self::assertDoesNotMatchRegularExpression( '/(float:\s*(right|inline-end)|text-align:\s*(right|end)|margin-(left|inline-start):\s*auto)/', $rule[2], $group . ' must not push its actions to the end.' );
 			}
 			self::assertTrue( $declared_start, $group . ' must declare justify-content: flex-start.' );
+		}
+
+		// A Button keeps its label width in a desktop action group; only the stacked phone layout fills the width.
+		self::assertDoesNotMatchRegularExpression( '/package-settings__save-actions\s*button\[type="submit"\]\s*\{[^}]*flex:\s*1/', $css );
+		foreach ( array( 'ran-booster-settings-actions', 'ran-booster-package-settings__save-actions' ) as $group ) {
+			self::assertMatchesRegularExpression( '/\.' . preg_quote( $group, '/' ) . ' \{[^}]*gap: var\(--ran-booster-space-12\);/', $css, $group . ' separates actions by 12px.' );
 		}
 	}
 

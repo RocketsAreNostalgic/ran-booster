@@ -7639,8 +7639,8 @@ msgid "1. Secure credential storage"
 msgstr ""
 
 #: views/onboarding.php:166
-#: views/settings-storage.php:301
-#: views/settings-storage.php:304
+#: views/settings-storage.php:303
+#: views/settings-storage.php:306
 #: views/settings.php:30
 #: views/settings.php:33
 #: views/troubleshooting-installation.php:100
@@ -10605,19 +10605,19 @@ msgstr ""
 msgid "Copy storage file"
 msgstr ""
 
-#: views/settings-storage.php:287
+#: views/settings-storage.php:281
 msgid "The encrypted file and its separate database key are created when you save the first credential."
 msgstr ""
 
-#: views/settings-storage.php:289
-msgid "Credentials are encrypted in this file. WordPress stores the encryption key separately."
+#: views/settings-storage.php:285
+msgid "Credentials are encrypted in this file; the key is stored separately."
 msgstr ""
 
-#: views/settings-storage.php:294
+#: views/settings-storage.php:296
 msgid "Learn how Booster manages credentials and keys"
 msgstr ""
 
-#: views/settings-storage.php:295
+#: views/settings-storage.php:297
 msgid "Manual storage override"
 msgstr ""
 

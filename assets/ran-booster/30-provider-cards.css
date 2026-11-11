@@ -617,7 +617,7 @@
 }
 
 .ran-booster-admin .ran-booster-provider-management__header {
-	align-items: flex-start;
+	align-items: center;
 	justify-content: space-between;
 	gap: var(--ran-booster-space-20);
 	margin-block-end: var(--ran-booster-card-gap);

@@ -2037,6 +2037,32 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/h2\.ran-booster-package-heading \{/', $css );
 	}
 
+	public function test_provider_management_header_centres_its_action_on_the_heading_block(): void {
+		$primitives = $this->asset( 'ran-booster/25-admin-primitives.css' );
+		$provider   = $this->asset( 'ran-booster/30-provider-cards.css' );
+		$responsive = $this->asset( 'ran-booster/80-responsive.css' );
+
+		// The provider header centres its action on the title and description together.
+		if ( 1 !== preg_match( '/\.ran-booster-admin \.ran-booster-provider-management__header \{[^}]*\}/', $provider, $header ) ) {
+			self::fail( 'The provider management header rule is missing.' );
+		}
+		self::assertStringContainsString( 'align-items: center;', $header[0] );
+		self::assertStringNotContainsString( 'align-items: flex-start;', $header[0] );
+		self::assertStringContainsString( 'justify-content: space-between;', $header[0] );
+		self::assertStringContainsString( 'margin-block-end: var(--ran-booster-card-gap);', $header[0] );
+
+		// The wrap at 1100px stays; the stacked layout at 782px start-aligns the action.
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 1100px\) \{\s+\.ran-booster-admin \.ran-booster-provider-management__header \{\s+flex-wrap: wrap;/', $responsive );
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 782px\) \{[\s\S]+?\.ran-booster-provider-management__header,[\s\S]+?\{\s+align-items: stretch;\s+flex-direction: column;/', $responsive );
+		self::assertMatchesRegularExpression( '/:is\([^)]*\.ran-booster-provider-management__header[^)]*\) \{\s+align-items: flex-start;\s+\}/', $responsive );
+
+		// The centring is scoped to the provider header; the shared action row is unchanged.
+		if ( 1 !== preg_match( '/\.ran-booster-admin \.ran-booster-action-row \{[^}]*\}/', $primitives, $action_row ) ) {
+			self::fail( 'The shared action row rule is missing.' );
+		}
+		self::assertMatchesRegularExpression( '/display: flex;\s+align-items: center;\s+flex-wrap: wrap;\s+gap: var\(--ran-booster-space-8\);/', $action_row[0] );
+	}
+
 	public function test_managed_package_table_controls_desktop_widths_and_allows_package_identity_to_wrap(): void {
 		$css         = $this->asset( 'ran-booster.css' );
 		$package_css = $this->asset( 'ran-booster/60-packages.css' );

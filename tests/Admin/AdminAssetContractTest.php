@@ -1177,6 +1177,25 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertMatchesRegularExpression( '/\.ran-booster-admin \.ran-booster-card__content \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-space-24\);/', $css );
 	}
 
+	public function test_install_package_operation_card_uses_the_footer_band_and_one_updates_field_rhythm(): void {
+		$css = $this->asset( 'ran-booster/65-package-settings.css' );
+
+		// The body takes the inset the band bleeds through and is footed only while the band is not hidden.
+		self::assertMatchesRegularExpression( '/\.ran-booster-package-operation-settings\s*\.ran-booster-settings-section__body \{\s*--ran-booster-card-inset-inline: var\(--ran-booster-space-24\);/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings-section__body\.ran-booster-settings-section__body--footed:not\(\s*:has\(> \[data-ran-booster-branch-install-actions\]\[hidden\]\)\s*\) \{\s*padding-block-end: 0;/', $css );
+		self::assertMatchesRegularExpression( '/\[data-ran-booster-branch-install-actions\]\s*\.ran-booster-card-footer\.ran-booster-package-install-actions \{\s*margin-block-start: var\(--ran-booster-card-gap\);/', $css );
+		self::assertMatchesRegularExpression( '/@media screen and \(max-width: 480px\) \{.*?--ran-booster-card-inset-inline: var\(--ran-booster-space-16\);/s', $css );
+		self::assertMatchesRegularExpression( '/max-width: 782px\) \{.*?\.ran-booster-card-footer\.ran-booster-package-install-actions,[^{]*\{\s*align-items: stretch;\s*flex-direction: column;/s', $css );
+		// The old zeroed divider inside the wrapper is gone.
+		self::assertDoesNotMatchRegularExpression( '/\[data-ran-booster-branch-install-actions\]\s*\.ran-booster-settings-actions/', $css );
+
+		// One shared rhythm for the Updates field on Install and Edit: label, 4px hint, 12px notice; 16px to and from the divider.
+		self::assertMatchesRegularExpression( '/\.ran-booster-deployment-policy-field--operation \{\s*display: grid;\s*gap: var\(--ran-booster-space-12\);/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-deployment-policy-group > \.description \{\s*margin-block: var\(--ran-booster-space-4\) 0;/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-deployment-policy-field--operation > \.notice \{\s*margin: 0;/', $css );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings-section\s*\.ran-booster-package-link-choice \{\s*margin-block-start: var\(--ran-booster-space-16\);\s*padding-block-start: var\(--ran-booster-space-16\);\s*border-block-start: 1px solid var\(--ran-booster-border\);/', $css );
+	}
+
 	public function test_transporter_tables_are_shared_collection_frames_with_one_pixel_dividers(): void {
 		$onboarding = $this->asset( 'ran-booster-onboarding.css' );
 		$responsive = $this->asset( 'ran-booster/80-responsive.css' );

@@ -167,10 +167,29 @@ function fixture(repositoryValue = '') {
 			return installButtons;
 		},
 	};
+	const policyHints = [
+		{
+			hidden: false,
+			getAttribute() {
+				return 'branch';
+			},
+		},
+		{
+			hidden: true,
+			getAttribute() {
+				return 'release_asset';
+			},
+		},
+	];
 	const form = {
 		dataset: {},
 		getAttribute() {
 			return '1';
+		},
+		querySelectorAll(selector) {
+			return selector === '[data-ran-booster-policy-source]'
+				? policyHints
+				: [];
 		},
 		querySelector(selector) {
 			return {
@@ -206,6 +225,7 @@ function fixture(repositoryValue = '') {
 		branchPane,
 		guidance,
 		installButtons,
+		policyHints,
 		release,
 		releasePane,
 		repository,
@@ -256,6 +276,17 @@ test('package source choices reveal their matching panels', () => {
 		assert.equal(state.branchPane.hidden, true);
 		assert.equal(state.releasePane.hidden, false);
 		assert.equal(state.installActions.hidden, true);
+		assert.deepEqual(
+			state.policyHints.map((hint) => hint.hidden),
+			[true, false]
+		);
+		state.branch.tab.click();
+		assert.deepEqual(
+			state.policyHints.map((hint) => hint.hidden),
+			[false, true]
+		);
+		assert.equal(state.installActions.hidden, false);
+		state.release.tab.click();
 		assert.equal(
 			state.sourceEvents.at(-1).type,
 			'ran-booster:package-source-changed'

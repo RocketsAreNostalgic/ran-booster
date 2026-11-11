@@ -19,6 +19,7 @@ $package_field_form               = isset( $package_field_form ) && is_string( $
 	? $package_field_form
 	: '';
 $operation_layout                 = ! empty( $package_operation_layout );
+$policy_source_toggle             = ! empty( $package_policy_source_toggle );
 $operation_actions_html           = isset( $package_operation_actions_html ) && is_string( $package_operation_actions_html )
 	? $package_operation_actions_html
 	: '';
@@ -58,17 +59,18 @@ $render_policy_select = static function () use ( $deployment_policy, $automatic_
 	<?php
 };
 
-$render_policy_description = static function () use ( $operation_layout, $branch_policy_description, $release_automation, $provider_webhook_available, $show_development_safety_notice, $push_to_deploy_documentation_url, $push_to_deploy_provider_url ): void {
+$render_policy_description = static function () use ( $operation_layout, $policy_source_toggle, $branch_policy_description, $release_automation, $provider_webhook_available, $show_development_safety_notice, $push_to_deploy_documentation_url, $push_to_deploy_provider_url ): void {
+	$source_attribute = $policy_source_toggle ? ' data-ran-booster-policy-source="branch"' : '';
 	if ( $release_automation ) {
 		?>
 			<p class="description"><?php esc_html_e( 'Manual waits for an administrator. Automatic installs validated releases.', 'ran-booster' ); ?></p>
 		<?php } elseif ( ! $provider_webhook_available ) { ?>
-			<p class="description">
+			<p class="description"<?php echo $source_attribute; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static attribute. ?>>
 				<?php esc_html_e( 'Automatic deployment is unavailable because this Git provider does not support signed webhooks.', 'ran-booster' ); ?>
 				<a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Read the Push-to-Deploy guide.', 'ran-booster' ); ?></a>
 			</p>
 		<?php } elseif ( $operation_layout ) { ?>
-			<p class="description">
+			<p class="description"<?php echo $source_attribute; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static attribute. ?>>
 				<?php echo esc_html( $branch_policy_description ); ?>
 				<?php if ( ! $show_development_safety_notice ) { ?>
 					<br/><a href="<?php echo esc_url( $push_to_deploy_provider_url ); ?>"><?php esc_html_e( 'Push-to-Deploy setting', 'ran-booster' ); ?></a> | <a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Docs', 'ran-booster' ); ?></a>
@@ -78,6 +80,11 @@ $render_policy_description = static function () use ( $operation_layout, $branch
 			<p class="description"><a href="<?php echo esc_url( $push_to_deploy_provider_url ); ?>"><?php esc_html_e( 'Push-to-Deploy setting', 'ran-booster' ); ?></a> | <a href="<?php echo esc_url( $push_to_deploy_documentation_url ); ?>"><?php esc_html_e( 'Docs', 'ran-booster' ); ?></a></p>
 			<?php
 		}
+	if ( $policy_source_toggle ) {
+		?>
+			<p class="description" data-ran-booster-policy-source="release_asset" hidden><?php esc_html_e( 'Manual waits for an administrator. Automatic installs validated releases.', 'ran-booster' ); ?></p>
+		<?php
+	}
 };
 ?>
 <?php if ( $operation_layout ) { ?>

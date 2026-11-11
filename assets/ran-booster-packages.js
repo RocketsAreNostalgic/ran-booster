@@ -277,6 +277,19 @@
 					if (branchActions) {
 						branchActions.hidden = source !== 'branch';
 					}
+					if (typeof form?.querySelectorAll === 'function') {
+						form.querySelectorAll(
+							'[data-ran-booster-policy-source]'
+						).forEach(function (hint) {
+							hint.hidden =
+								hint.getAttribute(
+									'data-ran-booster-policy-source'
+								) !==
+								(source === 'branch'
+									? 'branch'
+									: 'release_asset');
+						});
+					}
 					if (
 						typeof sourceControls.dispatchEvent === 'function' &&
 						typeof window !== 'undefined' &&

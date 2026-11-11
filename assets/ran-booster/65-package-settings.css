@@ -383,8 +383,8 @@
 .ran-booster-admin
 	.ran-booster-settings-section
 	.ran-booster-package-link-choice {
-	margin-block-start: var(--ran-booster-space-18);
-	padding-block-start: var(--ran-booster-space-18);
+	margin-block-start: var(--ran-booster-space-16);
+	padding-block-start: var(--ran-booster-space-16);
 	border-block-start: 1px solid var(--ran-booster-border);
 }
 
@@ -405,12 +405,25 @@
 	margin-block-start: 0;
 }
 
+/*
+ * The install actions are the Package operation Card's footer band. The body
+ * takes the Card inset the band bleeds through and drops its bottom padding
+ * only while the band is visible; with a non-Branch source the wrapper is
+ * hidden and the body keeps its normal bottom padding, so no gap or second
+ * divider remains.
+ */
+.ran-booster-admin
+	.ran-booster-package-operation-settings
+	.ran-booster-settings-section__body.ran-booster-settings-section__body--footed:not(
+		:has(> [data-ran-booster-branch-install-actions][hidden])
+	) {
+	padding-block-end: 0;
+}
+
 .ran-booster-admin
 	[data-ran-booster-branch-install-actions]
-	.ran-booster-settings-actions {
-	margin-block-start: var(--ran-booster-space-16);
-	padding-block-start: 0;
-	border-block-start: 0;
+	.ran-booster-card-footer.ran-booster-package-install-actions {
+	margin-block-start: var(--ran-booster-card-gap);
 }
 
 .ran-booster-admin .ran-booster-release-track-section {
@@ -515,6 +528,8 @@
 .ran-booster-admin
 	.ran-booster-package-operation-settings
 	.ran-booster-settings-section__body {
+	--ran-booster-card-inset-inline: var(--ran-booster-space-24);
+
 	container-type: inline-size;
 }
 
@@ -571,6 +586,12 @@
 			.ran-booster-settings-section__body
 		) {
 		padding-inline: var(--ran-booster-space-16);
+	}
+
+	.ran-booster-admin
+		.ran-booster-package-operation-settings
+		.ran-booster-settings-section__body {
+		--ran-booster-card-inset-inline: var(--ran-booster-space-16);
 	}
 }
 
@@ -968,6 +989,7 @@
 	.ran-booster-admin
 		:is(
 			.ran-booster-settings-actions,
+			.ran-booster-card-footer.ran-booster-package-install-actions,
 			.ran-booster-package-settings__save-actions
 		) {
 		align-items: stretch;

@@ -151,10 +151,16 @@ $managed_package_url        = '' === $managed_package_identifier
 				<header class="ran-booster-settings-section__header">
 					<h3 id="ran-booster-package-operation-heading" class="ran-booster-section__title"><?php esc_html_e( 'Package operation', 'ran-booster' ); ?></h3>
 				</header>
-				<div class="ran-booster-settings-section__body">
+				<div class="ran-booster-settings-section__body ran-booster-settings-section__body--footed">
 					<fieldset <?php disabled( ! $package_mutation_available ); ?>>
 						<div class="ran-booster-settings-fields">
-							<?php require __DIR__ . '/fields/deployment-policy.php'; ?>
+							<?php
+							// The Updates field uses the same layout as the Edit Package operation card; the hint follows the active source.
+							$package_operation_layout     = true;
+							$package_policy_source_toggle = true;
+							require __DIR__ . '/fields/deployment-policy.php';
+							unset( $package_operation_layout, $package_policy_source_toggle );
+							?>
 						</div>
 					</fieldset>
 					<div data-ran-booster-branch-install-actions>
@@ -169,7 +175,8 @@ $managed_package_url        = '' === $managed_package_identifier
 								</div>
 							</div>
 						</fieldset>
-						<div class="ran-booster-settings-actions" role="group" aria-label="<?php esc_attr_e( 'Installation actions', 'ran-booster' ); ?>">
+						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
+						<div class="ran-booster-card-footer ran-booster-package-install-actions" role="group" aria-label="<?php esc_attr_e( 'Installation actions', 'ran-booster' ); ?>">
 							<?php if ( '' !== $managed_package_url ) { ?>
 								<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary( false, true ) ); ?>" aria-describedby="ran-booster-link-installed-help" href="<?php echo esc_url( $managed_package_url ); ?>"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage %s', 'ran-booster' ), $package_view->get_type() ) ); ?></a>
 								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing. This can take a few seconds.', 'ran-booster' ) ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Install another %s', 'ran-booster' ), $package_view->get_type() ) ); ?></button>
@@ -178,7 +185,6 @@ $managed_package_url        = '' === $managed_package_identifier
 								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary() ); ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Installing…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Installing and preparing another. This can take a few seconds.', 'ran-booster' ) ); ?>" name="ran_booster[install_another]" value="1" <?php disabled( ! $package_mutation_available ); ?>><?php esc_html_e( 'Install and add another', 'ran-booster' ); ?></button>
 							<?php } ?>
 						</div>
-						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 					</div>
 				</div>
 			</section>

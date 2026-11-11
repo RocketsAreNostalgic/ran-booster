@@ -405,6 +405,74 @@ final class RepeatPackageViewTest extends TestCase {
 
 	#[DataProvider( 'create_view_matrix' )]
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The included production view reads these parameters as local template variables.
+	public function test_create_view_installation_actions_are_the_card_footer_band(
+		PackagePagePresenter $package_view,
+		bool $explicit_provider,
+		bool $open_repository_picker
+	): void {
+		$package_provider_settings = $this->provider_settings( true );
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+		$html = (string) ob_get_clean();
+		$form = $this->form_by_id( $html, 'ran-booster-package-create-form' );
+
+		// The body carries the footed modifier and the band is the last visible child of the Card body.
+		self::assertStringContainsString( '<div class="ran-booster-settings-section__body ran-booster-settings-section__body--footed">', $form );
+		if ( 1 !== preg_match( '/<div class="ran-booster-card-footer ran-booster-package-install-actions" role="group" aria-label="Installation actions">(.*?)<\/div>\s*<\/div>\s*<\/div>\s*<\/section>\s*<\/form>/s', $form, $band ) ) {
+			self::fail( 'The installation actions must be the last child of the Package operation body.' );
+		}
+		self::assertStringNotContainsString( 'ran-booster-settings-actions', $form );
+		self::assertSame( 2, substr_count( $band[1], '<button type="submit"' ) );
+		$primary   = strpos( $band[1], 'Install ' . $package_view->get_type() . '</button>' );
+		$secondary = strpos( $band[1], 'Install and add another</button>' );
+		self::assertIsInt( $primary );
+		self::assertIsInt( $secondary );
+		self::assertLessThan( $secondary, $primary, 'The primary action comes first.' );
+		self::assertStringContainsString( 'data-ran-booster-busy-label="Installing…"', $band[1] );
+		self::assertStringContainsString( 'name="ran_booster[install_another]" value="1"', $band[1] );
+
+		// The wrapper that JS hides contains the band and the status element, inside the form.
+		$wrapper = strpos( $form, 'data-ran-booster-branch-install-actions' );
+		$status  = strpos( $form, 'data-ran-booster-submit-busy-status' );
+		$footer  = strpos( $form, 'ran-booster-card-footer ran-booster-package-install-actions' );
+		self::assertIsInt( $wrapper );
+		self::assertIsInt( $status );
+		self::assertIsInt( $footer );
+		self::assertTrue( $wrapper < $status && $status < $footer, 'The busy status precedes the band inside the hidden-state wrapper.' );
+	}
+
+	#[DataProvider( 'create_view_matrix' )]
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The included production view reads these parameters as local template variables.
+	public function test_create_view_updates_hint_sits_between_the_select_and_the_notice_and_follows_the_source(
+		PackagePagePresenter $package_view,
+		bool $explicit_provider,
+		bool $open_repository_picker
+	): void {
+		$package_provider_settings        = $this->provider_settings( true );
+		$development_environment_detected = true;
+
+		ob_start();
+		require dirname( __DIR__, 2 ) . '/views/packages/create.php';
+		$html = (string) ob_get_clean();
+
+		$select  = strpos( $html, 'name="ran_booster[deployment_policy]"' );
+		$branch  = strpos( $html, 'data-ran-booster-policy-source="branch"' );
+		$notice  = strpos( $html, 'data-ran-booster-local-development-warning' );
+		$release = strpos( $html, 'data-ran-booster-policy-source="release_asset" hidden' );
+		self::assertIsInt( $select );
+		self::assertIsInt( $branch );
+		self::assertIsInt( $notice );
+		self::assertIsInt( $release );
+		self::assertTrue( $select < $branch && $branch < $release && $release < $notice, 'Select, hint, then notice.' );
+		self::assertStringContainsString( 'ran-booster-deployment-policy-field--operation', $html );
+		self::assertSame( 1, substr_count( $html, 'Manual waits for an administrator. Automatic deploys on push.' ) );
+		self::assertSame( 1, substr_count( $html, 'Manual waits for an administrator. Automatic installs validated releases.' ) );
+		self::assertDoesNotMatchRegularExpression( '/data-ran-booster-policy-source="branch"[^>]*hidden/', $html );
+	}
+
+	#[DataProvider( 'create_view_matrix' )]
+	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundInExtendedClassAfterLastUsed -- The included production view reads these parameters as local template variables.
 	public function test_create_view_does_not_trigger_warnings_when_promoted_to_exceptions(
 		PackagePagePresenter $package_view,
 		bool $explicit_provider,

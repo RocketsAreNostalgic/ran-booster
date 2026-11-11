@@ -83,6 +83,18 @@ function install({ runtime = true, failRender = false, tabs = true } = {}) {
 		get children() {
 			return this.childNodes.filter((node) => node.nodeType === 1);
 		}
+		matches(selector) {
+			return selector.split(',').some((part) => {
+				const token = part.trim();
+				if (token.startsWith('[')) {
+					return this.attributes.has(token.slice(1, -1));
+				}
+				if (token.startsWith('.')) {
+					return this.className.split(' ').includes(token.slice(1));
+				}
+				return this.name === token;
+			});
+		}
 		closest(selector) {
 			const names = selector
 				.match(/\[([^\]]+)\]/g)
@@ -667,6 +679,9 @@ test('the dialog is modal: aria-modal on the popup and everything else inert unt
 	const skip = new page.trigger.constructor('a');
 	page.doc.body.childNodes.unshift(skip);
 	skip.parentNode = page.doc.body;
+	const live = new page.trigger.constructor('div');
+	live.className = 'a11y-speak-region';
+	page.doc.body.append(live);
 	const preset = new page.trigger.constructor('div');
 	preset.setAttribute('inert', '');
 	page.doc.body.append(preset);
@@ -679,6 +694,11 @@ test('the dialog is modal: aria-modal on the popup and everything else inert unt
 		'skip link outside the wrapper'
 	);
 	assert.equal(page.trigger.hasAttribute('inert'), true);
+	assert.equal(
+		live.hasAttribute('inert'),
+		false,
+		'live regions stay announceable'
+	);
 	const portal = page.portals()[0];
 	assert.equal(portal.hasAttribute('inert'), false);
 

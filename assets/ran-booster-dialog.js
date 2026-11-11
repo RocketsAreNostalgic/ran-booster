@@ -118,12 +118,16 @@
 		const root = createRoot(host);
 		// Everything else on the page is inert while the dialog is open,
 		// including skip links and other siblings of the admin wrapper that
-		// the library does not cover. Only nodes made inert here are restored.
+		// the library does not cover. Live regions stay announceable, and only
+		// nodes made inert here are restored.
 		const inerted = Array.from(doc.body.children).filter(function (node) {
 			if (
 				node === host ||
 				node === portal ||
-				node.hasAttribute('inert')
+				node.hasAttribute('inert') ||
+				node.matches(
+					'script, style, template, link, [aria-live], .a11y-speak-region, .a11y-speak-intro-text'
+				)
 			) {
 				return false;
 			}

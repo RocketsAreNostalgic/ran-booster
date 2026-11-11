@@ -279,8 +279,8 @@ test('the release track form reuses the shared busy helper through data attribut
 		'The managed track form opts in.'
 	);
 	assert.ok(trackView.includes("__( 'Switching…', 'ran-booster' )"));
-	assert.ok(trackView.includes('data-ran-booster-busy-label="<?php'));
-	assert.ok(trackView.includes('data-ran-booster-busy-message="<?php'));
+	assert.match(trackView, /data-ran-booster-busy-label="<\?php/);
+	assert.match(trackView, /data-ran-booster-busy-message="<\?php/);
 	assert.match(trackView, /data-ran-booster-submit-busy-status><\/span>/);
 });
 

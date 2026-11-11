@@ -1058,7 +1058,9 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertStringNotContainsString( 'settings-card', $primitives );
 		// Body inset and the Card gap.
 		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card \{[^}]*margin-block: 0 var\(--ran-booster-card-gap\);/', $settings );
-		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body\.ran-booster-disclosure__body \{\s*padding: var\(--ran-booster-space-16\) var\(--ran-booster-settings-card-inset\);/', $settings );
+		// An open body keeps 16px above its content, the shared 32px Card block-end inset below it and 24px at the sides.
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body\.ran-booster-disclosure__body \{\s*padding-block: var\(--ran-booster-space-16\)\s*var\(--ran-booster-card-inset-block-end\);\s*padding-inline: var\(--ran-booster-settings-card-inset\);/', $settings );
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings__card-body:not\(\s*\.ran-booster-settings__card-body--footed\s*\)\s*> :last-child\s*\.ran-booster-settings__group:last-of-type \{\s*margin-block-end: 0;/', $settings );
 		// Footer: full-width band, 1px divider above, 16px 24px padding, action at the end; it bleeds through the body inset
 		// and the footed body drops its bottom padding so the band meets the Card edge.
 		if ( 1 !== preg_match( '/\.ran-booster-settings__save-actions\.ran-booster-settings__card-footer \{([^}]*)\}/', $settings, $footer ) ) {

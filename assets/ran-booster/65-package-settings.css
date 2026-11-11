@@ -1033,7 +1033,8 @@
  * Settings Cards are collapsible Disclosure Cards (see settings-card.php). The
  * header, the body and the footer band share one inline inset, so the title,
  * the content, the badge and chevron and the footer action line up. Block
- * padding is untouched: the header keeps its 16px (see the Installation rule).
+ * padding: the header keeps its 16px (see the Installation rule) and an open
+ * body ends on the shared Card block-end inset.
  * The Installation Cards keep their own 16px header padding.
  */
 .ran-booster-admin .ran-booster-settings__card {
@@ -1060,7 +1061,23 @@
 
 .ran-booster-admin
 	.ran-booster-settings__card-body.ran-booster-disclosure__body {
-	padding: var(--ran-booster-space-16) var(--ran-booster-settings-card-inset);
+	padding-block: var(--ran-booster-space-16)
+		var(--ran-booster-card-inset-block-end);
+	padding-inline: var(--ran-booster-settings-card-inset);
+}
+
+/*
+ * An open Card's bottom inset is the shared Card block-end inset. The last
+ * group's own bottom margin would stack on it, so it goes; the footed body
+ * ends in its footer band instead.
+ */
+.ran-booster-admin
+	.ran-booster-settings__card-body:not(
+		.ran-booster-settings__card-body--footed
+	)
+	> :last-child
+	.ran-booster-settings__group:last-of-type {
+	margin-block-end: 0;
 }
 
 /*

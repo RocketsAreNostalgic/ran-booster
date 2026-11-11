@@ -528,7 +528,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 							<span class="screen-reader-text" aria-live="polite" data-ran-booster-update-message></span>
 						</form>
 					<?php } ?>
-					<a href="<?php echo esc_url( $edit_url ); ?>" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>"><?php esc_html_e( 'Edit settings', 'ran-booster' ); ?></a>
+					<a href="<?php echo esc_url( $edit_url ); ?>" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) ); ?>"><?php esc_html_e( 'Edit settings', 'ran-booster' ); ?><span class="screen-reader-text">: <?php echo esc_html( $package->name ); ?></span></a>
 					<?php if ( ! $release_managed ) { ?>
 						<?php $extension_action_renderer->render( $package_actions ); ?>
 					<?php } ?>
@@ -578,7 +578,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 										)
 									);
 									?>
-												"><?php esc_html_e( 'View activity', 'ran-booster' ); ?></a>
+												"><?php esc_html_e( 'View activity', 'ran-booster' ); ?><span class="screen-reader-text">: <?php echo esc_html( $package->name ); ?></span></a>
 								</dd>
 							</div>
 							<?php if ( null !== $observed_check && ( $observed_check['id'] ?? null ) !== ( $latest_check['id'] ?? null ) ) { ?>

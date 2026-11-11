@@ -161,6 +161,48 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 	}
 
+	public function test_list_row_links_have_a_unique_accessible_name_per_package(): void {
+		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
+			$first        = $this->package( $package_view );
+			$first->name  = 'First <b>package</b>';
+			$second       = new RepeatPackageViewPackage( 'plugin' === $package_view->get_type() ? 'other/other.php' : 'other-theme' );
+			$second->name = 'Second package';
+			$second->set_repository( new ManagedRepository( 'gh', 'owner/other', 'provider-other', 'main' ) );
+			$packages         = array( $first, $second );
+			$package_activity = array( 'items' => array() );
+			foreach ( $packages as $package ) {
+				$package_activity['items'][ (string) $package->get_identifier() ] = array(
+					'check' => array(
+						'available'   => true,
+						'latest'      => null,
+						'observation' => null,
+					),
+				);
+			}
+			$package_providers   = array();
+			$package_return_args = array( 'return_type' => $package_view->get_type() );
+			$messages            = array();
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			$html = (string) ob_get_clean();
+
+			foreach ( array( 'Edit settings', 'View activity' ) as $visible ) {
+				$count = preg_match_all( '/<a\b[^>]*>\s*' . preg_quote( $visible, '/' ) . '<span class="screen-reader-text">(.*?)<\/span>\s*<\/a>/s', $html, $matches );
+				if ( 2 !== $count ) {
+					self::fail( $visible . ' links should each carry a package name; found ' . (string) $count . '.' );
+				}
+				$names = array();
+				foreach ( $matches[1] as $suffix ) {
+					$names[] = $visible . html_entity_decode( $suffix, ENT_QUOTES );
+				}
+				self::assertCount( 2, array_unique( $names ), $visible . ' names repeat across rows.' );
+				self::assertContains( $visible . ': Second package', $names );
+				self::assertContains( $visible . ': First <b>package</b>', $names );
+			}
+			self::assertStringNotContainsString( 'First <b>', $html );
+		}
+	}
+
 	private function assert_xpath_count( int $expected, \DOMXPath $xpath, string $expression ): void {
 		$nodes = $xpath->query( $expression );
 		self::assertNotFalse( $nodes );

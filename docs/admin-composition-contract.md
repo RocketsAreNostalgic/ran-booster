@@ -588,8 +588,10 @@ they apply to, and keeps Save and Apply in one predictable place.
    flush with the Card's bottom edge. The primary action comes first, then the
    secondary actions, 12px apart.
 2. A heading-row action sits at the end of the heading row, vertically centred
-   with the title and aligned to the content column's end edge. At 782px and
-   below it stacks under the title, start-aligned.
+   on the heading block (title and description together) and aligned to the
+   content column's end edge. Where the row holds only a title, as on Managed
+   Plugins and Themes, the block is the title row. At 782px and below it stacks
+   under the title, start-aligned.
 3. Dialog and modal footers keep end-aligned actions, as the WordPress Modal and
    platform dialogs do. This is the only end-aligned page-level exception.
 4. Table row actions stay in the table's Actions column at the end of the row.

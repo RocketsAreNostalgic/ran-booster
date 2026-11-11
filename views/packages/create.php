@@ -163,7 +163,7 @@ $managed_package_url        = '' === $managed_package_identifier
 								<div class="ran-booster-settings-field ran-booster-settings-field--wide">
 									<label>
 										<input type="checkbox" name="ran_booster[dry-run]" aria-describedby="ran-booster-link-installed-help" <?php /* phpcs:ignore WordPress.Security.NonceVerification.Missing -- Read-only form repopulation; output is escaped in the field and the action handler owns nonce verification. */ checked( '' !== $recovery_identifier || isset( $_POST['ran_booster']['dry-run'] ) ); ?>>
-										<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Link installed %s', 'ran-booster' ), $package_view->get_type() ) ); ?>
+										<?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Link an already installed %s', 'ran-booster' ), $package_view->get_type() ) ); ?>
 									</label>
 									<p class="description" id="ran-booster-link-installed-help"><?php echo esc_html( sprintf( /* translators: %s is plugin or theme. */ __( 'Manage an installed %s without deploying it; its folder name must match the repository.', 'ran-booster' ), $package_view->get_type() ) ); ?></p>
 								</div>

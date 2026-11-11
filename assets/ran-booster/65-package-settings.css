@@ -381,13 +381,6 @@
 .ran-booster-admin
 	.ran-booster-package-link-choice
 	.ran-booster-settings-field
-	> label {
-	font-weight: 400;
-}
-
-.ran-booster-admin
-	.ran-booster-package-link-choice
-	.ran-booster-settings-field
 	.description {
 	margin-inline-start: var(--ran-booster-space-24);
 	font-size: var(--ran-booster-font-size-md);

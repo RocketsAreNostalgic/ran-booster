@@ -211,6 +211,13 @@ final class AdminAssetContractTest extends TestCase {
 		self::assertDoesNotMatchRegularExpression( '/\.ran-booster-readiness-actions,[\s\S]*?\)\s*> a,/', $css );
 	}
 
+	public function test_link_choice_label_keeps_the_field_label_weight(): void {
+		$css = $this->asset( 'ran-booster.css' );
+
+		self::assertMatchesRegularExpression( '/\.ran-booster-settings-field\s*> label \{[^}]*font-weight: 600;/', $css );
+		self::assertDoesNotMatchRegularExpression( '/ran-booster-package-link-choice\s+\.ran-booster-settings-field\s*> label/', $css, 'The link choice label inherits the bold field label weight.' );
+	}
+
 	public function test_standalone_text_links_keep_a_24px_target(): void {
 		$css = $this->asset( 'ran-booster.css' );
 

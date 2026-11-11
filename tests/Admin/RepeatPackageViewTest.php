@@ -308,6 +308,8 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertMatchesRegularExpression( '/<fieldset class="ran-booster-package-link-choice"/', $html );
 		self::assertMatchesRegularExpression( '/name="ran_booster\[dry-run\]" aria-describedby="ran-booster-link-installed-help"/', $html );
 		self::assertStringContainsString( 'id="ran-booster-link-installed-help"', $html );
+		self::assertStringContainsString( 'Link an already installed ' . $package_view->get_type(), $html );
+		self::assertStringNotContainsString( 'Link installed ' . $package_view->get_type(), $html );
 		self::assertStringNotContainsString( 'ran-booster-link-installed-folder-help', $html );
 		self::assertStringContainsString( 'without deploying it; its folder name must match the repository.', $html );
 		self::assertStringNotContainsString( 'Let Booster manage an already installed', $html );

@@ -495,7 +495,7 @@ final class PortabilityViewTest extends TestCase {
 		$empty = $this->render_view( array(), array() );
 		self::assertMatchesRegularExpression( '/<strong>0<\/strong> packages/', $empty );
 		self::assertStringContainsString( '<span data-portability-export-selected-count>0 selected</span>', $empty );
-		self::assertStringContainsString( 'data-portability-export-select-all aria-label="Select all managed packages" disabled="disabled"', $empty );
+		self::assertStringContainsString( 'data-portability-export-select-all disabled="disabled"', $empty );
 	}
 
 	public function test_export_shows_empty_and_unavailable_states_without_an_enabled_download(): void {

@@ -247,7 +247,7 @@ $render_portability_extension      = static function ( string $hook, string $ste
 						<span aria-hidden="true">&middot;</span>
 						<span data-portability-export-selected-count><?php echo esc_html( sprintf( /* translators: %d: number of selected items. */ __( '%d selected', 'ran-booster' ), $portability_export_package_count ) ); ?></span>
 					</p>
-					<label class="ran-booster-portability__toolbar-select"><input type="checkbox" data-portability-export-select-all aria-label="<?php esc_attr_e( 'Select all managed packages', 'ran-booster' ); ?>"<?php checked( array() !== $portability_export_rows ); ?><?php disabled( array() === $portability_export_rows ); ?>> <?php esc_html_e( 'Select all packages', 'ran-booster' ); ?></label>
+					<label class="ran-booster-portability__toolbar-select"><input type="checkbox" data-portability-export-select-all<?php checked( array() !== $portability_export_rows ); ?><?php disabled( array() === $portability_export_rows ); ?>> <?php esc_html_e( 'Select all packages', 'ran-booster' ); ?></label>
 				</div>
 				<div class="ran-booster-data-table-wrap" role="region" aria-label="<?php esc_attr_e( 'Package list', 'ran-booster' ); ?>" tabindex="0">
 				<table class="ran-booster-data-table ran-booster-portability__table ran-booster-portability__export-table">

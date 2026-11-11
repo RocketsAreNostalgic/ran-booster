@@ -89,7 +89,11 @@ final class ReleaseManagementDisplay {
 		$automatic_policy          = $status_available && 'automatic' === $status->deployment_policy();
 		$recheck_enabled           = $status_available && 'branch' === $source && null === $track_nonce_action;
 		$refresh_enabled           = null !== $refresh_nonce_action && ! $repository_blocked;
-		$updates_enabled           = $status_available && ! $subdirectory_incompatible && ! $repository_blocked;
+		$recheck_reason            = ! $status_available
+			? __( 'Available once release status is available.', 'ran-booster' )
+			: ( 'branch' === $source
+				? __( 'This package is already eligible for releases.', 'ran-booster' )
+				: __( 'Not needed while releases are tracked.', 'ran-booster' ) );
 		$browser_enabled           = $status_available
 			&& 'release_asset' === $source
 			&& $eligibility->eligible()
@@ -225,7 +229,14 @@ final class ReleaseManagementDisplay {
 								<input type="hidden" name="<?php echo esc_attr( (string) $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
 							<?php } ?>
 						<?php } ?>
-						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"<?php disabled( ! $recheck_enabled ); ?> aria-disabled="<?php echo $recheck_enabled ? 'false' : 'true'; ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Rechecking…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Rechecking eligibility. This can take a few seconds.', 'ran-booster' ) ); ?>"><?php esc_html_e( 'Recheck eligibility', 'ran-booster' ); ?></button>
+						<?php if ( $recheck_enabled ) { ?>
+							<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" aria-disabled="false" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Rechecking…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Rechecking eligibility. This can take a few seconds.', 'ran-booster' ) ); ?>"><?php esc_html_e( 'Recheck eligibility', 'ran-booster' ); ?></button>
+						<?php } else { ?>
+							<span class="ran-booster-reason-tooltip" data-ran-booster-reason-tooltip>
+								<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>" aria-disabled="true" aria-describedby="ran-booster-release-recheck-reason" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Rechecking…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Rechecking eligibility. This can take a few seconds.', 'ran-booster' ) ); ?>"><?php esc_html_e( 'Recheck eligibility', 'ran-booster' ); ?></button>
+								<span id="ran-booster-release-recheck-reason" class="ran-booster-reason-tooltip__bubble" role="tooltip" hidden><?php echo esc_html( $recheck_reason ); ?></span>
+							</span>
+						<?php } ?>
 						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 					</form>
 					<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post"<?php echo $refresh_enabled ? ' data-ran-booster-package-mutation' : ''; ?>>
@@ -236,7 +247,6 @@ final class ReleaseManagementDisplay {
 						<button type="submit" class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::primary() ); ?>"<?php disabled( ! $refresh_enabled ); ?> aria-disabled="<?php echo $refresh_enabled ? 'false' : 'true'; ?>" data-ran-booster-busy-label="<?php echo esc_attr( __( 'Checking…', 'ran-booster' ) ); ?>" data-ran-booster-busy-message="<?php echo esc_attr( __( 'Checking for published releases. This can take a few seconds.', 'ran-booster' ) ); ?>"><?php esc_html_e( 'Check releases', 'ran-booster' ); ?></button>
 						<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status></span>
 					</form>
-					<a class="<?php echo esc_attr( \RAN\Admin\Component\ButtonClasses::secondary( false, true ) . ( $updates_enabled ? '' : ' disabled' ) ); ?>"<?php echo $updates_enabled ? ' href="' . esc_url( admin_url( 'update-core.php' ) ) . '"' : ' aria-disabled="true" tabindex="-1"'; ?>><?php esc_html_e( 'Open WordPress updates', 'ran-booster' ); ?></a>
 					<?php
 					ob_start();
 					if ( $status_available ) {
@@ -244,11 +254,8 @@ final class ReleaseManagementDisplay {
 					}
 					$add_on_actions = trim( (string) ob_get_clean() );
 					?>
-					<?php if ( '' !== $expected_update_uri || '' !== $add_on_actions ) { ?>
+					<?php if ( '' !== $add_on_actions ) { ?>
 						<span class="ran-booster-readiness-actions__links">
-							<?php if ( '' !== $expected_update_uri ) { ?>
-								<a href="<?php echo esc_url( $expected_update_uri ); ?>" target="_blank" rel="noopener noreferrer"><?php esc_html_e( 'Open repository', 'ran-booster' ); ?> <?php \RAN\Admin\Component\ExternalLinkMarker::print(); ?></a>
-							<?php } ?>
 							<?php echo $add_on_actions; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Add-on hook output is rendered as-is, as before. ?>
 						</span>
 					<?php } ?>

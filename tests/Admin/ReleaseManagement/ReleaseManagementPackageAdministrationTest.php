@@ -28,6 +28,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 		self::assertStringContainsString( '<span class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-high-intent" data-ran-booster-badge data-ran-booster-badge-intent="high">Not ready</span>', $html );
 		self::assertStringContainsString( 'Published release status is temporarily unavailable. Try again.', $html );
+		self::assertStringContainsString( 'role="tooltip" hidden>Available once release status is available.</span>', $html );
 	}
 
 	#[Before]
@@ -271,7 +272,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Booster could not safely read this package&#039;s repository storage. Check package storage and retry.', $html );
 		self::assertStringContainsString( '<fieldset class="ran-booster-release-track-control is-disabled" disabled="disabled"', $html );
 		self::assertMatchesRegularExpression( '/button[^>]+disabled[^>]*>Check releases<\/button>/', $html );
-		self::assertStringContainsString( '<a class="ran-wp-ui-reset-a ran-wp-ui-box-sizing ran-wp-ui-outset-ring--focus-except-active ran-wp-ui-button is-neutral is-outline disabled" aria-disabled="true" tabindex="-1">Open WordPress updates</a>', $html );
+		self::assertStringNotContainsString( 'Open WordPress updates', $this->readiness_actions( $html ) );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-browser-disabled="true"', $html );
 		self::assertStringNotContainsString( 'Conflicting packages', $html );
 		self::assertStringNotContainsString( '<ul class="ul-disc">', $html );
@@ -459,6 +460,45 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		);
 	}
 
+	private function readiness_actions( string $html ): string {
+		if ( 1 !== preg_match( '~<div class="ran-booster-readiness-actions">[\s\S]*?</section>~', $html, $matches ) ) {
+			self::fail( 'The Release readiness actions row must render.' );
+		}
+		return $matches[0];
+	}
+
+	/** @return array<string,array{string,string,string}> */
+	public static function inactive_recheck_states(): array {
+		return array(
+			'releases tracked' => array( 'release_asset', 'plugin', 'Not needed while releases are tracked.' ),
+			'branch eligible'  => array( 'branch', 'plugin', 'This package is already eligible for releases.' ),
+		);
+	}
+
+	/** @dataProvider inactive_recheck_states */
+	public function test_inactive_recheck_stays_visible_focusable_and_explained( string $source, string $type, string $reason ): void {
+		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( $source, $type ) ) );
+		$package  = new PackageProjection( $source, $type );
+
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', $type, 'release_asset', $package, $package->settings_url() );
+		$html    = (string) ob_get_clean();
+		$actions = $this->readiness_actions( $html );
+
+		self::assertSame( 2, preg_match_all( '/<form[\s>]/', $actions ), 'The actions row holds exactly Recheck eligibility and Check releases.' );
+		self::assertStringNotContainsString( 'update-core.php', $actions );
+		self::assertStringNotContainsString( 'Open WordPress updates', $actions );
+		self::assertStringNotContainsString( 'Manage release workflow', $html );
+		if ( 1 !== preg_match( '~<button type="submit"([^>]*)>Recheck eligibility</button>~', $actions, $button ) ) {
+			self::fail( 'Recheck eligibility must stay rendered.' );
+		}
+		self::assertStringContainsString( 'aria-disabled="true"', $button[1] );
+		self::assertDoesNotMatchRegularExpression( '/\sdisabled(=|\s|$)/', $button[1] );
+		self::assertStringContainsString( 'aria-describedby="ran-booster-release-recheck-reason"', $button[1] );
+		self::assertStringContainsString( '<span id="ran-booster-release-recheck-reason" class="ran-booster-reason-tooltip__bubble" role="tooltip" hidden>' . $reason . '</span>', $actions );
+		self::assertStringNotContainsString( 'Open repository', $html );
+	}
+
 	public function test_package_release_readiness_actions_render_inside_the_existing_action_row(): void {
 		\RAN\Admin\ReleaseManagement\add_action(
 			'ran_booster_admin_package_release_readiness_actions',
@@ -476,7 +516,8 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
 		$html = (string) ob_get_clean();
 
-		self::assertMatchesRegularExpression( '~<span class="ran-booster-readiness-actions__links">\s*<a href="[^"]*" target="_blank" rel="noopener noreferrer">Open repository[\s\S]*?</a>\s*<a href="https://example.test/repository-releases">Manage release automation</a>\s*</span>~', $html, 'The repository link and the add-on link share one trailing group.' );
+		self::assertMatchesRegularExpression( '~<span class="ran-booster-readiness-actions__links">\s*<a href="https://example.test/repository-releases">Manage release automation</a>\s*</span>~', $html, 'Add-on output keeps its trailing group.' );
+		self::assertStringNotContainsString( 'Open repository', $html );
 		self::assertSame( 1, substr_count( $html, 'ran-booster-readiness-actions__links' ) );
 		$actions_start = strpos( $html, '<div class="ran-booster-readiness-actions">' );
 		$link_position = strpos( $html, '>Manage release automation</a>' );
@@ -601,7 +642,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'Recheck eligibility' => array( 'Rechecking…', 'Rechecking eligibility. This can take a few seconds.' ),
 			'Check releases'      => array( 'Checking…', 'Checking for published releases. This can take a few seconds.' ),
 		) as $idle => list( $label, $message ) ) {
-			if ( 1 !== preg_match( '/<button[^>]*>' . preg_quote( $idle, '/' ) . '<\/button>\s*<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status><\/span>\s*<\/form>/', $html, $match ) ) {
+			if ( 1 !== preg_match( '/<button[^>]*>' . preg_quote( $idle, '/' ) . '<\/button>\s*(?:<span id="ran-booster-release-recheck-reason"[^>]*>[^<]*<\/span>\s*<\/span>\s*)?<span class="screen-reader-text" role="status" aria-live="polite" data-ran-booster-submit-busy-status><\/span>\s*<\/form>/', $html, $match ) ) {
 				self::fail( 'Expected ' . $idle . ' to be the last control before its form status.' );
 			}
 			self::assertStringContainsString( 'data-ran-booster-busy-label="' . $label . '"', $match[0] );
@@ -665,7 +706,6 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( '<strong>Release status</strong>', $html );
 		self::assertStringNotContainsString( '<strong>Package root</strong>', $html );
 		self::assertStringNotContainsString( '<strong>Installation route</strong>', $html );
-		self::assertStringContainsString( 'Open WordPress updates', $html );
 		self::assertStringNotContainsString( 'Install published plugin', $html );
 
 		$list = $controls->process_managed_browser_request( 'list_candidates', $this->managed_request( 'list_candidates' ) );

@@ -12,12 +12,7 @@ final class ReleaseWorkflowDisplay {
 	/** @param array{result_view:?array<string,mixed>,url:string} $projection */
 
 	public function package_automation( array $projection ): string {
-		$result = is_array( $projection['result_view'] ?? null ) ? $this->result_notice( $projection['result_view'] ) : '';
-		$url    = is_string( $projection['url'] ?? null ) ? $projection['url'] : '';
-
-		return $result . ( '' === $url
-			? ''
-			: '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Manage release workflow', 'ran-booster' ) . '</a>' );
+		return is_array( $projection['result_view'] ?? null ) ? $this->result_notice( $projection['result_view'] ) : '';
 	}
 
 	/** @param array{lifecycle?:list<array{label:string,message:string,state:string}>,...<string,mixed>} $projection */

@@ -181,6 +181,7 @@ $repository_placeholder = array() === $locator_examples
 						?>
 					</select>
 					<span class="description"><?php esc_html_e( 'Required for private repositories.', 'ran-booster' ); ?></span>
+					<span class="description"><?php esc_html_e( 'Only install Git provider integrations you trust: an active Git provider can read its saved credentials. Booster does not authenticate a third-party publisher.', 'ran-booster' ); ?></span>
 				</p>
 				<p>
 					<label for="ran-booster-troubleshooting-repository"><?php esc_html_e( 'Repository', 'ran-booster' ); ?> <span class="description"><?php esc_html_e( '(optional)', 'ran-booster' ); ?></span></label>

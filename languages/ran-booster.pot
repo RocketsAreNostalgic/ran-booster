@@ -249,7 +249,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:301
 #: RAN/Admin/ProviderRepositoryRowsNormalizer.php:352
 #: views/attempts/detail.php:98
-#: views/attempts/index.php:212
+#: views/attempts/index.php:219
 #: views/portability-review.php:255
 #: views/portability-review.php:286
 #: views/portability.php:240
@@ -262,7 +262,7 @@ msgstr ""
 #: RAN/Admin/Component/RepositoryDetailRenderer.php:302
 #: RAN/Troubleshooting/TroubleshootingService.php:242
 #: views/attempts/index.php:131
-#: views/attempts/index.php:178
+#: views/attempts/index.php:185
 #: views/extensions.php:243
 #: views/portability-review.php:31
 #: views/troubleshooting-installation.php:10
@@ -1047,7 +1047,7 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:248
 #: RAN/Troubleshooting/TroubleshootingService.php:234
 #: RAN/Troubleshooting/TroubleshootingService.php:247
-#: views/attempts/index.php:180
+#: views/attempts/index.php:187
 #: views/overview-dashboard.php:53
 #: views/overview-dashboard.php:74
 #: views/overview-dashboard.php:81
@@ -6129,14 +6129,14 @@ msgid "Manual administrator action"
 msgstr ""
 
 #: views/attempts/detail.php:60
-#: views/attempts/index.php:210
+#: views/attempts/index.php:217
 msgid "Failure reason"
 msgstr ""
 
 #: views/attempts/detail.php:61
 #: views/attempts/index.php:133
-#: views/attempts/index.php:180
-#: views/attempts/index.php:210
+#: views/attempts/index.php:187
+#: views/attempts/index.php:217
 msgid "Outcome"
 msgstr ""
 
@@ -6167,8 +6167,8 @@ msgid "Checking the box only clears the retry block. It does not change the pack
 msgstr ""
 
 #: views/attempts/detail.php:80
-#: views/attempts/index.php:198
-#: views/attempts/index.php:211
+#: views/attempts/index.php:205
+#: views/attempts/index.php:218
 msgid "Support reference"
 msgstr ""
 
@@ -6189,53 +6189,53 @@ msgid "State"
 msgstr ""
 
 #: views/attempts/detail.php:97
-#: views/attempts/index.php:213
+#: views/attempts/index.php:220
 msgid "Origin"
 msgstr ""
 
 #: views/attempts/detail.php:108
-#: views/attempts/index.php:214
+#: views/attempts/index.php:221
 msgid "Requested reference"
 msgstr ""
 
 #: views/attempts/detail.php:109
-#: views/attempts/index.php:215
+#: views/attempts/index.php:222
 msgid "Resolved reference"
 msgstr ""
 
 #: views/attempts/detail.php:109
-#: views/attempts/index.php:215
+#: views/attempts/index.php:222
 msgid "Not resolved"
 msgstr ""
 
 #: views/attempts/detail.php:110
-#: views/attempts/index.php:216
+#: views/attempts/index.php:223
 msgid "Mutation began"
 msgstr ""
 
 #: views/attempts/detail.php:110
-#: views/attempts/index.php:216
+#: views/attempts/index.php:223
 msgid "No"
 msgstr ""
 
 #: views/attempts/detail.php:111
-#: views/attempts/index.php:217
+#: views/attempts/index.php:224
 msgid "Finished"
 msgstr ""
 
 #: views/attempts/detail.php:111
-#: views/attempts/index.php:217
+#: views/attempts/index.php:224
 msgid "Not finished"
 msgstr ""
 
 #: views/attempts/detail.php:113
-#: views/attempts/index.php:219
+#: views/attempts/index.php:226
 msgid "Operator review"
 msgstr ""
 
 #. translators: 1: review date and time, 2: WordPress user ID.
 #: views/attempts/detail.php:113
-#: views/attempts/index.php:219
+#: views/attempts/index.php:226
 #, php-format
 msgid "Resolved %1$s by user #%2$d"
 msgstr ""
@@ -6257,12 +6257,12 @@ msgid "Allow retry and return to plugin settings"
 msgstr ""
 
 #: views/attempts/detail.php:142
-#: views/attempts/index.php:231
+#: views/attempts/index.php:238
 msgid "I have confirmed that the deployment worker has stopped."
 msgstr ""
 
 #: views/attempts/detail.php:143
-#: views/attempts/index.php:232
+#: views/attempts/index.php:239
 msgid "Reconcile stopped worker"
 msgstr ""
 
@@ -6288,7 +6288,7 @@ msgstr ""
 
 #: views/attempts/index.php:71
 #: views/attempts/index.php:132
-#: views/attempts/index.php:179
+#: views/attempts/index.php:186
 #: views/troubleshooting.php:34
 msgid "Activity"
 msgstr ""
@@ -6346,12 +6346,12 @@ msgid "Recorded checks and deployments"
 msgstr ""
 
 #: views/attempts/index.php:129
-#: views/attempts/index.php:168
+#: views/attempts/index.php:175
 msgid "Time"
 msgstr ""
 
 #: views/attempts/index.php:130
-#: views/attempts/index.php:169
+#: views/attempts/index.php:176
 msgid "Subject"
 msgstr ""
 
@@ -6374,60 +6374,66 @@ msgstr ""
 msgid "Workflow assessment"
 msgstr ""
 
-#: views/attempts/index.php:178
+#. translators: 1: activity subject, 2: activity name, 3: recorded time. Gives each row's disclosure a distinct accessible name.
+#: views/attempts/index.php:167
+#, php-format
+msgid "View details: %1$s, %2$s, %3$s"
+msgstr ""
+
+#: views/attempts/index.php:185
 msgid "Branch deployment"
 msgstr ""
 
-#: views/attempts/index.php:188
+#: views/attempts/index.php:195
 #: views/packages/index.php:603
 msgid "View details"
 msgstr ""
 
-#: views/attempts/index.php:192
+#: views/attempts/index.php:199
 msgid "Reported by"
 msgstr ""
 
-#: views/attempts/index.php:192
+#: views/attempts/index.php:199
 msgid "Recorded by Core"
 msgstr ""
 
-#: views/attempts/index.php:192
+#: views/attempts/index.php:199
 msgid "Reported by Git provider"
 msgstr ""
 
-#: views/attempts/index.php:195
+#: views/attempts/index.php:202
 msgid "Last recorded stage"
 msgstr ""
 
-#: views/attempts/index.php:196
+#: views/attempts/index.php:203
 msgid "Reason"
 msgstr ""
 
-#: views/attempts/index.php:197
+#: views/attempts/index.php:204
 msgid "Remediation"
 msgstr ""
 
-#: views/attempts/index.php:199
+#: views/attempts/index.php:206
 msgid "Completed (UTC)"
 msgstr ""
 
-#: views/attempts/index.php:222
+#: views/attempts/index.php:229
 msgid "Package settings"
 msgstr ""
 
-#: views/attempts/index.php:247
+#: views/attempts/index.php:254
 msgid "View latest activity"
 msgstr ""
 
-#: views/attempts/index.php:250
+#: views/attempts/index.php:257
 msgid "View older activity"
 msgstr ""
 
-#: views/attempts/index.php:251
+#: views/attempts/index.php:258
 msgid "Loading older activity…"
 msgstr ""
 
-#: views/attempts/index.php:252
+#: views/attempts/index.php:259
 msgid "Older activity could not be loaded. Try again."
 msgstr ""
 
@@ -7029,12 +7035,20 @@ msgstr ""
 msgid "Choose a durable directory outside the public web root that is owned by the same PHP process user used by WordPress web, cron and CLI requests. The directory must use mode 0700. Do not add group access as a workaround: Booster deliberately requires owner-only access. Define the preferred directory constant in wp-config.php before WordPress loads plugins; Booster creates and manages ran-booster-store.json and ran-booster-store.json.lock inside it with mode 0600:"
 msgstr ""
 
+#: views/documentation.php:381
+msgid "Code example: storage directory constant"
+msgstr ""
+
 #: views/documentation.php:382
 msgid "In wp-config.php, __DIR__ is the directory containing wp-config.php and dirname( __DIR__ ) is its parent. If wp-config.php is in public_html, do not append public_html again: choose a sibling directory outside it. Every existing parent directory must let the PHP process traverse it; on shared hosting that may require a host-managed execute permission or ACL on an ancestor. The final Booster storage directory must still be owned by PHP and mode 0700."
 msgstr ""
 
 #: views/documentation.php:383
 msgid "To use a hosting environment variable, bridge it to the PHP constant in wp-config.php. An environment variable by itself is not read by Booster:"
+msgstr ""
+
+#: views/documentation.php:384
+msgid "Code example: storage directory from an environment variable"
 msgstr ""
 
 #: views/documentation.php:388
@@ -7122,6 +7136,10 @@ msgstr ""
 
 #: views/documentation.php:435
 msgid "Adjust the compressed limit in Booster Settings. A target-local constant overrides and locks that preference:"
+msgstr ""
+
+#: views/documentation.php:436
+msgid "Code example: download limit constant"
 msgstr ""
 
 #: views/documentation.php:437

@@ -642,6 +642,15 @@
 		}
 	});
 	const restored = () => {
+		// Only a save that was sent or queued, or whose outcome was already
+		// unknown, is uncertain after history restoration. Capture that before
+		// bind() replaces the state of a restored form.
+		const interrupted = new Set();
+		for (const [scope, state] of states) {
+			if (state.flight || state.queued || state.unknown) {
+				interrupted.add(scope);
+			}
+		}
 		for (const state of waiting.values()) {
 			unlock(state);
 		}
@@ -649,8 +658,14 @@
 		activeRequest = null;
 		bind();
 		for (const state of states.values()) {
-			// Cached history is not authoritative. A retry retains its original fence.
-			uncertain(state);
+			if (interrupted.has(state.scope)) {
+				// Cached history is not authoritative. A retry retains its original fence.
+				uncertain(state);
+			} else {
+				// An idle form returns to its persisted baseline without a warning.
+				state.flight = null;
+				update(state);
+			}
 		}
 	};
 	document.addEventListener('htmx:historyRestore', restored);

@@ -1108,18 +1108,83 @@ test('unknown outcome retains original token and requires explicit retry', () =>
 	assert.equal(t.submissions[1].token, 'original');
 });
 
-test('history restore marks unknown and initialization only registers listeners once', () => {
+test('history restore of an idle form shows persisted state and no warning, and initialization registers listeners once', () => {
 	const h = harness();
 	h.initializeAgain();
+	h.window.announcements.length = 0;
 	h.doc('htmx:historyRestore', {});
-	assert.equal(pending(h.numeric), true);
-	assert.equal(pending(h.toggle), true);
-	assert.equal(h.toggle.retry.hidden, false);
+	for (const form of [h.numeric, h.toggle]) {
+		assert.equal(pending(form), false);
+		assert.equal(form.error.hidden, true);
+	}
+	assert.equal(h.numeric.status.textContent, 'No pending numeric changes.');
+	assert.deepEqual(
+		h.window.announcements.filter(
+			({ politeness }) => politeness === 'assertive'
+		),
+		[]
+	);
 	const nav = h.doc('htmx:beforeRequest', {
 		detail: { elt: {}, target: { contains: () => true }, xhr: {} },
 	});
-	assert.equal(nav.defaultPrevented, true);
-	assert.equal(h.confirms, 1);
+	assert.equal(nav.defaultPrevented, false);
+	assert.equal(h.confirms, 0);
+});
+
+test('Back after a completed save does not turn it unconfirmed (pageshow and history restore)', () => {
+	for (const restore of [
+		(h) => h.win('pageshow', { persisted: true }),
+		(h) => h.doc('htmx:historyRestore', {}),
+	]) {
+		const h = harness();
+		h.numeric.value = '2700';
+		h.doc('input', { target: h.numeric.numeric });
+		const saved = swap(h, h.numeric, {
+			value: '2700',
+			saved: true,
+			token: 'next',
+		});
+		assert.equal(pending(saved), false);
+		h.window.announcements.length = 0;
+		restore(h);
+		assert.equal(pending(saved), false);
+		assert.equal(saved.error.hidden, true);
+		assert.deepEqual(
+			h.window.announcements.filter(
+				({ politeness }) => politeness === 'assertive'
+			),
+			[]
+		);
+	}
+});
+
+test('Back to an idle form keeps genuine unsaved numeric edits dirty without an unconfirmed warning', () => {
+	const h = harness();
+	h.numeric.value = '2700';
+	h.doc('input', { target: h.numeric.numeric });
+	h.win('pageshow', { persisted: true });
+	assert.equal(pending(h.numeric), true);
+	assert.equal(h.numeric.status.textContent, 'Unsaved numeric changes.');
+	assert.equal(h.numeric.error.hidden, true);
+});
+
+test('a request interrupted by leaving still restores as unconfirmed', () => {
+	for (const restore of [
+		(h) => h.win('pageshow', { persisted: true }),
+		(h) => h.doc('htmx:historyRestore', {}),
+	]) {
+		const h = harness();
+		h.numeric.value = '2700';
+		h.doc('input', { target: h.numeric.numeric });
+		start(h, h.numeric);
+		restore(h);
+		assert.equal(pending(h.numeric), true);
+		assert.equal(h.numeric.error.hidden, false);
+		assert.match(h.numeric.error.primary.textContent, /unconfirmed/i);
+		// The untouched sibling scope is not blamed for it.
+		assert.equal(h.toggle.error.hidden, true);
+		assert.equal(pending(h.toggle), false);
+	}
 });
 
 test('native beforeunload and enhanced navigation protect pending changes', () => {
@@ -1279,13 +1344,16 @@ test('failed swap does not steal focus from outside the region', () => {
 	assert.equal(h.document.activeElement, outside);
 });
 
-test('only persisted pageshow invalidates the cached form', () => {
+test('only persisted pageshow re-evaluates the cached form', () => {
 	const h = harness();
+	h.numeric.value = '2700';
+	h.doc('input', { target: h.numeric.numeric });
+	start(h, h.numeric);
 	h.win('pageshow', { persisted: false });
-	assert.equal(pending(h.numeric), false);
+	assert.equal(h.numeric.error.hidden, true);
 	h.win('pageshow', { persisted: true });
-	assert.equal(pending(h.numeric), true);
-	assert.equal(pending(h.toggle), true);
+	assert.equal(h.numeric.error.hidden, false);
+	assert.equal(pending(h.toggle), false);
 });
 
 test('failed server response restores confirmed value and requires explicit retry', () => {

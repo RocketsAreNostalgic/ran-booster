@@ -90,7 +90,12 @@ final class GeneralPreferenceStore {
 		return $tokens;
 	}
 
-	/** @param array<string,mixed> $document
+	/**
+	 * Every current scope counter must be present and valid. A counter for a scope this
+	 * runtime does not know is written by a newer Booster: it is validated like the
+	 * known ones, returned, and so written back unchanged by every save.
+	 *
+	 * @param array<string,mixed> $document
 	 * @return array<string,int>|null
 	 */
 	private function revisions( array $document ): ?array {
@@ -98,11 +103,11 @@ final class GeneralPreferenceStore {
 			return array_fill_keys( array_keys( self::SCOPES ), 0 );
 		}
 		$revisions = $document['_revisions'];
-		if ( ! is_array( $revisions ) || count( $revisions ) !== count( self::SCOPES ) || array_diff_key( $revisions, self::SCOPES ) || array_diff_key( self::SCOPES, $revisions ) ) {
+		if ( ! is_array( $revisions ) || array_diff_key( self::SCOPES, $revisions ) ) {
 			return null;
 		}
-		foreach ( $revisions as $revision ) {
-			if ( ! is_int( $revision ) || $revision < 0 ) {
+		foreach ( $revisions as $scope => $revision ) {
+			if ( ! is_string( $scope ) || ! is_int( $revision ) || $revision < 0 ) {
 				return null;
 			}
 		}

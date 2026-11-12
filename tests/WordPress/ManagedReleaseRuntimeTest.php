@@ -2217,6 +2217,76 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
+	public function test_enable_reports_why_no_release_was_eligible_without_inspecting_zip_less_releases(): void {
+		$package = $this->package(
+			'plugin',
+			'example/example.php',
+			'example',
+			DeploymentPolicy::MANUAL,
+			source: PackageSource::BRANCH
+		);
+		$plugins = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$themes      = $this->createStub( ThemeRepository::class );
+		$store       = new RuntimeReleaseStore();
+		$lock        = new RuntimeUpdaterLock();
+		$mode        = new class() {
+			public string $value = 'none';
+		};
+		$inspections = 0;
+		$providers   = $this->release_metadata_registry(
+			list_releases: static function () use ( &$mode ): RepositoryReleaseCandidateList {
+				$names = 'incompatible' === $mode->value ? array( 'example.zip' ) : array();
+				return new RepositoryReleaseCandidateList(
+					'none' === $mode->value
+						? array()
+						: array(
+							new RepositoryReleaseCandidate( '101', 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', $names ),
+							new RepositoryReleaseCandidate( '102', 'v2.0.0', '2.0.0', false, '2026-08-16T12:00:00Z', $names ),
+							new RepositoryReleaseCandidate( '103', 'v1.0.0', '1.0.0', false, '2026-08-15T12:00:00Z', $names ),
+						)
+				);
+			},
+			inspect: static function () use ( &$inspections ): RepositoryReleaseInspection {
+				++$inspections;
+				throw RepositoryReleaseInspectionRejected::incompatible();
+			}
+		);
+		$facade      = $this->facade(
+			$plugins,
+			$themes,
+			$store,
+			$this->registrar( $plugins, $themes, $store, $lock, $providers ),
+			$lock,
+			$providers,
+			static fn (): bool => true,
+			static fn (): bool => true,
+			metadata_eligible: static fn (): bool => true
+		);
+
+		foreach ( array(
+			'none'         => array( 'no_releases', 0 ),
+			'no_zip'       => array( 'release_incompatible', 0 ),
+			'incompatible' => array( 'release_incompatible', 2 ),
+		) as $case => $expected ) {
+			$mode->value                       = $case;
+			[ $reason, $expected_inspections ] = $expected;
+			$inspections                       = 0;
+			$result                            = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+
+			self::assertFalse( $result->successful(), $case );
+			self::assertSame( 'release_unavailable', $result->code(), $case );
+			self::assertSame( $reason, $result->reason(), $case );
+			self::assertSame( $expected_inspections, $inspections, $case );
+		}
+		self::assertSame( array(), $store->transitions );
+
+		$this->repository_rows["plugin\0example/example.php"]->source = 'unknown';
+		$guard = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+		self::assertSame( 'release_unavailable', $guard->code() );
+		self::assertSame( '', $guard->reason() );
+	}
+
 	public function test_provider_preflight_requires_the_complete_read_facet_set_before_remote_work(): void {
 		$package = $this->package(
 			'plugin',

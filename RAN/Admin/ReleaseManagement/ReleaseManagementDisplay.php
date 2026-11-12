@@ -907,13 +907,14 @@ final class ReleaseManagementDisplay {
 		string $type = '',
 		string $identifier = '',
 		string $channel = '',
-		?ReleaseTrackingStatus $status = null
+		?ReleaseTrackingStatus $status = null,
+		string $reason = ''
 	): void {
 		if ( '' === $code ) {
 			return;
 		}
 
-		$message = $this->result_message( $code, $successful, $type, $channel, $status );
+		$message = $this->result_message( $code, $successful, $type, $channel, $status, $reason );
 		$review  = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
 		$tone    = $successful
 			? 'notice-success'
@@ -931,15 +932,15 @@ final class ReleaseManagementDisplay {
 			<?php } ?>
 		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( substr( $tone, 7 ) ); ?>
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>
-				<?php $this->render_failure_help( $code, $message ); ?>
+				<?php $this->render_failure_help( $code, $message, $reason ); ?>
 			<?php } ?>
 		</div>
 		<?php
 	}
 
-	private function result_message( string $code, bool $successful, string $type, string $channel, ?ReleaseTrackingStatus $status ): string {
+	private function result_message( string $code, bool $successful, string $type, string $channel, ?ReleaseTrackingStatus $status, string $reason = '' ): string {
 		if ( ! $successful && $this->is_diagnostic_code( $code ) ) {
-			return $this->diagnostic_message( $code );
+			return $this->diagnostic_message( $code, $reason );
 		}
 
 		return match ( $code ) {
@@ -997,7 +998,7 @@ final class ReleaseManagementDisplay {
 		if ( 'release_unavailable' === $code ) {
 			return match ( $reason ) {
 				'no_releases' => __( 'No published release was found for the selected track.', 'ran-booster' ),
-				'release_incompatible' => __( 'A published release was found, but it is not eligible.', 'ran-booster' ),
+				'release_incompatible' => __( 'A published release was found, but it has no single package ZIP asset or its header or Update URI does not match.', 'ran-booster' ),
 				default => __( 'Booster could not confirm an eligible published release for this track.', 'ran-booster' ),
 			};
 		}

@@ -579,7 +579,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			if ( ! $preflight->ready() ) {
 				return ReleaseTrackingResult::failed(
 					$preflight->code(),
-					'Published release assets could not be validated.'
+					'Published release assets could not be validated.',
+					$preflight->reason_code()
 				);
 			}
 			$package_root  = $eligibility->package_root();
@@ -1119,6 +1120,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			++$inspected;
 
+			// The listing names only ZIP assets, so none means inspection must reject; skip the round trip.
+			if ( array() === $candidate->expected_asset_names ) {
+				if ( 2 === $inspected ) {
+					return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $package_root, reason_code: 'release_incompatible' );
+				}
+				continue;
+			}
+
 			try {
 				$inspection = $inspector->inspect_release(
 					$type,
@@ -1129,6 +1138,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				);
 			} catch ( RepositoryReleaseInspectionRejected $failure ) {
 				if ( RepositoryReleaseInspectionRejected::INCOMPATIBLE === $failure->reason ) {
+					// Look past the newest release once, then stop; both paths end in the same reason.
 					if ( 2 === $inspected ) {
 						return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $package_root, reason_code: 'release_incompatible' );
 					}

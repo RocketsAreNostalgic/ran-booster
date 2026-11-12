@@ -1337,7 +1337,7 @@ final class AdminAssetContractTest extends TestCase {
 
 		// Each failure notice closes its message column, prints the icon, then the disclosure, then closes the notice.
 		self::assertSame( 1, preg_match_all( '/<\/div><\?php [^;]*print_intent\( \'warning\' \); \?>\s*<\?php \$this->render_failure_help\( \$failure_code, \'\', \$status_reason \); \?><\/div>/', $display ) );
-		self::assertSame( 1, preg_match_all( '/print_intent\( substr\( \$tone, 7 \) \); \?>\s*<\?php if \( ! \$successful && \$this->is_diagnostic_code\( \$code \) \) \{ \?>\s*<\?php \$this->render_failure_help\( \$code, \$message \); \?>\s*<\?php \} \?>\s*<\/div>/', $display ) );
+		self::assertSame( 1, preg_match_all( '/print_intent\( substr\( \$tone, 7 \) \); \?>\s*<\?php if \( ! \$successful && \$this->is_diagnostic_code\( \$code \) \) \{ \?>\s*<\?php \$this->render_failure_help\( \$code, \$message, \$reason \); \?>\s*<\?php \} \?>\s*<\/div>/', $display ) );
 	}
 
 	public function test_repository_branch_check_notice_sits_flush_beside_the_action(): void {

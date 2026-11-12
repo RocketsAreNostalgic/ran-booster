@@ -3386,7 +3386,10 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayNotHasKey( 'plugin/release.php', $activity['items'] );
 	}
 
-	/** @param list<mixed> $reads Scripted activity reads in the order the presenter issues them. */
+	/**
+	 * @param list<mixed> $reads Scripted activity reads in the order the presenter issues them.
+	 * @return array{0: array<string, mixed>, 1: list<string>}
+	 */
 	private function release_check_activity( array $reads ): array {
 		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 		require_once __DIR__ . '/../Activity/ActivityConnection.php';

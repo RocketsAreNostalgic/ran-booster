@@ -532,9 +532,10 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 	}
 
-	public function test_rate_limited_provider_does_not_block_saving_an_unchanged_repository(): void {
+	#[DataProvider( 'transient_lookup_failures' )]
+	public function test_rate_limited_provider_does_not_block_saving_an_unchanged_repository( int $code ): void {
 		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
-		$provider  = new FailingLookupProvider( 429 );
+		$provider  = new FailingLookupProvider( $code );
 		$providers = new ProviderRegistry( array( $provider ) );
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::never() )->method( 'add_failure_message' );
@@ -544,7 +545,7 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 				'edit-plugin',
 				self::callback(
 					static fn ( array $resolved ): bool => '1' === $resolved['repository_check_skipped']
-						&& 'stored' === $resolved['provider_repository_identity_source']
+						&& 'resolved' === $resolved['provider_repository_identity_source']
 						&& 'repository-id' === $resolved['provider_repository_id']
 						&& 'owner/original' === $resolved['repository']
 				)
@@ -560,6 +561,46 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 
 		self::assertSame( 'https://example.test/redirect', $result );
 		self::assertSame( 1, $provider->lookups, 'The provider is still asked first; only a failure falls back.' );
+	}
+
+	/** @return array<string, array{int}> */
+	public static function transient_lookup_failures(): array {
+		return array(
+			'rate limited'        => array( 429 ),
+			'bad gateway'         => array( 502 ),
+			'service unavailable' => array( 503 ),
+			'gateway timeout'     => array( 504 ),
+		);
+	}
+
+	/** @param array<string, string> $flag */
+	#[DataProvider( 'saves_that_continue_to_the_provider' )]
+	public function test_a_save_that_goes_on_to_use_the_provider_does_not_fall_back( array $flag ): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 429 ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+
+		$_POST['_ran_booster_reinstall_nonce'] = 'test-nonce'; // The reinstall form carries its own nonce field.
+		$result                                = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', array_merge( $this->unchanged_edit_request(), $flag ), true );
+
+		unset( $_POST['_ran_booster_reinstall_nonce'] );
+
+		self::assertFalse( $result );
+	}
+
+	/** @return array<string, array{array<string, string>}> */
+	public static function saves_that_continue_to_the_provider(): array {
+		return array(
+			'reinstall after save'          => array( array( 'reinstall_after_save' => '1' ) ),
+			'check the branch after saving' => array( array( 'check_repository_branch_after_save' => '1' ) ),
+		);
 	}
 
 	public function test_rate_limit_still_blocks_a_changed_repository_and_says_nothing_was_saved(): void {

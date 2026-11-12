@@ -668,8 +668,12 @@ final class PackageAdminController {
 	 * @return array<string, mixed>|null
 	 */
 	private function stored_repository_fallback( array $request, RuntimeException $failure, ?array $trusted_public_lookup, ?Package $stored_package ): ?array {
+		// Saves that go on to reinstall or check the branch need the provider as well, so only a
+		// plain settings save may continue without it.
 		if ( null !== $trusted_public_lookup
 			|| ! $stored_package instanceof Package
+			|| $this->enabled( $request, 'reinstall_after_save' )
+			|| $this->enabled( $request, 'check_repository_branch_after_save' )
 			|| ! in_array( $failure->getCode(), self::TRANSIENT_LOOKUP_CODES, true ) ) {
 			return null;
 		}

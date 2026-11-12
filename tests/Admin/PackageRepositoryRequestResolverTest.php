@@ -430,12 +430,30 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 		self::assertSame( 'bb', $result['provider'] );
 		self::assertSame( 'workspace/repository', $result['repository'] );
 		self::assertSame( 'provider-id-42', $result['provider_repository_id'] );
-		self::assertSame( 'stored', $result['provider_repository_identity_source'] );
+		self::assertSame( 'resolved', $result['provider_repository_identity_source'] );
 		self::assertSame( '1', $result['private'] );
 		self::assertSame( 'bitbucket-deploy', $result['credential_id'] );
 		self::assertSame( 'trunk', $result['branch'], 'A blank branch falls back to the stored branch.' );
 		self::assertSame( DeploymentPolicy::MANUAL->value, $result['deployment_policy'] );
 		self::assertSame( 'resolved-subdir', $result['subdirectory'] );
+	}
+
+	public function test_unchanged_public_repository_with_a_credential_stays_public_through_the_stored_fallback(): void {
+		$provider = $this->resolving_provider(
+			new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'workspace/repository', 'repository', 'provider-id-42', false, 'main', 'bitbucket-deploy' )
+		);
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+
+		$resolved = $resolver->resolve_unchanged(
+			$this->edit_request(),
+			$this->stored_plugin( 'workspace/repository', 'bitbucket-deploy', false )
+		);
+
+		self::assertIsArray( $resolved );
+		self::assertSame( '0', $resolved['private'] );
+		$operation = PackageOperation::from_input( 'edit-plugin', array_merge( $resolved, array( 'file' => 'fixture/fixture.php' ) ) );
+		self::assertFalse( $operation->is_private, 'A fresh lookup would not make a credentialed public repository private; neither may the fallback.' );
+		self::assertSame( 'bitbucket-deploy', $operation->credential_id );
 	}
 
 	/** @param array<string, mixed> $override */

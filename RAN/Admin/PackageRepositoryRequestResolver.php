@@ -87,11 +87,14 @@ final readonly class PackageRepositoryRequestResolver {
 		$branch_input = $request['branch'] ?? '';
 		$branch       = is_string( $branch_input ) ? trim( sanitize_text_field( wp_unslash( $branch_input ) ) ) : '';
 
-		$request['provider']                            = $provider->value;
-		$request['repository']                          = (string) $stored->get_repository();
-		$request['subdirectory']                        = $subdirectory ?? '';
-		$request['provider_repository_id']              = $stored_id;
-		$request['provider_repository_identity_source'] = 'stored';
+		$request['provider']               = $provider->value;
+		$request['repository']             = (string) $stored->get_repository();
+		$request['subdirectory']           = $subdirectory ?? '';
+		$request['provider_repository_id'] = $stored_id;
+		// The values come from the stored, previously verified package, never from the browser, so
+		// they take the 'resolved' source. Any other source would make a credentialed public
+		// repository private (see PackageOperation::from_input), which a fresh lookup would not.
+		$request['provider_repository_identity_source'] = 'resolved';
 		$request['private']                             = $stored->get_private() ? '1' : '0';
 		$request['credential_id']                       = $stored->get_credential_id();
 		$request['branch']                              = '' === $branch ? (string) $stored->get_branch() : $branch;

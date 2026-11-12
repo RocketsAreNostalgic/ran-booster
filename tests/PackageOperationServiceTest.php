@@ -129,6 +129,44 @@ final class PackageOperationServiceTest extends TestCase {
 		self::assertSame( 'example/example.php', $query['package'] );
 	}
 
+	public function test_a_skipped_repository_check_redirects_with_the_signed_unverified_marker(): void {
+		$package   = $this->plugin();
+		$dashboard = $this->dashboard( new OperationCoordinator(), $package );
+
+		$redirect = $dashboard->post_package_operation(
+			'edit-plugin',
+			$this->input(
+				'edit-plugin',
+				array(
+					'branch'                   => 'develop',
+					'repository_check_skipped' => '1',
+				)
+			)
+		);
+
+		self::assertIsString( $redirect );
+		self::assertSame( 'develop', $package->get_branch() );
+		$query = $this->redirect_query( $redirect );
+		self::assertSame( 'edit-unverified', $query['ran_booster_result'] );
+		self::assertSame( 'example/example.php', $query['package'] );
+		self::assertSame(
+			1,
+			\RAN\wp_verify_nonce(
+				$query['_ran_booster_notice_nonce'],
+				'ran-booster-package-success|plugin|edit-unverified|example/example.php'
+			)
+		);
+	}
+
+	public function test_an_ordinary_edit_save_redirects_with_the_plain_edit_marker(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator(), $this->plugin() );
+
+		$redirect = $dashboard->post_package_operation( 'edit-plugin', $this->input( 'edit-plugin', array( 'branch' => 'develop' ) ) );
+
+		self::assertIsString( $redirect );
+		self::assertSame( 'edit', $this->redirect_query( $redirect )['ran_booster_result'] );
+	}
+
 	public function test_save_and_check_redirect_uses_the_authoritative_edited_package_without_asuccess_notice(): void {
 		$package   = $this->plugin();
 		$dashboard = $this->dashboard( new OperationCoordinator(), $package );

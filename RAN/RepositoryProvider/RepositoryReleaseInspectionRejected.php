@@ -12,7 +12,11 @@ final class RepositoryReleaseInspectionRejected extends RuntimeException {
 	public const INVALID_RELEASE = 'invalid_release';
 	public const INCOMPATIBLE    = 'incompatible';
 
-	private function __construct( public readonly string $reason ) {
+	/** An optional lower-case reason name for an incompatible release; anything else is dropped. */
+	public readonly ?string $detail;
+
+	private function __construct( public readonly string $reason, ?string $detail = null ) {
+		$this->detail = null !== $detail && 1 === preg_match( '/\A[a-z][a-z0-9_]{0,63}\z/D', $detail ) ? $detail : null;
 		parent::__construct( 'The exact repository release could not be inspected.' );
 	}
 
@@ -24,7 +28,7 @@ final class RepositoryReleaseInspectionRejected extends RuntimeException {
 		return new self( self::INVALID_RELEASE );
 	}
 
-	public static function incompatible(): self {
-		return new self( self::INCOMPATIBLE );
+	public static function incompatible( ?string $detail = null ): self {
+		return new self( self::INCOMPATIBLE, $detail );
 	}
 }

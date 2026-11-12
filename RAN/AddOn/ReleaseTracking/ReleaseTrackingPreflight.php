@@ -29,7 +29,8 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 		private string $release_tag = '',
 		private string $package_header_version = '',
 		private string $version_relationship = '',
-		string $reason_code = ''
+		string $reason_code = '',
+		private string $detail = ''
 	) {
 		if ( ! in_array(
 			$code,
@@ -57,6 +58,8 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 			|| ! in_array( $this->version_relationship, array( '', 'newer', 'same', 'older', 'invalid' ), true )
 
 			|| ( '' !== $reason_code && ! in_array( $reason_code, self::reason_codes(), true ) )
+
+			|| self::detail( $this->detail ) !== $this->detail
 
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->release_tag . $this->package_header_version )
 
@@ -107,6 +110,21 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 		return $this->version_relationship;
 	}
 
+	public function detail_text(): string {
+
+		return $this->detail;
+	}
+
+	/**
+	 * The one rule for the short fact a reason may carry (a release tag or file path): at most 120 letters,
+	 * digits, spaces and . _ ~ : , / -. Only characters that survive a redirect query string unencoded are
+	 * allowed (a + would read back as a space, and & # % " would break it), so the signed notice cannot
+	 * vanish. Anything else becomes empty, so the message falls back to its generic text.
+	 */
+	public static function detail( string $value ): string {
+		return 1 === preg_match( '/\A[A-Za-z0-9 ._~:,\/-]{1,120}\z/D', $value ) ? $value : '';
+	}
+
 	/** @return list<string> */
 	public static function reason_codes(): array {
 		return array(
@@ -115,6 +133,8 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 			'invalid_release',
 			'release_identity_mismatch',
 			'release_incompatible',
+			'package_asset_missing',
+			'package_asset_ambiguous',
 			'release_version_mismatch',
 			'package_header_missing',
 			'package_header_invalid',

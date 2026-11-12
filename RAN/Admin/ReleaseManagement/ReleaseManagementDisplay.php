@@ -908,13 +908,14 @@ final class ReleaseManagementDisplay {
 		string $identifier = '',
 		string $channel = '',
 		?ReleaseTrackingStatus $status = null,
-		string $reason = ''
+		string $reason = '',
+		string $detail = ''
 	): void {
 		if ( '' === $code ) {
 			return;
 		}
 
-		$message = $this->result_message( $code, $successful, $type, $channel, $status, $reason );
+		$message = $this->result_message( $code, $successful, $type, $channel, $status, $reason, $detail );
 		$review  = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
 		$tone    = $successful
 			? 'notice-success'
@@ -932,15 +933,15 @@ final class ReleaseManagementDisplay {
 			<?php } ?>
 		</div><?php \RAN\Admin\Component\NoticeIcon::print_intent( substr( $tone, 7 ) ); ?>
 			<?php if ( ! $successful && $this->is_diagnostic_code( $code ) ) { ?>
-				<?php $this->render_failure_help( $code, $message, $reason ); ?>
+				<?php $this->render_failure_help( $code, $message, $reason, $detail ); ?>
 			<?php } ?>
 		</div>
 		<?php
 	}
 
-	private function result_message( string $code, bool $successful, string $type, string $channel, ?ReleaseTrackingStatus $status, string $reason = '' ): string {
+	private function result_message( string $code, bool $successful, string $type, string $channel, ?ReleaseTrackingStatus $status, string $reason = '', string $detail = '' ): string {
 		if ( ! $successful && $this->is_diagnostic_code( $code ) ) {
-			return $this->diagnostic_message( $code, $reason );
+			return $this->diagnostic_message( $code, $reason, $detail );
 		}
 
 		return match ( $code ) {
@@ -994,13 +995,25 @@ final class ReleaseManagementDisplay {
 		};
 	}
 
-	private function diagnostic_message( string $code, string $reason = '' ): string {
+	private function diagnostic_message( string $code, string $reason = '', string $detail = '' ): string {
+		// The release or file name is only a fact the reason may carry. Without it the generic copy stays true.
+		if ( '' === $detail && in_array( $reason, array( 'package_asset_missing', 'package_asset_ambiguous' ), true ) ) {
+			$reason = 'release_incompatible';
+		}
 		if ( 'release_unavailable' === $code ) {
 			return match ( $reason ) {
 				'no_releases' => __( 'No published release was found for the selected track.', 'ran-booster' ),
+				/* translators: %s: release tag, for example v1.2.0. */
+				'package_asset_missing' => sprintf( __( 'Release %s has no .zip package asset.', 'ran-booster' ), $detail ),
+				/* translators: %s: release tag, for example v1.2.0. */
+				'package_asset_ambiguous' => sprintf( __( 'Release %s has more than one .zip package asset.', 'ran-booster' ), $detail ),
 				'release_incompatible' => __( 'A published release was found, but it does not have exactly one package ZIP, or its header or Update URI does not match.', 'ran-booster' ),
 				default => __( 'Booster could not confirm an eligible published release for this track.', 'ran-booster' ),
 			};
+		}
+		if ( 'invalid_release_assets' === $code && 'release_identity_mismatch' === $reason && '' !== $detail ) {
+			/* translators: %s: package folder and main file name found in the ZIP, for example example/example.php. */
+			return sprintf( __( 'The ZIP’s folder or main file (%s) does not match this package.', 'ran-booster' ), $detail );
 		}
 
 		return match ( $code ) {
@@ -1043,13 +1056,23 @@ final class ReleaseManagementDisplay {
 			|| in_array( $code, array( 'invalid_release_assets', 'preflight_unavailable', 'subdirectory_not_supported', 'target_registration_failed', 'repository_release_owner_exists' ), true );
 	}
 
-	private function diagnostic_action( string $code, string $reason = '' ): string {
+	private function diagnostic_action( string $code, string $reason = '', string $detail = '' ): string {
+		// Keep the action in step with the message: without the release tag the generic copy is used for both.
+		if ( '' === $detail && in_array( $reason, array( 'package_asset_missing', 'package_asset_ambiguous' ), true ) ) {
+			$reason = 'release_incompatible';
+		}
 		if ( 'release_unavailable' === $code ) {
 			return match ( $reason ) {
 				'no_releases' => __( 'Publish a release for the selected Stable or Preview track, then use Check releases.', 'ran-booster' ),
+				'package_asset_missing' => __( 'Attach exactly one .zip package to the release, then use Check releases.', 'ran-booster' ),
+				'package_asset_ambiguous' => __( 'Keep exactly one .zip package on the release, then use Check releases.', 'ran-booster' ),
 				'release_incompatible' => __( 'Make sure the release has exactly one package ZIP asset, and that its plugin or theme header and Update URI match this repository. Then use Check releases.', 'ran-booster' ),
 				default => __( 'Publish a release for the selected Stable or Preview track, make sure it has one package ZIP whose header and Update URI match this repository, then use Check releases.', 'ran-booster' ),
 			};
+		}
+
+		if ( 'invalid_release_assets' === $code && 'release_identity_mismatch' === $reason && '' !== $detail ) {
+			return __( 'Publish a ZIP whose folder and main file name match this package, then use Check releases.', 'ran-booster' );
 		}
 
 		return match ( $code ) {
@@ -1101,7 +1124,7 @@ final class ReleaseManagementDisplay {
 		);
 	}
 
-	private function render_failure_help( string $code, string $message = '', string $reason = '' ): void {
+	private function render_failure_help( string $code, string $message = '', string $reason = '', string $detail = '' ): void {
 		$troubleshooting_url = add_query_arg(
 			array(
 				'page'  => 'ran-booster',
@@ -1116,7 +1139,7 @@ final class ReleaseManagementDisplay {
 			<summary><?php esc_html_e( 'Why this happened and how to fix it', 'ran-booster' ); ?></summary>
 			<div data-ran-booster-ui-disclosure-content class="ran-booster-disclosure__body">
 			<p><strong><?php esc_html_e( 'What Booster found:', 'ran-booster' ); ?></strong> <?php echo esc_html( '' !== $message ? $message : $this->diagnostic_message( $code, $reason ) ); ?></p>
-			<p><strong><?php esc_html_e( 'What to do:', 'ran-booster' ); ?></strong> <?php echo esc_html( $this->diagnostic_action( $code, $reason ) ); ?></p>
+			<p><strong><?php esc_html_e( 'What to do:', 'ran-booster' ); ?></strong> <?php echo esc_html( $this->diagnostic_action( $code, $reason, $detail ) ); ?></p>
 			<p><a href="<?php echo esc_url( $troubleshooting_url ); ?>"><?php esc_html_e( 'Open Troubleshooting', 'ran-booster' ); ?></a></p>
 			<p><strong><?php esc_html_e( 'Technical reason:', 'ran-booster' ); ?></strong> <code><?php echo esc_html( $code ); ?></code></p>
 			</div>

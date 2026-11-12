@@ -359,6 +359,19 @@ final class ProviderContractsTest extends TestCase {
 		);
 	}
 
+	public function test_release_inspection_rejection_detail_is_optional_bounded_and_never_a_new_reason(): void {
+		self::assertNull( RepositoryReleaseInspectionRejected::incompatible()->detail );
+		self::assertSame( 'package_header_missing', RepositoryReleaseInspectionRejected::incompatible( 'package_header_missing' )->detail );
+		self::assertSame( 'a' . str_repeat( 'b', 63 ), RepositoryReleaseInspectionRejected::incompatible( 'a' . str_repeat( 'b', 63 ) )->detail );
+		foreach ( array( '', 'Upper', 'package-header', '1abc', "abc\n", 'a' . str_repeat( 'b', 64 ), 'caf\u{e9}' ) as $malformed ) {
+			self::assertNull( RepositoryReleaseInspectionRejected::incompatible( $malformed )->detail, $malformed );
+		}
+		self::assertSame(
+			RepositoryReleaseInspectionRejected::INCOMPATIBLE,
+			RepositoryReleaseInspectionRejected::incompatible( 'package_header_missing' )->reason
+		);
+	}
+
 	public function test_release_metadata_is_an_exact_optional_capability(): void {
 		self::assertTrue( ( new \ReflectionClass( RepositoryReleaseMetadata::class ) )->isSubclassOf( \RAN\Provider\ProviderCapability::class ) );
 

@@ -9,6 +9,7 @@ use RAN\Deployment\DeploymentPolicy;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ProviderRegistry;
+use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateListing;
 use RAN\RepositoryProvider\RepositoryReleaseInspectionRejected;
 use RAN\RepositoryProvider\RepositoryReleaseInspector;
@@ -35,6 +36,12 @@ use Throwable;
  * Administrator facade over Core-owned source state and native update runtime.
  */
 final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
+	/**
+	 * Provider-supplied rejection reasons Core has specific copy for. A reason without copy would show the
+	 * generic text, which is less helpful than the listing-derived reason, so it is not accepted yet.
+	 */
+	private const EXPLAINED_PROVIDER_REASONS = array( 'package_asset_missing', 'package_asset_ambiguous' );
+
 	private const SOURCE_CHANGED_MESSAGE = 'Package settings changed after this browser page was opened. Refresh this browser page, review the current settings, then try again.';
 	private const SUBDIRECTORY_MESSAGE   = 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.';
 
@@ -580,7 +587,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				return ReleaseTrackingResult::failed(
 					$preflight->code(),
 					'Published release assets could not be validated.',
-					$preflight->reason_code()
+					$preflight->reason_code(),
+					$preflight->detail_text()
 				);
 			}
 			$package_root  = $eligibility->package_root();
@@ -1114,6 +1122,8 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 		}
 
 		$inspected = 0;
+		$newest    = null;
+		$detail    = null;
 		foreach ( $candidates as $candidate ) {
 			if ( 'stable' === $channel && $candidate->prerelease ) {
 				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $package_root, reason_code: 'invalid_release' );
@@ -1130,9 +1140,14 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				);
 			} catch ( RepositoryReleaseInspectionRejected $failure ) {
 				if ( RepositoryReleaseInspectionRejected::INCOMPATIBLE === $failure->reason ) {
-					// Look past the newest release once, then stop; both paths end in the same reason.
+					// Look past the newest release once, then stop. The newest release is the one named,
+					// even when the older one failed differently: it is the release the maintainer last published.
+					if ( null === $newest ) {
+						$newest = $candidate;
+						$detail = $failure->detail;
+					}
 					if ( 2 === $inspected ) {
-						return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $package_root, reason_code: 'release_incompatible' );
+						return $this->rejected_release_preflight( $package_root, $newest, $detail );
 					}
 					continue;
 				}
@@ -1155,7 +1170,15 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 				|| ! hash_equals( $package_root, $inspection->package_root )
 
 				|| ! hash_equals( $header_file, $inspection->main_file ) ) {
-				return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $package_root, reason_code: 'release_identity_mismatch' );
+				$found = $inspection->package_root . '/' . $inspection->main_file;
+
+				return new ReleaseTrackingPreflight(
+					ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS,
+					$package_root,
+					reason_code: 'release_identity_mismatch',
+					// Name the ZIP's layout only when that is what differs, not a listing-versus-inspection mismatch.
+					detail: hash_equals( $package_root, $inspection->package_root ) && hash_equals( $header_file, $inspection->main_file ) ? '' : ReleaseTrackingPreflight::detail( $found )
+				);
 			}
 
 			$comparison   = version_compare( $inspection->version, $package->get_version() );
@@ -1180,7 +1203,28 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			);
 		}
 
-		return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $package_root, reason_code: 'release_incompatible' );
+		return $this->rejected_release_preflight( $package_root, $newest, $detail );
+	}
+
+	/**
+	 * The provider's own reason for the newest rejection wins when Core knows it. Otherwise the listing's
+	 * ZIP count chooses the wording, after inspection has rejected the release. One ZIP means the cause is
+	 * inside the archive, which only the provider can name.
+	 */
+	private function rejected_release_preflight( string $package_root, ?RepositoryReleaseCandidate $newest, ?string $provider_reason ): ReleaseTrackingPreflight {
+		$zips = null === $newest ? 1 : count( $newest->expected_asset_names );
+
+		return new ReleaseTrackingPreflight(
+			ReleaseTrackingPreflight::RELEASE_UNAVAILABLE,
+			$package_root,
+			reason_code: match ( true ) {
+				null !== $provider_reason && in_array( $provider_reason, self::EXPLAINED_PROVIDER_REASONS, true ) => $provider_reason,
+				0 === $zips => 'package_asset_missing',
+				$zips > 1 => 'package_asset_ambiguous',
+				default => 'release_incompatible',
+			},
+			detail: null === $newest ? '' : ReleaseTrackingPreflight::detail( $newest->tag )
+		);
 	}
 
 	private function configuration_for(

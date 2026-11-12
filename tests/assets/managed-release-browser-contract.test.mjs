@@ -454,6 +454,204 @@ test('managed browser keeps an automatically inspected newer candidate outside e
 	);
 });
 
+const readyResponse = (version, relationship, extra = {}) => ({
+	successful: true,
+	code: 'release_ready',
+	data: {
+		version,
+		tag: `v${version}`,
+		installed_version: '2.0.0',
+		version_relationship: relationship,
+		...extra,
+	},
+});
+const checkedRadio = (harness) =>
+	descendants(harness.nodes.get('candidate-list')).find(
+		(node) => node.type === 'radio' && node.checked
+	);
+const radioFor = (harness, releaseId) =>
+	descendants(harness.nodes.get('candidate-list')).find(
+		(node) => node.type === 'radio' && node.dataset.releaseId === releaseId
+	);
+const listText = (harness) =>
+	descendants(harness.nodes.get('candidate-list'))
+		.map((node) => node.textContent || '')
+		.join(' ');
+const installedAndNewer = [
+	{
+		successful: true,
+		code: 'release_candidates_available',
+		data: {
+			installed_version: '2.0.0',
+			candidates: [
+				candidate('new', '3.0.0', 'newer', '2026-08-03T00:00:00Z'),
+				candidate('same', '2.0.0', 'same', '2026-08-02T00:00:00Z'),
+			],
+		},
+	},
+];
+
+test('managed browser preselects and inspects the installed release even when a newer release is listed first', async () => {
+	const harness = createHarness(
+		[...installedAndNewer, readyResponse('2.0.0', 'same')],
+		'new'
+	);
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	assert.equal(checkedRadio(harness).dataset.releaseId, 'same');
+	assert.equal(harness.requests.length, 2);
+	assert.equal(harness.requests[1].get('release_id'), 'same');
+	assert.equal(
+		harness.nodes.get('candidate-list').children[0].children[0].dataset
+			.releaseId,
+		'new',
+		'the newer release stays first in the list'
+	);
+	const text = listText(harness);
+	assert.match(
+		text,
+		/3\.0\.0 \(v3\.0\.0\).*Latest eligible.*Newer than installed/
+	);
+	assert.match(text, /2\.0\.0 \(v2\.0\.0\).*Installed\/current/);
+	assert.match(
+		harness.nodes.get('message').textContent,
+		/matches the installed version/
+	);
+});
+
+test('managed browser leaves Update now disabled, with no fallback link, while the installed release is selected', async () => {
+	const harness = createHarness(
+		[...installedAndNewer, readyResponse('2.0.0', 'same')],
+		'new'
+	);
+	harness.browser.dataset.ranBoosterManagedReleaseWordpressUrl =
+		'/wp-admin/plugins.php';
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+	assert.equal(harness.requests[1].get('release_id'), 'same');
+
+	const update = harness.nodes.get('native-update');
+	assert.equal(update.getAttribute('aria-disabled'), 'true');
+	assert.equal(update.getAttribute('href'), null);
+	assert.equal(update.textContent, 'Update now');
+	const outcomes = descendants(harness.nodes.get('candidate-list')).filter(
+		(node) => node.className === 'ran-booster-release-candidate__outcome'
+	);
+	assert.ok(outcomes.every((node) => node.hidden === true));
+	assert.equal(
+		descendants(harness.nodes.get('candidate-list')).some(
+			(node) => node.tagName === 'a'
+		),
+		false
+	);
+});
+
+test('managed browser inspects the newer release and enables Update now when the user selects it with a matching offer', async () => {
+	const harness = createHarness(
+		[
+			...installedAndNewer,
+			readyResponse('2.0.0', 'same'),
+			readyResponse('3.0.0', 'newer', {
+				native_offer: {
+					available: true,
+					release_id: 'new',
+					version: '3.0.0',
+				},
+			}),
+		],
+		'new'
+	);
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+	assert.equal(harness.requests[1].get('release_id'), 'same');
+	assert.equal(
+		harness.nodes.get('native-update').getAttribute('aria-disabled'),
+		'true'
+	);
+
+	const newer = radioFor(harness, 'new');
+	newer.checked = true;
+	await newer.dispatch('change');
+	await flush();
+
+	assert.equal(harness.requests.length, 3);
+	assert.equal(harness.requests[2].get('release_id'), 'new');
+	const update = harness.nodes.get('native-update');
+	assert.equal(update.getAttribute('aria-disabled'), 'false');
+	assert.equal(update.textContent, 'Update to 3.0.0');
+	assert.match(update.getAttribute('href'), /action=upgrade-plugin/);
+
+	const installed = radioFor(harness, 'same');
+	installed.checked = true;
+	await installed.dispatch('change');
+	await flush();
+	assert.equal(update.getAttribute('aria-disabled'), 'true');
+	assert.equal(update.getAttribute('href'), null);
+	assert.equal(update.textContent, 'Update now');
+});
+
+test('managed browser shows the WordPress screen link only after the newer release without an offer is selected', async () => {
+	const harness = createHarness(
+		[
+			...installedAndNewer,
+			readyResponse('2.0.0', 'same'),
+			readyResponse('3.0.0', 'newer'),
+		],
+		'other'
+	);
+	harness.browser.dataset.ranBoosterManagedReleaseWordpressUrl =
+		'/wp-admin/plugins.php';
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+	assert.equal(harness.requests[1].get('release_id'), 'same');
+	const links = () =>
+		descendants(harness.nodes.get('candidate-list')).filter(
+			(node) => node.tagName === 'a'
+		);
+	assert.equal(links().length, 0);
+
+	const newer = radioFor(harness, 'new');
+	newer.checked = true;
+	await newer.dispatch('change');
+	await flush();
+
+	assert.equal(links().length, 1);
+	assert.equal(
+		harness.nodes.get('native-update').getAttribute('aria-disabled'),
+		'true'
+	);
+});
+
+test('managed browser preselects the installed release when only it and older releases are listed', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate('old', '1.0.0', 'older', '2026-08-03T00:00:00Z'),
+					candidate('same', '2.0.0', 'same', '2026-08-02T00:00:00Z'),
+				],
+			},
+		},
+		readyResponse('2.0.0', 'same'),
+	]);
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+	assert.equal(harness.requests[1].get('release_id'), 'same');
+
+	assert.equal(checkedRadio(harness).dataset.releaseId, 'same');
+	assert.equal(radioFor(harness, 'old').disabled, true);
+	assert.equal(radioFor(harness, 'old').checked, undefined);
+});
+
 test('managed browser keeps the initial candidate inspection busy after its synchronous change event', async () => {
 	const inspection = deferred();
 	const harness = createHarness([
@@ -490,7 +688,7 @@ test('managed browser keeps the initial candidate inspection busy after its sync
 	await flush();
 });
 
-test('managed browser preserves provider candidate order without a native update offer', async () => {
+test('managed browser preserves provider candidate order when the installed release is not listed and there is no native update offer', async () => {
 	const providerFirst = candidate(
 		'provider-first',
 		'3.0.0',
@@ -707,7 +905,7 @@ test('managed browser enables the native Core update only for its exact newer in
 	assert.equal(outcome.textContent, 'Version 3.0.0 is ready to install.');
 });
 
-test('managed browser prefers and marks the exact rendered update offer over a later-published candidate', async () => {
+test('managed browser prefers and marks the exact rendered update offer over a later-published candidate when the installed release is not listed', async () => {
 	const harness = createHarness([
 		{
 			successful: true,
@@ -806,7 +1004,7 @@ test('managed browser sends a newer theme release without an offer to the Themes
 	}
 });
 
-test('managed browser matches the page-level offer by version when the page has no release id', async () => {
+test('managed browser matches the page-level offer by version when the page has no release id and the installed release is not listed', async () => {
 	const harness = createHarness(
 		[
 			{

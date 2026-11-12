@@ -1848,27 +1848,110 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( 2, $tracking->status_reads );
 	}
 
-	/** @return array<string, array{string, string, string}> */
+	/** @return array<string, array{string, string, string, string, string}> */
 	public static function failed_enable_reasons(): array {
 		return array(
-			'no published release'                => array( 'no_releases', 'No published release was found for the selected track.', 'Publish a release for the selected Stable or Preview track, then use Check releases.' ),
-			'no package ZIP or mismatched header' => array( 'release_incompatible', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset' ),
-			'no reason (source guard)'            => array( '', 'Booster could not confirm an eligible published release for this track.', 'make sure it has one package ZIP' ),
+			'no published release'             => array( 'no_releases', '', 'No published release was found for the selected track.', 'Publish a release for the selected Stable or Preview track, then use Check releases.', 'release_unavailable' ),
+			'no package ZIP'                   => array( 'package_asset_missing', 'v0.4.0', 'Release v0.4.0 has no .zip package asset.', 'Attach exactly one .zip package to the release, then use Check releases.', 'release_unavailable' ),
+			'more than one package ZIP'        => array( 'package_asset_ambiguous', 'v0.4.0', 'Release v0.4.0 has more than one .zip package asset.', 'Keep exactly one .zip package on the release, then use Check releases.', 'release_unavailable' ),
+			'one ZIP, cause inside it'         => array( 'release_incompatible', 'v0.4.0', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset', 'release_unavailable' ),
+			'ZIP named without its tag'        => array( 'package_asset_missing', '', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'Make sure the release has exactly one package ZIP asset', 'release_unavailable' ),
+			'folder or main file mismatch'     => array( 'release_identity_mismatch', 'wrong-dir/wrong.php', 'The ZIP’s folder or main file (wrong-dir/wrong.php) does not match this package.', 'Publish a ZIP whose folder and main file name match this package, then use Check releases.', 'invalid_release_assets' ),
+			'identity mismatch without a name' => array( 'release_identity_mismatch', '', 'The published release assets could not be validated.', 'Review the release, repository access', 'invalid_release_assets' ),
+			'no reason (source guard)'         => array( '', '', 'Booster could not confirm an eligible published release for this track.', 'make sure it has one package ZIP', 'release_unavailable' ),
 		);
 	}
 
 	#[DataProvider( 'failed_enable_reasons' )]
-	public function test_failed_enable_reason_survives_the_signed_redirect_and_selects_the_displayed_copy( string $reason, string $message, string $action ): void {
-		$html = $this->render_enable_failure( $reason, $url );
+	public function test_failed_enable_reason_survives_the_signed_redirect_and_selects_the_displayed_copy( string $reason, string $detail, string $message, string $action, string $code ): void {
+		$html = $this->render_enable_failure( $reason, $url, $detail, $code );
 
 		self::assertSame( '' !== $reason, str_contains( $url, 'ran_booster_release_reason=' . $reason ) );
 		self::assertSame( '' === $reason, ! str_contains( $url, 'ran_booster_release_reason' ) );
+		self::assertSame( '' !== $detail, str_contains( $url, 'ran_booster_release_detail=' ) );
 		self::assertStringContainsString( $message, $html );
 		self::assertStringContainsString( $action, $html );
-		self::assertStringContainsString( '<code>release_unavailable</code>', $html );
+		self::assertStringContainsString( '<code>' . $code . '</code>', $html );
 		if ( '' !== $reason ) {
 			self::assertStringNotContainsString( 'Booster could not confirm an eligible published release', $html );
 		}
+	}
+
+	public function test_a_forged_swapped_added_removed_or_oversized_detail_is_never_displayed(): void {
+		$this->render_enable_failure( 'package_asset_missing', $url, 'v0.4.0' );
+		$signed = $this->query_of( $url );
+		$this->render_enable_failure( 'package_asset_missing', $reason_only_url );
+		$reason_only = $this->query_of( $reason_only_url );
+		$this->render_enable_failure( '', $plain_url );
+		$plain = $this->query_of( $plain_url );
+
+		$forgeries = array(
+			'swapped'          => array( 'ran_booster_release_detail' => 'v9.9.9' ) + $signed,
+			'removed'          => array_diff_key( $signed, array( 'ran_booster_release_detail' => true ) ),
+			'added'            => $reason_only + array( 'ran_booster_release_detail' => 'v0.4.0' ),
+			'added, no reason' => $plain + array( 'ran_booster_release_detail' => 'v0.4.0' ),
+			'oversize'         => array( 'ran_booster_release_detail' => str_repeat( 'a', 121 ) ) + $signed,
+			'control char'     => array( 'ran_booster_release_detail' => "v0.4.0\n" ) + $signed,
+			'non ASCII'        => array( 'ran_booster_release_detail' => "v0.4.\u{202E}0" ) + $signed,
+			'array'            => array( 'ran_booster_release_detail' => array( 'v0.4.0' ) ) + $signed,
+		);
+		foreach ( $forgeries as $name => $query ) {
+			$_GET     = $query;
+			$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
+			$package  = new PackageProjection();
+			ob_start();
+			$controls->render_advanced_source_section( 'edit', 'plugin', 'branch', $package, $package->settings_url() );
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'v9.9.9', $html, $name );
+			self::assertStringNotContainsString( 'has no .zip package asset', $html, $name );
+			self::assertStringNotContainsString( 'v0.4.', $html, $name );
+		}
+	}
+
+	public function test_a_detail_only_allows_characters_that_survive_a_redirect_query_string(): void {
+		// WordPress add_query_arg does not encode new values and wp_safe_redirect strips characters outside a
+		// fixed set, so a detail with + & # % " < > = ; \' $ would read back changed and fail the signature,
+		// silently dropping the whole notice. Simulate both steps for every printable ASCII character.
+		foreach ( range( 0x20, 0x7E ) as $ordinal ) {
+			$value    = 'a' . chr( $ordinal ) . 'b';
+			$location = str_replace( ' ', '%20', 'https://example.test/wp-admin/admin.php?k=' . $value );
+			$location = (string) preg_replace( '/[^a-z0-9-~+_.?#=!&;,\/:%@$\|*\'()\[\]\\\\x80-\\xff]/i', '', $location );
+			parse_str( (string) parse_url( $location, PHP_URL_QUERY ), $parsed ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
+			if ( '' !== ReleaseTrackingPreflight::detail( $value ) ) {
+				self::assertSame( $value, $parsed['k'] ?? null, 'The allowed character ' . chr( $ordinal ) . ' must survive the redirect unchanged.' );
+			}
+		}
+		foreach ( array( 'v1.0.0+build.1', 'a&b', 'a#b', 'a%b', 'a"b', '<b>v1</b>', 'a=b', 'a;b', "a'b", 'a$b' ) as $unsafe ) {
+			self::assertSame( '', ReleaseTrackingPreflight::detail( $unsafe ), $unsafe );
+		}
+		foreach ( array( 'v0.4.0', 'v1.0.0-rc.1', 'example/example.php', 'found 1.2.0, expected 1.2.3' ) as $safe ) {
+			self::assertSame( $safe, ReleaseTrackingPreflight::detail( $safe ), $safe );
+		}
+	}
+
+	public function test_a_result_cannot_carry_an_unsafe_detail(): void {
+		foreach ( array( str_repeat( 'a', 121 ), "v1\n", "v1\u{200B}", 'vé' ) as $detail ) {
+			try {
+				ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.', 'package_asset_missing', $detail );
+				self::fail( 'An unsafe detail was accepted.' );
+			} catch ( \InvalidArgumentException ) {
+				self::assertSame( '', ReleaseTrackingPreflight::detail( $detail ) );
+			}
+		}
+		self::assertSame( 'v0.4.0', ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.', 'package_asset_missing', 'v0.4.0' )->detail() );
+	}
+
+	public function test_a_result_without_reason_or_detail_still_verifies_against_the_original_signed_payload(): void {
+		$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
+		$method   = new \ReflectionMethod( $controls, 'result_nonce_action' );
+		$original = 'ran-booster-result-' . hash( 'sha256', (string) wp_json_encode( array( 'release_enabled', true, 'plugin', 'example/example.php', 'stable' ) ) );
+
+		self::assertSame( $original, $method->invoke( $controls, 'release_enabled', true, 'plugin', 'example/example.php', 'stable' ) );
+		self::assertNotSame( $original, $method->invoke( $controls, 'release_enabled', true, 'plugin', 'example/example.php', 'stable', '', 'v1' ) );
+		self::assertNotSame(
+			$method->invoke( $controls, 'release_enabled', true, 'plugin', 'example/example.php', 'stable', 'package_asset_missing' ),
+			$method->invoke( $controls, 'release_enabled', true, 'plugin', 'example/example.php', 'stable', 'package_asset_missing', 'v1' )
+		);
 	}
 
 	public function test_a_forged_added_removed_or_unknown_reason_is_never_displayed(): void {
@@ -1904,9 +1987,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	}
 
 	/** @param-out string $url */
-	private function render_enable_failure( string $reason, ?string &$url = null ): string {
+	private function render_enable_failure( string $reason, ?string &$url = null, string $detail = '', string $code = 'release_unavailable' ): string {
 		$tracking                   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
-		$tracking->enable_result    = ReleaseTrackingResult::failed( 'release_unavailable', 'Published release assets could not be validated.', $reason );
+		$tracking->enable_result    = ReleaseTrackingResult::failed( $code, 'Published release assets could not be validated.', $reason, $detail );
 		$controls                   = ReleaseManagementFixture::controls( $tracking );
 		$request                    = $this->request( 'enable' );
 		$request['release_channel'] = 'stable';

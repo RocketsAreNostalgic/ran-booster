@@ -235,13 +235,16 @@ them.
 
 ### Pull requests
 
-- Title: a Conventional Commit of at most 65 characters. A squash merge uses the
-  title as the commit subject and appends ` (#NNN)`, so a longer title pushes
-  the default-branch subject past 72. The title type is what Release Please
-  reads, so classify it truthfully.
+- Title: a Conventional Commit of at most 64 characters. A squash merge uses the
+  title as the commit subject and appends ` (#NNNN)` (up to 8 characters), so a
+  longer title pushes the default-branch subject past 72. The title type is what
+  Release Please reads, so classify it truthfully.
 - Body: follow `.github/pull_request_template.md` (Summary, Why, Verification,
-  Checklist) and state the intended merge method. Put `Closes #NNN` in the body:
-  a squash merge keeps only the title and body, not the commits' messages.
+  Checklist) and state the intended merge method. For a squash merge, put
+  `Closes #NNN` in the PR body: this repository's squash commit carries only the
+  title, so the commits' messages and the body are not kept, but GitHub still
+  closes the issue from the PR body when the PR merges. A merge commit keeps
+  each commit's own `Closes` lines.
 - Merging is the owner's decision, as set out above. Present the PR, its SHAs
   and checks, and merge only on the owner's explicit authorisation.
 

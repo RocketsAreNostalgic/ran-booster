@@ -723,9 +723,10 @@
 		root.addEventListener(
 			'click',
 			function (event) {
-				// The mounted toggle, or the native summary when the runtime is absent.
+				// The mounted toggle in an article header, or the native summary when
+				// the runtime is absent. A button inside an article body never matches.
 				const trigger = event.target.closest?.(
-					'[role="button"][aria-expanded="false"], details.ran-booster-documentation__section:not([open]) > summary'
+					'.ran-booster-ui-disclosure__header > [role="button"][aria-expanded="false"], details.ran-booster-documentation__section:not([open]) > summary'
 				);
 				const section = trigger?.closest(
 					'.ran-booster-documentation__section'
@@ -741,10 +742,15 @@
 						shell ? shell.getBoundingClientRect().bottom : 0
 					);
 					if (section.getBoundingClientRect().top < line) {
-						section.scrollIntoView({
-							block: 'start',
-							behavior: 'instant',
-						});
+						try {
+							section.scrollIntoView({
+								block: 'start',
+								behavior: 'instant',
+							});
+						} catch {
+							// A browser without the instant behaviour rejects the option.
+							section.scrollIntoView({ block: 'start' });
+						}
 					}
 				});
 			},

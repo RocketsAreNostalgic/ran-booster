@@ -16,8 +16,8 @@ branch, worktree and CI round costs reconciliation work the maintainers pay for.
 - Do not create linked worktrees, extra clones, accumulator or integration
   branches, or stacked pull requests, and do not use tooling modes that create
   worktrees on your behalf. If a task seems to need one, stop and ask the owner.
-- If you find worktrees or branches you did not create, report them. Do not
-  reuse, switch to or delete them.
+- If you find local worktrees or unexpected local branches you did not create,
+  report them. Do not reuse, switch to or delete them.
 - Run `composer check` and `pnpm check` locally before opening a pull request.
   CI verifies a green local result; it is not a place to debug. Do not push
   repeatedly to trigger CI.
@@ -116,8 +116,8 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
   requests even when repository permissions or branch rules allow a direct
   merge. Prefer squash for ordinary incremental PRs so the
   reviewed PR lands as one meaningful default-branch commit. Use a regular merge
-  commit, never squash or rebase, for accumulator or integration branches and for
-  any PR whose detailed history matters, for example per-commit `Closes` lines,
+  commit, never squash or rebase, for owner-directed accumulator or integration
+  branches and for any PR whose detailed history matters, for example per-commit `Closes` lines,
   changelog entries or a deliberately ordered sequence. State the intended merge
   method when asking for merge authority. **Booster's bot-owned `chore(main): release ...` proposals
   are the explicit exception: use Create a merge commit, never squash or rebase

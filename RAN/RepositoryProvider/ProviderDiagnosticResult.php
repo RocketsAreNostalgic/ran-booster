@@ -59,7 +59,7 @@ final readonly class ProviderDiagnosticResult {
 		}
 	}
 
-	/** The one Core screen for untrusted failure text; callers drop, never redact, a value it rejects. */
+	/** Shape screen for failure text, a safety net only: sinks must still receive fixed or provider-public text. Callers drop, never redact, a rejected value. */
 	public static function is_safe_text( string $value, int $maximum = 512 ): bool {
 		return '' !== trim( $value )
 			&& strlen( $value ) <= $maximum
@@ -75,6 +75,10 @@ final readonly class ProviderDiagnosticResult {
 			&& 1 !== preg_match( '#[A-Za-z][A-Za-z0-9+.-]*://#', $value )
 			&& 1 !== preg_match( '#\.\./|\bwp-content\b#i', $value )
 			&& 1 !== preg_match( '/\b(?:token|secret|password|passwd|api[_-]?key|signature)\b\s*[:=]/i', $value )
-			&& 1 !== preg_match( '/\b[0-9a-f]{32,}\b/i', $value );
+			&& 1 !== preg_match( '/\b[0-9a-f]{32,}\b/i', $value )
+			&& 1 !== preg_match( '/[A-Za-z0-9_-]{40,}/', $value )
+			&& 1 !== preg_match( '#:/#', $value )
+			&& 1 !== preg_match( '/[^\s:@\/]+:[^\s@\/]+@\S/', $value )
+			&& 1 !== preg_match( '/\b(?:password|passwd|pwd|secret|token|api[ _-]?key)\b\s+\S/i', $value );
 	}
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Tests\Deployment;
 
 require_once __DIR__ . '/DeploymentWorkerPhpFunctions.php';
+require_once dirname( __DIR__ ) . '/Logging/LoggingWordPressFunctions.php';
 require_once __DIR__ . '/WordPressWorkerWakeupCron.php';
 require_once __DIR__ . '/WordPressWorkerWakeupWordPressFunctions.php';
 require_once __DIR__ . '/AttemptRepositoryDatabase.php';
@@ -23,6 +24,7 @@ use RAN\Deployment\DeploymentWorker;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\Logging\BoosterLogger;
 use RAN\Logging\TemporaryDebugCapture;
+use RAN\Deployment\DeploymentStorageFailure;
 use RuntimeException;
 
 final class DeploymentWorkerTest extends TestCase {
@@ -154,6 +156,29 @@ final class DeploymentWorkerTest extends TestCase {
 	}
 
 	public function test_coordinator_throwable_is_logged_by_class_and_code_without_its_message(): void {
+		$this->admit( 'failure' );
+		$this->coordinator->failure = new RuntimeException( 'https://user:token@example.com/private /var/www/secret', 42 );
+
+		$lines = $this->captured_log_lines();
+
+		self::assertStringContainsString( 'deployment worker failed', $lines );
+		self::assertStringContainsString( '"exception_class":"RuntimeException","exception_code":"42"', $lines );
+		self::assertStringNotContainsString( 'token', $lines );
+		self::assertStringNotContainsString( '/var/www', $lines );
+	}
+
+	public function test_storage_failure_is_logged_by_class_without_its_message(): void {
+		$this->admit( 'failure' );
+		$this->coordinator->failure = DeploymentStorageFailure::unavailable();
+
+		$lines = $this->captured_log_lines();
+
+		self::assertStringContainsString( 'deployment worker storage failure', $lines );
+		self::assertStringContainsString( '"exception_class":"RAN\\\\Deployment\\\\DeploymentStorageFailure"', $lines );
+		self::assertStringNotContainsString( DeploymentStorageFailure::unavailable()->getMessage(), $lines );
+	}
+
+	private function captured_log_lines(): string {
 		$directory = sys_get_temp_dir() . '/ran-booster-worker-log-' . bin2hex( random_bytes( 8 ) );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
 		mkdir( $directory, 0700 );
@@ -161,14 +186,8 @@ final class DeploymentWorkerTest extends TestCase {
 		$capture->start();
 		BoosterLogger::configure_capture( $capture );
 		try {
-			$this->admit( 'failure' );
-			$this->coordinator->failure = new RuntimeException( 'https://user:token@example.com/private /var/www/secret', 42 );
 			$this->worker()->run_once();
-			$lines = implode( "\n", array_column( $capture->snapshot()['entries'], 'line' ) );
-			self::assertStringContainsString( 'deployment worker failed', $lines );
-			self::assertStringContainsString( '"exception_class":"RuntimeException","exception_code":"42"', $lines );
-			self::assertStringNotContainsString( 'token', $lines );
-			self::assertStringNotContainsString( '/var/www', $lines );
+			return implode( "\n", array_column( $capture->snapshot()['entries'], 'line' ) );
 		} finally {
 			BoosterLogger::configure_capture( null );
 			foreach ( array_filter( (array) glob( $directory . '/*' ), 'is_string' ) as $file ) {
@@ -227,8 +246,8 @@ final class WorkerCoordinator extends DeploymentCoordinator {
 
 	public int $calls = 0;
 	/** @var list<int> */
-	public array $attempt_ids         = array();
-	public ?RuntimeException $failure = null;
+	public array $attempt_ids   = array();
+	public ?\Throwable $failure = null;
 
 	public function __construct() {
 	}

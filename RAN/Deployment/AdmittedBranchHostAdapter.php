@@ -53,6 +53,7 @@ use ZipArchive;
  */
 final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, AdmittedArchiveSource, AdmittedTargetFacts, AdmittedPackageExecutor, MutationLock {
 	private const VALIDATOR_OUTCOMES = array(
+		ArchiveValidator::CODE_ZIP_UNAVAILABLE           => DeploymentOutcome::CODE_DEPLOYMENT_ZIP_EXTENSION_MISSING,
 		ArchiveValidator::CODE_ZIP_INVALID               => DeploymentOutcome::CODE_ARCHIVE_ZIP_INVALID,
 		ArchiveValidator::CODE_ENTRY_LIMIT               => DeploymentOutcome::CODE_ARCHIVE_ENTRY_LIMIT,
 		ArchiveValidator::CODE_ENTRY_INVALID             => DeploymentOutcome::CODE_ARCHIVE_ENTRY_INVALID,

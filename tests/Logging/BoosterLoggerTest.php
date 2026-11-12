@@ -113,7 +113,7 @@ final class BoosterLoggerTest extends TestCase {
 			'token'  => 'ghp_abcdefghijklmnop1234',
 			'url'    => 'https://user:pass@example.com/x',
 			'path'   => '/Users/someone/site/wp-content/file.php',
-			'digest' => str_repeat( 'ab', 32 ),
+			'digest' => str_repeat( 'ab', 24 ),
 			'markup' => '<script>alert(1)</script>',
 			'long'   => str_repeat( 'a', 192 ),
 		);
@@ -130,6 +130,27 @@ final class BoosterLoggerTest extends TestCase {
 		foreach ( $this->capture->snapshot()['entries'] as $entry ) {
 			self::assertSame( 1, preg_match( '/\{"step":"ok"\}\z/', $entry['line'] ), $entry['line'] );
 		}
+	}
+
+	public function test_exact_commit_ids_and_correlation_ids_survive_the_value_screen(): void {
+		BoosterLogger::log(
+			'ids',
+			array(
+				'resolved_ref'   => str_repeat( 'a', 40 ),
+				'correlation_id' => str_repeat( 'b', 32 ),
+			)
+		);
+		BoosterLogger::log(
+			'near',
+			array(
+				'resolved_ref'   => str_repeat( 'a', 41 ) . 'Z',
+				'correlation_id' => str_repeat( 'b', 33 ),
+			)
+		);
+		$entries = $this->capture->snapshot()['entries'];
+		self::assertStringContainsString( '"resolved_ref":"' . str_repeat( 'a', 40 ) . '","correlation_id":"' . str_repeat( 'b', 32 ) . '"', $entries[0]['line'] );
+		self::assertStringNotContainsString( 'resolved_ref', $entries[1]['line'] );
+		self::assertStringNotContainsString( 'correlation_id', $entries[1]['line'] );
 	}
 
 	public function test_inactive_or_broken_capture_does_not_affect_logging_callers(): void {

@@ -97,7 +97,7 @@ final class BoosterLogger {
 
 			if ( is_string( $value ) ) {
 				$line = self::one_line( $value );
-				if ( '' !== $line && ! ( 'correlation_id' === $key && 1 === preg_match( '/\A[0-9a-f]{32}\z/', $line ) ) && ! ProviderDiagnosticResult::is_safe_text( $line, 191 ) ) {
+				if ( '' !== $line && ! self::is_exact_identifier( $key, $line ) && ! ProviderDiagnosticResult::is_safe_text( $line, 191 ) ) {
 					continue;
 				}
 				$safe[ $key ] = $line;
@@ -107,6 +107,14 @@ final class BoosterLogger {
 		}
 
 		return $safe;
+	}
+
+	private static function is_exact_identifier( string $key, string $value ): bool {
+		return match ( $key ) {
+			'correlation_id' => 1 === preg_match( '/\A[0-9a-f]{32}\z/', $value ),
+			'resolved_ref' => 1 === preg_match( '/\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z/', $value ),
+			default => false,
+		};
 	}
 
 	private static function one_line( string $value ): string {

@@ -806,6 +806,103 @@ test('managed browser sends a newer theme release without an offer to the Themes
 	}
 });
 
+test('managed browser enables the native Core update from a persisted offer when the page has no release id', async () => {
+	const harness = createHarness(
+		[
+			{
+				successful: true,
+				code: 'release_candidates_available',
+				data: {
+					installed_version: '2.0.0',
+					candidates: [
+						candidate(
+							'new',
+							'3.0.0',
+							'newer',
+							'2026-08-03T00:00:00Z'
+						),
+					],
+				},
+			},
+			{
+				successful: true,
+				code: 'release_ready',
+				data: {
+					version: '3.0.0',
+					tag: 'v3.0.0',
+					installed_version: '2.0.0',
+					version_relationship: 'newer',
+					native_offer: {
+						available: true,
+						release_id: 'new',
+						version: '3.0.0',
+					},
+				},
+			},
+		],
+		''
+	);
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	const input = descendants(harness.nodes.get('candidate-list')).find(
+		(node) => node.type === 'radio'
+	);
+	assert.equal(input.checked, true);
+	assert.equal(
+		harness.nodes.get('native-update').getAttribute('aria-disabled'),
+		'false'
+	);
+	assert.equal(
+		harness.nodes.get('native-update').textContent,
+		'Update to 3.0.0'
+	);
+});
+
+test('managed browser shows a visible WordPress screen link beside a newer release WordPress has not offered', async () => {
+	const harness = createHarness([
+		{
+			successful: true,
+			code: 'release_candidates_available',
+			data: {
+				installed_version: '2.0.0',
+				candidates: [
+					candidate(
+						'other',
+						'3.1.0',
+						'newer',
+						'2026-08-03T00:00:00Z'
+					),
+				],
+			},
+		},
+		{
+			successful: true,
+			code: 'release_ready',
+			data: {
+				version: '3.1.0',
+				tag: 'v3.1.0',
+				installed_version: '2.0.0',
+				version_relationship: 'newer',
+			},
+		},
+	]);
+	harness.browser.dataset.ranBoosterManagedReleaseWordpressUrl =
+		'/wp-admin/plugins.php';
+	harness.initialize(harness.browser);
+	await flush();
+	await flush();
+
+	const outcome = descendants(harness.nodes.get('candidate-list')).find(
+		(node) => node.className === 'ran-booster-release-candidate__outcome'
+	);
+	const link = outcome.children.find((node) => node?.tagName === 'a');
+	assert.ok(link, 'a visible link to the WordPress screen is expected');
+	assert.equal(link.href, '/wp-admin/plugins.php');
+	assert.equal(link.textContent, 'Open WordPress Plugins');
+});
+
 test('managed browser leaves the native Core update disabled for a newer release outside the rendered offer', async () => {
 	const harness = createHarness([
 		{

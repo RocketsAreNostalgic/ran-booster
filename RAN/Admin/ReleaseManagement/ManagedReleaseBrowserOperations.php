@@ -75,6 +75,13 @@ final class ManagedReleaseBrowserOperations {
 			return $this->outcome( 'source_changed' );
 		}
 
+		// The updater's own status only holds the offer in the request that ran its check, so the
+		// persisted WordPress offer decides whether this exact version can be updated. WordPress
+		// installs the offer's identity-bound package, so a matching version needs no release id.
+		$offered  = self::persisted_offer_version( $type, $identifier );
+		$matches  = '' !== $offered && 0 === version_compare( $offered, $inspection->latest_version() );
+		$known_id = $status->native_offer_release_id();
+
 		return $this->outcome(
 			'release_ready',
 			true,
@@ -85,12 +92,24 @@ final class ManagedReleaseBrowserOperations {
 				'installed_version'    => $status->installed_version(),
 				'version_relationship' => self::version_relationship( $inspection->latest_version(), $status->installed_version() ),
 				'native_offer'         => array(
-					'available'  => $status->update_available(),
-					'release_id' => $status->native_offer_release_id(),
-					'version'    => $status->latest_version(),
+					'available'  => $matches || $status->update_available(),
+					'release_id' => '' === $known_id && $matches ? $release_id : $known_id,
+					'version'    => $matches ? $offered : $status->latest_version(),
 				),
 			)
 		);
+	}
+
+	/** The version WordPress currently offers for this package, or an empty string when it holds no offer. */
+	public static function persisted_offer_version( string $type, string $identifier ): string {
+		if ( ! function_exists( 'get_site_transient' ) ) {
+			return '';
+		}
+		$transient = get_site_transient( 'plugin' === $type ? 'update_plugins' : 'update_themes' );
+		$entry     = is_object( $transient ) && is_array( $transient->response ?? null ) ? ( $transient->response[ $identifier ] ?? null ) : null;
+		$version   = is_array( $entry ) ? ( $entry['new_version'] ?? $entry['version'] ?? '' ) : ( is_object( $entry ) ? ( $entry->new_version ?? $entry->version ?? '' ) : '' );
+
+		return is_string( $version ) ? $version : '';
 	}
 
 	/** @return \Closure(RepositoryReleaseCandidate):array{release_id:string,tag:string,version:string,prerelease:bool,published_at:string,version_relationship:string} */

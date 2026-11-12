@@ -312,6 +312,8 @@ final class ReleaseManagementDisplay {
 		$list_nonce        = $enabled ? ( $nonce_actions['list_candidates'] ?? '' ) : '';
 		$inspect_nonce     = $enabled ? ( $nonce_actions['inspect_candidate'] ?? '' ) : '';
 		$native_update_url = $enabled && null !== $status ? $this->native_update_url( $status ) : '';
+		$offered_version   = $enabled && null !== $status ? ManagedReleaseBrowserOperations::persisted_offer_version( $status->type(), $status->identifier() ) : '';
+		$screen_url        = null === $status ? '' : ( 'plugin' === $status->type() ? admin_url( 'plugins.php' ) : admin_url( 'themes.php' ) );
 		?>
 		<div
 			class="ran-booster-managed-release-browser<?php echo $enabled ? '' : ' is-disabled'; ?>"
@@ -326,7 +328,8 @@ final class ReleaseManagementDisplay {
 			data-ran-booster-managed-release-inspect-nonce="<?php echo esc_attr( $inspect_nonce ); ?>"
 			data-ran-booster-managed-release-ajax-url="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>"
 			data-ran-booster-managed-release-native-update-url="<?php echo esc_url( $native_update_url ); ?>"
-			data-ran-booster-managed-release-native-update-version="<?php echo esc_attr( $status->latest_version() ); ?>"
+			data-ran-booster-managed-release-native-update-version="<?php echo esc_attr( '' !== $offered_version ? $offered_version : $status->latest_version() ); ?>"
+			data-ran-booster-managed-release-wordpress-url="<?php echo esc_url( $screen_url ); ?>"
 			data-ran-booster-managed-release-native-update-release-id="<?php echo esc_attr( $status->native_offer_release_id() ); ?>"
 			<?php } ?>
 		>
@@ -372,7 +375,8 @@ final class ReleaseManagementDisplay {
 	}
 
 	private function native_update_url( ReleaseTrackingStatus $status ): string {
-		if ( ! $status->update_available() || '' === $status->latest_version() ) {
+		$offered = ManagedReleaseBrowserOperations::persisted_offer_version( $status->type(), $status->identifier() );
+		if ( '' === $offered && ( ! $status->update_available() || '' === $status->latest_version() ) ) {
 			return '';
 		}
 

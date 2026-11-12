@@ -247,6 +247,26 @@ them.
   each commit's own `Closes` lines.
 - Merging is the owner's decision, as set out above. Present the PR, its SHAs
   and checks, and merge only on the owner's explicit authorisation.
+- Merge checks. The `main` ruleset does not require a branch to be up to date
+  with `main`, and a PR's checks test only that PR's own head, so two PRs that
+  each pass can still break `main` together. `main`'s own Quality run, which
+  uses the same full pipeline, is the check for the combination. These checks
+  add to the owner's authorisation and never replace it. Before merging, check
+  `main`'s latest run
+  (`gh run list --workflow quality.yml --event push --branch main --limit 1
+  --json status,conclusion,headSha`). It is green only when `status` is
+  `completed`, `conclusion` is `success` and `headSha` equals current
+  `origin/main`. Queued or in progress means wait. Failed, cancelled or timed
+  out is red. Do not merge onto a red `main`, except the PR that fixes it, which
+  the owner authorises by name. After merging, watch that run, and if it goes
+  red stop merging and report to the owner. Merge one PR at a time and let its
+  `main` run finish before the next.
+- Auto-merge is not enabled for this repository. If the owner enables it, turn
+  it on only for a PR the owner has authorised, naming its head SHA. Do not push
+  to that PR afterwards without switching auto-merge off first and getting the
+  new commits reviewed, because it merges whatever head is current when the
+  checks pass. Never use it for the Release Please PR, which is merged with a
+  merge commit only on the owner's explicit authorisation, per `RELEASE.md`.
 
 ### Issues
 

@@ -650,10 +650,26 @@ final class RepeatPackageViewTest extends TestCase {
 		$package                          = $this->package( $package_view );
 		$package_provider_settings        = $this->provider_settings( $provider_available );
 		$development_environment_detected = true;
+		// The WordPress screen link is capability-gated; grant it explicitly instead of relying on whichever capability double loaded first.
+		$had_capabilities                         = array_key_exists( 'ran_booster_test_capabilities', $GLOBALS );
+		$previous_capabilities                    = $GLOBALS['ran_booster_test_capabilities'] ?? null;
+		$GLOBALS['ran_booster_test_capabilities'] = array(
+			'activate_plugins'      => true,
+			'switch_themes'         => true,
+			'manage_network_themes' => true,
+		);
 
 		ob_start();
-		require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
-		$html = (string) ob_get_clean();
+		try {
+			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+		} finally {
+			$html = (string) ob_get_clean();
+			if ( $had_capabilities ) {
+				$GLOBALS['ran_booster_test_capabilities'] = $previous_capabilities;
+			} else {
+				unset( $GLOBALS['ran_booster_test_capabilities'] );
+			}
+		}
 		self::assertStringContainsString( 'class="ran-booster-settings-section ran-booster-package-operation-settings ran-booster-card" data-ran-booster-card="package-edit" aria-labelledby="ran-booster-package-operation-heading"', $html );
 		self::assertMatchesRegularExpression( '/<select[^>]*name="ran_booster\[deployment_policy\]"[^>]*form="ran-booster-package-edit-form"/', $html );
 		self::assertMatchesRegularExpression( '/<button[^>]*form="ran-booster-package-edit-form"[^>]*data-ran-booster-package-settings-save/', $html );
@@ -678,6 +694,12 @@ final class RepeatPackageViewTest extends TestCase {
 		// Heading value plus the repository line; no third source-state line.
 		self::assertSame( 2, substr_count( $current_source[1], '<p ' ), $package_view->get_type() );
 		self::assertStringNotContainsString( 'Included with Booster', $current_source[1] );
+		$is_plugin = 'plugin' === $package_view->get_type();
+		self::assertMatchesRegularExpression(
+			'/WordPress state<\/p>.*?<a href="[^"]*' . ( $is_plugin ? 'plugins' : 'themes' ) . '\.php">Open WordPress ' . ( $is_plugin ? 'Plugins' : 'Themes' ) . '<\/a>/s',
+			$html,
+			$package_view->get_type()
+		);
 		self::assertStringNotContainsString( 'provider is unavailable', $current_source[1] );
 		$save_actions = $this->action_group_by_class( $html, 'ran-booster-package-settings__save-actions' );
 		self::assertStringContainsString( $install_another_link, $save_actions );

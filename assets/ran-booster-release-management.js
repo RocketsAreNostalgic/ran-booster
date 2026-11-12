@@ -138,15 +138,22 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 		);
 		return true;
 	};
-	const isNativeUpdateOffer = (candidate) =>
-		candidate.version_relationship === 'newer' &&
-		candidate.version ===
+	const isNativeUpdateOffer = (candidate) => {
+		const offeredId =
 			managedBrowser.dataset
-				.ranBoosterManagedReleaseNativeUpdateVersion &&
-		String(candidate.release_id) ===
-			managedBrowser.dataset
-				.ranBoosterManagedReleaseNativeUpdateReleaseId &&
-		Boolean(managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl);
+				.ranBoosterManagedReleaseNativeUpdateReleaseId;
+		// The release id is only known in the request that ran the updater's check.
+		return (
+			candidate.version_relationship === 'newer' &&
+			candidate.version ===
+				managedBrowser.dataset
+					.ranBoosterManagedReleaseNativeUpdateVersion &&
+			(!offeredId || String(candidate.release_id) === offeredId) &&
+			Boolean(
+				managedBrowser.dataset.ranBoosterManagedReleaseNativeUpdateUrl
+			)
+		);
+	};
 	const isCurrentNativeUpdateOffer = (candidate, nativeOffer) =>
 		nativeOffer?.available === true &&
 		candidate.version_relationship === 'newer' &&
@@ -267,12 +274,12 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					'theme'
 						? /* translators: %s: inspected release status. */
 							__(
-								'%s Update it from the WordPress Themes screen.',
+								'%s Use Check releases, or update from the WordPress Themes screen.',
 								'ran-booster'
 							)
 						: /* translators: %s: inspected release status. */
 							__(
-								'%s Update it from the WordPress Plugins screen.',
+								'%s Use Check releases, or update from the WordPress Plugins screen.',
 								'ran-booster'
 							);
 				statusMessage = nativeOffer
@@ -296,6 +303,20 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 			if (selectedOutcome) {
 				selectedOutcome.textContent = outcomeMessage;
 				selectedOutcome.hidden = relationship !== 'newer';
+				const screenUrl =
+					managedBrowser.dataset.ranBoosterManagedReleaseWordpressUrl;
+				if (relationship === 'newer' && !nativeOffer && screenUrl) {
+					// The status line is announced only; a visible way forward sits with the outcome.
+					const link = document.createElement('a');
+					link.href = screenUrl;
+					link.textContent =
+						managedBrowser.dataset.ranBoosterManagedReleaseType ===
+						'theme'
+							? __('Open WordPress Themes', 'ran-booster')
+							: __('Open WordPress Plugins', 'ran-booster');
+					selectedOutcome.textContent = `${outcomeMessage} `;
+					selectedOutcome.append(link);
+				}
 			}
 			if (nativeOffer) {
 				enableNativeUpdate(response.data.native_offer.version);

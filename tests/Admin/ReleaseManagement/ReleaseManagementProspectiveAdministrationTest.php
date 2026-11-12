@@ -171,7 +171,7 @@ final class ReleaseManagementProspectiveAdministrationTest extends TestCase {
 		self::assertIsString( $script );
 		self::assertStringContainsString( "form.elements.namedItem('ran_booster[action]')", $script );
 		self::assertStringContainsString( 'branchAction.disabled = true', $script );
-		self::assertStringContainsString( '%s Update it from the WordPress Plugins screen.', $script );
+		self::assertStringContainsString( '%s Use Check releases, or update from the WordPress Plugins screen.', $script );
 		self::assertStringNotContainsString( 'Refresh releases before installing', $script );
 	}
 

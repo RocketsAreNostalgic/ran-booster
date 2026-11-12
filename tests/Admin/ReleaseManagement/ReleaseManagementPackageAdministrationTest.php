@@ -834,6 +834,27 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringNotContainsString( 'data-ran-booster-managed-release-native-update>', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-version="1.2.0"', $html );
 		self::assertStringContainsString( 'data-ran-booster-managed-release-native-update-release-id=""', $html );
+		self::assertStringContainsString( 'data-ran-booster-managed-release-wordpress-url="https://example.test/wp-admin/plugins.php"', $html );
+		$GLOBALS['ran_booster_release_management_test_multisite'] = true;
+		try {
+			ob_start();
+			$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+			$network_html = (string) ob_get_clean();
+		} finally {
+			unset( $GLOBALS['ran_booster_release_management_test_multisite'] );
+		}
+		self::assertStringContainsString( 'data-ran-booster-managed-release-wordpress-url="https://example.test/wp-admin/network/plugins.php"', $network_html );
+		// Without the capability the screen would deny the user, so no link target is offered.
+		$GLOBALS['ran_booster_release_management_test_multisite']           = true;
+		$GLOBALS['ran_booster_release_management_test_denied_capabilities'] = array( 'manage_network_plugins' );
+		try {
+			ob_start();
+			$controls->render_advanced_source_section( 'edit', 'plugin', 'release_asset', $package, $package->settings_url() );
+			$denied_html = (string) ob_get_clean();
+		} finally {
+			unset( $GLOBALS['ran_booster_release_management_test_multisite'], $GLOBALS['ran_booster_release_management_test_denied_capabilities'] );
+		}
+		self::assertStringContainsString( 'data-ran-booster-managed-release-wordpress-url=""', $denied_html );
 		self::assertStringContainsString( 'aria-disabled="true"', $html );
 		self::assertStringContainsString( 'action=upgrade-plugin', $html );
 		self::assertStringContainsString( 'plugin=example%2Fexample.php', $html );

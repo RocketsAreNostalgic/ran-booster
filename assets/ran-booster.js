@@ -717,6 +717,36 @@
 		});
 		initDocumentationSectionTracking(root, links, sections);
 		initDocumentationPrintDetails(root);
+		// Opening one article collapses another, and a taller one above shifts
+		// the page. Before the next paint, bring a heading that ended up under
+		// the fixed headers back to the top; a heading still in view stays put.
+		root.addEventListener(
+			'click',
+			function (event) {
+				const trigger = event.target.closest?.(
+					'[role="button"][aria-expanded="false"]'
+				);
+				const section = trigger?.closest(
+					'.ran-booster-documentation__section'
+				);
+				if (!section) {
+					return;
+				}
+				window.requestAnimationFrame(function () {
+					const shell = document.querySelector('.ran-admin-shell');
+					const line = shell
+						? shell.getBoundingClientRect().bottom
+						: 0;
+					if (section.getBoundingClientRect().top < line) {
+						section.scrollIntoView({
+							block: 'start',
+							behavior: 'instant',
+						});
+					}
+				});
+			},
+			true
+		);
 	}
 
 	document.addEventListener?.('htmx:afterSwap', function (event) {

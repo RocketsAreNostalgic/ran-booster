@@ -124,6 +124,7 @@
 
 .ran-booster-admin .ran-booster-documentation__section {
 	margin: 0;
+	scroll-margin-block-start: var(--ran-admin-shell-scroll-margin, 192px);
 }
 
 .ran-booster-admin .ran-booster-documentation__section summary {

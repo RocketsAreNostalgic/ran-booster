@@ -411,6 +411,9 @@ final class DeploymentAdminPresenter {
 							'observation' => null,
 						)
 						: $this->activity_store->summary( $type, $capture['subject_identity'], $capture['adoption_token'], $capture['context'], $purpose );
+					if ( null !== $capture['adoption_token'] && true === $items[ $package->get_identifier() ]['check']['available'] && null === $items[ $package->get_identifier() ]['check']['latest'] ) {
+						$items[ $package->get_identifier() ]['check']['earlier'] = $this->activity_store->latest_for_adoption( $type, $capture['subject_identity'], $capture['adoption_token'], $purpose );
+					}
 				}
 			} catch ( Throwable $failure ) {
 				$this->log_read_failure( 'package deployment activity unavailable', $failure, 'package_activity_summary', 'read-' . $type . '-package-activity' );

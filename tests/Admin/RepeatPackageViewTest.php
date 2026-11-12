@@ -1706,6 +1706,44 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 	}
 
+	public function test_last_recorded_check_reports_earlier_settings_revision_or_none(): void {
+		$package_view = PackagePagePresenter::plugin();
+		$package      = $this->package( $package_view );
+		$render       = function ( array $check ) use ( $package, $package_view ): string {
+			$packages            = array( $package );
+			$package_activity    = array( 'items' => array( $package->get_identifier() => array( 'check' => $check ) ) );
+			$package_providers   = array();
+			$package_return_args = array( 'return_type' => 'plugin' );
+			$messages            = array();
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			return (string) ob_get_clean();
+		};
+		$record       = array(
+			'sort_at' => '2026-11-01 10:00:00',
+			'status'  => 'succeeded',
+			'reason'  => '',
+			'message' => '',
+		);
+		$base         = array(
+			'available'   => true,
+			'latest'      => null,
+			'observation' => null,
+		);
+
+		$current = $render( array( 'latest' => $record ) + $base );
+		self::assertStringContainsString( '2026-11-01 10:00:00', $current );
+		self::assertStringNotContainsString( 'before the latest settings change', $current );
+
+		$earlier = $render( array( 'earlier' => $record ) + $base );
+		self::assertStringContainsString( '2026-11-01 10:00:00', $earlier );
+		self::assertStringContainsString( '(before the latest settings change)', $earlier );
+
+		$none = $render( $base );
+		self::assertStringContainsString( 'No check recorded', $none );
+		self::assertStringNotContainsString( 'before the latest settings change', $none );
+	}
+
 	public function test_package_badges_render_known_activity_and_bounded_extension_tones(): void {
 		$package_view = PackagePagePresenter::plugin();
 		$package      = $this->package( $package_view );

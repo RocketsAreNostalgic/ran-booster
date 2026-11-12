@@ -292,6 +292,23 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertStringContainsString( 'adoption_token = %s AND context = %s', $this->connection->queries[0] );
 	}
 
+	public function test_latest_for_adoption_ignores_context_while_summary_still_requires_it(): void {
+		$this->connection->read_results = array(
+			array(
+				(object) array(
+					'id'     => '9',
+					'status' => 'succeeded',
+				),
+			),
+		);
+		$capture                        = self::capture();
+		$record                         = $this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'release.check' );
+		self::assertSame( '9', $record['id'] ?? null );
+		self::assertStringNotContainsString( 'context', $this->connection->queries[0] );
+		self::assertStringNotContainsString( 'context', implode( ' ', array_map( 'strval', $this->connection->prepared[0]['args'] ) ) );
+		self::assertNull( $this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'unknown.purpose' ) );
+	}
+
 	public function test_failed_source_and_invalid_boundary_return_unavailable(): void {
 		$this->connection->read_results = array( false );
 		self::assertSame(

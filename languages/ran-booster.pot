@@ -220,8 +220,8 @@ msgstr ""
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:334
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:546
 #: views/packages/index.php:167
-#: views/packages/index.php:358
-#: views/packages/index.php:433
+#: views/packages/index.php:359
+#: views/packages/index.php:434
 #: assets/ran-booster-release-management.js:921
 msgid "Releases"
 msgstr ""
@@ -282,7 +282,7 @@ msgstr ""
 #: views/packages/fields/deployment-policy.php:90
 #: views/packages/fields/deployment-policy.php:102
 #: views/packages/fields/deployment-policy.php:105
-#: views/packages/index.php:493
+#: views/packages/index.php:494
 msgid "Updates"
 msgstr ""
 
@@ -518,7 +518,7 @@ msgstr[1] ""
 #: views/packages/edit.php:239
 #: views/packages/index.php:109
 #: views/packages/index.php:172
-#: views/packages/index.php:423
+#: views/packages/index.php:424
 msgid "Automatic"
 msgstr ""
 
@@ -530,7 +530,7 @@ msgstr ""
 #: views/packages/edit.php:240
 #: views/packages/index.php:108
 #: views/packages/index.php:173
-#: views/packages/index.php:425
+#: views/packages/index.php:426
 msgid "Manual"
 msgstr ""
 
@@ -544,8 +544,8 @@ msgstr ""
 #: views/packages/edit.php:238
 #: views/packages/index.php:107
 #: views/packages/index.php:174
-#: views/packages/index.php:424
-#: views/packages/index.php:489
+#: views/packages/index.php:425
+#: views/packages/index.php:490
 #: views/settings-general.php:194
 #: views/settings-general.php:242
 #: assets/ran-booster-settings.js:108
@@ -1532,8 +1532,8 @@ msgid "deployment disabled"
 msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:498
-#: views/packages/index.php:339
-#: views/packages/index.php:382
+#: views/packages/index.php:340
+#: views/packages/index.php:383
 msgid "Git provider unavailable"
 msgstr ""
 
@@ -1562,7 +1562,7 @@ msgstr ""
 
 #: RAN/Admin/PackageAdminController.php:529
 #: views/packages/edit.php:202
-#: views/packages/index.php:489
+#: views/packages/index.php:490
 #: views/settings-general.php:194
 #: views/settings-general.php:242
 #: assets/ran-booster-settings.js:107
@@ -1774,7 +1774,7 @@ msgstr ""
 
 #: RAN/Admin/PackagePagePresenter.php:406
 #: views/packages/edit.php:234
-#: views/packages/index.php:437
+#: views/packages/index.php:438
 #: assets/ran-booster-release-management.js:848
 msgid "repository default"
 msgstr ""
@@ -2335,7 +2335,7 @@ msgstr ""
 #: views/overview-dashboard.php:32
 #: views/packages/branch-readiness.php:200
 #: views/packages/index.php:65
-#: views/packages/index.php:353
+#: views/packages/index.php:354
 #: views/provider.php:834
 #: views/settings-storage.php:25
 #: views/troubleshooting-installation.php:18
@@ -4880,12 +4880,12 @@ msgid "Succeeded"
 msgstr ""
 
 #: RAN/Booster.php:1031
-#: views/packages/index.php:349
+#: views/packages/index.php:350
 msgid "Reinstall queued"
 msgstr ""
 
 #: RAN/Booster.php:1032
-#: views/packages/index.php:351
+#: views/packages/index.php:352
 msgid "Reinstall in progress…"
 msgstr ""
 
@@ -5835,7 +5835,7 @@ msgstr ""
 #: views/attempts/index.php:91
 #: views/packages/fields/provider.php:19
 #: views/packages/fields/provider.php:22
-#: views/packages/index.php:548
+#: views/packages/index.php:549
 #: views/portability-review.php:28
 #: views/troubleshooting.php:147
 #: assets/ran-booster-repository-picker.js:504
@@ -5970,7 +5970,7 @@ msgstr ""
 
 #: RAN/Troubleshooting/TroubleshootingService.php:311
 #: views/extensions.php:223
-#: views/packages/index.php:552
+#: views/packages/index.php:553
 #: views/portability-review.php:42
 #: views/troubleshooting-installation.php:10
 #: views/troubleshooting-installation.php:174
@@ -6330,7 +6330,7 @@ msgid "Branch deployment"
 msgstr ""
 
 #: views/attempts/index.php:195
-#: views/packages/index.php:608
+#: views/packages/index.php:612
 msgid "View details"
 msgstr ""
 
@@ -8054,7 +8054,7 @@ msgstr ""
 
 #. translators: %s is the repository branch name.
 #: views/packages/edit.php:233
-#: views/packages/index.php:436
+#: views/packages/index.php:437
 #: assets/ran-booster-release-management.js:846
 #, php-format,js-format
 msgid "Branch · %s"
@@ -8410,167 +8410,171 @@ msgstr ""
 msgid "No managed %s match the current filters."
 msgstr ""
 
-#: views/packages/index.php:337
+#: views/packages/index.php:338
 msgid "Deployment disabled"
 msgstr ""
 
-#: views/packages/index.php:341
-#: views/packages/index.php:392
+#: views/packages/index.php:342
+#: views/packages/index.php:393
 msgid "Credential unavailable"
 msgstr ""
 
 #. translators: %s is the managed package type, such as plugin or theme.
-#: views/packages/index.php:344
+#: views/packages/index.php:345
 #, php-format
 msgid "Reinstall %s"
 msgstr ""
 
-#: views/packages/index.php:346
-#: views/packages/index.php:528
+#: views/packages/index.php:347
+#: views/packages/index.php:529
 #: views/packages/reinstall.php:36
 #: views/packages/reinstall.php:45
 msgid "Reinstall"
 msgstr ""
 
 #. translators: %s is the repository branch name.
-#: views/packages/index.php:361
+#: views/packages/index.php:362
 #, php-format
 msgid "Branch: %s"
 msgstr ""
 
-#: views/packages/index.php:364
+#: views/packages/index.php:365
 msgid "Public repository"
 msgstr ""
 
-#: views/packages/index.php:367
+#: views/packages/index.php:368
 msgid "Private; Git provider unavailable"
 msgstr ""
 
 #. translators: %s is the saved credential label.
-#: views/packages/index.php:371
+#: views/packages/index.php:372
 #, php-format
 msgid "Private via %s"
 msgstr ""
 
-#: views/packages/index.php:375
+#: views/packages/index.php:376
 msgid "Private; credential missing"
 msgstr ""
 
-#: views/packages/index.php:387
+#: views/packages/index.php:388
 msgid "Integration unavailable"
 msgstr ""
 
-#: views/packages/index.php:440
+#: views/packages/index.php:441
 msgid "The saved Git provider is unavailable. Restore it before deploying this package."
 msgstr ""
 
-#: views/packages/index.php:442
+#: views/packages/index.php:443
 msgid "The saved repository credential is unavailable."
 msgstr ""
 
-#: views/packages/index.php:446
+#: views/packages/index.php:447
 msgid "Booster will not overwrite this package or respond to repository pushes."
 msgstr ""
 
-#: views/packages/index.php:449
+#: views/packages/index.php:450
 msgid "WordPress controls when validated published releases are installed."
 msgstr ""
 
-#: views/packages/index.php:450
+#: views/packages/index.php:451
 msgid "Installed package is current. Release checks run only when requested."
 msgstr ""
 
-#: views/packages/index.php:452
+#: views/packages/index.php:453
 msgid "A prior branch deployment is awaiting operator review. It is not running. Open deployment activity and record the review before retrying."
 msgstr ""
 
-#: views/packages/index.php:454
+#: views/packages/index.php:455
 msgid "The latest branch deployment failed. Open deployment activity for details before retrying."
 msgstr ""
 
-#: views/packages/index.php:456
+#: views/packages/index.php:457
 msgid "Signed repository pushes deploy automatically. Review setup if pushes are not arriving."
 msgstr ""
 
-#: views/packages/index.php:458
+#: views/packages/index.php:459
 msgid "Ready."
 msgstr ""
 
-#: views/packages/index.php:461
+#: views/packages/index.php:462
 msgid "Release details"
 msgstr ""
 
 #. translators: %s: package name.
-#: views/packages/index.php:462
+#: views/packages/index.php:463
 #: views/portability-review.php:383
 msgid "Package details"
 msgstr ""
 
-#: views/packages/index.php:462
+#: views/packages/index.php:463
 msgid "Deployment activity"
 msgstr ""
 
 #. translators: %s is a package name.
-#: views/packages/index.php:478
+#: views/packages/index.php:479
 #, php-format
 msgid "Select %s"
 msgstr ""
 
-#: views/packages/index.php:488
+#: views/packages/index.php:489
 msgid "WordPress"
 msgstr ""
 
-#: views/packages/index.php:527
+#: views/packages/index.php:528
 #: views/packages/reinstall.php:38
 msgid "Reinstall from the saved branch and overwrite local changes?"
 msgstr ""
 
-#: views/packages/index.php:533
+#: views/packages/index.php:534
 msgid "Edit settings"
 msgstr ""
 
-#: views/packages/index.php:553
+#: views/packages/index.php:554
 msgid "Not available"
 msgstr ""
 
-#: views/packages/index.php:556
+#: views/packages/index.php:557
 msgid "Access"
 msgstr ""
 
-#: views/packages/index.php:562
+#: views/packages/index.php:563
 msgid "Last recorded check"
 msgstr ""
 
-#: views/packages/index.php:565
-#: views/packages/index.php:595
+#: views/packages/index.php:566
+#: views/packages/index.php:599
 msgid "Temporarily unavailable"
 msgstr ""
 
-#: views/packages/index.php:569
-msgid "No check recorded for the current settings"
+#: views/packages/index.php:571
+msgid "before the latest settings change"
 msgstr ""
 
-#: views/packages/index.php:583
-msgid "View activity"
+#: views/packages/index.php:573
+msgid "No check recorded"
 msgstr ""
 
 #: views/packages/index.php:587
+msgid "View activity"
+msgstr ""
+
+#: views/packages/index.php:591
 msgid "Last established result"
 msgstr ""
 
-#: views/packages/index.php:592
+#: views/packages/index.php:596
 msgid "Last activity"
 msgstr ""
 
-#: views/packages/index.php:610
+#: views/packages/index.php:614
 msgid "No activity recorded"
 msgstr ""
 
-#: views/packages/index.php:615
+#: views/packages/index.php:619
 msgid "Last succeeded"
 msgstr ""
 
-#: views/packages/index.php:616
+#: views/packages/index.php:620
 msgid "Not recorded"
 msgstr ""
 

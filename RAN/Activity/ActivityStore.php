@@ -437,6 +437,19 @@ final class ActivityStore {
 	}
 
 	/**
+	 * Passive display only: the newest row for this adoption, whatever settings revision recorded it.
+	 *
+	 * @return ?Record
+	 */
+	public function latest_for_adoption( string $subject_type, string $subject_identity, string $adoption_token, string $purpose ): ?array {
+		if ( ! $this->available() || ! in_array( $purpose, self::PURPOSES, true ) ) {
+			return null;
+		}
+		$where = $this->prepare( 'BINARY subject_type = %s AND subject_identity = %s AND adoption_token = %s AND BINARY purpose = %s', $subject_type, $subject_identity, $adoption_token, $purpose );
+		return null === $where ? null : ( $this->rows( "SELECT * FROM {$this->table} WHERE $where ORDER BY id DESC LIMIT 1" )[0] ?? null );
+	}
+
+	/**
 	 * Existing composition supplies current active contexts; absence is not an empty authoritative inventory.
 	 * @param list<Capture> $current_contexts
 	 */

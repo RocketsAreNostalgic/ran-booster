@@ -454,9 +454,9 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 				<ol>
 					<li><?php esc_html_e( 'The plugin or theme is at the repository root, and its installed Update URI is exactly https://github.com/owner/repo.', 'ran-booster' ); ?></li>
 					<li><?php esc_html_e( 'The release is published, not a draft, and tagged like v1.2.3 or 1.2.3, optionally with a suffix such as -rc.1.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'It has exactly one .zip asset under 50 MiB. The name does not matter, and other asset types are allowed.', 'ran-booster' ); ?></li>
+					<li><?php esc_html_e( 'It has exactly one .zip asset, named with letters, digits, dots, underscores or hyphens (starting with a letter or digit, 220 characters at most) and within this site’s compressed size limit, 50 MiB by default. Other asset types are allowed.', 'ran-booster' ); ?></li>
 					<li><?php esc_html_e( 'The ZIP has one top-level folder named exactly like the installed folder, holding the main plugin file or style.css.', 'ran-booster' ); ?></li>
-					<li><?php esc_html_e( 'Inside, the Plugin Name or Theme Name, Version (equal to the tag), Update URI, Requires PHP and Requires at least headers are present.', 'ran-booster' ); ?></li>
+					<li><?php esc_html_e( 'Inside, the Plugin Name or Theme Name, Version, Update URI, Requires PHP and Requires at least headers are present. Version matches the tag without its leading v, so tag v1.2.3 needs Version: 1.2.3.', 'ran-booster' ); ?></li>
 					<li><?php esc_html_e( 'File paths are plain ASCII and avoid \\ : < > " | ? *.', 'ran-booster' ); ?></li>
 				</ol>
 				<p><?php esc_html_e( 'Immutable releases, manifests, checksums and signatures are not required. GitHub’s automatic source archives are not used, so a release without an uploaded ZIP is not accepted. If your workflow builds the ZIP, attach it with:', 'ran-booster' ); ?></p>

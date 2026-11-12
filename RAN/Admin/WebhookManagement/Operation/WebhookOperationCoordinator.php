@@ -158,10 +158,11 @@ final class WebhookOperationCoordinator {
 			|| 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $observed )
 			|| ! in_array( $delivery, array( 'configured_pending_delivery', 'verified', 'unverified', 'unknown', 'absent' ), true )
 			|| ! is_array( $configuration )
-			|| ! is_string( $remediation )
-			|| ! ProviderDiagnosticResult::is_safe_text( $remediation ) ) {
+			|| ! is_string( $remediation ) ) {
 			return $this->outcome( 'operation_failed' );
 		}
+		// Drop only unsafe guidance; the confirmed operation facts must still be recorded.
+		$remediation = ProviderDiagnosticResult::is_safe_text( $remediation ) ? $remediation : null;
 
 		if ( 'setup' === $operation ) {
 			$outcome    = $this->record_setup( $target, $result, $credential_id, $state, $code, $observed, $delivery );
@@ -406,7 +407,7 @@ final class WebhookOperationCoordinator {
 	 * @param array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool} $outcome
 	 * @return array{code:string,recovery:array{hook_id:string,profile_id:string}|null,remediation:?string,successful:bool,inline_safe:bool}
 	 */
-	private function finalize_outcome( array $outcome, string $remediation, bool $successful, bool $inline_safe ): array {
+	private function finalize_outcome( array $outcome, ?string $remediation, bool $successful, bool $inline_safe ): array {
 		if ( ! $successful && $this->successful_code( $outcome['code'] ) ) {
 			$outcome['code'] = 'operation_failed';
 		}

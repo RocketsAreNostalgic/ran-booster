@@ -187,7 +187,7 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 	}
 
 	public function test_failure_text_shaped_like_urls_paths_digests_or_secrets_is_rejected_before_sql(): void {
-		foreach ( array( 'See https://example.com/a?x=1', 'Cannot write /var/www/html/x', 'Cannot write wp-content/uploads/x', 'Hash 0123456789abcdef0123456789abcdef01234567', 'Rejected token=abcdef', 'Rejected password hunter2', 'admin:hunter2@host', '<b>markup</b>' ) as $text ) {
+		foreach ( array( 'See https://example.com/a?x=1', 'Cannot write /var/www/html/x', 'Cannot write wp-content/uploads/x', 'Hash 0123456789abcdef0123456789abcdef01234567', 'Rejected token=abcdef', 'admin:hunter2@host', '<b>markup</b>' ) as $text ) {
 			self::assertFalse( $this->store->complete( 1, 'failed', 'checked', $text ), $text );
 			self::assertFalse( $this->store->complete( 1, 'failed', 'checked', '', $text ), $text );
 		}

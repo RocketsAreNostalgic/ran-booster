@@ -78,7 +78,6 @@ final readonly class ProviderDiagnosticResult {
 			&& 1 !== preg_match( '/\b[0-9a-f]{32,}\b/i', $value )
 			&& 1 !== preg_match( '/[A-Za-z0-9_-]{40,}/', $value )
 			&& 1 !== preg_match( '#:/#', $value )
-			&& 1 !== preg_match( '/[^\s:@\/]+:[^\s@\/]+@\S/', $value )
-			&& 1 !== preg_match( '/\b(?:password|passwd|pwd|secret|token|api[ _-]?key)\b\s+\S/i', $value );
+			&& 1 !== preg_match( '/[^\s:@\/]+:[^\s@\/]+@\S/', $value );
 	}
 }

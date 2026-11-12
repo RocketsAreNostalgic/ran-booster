@@ -786,6 +786,18 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringNotContainsString( 'synthetic-request-credential', serialize( $store->record->to_array() ) );
 	}
 
+	public function test_unsafe_provider_guidance_is_dropped_without_discarding_a_confirmed_setup(): void {
+		$gateway         = $this->gateway();
+		$gateway->result = $this->operation_result( remediation: 'See https://example.com/help?token=abc for guidance.' );
+		$store           = new OperationStoreFixture();
+		$redirect        = $this->controller( gateway: $gateway, store: $store )->handle_admin_post( $this->request(), 'valid' );
+
+		self::assertStringContainsString( 'webhook_management_result=configured_pending_delivery', $redirect );
+		self::assertNotNull( $store->record );
+		self::assertStringNotContainsString( 'example.com', $redirect );
+		self::assertStringNotContainsString( 'token', $redirect );
+	}
+
 	public function test_setup_requires_an_explicit_known_signing_secret_selection(): void {
 		foreach ( array( '', 'wh_ffffffffffffffffffffffff' ) as $profile_id ) {
 			$gateway  = $this->gateway();

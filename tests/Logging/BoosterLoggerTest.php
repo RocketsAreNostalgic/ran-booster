@@ -153,6 +153,42 @@ final class BoosterLoggerTest extends TestCase {
 		self::assertStringNotContainsString( 'correlation_id', $entries[1]['line'] );
 	}
 
+	public function test_every_fixed_diagnostic_id_in_production_code_survives_the_value_screen(): void {
+		$ids = array();
+		foreach ( new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( dirname( __DIR__, 2 ) . '/RAN', \FilesystemIterator::SKIP_DOTS ) ) as $file ) {
+			if ( $file instanceof \SplFileInfo && 'php' === $file->getExtension() ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a test.
+				preg_match_all( "/'(ran_booster_[a-z0-9_]{20,})'/", (string) file_get_contents( $file->getPathname() ), $found );
+				$ids = array_merge( $ids, $found[1] );
+			}
+		}
+		$ids = array_unique( $ids );
+		self::assertContains( 'ran_booster_storage_transaction_unavailable', $ids );
+		self::assertContains( 'ran_booster_storage_invalid_provider_identity', $ids );
+		foreach ( $ids as $id ) {
+			BoosterLogger::log( 'id', array( 'diagnostic_id' => $id ) );
+		}
+		$lines = implode( "\n", array_column( $this->capture->snapshot()['entries'], 'line' ) );
+		foreach ( $ids as $id ) {
+			self::assertStringContainsString( '"diagnostic_id":"' . $id . '"', $lines, $id );
+		}
+	}
+
+	public function test_token_like_runs_are_still_dropped_from_diagnostic_ids(): void {
+		foreach ( array( 'Ab3dEf9hIjKlMnOpQrStUvWxYz0123456789AbCdEf', 'ghp_' . str_repeat( 'a', 36 ), str_repeat( 'a', 30 ) . '12345678', str_repeat( 'ab', 16 ) ) as $value ) {
+			BoosterLogger::log(
+				'tokenish',
+				array(
+					'diagnostic_id' => $value,
+					'step'          => 'ok',
+				)
+			);
+		}
+		foreach ( $this->capture->snapshot()['entries'] as $entry ) {
+			self::assertStringEndsWith( '{"step":"ok"}', $entry['line'] );
+		}
+	}
+
 	public function test_inactive_or_broken_capture_does_not_affect_logging_callers(): void {
 		$this->capture->stop();
 		self::assertFalse( BoosterLogger::log( 'after stop', array( 'step' => 'ignored' ) ) );

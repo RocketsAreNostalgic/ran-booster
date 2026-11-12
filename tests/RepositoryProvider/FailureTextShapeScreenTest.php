@@ -26,8 +26,6 @@ final class FailureTextShapeScreenTest extends TestCase {
 			'long token run'       => array( 'Failed abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV' ),
 			'scheme-less userinfo' => array( 'admin:hunter2@example.com' ),
 			'colon slash'          => array( 'host:/share/file' ),
-			'prose password'       => array( 'The password hunter2 was rejected' ),
-			'prose token'          => array( 'token abc was rejected' ),
 			'header'               => array( 'Authorization: Bearer abcdefghijkl' ),
 		);
 	}
@@ -39,7 +37,9 @@ final class FailureTextShapeScreenTest extends TestCase {
 		new ProviderDiagnosticResult( 'failed', 'x', $text, 'Retry later.' );
 	}
 
-	public function test_plain_fixed_sentences_remain_accepted(): void {
+	public function test_curated_provider_guidance_remains_accepted(): void {
 		self::assertTrue( ProviderDiagnosticResult::is_safe_text( 'Check repository access, then retry.' ) );
+		self::assertTrue( ProviderDiagnosticResult::is_safe_text( 'Check the token permissions and organisation approval.' ) );
+		self::assertTrue( ProviderDiagnosticResult::is_safe_text( 'The secret or password may have expired; update it.' ) );
 	}
 }

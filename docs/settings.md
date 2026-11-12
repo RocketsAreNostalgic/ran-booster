@@ -37,13 +37,35 @@ new attempt. A post-commit concurrent change likewise requires review rather
 than automatically overwriting that administrator's value. Confirmed current
 state does not identify which uncertain request committed.
 
-The existing nonautoloaded General option contains three fixed scope revisions.
-Every accepted save advances the affected revision, including an unchanged
-request. Legacy full-form submissions advance all three; confirmed management
-clearing a saved GitHub-hide request advances that scope. Scope tokens preserve
+The existing nonautoloaded General option contains one revision per fixed scope
+(three today). Every accepted save advances the affected revision, including an
+unchanged request, and creates the option on a site that has never saved. This is
+a deliberate simplicity trade-off, not an ABA defence: a no-op write cannot
+overwrite another change, and its fence is advanced only so that every committed
+request is observable as one revision step and a retry of a committed request is
+always reported stale rather than guessed to be equivalent. The costs are
+accepted. A no-op save in one tab makes another tab's token for the same scope
+stale, so that tab shows one "review current values" message even though the
+saved values are identical. A first save of defaults on a fresh site writes the
+option and its revisions. A legacy autoloaded option is rewritten nonautoloaded by
+the first save. Settings never saves on load, blur or a timer, so these costs
+occur only when someone presses Save or flips a switch. Skipping no-op writes was
+considered and left out because it changes the "one accepted save, one revision
+step" contract without a user-visible gain.
+Legacy full-form submissions advance every known scope. Confirmed management
+clearing writes and advances only when a saved GitHub-hide request exists, and
+then advances that scope. Scope tokens preserve
 raw value presence/type. The existing management and option locks, strict input
 validation, full-document SQL compare-and-set and unrelated option keys remain.
-Reads do not initialize revisions; malformed or exhausted revisions fail closed.
+Reads do not initialize revisions. A missing or non-integer counter for a
+current scope, a negative counter, a non-string scope key, or an exhausted
+current scope fails closed. A counter for a scope this version does not know,
+written by a newer Booster, is validated the same way, is never advanced or
+removed, and is written back unchanged by every save, so a rollback can still
+save the scopes it knows without discarding the newer version's fences. A release
+that adds a scope must treat that scope's missing counter as 0, or every existing
+site would fail closed on upgrade. A release that removes or renames a scope must
+keep writing the old counter, or a rollback to this version would fail closed.
 Older running Booster code preserves unknown metadata but cannot advance these
 fences. Mixed-version concurrent writes, including old-runtime ABA, are not
 qualified; deploy after old requests have drained and retain rollback material.

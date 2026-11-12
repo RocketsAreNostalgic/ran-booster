@@ -410,7 +410,19 @@ final class GeneralPreferenceStoreTest extends TestCase {
 				'hide_github'           => 0,
 				'self_update_discovery' => 0,
 				'numeric'               => 0,
-				'extra'                 => 0,
+				'extra'                 => -1,
+			),
+			array(
+				'hide_github'           => 0,
+				'self_update_discovery' => 0,
+				'numeric'               => 0,
+				'extra'                 => '0',
+			),
+			array(
+				'hide_github'           => 0,
+				'self_update_discovery' => 0,
+				'numeric'               => 0,
+				7                       => 0,
 			),
 			array(
 				'hide_github'           => -1,
@@ -475,6 +487,99 @@ final class GeneralPreferenceStoreTest extends TestCase {
 			),
 			\RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['_revisions']
 		);
+	}
+
+	public function test_unknown_revision_scopes_pass_through_and_round_trip_opaquely(): void {
+		$store    = new GeneralPreferenceStore();
+		$lock     = static fn ( callable $operation ): string => $operation();
+		$eligible = static fn (): bool => true;
+		$read     = static fn (): array => \RAN\Settings\maybe_unserialize( $GLOBALS['ran_booster_general_preference_raw'] )['_revisions'];
+		$this->seed(
+			array(
+				'hide_github' => true,
+				'_revisions'  => array(
+					'notify_releases'       => 7,
+					'hide_github'           => 3,
+					'self_update_discovery' => 1,
+					'numeric'               => 2,
+					'zz_future'             => PHP_INT_MAX,
+				),
+			)
+		);
+		self::assertFalse( $store->snapshot()['malformed'] );
+		$tokens = $store->view_snapshot()['tokens'];
+		$this->seed(
+			array(
+				'hide_github' => true,
+				'_revisions'  => array(
+					'hide_github'           => 3,
+					'self_update_discovery' => 1,
+					'numeric'               => 2,
+				),
+			)
+		);
+		self::assertSame( $tokens, $store->view_snapshot()['tokens'], 'Known-scope tokens must not depend on unknown counters.' );
+		$this->seed(
+			array(
+				'hide_github' => true,
+				'_revisions'  => array(
+					'notify_releases'       => 7,
+					'hide_github'           => 3,
+					'self_update_discovery' => 1,
+					'numeric'               => 2,
+					'zz_future'             => PHP_INT_MAX,
+				),
+			)
+		);
+		self::assertSame(
+			'saved',
+			$store->save(
+				$store->view_snapshot()['tokens']['numeric'],
+				array(
+					'history_rows'       => '300',
+					'history_days'       => '30',
+					'max_download_bytes' => '52428800',
+				),
+				$lock,
+				$eligible,
+				'numeric'
+			)
+		);
+		self::assertSame(
+			array(
+				'notify_releases'       => 7,
+				'hide_github'           => 3,
+				'self_update_discovery' => 1,
+				'numeric'               => 3,
+				'zz_future'             => PHP_INT_MAX,
+			),
+			$read()
+		);
+		self::assertSame( 'saved', $store->save( $store->snapshot()['token'], array_merge( $this->submission(), array( 'history_rows' => '400' ) ), $lock, $eligible ) );
+		self::assertSame(
+			array(
+				'notify_releases'       => 7,
+				'hide_github'           => 4,
+				'self_update_discovery' => 2,
+				'numeric'               => 4,
+				'zz_future'             => PHP_INT_MAX,
+			),
+			$read()
+		);
+		$this->seed(
+			array(
+				'hide_github' => true,
+				'_revisions'  => array(
+					'hide_github'           => 0,
+					'self_update_discovery' => 0,
+					'numeric'               => 0,
+					'notify_releases'       => 7,
+				),
+			)
+		);
+		self::assertTrue( $store->clear_confirmed_github_hide_request() );
+		self::assertSame( 1, $read()['hide_github'] );
+		self::assertSame( 7, $read()['notify_releases'] );
 	}
 
 	public function test_tokens_are_bound_to_the_fixed_scope_even_with_matching_absent_values(): void {

@@ -11,6 +11,8 @@ pnpm check
 
 `composer check` is the ordinary non-mutating PHP aggregate. It retains localisation/generated-state checks, deterministic tests, Admin Shell verification, the independent `lint:syntax` parser sweep, `standards` (PHPCS/WPCS/PHPCompatibility), and the existing blocking `analyze` contract. `composer standards:fix` is the matching mutating PHPCBF command and is not part of the required check.
 
+For a quick local pre-push check, `composer analyze:changed` runs level-8 analysis on only the development PHP under `scripts/` and `tests/` that changed from `origin/main` (committed, staged, unstaged and untracked), using the same configurations and profile routing as the full runner, and takes seconds. It does not reproduce the runner's batching partition, so it can differ for files whose test classes collide with other declarations. The full `composer check` and CI remain authoritative. `test:unit` runs PHPUnit with the memory limit lifted so `composer check` finishes on a default 128M PHP.
+
 Runtime, archive, release-candidate, and WordPress lifecycle changes need the focused proof required by [AGENTS.md](AGENTS.md). Do not commit generated release ZIPs, secret sidecars, WordPress runtime state, or credentials.
 
 The guarded `tests/WordPress/adoption-recovery-smoke.sh` proof runs the real

@@ -910,7 +910,7 @@ final class ReleaseManagementDisplay {
 		$review  = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
 		$tone    = $successful
 			? 'notice-success'
-			: ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists' ), true )
+			: ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists', 'refresh_unchecked' ), true )
 				? 'notice-warning'
 				: 'notice-error' );
 		?>
@@ -949,6 +949,7 @@ final class ReleaseManagementDisplay {
 			),
 			'release_current',
 			'release_update_available' => $this->refreshed_result_message( $status ),
+			'refresh_unchecked' => __( 'Releases were not checked. Use Check releases to retry.', 'ran-booster' ),
 			'refresh_failed' => __( 'The release check could not start. Review this package’s published release settings, then retry.', 'ran-booster' ),
 			'branch_restored' => __( 'Branch-based package management is restored.', 'ran-booster' ),
 			'source_changed' => __( 'Package settings changed after this browser page was opened. Refresh the page, review the current settings, then try again.', 'ran-booster' ),

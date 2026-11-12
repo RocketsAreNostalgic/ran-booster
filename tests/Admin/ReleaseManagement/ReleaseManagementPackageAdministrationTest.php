@@ -1763,6 +1763,44 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertSame( array(), $tracking->calls );
 	}
 
+	public function test_a_refresh_that_recorded_no_check_does_not_report_completion(): void {
+		$tracking   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', last_checked_at: '' ) );
+		$operations = new \RAN\Admin\ReleaseManagement\ReleaseTrackingOperations( $tracking );
+
+		$outcome = $operations->execute( 'refresh', 'plugin', 'example/example.php', 3, 'stable', $this->nonce( 'refresh' ) );
+
+		self::assertSame( 'refresh_unchecked', $outcome['code'] );
+		self::assertFalse( $outcome['successful'] );
+	}
+
+	public function test_a_refresh_that_recorded_a_check_still_reports_the_result(): void {
+		$tracking   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$operations = new \RAN\Admin\ReleaseManagement\ReleaseTrackingOperations( $tracking );
+
+		$outcome = $operations->execute( 'refresh', 'plugin', 'example/example.php', 3, 'stable', $this->nonce( 'refresh' ) );
+
+		self::assertSame( 'release_current', $outcome['code'] );
+		self::assertTrue( $outcome['successful'] );
+	}
+
+	public function test_an_unchecked_refresh_shows_a_warning_that_agrees_with_the_status(): void {
+		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset', last_checked_at: '' ) );
+		$controls = ReleaseManagementFixture::controls( $tracking );
+		$url      = $controls->process_admin_post_request( 'refresh', $this->request( 'refresh' ) );
+		$query    = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Parsing the already signed local PRG fixture.
+		parse_str( $query, $_GET );
+
+		ob_start();
+		$controls->render_operation_notice();
+		$html = (string) ob_get_clean();
+
+		self::assertStringContainsString( 'Releases were not checked. Use Check releases to retry.', $html );
+		self::assertStringContainsString( 'notice-warning', $html );
+		self::assertStringNotContainsString( 'Release check complete.', $html );
+		self::assertStringNotContainsString( 'notice-success', $html );
+	}
+
 	public function test_signed_prg_notice_reads_fresh_status_without_repeating_mutation(): void {
 		$tracking = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
 		$controls = ReleaseManagementFixture::controls( $tracking );

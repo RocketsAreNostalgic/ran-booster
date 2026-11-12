@@ -76,6 +76,10 @@ final class ReleaseTrackingOperations {
 			if ( '' !== $status->failure_code() ) {
 				return $this->outcome( $type, $identifier, $status->failure_code(), false );
 			}
+			if ( '' === $status->last_checked_at() ) {
+				// The refresh ran but recorded no check, so claiming completion would contradict the status.
+				return $this->outcome( $type, $identifier, 'refresh_unchecked', false );
+			}
 			$code = $status->update_available() ? 'release_update_available' : 'release_current';
 		}
 

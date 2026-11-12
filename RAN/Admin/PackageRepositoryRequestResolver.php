@@ -6,6 +6,7 @@ namespace RAN\Admin;
 
 use InvalidArgumentException;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\Package;
 use RAN\PackageSubdirectory;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\RepositoryProvider\ProviderCode;
@@ -28,6 +29,79 @@ final readonly class PackageRepositoryRequestResolver {
 	 */
 	public function resolve( array $request ): array {
 		return $this->resolve_request( $request );
+	}
+
+	/**
+	 * Complete an edit request from the stored package when no provider-dependent field changed.
+	 *
+	 * Used only as a fallback when the provider lookup is rate-limited or unavailable: a save
+	 * that keeps the same provider, repository, credential and subdirectory can then proceed
+	 * on the stored identity. Returns null when any of those fields differs or the stored
+	 * identity is incomplete, so a changed repository is never accepted unverified.
+	 *
+	 * @param array<string, mixed> $request Package form request.
+	 * @return array<string, mixed>|null
+	 */
+	public function resolve_unchanged( array $request, Package $stored ): ?array {
+		$provider_input   = $request['provider'] ?? null;
+		$repository_input = $request['repository'] ?? null;
+		$stored_id        = $stored->get_provider_repository_id();
+		if ( ! is_string( $provider_input ) || ! is_string( $repository_input ) || null === $stored_id || '' === $stored_id ) {
+			return null;
+		}
+
+		$provider = ProviderCode::parse( wp_unslash( $provider_input ) );
+		if ( $stored->get_provider_code() !== $provider->value || (string) $stored->get_repository() !== wp_unslash( $repository_input ) ) {
+			return null;
+		}
+
+		$subdirectory_input = $request['subdirectory'] ?? null;
+		$subdirectory       = PackageSubdirectory::normalize( is_string( $subdirectory_input ) ? wp_unslash( $subdirectory_input ) : $subdirectory_input );
+		$credential_input   = $request['credential_id'] ?? null;
+		$credential_id      = is_string( $credential_input ) ? trim( wp_unslash( $credential_input ) ) : '';
+		$public_lookup      = $request['public_lookup_profile_id'] ?? null;
+		$identity_source    = is_string( $request['provider_repository_identity_source'] ?? null ) ? sanitize_key( wp_unslash( $request['provider_repository_identity_source'] ) ) : '';
+		$expected_id        = $request['provider_repository_id'] ?? null;
+		if ( ( $subdirectory ?? '' ) !== (string) $stored->get_subdirectory()
+			|| $credential_id !== $stored->get_credential_id()
+			|| 'picker' === $identity_source
+			|| ( is_string( $public_lookup ) && '' !== trim( $public_lookup ) )
+			|| ( is_string( $expected_id ) && '' !== $expected_id && ! hash_equals( $stored_id, $expected_id ) ) ) {
+			return null;
+		}
+
+		$this->providers->get( $provider );
+		$deployment_policy_input = $request['deployment_policy'] ?? DeploymentPolicy::MANUAL->value;
+		if ( ! is_string( $deployment_policy_input ) ) {
+			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
+		}
+		try {
+			$deployment_policy = DeploymentPolicy::from_database( $deployment_policy_input );
+		} catch ( InvalidArgumentException ) {
+			throw new InvalidArgumentException( 'Choose a valid deployment policy.' );
+		}
+		if ( DeploymentPolicy::AUTOMATIC === $deployment_policy ) {
+			$this->providers->require_capability( $provider, WebhookNormalizer::class );
+		}
+
+		$branch_input = $request['branch'] ?? '';
+		$branch       = is_string( $branch_input ) ? trim( sanitize_text_field( wp_unslash( $branch_input ) ) ) : '';
+
+		$request['provider']               = $provider->value;
+		$request['repository']             = (string) $stored->get_repository();
+		$request['subdirectory']           = $subdirectory ?? '';
+		$request['provider_repository_id'] = $stored_id;
+		// The values come from the stored, previously verified package, never from the browser, so
+		// they take the 'resolved' source. Any other source would make a credentialed public
+		// repository private (see PackageOperation::from_input), which a fresh lookup would not.
+		$request['provider_repository_identity_source'] = 'resolved';
+		$request['private']                             = $stored->get_private() ? '1' : '0';
+		$request['credential_id']                       = $stored->get_credential_id();
+		$request['branch']                              = '' === $branch ? (string) $stored->get_branch() : $branch;
+		$request['deployment_policy']                   = $deployment_policy->value;
+		unset( $request['public_lookup_profile_id'] );
+
+		return $request;
 	}
 
 	/**

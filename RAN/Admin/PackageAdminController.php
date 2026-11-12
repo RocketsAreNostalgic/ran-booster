@@ -24,6 +24,9 @@ use WP_Error;
 /** @internal Core package-mutation request and signed-feedback owner. */
 final class PackageAdminController {
 
+	/** Provider answers that mean "try later", not "this repository is wrong". */
+	private const TRANSIENT_LOOKUP_CODES = array( 429, 502, 503, 504 );
+
 	public function __construct(
 		private ?PackageOperationService $operations = null,
 		private ?PackageRepositoryRequestResolver $repositories = null,
@@ -66,6 +69,8 @@ final class PackageAdminController {
 		}
 
 		check_admin_referer( $action );
+		// Only a skipped provider re-check set below may carry this marker; never the browser.
+		unset( $request['repository_check_skipped'] );
 		$reinstall = in_array( $action, array( 'edit-plugin', 'edit-theme' ), true )
 			&& $this->enabled( $request, 'reinstall_after_save' );
 		if ( $reinstall ) {
@@ -92,7 +97,7 @@ final class PackageAdminController {
 			}
 		}
 		if ( in_array( $action, array( 'install-plugin', 'install-theme', 'edit-plugin', 'edit-theme' ), true ) ) {
-			$request = $this->resolve( $dashboard, $request, $this->trusted_public_lookup_profile( $request, $stored_package ) );
+			$request = $this->resolve( $dashboard, $request, $this->trusted_public_lookup_profile( $request, $stored_package ), $stored_package );
 			if ( null === $request ) {
 				return false;
 			}
@@ -299,7 +304,9 @@ final class PackageAdminController {
 		}
 		if ( in_array( $status, array( 'succeeded', 'edited', 'linked' ), true ) && ( $result['package'] ?? null ) instanceof Package ) {
 
-			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status );
+			$check_skipped = 'edited' === $status && '1' === ( $request['repository_check_skipped'] ?? null );
+
+			return $this->success_redirect( $operation, $result['package'], $list_arguments, $install_another, $return_to_settings || 'edited' === $status, $check_skipped ? 'edit-unverified' : null );
 		}
 		if ( in_array( $status, array( 'unlinked', 'deleted' ), true ) ) {
 
@@ -344,9 +351,13 @@ final class PackageAdminController {
 		$operation  = sanitize_key( wp_unslash( (string) $_GET['ran_booster_result'] ) );
 		$identifier = sanitize_text_field( wp_unslash( (string) $_GET['ran_booster_package'] ) );
 		$nonce      = wp_unslash( (string) $_GET['_ran_booster_notice_nonce'] );
-		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'unlink', 'unlink-and-delete', 'already-managed' ), true )
+		if ( ! in_array( $operation, array( 'install', 'update', 'edit', 'edit-unverified', 'unlink', 'unlink-and-delete', 'already-managed' ), true )
 			|| false === wp_verify_nonce( $nonce, 'ran-booster-package-success|' . $type . '|' . $operation . '|' . $identifier ) ) {
 			return null;
+		}
+		$repository_check_skipped = 'edit-unverified' === $operation;
+		if ( $repository_check_skipped ) {
+			$operation = 'edit';
 		}
 		if ( 'already-managed' === $operation ) {
 			$dashboard->add_message(
@@ -383,6 +394,14 @@ final class PackageAdminController {
 			$message['saved_type']    = $type;
 		}
 		$dashboard->add_message( $message );
+		if ( $repository_check_skipped ) {
+			$dashboard->add_message(
+				array(
+					'type'    => 'warning',
+					'message' => __( 'The Git provider is rate-limited or unavailable, so Booster could not re-check the repository. Your settings were saved with the repository details already stored.', 'ran-booster' ),
+				)
+			);
+		}
 
 		return compact( 'operation', 'identifier' );
 	}
@@ -597,7 +616,7 @@ final class PackageAdminController {
 	 * @param array{profile_id: string|null}|null $trusted_public_lookup
 	 * @return array<string, mixed>|null
 	 */
-	private function resolve( Dashboard $dashboard, array $request, ?array $trusted_public_lookup = null ): ?array {
+	private function resolve( Dashboard $dashboard, array $request, ?array $trusted_public_lookup = null, ?Package $stored_package = null ): ?array {
 		try {
 			if ( null !== $trusted_public_lookup ) {
 				return $this->repositories?->resolve_with_trusted_public_lookup_profile( $request, $trusted_public_lookup['profile_id'] )
@@ -614,11 +633,15 @@ final class PackageAdminController {
 		} catch ( InvalidArgumentException $failure ) {
 			$message = __( 'Check the Git provider, account, repository, and credential fields.', 'ran-booster' );
 		} catch ( RuntimeException $failure ) {
+			$stored_fallback = $this->stored_repository_fallback( $request, $failure, $trusted_public_lookup, $stored_package );
+			if ( null !== $stored_fallback ) {
+				return $stored_fallback;
+			}
 			$message = match ( $failure->getCode() ) {
 				401 => __( 'The Git provider rejected the selected credential.', 'ran-booster' ),
 				403 => __( 'The Git provider denied access. Check credential permissions or rate limits.', 'ran-booster' ),
 				404 => __( 'The repository could not be found, or the selected credential cannot access it.', 'ran-booster' ),
-				429 => __( 'The Git provider rate limit has been reached. Try again later.', 'ran-booster' ),
+				429 => __( 'The Git provider rate limit has been reached. Nothing was saved. Try again later.', 'ran-booster' ),
 				default => __( 'Booster could not verify the repository. Please try again.', 'ran-booster' ),
 			};
 		} catch ( Throwable $failure ) {
@@ -633,6 +656,47 @@ final class PackageAdminController {
 		}
 		$dashboard->add_failure_message( new WP_Error( 'ran_booster_repository_error', $message ), $failure, $context );
 		return null;
+	}
+
+	/**
+	 * A rate-limited or unavailable provider must not block saving settings for a repository
+	 * that has not changed. Definitive answers (rejected credential, missing repository) and
+	 * any changed repository identity still fail, so only the re-check is skipped.
+	 *
+	 * @param array<string, mixed> $request
+	 * @param array{profile_id: string|null}|null $trusted_public_lookup
+	 * @return array<string, mixed>|null
+	 */
+	private function stored_repository_fallback( array $request, RuntimeException $failure, ?array $trusted_public_lookup, ?Package $stored_package ): ?array {
+		// Saves that go on to reinstall or check the branch need the provider as well, so only a
+		// plain settings save may continue without it.
+		if ( null !== $trusted_public_lookup
+			|| ! $stored_package instanceof Package
+			|| $this->enabled( $request, 'reinstall_after_save' )
+			|| $this->enabled( $request, 'check_repository_branch_after_save' )
+			|| ! in_array( $failure->getCode(), self::TRANSIENT_LOOKUP_CODES, true ) ) {
+			return null;
+		}
+		try {
+			$stored = $this->repositories?->resolve_unchanged( $request, $stored_package );
+		} catch ( Throwable ) {
+			return null;
+		}
+		if ( null === $stored ) {
+			return null;
+		}
+		\RAN\Logging\BoosterLogger::log(
+			'package repository check skipped',
+			array(
+				'event'        => 'package_repository_check_skipped',
+				'operation'    => is_string( $request['action'] ?? null ) ? sanitize_key( wp_unslash( $request['action'] ) ) : '',
+				'outcome_code' => (string) $failure->getCode(),
+				'step'         => 'package_repository_resolve',
+			)
+		);
+		$stored['repository_check_skipped'] = '1';
+
+		return $stored;
 	}
 
 	/**

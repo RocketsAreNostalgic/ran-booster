@@ -9,6 +9,7 @@ namespace RAN\Deployment;
 
 use RAN\AdoptionIdentity;
 use RAN\ManagedRepository;
+use RAN\Logging\BoosterLogger;
 use RAN\Package;
 use RAN\PackageSource;
 use RAN\RepositoryProvider\ArchiveRequest;
@@ -23,6 +24,7 @@ use RAN\Storage\RepositorySourceGuard;
 use RAN\Storage\ThemeRepository;
 use RAN\WordPress\WordPressUpdaterLock;
 use RAN\WPBranchUpdater\V1\Archive\ArchiveOffer;
+use RAN\WPBranchUpdater\V1\Archive\ArchiveValidator;
 use RAN\WPBranchUpdater\V1\Archive\PreparedArchive;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedArchiveSource;
 use RAN\WPBranchUpdater\V1\Contract\AdmittedAttemptJournal;
@@ -50,6 +52,35 @@ use ZipArchive;
  * @internal Branch deployment composition only.
  */
 final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, AdmittedArchiveSource, AdmittedTargetFacts, AdmittedPackageExecutor, MutationLock {
+	private const VALIDATOR_OUTCOMES = array(
+		ArchiveValidator::CODE_ZIP_INVALID               => DeploymentOutcome::CODE_ARCHIVE_ZIP_INVALID,
+		ArchiveValidator::CODE_ENTRY_LIMIT               => DeploymentOutcome::CODE_ARCHIVE_ENTRY_LIMIT,
+		ArchiveValidator::CODE_ENTRY_INVALID             => DeploymentOutcome::CODE_ARCHIVE_ENTRY_INVALID,
+		ArchiveValidator::CODE_PATH_UNSAFE               => DeploymentOutcome::CODE_ARCHIVE_PATH_UNSAFE,
+		ArchiveValidator::CODE_PATH_COLLISION            => DeploymentOutcome::CODE_ARCHIVE_PATH_COLLISION,
+		ArchiveValidator::CODE_LAYOUT_INVALID            => DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID,
+		ArchiveValidator::CODE_ENTRY_UNSUPPORTED         => DeploymentOutcome::CODE_ARCHIVE_ENTRY_UNSUPPORTED,
+		ArchiveValidator::CODE_ENTRY_ENCRYPTED           => DeploymentOutcome::CODE_ARCHIVE_ENCRYPTED,
+		ArchiveValidator::CODE_COMPRESSED_TOO_LARGE      => DeploymentOutcome::CODE_ARCHIVE_COMPRESSED_TOO_LARGE,
+		ArchiveValidator::CODE_SUBDIRECTORY_MISSING      => DeploymentOutcome::CODE_PACKAGE_SUBDIRECTORY_MISSING,
+		ArchiveValidator::CODE_PACKAGE_IDENTITY          => DeploymentOutcome::CODE_PACKAGE_IDENTITY_MISMATCH,
+		ArchiveValidator::CODE_HEADER_UNREADABLE         => DeploymentOutcome::CODE_PACKAGE_HEADER_UNREADABLE,
+		ArchiveValidator::CODE_VERSION_INVALID           => DeploymentOutcome::CODE_PACKAGE_VERSION_INVALID,
+		ArchiveValidator::CODE_COMPATIBILITY_INVALID     => DeploymentOutcome::CODE_PACKAGE_COMPATIBILITY_INVALID,
+		ArchiveValidator::CODE_REQUIRES_NEWER_PHP        => DeploymentOutcome::CODE_PACKAGE_REQUIRES_NEWER_PHP,
+		ArchiveValidator::CODE_REQUIRES_NEWER_WP         => DeploymentOutcome::CODE_PACKAGE_REQUIRES_NEWER_WORDPRESS,
+		ArchiveValidator::CODE_EXPANDED_TOO_LARGE        => DeploymentOutcome::CODE_ARCHIVE_EXPANDED_TOO_LARGE,
+		ArchiveValidator::CODE_PLUGIN_MISSING            => DeploymentOutcome::CODE_PACKAGE_PLUGIN_MISSING,
+		ArchiveValidator::CODE_THEME_MISSING             => DeploymentOutcome::CODE_PACKAGE_THEME_MISSING,
+		ArchiveValidator::CODE_MULTIPLE_PLUGINS          => DeploymentOutcome::CODE_PACKAGE_MULTIPLE_PLUGINS,
+		ArchiveValidator::CODE_HEADER_MISSING            => DeploymentOutcome::CODE_PACKAGE_HEADER_MISSING,
+		ArchiveValidator::CODE_VERSION_MISSING           => DeploymentOutcome::CODE_PACKAGE_VERSION_MISSING,
+		ArchiveValidator::CODE_MULTIPLE_ROOTS            => DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID,
+		ArchiveValidator::CODE_PACKAGE_DIRECTORY_MISSING => DeploymentOutcome::CODE_ARCHIVE_LAYOUT_INVALID,
+		ArchiveValidator::CODE_THEME_IDENTITY_MISMATCH   => DeploymentOutcome::CODE_PACKAGE_IDENTITY_MISMATCH,
+		ArchiveValidator::CODE_FILE_PARENT_COLLISION     => DeploymentOutcome::CODE_ARCHIVE_PATH_COLLISION,
+	);
+
 
 	private const DOWNLOAD_TIMEOUT  = 120;
 	private const DOWNLOAD_ATTEMPTS = 2;
@@ -256,13 +287,24 @@ final class AdmittedBranchHostAdapter implements AdmittedAttemptJournal, Admitte
 				$this->cleanup_artifact_after_host_failure( $artifact );
 			}
 			throw $failure;
-		} catch ( Throwable ) {
+		} catch ( Throwable $failure ) {
 			$this->cleanup_provider_archive( $provider_archive );
 			if ( $artifact instanceof PreparedArchive ) {
 				$this->cleanup_artifact_after_host_failure( $artifact );
 			}
-			$this->stage( DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED );
+			for ( $cause = $failure; null !== $cause; $cause = $cause->getPrevious() ) {
+				BoosterLogger::log_exception( 'branch archive preparation failed', $cause, $this->attempt->log_context() + array( 'step' => 'prepare_archive' ) );
+			}
+			$this->stage( self::archive_failure_outcome( $failure ) );
 		}
+	}
+
+	/** Map the updater validator's numeric cause to its reserved outcome; anything else stays generic. */
+	private static function archive_failure_outcome( Throwable $failure ): string {
+		if ( null !== $failure->getPrevious() ) {
+			return DeploymentOutcome::CODE_ARCHIVE_CLEANUP_FAILED;
+		}
+		return $failure instanceof RuntimeException ? ( self::VALIDATOR_OUTCOMES[ $failure->getCode() ] ?? DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED ) : DeploymentOutcome::CODE_ARCHIVE_INTEGRITY_FAILED;
 	}
 
 	public function verify_current_head(): void {

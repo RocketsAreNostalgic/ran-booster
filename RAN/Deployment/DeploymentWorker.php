@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Deployment;
 
+use RAN\Logging\BoosterLogger;
 use RAN\Portability\WpPusherCoexistencePolicy;
 use RAN\Runtime\RuntimeSupport;
 use Throwable;
@@ -45,6 +46,7 @@ final readonly class DeploymentWorker {
 				'correlation_id' => $attempt->get_correlation_id(),
 			);
 		} catch ( DeploymentStorageFailure $failure ) {
+			BoosterLogger::log_exception( 'deployment worker storage failure', $failure, array( 'step' => 'deployment_worker' ) );
 			$reference = $failure->get_active_correlation_id();
 			$result    = array(
 				'status'        => null === $reference ? 'unavailable' : 'contended',
@@ -55,7 +57,9 @@ final readonly class DeploymentWorker {
 			}
 
 			return $result;
-		} catch ( Throwable ) {
+		} catch ( Throwable $failure ) {
+			BoosterLogger::log_exception( 'deployment worker failed', $failure, array( 'step' => 'deployment_worker' ) );
+
 			return array(
 				'status'        => 'unavailable',
 				'runner_status' => 'not_required',

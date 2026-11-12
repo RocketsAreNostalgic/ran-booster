@@ -15,10 +15,64 @@ use Throwable;
 /** One fixed export boundary; captured text has no persistence or transmission path. */
 final class SupportReport {
 
-	public const MAX_BYTES     = 1048576;
-	private const OPERATIONS   = array( 'install', 'update', 'diagnostics.run', 'credential.validate', 'branch.check', 'release.check', 'workflow.assessment', 'webhook.install', 'webhook.update', 'webhook.delete', 'webhook.reconcile', 'deployment.manual', 'deployment.webhook', 'deployment.batch' );
-	private const PARTIAL      = array( 'local_incomplete', 'deadline_exhausted', 'remote_calls_exhausted', 'provider_unavailable', 'provider_results_invalid', 'result_limit_exhausted' );
-	private const LOG_MESSAGES = array( 'attempt admitted (manual)', 'attempt queued (manual batch)', 'attempt queued (webhook)', 'attempt claimed from queue', 'deployment execution started', 'attempt finished', 'attempt reconciled as stopped', 'mutation guard blocked deployment' );
+	public const MAX_BYTES   = 1048576;
+	private const OPERATIONS = array( 'install', 'update', 'diagnostics.run', 'credential.validate', 'branch.check', 'release.check', 'workflow.assessment', 'webhook.install', 'webhook.update', 'webhook.delete', 'webhook.reconcile', 'deployment.manual', 'deployment.webhook', 'deployment.batch' );
+	private const PARTIAL    = array( 'local_incomplete', 'deadline_exhausted', 'remote_calls_exhausted', 'provider_unavailable', 'provider_results_invalid', 'result_limit_exhausted' );
+	/** Fixed codes emitted by Booster's native targets and the GitHub provider: 'github_updater_' plus the release updater's inactive codes, its bare failure codes, and Booster's own. */
+	private const UPDATER_CODES = array(
+		'native_discovery_disabled',
+		'diagnostics_unavailable',
+		'github_updater_declaration_invalid',
+		'github_updater_provider_code_invalid',
+		'github_updater_repository_locator_invalid',
+		'github_updater_repository_identity_invalid',
+		'github_updater_release_channel_invalid',
+		'github_updater_update_policy_invalid',
+		'github_updater_credential_resolver_invalid',
+		'github_updater_maximum_artifact_bytes_invalid',
+		'github_updater_installed_file_invalid',
+		'github_updater_installed_file_missing',
+		'github_updater_installed_file_unreadable',
+		'github_updater_installed_file_not_regular',
+		'github_updater_installed_file_symlink',
+		'github_updater_installed_file_outside_root',
+		'github_updater_installed_file_root_ambiguous',
+		'github_updater_installed_file_changed',
+		'github_updater_plugin_root_level_unsupported',
+		'github_updater_theme_header_file_invalid',
+		'github_updater_theme_nested_identity_unsupported',
+		'github_updater_installed_header_missing',
+		'github_updater_installed_header_ambiguous',
+		'github_updater_installed_header_invalid',
+		'github_updater_installed_update_uri_mismatch',
+		'github_updater_installed_requirement_incompatible',
+		'github_updater_unsupported_provider',
+		'github_updater_target_declaration_conflict',
+		'github_updater_target_composition_failed',
+		'github_updater_activation_boundary_missed',
+		'github_updater_runtime_environment_invalid',
+		'github_updater_runtime_selection_inactive',
+		'github_updater_runtime_load_failed',
+		'github_updater_runtime_handoff_invalid',
+		'github_updater_protocol_conflict_inactive',
+		'github_updater_status_unavailable',
+		'github_updater_release_incompatible',
+		'acquisition_failed',
+		'acquisition_identity_invalid',
+		'archive_changed_before_extraction',
+		'binding_fence_lost',
+		'descriptor_admission_rejected',
+		'outcome_uncertain',
+		'remote_release_changed',
+		'runtime_liveness_lost',
+		'runtime_package_identity_invalid',
+		'staged_package_identity_invalid',
+		'unverified_install_result',
+		'unverified_pre_download',
+		'unverified_pre_download_result',
+		'unverified_pre_install',
+	);
+	private const LOG_MESSAGES  = array( 'attempt admitted (manual)', 'attempt queued (manual batch)', 'attempt queued (webhook)', 'attempt claimed from queue', 'deployment execution started', 'attempt finished', 'attempt reconciled as stopped', 'mutation guard blocked deployment', 'branch archive preparation failed', 'deployment worker failed', 'deployment worker storage failure' );
 	/** @var array<string,array<string,string>> */
 	private array $identities = array();
 
@@ -168,7 +222,7 @@ final class SupportReport {
 			$lines[ $key ] = InstallationFacts::version( $core[ $key ] ?? null );
 		}
 		$lines['marker_commit'] = self::hex( $core['marker_commit'] ?? null, 40 );
-		$lines['updater_code']  = self::choice( $core['updater_code'] ?? null, array( 'native_discovery_disabled', 'diagnostics_unavailable', 'github_updater_status_unavailable', 'github_updater_runtime_environment_invalid' ) );
+		$lines['updater_code']  = self::choice( $core['updater_code'] ?? null, self::UPDATER_CODES );
 		foreach ( array( 'last_check', 'next_check' ) as $key ) {
 			$value         = $core[ $key ] ?? null;
 			$lines[ $key ] = ( is_int( $value ) && $value > 0 && $value <= 253402300799 ? gmdate( 'c', $value ) : 'Unknown; no new check performed' );
@@ -442,10 +496,10 @@ final class SupportReport {
 		if ( ! isset( $data['attempt'] ) ) {
 			return $data['message'];
 		}
-		return $data['message'] . '; attempt=' . $data['attempt'] . '; correlation=' . $data['correlation'] . '; outcome=' . $data['outcome'];
+		return $data['message'] . '; attempt=' . $data['attempt'] . '; correlation=' . $data['correlation'] . '; outcome=' . $data['outcome'] . ( 'Unknown' === $data['cause'] ? '' : '; cause_code=' . $data['cause'] );
 	}
 
-	/** @return array{message:string}|array{message:string,attempt:string,correlation:string,outcome:string}|null */
+	/** @return array{message:string}|array{message:string,attempt:string,correlation:string,outcome:string,cause:string}|null */
 	private static function safe_log_data( string $line ): ?array {
 		if ( strlen( $line ) > 4096 || preg_match( '//u', $line ) !== 1 ) {
 			return null;
@@ -471,6 +525,7 @@ final class SupportReport {
 				'attempt'     => self::positive( $context['attempt_id'] ?? null ),
 				'correlation' => self::hex( $context['correlation_id'] ?? null, 32 ),
 				'outcome'     => self::reason( $context['outcome_code'] ?? null ),
+				'cause'       => self::cause_code( $context['exception_code'] ?? null ),
 			);
 		}
 		return null;
@@ -545,6 +600,10 @@ final class SupportReport {
 
 	private static function positive( mixed $value ): string {
 		return ( is_int( $value ) || is_string( $value ) ) && preg_match( '/\A[1-9][0-9]{0,18}\z/', (string) $value ) === 1 ? (string) $value : 'Unknown';
+	}
+
+	private static function cause_code( mixed $value ): string {
+		return is_string( $value ) && 1 === preg_match( '/\A[0-9]{1,6}\z/', $value ) ? $value : 'Unknown';
 	}
 
 	private static function hex( mixed $value, int $length ): string {

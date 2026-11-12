@@ -21,6 +21,8 @@ use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\DeploymentState;
 use RAN\Deployment\DeploymentWorker;
 use RAN\Deployment\WordPressWorkerWakeup;
+use RAN\Logging\BoosterLogger;
+use RAN\Logging\TemporaryDebugCapture;
 use RuntimeException;
 
 final class DeploymentWorkerTest extends TestCase {
@@ -149,6 +151,33 @@ final class DeploymentWorkerTest extends TestCase {
 
 		self::assertSame( 'unavailable', $result['status'] );
 		self::assertSame( DeploymentState::RUNNING, $this->attempts->find_exact( $attempt->get_id() )?->get_state() );
+	}
+
+	public function test_coordinator_throwable_is_logged_by_class_and_code_without_its_message(): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-worker-log-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+		mkdir( $directory, 0700 );
+		$capture = new TemporaryDebugCapture( $directory . '/secrets.json', static fn(): int => strtotime( '2026-07-23T12:00:00Z' ) );
+		$capture->start();
+		BoosterLogger::configure_capture( $capture );
+		try {
+			$this->admit( 'failure' );
+			$this->coordinator->failure = new RuntimeException( 'https://user:token@example.com/private /var/www/secret', 42 );
+			$this->worker()->run_once();
+			$lines = implode( "\n", array_column( $capture->snapshot()['entries'], 'line' ) );
+			self::assertStringContainsString( 'deployment worker failed', $lines );
+			self::assertStringContainsString( '"exception_class":"RuntimeException","exception_code":"42"', $lines );
+			self::assertStringNotContainsString( 'token', $lines );
+			self::assertStringNotContainsString( '/var/www', $lines );
+		} finally {
+			BoosterLogger::configure_capture( null );
+			foreach ( array_filter( (array) glob( $directory . '/*' ), 'is_string' ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+				unlink( $file );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+			rmdir( $directory );
+		}
 	}
 
 	private function worker(): DeploymentWorker {

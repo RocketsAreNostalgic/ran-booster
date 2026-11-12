@@ -2217,7 +2217,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertSame( 0, $lock->acquires );
 	}
 
-	public function test_enable_reports_why_no_release_was_eligible_without_inspecting_zip_less_releases(): void {
+	public function test_enable_reports_why_no_release_was_eligible_and_inspects_zip_less_releases(): void {
 		$package = $this->package(
 			'plugin',
 			'example/example.php',
@@ -2236,13 +2236,12 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$inspections = 0;
 		$providers   = $this->release_metadata_registry(
 			list_releases: static function () use ( &$mode ): RepositoryReleaseCandidateList {
-				$names = in_array( $mode->value, array( 'incompatible', 'fallback' ), true ) ? array( 'example.zip' ) : array();
+				$names = 'incompatible' === $mode->value ? array( 'example.zip' ) : array();
 				return new RepositoryReleaseCandidateList(
 					'none' === $mode->value
 						? array()
 						: array(
-							// In fallback mode only the newest release lacks a ZIP, so the older one must still be inspected.
-							new RepositoryReleaseCandidate( '101', 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', 'fallback' === $mode->value ? array() : $names ),
+							new RepositoryReleaseCandidate( '101', 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', $names ),
 							new RepositoryReleaseCandidate( '102', 'v2.0.0', '2.0.0', false, '2026-08-16T12:00:00Z', $names ),
 							new RepositoryReleaseCandidate( '103', 'v1.0.0', '1.0.0', false, '2026-08-15T12:00:00Z', $names ),
 						)
@@ -2267,9 +2266,9 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 
 		foreach ( array(
 			'none'         => array( 'no_releases', 0 ),
-			'no_zip'       => array( 'release_incompatible', 0 ),
+			// The listing's asset names are not trusted to be complete, so a release listed without a ZIP is still inspected.
+			'no_zip'       => array( 'release_incompatible', 2 ),
 			'incompatible' => array( 'release_incompatible', 2 ),
-			'fallback'     => array( 'release_incompatible', 1 ),
 		) as $case => $expected ) {
 			$mode->value                       = $case;
 			[ $reason, $expected_inspections ] = $expected;

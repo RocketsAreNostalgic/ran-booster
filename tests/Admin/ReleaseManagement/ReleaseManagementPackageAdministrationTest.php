@@ -1923,8 +1923,12 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	private function query_of( string $url ): array {
 		$query = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
 		parse_str( $query, $parsed );
+		$strings = array();
+		foreach ( $parsed as $key => $value ) {
+			$strings[ (string) $key ] = is_string( $value ) ? $value : '';
+		}
 
-		return array_map( 'strval', $parsed );
+		return $strings;
 	}
 
 	/** @return array<string, string> */

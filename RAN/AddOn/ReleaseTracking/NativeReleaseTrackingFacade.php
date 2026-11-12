@@ -1120,14 +1120,6 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			}
 			++$inspected;
 
-			// The listing names only ZIP assets, so none means inspection must reject; skip the round trip.
-			if ( array() === $candidate->expected_asset_names ) {
-				if ( 2 === $inspected ) {
-					return new ReleaseTrackingPreflight( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $package_root, reason_code: 'release_incompatible' );
-				}
-				continue;
-			}
-
 			try {
 				$inspection = $inspector->inspect_release(
 					$type,

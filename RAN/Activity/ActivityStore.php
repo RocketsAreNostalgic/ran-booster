@@ -439,14 +439,25 @@ final class ActivityStore {
 	/**
 	 * Passive display only: the newest row for this adoption, whatever settings revision recorded it.
 	 *
-	 * @return ?Record
+	 * @return array{available:bool,record:?Record}
 	 */
-	public function latest_for_adoption( string $subject_type, string $subject_identity, string $adoption_token, string $purpose ): ?array {
+	public function latest_for_adoption( string $subject_type, string $subject_identity, string $adoption_token, string $purpose ): array {
+		$unavailable = array(
+			'available' => false,
+			'record'    => null,
+		);
 		if ( ! $this->available() || ! in_array( $purpose, self::PURPOSES, true ) ) {
-			return null;
+			return $unavailable;
 		}
 		$where = $this->prepare( 'BINARY subject_type = %s AND subject_identity = %s AND adoption_token = %s AND BINARY purpose = %s', $subject_type, $subject_identity, $adoption_token, $purpose );
-		return null === $where ? null : ( $this->rows( "SELECT * FROM {$this->table} WHERE $where ORDER BY id DESC LIMIT 1" )[0] ?? null );
+		$rows  = null === $where ? null : $this->rows( "SELECT * FROM {$this->table} WHERE $where ORDER BY id DESC LIMIT 1" );
+
+		return null === $rows
+			? $unavailable
+			: array(
+				'available' => true,
+				'record'    => $rows[0] ?? null,
+			);
 	}
 
 	/**

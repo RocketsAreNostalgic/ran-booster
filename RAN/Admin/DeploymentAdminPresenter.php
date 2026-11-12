@@ -412,7 +412,13 @@ final class DeploymentAdminPresenter {
 						)
 						: $this->activity_store->summary( $type, $capture['subject_identity'], $capture['adoption_token'], $capture['context'], $purpose );
 					if ( null !== $capture['adoption_token'] && true === $items[ $package->get_identifier() ]['check']['available'] && null === $items[ $package->get_identifier() ]['check']['latest'] ) {
-						$items[ $package->get_identifier() ]['check']['earlier'] = $this->activity_store->latest_for_adoption( $type, $capture['subject_identity'], $capture['adoption_token'], $purpose );
+						$earlier = $this->activity_store->latest_for_adoption( $type, $capture['subject_identity'], $capture['adoption_token'], $purpose );
+						if ( true === $earlier['available'] ) {
+							$items[ $package->get_identifier() ]['check']['earlier'] = $earlier['record'];
+						} else {
+							// A failed fallback read is not an empty history.
+							$items[ $package->get_identifier() ]['check']['available'] = false;
+						}
 					}
 				}
 			} catch ( Throwable $failure ) {

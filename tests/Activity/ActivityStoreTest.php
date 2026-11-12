@@ -302,11 +302,33 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 			),
 		);
 		$capture                        = self::capture();
-		$record                         = $this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'release.check' );
-		self::assertSame( '9', $record['id'] ?? null );
+		$result                         = $this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'release.check' );
+		self::assertTrue( $result['available'] );
+		self::assertSame( '9', $result['record']['id'] ?? null );
 		self::assertStringNotContainsString( 'context', $this->connection->queries[0] );
 		self::assertStringNotContainsString( 'context', implode( ' ', array_map( 'strval', $this->connection->prepared[0]['args'] ) ) );
-		self::assertNull( $this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'unknown.purpose' ) );
+		self::assertFalse( $this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'unknown.purpose' )['available'] );
+	}
+
+	public function test_latest_for_adoption_distinguishes_no_history_from_a_failed_read(): void {
+		$capture                        = self::capture();
+		$this->connection->read_results = array( array() );
+		self::assertSame(
+			array(
+				'available' => true,
+				'record'    => null,
+			),
+			$this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'release.check' )
+		);
+
+		$this->connection->read_results = array( false );
+		self::assertSame(
+			array(
+				'available' => false,
+				'record'    => null,
+			),
+			$this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'release.check' )
+		);
 	}
 
 	public function test_failed_source_and_invalid_boundary_return_unavailable(): void {

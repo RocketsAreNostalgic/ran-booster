@@ -77,7 +77,9 @@ final class ManagedReleaseBrowserOperations {
 
 		// The updater's own status only holds the offer in the request that ran its check, so the
 		// persisted WordPress offer decides whether this exact version can be updated. WordPress
-		// installs the offer's identity-bound package, so a matching version needs no release id.
+		// installs the offer's identity-bound package, so a matching version needs no release id. The
+		// version string is the only identity available here: a persisted offer for another release with
+		// the same version would install that release.
 		$offered  = self::persisted_offer_version( $type, $identifier );
 		$matches  = '' !== $offered && 0 === version_compare( $offered, $inspection->latest_version() );
 		$known_id = $status->native_offer_release_id();

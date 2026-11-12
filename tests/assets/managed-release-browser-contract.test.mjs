@@ -806,7 +806,7 @@ test('managed browser sends a newer theme release without an offer to the Themes
 	}
 });
 
-test('managed browser enables the native Core update from a persisted offer when the page has no release id', async () => {
+test('managed browser matches the page-level offer by version when the page has no release id', async () => {
 	const harness = createHarness(
 		[
 			{
@@ -815,6 +815,12 @@ test('managed browser enables the native Core update from a persisted offer when
 				data: {
 					installed_version: '2.0.0',
 					candidates: [
+						candidate(
+							'other',
+							'3.1.0',
+							'newer',
+							'2026-08-04T00:00:00Z'
+						),
 						candidate(
 							'new',
 							'3.0.0',
@@ -846,10 +852,14 @@ test('managed browser enables the native Core update from a persisted offer when
 	await flush();
 	await flush();
 
-	const input = descendants(harness.nodes.get('candidate-list')).find(
-		(node) => node.type === 'radio'
+	const checked = descendants(harness.nodes.get('candidate-list')).find(
+		(node) => node.type === 'radio' && node.checked
 	);
-	assert.equal(input.checked, true);
+	assert.equal(
+		checked?.dataset.releaseId,
+		'new',
+		'the offered release, not the newest, is preselected'
+	);
 	assert.equal(
 		harness.nodes.get('native-update').getAttribute('aria-disabled'),
 		'false'

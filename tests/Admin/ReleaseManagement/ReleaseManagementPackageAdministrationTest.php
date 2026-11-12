@@ -1547,14 +1547,15 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( 'Version 1.0.0 is installed; no newer eligible release was found.', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-release-status-notice', $html );
 		self::assertStringNotContainsString( 'Why this happened and how to fix it', $html );
-		self::assertStringNotContainsString( 'Releases have not been checked yet.', $html );
+		self::assertStringNotContainsString( 'Use Check releases to look for a newer version.', $html );
 	}
 
-	public function test_never_checked_release_status_is_neutral_and_never_uses_failure_wording(): void {
+	public function test_a_status_with_no_check_in_this_request_is_neutral_and_never_claims_it_was_never_checked(): void {
 		$html = $this->render_release_view( array( 'last_checked_at' => '' ) );
 
 		self::assertSame( 'is-neutral', $this->release_status_row_class( $html ) );
-		self::assertStringContainsString( 'Releases have not been checked yet. Use Check releases.', $html );
+		self::assertStringContainsString( 'Use Check releases to look for a newer version.', $html );
+		self::assertStringNotContainsString( 'have not been checked', $html );
 		self::assertStringNotContainsString( 'no newer eligible release was found', $html );
 		self::assertStringNotContainsString( 'data-ran-booster-release-status-notice', $html );
 		self::assertStringNotContainsString( 'No published release was found', $html );

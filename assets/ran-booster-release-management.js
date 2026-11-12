@@ -262,16 +262,22 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 							),
 							response.data.version
 						);
+				const guidance =
+					managedBrowser.dataset.ranBoosterManagedReleaseType ===
+					'theme'
+						? /* translators: %s: inspected release status. */
+							__(
+								'%s Update it from the WordPress Themes screen.',
+								'ran-booster'
+							)
+						: /* translators: %s: inspected release status. */
+							__(
+								'%s Update it from the WordPress Plugins screen.',
+								'ran-booster'
+							);
 				statusMessage = nativeOffer
 					? outcomeMessage
-					: sprintf(
-							/* translators: %s: inspected release status. */
-							__(
-								'%s Refresh releases before installing.',
-								'ran-booster'
-							),
-							outcomeMessage
-						);
+					: sprintf(guidance, outcomeMessage);
 			} else if (relationship === 'older') {
 				outcomeMessage = sprintf(
 					/* translators: %s: release version. */

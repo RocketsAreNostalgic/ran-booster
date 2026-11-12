@@ -195,7 +195,7 @@ final class ReleaseManagementDisplay {
 					<li class="ran-booster-readiness-item <?php echo $status_available && 'release_asset' === $source && '' === $status->failure_code() ? ( $release_unchecked ? 'is-neutral' : 'is-ok' ) : ( $status_available && 'branch' === $source && ! $repository_blocked ? 'is-neutral' : 'is-warning' ); ?>">
 						<span class="ran-booster-readiness-icon" aria-hidden="true"></span>
 						<strong><?php esc_html_e( 'Release status', 'ran-booster' ); ?></strong>
-						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? ( $release_unchecked ? __( 'Releases have not been checked yet. Use Check releases.', 'ran-booster' ) : $this->release_status_message( $status ) ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
+						<span><?php echo esc_html( ! $status_available ? __( 'Cannot be checked until release status is available.', 'ran-booster' ) : ( 'release_asset' === $source ? ( $release_unchecked ? __( 'Use Check releases to look for a newer version.', 'ran-booster' ) : $this->release_status_message( $status ) ) : __( 'Branch is active; releases are not tracked.', 'ran-booster' ) ) ); ?></span>
 					</li>
 				</ul>
 				<?php ob_start(); ?>

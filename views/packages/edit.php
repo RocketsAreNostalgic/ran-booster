@@ -385,6 +385,14 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 			<p class="ran-booster-summary-grid__label"><?php esc_html_e( 'WordPress state', 'ran-booster' ); ?></p>
 			<p class="ran-booster-package-summary__value"><?php echo esc_html( $word_press_state ); ?></p>
 			<p class="ran-booster-package-summary__meta"><?php esc_html_e( 'Independent of package source', 'ran-booster' ); ?></p>
+			<?php
+			$word_press_screen_url = 'plugin' === $package_view->get_type()
+				? ( current_user_can( is_multisite() ? 'manage_network_plugins' : 'activate_plugins' ) ? ( is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' ) ) : '' )
+				: ( current_user_can( is_multisite() ? 'manage_network_themes' : 'switch_themes' ) ? ( is_multisite() ? network_admin_url( 'themes.php' ) : admin_url( 'themes.php' ) ) : '' );
+			if ( '' !== $word_press_screen_url ) {
+				?>
+				<p class="ran-booster-package-summary__meta"><a href="<?php echo esc_url( $word_press_screen_url ); ?>"><?php echo esc_html( 'plugin' === $package_view->get_type() ? __( 'Open WordPress Plugins', 'ran-booster' ) : __( 'Open WordPress Themes', 'ran-booster' ) ); ?></a></p>
+			<?php } ?>
 		</div>
 	</aside>
 </div>

@@ -760,6 +760,52 @@ test('managed browser prefers and marks the exact rendered update offer over a l
 	);
 });
 
+test('managed browser sends a newer theme release without an offer to the Themes screen', async () => {
+	for (const [type, expected] of [
+		['plugin', /Plugins screen/],
+		['theme', /Themes screen/],
+	]) {
+		const harness = createHarness([
+			{
+				successful: true,
+				code: 'release_candidates_available',
+				data: {
+					installed_version: '2.0.0',
+					candidates: [
+						candidate(
+							'other',
+							'3.1.0',
+							'newer',
+							'2026-08-03T00:00:00Z'
+						),
+					],
+				},
+			},
+			{
+				successful: true,
+				code: 'release_ready',
+				data: {
+					version: '3.1.0',
+					tag: 'v3.1.0',
+					installed_version: '2.0.0',
+					version_relationship: 'newer',
+				},
+			},
+		]);
+		harness.browser.dataset.ranBoosterManagedReleaseType = type;
+		harness.initialize(harness.browser);
+		await flush();
+		await flush();
+
+		assert.match(harness.nodes.get('message').textContent, expected, type);
+		assert.doesNotMatch(
+			harness.nodes.get('message').textContent,
+			type === 'theme' ? /Plugins screen/ : /Themes screen/,
+			type
+		);
+	}
+});
+
 test('managed browser leaves the native Core update disabled for a newer release outside the rendered offer', async () => {
 	const harness = createHarness([
 		{

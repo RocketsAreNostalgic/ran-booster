@@ -575,9 +575,10 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 
 	/** @param array<string, string> $flag */
 	#[DataProvider( 'saves_that_continue_to_the_provider' )]
-	public function test_a_save_that_goes_on_to_use_the_provider_does_not_fall_back( array $flag ): void {
-		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+	public function test_a_save_that_goes_on_to_use_the_provider_does_not_fall_back( array $flag, bool $is_private ): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh', $is_private, $is_private ? 'deployment-profile' : null );
 		$providers = new ProviderRegistry( array( new FailingLookupProvider( 429 ) ) );
+		$request   = array_merge( $this->unchanged_edit_request(), $is_private ? array( 'credential_id' => 'deployment-profile' ) : array(), $flag );
 		$dashboard = $this->createMock( Dashboard::class );
 		$dashboard->expects( self::once() )->method( 'add_failure_message' );
 		$dashboard->expects( self::never() )->method( 'post_package_operation' );
@@ -588,18 +589,20 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 			plugins: new EditBoundaryPluginRepository( $package ),
 			themes: new EditBoundaryThemeRepository( $package ),
 			providers: $providers
-		) )->manage( $dashboard, 'edit-plugin', array_merge( $this->unchanged_edit_request(), $flag ), true );
+		) )->manage( $dashboard, 'edit-plugin', $request, true );
 
 		unset( $_POST['_ran_booster_reinstall_nonce'] );
 
 		self::assertFalse( $result );
 	}
 
-	/** @return array<string, array{array<string, string>}> */
+	/** @return array<string, array{array<string, string>, bool}> */
 	public static function saves_that_continue_to_the_provider(): array {
 		return array(
-			'reinstall after save'          => array( array( 'reinstall_after_save' => '1' ) ),
-			'check the branch after saving' => array( array( 'check_repository_branch_after_save' => '1' ) ),
+			'reinstall, public package'     => array( array( 'reinstall_after_save' => '1' ), false ),
+			'reinstall, private package'    => array( array( 'reinstall_after_save' => '1' ), true ),
+			'branch check, public package'  => array( array( 'check_repository_branch_after_save' => '1' ), false ),
+			'branch check, private package' => array( array( 'check_repository_branch_after_save' => '1' ), true ),
 		);
 	}
 

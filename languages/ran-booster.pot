@@ -2619,7 +2619,7 @@ msgid "Release status"
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:198
-msgid "Releases have not been checked yet. Use Check releases."
+msgid "Use Check releases to look for a newer version."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:198
@@ -8145,6 +8145,14 @@ msgstr ""
 
 #: views/packages/edit.php:387
 msgid "Independent of package source"
+msgstr ""
+
+#: views/packages/edit.php:394
+msgid "Open WordPress Plugins"
+msgstr ""
+
+#: views/packages/edit.php:394
+msgid "Open WordPress Themes"
 msgstr ""
 
 #: views/packages/fields/branch.php:20

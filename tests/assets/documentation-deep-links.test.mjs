@@ -602,3 +602,29 @@ test('opening an article re-seats its heading only when it ended under the fixed
 	fixture.windowListeners.get('root:click')({ target: none });
 	assert.equal(fixture.pending(), 0);
 });
+
+test('the re-seat also covers the native summary and a shell scrolled off a short viewport', () => {
+	const fixture = createFixture({ hash: '', shellBottom: -500 });
+	const selectors = [];
+	const calls = [];
+	const section = {
+		getBoundingClientRect: () => ({ top: -179 }),
+		scrollIntoView: (options) => calls.push(JSON.stringify(options)),
+	};
+	const trigger = { closest: () => section };
+	fixture.windowListeners.get('root:click')({
+		target: {
+			closest: (selector) => {
+				selectors.push(selector);
+				return trigger;
+			},
+		},
+	});
+	fixture.flush();
+	assert.match(selectors[0], /\[role="button"\]\[aria-expanded="false"\]/);
+	assert.match(
+		selectors[0],
+		/details\.ran-booster-documentation__section:not\(\[open\]\) > summary/
+	);
+	assert.deepEqual(calls, ['{"block":"start","behavior":"instant"}']);
+});

@@ -723,8 +723,9 @@
 		root.addEventListener(
 			'click',
 			function (event) {
+				// The mounted toggle, or the native summary when the runtime is absent.
 				const trigger = event.target.closest?.(
-					'[role="button"][aria-expanded="false"]'
+					'[role="button"][aria-expanded="false"], details.ran-booster-documentation__section:not([open]) > summary'
 				);
 				const section = trigger?.closest(
 					'.ran-booster-documentation__section'
@@ -734,9 +735,11 @@
 				}
 				window.requestAnimationFrame(function () {
 					const shell = document.querySelector('.ran-admin-shell');
-					const line = shell
-						? shell.getBoundingClientRect().bottom
-						: 0;
+					// A short viewport un-sticks the shell, so its bottom can be negative.
+					const line = Math.max(
+						0,
+						shell ? shell.getBoundingClientRect().bottom : 0
+					);
 					if (section.getBoundingClientRect().top < line) {
 						section.scrollIntoView({
 							block: 'start',

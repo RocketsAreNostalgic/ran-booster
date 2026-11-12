@@ -7,7 +7,7 @@ directory and preserve unrelated work.
 
 This checkout is the only development checkout. It lives inside the
 `pns-stageing` Local site, so PHP and CSS edits are visible there immediately;
-JS asset changes need `pnpm build`. Keep delivery overhead low: every extra
+JS asset changes need `pnpm ui:build`. Keep delivery overhead low: every extra
 branch, worktree and CI round costs reconciliation work the maintainers pay for.
 
 - Work on one short-lived branch off the latest `origin/main` at a time, named
@@ -114,12 +114,13 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
   method, checks and unresolved risks, then merge only after the owner explicitly
   authorizes that specific pull request. This includes Release Please pull
   requests even when repository permissions or branch rules allow a direct
-  merge. Prefer squash for ordinary incremental PRs so the
-  reviewed PR lands as one meaningful default-branch commit. Use a regular merge
-  commit, never squash or rebase, for owner-directed accumulator or integration
-  branches and for any PR whose detailed history matters, for example per-commit `Closes` lines,
-  changelog entries or a deliberately ordered sequence. State the intended merge
-  method when asking for merge authority. **Booster's bot-owned `chore(main): release ...` proposals
+  merge. Prefer squash for ordinary incremental PRs so the reviewed PR lands as
+  one meaningful default-branch commit. Use a regular merge commit, never squash
+  or rebase, for an accumulator or integration branch when the owner directs one,
+  and for any PR whose detailed history matters, for example per-commit `Closes`
+  lines, changelog entries or a deliberately ordered sequence. The owner decides
+  which PRs those are, so state the intended merge method when asking for merge
+  authority. **Booster's bot-owned `chore(main): release ...` proposals
   are the explicit exception: use Create a merge commit, never squash or rebase
   merge**, as required by [the release guide](RELEASE.md#merge-method-for-booster-release-proposals).
   This is Booster policy, not a universal Release Please limitation. Rebase
@@ -207,8 +208,10 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
 ## Commits and authorisation
 
 - Use Conventional Commits: `<type>[optional scope]: <description>`, with a
-  subject of at most 72 characters. Name the governing issue in the body
-  (`Refs #NNN`, or `Closes #NNN` only when the commit fully resolves it).
+  subject of 72 characters or fewer (a house convention; no tool enforces it).
+  Name the governing issue in the body (`Refs #NNN`, or `Closes #NNN` only when
+  the commit fully resolves it). For a squash merge only the PR title and body
+  survive, so put any `Closes #NNN` in the PR body.
 - Never put Dex task IDs in source, documentation, commit messages, pull
   requests or release notes.
 - Issues marked tracking-only or "no implementation dispatched" need explicit
@@ -223,7 +226,7 @@ This file is the single source of agent policy for this repository. Do not
 duplicate it in tool-specific files. Skills live in `.agents/skills/`:
 
 - Core: `.agents/skills/code-review`, for every pull request and patch review.
-- Workbench: `ran-booster-workbench/.agents/skills/ran-booster-dex`, for the Dex
+- Workbench (nested repo, local only): `ran-booster-workbench/.agents/skills/ran-booster-dex`, for the Dex
   workflow.
 - Release work: the shared RAN Release Please skill linked above.
 

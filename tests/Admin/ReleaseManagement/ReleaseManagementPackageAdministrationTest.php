@@ -13,6 +13,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingEligibility;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingPreflight;
+use RAN\AddOn\ReleaseTracking\ReleaseTrackingResult;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\RepositoryProvider\RepositoryReleaseCandidate;
 use RAN\RepositoryProvider\RepositoryReleaseCandidateList;
@@ -1535,7 +1536,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	public function test_release_failure_states_use_accurate_wording_and_never_the_old_message(): void {
 		$cases = array(
 			'no_releases'          => array( 'No published release was found for the selected track.', 'Publish a release for the selected Stable or Preview track, then use Check releases.' ),
-			'release_incompatible' => array( 'A published release was found, but it is not eligible.', 'exactly one package ZIP asset' ),
+			'release_incompatible' => array( 'A published release was found, but it does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset' ),
 			''                     => array( 'Booster could not confirm an eligible published release for this track.', 'make sure it has one package ZIP' ),
 		);
 		foreach ( $cases as $reason => $expected ) {
@@ -1845,6 +1846,89 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			$tracking->calls
 		);
 		self::assertSame( 2, $tracking->status_reads );
+	}
+
+	/** @return array<string, array{string, string, string}> */
+	public static function failed_enable_reasons(): array {
+		return array(
+			'no published release'                => array( 'no_releases', 'No published release was found for the selected track.', 'Publish a release for the selected Stable or Preview track, then use Check releases.' ),
+			'no package ZIP or mismatched header' => array( 'release_incompatible', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset' ),
+			'no reason (source guard)'            => array( '', 'Booster could not confirm an eligible published release for this track.', 'make sure it has one package ZIP' ),
+		);
+	}
+
+	#[DataProvider( 'failed_enable_reasons' )]
+	public function test_failed_enable_reason_survives_the_signed_redirect_and_selects_the_displayed_copy( string $reason, string $message, string $action ): void {
+		$html = $this->render_enable_failure( $reason, $url );
+
+		self::assertSame( '' !== $reason, str_contains( $url, 'ran_booster_release_reason=' . $reason ) );
+		self::assertSame( '' === $reason, ! str_contains( $url, 'ran_booster_release_reason' ) );
+		self::assertStringContainsString( $message, $html );
+		self::assertStringContainsString( $action, $html );
+		self::assertStringContainsString( '<code>release_unavailable</code>', $html );
+		if ( '' !== $reason ) {
+			self::assertStringNotContainsString( 'Booster could not confirm an eligible published release', $html );
+		}
+	}
+
+	public function test_a_forged_added_removed_or_unknown_reason_is_never_displayed(): void {
+		$this->render_enable_failure( 'release_incompatible', $url );
+		$signed = $this->query_of( $url );
+		$this->render_enable_failure( '', $plain_url );
+		$plain = $this->query_of( $plain_url );
+
+		$forgeries = array(
+			'swapped'  => array( 'ran_booster_release_reason' => 'no_releases' ) + $signed,
+			'removed'  => array_diff_key( $signed, array( 'ran_booster_release_reason' => true ) ),
+			'added'    => $plain + array( 'ran_booster_release_reason' => 'release_incompatible' ),
+			'unknown'  => array( 'ran_booster_release_reason' => 'bogus_reason' ) + $signed,
+			'oversize' => array( 'ran_booster_release_reason' => str_repeat( 'a', 300 ) ) + $signed,
+			'array'    => array( 'ran_booster_release_reason' => array( 'release_incompatible' ) ) + $signed,
+		);
+		foreach ( $forgeries as $name => $query ) {
+			$_GET     = $query;
+			$controls = ReleaseManagementFixture::controls( new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ) );
+			$package  = new PackageProjection();
+			ob_start();
+			$controls->render_advanced_source_section( 'edit', 'plugin', 'branch', $package, $package->settings_url() );
+			$html = (string) ob_get_clean();
+			self::assertStringNotContainsString( 'Booster could not confirm an eligible published release', $html, $name );
+			self::assertStringNotContainsString( 'single package ZIP asset', $html, $name );
+			self::assertStringNotContainsString( 'No published release was found', $html, $name );
+		}
+	}
+
+	public function test_a_result_cannot_carry_a_reason_outside_the_preflight_allow_list(): void {
+		$this->expectException( \InvalidArgumentException::class );
+		ReleaseTrackingResult::failed( 'release_unavailable', 'Release tracking could not be enabled.', 'not_a_reason' );
+	}
+
+	/** @param-out string $url */
+	private function render_enable_failure( string $reason, ?string &$url = null ): string {
+		$tracking                   = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() );
+		$tracking->enable_result    = ReleaseTrackingResult::failed( 'release_unavailable', 'Published release assets could not be validated.', $reason );
+		$controls                   = ReleaseManagementFixture::controls( $tracking );
+		$request                    = $this->request( 'enable' );
+		$request['release_channel'] = 'stable';
+		$url                        = $controls->process_admin_post_request( 'enable', $request );
+		$_GET                       = $this->query_of( $url );
+		$package                    = new PackageProjection();
+		ob_start();
+		$controls->render_advanced_source_section( 'edit', 'plugin', 'branch', $package, $package->settings_url() );
+
+		return (string) ob_get_clean();
+	}
+
+	/** @return array<string, string> */
+	private function query_of( string $url ): array {
+		$query = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
+		parse_str( $query, $parsed );
+		$strings = array();
+		foreach ( $parsed as $key => $value ) {
+			$strings[ (string) $key ] = is_string( $value ) ? $value : '';
+		}
+
+		return $strings;
 	}
 
 	/** @return array<string, string> */

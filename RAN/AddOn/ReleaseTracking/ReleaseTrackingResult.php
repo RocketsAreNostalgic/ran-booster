@@ -14,9 +14,11 @@ final readonly class ReleaseTrackingResult {
 	public function __construct(
 		private bool $successful,
 		private string $code,
-		private string $message
+		private string $message,
+		private string $reason = ''
 	) {
 		if ( 1 !== preg_match( '/^[a-z][a-z0-9_]{0,63}$/', $this->code )
+			|| ( '' !== $this->reason && ! in_array( $this->reason, ReleaseTrackingPreflight::reason_codes(), true ) )
 			|| '' === trim( $this->message )
 			|| strlen( $this->message ) > 255
 			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $this->message ) ) {
@@ -28,8 +30,8 @@ final readonly class ReleaseTrackingResult {
 		return new self( true, $code, $message );
 	}
 
-	public static function failed( string $code, string $message ): self {
-		return new self( false, $code, $message );
+	public static function failed( string $code, string $message, string $reason = '' ): self {
+		return new self( false, $code, $message, $reason );
 	}
 
 	public function successful(): bool {
@@ -42,5 +44,9 @@ final readonly class ReleaseTrackingResult {
 
 	public function message(): string {
 		return $this->message;
+	}
+
+	public function reason(): string {
+		return $this->reason;
 	}
 }

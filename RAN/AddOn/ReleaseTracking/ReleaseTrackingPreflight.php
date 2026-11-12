@@ -108,7 +108,7 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 	}
 
 	/** @return list<string> */
-	private static function reason_codes(): array {
+	public static function reason_codes(): array {
 		return array(
 			'provider_unavailable',
 			'no_releases',

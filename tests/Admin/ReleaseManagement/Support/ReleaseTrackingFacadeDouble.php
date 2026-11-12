@@ -33,6 +33,8 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 
 	public ?ReleaseTrackingPreflight $candidate_inspection = null;
 
+	public ?ReleaseTrackingResult $enable_result = null;
+
 	/** @var null|callable():void */
 	public $after_candidate_list = null;
 
@@ -119,7 +121,7 @@ final class ReleaseTrackingFacadeDouble implements ReleaseTrackingFacade, Manage
 	public function enable( string $type, string $identifier, int $expected_source_revision, string $channel, string $nonce ): ReleaseTrackingResult {
 		$this->calls[] = array( 'enable', $type, $identifier, $expected_source_revision, $channel, $nonce );
 
-		return ReleaseTrackingResult::succeeded( 'release_enabled', 'Release tracking enabled.' );
+		return $this->enable_result ?? ReleaseTrackingResult::succeeded( 'release_enabled', 'Release tracking enabled.' );
 	}
 
 	public function change_channel( string $type, string $identifier, int $expected_source_revision, string $channel, string $nonce ): ReleaseTrackingResult {

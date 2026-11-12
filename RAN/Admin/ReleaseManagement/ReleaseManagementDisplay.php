@@ -910,7 +910,7 @@ final class ReleaseManagementDisplay {
 		$review  = ! $successful && in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed' ), true );
 		$tone    = $successful
 			? 'notice-success'
-			: ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists' ), true )
+			: ( in_array( $code, array( 'installed_but_unmanaged', 'management_state_uncertain', 'installation_cleanup_failed', 'release_repository_conflict', 'repository_release_owner_exists', 'refresh_unchecked' ), true )
 				? 'notice-warning'
 				: 'notice-error' );
 		?>

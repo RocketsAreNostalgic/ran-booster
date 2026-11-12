@@ -1796,6 +1796,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		$html = (string) ob_get_clean();
 
 		self::assertStringContainsString( 'Releases were not checked. Use Check releases to retry.', $html );
+		self::assertStringContainsString( 'notice-warning', $html );
 		self::assertStringNotContainsString( 'Release check complete.', $html );
 		self::assertStringNotContainsString( 'notice-success', $html );
 	}

@@ -310,6 +310,20 @@ final class ReleasePlatformContractTest extends TestCase {
 		self::assertStringContainsString( 'runtime-packaging-policy.json', $manifest );
 	}
 
+	public function test_the_generated_built_with_record_is_declared_built_and_verified(): void {
+		$root = dirname( __DIR__ );
+		self::assertStringContainsString( 'ran-booster-packages.json', $this->read_text( $root . '/release-files.txt' ) );
+		foreach ( array( 'build-release.sh', 'verify-release.sh' ) as $script_name ) {
+			$script = $this->read_text( $root . '/scripts/' . $script_name );
+			self::assertStringContainsString( "'ran-booster-packages.json'", $script, $script_name );
+			self::assertStringContainsString( 'ran-booster-built-with', $script, $script_name );
+		}
+		$verifier = $this->read_text( $root . '/scripts/verify-release.sh' );
+		self::assertStringContainsString( "'ran-booster/ran-booster-packages.json'", $verifier );
+		self::assertStringContainsString( 'installed built-with package record does not match composer.lock', $verifier );
+		self::assertStringNotContainsString( 'ran-booster-packages.json', $this->read_text( $root . '/.gitattributes' ), 'The record is generated only; it is never a source file.' );
+	}
+
 	public function test_quality_keeps_packaging_policy_in_the_repository_owned_archive_boundary(): void {
 		$quality = $this->read_text( dirname( __DIR__ ) . '/.github/workflows/quality.yml' );
 		$release = $this->read_text( dirname( __DIR__ ) . '/.github/workflows/release-please.yml' );

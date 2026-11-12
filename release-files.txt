@@ -5,8 +5,10 @@
 # runtime-packaging-policy.json and are copied from a clean --no-dev Composer
 # install of the same commit's composer.json and composer.lock.
 # ran-booster-release.json is generated only in the temporary archive stage from
-# the selected version and immutable commit. The build and verification scripts
-# reject every path outside these two declarative allowlists.
+# the selected version and immutable commit. ran-booster-packages.json is
+# generated there too, from the locked runtime package versions. The build and
+# verification scripts reject every path outside these two declarative
+# allowlists.
 NOTICE.md
 RAN
 assets
@@ -15,6 +17,7 @@ index.php
 languages
 license.txt
 ran-booster.php
+ran-booster-packages.json
 ran-booster-release.json
 readme.txt
 uninstall.php

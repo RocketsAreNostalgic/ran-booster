@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 
 namespace RAN\Admin\WebhookManagement\Operation;
 
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\AddOn\WebhookAssistance\AssistanceTarget;
 use RAN\AddOn\WebhookAssistance\WebhookAssistanceFacade;
 use RAN\AddOn\WebhookAssistance\WebhookProfileMetadata;
@@ -158,9 +159,7 @@ final class WebhookOperationCoordinator {
 			|| ! in_array( $delivery, array( 'configured_pending_delivery', 'verified', 'unverified', 'unknown', 'absent' ), true )
 			|| ! is_array( $configuration )
 			|| ! is_string( $remediation )
-			|| '' === trim( $remediation )
-			|| strlen( $remediation ) > 512
-			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $remediation ) ) {
+			|| ! ProviderDiagnosticResult::is_safe_text( $remediation ) ) {
 			return $this->outcome( 'operation_failed' );
 		}
 

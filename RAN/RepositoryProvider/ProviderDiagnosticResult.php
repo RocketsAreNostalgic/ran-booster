@@ -54,20 +54,27 @@ final readonly class ProviderDiagnosticResult {
 	}
 
 	private function assert_safe_text( string $value ): void {
-		if ( '' === trim( $value )
-			|| strlen( $value ) > 512
-			|| 1 === preg_match( '/[\x00-\x1F\x7F]/', $value )
-			|| 1 === preg_match( '/<\/?[A-Za-z][^>]*>/', $value )
-			|| 1 === preg_match( '/\b(?:authorization|proxy-authorization|cookie|set-cookie|x-hub-signature(?:-256)?|x-api-key|x-auth-token|private-token)\s*:/i', $value )
-			|| 1 === preg_match( '/\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+\/=:-]{8,}/i', $value )
-			|| 1 === preg_match( '/\b(?:gh[pousr]_|github_pat_|ATATT3)[A-Za-z0-9_-]{6,}/', $value )
-			|| 1 === preg_match( '/\bglpat-[A-Za-z0-9_-]{6,}/', $value )
-			|| 1 === preg_match( '#(?:^|[\s(])(?:[A-Za-z]:[\\\\/]|/(?!/)[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*)#', $value )
-			|| 1 === preg_match( '#(?:^|[\s(])\\\\\\\\[^\\\\\s]+\\\\[^\\\\\s]+#', $value )
-			|| 1 === preg_match( '/[{}\[\]]/', $value )
-			|| 1 === preg_match( '#https?://[^/\s]+@#i', $value )
-		) {
+		if ( ! self::is_safe_text( $value ) ) {
 			throw new InvalidArgumentException( 'Provider diagnostic text must be safe, plain, single-line text.' );
 		}
+	}
+
+	/** The one Core screen for untrusted failure text; callers drop, never redact, a value it rejects. */
+	public static function is_safe_text( string $value, int $maximum = 512 ): bool {
+		return '' !== trim( $value )
+			&& strlen( $value ) <= $maximum
+			&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $value )
+			&& 1 !== preg_match( '/<\/?[A-Za-z][^>]*>/', $value )
+			&& 1 !== preg_match( '/\b(?:authorization|proxy-authorization|cookie|set-cookie|x-hub-signature(?:-256)?|x-api-key|x-auth-token|private-token)\s*:/i', $value )
+			&& 1 !== preg_match( '/\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+\/=:-]{8,}/i', $value )
+			&& 1 !== preg_match( '/\b(?:gh[pousr]_|github_pat_|ATATT3)[A-Za-z0-9_-]{6,}/', $value )
+			&& 1 !== preg_match( '/\bglpat-[A-Za-z0-9_-]{6,}/', $value )
+			&& 1 !== preg_match( '#(?:^|[\s(])(?:[A-Za-z]:[\\\\/]|/(?!/)[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*)#', $value )
+			&& 1 !== preg_match( '#(?:^|[\s(])\\\\\\\\[^\\\\\s]+\\\\[^\\\\\s]+#', $value )
+			&& 1 !== preg_match( '/[{}\[\]]/', $value )
+			&& 1 !== preg_match( '#[A-Za-z][A-Za-z0-9+.-]*://#', $value )
+			&& 1 !== preg_match( '#\.\./|\bwp-content\b#i', $value )
+			&& 1 !== preg_match( '/\b(?:token|secret|password|passwd|api[_-]?key|signature)\b\s*[:=]/i', $value )
+			&& 1 !== preg_match( '/\b[0-9a-f]{32,}\b/i', $value );
 	}
 }

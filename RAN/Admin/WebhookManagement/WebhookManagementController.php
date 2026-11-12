@@ -4,6 +4,7 @@ declare( strict_types = 1 );
 
 namespace RAN\Admin\WebhookManagement;
 
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\Admin\Interaction\AdminInteractionFacade;
 use RAN\Admin\Interaction\AdminInteractionOutcome;
 use RAN\Admin\Interaction\AdminInteractionRequest;
@@ -211,9 +212,7 @@ final class WebhookManagementController {
 
 	private function safe_remediation( mixed $remediation ): ?string {
 		return is_string( $remediation )
-			&& '' !== trim( $remediation )
-			&& strlen( $remediation ) <= 255
-			&& 1 !== preg_match( '/[\x00-\x1F\x7F]/', $remediation )
+			&& ProviderDiagnosticResult::is_safe_text( $remediation, 255 )
 			? $remediation
 			: null;
 	}

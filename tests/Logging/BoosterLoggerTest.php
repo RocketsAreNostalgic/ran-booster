@@ -108,6 +108,30 @@ final class BoosterLoggerTest extends TestCase {
 		self::assertStringNotContainsString( __FILE__, $line );
 	}
 
+	public function test_context_values_shaped_like_secrets_paths_urls_digests_or_markup_are_dropped(): void {
+		$shapes = array(
+			'token'  => 'ghp_abcdefghijklmnop1234',
+			'url'    => 'https://user:pass@example.com/x',
+			'path'   => '/Users/someone/site/wp-content/file.php',
+			'digest' => str_repeat( 'ab', 32 ),
+			'markup' => '<script>alert(1)</script>',
+			'long'   => str_repeat( 'a', 192 ),
+		);
+		foreach ( $shapes as $shape => $value ) {
+			BoosterLogger::log(
+				'shape ' . $shape,
+				array(
+					'resolved_ref'   => $value,
+					'exception_code' => $value,
+					'step'           => 'ok',
+				)
+			);
+		}
+		foreach ( $this->capture->snapshot()['entries'] as $entry ) {
+			self::assertSame( 1, preg_match( '/\{"step":"ok"\}\z/', $entry['line'] ), $entry['line'] );
+		}
+	}
+
 	public function test_inactive_or_broken_capture_does_not_affect_logging_callers(): void {
 		$this->capture->stop();
 		self::assertFalse( BoosterLogger::log( 'after stop', array( 'step' => 'ignored' ) ) );

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Logging;
 
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use Throwable;
 
 final class BoosterLogger {
@@ -95,7 +96,11 @@ final class BoosterLogger {
 			}
 
 			if ( is_string( $value ) ) {
-				$safe[ $key ] = self::one_line( $value );
+				$line = self::one_line( $value );
+				if ( '' !== $line && ! ( 'correlation_id' === $key && 1 === preg_match( '/\A[0-9a-f]{32}\z/', $line ) ) && ! ProviderDiagnosticResult::is_safe_text( $line, 191 ) ) {
+					continue;
+				}
+				$safe[ $key ] = $line;
 			} elseif ( is_bool( $value ) || is_int( $value ) || is_float( $value ) || null === $value ) {
 				$safe[ $key ] = $value;
 			}

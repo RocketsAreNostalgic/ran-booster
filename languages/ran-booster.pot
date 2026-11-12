@@ -4909,19 +4909,19 @@ msgstr ""
 msgid "Booster reinstalls have finished. Review the package statuses below. Skipped: {skipped}."
 msgstr ""
 
-#: RAN/Booster.php:1231
+#: RAN/Booster.php:1252
 msgid "RAN Booster could not save this notice preference. Please try again."
 msgstr ""
 
-#: RAN/Booster.php:1268
+#: RAN/Booster.php:1289
 msgid "A managed GitHub update has not been verified. Further GitHub-managed updates are paused until verification is complete or recovery is performed."
 msgstr ""
 
-#: RAN/Booster.php:1270
+#: RAN/Booster.php:1291
 msgid "Review GitHub management."
 msgstr ""
 
-#: RAN/Booster.php:1272
+#: RAN/Booster.php:1293
 msgid "Contact a site administrator."
 msgstr ""
 

@@ -387,7 +387,7 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 			<p class="ran-booster-package-summary__meta"><?php esc_html_e( 'Independent of package source', 'ran-booster' ); ?></p>
 			<?php
 			$word_press_screen_url = 'plugin' === $package_view->get_type()
-				? ( current_user_can( 'activate_plugins' ) ? ( is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' ) ) : '' )
+				? ( current_user_can( is_multisite() ? 'manage_network_plugins' : 'activate_plugins' ) ? ( is_multisite() ? network_admin_url( 'plugins.php' ) : admin_url( 'plugins.php' ) ) : '' )
 				: ( current_user_can( is_multisite() ? 'manage_network_themes' : 'switch_themes' ) ? ( is_multisite() ? network_admin_url( 'themes.php' ) : admin_url( 'themes.php' ) ) : '' );
 			if ( '' !== $word_press_screen_url ) {
 				?>

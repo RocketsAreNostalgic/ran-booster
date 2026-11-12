@@ -654,16 +654,31 @@ final class RepeatPackageViewTest extends TestCase {
 		$had_capabilities                         = array_key_exists( 'ran_booster_test_capabilities', $GLOBALS );
 		$previous_capabilities                    = $GLOBALS['ran_booster_test_capabilities'] ?? null;
 		$GLOBALS['ran_booster_test_capabilities'] = array(
-			'activate_plugins'      => true,
-			'switch_themes'         => true,
-			'manage_network_themes' => true,
+			'activate_plugins'       => true,
+			'manage_network_plugins' => true,
+			'switch_themes'          => true,
+			'manage_network_themes'  => true,
 		);
 
-		ob_start();
 		try {
-			require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+			ob_start();
+			try {
+				require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+			} finally {
+				$html = (string) ob_get_clean();
+			}
+			if ( $multisite && 'plugin' === $package_view->get_type() ) {
+				// Activating plugins does not grant network plugin management, so the network link must not appear.
+				$GLOBALS['ran_booster_test_capabilities']['manage_network_plugins'] = false;
+				ob_start();
+				try {
+					require dirname( __DIR__, 2 ) . '/views/packages/edit.php';
+				} finally {
+					$without_network_plugins = (string) ob_get_clean();
+				}
+				self::assertStringNotContainsString( 'Open WordPress Plugins', $without_network_plugins, 'network link without manage_network_plugins' );
+			}
 		} finally {
-			$html = (string) ob_get_clean();
 			if ( $had_capabilities ) {
 				$GLOBALS['ran_booster_test_capabilities'] = $previous_capabilities;
 			} else {

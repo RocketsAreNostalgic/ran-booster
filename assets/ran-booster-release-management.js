@@ -264,14 +264,24 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 						);
 				statusMessage = nativeOffer
 					? outcomeMessage
-					: sprintf(
-							/* translators: %s: inspected release status. */
-							__(
-								'%s Update it from the WordPress Plugins screen.',
-								'ran-booster'
-							),
-							outcomeMessage
-						);
+					: managedBrowser.dataset.ranBoosterManagedReleaseType ===
+						  'theme'
+						? sprintf(
+								/* translators: %s: inspected release status. */
+								__(
+									'%s Update it from the WordPress Themes screen.',
+									'ran-booster'
+								),
+								outcomeMessage
+							)
+						: sprintf(
+								/* translators: %s: inspected release status. */
+								__(
+									'%s Update it from the WordPress Plugins screen.',
+									'ran-booster'
+								),
+								outcomeMessage
+							);
 			} else if (relationship === 'older') {
 				outcomeMessage = sprintf(
 					/* translators: %s: release version. */

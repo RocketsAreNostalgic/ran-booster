@@ -3,6 +3,32 @@
 This directory is an independent nested Git repository. Run commands from this
 directory and preserve unrelated work.
 
+## Working model: one checkout, short branches
+
+This checkout is the only development checkout. It lives inside the
+`pns-stageing` Local site, so PHP and CSS edits are visible there immediately;
+JS asset changes need `pnpm ui:build`. Keep delivery overhead low: every extra
+branch, worktree and CI round costs reconciliation work the maintainers pay for.
+
+- Work on one short-lived branch off the latest `origin/main` at a time, named
+  `<type>/<issue>-<slug>`. Merge or abandon it before starting another. Prefer
+  one open pull request at a time unless the owner directs otherwise.
+- Do not create linked worktrees, extra clones, accumulator or integration
+  branches, or stacked pull requests, and do not use tooling modes that create
+  worktrees on your behalf. If a task seems to need one, stop and ask the owner.
+- If you find local worktrees or unexpected local branches you did not create,
+  report them. Do not reuse, switch to or delete them.
+- Run `composer check` and `pnpm check` locally before opening a pull request.
+  CI verifies a green local result; it is not a place to debug. Do not push
+  repeatedly to trigger CI. A leftover local `build/` directory is scanned by
+  PHPCS, PHPStan and the quality tests and floods them with unrelated errors;
+  move it aside while you run the gates and restore it afterwards, and never
+  delete it without the owner's say-so.
+- Test published artifacts on the `booster-test` Local site, which runs release
+  ZIPs only. Never check out source there.
+- The Workbench nested in this directory is `main`-only with exactly one
+  working tree. Follow its own `AGENTS.md` before touching it.
+
 ## Administration component package
 
 Use `@wordpress/ui` for every component replacement unless the owner expressly
@@ -91,10 +117,13 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
   method, checks and unresolved risks, then merge only after the owner explicitly
   authorizes that specific pull request. This includes Release Please pull
   requests even when repository permissions or branch rules allow a direct
-  merge. For ordinary iterative or agent-developed PRs, prefer squash so the
-  reviewed PR lands as one meaningful default-branch commit; a merge commit is
-  appropriate only when that ordinary PR's internal sequence is deliberately
-  worth preserving. **Booster's bot-owned `chore(main): release ...` proposals
+  merge. Prefer squash for ordinary incremental PRs so the reviewed PR lands as
+  one meaningful default-branch commit. Use a regular merge commit, never squash
+  or rebase, for an accumulator or integration branch when the owner directs one,
+  and for any PR whose detailed history matters, for example per-commit `Closes`
+  lines, changelog entries or a deliberately ordered sequence. The owner decides
+  which PRs those are, so state the intended merge method when asking for merge
+  authority. **Booster's bot-owned `chore(main): release ...` proposals
   are the explicit exception: use Create a merge commit, never squash or rebase
   merge**, as required by [the release guide](RELEASE.md#merge-method-for-booster-release-proposals).
   This is Booster policy, not a universal Release Please limitation. Rebase
@@ -178,6 +207,82 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
   verification, or use `HUSKY=0` solely to bypass a pnpm bootstrap failure.
   Once dependencies are current, use the normal `pnpm check` and Husky gates
   rather than substituting partial commands.
+
+## Commits, pull requests and issues
+
+No tool enforces most of these rules, so check them yourself before you commit,
+open or edit anything. Release Please builds the changelog and version from
+them.
+
+### Commit messages
+
+- Format: `<type>[optional scope]: <description>`. Release Please configuration
+  decides visibility. `feat`, `fix`, `perf` and `revert` appear in release
+  notes. `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`, `deps` and
+  `release` are hidden.
+- Use `fix` or `feat` only for a user-visible bug or feature. Lint, PHPCS,
+  i18n regeneration, test-only work, tooling and development-only dependency
+  changes are `style`, `refactor`, `test`, `build` or `chore`, for example
+  `build(deps): ...`, never `fix(deps)`.
+- Subject: imperative, lowercase after the colon, no trailing period, at most 72
+  characters counting the type and scope. Measure it, for example with
+  `git log -1 --format=%s | awk '{print length($0)}'`.
+- Body: a blank line after the subject, lines wrapped at 72 characters, saying
+  what changed and why. Name the governing issue (`Refs #NNN`, or `Closes #NNN`
+  only when the commit fully resolves it).
+- Amend an unpushed commit that breaks these rules. Never rewrite pushed
+  history.
+
+### Pull requests
+
+- Title: a Conventional Commit of at most 64 characters. A squash merge uses the
+  title as the commit subject and appends ` (#NNNN)` (up to 8 characters), so a
+  longer title pushes the default-branch subject past 72. The title type is what
+  Release Please reads, so classify it truthfully.
+- Body: follow `.github/pull_request_template.md` (Summary, Why, Verification,
+  Checklist) and state the intended merge method. For a squash merge, put
+  `Closes #NNN` in the PR body: this repository's squash commit carries only the
+  title, so the commits' messages and the body are not kept, but GitHub still
+  closes the issue from the PR body when the PR merges. A merge commit keeps
+  each commit's own `Closes` lines.
+- Merging is the owner's decision, as set out above. Present the PR, its SHAs
+  and checks, and merge only on the owner's explicit authorisation.
+
+### Issues
+
+- Title: `type(scope): imperative summary`, matching the commit style, aiming for
+  80 characters or fewer. Put detail in the body. Existing titles run to about
+  110; treat anything over 100 as too long. Public reports made through the
+  issue forms keep the form's `[Bug]: ` or `[Feature]: ` prefix instead.
+- Labels: one of `bug`, `enhancement` or `documentation`; one or more `area:*`
+  labels; a `type:*` label (`assessment`, `design`, `roadmap` or `deferred`)
+  where it applies. Set the milestone when the work is scheduled.
+- Never include credentials, private repository or site identities, Dex task
+  IDs or vulnerability details. Report vulnerabilities through `SECURITY.md`.
+
+### Authorisation
+
+- Never put Dex task IDs in source, documentation, commit messages, pull
+  requests, issues or release notes.
+- Issues marked tracking-only or "no implementation dispatched" need explicit
+  owner authorisation before implementation. A clearly identified
+  presentation-only CSS or spacing defect may proceed once its scope is
+  confirmed. Never close issues, clear holds, run `dex sync` or mass-complete
+  work without owner direction.
+
+## Agent skills and single-source policy
+
+This file is the single source of agent policy for this repository. Do not
+duplicate it in tool-specific files. Skills live in `.agents/skills/`:
+
+- Core: `.agents/skills/code-review`, for every pull request and patch review.
+- Workbench (nested repo, local only): `ran-booster-workbench/.agents/skills/ran-booster-dex`, for the Dex
+  workflow.
+- Release work: the shared RAN Release Please skill linked above.
+
+Tool-specific files such as `CLAUDE.md` or `.claude/` are not committed. A tool
+that needs one uses a local file that imports or links this one, hidden through
+`.git/info/exclude`.
 
 ## Blacksmith AI prohibition
 

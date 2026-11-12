@@ -3,6 +3,29 @@
 This directory is an independent nested Git repository. Run commands from this
 directory and preserve unrelated work.
 
+## Working model: one checkout, short branches
+
+This checkout is the only development checkout. It lives inside the
+`pns-stageing` Local site, so PHP and CSS edits are visible there immediately;
+JS asset changes need `pnpm build`. Keep delivery overhead low: every extra
+branch, worktree and CI round costs reconciliation work the maintainers pay for.
+
+- Work on one short-lived branch off the latest `origin/main` at a time, named
+  `<type>/<issue>-<slug>`. Merge or abandon it before starting another. Prefer
+  one open pull request at a time unless the owner directs otherwise.
+- Do not create linked worktrees, extra clones, accumulator or integration
+  branches, or stacked pull requests, and do not use tooling modes that create
+  worktrees on your behalf. If a task seems to need one, stop and ask the owner.
+- If you find worktrees or branches you did not create, report them. Do not
+  reuse, switch to or delete them.
+- Run `composer check` and `pnpm check` locally before opening a pull request.
+  CI verifies a green local result; it is not a place to debug. Do not push
+  repeatedly to trigger CI.
+- Test published artifacts on the `booster-test` Local site, which runs release
+  ZIPs only. Never check out source there.
+- The Workbench nested in this directory is `main`-only with exactly one
+  working tree. Follow its own `AGENTS.md` before touching it.
+
 ## Administration component package
 
 Use `@wordpress/ui` for every component replacement unless the owner expressly
@@ -91,10 +114,12 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
   method, checks and unresolved risks, then merge only after the owner explicitly
   authorizes that specific pull request. This includes Release Please pull
   requests even when repository permissions or branch rules allow a direct
-  merge. For ordinary iterative or agent-developed PRs, prefer squash so the
-  reviewed PR lands as one meaningful default-branch commit; a merge commit is
-  appropriate only when that ordinary PR's internal sequence is deliberately
-  worth preserving. **Booster's bot-owned `chore(main): release ...` proposals
+  merge. Prefer squash for ordinary incremental PRs so the
+  reviewed PR lands as one meaningful default-branch commit. Use a regular merge
+  commit, never squash or rebase, for accumulator or integration branches and for
+  any PR whose detailed history matters, for example per-commit `Closes` lines,
+  changelog entries or a deliberately ordered sequence. State the intended merge
+  method when asking for merge authority. **Booster's bot-owned `chore(main): release ...` proposals
   are the explicit exception: use Create a merge commit, never squash or rebase
   merge**, as required by [the release guide](RELEASE.md#merge-method-for-booster-release-proposals).
   This is Booster policy, not a universal Release Please limitation. Rebase

@@ -560,7 +560,8 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 						releases.length
 					)
 				);
-				selected = nativeOffer || inspectable[0];
+				// The installed release stays selected; the newer one is chosen to update.
+				selected = installedCandidate || nativeOffer || inspectable[0];
 				const selectedCandidate = candidateElements.get(selected);
 				selectedOutcome = selectedCandidate?.outcome || null;
 				const input = selectedCandidate?.input;

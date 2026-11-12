@@ -11,7 +11,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\Admin\PackageRepositoryRequestResolver;
 use RAN\Deployment\DeploymentPolicy;
+use RAN\ManagedRepository;
 use RAN\PackageOperation;
+use RAN\Plugin;
 use RAN\RepositoryProvider\ArchiveRequest;
 use RAN\RepositoryProvider\CredentialedPublicRepositoryBrowser;
 use RAN\RepositoryProvider\PreparedArchive;
@@ -410,6 +412,111 @@ final class PackageRepositoryRequestResolverTest extends TestCase {
 				'provider_repository_identity_source' => 'picker',
 			)
 		);
+	}
+
+	public function test_unchanged_repository_edit_completes_from_the_stored_package_without_a_provider_lookup(): void {
+		$provider = $this->resolving_provider(
+			new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'workspace/repository', 'repository', 'provider-id-42', true, 'main', 'bitbucket-deploy' )
+		);
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+
+		$result = $resolver->resolve_unchanged(
+			$this->edit_request(),
+			$this->stored_plugin( 'workspace/repository', 'bitbucket-deploy', true )
+		);
+
+		self::assertNull( $provider->request, 'An unchanged repository must not trigger a provider lookup.' );
+		self::assertIsArray( $result );
+		self::assertSame( 'bb', $result['provider'] );
+		self::assertSame( 'workspace/repository', $result['repository'] );
+		self::assertSame( 'provider-id-42', $result['provider_repository_id'] );
+		self::assertSame( 'stored', $result['provider_repository_identity_source'] );
+		self::assertSame( '1', $result['private'] );
+		self::assertSame( 'bitbucket-deploy', $result['credential_id'] );
+		self::assertSame( 'trunk', $result['branch'], 'A blank branch falls back to the stored branch.' );
+		self::assertSame( DeploymentPolicy::MANUAL->value, $result['deployment_policy'] );
+		self::assertSame( 'resolved-subdir', $result['subdirectory'] );
+	}
+
+	/** @param array<string, mixed> $override */
+	#[DataProvider( 'provider_dependent_changes' )]
+	public function test_any_provider_dependent_change_still_needs_the_provider( array $override ): void {
+		$provider = $this->resolving_provider(
+			new RepositoryDescriptor( ProviderCode::parse( 'bb' ), 'workspace/repository', 'repository', 'provider-id-42', true, 'main', 'bitbucket-deploy' )
+		);
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+
+		self::assertNull(
+			$resolver->resolve_unchanged(
+				array_merge( $this->edit_request(), $override ),
+				$this->stored_plugin( 'workspace/repository', 'bitbucket-deploy', true )
+			)
+		);
+		self::assertNull( $provider->request );
+	}
+
+	/** @return array<string, array{array<string, mixed>}> */
+	public static function provider_dependent_changes(): array {
+		return array(
+			'repository'            => array( array( 'repository' => 'workspace/other' ) ),
+			'repository case'       => array( array( 'repository' => 'Workspace/Repository' ) ),
+			'credential'            => array( array( 'credential_id' => 'another-credential' ) ),
+			'credential removed'    => array( array( 'credential_id' => '' ) ),
+			'subdirectory'          => array( array( 'subdirectory' => 'packages/other' ) ),
+			'picker identity'       => array( array( 'provider_repository_identity_source' => 'picker' ) ),
+			'public lookup profile' => array( array( 'public_lookup_profile_id' => 'public_lookup' ) ),
+			'expected id mismatch'  => array( array( 'provider_repository_id' => 'another-id' ) ),
+		);
+	}
+
+	public function test_unchanged_repository_edit_still_requires_webhook_capability_for_push_to_deploy(): void {
+		$provider = $this->credentialed_resolving_provider(
+			new RepositoryDescriptor( ProviderCode::parse( 'gh' ), 'owner/repository', 'repository', 'provider-id-1', false, 'main', null )
+		);
+		$resolver = new PackageRepositoryRequestResolver( new ProviderRegistry( array( $provider ) ) );
+
+		$this->expectException( UnsupportedProviderCapability::class );
+
+		$resolver->resolve_unchanged(
+			array_merge(
+				$this->edit_request(),
+				array(
+					'provider'          => 'gh',
+					'repository'        => 'owner/repository',
+					'credential_id'     => '',
+					'subdirectory'      => '',
+					'deployment_policy' => DeploymentPolicy::AUTOMATIC->value,
+				)
+			),
+			$this->stored_plugin( 'owner/repository', null, false, 'gh', 'provider-id-1', '' )
+		);
+	}
+
+	/** @return array<string, mixed> */
+	private function edit_request(): array {
+		return array(
+			'provider'          => 'bb',
+			'repository'        => 'workspace/repository',
+			'credential_id'     => 'bitbucket-deploy',
+			'subdirectory'      => 'resolved-subdir',
+			'branch'            => '',
+			'deployment_policy' => DeploymentPolicy::MANUAL->value,
+		);
+	}
+
+	private function stored_plugin(
+		string $locator,
+		?string $credential_id,
+		bool $is_private,
+		string $provider = 'bb',
+		string $provider_repository_id = 'provider-id-42',
+		string $subdirectory = 'resolved-subdir'
+	): Plugin {
+		$plugin = new Plugin();
+		$plugin->set_repository( new ManagedRepository( $provider, $locator, $provider_repository_id, 'trunk', $is_private, $credential_id ) );
+		$plugin->set_subdirectory( $subdirectory );
+
+		return $plugin;
 	}
 
 	/** @return RepositoryProvider&WebhookNormalizer&object{request: ?RepositoryLookupRequest} */

@@ -1288,6 +1288,42 @@ final class PackageOperationServiceTest extends TestCase {
 		);
 	}
 
+	public function test_signed_unverified_edit_marker_reports_the_save_and_the_skipped_repository_check(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$_GET      = array(
+			'ran_booster_result'        => 'edit-unverified',
+			'ran_booster_package'       => 'example/example.php',
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|edit-unverified|example/example.php' ),
+		);
+
+		$notice = $this->invoke_package_success_notice( $dashboard, 'plugin' );
+
+		self::assertSame(
+			array(
+				'operation'  => 'edit',
+				'identifier' => 'example/example.php',
+			),
+			$notice
+		);
+		self::assertSame( 'success', $dashboard->messages[0]['type'] );
+		self::assertSame( 'Plugin was successfully saved.', $dashboard->messages[0]['message'] );
+		self::assertSame( 'warning', $dashboard->messages[1]['type'] );
+		self::assertStringContainsString( 'could not re-check the repository', $dashboard->messages[1]['message'] );
+		self::assertCount( 2, $dashboard->messages );
+	}
+
+	public function test_unsigned_unverified_edit_marker_cannot_create_a_notice(): void {
+		$dashboard = $this->dashboard( new OperationCoordinator() );
+		$_GET      = array(
+			'ran_booster_result'        => 'edit-unverified',
+			'ran_booster_package'       => 'example/example.php',
+			'_ran_booster_notice_nonce' => \RAN\wp_create_nonce( 'ran-booster-package-success|plugin|edit|example/example.php' ),
+		);
+
+		self::assertNull( $this->invoke_package_success_notice( $dashboard, 'plugin' ) );
+		self::assertSame( array(), $dashboard->messages );
+	}
+
 	/** @return list<array{string, string}> */
 	public static function update_redirect_matrix(): array {
 		return array(

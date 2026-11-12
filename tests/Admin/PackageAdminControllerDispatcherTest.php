@@ -532,6 +532,123 @@ final class PackageAdminControllerDispatcherTest extends TestCase {
 		);
 	}
 
+	public function test_rate_limited_provider_does_not_block_saving_an_unchanged_repository(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$provider  = new FailingLookupProvider( 429 );
+		$providers = new ProviderRegistry( array( $provider ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::never() )->method( 'add_failure_message' );
+		$dashboard->expects( self::once() )
+			->method( 'post_package_operation' )
+			->with(
+				'edit-plugin',
+				self::callback(
+					static fn ( array $resolved ): bool => '1' === $resolved['repository_check_skipped']
+						&& 'stored' === $resolved['provider_repository_identity_source']
+						&& 'repository-id' === $resolved['provider_repository_id']
+						&& 'owner/original' === $resolved['repository']
+				)
+			)
+			->willReturn( 'https://example.test/redirect' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', $this->unchanged_edit_request(), true );
+
+		self::assertSame( 'https://example.test/redirect', $result );
+		self::assertSame( 1, $provider->lookups, 'The provider is still asked first; only a failure falls back.' );
+	}
+
+	public function test_rate_limit_still_blocks_a_changed_repository_and_says_nothing_was_saved(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( 429 ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'add_failure_message' )
+			->with(
+				self::callback(
+					static fn ( mixed $message ): bool => $message instanceof WP_Error
+						&& 'The Git provider rate limit has been reached. Nothing was saved. Try again later.' === $message->get_error_message()
+				)
+			);
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', array_merge( $this->unchanged_edit_request(), array( 'repository' => 'owner/replacement' ) ), true );
+
+		self::assertFalse( $result );
+	}
+
+	#[DataProvider( 'definitive_lookup_failures' )]
+	public function test_definitive_provider_answers_still_block_an_unchanged_repository( int $code ): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$providers = new ProviderRegistry( array( new FailingLookupProvider( $code ) ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )->method( 'add_failure_message' );
+		$dashboard->expects( self::never() )->method( 'post_package_operation' );
+
+		$result = ( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', $this->unchanged_edit_request(), true );
+
+		self::assertFalse( $result );
+	}
+
+	/** @return array<string, array{int}> */
+	public static function definitive_lookup_failures(): array {
+		return array(
+			'credential rejected' => array( 401 ),
+			'access denied'       => array( 403 ),
+			'not found'           => array( 404 ),
+			'no code'             => array( 0 ),
+		);
+	}
+
+	public function test_a_browser_supplied_skipped_check_marker_is_discarded(): void {
+		$package   = EditBoundaryPackage::make( 'fixture/fixture.php', 'gh' );
+		$provider  = new CapturingPublicLookupProvider();
+		$providers = new ProviderRegistry( array( $provider ) );
+		$dashboard = $this->createMock( Dashboard::class );
+		$dashboard->expects( self::once() )
+			->method( 'post_package_operation' )
+			->with(
+				'edit-plugin',
+				self::callback( static fn ( array $resolved ): bool => ! array_key_exists( 'repository_check_skipped', $resolved ) )
+			)
+			->willReturn( 'https://example.test/redirect' );
+
+		( new PackageAdminController(
+			repositories: new PackageRepositoryRequestResolver( $providers ),
+			plugins: new EditBoundaryPluginRepository( $package ),
+			themes: new EditBoundaryThemeRepository( $package ),
+			providers: $providers
+		) )->manage( $dashboard, 'edit-plugin', array_merge( $this->unchanged_edit_request(), array( 'repository_check_skipped' => '1' ) ), true );
+	}
+
+	/** @return array<string, mixed> */
+	private function unchanged_edit_request(): array {
+		return array(
+			'action'            => 'edit-plugin',
+			'file'              => 'fixture/fixture.php',
+			'provider'          => 'gh',
+			'repository'        => 'owner/original',
+			'credential_id'     => '',
+			'branch'            => 'main',
+			'subdirectory'      => '',
+			'deployment_policy' => 'manual',
+		);
+	}
+
 	private function dispatcher(
 		Dashboard $dashboard,
 		ProviderRegistry $providers,
@@ -637,6 +754,33 @@ final class CapturingPublicLookupProvider implements RepositoryProvider, Credent
 			'main',
 			$request->credential_id
 		);
+	}
+
+	public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {
+		unset( $request );
+		throw new \RuntimeException( 'Archive preparation is not used by this test.' );
+	}
+}
+
+// phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused dispatcher fixtures stay beside their tests.
+final class FailingLookupProvider implements RepositoryProvider {
+
+	use \RAN\Tests\RepositoryProvider\Support\SuppliesProviderDiagnostics;
+
+	public int $lookups = 0;
+
+	public function __construct( private readonly int $code ) {
+	}
+
+	public function get_metadata(): ProviderMetadata {
+		return new ProviderMetadata( ProviderCode::parse( 'gh' ), 'GitHub', 'https://example.test/', 'Owner' );
+	}
+
+	public function resolve_repository( RepositoryLookupRequest $request ): RepositoryDescriptor {
+		unset( $request );
+		++$this->lookups;
+
+		throw new \RuntimeException( 'Provider lookup failed.', $this->code );
 	}
 
 	public function prepare_archive( \RAN\RepositoryProvider\ArchiveRequest $request ): \RAN\RepositoryProvider\PreparedArchive {

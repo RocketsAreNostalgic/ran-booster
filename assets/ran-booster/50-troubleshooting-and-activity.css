@@ -54,7 +54,10 @@
 
 /*
  * Every Installation header keeps 16px of vertical padding closed and open, so
- * nothing shifts on toggle.
+ * nothing shifts on toggle. The native fallback selector repeats the density
+ * and disclosure attributes so it outranks the prominent-density summary rule
+ * (12px) in 25-admin-primitives.css, which would otherwise make the fallback
+ * 8px shorter than the mounted header and shift the page when it mounts.
  */
 
 .ran-booster-admin
@@ -70,7 +73,7 @@
 	:is(
 		[data-ran-booster-ui-disclosure="installation-section"],
 		[data-ran-booster-ui-disclosure="settings-card"]
-	)
+	)[data-ran-booster-ui-disclosure-density][data-ran-booster-ui-disclosure]
 	> details[data-ran-booster-ui-disclosure-fallback]
 	> summary {
 	padding-block: 16px;

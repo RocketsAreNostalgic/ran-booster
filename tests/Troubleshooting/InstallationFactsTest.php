@@ -58,7 +58,7 @@ final class InstallationFactsTest extends TestCase {
 		self::assertSame( 'Unknown', $rows['WordPress'] );
 		self::assertSame( 'Unknown', $rows['Database'] );
 		self::assertSame( 'Unknown', $rows['Web server'] );
-		foreach ( array( 'vv1.2.3', 'v', 'v-beta', '1.2.3+private-customer', '1.2.3-private-client', "1.2.3\0", "1.2.3\xff", str_repeat( '1', 81 ), array(), null ) as $unshareable ) {
+		foreach ( array( 'V1.2.3', 'vv1.2.3', 'v', 'v-beta', '1.2.3+private-customer', '1.2.3-private-client', "1.2.3\0", "1.2.3\xff", str_repeat( '1', 81 ), array(), null ) as $unshareable ) {
 			self::assertSame( 'Unknown', InstallationFacts::version( $unshareable ) );
 		}
 		foreach ( array( '1.2.3', '1.0.0-beta.41', '8.5.0', '1.0.0-rc.2', 'v1.0.0-beta.21' ) as $version ) {

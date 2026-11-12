@@ -321,7 +321,8 @@ A releasable Core change proves:
 - background Core installation remains forced off when discovery is enabled;
 - the release ZIP alone contains the generated marker; and
 - the verified archive exactly matches the committed Core, locked updater
-  runtime, and generated marker allowlist.
+  runtime, and generated file allowlist (the marker and the built-with
+  package record, which the marker validation never reads).
 
 See [Package update orchestration](package-update-orchestration.md) for the
 larger managed-release and branch deployment model. Historical alternatives and

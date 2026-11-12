@@ -29,7 +29,8 @@ final class InstalledPackageVersionTest extends TestCase {
 
 	public function test_composer_metadata_wins_over_the_build_record(): void {
 		$expected = \Composer\InstalledVersions::getPrettyVersion( 'ran/booster-github-provider' );
-		$path     = $this->record( '{"schema":"ran-booster-built-with","schema_version":1,"packages":{"ran/booster-github-provider":"v0.0.1"}}' );
+		self::assertNotNull( $expected );
+		$path = $this->record( '{"schema":"ran-booster-built-with","schema_version":1,"packages":{"ran/booster-github-provider":"v0.0.1"}}' );
 
 		self::assertSame( $expected, ( new InstalledPackageVersion( null, $path ) )->for_package( 'ran/booster-github-provider' ) );
 	}
@@ -54,18 +55,13 @@ final class InstalledPackageVersionTest extends TestCase {
 	}
 
 	public function test_a_missing_or_symbolic_build_record_is_unavailable(): void {
-		$directory = sys_get_temp_dir() . '/ran-booster-built-with-' . bin2hex( random_bytes( 6 ) );
-		mkdir( $directory );
-		$target = $directory . '/target.json';
-		file_put_contents( $target, '{"schema":"ran-booster-built-with","schema_version":1,"packages":{"ran/recorded-only":"v1.0.0"}}' );
-		$link = $directory . '/ran-booster-packages.json';
+		$target = $this->record( '{"schema":"ran-booster-built-with","schema_version":1,"packages":{"ran/recorded-only":"v1.0.0"}}' );
+		$link   = $target . '.link';
 		symlink( $target, $link );
+		$this->records[] = $link;
 
-		self::assertNull( ( new InstalledPackageVersion( null, $directory . '/absent.json' ) )->for_package( 'ran/recorded-only' ) );
+		self::assertNull( ( new InstalledPackageVersion( null, $target . '.absent' ) )->for_package( 'ran/recorded-only' ) );
 		self::assertNull( ( new InstalledPackageVersion( null, $link ) )->for_package( 'ran/recorded-only' ) );
-		unlink( $link );
-		unlink( $target );
-		rmdir( $directory );
 	}
 
 	private function record( string $contents ): string {

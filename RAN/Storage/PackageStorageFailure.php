@@ -92,7 +92,7 @@ final class PackageStorageFailure extends RuntimeException {
 				: sprintf(
 					/* translators: %s: identifier of the existing Release package. */
 					__( 'This repository already supplies releases to %s. Additional packages cannot use it. To use this repository for multiple Branch packages, switch that package to Branch first.', 'ran-booster' ),
-					$release_owner
+					htmlspecialchars( $release_owner, ENT_QUOTES )
 				),
 			self::VERIFICATION_FAILED => __( 'Booster could not verify package management data after a database change. The saved state may have changed; review it before retrying.', 'ran-booster' ),
 			default => $diagnostic_id,

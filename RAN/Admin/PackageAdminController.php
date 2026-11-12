@@ -802,7 +802,7 @@ final class PackageAdminController {
 	private function append_bulk_reasons( string $message, array $reasons, array $labels ): string {
 		$details = array();
 		foreach ( $reasons as $reason => $count ) {
-			$details[] = ( $labels[ $reason ] ?? $reason ) . ': ' . $count;
+			$details[] = ( $labels[ $reason ] ?? esc_html( (string) $reason ) ) . ': ' . $count;
 		}
 
 		return array() === $details ? $message : $message . ' ' . implode( '; ', $details ) . '.';

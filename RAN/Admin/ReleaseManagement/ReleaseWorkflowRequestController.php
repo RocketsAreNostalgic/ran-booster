@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Admin\ReleaseManagement;
 
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingFacade;
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
 use RAN\Logging\BoosterLogger;
@@ -585,7 +586,7 @@ final class ReleaseWorkflowRequestController {
 	}
 
 	private function result_display_text( mixed $value ): string {
-		return is_string( $value ) && strlen( $value ) <= 512 && 0 === preg_match( '/[<>\x00-\x1F\x7F]/', $value ) ? $value : '';
+		return is_string( $value ) && ProviderDiagnosticResult::is_safe_text( $value ) ? $value : '';
 	}
 
 	/** @param array{code:string,successful:bool,type:string,identifier:string,channel:string} $result */

@@ -264,6 +264,27 @@ final class SupportReportTest extends TestCase {
 		self::assertCount( 8, SupportReport::safe_diagnostic_results( array_fill( 0, 100, $rows[0] ) ) );
 	}
 
+	public function test_failure_log_lines_show_only_a_numeric_cause_code(): void {
+		$line = '[ran-booster] branch archive preparation failed {"attempt_id":17,"correlation_id":"' . str_repeat( 'a', 32 ) . '","exception_class":"private-class-canary","exception_code":"1010"}';
+		self::assertSame( 'branch archive preparation failed; attempt=17; correlation=' . str_repeat( 'a', 32 ) . '; outcome=Unknown; cause_code=1010', SupportReport::safe_log( $line ) );
+		$leak = SupportReport::safe_log( str_replace( '"1010"', '"/var/www/token=abc"', $line ) );
+		self::assertIsString( $leak );
+		self::assertStringNotContainsString( 'token', $leak );
+		self::assertStringNotContainsString( 'private-class-canary', $leak );
+	}
+
+	public function test_updater_codes_the_updaters_really_emit_are_not_reported_as_unknown(): void {
+		$method = new \ReflectionMethod( SupportReport::class, 'core_update_lines' );
+		foreach ( array( 'github_updater_installed_header_missing', 'acquisition_failed', 'outcome_uncertain' ) as $code ) {
+			$lines = $method->invoke( null, array( 'updater_code' => $code ) );
+			self::assertIsArray( $lines );
+			self::assertSame( $code, $lines['updater_code'] );
+		}
+		$lines = $method->invoke( null, array( 'updater_code' => 'github_updater_/etc/passwd' ) );
+		self::assertIsArray( $lines );
+		self::assertSame( 'Unknown', $lines['updater_code'] );
+	}
+
 	public function test_safe_log_templates_omit_raw_text_and_unreviewed_context(): void {
 		$line = '[ran-booster] attempt finished {"attempt_id":17,"correlation_id":"' . str_repeat( 'a', 32 ) . '","outcome_code":"archive_download_failed","package_slug":"private-package-canary","resolved_by":"private-actor-canary","exception_class":"private-exception-canary","resolved_ref":"private-ref-canary"}';
 		$safe = SupportReport::safe_log( $line );

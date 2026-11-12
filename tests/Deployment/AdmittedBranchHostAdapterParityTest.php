@@ -14,9 +14,12 @@ require_once __DIR__ . '/../RepositoryProvider/Support/RepositoryResolverWordPre
 require_once __DIR__ . '/../RepositoryProvider/AuthenticatedPreparedArchiveWordPressFunctions.php';
 
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RAN\BoosterGitHubProvider\V1\GitHubProvider;
 use RAN\Deployment\AdmittedBranchHostAdapter;
+use RAN\Logging\BoosterLogger;
+use RAN\Logging\TemporaryDebugCapture;
 use RAN\Deployment\DeploymentAttempt;
 use RAN\Deployment\DeploymentAttemptRepository;
 use RAN\Deployment\DeploymentCoordinator;
@@ -560,6 +563,57 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 
 		self::assertSame( array(), $GLOBALS['ran_booster_admitted_http_calls'] );
 		self::assertSame( 1, $archive->cleanup_calls );
+	}
+
+	/** @return array<string, array{?string, string, string}> */
+	public static function validator_causes(): array {
+		return array(
+			'not a zip'        => array( "not a zip /private/path token=abc\n", DeploymentOutcome::CODE_ARCHIVE_ZIP_INVALID, '1001' ),
+			'no plugin header' => array( null, DeploymentOutcome::CODE_PACKAGE_PLUGIN_MISSING, '1019' ),
+		);
+	}
+
+	#[DataProvider( 'validator_causes' )]
+	public function test_validator_causes_map_to_reserved_outcomes_and_log_only_class_and_code( ?string $bytes, string $outcome, string $code ): void {
+		$directory = sys_get_temp_dir() . '/ran-booster-cause-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+		mkdir( $directory, 0700 );
+		$capture = new TemporaryDebugCapture( $directory . '/secrets.json', static fn(): int => strtotime( '2026-07-23T12:00:00Z' ) );
+		$capture->start();
+		BoosterLogger::configure_capture( $capture );
+		try {
+			$archive = new ParityProviderArchive( str_repeat( 'a', 40 ) );
+			$adapter = $this->adapter( $this->running_update(), new ParityRepositoryProvider( $archive ) );
+			$path    = $this->download_fixture( 'example' );
+			if ( null === $bytes ) {
+				$zip = new ZipArchive();
+				$zip->open( $path, ZipArchive::OVERWRITE );
+				$zip->addFromString( 'example/example.php', "<?php\n" );
+				$zip->close();
+			} else {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+				file_put_contents( $path, $bytes );
+			}
+			try {
+				$adapter->prepare( $adapter->declaration(), $this->update_baseline() );
+				self::fail( 'The invalid archive must be refused.' );
+			} catch ( AdmittedBranchStageFailure $failure ) {
+				self::assertSame( $outcome, $failure->outcome_code );
+			}
+			$lines = implode( "\n", array_column( $capture->snapshot()['entries'], 'line' ) );
+			self::assertStringContainsString( '"exception_class":"RuntimeException","exception_code":"' . $code . '"', $lines );
+			self::assertStringNotContainsString( 'private', $lines );
+			self::assertStringNotContainsString( 'token=abc', $lines );
+			self::assertStringNotContainsString( 'not a readable', $lines );
+		} finally {
+			BoosterLogger::configure_capture( null );
+			foreach ( array_filter( (array) glob( $directory . '/*' ), 'is_string' ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+				unlink( $file );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+			rmdir( $directory );
+		}
 	}
 
 	public function test_post_mutation_managed_snapshot_drift_finishes_interrupted(): void {

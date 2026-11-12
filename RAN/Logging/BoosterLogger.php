@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RAN\Logging;
 
+use RAN\RepositoryProvider\ProviderDiagnosticResult;
 use Throwable;
 
 final class BoosterLogger {
@@ -95,13 +96,30 @@ final class BoosterLogger {
 			}
 
 			if ( is_string( $value ) ) {
-				$safe[ $key ] = self::one_line( $value );
+				$line = self::one_line( $value );
+				if ( '' !== $line && ! self::is_exact_identifier( $key, $line ) && ! ProviderDiagnosticResult::is_safe_text( $line, 191 ) ) {
+					continue;
+				}
+				$safe[ $key ] = $line;
 			} elseif ( is_bool( $value ) || is_int( $value ) || is_float( $value ) || null === $value ) {
 				$safe[ $key ] = $value;
 			}
 		}
 
 		return $safe;
+	}
+
+	/** Exact id shapes that the prose screen must not drop: commit ids, correlation ids and fixed snake_case diagnostic ids. */
+	private static function is_exact_identifier( string $key, string $value ): bool {
+		return match ( $key ) {
+			'correlation_id' => 1 === preg_match( '/\A[0-9a-f]{32}\z/', $value ),
+			'resolved_ref' => 1 === preg_match( '/\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z/', $value ) || self::is_snake_identifier( $value ),
+			default => self::is_snake_identifier( $value ),
+		};
+	}
+
+	private static function is_snake_identifier( string $value ): bool {
+		return 1 === preg_match( '/\A[a-z][a-z0-9_]{0,95}\z/', $value ) && 0 === preg_match( '/[0-9a-f]{32}|\A(?:gh[pousr]_|github_pat_|glpat)/', $value ) && strlen( (string) preg_replace( '/\D/', '', $value ) ) < 8;
 	}
 
 	private static function one_line( string $value ): string {

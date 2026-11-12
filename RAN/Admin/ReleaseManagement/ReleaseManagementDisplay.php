@@ -313,8 +313,10 @@ final class ReleaseManagementDisplay {
 		$inspect_nonce     = $enabled ? ( $nonce_actions['inspect_candidate'] ?? '' ) : '';
 		$native_update_url = $enabled && null !== $status ? $this->native_update_url( $status ) : '';
 		$offered_version   = $enabled && null !== $status ? ManagedReleaseBrowserOperations::persisted_offer_version( $status->type(), $status->identifier() ) : '';
-		$screen_file       = null !== $status && 'theme' === $status->type() ? 'themes.php' : 'plugins.php';
-		$screen_url        = null === $status ? '' : ( is_multisite() ? network_admin_url( $screen_file ) : admin_url( $screen_file ) );
+		$screen_is_theme   = null !== $status && 'theme' === $status->type();
+		$screen_file       = $screen_is_theme ? 'themes.php' : 'plugins.php';
+		$screen_cap        = $screen_is_theme ? ( is_multisite() ? 'manage_network_themes' : 'switch_themes' ) : ( is_multisite() ? 'manage_network_plugins' : 'activate_plugins' );
+		$screen_url        = null === $status || ! current_user_can( $screen_cap ) ? '' : ( is_multisite() ? network_admin_url( $screen_file ) : admin_url( $screen_file ) );
 		?>
 		<div
 			class="ran-booster-managed-release-browser<?php echo $enabled ? '' : ' is-disabled'; ?>"

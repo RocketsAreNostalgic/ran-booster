@@ -477,7 +477,10 @@ loads a bundled copy of the same tokens, `assets/lib/ran-booster-wpds-tokens.css
 `scripts/build-wpds-tokens.mjs` generates it from the `@wordpress/theme` release
 that the pinned `@wordpress/ui` depends on (`pnpm ui:build`, checked by
 `pnpm ui:check`), and `tests/assets/wpds-tokens.test.mjs` fails if any stylesheet
-reads a token the bundle does not define. Without a token source the type scale,
+reads a token the bundle does not define, including the component styles
+embedded in the bundled scripts. WordPress 7.1.4's own set is older than the
+bundle (167 tokens against 171); the few newer tokens are read only with a
+neutral-surface fallback, so nothing breaks there. Without a token source the type scale,
 colour and spacing are all undefined and the screens render unstyled, so any
 change to how the styles load must keep a source on WordPress 7.0.x.
 

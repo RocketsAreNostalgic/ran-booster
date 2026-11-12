@@ -23,7 +23,8 @@ const stylesheets = (directory) =>
 			return stylesheets(full);
 		}
 		// The bundled tokens themselves are not a consumer.
-		return entry.name.endsWith('.css') &&
+		// The component styles are also embedded as strings in the bundled scripts.
+		return (entry.name.endsWith('.css') || entry.name.endsWith('.js')) &&
 			entry.name !== 'ran-booster-wpds-tokens.css'
 			? [full]
 			: [];

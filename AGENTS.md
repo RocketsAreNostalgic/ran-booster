@@ -204,6 +204,33 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
   Once dependencies are current, use the normal `pnpm check` and Husky gates
   rather than substituting partial commands.
 
+## Commits and authorisation
+
+- Use Conventional Commits: `<type>[optional scope]: <description>`, with a
+  subject of at most 72 characters. Name the governing issue in the body
+  (`Refs #NNN`, or `Closes #NNN` only when the commit fully resolves it).
+- Never put Dex task IDs in source, documentation, commit messages, pull
+  requests or release notes.
+- Issues marked tracking-only or "no implementation dispatched" need explicit
+  owner authorisation before implementation. A clearly identified
+  presentation-only CSS or spacing defect may proceed once its scope is
+  confirmed. Never close issues, clear holds, run `dex sync` or mass-complete
+  work without owner direction.
+
+## Agent skills and single-source policy
+
+This file is the single source of agent policy for this repository. Do not
+duplicate it in tool-specific files. Skills live in `.agents/skills/`:
+
+- Core: `.agents/skills/code-review`, for every pull request and patch review.
+- Workbench: `ran-booster-workbench/.agents/skills/ran-booster-dex`, for the Dex
+  workflow.
+- Release work: the shared RAN Release Please skill linked above.
+
+Tool-specific files such as `CLAUDE.md` or `.claude/` are not committed. A tool
+that needs one uses a local file that imports or links this one, hidden through
+`.git/info/exclude`.
+
 ## Blacksmith AI prohibition
 
 Blacksmith is approved only as GitHub Actions runner infrastructure where a

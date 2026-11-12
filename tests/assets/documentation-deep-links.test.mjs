@@ -579,3 +579,52 @@ test('prepared documentation synchronizes native state immediately for navigatio
 	f.windowListeners.get('root:toggle')({ type: 'toggle' });
 	assert.equal(f.stateEvents.at(-1)[0], 'ran-booster:documentation-state');
 });
+
+test('opening an article re-seats its heading only when it ended under the fixed header', () => {
+	const fixture = createFixture({ hash: '', shellBottom: 144 });
+	for (const top of [-179, 300]) {
+		const calls = [];
+		const section = {
+			getBoundingClientRect: () => ({ top }),
+			scrollIntoView: (options) => calls.push(JSON.stringify(options)),
+		};
+		const trigger = { closest: () => section };
+		fixture.windowListeners.get('root:click')({
+			target: { closest: () => trigger },
+		});
+		fixture.flush();
+		assert.deepEqual(
+			calls,
+			top < 144 ? ['{"block":"start","behavior":"instant"}'] : []
+		);
+	}
+	const none = { closest: () => null };
+	fixture.windowListeners.get('root:click')({ target: none });
+	assert.equal(fixture.pending(), 0);
+});
+
+test('the re-seat also covers the native summary and a shell scrolled off a short viewport', () => {
+	const fixture = createFixture({ hash: '', shellBottom: -500 });
+	const selectors = [];
+	const calls = [];
+	const section = {
+		getBoundingClientRect: () => ({ top: -179 }),
+		scrollIntoView: (options) => calls.push(JSON.stringify(options)),
+	};
+	const trigger = { closest: () => section };
+	fixture.windowListeners.get('root:click')({
+		target: {
+			closest: (selector) => {
+				selectors.push(selector);
+				return trigger;
+			},
+		},
+	});
+	fixture.flush();
+	assert.match(selectors[0], /\[role="button"\]\[aria-expanded="false"\]/);
+	assert.match(
+		selectors[0],
+		/details\.ran-booster-documentation__section:not\(\[open\]\) > summary/
+	);
+	assert.deepEqual(calls, ['{"block":"start","behavior":"instant"}']);
+});

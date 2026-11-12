@@ -717,6 +717,39 @@
 		});
 		initDocumentationSectionTracking(root, links, sections);
 		initDocumentationPrintDetails(root);
+		// Opening one article collapses another, and a taller one above shifts
+		// the page. Before the next paint, bring a heading that ended up under
+		// the fixed headers back to the top; a heading still in view stays put.
+		root.addEventListener(
+			'click',
+			function (event) {
+				// The mounted toggle, or the native summary when the runtime is absent.
+				const trigger = event.target.closest?.(
+					'[role="button"][aria-expanded="false"], details.ran-booster-documentation__section:not([open]) > summary'
+				);
+				const section = trigger?.closest(
+					'.ran-booster-documentation__section'
+				);
+				if (!section) {
+					return;
+				}
+				window.requestAnimationFrame(function () {
+					const shell = document.querySelector('.ran-admin-shell');
+					// A short viewport un-sticks the shell, so its bottom can be negative.
+					const line = Math.max(
+						0,
+						shell ? shell.getBoundingClientRect().bottom : 0
+					);
+					if (section.getBoundingClientRect().top < line) {
+						section.scrollIntoView({
+							block: 'start',
+							behavior: 'instant',
+						});
+					}
+				});
+			},
+			true
+		);
 	}
 
 	document.addEventListener?.('htmx:afterSwap', function (event) {

@@ -1057,6 +1057,10 @@ final class ReleaseManagementDisplay {
 	}
 
 	private function diagnostic_action( string $code, string $reason = '', string $detail = '' ): string {
+		// Keep the action in step with the message: without the release tag the generic copy is used for both.
+		if ( '' === $detail && in_array( $reason, array( 'package_asset_missing', 'package_asset_ambiguous' ), true ) ) {
+			$reason = 'release_incompatible';
+		}
 		if ( 'release_unavailable' === $code ) {
 			return match ( $reason ) {
 				'no_releases' => __( 'Publish a release for the selected Stable or Preview track, then use Check releases.', 'ran-booster' ),

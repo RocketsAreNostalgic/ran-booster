@@ -36,6 +36,12 @@ use Throwable;
  * Administrator facade over Core-owned source state and native update runtime.
  */
 final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
+	/**
+	 * Provider-supplied rejection reasons Core has specific copy for. A reason without copy would show the
+	 * generic text, which is less helpful than the listing-derived reason, so it is not accepted yet.
+	 */
+	private const EXPLAINED_PROVIDER_REASONS = array( 'package_asset_missing', 'package_asset_ambiguous' );
+
 	private const SOURCE_CHANGED_MESSAGE = 'Package settings changed after this browser page was opened. Refresh this browser page, review the current settings, then try again.';
 	private const SUBDIRECTORY_MESSAGE   = 'Published releases require this plugin or theme to be at the repository root. Return to Branch to keep using its configured repository subdirectory.';
 
@@ -1212,7 +1218,7 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			ReleaseTrackingPreflight::RELEASE_UNAVAILABLE,
 			$package_root,
 			reason_code: match ( true ) {
-				null !== $provider_reason && in_array( $provider_reason, ReleaseTrackingPreflight::reason_codes(), true ) => $provider_reason,
+				null !== $provider_reason && in_array( $provider_reason, self::EXPLAINED_PROVIDER_REASONS, true ) => $provider_reason,
 				0 === $zips => 'package_asset_missing',
 				$zips > 1 => 'package_asset_ambiguous',
 				default => 'release_incompatible',

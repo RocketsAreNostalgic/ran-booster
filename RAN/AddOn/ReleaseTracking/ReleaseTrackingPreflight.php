@@ -116,11 +116,13 @@ final readonly class ReleaseTrackingPreflight extends RepositoryReleaseWorkflowP
 	}
 
 	/**
-	 * The one rule for the short fact a reason may carry (a release tag or file path): printable ASCII,
-	 * at most 120 characters. Anything else becomes empty, so the message falls back to its generic text.
+	 * The one rule for the short fact a reason may carry (a release tag or file path): at most 120 letters,
+	 * digits, spaces and . _ ~ : , / -. Only characters that survive a redirect query string unencoded are
+	 * allowed (a + would read back as a space, and & # % " would break it), so the signed notice cannot
+	 * vanish. Anything else becomes empty, so the message falls back to its generic text.
 	 */
 	public static function detail( string $value ): string {
-		return 1 === preg_match( '/\A[\x20-\x7E]{1,120}\z/D', $value ) ? $value : '';
+		return 1 === preg_match( '/\A[A-Za-z0-9 ._~:,\/-]{1,120}\z/D', $value ) ? $value : '';
 	}
 
 	/** @return list<string> */

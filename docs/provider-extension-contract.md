@@ -584,9 +584,14 @@ other exceptions mean the inspection operation was unavailable. Only
 `incompatible()` may carry an optional lower-case `detail` (matching
 `[a-z][a-z0-9_]{0,63}`; anything else becomes `null`) naming why the newest
 release was rejected. It is an additive optional field, not a new reason, so
-Core's candidate walk is unchanged. Core shows it only when it is one of
-Core's preflight reason codes, and otherwise falls back to the reason it can
-derive from the release listing, or the generic one. The
+Core's candidate walk is unchanged. Core shows it only when Core has specific copy for that
+reason (today `package_asset_missing` and `package_asset_ambiguous`), and otherwise
+falls back to the reason it can derive from the release listing, or the generic
+one. Each `RepositoryReleaseCandidate` lists its package ZIP assets in
+`expected_asset_names` (at most 8, ZIP names only); a provider that returns
+candidates must list them completely, because after inspection has rejected a
+release Core words the rejection from that list: none means no package ZIP,
+two or more means more than one. The
 facet grants no installation,
 updater or mutation authority and does not by itself make the complete release
 product available.

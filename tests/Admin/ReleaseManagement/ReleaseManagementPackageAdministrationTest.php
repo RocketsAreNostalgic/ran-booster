@@ -1855,7 +1855,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 			'no package ZIP'                   => array( 'package_asset_missing', 'v0.4.0', 'Release v0.4.0 has no .zip package asset.', 'Attach exactly one .zip package to the release, then use Check releases.', 'release_unavailable' ),
 			'more than one package ZIP'        => array( 'package_asset_ambiguous', 'v0.4.0', 'Release v0.4.0 has more than one .zip package asset.', 'Keep exactly one .zip package on the release, then use Check releases.', 'release_unavailable' ),
 			'one ZIP, cause inside it'         => array( 'release_incompatible', 'v0.4.0', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset', 'release_unavailable' ),
-			'ZIP named without its tag'        => array( 'package_asset_missing', '', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'Attach exactly one .zip package to the release', 'release_unavailable' ),
+			'ZIP named without its tag'        => array( 'package_asset_missing', '', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'Make sure the release has exactly one package ZIP asset', 'release_unavailable' ),
 			'folder or main file mismatch'     => array( 'release_identity_mismatch', 'wrong-dir/wrong.php', 'The ZIP’s folder or main file (wrong-dir/wrong.php) does not match this package.', 'Publish a ZIP whose folder and main file name match this package, then use Check releases.', 'invalid_release_assets' ),
 			'identity mismatch without a name' => array( 'release_identity_mismatch', '', 'The published release assets could not be validated.', 'Review the release, repository access', 'invalid_release_assets' ),
 			'no reason (source guard)'         => array( '', '', 'Booster could not confirm an eligible published release for this track.', 'make sure it has one package ZIP', 'release_unavailable' ),
@@ -1908,12 +1908,25 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		}
 	}
 
-	public function test_a_detail_is_escaped_when_displayed(): void {
-		// Printable ASCII is allowed through, so escaping is what keeps markup inert.
-		$html = $this->render_enable_failure( 'package_asset_missing', $url, '<b>v1</b>&"' );
-
-		self::assertStringContainsString( 'Release &lt;b&gt;v1&lt;/b&gt;&amp;&quot; has no .zip package asset.', $html );
-		self::assertStringNotContainsString( '<b>v1</b>', $html );
+	public function test_a_detail_only_allows_characters_that_survive_a_redirect_query_string(): void {
+		// WordPress add_query_arg does not encode new values and wp_safe_redirect strips characters outside a
+		// fixed set, so a detail with + & # % " < > = ; \' $ would read back changed and fail the signature,
+		// silently dropping the whole notice. Simulate both steps for every printable ASCII character.
+		foreach ( range( 0x20, 0x7E ) as $ordinal ) {
+			$value    = 'a' . chr( $ordinal ) . 'b';
+			$location = str_replace( ' ', '%20', 'https://example.test/wp-admin/admin.php?k=' . $value );
+			$location = (string) preg_replace( '/[^a-z0-9-~+_.?#=!&;,\/:%@$\|*\'()\[\]\\\\x80-\\xff]/i', '', $location );
+			parse_str( (string) parse_url( $location, PHP_URL_QUERY ), $parsed ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
+			if ( '' !== ReleaseTrackingPreflight::detail( $value ) ) {
+				self::assertSame( $value, $parsed['k'] ?? null, 'The allowed character ' . chr( $ordinal ) . ' must survive the redirect unchanged.' );
+			}
+		}
+		foreach ( array( 'v1.0.0+build.1', 'a&b', 'a#b', 'a%b', 'a"b', '<b>v1</b>', 'a=b', 'a;b', "a'b", 'a$b' ) as $unsafe ) {
+			self::assertSame( '', ReleaseTrackingPreflight::detail( $unsafe ), $unsafe );
+		}
+		foreach ( array( 'v0.4.0', 'v1.0.0-rc.1', 'example/example.php', 'found 1.2.0, expected 1.2.3' ) as $safe ) {
+			self::assertSame( $safe, ReleaseTrackingPreflight::detail( $safe ), $safe );
+		}
 	}
 
 	public function test_a_result_cannot_carry_an_unsafe_detail(): void {

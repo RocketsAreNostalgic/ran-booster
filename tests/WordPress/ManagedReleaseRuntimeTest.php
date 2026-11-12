@@ -2264,20 +2264,22 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			list_releases: static function () use ( &$mode ): RepositoryReleaseCandidateList {
 				// The asset names the listing shows for the newest release and for the one before it.
 				$names = array(
-					'no_zip'       => array( array(), array() ),
-					'two_zips'     => array( array( 'a.zip', 'b.zip' ), array( 'a.zip', 'b.zip' ) ),
-					'incompatible' => array( array( 'example.zip' ), array( 'example.zip' ) ),
-					'newest_one'   => array( array( 'example.zip' ), array() ),
-					'newest_none'  => array( array(), array( 'a.zip', 'b.zip' ) ),
-					'detail_known' => array( array( 'example.zip' ), array() ),
-					'detail_other' => array( array( 'example.zip' ), array() ),
-					'detail_bad'   => array( array( 'a.zip', 'b.zip' ), array() ),
+					'no_zip'           => array( array(), array() ),
+					'two_zips'         => array( array( 'a.zip', 'b.zip' ), array( 'a.zip', 'b.zip' ) ),
+					'incompatible'     => array( array( 'example.zip' ), array( 'example.zip' ) ),
+					'newest_one'       => array( array( 'example.zip' ), array() ),
+					'newest_none'      => array( array(), array( 'a.zip', 'b.zip' ) ),
+					'detail_known'     => array( array( 'example.zip' ), array() ),
+					'detail_explained' => array( array( 'example.zip' ), array() ),
+					'plus_tag'         => array( array(), array() ),
+					'detail_other'     => array( array( 'example.zip' ), array() ),
+					'detail_bad'       => array( array( 'a.zip', 'b.zip' ), array() ),
 				)[ $mode->value ] ?? array( array(), array() );
 				return new RepositoryReleaseCandidateList(
 					'none' === $mode->value
 						? array()
 						: array(
-							new RepositoryReleaseCandidate( '101', 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', $names[0] ),
+							new RepositoryReleaseCandidate( '101', 'plus_tag' === $mode->value ? 'v3.0.0+build.1' : 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', $names[0] ),
 							new RepositoryReleaseCandidate( '102', 'v2.0.0', '2.0.0', false, '2026-08-16T12:00:00Z', $names[1] ),
 							new RepositoryReleaseCandidate( '103', 'v1.0.0', '1.0.0', false, '2026-08-15T12:00:00Z', $names[0] ),
 						)
@@ -2287,9 +2289,10 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				++$inspections;
 				throw RepositoryReleaseInspectionRejected::incompatible(
 					array(
-						'detail_known' => 'package_header_missing',
-						'detail_other' => 'a_future_reason',
-						'detail_bad'   => 'Not-A-Reason',
+						'detail_known'     => 'package_header_missing',
+						'detail_explained' => 'package_asset_ambiguous',
+						'detail_other'     => 'a_future_reason',
+						'detail_bad'       => 'Not-A-Reason',
 					)[ $mode->value ] ?? null
 				);
 			}
@@ -2307,19 +2310,23 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 
 		foreach ( array(
-			'none'         => array( 'no_releases', 0, '' ),
+			'none'             => array( 'no_releases', 0, '' ),
 			// The listing's asset names are not trusted to be complete, so a release listed without a ZIP is still inspected.
 			// They only choose the wording after inspection has rejected the release.
-			'no_zip'       => array( 'package_asset_missing', 2, 'v3.0.0' ),
-			'two_zips'     => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
-			'incompatible' => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'no_zip'           => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			'two_zips'         => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
+			'incompatible'     => array( 'release_incompatible', 2, 'v3.0.0' ),
 			// The newest release names the reason even when the one before it was rejected differently.
-			'newest_one'   => array( 'release_incompatible', 2, 'v3.0.0' ),
-			'newest_none'  => array( 'package_asset_missing', 2, 'v3.0.0' ),
-			// A provider's own known reason wins; an unknown or malformed one never reaches Core.
-			'detail_known' => array( 'package_header_missing', 2, 'v3.0.0' ),
-			'detail_other' => array( 'release_incompatible', 2, 'v3.0.0' ),
-			'detail_bad'   => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
+			'newest_one'       => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'newest_none'      => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			// A provider's own reason wins only when Core has copy for it; a known code without copy, an unknown
+			// one and a malformed one fall back to the reason the listing shows.
+			'detail_explained' => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
+			'detail_known'     => array( 'release_incompatible', 2, 'v3.0.0' ),
+			// A tag with a character a redirect cannot carry gives no detail, so the generic copy is used.
+			'plus_tag'         => array( 'package_asset_missing', 2, '' ),
+			'detail_other'     => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'detail_bad'       => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
 		) as $case => $expected ) {
 			$mode->value                                = $case;
 			[ $reason, $expected_inspections, $detail ] = $expected;

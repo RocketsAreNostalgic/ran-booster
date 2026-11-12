@@ -3,15 +3,14 @@
  * Quick local level-8 analysis of the development PHP changed from origin/main.
  *
  * Selects committed, staged, unstaged and untracked PHP under scripts/ and tests/
- * (deleted files excluded), then runs the same locked analyzer configurations as
- * scripts/analyze-development.php, using the same profile routing: WordPress,
- * fixture and Integration tests are analysed one file at a time with
- * phpstan-integration.neon; everything else is one phpstan-development.neon run.
- *
- * Limitation: this skips the full runner's batching partition, so a file whose
- * test classes collide with another file's declarations can differ from the full
- * run. It is a fast pre-push check only. `composer analyze` and CI stay
- * authoritative.
+ * (deleted files excluded; NUL-delimited git output, so any file name is safe),
+ * then runs the locked analyzer with the same configurations as
+ * scripts/analyze-development.php. Every changed file is analysed in its own
+ * process, so files that declare incompatible symbols can never mask each other's
+ * errors (the isolation the full runner derives from source declarations); the
+ * routing between phpstan-development.neon and phpstan-integration.neon follows
+ * the full runner. It is a fast pre-push check only: `composer analyze` and CI
+ * stay authoritative.
  */
 
 declare(strict_types=1);
@@ -19,52 +18,58 @@ declare(strict_types=1);
 $ran_booster_changed_status = ( static function (): int {
 	$root = dirname( __DIR__ );
 	$base = 'origin/main';
-	$git  = static function ( array $arguments ) use ( $root ): ?array {
-		$output = array();
-		$code   = 0;
-		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_exec -- Local developer tool reading git state with a fixed argument vector.
-		exec( 'git -C ' . escapeshellarg( $root ) . ' -c core.quotepath=off ' . implode( ' ', array_map( 'escapeshellarg', $arguments ) ) . ' 2>/dev/null', $output, $code );
-		return 0 === $code ? $output : null;
+	$git  = static function ( array $arguments ) use ( $root ): ?string {
+		$command = array_values( array_merge( array( 'git', '-C', $root ), $arguments ) );
+		// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.system_calls_proc_open -- Local developer tool reading git state with a fixed argument vector and no shell.
+		$process = proc_open(
+			$command,
+			array(
+				1 => array( 'pipe', 'w' ),
+				2 => array( 'file', '/dev/null', 'w' ),
+			),
+			$pipes
+		);
+		if ( ! is_resource( $process ) ) {
+			return null;
+		}
+		$output = stream_get_contents( $pipes[1] );
+		fclose( $pipes[1] ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Close a local process pipe.
+
+		return 0 === proc_close( $process ) && is_string( $output ) ? $output : null;
 	};
 	if ( null === $git( array( 'rev-parse', '--verify', '--quiet', $base ) ) ) {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fwrite -- Report CLI failure to standard error.
 		fwrite( STDERR, "Cannot find {$base}; run git fetch origin main first.\n" );
 		return 2;
 	}
-	// One name per line (unquoted), so spaces are safe; the pathspec keeps only maintained development PHP.
+	// NUL-delimited names (-z), so quotes, backslashes, spaces and newlines in a name are preserved; the pathspec keeps only maintained development PHP.
 	$specs = array( '--', 'scripts/*.php', 'tests/*.php' );
 	$names = array();
 	foreach ( array(
-		array( 'diff', '--name-only', '--diff-filter=d', $base ),
-		array( 'ls-files', '--others', '--exclude-standard' ),
+		array( 'diff', '-z', '--name-only', '--diff-filter=d', $base ),
+		array( 'ls-files', '-z', '--others', '--exclude-standard' ),
 	) as $command ) {
 		$list = $git( array_merge( $command, $specs ) );
 		if ( null === $list ) {
 			return 2;
 		}
-		foreach ( $list as $name ) {
+		foreach ( explode( "\0", $list ) as $name ) {
 			if ( '' !== $name && is_file( $root . '/' . $name ) ) {
 				$names[ $name ] = true;
 			}
 		}
 	}
-	$names = array_keys( $names );
+	// Kept in step with phpstan-development.neon excludePaths: analysing an excluded fixture explicitly is a false failure.
+	$names = array_values( array_diff( array_keys( $names ), array( 'tests/fixtures/provider-api11-registration/workflow-provider.php', 'tests/fixtures/provider-api12-registration/repository-provider.php' ) ) );
 	sort( $names );
 	if ( array() === $names ) {
 		echo "No changed development PHP files.\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static CLI text.
 		return 0;
 	}
-	$development = array();
-	$groups      = array();
+	// One process per file: files that declare incompatible symbols must never be analysed together.
+	$groups = array();
 	foreach ( $names as $name ) {
-		if ( preg_match( '~^tests/(?:WordPress|fixtures|Integration)/~', $name ) ) {
-			$groups[] = array( 'phpstan-integration.neon', array( $name ) );
-		} else {
-			$development[] = $name;
-		}
-	}
-	if ( array() !== $development ) {
-		array_unshift( $groups, array( 'phpstan-development.neon', $development ) );
+		$groups[] = array( 1 === preg_match( '~^tests/(?:WordPress|fixtures|Integration)/~', $name ) ? 'phpstan-integration.neon' : 'phpstan-development.neon', array( $name ) );
 	}
 	$status = 0;
 	foreach ( $groups as list( $profile, $files ) ) {

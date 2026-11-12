@@ -106,6 +106,7 @@ function createFixture({
 	]);
 	const observers = [];
 	const windowListeners = new Map();
+	const rootCapture = new Map();
 	const root = {
 		hasAttribute(name) {
 			return optIn && name === 'data-ran-booster-ui-documentation';
@@ -122,8 +123,9 @@ function createFixture({
 		},
 		dataset: {},
 		isConnected: true,
-		addEventListener(name, callback) {
+		addEventListener(name, callback, capture) {
 			windowListeners.set('root:' + name, callback);
+			rootCapture.set(name, capture);
 		},
 		querySelector(selector) {
 			return selector === ':target'
@@ -294,6 +296,7 @@ function createFixture({
 		second,
 		window,
 		windowListeners,
+		rootCapture,
 		pending() {
 			return frames.length;
 		},
@@ -603,9 +606,50 @@ test('opening an article re-seats its heading only when it ended under the fixed
 	assert.equal(fixture.pending(), 0);
 });
 
-test('the re-seat also covers the native summary and a shell scrolled off a short viewport', () => {
-	const fixture = createFixture({ hash: '', shellBottom: -500 });
+test('the re-seat listens in the capture phase and schedules a frame for a collapsed trigger', () => {
+	const fixture = createFixture({ hash: '', shellBottom: 144 });
+	assert.equal(fixture.rootCapture.get('click'), true);
+	const section = {
+		getBoundingClientRect: () => ({ top: 300 }),
+		scrollIntoView: () => {},
+	};
+	const trigger = { closest: () => section };
+	const before = fixture.pending();
+	fixture.windowListeners.get('root:click')({
+		target: { closest: () => trigger },
+	});
+	assert.equal(fixture.pending(), before + 1);
+});
+
+test('the re-seat matches only article headers and the native summary', () => {
+	const fixture = createFixture({ hash: '', shellBottom: 144 });
 	const selectors = [];
+	fixture.windowListeners.get('root:click')({
+		target: {
+			closest: (selector) => {
+				selectors.push(selector);
+				return null;
+			},
+		},
+	});
+	assert.equal(selectors.length, 1);
+	assert.match(
+		selectors[0],
+		/\.ran-booster-ui-disclosure__header > \[role="button"\]\[aria-expanded="false"\]/
+	);
+	assert.match(
+		selectors[0],
+		/details\.ran-booster-documentation__section:not\(\[open\]\) > summary/
+	);
+	assert.doesNotMatch(
+		selectors[0],
+		/(^|, )\[role="button"\]/,
+		'a bare role=button must not match a button inside an article'
+	);
+});
+
+test('the re-seat also covers a shell scrolled off a short viewport', () => {
+	const fixture = createFixture({ hash: '', shellBottom: -500 });
 	const calls = [];
 	const section = {
 		getBoundingClientRect: () => ({ top: -179 }),
@@ -613,18 +657,31 @@ test('the re-seat also covers the native summary and a shell scrolled off a shor
 	};
 	const trigger = { closest: () => section };
 	fixture.windowListeners.get('root:click')({
-		target: {
-			closest: (selector) => {
-				selectors.push(selector);
-				return trigger;
-			},
-		},
+		target: { closest: () => trigger },
 	});
 	fixture.flush();
-	assert.match(selectors[0], /\[role="button"\]\[aria-expanded="false"\]/);
-	assert.match(
-		selectors[0],
-		/details\.ran-booster-documentation__section:not\(\[open\]\) > summary/
-	);
 	assert.deepEqual(calls, ['{"block":"start","behavior":"instant"}']);
+});
+
+test('the re-seat falls back when a browser rejects the instant behaviour', () => {
+	const fixture = createFixture({ hash: '', shellBottom: 144 });
+	const calls = [];
+	const section = {
+		getBoundingClientRect: () => ({ top: -179 }),
+		scrollIntoView: (options) => {
+			calls.push(JSON.stringify(options));
+			if (options.behavior === 'instant') {
+				throw new TypeError('invalid enum value');
+			}
+		},
+	};
+	const trigger = { closest: () => section };
+	fixture.windowListeners.get('root:click')({
+		target: { closest: () => trigger },
+	});
+	fixture.flush();
+	assert.deepEqual(calls, [
+		'{"block":"start","behavior":"instant"}',
+		'{"block":"start"}',
+	]);
 });

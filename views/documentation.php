@@ -448,6 +448,19 @@ if ( is_string( $ran_booster_secrets_dir ) &amp;&amp; '' !== trim( $ran_booster_
 				<p><?php esc_html_e( 'Adjust the compressed limit in Booster Settings. A target-local constant overrides and locks that preference:', 'ran-booster' ); ?></p>
 				<pre tabindex="0" role="region" aria-label="<?php esc_attr_e( 'Code example: download limit constant', 'ran-booster' ); ?>"><code>define( 'RAN_BOOSTER_MAX_DOWNLOAD_BYTES', 150 * 1024 * 1024 );</code></pre>
 				<p><?php esc_html_e( 'The value may range from 1 MiB through 536,870,911 bytes (just under 512 MiB). Booster derives a separate expanded-content limit four times as large and still applies entry-count, path, identity and free-space checks. It does not set installed size or History retention. It affects branch-source manual installs and updates, webhook updates, and package installation from a Transporter Blueprint. GitHub release inspection, installation and managed updates also use the compressed limit; the release updater has separate expansion safeguards. Extension downloads and Blueprint file imports have independent bounds.', 'ran-booster' ); ?></p>
+
+				<h4 id="ran-booster-release-requirements"><?php esc_html_e( 'Published release requirements', 'ran-booster' ); ?></h4>
+				<p><?php esc_html_e( 'Booster accepts a GitHub release when:', 'ran-booster' ); ?></p>
+				<ol>
+					<li><?php esc_html_e( 'The plugin or theme is at the repository root, and its installed Update URI is exactly https://github.com/owner/repo.', 'ran-booster' ); ?></li>
+					<li><?php esc_html_e( 'The release is published, not a draft, and tagged like v1.2.3 or 1.2.3, optionally with a suffix such as -rc.1.', 'ran-booster' ); ?></li>
+					<li><?php esc_html_e( 'It has exactly one .zip asset, named with letters, digits, dots, underscores or hyphens (starting with a letter or digit, 220 characters at most) and within this site’s compressed size limit, 50 MiB by default. Other asset types are allowed.', 'ran-booster' ); ?></li>
+					<li><?php esc_html_e( 'The ZIP has one top-level folder named exactly like the installed folder, holding the main plugin file or style.css.', 'ran-booster' ); ?></li>
+					<li><?php esc_html_e( 'Inside, the Plugin Name or Theme Name, Version, Update URI, Requires PHP and Requires at least headers are present. Version matches the tag without its leading v, so tag v1.2.3 needs Version: 1.2.3.', 'ran-booster' ); ?></li>
+					<li><?php esc_html_e( 'File paths are plain ASCII and avoid \\ : < > " | ? *.', 'ran-booster' ); ?></li>
+				</ol>
+				<p><?php esc_html_e( 'Immutable releases, manifests, checksums and signatures are not required. GitHub’s automatic source archives are not used, so a release without an uploaded ZIP is not accepted. If your workflow builds the ZIP, attach it with:', 'ran-booster' ); ?></p>
+				<pre tabindex="0" role="region" aria-label="<?php esc_attr_e( 'Code example: attach the release ZIP', 'ran-booster' ); ?>"><code>gh release upload "$TAG" my-package.zip</code></pre>
 			</div>
 		</details>
 		</div></div></div>

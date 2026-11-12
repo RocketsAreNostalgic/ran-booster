@@ -20,7 +20,10 @@ branch, worktree and CI round costs reconciliation work the maintainers pay for.
   report them. Do not reuse, switch to or delete them.
 - Run `composer check` and `pnpm check` locally before opening a pull request.
   CI verifies a green local result; it is not a place to debug. Do not push
-  repeatedly to trigger CI.
+  repeatedly to trigger CI. A leftover local `build/` directory is scanned by
+  PHPCS, PHPStan and the quality tests and floods them with unrelated errors;
+  move it aside while you run the gates and restore it afterwards, and never
+  delete it without the owner's say-so.
 - Test published artifacts on the `booster-test` Local site, which runs release
   ZIPs only. Never check out source there.
 - The Workbench nested in this directory is `main`-only with exactly one
@@ -205,15 +208,59 @@ rule exclusions retain only the parity-checked generated Admin Shell binding.
   Once dependencies are current, use the normal `pnpm check` and Husky gates
   rather than substituting partial commands.
 
-## Commits and authorisation
+## Commits, pull requests and issues
 
-- Use Conventional Commits: `<type>[optional scope]: <description>`, with a
-  subject of 72 characters or fewer (a house convention; no tool enforces it).
-  Name the governing issue in the body (`Refs #NNN`, or `Closes #NNN` only when
-  the commit fully resolves it). For a squash merge only the PR title and body
-  survive, so put any `Closes #NNN` in the PR body.
+No tool enforces most of these rules, so check them yourself before you commit,
+open or edit anything. Release Please builds the changelog and version from
+them.
+
+### Commit messages
+
+- Format: `<type>[optional scope]: <description>`. Release Please configuration
+  decides visibility. `feat`, `fix`, `perf` and `revert` appear in release
+  notes. `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore`, `deps` and
+  `release` are hidden.
+- Use `fix` or `feat` only for a user-visible bug or feature. Lint, PHPCS,
+  i18n regeneration, test-only work, tooling and development-only dependency
+  changes are `style`, `refactor`, `test`, `build` or `chore`, for example
+  `build(deps): ...`, never `fix(deps)`.
+- Subject: imperative, lowercase after the colon, no trailing period, at most 72
+  characters counting the type and scope. Measure it, for example with
+  `git log -1 --format=%s | awk '{print length($0)}'`.
+- Body: a blank line after the subject, lines wrapped at 72 characters, saying
+  what changed and why. Name the governing issue (`Refs #NNN`, or `Closes #NNN`
+  only when the commit fully resolves it).
+- Amend an unpushed commit that breaks these rules. Never rewrite pushed
+  history.
+
+### Pull requests
+
+- Title: a Conventional Commit of at most 65 characters. A squash merge uses the
+  title as the commit subject and appends ` (#NNN)`, so a longer title pushes
+  the default-branch subject past 72. The title type is what Release Please
+  reads, so classify it truthfully.
+- Body: follow `.github/pull_request_template.md` (Summary, Why, Verification,
+  Checklist) and state the intended merge method. Put `Closes #NNN` in the body:
+  a squash merge keeps only the title and body, not the commits' messages.
+- Merging is the owner's decision, as set out above. Present the PR, its SHAs
+  and checks, and merge only on the owner's explicit authorisation.
+
+### Issues
+
+- Title: `type(scope): imperative summary`, matching the commit style, aiming for
+  80 characters or fewer. Put detail in the body. Existing titles run to about
+  110; treat anything over 100 as too long. Public reports made through the
+  issue forms keep the form's `[Bug]: ` or `[Feature]: ` prefix instead.
+- Labels: one of `bug`, `enhancement` or `documentation`; one or more `area:*`
+  labels; a `type:*` label (`assessment`, `design`, `roadmap` or `deferred`)
+  where it applies. Set the milestone when the work is scheduled.
+- Never include credentials, private repository or site identities, Dex task
+  IDs or vulnerability details. Report vulnerabilities through `SECURITY.md`.
+
+### Authorisation
+
 - Never put Dex task IDs in source, documentation, commit messages, pull
-  requests or release notes.
+  requests, issues or release notes.
 - Issues marked tracking-only or "no implementation dispatched" need explicit
   owner authorisation before implementation. A clearly identified
   presentation-only CSS or spacing defect may proceed once its scope is

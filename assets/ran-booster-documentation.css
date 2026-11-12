@@ -486,6 +486,23 @@
 	}
 }
 
+/*
+ * Each article sits inside a Documentation Card, so the Card surface is the
+ * only frame. The native details and the mounted disclosure drop their own
+ * border and fill (add-on articles are wrapped the same way).
+ */
+
+.ran-booster-admin
+	[data-ran-booster-card="documentation"]
+	.ran-booster-documentation__section.ran-booster-disclosure,
+.ran-booster-admin
+	[data-ran-booster-card="documentation"]
+	.ran-booster-ui-disclosure {
+	border: 0;
+	box-shadow: none;
+	background: transparent;
+}
+
 /* Native Docs reveal content immediately for anchors, browser find and print. */
 .ran-booster-admin .ran-booster-documentation__ui-panel {
 	transition: none;

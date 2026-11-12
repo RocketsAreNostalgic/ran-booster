@@ -301,6 +301,7 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 			$check_summary             = is_array( $package_activity_summary['check'] ?? null ) ? $package_activity_summary['check'] : null;
 			$latest_check              = is_array( $check_summary['latest'] ?? null ) ? $check_summary['latest'] : null;
 			$observed_check            = is_array( $check_summary['observation'] ?? null ) ? $check_summary['observation'] : null;
+			$earlier_check             = is_array( $check_summary['earlier'] ?? null ) ? $check_summary['earlier'] : null;
 			$latest_attempt            = $package_activity_summary['latest'] ?? null;
 			$last_successful_attempt   = $package_activity_summary['last_successful'] ?? null;
 			$latest_activity           = $latest_attempt instanceof \RAN\Deployment\DeploymentAttempt ? $latest_attempt->safe_data() : null;
@@ -565,8 +566,11 @@ $package_show_empty_state = count( $packages ) < 1 && $package_list_total < 1 &&
 										<?php esc_html_e( 'Temporarily unavailable', 'ran-booster' ); ?>
 									<?php } elseif ( null !== $latest_check ) { ?>
 										<?php echo esc_html( (string) ( $latest_check['sort_at'] ?? '' ) ); ?> — <?php echo esc_html( \RAN\Admin\DeploymentOutcomeMessage::for_activity( (string) ( $latest_check['status'] ?? '' ), (string) ( $latest_check['reason'] ?? '' ), (string) ( $latest_check['message'] ?? '' ) ) ); ?>
+									<?php } elseif ( null !== $earlier_check ) { ?>
+										<?php echo esc_html( (string) ( $earlier_check['sort_at'] ?? '' ) ); ?> — <?php echo esc_html( \RAN\Admin\DeploymentOutcomeMessage::for_activity( (string) ( $earlier_check['status'] ?? '' ), (string) ( $earlier_check['reason'] ?? '' ), (string) ( $earlier_check['message'] ?? '' ) ) ); ?>
+										(<?php esc_html_e( 'before the latest settings change', 'ran-booster' ); ?>)
 									<?php } else { ?>
-										<?php esc_html_e( 'No check recorded for the current settings', 'ran-booster' ); ?>
+										<?php esc_html_e( 'No check recorded', 'ran-booster' ); ?>
 									<?php } ?>
 									<a href="
 									<?php

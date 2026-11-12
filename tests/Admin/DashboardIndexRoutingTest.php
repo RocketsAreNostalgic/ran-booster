@@ -3386,6 +3386,62 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertArrayNotHasKey( 'plugin/release.php', $activity['items'] );
 	}
 
+	/**
+	 * @param list<mixed> $reads Scripted activity reads in the order the presenter issues them.
+	 * @return array{0: array<string, mixed>, 1: list<string>}
+	 */
+	private function release_check_activity( array $reads ): array {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		require_once __DIR__ . '/../Activity/ActivityConnection.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ]     = '1';
+		$GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
+		$connection               = new \RAN\Tests\Activity\ActivityConnection();
+		$connection->read_results = $reads;
+		$package                  = $this->managed_package( 'example/example.php', 'Example Plugin', 'repository-1', \RAN\PackageSource::RELEASE_ASSET );
+		$presenter                = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( new DashboardActivityWpdb() ), activity_store: new \RAN\Activity\ActivityStore( $connection ) );
+		$activity                 = $presenter->package_activity( array( $package ), 'plugin' );
+
+		return array( $activity['items']['example/example.php']['check'] ?? array(), $connection->queries );
+	}
+
+	public function test_a_release_check_from_an_earlier_settings_revision_is_kept_beside_an_empty_exact_summary(): void {
+		$earlier = (object) array(
+			'id'      => '7',
+			'status'  => 'succeeded',
+			'sort_at' => '2026-07-20 10:00:00',
+		);
+		// Exact summary: latest and observation are empty; the fallback then finds the earlier row.
+		[ $check, $queries ] = $this->release_check_activity( array( array(), array(), array( $earlier ) ) );
+
+		self::assertTrue( $check['available'] );
+		self::assertNull( $check['latest'], 'The exact-context summary stays empty after the settings change.' );
+		self::assertSame( '2026-07-20 10:00:00', $check['earlier']['sort_at'] ?? null );
+		self::assertCount( 3, $queries );
+		self::assertStringContainsString( 'context_key', $queries[0] );
+		self::assertStringNotContainsString( 'context', $queries[2], 'Only the passive fallback ignores the settings context.' );
+	}
+
+	public function test_an_unchanged_release_check_context_is_current_and_never_reads_the_fallback(): void {
+		$current             = (object) array(
+			'id'      => '8',
+			'status'  => 'succeeded',
+			'sort_at' => '2026-07-21 10:00:00',
+		);
+		[ $check, $queries ] = $this->release_check_activity( array( array( $current ), array( $current ) ) );
+
+		self::assertTrue( $check['available'] );
+		self::assertSame( '2026-07-21 10:00:00', $check['latest']['sort_at'] ?? null );
+		self::assertArrayNotHasKey( 'earlier', $check );
+		self::assertCount( 2, $queries );
+	}
+
+	public function test_a_failed_fallback_read_is_unavailable_not_an_empty_history(): void {
+		[ $check ] = $this->release_check_activity( array( array(), array(), false ) );
+
+		self::assertFalse( $check['available'] );
+		self::assertArrayNotHasKey( 'earlier', $check );
+	}
+
 	public function test_short_deployment_history_does_not_offer_an_older_page(): void {
 		$database       = new DashboardActivityWpdb();
 		$database->rows = array_map( static fn ( int $id ): array => DashboardActivityWpdb::attempt( $id, 'succeeded' ), range( 1, 9 ) );

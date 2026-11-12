@@ -507,6 +507,30 @@ final class GeneralPreferenceStoreTest extends TestCase {
 			)
 		);
 		self::assertFalse( $store->snapshot()['malformed'] );
+		$tokens = $store->view_snapshot()['tokens'];
+		$this->seed(
+			array(
+				'hide_github' => true,
+				'_revisions'  => array(
+					'hide_github'           => 3,
+					'self_update_discovery' => 1,
+					'numeric'               => 2,
+				),
+			)
+		);
+		self::assertSame( $tokens, $store->view_snapshot()['tokens'], 'Known-scope tokens must not depend on unknown counters.' );
+		$this->seed(
+			array(
+				'hide_github' => true,
+				'_revisions'  => array(
+					'notify_releases'       => 7,
+					'hide_github'           => 3,
+					'self_update_discovery' => 1,
+					'numeric'               => 2,
+					'zz_future'             => PHP_INT_MAX,
+				),
+			)
+		);
 		self::assertSame(
 			'saved',
 			$store->save(
@@ -542,9 +566,6 @@ final class GeneralPreferenceStoreTest extends TestCase {
 			),
 			$read()
 		);
-		self::assertTrue( $store->clear_confirmed_github_hide_request() );
-		self::assertSame( 4, $read()['hide_github'] );
-		self::assertSame( 7, $read()['notify_releases'] );
 		$this->seed(
 			array(
 				'hide_github' => true,

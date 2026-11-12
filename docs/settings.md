@@ -49,13 +49,12 @@ stale, so that tab shows one "review current values" message even though the
 saved values are identical. A first save of defaults on a fresh site writes the
 option and its revisions. A legacy autoloaded option is rewritten nonautoloaded by
 the first save. Settings never saves on load, blur or a timer, so these costs
-occur only when someone presses Save or flips a switch, typically at most once
-per click. Confirmed management clearing is different: it writes and advances
-only when a saved GitHub-hide request actually exists. Skipping no-op writes was
+occur only when someone presses Save or flips a switch. Skipping no-op writes was
 considered and left out because it changes the "one accepted save, one revision
-step" contract and five existing tests without a user-visible gain.
-Legacy full-form submissions advance all three; confirmed management
-clearing a saved GitHub-hide request advances that scope. Scope tokens preserve
+step" contract without a user-visible gain.
+Legacy full-form submissions advance every known scope. Confirmed management
+clearing writes and advances only when a saved GitHub-hide request exists, and
+then advances that scope. Scope tokens preserve
 raw value presence/type. The existing management and option locks, strict input
 validation, full-document SQL compare-and-set and unrelated option keys remain.
 Reads do not initialize revisions. A missing or non-integer counter for a
@@ -65,7 +64,8 @@ written by a newer Booster, is validated the same way, is never advanced or
 removed, and is written back unchanged by every save, so a rollback can still
 save the scopes it knows without discarding the newer version's fences. A release
 that adds a scope must treat that scope's missing counter as 0, or every existing
-site would fail closed on upgrade.
+site would fail closed on upgrade. A release that removes or renames a scope must
+keep writing the old counter, or a rollback to this version would fail closed.
 Older running Booster code preserves unknown metadata but cannot advance these
 fences. Mixed-version concurrent writes, including old-runtime ABA, are not
 qualified; deploy after old requests have drained and retain rollback material.

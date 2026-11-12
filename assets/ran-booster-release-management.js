@@ -267,7 +267,7 @@ const initializeManagedReleaseBrowser = (managedBrowser) => {
 					: sprintf(
 							/* translators: %s: inspected release status. */
 							__(
-								'%s Refresh releases before installing.',
+								'%s Update it from the WordPress Plugins screen.',
 								'ran-booster'
 							),
 							outcomeMessage

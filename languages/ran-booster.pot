@@ -11087,7 +11087,7 @@ msgstr ""
 #. translators: %s: inspected release status.
 #: assets/ran-booster-release-management.js:269
 #, js-format
-msgid "%s Refresh releases before installing."
+msgid "%s Update it from the WordPress Plugins screen."
 msgstr ""
 
 #. translators: %s: release version.

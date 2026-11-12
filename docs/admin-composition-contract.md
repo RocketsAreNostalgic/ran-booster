@@ -930,7 +930,7 @@ This does not remove the public tab capability for other add-ons.
 
 Core owns the **RAN Booster > Extensions** submenu at
 `ran-booster-extensions`. The `manage_options`-gated page renders the remaining
-release-bundled first-party cards in deterministic order. Its catalogue, local
+release-bundled cards for RAN-maintained extensions in deterministic order. Its catalogue, local
 placeholder images, installed-plugin reads, compatibility labels and failure
 shell are all Core-owned.
 

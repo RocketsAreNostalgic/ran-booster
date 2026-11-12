@@ -395,30 +395,35 @@ class Booster {
 					return true;
 				}
 			},
-			fn (): array => $this->extension_cards( get_plugins() )
+			// Registers during plugin load, so it must not translate display text.
+			fn (): array => $this->extension_cards( get_plugins(), false )
 		) )->register();
 	}
 
 	/** @internal
 	 * @return list<array<string, mixed>>
 	 */
-	public static function extension_declarations(): array {
+	public static function extension_declarations( bool $translated = true ): array {
+		// Plugin load must not translate: the textdomain is only available from init.
 		return array(
 			array(
 				'id'                      => 'ran-booster-bitbucket',
 				'provider_code'           => 'bb',
 				'provider_implementation' => 'RAN\\Booster\\Bitbucket\\BitbucketProvider',
 				'name'                    => 'Bitbucket Cloud',
-				'description'             => __( 'Deploy from Bitbucket Cloud repositories.', 'ran-booster' ),
+				'description'             => self::text( $translated, static fn (): string => __( 'Deploy from Bitbucket Cloud repositories.', 'ran-booster' ) ),
 				'details'                 => '',
 				'features'                => array(),
-				'requirements'            => array(
-					__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
-					__( 'Manual Bitbucket webhook setup for Push-to-Deploy.', 'ran-booster' ),
+				'requirements'            => self::texts(
+					$translated,
+					static fn (): array => array(
+						__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
+						__( 'Manual Bitbucket webhook setup for Push-to-Deploy.', 'ran-booster' ),
+					)
 				),
 				'plugin'                  => 'ran-booster-bitbucket/ran-booster-bitbucket.php',
 				'image'                   => 'bitbucket-cloud.svg',
-				'availability'            => __( 'Free', 'ran-booster' ),
+				'availability'            => self::text( $translated, static fn (): string => __( 'Free', 'ran-booster' ) ),
 				'required_apis'           => array(
 					'RAN_BOOSTER_PROVIDER_API_VERSION' => 15,
 					'RAN_BOOSTER_ADDON_API_VERSION'    => 17,
@@ -436,19 +441,25 @@ class Booster {
 			array(
 				'id'                   => 'ran-booster-wp-pusher-migrator',
 				'name'                 => 'WP Pusher Migrator',
-				'description'          => __( 'Move WP Pusher packages into Booster without reinstalling.', 'ran-booster' ),
-				'details'              => __( 'Adopted packages start with deployments disabled.', 'ran-booster' ),
-				'features'             => array(
-					__( 'Migrator removes each WP Pusher entry only after Booster verifies the adopted package with deployments disabled.', 'ran-booster' ),
+				'description'          => self::text( $translated, static fn (): string => __( 'Move WP Pusher packages into Booster without reinstalling.', 'ran-booster' ) ),
+				'details'              => self::text( $translated, static fn (): string => __( 'Adopted packages start with deployments disabled.', 'ran-booster' ) ),
+				'features'             => self::texts(
+					$translated,
+					static fn (): array => array(
+						__( 'Migrator removes each WP Pusher entry only after Booster verifies the adopted package with deployments disabled.', 'ran-booster' ),
+					)
 				),
-				'requirements'         => array(
-					__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
-					__( 'A single site with a supported WP Pusher installation that is inactive.', 'ran-booster' ),
-					__( 'Existing Booster credentials for private repositories; GitLab packages are not supported.', 'ran-booster' ),
+				'requirements'         => self::texts(
+					$translated,
+					static fn (): array => array(
+						__( 'WordPress 7.0 or later and PHP 8.2 or later.', 'ran-booster' ),
+						__( 'A single site with a supported WP Pusher installation that is inactive.', 'ran-booster' ),
+						__( 'Existing Booster credentials for private repositories; GitLab packages are not supported.', 'ran-booster' ),
+					)
 				),
 				'plugin'               => 'ran-booster-wp-pusher-migrator/ran-booster-wp-pusher-migrator.php',
 				'image'                => 'wp-pusher-migrator.svg',
-				'availability'         => __( 'Free', 'ran-booster' ),
+				'availability'         => self::text( $translated, static fn (): string => __( 'Free', 'ran-booster' ) ),
 				'required_apis'        => array(
 					'RAN_BOOSTER_PORTABILITY_API_VERSION' => 4,
 					'RAN_BOOSTER_ADMIN_INTERACTION_API_VERSION' => 3,
@@ -466,11 +477,26 @@ class Booster {
 		);
 	}
 
+	/** @param \Closure(): string $translate */
+	private static function text( bool $translated, \Closure $translate ): string {
+		return $translated ? $translate() : '';
+	}
+
+	/**
+	 * @param \Closure(): list<string> $translate
+	 * @return list<string>
+	 */
+	private static function texts( bool $translated, \Closure $translate ): array {
+		return $translated ? $translate() : array();
+	}
+
 	/** @param array<string, array<string, mixed>> $installed_plugins
+	 *  @param bool $translated False when called while the plugin loads, before translations are available;
+	 *                          the catalogue facts and state are complete, only display text is left empty.
 	 *  @return list<array<string, mixed>>
 	 */
-	private function extension_cards( array $installed_plugins ): array {
-		$catalogue = self::extension_declarations();
+	private function extension_cards( array $installed_plugins, bool $translated = true ): array {
+		$catalogue = self::extension_declarations( $translated );
 
 		foreach ( $catalogue as &$extension ) {
 			$installed                = array_key_exists( $extension['plugin'], $installed_plugins );
@@ -500,43 +526,52 @@ class Booster {
 			$extension['installed_version']             = $installed_version;
 			$extension['installed_release_status']      = $installed_release_status;
 			$extension['selected_release_is_installed'] = 'selected' === $installed_release_status;
-			if ( ! $compatible ) {
-				$extension['compatibility_label'] = sprintf(
-					/* translators: %s: Selected extension release version. */
-					__( 'The selected version %s release requires a different version of Booster. Review its documentation before installing or updating.', 'ran-booster' ),
-					$release_version
-				);
-			} elseif ( 'older' === $installed_release_status ) {
-				$extension['compatibility_label'] = sprintf(
-					/* translators: 1: Selected extension release version, 2: Installed extension version. */
-					__( 'The selected version %1$s release is compatible with your version of Booster. Your installed version %2$s is older; update it in Plugins.', 'ran-booster' ),
-					$release_version,
-					$installed_version
-				);
-			} elseif ( 'newer' === $installed_release_status ) {
-				$extension['compatibility_label'] = sprintf(
-					/* translators: 1: Selected extension release version, 2: Installed extension version. */
-					__( 'The selected version %1$s release is compatible with your version of Booster. Your installed version %2$s is newer and has not been qualified for this catalogue. Review it in Plugins.', 'ran-booster' ),
-					$release_version,
-					$installed_version
-				);
-			} elseif ( 'unknown' === $installed_release_status ) {
-				$extension['compatibility_label'] = sprintf(
-					/* translators: %s: Selected extension release version. */
-					__( 'The selected version %s release is compatible with your version of Booster. The installed extension version could not be verified; review it in Plugins before updating.', 'ran-booster' ),
-					$release_version
-				);
-			} else {
-				$extension['compatibility_label'] = __( 'Compatible with your version of Booster', 'ran-booster' );
-			}
-			$extension['state']      = ! $installed
+			$extension['compatibility_label']           = $translated
+				? $this->extension_compatibility_label( $compatible, $installed_release_status, $release_version, $installed_version )
+				: '';
+			$extension['state']                         = ! $installed
 				? 'Not installed'
 				: ( ! $compatible ? 'Incompatible' : ( $active ? 'Active' : 'Installed, inactive' ) );
-			$extension['state_kind'] = $installed && ! $compatible ? 'error' : ( $active ? 'ok' : 'neutral' );
+			$extension['state_kind']                    = $installed && ! $compatible ? 'error' : ( $active ? 'ok' : 'neutral' );
 		}
 		unset( $extension );
 
 		return $catalogue;
+	}
+
+	private function extension_compatibility_label( bool $compatible, string $installed_release_status, string $release_version, string $installed_version ): string {
+		if ( ! $compatible ) {
+			return sprintf(
+				/* translators: %s: Selected extension release version. */
+				__( 'The selected version %s release requires a different version of Booster. Review its documentation before installing or updating.', 'ran-booster' ),
+				$release_version
+			);
+		}
+		if ( 'older' === $installed_release_status ) {
+			return sprintf(
+				/* translators: 1: Selected extension release version, 2: Installed extension version. */
+				__( 'The selected version %1$s release is compatible with your version of Booster. Your installed version %2$s is older; update it in Plugins.', 'ran-booster' ),
+				$release_version,
+				$installed_version
+			);
+		}
+		if ( 'newer' === $installed_release_status ) {
+			return sprintf(
+				/* translators: 1: Selected extension release version, 2: Installed extension version. */
+				__( 'The selected version %1$s release is compatible with your version of Booster. Your installed version %2$s is newer and has not been qualified for this catalogue. Review it in Plugins.', 'ran-booster' ),
+				$release_version,
+				$installed_version
+			);
+		}
+		if ( 'unknown' === $installed_release_status ) {
+			return sprintf(
+				/* translators: %s: Selected extension release version. */
+				__( 'The selected version %s release is compatible with your version of Booster. The installed extension version could not be verified; review it in Plugins before updating.', 'ran-booster' ),
+				$release_version
+			);
+		}
+
+		return __( 'Compatible with your version of Booster', 'ran-booster' );
 	}
 
 	/**

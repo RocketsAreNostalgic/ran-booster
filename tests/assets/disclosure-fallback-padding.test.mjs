@@ -26,3 +26,20 @@ test('the Installation fallback padding outranks the prominent summary rule', ()
 		'the fallback selector must repeat the density and disclosure attributes to outrank the prominent rule'
 	);
 });
+
+test('the warned fallback keeps its zero bottom padding above the Installation padding', () => {
+	const rule = css.match(
+		/\.ran-booster-admin\s+\[data-ran-booster-ui-disclosure-warned\]([^{]*?)>\s*details\[data-ran-booster-ui-disclosure-fallback\]\s*>\s*summary\s*\{[^}]*padding-block-end:\s*0;/
+	);
+	assert.ok(rule, 'the warned fallback summary rule is missing');
+	assert.match(
+		rule[1],
+		/\[data-ran-booster-ui-disclosure-density\]\[data-ran-booster-ui-disclosure\]/,
+		'the warned selector must repeat the density and disclosure attributes to keep outranking the Installation padding'
+	);
+	assert.ok(
+		css.indexOf('padding-block-end: 0;') >
+			css.indexOf('padding-block: 16px;'),
+		'the warned override must come after the Installation padding'
+	);
+});

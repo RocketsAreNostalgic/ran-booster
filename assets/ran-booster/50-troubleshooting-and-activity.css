@@ -82,10 +82,13 @@
 /*
  * The native fallback keeps the warning inside the summary, on its own row
  * below the title row, so the shared summary divider already sits below it.
+ * It repeats the density and disclosure attributes so its zero bottom padding
+ * keeps outranking the 16px block padding above, which would otherwise add 8px
+ * under the warning row.
  */
 
 .ran-booster-admin
-	[data-ran-booster-ui-disclosure-warned]
+	[data-ran-booster-ui-disclosure-warned][data-ran-booster-ui-disclosure-density][data-ran-booster-ui-disclosure]
 	> details[data-ran-booster-ui-disclosure-fallback]
 	> summary {
 	flex-wrap: wrap;

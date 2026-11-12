@@ -1536,7 +1536,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	public function test_release_failure_states_use_accurate_wording_and_never_the_old_message(): void {
 		$cases = array(
 			'no_releases'          => array( 'No published release was found for the selected track.', 'Publish a release for the selected Stable or Preview track, then use Check releases.' ),
-			'release_incompatible' => array( 'A published release was found, but it has no single package ZIP asset or its header or Update URI does not match.', 'exactly one package ZIP asset' ),
+			'release_incompatible' => array( 'A published release was found, but it does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset' ),
 			''                     => array( 'Booster could not confirm an eligible published release for this track.', 'make sure it has one package ZIP' ),
 		);
 		foreach ( $cases as $reason => $expected ) {
@@ -1852,7 +1852,7 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 	public static function failed_enable_reasons(): array {
 		return array(
 			'no published release'                => array( 'no_releases', 'No published release was found for the selected track.', 'Publish a release for the selected Stable or Preview track, then use Check releases.' ),
-			'no package ZIP or mismatched header' => array( 'release_incompatible', 'has no single package ZIP asset or its header or Update URI does not match.', 'exactly one package ZIP asset' ),
+			'no package ZIP or mismatched header' => array( 'release_incompatible', 'does not have exactly one package ZIP, or its header or Update URI does not match.', 'exactly one package ZIP asset' ),
 			'no reason (source guard)'            => array( '', 'Booster could not confirm an eligible published release for this track.', 'make sure it has one package ZIP' ),
 		);
 	}

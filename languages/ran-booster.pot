@@ -2997,7 +2997,7 @@ msgid "No published release was found for the selected track."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1001
-msgid "A published release was found, but it has no single package ZIP asset or its header or Update URI does not match."
+msgid "A published release was found, but it does not have exactly one package ZIP, or its header or Update URI does not match."
 msgstr ""
 
 #: RAN/Admin/ReleaseManagement/ReleaseManagementDisplay.php:1002

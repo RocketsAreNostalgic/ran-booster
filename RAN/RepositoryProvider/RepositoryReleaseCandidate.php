@@ -9,7 +9,11 @@ use InvalidArgumentException;
 final readonly class RepositoryReleaseCandidate {
 	private const UTC_PATTERN = '/\A(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?Z\z/D';
 
-	/** @param list<string> $expected_asset_names */
+	/**
+	 * @param list<string> $expected_asset_names The package ZIP assets the provider's release listing shows. A
+	 *                                           provider that returns candidates must list them completely: an
+	 *                                           empty list means no ZIP, and Core skips inspecting that release.
+	 */
 	public function __construct(
 		public string $provider_release_id,
 		public string $tag,

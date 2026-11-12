@@ -998,7 +998,7 @@ final class ReleaseManagementDisplay {
 		if ( 'release_unavailable' === $code ) {
 			return match ( $reason ) {
 				'no_releases' => __( 'No published release was found for the selected track.', 'ran-booster' ),
-				'release_incompatible' => __( 'A published release was found, but it has no single package ZIP asset or its header or Update URI does not match.', 'ran-booster' ),
+				'release_incompatible' => __( 'A published release was found, but it does not have exactly one package ZIP, or its header or Update URI does not match.', 'ran-booster' ),
 				default => __( 'Booster could not confirm an eligible published release for this track.', 'ran-booster' ),
 			};
 		}

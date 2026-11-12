@@ -24,6 +24,7 @@ final class ReleaseManagementControls {
 	private const RESULT_NONCE_ACTION      = 'ran-booster-result-';
 	private const CHANNEL_QUERY_KEY        = 'ran_booster_release_channel';
 	private const REASON_QUERY_KEY         = 'ran_booster_release_reason';
+	private const DETAIL_QUERY_KEY         = 'ran_booster_release_detail';
 
 	private readonly ProspectiveReleaseOperations $prospective_operations;
 	private readonly ReleaseTrackingOperations $tracking;
@@ -196,7 +197,7 @@ final class ReleaseManagementControls {
 			&& $release_pane;
 		if ( 'edit' === $mode && null !== $result && '' !== $code && ! $duplicate_conflict ) {
 			ob_start();
-			$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'] ), null );
+			$this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'] ), null );
 			$operation_notice_html = (string) ob_get_clean();
 		}
 		$prospective = $this->prospective_projection( $type );
@@ -259,7 +260,7 @@ final class ReleaseManagementControls {
 		}
 
 		$status = $this->request_boundary( fn (): ?ReleaseTrackingStatus => $this->tracking->fresh_status( $result['type'], $result['identifier'] ), null );
-		\RAN\Admin\BoosterNoticeScope::render( fn () => $this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'] ), null ) );
+		\RAN\Admin\BoosterNoticeScope::render( fn () => $this->request_boundary( fn () => $this->display->render_operation_notice( $code, $result['successful'], $result['type'], $result['identifier'], $result['channel'], $status, $result['reason'], $result['detail'] ), null ) );
 	}
 
 	/**
@@ -909,7 +910,7 @@ final class ReleaseManagementControls {
 	}
 
 	/**
-	 * @param array{type:string,identifier:string,code:string,successful:bool,reason?:string} $outcome
+	 * @param array{type:string,identifier:string,code:string,successful:bool,reason?:string,detail?:string} $outcome
 	 * @return array<string, string>
 	 */
 	private function result_query_arguments( array $outcome, string $channel = '' ): array {
@@ -921,6 +922,7 @@ final class ReleaseManagementControls {
 		$channel                         = in_array( $channel, array( 'stable', 'prerelease' ), true ) ? $channel : '';
 		$reason                          = $outcome['reason'] ?? '';
 		$reason                          = in_array( $reason, ReleaseTrackingPreflight::reason_codes(), true ) ? $reason : '';
+		$detail                          = ReleaseTrackingPreflight::detail( $outcome['detail'] ?? '' );
 		$args                            = array(
 			self::RESULT_QUERY_KEY         => $code,
 			self::RESULT_SUCCESS_QUERY_KEY => $successful ? '1' : '0',
@@ -931,14 +933,17 @@ final class ReleaseManagementControls {
 		if ( '' !== $reason ) {
 			$args[ self::REASON_QUERY_KEY ] = $reason;
 		}
+		if ( '' !== $detail ) {
+			$args[ self::DETAIL_QUERY_KEY ] = $detail;
+		}
 		$args[ self::RESULT_NONCE_QUERY_KEY ] = wp_create_nonce(
-			$this->result_nonce_action( $code, $successful, $type, $identifier, $channel, $reason )
+			$this->result_nonce_action( $code, $successful, $type, $identifier, $channel, $reason, $detail )
 		);
 
 		return $args;
 	}
 
-	/** @return array{code:string,successful:bool,type:string,identifier:string,channel:string,reason:string}|null */
+	/** @return array{code:string,successful:bool,type:string,identifier:string,channel:string,reason:string,detail:string}|null */
 	private function requested_result(): ?array {
 		$raw_code       = $_GET[ self::RESULT_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$raw_success    = $_GET[ self::RESULT_SUCCESS_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
@@ -946,9 +951,10 @@ final class ReleaseManagementControls {
 		$raw_identifier = $_GET[ self::RESULT_PACKAGE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$raw_channel    = $_GET[ self::CHANNEL_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$raw_reason     = $_GET[ self::REASON_QUERY_KEY ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
+		$raw_detail     = $_GET[ self::DETAIL_QUERY_KEY ] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verified display-only PRG result.
 		$raw_nonce      = $_GET[ self::RESULT_NONCE_QUERY_KEY ] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Verification value for this PRG result.
 		if ( ! is_string( $raw_code ) || ! is_string( $raw_success ) || ! is_string( $raw_type )
-			|| ! is_string( $raw_identifier ) || ! is_string( $raw_channel ) || ! is_string( $raw_reason ) || ! is_string( $raw_nonce ) ) {
+			|| ! is_string( $raw_identifier ) || ! is_string( $raw_channel ) || ! is_string( $raw_reason ) || ! is_string( $raw_detail ) || ! is_string( $raw_nonce ) ) {
 			return null;
 		}
 
@@ -958,18 +964,20 @@ final class ReleaseManagementControls {
 		$identifier = wp_unslash( $raw_identifier );
 		$channel    = wp_unslash( $raw_channel );
 		$reason     = wp_unslash( $raw_reason );
+		$detail     = wp_unslash( $raw_detail );
 		$nonce      = wp_unslash( $raw_nonce );
 		if ( sanitize_key( $code ) !== $code || '' === $code || strlen( $code ) > 64
 			|| ! in_array( $success, array( '0', '1' ), true )
 			|| ! in_array( $type, array( 'plugin', 'theme' ), true )
 			|| sanitize_text_field( $identifier ) !== $identifier || strlen( $identifier ) > 255
 			|| ! in_array( $channel, array( '', 'stable', 'prerelease' ), true )
-			|| ( '' !== $reason && ! in_array( $reason, ReleaseTrackingPreflight::reason_codes(), true ) ) ) {
+			|| ( '' !== $reason && ! in_array( $reason, ReleaseTrackingPreflight::reason_codes(), true ) )
+			|| ReleaseTrackingPreflight::detail( $detail ) !== $detail ) {
 			return null;
 		}
 
 		$successful = '1' === $success;
-		if ( 1 !== wp_verify_nonce( $nonce, $this->result_nonce_action( $code, $successful, $type, $identifier, $channel, $reason ) ) ) {
+		if ( 1 !== wp_verify_nonce( $nonce, $this->result_nonce_action( $code, $successful, $type, $identifier, $channel, $reason, $detail ) ) ) {
 			return null;
 		}
 
@@ -980,17 +988,25 @@ final class ReleaseManagementControls {
 			'identifier' => $identifier,
 			'channel'    => $channel,
 			'reason'     => $reason,
+			'detail'     => $detail,
 		);
 	}
 
-	private function result_nonce_action( string $code, bool $successful, string $type, string $identifier, string $channel, string $reason = '' ): string {
-		// An absent reason keeps the original signed payload, so adding or removing one invalidates the nonce.
-		$payload = wp_json_encode( '' === $reason ? array( $code, $successful, $type, $identifier, $channel ) : array( $code, $successful, $type, $identifier, $channel, $reason ) );
+	private function result_nonce_action( string $code, bool $successful, string $type, string $identifier, string $channel, string $reason = '', string $detail = '' ): string {
+		// Absent optional values keep the original signed payload, so adding, removing or swapping one invalidates the nonce.
+		// A detail without a reason is signed with an empty reason slot, so it cannot match a reason-only payload.
+		$payload = wp_json_encode(
+			match ( true ) {
+				'' !== $detail => array( $code, $successful, $type, $identifier, $channel, $reason, $detail ),
+				'' !== $reason => array( $code, $successful, $type, $identifier, $channel, $reason ),
+				default => array( $code, $successful, $type, $identifier, $channel ),
+			}
+		);
 
 		return self::RESULT_NONCE_ACTION . hash( 'sha256', is_string( $payload ) ? $payload : '' );
 	}
 
-	/** @param array{code:string,successful:bool,type:string,identifier:string,channel:string,reason:string} $result */
+	/** @param array{code:string,successful:bool,type:string,identifier:string,channel:string,reason:string,detail:string} $result */
 	private function result_matches_current_screen( array $result ): bool {
 		$page_value = $_GET['page'] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen binding for a verified result.
 		$package    = $_GET['package'] ?? null; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only screen binding for a verified result.

@@ -2112,6 +2112,14 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 				if ( 'none' === $mode->value ) {
 					return new RepositoryReleaseCandidateList( array() );
 				}
+				if ( 'fallback' === $mode->value ) {
+					return new RepositoryReleaseCandidateList(
+						array(
+							new RepositoryReleaseCandidate( '101', 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', array() ),
+							new RepositoryReleaseCandidate( '102', 'v2.0.0', '2.0.0', false, '2026-08-16T12:00:00Z', array( 'example.zip' ) ),
+						)
+					);
+				}
 				if ( 'incompatible_budget' === $mode->value ) {
 					return new RepositoryReleaseCandidateList(
 						array(
@@ -2140,7 +2148,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			inspect: static function ( string $type, RepositoryReference $repository, string $release_id, string $tag, string $channel ) use ( &$mode, &$inspection_calls ): RepositoryReleaseInspection {
 				++$inspection_calls;
 				unset( $type, $repository, $channel );
-				if ( 'incompatible_budget' === $mode->value ) {
+				if ( 'incompatible_budget' === $mode->value || ( 'fallback' === $mode->value && '101' === $release_id ) ) {
 					throw RepositoryReleaseInspectionRejected::incompatible();
 				}
 
@@ -2179,7 +2187,24 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 			self::assertNotNull( $result );
 			self::assertSame( ReleaseTrackingPreflight::INVALID_RELEASE_ASSETS, $result->code(), $mode->value );
 			self::assertSame( 'release_identity_mismatch', $result->reason_code(), $mode->value );
+			// The ZIP's layout is named only when that is what differs.
+			self::assertSame(
+				array(
+					'package_root' => 'other/example.php',
+					'main_file'    => 'example/other.php',
+				)[ $mode->value ] ?? '',
+				$result->detail_text(),
+				$mode->value
+			);
 		}
+
+		$calls_before_fallback = $inspection_calls;
+		$mode->value           = 'fallback';
+		$result                = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
+		self::assertNotNull( $result );
+		self::assertSame( ReleaseTrackingPreflight::READY, $result->code() );
+		self::assertSame( 'v2.0.0', $result->release_tag() );
+		self::assertSame( 2, $inspection_calls - $calls_before_fallback );
 
 		$mode->value = 'channel';
 		$result      = $facade->preflight( 'plugin', 'example/example.php', 1, 'stable', $nonce );
@@ -2212,6 +2237,7 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		self::assertNotNull( $result );
 		self::assertSame( ReleaseTrackingPreflight::RELEASE_UNAVAILABLE, $result->code() );
 		self::assertSame( 'release_incompatible', $result->reason_code() );
+		self::assertSame( 'v3.0.0', $result->detail_text() );
 		self::assertSame( 2, $inspection_calls - $calls_before_budget );
 		self::assertSame( array(), $store->transitions );
 		self::assertSame( 0, $lock->acquires );
@@ -2236,20 +2262,36 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		$inspections = 0;
 		$providers   = $this->release_metadata_registry(
 			list_releases: static function () use ( &$mode ): RepositoryReleaseCandidateList {
-				$names = 'incompatible' === $mode->value ? array( 'example.zip' ) : array();
+				// The asset names the listing shows for the newest release and for the one before it.
+				$names = array(
+					'no_zip'       => array( array(), array() ),
+					'two_zips'     => array( array( 'a.zip', 'b.zip' ), array( 'a.zip', 'b.zip' ) ),
+					'incompatible' => array( array( 'example.zip' ), array( 'example.zip' ) ),
+					'newest_one'   => array( array( 'example.zip' ), array() ),
+					'newest_none'  => array( array(), array( 'a.zip', 'b.zip' ) ),
+					'detail_known' => array( array( 'example.zip' ), array() ),
+					'detail_other' => array( array( 'example.zip' ), array() ),
+					'detail_bad'   => array( array( 'a.zip', 'b.zip' ), array() ),
+				)[ $mode->value ] ?? array( array(), array() );
 				return new RepositoryReleaseCandidateList(
 					'none' === $mode->value
 						? array()
 						: array(
-							new RepositoryReleaseCandidate( '101', 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', $names ),
-							new RepositoryReleaseCandidate( '102', 'v2.0.0', '2.0.0', false, '2026-08-16T12:00:00Z', $names ),
-							new RepositoryReleaseCandidate( '103', 'v1.0.0', '1.0.0', false, '2026-08-15T12:00:00Z', $names ),
+							new RepositoryReleaseCandidate( '101', 'v3.0.0', '3.0.0', false, '2026-08-17T12:00:00Z', $names[0] ),
+							new RepositoryReleaseCandidate( '102', 'v2.0.0', '2.0.0', false, '2026-08-16T12:00:00Z', $names[1] ),
+							new RepositoryReleaseCandidate( '103', 'v1.0.0', '1.0.0', false, '2026-08-15T12:00:00Z', $names[0] ),
 						)
 				);
 			},
-			inspect: static function () use ( &$inspections ): RepositoryReleaseInspection {
+			inspect: static function () use ( &$inspections, &$mode ): RepositoryReleaseInspection {
 				++$inspections;
-				throw RepositoryReleaseInspectionRejected::incompatible();
+				throw RepositoryReleaseInspectionRejected::incompatible(
+					array(
+						'detail_known' => 'package_header_missing',
+						'detail_other' => 'a_future_reason',
+						'detail_bad'   => 'Not-A-Reason',
+					)[ $mode->value ] ?? null
+				);
 			}
 		);
 		$facade      = $this->facade(
@@ -2265,19 +2307,29 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 
 		foreach ( array(
-			'none'         => array( 'no_releases', 0 ),
+			'none'         => array( 'no_releases', 0, '' ),
 			// The listing's asset names are not trusted to be complete, so a release listed without a ZIP is still inspected.
-			'no_zip'       => array( 'release_incompatible', 2 ),
-			'incompatible' => array( 'release_incompatible', 2 ),
+			// They only choose the wording after inspection has rejected the release.
+			'no_zip'       => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			'two_zips'     => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
+			'incompatible' => array( 'release_incompatible', 2, 'v3.0.0' ),
+			// The newest release names the reason even when the one before it was rejected differently.
+			'newest_one'   => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'newest_none'  => array( 'package_asset_missing', 2, 'v3.0.0' ),
+			// A provider's own known reason wins; an unknown or malformed one never reaches Core.
+			'detail_known' => array( 'package_header_missing', 2, 'v3.0.0' ),
+			'detail_other' => array( 'release_incompatible', 2, 'v3.0.0' ),
+			'detail_bad'   => array( 'package_asset_ambiguous', 2, 'v3.0.0' ),
 		) as $case => $expected ) {
-			$mode->value                       = $case;
-			[ $reason, $expected_inspections ] = $expected;
-			$inspections                       = 0;
-			$result                            = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
+			$mode->value                                = $case;
+			[ $reason, $expected_inspections, $detail ] = $expected;
+			$inspections                                = 0;
+			$result                                     = $facade->enable( 'plugin', 'example/example.php', 1, 'stable', 'valid' );
 
 			self::assertFalse( $result->successful(), $case );
 			self::assertSame( 'release_unavailable', $result->code(), $case );
 			self::assertSame( $reason, $result->reason(), $case );
+			self::assertSame( $detail, $result->detail(), $case );
 			self::assertSame( $expected_inspections, $inspections, $case );
 		}
 		self::assertSame( array(), $store->transitions );

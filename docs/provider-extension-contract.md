@@ -580,7 +580,13 @@ main file and opaque fingerprint. The value exposes no local path, URL,
 credential, archive or artifact handle. `RepositoryReleaseInspectionRejected`
 distinguishes `no_releases`, `invalid_release` and package `incompatible`;
 other exceptions mean the inspection operation was unavailable. Only
-`incompatible` permits Core to try the next provider-ordered candidate. The
+`incompatible` permits Core to try the next provider-ordered candidate.
+`incompatible()` may carry an optional lower-case `detail` (matching
+`[a-z][a-z0-9_]{0,63}`; anything else becomes `null`) naming why the newest
+release was rejected. It is an additive optional field, not a new reason, so
+Core's candidate walk is unchanged. Core shows it only when it is one of
+Core's preflight reason codes, and otherwise falls back to the reason it can
+derive from the release listing, or the generic one. The
 facet grants no installation,
 updater or mutation authority and does not by itself make the complete release
 product available.

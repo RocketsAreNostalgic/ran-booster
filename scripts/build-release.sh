@@ -52,6 +52,7 @@ committed_entries=(
 	'views'
 )
 generated_entries=(
+	'ran-booster-packages.json'
 	'ran-booster-release.json'
 )
 allowed_entries=( "${committed_entries[@]}" "${generated_entries[@]}" )
@@ -308,6 +309,31 @@ php -r '
 	);
 ' "$expected_version" "$commit" "$stage_root/ran-booster-release.json"
 
+# Release archives ship no Composer metadata, so the exact locked versions of the
+# bundled runtime packages are recorded here for the Installation screen and the
+# support report. The content derives only from composer.lock, so the build stays
+# deterministic.
+# shellcheck disable=SC2016
+php -r '
+	$packages = array();
+	foreach ( file( $argv[1], FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ) as $line ) {
+		$fields                = explode( "\t", $line );
+		$packages[ $fields[0] ] = $fields[1];
+	}
+	ksort( $packages );
+	file_put_contents(
+		$argv[2],
+		json_encode(
+			array(
+				"schema"         => "ran-booster-built-with",
+				"schema_version" => 1,
+				"packages"       => $packages,
+			),
+			JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+		) . "\n"
+	);
+' "$packaging_records" "$stage_root/ran-booster-packages.json"
+
 if find "$stage_root" -type l -print -quit | grep -q .; then
 	fail 'release files must not contain symbolic links.'
 fi
@@ -321,6 +347,7 @@ php -r '
 	$archive_root = $argv[2];
 	$epoch = (int) $argv[3];
 	$marker = $argv[4];
+	$packages_record = $argv[5];
 	$package_iterator = new RecursiveIteratorIterator(
 		new RecursiveDirectoryIterator( $package_root, FilesystemIterator::SKIP_DOTS ),
 		RecursiveIteratorIterator::SELF_FIRST
@@ -329,6 +356,7 @@ php -r '
 		chmod( $item->getPathname(), $item->isDir() ? 0755 : 0644 );
 	}
 	chmod( $marker, 0644 );
+	chmod( $packages_record, 0644 );
 	$archive_iterator = new RecursiveIteratorIterator(
 		new RecursiveDirectoryIterator( $archive_root, FilesystemIterator::SKIP_DOTS ),
 		RecursiveIteratorIterator::CHILD_FIRST
@@ -337,7 +365,7 @@ php -r '
 		touch( $item->getPathname(), $epoch );
 	}
 	touch( $archive_root, $epoch );
-	' "$stage_root/vendor/ran" "$stage_root" "$commit_epoch" "$stage_root/ran-booster-release.json"
+	' "$stage_root/vendor/ran" "$stage_root" "$commit_epoch" "$stage_root/ran-booster-release.json" "$stage_root/ran-booster-packages.json"
 
 archive_name="ran-booster-$expected_version.zip"
 tmp_archive="$tmp_dir/$archive_name"

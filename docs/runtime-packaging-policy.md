@@ -8,7 +8,9 @@ Booster's release archive deliberately ships only a bounded subset of its produc
 
 `runtime-packaging-policy.json` owns Booster's product-level packaging decision: which production packages may enter the release ZIP, the GitHub repository each package is expected to resolve from, the archive root for that package, and the top-level files/directories that are permitted to ship. Every surface declares an exact `file` or `directory` kind. Nested surfaces are deliberately unsupported so a policy entry cannot hide a symlinked ancestor, and a later dependency revision cannot silently broaden a file surface into a directory. The policy also identifies exactly one neutral release-updater package. It does not carry versions or commit SHAs.
 
-`release-files.txt` owns only committed Core files plus the generated `ran-booster-release.json` marker. Vendor/package surfaces are intentionally absent from that file because they are owned by the runtime packaging policy.
+`release-files.txt` owns only committed Core files plus two generated files: the `ran-booster-release.json` marker and `ran-booster-packages.json`. Vendor/package surfaces are intentionally absent from that file because they are owned by the runtime packaging policy.
+
+`ran-booster-packages.json` records the exact locked version of every bundled runtime package (schema `ran-booster-built-with`, version 1), written by `scripts/build-release.sh` from the same `composer.lock` records the build already validates and checked by `scripts/verify-release.sh`. A release archive ships no Composer metadata, so the Installation screen and the support report read the bundled GitHub provider's version from this file; a development checkout reads Composer's own metadata instead. A release built before this file existed has no record, so those screens show Unknown for it. The version is never inferred from Core's version or the network.
 
 ## Consumers
 

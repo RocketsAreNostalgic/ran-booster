@@ -351,6 +351,6 @@ final class InstallationFacts {
 	}
 
 	public static function version( mixed $value ): string {
-		return is_string( $value ) && preg_match( '/\A[0-9]+(?:\.[0-9]+)*(?:-(?:alpha|beta|rc|dev)(?:[.-][0-9]+)?)?\z/iD', $value ) === 1 && strlen( $value ) <= 80 ? $value : 'Unknown';
+		return is_string( $value ) && preg_match( '/\A(?-i:v)?[0-9]+(?:\.[0-9]+)*(?:-(?:alpha|beta|rc|dev)(?:[.-][0-9]+)?)?\z/iD', $value ) === 1 && strlen( $value ) <= 80 ? $value : 'Unknown';
 	}
 }

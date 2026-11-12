@@ -55,6 +55,7 @@ committed_entries=(
 	'views'
 )
 generated_entries=(
+	'ran-booster-packages.json'
 	'ran-booster-release.json'
 )
 allowed_entries=( "${committed_entries[@]}" "${generated_entries[@]}" )
@@ -390,7 +391,7 @@ for index in "${!package_roots[@]}"; do
 		"${package_roots[$index]}" \
 		"${package_surface_specs[$index]}"
 done
-printf '%s\n' 'ran-booster/ran-booster-release.json' >> "$expected_files"
+printf '%s\n' 'ran-booster/ran-booster-packages.json' 'ran-booster/ran-booster-release.json' >> "$expected_files"
 LC_ALL=C sort -o "$expected_files" "$expected_files"
 grep -v '/$' "$archive_paths" | LC_ALL=C sort > "$archive_files"
 
@@ -414,6 +415,7 @@ diff -u "$expected_paths" "$archive_paths" >/dev/null \
 for required_path in \
 	'ran-booster/NOTICE.md' \
 	'ran-booster/license.txt' \
+	'ran-booster/ran-booster-packages.json' \
 	'ran-booster/ran-booster-release.json' \
 	'ran-booster/ran-booster.php'; do
 	grep -Fqx "$required_path" "$archive_files" \
@@ -456,6 +458,29 @@ php -r '
 	"$expected_version" \
 	"$commit" \
 	|| fail 'installed Core release marker does not match the release version and commit.'
+
+# The built-with record must list exactly the locked runtime packages and versions.
+# shellcheck disable=SC2016
+php -r '
+	$document = json_decode( file_get_contents( $argv[1] ), true, 16, JSON_THROW_ON_ERROR );
+	$packages = array();
+	foreach ( file( $argv[2], FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES ) as $line ) {
+		$fields                = explode( "\t", $line );
+		$packages[ $fields[0] ] = $fields[1];
+	}
+	ksort( $packages );
+	$expected = array(
+		"schema"         => "ran-booster-built-with",
+		"schema_version" => 1,
+		"packages"       => $packages,
+	);
+	if ( $document !== $expected ) {
+		exit( 1 );
+	}
+' \
+	"$extract_dir/ran-booster/ran-booster-packages.json" \
+	"$packaging_records" \
+	|| fail 'installed built-with package record does not match composer.lock.'
 
 compare_runtime_package() {
 	local installed_root=$1

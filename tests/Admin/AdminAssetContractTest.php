@@ -1687,6 +1687,14 @@ final class AdminAssetContractTest extends TestCase {
 			'/@media print \{[\s\S]+\.ran-booster-admin \.ran-booster-documentation__index \{\s+display: block;\s+grid-area: auto;\s+position: static;/',
 			$documentation
 		);
+		self::assertMatchesRegularExpression(
+			'/@media print \{[\s\S]+\[data-ran-booster-card="documentation"\]\s+\.ran-booster-card__surface \{\s+border: 0;\s+box-shadow: none;\s+background: transparent;/',
+			$documentation
+		);
+		self::assertMatchesRegularExpression(
+			'/^\.ran-booster-admin\s+\[data-ran-booster-card="documentation"\]\s+\.ran-booster-documentation__section\.ran-booster-disclosure,\s+\.ran-booster-admin\s+\[data-ran-booster-card="documentation"\]\s+\.ran-booster-ui-disclosure \{\s+border: 0;\s+box-shadow: none;\s+background: transparent;/m',
+			$documentation
+		);
 		self::assertStringContainsString( 'color-scheme: only light;', $documentation );
 		self::assertStringContainsString( 'background: Canvas !important;', $documentation );
 		self::assertMatchesRegularExpression(

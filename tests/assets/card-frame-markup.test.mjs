@@ -50,7 +50,7 @@ test('every page Card host renders the static public Card frame', () => {
 			);
 		}
 	}
-	assert.equal(hosts, 33);
+	assert.equal(hosts, 44);
 });
 
 test('Card styles no longer depend on a mounted React Card', () => {

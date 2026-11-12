@@ -64,7 +64,8 @@ final class DocumentationHookRendererTest extends TestCase {
 			),
 			$received
 		);
-		self::assertStringContainsString( '<details id="fixture-guide" class="ran-booster-documentation__section ran-booster-panel ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">', $html );
+		self::assertStringContainsString( '<details id="fixture-guide" class="ran-booster-documentation__section ran-booster-disclosure" data-ran-booster-documentation-section name="ran-booster-documentation">', $html );
+		self::assertStringContainsString( '<div class="ran-booster-card" data-ran-booster-card="documentation"><div class="ran-wp-ui-card ran-wp-ui-box-sizing ran-booster-card__surface"><div class="ran-booster-card__content">', $html );
 		self::assertStringContainsString( '<summary>Fixture guide</summary>', $html );
 		self::assertStringContainsString( '<div class="ran-booster-documentation__content ran-booster-disclosure__body"><h3>Vanilla heading</h3><p>Guide <strong>content</strong></p></div>', $html );
 		self::assertStringNotContainsString( '<script>', $html );

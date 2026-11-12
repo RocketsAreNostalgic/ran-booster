@@ -40,7 +40,7 @@ Plugin names and compatibility declarations do not verify the publisher.
    can be reused, acknowledge that compatible credentials must be configured
    afterward. With no retained API material, no reuse acknowledgement is needed.
 4. Choose **Approve GitHub provider**. On the refreshed page, confirm
-   **Provided by …** identifies the intended plugin. **Manage GitHub provider**
+   **Provider extension: …** identifies the intended plugin. **Manage GitHub provider**
    contains switching guidance; **GitHub provider details** links to the
    current installation details.
 

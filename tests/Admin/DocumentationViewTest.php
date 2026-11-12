@@ -53,18 +53,20 @@ final class DocumentationViewTest extends TestCase {
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath          = new \DOMXPath( $document );
 		$heading_panels = $xpath->query( '//*[@id="ran-booster-documentation-heading"]/ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
-		$quick_start    = $xpath->query( '//details[@id="ran-booster-quick-start"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")][@open]' );
-		$panels         = $xpath->query( '//details[@data-ran-booster-documentation-section][contains(concat(" ", normalize-space(@class), " "), " ran-booster-panel ")]' );
+		$quick_start    = $xpath->query( '//div[@data-ran-booster-card="documentation"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card__surface ")]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card__content ")][count(*)=1]/details[@id="ran-booster-quick-start"][@open]' );
+		$panels         = $xpath->query( '//div[@data-ran-booster-card="documentation"][contains(concat(" ", normalize-space(@class), " "), " ran-booster-card ")]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card__surface ")]/div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-card__content ")][count(*)=1]/details[@data-ran-booster-documentation-section]' );
 		self::assertInstanceOf( \DOMNodeList::class, $heading_panels );
 		self::assertInstanceOf( \DOMNodeList::class, $quick_start );
 		self::assertInstanceOf( \DOMNodeList::class, $panels );
 		self::assertCount( 0, $heading_panels );
+		self::assertStringNotContainsString( 'ran-booster-panel', $html );
 		self::assertCount( 1, $quick_start );
 		self::assertCount( 11, $panels );
 		foreach ( $panels as $panel ) {
 			self::assertInstanceOf( \DOMElement::class, $panel );
 			self::assertSame( 'ran-booster-documentation', $panel->getAttribute( 'name' ) );
 			self::assertStringContainsString( 'ran-booster-disclosure', $panel->getAttribute( 'class' ) );
+			self::assertStringNotContainsString( 'ran-booster-panel', $panel->getAttribute( 'class' ) );
 			self::assertSame( 1.0, $xpath->evaluate( 'count(./div[contains(concat(" ", normalize-space(@class), " "), " ran-booster-disclosure__body ")])', $panel ) );
 		}
 		self::assertMatchesRegularExpression( '/<details\b[^>]*\bopen\b[^>]*>\s*<summary>Quick start<\/summary>/', $html );
@@ -242,7 +244,7 @@ final class DocumentationViewTest extends TestCase {
 		$html = $this->render_view( $this->provider_documentation() );
 
 		self::assertSame( 1, $callable_calls );
-		self::assertStringContainsString( '<div class="ran-booster-documentation__index ran-booster-panel" data-ran-booster-documentation-index>', $html );
+		self::assertStringContainsString( '<div class="ran-booster-documentation__index" data-ran-booster-documentation-index>', $html );
 		self::assertStringContainsString( '<h3 id="ran-booster-documentation-index-heading" class="ran-booster-documentation__index-heading">On this page</h3>', $html );
 		$outline = new \DOMDocument();
 		$outline->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
@@ -287,7 +289,7 @@ final class DocumentationViewTest extends TestCase {
 		self::assertInstanceOf( \DOMElement::class, $requirements );
 		self::assertSame( 'details', $xpath->evaluate( 'local-name(.)', $requirements ) );
 		self::assertFalse( $requirements->hasAttribute( 'open' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(following-sibling::*[1][@id="ran-booster-requirements"])', $quick_start ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(ancestor::div[@data-ran-booster-card][1]/following-sibling::*[1]//details[@id="ran-booster-requirements"])', $quick_start ) );
 		self::assertSame( 3.0, $xpath->evaluate( 'count(div/ol/li)', $quick_start ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(div/p)', $quick_start ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(div/p/a[@href="#ran-booster-requirements"])', $quick_start ) );
@@ -595,7 +597,7 @@ final class DocumentationViewTest extends TestCase {
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[contains(concat(" ", normalize-space(@class), " "), " ran-booster-documentation__chapter ")][h3="GitHub"]//details[@id="shared-guide"])' ) );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-documentation-provider-gh"]/following-sibling::*[1][@id="shared-guide"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="ran-booster-documentation-provider-gh"]/ancestor::div[@data-ran-booster-card][1]/following-sibling::*[1]//details[@id="shared-guide"])' ) );
 		self::assertSame( 1.0, $xpath->evaluate( 'count(//details[@id="shared-guide"])' ) );
 		self::assertStringNotContainsString( 'Duplicate loses', $html );
 	}
@@ -615,7 +617,7 @@ final class DocumentationViewTest extends TestCase {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[h3="Reference"]/details[@id="ran-booster-wp-pusher-migration"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[h3="Reference"]//details[@id="ran-booster-wp-pusher-migration"])' ) );
 		self::assertSame( 0.0, $xpath->evaluate( 'count(//section[h3="Booster Core concepts"]/details[@id="ran-booster-wp-pusher-migration"])' ) );
 	}
 
@@ -686,7 +688,7 @@ final class DocumentationViewTest extends TestCase {
 		$document = new \DOMDocument();
 		$document->loadHTML( $html, LIBXML_NOERROR | LIBXML_NOWARNING );
 		$xpath = new \DOMXPath( $document );
-		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[h3="Reference"]/details[@id="ran-booster-wp-pusher-migration"])' ) );
+		self::assertSame( 1.0, $xpath->evaluate( 'count(//section[h3="Reference"]//details[@id="ran-booster-wp-pusher-migration"])' ) );
 	}
 
 	public function test_empty_migrator_content_falls_back_but_failed_callback_keeps_unavailable_article(): void {

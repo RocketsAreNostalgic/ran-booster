@@ -8,8 +8,6 @@ use PHPUnit\Framework\TestCase;
 use RAN\RepositoryProvider\InstalledPackageVersion;
 
 final class InstalledPackageVersionTest extends TestCase {
-	// phpcs:disable WordPress.WP.AlternativeFunctions -- Disposable fixture files; this pure reader is independent of WordPress APIs.
-
 	public function test_composer_metadata_reports_the_installed_package_version(): void {
 		$expected = \Composer\InstalledVersions::getPrettyVersion( 'ran/booster-github-provider' );
 		self::assertNotNull( $expected );
@@ -67,6 +65,7 @@ final class InstalledPackageVersionTest extends TestCase {
 	private function record( string $contents ): string {
 		$path = tempnam( sys_get_temp_dir(), 'ran-booster-built-with-' );
 		self::assertIsString( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Disposable fixture file for a reader that is independent of WordPress APIs.
 		file_put_contents( $path, $contents );
 		$this->records[] = $path;
 
@@ -79,7 +78,7 @@ final class InstalledPackageVersionTest extends TestCase {
 	// phpcs:ignore RANOwnedMethods.NamingConventions.ValidMethodName.NotSnakeCase -- PHPUnit requires this exact lifecycle override name.
 	protected function tearDown(): void {
 		foreach ( $this->records as $path ) {
-			@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Temporary test file cleanup.
+			@unlink( $path ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged, WordPress.WP.AlternativeFunctions.unlink_unlink -- Temporary test file cleanup.
 		}
 		parent::tearDown();
 	}
@@ -91,5 +90,3 @@ final class InstalledPackageVersionTest extends TestCase {
 		self::assertSame( 'v1.2.3', ( new InstalledPackageVersion( static fn (): string => 'v1.2.3' ) )->for_package( 'a/b' ) );
 	}
 }
-
-// phpcs:enable WordPress.WP.AlternativeFunctions

@@ -471,6 +471,16 @@ tokens, so they follow the design system. Booster's own tokens in
 `test_headings_take_their_size_from_the_shared_type_scale` fails on any raw size
 outside the listed icon and numeral exceptions.
 
+The `--wpds-*` tokens come from WordPress's `wp-theme` style, which exists from
+WordPress 7.1. Booster supports 7.0, so when `wp-theme` is not registered it
+loads a bundled copy of the same tokens, `assets/lib/ran-booster-wpds-tokens.css`.
+`scripts/build-wpds-tokens.mjs` generates it from the `@wordpress/theme` release
+that the pinned `@wordpress/ui` depends on (`pnpm ui:build`, checked by
+`pnpm ui:check`), and `tests/assets/wpds-tokens.test.mjs` fails if any stylesheet
+reads a token the bundle does not define. Without a token source the type scale,
+colour and spacing are all undefined and the screens render unstyled, so any
+change to how the styles load must keep a source on WordPress 7.0.x.
+
 | Role                                              | Token                          | Size / weight |
 | ------------------------------------------------- | ------------------------------ | ------------- |
 | Page title, count numerals                        | `--ran-booster-font-size-xl`   | 20px / 600    |

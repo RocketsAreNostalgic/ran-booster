@@ -355,6 +355,12 @@ final class BoosterAssetsTest extends TestCase {
 		$registered = $GLOBALS['ran_booster_asset_test_registered_styles'];
 		$enqueued   = $GLOBALS['ran_booster_asset_test_enqueued_styles'];
 
+		$tokens = $theme_registered ? 'wp-theme' : 'ran-booster-wpds-tokens';
+		self::assertSame( ! $theme_registered, isset( $registered['ran-booster-wpds-tokens'] ) );
+		if ( ! $theme_registered ) {
+			self::assertStringEndsWith( '/assets/lib/ran-booster-wpds-tokens.css', $registered['ran-booster-wpds-tokens']['source'] );
+			self::assertSame( array(), $registered['ran-booster-wpds-tokens']['dependencies'] );
+		}
 		self::assertSame( ! $theme_registered, isset( $registered['ran-booster-notice-compat'] ) );
 		self::assertSame( ! $theme_registered, in_array( 'ran-booster-notice-compat', $enqueued, true ) );
 		if ( ! $theme_registered ) {
@@ -362,11 +368,14 @@ final class BoosterAssetsTest extends TestCase {
 			self::assertStringEndsWith( '/assets/ran-booster-notice-compat.css', $registered['ran-booster-notice-compat']['source'] );
 		}
 		if ( 'plugins.php' === $hook ) {
-			self::assertSame( $theme_registered ? array( 'wp-theme', 'ran-booster-wp-ui-static' ) : array( 'ran-booster-wp-ui-static' ), $registered['ran-booster-25-admin-primitives']['dependencies'] );
+			self::assertSame( array( $tokens, 'ran-booster-wp-ui-static' ), $registered['ran-booster-25-admin-primitives']['dependencies'] );
 			self::assertStringEndsWith( '/assets/lib/ran-booster-wp-ui-static.css', $registered['ran-booster-wp-ui-static']['source'] );
 			self::assertSame( array(), $registered['ran-booster-wp-ui-static']['dependencies'] );
 			self::assertSame( $theme_registered, in_array( 'wp-theme', $enqueued, true ) );
+			self::assertContains( $tokens, $enqueued, 'The design tokens must load with the global notices.' );
 			self::assertArrayNotHasKey( 'ran-booster-admin-shell', $registered );
+		} else {
+			self::assertSame( array( $tokens ), $registered['ran-booster-wp-ui-static']['dependencies'], 'The component styles depend on the design tokens.' );
 		}
 	}
 
@@ -632,7 +641,7 @@ final class BoosterAssetsTest extends TestCase {
 		$static_style = $registered_styles['ran-booster-wp-ui-static'];
 		unset( $registered_styles['ran-booster-wp-ui-static'] );
 		self::assertStringEndsWith( '/assets/lib/ran-booster-wp-ui-static.css', $static_style['source'] );
-		self::assertSame( array(), $static_style['dependencies'] );
+		self::assertSame( array( 'wp-theme' ), $static_style['dependencies'] );
 
 		$expected_styles = array(
 			'ran-booster-admin-shell'                     => 'ran-admin-shell.css',

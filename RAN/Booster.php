@@ -884,7 +884,7 @@ class Booster {
 		wp_register_style(
 			'ran-booster-wp-ui-static',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/lib/ran-booster-wp-ui-static.css',
-			array(),
+			array( $this->design_tokens_handle() ),
 			$this->asset_version( $wp_ui_static_path )
 		);
 		wp_enqueue_style( 'ran-booster-styles' );
@@ -1065,9 +1065,8 @@ class Booster {
 			return;
 		}
 
-		if ( wp_style_is( 'wp-theme', 'registered' ) ) {
-			wp_enqueue_style( 'wp-theme' );
-		}
+		$tokens = $this->design_tokens_handle();
+		wp_enqueue_style( $tokens );
 		// The global notices are static Notices drawn with the public Notice's own CSS.
 		$static_path = 'assets/lib/ran-booster-wp-ui-static.css';
 		wp_register_style(
@@ -1080,11 +1079,33 @@ class Booster {
 		wp_register_style(
 			'ran-booster-25-admin-primitives',
 			trailingslashit( $this->booster_url ?? '' ) . $path,
-			wp_style_is( 'wp-theme', 'registered' ) ? array( 'wp-theme', 'ran-booster-wp-ui-static' ) : array( 'ran-booster-wp-ui-static' ),
+			array( $tokens, 'ran-booster-wp-ui-static' ),
 			$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $path )
 		);
 		wp_enqueue_style( 'ran-booster-25-admin-primitives' );
 		$this->load_ui_assets( false );
+	}
+
+	/**
+	 * The style handle that supplies the --wpds-* design tokens the public component
+	 * styles read: WordPress's own `wp-theme` from 7.1, otherwise a bundled copy of the
+	 * same tokens. Without either, type scale, colour and spacing are all undefined.
+	 */
+	private function design_tokens_handle(): string {
+		if ( wp_style_is( 'wp-theme', 'registered' ) ) {
+			return 'wp-theme';
+		}
+		$path = 'assets/lib/ran-booster-wpds-tokens.css';
+		if ( ! wp_style_is( 'ran-booster-wpds-tokens', 'registered' ) ) {
+			wp_register_style(
+				'ran-booster-wpds-tokens',
+				trailingslashit( $this->booster_url ?? '' ) . $path,
+				array(),
+				$this->asset_version( trailingslashit( $this->booster_path ?? '' ) . $path )
+			);
+		}
+
+		return 'ran-booster-wpds-tokens';
 	}
 
 	/** Reuse one public component foundation and the existing footer adapter. */

@@ -1,0 +1,9 @@
+{
+	"source": {
+		"package": "@wordpress/theme",
+		"version": "4.0.0",
+		"sha256": "7024853183a393d2cf4c183538ab0ebfdcb1f6a231f7fab2910ea2d387491d42"
+	},
+	"tokens": 171,
+	"outputSha256": "1d0a6abd7c24c850cefd8a3f4a9b244d7fbbef19701ae65adf9c46485451c26e"
+}

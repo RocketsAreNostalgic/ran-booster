@@ -233,6 +233,28 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 	}
 
+	public function test_unavailable_reinstall_is_natively_disabled_until_javascript_guards_it(): void {
+		$settings_url = 'https://example.test/wp-admin/admin.php?page=ran-booster';
+		$cases        = array(
+			'disabled policy'     => array( 'disabled', true, false ),
+			'unavailable route'   => array( 'manual', false, false ),
+			'available reinstall' => array( 'manual', true, true ),
+		);
+		foreach ( $cases as $label => $case ) {
+			list( $deployment_policy, $package_mutation_available, $available ) = $case;
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/reinstall.php';
+			$html = (string) ob_get_clean();
+			$tag  = preg_match( '/<button\b[^>]*data-ran-booster-settings-reinstall[^>]*>/s', $html, $matches ) ? $matches[0] : '';
+			self::assertNotSame( '', $tag, $label );
+			$native_disabled = 1 === preg_match( '/\sdisabled(\s|>)/', $tag );
+			self::assertSame( ! $available, $native_disabled, $label );
+			self::assertSame( ! $available, str_contains( $tag, 'title="Set Updates to Manual or Automatic before reinstalling."' ), $label );
+			self::assertSame( ! $available, str_contains( $tag, 'aria-describedby="ran-booster-reinstall-reason"' ), $label );
+			self::assertStringContainsString( $available ? 'aria-disabled="false"' : 'aria-disabled="true"', $tag, $label );
+		}
+	}
+
 	public function test_failed_package_submission_marks_form_for_leave_warning(): void {
 		foreach ( array( PackagePagePresenter::plugin(), PackagePagePresenter::theme() ) as $package_view ) {
 			foreach ( array( 'create', 'edit' ) as $operation ) {
@@ -701,9 +723,9 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertIsInt( $description_position );
 			$notice_position = strpos( $html, 'data-ran-booster-local-development-warning', $description_position );
 			self::assertIsInt( $notice_position );
-			$guidance_position = strpos( $html, 'data-ran-booster-reinstall-guidance', $notice_position );
-			self::assertIsInt( $guidance_position );
-			$actions_position = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $guidance_position );
+			self::assertStringNotContainsString( 'data-ran-booster-reinstall-guidance', $html );
+			self::assertSame( 1, substr_count( $html, 'id="ran-booster-reinstall-reason" class="ran-booster-reason-tooltip__bubble" role="tooltip"' ) );
+			$actions_position = strpos( $html, 'class="ran-booster-package-operation-settings__actions"', $notice_position );
 			self::assertIsInt( $actions_position );
 			$reinstall_position = strpos( $html, 'data-ran-booster-settings-reinstall', $actions_position );
 			self::assertIsInt( $reinstall_position );
@@ -714,13 +736,12 @@ final class RepeatPackageViewTest extends TestCase {
 			self::assertLessThan( $automation_position, $advanced_position );
 			self::assertTrue( $advanced_position < $readiness_position );
 			self::assertTrue( $readiness_position < $advanced_end );
-			// Label, select, description, notice, guidance, then the action group last.
+			// Label, select, description, notice, then the action group last.
 			self::assertTrue( $operation_position < $label_position );
 			self::assertTrue( $label_position < $select_position );
 			self::assertTrue( $select_position < $description_position );
 			self::assertTrue( $description_position < $notice_position );
-			self::assertTrue( $notice_position < $guidance_position );
-			self::assertTrue( $guidance_position < $actions_position );
+			self::assertTrue( $notice_position < $actions_position );
 			self::assertTrue( $actions_position < $reinstall_position );
 			self::assertTrue( $reinstall_position < $operation_end );
 			self::assertTrue( $operation_end < $save_actions_position );
@@ -1374,15 +1395,12 @@ final class RepeatPackageViewTest extends TestCase {
 		}
 		$buttons[] = $branch ? 'data-ran-booster-settings-reinstall' : 'data-ran-booster-managed-release-native-update';
 
-		$needles = array(
+		$needles   = array(
 			'<label for="ran-booster-deployment-policy">',
 			'name="ran_booster[deployment_policy]"',
 			$branch ? 'Automatic deploys on push.' : 'Automatic installs validated releases.',
 			'data-ran-booster-local-development-warning',
 		);
-		if ( $branch ) {
-			$needles[] = 'data-ran-booster-reinstall-guidance';
-		}
 		$needles[] = 'class="ran-booster-package-operation-settings__actions" role="group" aria-label="Package operations"';
 		$previous  = -1;
 		foreach ( array_merge( $needles, $buttons ) as $needle ) {
@@ -1396,7 +1414,7 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertSame( 1, substr_count( $card, 'ran-booster-package-operation-settings__actions' ) );
 		self::assertSame( count( $buttons ), preg_match_all( '/<(?:a|button)\b/', (string) preg_replace( '/^.*?class="ran-booster-package-operation-settings__actions".*?>/s', '', $card, 1 ) ) );
 		// The action group closes the card body; nothing follows it inside the Updates field.
-		self::assertMatchesRegularExpression( '/<\/(?:a|button)>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/div>\s*$/', $card );
+		self::assertMatchesRegularExpression( '/<\/(?:a|button|span)>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/div>\s*<\/div>\s*$/', $card );
 		// Branch packages keep Reinstall out of the Releases card and vice versa.
 		self::assertSame( $branch, str_contains( $card, 'data-ran-booster-settings-reinstall' ) );
 		self::assertSame( ! $branch, str_contains( $card, 'data-ran-booster-managed-release-native-update' ) );

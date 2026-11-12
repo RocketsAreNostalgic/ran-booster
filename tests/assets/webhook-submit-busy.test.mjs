@@ -115,6 +115,7 @@ function setup() {
 		querySelectorAll: (selector) =>
 			selector === 'form[data-ran-booster-submit-busy]' ? [form] : [],
 		createElement: () => element(),
+		dispatchEvent: () => true,
 	};
 	const window = {
 		addEventListener: (type, handler) => {

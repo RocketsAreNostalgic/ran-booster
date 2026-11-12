@@ -112,7 +112,9 @@
 			}
 			bubble.hidden = false;
 			visible = bubble;
-			const anchor = wrapper.getBoundingClientRect();
+			const anchor = (
+				wrapper.querySelector('[aria-describedby]') || wrapper
+			).getBoundingClientRect();
 			const margin = 8;
 			const left = Math.min(
 				anchor.left,
@@ -175,6 +177,9 @@
 				}
 			},
 			true
+		);
+		document.dispatchEvent(
+			new CustomEvent('ran-booster:reason-tooltip-ready')
 		);
 	}
 

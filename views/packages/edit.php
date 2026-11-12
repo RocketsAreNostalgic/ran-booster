@@ -311,11 +311,10 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 				</header>
 				<div class="ran-booster-settings-section__body">
 					<?php
-					$package_field_form              = 'ran-booster-package-edit-form';
-					$package_automation_source       = $package_current_source;
-					$package_operation_layout        = true;
-					$package_operation_actions_html  = '';
-					$package_operation_guidance_html = '';
+					$package_field_form             = 'ran-booster-package-edit-form';
+					$package_automation_source      = $package_current_source;
+					$package_operation_layout       = true;
+					$package_operation_actions_html = '';
 					ob_start();
 					if ( $release_managed ) {
 						/**
@@ -341,14 +340,9 @@ $automation_summary = match ( $package->get_deployment_policy()->value ) {
 					</div>
 						<?php
 						$package_operation_actions_html = (string) ob_get_clean();
-						if ( $show_branch_operations ) {
-							ob_start();
-							require __DIR__ . '/reinstall-guidance.php';
-							$package_operation_guidance_html = (string) ob_get_clean();
-						}
 					}
 					require __DIR__ . '/fields/deployment-policy.php';
-					unset( $package_field_form, $package_operation_layout, $package_operation_actions_html, $package_operation_guidance_html, $package_add_on_operation_actions );
+					unset( $package_field_form, $package_operation_layout, $package_operation_actions_html, $package_add_on_operation_actions );
 					?>
 				</div>
 			</div></div></section>

@@ -467,9 +467,10 @@
 				const reinstall = operation?.querySelector(
 					'[data-ran-booster-settings-reinstall]'
 				);
-				const guidance = operation?.querySelector(
-					'[data-ran-booster-reinstall-guidance]'
+				const wrapper = reinstall?.closest(
+					'.ran-booster-reason-tooltip'
 				);
+				const reason = wrapper?.querySelector('[role="tooltip"]');
 
 				const sync = function () {
 					if (notice) {
@@ -480,13 +481,42 @@
 							reinstall.getAttribute(
 								'data-ran-booster-reinstall-capable'
 							) === '1' && select.value !== 'disabled';
-						reinstall.disabled = !available;
+						// Native disabled blocks the post until the activation guard exists; then aria-disabled keeps it focusable for the tooltip.
+						const guarded =
+							window.ranBoosterReasonTooltipInitialized === true;
+						reinstall.disabled = !available && !guarded;
+						if (guarded || available) {
+							reinstall.removeAttribute('title');
+						} else if (reason) {
+							reinstall.setAttribute('title', reason.textContent);
+						}
+						reinstall.setAttribute(
+							'aria-disabled',
+							available ? 'false' : 'true'
+						);
 						reinstall.setAttribute(
 							'data-update-can-run',
 							available ? '1' : '0'
 						);
-						if (guidance) {
-							guidance.hidden = available;
+						if (available) {
+							wrapper?.removeAttribute(
+								'data-ran-booster-reason-tooltip'
+							);
+							reinstall.removeAttribute('aria-describedby');
+							if (reason) {
+								reason.hidden = true;
+							}
+						} else {
+							wrapper?.setAttribute(
+								'data-ran-booster-reason-tooltip',
+								''
+							);
+							if (reason) {
+								reinstall.setAttribute(
+									'aria-describedby',
+									reason.id
+								);
+							}
 						}
 					}
 				};
@@ -495,6 +525,13 @@
 					field.dataset.ranBoosterOperationControlsBound = 'true';
 				}
 				select.addEventListener('change', sync);
+				if (window.ranBoosterReasonTooltipInitialized !== true) {
+					document.addEventListener(
+						'ran-booster:reason-tooltip-ready',
+						sync,
+						{ once: true }
+					);
+				}
 				sync();
 			});
 	}

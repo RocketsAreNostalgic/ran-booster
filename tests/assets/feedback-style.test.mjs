@@ -25,8 +25,10 @@ const rule = (pattern) =>
 const listRules = rule(
 	/^\.ran-booster-snackbar-host \.components-snackbar-list$/
 );
-// The base list rule, and the one inside the 782px media query.
-const [list, mobileList] = listRules;
+// The base list rule and the one inside the 782px media query, told apart by
+// content, not by order.
+const list = listRules.find(({ body }) => /position:\s*fixed/.test(body));
+const mobileList = listRules.find(({ body }) => /inset-inline:/.test(body));
 
 function token(name) {
 	const match = tokens.match(new RegExp(`wpds-${name}:\\s*(#[0-9a-f]+)`));
@@ -97,7 +99,7 @@ test('the list sits at the bottom of the viewport and is centred in the content 
 	assert.match(host.body, /inline-size:\s*100%/);
 	assert.match(
 		list.body,
-		/--ran-booster-snackbar-size:\s*min\(\s*600px,\s*100cqi - 2 \* var\(--ran-booster-snackbar-gutter\)/
+		/--ran-booster-snackbar-size:\s*min\(\s*600px,\s*100cqi\s*-\s*2\s*\*\s*var\(--ran-booster-snackbar-gutter\)/
 	);
 	assert.match(
 		list.body,
@@ -105,9 +107,14 @@ test('the list sits at the bottom of the viewport and is centred in the content 
 	);
 	assert.match(
 		list.body,
-		/margin-inline-start:\s*calc\(\s*\(100cqi - var\(--ran-booster-snackbar-size\)\) \/ 2\s*\)/
+		/margin-inline-start:\s*calc\(\s*\(\s*100cqi\s*-\s*var\(--ran-booster-snackbar-size\)\s*\)\s*\/\s*2\s*\)/
 	);
 	assert.doesNotMatch(list.body, /inset-inline(-start)?\s*:/);
+	// The cap holds where container query units are unsupported.
+	assert.match(list.body, /max-inline-size:\s*600px/);
+	// Containment, transform or filter on the host would make it the
+	// containing block of the fixed list and anchor it to the page.
+	assert.doesNotMatch(host.body, /(^|[\s;])(contain|transform|filter)\s*:/);
 	assert.doesNotMatch(
 		list.body,
 		/overflow/,
@@ -124,9 +131,10 @@ test('at 782px and below the list is centred in the viewport with a 16px gutter 
 	assert.match(hostCss, /@media \(max-width: 782px\)/);
 	assert.match(
 		mobileList.body,
-		/--ran-booster-snackbar-size:\s*min\(\s*600px,\s*100% - 2 \* var\(--ran-booster-snackbar-gutter\)/
+		/--ran-booster-snackbar-size:\s*min\(\s*600px,\s*100%\s*-\s*2\s*\*\s*var\(--ran-booster-snackbar-gutter\)/
 	);
 	assert.match(mobileList.body, /inset-inline:\s*0/);
+	assert.doesNotMatch(mobileList.body, /100vw|cqi|margin-inline-start/);
 	assert.match(mobileList.body, /margin-inline:\s*auto/);
 	assert.doesNotMatch(
 		mobileList.body,

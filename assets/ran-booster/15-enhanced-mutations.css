@@ -29,7 +29,7 @@
  * no scripted measuring, and the writing direction mirrors the offset.
  */
 
-/* Size containment alone collapses the auto width of this empty block. */
+/* Inline-size containment ignores content width, so an auto width on this empty block resolves to 0 and is stated. */
 .ran-booster-snackbar-host {
 	container-type: inline-size;
 	inline-size: 100%;

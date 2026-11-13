@@ -77,7 +77,7 @@ webhook and extension successes follow it too.
 | --- | --- |
 | Queue | At most 3 visible, newest last. A fourth evicts the oldest success. If no success is visible, it evicts the oldest failure pointer. Evicting a pointer loses nothing because the inline message remains. |
 | Duplicates | Each event has an id. The same id never produces two snackbars. |
-| Duration | One constant, 10 seconds (R5). WordPress's own `Snackbar` hard-codes its timeout and cannot be configured or paused, so the host renders success items with the explicit-dismiss presentation (which also gives the dismiss control) and owns the timer that removes them. |
+| Duration | Decided: one constant, 10 seconds (R5), tunable later in that one place. WordPress's own `Snackbar` hard-codes 6 seconds and cannot be configured or paused, so the host renders success items with the explicit-dismiss presentation (which also gives the dismiss control) and owns the timer that removes them. |
 | Pause | The timer pauses while the pointer is over the item or focus is inside it, and resumes with the remaining time. This is Booster-owned. |
 | Dismiss | Every item has a dismiss control reachable by keyboard. Escape while focus is inside the item dismisses it. |
 | Focus | The host never moves focus. If the item that holds focus is removed, focus returns to the control that started the action, or to the nearest sensible control (existing behaviour). |
@@ -281,9 +281,9 @@ Every pull request runs `composer check` and `pnpm check`.
   success and an inline failure; Needs attention unchanged; the exact installed
   archive and its hash.
 
-## Open decisions
+## Open decision
 
-**1. How a server result reaches the next page load.** This policy does not
+**How a server result reaches the next page load.** This policy does not
 depend on the answer; P1 implements whichever is chosen. Two options remain:
 
 - **Per-user one-shot flash.** The handler stores closed codes only (kind, code,
@@ -299,10 +299,3 @@ depend on the answer; P1 implements whichever is chosen. Two options remain:
 No choice is made here. The rule that binds either option is R16: no display
 text in a URL and no secret, provider response or path in a stored or signed
 payload.
-
-**2. Success duration: 10 seconds or 6 seconds.** The owner decision is a
-single universal duration with a 10 second default (R5). WordPress 7.0.4's own
-`Snackbar` hard-codes 6 seconds and cannot be configured, so 10 seconds is not
-WordPress's default, and the policy keeps 10 seconds as the single Booster
-constant. The owner must confirm 10 seconds or choose 6 seconds before P2.
-Either value is one constant; the choice does not change the design.

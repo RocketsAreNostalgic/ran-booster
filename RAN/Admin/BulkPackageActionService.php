@@ -177,7 +177,7 @@ final readonly class BulkPackageActionService {
 
 	private function change_policy( BulkPackageAction $action, DeploymentPolicy $policy ): BulkPackageResult {
 		$snapshots = array();
-		$enabling  = false;
+		$resetting = false;
 		foreach ( $action->identifiers as $identifier ) {
 			if ( 'plugin' === $action->package_type ) {
 				PackageMutationGuard::assert_plugin_file_allowed( $identifier );
@@ -192,13 +192,13 @@ final readonly class BulkPackageActionService {
 				);
 			}
 			$snapshots[] = $this->snapshot( $package );
-			$enabling    = $enabling || ReleaseRecheck::would_enable( $package->get_source(), $package->get_deployment_policy(), $policy );
+			$resetting   = $resetting || ReleaseRecheck::would_reset( $package->get_source(), $package->get_deployment_policy(), $policy );
 		}
 
 		$result = 'plugin' === $action->package_type
 			? $this->plugins->set_plugin_deployment_policies( $snapshots, $policy )
 			: $this->themes->set_theme_deployment_policies( $snapshots, $policy );
-		if ( $enabling && $result['changed'] > 0 ) {
+		if ( $resetting && $result['changed'] > 0 ) {
 			ReleaseRecheck::request( $action->package_type );
 		}
 

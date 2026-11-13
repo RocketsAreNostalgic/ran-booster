@@ -13,10 +13,10 @@ final class BoosterLogger {
 
 	/**
 	 * The shape Core stores package slugs and notice codes in (DeploymentAttempt::identifier, Dashboard diagnostic ids),
-	 * without the vendor token prefixes, digest words and 32 hex digits that FailureText would also drop.
+	 * without the vendor token prefixes, digest words and 32 consecutive hex digits (separators ignored) that FailureText would also drop.
 	 * It is deliberately looser than identifier(): leading digits, long words and short hex-like slugs are real slugs.
 	 */
-	private const STORED_ID = '/\A(?!.*(?<![a-z0-9])(?:gh[pousr][_-]|github_pat_|gl(?:pat|dt|rt|cbt|ptt|soat)-|xox[abprs]-|xapp-|npm_|(?:sk|pk|rk)_(?:live|test)_|sk-|shp(?:at|ca|pa|ss)_|dop_v1_|ya29\.|wordpress_(?:logged_in|sec|test_cookie)|wp-settings-|private[ _.-]?key|sha[ _-]?[0-9]|md5|blake2))(?!(?:[^0-9a-f]*[0-9a-f]){32})[a-z0-9][a-z0-9._-]{0,190}\z/';
+	private const STORED_ID = '/\A(?!.*(?<![a-z0-9])(?:gh[pousr][_-]|github_pat_|gl(?:pat|dt|rt|cbt|ptt|soat)-|xox[abprs]-|xapp-|npm_|(?:sk|pk|rk)_(?:live|test)_|sk-|shp(?:at|ca|pa|ss)_|dop_v1_|ya29\.|wordpress_(?:logged_in|sec|test_cookie)|wp-settings-|private[ _.-]?key|sha[ _-]?[0-9]|md5|blake2))(?!(?:[0-9a-f][._-]*){32})[a-z0-9][a-z0-9._-]{0,190}\z/';
 
 	private static ?TemporaryDebugCapture $capture = null;
 

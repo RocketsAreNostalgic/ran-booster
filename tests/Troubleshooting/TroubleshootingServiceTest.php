@@ -172,6 +172,40 @@ final class TroubleshootingServiceTest extends TestCase {
 		}
 	}
 
+	public function test_composer_dev_versions_and_41_character_class_runs_follow_their_grammars(): void {
+		require_once dirname( __DIR__ ) . '/Support/PackageOperationGlobalWordPressFunctions.php';
+		$service = $this->service();
+		foreach ( array(
+			'dev-main'      => true,
+			'1.0.x-dev'     => true,
+			'2.1-dev'       => true,
+			'dev-'          => false,
+			'dev-feature/x' => false,
+			'1.0.x'         => false,
+		) as $version => $shown ) {
+			$form                     = $service->form_payload();
+			$form['core_self_update'] = array( 'installed_version' => $version );
+			$rows                     = $service->with_installation_context( $form, null )['installation_details']['Core updates'];
+			self::assertSame( $shown ? $version : 'Unavailable', $rows['Installed version'], (string) $version );
+		}
+		foreach ( array(
+			'RAN\\' . str_repeat( 'a', 40 ) => true,
+			'RAN\\' . str_repeat( 'a', 41 ) => false,
+		) as $class => $shown ) {
+			$selection = array(
+				'state'      => 'available',
+				'available'  => true,
+				'current'    => array(
+					'selected'    => 'external',
+					'declaration' => array( 'facets' => array( $class ) ),
+				),
+				'candidates' => array(),
+			);
+			$rows      = $service->with_installation_context( $service->form_payload(), $selection )['installation_details']['GitHub provider'];
+			self::assertSame( $shown ? $class : 'Unavailable', $rows['Capability 1'], (string) $class );
+		}
+	}
+
 	/** @return array<string, array{string}> */
 	public static function hostile_declared_values(): array {
 		return array(

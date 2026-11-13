@@ -90,6 +90,83 @@ webhook and extension successes follow it too.
 | No JavaScript | The result is a Core notice in the notice destination before the shell (see Notice placement). With JavaScript the host consumes that element by event id and removes it. |
 | Multisite | The host works on network admin screens that use the Booster shell. Any stored result is keyed per user and per site. |
 
+## Visual treatment
+
+The snackbar is not the stock black pill with white text. It is styled by
+intent so it reads as part of the same system as the `@wordpress/ui` Notice and
+the Badge, even though `SnackbarList` is the approved component exception.
+The three intents map one to one with Notice and Badge. This is CSS over the
+`SnackbarList` host (class and `icon` passed per notice, selectors scoped to
+the Booster host class). It adds no component. P2 owns it.
+
+WordPress's default `.components-snackbar` is `rgba(0, 0, 0, 0.85)` with
+`#fff` text, a 4px radius and a hard-coded shadow. P2 overrides all of these
+with the tokens below. It uses the same `--wpds-*` tokens as Notice
+(`.ran-wp-ui-notice.is-*` in `assets/lib/ran-booster-wp-ui-static.css`, and the
+`[data-ran-booster-ui-notice-intent]` mapping in
+`assets/ran-booster/25-admin-primitives.css`). Booster bundles these tokens
+(`assets/lib/ran-booster-wpds-tokens.css`, `@wordpress/theme` 4.0.0) for
+WordPress before 7.1. Every token name below was checked in that file.
+
+| Role | Success | Failure pointer (error) | Warning |
+| --- | --- | --- | --- |
+| Surface | `--wpds-color-background-surface-success-weak` | `--wpds-color-background-surface-error-weak` | `--wpds-color-background-surface-warning-weak` |
+| Border (1px, `--wpds-border-width-xs`) | `--wpds-color-stroke-surface-success` | `--wpds-color-stroke-surface-error` | `--wpds-color-stroke-surface-warning` |
+| Text | `--wpds-color-foreground-content-success` | `--wpds-color-foreground-content-error` | `--wpds-color-foreground-content-warning` |
+| Icon | `--wpds-color-foreground-content-success-weak` | `--wpds-color-foreground-content-error-weak` | `--wpds-color-foreground-content-warning-weak` |
+
+The Badge uses the non-weak surface tokens (`--wpds-color-background-surface-success`,
+`-error`, `-warning`) with the same text tokens. The snackbar uses the weak
+surface like Notice because it carries a sentence, a border and an icon, as
+Notice does. Both resolve to the same hue per intent.
+
+- **Warning** is not surfaced as a snackbar today (R12 keeps warnings inline).
+  The variant is defined so the three intents stay one to one with Notice and
+  Badge, and so a future warning pointer needs no new design.
+- **Focus.** The dismiss control and the action link use
+  `--wpds-color-stroke-focus` with a `--wpds-border-width-focus` ring, the same
+  token the bundled `@wordpress/ui` styles and `25-admin-primitives.css` use. The ring has 5.2 to 5.4:1
+  contrast against each weak surface. Do not use the WordPress component's
+  own accent ring.
+- **Shape and spacing.** Radius `--wpds-border-radius-lg`; padding
+  `--wpds-dimension-padding-md`; gap between icon, text and controls
+  `--wpds-dimension-gap-xs` (as Notice) and between stacked items
+  `--wpds-dimension-gap-sm`. No pixel literals other than the existing
+  host-width clamp.
+- **Icon.** The same intent icons as Notice (success check, error, warning),
+  passed through the `SnackbarList` `icon` prop. Colour comes from the icon
+  token above, not from the text colour.
+- **Contrast (WCAG AA).** Computed from the token values in the bundled file.
+  Text on surface: success 15.2:1, error 15.6:1, warning 15.6:1 (needs 4.5:1).
+  Icon on surface: 4.9:1, 5.3:1, 4.9:1 (needs 3:1). Focus ring on surface:
+  5.2 to 5.4:1 (needs 3:1). The 1px border is 1.7 to 1.8:1 against its surface,
+  the same as Notice. WCAG 1.4.11 does not require a decorative container border
+  to reach 3:1 when text and icon carry the meaning, so this matches Notice. P2
+  must not rely on the border alone to separate the snackbar from the page.
+- **Dark and light.** The bundled token file defines no dark values and
+  WordPress admin has no dark colour scheme, so there is one palette today.
+  P2 uses only `--wpds-*` tokens and no colour literals, so a dark theme
+  delivered by `wp-theme` applies without a change here.
+- **Forced colours.** Under `@media (forced-colors: active)` the surface is
+  `Canvas`, the border and text are `CanvasText`, the icon uses `currentColor`
+  and the focus ring uses `Highlight`. No blend modes. Intent must still be
+  readable without colour: the icon shape and the message text carry it. This
+  follows the existing `forced-colors` blocks in
+  `assets/ran-booster/00-foundations.css`.
+- **Motion.** Enter and exit use `--wpds-motion-duration-md` and
+  `--wpds-motion-easing-balanced`. `SnackbarList` already disables its own
+  layout and variants when the user prefers reduced motion; P2 adds
+  `@media (prefers-reduced-motion: reduce)` so no transition or animation of
+  Booster's own runs either.
+- **Gaps in the token set.** No token fits the elevation. The token file has no
+  shadow or elevation token, and the WordPress snackbar's shadow is a literal.
+  P2 uses the border alone, or keeps the component's shadow as the one literal
+  exception, and the owner decides which at the visual check. No other intent
+  lacks a token.
+- **Check.** P2 includes a visual check per intent (success, error pointer,
+  warning) in light, in forced colours and in RTL, with the computed contrast
+  recorded.
+
 ## Copy and the shared failure vocabulary
 
 Core owns all feedback copy. A feedback event is a kind, a closed code and an
@@ -122,7 +199,7 @@ helper is counted once. The Disposition column states where each category goes.
 | A2 | Bulk update summary (`add_bulk_notice`) | within A | Moves; R8, links to Activity. |
 | B | Global `admin_notices` registrations | 9 registrations plus the signed-outcome fallback | Stay as notices (R10), except the release operation notice, which is user-initiated: its success moves and its failure becomes inline. |
 | C | Signed operation outcomes (`SignedAdminInteractionFlow`, Admin Interaction API 3) | 1 flow; kinds SUCCESS, ACCEPTED, VALIDATION_FAILURE, UNEXPECTED_FAILURE | SUCCESS and ACCEPTED move. Failures stay in the declared inline region. Message text leaves the URL (R16). Add-ons get this through `respond()` with no new API. |
-| D | Redirect-with-query-arg results | 6 producers, 5 query vocabularies | Success moves, failures stay inline. Transport is the open decision below. |
+| D | Redirect-with-query-arg results | 6 producers, 5 query vocabularies | Success moves, failures stay inline. Transport is open decision 1 below. |
 | E | Existing snackbar (`presentGeneralSnackbar`) | 1 host, 3 consumers | Kept and generalised into the single host. |
 | F | Inline live regions and result markup in views | 54 matches in 27 files | Stay. They are field, row and per-control feedback. Confirmation paragraphs duplicated next to a save become redundant. |
 | F1 | Copy-to-clipboard confirmations | within F | Stay local (R9). |
@@ -170,8 +247,8 @@ coding, per `AGENTS.md`.
 | PR | Content | Production | Tests | Docs | Depends on |
 | --- | --- | --- | --- | --- | --- |
 | P0 | This policy and the exception record | 0 | 0 | this document | none |
-| P1 | Server-to-page transport of a result (per the open decision), one consume point on Booster screens, static notice with event id, remove message text from the signed-outcome URL, keep the API 3 signature | about +120 / -90 | about +260 | about +40 | P0 and the transport decision |
-| P2 | One client host (`ranBoosterFeedback.show()`): generalise `presentGeneralSnackbar`, queue of 3, Booster-owned timer and pause, CSS-only logical positioning, mobile gutters, dedupe against the static element, remove the JS centre measurement | about +80 / -110 JS, +30 CSS | about +180 | about +20 | P0 (can run against the existing event before P1) |
+| P1 | Server-to-page transport of a result (per open decision 1), one consume point on Booster screens, static notice with event id, remove message text from the signed-outcome URL, keep the API 3 signature | about +120 / -90 | about +260 | about +40 | P0 and open decision 1 |
+| P2 | One client host (`ranBoosterFeedback.show()`): generalise `presentGeneralSnackbar`, queue of 3, Booster-owned timer and pause, CSS-only logical positioning, mobile gutters, dedupe against the static element, remove the JS centre measurement, and the intent styling in Visual treatment (success, error pointer, warning; Notice and Badge tokens, CSS over the host, no new component, visual check per intent) | about +80 / -110 JS, +30 CSS | about +180 | about +20 | P0 (can run against the existing event before P1) |
 | P3 | Move existing producers on current strings: package install, update, edit, unlink, delete, reinstall, update and remove operations, bulk with Activity link, Check releases and other release results, extension install and activate, webhook results. Failures stay inline | about +60 / -120 | about +150 | about +10 | P1, P2 |
 | P4 | Signed outcome and add-on path: SUCCESS and ACCEPTED use the transport; document that add-ons get the snackbar through `respond()` | about +30 | about +80 | about +60 (`enhanced-admin-interactions.md`) | P1 |
 | P5 | Copy integration: success titles from the one code to copy function; failure copy through it; `FailureText` display mode for Activity detail only | about +60 | about +120 | about +30 | #859 landed and the `ran/updater-support` bump |
@@ -204,9 +281,9 @@ Every pull request runs `composer check` and `pnpm check`.
   success and an inline failure; Needs attention unchanged; the exact installed
   archive and its hash.
 
-## Open implementation decision
+## Open decisions
 
-**How a server result reaches the next page load.** This policy does not
+**1. How a server result reaches the next page load.** This policy does not
 depend on the answer; P1 implements whichever is chosen. Two options remain:
 
 - **Per-user one-shot flash.** The handler stores closed codes only (kind, code,
@@ -222,3 +299,10 @@ depend on the answer; P1 implements whichever is chosen. Two options remain:
 No choice is made here. The rule that binds either option is R16: no display
 text in a URL and no secret, provider response or path in a stored or signed
 payload.
+
+**2. Success duration: 10 seconds or 6 seconds.** The owner decision is a
+single universal duration with a 10 second default (R5). WordPress 7.0.4's own
+`Snackbar` hard-codes 6 seconds and cannot be configured, so 10 seconds is not
+WordPress's default, and the policy keeps 10 seconds as the single Booster
+constant. The owner must confirm 10 seconds or choose 6 seconds before P2.
+Either value is one constant; the choice does not change the design.

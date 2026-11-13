@@ -877,9 +877,10 @@ carrier still reports every situation Core can distinguish by code.
 
 ### Reason vocabulary
 
-The vocabulary is closed and shared with the updater packages' release fault
-set. A provider uses only these ids; Core drops an unknown reason and treats
-the failure as if it carried none.
+The vocabulary is closed. A provider uses only these ids; Core drops an unknown
+reason and treats the failure as if it carried none. It refines the coarser
+`ReleaseFailure` codes of the release updater (see
+[Updater correspondence](#updater-correspondence)).
 
 Typed facts are listed where they apply. "Core shows" is the fixed Core copy,
 paraphrased; typed numbers are rendered by Core as text.
@@ -931,14 +932,35 @@ Unix timestamp. Parse them to integers in the provider; never pass header text.
 Core renders them, for example "try again in about two minutes".
 
 `detail` is optional and rare. It is printable ASCII (0x20 to 0x7E) of at most
-120 characters, for a short fact such as a release tag. Core screens the whole
-text with the shared `ran-updater-support` `FailureText` screener before it
-bounds it: in display mode before the text is shown, and in strict mode before
-any text is stored. If any part matches a credential, digest, path, markup,
-URL-with-userinfo or query-token shape, Core drops the detail and keeps the
-reason. It never redacts in place and never truncates first. A surface without
-a detail slot ignores it. Do not send response bodies, headers, `WP_Error`
-messages or exception messages.
+120 characters, for a short fact such as a release tag or a package asset name.
+Core screens it with `RAN\UpdaterSupport\V1\FailureText::strict( $detail, 120 )`,
+the same policy the updater packages use for their rejection detail. `strict()`
+screens the whole text before it bounds it, drops the whole text if any rule
+matches, and never redacts, rewrites or truncates a rejected value. A detail
+therefore must be plain words and digits: it is dropped if it contains a slash,
+backslash, colon or question mark not followed by a space, `=`, `@`, `~`, `%`
+escape, angle bracket, brace, a URL scheme, a path word, a token or key prefix,
+a digest, a long hex or base64-like run, or a credential word followed by text.
+A surface without a detail slot ignores the detail. Do not send response
+bodies, headers, `WP_Error` messages or exception messages.
+
+### Screening modes
+
+Core applies one screener, `FailureText`, at every sink, by mode:
+
+| Mode | Core uses it for |
+| --- | --- |
+| `strict( $text, $max )` | `ProviderFailure::$detail` (120), before it is shown or stored |
+| `display( $text, $max )` | Provider-authored fixed sentences: the `InvalidCredentialInput` message (512), `ProviderDiagnosticResult` message and remediation (512), and `RepositoryWebhookOperationResult` remediation (512) |
+| `identifier( $text )` | Closed ids: reasons, diagnostic and operation codes, log values such as `reason` and `step` (snake_case, at most 96 bytes) |
+| `commit_id( $text )` | Resolved commit ids, exactly 40 or 64 lowercase hex digits |
+
+`display()` applies the same shape rules as `strict()` but not the prose
+credential-word rules, so a fixed sentence such as "Check the token
+permissions." passes. It is for curated text the provider wrote, never for
+text echoed from a remote response. Both modes accept printable ASCII only and
+drop anything else whole, so these channels carry English ASCII text. A
+rejected value is dropped and Core falls back to its own copy.
 
 ### Where each signal goes
 
@@ -947,7 +969,7 @@ Attach the `ProviderFailure` to the carrier the operation already uses.
 | Operation | Carrier | Attach as |
 | --- | --- | --- |
 | `resolve_repository()`, repository browsing, `prepare_archive()`, `verify_current_head()` | `ProviderRequestFailed`, a final `RuntimeException` | `new ProviderRequestFailed( $failure )`; `getCode()` returns the failure's `http_status`, else the reason's default code |
-| Release listing, inspection | `RepositoryReleaseReadUnavailable` | `new RepositoryReleaseReadUnavailable( $failure )`; argument optional |
+| Release listing, inspection | `RepositoryReleaseReadUnavailable` | `new RepositoryReleaseReadUnavailable( failure: $failure )`; the constructor keeps the `RuntimeException` message, code and previous arguments and adds `failure` last, so existing calls are unchanged |
 | Release inspection rejection | `RepositoryReleaseInspectionRejected` | Optional last argument of `no_releases()`, `invalid_release()` and `incompatible()` |
 | Release acquisition rejection | `RepositoryReleaseAcquisitionRejected` | Optional argument of `invalid_release()`, `cleanup_failed()` and the new `changed()` (reason `release_changed`) |
 | Saved credential check | `CredentialValidationResult` | Optional argument of `invalid()`, `unavailable()`, `rate_limited()` and `invalid_response()`. `valid()` accepts none |
@@ -1013,8 +1035,9 @@ Core verifies the signature and secret before the provider's normalizer runs,
 and decides scope through `ProviderWebhookPolicy::authorize_webhook()`. These
 reasons are Core-only and a provider cannot set them: `signature_missing`,
 `signature_malformed`, `signature_mismatch`, `secret_store_unavailable` and
-`scope_mismatch`. A provider sets only the `payload_*` and `ignored_*` reasons
-above, plus `probe` through `WebhookEnvelope::probe()`.
+`scope_mismatch`, plus `probe_verified`, which Core records when a provider
+returns `WebhookEnvelope::probe()`. A provider sets only the `payload_*` and
+`ignored_*` reasons above.
 
 `WebhookRejected( int $status_code, string $safe_message, ?string $reason = null )`
 keeps its status mapping: `400` and `413` pass through, `401`, `403` and `503`
@@ -1063,17 +1086,50 @@ thrown by the request operations:
 | `410` | `ref_not_found` |
 | `413` | `response_too_large` |
 | `429` | `rate_limited` |
-| `502`, `503`, `504` | `http_5xx` (`504` also `http_timeout`) |
+| `502`, `503` | `http_5xx` |
+| `504` | `transport_other` |
 | Anything else, including `0` | No reason: generic failure |
+
+Existing providers use `504` only when the HTTP request failed before any
+response arrived (a `WP_Error`), and `502` and `503` for a bad or unavailable
+upstream reply, so `504` is a transport failure. A provider that sees a real
+upstream 504 status sends `http_5xx` with `http_status: 504` through the
+carrier.
 
 `ProviderRequestFailed::getCode()` returns the failure's `http_status`, else
 the reason's default code: `401` for credential reasons other than store
 failure, `403` for `permission_denied`, `404` for location reasons, `409` for
-`repository_identity_changed` and `operation_superseded`, `413`
-for `response_too_large`, `422` for `repository_no_default_branch`,
-`429` for rate reasons, `504` for `http_timeout`, `502` for `http_5xx` and
-`response_invalid`, and `503` for the rest. A host that predates the carrier
-therefore still reads a sensible code.
+`repository_identity_changed` and `operation_superseded`, `413` for
+`response_too_large`, `422` for `repository_no_default_branch`, `429` for rate
+reasons, `502` for `http_5xx` and `response_invalid`, `504` for every transport
+reason (`http_timeout`, `dns_failed`, `tls_failed`, `blocked_by_site`,
+`redirect_blocked`, `transport_other`) and `503` for the rest. A host that
+predates the carrier therefore still reads a sensible code.
+
+#### Updater correspondence
+
+The release updater reports coarse `ReleaseFailure` codes and `ReleaseRejection`
+reasons. Core maps each provider reason to one of them, and its rate-limit
+`retry_after` range (1 to 86400) and 120-character detail bound are the same as
+the updater's.
+
+| Provider reasons | `ReleaseFailure` code |
+| --- | --- |
+| `credential_missing`, `credential_store_unavailable`, `credential_format_invalid` | `credential_unavailable` |
+| `credential_rejected`, `credential_expired`, `permission_denied`, location reasons | `repository_access_unavailable` |
+| `rate_limited`, `rate_limited_secondary` | `rate_limited` |
+| Transport, `http_*` and `response_*` reasons | `provider_unavailable` |
+| `site_filesystem_unsupported` | `filesystem_unsupported` |
+| `site_zip_unavailable` | `runtime_unavailable` |
+| `operation_superseded` | `operation_failed` |
+| `no_releases` | `release_unavailable` |
+| `release_invalid` | `invalid_release` |
+| `release_incompatible` | `package_incompatible` |
+| `release_changed` | `release_changed` |
+
+The updater's `ReleaseRejection` reasons (for example `no_package_zip` and
+`multiple_package_zips`) are updater-side. Core words them as the existing
+`package_*` ids and does not accept them from a provider.
 
 ### Secrets rules for providers
 

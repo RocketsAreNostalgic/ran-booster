@@ -127,8 +127,11 @@ pages do not replay a cached confirmation.
 `assets/ran-booster-feedback.js` is the one client host for these results and
 for the server-rendered `.ran-booster-feedback` fallback. Core scripts call
 `window.ranBoosterFeedback.show(message, options)`; this is an internal entry,
-not an add-on API. The host shows at most three items, evicting the oldest
-success first and a failure pointer only when no success is left. A success
+not an add-on API. The host shows at most three items, newest last. When a
+fourth arrives the oldest success is dropped first; a pointer to a persistent
+error is never dropped. With three pointers visible a new success is announced
+politely and not shown (its static server form is kept) and a new pointer is
+omitted because its inline message is the record; to be revisited after use. A success
 dismisses itself after one 10 second constant owned by the host, pauses while
 the pointer is over it or focus is inside it, and also dismisses with its
 control or Escape. An error or warning item is only a pointer to a persistent

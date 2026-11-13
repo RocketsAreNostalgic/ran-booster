@@ -114,7 +114,10 @@ test('the list sits at the bottom of the viewport and is centred in the content 
 	assert.match(list.body, /max-inline-size:\s*600px/);
 	// Containment, transform or filter on the host would make it the
 	// containing block of the fixed list and anchor it to the page.
-	assert.doesNotMatch(host.body, /(^|[\s;])(contain|transform|filter)\s*:/);
+	assert.doesNotMatch(
+		host.body,
+		/(^|[\s;])(contain|transform|filter|backdrop-filter|perspective)\s*:|will-change:\s*[^;]*transform/
+	);
 	assert.doesNotMatch(
 		list.body,
 		/overflow/,

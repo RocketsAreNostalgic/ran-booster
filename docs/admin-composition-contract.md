@@ -989,6 +989,21 @@ card's server-rendered details section in the shared WordPress UI Dialog and
 returns it to the page on close; without JavaScript the fragment link reveals
 the same section in place. The section links to the selected release page.
 
+Each card is an inline-size container: its actions stack under the title and
+move to the inline-end column once the card is 512px wide.
+
+Owner-approved exception to "do not reimplement WordPress plugin-card layout":
+WordPress decides plugin-card layout from viewport media queries, which cannot
+follow a card's width in this grid, so card-width layout must override them.
+The layout overrides are limited to `.name`, `.desc > p`, `h3`,
+`.action-links`, `.plugin-action-buttons` (with its `li`, `.button` and `br`)
+and the `.plugin-card-bottom` flex row with its `.column-rating` and
+`.column-compatibility` items. They use logical properties only. The stacked
+layout is the unconditional base and the wide layout sits behind one
+`@container` rule. No viewport media query may touch the plugin-card layout.
+Card chrome that is not layout (the icon radius, the top inset, the link
+pointer target) and the badge, details-dialog and `#TB_` rules are unchanged.
+
 ### Extension details dialog
 
 The dialog follows the WordPress plugin-information layout: a banner header

@@ -41,6 +41,145 @@
 	inline-size: auto;
 	min-inline-size: 0;
 	margin: 0;
+	container: ran-booster-extension-card / inline-size;
+}
+
+/*
+ * Card layout follows the card's own width, not the viewport. WordPress
+ * switches plugin-card rules at viewport widths (1100px, 782px, 480px), which
+ * disagrees with this grid, where a card's width depends on its column count.
+ * Each card is an inline-size container: actions stack under the title by
+ * default, and sit in a right-hand column once the card is wide enough for the
+ * icon, the text and that column. Every property core sets on these elements
+ * is reset here with logical properties, so both layouts hold in either
+ * direction.
+ */
+
+.ran-booster-admin .ran-booster-extensions__grid .plugin-card .name,
+.ran-booster-admin .ran-booster-extensions__grid .plugin-card .desc > p {
+	margin-inline: 148px 0;
+}
+
+.ran-booster-admin .ran-booster-extensions__grid .plugin-card h3 {
+	margin-block: 0 var(--ran-booster-space-16);
+	margin-inline: 0;
+}
+
+.ran-booster-admin .ran-booster-extensions__grid .plugin-card .action-links {
+	position: static;
+	inset: auto;
+	inline-size: auto;
+	margin-block: 0 var(--ran-booster-space-12);
+	margin-inline: 148px 0;
+}
+
+.ran-booster-admin
+	.ran-booster-extensions__grid
+	.plugin-card
+	.plugin-action-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-8) var(--ran-booster-space-16);
+	float: none;
+	clear: none;
+	margin: 0;
+	padding: 0;
+	text-align: start;
+}
+
+.ran-booster-admin
+	.ran-booster-extensions__grid
+	.plugin-card
+	.plugin-action-buttons
+	li {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--ran-booster-space-4) var(--ran-booster-space-16);
+	margin: 0;
+}
+
+.ran-booster-admin
+	.ran-booster-extensions__grid
+	.plugin-card
+	.plugin-action-buttons
+	li
+	.button {
+	margin: 0;
+}
+
+/* The flex lists place the two links; the line break between them is inert. */
+.ran-booster-admin
+	.ran-booster-extensions__grid
+	.plugin-card
+	.plugin-action-buttons
+	br {
+	display: none;
+}
+
+/* Footer: status badges and compatibility share a row until they cannot. */
+.ran-booster-admin .ran-booster-extensions__grid .plugin-card-bottom {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--ran-booster-space-8) var(--ran-booster-space-16);
+}
+
+.ran-booster-admin
+	.ran-booster-extensions__grid
+	.plugin-card-bottom
+	:is(.column-rating, .column-compatibility) {
+	float: none;
+	clear: none;
+	inline-size: auto;
+	max-inline-size: none;
+	margin: 0;
+	text-align: start;
+}
+
+@container ran-booster-extension-card (min-inline-size: 512px) {
+	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .name,
+	.ran-booster-admin .ran-booster-extensions__grid .plugin-card .desc > p {
+		margin-inline: 148px 136px;
+	}
+
+	.ran-booster-admin
+		.ran-booster-extensions__grid
+		.plugin-card
+		.action-links {
+		position: absolute;
+		inset-block-start: var(--ran-booster-card-inset-block-start);
+		inset-inline: auto var(--ran-booster-space-24);
+		inline-size: 120px;
+		margin: 0;
+	}
+
+	.ran-booster-admin
+		.ran-booster-extensions__grid
+		.plugin-card
+		.plugin-action-buttons {
+		flex-direction: column;
+		align-items: flex-end;
+		text-align: end;
+	}
+
+	.ran-booster-admin
+		.ran-booster-extensions__grid
+		.plugin-card
+		.plugin-action-buttons
+		li {
+		flex-direction: column;
+		align-items: flex-end;
+	}
+
+	.ran-booster-admin
+		.ran-booster-extensions__grid
+		.plugin-card-bottom
+		.column-compatibility {
+		text-align: end;
+	}
 }
 
 /* Keep native plugin-card spacing through the static Card layers. */

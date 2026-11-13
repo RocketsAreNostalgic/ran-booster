@@ -358,6 +358,15 @@ This is the visible recovery contract: Booster records what happened, keeps the
 attempt row, and leaves ambiguous results for operator reconciliation instead of
 pretending they succeeded.
 
+When the runner throws after admission (a database or lock-storage failure, a
+PHP error), the coordinator logs only the exception class and code, then applies
+the confirmed-stopped transition itself: `worker_stopped` before mutation began,
+otherwise `interrupted`. A webhook attempt then follows the normal background
+failure notification. If the row cannot be written, the attempt stays `running`,
+nothing is recorded in Activity, and a manual action shows a fixed "left running"
+notice with the random reference and a link to the Reconcile stopped worker form.
+A row that is already terminal keeps the original failure.
+
 ## Background failure notifications
 
 After a webhook attempt reaches `failed` or `needs_attention`, Booster follows

@@ -28,6 +28,7 @@ use RAN\Deployment\DeploymentOutcome;
 use RAN\Deployment\DeploymentPolicy;
 use RAN\Deployment\DeploymentRequest;
 use RAN\Deployment\DeploymentState;
+use RAN\Deployment\DeploymentStorageFailure;
 use RAN\Deployment\WordPressWorkerWakeup;
 use RAN\ManagedRepository;
 use RAN\PackageSource;
@@ -692,6 +693,98 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		}
 	}
 
+	public function test_successful_coordinator_run_is_unchanged_and_logs_no_throw(): void {
+		$outcome                   = null;
+		$executor                  = new ParityCoreExecutor();
+		$executor->after_execution = function (): void {
+			$this->plugins->installed = $this->plugin( version: '2.0.0' );
+		};
+		$this->download_fixture( 'example' );
+		$lines = $this->captured_logs(
+			function () use ( $executor, &$outcome ): void {
+				$outcome = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ), executor: $executor )->execute_claimed( $this->running_update() );
+			}
+		);
+
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( DeploymentOutcome::CODE_DEPLOYED, $outcome->get_code() );
+		self::assertSame( DeploymentState::SUCCEEDED->value, $this->database->rows[0]['state'] );
+		self::assertStringNotContainsString( 'deployment execution threw', $lines );
+	}
+
+	public function test_lock_release_storage_failure_is_settled_as_interrupted_and_logged_by_class_and_code(): void {
+		$outcome = null;
+		$this->download_fixture( 'example' );
+		$this->database->fail_query_contains = 'DELETE FROM `wp_options`';
+		$lines                               = $this->captured_logs(
+			function () use ( &$outcome ): void {
+				$outcome = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) )->execute_claimed( $this->running_update() );
+			}
+		);
+
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $outcome->get_code() );
+		self::assertSame( DeploymentState::NEEDS_ATTENTION->value, $this->database->rows[0]['state'] );
+		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $this->database->rows[0]['outcome_code'] );
+		self::assertStringContainsString( 'deployment execution threw', $lines );
+		self::assertStringContainsString( '"exception_class":"RAN\\\\WPBranchUpdater\\\\V1\\\\Runtime\\\\BranchDeploymentLockStorageFailure"', $lines );
+		self::assertStringNotContainsString( 'database details must not escape', $lines );
+	}
+
+	public function test_mutation_start_record_failure_is_settled_as_worker_stopped_without_message_text(): void {
+		$outcome = null;
+		$this->download_fixture( 'example' );
+		$this->database->fail_query_contains = 'SET mutation_started_at';
+		$lines                               = $this->captured_logs(
+			function () use ( &$outcome ): void {
+				$outcome = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) )->execute_claimed( $this->running_update() );
+			}
+		);
+
+		self::assertInstanceOf( DeploymentOutcome::class, $outcome );
+		self::assertSame( DeploymentOutcome::CODE_WORKER_STOPPED, $outcome->get_code() );
+		self::assertSame( DeploymentState::FAILED->value, $this->database->rows[0]['state'] );
+		self::assertNull( $this->database->rows[0]['mutation_started_at'] );
+		self::assertStringContainsString( 'deployment execution threw', $lines );
+		self::assertStringNotContainsString( 'database details must not escape', $lines );
+	}
+
+	public function test_webhook_attempt_settled_after_a_throw_is_notified_once(): void {
+		$this->download_fixture( 'example' );
+		$this->database->fail_query_contains = 'DELETE FROM `wp_options`';
+		$notifier                            = new ParityFailureNotifier( $this->database );
+
+		$outcome = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ), $notifier )->execute_claimed( $this->running_webhook_update( str_repeat( 'a', 40 ) ) );
+
+		self::assertSame( DeploymentOutcome::CODE_INTERRUPTED, $outcome->get_code(), (string) $this->database->rows[0]['outcome_code'] );
+		self::assertCount( 1, $notifier->attempts );
+		self::assertSame( 'needs_attention', $notifier->stored_states[0] );
+	}
+
+	public function test_unwritable_attempt_row_is_reported_left_running_with_fixed_text_only(): void {
+		$this->download_fixture( 'example' );
+		$this->database->fail_query_contains = 'UPDATE `wp_ran_booster_deployment_attempts`';
+		$attempt                             = $this->running_update();
+		$coordinator                         = $this->coordinator( new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) ) );
+		$caught                              = null;
+		$lines                               = $this->captured_logs(
+			static function () use ( $coordinator, $attempt, &$caught ): void {
+				try {
+					$coordinator->execute_claimed( $attempt );
+				} catch ( DeploymentStorageFailure $failure ) {
+					$caught = $failure;
+				}
+			}
+		);
+
+		self::assertInstanceOf( DeploymentStorageFailure::class, $caught );
+		self::assertTrue( $caught->is_left_running() );
+		self::assertSame( $attempt->get_correlation_id(), $caught->get_active_correlation_id() );
+		self::assertSame( DeploymentState::RUNNING->value, $this->database->rows[0]['state'] );
+		self::assertStringContainsString( 'deployment attempt left running', $lines );
+		self::assertStringNotContainsString( 'database details must not escape', $lines );
+	}
+
 	public function test_single_file_plugin_is_rejected_before_provider_contact(): void {
 		$this->plugins->managed = array( 'fixture' => $this->plugin( identifier: 'example.php' ) );
 		$provider               = new ParityRepositoryProvider( new ParityProviderArchive( str_repeat( 'a', 40 ) ) );
@@ -735,6 +828,28 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		self::assertSame( 'failed', $notifier->stored_states[0] );
 		self::assertSame( DeploymentState::FAILED, $notifier->attempts[0]->get_state() );
 		self::assertSame( DeploymentOutcome::CODE_PROVIDER_CREDENTIAL_REJECTED, $notifier->attempts[0]->get_outcome()?->get_code() );
+	}
+
+	/** @param callable(): void $operation */
+	private function captured_logs( callable $operation ): string {
+		$directory = sys_get_temp_dir() . '/ran-booster-left-running-' . bin2hex( random_bytes( 8 ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+		mkdir( $directory, 0700 );
+		$capture = new TemporaryDebugCapture( $directory . '/secrets.json', static fn(): int => strtotime( '2026-07-23T12:00:00Z' ) );
+		$capture->start();
+		BoosterLogger::configure_capture( $capture );
+		try {
+			$operation();
+			return implode( "\n", array_column( $capture->snapshot()['entries'], 'line' ) );
+		} finally {
+			BoosterLogger::configure_capture( null );
+			foreach ( array_filter( (array) glob( $directory . '/*' ), 'is_string' ) as $file ) {
+				// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+				unlink( $file );
+			}
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir -- Native I/O controls the isolated test fixture without requiring WordPress filesystem bootstrap.
+			rmdir( $directory );
+		}
 	}
 
 	private function adoption_conflict_outcome( bool $exact ): string {
@@ -783,7 +898,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 		return $deployment->deploy();
 	}
 
-	private function coordinator( ParityRepositoryProvider $provider, ?DeploymentFailureNotifier $notifier = null ): DeploymentCoordinator {
+	private function coordinator( ParityRepositoryProvider $provider, ?DeploymentFailureNotifier $notifier = null, ?WordPressCorePackageExecutor $executor = null ): DeploymentCoordinator {
 		return new DeploymentCoordinator(
 			$this->attempts,
 			$this->plugins,
@@ -794,7 +909,7 @@ final class AdmittedBranchHostAdapterParityTest extends TestCase {
 			new WordPressUpdaterLock(),
 			$notifier,
 			$this->source_guard,
-			new ParityCoreExecutor()
+			$executor ?? new ParityCoreExecutor()
 		);
 	}
 

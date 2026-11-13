@@ -90,6 +90,13 @@ final class DeploymentAdminPresenter {
 		$package_slug = (string) $attempt['package_slug'];
 		$activity_url = admin_url( 'admin.php?page=ran-booster&tab=troubleshooting&panel=activity' )
 			. '&attempt=' . rawurlencode( (string) $attempt['id'] ) . '&reference=' . rawurlencode( $reference );
+		if ( $failure->is_left_running() ) {
+			/* translators: 1: random support reference, 2: activity record link. */
+			$message = sprintf( __( 'Deployment attempt left running. Reference: <code>%1$s</code>. <a href="%2$s">Reconcile it in Recent Activity</a>.', 'ran-booster' ), $reference, esc_url( $activity_url ) );
+			status_header( 500 );
+
+			return $this->outcome( 'error', 'ran_booster_deployment_left_running', $message, $reference, $operation );
+		}
 		if ( 'needs_attention' === $state ) {
 			/* translators: 1: package type, 2: package slug, 3: activity record link. */
 			$message = sprintf( __( 'Booster could not confirm how an earlier deployment of the %1$s %2$s ended, so it has paused retries. No deployment is currently running. <a href="%3$s">Check the package and allow another attempt</a>.', 'ran-booster' ), esc_html( $package_type ), esc_html( $package_slug ), esc_url( $activity_url ) );

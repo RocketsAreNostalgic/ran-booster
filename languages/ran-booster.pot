@@ -801,35 +801,41 @@ msgstr ""
 msgid "%1$s Reference: <code>%2$s</code>. <a href=\"%3$s\">View deployment activity</a>."
 msgstr ""
 
-#. translators: 1: package type, 2: package slug, 3: activity record link.
+#. translators: 1: random support reference, 2: activity record link.
 #: RAN/Admin/DeploymentAdminPresenter.php:95
+#, php-format
+msgid "Deployment attempt left running. Reference: <code>%1$s</code>. <a href=\"%2$s\">Reconcile it in Recent Activity</a>."
+msgstr ""
+
+#. translators: 1: package type, 2: package slug, 3: activity record link.
+#: RAN/Admin/DeploymentAdminPresenter.php:102
 #, php-format
 msgid "Booster could not confirm how an earlier deployment of the %1$s %2$s ended, so it has paused retries. No deployment is currently running. <a href=\"%3$s\">Check the package and allow another attempt</a>."
 msgstr ""
 
 #. translators: 1: package type, 2: package slug, 3: deployment state, 4: activity record link.
-#: RAN/Admin/DeploymentAdminPresenter.php:98
+#: RAN/Admin/DeploymentAdminPresenter.php:105
 #, php-format
 msgid "Booster is already tracking the %1$s %2$s in state %3$s. <a href=\"%4$s\">Review this deployment activity record</a> before trying again."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:247
-#: RAN/Admin/DeploymentAdminPresenter.php:283
-#: RAN/Admin/DeploymentAdminPresenter.php:297
+#: RAN/Admin/DeploymentAdminPresenter.php:254
+#: RAN/Admin/DeploymentAdminPresenter.php:290
+#: RAN/Admin/DeploymentAdminPresenter.php:304
 msgid "GitHub"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:247
-#: RAN/Admin/DeploymentAdminPresenter.php:283
-#: RAN/Admin/DeploymentAdminPresenter.php:297
+#: RAN/Admin/DeploymentAdminPresenter.php:254
+#: RAN/Admin/DeploymentAdminPresenter.php:290
+#: RAN/Admin/DeploymentAdminPresenter.php:304
 msgid "Bitbucket"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:275
+#: RAN/Admin/DeploymentAdminPresenter.php:282
 msgid "Older activity filters were cleared. Use Git provider and Activity subject to filter activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:297
+#: RAN/Admin/DeploymentAdminPresenter.php:304
 #: RAN/Admin/PackageAdminController.php:369
 #: RAN/Admin/PackageAdminController.php:388
 #: RAN/Admin/PortabilityController.php:631
@@ -843,7 +849,7 @@ msgstr ""
 msgid "Theme"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:297
+#: RAN/Admin/DeploymentAdminPresenter.php:304
 #: RAN/Admin/PackageAdminController.php:369
 #: RAN/Admin/PackageAdminController.php:388
 #: RAN/Admin/PortabilityController.php:631
@@ -857,28 +863,28 @@ msgstr ""
 msgid "Plugin"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:302
+#: RAN/Admin/DeploymentAdminPresenter.php:309
 msgid "That Git provider filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:305
+#: RAN/Admin/DeploymentAdminPresenter.php:312
 msgid "That Git provider is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:321
+#: RAN/Admin/DeploymentAdminPresenter.php:328
 msgid "Non-package events"
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:329
+#: RAN/Admin/DeploymentAdminPresenter.php:336
 msgid "That Activity subject filter was cleared."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:332
-#: RAN/Admin/DeploymentAdminPresenter.php:345
+#: RAN/Admin/DeploymentAdminPresenter.php:339
+#: RAN/Admin/DeploymentAdminPresenter.php:352
 msgid "That Activity subject is no longer available in retained activity."
 msgstr ""
 
-#: RAN/Admin/DeploymentAdminPresenter.php:348
+#: RAN/Admin/DeploymentAdminPresenter.php:355
 msgid "The Activity subject filter was cleared because it does not match the selected Git provider."
 msgstr ""
 

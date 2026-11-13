@@ -217,8 +217,11 @@ function build(options = {}) {
 			};
 		},
 		staticContainer(items) {
+			const marks = new Set();
 			const container = {
 				removed: false,
+				setAttribute: (name) => marks.add(name),
+				hasAttribute: (name) => marks.has(name),
 				items: [],
 				querySelectorAll: () => [...container.items],
 				querySelector: () => container.items[0] ?? null,
@@ -971,4 +974,52 @@ test('an item expiring or evicted never takes focus from a different item', () =
 	env.feedback.show('Four.');
 	assert.equal(env.notices.length, 3);
 	assert.equal(env.document.activeElement, inner);
+});
+
+test('a qualified result keeps its success static on every later pass', () => {
+	const env = boot();
+	env.target('inline-failure');
+	const container = env.staticContainer([
+		{ key: 's', intent: 'success', text: 'Saved.' },
+		{
+			key: 'w',
+			intent: 'warning',
+			text: 'Saved, with a warning.',
+			target: 'inline-failure',
+		},
+	]);
+	env.feedback.consume();
+	env.feedback.consume();
+	env.documentListeners.get('htmx:afterSwap')();
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Saved, with a warning.']
+	);
+	assert.equal(container.items.length, 1);
+});
+
+test('a repeated result refreshes the control focus returns to', () => {
+	const env = boot({
+		candidates: () => [],
+	});
+	const first = { ...env.target('first'), isConnected: false };
+	const second = env.target('second');
+	env.feedback.show('Saved.', { returnControl: first });
+	env.feedback.show('Saved.', { returnControl: second });
+	const inner = env.inside(env.notices[0]);
+	env.host.inside.add(inner);
+	env.document.activeElement = inner;
+	second.getClientRects = () => [{}];
+	second.getBoundingClientRect = () => ({
+		left: 1,
+		top: 1,
+		right: 2,
+		bottom: 2,
+	});
+	second.disabled = false;
+	second.focus = () => {
+		env.document.activeElement = second;
+	};
+	env.root.onRemove(env.notices[0].id);
+	assert.equal(env.document.activeElement, second);
 });

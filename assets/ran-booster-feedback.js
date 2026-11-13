@@ -217,6 +217,7 @@
 		}
 		const duplicate = state?.items.find((item) => item.id === id);
 		if (duplicate) {
+			state.returnControl = options.returnControl || state.returnControl;
 			duplicate.remaining = DURATION;
 			if (duplicate.timer) {
 				arm(duplicate);
@@ -285,9 +286,17 @@
 				const items = Array.from(
 					container.querySelectorAll('[data-feedback-key]')
 				);
-				const failure = items.some(
-					(item) => item.getAttribute('data-intent') !== 'success'
-				);
+				// A consumed failure leaves a mark so a later pass still keeps the
+				// success of a qualified result static.
+				const mark = 'data-ran-booster-feedback-qualified';
+				const failure =
+					container.hasAttribute(mark) ||
+					items.some(
+						(item) => item.getAttribute('data-intent') !== 'success'
+					);
+				if (failure) {
+					container.setAttribute(mark, '');
+				}
 				items.forEach((item) => {
 					const intent = item.getAttribute('data-intent');
 					const target = document.getElementById(

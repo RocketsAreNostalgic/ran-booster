@@ -37,7 +37,7 @@ final class GitHubWebhookReadinessMessageTest extends TestCase {
 		$evidence = new class( $matched ) implements AuthenticatedWebhookDeliveryEvidenceReader {
 			public function __construct( private bool $matched ) {}
 
-			public function latest_authenticated_delivery(): ?AuthenticatedWebhookDeliveryEvidence {
+			public function latest_authenticated_delivery(): AuthenticatedWebhookDeliveryEvidence {
 				return new AuthenticatedWebhookDeliveryEvidence( ProviderCode::parse( 'gh' ), '2026-08-13 12:00:00', $this->matched );
 			}
 		};

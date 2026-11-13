@@ -12,8 +12,8 @@ render another base view or marker. The old post-shell marker is removed.
 | Unrelated WordPress `notice`, `updated`, `error` | Native hooks and relocation, above the shell. Core does not capture or replay them. |
 | Credential expiry, deployment failures, secrets-runtime/database blockers, native-update warning | Existing explicit `BoosterNoticeScope` queue on eligible shell screens; existing feature audience, capability and urgency rules elsewhere. |
 | Development guidance | Existing shell-inline renderer and preference policy. |
-| Signed operation outcomes | Existing interaction flow and inline page result, or the relevant package heading/row/fragment. |
-| Form errors, webhook/release controls, source settings, managed-package failure rows | Existing inline feedback beside their controls. |
+| Signed operation outcomes | Existing interaction flow and inline page result, or the relevant package heading/row/fragment. Under the [feedback policy](feedback-policy.md), confirmed success moves to the snackbar and failures stay inline; this row describes the current behaviour until that plan lands. |
+| Form errors, webhook/release controls, source settings, managed-package failure rows | Existing inline feedback beside their controls. Failures stay inline under the feedback policy. |
 | Satellite missing/incompatible-Core warnings | Independent bootstrap warning; no new satellite shell dependency. |
 
 The queue, screen/capability decisions, feature controllers, preference transport,

@@ -1969,7 +1969,7 @@ final class TroubleshootingViewTest extends TestCase {
 		self::assertInstanceOf( \DOMElement::class, $subline_node );
 		self::assertSame( 'Checks credential and repository access only.', trim( (string) $xpath->evaluate( 'string(.)', $subline_node ) ) );
 		self::assertStringContainsString( 'placeholder="owner/repository (GitHub) or workspace/repository (Bitbucket)"', $html );
-		self::assertStringContainsString( 'class="ran-booster-data-table-wrap ran-booster-troubleshooting__table-wrap"', $html );
+		self::assertStringContainsString( 'class="ran-booster-data-table-wrap"', $html );
 		self::assertStringContainsString( '<table class="ran-booster-data-table ran-booster-data-table--rows ran-booster-troubleshooting__table">', $html );
 		self::assertStringContainsString( 'class="ran-wp-ui-text is-body-sm ran-wp-ui-badge is-stable-intent ran-booster-diagnostic-status ran-booster-diagnostic-status--pass"', $html );
 		self::assertStringContainsString( 'data-label="Status"', $html );

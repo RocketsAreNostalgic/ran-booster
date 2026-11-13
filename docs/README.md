@@ -33,6 +33,8 @@ reconciliation, Abilities and whole-site V3 remain outside this delivery.
 - [Administration composition contract](admin-composition-contract.md) covers
   Admin Shell continuity, page-local navigation, supported extension surfaces
   and [action placement](admin-composition-contract.md#action-placement).
+- [Feedback policy](feedback-policy.md) sets where action results appear: busy
+  state, snackbar success, persistent inline failure, and the producer inventory.
 - [Translating RAN Booster](translating.md) explains how to create, build, test,
   and submit PHP and JavaScript translations.
 - [Runtime dependency packaging policy](runtime-packaging-policy.md) records the

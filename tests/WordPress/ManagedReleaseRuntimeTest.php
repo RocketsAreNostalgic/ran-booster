@@ -3077,6 +3077,61 @@ final class ManagedReleaseRuntimeTest extends TestCase {
 		);
 	}
 
+	#[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+	#[\PHPUnit\Framework\Attributes\PreserveGlobalState( false )]
+	public function test_the_default_read_only_check_calls_the_updater_filter_once_a_minute_per_package(): void {
+		require_once __DIR__ . '/ReadOnlyCheckWordPressFunctions.php';
+		$report                                 = array(
+			'status'            => 'succeeded',
+			'reason'            => 'no_newer_candidate',
+			'offered'           => false,
+			'candidate_version' => null,
+		);
+		$GLOBALS['ran_booster_read_only_check'] = array(
+			'calls'      => array(),
+			'transients' => array(),
+			'answer'     => null,
+		);
+		$package                                = $this->package( 'plugin', self::NATIVE_PLUGIN, 'example', DeploymentPolicy::DISABLED );
+		[$registrar]                            = $this->native_plugin_registrar( $package );
+		$plugins                                = $this->createStub( PluginRepository::class );
+		$plugins->method( 'booster_plugin_from_file' )->willReturn( $package );
+		$store  = new RuntimeReleaseStore( array( "plugin\0" . self::NATIVE_PLUGIN => new ManagedReleaseConfiguration( 'example', 'example.php' ) ) );
+		$facade = $this->facade( $plugins, $this->createStub( ThemeRepository::class ), $store, $registrar, new RuntimeUpdaterLock(), $this->release_metadata_registry(), static fn (): bool => true, static fn (): bool => true, static function (): void {}, null, static fn (): bool => true );
+		$state  = &$GLOBALS['ran_booster_read_only_check'];
+
+		// An updater that does not answer is not throttled, and falls back to the native path.
+		self::assertSame( 'release_refreshed', $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' )->code() );
+		self::assertSame( array(), $state['transients'] );
+		self::assertSame( array( 'ran_wp_release_updater_check_releases_v1', null, 'plugin', self::NATIVE_PLUGIN ), $state['calls'][0] );
+
+		$state['answer'] = $report;
+		$first           = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+		$second          = $facade->refresh( 'plugin', self::NATIVE_PLUGIN, 1, 'nonce' );
+
+		self::assertCount( 2, $state['calls'], 'The second click inside the minute never reaches the updater.' );
+		self::assertCount( 1, $state['transients'] );
+		self::assertSame( 60, current( $state['transients'] ) );
+		// No observation was emitted by this double, so the first answer is not trusted as up to date.
+		self::assertSame( 'refresh_unchecked', $first->code() );
+		self::assertSame( 'refresh_recent', $second->code() );
+		self::assertSame( 'cooldown_active', $second->check_reason() );
+	}
+
+	public function test_the_vendored_updater_still_registers_the_read_only_check_this_adoption_consumes(): void {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads a vendored local source file, not a remote URL.
+		$source = (string) file_get_contents( dirname( __DIR__, 2 ) . '/vendor/ran/wp-release-updater/src/WordPress/NativePackageUpdater.php' );
+
+		self::assertStringContainsString( "add_filter( 'ran_wp_release_updater_check_releases_v1'", $source );
+		foreach ( array( 'status', 'reason', 'policy', 'relationship', 'installed_version', 'candidate_version', 'candidate_validation_code' ) as $key ) {
+			self::assertStringContainsString( "'$key'", $source );
+		}
+		self::assertMatchesRegularExpression( "/'offered'\s*=>\s*false/", $source );
+		foreach ( array( 'newer_release_observed', 'runtime_busy', 'policy_forced_off' ) as $reason ) {
+			self::assertStringContainsString( "'$reason'", $source );
+		}
+	}
+
 	public function test_facade_projects_neutral_target_offers_and_validation_failures(): void {
 		$package = $this->package( 'theme', 'example-theme', 'example-theme', DeploymentPolicy::MANUAL );
 		$plugins = $this->createStub( PluginRepository::class );

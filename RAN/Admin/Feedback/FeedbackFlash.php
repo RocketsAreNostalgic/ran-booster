@@ -113,6 +113,7 @@ final class FeedbackFlash {
 					: __( 'Newer release available. Updates are off for this package.', 'ran-booster' ),
 				'',
 			),
+			'refresh_recent'             => array( 'info', __( 'Checked a moment ago.', 'ran-booster' ), '' ),
 			'refresh_current_while_off'  => array( 'info', __( 'Checked: no newer release. Updates are off for this package.', 'ran-booster' ), '' ),
 			'refresh_skipped_disabled'   => array( 'info', __( 'Check not run. Updates are off for this package.', 'ran-booster' ), __( 'Nothing is wrong. Turn updates on in the package settings to check for releases.', 'ran-booster' ) ),
 			'refresh_skipped_forced_off' => array( 'info', __( 'Check not run. Site configuration turns updates off.', 'ran-booster' ), __( 'Nothing is wrong. Site configuration blocks updates for every package; change it there to allow checks.', 'ran-booster' ) ),
@@ -125,7 +126,7 @@ final class FeedbackFlash {
 	}
 
 	private static function valid_version( string $version ): bool {
-		return 1 === preg_match( '/\A[0-9A-Za-z][0-9A-Za-z.+_-]{0,63}\z/', $version );
+		return 1 === preg_match( '/\A[0-9A-Za-z][0-9A-Za-z._-]{0,63}\z/', $version );
 	}
 
 	/** @return array{0: 'success'|'info'|'error'|'warning', 1: string, 2?: string}|null Intent, fixed Core copy and optional inline target for a closed code. */

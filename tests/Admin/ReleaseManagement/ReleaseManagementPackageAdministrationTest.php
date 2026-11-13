@@ -1830,6 +1830,9 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		return array(
 			'disabled'     => array( 'refresh_skipped_disabled', 'info', 'Check not run. Updates are off for this package.', 'Nothing is wrong. Turn updates on in the package settings to check for releases.' ),
 			'forced off'   => array( 'refresh_skipped_forced_off', 'info', 'Check not run. Site configuration turns updates off.', 'Site configuration blocks updates for every package' ),
+			'recent'       => array( 'refresh_recent', 'info', 'Checked a moment ago.', '' ),
+			'newer'        => array( 'refresh_newer_while_off', 'info', 'Newer release available. Updates are off for this package.', '' ),
+			'current'      => array( 'refresh_current_while_off', 'info', 'Checked: no newer release. Updates are off for this package.', '' ),
 			'not admitted' => array( 'refresh_unchecked', 'warning', 'Releases were not checked. Use Check releases to retry.', '' ),
 			'rejected'     => array( 'refresh_rejected', 'warning', 'The newest release cannot be used.', 'Activity records the reason.' ),
 			'failed'       => array( 'refresh_check_failed', 'error', 'The release check failed.', 'see Activity.' ),
@@ -1865,6 +1868,31 @@ final class ReleaseManagementPackageAdministrationTest extends TestCase {
 		self::assertStringContainsString( $text, $inline );
 		self::assertStringContainsString( $detail, $inline );
 		self::assertStringNotContainsString( 'notice-success', $inline );
+	}
+
+	public function test_a_newer_release_found_while_updates_are_off_names_its_version_in_the_snackbar_and_the_notice(): void {
+		$GLOBALS['ran_booster_feedback_test'] = array( 'meta' => array() );
+		$tracking                             = new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status( 'release_asset' ) );
+		$tracking->refresh_result             = \RAN\AddOn\ReleaseTracking\ReleaseTrackingResult::failed( 'refresh_newer_while_off', 'Published release information was not offered.', detail: '2.0.0-rc.1', check_reason: 'newer_release_observed' );
+		$controls                             = ReleaseManagementFixture::controls( $tracking );
+		$url                                  = $controls->process_admin_post_request( 'refresh', $this->request( 'refresh' ) );
+		$query                                = (string) parse_url( $url, PHP_URL_QUERY ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url -- Local URL fixture.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Parsing the already signed local PRG fixture.
+		parse_str( $query, $_GET );
+
+		ob_start();
+		\RAN\Admin\Feedback\FeedbackFlash::render();
+		self::assertStringContainsString( '>Newer release 2.0.0-rc.1 available. Updates are off for this package.</div>', (string) ob_get_clean() );
+		ob_start();
+		$controls->render_operation_notice();
+		self::assertStringContainsString( 'Newer release 2.0.0-rc.1 available. Updates are off for this package.', (string) ob_get_clean() );
+
+		// A tampered version breaks the signature, so the signed notice does not render.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Tampering with the parsed local fixture on purpose.
+		$_GET['ran_booster_release_detail'] = '9.9.9';
+		ob_start();
+		$controls->render_operation_notice();
+		self::assertStringNotContainsString( '9.9.9', (string) ob_get_clean() );
 	}
 
 	public function test_a_confirmed_check_releases_result_travels_as_a_flash_not_as_query_arguments(): void {

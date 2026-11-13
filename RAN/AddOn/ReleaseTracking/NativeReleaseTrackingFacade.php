@@ -877,8 +877,9 @@ final class NativeReleaseTrackingFacade implements ReleaseTrackingFacade {
 			$status = 'skipped';
 			$reason = 'check_not_observed';
 		}
-		$version = is_string( $report['candidate_version'] ?? null ) ? ReleaseTrackingPreflight::detail( $report['candidate_version'] ) : '';
+		$version = is_string( $report['candidate_version'] ?? null ) ? ReleaseTrackingPreflight::detail( explode( '+', $report['candidate_version'], 2 )[0] ) : '';
 		$code    = match ( true ) {
+			'cooldown_active' === $reason => 'refresh_recent',
 			'policy_forced_off' === $reason => 'refresh_skipped_forced_off',
 			'policy_disabled' === $reason => 'refresh_skipped_disabled',
 			'succeeded' === $status && 'newer_release_observed' === $reason => 'refresh_newer_while_off',

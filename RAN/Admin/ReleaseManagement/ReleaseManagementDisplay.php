@@ -967,6 +967,7 @@ final class ReleaseManagementDisplay {
 			'refresh_failed',
 			'refresh_skipped_disabled',
 			'refresh_skipped_forced_off',
+			'refresh_recent',
 			'refresh_newer_while_off',
 			'refresh_current_while_off',
 			'refresh_rejected',

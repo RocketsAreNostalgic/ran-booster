@@ -12,8 +12,8 @@ render another base view or marker. The old post-shell marker is removed.
 | Unrelated WordPress `notice`, `updated`, `error` | Native hooks and relocation, above the shell. Core does not capture or replay them. |
 | Credential expiry, deployment failures, secrets-runtime/database blockers, native-update warning | Existing explicit `BoosterNoticeScope` queue on eligible shell screens; existing feature audience, capability and urgency rules elsewhere. |
 | Development guidance | Existing shell-inline renderer and preference policy. |
-| Signed operation outcomes | Existing interaction flow and inline page result, or the relevant package heading/row/fragment. |
-| Form errors, webhook/release controls, source settings, managed-package failure rows | Existing inline feedback beside their controls. |
+| Signed operation outcomes | Existing interaction flow and inline page result, or the relevant package heading/row/fragment. Under the [feedback policy](feedback-policy.md), confirmed success moves to the snackbar and failures stay inline; this row describes the current behaviour until that plan lands. |
+| Form errors, webhook/release controls, source settings, managed-package failure rows | Existing inline feedback beside their controls. Failures stay inline under the feedback policy. |
 | Satellite missing/incompatible-Core warnings | Independent bootstrap warning; no new satellite shell dependency. |
 
 The queue, screen/capability decisions, feature controllers, preference transport,
@@ -82,3 +82,32 @@ than substituting source checks for installed acceptance. Run `composer check`,
 `pnpm check`, archive verification and runtime proofs. The archive must exclude
 the build-time shell package and development vendor tree. Do not merge, publish,
 deploy to retained sites or close #560 from this pilot.
+
+## Feedback flash (static fallback, #755 P1)
+
+`RAN\Admin\Feedback\FeedbackFlash` carries a confirmed click result to the next
+Booster screen without putting display text in a URL. It is Core-internal, not an
+add-on seam, and the first producer is Check releases.
+
+- **Storage.** One user-meta row, `_ran_booster_feedback_flash`, per user:
+  `{site, at, codes}`. `codes` are closed Core codes (at most three); no message,
+  URL, path or other caller data can enter it, and unknown codes are dropped on
+  write and on read. Uninstall deletes the key with the other user-meta keys.
+- **Lifetime.** Read and deleted on the next Booster shell render
+  (`views/base.php`, after the shell notices). It expires after 60 seconds. The
+  exact-value delete is the claim, so with two tabs only one prints it.
+- **Scope.** A flash belongs to the user and the site that produced it (the
+  network admin uses the main site id). Another user, another site, a logged-out
+  request or a user without `manage_options` prints nothing and leaves it.
+- **Markup.** One container, `div.ran-booster-feedback[data-ran-booster-feedback]`,
+  holding `div.ran-booster-feedback__item` items with `data-feedback-key` (the
+  code), `data-intent` (`success|error|warning`) and `role` (`status`, or `alert`
+  for `error`), whose text is the fixed Core copy resolved from the code with
+  `__()`. The client host converts these items into snackbars and removes the
+  element; without JavaScript it is the visible result.
+- **Copy.** The code-to-copy map lives in `FeedbackFlash`. Each sentence is one
+  whole translatable string. A test asserts the Check releases fallback and the
+  inline release status end with the same outcome sentence, so they cannot drift.
+- **Limits.** With the settings-return hash anchor the static flash prints at the
+  top of the page, above the viewport, as the old top notice did. A failed
+  `update_user_meta()` silently skips the flash; the inline status remains.

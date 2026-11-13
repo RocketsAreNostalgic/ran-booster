@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace RAN\Admin\ReleaseManagement;
 
 use RAN\AddOn\ReleaseTracking\ReleaseTrackingStatus;
+use RAN\Admin\Feedback\FeedbackFlash;
 use RAN\Admin\PackageDisplayProjection;
 
 /** @internal Contributes release-specific state and actions to Core-owned package pages. */
@@ -1101,7 +1102,7 @@ final class ReleaseManagementDisplay {
 	private function refreshed_result_message( ?ReleaseTrackingStatus $status ): string {
 		return null === $status
 			? __( 'The release check completed, but its version result is unavailable. Review the package status below.', 'ran-booster' )
-			: __( 'Release check complete.', 'ran-booster' );
+			: FeedbackFlash::release_checked();
 	}
 
 	/** @param ReleaseTrackingStatus $status */
@@ -1119,7 +1120,7 @@ final class ReleaseManagementDisplay {
 
 		return sprintf(
 			/* translators: %s is the installed version. */
-			__( 'Version %s is installed; no newer eligible release was found.', 'ran-booster' ),
+			__( 'Version %s is installed. No newer eligible release was found.', 'ran-booster' ),
 			'' !== $installed ? $installed : __( 'unknown', 'ran-booster' )
 		);
 	}

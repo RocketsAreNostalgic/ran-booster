@@ -127,7 +127,6 @@ function scenario(initial, desired, focus, focusOnly = false) {
 			.focus();
 	}
 	const outside = nav.doc.body.appendChild(new Node('button'));
-	let snackbarDisposed = false;
 	const feedbackSource = fs.readFileSync(
 		new URL(
 			'../../assets/ran-booster-enhanced-mutations.js',
@@ -151,13 +150,6 @@ function scenario(initial, desired, focus, focusOnly = false) {
 			},
 		},
 		window: nav.window,
-		snackbar: { host: outside, region: outside },
-		restoreSnackbarFocus: () => {
-			snackbarDisposed = true;
-		},
-		disposeSnackbar: () => {
-			snackbarDisposed = true;
-		},
 	});
 	if (focus === 'outside') {
 		outside.focus();
@@ -232,7 +224,6 @@ function scenario(initial, desired, focus, focusOnly = false) {
 	assert.equal(cleanupEvents[0].detail.elt, shell);
 	assert.equal(cleanupEvents[0].bubbles, true);
 	assert.equal(shell.contains(outside), false);
-	assert.equal(snackbarDisposed, false);
 	const focusAfterSwap = nav.doc.activeElement;
 	const focusWasConnected = Boolean(focusAfterSwap?.isConnected);
 	const focusHref = focusAfterSwap?.getAttribute?.('href');

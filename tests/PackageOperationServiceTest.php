@@ -1494,6 +1494,45 @@ final class PackageOperationServiceTest extends TestCase {
 		unset( $GLOBALS['ran_booster_test_status_header'] );
 	}
 
+	public function test_dashboard_tells_the_person_a_started_attempt_was_left_running(): void {
+		$coordinator          = new OperationCoordinator();
+		$coordinator->failure = DeploymentStorageFailure::left_running(
+			array(
+				'id'             => 44,
+				'correlation_id' => str_repeat( 'f', 32 ),
+				'state'          => 'running',
+				'package_type'   => 'plugin',
+				'package_slug'   => 'example',
+			)
+		);
+		$dashboard            = $this->dashboard( $coordinator );
+
+		self::assertFalse( $dashboard->post_package_operation( 'update-plugin', $this->input( 'update-plugin' ) ) );
+		self::assertSame( 409, $GLOBALS['ran_booster_test_status_header'] );
+		self::assertCount( 1, $dashboard->messages );
+		self::assertSame( 'error', $dashboard->messages[0]['type'] );
+		self::assertSame( 'ran_booster_deployment_left_running', $dashboard->messages[0]['code'] );
+		self::assertStringContainsString( 'Deployment attempt left running.', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'Reference: <code>' . str_repeat( 'f', 32 ) . '</code>', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'attempt=44', $dashboard->messages[0]['message'] );
+		self::assertStringContainsString( 'Reconcile it in Recent Activity', $dashboard->messages[0]['message'] );
+		self::assertStringNotContainsString( 'could not safely store', $dashboard->messages[0]['message'] );
+		unset( $GLOBALS['ran_booster_test_status_header'] );
+	}
+
+	public function test_pre_admission_failure_does_not_claim_an_attempt_was_left_running(): void {
+		$coordinator          = new OperationCoordinator();
+		$coordinator->failure = new \RuntimeException( 'https://user:token@example.com/private /var/www/secret' );
+		$dashboard            = $this->dashboard( $coordinator );
+
+		self::assertFalse( $dashboard->post_package_operation( 'update-plugin', $this->input( 'update-plugin' ) ) );
+		self::assertSame( 'ran_booster_manual_action_failed', $dashboard->messages[0]['code'] );
+		self::assertStringNotContainsString( 'left running', $dashboard->messages[0]['message'] );
+		self::assertStringNotContainsString( 'token', $dashboard->messages[0]['message'] );
+		self::assertStringNotContainsString( '/var/www', $dashboard->messages[0]['message'] );
+		unset( $GLOBALS['ran_booster_test_status_header'] );
+	}
+
 	public function test_dashboard_explains_that_an_unresolved_deployment_is_not_running(): void {
 		$coordinator          = new OperationCoordinator();
 		$coordinator->failure = DeploymentStorageFailure::contention(

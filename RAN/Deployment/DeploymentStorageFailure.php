@@ -15,6 +15,7 @@ final class DeploymentStorageFailure extends RuntimeException {
 	private const DELIVERY_CONFLICT_CODE    = 2;
 	private const DATABASE_UNSUPPORTED_CODE = 3;
 	private const CAPACITY_EXHAUSTED_CODE   = 4;
+	private const LEFT_RUNNING_CODE         = 5;
 
 	/** @var array<string, bool|int|string|null>|null */
 	private ?array $active_attempt = null;
@@ -46,6 +47,18 @@ final class DeploymentStorageFailure extends RuntimeException {
 			$active_attempt,
 			array_flip( array( 'id', 'correlation_id', 'state', 'package_type', 'package_slug' ) )
 		);
+
+		return $failure;
+	}
+
+	/** @param array<string, bool|int|string|null> $attempt */
+	public static function left_running( array $attempt ): self {
+		$active = self::contention( $attempt )->active_attempt;
+		if ( null === $active ) {
+			return self::inconsistent();
+		}
+		$failure                 = new self( 'RAN Booster left a deployment attempt running.', self::LEFT_RUNNING_CODE );
+		$failure->active_attempt = $active;
 
 		return $failure;
 	}
@@ -83,6 +96,10 @@ final class DeploymentStorageFailure extends RuntimeException {
 
 	public function is_database_unsupported(): bool {
 		return self::DATABASE_UNSUPPORTED_CODE === $this->getCode();
+	}
+
+	public function is_left_running(): bool {
+		return self::LEFT_RUNNING_CODE === $this->getCode();
 	}
 
 	public function is_capacity_exhausted(): bool {

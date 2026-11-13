@@ -3662,8 +3662,7 @@ msgstr ""
 #: RAN/Troubleshooting/TroubleshootingService.php:283
 #: RAN/Troubleshooting/TroubleshootingService.php:287
 #: RAN/Troubleshooting/TroubleshootingService.php:288
-#: RAN/Troubleshooting/TroubleshootingService.php:341
-#: RAN/Troubleshooting/TroubleshootingService.php:344
+#: RAN/Troubleshooting/TroubleshootingService.php:357
 #: views/debug-capture.php:58
 #: views/onboarding.php:98
 #: views/settings-storage.php:26

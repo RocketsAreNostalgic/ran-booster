@@ -330,10 +330,17 @@ cell's short label out of band, and the enhanced-mutation script shows the row
 while its Notice is visible. Webhook secrets print no result row. Headers are
 13px/600 on the Card surface, record groups alternate the subtle surface with
 one divider between groups, so a hidden result row never shifts the stripe,
-and the wrapper takes the inset radius. Cells carry `data-label` and stack
-through the shared data-table rules at 782px and below, with the result cell a
-full-width block under the stacked fields; only the actions cell stays out of
-the label grid, with its Buttons in an inner `.ran-booster-actions` row so the
+and the wrapper takes the inset radius. The frame uses `overflow: clip`, so a
+striped row never paints over its rounded corners. It is `clip` and not
+`hidden` because the frame contract test forbids `hidden` on the frame (the
+commit that added the test records no further reason), and `clip` does not
+make the frame a scroll container. Because the frame clips at its edge, the
+focus ring of any focusable child at the edge must stay inside it: the
+focusable table region on the Transporter Package list takes
+`outline-offset: -2px`, and a new focusable child needs the same inset ring.
+Cells carry `data-label` and stack through the shared data-table rules at 782px
+and below, with the result cell a full-width block under the stacked fields;
+only the actions cell stays out of the label grid, with its Buttons in an inner `.ran-booster-actions` row so the
 cell remains a real table cell. Column widths stay on the `--access` and
 `--webhook` modifiers, and their cells are vertically centred like Activity;
 other data tables keep the shared top alignment.
@@ -343,8 +350,10 @@ Troubleshooting diagnostics table use the same frame and the `--rows`
 modifier, without `widefat`. Every data-table header is 13px/600, start-aligned
 on the Card surface; a `th scope="row"` in a body row reads as a normal cell.
 The diagnostics table keeps one `tbody` per result group with the strong
-divider between groups, and each group restarts the row stripe. In stacked
-cells every child sits in the value column.
+divider between groups, and each group restarts the row stripe. Its results
+Card holds the heading, the count and the frame directly, with the frame 24px
+(`--ran-booster-card-gap`) below the heading block as in Activity. In stacked cells every child sits in
+the value column.
 
 The Managed Plugins and Managed Themes table keeps its native `wp-list-table
 widefat plugins` structure: two rows per package, the row-header checkbox

@@ -310,158 +310,6 @@
 		let sourceRequest = null;
 		const requests = new WeakMap();
 		let armedSuccess = null;
-		let snackbar = null;
-
-		function disposeSnackbar() {
-			if (!snackbar) {
-				return;
-			}
-			const previous = snackbar;
-			snackbar = null;
-			if (previous.reposition) {
-				window.removeEventListener('resize', previous.reposition);
-				previous.observer?.disconnect();
-			}
-			previous.root.unmount();
-			previous.host.remove();
-		}
-
-		function restoreSnackbarFocus(removing = null) {
-			if (
-				!snackbar?.host.contains(
-					snackbar.host.ownerDocument.activeElement
-				)
-			) {
-				return;
-			}
-			const candidates = [
-				...(snackbar.returnControl ? [snackbar.returnControl] : []),
-				...document.querySelectorAll(
-					'[data-ran-booster-package-settings-save]'
-				),
-				...document.querySelectorAll(
-					'#ran-booster-save-numeric-bottom'
-				),
-				...document.querySelectorAll(
-					'#ran-booster-general-region [data-ran-booster-ui-switch-mount] button[role="switch"], #ran-booster-general-region input[type="number"], #ran-booster-general-region input[role="switch"]'
-				),
-				...document.querySelectorAll('#wpadminbar a[href]'),
-			];
-			for (const candidate of candidates) {
-				if (
-					!candidate.isConnected ||
-					candidate.disabled ||
-					removing?.contains?.(candidate) ||
-					!candidate.getClientRects().length
-				) {
-					continue;
-				}
-				const rect = candidate.getBoundingClientRect();
-				if (
-					rect.left < 0 ||
-					rect.top < 0 ||
-					rect.right > window.innerWidth ||
-					rect.bottom > window.innerHeight
-				) {
-					continue;
-				}
-				candidate.focus({ preventScroll: true });
-				if (snackbar.host.ownerDocument.activeElement === candidate) {
-					break;
-				}
-			}
-		}
-
-		function presentGeneralSnackbar(
-			message,
-			region = document.getElementById('ran-booster-general-region'),
-			returnControl = null
-		) {
-			const element = window.wp?.element;
-			const List = window.wp?.components?.SnackbarList;
-			if (
-				!element?.createRoot ||
-				!element.flushSync ||
-				!List ||
-				!region
-			) {
-				return false;
-			}
-			const probe = document.createElement('div');
-			probe.className = 'components-snackbar';
-			probe.style.cssText = 'position:fixed;visibility:hidden';
-			document.body.append(probe);
-			const style = window.getComputedStyle(probe);
-			const cssReady =
-				parseFloat(style.paddingLeft) > 0 &&
-				style.backgroundColor !== 'rgba(0, 0, 0, 0)' &&
-				style.backgroundColor !== 'transparent';
-			probe.remove();
-			if (!cssReady) {
-				return false;
-			}
-			restoreSnackbarFocus();
-			disposeSnackbar();
-			const host = document.createElement('div');
-			host.className = 'ran-booster-general-snackbar';
-			region.insertAdjacentElement('afterend', host);
-			try {
-				snackbar = {
-					host,
-					region,
-					returnControl,
-					root: element.createRoot(host),
-				};
-			} catch {
-				host.remove();
-				return false;
-			}
-
-			try {
-				const current = snackbar;
-				element.flushSync(() =>
-					current.root.render(
-						element.createElement(List, {
-							notices: [{ id: 'general-save', content: message }],
-							onRemove: () => {
-								if (snackbar !== current) {
-									return;
-								}
-								restoreSnackbarFocus();
-								disposeSnackbar();
-							},
-						})
-					)
-				);
-				if (current.host.querySelector('.components-snackbar')) {
-					current.reposition = () => {
-						const rect = region.getBoundingClientRect();
-						current.host.style.setProperty(
-							'--ran-booster-snackbar-center',
-							`${rect.left + rect.width / 2}px`
-						);
-					};
-					current.reposition();
-					window.addEventListener('resize', current.reposition);
-					if (window.ResizeObserver) {
-						current.observer = new window.ResizeObserver(
-							current.reposition
-						);
-						current.observer.observe(region);
-						const content = document.getElementById('wpcontent');
-						if (content) {
-							current.observer.observe(content);
-						}
-					}
-					return true;
-				}
-				disposeSnackbar();
-				return false;
-			} catch {
-				disposeSnackbar();
-				return false;
-			}
-		}
 
 		function captureRequest(event, form) {
 			const detail = event.detail;
@@ -1135,16 +983,6 @@
 			function (event) {
 				const element = event.target;
 				if (
-					snackbar &&
-					(element === snackbar.host ||
-						element?.contains?.(snackbar.host) ||
-						element === snackbar.region ||
-						element?.contains?.(snackbar.region))
-				) {
-					restoreSnackbarFocus(element);
-					disposeSnackbar();
-				}
-				if (
 					element?.matches?.(
 						'[data-ran-booster-credential-validation]'
 					)
@@ -1362,10 +1200,7 @@
 				) {
 					save.consumed = true;
 					const message = save.saveNotice.textContent.trim();
-					if (
-						message &&
-						presentGeneralSnackbar(message, save.saveRegion)
-					) {
+					if (message && window.ranBoosterFeedback?.show(message)) {
 						save.saveNotice.remove();
 					} else {
 						window.ranBoosterAnnounce(message);
@@ -1423,11 +1258,9 @@
 							)) ||
 						submitters.get(confirmed.form);
 					if (
-						presentGeneralSnackbar(
-							message,
-							confirmed.general ? undefined : region,
-							control
-						)
+						window.ranBoosterFeedback?.show(message, {
+							returnControl: control,
+						})
 					) {
 						return;
 					}
@@ -1518,12 +1351,6 @@
 			});
 		});
 
-		const clearSnackbar = function () {
-			restoreSnackbarFocus();
-			disposeSnackbar();
-		};
-		window.addEventListener('pagehide', clearSnackbar);
-		document.addEventListener('htmx:beforeHistorySave', clearSnackbar);
 		window.ranBoosterEnhancedMutationFeedbackInitialized = true;
 	}
 })();

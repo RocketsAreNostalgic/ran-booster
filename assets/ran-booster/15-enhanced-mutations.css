@@ -18,54 +18,159 @@
 	pointer-events: none;
 }
 
-/* Keep confirmed saves in the viewport without moving their forms. */
-.ran-booster-general-snackbar .components-snackbar-list {
-	position: fixed;
-	z-index: 100;
-	right: auto;
-	inset-block-end: max(80px, calc(env(safe-area-inset-bottom) + 24px));
+/*
+ * The one snackbar host (ran-booster-feedback.js). It sits at the
+ * bottom of the viewport, over the Booster content column and never moves
+ * the layout. The host is a child of #wpcontent and the list leaves its
+ * inline offset unset, so the list keeps the static position at the start of
+ * the content column: no measuring, and the writing direction mirrors it.
+ */
+
+.ran-booster-snackbar-host .components-snackbar-list {
 	--ran-booster-snackbar-gutter: max(
-		16px,
+		var(--ran-booster-space-16),
 		env(safe-area-inset-left),
 		env(safe-area-inset-right)
 	);
-	inline-size: min(
-		360px,
-		calc(100vw - 2 * var(--ran-booster-snackbar-gutter))
+
+	position: fixed;
+	z-index: 100;
+	inset-block-end: max(
+		var(--ran-booster-space-24),
+		calc(env(safe-area-inset-bottom) + var(--ran-booster-space-16))
 	);
-	left: clamp(
-		var(--ran-booster-snackbar-gutter),
-		calc(
-			var(--ran-booster-snackbar-center, 50vw) -
-				min(180px, 50vw - var(--ran-booster-snackbar-gutter))
-		),
-		calc(
-			100vw - var(--ran-booster-snackbar-gutter) -
-				min(360px, 100vw - 2 * var(--ran-booster-snackbar-gutter))
-		)
-	);
-	max-block-size: calc(100vh - 140px);
-	overflow-y: auto;
-	pointer-events: none;
+	max-inline-size: min(600px, 100vw - 2 * var(--ran-booster-snackbar-gutter));
 }
 
-.ran-booster-general-snackbar .components-snackbar-list__notice-container {
-	display: flex;
-	justify-content: center;
-}
-
-.ran-booster-general-snackbar .components-snackbar {
-	pointer-events: auto;
-}
-
-@media (min-width: 783px) {
-	.ran-booster-general-snackbar .components-snackbar-list {
-		--ran-booster-snackbar-gutter: max(
-			24px,
-			env(safe-area-inset-left),
-			env(safe-area-inset-right)
-		);
+@media (max-width: 782px) {
+	.ran-booster-snackbar-host .components-snackbar-list {
+		inset-inline: var(--ran-booster-snackbar-gutter);
+		inline-size: auto;
+		max-inline-size: none;
 	}
+}
+
+.ran-booster-snackbar-host .components-snackbar-list__notice-container {
+	display: flex;
+	justify-content: flex-start;
+}
+
+/*
+ * Intent styling is the @wordpress/ui Notice treatment (weak surface, content
+ * and icon tokens, the same content tokens the Badge uses) taken from the same
+ * --wpds tokens, so the colour scheme follows the rest of the admin and forced
+ * colours restyle the border. WordPress's black default is replaced. The border uses the strong
+ * stroke token, which gives the floating surface a 3:1 boundary.
+ */
+
+.ran-booster-snackbar-host .components-snackbar {
+	box-sizing: border-box;
+	padding: var(--wpds-dimension-padding-md);
+	border: 1px solid var(--ran-booster-snackbar-stroke);
+	border-radius: var(--wpds-border-radius-lg);
+	box-shadow: 0 2px 8px var(--ran-booster-color-black-a15);
+	backdrop-filter: none;
+	background: var(--ran-booster-snackbar-surface);
+	color: var(--ran-booster-snackbar-text);
+	font-family: var(--wpds-typography-font-family-body);
+	font-size: var(--wpds-typography-font-size-md);
+	line-height: var(--wpds-typography-line-height-sm);
+	overflow-wrap: anywhere;
+}
+
+.ran-booster-snackbar-host .components-snackbar.ran-booster-snackbar--success {
+	--ran-booster-snackbar-surface: var(
+		--wpds-color-background-surface-success-weak
+	);
+	--ran-booster-snackbar-stroke: var(
+		--wpds-color-stroke-surface-success-strong
+	);
+	--ran-booster-snackbar-text: var(--wpds-color-foreground-content-success);
+	--ran-booster-snackbar-icon: var(
+		--wpds-color-foreground-content-success-weak
+	);
+}
+
+.ran-booster-snackbar-host .components-snackbar.ran-booster-snackbar--error {
+	--ran-booster-snackbar-surface: var(
+		--wpds-color-background-surface-error-weak
+	);
+	--ran-booster-snackbar-stroke: var(
+		--wpds-color-stroke-surface-error-strong
+	);
+	--ran-booster-snackbar-text: var(--wpds-color-foreground-content-error);
+	--ran-booster-snackbar-icon: var(
+		--wpds-color-foreground-content-error-weak
+	);
+}
+
+.ran-booster-snackbar-host .components-snackbar.ran-booster-snackbar--warning {
+	--ran-booster-snackbar-surface: var(
+		--wpds-color-background-surface-warning-weak
+	);
+	--ran-booster-snackbar-stroke: var(
+		--wpds-color-stroke-surface-warning-strong
+	);
+	--ran-booster-snackbar-text: var(--wpds-color-foreground-content-warning);
+	--ran-booster-snackbar-icon: var(
+		--wpds-color-foreground-content-warning-weak
+	);
+}
+
+.ran-booster-snackbar-host .components-snackbar:focus-visible,
+.ran-booster-snackbar-host
+	:is(
+		.components-snackbar__dismiss-button,
+		.components-snackbar__action
+	):focus-visible {
+	outline: var(--wpds-border-width-focus) solid var(--wpds-color-stroke-focus);
+	outline-offset: 2px;
+	box-shadow: none;
+}
+
+.ran-booster-snackbar-host .components-snackbar .components-snackbar__content {
+	align-items: center;
+	gap: var(--wpds-dimension-gap-md);
+	justify-content: flex-start;
+}
+
+/* A decorative glyph in the Notice icon colour; the copy carries the meaning. */
+.ran-booster-snackbar-host
+	.components-snackbar
+	.components-snackbar__content::before {
+	flex: none;
+	color: var(--ran-booster-snackbar-icon);
+	font-weight: var(--ran-booster-font-weight-semibold);
+	content: "!" / "";
+}
+
+.ran-booster-snackbar-host
+	.components-snackbar.ran-booster-snackbar--success
+	.components-snackbar__content::before {
+	content: "\2713" / "";
+}
+
+.ran-booster-snackbar-host
+	.components-snackbar
+	:is(
+		.components-snackbar__action.components-button,
+		.components-snackbar__dismiss-button
+	) {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-inline-size: var(--wpds-dimension-size-sm);
+	min-block-size: var(--wpds-dimension-size-sm);
+	margin: 0;
+	margin-inline-start: auto;
+	color: var(--ran-booster-snackbar-text);
+}
+
+.ran-booster-snackbar-host
+	.components-snackbar
+	.components-snackbar__action
+	+ .components-snackbar__dismiss-button {
+	margin-inline-start: 0;
 }
 
 /*

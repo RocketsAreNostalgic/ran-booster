@@ -644,14 +644,8 @@ test('re-evaluating feedback initialization preserves the request lifecycle', ()
 	assert.equal(state.button.disabled, true);
 });
 
-test('General feedback requires the matching response and falls back when Core rendering is unavailable', () => {
-	for (const mode of [
-		'ready',
-		'ready-dismiss',
-		'missing-component',
-		'missing-style',
-		'render-failure',
-	]) {
+test('General feedback requires the matching response and falls back when the shared host is unavailable', () => {
+	for (const mode of ['ready', 'host-absent', 'host-refused']) {
 		const state = fixture();
 		const sourceListeners = new Map();
 		const xhrListeners = new Map();
@@ -662,78 +656,23 @@ test('General feedback requires the matching response and falls back when Core r
 		};
 		state.form.isConnected = true;
 		const nativeFeedback = [];
-		let rendered = 0;
-		let unmounted = 0;
-		let center = 0;
-		let regionLeft = 200;
-		const content = {};
-		const observed = [];
-		let observerCallback;
-		let disconnected = 0;
-		let dismiss;
-		state.window.ResizeObserver = class {
-			constructor(callback) {
-				observerCallback = callback;
-			}
-			observe(target) {
-				observed.push(target);
-			}
-			disconnect() {
-				disconnected++;
-			}
-		};
-		state.window.removeEventListener = (name) =>
-			state.listeners.delete(`window:${name}`);
+		const shown = [];
 		state.form.matches = (selector) =>
 			selector === '[data-ran-booster-general-form]' ||
 			selector === '[data-ran-booster-enhanced-mutation]';
 		state.form.addEventListener = (name, callback) =>
 			sourceListeners.set(name, callback);
 		state.form.removeEventListener = (name) => sourceListeners.delete(name);
-		state.document.getElementById = (id) => {
-			if (id === 'ran-booster-general-region') {
-				return region;
-			}
-			return id === 'wpcontent' ? content : state.error;
-		};
-		state.document.body = { append() {} };
-		state.document.createElement = () => ({
-			style: {
-				setProperty(name, value) {
-					assert.equal(name, '--ran-booster-snackbar-center');
-					center = value;
+		state.document.getElementById = (id) =>
+			id === 'ran-booster-general-region' ? region : state.error;
+		if (mode !== 'host-absent') {
+			state.window.ranBoosterFeedback = {
+				show(message, options) {
+					shown.push({ message, options });
+					return mode === 'ready';
 				},
-			},
-			ownerDocument: state.document,
-			isConnected: true,
-			remove() {},
-			contains: () => false,
-			querySelector: () => (rendered ? {} : null),
-		});
-		state.window.getComputedStyle = () => ({
-			paddingLeft: mode === 'missing-style' ? '0px' : '20px',
-			backgroundColor: mode === 'missing-style' ? 'transparent' : 'black',
-		});
-		state.window.wp.element = {
-			createElement: (component, props) => {
-				dismiss = props.onRemove;
-				return { component, props };
-			},
-			createRoot: () => ({
-				render() {
-					if (mode === 'render-failure') {
-						throw new Error('render');
-					}
-					rendered++;
-				},
-				unmount() {
-					unmounted++;
-				},
-			}),
-			flushSync: (callback) => callback(),
-		};
-		state.window.wp.components =
-			mode === 'missing-component' ? {} : { SnackbarList() {} };
+			};
+		}
 		const xhr = {
 			addEventListener: (name, callback) =>
 				xhrListeners.set(name, callback),
@@ -759,8 +698,6 @@ test('General feedback requires the matching response and falls back when Core r
 		region = {
 			id: 'ran-booster-general-region',
 			hasAttribute: () => true,
-			getBoundingClientRect: () => ({ left: regionLeft, width: 800 }),
-			insertAdjacentElement() {},
 			querySelectorAll: () => [],
 			append(child) {
 				nativeFeedback.push(child);
@@ -772,9 +709,14 @@ test('General feedback requires the matching response and falls back when Core r
 		state.listeners.get('ran-booster:admin-mutation-success')({
 			detail: { message: 'Saved.' },
 		});
-		assert.equal(rendered, mode.startsWith('ready') ? 1 : 0, mode);
-
-		if (!mode.startsWith('ready')) {
+		assert.equal(shown.length, mode === 'host-absent' ? 0 : 1, mode);
+		if (mode !== 'host-absent') {
+			assert.equal(shown[0].message, 'Saved.', mode);
+		}
+		if (mode === 'ready') {
+			assert.deepEqual(state.announcements, [], mode);
+			assert.equal(nativeFeedback.length, 0, mode);
+		} else {
 			assert.deepEqual(
 				state.announcements,
 				[{ message: 'Saved.', type: 'polite' }],
@@ -783,119 +725,9 @@ test('General feedback requires the matching response and falls back when Core r
 			assert.equal(nativeFeedback.length, 1, mode);
 			assert.equal(nativeFeedback[0].textContent, 'Saved.', mode);
 		}
-		if (mode.startsWith('ready')) {
-			assert.equal(center, '600px');
-			assert.deepEqual(observed, [region, content]);
-			regionLeft = 120;
-			state.listeners.get('window:resize')();
-			assert.equal(center, '520px');
-			regionLeft = 90;
-			observerCallback();
-			assert.equal(center, '490px');
-			if (mode === 'ready-dismiss') {
-				dismiss();
-			} else {
-				state.listeners.get('htmx:beforeHistorySave')();
-			}
-			state.listeners.get('htmx:beforeHistorySave')();
-			assert.equal(disconnected, 1);
-			assert.equal(state.listeners.has('window:resize'), false);
-			assert.equal(
-				unmounted,
-				1,
-				'Discard once before history serializes markup.'
-			);
-		}
 		xhrListeners.get('loadend')();
 		assert.equal(sourceListeners.has('htmx:beforeOnLoad'), false);
 	}
-});
-
-test('Snackbar dismissal focuses the first eligible control in the viewport', () => {
-	const focused = {};
-	const ownerDocument = { activeElement: focused };
-	const host = { ownerDocument, contains: (element) => element === focused };
-	const attempts = [];
-	const candidate = (name, options = {}) => ({
-		isConnected: options.connected !== false,
-		disabled: Boolean(options.disabled),
-		getClientRects: () => (options.hidden ? [] : [{}]),
-		getBoundingClientRect: () =>
-			options.offscreen
-				? { left: 0, top: -50, right: 50, bottom: -10 }
-				: { left: 10, top: 10, right: 50, bottom: 50 },
-		focus(settings) {
-			assert.deepEqual(settings, { preventScroll: true });
-			attempts.push(name);
-			if (!options.fail) {
-				ownerDocument.activeElement = this;
-			}
-		},
-	});
-	const save = candidate('save', { offscreen: true });
-	const hidden = candidate('hidden', { hidden: true });
-	const disabled = candidate('disabled', { disabled: true });
-	const disconnected = candidate('disconnected', { connected: false });
-	const removed = candidate('removed');
-	const failed = candidate('failed', { fail: true });
-	const visible = candidate('visible');
-	const admin = candidate('admin');
-	const document = {
-		querySelectorAll(selector) {
-			if (selector.includes('save-numeric-bottom')) {
-				return [save];
-			}
-			if (selector.includes('wpadminbar')) {
-				return [admin];
-			}
-			return [hidden, disabled, disconnected, removed, failed, visible];
-		},
-	};
-	const restore = loadFunction('restoreSnackbarFocus', {
-		document,
-		window: { innerWidth: 320, innerHeight: 600 },
-		snackbar: { host },
-	});
-	restore({ contains: (element) => element === removed });
-	assert.deepEqual(attempts, ['failed', 'visible']);
-	assert.equal(ownerDocument.activeElement, visible);
-	ownerDocument.activeElement = {};
-	restore();
-	assert.deepEqual(
-		attempts,
-		['failed', 'visible'],
-		'Focus outside the Snackbar is not moved.'
-	);
-});
-
-test('Snackbar dismissal leaves focus alone when no candidate is visible', () => {
-	const focused = {};
-	const host = {
-		ownerDocument: { activeElement: focused },
-		contains: (item) => item === focused,
-	};
-	const document = {
-		querySelectorAll: () => [
-			{
-				isConnected: true,
-				disabled: false,
-				getClientRects: () => [{}],
-				getBoundingClientRect: () => ({
-					left: 0,
-					right: 20,
-					top: 650,
-					bottom: 680,
-				}),
-				focus: () => assert.fail('Off-screen control was focused.'),
-			},
-		],
-	};
-	loadFunction('restoreSnackbarFocus', {
-		document,
-		window: { innerWidth: 320, innerHeight: 600 },
-		snackbar: { host },
-	})();
-	assert.equal(host.ownerDocument.activeElement, focused);
 });
 
 test('General response from a detached source cannot replace a newer target', () => {
@@ -1867,7 +1699,7 @@ test('the feedback runtime has no legacy toast presenter', () => {
 		buttonCss,
 		/ran-booster-enhanced-mutation__submitter--busy\.ran-booster-update-is-active::before[\s\S]*repeating-linear-gradient/
 	);
-	assert.match(css, /ran-booster-general-snackbar/);
+	assert.match(css, /ran-booster-snackbar-host/);
 });
 
 test('General busy state keeps switches and their fieldsets usable while protecting submit controls', () => {
@@ -1958,41 +1790,6 @@ test('General busy state leaves only the mounted switch subtree operable', () =>
 	}
 });
 
-test('Snackbar dismissal can focus the visible public switch', () => {
-	const focused = {};
-	const ownerDocument = { activeElement: focused };
-	const host = { ownerDocument, contains: (item) => item === focused };
-	const control = {
-		isConnected: true,
-		disabled: false,
-		getClientRects: () => [{}],
-		getBoundingClientRect: () => ({
-			left: 10,
-			top: 10,
-			right: 50,
-			bottom: 50,
-		}),
-		focus(options) {
-			assert.deepEqual(options, { preventScroll: true });
-			ownerDocument.activeElement = this;
-		},
-	};
-	const document = {
-		querySelectorAll: (selector) =>
-			selector.includes(
-				'[data-ran-booster-ui-switch-mount] button[role="switch"]'
-			)
-				? [control]
-				: [],
-	};
-	loadFunction('restoreSnackbarFocus', {
-		document,
-		window: { innerWidth: 320, innerHeight: 600 },
-		snackbar: { host },
-	})();
-	assert.equal(ownerDocument.activeElement, control);
-});
-
 test('package save feedback requires the matching authoritative edit response', () => {
 	for (const scenario of [
 		'plugin',
@@ -2011,9 +1808,8 @@ test('package save feedback requires the matching authoritative edit response', 
 		'failed-status',
 		'stale',
 		'independent-pending',
-		'missing-component',
-		'missing-style',
-		'render-failure',
+		'host-absent',
+		'host-refused',
 	]) {
 		const state = fixture();
 		const type = scenario === 'theme' ? 'theme' : 'plugin';
@@ -2103,34 +1899,15 @@ test('package save feedback requires the matching authoritative edit response', 
 		};
 		state.document.getElementById = (id) =>
 			id === 'wpbody-content' ? current : state.error;
-		state.document.body = { append() {} };
-		state.document.createElement = () => ({
-			style: { setProperty() {} },
-			ownerDocument: state.document,
-			remove() {},
-			contains: () => false,
-			querySelector: () => (rendered ? {} : null),
-		});
-		state.window.removeEventListener = () => {};
-		state.window.getComputedStyle = () => ({
-			paddingLeft: scenario === 'missing-style' ? '0' : '20px',
-			backgroundColor: 'black',
-		});
-		state.window.wp.components =
-			scenario === 'missing-component' ? {} : { SnackbarList() {} };
-		state.window.wp.element = {
-			createElement: (component, props) => ({ component, props }),
-			createRoot: () => ({
-				render() {
-					if (scenario === 'render-failure') {
-						throw Error('render');
-					}
+		if (scenario !== 'host-absent') {
+			state.window.ranBoosterFeedback = {
+				show: (message) => {
+					assert.equal(message, 'Package settings saved.');
 					rendered++;
+					return scenario !== 'host-refused';
 				},
-				unmount() {},
-			}),
-			flushSync: (callback) => callback(),
-		};
+			};
+		}
 		loadFunction('initEnhancedMutationFeedback', {
 			document: state.document,
 			window: state.window,
@@ -2179,13 +1956,13 @@ test('package save feedback requires the matching authoritative edit response', 
 		const success = ['plugin', 'theme', 'independent-pending'].includes(
 			scenario
 		);
-		const fallback = [
-			'missing-component',
-			'missing-style',
-			'render-failure',
-		].includes(scenario);
+		const fallback = ['host-absent', 'host-refused'].includes(scenario);
 		assert.equal(removed, success ? 1 : 0, scenario);
-		assert.equal(rendered, success ? 1 : 0, scenario);
+		assert.equal(
+			rendered,
+			success || scenario === 'host-refused' ? 1 : 0,
+			scenario
+		);
 		assert.deepEqual(
 			state.announcements,
 			fallback
@@ -2759,9 +2536,8 @@ test('only the three authorized provider saves use the shared Snackbar', () => {
 		'access-button',
 		'webhook',
 		'public',
-		'missing-module',
-		'missing-style',
-		'render-failure',
+		'host-absent',
+		'host-refused',
 		'wrong-target',
 		'wrong-operation',
 		'wrong-header',
@@ -2778,9 +2554,8 @@ test('only the three authorized provider saves use the shared Snackbar', () => {
 			'access-button': 'save-access-profile',
 			webhook: 'save-webhook-profile',
 			public: 'save-public-lookup-profile',
-			'missing-module': 'save-access-profile',
-			'missing-style': 'save-access-profile',
-			'render-failure': 'save-access-profile',
+			'host-absent': 'save-access-profile',
+			'host-refused': 'save-access-profile',
 			'wrong-target': 'save-access-profile',
 			'wrong-operation': 'save-other-profile',
 			'wrong-header': 'save-access-profile',
@@ -2828,34 +2603,15 @@ test('only the three authorized provider saves use the shared Snackbar', () => {
 		}
 		state.document.getElementById = (id) =>
 			id === targetId ? region : state.error;
-		state.document.body = { append() {} };
-		state.document.createElement = () => ({
-			style: { setProperty() {} },
-			remove() {},
-			contains: () => false,
-			ownerDocument: state.document,
-			querySelector: () => (rendered ? {} : null),
-		});
-		state.window.getComputedStyle = () => ({
-			paddingLeft: scenario === 'missing-style' ? '0' : '20px',
-			backgroundColor: 'black',
-		});
-		state.window.removeEventListener = () => {};
-		state.window.wp.components =
-			scenario === 'missing-module' ? {} : { SnackbarList() {} };
-		state.window.wp.element = {
-			createElement: (component, props) => ({ component, props }),
-			createRoot: () => ({
-				render() {
-					if (scenario === 'render-failure') {
-						throw Error('render');
-					}
+		if (scenario !== 'host-absent') {
+			state.window.ranBoosterFeedback = {
+				show: (message) => {
+					assert.equal(message, 'Profile saved.');
 					rendered++;
+					return scenario !== 'host-refused';
 				},
-				unmount() {},
-			}),
-			flushSync: (callback) => callback(),
-		};
+			};
+		}
 		const payload = { message: 'Profile saved.' };
 		if (scenario !== 'public') {
 			payload.operation = operation;
@@ -2913,7 +2669,11 @@ test('only the three authorized provider saves use the shared Snackbar', () => {
 			'webhook',
 			'public',
 		].includes(scenario);
-		assert.equal(rendered, expectedSnackbar ? 1 : 0, scenario);
+		assert.equal(
+			rendered,
+			expectedSnackbar || scenario === 'host-refused' ? 1 : 0,
+			scenario
+		);
 		if (expectedSnackbar) {
 			assert.deepEqual(appended, [], scenario);
 			assert.deepEqual(state.announcements, [], scenario);
@@ -2934,7 +2694,7 @@ test('only the three authorized provider saves use the shared Snackbar', () => {
 	}
 });
 
-test('provider Snackbar dismissal prefers the current visible returned save control', () => {
+test('provider Snackbar hands the host the current visible returned save control', () => {
 	for (const scenario of [
 		'inside',
 		'outside',
@@ -2961,10 +2721,6 @@ test('provider Snackbar dismissal prefers the current visible returned save cont
 			contains: () => true,
 		};
 		let region = target;
-		let rendered = false;
-		let dismiss;
-		const hostFocus = {};
-		const outside = {};
 		const makeControl = (visible, disabled = false) => ({
 			isConnected: true,
 			disabled,
@@ -3011,33 +2767,12 @@ test('provider Snackbar dismissal prefers the current visible returned save cont
 		state.button.isConnected = false;
 		state.document.getElementById = (id) =>
 			id === target.id ? region : state.error;
-		state.document.body = { append() {} };
-		state.document.createElement = () => ({
-			style: { setProperty() {} },
-			remove() {},
-			ownerDocument: state.document,
-			contains: (item) => item === hostFocus,
-			querySelector: () => (rendered ? {} : null),
-		});
-		state.window.innerHeight = 800;
-		state.window.removeEventListener = () => {};
-		state.window.getComputedStyle = () => ({
-			paddingLeft: '20px',
-			backgroundColor: 'black',
-		});
-		state.window.wp.components = { SnackbarList() {} };
-		state.window.wp.element = {
-			createElement: (component, props) => {
-				dismiss = props.onRemove;
-				return { component, props };
+		const shown = [];
+		state.window.ranBoosterFeedback = {
+			show: (message, options) => {
+				shown.push(options);
+				return true;
 			},
-			createRoot: () => ({
-				render() {
-					rendered = true;
-				},
-				unmount() {},
-			}),
-			flushSync: (callback) => callback(),
 		};
 		const xhr = {
 			status: 200,
@@ -3078,21 +2813,14 @@ test('provider Snackbar dismissal prefers the current visible returned save cont
 		state.listeners.get('ran-booster:admin-mutation-success')({
 			detail: { message: 'Saved.' },
 		});
-		assert.equal(rendered, true);
-		state.document.activeElement =
-			scenario === 'outside' ? outside : hostFocus;
-		dismiss();
+		assert.equal(shown.length, 1, scenario);
 		let expected = heading;
-		if (scenario === 'outside') {
-			expected = outside;
-		} else if (isPublic) {
+		if (isPublic) {
 			expected = returned;
-		} else if (
-			['missing-heading', 'offscreen-heading'].includes(scenario)
-		) {
-			expected = fallback;
+		} else if (scenario === 'missing-heading') {
+			expected = state.button;
 		}
-		assert.equal(state.document.activeElement, expected, scenario);
+		assert.equal(shown[0].returnControl, expected, scenario);
 	}
 });
 

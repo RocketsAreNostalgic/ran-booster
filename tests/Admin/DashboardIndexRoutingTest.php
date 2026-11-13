@@ -3475,16 +3475,16 @@ final class DashboardIndexRoutingTest extends TestCase {
 		$connection               = new \RAN\Tests\Activity\ActivityConnection();
 		$connection->read_results = array( array(), array(), array( $observed ), array( $observed ) );
 		$presenter                = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( new DashboardActivityWpdb() ), activity_store: new \RAN\Activity\ActivityStore( $connection ) );
-		$check                    = $presenter->package_activity( array( $package ), 'plugin' )['items']['example/example.php']['check'];
+		$check                    = $presenter->package_activity( array( $package ), 'plugin' )['items']['example/example.php']['check'] ?? array();
 
 		self::assertContains( $after, $connection->prepared[0]['args'], 'The exact summary reads the new revision context.' );
-		self::assertNull( $check['observation'] );
+		self::assertNull( $check['observation'] ?? null );
 		self::assertSame(
 			array(
 				'version' => '1.2.0',
 				'at'      => '2026-07-20 10:00:00',
 			),
-			\RAN\Admin\PastReleaseObservation::from_record( (array) $check['earlier_observation'] )
+			\RAN\Admin\PastReleaseObservation::from_record( (array) ( $check['earlier_observation'] ?? null ) )
 		);
 	}
 

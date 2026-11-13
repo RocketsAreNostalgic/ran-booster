@@ -392,7 +392,7 @@ final class DeploymentAdminPresenter {
 
 	/**
 	 * @param list<Package> $packages
-	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null}}>, unavailable: bool}
+	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null, earlier?: mixed, earlier_observation?: mixed}}>, unavailable: bool}
 	 */
 	public function package_activity( array $packages, string $type ): array {
 		if ( null === $this->attempts || count( $packages ) > 50 ) {
@@ -528,8 +528,8 @@ final class DeploymentAdminPresenter {
 	}
 
 	/**
-	 * @param array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null}}> $items
-	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null}}>, unavailable: bool}
+	 * @param array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null, earlier?: mixed, earlier_observation?: mixed}}> $items
+	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null, earlier?: mixed, earlier_observation?: mixed}}>, unavailable: bool}
 	 */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- compact() reads items and unavailable to build the package activity result.
 	private function package_activity_result( array $items = array(), bool $unavailable = true ): array {

@@ -265,7 +265,7 @@ class DeploymentCoordinator {
 		} catch ( Throwable $storage ) {
 			BoosterLogger::log_exception( 'deployment attempt left running', $storage, $context );
 			$data = $attempt->safe_data();
-			throw DeploymentStorageFailure::left_running(
+			$left = DeploymentStorageFailure::left_running(
 				array(
 					'id'             => $data['id'],
 					'correlation_id' => $data['correlation_id'],
@@ -274,6 +274,7 @@ class DeploymentCoordinator {
 					'package_slug'   => $data['package_slug'],
 				)
 			);
+			throw $left;
 		}
 		if ( null === $settled ) {
 			throw $failure;

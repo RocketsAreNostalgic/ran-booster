@@ -184,6 +184,60 @@ a configuration notice, never operation authority. This placement is
 not a capability enumerator, generic form schema, callback registry or provider
 HTML seam.
 
+### Failure text screening
+
+Core screens provider-authored text with one shared screener,
+`RAN\UpdaterSupport\V1\FailureText` from `ran/updater-support`, never with a Core
+copy of its rules. It screens the whole text before bounding it and drops a
+rejected text whole; it never redacts or truncates. Core uses it by mode:
+
+| Mode | Core sink |
+| --- | --- |
+| `display( $text, $max )` | `ProviderDiagnosticResult` message and remediation (512), `InvalidCredentialInput` message (512), `RepositoryWebhookOperationResult` and `RepositoryWebhookFitnessResult` remediation (512), the webhook controller (255) and the release workflow result text (512) |
+| `identifier( $text )`, `commit_id( $text )` | `BoosterLogger` closed ids and commit ids |
+| `strict( $text, $max )` | `BoosterLogger` string values that are not ids |
+
+`display()` takes curated sentences only: printable ASCII with none of the
+following, anywhere in the text: `/`, `\`, `@`, `=`, `<`, `>`, `&`, `;` or `?`
+attached to the next word, a colon attached to the next character (so `key:value`
+and `https://` both go; a clock time such as `12:00:00` is allowed from support
+beta.7), `%xx` escapes, `|`, `~`, backticks, brackets and braces, `ghp_`-style
+token and key prefixes, digest words, a run of 25 or more letters or digits, a
+run of 16 or more hex digits, and a word that mixes letters and digits at length.
+Write fixed provider remediation in plain ASCII words and do not quote token
+prefixes such as `ghp_` or `github_pat_`. A provider never passes echoed remote
+text, a `WP_Error` message or an exception message. A rejected value is dropped
+and Core falls back to its own copy: an `InvalidCredentialInput` keeps its
+reason and shows Core's copy for that reason, and webhook remediation is emptied
+without discarding the confirmed operation facts.
+
+#### What `display()` no longer catches compared with the old Core screens
+
+The old Core screens dropped a credential word followed by `:` or `=`.
+`display()` is by policy for fixed Core and provider-authored sentences, so it
+does not treat prose about credentials as a credential. These therefore pass:
+`token: x`, `secret: hunter2`, `password: hunter2`, `api_key: abc`,
+`signature: abc`, `Private-Token: x` (in any letter case) and a lowercase
+`Bearer abcdefgh`. The header names `Authorization:`, `Proxy-Authorization:`,
+`Cookie:`, `X-API-Key:` and `X-Auth-Token:` are dropped from support beta.6 and
+later. `strict()`, used for the logger's free values, drops a credential word
+beside any other text. This is an accepted trade-off: never pass echoed remote
+text to a `display()` sink.
+
+`ProviderDiagnosticResult::is_safe_text()` was a public static method and is
+removed. Callers compare `FailureText::display( $text, $max ) === $text`.
+
+Core-owned technical identifiers do not use `FailureText`. The Troubleshooting
+installation report shows a provider code, algorithm id, version, commit id or
+`RAN\...` class name only when it fits a fixed grammar for that field, and shows
+`Unavailable` otherwise. `BoosterLogger` matches package slugs, notice codes,
+the correlation id, exception classes and codes, and state transitions against
+local shapes, because they are not failure text.
+
+Core's own translated copy does not pass through `FailureText`. It is shown
+through Core's own escaped output and may use any Unicode punctuation. Only text
+that a provider supplied reaches these sinks.
+
 ### Optional release workflow management
 
 `RepositoryReleaseWorkflowManagementV3` is the release-workflow management

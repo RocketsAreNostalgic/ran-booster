@@ -235,12 +235,12 @@ final class TroubleshootingService {
 		};
 		$sections = array(
 			__( 'Diagnostic Git provider', 'ran-booster' ) => array(
-				__( 'Git provider', 'ran-booster' )      => $this->installation_text( $payload['providers'][ $selected ] ?? null ),
-				__( 'Git provider code', 'ran-booster' ) => $this->installation_text( $selected ),
+				__( 'Git provider', 'ran-booster' )      => $this->installation_value( $payload['providers'][ $selected ] ?? null, 'label' ),
+				__( 'Git provider code', 'ran-booster' ) => $this->installation_value( $selected, 'slug' ),
 			),
 			__( 'GitHub provider', 'ran-booster' )         => array(
 				__( 'Source', 'ran-booster' )          => $source,
-				__( 'Selection state', 'ran-booster' ) => $this->installation_text( $github_selection['state'] ?? null ),
+				__( 'Selection state', 'ran-booster' ) => $this->installation_value( $github_selection['state'] ?? null, 'slug' ),
 				__( 'Operational availability', 'ran-booster' ) => match ( $github_selection['available'] ?? null ) {
 					true => __( 'Available', 'ran-booster' ),
 					false => __( 'Unavailable', 'ran-booster' ),
@@ -255,18 +255,18 @@ final class TroubleshootingService {
 		$sections[ __( 'GitHub provider', 'ran-booster' ) ][ __( 'Enabled candidates', 'ran-booster' ) ] = (string) count( $candidates );
 		$core        = $payload['core_self_update'];
 		$core_fields = array(
-			'installed_version' => __( 'Installed version', 'ran-booster' ),
-			'requested_mode'    => __( 'Requested mode', 'ran-booster' ),
-			'effective_mode'    => __( 'Effective mode', 'ran-booster' ),
-			'reason'            => __( 'Policy reason', 'ran-booster' ),
-			'updater_state'     => __( 'Updater state', 'ran-booster' ),
-			'updater_code'      => __( 'Updater code', 'ran-booster' ),
-			'offered_version'   => __( 'Offered version', 'ran-booster' ),
-			'marker_version'    => __( 'Marker version', 'ran-booster' ),
-			'marker_commit'     => __( 'Marker commit', 'ran-booster' ),
+			'installed_version' => array( __( 'Installed version', 'ran-booster' ), 'version' ),
+			'requested_mode'    => array( __( 'Requested mode', 'ran-booster' ), 'slug' ),
+			'effective_mode'    => array( __( 'Effective mode', 'ran-booster' ), 'slug' ),
+			'reason'            => array( __( 'Policy reason', 'ran-booster' ), 'slug' ),
+			'updater_state'     => array( __( 'Updater state', 'ran-booster' ), 'slug' ),
+			'updater_code'      => array( __( 'Updater code', 'ran-booster' ), 'slug' ),
+			'offered_version'   => array( __( 'Offered version', 'ran-booster' ), 'version' ),
+			'marker_version'    => array( __( 'Marker version', 'ran-booster' ), 'version' ),
+			'marker_commit'     => array( __( 'Marker commit', 'ran-booster' ), 'commit' ),
 		);
-		foreach ( $core_fields as $key => $label ) {
-			$sections[ __( 'Core updates', 'ran-booster' ) ][ $label ] = $this->installation_text( $core[ $key ] ?? null );
+		foreach ( $core_fields as $key => $field ) {
+			$sections[ __( 'Core updates', 'ran-booster' ) ][ $field[0] ] = $this->installation_value( $core[ $key ] ?? null, $field[1] );
 		}
 		foreach ( array(
 			'last_check' => __( 'Last check (UTC)', 'ran-booster' ),
@@ -307,41 +307,54 @@ final class TroubleshootingService {
 		$declaration = is_array( $declaration ) ? $declaration : array();
 		$rows        = array();
 		foreach ( array(
-			'display_name'           => __( 'Name', 'ran-booster' ),
-			'display_version'        => __( 'Version', 'ran-booster' ),
-			'implementation_id'      => __( 'Implementation', 'ran-booster' ),
-			'provider_api_version'   => __( 'Provider API', 'ran-booster' ),
-			'compatibility_revision' => __( 'Compatibility revision', 'ran-booster' ),
-			'webhook_signing_format' => __( 'Webhook signing format', 'ran-booster' ),
-		) as $key => $label ) {
-			$value          = $declaration[ $key ] ?? null;
-			$rows[ $label ] = $this->installation_text( 'provider_api_version' === $key ? ( is_int( $value ) && $value >= 0 && $value <= 999 ? (string) $value : null ) : $value );
+			'display_name'           => array( __( 'Name', 'ran-booster' ), 'label' ),
+			'display_version'        => array( __( 'Version', 'ran-booster' ), 'version' ),
+			'implementation_id'      => array( __( 'Implementation', 'ran-booster' ), 'slug' ),
+			'provider_api_version'   => array( __( 'Provider API', 'ran-booster' ), 'version' ),
+			'compatibility_revision' => array( __( 'Compatibility revision', 'ran-booster' ), 'version' ),
+			'webhook_signing_format' => array( __( 'Webhook signing format', 'ran-booster' ), 'slug' ),
+		) as $key => $field ) {
+			$value             = $declaration[ $key ] ?? null;
+			$rows[ $field[0] ] = $this->installation_value( 'provider_api_version' === $key ? ( is_int( $value ) && $value >= 0 && $value <= 999 ? (string) $value : null ) : $value, $field[1] );
 		}
 		foreach ( array(
 			/* translators: %d: locally declared capability number. */
-			'facets'                 => __( 'Capability %d', 'ran-booster' ),
+			'facets'                 => array( __( 'Capability %d', 'ran-booster' ), 'class' ),
 			/* translators: %d: locally declared credential format number. */
-			'api_credential_formats' => __( 'API credential format %d', 'ran-booster' ),
-		) as $key => $label ) {
+			'api_credential_formats' => array( __( 'API credential format %d', 'ran-booster' ), 'slug' ),
+		) as $key => $field ) {
 			$values = $declaration[ $key ] ?? null;
 			if ( is_array( $values ) && array_is_list( $values ) && count( $values ) <= 32 ) {
 				foreach ( $values as $index => $value ) {
-					$rows[ sprintf( $label, $index + 1 ) ] = $this->installation_text( $value );
+					$rows[ sprintf( $field[0], $index + 1 ) ] = $this->installation_value( $value, $field[1] );
 				}
 			}
 		}
 		return $rows;
 	}
 
-	private function installation_text( mixed $value ): string {
-		if ( is_string( $value ) && strlen( $value ) <= 256 ) {
-			try {
-				return ( new ProviderDiagnosticResult( 'pass', 'local.installation', $value, 'No action required.' ) )->message;
-			} catch ( \InvalidArgumentException ) {
-				return __( 'Unavailable', 'ran-booster' );
-			}
-		}
-		return __( 'Unavailable', 'ran-booster' );
+	/**
+	 * A declared technical identifier, shown only when it fits the fixed grammar for its field, otherwise `Unavailable`.
+	 *
+	 * These are Core or provider declared identifiers, not failure text, so they do not pass through FailureText.
+	 * A token prefix, URL, path or long opaque run matches none of the grammars.
+	 *
+	 * @param 'label'|'slug'|'version'|'commit'|'class' $kind
+	 */
+	private function installation_value( mixed $value, string $kind ): string {
+		$grammar = match ( $kind ) {
+			// A display name or implementation id: words, digits, spaces and common name punctuation, with no long opaque run.
+			'label' => '/\A(?=.{1,64}\z)(?!.*[A-Za-z0-9]{20})[A-Za-z0-9][A-Za-z0-9 .,()\'+\/-]*\z/',
+			// A provider code, algorithm id or state: lowercase words joined by . _ / or -.
+			'slug' => '/\A(?=.{1,96}\z)(?!.*(?:gh[pousr]_|github_pat_))(?!.*[a-z0-9]{33})[a-z][a-z0-9]*(?:[._\/-][a-z0-9]+)*\z/',
+			// A version, the literal Unknown that Core reports when a package version cannot be read, or a Composer dev version.
+			'version' => '/\A(?:Unknown|dev-[A-Za-z0-9._-]{1,60}|(?=.{1,64}\z)[0-9]+(?:\.(?:[0-9]+|x))*-dev|(?=.{1,64}\z)v?[0-9]+(?:\.[0-9]+){0,3}(?:-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?)\z/',
+			'commit' => '/\A(?:[0-9a-f]{40}|[0-9a-f]{64})\z/',
+			// A Booster interface or class name: the RAN namespace and identifier segments.
+			'class' => '/\A(?=.{1,191}\z)(?!.*(?:gh[pousr]_|github_pat_|glpat-))(?!.*[A-Za-z0-9]{41})RAN(?:\\\\[A-Za-z_][A-Za-z0-9_]*)+\z/',
+		};
+
+		return is_string( $value ) && 1 === preg_match( $grammar, $value ) ? $value : __( 'Unavailable', 'ran-booster' );
 	}
 
 	/**

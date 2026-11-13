@@ -161,7 +161,8 @@ final class GitHubCredentialPolicyHostIntegrationTest extends TestCase {
 			self::fail( 'The submitted token prefix mismatch must be rejected.' );
 		} catch ( InvalidCredentialInput $failure ) {
 			self::assertSame( InvalidCredentialInput::CREDENTIAL_KIND_MISMATCH, $failure->reason );
-			self::assertStringContainsString( 'must begin with ghp_', $failure->getMessage() );
+			// The vendored provider copy quotes the ghp_ prefix, which the shared display screen drops, so Core's own copy for the reason is shown.
+			self::assertSame( 'The credential type does not match the submitted secret. Check the selected type and try again.', $failure->getMessage() );
 			self::assertFalse(
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.json_encode_json_encode -- Native JSON encoding preserves the exact fixture payload or secret-containment evidence without a WordPress runtime.
 				str_contains( (string) json_encode( $failure->getTrace() ), $token ),

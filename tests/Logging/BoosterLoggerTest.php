@@ -7,6 +7,7 @@ namespace RAN\Tests\Logging;
 // Direct local filesystem operations inspect the bounded capture under test.
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\PreserveGlobalState;
 use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use PHPUnit\Framework\TestCase;
@@ -94,13 +95,13 @@ final class BoosterLoggerTest extends TestCase {
 				'diagnostic_id'  => 'ran_booster_manual_action_failed',
 				'reference'      => 'ignored-generic-reference',
 				'step'           => 'deploy',
-				'source'         => "manual\nadmin",
+				'source'         => 'manual',
 			)
 		);
 
 		$line = $this->capture->snapshot()['entries'][0]['line'];
 		self::assertSame(
-			'[ran-booster] deployment failed {"correlation_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","diagnostic_id":"ran_booster_manual_action_failed","step":"deploy","source":"manual admin","exception_class":"RuntimeException","exception_code":"73"}',
+			'[ran-booster] deployment failed {"correlation_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","diagnostic_id":"ran_booster_manual_action_failed","step":"deploy","source":"manual","exception_class":"RuntimeException","exception_code":"73"}',
 			$line
 		);
 		self::assertStringNotContainsString( 'sentinel-raw-exception-secret', $line );
@@ -157,8 +158,9 @@ final class BoosterLoggerTest extends TestCase {
 		$ids = array();
 		foreach ( new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( dirname( __DIR__, 2 ) . '/RAN', \FilesystemIterator::SKIP_DOTS ) ) as $file ) {
 			if ( $file instanceof \SplFileInfo && 'php' === $file->getExtension() ) {
+				// A trailing underscore marks a prefix that a longer id is built from, not an id.
 				// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents -- Reads repository source in a test.
-				preg_match_all( "/'(ran_booster_[a-z0-9_]{20,})'/", (string) file_get_contents( $file->getPathname() ), $found );
+				preg_match_all( "/'(ran_booster_[a-z0-9_]{20,}[a-z0-9])'/", (string) file_get_contents( $file->getPathname() ), $found );
 				$ids = array_merge( $ids, $found[1] );
 			}
 		}
@@ -187,6 +189,272 @@ final class BoosterLoggerTest extends TestCase {
 		foreach ( $this->capture->snapshot()['entries'] as $entry ) {
 			self::assertStringEndsWith( '{"step":"ok"}', $entry['line'] );
 		}
+	}
+
+	/** True when the logger's one-line folding leaves the text exactly as written. */
+	private static function is_one_line_stable( string $text ): bool {
+		$folded = preg_replace( '/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/u', ' ', $text );
+
+		return '' !== trim( $text ) && trim( $text ) === $text && $folded === $text;
+	}
+
+	/** @return array<string, array{string}> */
+	private static function corpus_group( string $group ): array {
+		/** @var array<string, array<string, string>> $corpus */
+		$corpus = require dirname( __DIR__, 2 ) . '/vendor/ran/updater-support/tests/fixtures/failure-text-corpus.php';
+		$rows   = array();
+		foreach ( $corpus[ $group ] as $label => $text ) {
+			$rows[ $label ] = array( $text );
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Hostile entries the logger can screen as written. The logger folds control, format and
+	 * line-separator characters and surrounding space into single spaces before screening (so a
+	 * multi-line value stays one log line), which makes those entries ordinary text by then.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function hostile_corpus(): array {
+		return array_filter(
+			self::corpus_group( 'hostile' ),
+			static fn ( array $row ): bool => self::is_one_line_stable( $row[0] )
+		);
+	}
+
+	/** @return array<string, array{string}> */
+	public static function strict_only_corpus(): array {
+		return self::corpus_group( 'strict_only' );
+	}
+
+	/** @return array<string, array{string}> */
+	public static function benign_corpus(): array {
+		return array_filter(
+			self::corpus_group( 'benign' ),
+			static fn ( array $row ): bool => strlen( $row[0] ) <= 191 && self::is_one_line_stable( $row[0] )
+		);
+	}
+
+	/** @return array<string, array{string}> */
+	public static function identifier_corpus(): array {
+		return self::corpus_group( 'identifiers' );
+	}
+
+	/** @return array<string, array{string}> */
+	public static function not_identifier_corpus(): array {
+		return array_filter(
+			self::corpus_group( 'not_identifiers' ),
+			static fn ( array $row ): bool => self::is_one_line_stable( $row[0] )
+		);
+	}
+
+	private function last_line(): string {
+		$entries = $this->capture->snapshot()['entries'];
+		$entry   = end( $entries );
+		self::assertIsArray( $entry );
+
+		return $entry['line'];
+	}
+
+	#[DataProvider( 'hostile_corpus' )]
+	public function test_every_hostile_corpus_entry_is_withheld_from_the_message_and_dropped_from_every_string_value( string $text ): void {
+		BoosterLogger::log(
+			$text,
+			array(
+				'attempt_id' => $text,
+				'step'       => 'ok',
+			)
+		);
+
+		$line = $this->last_line();
+		self::assertSame( '[ran-booster] message withheld {"step":"ok"}', $line );
+	}
+
+	#[DataProvider( 'strict_only_corpus' )]
+	public function test_credential_prose_is_kept_in_the_message_and_dropped_from_values( string $text ): void {
+		BoosterLogger::log( $text, array( 'attempt_id' => $text ) );
+
+		$line = $this->last_line();
+		self::assertStringStartsWith( '[ran-booster] ' . trim( $text ), $line, 'The message is Core text screened by shape only.' );
+		self::assertStringNotContainsString( '"attempt_id"', $line, 'Any other string value is untrusted and screened by the strict mode.' );
+	}
+
+	#[DataProvider( 'benign_corpus' )]
+	public function test_benign_corpus_entries_survive_in_a_free_text_value( string $text ): void {
+		BoosterLogger::log( 'free text', array( 'attempt_id' => $text ) );
+
+		self::assertStringContainsString( '"attempt_id":' . wp_json_encode( $text, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE ), $this->last_line() );
+	}
+
+	#[DataProvider( 'identifier_corpus' )]
+	public function test_closed_identifiers_survive_in_identifier_keys( string $id ): void {
+		BoosterLogger::log( 'id', array( 'step' => $id ) );
+
+		self::assertStringContainsString( '"step":' . wp_json_encode( $id, JSON_UNESCAPED_SLASHES ), $this->last_line() );
+	}
+
+	#[DataProvider( 'not_identifier_corpus' )]
+	public function test_non_identifiers_are_dropped_from_identifier_keys( string $id ): void {
+		BoosterLogger::log( 'id', array( 'step' => $id ) );
+
+		self::assertStringNotContainsString( 'step', $this->last_line() );
+	}
+
+	public function test_dotted_and_dashed_closed_ids_are_kept_and_a_credential_message_is_withheld(): void {
+		BoosterLogger::log(
+			'token ghp_abcdefghijklmnop1234 failed',
+			array(
+				'diagnostic_id' => 'gh.credential.valid',
+				'provider'      => 'github-fine-grained',
+			)
+		);
+
+		self::assertSame( '[ran-booster] message withheld {"diagnostic_id":"gh.credential.valid","provider":"github-fine-grained"}', $this->last_line() );
+	}
+
+	/** @return array<string, array{string, bool}> */
+	public static function stored_ids(): array {
+		return array(
+			'leading digit'              => array( '3d-flipbook', true ),
+			'trailing underscore'        => array( 'my_plugin_', true ),
+			'double underscore'          => array( 'plugin__x', true ),
+			'hex-like short slug'        => array( 'a1b2c3d4e5f6a7b8c9', true ),
+			'long alphanumeric run'      => array( str_repeat( 'a', 30 ) . '-tools', true ),
+			'sk inside a word'           => array( 'disk-image', true ),
+			'dotted notice code'         => array( 'ran_booster.admin-error', true ),
+			'longest accepted'           => array( 'z' . str_repeat( 'y', 190 ), true ),
+			'one over the bound'         => array( 'z' . str_repeat( 'y', 191 ), false ),
+			'classic token'              => array( 'ghp_abcdefghijklmnop1234', false ),
+			'fine grained token'         => array( 'github_pat_abcdefghijklmnop', false ),
+			'gitlab token'               => array( 'glpat-abcdefghijkl', false ),
+			'payment key'                => array( 'sk-abcdefghijkl', false ),
+			'npm token'                  => array( 'npm_abcdefghijkl', false ),
+			'digest word'                => array( 'sha256_abcdef', false ),
+			'forty hex'                  => array( str_repeat( 'ab', 20 ), false ),
+			'long slug with hex letters' => array( 'advanced-custom-fields-pro-extended-database-feed-cache-deed', true ),
+			'long accessible slug'       => array( 'bbpress-notify-nospam-for-accessible-feedback-and-decade-badge-fade', true ),
+			'long cafe slug'             => array( 'my-cafe-and-bed-and-breakfast-deadline-facade-accessible-feedback', true ),
+			'hex run'                    => array( 'deadbeefdeadbeefdeadbeefdeadbeef', false ),
+			'separated hex run'          => array( 'dead-beef-dead-beef-dead-beef-dead-beef', false ),
+			'wordpress cookie name'      => array( 'wordpress_logged_in_abc', false ),
+			'settings cookie name'       => array( 'wp-settings-1', false ),
+			'uppercase'                  => array( 'My-Plugin', false ),
+			'slash'                      => array( 'dir/plugin', false ),
+			'leading separator'          => array( '-plugin', false ),
+		);
+	}
+
+	#[DataProvider( 'stored_ids' )]
+	public function test_package_slugs_and_notice_codes_keep_the_shape_core_stores_them_in( string $value, bool $kept ): void {
+		foreach ( array( 'package_slug', 'diagnostic_id' ) as $key ) {
+			BoosterLogger::log( 'stored', array( $key => $value ) );
+			self::assertSame( $kept, str_contains( $this->last_line(), '"' . $key . '"' ), $key . ' ' . $value );
+		}
+	}
+
+	public function test_exception_code_and_class_bounds_are_exact(): void {
+		foreach ( array(
+			'1234567890'  => true,
+			'12345678901' => false,
+			'-5'          => true,
+		) as $code => $kept ) {
+			BoosterLogger::log( 'code', array( 'exception_code' => (string) $code ) );
+			self::assertSame( $kept, str_contains( $this->last_line(), 'exception_code' ), (string) $code );
+		}
+		foreach ( array(
+			str_repeat( 'a_', 95 ) . 'a'         => true,
+			str_repeat( 'a_', 96 )               => false,
+			'RAN\\Deployment\\DeploymentFailure' => true,
+			'RAN\\ghp_abcdefghijklmnop1234'      => false,
+			'RAN\\GHP_abcdefghijklmnop1234'      => false,
+			'Vendor\\github_pat_abc'             => false,
+			'RAN\\' . str_repeat( 'a', 41 )      => false,
+		) as $class => $kept ) {
+			BoosterLogger::log( 'class', array( 'exception_class' => (string) $class ) );
+			self::assertSame( $kept, str_contains( $this->last_line(), 'exception_class' ), (string) $class );
+		}
+	}
+
+	public function test_the_exact_correlation_id_is_kept_locally_and_anything_else_is_dropped(): void {
+		foreach ( array( str_repeat( 'a', 32 ), str_repeat( 'A', 32 ), str_repeat( 'a', 31 ), 'attempt-1' ) as $value ) {
+			BoosterLogger::log( 'correlation', array( 'correlation_id' => $value ) );
+			$line = $this->last_line();
+			if ( str_repeat( 'a', 32 ) === $value ) {
+				self::assertStringContainsString( '"correlation_id":"' . $value . '"', $line );
+			} else {
+				self::assertStringNotContainsString( 'correlation_id', $line, $value );
+			}
+		}
+	}
+
+	public function test_resolved_ref_accepts_exact_commit_ids_and_closed_ids_only(): void {
+		foreach ( array( str_repeat( 'a', 40 ), str_repeat( 'b', 64 ), 'branch_main', str_repeat( 'a', 39 ), str_repeat( 'A', 40 ), 'refs/heads/main' ) as $value ) {
+			BoosterLogger::log( 'ref', array( 'resolved_ref' => $value ) );
+			$kept = str_contains( $this->last_line(), 'resolved_ref' );
+			self::assertSame( in_array( $value, array( str_repeat( 'a', 40 ), str_repeat( 'b', 64 ), 'branch_main' ), true ), $kept, $value );
+		}
+	}
+
+	public function test_a_state_transition_is_exactly_two_closed_ids(): void {
+		foreach ( array( 'new->running', 'queued->running' ) as $value ) {
+			BoosterLogger::log( 'moved', array( 'transition' => $value ) );
+			self::assertStringContainsString( '"transition":"' . str_replace( '>', '\u003e', $value ), str_replace( '>', '\u003e', $this->last_line() ) );
+		}
+		foreach ( array( 'new->', '->running', 'a->b->c', 'ghp_abcdefghijklmnop1234->running', 'new>running' ) as $value ) {
+			BoosterLogger::log( 'moved', array( 'transition' => $value ) );
+			self::assertStringNotContainsString( 'transition', $this->last_line(), $value );
+		}
+	}
+
+	public function test_only_integer_exception_codes_and_plain_class_names_are_recorded(): void {
+		BoosterLogger::log_exception( 'integer', new RuntimeException( 'x', 73 ) );
+		self::assertStringContainsString( '"exception_class":"RuntimeException","exception_code":"73"', $this->last_line() );
+
+		BoosterLogger::log_exception( 'string code', new \PDOException( 'x' ) );
+		self::assertStringContainsString( '"exception_class":"PDOException","exception_code":"0"', $this->last_line() );
+
+		$exception = new class( 'x' ) extends RuntimeException {
+			// phpcs:ignore Squiz.Commenting.FunctionComment.Missing -- Test double reports a string code, as some database exceptions do.
+			public function __construct( string $message ) {
+				parent::__construct( $message );
+				$this->code = 'HY000';
+			}
+		};
+		BoosterLogger::log_exception( 'string state', $exception, array( 'step' => 'ok' ) );
+		$digits = new class( 'x' ) extends RuntimeException {
+			// phpcs:ignore Squiz.Commenting.FunctionComment.Missing -- Test double reports a digit-only string code, as SQLSTATE values can be.
+			public function __construct( string $message ) {
+				parent::__construct( $message );
+				$this->code = '23000';
+			}
+		};
+		BoosterLogger::log_exception( 'digit state', $digits, array( 'step' => 'ok' ) );
+		self::assertStringNotContainsString( 'exception_code', $this->last_line(), 'Only an integer code is recorded, even when a string code is all digits.' );
+		$line = $this->last_line();
+		self::assertStringNotContainsString( 'exception_code', $line );
+		self::assertStringNotContainsString( 'exception_class', $line, 'An anonymous class name carries a path and is dropped.' );
+		self::assertStringNotContainsString( 'HY000', $line );
+
+		// A class name is declared code, not remote text: only its closed spelling is checked.
+		BoosterLogger::log(
+			'forged',
+			array(
+				'exception_class' => 'Vendor\\Not A Class/Name',
+				'exception_code'  => 'HY000',
+			)
+		);
+		self::assertSame( '[ran-booster] forged []', $this->last_line() );
+	}
+
+	public function test_the_context_allow_list_cannot_grow_without_changing_this_test(): void {
+		$keys = ( new \ReflectionClassConstant( BoosterLogger::class, 'SAFE_CONTEXT_KEYS' ) )->getValue();
+		self::assertIsArray( $keys );
+		self::assertSame(
+			array( 'attempt_id', 'correlation_id', 'diagnostic_id', 'event', 'exception_class', 'exception_code', 'operation', 'outcome_code', 'package_slug', 'provider', 'resolved_by', 'resolved_ref', 'source', 'state', 'step', 'transition' ),
+			array_keys( $keys )
+		);
 	}
 
 	public function test_inactive_or_broken_capture_does_not_affect_logging_callers(): void {

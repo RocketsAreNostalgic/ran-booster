@@ -942,6 +942,15 @@ final class ReleaseWorkflowControlsTest extends TestCase {
 		self::assertSame( 'Releases are available; their publishing method has not been assessed.', $state['message'] );
 	}
 
+	public function test_provider_result_text_is_shown_only_when_the_shared_display_screen_keeps_it_whole(): void {
+		$screen = new \ReflectionMethod( ReleaseWorkflowRequestController::class, 'result_display_text' );
+		$kept   = 'Review the release settings, then retry.';
+		self::assertSame( $kept, $screen->invoke( $this->controller(), $kept ) );
+		foreach ( array( 'See https://example.test/help', 'Cannot read /srv/private/file', 'Token ghp_abcdefghijklmnop1234', '<b>bold</b>', str_repeat( 'ok go ', 85 ) . 'end', ' padded ', '', 42, null ) as $unsafe ) {
+			self::assertSame( '', $screen->invoke( $this->controller(), $unsafe ), is_scalar( $unsafe ) ? (string) $unsafe : 'non-string' );
+		}
+	}
+
 	private function controller( ?ReleaseTrackingFacadeDouble $tracking = null, ?RepositoryProvider $provider = null, bool $registered = true, ?RepositorySourceGuard $source_guard = null ): ReleaseWorkflowRequestController {
 		$provider ??= new RepositoryReleaseWorkflowProviderDouble();
 		return new ReleaseWorkflowRequestController( $tracking ?? new ReleaseTrackingFacadeDouble( ReleaseManagementFixture::status() ), new PluginRepositoryDouble( provider_code: $provider->get_metadata()->code->value ), new ThemeRepositoryDouble(), new ProviderRegistry( $registered ? array( $provider ) : array() ), $source_guard ?? $this->source_guard() );

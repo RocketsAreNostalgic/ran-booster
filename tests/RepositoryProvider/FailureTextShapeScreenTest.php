@@ -4,42 +4,179 @@ declare(strict_types=1);
 
 namespace RAN\Tests\RepositoryProvider;
 
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use RAN\RepositoryProvider\InvalidCredentialInput;
 use RAN\RepositoryProvider\ProviderDiagnosticResult;
+use RAN\RepositoryProvider\RepositoryWebhookFitnessResult;
+use RAN\RepositoryProvider\RepositoryWebhookOperationResult;
+use RAN\UpdaterSupport\V1\FailureText;
 
+/**
+ * Core applies the shared ran-updater-support screener at every failure-text sink.
+ * The shared hostile/benign corpus is the cross-package contract: the policy itself
+ * is tested in that package, and these tests prove Core's sinks honour it.
+ */
 #[CoversClass( ProviderDiagnosticResult::class )]
+#[CoversClass( InvalidCredentialInput::class )]
+#[CoversClass( RepositoryWebhookOperationResult::class )]
+#[CoversClass( RepositoryWebhookFitnessResult::class )]
 final class FailureTextShapeScreenTest extends TestCase {
 
-	/** @return array<string, array{string}> */
-	public static function unsafe_text(): array {
-		return array(
-			'token'                => array( 'Failed with ghp_abcdefghijklmnop1234' ),
-			'credentialed url'     => array( 'See https://user:secret@example.com/repo' ),
-			'plain url'            => array( 'Fetch https://example.com/a?x=1 failed' ),
-			'query secret'         => array( 'Rejected token=abcdef' ),
-			'absolute path'        => array( 'Cannot write /var/www/html/wp-content/x' ),
-			'relative path'        => array( 'Cannot write wp-content/uploads/x' ),
-			'digest'               => array( 'Hash 0123456789abcdef0123456789abcdef01234567 mismatch' ),
-			'markup'               => array( 'Bad <b>thing</b>' ),
-			'long token run'       => array( 'Failed abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV' ),
-			'scheme-less userinfo' => array( 'admin:hunter2@example.com' ),
-			'colon slash'          => array( 'host:/share/file' ),
-			'header'               => array( 'Authorization: Bearer abcdefghijkl' ),
-		);
+	/** @return array<string, array<string, string>> */
+	private static function corpus(): array {
+		/** @var array<string, array<string, string>> $corpus */
+		$corpus = require dirname( __DIR__, 2 ) . '/vendor/ran/updater-support/tests/fixtures/failure-text-corpus.php';
+
+		return $corpus;
 	}
 
-	#[DataProvider( 'unsafe_text' )]
-	public function test_unsafe_failure_text_is_rejected_by_the_shared_screen_and_activity_text_boundary( string $text ): void {
-		self::assertFalse( ProviderDiagnosticResult::is_safe_text( $text ) );
-		$this->expectException( \InvalidArgumentException::class );
-		new ProviderDiagnosticResult( 'failed', 'x', $text, 'Retry later.' );
+	/** @return array<string, array{string}> */
+	private static function labelled( string $group ): array {
+		$rows = array();
+		foreach ( self::corpus()[ $group ] as $label => $text ) {
+			$rows[ $label ] = array( $text );
+		}
+
+		return $rows;
+	}
+
+	/** @return array<string, array{string}> */
+	public static function hostile(): array {
+		return self::labelled( 'hostile' );
+	}
+
+	/** @return array<string, array{string}> */
+	public static function strict_only(): array {
+		return self::labelled( 'strict_only' );
+	}
+
+	/** @return array<string, array{string}> */
+	public static function display_only(): array {
+		return self::labelled( 'display_only' );
+	}
+
+	/** @return array<string, array{string}> */
+	public static function benign(): array {
+		return self::labelled( 'benign' );
+	}
+
+	public function test_the_shared_corpus_is_present_and_every_group_is_populated(): void {
+		foreach ( array( 'hostile', 'strict_only', 'display_only', 'benign' ) as $group ) {
+			self::assertNotSame( array(), self::corpus()[ $group ] ?? array(), $group );
+		}
+	}
+
+	#[DataProvider( 'hostile' )]
+	public function test_hostile_text_is_dropped_by_display_and_strict( string $text ): void {
+		self::assertNull( FailureText::display( $text, 512 ) );
+		self::assertNull( FailureText::strict( $text, 512 ) );
+	}
+
+	#[DataProvider( 'strict_only' )]
+	public function test_credential_prose_is_dropped_by_strict_and_kept_by_display( string $text ): void {
+		self::assertNull( FailureText::strict( $text, 512 ) );
+		self::assertNotNull( FailureText::display( $text, 512 ) );
+	}
+
+	#[DataProvider( 'display_only' )]
+	public function test_curated_sentences_are_kept_by_display_and_dropped_by_strict( string $text ): void {
+		self::assertNotNull( FailureText::display( $text, 512 ) );
+		self::assertNull( FailureText::strict( $text, 512 ) );
+	}
+
+	#[DataProvider( 'benign' )]
+	public function test_benign_text_survives_both_modes( string $text ): void {
+		self::assertNotNull( FailureText::display( $text, 512 ) );
+		self::assertNotNull( FailureText::strict( $text, 512 ) );
+	}
+
+	#[DataProvider( 'hostile' )]
+	public function test_every_hostile_entry_is_rejected_by_the_diagnostic_result_message_and_remediation( string $text ): void {
+		foreach ( array( array( $text, 'Retry later.' ), array( 'Retry later.', $text ) ) as $pair ) {
+			$rejected = false;
+			try {
+				new ProviderDiagnosticResult( 'fail', 'x', $pair[0], $pair[1] );
+			} catch ( InvalidArgumentException ) {
+				$rejected = true;
+			}
+			self::assertTrue( $rejected, 'Hostile text was accepted by ProviderDiagnosticResult.' );
+		}
+	}
+
+	#[DataProvider( 'hostile' )]
+	public function test_every_hostile_entry_is_replaced_in_a_credential_input_failure( string $text ): void {
+		$failure = new InvalidCredentialInput( InvalidCredentialInput::INVALID_SECRET_SHAPE, $text );
+
+		self::assertNotSame( $text, $failure->getMessage() );
+		self::assertNotSame( '', $failure->getMessage() );
+	}
+
+	#[DataProvider( 'hostile' )]
+	public function test_every_hostile_entry_is_dropped_from_webhook_remediation_without_losing_the_result( string $text ): void {
+		$configuration = array(
+			'endpoint'     => 'matched',
+			'events'       => 'matched',
+			'content_type' => 'matched',
+			'active'       => 'matched',
+		);
+		try {
+			$operation = new RepositoryWebhookOperationResult( 'succeeded', 'configured_pending_delivery', '2026-08-02T20:00:00Z', '77', $configuration, 'configured_pending_delivery', $text );
+			$fitness   = new RepositoryWebhookFitnessResult( 'supported', 'suitable', 'appropriate', 'observed', 'fitness_ok', '2026-08-02T20:00:00Z', $text );
+		} catch ( InvalidArgumentException ) {
+			// Empty, over-long and control-character text is a structural failure of the result, not guidance to drop.
+			self::assertTrue( '' === $text || strlen( $text ) > 512 || 1 === preg_match( '/[\x00-\x1F\x7F]/', $text ) );
+
+			return;
+		}
+
+		self::assertSame( '', $operation->to_array()['remediation'] );
+		self::assertSame( '', $fitness->to_array()['remediation'] );
+		self::assertSame( 'configured_pending_delivery', $operation->to_array()['code'], 'The confirmed operation facts survive.' );
+	}
+
+	public function test_a_result_with_screened_out_guidance_can_be_copied_without_losing_its_facts(): void {
+		$configuration = array(
+			'endpoint'     => 'matched',
+			'events'       => 'matched',
+			'content_type' => 'matched',
+			'active'       => 'matched',
+		);
+		$result        = new RepositoryWebhookOperationResult( 'succeeded', 'configured_pending_delivery', '2026-08-02T20:00:00Z', '77', $configuration, 'configured_pending_delivery', 'See https://example.test/help?token=abc for guidance.' );
+		$partial       = $result->as_partial( 'operation_lock_release_failed', 'Retry later.' )->to_array();
+		self::assertSame( 'Retry later.', $partial['remediation'] );
+		self::assertSame( '', $result->to_array()['remediation'] );
+		$profile = new \RAN\AddOn\WebhookAssistance\WebhookProfileMetadata( 'wh_0123456789abcdef01234567', 'gh', 'repository', 'owner/repository', '1234', 1, 'created', 'file', false );
+		self::assertSame( '', $result->with_profile( $profile )->to_array()['remediation'] );
+		self::assertSame( 'configured_pending_delivery', $result->with_profile( $profile )->to_array()['code'] );
+	}
+
+	#[DataProvider( 'benign' )]
+	public function test_benign_entries_are_accepted_by_the_diagnostic_result( string $text ): void {
+		if ( strlen( $text ) > 512 ) {
+			self::markTestSkipped( 'Longer than the 512 byte sink bound.' );
+		}
+		self::assertSame( $text, ( new ProviderDiagnosticResult( 'pass', 'x', $text, 'No action required.' ) )->message );
 	}
 
 	public function test_curated_provider_guidance_remains_accepted(): void {
-		self::assertTrue( ProviderDiagnosticResult::is_safe_text( 'Check repository access, then retry.' ) );
-		self::assertTrue( ProviderDiagnosticResult::is_safe_text( 'Check the token permissions and organisation approval.' ) );
-		self::assertTrue( ProviderDiagnosticResult::is_safe_text( 'The secret or password may have expired; update it.' ) );
+		foreach ( array( 'Check repository access, then retry.', 'Check the token permissions and organisation approval.', 'The secret or password may have expired; update it.' ) as $text ) {
+			self::assertSame( $text, FailureText::display( $text, 512 ) );
+			self::assertSame( $text, ( new ProviderDiagnosticResult( 'fail', 'x', $text, $text ) )->remediation );
+		}
+	}
+
+	public function test_text_longer_than_the_sink_bound_is_not_accepted_by_a_validating_sink(): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		new ProviderDiagnosticResult( 'fail', 'x', str_repeat( 'a ', 257 ), 'Retry later.' );
+	}
+
+	public function test_surrounding_spaces_are_not_a_valid_message(): void {
+		$this->expectException( InvalidArgumentException::class );
+
+		new ProviderDiagnosticResult( 'fail', 'x', ' Retry later. ', 'Retry later.' );
 	}
 }

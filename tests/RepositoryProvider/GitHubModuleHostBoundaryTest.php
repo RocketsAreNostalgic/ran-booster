@@ -27,6 +27,8 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		'tests/RepositoryProvider/GitHubCredentialPolicyHostIntegrationTest.php',
 		'tests/RepositoryProvider/GitHubExternalExtensionParityTest.php',
 		// Host composition retains the actual provider's bundled compatibility baseline.
+		// Proves the real readiness message keeps its delivery time through the display screen.
+		'tests/RepositoryProvider/GitHubWebhookReadinessMessageTest.php',
 		'tests/RepositoryProvider/HostSelectionDatabase.php',
 		'tests/RepositoryProvider/Support/ShippedSecretPolicyCatalog.php',
 		'tests/Runtime/ReleaseManagementCutoverBootstrapTest.php',
@@ -35,6 +37,8 @@ final class GitHubModuleHostBoundaryTest extends TestCase {
 		// Package persistence fixtures initialize the actual bundled selection contract.
 		'tests/Storage/PackagePersistenceFailureTest.php',
 		'tests/Storage/PackageProviderIdentityTest.php',
+		// Proves the installation report shows every value the shipped provider declares.
+		'tests/Troubleshooting/TroubleshootingServiceTest.php',
 		'tests/Webhook/SignedWebhookVerifierTest.php',
 		'tests/Webhook/WebhookProcessorTest.php',
 		'tests/WordPress/ManagedReleaseRuntimeTest.php',

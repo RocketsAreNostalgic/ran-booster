@@ -181,7 +181,7 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 	}
 
 	public function test_secret_text_and_unknown_facts_are_rejected_before_sql(): void {
-		self::assertFalse( $this->store->progress( 1, 'checking', 'Authorization: Bearer abcdefghijklmnop' ) );
+		self::assertFalse( $this->store->progress( 1, 'checking', 'Authorization: Bearer abcdefgh12345678' ) );
 		self::assertFalse( $this->store->complete( 1, 'succeeded', 'checked', '', '', array( 'response' => 'remote body' ) ) );
 		self::assertSame( array(), $this->connection->queries );
 	}
@@ -197,10 +197,10 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 	public function test_disabled_and_active_handles_discard_invalid_scalar_payloads_without_sql(): void {
 		foreach ( array( null, 1 ) as $id ) {
 			$operation = new RecordedActivityOperation( $this->store, $id );
-			$operation->progress( 'invalid stage', 'Authorization: Bearer abcdefghijklmnop' );
+			$operation->progress( 'invalid stage', 'Authorization: Bearer abcdefgh12345678' );
 			$operation->complete( 'unknown', 'checked' );
 			$operation->complete( 'succeeded', 'checked', '<script>remote</script>' );
-			$operation->complete( 'succeeded', 'checked', '', 'Authorization: secret' );
+			$operation->complete( 'succeeded', 'checked', '', 'Authorization: Abcdefgh12345678' );
 		}
 		self::assertSame( array(), $this->connection->prepared );
 		self::assertSame( array(), $this->connection->queries );

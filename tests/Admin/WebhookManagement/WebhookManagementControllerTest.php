@@ -1479,6 +1479,18 @@ final class WebhookManagementControllerTest extends TestCase {
 		self::assertStringContainsString( 'could not confirm that the remote webhook operation succeeded', $html );
 	}
 
+	public function test_remediation_is_shown_only_when_the_shared_display_screen_keeps_it_whole_within_255_bytes(): void {
+		$screen = new \ReflectionMethod( WebhookManagementController::class, 'safe_remediation' );
+		$kept   = 'Inspect the provider audit trail before retrying this operation.';
+		self::assertSame( $kept, $screen->invoke( $this->controller(), $kept ) );
+		$longest = str_repeat( 'ok go ', 42 ) . 'end';
+		self::assertSame( 255, strlen( $longest ) );
+		self::assertSame( $longest, $screen->invoke( $this->controller(), $longest ) );
+		foreach ( array( 'See https://example.test/help', 'Cannot read /srv/private/file', 'Token ghp_abcdefghijklmnop1234', '<b>bold</b>', str_repeat( 'ok go ', 42 ) . 'ends', ' padded ', '', 42, null ) as $unsafe ) {
+			self::assertNull( $screen->invoke( $this->controller(), $unsafe ), is_scalar( $unsafe ) ? (string) $unsafe : 'non-string' );
+		}
+	}
+
 	public function test_package_remediation_carries_its_signed_provider_and_repository_identity(): void {
 		$remediation     = 'Inspect the provider audit trail before retrying this operation.';
 		$gateway         = $this->gateway();

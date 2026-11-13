@@ -1744,6 +1744,60 @@ final class RepeatPackageViewTest extends TestCase {
 		self::assertStringNotContainsString( 'before the latest settings change', $none );
 	}
 
+	public function test_disabled_release_package_shows_the_last_observed_newer_release_as_a_past_observation(): void {
+		$package_view = PackagePagePresenter::plugin();
+		$render       = function ( \RAN\Deployment\DeploymentPolicy $policy, \RAN\PackageSource $source, string $facts, bool $after_settings_save = false ) use ( $package_view ): string {
+			$package = $this->package( $package_view );
+			$package->set_deployment_policy( $policy );
+			$package->set_source( $source, 1 );
+			$package->version    = '1.0.0';
+			$observation         = array(
+				'id'      => 7,
+				'sort_at' => '2026-11-01 10:00:00',
+				'status'  => 'succeeded',
+				'reason'  => 'update_available',
+				'message' => '',
+				'facts'   => $facts,
+			);
+			$packages            = array( $package );
+			$package_activity    = array(
+				'items' => array(
+					$package->get_identifier() => array(
+						'check' => $after_settings_save
+							? array(
+								'available'           => true,
+								'latest'              => null,
+								'observation'         => null,
+								'earlier_observation' => $observation,
+							)
+							: array(
+								'available'   => true,
+								'latest'      => array_merge( $observation, array( 'id' => 8 ) ),
+								'observation' => $observation,
+							),
+					),
+				),
+			);
+			$package_providers   = array();
+			$package_return_args = array( 'return_type' => 'plugin' );
+			$messages            = array();
+			ob_start();
+			require dirname( __DIR__, 2 ) . '/views/packages/index.php';
+			return (string) ob_get_clean();
+		};
+		$newer        = '{"relationship":"newer","candidate_version":"1.2.0"}';
+
+		$disabled = $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::RELEASE_ASSET, $newer );
+		self::assertStringContainsString( 'Last observed newer release', $disabled );
+		self::assertStringContainsString( '1.2.0, seen 2026-11-01 10:00:00. Not an available update.', $disabled );
+
+		self::assertStringContainsString( '1.2.0, seen 2026-11-01 10:00:00.', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::RELEASE_ASSET, $newer, true ), 'The observation survives a settings save.' );
+		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::RELEASE_ASSET, '{"relationship":"newer","candidate_version":"0.0.1"}' ) );
+		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::MANUAL, \RAN\PackageSource::RELEASE_ASSET, $newer ) );
+		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::BRANCH, $newer ) );
+		self::assertStringNotContainsString( 'Last observed newer release', $render( \RAN\Deployment\DeploymentPolicy::DISABLED, \RAN\PackageSource::RELEASE_ASSET, '{"relationship":"same","candidate_version":"1.0.0"}' ) );
+	}
+
 	public function test_package_badges_render_known_activity_and_bounded_extension_tones(): void {
 		$package_view = PackagePagePresenter::plugin();
 		$package      = $this->package( $package_view );
@@ -1912,6 +1966,7 @@ final class RepeatPackageViewTest extends TestCase {
 // phpcs:ignore Generic.Files.OneObjectStructurePerFile.MultipleFound -- Focused package fake stays beside shared view coverage.
 final class RepeatPackageViewPackage extends AbstractPackage {
 	public string $name;
+	public string $version = '';
 
 	public function __construct( private readonly string $identifier = '' ) {
 		$this->name = 'Example package';

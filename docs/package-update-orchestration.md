@@ -336,6 +336,7 @@ These controls do not change managed plugin or theme release policies.
 | Request bootstrap       | Booster                                                                                   | Registers each eligible managed target with the shared updater before public selection/activation at `after_setup_theme` priority `PHP_INT_MAX` | No                                            | No                |
 | Normal update check        | WordPress scheduled or administrator-driven update check                                  | WordPress calls the updater's host-specific update filter                                                                  | Yes, for candidate validation on a cache miss | No                |
 | **Check releases**         | Administrator in Booster                                                                  | Core handler → internal coordinator → updater cache clear → WordPress native update check                                  | Yes, for fresh candidate validation           | No                |
+| **Enable updates**         | Administrator changing a release package's policy from `disabled` to `manual` or `automatic` | Core policy write → update-cache clear → next administration request runs one WordPress native check | Yes, for fresh candidate validation           | No                |
 | Prospective **Install**    | Administrator selecting an exact release                                                  | Core prospective facade → selected provider → Core installer and adoption                                                  | Yes, one exact installation archive           | Yes               |
 | Native **Update**          | Administrator on a WordPress update surface                                               | WordPress upgrader → shared updater pre-download hook                                                                      | Yes, one fresh installation archive           | Yes               |
 | Native automatic update    | WordPress's own automatic-updater run, when its final policy decision permits the package | WordPress upgrader → shared updater pre-download hook                                                                      | Yes, one fresh installation archive           | Yes               |
@@ -924,3 +925,14 @@ The current contracts are implemented in:
 For lower-level branch attempt fields, archive limits, terminal outcomes, and
 reconciliation, continue with the
 [deployment execution guide](deployment-execution.md).
+
+### Enabling updates and past observations
+
+Enabling updates clears only WordPress's cached update check for that package
+type. The next administration request then normally runs one native check (best effort: a request already in flight, or the updater's cooldown, can defer it to WordPress's next scheduled check) through the
+updater's own policy, cooldown and claim gates, so a cooldown still applies and a
+failed check is recorded in Activity like any other. A failed cache clear never
+blocks the policy change. While updates are `disabled`, the package shows the
+newer release its last established check observed, with version and check time,
+read from that Activity record and labelled as a past observation, never as an
+available update. Core keeps no separate state for it.

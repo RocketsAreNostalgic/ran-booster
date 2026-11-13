@@ -392,7 +392,7 @@ final class DeploymentAdminPresenter {
 
 	/**
 	 * @param list<Package> $packages
-	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null}}>, unavailable: bool}
+	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null, earlier?: mixed, earlier_observation?: mixed}}>, unavailable: bool}
 	 */
 	public function package_activity( array $packages, string $type ): array {
 		if ( null === $this->attempts || count( $packages ) > 50 ) {
@@ -418,6 +418,13 @@ final class DeploymentAdminPresenter {
 							'observation' => null,
 						)
 						: $this->activity_store->summary( $type, $capture['subject_identity'], $capture['adoption_token'], $capture['context'], $purpose );
+					if ( null !== $capture['adoption_token'] && PackageSource::RELEASE_ASSET === $package->get_source() && \RAN\Deployment\DeploymentPolicy::DISABLED === $package->get_deployment_policy() && true === $items[ $package->get_identifier() ]['check']['available'] && null === $items[ $package->get_identifier() ]['check']['observation'] ) {
+						// A settings save starts a new context, so a disabled release package looks across revisions for its last established result.
+						$established = $this->activity_store->latest_for_adoption( $type, $capture['subject_identity'], $capture['adoption_token'], $purpose, true );
+						if ( true === $established['available'] ) {
+							$items[ $package->get_identifier() ]['check']['earlier_observation'] = $established['record'];
+						}
+					}
 					if ( null !== $capture['adoption_token'] && true === $items[ $package->get_identifier() ]['check']['available'] && null === $items[ $package->get_identifier() ]['check']['latest'] ) {
 						$earlier = $this->activity_store->latest_for_adoption( $type, $capture['subject_identity'], $capture['adoption_token'], $purpose );
 						if ( true === $earlier['available'] ) {
@@ -521,8 +528,8 @@ final class DeploymentAdminPresenter {
 	}
 
 	/**
-	 * @param array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null}}> $items
-	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null}}>, unavailable: bool}
+	 * @param array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null, earlier?: mixed, earlier_observation?: mixed}}> $items
+	 * @return array{items: array<array-key, array{latest: \RAN\Deployment\DeploymentAttempt|null, last_successful: \RAN\Deployment\DeploymentAttempt|null, check?: array{available: bool, latest: array<string, int|string|null>|null, observation: array<string, int|string|null>|null, earlier?: mixed, earlier_observation?: mixed}}>, unavailable: bool}
 	 */
 	// phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed -- compact() reads items and unavailable to build the package activity result.
 	private function package_activity_result( array $items = array(), bool $unavailable = true ): array {

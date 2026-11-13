@@ -437,11 +437,11 @@ final class ActivityStore {
 	}
 
 	/**
-	 * Passive display only: the newest row for this adoption, whatever settings revision recorded it.
+	 * Passive display only: the newest row (or newest established row) for this adoption, whatever settings revision recorded it.
 	 *
 	 * @return array{available:bool,record:?Record}
 	 */
-	public function latest_for_adoption( string $subject_type, string $subject_identity, string $adoption_token, string $purpose ): array {
+	public function latest_for_adoption( string $subject_type, string $subject_identity, string $adoption_token, string $purpose, bool $established_only = false ): array {
 		$unavailable = array(
 			'available' => false,
 			'record'    => null,
@@ -450,6 +450,7 @@ final class ActivityStore {
 			return $unavailable;
 		}
 		$where = $this->prepare( 'BINARY subject_type = %s AND subject_identity = %s AND adoption_token = %s AND BINARY purpose = %s', $subject_type, $subject_identity, $adoption_token, $purpose );
+		$where = null !== $where && $established_only ? $where . " AND effect <> 'none'" : $where;
 		$rows  = null === $where ? null : $this->rows( "SELECT * FROM {$this->table} WHERE $where ORDER BY id DESC LIMIT 1" );
 
 		return null === $rows

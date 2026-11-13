@@ -318,6 +318,16 @@ final class ActivityStoreTest extends RANBoosterTestCase {
 		self::assertFalse( $this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'unknown.purpose' )['available'] );
 	}
 
+	public function test_latest_for_adoption_can_be_limited_to_established_rows(): void {
+		$this->connection->read_results = array( array(), array() );
+		$capture                        = self::capture();
+		$this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'release.check' );
+		$this->store->latest_for_adoption( 'plugin', 'example/example.php', $capture['adoption_token'], 'release.check', true );
+
+		self::assertStringNotContainsString( "effect <> 'none'", $this->connection->queries[0] );
+		self::assertStringContainsString( "AND effect <> 'none' ORDER BY id DESC LIMIT 1", $this->connection->queries[1] );
+	}
+
 	public function test_latest_for_adoption_distinguishes_no_history_from_a_failed_read(): void {
 		$capture                        = self::capture();
 		$this->connection->read_results = array( array() );

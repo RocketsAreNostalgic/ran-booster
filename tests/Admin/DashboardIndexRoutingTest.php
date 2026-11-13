@@ -3390,14 +3390,14 @@ final class DashboardIndexRoutingTest extends TestCase {
 	 * @param list<mixed> $reads Scripted activity reads in the order the presenter issues them.
 	 * @return array{0: array<string, mixed>, 1: list<string>}
 	 */
-	private function release_check_activity( array $reads ): array {
+	private function release_check_activity( array $reads, \RAN\Deployment\DeploymentPolicy $policy = \RAN\Deployment\DeploymentPolicy::DISABLED ): array {
 		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
 		require_once __DIR__ . '/../Activity/ActivityConnection.php';
 		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ]     = '1';
 		$GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
 		$connection               = new \RAN\Tests\Activity\ActivityConnection();
 		$connection->read_results = $reads;
-		$package                  = $this->managed_package( 'example/example.php', 'Example Plugin', 'repository-1', \RAN\PackageSource::RELEASE_ASSET );
+		$package                  = $this->managed_package( 'example/example.php', 'Example Plugin', 'repository-1', \RAN\PackageSource::RELEASE_ASSET, policy: $policy );
 		$presenter                = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( new DashboardActivityWpdb() ), activity_store: new \RAN\Activity\ActivityStore( $connection ) );
 		$activity                 = $presenter->package_activity( array( $package ), 'plugin' );
 
@@ -3410,15 +3410,82 @@ final class DashboardIndexRoutingTest extends TestCase {
 			'status'  => 'succeeded',
 			'sort_at' => '2026-07-20 10:00:00',
 		);
-		// Exact summary: latest and observation are empty; the fallback then finds the earlier row.
-		[ $check, $queries ] = $this->release_check_activity( array( array(), array(), array( $earlier ) ) );
+		// Exact summary: latest and observation are empty; the cross-revision reads then find the earlier row.
+		[ $check, $queries ] = $this->release_check_activity( array( array(), array(), array( $earlier ), array( $earlier ) ) );
 
 		self::assertTrue( $check['available'] );
 		self::assertNull( $check['latest'], 'The exact-context summary stays empty after the settings change.' );
 		self::assertSame( '2026-07-20 10:00:00', $check['earlier']['sort_at'] ?? null );
-		self::assertCount( 3, $queries );
+		self::assertSame( '2026-07-20 10:00:00', $check['earlier_observation']['sort_at'] ?? null );
+		self::assertCount( 4, $queries );
 		self::assertStringContainsString( 'context_key', $queries[0] );
-		self::assertStringNotContainsString( 'context', $queries[2], 'Only the passive fallback ignores the settings context.' );
+		self::assertStringContainsString( "effect <> 'none'", $queries[2] );
+		self::assertStringNotContainsString( 'context', $queries[2], 'The cross-revision read ignores the settings context.' );
+		self::assertStringNotContainsString( 'context', $queries[3], 'Only the passive fallback ignores the settings context.' );
+	}
+
+	public function test_an_enabled_release_package_never_reads_across_settings_revisions(): void {
+		[ $check, $queries ] = $this->release_check_activity( array( array(), array(), array() ), \RAN\Deployment\DeploymentPolicy::MANUAL );
+
+		self::assertArrayNotHasKey( 'earlier_observation', $check );
+		self::assertCount( 3, $queries );
+		self::assertStringNotContainsString( 'context', $queries[2], 'The third read is the ordinary fallback, not an established cross-revision read.' );
+		self::assertStringNotContainsString( "effect <> 'none'", $queries[2] );
+	}
+
+	public function test_a_real_settings_revision_bump_keeps_the_established_release_observation(): void {
+		require_once __DIR__ . '/../Activity/ActivityWordPressFunctions.php';
+		require_once __DIR__ . '/../Activity/ActivityConnection.php';
+		$GLOBALS['ran_booster_activity_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ]     = '1';
+		$GLOBALS['ran_booster_storage_test_options'][ \RAN\Activity\ActivityStore::VERSION_OPTION ] = '1';
+		$package = \RAN\Plugin::from_wp_array(
+			'example/example.php',
+			array(
+				'Name'        => 'Example',
+				'PluginURI'   => '',
+				'Version'     => '1.0.0',
+				'Description' => '',
+				'Author'      => '',
+				'AuthorURI'   => '',
+				'TextDomain'  => '',
+				'DomainPath'  => '',
+				'Network'     => false,
+				'Title'       => 'Example',
+				'AuthorName'  => '',
+			)
+		);
+		$package->set_repository( new ManagedRepository( 'gh', 'owner/example', 'repository-1', 'main' ) );
+		$package->set_adoption_token( 'gh:repository-1:11111111-1111-4111-8111-111111111111' );
+		$package->set_source( \RAN\PackageSource::RELEASE_ASSET, 1 );
+		$package->set_deployment_policy( \RAN\Deployment\DeploymentPolicy::DISABLED );
+		$evidence = new \RAN\Admin\RepositoryBranchCheckEvidenceStore();
+		$before   = $evidence->activity_context( 'plugin', $package, 'release.check' )['context'];
+
+		// Saving settings advances the source revision, which is part of the Activity context.
+		$package->set_source( \RAN\PackageSource::RELEASE_ASSET, 2 );
+		$after = $evidence->activity_context( 'plugin', $package, 'release.check' )['context'];
+		self::assertNotSame( $before, $after );
+
+		$observed                 = (object) array(
+			'id'      => '7',
+			'status'  => 'succeeded',
+			'sort_at' => '2026-07-20 10:00:00',
+			'facts'   => '{"relationship":"newer","candidate_version":"1.2.0"}',
+		);
+		$connection               = new \RAN\Tests\Activity\ActivityConnection();
+		$connection->read_results = array( array(), array(), array( $observed ), array( $observed ) );
+		$presenter                = new DeploymentAdminPresenter( attempts: $this->deployment_attempts( new DashboardActivityWpdb() ), activity_store: new \RAN\Activity\ActivityStore( $connection ) );
+		$check                    = $presenter->package_activity( array( $package ), 'plugin' )['items']['example/example.php']['check'] ?? array();
+
+		self::assertContains( $after, $connection->prepared[0]['args'], 'The exact summary reads the new revision context.' );
+		self::assertNull( $check['observation'] ?? null );
+		self::assertSame(
+			array(
+				'version' => '1.2.0',
+				'at'      => '2026-07-20 10:00:00',
+			),
+			\RAN\Admin\PastReleaseObservation::from_record( (array) ( $check['earlier_observation'] ?? null ) )
+		);
 	}
 
 	public function test_an_unchanged_release_check_context_is_current_and_never_reads_the_fallback(): void {
@@ -3432,11 +3499,12 @@ final class DashboardIndexRoutingTest extends TestCase {
 		self::assertTrue( $check['available'] );
 		self::assertSame( '2026-07-21 10:00:00', $check['latest']['sort_at'] ?? null );
 		self::assertArrayNotHasKey( 'earlier', $check );
+		self::assertArrayNotHasKey( 'earlier_observation', $check );
 		self::assertCount( 2, $queries );
 	}
 
 	public function test_a_failed_fallback_read_is_unavailable_not_an_empty_history(): void {
-		[ $check ] = $this->release_check_activity( array( array(), array(), false ) );
+		[ $check ] = $this->release_check_activity( array( array(), array(), array(), false ) );
 
 		self::assertFalse( $check['available'] );
 		self::assertArrayNotHasKey( 'earlier', $check );

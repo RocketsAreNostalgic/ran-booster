@@ -6401,7 +6401,7 @@ msgid "Branch deployment"
 msgstr ""
 
 #: views/attempts/index.php:195
-#: views/packages/index.php:612
+#: views/packages/index.php:628
 msgid "View details"
 msgstr ""
 
@@ -8655,7 +8655,7 @@ msgid "Last recorded check"
 msgstr ""
 
 #: views/packages/index.php:566
-#: views/packages/index.php:599
+#: views/packages/index.php:615
 msgid "Temporarily unavailable"
 msgstr ""
 
@@ -8675,19 +8675,29 @@ msgstr ""
 msgid "Last established result"
 msgstr ""
 
-#: views/packages/index.php:596
+#: views/packages/index.php:600
+msgid "Last observed newer release"
+msgstr ""
+
+#. translators: 1: release version, 2: date and time the release was observed.
+#: views/packages/index.php:604
+#, php-format
+msgid "%1$s, seen %2$s. Not an available update."
+msgstr ""
+
+#: views/packages/index.php:612
 msgid "Last activity"
 msgstr ""
 
-#: views/packages/index.php:614
+#: views/packages/index.php:630
 msgid "No activity recorded"
 msgstr ""
 
-#: views/packages/index.php:619
+#: views/packages/index.php:635
 msgid "Last succeeded"
 msgstr ""
 
-#: views/packages/index.php:620
+#: views/packages/index.php:636
 msgid "Not recorded"
 msgstr ""
 

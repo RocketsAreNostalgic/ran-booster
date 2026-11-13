@@ -520,6 +520,10 @@ final class BoosterAssetsTest extends TestCase {
 			array( 'ran-booster-js', 'ran-booster-announce', 'ran-booster-feedback', 'ran-booster-notice', 'wp-i18n' ),
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['dependencies']
 		);
+		self::assertSame(
+			array( 'wp-a11y', 'wp-i18n', 'wp-element', 'wp-components' ),
+			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-feedback']['dependencies']
+		);
 		self::assertStringEndsWith(
 			'/assets/ran-booster-enhanced-mutations.js',
 			$GLOBALS['ran_booster_asset_test_registered_scripts']['ran-booster-enhanced-mutations']['source']

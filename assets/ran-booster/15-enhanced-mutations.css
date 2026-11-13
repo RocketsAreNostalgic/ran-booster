@@ -35,6 +35,7 @@
 
 	position: fixed;
 	z-index: 100;
+	pointer-events: none;
 	inset-block-end: max(
 		var(--ran-booster-space-24),
 		calc(env(safe-area-inset-bottom) + var(--ran-booster-space-16))
@@ -134,20 +135,34 @@
 	justify-content: flex-start;
 }
 
-/* A decorative glyph in the Notice icon colour; the copy carries the meaning. */
+/*
+ * A decorative glyph in the Notice icon colour. Each intent has its own shape
+ * (check, "!", cross) so intent never relies on colour alone. The first
+ * declaration is the fallback for browsers without alternative text.
+ */
+
 .ran-booster-snackbar-host
 	.components-snackbar
 	.components-snackbar__content::before {
 	flex: none;
 	color: var(--ran-booster-snackbar-icon);
 	font-weight: var(--ran-booster-font-weight-semibold);
+	content: "!";
 	content: "!" / "";
 }
 
 .ran-booster-snackbar-host
 	.components-snackbar.ran-booster-snackbar--success
 	.components-snackbar__content::before {
+	content: "\2713";
 	content: "\2713" / "";
+}
+
+.ran-booster-snackbar-host
+	.components-snackbar.ran-booster-snackbar--error
+	.components-snackbar__content::before {
+	content: "\2716";
+	content: "\2716" / "";
 }
 
 .ran-booster-snackbar-host
@@ -171,6 +186,12 @@
 	.components-snackbar__action
 	+ .components-snackbar__dismiss-button {
 	margin-inline-start: 0;
+}
+
+@media (forced-colors: active) {
+	.ran-booster-snackbar-host .components-snackbar {
+		border-color: CanvasText;
+	}
 }
 
 /*

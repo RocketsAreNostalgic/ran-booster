@@ -11,9 +11,9 @@ const DURATION = 10000;
 function resolve(href) {
 	try {
 		const url = new URL(href, 'https://example.test/wp-admin/admin.php');
-		return { href: url.href, origin: url.origin };
+		return { href: url.href, origin: url.origin, protocol: url.protocol };
 	} catch {
-		return { href: '', origin: 'null' };
+		return { href: '', origin: 'null', protocol: '' };
 	}
 }
 
@@ -60,6 +60,7 @@ function build(options = {}) {
 		components = true,
 		cssReady = true,
 		renderThrows = false,
+		noRender = false,
 		readyState = 'complete',
 	} = options;
 	let clock = 0;
@@ -142,7 +143,8 @@ function build(options = {}) {
 									node.className ===
 									'ran-booster-snackbar-host'
 							);
-							host.rendered = root.notices.length > 0;
+							host.rendered =
+								!noRender && root.notices.length > 0;
 						},
 						unmount() {
 							root.unmounted = true;
@@ -238,8 +240,11 @@ function build(options = {}) {
 							...resolve(spec.link.href),
 						}
 					: null;
+				const itemMarks = new Set();
 				const item = {
 					removed: false,
+					setAttribute: (name) => itemMarks.add(name),
+					hasAttribute: (name) => itemMarks.has(name),
 					childNodes: link ? [text, link] : [text],
 					getAttribute: (name) =>
 						({
@@ -1022,4 +1027,148 @@ test('a repeated result refreshes the control focus returns to', () => {
 	};
 	env.root.onRemove(env.notices[0].id);
 	assert.equal(env.document.activeElement, second);
+});
+
+function pointers(env, ids = ['a', 'b', 'c']) {
+	const targets = {};
+	for (const id of ids) {
+		targets[id] = env.target(`target-${id}`);
+		env.feedback.show(`Pointer ${id}.`, {
+			intent: 'error',
+			id,
+			target: targets[id],
+		});
+	}
+	return targets;
+}
+
+test('a pointer whose inline target was swapped away is dropped and frees its slot', () => {
+	const env = boot();
+	const targets = pointers(env);
+	targets.a.isConnected = false;
+	assert.equal(env.feedback.show('Saved.'), true);
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Pointer b.', 'Pointer c.', 'Saved.']
+	);
+});
+
+test('consume drops stale pointers and unmounts when none is left', () => {
+	const env = boot();
+	const targets = pointers(env, ['a', 'b']);
+	targets.a.isConnected = false;
+	env.feedback.consume();
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Pointer b.']
+	);
+	targets.b.isConnected = false;
+	env.documentListeners.get('htmx:afterSwap')();
+	assert.equal(env.root.unmounted, true);
+	assert.equal(env.host.removed, true);
+});
+
+test('a repeated pointer refreshes its target and Show details follows it', () => {
+	const env = boot();
+	const first = env.target('first');
+	const second = env.target('second');
+	env.feedback.show('Failed.', { intent: 'error', id: 'p', target: first });
+	const [{ actions }] = env.notices;
+	env.feedback.show('Failed.', { intent: 'error', id: 'p', target: second });
+	assert.equal(env.notices.length, 1);
+	actions[0].onClick();
+	assert.equal(env.document.activeElement, second);
+	assert.equal(first.attributes.has('tabindex'), false);
+});
+
+test('a repeated success is spoken again, a first one is announced by the component', () => {
+	const env = boot();
+	const spoken = [];
+	env.window.wp.a11y = { speak: (...args) => spoken.push(args) };
+	env.feedback.show('Saved.');
+	assert.deepEqual(spoken, []);
+	env.feedback.show('Saved.');
+	env.feedback.show('Saved.');
+	assert.deepEqual(spoken, [
+		['Saved.', 'polite'],
+		['Saved.', 'polite'],
+	]);
+});
+
+test('an unshown static success is spoken once however many passes follow', () => {
+	for (const options of [{}, { components: false }]) {
+		const env = boot(options);
+		const spoken = [];
+		env.window.wp.a11y = { speak: (...args) => spoken.push(args) };
+		pointers(env);
+		env.staticContainer([
+			{ key: 's', intent: 'success', text: 'Settings saved.' },
+		]);
+		env.feedback.consume();
+		env.feedback.consume();
+		env.documentListeners.get('htmx:afterSwap')();
+		env.documentListeners.get('htmx:afterSwap')();
+		assert.deepEqual(spoken, [['Settings saved.', 'polite']]);
+	}
+});
+
+test('the Activity action needs an http or https link on this origin', () => {
+	for (const href of [
+		'blob:https://example.test/abc',
+		'ftp://example.test/x',
+	]) {
+		const env = boot();
+		env.staticContainer([
+			{
+				key: 'k',
+				intent: 'success',
+				text: 'Done.',
+				link: { text: 'Open', href },
+			},
+		]);
+		env.feedback.consume();
+		assert.deepEqual(env.notices[0].actions, [], href);
+	}
+});
+
+test('the public entry cannot be replaced or changed', () => {
+	const env = boot();
+	const descriptor = Object.getOwnPropertyDescriptor(
+		env.window,
+		'ranBoosterFeedback'
+	);
+	assert.equal(descriptor.writable, false);
+	assert.equal(descriptor.configurable, false);
+	assert.equal(Object.isFrozen(descriptor.value), true);
+	assert.throws(() => {
+		'use strict';
+		env.window.ranBoosterFeedback = {};
+	});
+});
+
+test('evicting the item that holds focus returns focus to a control', () => {
+	const returnControl = Object.assign(fakeControl({}), {
+		ownerDocument: null,
+	});
+	const env = boot();
+	returnControl.ownerDocument = env.document;
+	env.feedback.show('One.', { returnControl });
+	env.feedback.show('Two.');
+	env.feedback.show('Three.');
+	const inner = env.inside(env.notices[0]);
+	env.host.inside.add(inner);
+	env.document.activeElement = inner;
+	env.feedback.show('Four.');
+	assert.equal(env.document.activeElement, returnControl);
+	assert.deepEqual(
+		env.notices.map((notice) => notice.content),
+		['Two.', 'Three.', 'Four.']
+	);
+});
+
+test('a snackbar that did not render is refused and torn down', () => {
+	const env = boot({ noRender: true });
+	assert.equal(env.feedback.show('Saved.'), false);
+	assert.equal(env.host.removed, true);
+	assert.equal(env.root.unmounted, true);
 });

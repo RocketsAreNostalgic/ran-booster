@@ -200,6 +200,14 @@
 		return true;
 	}
 
+	// A pointer whose inline message was swapped away leads nowhere, so it
+	// goes instead of holding one of the slots.
+	function prune() {
+		state?.items
+			.filter((item) => item.target && !item.target.isConnected)
+			.forEach((item) => remove(item.uid));
+	}
+
 	// Show one confirmed result (fixed Core copy). Success items dismiss
 	// themselves after DURATION. An error or warning is only a pointer to its
 	// persistent inline message (options.target), never timed or shown alone.
@@ -215,10 +223,17 @@
 		) {
 			return false;
 		}
+		prune();
 		const duplicate = state?.items.find((item) => item.id === id);
 		if (duplicate) {
 			state.returnControl = options.returnControl || state.returnControl;
 			duplicate.remaining = DURATION;
+			if (intent === 'success') {
+				// The component speaks only on mount; a repeat is spoken here.
+				window.wp?.a11y?.speak?.(text, 'polite');
+			} else {
+				duplicate.target = target;
+			}
 			if (duplicate.timer) {
 				arm(duplicate);
 			}
@@ -236,15 +251,17 @@
 			hover: false,
 			focus: false,
 			action,
+			target,
 		};
 		if (intent !== 'success') {
 			item.action = {
 				label: window.wp.i18n.__('Show details', 'ran-booster'),
 				onClick: () => {
-					if (!target.matches('a[href], button, input, select')) {
-						target.setAttribute('tabindex', '-1');
+					const { target: current } = item;
+					if (!current.matches('a[href], button, input, select')) {
+						current.setAttribute('tabindex', '-1');
 					}
-					target.focus();
+					current.focus();
 				},
 			};
 		}
@@ -280,6 +297,7 @@
 	// that cannot be shown (no host, no inline target, qualified result) as
 	// the visible static result.
 	function consume() {
+		prune();
 		document
 			.querySelectorAll('[data-ran-booster-feedback]')
 			.forEach((container) => {
@@ -314,14 +332,22 @@
 						.join('');
 					// Core builds the Activity link; still accept this origin only.
 					const action =
-						link?.origin === window.location.origin
+						/^https?:$/.test(link?.protocol) &&
+						link.origin === window.location.origin
 							? { label: link.textContent.trim(), url: link.href }
 							: null;
 					const id = item.getAttribute('data-feedback-key');
 					if (show(text, { intent, id, target, action })) {
 						item.remove();
-					} else if (intent === 'success') {
-						// Not shown: the static result stays, spoken politely.
+					} else if (
+						intent === 'success' &&
+						!item.hasAttribute('data-ran-booster-feedback-spoken')
+					) {
+						// Not shown: the static result stays, spoken politely once.
+						item.setAttribute(
+							'data-ran-booster-feedback-spoken',
+							''
+						);
 						window.wp?.a11y?.speak?.(text.trim(), 'polite');
 					}
 				});
@@ -331,7 +357,9 @@
 			});
 	}
 
-	window.ranBoosterFeedback = { show, consume };
+	Object.defineProperty(window, 'ranBoosterFeedback', {
+		value: Object.freeze({ show, consume }),
+	});
 
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', consume, { once: true });

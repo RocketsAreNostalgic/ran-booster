@@ -232,3 +232,52 @@ test('action and dismiss controls keep a 24px target and the text colour', () =>
 	assert.match(controls.body, /color:\s*var\(--ran-booster-snackbar-text\)/);
 	assert.match(tokens, /--wpds-dimension-size-sm:\s*24px/);
 });
+
+test('each intent has its own glyph with a fallback for browsers without alt text', () => {
+	const glyph = (intent) => {
+		const match = hostCss.match(
+			new RegExp(
+				`ran-booster-snackbar--${intent}\\s*\\.components-snackbar__content::before\\s*\\{([^}]*)\\}`
+			)
+		);
+		return match?.[1];
+	};
+	const baseRule = rules.find(
+		({ selector, body }) =>
+			selector.endsWith('.components-snackbar__content::before') &&
+			/content:/.test(body) &&
+			!selector.includes('--')
+	).body;
+	const shapes = {
+		success: glyph('success').match(/content:\s*"([^"]+)"\s*;/)[1],
+		error: glyph('error').match(/content:\s*"([^"]+)"\s*;/)[1],
+		// Warning keeps the base glyph.
+		warning: baseRule.match(/content:\s*"([^"]+)"\s*;/)[1],
+	};
+	assert.equal(new Set(Object.values(shapes)).size, 3, 'Shapes differ');
+	for (const body of [glyph('success'), glyph('error'), baseRule]) {
+		assert.match(
+			body,
+			/content:\s*"[^"]+";\s*content:\s*"[^"]+"\s*\/\s*"";/
+		);
+	}
+	assert.equal(glyph('warning'), undefined, 'Warning uses the base glyph.');
+});
+
+test('forced colours keep a real CanvasText border and no background reliance', () => {
+	const block = css.match(
+		/@media \(forced-colors: active\)\s*\{\s*\.ran-booster-snackbar-host \.components-snackbar\s*\{([^}]*)\}/
+	);
+	assert.ok(block, 'A forced-colors block exists.');
+	assert.match(block[1], /border-color:\s*CanvasText/);
+	assert.doesNotMatch(block[1], /background/);
+});
+
+test('the list ignores the pointer, sits above content and below every dialog', () => {
+	assert.match(list.body, /pointer-events:\s*none/);
+	const z = Number(list.body.match(/z-index:\s*(\d+)/)[1]);
+	const modal = Number(
+		foundations.match(/--ran-booster-layer-modal:\s*(\d+)/)[1]
+	);
+	assert.ok(z > 0 && z < modal);
+});

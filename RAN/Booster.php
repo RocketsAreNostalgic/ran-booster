@@ -929,7 +929,7 @@ class Booster {
 		wp_register_script(
 			'ran-booster-feedback',
 			trailingslashit( $this->booster_url ?? '' ) . 'assets/ran-booster-feedback.js',
-			array( 'wp-i18n', 'wp-element', 'wp-components' ),
+			array( 'wp-a11y', 'wp-i18n', 'wp-element', 'wp-components' ),
 			$feedback_script_version,
 			true
 		);
